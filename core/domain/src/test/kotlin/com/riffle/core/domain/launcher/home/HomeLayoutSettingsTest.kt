@@ -1,0 +1,32 @@
+package com.riffle.core.domain.launcher.home
+
+import kotlin.test.Test
+import kotlin.test.assertEquals
+
+class HomeLayoutSettingsTest {
+    @Test
+    fun standardPhoneSettingsUseTheConventionalHomeGrid() {
+        val settings = HomeLayoutSettings.standardPhone()
+
+        assertEquals(GridDimensions(columns = 4, rows = 5), settings.grid.dimensions)
+        assertEquals(GridInsets(), settings.grid.margin)
+        assertEquals(GridInsets(), settings.grid.padding)
+        assertEquals(GridSpacing(), settings.grid.cellSpacing)
+    }
+
+    @Test
+    fun gridSettingsCanConfigureSpacingWithoutChangingGridOccupancy() {
+        val settings =
+            GridSettings(
+                dimensions = GridDimensions(columns = 5, rows = 6),
+                margin = GridInsets(start = 1, top = 2, end = 3, bottom = 4),
+                padding = GridInsets(start = 5, top = 6, end = 7, bottom = 8),
+                cellSpacing = GridSpacing(horizontal = 9, vertical = 10),
+            )
+
+        assertEquals(GridDimensions(columns = 5, rows = 6), settings.dimensions)
+        assertEquals(GridInsets(start = 1, top = 2, end = 3, bottom = 4), settings.margin)
+        assertEquals(GridInsets(start = 5, top = 6, end = 7, bottom = 8), settings.padding)
+        assertEquals(GridSpacing(horizontal = 9, vertical = 10), settings.cellSpacing)
+    }
+}
