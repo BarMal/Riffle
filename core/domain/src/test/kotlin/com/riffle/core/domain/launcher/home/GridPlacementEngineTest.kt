@@ -40,6 +40,88 @@ class GridPlacementEngineTest {
     }
 
     @Test
+    fun placesItemInFirstAvailableCell() {
+        val result = engine.placeItemInFirstAvailableCell(page = page, item = appItem(id = "camera"))
+
+        val placed = assertIs<PlaceLauncherItemResult.Placed>(result)
+        assertEquals(GridPlacement(cell = GridCell(column = 0, row = 0)), placed.page.items.single().placement)
+    }
+
+    @Test
+    fun skipsOccupiedCellsWhenPlacingFirstAvailableCell() {
+        val occupiedPage =
+            page.copy(
+                items =
+                    listOf(
+                        appItem(
+                            id = "calendar",
+                            placement = GridPlacement(cell = GridCell(column = 0, row = 0)),
+                        ),
+                    ),
+            )
+
+        val result = engine.placeItemInFirstAvailableCell(page = occupiedPage, item = appItem(id = "camera"))
+
+        val placed = assertIs<PlaceLauncherItemResult.Placed>(result)
+        assertEquals(GridPlacement(cell = GridCell(column = 1, row = 0)), placed.page.items.last().placement)
+    }
+
+    @Test
+    fun placesSpanningItemInFirstAvailableCellWhereItFits() {
+        val occupiedPage =
+            page.copy(
+                items =
+                    listOf(
+                        appItem(
+                            id = "calendar",
+                            placement =
+                                GridPlacement(
+                                    cell = GridCell(column = 0, row = 0),
+                                    span = GridSpan(columns = 3, rows = 1),
+                                ),
+                        ),
+                    ),
+            )
+
+        val result =
+            engine.placeItemInFirstAvailableCell(
+                page = occupiedPage,
+                item = appItem(id = "camera"),
+                span = GridSpan(columns = 2, rows = 1),
+            )
+
+        val placed = assertIs<PlaceLauncherItemResult.Placed>(result)
+        assertEquals(
+            GridPlacement(
+                cell = GridCell(column = 0, row = 1),
+                span = GridSpan(columns = 2, rows = 1),
+            ),
+            placed.page.items.last().placement,
+        )
+    }
+
+    @Test
+    fun rejectsFirstAvailablePlacementWhenNoCellsFit() {
+        val fullPage =
+            LauncherPage(
+                id = LauncherPageId("full"),
+                grid = GridDimensions(columns = 1, rows = 1),
+                items =
+                    listOf(
+                        appItem(
+                            id = "calendar",
+                            placement = GridPlacement(cell = GridCell(column = 0, row = 0)),
+                        ),
+                    ),
+            )
+
+        val result = engine.placeItemInFirstAvailableCell(page = fullPage, item = appItem(id = "camera"))
+
+        val rejected = assertIs<PlaceLauncherItemResult.Rejected>(result)
+        assertEquals(PlacementRejectionReason.NO_AVAILABLE_CELL, rejected.reason)
+    }
+
+    @Test
     fun rejectsPlacementOutsideGridBounds() {
         val item =
             appItem(
