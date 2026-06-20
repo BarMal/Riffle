@@ -2,6 +2,7 @@ package com.riffle.app.launcher
 
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.InstalledApp
+import com.riffle.core.domain.launcher.home.DockItemMoveDirection
 import com.riffle.core.domain.launcher.home.HomeShortcutMoveDirection
 import com.riffle.core.domain.launcher.home.LauncherItemId
 
@@ -43,6 +44,11 @@ sealed interface LauncherShellAction {
     data class RemoveHomeShortcut(val itemId: LauncherItemId) : LauncherShellAction
 
     data class RemoveDockShortcut(val itemId: LauncherItemId) : LauncherShellAction
+
+    data class MoveDockShortcut(
+        val itemId: LauncherItemId,
+        val direction: DockItemMoveDirection,
+    ) : LauncherShellAction
 
     data class MoveHomeShortcut(
         val itemId: LauncherItemId,
