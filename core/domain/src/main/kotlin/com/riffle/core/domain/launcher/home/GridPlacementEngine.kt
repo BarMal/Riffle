@@ -18,6 +18,17 @@ class GridPlacementEngine {
             }
         } ?: PlaceLauncherItemResult.Rejected(PlacementRejectionReason.MISSING_PLACEMENT)
 
+    fun placeItemInFirstAvailableCell(
+        page: LauncherPage,
+        item: LauncherItem,
+        span: GridSpan = GridSpan(),
+    ): PlaceLauncherItemResult =
+        page.grid.cells
+            .map { cell -> item.withPlacement(GridPlacement(cell = cell, span = span)) }
+            .map { candidate -> placeItem(page = page, item = candidate) }
+            .firstOrNull { result -> result is PlaceLauncherItemResult.Placed }
+            ?: PlaceLauncherItemResult.Rejected(PlacementRejectionReason.NO_AVAILABLE_CELL)
+
     fun moveItem(
         page: LauncherPage,
         itemId: LauncherItemId,
@@ -58,6 +69,14 @@ class GridPlacementEngine {
             placement.cell.column + placement.span.columns <= columns &&
             placement.cell.row + placement.span.rows <= rows
 
+    private val GridDimensions.cells: List<GridCell>
+        get() =
+            (0 until rows).flatMap { row ->
+                (0 until columns).map { column ->
+                    GridCell(column = column, row = row)
+                }
+            }
+
     private fun LauncherItem.collidesWith(other: LauncherItem): Boolean =
         placement?.occupiedCells.orEmpty().intersect(other.placement?.occupiedCells.orEmpty()).isNotEmpty()
 
@@ -83,4 +102,5 @@ enum class PlacementRejectionReason {
     ITEM_NOT_FOUND,
     OUT_OF_BOUNDS,
     COLLISION,
+    NO_AVAILABLE_CELL,
 }
