@@ -1,5 +1,8 @@
 package com.riffle.core.domain.launcher.home
 
+import com.riffle.core.domain.launcher.apps.AppActivityName
+import com.riffle.core.domain.launcher.apps.AppIdentity
+import com.riffle.core.domain.launcher.apps.AppPackageName
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
@@ -301,8 +304,11 @@ class GridPlacementEngineTest {
     ): AppShortcutItem =
         AppShortcutItem(
             id = LauncherItemId(id),
-            packageName = "com.riffle.$id",
-            activityName = ".MainActivity",
+            appIdentity =
+                AppIdentity(
+                    packageName = AppPackageName("com.riffle.$id"),
+                    activityName = AppActivityName(".MainActivity"),
+                ),
             placement = placement,
         )
 }
