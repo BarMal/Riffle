@@ -2,6 +2,7 @@ package com.riffle.app.launcher
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -50,6 +51,7 @@ fun StandardHome(
         WorkspaceGrid(
             page = layout.selectedPage,
             appIconLoader = appIconLoader,
+            onAction = onAction,
             modifier =
                 Modifier
                     .weight(1f)
@@ -91,6 +93,7 @@ private fun HomeToolbar(onAction: (LauncherShellAction) -> Unit) {
 private fun WorkspaceGrid(
     page: LauncherPage,
     appIconLoader: AppIconLoader,
+    onAction: (LauncherShellAction) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -119,6 +122,7 @@ private fun WorkspaceGrid(
                             HomeShortcut(
                                 shortcut = shortcut,
                                 appIconLoader = appIconLoader,
+                                onAction = onAction,
                             )
                         }
                     }
@@ -133,8 +137,13 @@ private fun WorkspaceGrid(
 private fun HomeShortcut(
     shortcut: AppShortcutItem,
     appIconLoader: AppIconLoader,
+    onAction: (LauncherShellAction) -> Unit,
 ) {
     Column(
+        modifier =
+            Modifier.clickable {
+                onAction(LauncherShellAction.LaunchApp(shortcut.appIdentity))
+            },
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
