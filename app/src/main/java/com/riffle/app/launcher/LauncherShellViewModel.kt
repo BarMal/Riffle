@@ -8,6 +8,8 @@ import com.riffle.core.domain.launcher.ShellNavigationAction
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.apps.InstalledAppCatalog
 import com.riffle.core.domain.launcher.apps.InstalledAppRepository
+import com.riffle.core.domain.launcher.home.DockEditResult
+import com.riffle.core.domain.launcher.home.DockEngine
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
@@ -32,6 +34,8 @@ class LauncherShellViewModel(
     private val homePageEngine: HomePageEngine = HomePageEngine(),
     private val homeLayoutRepository: HomeLayoutRepository = NoopHomeLayoutRepository,
 ) : ViewModel() {
+    private val dockEngine = DockEngine()
+
     private val mutableState =
         MutableStateFlow(
             createInitialState(
@@ -102,6 +106,14 @@ class LauncherShellViewModel(
             when (val result = homePageEngine.applyEdit(action = action, layout = mutableState.value.homeLayout)) {
                 is HomePageEditResult.Updated -> mutableState.value.withHomeLayout(result.layout, homeLayoutRepository)
                 is HomePageEditResult.Rejected -> mutableState.value
+            }
+    }
+
+    fun onDockEdited(action: LauncherShellAction) {
+        mutableState.value =
+            when (val result = dockEngine.applyEdit(action = action, layout = mutableState.value.homeLayout)) {
+                is DockEditResult.Updated -> mutableState.value.withHomeLayout(result.layout, homeLayoutRepository)
+                is DockEditResult.Rejected -> mutableState.value
             }
     }
 

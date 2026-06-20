@@ -27,5 +27,8 @@ fun LauncherShellState.appIconPreloadIdentities(): List<AppIdentity> =
                 page.items
                     .filterIsInstance<AppShortcutItem>()
                     .map { shortcut -> shortcut.appIdentity }
-            }
+            } +
+            homeLayout.dock.items
+                .filterIsInstance<AppShortcutItem>()
+                .map { shortcut -> shortcut.appIdentity }
     ).distinct()

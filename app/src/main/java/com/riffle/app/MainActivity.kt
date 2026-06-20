@@ -59,7 +59,8 @@ class MainActivity : ComponentActivity() {
             handleFirstRunAction(action) ||
                 handleNavigationAction(action) ||
                 handleHomePageAction(action) ||
-                handleHomeShortcutAction(action)
+                handleHomeShortcutAction(action) ||
+                handleDockAction(action)
 
         if (!handled) {
             handleAppAction(action)
@@ -112,6 +113,18 @@ class MainActivity : ComponentActivity() {
             is LauncherShellAction.MoveHomeShortcut,
             -> {
                 shellViewModel.onHomeShortcutEdited(action)
+                true
+            }
+
+            else -> false
+        }
+
+    private fun handleDockAction(action: LauncherShellAction): Boolean =
+        when (action) {
+            is LauncherShellAction.AddAppToDock,
+            is LauncherShellAction.RemoveDockShortcut,
+            -> {
+                shellViewModel.onDockEdited(action)
                 true
             }
 

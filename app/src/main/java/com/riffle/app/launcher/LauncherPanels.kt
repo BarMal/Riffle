@@ -164,6 +164,9 @@ private fun AppDrawerRow(
         TextButton(onClick = { onAction(LauncherShellAction.AddAppToHome(app)) }) {
             Text(text = "Add")
         }
+        TextButton(onClick = { onAction(LauncherShellAction.AddAppToDock(app)) }) {
+            Text(text = "Dock")
+        }
     }
 }
 

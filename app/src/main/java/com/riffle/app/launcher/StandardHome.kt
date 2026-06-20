@@ -1,7 +1,6 @@
 package com.riffle.app.launcher
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -18,7 +17,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -31,7 +29,6 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.home.AppShortcutItem
-import com.riffle.core.domain.launcher.home.DockModel
 import com.riffle.core.domain.launcher.home.GridCell
 import com.riffle.core.domain.launcher.home.HomeEditMode
 import com.riffle.core.domain.launcher.home.HomeLayout
@@ -78,7 +75,12 @@ fun StandardHome(
             selectedPageIndex = layout.selectedPageIndex,
         )
         Spacer(modifier = Modifier.height(20.dp))
-        Dock(dock = layout.dock)
+        Dock(
+            dock = layout.dock,
+            isEditing = layout.editMode is HomeEditMode.EditingPage,
+            appIconLoader = appIconLoader,
+            onAction = onAction,
+        )
     }
 }
 
@@ -310,33 +312,3 @@ private fun BoxScope.RemoveShortcutButton(
 private fun LauncherPage.shortcutAt(cell: GridCell): AppShortcutItem? =
     items.filterIsInstance<AppShortcutItem>()
         .firstOrNull { item -> item.placement?.cell == cell }
-
-@Composable
-private fun Dock(dock: DockModel) {
-    Row(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .height(76.dp)
-                .clip(RoundedCornerShape(28.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.72f))
-                .padding(horizontal = 18.dp, vertical = 12.dp),
-        horizontalArrangement = Arrangement.spacedBy(14.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        repeat(dock.capacity) {
-            Box(
-                modifier =
-                    Modifier
-                        .weight(1f)
-                        .aspectRatio(1f)
-                        .clip(RoundedCornerShape(16.dp))
-                        .border(
-                            width = 1.dp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.28f),
-                            shape = RoundedCornerShape(16.dp),
-                        ),
-            )
-        }
-    }
-}
