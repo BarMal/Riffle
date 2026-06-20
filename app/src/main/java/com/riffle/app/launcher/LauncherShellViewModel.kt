@@ -202,6 +202,12 @@ private fun HomePageEngine.applyEdit(
         LauncherShellAction.SelectNextHomePage ->
             selectPageAtOffset(layout = layout, offset = 1)
 
+        LauncherShellAction.MoveSelectedHomePageLeft ->
+            moveSelectedPageByOffset(layout = layout, offset = -1)
+
+        LauncherShellAction.MoveSelectedHomePageRight ->
+            moveSelectedPageByOffset(layout = layout, offset = 1)
+
         LauncherShellAction.DeleteSelectedHomePage ->
             deletePage(
                 layout = layout,
@@ -217,6 +223,23 @@ private fun HomePageEngine.selectPageAtOffset(
 ): HomePageEditResult =
     layout.pages.getOrNull(layout.selectedPageIndex + offset)
         ?.let { page -> selectPage(layout = layout, pageId = page.id) }
+        ?: HomePageEditResult.Rejected(
+            HomePageEditRejectionReason.INDEX_OUT_OF_BOUNDS,
+        )
+
+private fun HomePageEngine.moveSelectedPageByOffset(
+    layout: HomeLayout,
+    offset: Int,
+): HomePageEditResult =
+    (layout.selectedPageIndex + offset)
+        .takeIf { targetIndex -> targetIndex in layout.pages.indices }
+        ?.let { targetIndex ->
+            movePage(
+                layout = layout,
+                pageId = layout.selectedPageId,
+                targetIndex = targetIndex,
+            )
+        }
         ?: HomePageEditResult.Rejected(
             HomePageEditRejectionReason.INDEX_OUT_OF_BOUNDS,
         )

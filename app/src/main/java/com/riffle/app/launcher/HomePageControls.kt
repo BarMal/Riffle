@@ -37,6 +37,18 @@ fun PageEditControls(
             Text(text = "Add page")
         }
         TextButton(
+            enabled = selectedPageIndex > 0,
+            onClick = { onAction(LauncherShellAction.MoveSelectedHomePageLeft) },
+        ) {
+            Text(text = "Move <")
+        }
+        TextButton(
+            enabled = selectedPageIndex < pageCount - 1,
+            onClick = { onAction(LauncherShellAction.MoveSelectedHomePageRight) },
+        ) {
+            Text(text = "Move >")
+        }
+        TextButton(
             enabled = pageCount > 1,
             onClick = { onAction(LauncherShellAction.DeleteSelectedHomePage) },
         ) {

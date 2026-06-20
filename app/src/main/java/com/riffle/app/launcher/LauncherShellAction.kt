@@ -28,6 +28,10 @@ sealed interface LauncherShellAction {
 
     data object SelectNextHomePage : LauncherShellAction
 
+    data object MoveSelectedHomePageLeft : LauncherShellAction
+
+    data object MoveSelectedHomePageRight : LauncherShellAction
+
     data object DeleteSelectedHomePage : LauncherShellAction
 
     data class LaunchApp(val identity: AppIdentity) : LauncherShellAction

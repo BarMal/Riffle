@@ -295,6 +295,57 @@ class LauncherShellViewModelTest {
     }
 
     @Test
+    fun movesSelectedHomePageLeftAndSavesLayout() {
+        val repository = FakeHomeLayoutRepository(savedLayout = HomeLayoutDefaults.standard())
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                homeLayoutRepository = repository,
+            )
+        viewModel.onHomePageEdited(LauncherShellAction.AddHomePage)
+
+        viewModel.onHomePageEdited(LauncherShellAction.MoveSelectedHomePageLeft)
+
+        assertEquals(listOf(LauncherPageId("home-2"), LauncherPageId("home")), viewModel.state.value.homeLayout.pageIds)
+        assertEquals(LauncherPageId("home-2"), viewModel.state.value.homeLayout.selectedPageId)
+        assertEquals(viewModel.state.value.homeLayout, repository.savedLayout)
+    }
+
+    @Test
+    fun movesSelectedHomePageRightAndSavesLayout() {
+        val repository = FakeHomeLayoutRepository(savedLayout = HomeLayoutDefaults.standard())
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                homeLayoutRepository = repository,
+            )
+        viewModel.onHomePageEdited(LauncherShellAction.AddHomePage)
+        viewModel.onHomePageEdited(LauncherShellAction.SelectPreviousHomePage)
+
+        viewModel.onHomePageEdited(LauncherShellAction.MoveSelectedHomePageRight)
+
+        assertEquals(listOf(LauncherPageId("home-2"), LauncherPageId("home")), viewModel.state.value.homeLayout.pageIds)
+        assertEquals(LauncherPageId("home"), viewModel.state.value.homeLayout.selectedPageId)
+        assertEquals(viewModel.state.value.homeLayout, repository.savedLayout)
+    }
+
+    @Test
+    fun ignoresSelectedHomePageMoveOutsideLayoutBounds() {
+        val repository = FakeHomeLayoutRepository(savedLayout = HomeLayoutDefaults.standard())
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                homeLayoutRepository = repository,
+            )
+        val layoutBeforeMove = viewModel.state.value.homeLayout
+
+        viewModel.onHomePageEdited(LauncherShellAction.MoveSelectedHomePageLeft)
+
+        assertEquals(layoutBeforeMove, viewModel.state.value.homeLayout)
+        assertEquals(layoutBeforeMove, repository.savedLayout)
+    }
+
+    @Test
     fun deletesSelectedHomePageAndSavesLayout() {
         val repository = FakeHomeLayoutRepository(savedLayout = HomeLayoutDefaults.standard())
         val viewModel =
