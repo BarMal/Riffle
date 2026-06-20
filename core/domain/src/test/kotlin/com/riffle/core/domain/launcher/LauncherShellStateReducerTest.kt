@@ -45,4 +45,33 @@ class LauncherShellStateReducerTest {
         assertEquals(FirstRunStatus.COMPLETE, state.firstRunStatus)
         assertTrue(state.shouldShowEmptyHome)
     }
+
+    @Test
+    fun navigationActionsSelectShellDestinations() {
+        val appDrawerState =
+            reducer.navigationActionSelected(
+                currentState = LauncherShellState(firstRunStatus = FirstRunStatus.COMPLETE),
+                action = ShellNavigationAction.OpenAppDrawer,
+            )
+        val searchState =
+            reducer.navigationActionSelected(
+                currentState = appDrawerState,
+                action = ShellNavigationAction.OpenSearch,
+            )
+        val settingsState =
+            reducer.navigationActionSelected(
+                currentState = searchState,
+                action = ShellNavigationAction.OpenSettings,
+            )
+        val homeState =
+            reducer.navigationActionSelected(
+                currentState = settingsState,
+                action = ShellNavigationAction.OpenHome,
+            )
+
+        assertEquals(ShellDestination.APP_DRAWER, appDrawerState.destination)
+        assertEquals(ShellDestination.SEARCH, searchState.destination)
+        assertEquals(ShellDestination.SETTINGS, settingsState.destination)
+        assertEquals(ShellDestination.HOME, homeState.destination)
+    }
 }

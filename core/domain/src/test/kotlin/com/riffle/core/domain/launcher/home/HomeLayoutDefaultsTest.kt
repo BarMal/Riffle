@@ -7,6 +7,13 @@ import kotlin.test.assertTrue
 
 class HomeLayoutDefaultsTest {
     @Test
+    fun standardLayoutNamesTheStandardAppDrawerModeExplicitly() {
+        val layout = HomeLayoutDefaults.standard()
+
+        assertEquals(LauncherViewMode.STANDARD_APP_DRAWER, layout.viewMode)
+    }
+
+    @Test
     fun standardLayoutStartsWithOneEmptyHomePage() {
         val layout = HomeLayoutDefaults.standard()
 

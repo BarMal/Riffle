@@ -11,6 +11,7 @@ import com.riffle.app.launcher.LauncherShellAction
 import com.riffle.app.launcher.LauncherShellViewModel
 import com.riffle.app.launcher.LauncherShellViewModelFactory
 import com.riffle.app.launcher.SharedPreferencesFirstRunRepository
+import com.riffle.core.domain.launcher.ShellNavigationAction
 
 class MainActivity : ComponentActivity() {
     private val shellViewModel: LauncherShellViewModel by viewModels {
@@ -51,6 +52,14 @@ class MainActivity : ComponentActivity() {
             }
 
             LauncherShellAction.CompleteFirstRun -> shellViewModel.onFirstRunCompleted()
+            LauncherShellAction.OpenHome ->
+                shellViewModel.onNavigationActionSelected(ShellNavigationAction.OpenHome)
+            LauncherShellAction.OpenAppDrawer ->
+                shellViewModel.onNavigationActionSelected(ShellNavigationAction.OpenAppDrawer)
+            LauncherShellAction.OpenSearch ->
+                shellViewModel.onNavigationActionSelected(ShellNavigationAction.OpenSearch)
+            LauncherShellAction.OpenSettings ->
+                shellViewModel.onNavigationActionSelected(ShellNavigationAction.OpenSettings)
         }
     }
 }

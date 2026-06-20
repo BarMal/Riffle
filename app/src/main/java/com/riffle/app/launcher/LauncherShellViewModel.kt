@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import com.riffle.core.domain.launcher.HomeRoleStatus
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.LauncherShellStateReducer
+import com.riffle.core.domain.launcher.ShellNavigationAction
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -30,6 +31,14 @@ class LauncherShellViewModel(
     fun onFirstRunCompleted() {
         firstRunRepository.setFirstRunComplete()
         mutableState.value = reducer.firstRunCompleted(mutableState.value)
+    }
+
+    fun onNavigationActionSelected(action: ShellNavigationAction) {
+        mutableState.value =
+            reducer.navigationActionSelected(
+                currentState = mutableState.value,
+                action = action,
+            )
     }
 
     private fun createInitialState(): LauncherShellState =
