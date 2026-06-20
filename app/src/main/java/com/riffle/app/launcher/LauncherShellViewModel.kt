@@ -5,15 +5,19 @@ import com.riffle.core.domain.launcher.HomeRoleStatus
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.LauncherShellStateReducer
 import com.riffle.core.domain.launcher.ShellNavigationAction
+import com.riffle.core.domain.launcher.apps.InstalledAppCatalog
+import com.riffle.core.domain.launcher.apps.InstalledAppRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 class LauncherShellViewModel(
     private val firstRunRepository: FirstRunRepository,
+    private val installedAppRepository: InstalledAppRepository = InstalledAppRepository { emptyList() },
     private val reducer: LauncherShellStateReducer = LauncherShellStateReducer(),
+    private val appCatalog: InstalledAppCatalog = InstalledAppCatalog(),
 ) : ViewModel() {
-    private val mutableState = MutableStateFlow(createInitialState())
+    private val mutableState = MutableStateFlow(createInitialState().withInstalledApps())
     val state: StateFlow<LauncherShellState> = mutableState.asStateFlow()
 
     fun onHomeRoleStatusChanged(homeRoleStatus: HomeRoleStatus) {
@@ -41,12 +45,19 @@ class LauncherShellViewModel(
             )
     }
 
+    fun refreshInstalledApps() {
+        mutableState.value = mutableState.value.withInstalledApps()
+    }
+
     private fun createInitialState(): LauncherShellState =
         if (firstRunRepository.isFirstRunComplete()) {
             reducer.firstRunCompleted(LauncherShellState())
         } else {
             LauncherShellState()
         }
+
+    private fun LauncherShellState.withInstalledApps(): LauncherShellState =
+        copy(installedApps = appCatalog.visibleApps(installedAppRepository.installedApps()))
 
     private fun persistCompletedFirstRun(state: LauncherShellState) {
         if (state.shouldShowEmptyHome) {

@@ -11,12 +11,14 @@ import com.riffle.app.launcher.LauncherShellAction
 import com.riffle.app.launcher.LauncherShellViewModel
 import com.riffle.app.launcher.LauncherShellViewModelFactory
 import com.riffle.app.launcher.SharedPreferencesFirstRunRepository
+import com.riffle.app.launcher.apps.PackageManagerInstalledAppRepository
 import com.riffle.core.domain.launcher.ShellNavigationAction
 
 class MainActivity : ComponentActivity() {
     private val shellViewModel: LauncherShellViewModel by viewModels {
         LauncherShellViewModelFactory(
             firstRunRepository = SharedPreferencesFirstRunRepository(this),
+            installedAppRepository = PackageManagerInstalledAppRepository(packageManager),
         )
     }
     private val homeRoleGateway by lazy { AndroidHomeRoleGateway(this) }
@@ -41,6 +43,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        shellViewModel.refreshInstalledApps()
         shellViewModel.onHomeRoleStatusChanged(homeRoleGateway.getHomeRoleStatus())
     }
 

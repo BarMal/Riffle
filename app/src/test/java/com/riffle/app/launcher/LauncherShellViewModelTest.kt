@@ -4,6 +4,12 @@ import com.riffle.core.domain.launcher.FirstRunStatus
 import com.riffle.core.domain.launcher.HomeRoleStatus
 import com.riffle.core.domain.launcher.ShellDestination
 import com.riffle.core.domain.launcher.ShellNavigationAction
+import com.riffle.core.domain.launcher.apps.AppActivityName
+import com.riffle.core.domain.launcher.apps.AppIdentity
+import com.riffle.core.domain.launcher.apps.AppPackageName
+import com.riffle.core.domain.launcher.apps.AppVisibility
+import com.riffle.core.domain.launcher.apps.InstalledApp
+import com.riffle.core.domain.launcher.apps.InstalledAppRepository
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -60,6 +66,43 @@ class LauncherShellViewModelTest {
         assertEquals(ShellDestination.HOME, viewModel.state.value.destination)
     }
 
+    @Test
+    fun loadsVisibleInstalledAppsIntoInitialState() {
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                installedAppRepository =
+                    FakeInstalledAppRepository(
+                        apps =
+                            listOf(
+                                app(label = "Hidden", visibility = AppVisibility.HIDDEN),
+                                app(label = "Camera"),
+                                app(label = "Browser"),
+                            ),
+                    ),
+            )
+
+        assertEquals(
+            listOf("Browser", "Camera"),
+            viewModel.state.value.installedApps.map { app -> app.label },
+        )
+    }
+
+    @Test
+    fun refreshesInstalledApps() {
+        val repository = FakeInstalledAppRepository(apps = listOf(app(label = "Camera")))
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                installedAppRepository = repository,
+            )
+
+        repository.apps = listOf(app(label = "Calendar"))
+        viewModel.refreshInstalledApps()
+
+        assertEquals(listOf("Calendar"), viewModel.state.value.installedApps.map { app -> app.label })
+    }
+
     private class FakeFirstRunRepository(
         private var isComplete: Boolean = false,
     ) : FirstRunRepository {
@@ -69,4 +112,24 @@ class LauncherShellViewModelTest {
             isComplete = true
         }
     }
+
+    private class FakeInstalledAppRepository(
+        var apps: List<InstalledApp> = emptyList(),
+    ) : InstalledAppRepository {
+        override fun installedApps(): List<InstalledApp> = apps
+    }
+
+    private fun app(
+        label: String,
+        visibility: AppVisibility = AppVisibility.VISIBLE,
+    ): InstalledApp =
+        InstalledApp(
+            identity =
+                AppIdentity(
+                    packageName = AppPackageName("com.riffle.${label.lowercase()}"),
+                    activityName = AppActivityName(".MainActivity"),
+                ),
+            label = label,
+            visibility = visibility,
+        )
 }

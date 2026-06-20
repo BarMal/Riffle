@@ -1,5 +1,6 @@
 package com.riffle.core.domain.launcher
 
+import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 
@@ -8,6 +9,7 @@ data class LauncherShellState(
     val homeRoleStatus: HomeRoleStatus = HomeRoleStatus.UNKNOWN,
     val destination: ShellDestination = ShellDestination.HOME,
     val homeLayout: HomeLayout = HomeLayoutDefaults.standard(),
+    val installedApps: List<InstalledApp> = emptyList(),
 ) {
     val shouldShowDefaultHomePrompt: Boolean =
         firstRunStatus != FirstRunStatus.COMPLETE && homeRoleStatus != HomeRoleStatus.DEFAULT_HOME

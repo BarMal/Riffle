@@ -22,6 +22,10 @@ import com.riffle.core.domain.launcher.FirstRunStatus
 import com.riffle.core.domain.launcher.HomeRoleStatus
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.ShellDestination
+import com.riffle.core.domain.launcher.apps.AppActivityName
+import com.riffle.core.domain.launcher.apps.AppIdentity
+import com.riffle.core.domain.launcher.apps.AppPackageName
+import com.riffle.core.domain.launcher.apps.InstalledApp
 
 @Composable
 fun LauncherShell(
@@ -95,6 +99,7 @@ private fun LauncherDestination(
 
         ShellDestination.APP_DRAWER ->
             AppDrawer(
+                apps = state.installedApps,
                 onAction = onAction,
             )
 
@@ -136,7 +141,28 @@ private fun AppDrawerPreview() {
             LauncherShellState(
                 firstRunStatus = FirstRunStatus.COMPLETE,
                 destination = ShellDestination.APP_DRAWER,
+                installedApps = samplePreviewApps(),
             ),
         onAction = {},
     )
 }
+
+private fun samplePreviewApps(): List<InstalledApp> =
+    listOf(
+        previewApp(label = "Camera", packageName = "com.android.camera"),
+        previewApp(label = "Calendar", packageName = "com.android.calendar"),
+        previewApp(label = "Maps", packageName = "com.google.android.apps.maps"),
+    )
+
+private fun previewApp(
+    label: String,
+    packageName: String,
+): InstalledApp =
+    InstalledApp(
+        identity =
+            AppIdentity(
+                packageName = AppPackageName(packageName),
+                activityName = AppActivityName(".MainActivity"),
+            ),
+        label = label,
+    )
