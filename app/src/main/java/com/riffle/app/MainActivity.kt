@@ -123,6 +123,7 @@ class MainActivity : ComponentActivity() {
         when (action) {
             is LauncherShellAction.AddAppToDock,
             is LauncherShellAction.RemoveDockShortcut,
+            is LauncherShellAction.MoveDockShortcut,
             -> {
                 shellViewModel.onDockEdited(action)
                 true

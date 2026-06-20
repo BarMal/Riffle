@@ -74,6 +74,75 @@ class DockEngineTest {
         assertEquals(DockEditRejectionReason.ITEM_NOT_FOUND, rejected.reason)
     }
 
+    @Test
+    fun movesDockItemLeft() {
+        val phone = appShortcut(id = "phone")
+        val camera = appShortcut(id = "camera")
+        val layout = layoutWithDockItems(phone, camera)
+
+        val result =
+            engine.moveDockItem(
+                layout = layout,
+                itemId = camera.id,
+                direction = DockItemMoveDirection.LEFT,
+            )
+
+        val updated = assertIs<DockEditResult.Updated>(result)
+        assertEquals(listOf(camera.id, phone.id), updated.layout.dock.items.map { item -> item.id })
+        assertEquals(listOf(phone.id, camera.id), layout.dock.items.map { item -> item.id })
+    }
+
+    @Test
+    fun movesDockItemRight() {
+        val phone = appShortcut(id = "phone")
+        val camera = appShortcut(id = "camera")
+        val layout = layoutWithDockItems(phone, camera)
+
+        val result =
+            engine.moveDockItem(
+                layout = layout,
+                itemId = phone.id,
+                direction = DockItemMoveDirection.RIGHT,
+            )
+
+        val updated = assertIs<DockEditResult.Updated>(result)
+        assertEquals(listOf(camera.id, phone.id), updated.layout.dock.items.map { item -> item.id })
+    }
+
+    @Test
+    fun rejectsDockItemMoveOutsideBounds() {
+        val phone = appShortcut(id = "phone")
+        val layout = layoutWithDockItems(phone)
+
+        val result =
+            engine.moveDockItem(
+                layout = layout,
+                itemId = phone.id,
+                direction = DockItemMoveDirection.LEFT,
+            )
+
+        val rejected = assertIs<DockEditResult.Rejected>(result)
+        assertEquals(DockEditRejectionReason.INDEX_OUT_OF_BOUNDS, rejected.reason)
+    }
+
+    @Test
+    fun rejectsMovingMissingDockItem() {
+        val result =
+            engine.moveDockItem(
+                layout = HomeLayoutDefaults.standard(),
+                itemId = LauncherItemId("missing"),
+                direction = DockItemMoveDirection.RIGHT,
+            )
+
+        val rejected = assertIs<DockEditResult.Rejected>(result)
+        assertEquals(DockEditRejectionReason.ITEM_NOT_FOUND, rejected.reason)
+    }
+
+    private fun layoutWithDockItems(vararg items: AppShortcutItem): HomeLayout =
+        HomeLayoutDefaults.standard().copy(
+            dock = DockModel(capacity = 5, items = items.toList()),
+        )
+
     private fun app(label: String): InstalledApp =
         InstalledApp(
             identity =

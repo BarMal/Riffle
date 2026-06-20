@@ -11,6 +11,7 @@ import com.riffle.core.domain.launcher.apps.AppVisibility
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.apps.InstalledAppRepository
 import com.riffle.core.domain.launcher.home.AppShortcutItem
+import com.riffle.core.domain.launcher.home.DockItemMoveDirection
 import com.riffle.core.domain.launcher.home.DockModel
 import com.riffle.core.domain.launcher.home.GridCell
 import com.riffle.core.domain.launcher.home.GridPlacement
@@ -458,6 +459,83 @@ class LauncherShellViewModelTest {
     }
 
     @Test
+    fun movesDockShortcutLeftAndSavesLayout() {
+        val phone = app(label = "Phone")
+        val camera = app(label = "Camera")
+        val repository = FakeHomeLayoutRepository()
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                installedAppRepository = FakeInstalledAppRepository(apps = listOf(phone, camera)),
+                homeLayoutRepository = repository,
+            )
+        viewModel.onDockEdited(LauncherShellAction.AddAppToDock(phone))
+        viewModel.onDockEdited(LauncherShellAction.AddAppToDock(camera))
+        val cameraShortcut = viewModel.state.value.homeLayout.dock.items[1] as AppShortcutItem
+
+        viewModel.onDockEdited(
+            LauncherShellAction.MoveDockShortcut(
+                itemId = cameraShortcut.id,
+                direction = DockItemMoveDirection.LEFT,
+            ),
+        )
+
+        assertEquals(listOf("Camera", "Phone"), viewModel.state.value.homeLayout.dock.labels)
+        assertEquals(viewModel.state.value.homeLayout, repository.savedLayout)
+    }
+
+    @Test
+    fun movesDockShortcutRightAndSavesLayout() {
+        val phone = app(label = "Phone")
+        val camera = app(label = "Camera")
+        val repository = FakeHomeLayoutRepository()
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                installedAppRepository = FakeInstalledAppRepository(apps = listOf(phone, camera)),
+                homeLayoutRepository = repository,
+            )
+        viewModel.onDockEdited(LauncherShellAction.AddAppToDock(phone))
+        viewModel.onDockEdited(LauncherShellAction.AddAppToDock(camera))
+        val phoneShortcut = viewModel.state.value.homeLayout.dock.items[0] as AppShortcutItem
+
+        viewModel.onDockEdited(
+            LauncherShellAction.MoveDockShortcut(
+                itemId = phoneShortcut.id,
+                direction = DockItemMoveDirection.RIGHT,
+            ),
+        )
+
+        assertEquals(listOf("Camera", "Phone"), viewModel.state.value.homeLayout.dock.labels)
+        assertEquals(viewModel.state.value.homeLayout, repository.savedLayout)
+    }
+
+    @Test
+    fun ignoresDockShortcutMoveOutsideBounds() {
+        val phone = app(label = "Phone")
+        val repository = FakeHomeLayoutRepository()
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                installedAppRepository = FakeInstalledAppRepository(apps = listOf(phone)),
+                homeLayoutRepository = repository,
+            )
+        viewModel.onDockEdited(LauncherShellAction.AddAppToDock(phone))
+        val layoutBeforeMove = viewModel.state.value.homeLayout
+        val phoneShortcut = layoutBeforeMove.dock.items.single()
+
+        viewModel.onDockEdited(
+            LauncherShellAction.MoveDockShortcut(
+                itemId = phoneShortcut.id,
+                direction = DockItemMoveDirection.LEFT,
+            ),
+        )
+
+        assertEquals(layoutBeforeMove, viewModel.state.value.homeLayout)
+        assertEquals(layoutBeforeMove, repository.savedLayout)
+    }
+
+    @Test
     fun removesHomeShortcutAndSavesLayout() {
         val camera = app(label = "Camera")
         val repository = FakeHomeLayoutRepository()
@@ -585,4 +663,7 @@ class LauncherShellViewModelTest {
 
     private val HomeLayout.pageIds: List<LauncherPageId>
         get() = pages.map { page -> page.id }
+
+    private val DockModel.labels: List<String>
+        get() = items.filterIsInstance<AppShortcutItem>().map { item -> item.label }
 }

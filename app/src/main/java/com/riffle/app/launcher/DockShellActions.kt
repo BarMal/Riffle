@@ -16,5 +16,12 @@ fun DockEngine.applyEdit(
         is LauncherShellAction.RemoveDockShortcut ->
             removeDockItem(layout = layout, itemId = action.itemId)
 
+        is LauncherShellAction.MoveDockShortcut ->
+            moveDockItem(
+                layout = layout,
+                itemId = action.itemId,
+                direction = action.direction,
+            )
+
         else -> DockEditResult.Rejected(DockEditRejectionReason.ITEM_NOT_FOUND)
     }

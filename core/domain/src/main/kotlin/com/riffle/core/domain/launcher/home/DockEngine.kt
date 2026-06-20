@@ -47,6 +47,41 @@ class DockEngine {
                 )
         }
 
+    fun moveDockItem(
+        layout: HomeLayout,
+        itemId: LauncherItemId,
+        direction: DockItemMoveDirection,
+    ): DockEditResult =
+        layout.dock.items.indexOfFirst { item -> item.id == itemId }
+            .takeIf { index -> index >= 0 }
+            ?.let { currentIndex ->
+                currentIndex + direction.indexDelta
+            }
+            ?.takeIf { targetIndex -> targetIndex in layout.dock.items.indices }
+            ?.let { targetIndex ->
+                DockEditResult.Updated(
+                    layout.copy(
+                        dock =
+                            layout.dock.copy(
+                                items =
+                                    layout.dock.items.moveItem(
+                                        itemId = itemId,
+                                        targetIndex = targetIndex,
+                                    ),
+                            ),
+                    ),
+                )
+            }
+            ?: DockEditResult.Rejected(
+                when {
+                    layout.dock.items.any { item -> item.id == itemId } ->
+                        DockEditRejectionReason.INDEX_OUT_OF_BOUNDS
+
+                    else ->
+                        DockEditRejectionReason.ITEM_NOT_FOUND
+                },
+            )
+
     private fun appShortcutFor(
         app: InstalledApp,
         layout: HomeLayout,
@@ -64,6 +99,16 @@ class DockEngine {
 
     private val AppIdentity.shortcutKey: String
         get() = "${profile.id.value}:${packageName.value}/${activityName.value}"
+
+    private fun List<LauncherItem>.moveItem(
+        itemId: LauncherItemId,
+        targetIndex: Int,
+    ): List<LauncherItem> =
+        first { item -> item.id == itemId }.let { movingItem ->
+            filterNot { item -> item.id == itemId }.toMutableList()
+                .apply { add(targetIndex, movingItem) }
+                .toList()
+        }
 }
 
 sealed interface DockEditResult {
@@ -76,4 +121,12 @@ enum class DockEditRejectionReason {
     NO_AVAILABLE_SLOT,
     DUPLICATE_APP,
     ITEM_NOT_FOUND,
+    INDEX_OUT_OF_BOUNDS,
+}
+
+enum class DockItemMoveDirection(
+    val indexDelta: Int,
+) {
+    LEFT(indexDelta = -1),
+    RIGHT(indexDelta = 1),
 }
