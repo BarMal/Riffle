@@ -11,10 +11,13 @@ import com.riffle.core.domain.launcher.apps.InstalledAppRepository
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
+import com.riffle.core.domain.launcher.home.HomePageEditRejectionReason
 import com.riffle.core.domain.launcher.home.HomePageEditResult
 import com.riffle.core.domain.launcher.home.HomePageEngine
 import com.riffle.core.domain.launcher.home.HomeShortcutEngine
 import com.riffle.core.domain.launcher.home.HomeShortcutResult
+import com.riffle.core.domain.launcher.home.LauncherPage
+import com.riffle.core.domain.launcher.home.LauncherPageId
 import com.riffle.core.domain.launcher.home.PlacementRejectionReason
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -86,33 +89,19 @@ class LauncherShellViewModel(
             }
     }
 
-    fun onEnterHomeEditMode() {
-        mutableState.value =
-            when (
-                val result =
-                    homePageEngine.enterPageEditMode(
-                        layout = mutableState.value.homeLayout,
-                        pageId = mutableState.value.homeLayout.selectedPageId,
-                    )
-            ) {
-                is HomePageEditResult.Updated -> mutableState.value.withHomeLayout(result.layout, homeLayoutRepository)
-                is HomePageEditResult.Rejected -> mutableState.value
-            }
-    }
-
-    fun onExitHomeEditMode() {
-        mutableState.value =
-            when (val result = homePageEngine.exitEditMode(layout = mutableState.value.homeLayout)) {
-                is HomePageEditResult.Updated -> mutableState.value.withHomeLayout(result.layout, homeLayoutRepository)
-                is HomePageEditResult.Rejected -> mutableState.value
-            }
-    }
-
     fun onHomeShortcutEdited(action: LauncherShellAction) {
         mutableState.value =
             when (val result = shortcutEngine.applyEdit(action = action, layout = mutableState.value.homeLayout)) {
                 is HomeShortcutResult.Updated -> mutableState.value.withHomeLayout(result.layout, homeLayoutRepository)
                 is HomeShortcutResult.Rejected -> mutableState.value
+            }
+    }
+
+    fun onHomePageEdited(action: LauncherShellAction) {
+        mutableState.value =
+            when (val result = homePageEngine.applyEdit(action = action, layout = mutableState.value.homeLayout)) {
+                is HomePageEditResult.Updated -> mutableState.value.withHomeLayout(result.layout, homeLayoutRepository)
+                is HomePageEditResult.Rejected -> mutableState.value
             }
     }
 
@@ -184,3 +173,61 @@ private fun HomeShortcutEngine.applyEdit(
 
         else -> HomeShortcutResult.Rejected(PlacementRejectionReason.ITEM_NOT_FOUND)
     }
+
+private fun HomePageEngine.applyEdit(
+    action: LauncherShellAction,
+    layout: HomeLayout,
+): HomePageEditResult =
+    when (action) {
+        LauncherShellAction.EnterHomeEditMode ->
+            enterPageEditMode(
+                layout = layout,
+                pageId = layout.selectedPageId,
+            )
+
+        LauncherShellAction.ExitHomeEditMode ->
+            exitEditMode(layout = layout)
+
+        LauncherShellAction.AddHomePage ->
+            layout.newHomePage().let { page ->
+                when (val result = addPage(layout = layout, page = page)) {
+                    is HomePageEditResult.Updated -> selectPage(layout = result.layout, pageId = page.id)
+                    is HomePageEditResult.Rejected -> result
+                }
+            }
+
+        LauncherShellAction.SelectPreviousHomePage ->
+            selectPageAtOffset(layout = layout, offset = -1)
+
+        LauncherShellAction.SelectNextHomePage ->
+            selectPageAtOffset(layout = layout, offset = 1)
+
+        LauncherShellAction.DeleteSelectedHomePage ->
+            deletePage(
+                layout = layout,
+                pageId = layout.selectedPageId,
+            )
+
+        else -> HomePageEditResult.Rejected(HomePageEditRejectionReason.PAGE_NOT_FOUND)
+    }
+
+private fun HomePageEngine.selectPageAtOffset(
+    layout: HomeLayout,
+    offset: Int,
+): HomePageEditResult =
+    layout.pages.getOrNull(layout.selectedPageIndex + offset)
+        ?.let { page -> selectPage(layout = layout, pageId = page.id) }
+        ?: HomePageEditResult.Rejected(
+            HomePageEditRejectionReason.INDEX_OUT_OF_BOUNDS,
+        )
+
+private fun HomeLayout.newHomePage(): LauncherPage =
+    LauncherPage(
+        id = nextHomePageId(),
+        grid = settings.grid.dimensions,
+    )
+
+private fun HomeLayout.nextHomePageId(): LauncherPageId =
+    generateSequence(2) { pageNumber -> pageNumber + 1 }
+        .map { pageNumber -> LauncherPageId("home-$pageNumber") }
+        .first { candidate -> pages.none { page -> page.id == candidate } }

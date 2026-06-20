@@ -22,6 +22,14 @@ sealed interface LauncherShellAction {
 
     data object ExitHomeEditMode : LauncherShellAction
 
+    data object AddHomePage : LauncherShellAction
+
+    data object SelectPreviousHomePage : LauncherShellAction
+
+    data object SelectNextHomePage : LauncherShellAction
+
+    data object DeleteSelectedHomePage : LauncherShellAction
+
     data class LaunchApp(val identity: AppIdentity) : LauncherShellAction
 
     data class AddAppToHome(val app: InstalledApp) : LauncherShellAction
