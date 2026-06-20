@@ -31,6 +31,22 @@ class GridPlacementEngine {
                 )
             } ?: PlaceLauncherItemResult.Rejected(PlacementRejectionReason.ITEM_NOT_FOUND)
 
+    fun resizeItem(
+        page: LauncherPage,
+        itemId: LauncherItemId,
+        span: GridSpan,
+    ): PlaceLauncherItemResult =
+        page.items.firstOrNull { item -> item.id == itemId }
+            ?.let { item ->
+                item.placement?.let { placement ->
+                    moveItem(
+                        page = page,
+                        itemId = itemId,
+                        placement = placement.copy(span = span),
+                    )
+                } ?: PlaceLauncherItemResult.Rejected(PlacementRejectionReason.MISSING_PLACEMENT)
+            } ?: PlaceLauncherItemResult.Rejected(PlacementRejectionReason.ITEM_NOT_FOUND)
+
     fun removeItem(
         page: LauncherPage,
         itemId: LauncherItemId,
