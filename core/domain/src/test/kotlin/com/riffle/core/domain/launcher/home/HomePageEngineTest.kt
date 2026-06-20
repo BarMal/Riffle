@@ -144,6 +144,52 @@ class HomePageEngineTest {
         assertEquals(HomePageEditRejectionReason.INDEX_OUT_OF_BOUNDS, rejected.reason)
     }
 
+    @Test
+    fun entersPageEditModeForExistingPage() {
+        val layoutWithPages =
+            layout.copy(
+                pages = layout.pages + page(id = "widgets"),
+                selectedPageId = pageId("home"),
+            )
+
+        val result = engine.enterPageEditMode(layout = layoutWithPages, pageId = pageId("widgets"))
+
+        val updated = assertIs<HomePageEditResult.Updated>(result)
+        assertEquals(pageId("widgets"), updated.layout.selectedPageId)
+        assertEquals(HomeEditMode.EditingPage(pageId = pageId("widgets")), updated.layout.editMode)
+    }
+
+    @Test
+    fun rejectsPageEditModeForMissingPage() {
+        val result = engine.enterPageEditMode(layout = layout, pageId = pageId("missing"))
+
+        val rejected = assertIs<HomePageEditResult.Rejected>(result)
+        assertEquals(HomePageEditRejectionReason.PAGE_NOT_FOUND, rejected.reason)
+    }
+
+    @Test
+    fun entersPageOverviewWithoutChangingSelection() {
+        val result = engine.enterPageOverview(layout = layout)
+
+        val updated = assertIs<HomePageEditResult.Updated>(result)
+        assertEquals(pageId("home"), updated.layout.selectedPageId)
+        assertEquals(HomeEditMode.ManagingPages, updated.layout.editMode)
+    }
+
+    @Test
+    fun exitsEditModeWithoutChangingSelection() {
+        val editingLayout =
+            layout.copy(
+                editMode = HomeEditMode.EditingPage(pageId = pageId("home")),
+            )
+
+        val result = engine.exitEditMode(layout = editingLayout)
+
+        val updated = assertIs<HomePageEditResult.Updated>(result)
+        assertEquals(pageId("home"), updated.layout.selectedPageId)
+        assertEquals(HomeEditMode.Browsing, updated.layout.editMode)
+    }
+
     private fun page(id: String): LauncherPage =
         LauncherPage(
             id = pageId(id),
