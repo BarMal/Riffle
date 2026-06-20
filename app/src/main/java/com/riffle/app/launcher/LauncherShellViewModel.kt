@@ -8,6 +8,9 @@ import com.riffle.core.domain.launcher.ShellNavigationAction
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.apps.InstalledAppCatalog
 import com.riffle.core.domain.launcher.apps.InstalledAppRepository
+import com.riffle.core.domain.launcher.home.HomeLayout
+import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
+import com.riffle.core.domain.launcher.home.HomeLayoutRepository
 import com.riffle.core.domain.launcher.home.HomeShortcutEngine
 import com.riffle.core.domain.launcher.home.HomeShortcutResult
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,6 +23,7 @@ class LauncherShellViewModel(
     private val reducer: LauncherShellStateReducer = LauncherShellStateReducer(),
     private val appCatalog: InstalledAppCatalog = InstalledAppCatalog(),
     private val shortcutEngine: HomeShortcutEngine = HomeShortcutEngine(),
+    private val homeLayoutRepository: HomeLayoutRepository = NoopHomeLayoutRepository,
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(createInitialState().withInstalledApps())
     val state: StateFlow<LauncherShellState> = mutableState.asStateFlow()
@@ -64,18 +68,23 @@ class LauncherShellViewModel(
     fun onAddAppToHome(app: InstalledApp) {
         mutableState.value =
             when (val result = shortcutEngine.addAppToSelectedPage(mutableState.value.homeLayout, app)) {
-                is HomeShortcutResult.Updated -> mutableState.value.copy(homeLayout = result.layout)
+                is HomeShortcutResult.Updated ->
+                    mutableState.value.copy(homeLayout = result.layout)
+                        .also { state -> homeLayoutRepository.saveHomeLayout(state.homeLayout) }
 
                 is HomeShortcutResult.Rejected -> mutableState.value
             }
     }
 
     private fun createInitialState(): LauncherShellState =
-        if (firstRunRepository.isFirstRunComplete()) {
-            reducer.firstRunCompleted(LauncherShellState())
-        } else {
-            LauncherShellState()
-        }
+        LauncherShellState(homeLayout = homeLayoutRepository.loadHomeLayout() ?: HomeLayoutDefaults.standard())
+            .let { initialState ->
+                if (firstRunRepository.isFirstRunComplete()) {
+                    reducer.firstRunCompleted(initialState)
+                } else {
+                    initialState
+                }
+            }
 
     private fun LauncherShellState.withInstalledApps(): LauncherShellState =
         appCatalog.visibleApps(installedAppRepository.installedApps()).let { visibleApps ->
@@ -89,5 +98,11 @@ class LauncherShellViewModel(
         if (state.shouldShowEmptyHome) {
             firstRunRepository.setFirstRunComplete()
         }
+    }
+
+    private object NoopHomeLayoutRepository : HomeLayoutRepository {
+        override fun loadHomeLayout(): HomeLayout? = null
+
+        override fun saveHomeLayout(layout: HomeLayout) = Unit
     }
 }

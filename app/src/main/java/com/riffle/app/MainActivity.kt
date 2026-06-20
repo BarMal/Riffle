@@ -11,6 +11,7 @@ import com.riffle.app.launcher.LauncherShellAction
 import com.riffle.app.launcher.LauncherShellViewModel
 import com.riffle.app.launcher.LauncherShellViewModelFactory
 import com.riffle.app.launcher.SharedPreferencesFirstRunRepository
+import com.riffle.app.launcher.SharedPreferencesHomeLayoutRepository
 import com.riffle.app.launcher.apps.AndroidAppLauncher
 import com.riffle.app.launcher.apps.PackageManagerInstalledAppRepository
 import com.riffle.core.domain.launcher.ShellNavigationAction
@@ -20,6 +21,7 @@ class MainActivity : ComponentActivity() {
         LauncherShellViewModelFactory(
             firstRunRepository = SharedPreferencesFirstRunRepository(this),
             installedAppRepository = PackageManagerInstalledAppRepository(packageManager),
+            homeLayoutRepository = SharedPreferencesHomeLayoutRepository(this),
         )
     }
     private val homeRoleGateway by lazy { AndroidHomeRoleGateway(this) }
