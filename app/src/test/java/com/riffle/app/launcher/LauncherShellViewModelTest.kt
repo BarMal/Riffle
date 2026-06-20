@@ -11,6 +11,7 @@ import com.riffle.core.domain.launcher.apps.AppVisibility
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.apps.InstalledAppRepository
 import com.riffle.core.domain.launcher.home.AppShortcutItem
+import com.riffle.core.domain.launcher.home.DockModel
 import com.riffle.core.domain.launcher.home.GridCell
 import com.riffle.core.domain.launcher.home.GridPlacement
 import com.riffle.core.domain.launcher.home.HomeEditMode
@@ -376,6 +377,84 @@ class LauncherShellViewModelTest {
 
         assertEquals(layoutBeforeDeletion, viewModel.state.value.homeLayout)
         assertEquals(layoutBeforeDeletion, repository.savedLayout)
+    }
+
+    @Test
+    fun addsAppShortcutToDockAndSavesLayout() {
+        val phone = app(label = "Phone")
+        val repository = FakeHomeLayoutRepository()
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                installedAppRepository = FakeInstalledAppRepository(apps = listOf(phone)),
+                homeLayoutRepository = repository,
+            )
+
+        viewModel.onDockEdited(LauncherShellAction.AddAppToDock(phone))
+
+        val shortcut = viewModel.state.value.homeLayout.dock.items.single() as AppShortcutItem
+        assertEquals(phone.identity, shortcut.appIdentity)
+        assertEquals("Phone", shortcut.label)
+        assertEquals(null, shortcut.placement)
+        assertEquals(viewModel.state.value.homeLayout, repository.savedLayout)
+    }
+
+    @Test
+    fun ignoresDuplicateDockShortcut() {
+        val phone = app(label = "Phone")
+        val repository = FakeHomeLayoutRepository()
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                installedAppRepository = FakeInstalledAppRepository(apps = listOf(phone)),
+                homeLayoutRepository = repository,
+            )
+        viewModel.onDockEdited(LauncherShellAction.AddAppToDock(phone))
+        val layoutBeforeDuplicate = viewModel.state.value.homeLayout
+
+        viewModel.onDockEdited(LauncherShellAction.AddAppToDock(phone))
+
+        assertEquals(layoutBeforeDuplicate, viewModel.state.value.homeLayout)
+        assertEquals(layoutBeforeDuplicate, repository.savedLayout)
+    }
+
+    @Test
+    fun ignoresDockShortcutWhenDockIsFull() {
+        val phone = app(label = "Phone")
+        val repository =
+            FakeHomeLayoutRepository(
+                savedLayout = HomeLayoutDefaults.standard().copy(dock = DockModel(capacity = 0)),
+            )
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                homeLayoutRepository = repository,
+            )
+        val layoutBeforeAdd = viewModel.state.value.homeLayout
+
+        viewModel.onDockEdited(LauncherShellAction.AddAppToDock(phone))
+
+        assertEquals(layoutBeforeAdd, viewModel.state.value.homeLayout)
+        assertEquals(layoutBeforeAdd, repository.savedLayout)
+    }
+
+    @Test
+    fun removesDockShortcutAndSavesLayout() {
+        val phone = app(label = "Phone")
+        val repository = FakeHomeLayoutRepository()
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                installedAppRepository = FakeInstalledAppRepository(apps = listOf(phone)),
+                homeLayoutRepository = repository,
+            )
+        viewModel.onDockEdited(LauncherShellAction.AddAppToDock(phone))
+        val shortcut = viewModel.state.value.homeLayout.dock.items.single() as AppShortcutItem
+
+        viewModel.onDockEdited(LauncherShellAction.RemoveDockShortcut(shortcut.id))
+
+        assertEquals(emptyList<AppShortcutItem>(), viewModel.state.value.homeLayout.dock.items)
+        assertEquals(viewModel.state.value.homeLayout, repository.savedLayout)
     }
 
     @Test
