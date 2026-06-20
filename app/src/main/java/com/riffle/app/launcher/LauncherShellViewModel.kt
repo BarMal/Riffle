@@ -15,7 +15,7 @@ import com.riffle.core.domain.launcher.home.HomePageEditResult
 import com.riffle.core.domain.launcher.home.HomePageEngine
 import com.riffle.core.domain.launcher.home.HomeShortcutEngine
 import com.riffle.core.domain.launcher.home.HomeShortcutResult
-import com.riffle.core.domain.launcher.home.LauncherItemId
+import com.riffle.core.domain.launcher.home.PlacementRejectionReason
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -108,9 +108,9 @@ class LauncherShellViewModel(
             }
     }
 
-    fun onRemoveHomeShortcut(itemId: LauncherItemId) {
+    fun onHomeShortcutEdited(action: LauncherShellAction) {
         mutableState.value =
-            when (val result = shortcutEngine.removeShortcutFromSelectedPage(mutableState.value.homeLayout, itemId)) {
+            when (val result = shortcutEngine.applyEdit(action = action, layout = mutableState.value.homeLayout)) {
                 is HomeShortcutResult.Updated -> mutableState.value.withHomeLayout(result.layout, homeLayoutRepository)
                 is HomeShortcutResult.Rejected -> mutableState.value
             }
@@ -163,3 +163,24 @@ private fun persistCompletedFirstRun(
         firstRunRepository.setFirstRunComplete()
     }
 }
+
+private fun HomeShortcutEngine.applyEdit(
+    action: LauncherShellAction,
+    layout: HomeLayout,
+): HomeShortcutResult =
+    when (action) {
+        is LauncherShellAction.RemoveHomeShortcut ->
+            removeShortcutFromSelectedPage(
+                layout = layout,
+                itemId = action.itemId,
+            )
+
+        is LauncherShellAction.MoveHomeShortcut ->
+            moveShortcutOnSelectedPage(
+                layout = layout,
+                itemId = action.itemId,
+                direction = action.direction,
+            )
+
+        else -> HomeShortcutResult.Rejected(PlacementRejectionReason.ITEM_NOT_FOUND)
+    }
