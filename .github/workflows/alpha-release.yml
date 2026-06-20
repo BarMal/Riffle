@@ -61,6 +61,12 @@ jobs:
           mkdir -p "$RUNNER_TEMP/release"
           cp app/build/outputs/apk/release/*.apk "$RUNNER_TEMP/release/riffle-alpha.apk"
           cp app/build/outputs/bundle/release/*.aab "$RUNNER_TEMP/release/riffle-alpha.aab"
+          pwsh .github/scripts/write-release-notes.ps1 \
+            -ReleaseChannel alpha \
+            -CommitSha "$GITHUB_SHA" \
+            -ApkPath "$RUNNER_TEMP/release/riffle-alpha.apk" \
+            -AabPath "$RUNNER_TEMP/release/riffle-alpha.aab" \
+            -NotesPath "$RUNNER_TEMP/release-notes.md"
 
           gh release create "$RELEASE_TAG" \
             "$RUNNER_TEMP/release/riffle-alpha.apk" \
@@ -68,5 +74,5 @@ jobs:
             --repo "$GITHUB_REPOSITORY" \
             --target "$GITHUB_SHA" \
             --title "Riffle Alpha ${{ github.run_number }}" \
-            --notes "Signed alpha build from commit $GITHUB_SHA." \
+            --notes-file "$RUNNER_TEMP/release-notes.md" \
             --prerelease
