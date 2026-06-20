@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
@@ -25,9 +26,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
+import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.DockModel
-import com.riffle.core.domain.launcher.home.GridDimensions
+import com.riffle.core.domain.launcher.home.GridCell
 import com.riffle.core.domain.launcher.home.HomeLayout
+import com.riffle.core.domain.launcher.home.LauncherPage
 
 @Composable
 fun StandardHome(
@@ -44,7 +47,7 @@ fun StandardHome(
     ) {
         HomeToolbar(onAction = onAction)
         WorkspaceGrid(
-            grid = layout.selectedPage.grid,
+            page = layout.selectedPage,
             modifier =
                 Modifier
                     .weight(1f)
@@ -84,31 +87,74 @@ private fun HomeToolbar(onAction: (LauncherShellAction) -> Unit) {
 
 @Composable
 private fun WorkspaceGrid(
-    grid: GridDimensions,
+    page: LauncherPage,
     modifier: Modifier = Modifier,
 ) {
     Column(
         modifier = modifier,
         verticalArrangement = Arrangement.Center,
     ) {
+        val grid = page.grid
         repeat(grid.rows) {
+            val row = it
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                repeat(grid.columns) {
+                repeat(grid.columns) { column ->
+                    val shortcut = page.shortcutAt(cell = GridCell(column = column, row = row))
+
                     Box(
                         modifier =
                             Modifier
                                 .weight(1f)
                                 .aspectRatio(1f),
-                    )
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        if (shortcut != null) {
+                            HomeShortcut(shortcut = shortcut)
+                        }
+                    }
                 }
             }
             Spacer(modifier = Modifier.height(12.dp))
         }
     }
 }
+
+@Composable
+private fun HomeShortcut(shortcut: AppShortcutItem) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Box(
+            modifier =
+                Modifier
+                    .size(44.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(MaterialTheme.colorScheme.primaryContainer),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                text = shortcut.label.firstOrNull()?.uppercase().orEmpty(),
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onPrimaryContainer,
+            )
+        }
+        Text(
+            modifier = Modifier.widthIn(max = 72.dp),
+            text = shortcut.label,
+            style = MaterialTheme.typography.labelSmall,
+            maxLines = 1,
+        )
+    }
+}
+
+private fun LauncherPage.shortcutAt(cell: GridCell): AppShortcutItem? =
+    items.filterIsInstance<AppShortcutItem>()
+        .firstOrNull { item -> item.placement?.cell == cell }
 
 @Composable
 private fun PageIndicator(

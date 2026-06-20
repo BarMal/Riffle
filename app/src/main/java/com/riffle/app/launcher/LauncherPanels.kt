@@ -151,6 +151,9 @@ private fun AppDrawerRow(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+        TextButton(onClick = { onAction(LauncherShellAction.AddAppToHome(app)) }) {
+            Text(text = "Add")
+        }
     }
 }
 

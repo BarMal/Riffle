@@ -391,6 +391,7 @@ class GridPlacementEngineTest {
                     packageName = AppPackageName("com.riffle.$id"),
                     activityName = AppActivityName(".MainActivity"),
                 ),
+            label = id,
             placement = placement,
         )
 }
