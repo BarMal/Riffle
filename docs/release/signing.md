@@ -56,3 +56,4 @@ Use the manual release workflows from the Actions tab:
 - `Stable Release` publishes a normal GitHub release with `riffle-stable.apk` and `riffle-stable.aab`.
 
 Both workflows also keep the raw build outputs as GitHub Actions artifacts for traceability.
+Release notes include APK and AAB sizes so growth is visible before a hard budget is enforced.
