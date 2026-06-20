@@ -39,6 +39,48 @@ class HomeShortcutEngine(
                 )
         }
 
+    fun moveShortcutOnSelectedPage(
+        layout: HomeLayout,
+        itemId: LauncherItemId,
+        direction: HomeShortcutMoveDirection,
+    ): HomeShortcutResult =
+        layout.selectedPage.items.firstOrNull { item -> item.id == itemId }
+            ?.placement
+            ?.let { placement ->
+                placement.copy(
+                    cell =
+                        GridCell(
+                            column = placement.cell.column + direction.columnDelta,
+                            row = placement.cell.row + direction.rowDelta,
+                        ),
+                )
+            }
+            ?.let { placement ->
+                when (
+                    val result =
+                        gridPlacementEngine.moveItem(
+                            page = layout.selectedPage,
+                            itemId = itemId,
+                            placement = placement,
+                        )
+                ) {
+                    is PlaceLauncherItemResult.Placed ->
+                        HomeShortcutResult.Updated(layout.withUpdatedSelectedPage(result.page))
+
+                    is PlaceLauncherItemResult.Rejected ->
+                        HomeShortcutResult.Rejected(result.reason)
+                }
+            }
+            ?: HomeShortcutResult.Rejected(
+                when {
+                    layout.selectedPage.items.any { item -> item.id == itemId } ->
+                        PlacementRejectionReason.MISSING_PLACEMENT
+
+                    else ->
+                        PlacementRejectionReason.ITEM_NOT_FOUND
+                },
+            )
+
     private fun appShortcutFor(
         app: InstalledApp,
         layout: HomeLayout,
@@ -74,4 +116,14 @@ sealed interface HomeShortcutResult {
     data class Updated(val layout: HomeLayout) : HomeShortcutResult
 
     data class Rejected(val reason: PlacementRejectionReason) : HomeShortcutResult
+}
+
+enum class HomeShortcutMoveDirection(
+    val columnDelta: Int,
+    val rowDelta: Int,
+) {
+    UP(columnDelta = 0, rowDelta = -1),
+    DOWN(columnDelta = 0, rowDelta = 1),
+    LEFT(columnDelta = -1, rowDelta = 0),
+    RIGHT(columnDelta = 1, rowDelta = 0),
 }

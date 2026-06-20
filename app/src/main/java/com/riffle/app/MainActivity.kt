@@ -74,7 +74,8 @@ class MainActivity : ComponentActivity() {
             LauncherShellAction.ExitHomeEditMode -> shellViewModel.onExitHomeEditMode()
             is LauncherShellAction.LaunchApp -> appLauncher.launch(action.identity)
             is LauncherShellAction.AddAppToHome -> shellViewModel.onAddAppToHome(action.app)
-            is LauncherShellAction.RemoveHomeShortcut -> shellViewModel.onRemoveHomeShortcut(action.itemId)
+            is LauncherShellAction.RemoveHomeShortcut -> shellViewModel.onHomeShortcutEdited(action)
+            is LauncherShellAction.MoveHomeShortcut -> shellViewModel.onHomeShortcutEdited(action)
             is LauncherShellAction.SearchQueryChanged -> shellViewModel.onSearchQueryChanged(action.query)
         }
     }

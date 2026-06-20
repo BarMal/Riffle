@@ -17,6 +17,7 @@ import com.riffle.core.domain.launcher.home.HomeEditMode
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
+import com.riffle.core.domain.launcher.home.HomeShortcutMoveDirection
 import com.riffle.core.domain.launcher.home.LauncherItemId
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -253,7 +254,7 @@ class LauncherShellViewModelTest {
         viewModel.onAddAppToHome(camera)
         val shortcut = viewModel.state.value.homeLayout.selectedPage.items.single() as AppShortcutItem
 
-        viewModel.onRemoveHomeShortcut(shortcut.id)
+        viewModel.onHomeShortcutEdited(LauncherShellAction.RemoveHomeShortcut(shortcut.id))
 
         assertEquals(emptyList<AppShortcutItem>(), viewModel.state.value.homeLayout.selectedPage.items)
         assertEquals(viewModel.state.value.homeLayout, repository.savedLayout)
@@ -268,10 +269,62 @@ class LauncherShellViewModelTest {
                 homeLayoutRepository = repository,
             )
 
-        viewModel.onRemoveHomeShortcut(LauncherItemId("missing"))
+        viewModel.onHomeShortcutEdited(LauncherShellAction.RemoveHomeShortcut(LauncherItemId("missing")))
 
         assertEquals(HomeLayoutDefaults.standard(), viewModel.state.value.homeLayout)
         assertEquals(HomeLayoutDefaults.standard(), repository.savedLayout)
+    }
+
+    @Test
+    fun movesHomeShortcutAndSavesLayout() {
+        val camera = app(label = "Camera")
+        val repository = FakeHomeLayoutRepository()
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                installedAppRepository = FakeInstalledAppRepository(apps = listOf(camera)),
+                homeLayoutRepository = repository,
+            )
+        viewModel.onAddAppToHome(camera)
+        val shortcut = viewModel.state.value.homeLayout.selectedPage.items.single() as AppShortcutItem
+
+        viewModel.onHomeShortcutEdited(
+            LauncherShellAction.MoveHomeShortcut(
+                itemId = shortcut.id,
+                direction = HomeShortcutMoveDirection.RIGHT,
+            ),
+        )
+
+        assertEquals(
+            GridPlacement(cell = GridCell(column = 1, row = 0)),
+            viewModel.state.value.homeLayout.selectedPage.items.single().placement,
+        )
+        assertEquals(viewModel.state.value.homeLayout, repository.savedLayout)
+    }
+
+    @Test
+    fun ignoresHomeShortcutMoveRejectedByGrid() {
+        val camera = app(label = "Camera")
+        val repository = FakeHomeLayoutRepository()
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                installedAppRepository = FakeInstalledAppRepository(apps = listOf(camera)),
+                homeLayoutRepository = repository,
+            )
+        viewModel.onAddAppToHome(camera)
+        val layoutBeforeMove = viewModel.state.value.homeLayout
+        val shortcut = layoutBeforeMove.selectedPage.items.single() as AppShortcutItem
+
+        viewModel.onHomeShortcutEdited(
+            LauncherShellAction.MoveHomeShortcut(
+                itemId = shortcut.id,
+                direction = HomeShortcutMoveDirection.LEFT,
+            ),
+        )
+
+        assertEquals(layoutBeforeMove, viewModel.state.value.homeLayout)
+        assertEquals(layoutBeforeMove, repository.savedLayout)
     }
 
     private class FakeFirstRunRepository(

@@ -35,6 +35,7 @@ import com.riffle.core.domain.launcher.home.DockModel
 import com.riffle.core.domain.launcher.home.GridCell
 import com.riffle.core.domain.launcher.home.HomeEditMode
 import com.riffle.core.domain.launcher.home.HomeLayout
+import com.riffle.core.domain.launcher.home.HomeShortcutMoveDirection
 import com.riffle.core.domain.launcher.home.LauncherPage
 
 @Composable
@@ -166,12 +167,14 @@ private fun HomeShortcut(
     appIconLoader: AppIconLoader,
     onAction: (LauncherShellAction) -> Unit,
 ) {
-    Box {
+    Box(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier =
-                Modifier.clickable(enabled = !isEditing) {
-                    onAction(LauncherShellAction.LaunchApp(shortcut.appIdentity))
-                },
+                Modifier
+                    .align(Alignment.Center)
+                    .clickable(enabled = !isEditing) {
+                        onAction(LauncherShellAction.LaunchApp(shortcut.appIdentity))
+                    },
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
@@ -190,11 +193,86 @@ private fun HomeShortcut(
         }
 
         if (isEditing) {
+            MoveShortcutControls(
+                shortcut = shortcut,
+                onAction = onAction,
+            )
             RemoveShortcutButton(
                 label = shortcut.label,
                 onClick = { onAction(LauncherShellAction.RemoveHomeShortcut(shortcut.id)) },
             )
         }
+    }
+}
+
+@Composable
+private fun BoxScope.MoveShortcutControls(
+    shortcut: AppShortcutItem,
+    onAction: (LauncherShellAction) -> Unit,
+) {
+    fun moveShortcut(direction: HomeShortcutMoveDirection) {
+        onAction(
+            LauncherShellAction.MoveHomeShortcut(
+                itemId = shortcut.id,
+                direction = direction,
+            ),
+        )
+    }
+
+    MoveShortcutButton(
+        label = shortcut.label,
+        direction = HomeShortcutMoveDirection.UP,
+        text = "U",
+        alignment = Alignment.TopCenter,
+        onClick = { moveShortcut(HomeShortcutMoveDirection.UP) },
+    )
+    MoveShortcutButton(
+        label = shortcut.label,
+        direction = HomeShortcutMoveDirection.DOWN,
+        text = "D",
+        alignment = Alignment.BottomCenter,
+        onClick = { moveShortcut(HomeShortcutMoveDirection.DOWN) },
+    )
+    MoveShortcutButton(
+        label = shortcut.label,
+        direction = HomeShortcutMoveDirection.LEFT,
+        text = "L",
+        alignment = Alignment.CenterStart,
+        onClick = { moveShortcut(HomeShortcutMoveDirection.LEFT) },
+    )
+    MoveShortcutButton(
+        label = shortcut.label,
+        direction = HomeShortcutMoveDirection.RIGHT,
+        text = "R",
+        alignment = Alignment.CenterEnd,
+        onClick = { moveShortcut(HomeShortcutMoveDirection.RIGHT) },
+    )
+}
+
+@Composable
+private fun BoxScope.MoveShortcutButton(
+    label: String,
+    direction: HomeShortcutMoveDirection,
+    text: String,
+    alignment: Alignment,
+    onClick: () -> Unit,
+) {
+    Box(
+        modifier =
+            Modifier
+                .align(alignment)
+                .size(20.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.secondaryContainer)
+                .clickable(onClick = onClick)
+                .semantics { contentDescription = "Move $label ${direction.name.lowercase()}" },
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSecondaryContainer,
+        )
     }
 }
 
