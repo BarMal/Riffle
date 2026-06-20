@@ -199,6 +199,102 @@ class GridPlacementEngineTest {
         assertEquals(PlacementRejectionReason.COLLISION, rejected.reason)
     }
 
+    @Test
+    fun resizesItemAtExistingCell() {
+        val item =
+            appItem(
+                id = "calendar",
+                placement = GridPlacement(cell = GridCell(column = 1, row = 1)),
+            )
+        val occupiedPage = page.copy(items = listOf(item))
+        val newSpan = GridSpan(columns = 2, rows = 2)
+
+        val result =
+            engine.resizeItem(
+                page = occupiedPage,
+                itemId = item.id,
+                span = newSpan,
+            )
+
+        val placed = assertIs<PlaceLauncherItemResult.Placed>(result)
+        assertEquals(newSpan, placed.page.items.single().placement?.span)
+        assertEquals(GridCell(column = 1, row = 1), placed.page.items.single().placement?.cell)
+    }
+
+    @Test
+    fun rejectsResizeThatOverflowsGrid() {
+        val item =
+            appItem(
+                id = "calendar",
+                placement = GridPlacement(cell = GridCell(column = 3, row = 4)),
+            )
+        val occupiedPage = page.copy(items = listOf(item))
+
+        val result =
+            engine.resizeItem(
+                page = occupiedPage,
+                itemId = item.id,
+                span = GridSpan(columns = 2, rows = 2),
+            )
+
+        val rejected = assertIs<PlaceLauncherItemResult.Rejected>(result)
+        assertEquals(PlacementRejectionReason.OUT_OF_BOUNDS, rejected.reason)
+    }
+
+    @Test
+    fun rejectsResizeIntoOccupiedCells() {
+        val calendar =
+            appItem(
+                id = "calendar",
+                placement = GridPlacement(cell = GridCell(column = 0, row = 0)),
+            )
+        val camera =
+            appItem(
+                id = "camera",
+                placement = GridPlacement(cell = GridCell(column = 1, row = 1)),
+            )
+        val occupiedPage = page.copy(items = listOf(calendar, camera))
+
+        val result =
+            engine.resizeItem(
+                page = occupiedPage,
+                itemId = calendar.id,
+                span = GridSpan(columns = 2, rows = 2),
+            )
+
+        val rejected = assertIs<PlaceLauncherItemResult.Rejected>(result)
+        assertEquals(PlacementRejectionReason.COLLISION, rejected.reason)
+    }
+
+    @Test
+    fun rejectsResizeWhenItemIsMissing() {
+        val result =
+            engine.resizeItem(
+                page = page,
+                itemId = LauncherItemId("missing"),
+                span = GridSpan(columns = 2, rows = 2),
+            )
+
+        val rejected = assertIs<PlaceLauncherItemResult.Rejected>(result)
+        assertEquals(PlacementRejectionReason.ITEM_NOT_FOUND, rejected.reason)
+    }
+
+    @Test
+    fun rejectsResizeWhenExistingItemHasNoPlacement() {
+        val item = appItem(id = "calendar")
+        val occupiedPage = page.copy(items = listOf(item))
+
+        val result =
+            engine.resizeItem(
+                page = occupiedPage,
+                itemId = item.id,
+                span = GridSpan(columns = 2, rows = 2),
+            )
+
+        val rejected = assertIs<PlaceLauncherItemResult.Rejected>(result)
+        assertEquals(PlacementRejectionReason.MISSING_PLACEMENT, rejected.reason)
+    }
+
     private fun appItem(
         id: String,
         placement: GridPlacement? = null,
