@@ -20,6 +20,25 @@ class HomeShortcutEngine(
             }
         }
 
+    fun removeShortcutFromSelectedPage(
+        layout: HomeLayout,
+        itemId: LauncherItemId,
+    ): HomeShortcutResult =
+        when {
+            layout.selectedPage.items.none { item -> item.id == itemId } ->
+                HomeShortcutResult.Rejected(PlacementRejectionReason.ITEM_NOT_FOUND)
+
+            else ->
+                HomeShortcutResult.Updated(
+                    layout.withUpdatedSelectedPage(
+                        gridPlacementEngine.removeItem(
+                            page = layout.selectedPage,
+                            itemId = itemId,
+                        ),
+                    ),
+                )
+        }
+
     private fun appShortcutFor(
         app: InstalledApp,
         layout: HomeLayout,

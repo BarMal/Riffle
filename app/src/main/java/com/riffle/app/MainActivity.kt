@@ -70,8 +70,11 @@ class MainActivity : ComponentActivity() {
                 shellViewModel.onNavigationActionSelected(ShellNavigationAction.OpenSearch)
             LauncherShellAction.OpenSettings ->
                 shellViewModel.onNavigationActionSelected(ShellNavigationAction.OpenSettings)
+            LauncherShellAction.EnterHomeEditMode -> shellViewModel.onEnterHomeEditMode()
+            LauncherShellAction.ExitHomeEditMode -> shellViewModel.onExitHomeEditMode()
             is LauncherShellAction.LaunchApp -> appLauncher.launch(action.identity)
             is LauncherShellAction.AddAppToHome -> shellViewModel.onAddAppToHome(action.app)
+            is LauncherShellAction.RemoveHomeShortcut -> shellViewModel.onRemoveHomeShortcut(action.itemId)
             is LauncherShellAction.SearchQueryChanged -> shellViewModel.onSearchQueryChanged(action.query)
         }
     }

@@ -5,6 +5,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -26,10 +27,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.DockModel
 import com.riffle.core.domain.launcher.home.GridCell
+import com.riffle.core.domain.launcher.home.HomeEditMode
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.LauncherPage
 
@@ -47,9 +51,13 @@ fun StandardHome(
         verticalArrangement = Arrangement.SpaceBetween,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        HomeToolbar(onAction = onAction)
+        HomeToolbar(
+            isEditing = layout.editMode is HomeEditMode.EditingPage,
+            onAction = onAction,
+        )
         WorkspaceGrid(
             page = layout.selectedPage,
+            isEditing = layout.editMode is HomeEditMode.EditingPage,
             appIconLoader = appIconLoader,
             onAction = onAction,
             modifier =
@@ -67,7 +75,10 @@ fun StandardHome(
 }
 
 @Composable
-private fun HomeToolbar(onAction: (LauncherShellAction) -> Unit) {
+private fun HomeToolbar(
+    isEditing: Boolean,
+    onAction: (LauncherShellAction) -> Unit,
+) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -86,12 +97,26 @@ private fun HomeToolbar(onAction: (LauncherShellAction) -> Unit) {
         TextButton(onClick = { onAction(LauncherShellAction.OpenSettings) }) {
             Text(text = "Settings")
         }
+        TextButton(
+            onClick = {
+                onAction(
+                    if (isEditing) {
+                        LauncherShellAction.ExitHomeEditMode
+                    } else {
+                        LauncherShellAction.EnterHomeEditMode
+                    },
+                )
+            },
+        ) {
+            Text(text = if (isEditing) "Done" else "Edit")
+        }
     }
 }
 
 @Composable
 private fun WorkspaceGrid(
     page: LauncherPage,
+    isEditing: Boolean,
     appIconLoader: AppIconLoader,
     onAction: (LauncherShellAction) -> Unit,
     modifier: Modifier = Modifier,
@@ -121,6 +146,7 @@ private fun WorkspaceGrid(
                         if (shortcut != null) {
                             HomeShortcut(
                                 shortcut = shortcut,
+                                isEditing = isEditing,
                                 appIconLoader = appIconLoader,
                                 onAction = onAction,
                             )
@@ -136,28 +162,62 @@ private fun WorkspaceGrid(
 @Composable
 private fun HomeShortcut(
     shortcut: AppShortcutItem,
+    isEditing: Boolean,
     appIconLoader: AppIconLoader,
     onAction: (LauncherShellAction) -> Unit,
 ) {
-    Column(
+    Box {
+        Column(
+            modifier =
+                Modifier.clickable(enabled = !isEditing) {
+                    onAction(LauncherShellAction.LaunchApp(shortcut.appIdentity))
+                },
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            LauncherAppIcon(
+                identity = shortcut.appIdentity,
+                label = shortcut.label,
+                iconLoader = appIconLoader,
+                modifier = Modifier.size(44.dp),
+            )
+            Text(
+                modifier = Modifier.widthIn(max = 72.dp),
+                text = shortcut.label,
+                style = MaterialTheme.typography.labelSmall,
+                maxLines = 1,
+            )
+        }
+
+        if (isEditing) {
+            RemoveShortcutButton(
+                label = shortcut.label,
+                onClick = { onAction(LauncherShellAction.RemoveHomeShortcut(shortcut.id)) },
+            )
+        }
+    }
+}
+
+@Composable
+private fun BoxScope.RemoveShortcutButton(
+    label: String,
+    onClick: () -> Unit,
+) {
+    Box(
         modifier =
-            Modifier.clickable {
-                onAction(LauncherShellAction.LaunchApp(shortcut.appIdentity))
-            },
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(6.dp),
+            Modifier
+                .align(Alignment.TopEnd)
+                .size(24.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.errorContainer)
+                .clickable(onClick = onClick)
+                .semantics { contentDescription = "Remove $label" },
+        contentAlignment = Alignment.Center,
     ) {
-        LauncherAppIcon(
-            identity = shortcut.appIdentity,
-            label = shortcut.label,
-            iconLoader = appIconLoader,
-            modifier = Modifier.size(44.dp),
-        )
         Text(
-            modifier = Modifier.widthIn(max = 72.dp),
-            text = shortcut.label,
+            text = "X",
             style = MaterialTheme.typography.labelSmall,
-            maxLines = 1,
+            color = MaterialTheme.colorScheme.onErrorContainer,
         )
     }
 }

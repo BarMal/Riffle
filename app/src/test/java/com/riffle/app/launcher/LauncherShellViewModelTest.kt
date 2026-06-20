@@ -13,9 +13,11 @@ import com.riffle.core.domain.launcher.apps.InstalledAppRepository
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.GridCell
 import com.riffle.core.domain.launcher.home.GridPlacement
+import com.riffle.core.domain.launcher.home.HomeEditMode
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
+import com.riffle.core.domain.launcher.home.LauncherItemId
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -215,6 +217,61 @@ class LauncherShellViewModelTest {
         viewModel.onAddAppToHome(camera)
 
         assertEquals(viewModel.state.value.homeLayout, repository.savedLayout)
+    }
+
+    @Test
+    fun entersAndExitsHomeEditMode() {
+        val repository = FakeHomeLayoutRepository(savedLayout = HomeLayoutDefaults.standard())
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                homeLayoutRepository = repository,
+            )
+
+        viewModel.onEnterHomeEditMode()
+
+        assertEquals(
+            HomeEditMode.EditingPage(viewModel.state.value.homeLayout.selectedPageId),
+            viewModel.state.value.homeLayout.editMode,
+        )
+
+        viewModel.onExitHomeEditMode()
+
+        assertEquals(HomeEditMode.Browsing, viewModel.state.value.homeLayout.editMode)
+    }
+
+    @Test
+    fun removesHomeShortcutAndSavesLayout() {
+        val camera = app(label = "Camera")
+        val repository = FakeHomeLayoutRepository()
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                installedAppRepository = FakeInstalledAppRepository(apps = listOf(camera)),
+                homeLayoutRepository = repository,
+            )
+        viewModel.onAddAppToHome(camera)
+        val shortcut = viewModel.state.value.homeLayout.selectedPage.items.single() as AppShortcutItem
+
+        viewModel.onRemoveHomeShortcut(shortcut.id)
+
+        assertEquals(emptyList<AppShortcutItem>(), viewModel.state.value.homeLayout.selectedPage.items)
+        assertEquals(viewModel.state.value.homeLayout, repository.savedLayout)
+    }
+
+    @Test
+    fun ignoresMissingHomeShortcutRemoval() {
+        val repository = FakeHomeLayoutRepository(savedLayout = HomeLayoutDefaults.standard())
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                homeLayoutRepository = repository,
+            )
+
+        viewModel.onRemoveHomeShortcut(LauncherItemId("missing"))
+
+        assertEquals(HomeLayoutDefaults.standard(), viewModel.state.value.homeLayout)
+        assertEquals(HomeLayoutDefaults.standard(), repository.savedLayout)
     }
 
     private class FakeFirstRunRepository(

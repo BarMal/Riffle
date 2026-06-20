@@ -50,6 +50,36 @@ class HomeShortcutEngineTest {
         assertEquals(PlacementRejectionReason.NO_AVAILABLE_CELL, rejected.reason)
     }
 
+    @Test
+    fun removesShortcutFromSelectedPage() {
+        val shortcut =
+            appShortcut(
+                id = "camera",
+                placement = GridPlacement(cell = GridCell(column = 0, row = 0)),
+            )
+        val layout =
+            HomeLayoutDefaults.standard().copy(
+                pages = listOf(HomeLayoutDefaults.standard().selectedPage.copy(items = listOf(shortcut))),
+            )
+
+        val result = engine.removeShortcutFromSelectedPage(layout = layout, itemId = shortcut.id)
+
+        val updated = assertIs<HomeShortcutResult.Updated>(result)
+        assertEquals(emptyList(), updated.layout.selectedPage.items)
+    }
+
+    @Test
+    fun rejectsRemovingMissingShortcut() {
+        val result =
+            engine.removeShortcutFromSelectedPage(
+                layout = HomeLayoutDefaults.standard(),
+                itemId = LauncherItemId("missing"),
+            )
+
+        val rejected = assertIs<HomeShortcutResult.Rejected>(result)
+        assertEquals(PlacementRejectionReason.ITEM_NOT_FOUND, rejected.reason)
+    }
+
     private fun app(label: String): InstalledApp =
         InstalledApp(
             identity =
