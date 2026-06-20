@@ -49,6 +49,14 @@ class LauncherShellViewModel(
         mutableState.value = mutableState.value.withInstalledApps()
     }
 
+    fun onSearchQueryChanged(query: String) {
+        mutableState.value =
+            mutableState.value.copy(
+                searchQuery = query,
+                searchResults = appCatalog.searchApps(mutableState.value.installedApps, query),
+            )
+    }
+
     private fun createInitialState(): LauncherShellState =
         if (firstRunRepository.isFirstRunComplete()) {
             reducer.firstRunCompleted(LauncherShellState())
@@ -57,7 +65,12 @@ class LauncherShellViewModel(
         }
 
     private fun LauncherShellState.withInstalledApps(): LauncherShellState =
-        copy(installedApps = appCatalog.visibleApps(installedAppRepository.installedApps()))
+        appCatalog.visibleApps(installedAppRepository.installedApps()).let { visibleApps ->
+            copy(
+                installedApps = visibleApps,
+                searchResults = appCatalog.searchApps(visibleApps, searchQuery),
+            )
+        }
 
     private fun persistCompletedFirstRun(state: LauncherShellState) {
         if (state.shouldShowEmptyHome) {

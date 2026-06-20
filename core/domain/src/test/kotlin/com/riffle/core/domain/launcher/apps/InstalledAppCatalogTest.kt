@@ -70,6 +70,43 @@ class InstalledAppCatalogTest {
         assertEquals(listOf("Work Camera"), workApps.map { app -> app.label })
     }
 
+    @Test
+    fun blankSearchReturnsVisibleApps() {
+        val apps =
+            listOf(
+                app(label = "Camera"),
+                app(label = "Hidden", visibility = AppVisibility.HIDDEN),
+                app(label = "Browser"),
+            )
+
+        val results = catalog.searchApps(apps = apps, query = " ")
+
+        assertEquals(listOf("Browser", "Camera"), results.map { app -> app.label })
+    }
+
+    @Test
+    fun searchMatchesLabelPackageAndActivity() {
+        val apps =
+            listOf(
+                app(label = "Camera", packageName = "com.android.camera"),
+                app(label = "Maps", packageName = "com.google.android.apps.maps"),
+                app(label = "Dialler", activityName = ".PhoneActivity"),
+            )
+
+        assertEquals(
+            listOf("Camera"),
+            catalog.searchApps(apps = apps, query = "cam").map { app -> app.label },
+        )
+        assertEquals(
+            listOf("Maps"),
+            catalog.searchApps(apps = apps, query = "google").map { app -> app.label },
+        )
+        assertEquals(
+            listOf("Dialler"),
+            catalog.searchApps(apps = apps, query = "phone").map { app -> app.label },
+        )
+    }
+
     private fun app(
         label: String,
         packageName: String = "com.android.${label.lowercase().replace(" ", ".")}",

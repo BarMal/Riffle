@@ -16,4 +16,6 @@ sealed interface LauncherShellAction {
     data object OpenSettings : LauncherShellAction
 
     data class LaunchApp(val identity: AppIdentity) : LauncherShellAction
+
+    data class SearchQueryChanged(val query: String) : LauncherShellAction
 }
