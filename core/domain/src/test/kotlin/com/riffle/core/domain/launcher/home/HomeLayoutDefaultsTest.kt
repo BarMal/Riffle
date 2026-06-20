@@ -20,6 +20,7 @@ class HomeLayoutDefaultsTest {
         assertEquals(1, layout.pages.size)
         assertSame(layout.pages.first(), layout.selectedPage)
         assertEquals(0, layout.selectedPageIndex)
+        assertEquals(LauncherPageType.Home, layout.selectedPage.type)
         assertTrue(layout.selectedPage.items.isEmpty())
     }
 
