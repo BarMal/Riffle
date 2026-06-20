@@ -14,18 +14,16 @@ data class HomeLayout(
 }
 
 object HomeLayoutDefaults {
-    fun standard(): HomeLayout {
-        val firstPage =
-            LauncherPage(
-                id = LauncherPageId("home"),
-                grid = GridDimensions(columns = 4, rows = 5),
+    fun standard(): HomeLayout =
+        LauncherPage(
+            id = LauncherPageId("home"),
+            grid = GridDimensions(columns = 4, rows = 5),
+        ).let { firstPage ->
+            HomeLayout(
+                viewMode = LauncherViewMode.STANDARD_APP_DRAWER,
+                pages = listOf(firstPage),
+                selectedPageId = firstPage.id,
+                dock = DockModel(capacity = 5),
             )
-
-        return HomeLayout(
-            viewMode = LauncherViewMode.STANDARD_APP_DRAWER,
-            pages = listOf(firstPage),
-            selectedPageId = firstPage.id,
-            dock = DockModel(capacity = 5),
-        )
-    }
+        }
 }
