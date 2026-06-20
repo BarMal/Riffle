@@ -8,14 +8,21 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.core.graphics.drawable.toBitmap
 import com.riffle.app.launcher.AppIconLoader
 import com.riffle.core.domain.launcher.apps.AppIdentity
+import java.util.concurrent.ConcurrentHashMap
 
 class PackageManagerAppIconLoader(
     private val packageManager: PackageManager,
 ) : AppIconLoader {
-    private val icons = mutableMapOf<AppIdentity, ImageBitmap>()
+    private val icons = ConcurrentHashMap<AppIdentity, ImageBitmap>()
 
     override fun iconFor(identity: AppIdentity): ImageBitmap? =
         icons[identity] ?: loadIcon(identity)?.also { icon -> icons[identity] = icon }
+
+    override fun cachedIconFor(identity: AppIdentity): ImageBitmap? = icons[identity]
+
+    override fun preloadIcons(identities: List<AppIdentity>) {
+        identities.forEach { identity -> iconFor(identity) }
+    }
 
     private fun loadIcon(identity: AppIdentity): ImageBitmap? =
         runCatching {

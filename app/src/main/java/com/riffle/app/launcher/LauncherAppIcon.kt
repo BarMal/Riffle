@@ -8,7 +8,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -17,13 +21,23 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.apps.AppIdentity
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
-fun interface AppIconLoader {
+interface AppIconLoader {
     fun iconFor(identity: AppIdentity): ImageBitmap?
+
+    fun cachedIconFor(identity: AppIdentity): ImageBitmap? = null
+
+    fun preloadIcons(identities: List<AppIdentity>) {
+        identities.forEach(::iconFor)
+    }
 }
 
 object EmptyAppIconLoader : AppIconLoader {
     override fun iconFor(identity: AppIdentity): ImageBitmap? = null
+
+    override fun preloadIcons(identities: List<AppIdentity>) = Unit
 }
 
 @Composable
@@ -34,11 +48,24 @@ fun LauncherAppIcon(
     modifier: Modifier = Modifier,
     shape: Shape = RoundedCornerShape(12.dp),
 ) {
-    val icon = remember(identity, iconLoader) { iconLoader.iconFor(identity) }
+    var icon by remember(identity, iconLoader) {
+        mutableStateOf(iconLoader.cachedIconFor(identity))
+    }
 
-    if (icon != null) {
+    LaunchedEffect(identity, iconLoader) {
+        val cachedIcon = iconLoader.cachedIconFor(identity)
+        icon =
+            if (cachedIcon != null) {
+                cachedIcon
+            } else {
+                withContext(Dispatchers.Default) { iconLoader.iconFor(identity) }
+            }
+    }
+    val loadedIcon = icon
+
+    if (loadedIcon != null) {
         Image(
-            bitmap = icon,
+            bitmap = loadedIcon,
             contentDescription = "$label icon",
             contentScale = ContentScale.Fit,
             modifier = modifier.clip(shape),
