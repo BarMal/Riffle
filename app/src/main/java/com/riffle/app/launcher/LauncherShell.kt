@@ -30,12 +30,14 @@ import com.riffle.core.domain.launcher.apps.InstalledApp
 @Composable
 fun LauncherShell(
     viewModel: LauncherShellViewModel,
+    appIconLoader: AppIconLoader = EmptyAppIconLoader,
     onAction: (LauncherShellAction) -> Unit,
 ) {
     val state by viewModel.state.collectAsState()
 
     LauncherShellContent(
         state = state,
+        appIconLoader = appIconLoader,
         onAction = onAction,
     )
 }
@@ -43,6 +45,7 @@ fun LauncherShell(
 @Composable
 fun LauncherShellContent(
     state: LauncherShellState,
+    appIconLoader: AppIconLoader = EmptyAppIconLoader,
     onAction: (LauncherShellAction) -> Unit,
 ) {
     MaterialTheme {
@@ -52,6 +55,7 @@ fun LauncherShellContent(
             } else {
                 LauncherDestination(
                     state = state,
+                    appIconLoader = appIconLoader,
                     onAction = onAction,
                 )
             }
@@ -88,18 +92,21 @@ private fun DefaultHomePrompt(onAction: (LauncherShellAction) -> Unit) {
 @Composable
 private fun LauncherDestination(
     state: LauncherShellState,
+    appIconLoader: AppIconLoader,
     onAction: (LauncherShellAction) -> Unit,
 ) {
     when (state.destination) {
         ShellDestination.HOME ->
             StandardHome(
                 layout = state.homeLayout,
+                appIconLoader = appIconLoader,
                 onAction = onAction,
             )
 
         ShellDestination.APP_DRAWER ->
             AppDrawer(
                 apps = state.installedApps,
+                appIconLoader = appIconLoader,
                 onAction = onAction,
             )
 
@@ -107,6 +114,7 @@ private fun LauncherDestination(
             SearchSurface(
                 query = state.searchQuery,
                 results = state.searchResults,
+                appIconLoader = appIconLoader,
                 onAction = onAction,
             )
 
