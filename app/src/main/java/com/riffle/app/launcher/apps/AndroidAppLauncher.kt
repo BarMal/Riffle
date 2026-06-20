@@ -20,5 +20,8 @@ class AndroidAppLauncher(
                     packageName.value,
                     activityName.value,
                 ),
-            )
+            ).addFlags(LAUNCHER_LAUNCH_FLAGS)
 }
+
+internal const val LAUNCHER_LAUNCH_FLAGS: Int =
+    Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED
