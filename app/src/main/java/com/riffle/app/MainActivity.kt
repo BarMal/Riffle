@@ -13,6 +13,7 @@ import com.riffle.app.launcher.LauncherShellViewModelFactory
 import com.riffle.app.launcher.SharedPreferencesFirstRunRepository
 import com.riffle.app.launcher.SharedPreferencesHomeLayoutRepository
 import com.riffle.app.launcher.apps.AndroidAppLauncher
+import com.riffle.app.launcher.apps.PackageManagerAppIconLoader
 import com.riffle.app.launcher.apps.PackageManagerInstalledAppRepository
 import com.riffle.core.domain.launcher.ShellNavigationAction
 
@@ -26,6 +27,7 @@ class MainActivity : ComponentActivity() {
     }
     private val homeRoleGateway by lazy { AndroidHomeRoleGateway(this) }
     private val appLauncher by lazy { AndroidAppLauncher(this) }
+    private val appIconLoader by lazy { PackageManagerAppIconLoader(packageManager) }
 
     private val requestHomeRole =
         registerForActivityResult(
@@ -40,6 +42,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             LauncherShell(
                 viewModel = shellViewModel,
+                appIconLoader = appIconLoader,
                 onAction = ::handleAction,
             )
         }

@@ -35,6 +35,7 @@ import com.riffle.core.domain.launcher.home.LauncherPage
 @Composable
 fun StandardHome(
     layout: HomeLayout,
+    appIconLoader: AppIconLoader,
     onAction: (LauncherShellAction) -> Unit,
 ) {
     Column(
@@ -48,6 +49,7 @@ fun StandardHome(
         HomeToolbar(onAction = onAction)
         WorkspaceGrid(
             page = layout.selectedPage,
+            appIconLoader = appIconLoader,
             modifier =
                 Modifier
                     .weight(1f)
@@ -88,6 +90,7 @@ private fun HomeToolbar(onAction: (LauncherShellAction) -> Unit) {
 @Composable
 private fun WorkspaceGrid(
     page: LauncherPage,
+    appIconLoader: AppIconLoader,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -113,7 +116,10 @@ private fun WorkspaceGrid(
                         contentAlignment = Alignment.Center,
                     ) {
                         if (shortcut != null) {
-                            HomeShortcut(shortcut = shortcut)
+                            HomeShortcut(
+                                shortcut = shortcut,
+                                appIconLoader = appIconLoader,
+                            )
                         }
                     }
                 }
@@ -124,25 +130,20 @@ private fun WorkspaceGrid(
 }
 
 @Composable
-private fun HomeShortcut(shortcut: AppShortcutItem) {
+private fun HomeShortcut(
+    shortcut: AppShortcutItem,
+    appIconLoader: AppIconLoader,
+) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        Box(
-            modifier =
-                Modifier
-                    .size(44.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(MaterialTheme.colorScheme.primaryContainer),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                text = shortcut.label.firstOrNull()?.uppercase().orEmpty(),
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onPrimaryContainer,
-            )
-        }
+        LauncherAppIcon(
+            identity = shortcut.appIdentity,
+            label = shortcut.label,
+            iconLoader = appIconLoader,
+            modifier = Modifier.size(44.dp),
+        )
         Text(
             modifier = Modifier.widthIn(max = 72.dp),
             text = shortcut.label,

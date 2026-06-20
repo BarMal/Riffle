@@ -1,6 +1,5 @@
 package com.riffle.app.launcher
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -12,7 +11,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -23,13 +21,13 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.apps.InstalledApp
 
 @Composable
 fun AppDrawer(
     apps: List<InstalledApp>,
+    appIconLoader: AppIconLoader,
     onAction: (LauncherShellAction) -> Unit,
 ) {
     LauncherPanel(
@@ -38,6 +36,7 @@ fun AppDrawer(
     ) {
         AppList(
             apps = apps,
+            appIconLoader = appIconLoader,
             emptyText = "No launchable apps found",
             onAction = onAction,
         )
@@ -48,6 +47,7 @@ fun AppDrawer(
 fun SearchSurface(
     query: String,
     results: List<InstalledApp>,
+    appIconLoader: AppIconLoader,
     onAction: (LauncherShellAction) -> Unit,
 ) {
     LauncherPanel(
@@ -66,6 +66,7 @@ fun SearchSurface(
             AppList(
                 modifier = Modifier.weight(1f),
                 apps = results,
+                appIconLoader = appIconLoader,
                 emptyText = "No matching apps",
                 onAction = onAction,
             )
@@ -89,6 +90,7 @@ fun SettingsSurface(onAction: (LauncherShellAction) -> Unit) {
 @Composable
 private fun AppList(
     apps: List<InstalledApp>,
+    appIconLoader: AppIconLoader,
     emptyText: String,
     onAction: (LauncherShellAction) -> Unit,
     modifier: Modifier = Modifier,
@@ -114,6 +116,7 @@ private fun AppList(
             ) { app ->
                 AppDrawerRow(
                     app = app,
+                    appIconLoader = appIconLoader,
                     onAction = onAction,
                 )
             }
@@ -124,6 +127,7 @@ private fun AppList(
 @Composable
 private fun AppDrawerRow(
     app: InstalledApp,
+    appIconLoader: AppIconLoader,
     onAction: (LauncherShellAction) -> Unit,
 ) {
     Row(
@@ -136,7 +140,13 @@ private fun AppDrawerRow(
         horizontalArrangement = Arrangement.spacedBy(14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        AppIconPlaceholder(label = app.label)
+        LauncherAppIcon(
+            identity = app.identity,
+            label = app.label,
+            iconLoader = appIconLoader,
+            modifier = Modifier.launcherIconSize(),
+            shape = CircleShape,
+        )
         Column(
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.Center,
@@ -154,24 +164,6 @@ private fun AppDrawerRow(
         TextButton(onClick = { onAction(LauncherShellAction.AddAppToHome(app)) }) {
             Text(text = "Add")
         }
-    }
-}
-
-@Composable
-private fun AppIconPlaceholder(label: String) {
-    Box(
-        modifier =
-            Modifier
-                .size(40.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.primaryContainer),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = label.firstOrNull()?.uppercase().orEmpty(),
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.onPrimaryContainer,
-        )
     }
 }
 
