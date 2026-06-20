@@ -95,6 +95,8 @@ class MainActivity : ComponentActivity() {
             LauncherShellAction.AddHomePage,
             LauncherShellAction.SelectPreviousHomePage,
             LauncherShellAction.SelectNextHomePage,
+            LauncherShellAction.MoveSelectedHomePageLeft,
+            LauncherShellAction.MoveSelectedHomePageRight,
             LauncherShellAction.DeleteSelectedHomePage,
             -> {
                 shellViewModel.onHomePageEdited(action)
