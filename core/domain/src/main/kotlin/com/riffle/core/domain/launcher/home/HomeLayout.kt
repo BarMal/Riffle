@@ -6,6 +6,7 @@ data class HomeLayout(
     val selectedPageId: LauncherPageId,
     val dock: DockModel,
     val settings: HomeLayoutSettings = HomeLayoutSettings.standardPhone(),
+    val editMode: HomeEditMode = HomeEditMode.Browsing,
 ) {
     val selectedPage: LauncherPage =
         pages.first { page -> page.id == selectedPageId }

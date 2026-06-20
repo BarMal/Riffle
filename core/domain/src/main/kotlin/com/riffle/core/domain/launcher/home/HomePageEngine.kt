@@ -72,6 +72,31 @@ class HomePageEngine {
                 )
         }
 
+    fun enterPageEditMode(
+        layout: HomeLayout,
+        pageId: LauncherPageId,
+    ): HomePageEditResult =
+        when {
+            layout.pages.none { page -> page.id == pageId } ->
+                HomePageEditResult.Rejected(HomePageEditRejectionReason.PAGE_NOT_FOUND)
+
+            else ->
+                HomePageEditResult.Updated(
+                    layout.copy(
+                        selectedPageId = pageId,
+                        editMode = HomeEditMode.EditingPage(pageId = pageId),
+                    ),
+                )
+        }
+
+    fun enterPageOverview(layout: HomeLayout): HomePageEditResult =
+        HomePageEditResult.Updated(layout.copy(editMode = HomeEditMode.ManagingPages))
+
+    fun exitEditMode(layout: HomeLayout): HomePageEditResult =
+        HomePageEditResult.Updated(
+            layout.copy(editMode = HomeEditMode.Browsing),
+        )
+
     private fun List<LauncherPage>.moveItem(
         pageId: LauncherPageId,
         targetIndex: Int,

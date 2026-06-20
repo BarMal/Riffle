@@ -21,6 +21,7 @@ class HomeLayoutDefaultsTest {
         assertSame(layout.pages.first(), layout.selectedPage)
         assertEquals(0, layout.selectedPageIndex)
         assertEquals(LauncherPageType.Home, layout.selectedPage.type)
+        assertEquals(HomeEditMode.Browsing, layout.editMode)
         assertTrue(layout.selectedPage.items.isEmpty())
     }
 
