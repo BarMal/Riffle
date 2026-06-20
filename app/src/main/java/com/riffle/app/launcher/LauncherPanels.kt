@@ -1,6 +1,7 @@
 package com.riffle.app.launcher
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -48,7 +49,10 @@ fun AppDrawer(
                     items = apps,
                     key = { app -> app.drawerKey },
                 ) { app ->
-                    AppDrawerRow(app = app)
+                    AppDrawerRow(
+                        app = app,
+                        onAction = onAction,
+                    )
                 }
             }
         }
@@ -82,12 +86,16 @@ fun SettingsSurface(onAction: (LauncherShellAction) -> Unit) {
 }
 
 @Composable
-private fun AppDrawerRow(app: InstalledApp) {
+private fun AppDrawerRow(
+    app: InstalledApp,
+    onAction: (LauncherShellAction) -> Unit,
+) {
     Row(
         modifier =
             Modifier
                 .fillMaxWidth()
                 .defaultMinSize(minHeight = 56.dp)
+                .clickable { onAction(LauncherShellAction.LaunchApp(app.identity)) }
                 .padding(horizontal = 2.dp, vertical = 4.dp),
         horizontalArrangement = Arrangement.spacedBy(14.dp),
         verticalAlignment = Alignment.CenterVertically,
