@@ -19,6 +19,7 @@ import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
 import com.riffle.core.domain.launcher.home.HomeShortcutMoveDirection
 import com.riffle.core.domain.launcher.home.LauncherItemId
+import com.riffle.core.domain.launcher.home.LauncherPageId
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -229,16 +230,101 @@ class LauncherShellViewModelTest {
                 homeLayoutRepository = repository,
             )
 
-        viewModel.onEnterHomeEditMode()
+        viewModel.onHomePageEdited(LauncherShellAction.EnterHomeEditMode)
 
         assertEquals(
             HomeEditMode.EditingPage(viewModel.state.value.homeLayout.selectedPageId),
             viewModel.state.value.homeLayout.editMode,
         )
 
-        viewModel.onExitHomeEditMode()
+        viewModel.onHomePageEdited(LauncherShellAction.ExitHomeEditMode)
 
         assertEquals(HomeEditMode.Browsing, viewModel.state.value.homeLayout.editMode)
+    }
+
+    @Test
+    fun addsHomePageSelectsItAndSavesLayout() {
+        val repository = FakeHomeLayoutRepository(savedLayout = HomeLayoutDefaults.standard())
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                homeLayoutRepository = repository,
+            )
+
+        viewModel.onHomePageEdited(LauncherShellAction.AddHomePage)
+
+        assertEquals(listOf(LauncherPageId("home"), LauncherPageId("home-2")), viewModel.state.value.homeLayout.pageIds)
+        assertEquals(LauncherPageId("home-2"), viewModel.state.value.homeLayout.selectedPageId)
+        assertEquals(viewModel.state.value.homeLayout, repository.savedLayout)
+    }
+
+    @Test
+    fun selectsAdjacentHomePagesAndSavesLayout() {
+        val repository = FakeHomeLayoutRepository(savedLayout = HomeLayoutDefaults.standard())
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                homeLayoutRepository = repository,
+            )
+        viewModel.onHomePageEdited(LauncherShellAction.AddHomePage)
+
+        viewModel.onHomePageEdited(LauncherShellAction.SelectPreviousHomePage)
+
+        assertEquals(LauncherPageId("home"), viewModel.state.value.homeLayout.selectedPageId)
+
+        viewModel.onHomePageEdited(LauncherShellAction.SelectNextHomePage)
+
+        assertEquals(LauncherPageId("home-2"), viewModel.state.value.homeLayout.selectedPageId)
+        assertEquals(viewModel.state.value.homeLayout, repository.savedLayout)
+    }
+
+    @Test
+    fun ignoresPageSelectionOutsideLayoutBounds() {
+        val repository = FakeHomeLayoutRepository(savedLayout = HomeLayoutDefaults.standard())
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                homeLayoutRepository = repository,
+            )
+        val layoutBeforeSelection = viewModel.state.value.homeLayout
+
+        viewModel.onHomePageEdited(LauncherShellAction.SelectPreviousHomePage)
+
+        assertEquals(layoutBeforeSelection, viewModel.state.value.homeLayout)
+        assertEquals(layoutBeforeSelection, repository.savedLayout)
+    }
+
+    @Test
+    fun deletesSelectedHomePageAndSavesLayout() {
+        val repository = FakeHomeLayoutRepository(savedLayout = HomeLayoutDefaults.standard())
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                homeLayoutRepository = repository,
+            )
+        viewModel.onHomePageEdited(LauncherShellAction.AddHomePage)
+
+        viewModel.onHomePageEdited(LauncherShellAction.DeleteSelectedHomePage)
+
+        assertEquals(listOf(LauncherPageId("home")), viewModel.state.value.homeLayout.pageIds)
+        assertEquals(LauncherPageId("home"), viewModel.state.value.homeLayout.selectedPageId)
+        assertEquals(viewModel.state.value.homeLayout, repository.savedLayout)
+    }
+
+    @Test
+    fun ignoresDeletingLastHomePage() {
+        val repository = FakeHomeLayoutRepository(savedLayout = HomeLayoutDefaults.standard())
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                homeLayoutRepository = repository,
+            )
+        val layoutBeforeDeletion = viewModel.state.value.homeLayout
+
+        viewModel.onHomePageEdited(LauncherShellAction.DeleteSelectedHomePage)
+
+        assertEquals(layoutBeforeDeletion, viewModel.state.value.homeLayout)
+        assertEquals(layoutBeforeDeletion, repository.savedLayout)
     }
 
     @Test
@@ -366,4 +452,7 @@ class LauncherShellViewModelTest {
             label = label,
             visibility = visibility,
         )
+
+    private val HomeLayout.pageIds: List<LauncherPageId>
+        get() = pages.map { page -> page.id }
 }

@@ -55,28 +55,82 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun handleAction(action: LauncherShellAction) {
+        val handled =
+            handleFirstRunAction(action) ||
+                handleNavigationAction(action) ||
+                handleHomePageAction(action) ||
+                handleHomeShortcutAction(action)
+
+        if (!handled) {
+            handleAppAction(action)
+        }
+    }
+
+    private fun handleFirstRunAction(action: LauncherShellAction): Boolean =
         when (action) {
             LauncherShellAction.RequestDefaultHome -> {
                 shellViewModel.onDefaultHomeRequestStarted()
                 requestHomeRole.launch(homeRoleGateway.createHomeRoleRequestIntent())
+                true
             }
 
-            LauncherShellAction.CompleteFirstRun -> shellViewModel.onFirstRunCompleted()
-            LauncherShellAction.OpenHome ->
-                shellViewModel.onNavigationActionSelected(ShellNavigationAction.OpenHome)
-            LauncherShellAction.OpenAppDrawer ->
-                shellViewModel.onNavigationActionSelected(ShellNavigationAction.OpenAppDrawer)
-            LauncherShellAction.OpenSearch ->
-                shellViewModel.onNavigationActionSelected(ShellNavigationAction.OpenSearch)
-            LauncherShellAction.OpenSettings ->
-                shellViewModel.onNavigationActionSelected(ShellNavigationAction.OpenSettings)
-            LauncherShellAction.EnterHomeEditMode -> shellViewModel.onEnterHomeEditMode()
-            LauncherShellAction.ExitHomeEditMode -> shellViewModel.onExitHomeEditMode()
+            LauncherShellAction.CompleteFirstRun -> {
+                shellViewModel.onFirstRunCompleted()
+                true
+            }
+
+            else -> false
+        }
+
+    private fun handleNavigationAction(action: LauncherShellAction): Boolean =
+        action.navigationAction()
+            ?.also(shellViewModel::onNavigationActionSelected)
+            ?.let { true }
+            ?: false
+
+    private fun handleHomePageAction(action: LauncherShellAction): Boolean =
+        when (action) {
+            LauncherShellAction.EnterHomeEditMode,
+            LauncherShellAction.ExitHomeEditMode,
+            LauncherShellAction.AddHomePage,
+            LauncherShellAction.SelectPreviousHomePage,
+            LauncherShellAction.SelectNextHomePage,
+            LauncherShellAction.DeleteSelectedHomePage,
+            -> {
+                shellViewModel.onHomePageEdited(action)
+                true
+            }
+
+            else -> false
+        }
+
+    private fun handleHomeShortcutAction(action: LauncherShellAction): Boolean =
+        when (action) {
+            is LauncherShellAction.RemoveHomeShortcut,
+            is LauncherShellAction.MoveHomeShortcut,
+            -> {
+                shellViewModel.onHomeShortcutEdited(action)
+                true
+            }
+
+            else -> false
+        }
+
+    private fun handleAppAction(action: LauncherShellAction) {
+        when (action) {
             is LauncherShellAction.LaunchApp -> appLauncher.launch(action.identity)
             is LauncherShellAction.AddAppToHome -> shellViewModel.onAddAppToHome(action.app)
-            is LauncherShellAction.RemoveHomeShortcut -> shellViewModel.onHomeShortcutEdited(action)
-            is LauncherShellAction.MoveHomeShortcut -> shellViewModel.onHomeShortcutEdited(action)
             is LauncherShellAction.SearchQueryChanged -> shellViewModel.onSearchQueryChanged(action.query)
+            else -> Unit
         }
     }
 }
+
+private fun LauncherShellAction.navigationAction(): ShellNavigationAction? =
+    when (this) {
+        LauncherShellAction.OpenHome -> ShellNavigationAction.OpenHome
+        LauncherShellAction.OpenAppDrawer -> ShellNavigationAction.OpenAppDrawer
+        LauncherShellAction.OpenSearch -> ShellNavigationAction.OpenSearch
+        LauncherShellAction.OpenSettings -> ShellNavigationAction.OpenSettings
+        else -> null
+    }

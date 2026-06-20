@@ -66,6 +66,13 @@ fun StandardHome(
                     .weight(1f)
                     .fillMaxWidth(),
         )
+        if (layout.editMode is HomeEditMode.EditingPage) {
+            PageEditControls(
+                pageCount = layout.pages.size,
+                selectedPageIndex = layout.selectedPageIndex,
+                onAction = onAction,
+            )
+        }
         PageIndicator(
             pageCount = layout.pages.size,
             selectedPageIndex = layout.selectedPageIndex,
@@ -303,31 +310,6 @@ private fun BoxScope.RemoveShortcutButton(
 private fun LauncherPage.shortcutAt(cell: GridCell): AppShortcutItem? =
     items.filterIsInstance<AppShortcutItem>()
         .firstOrNull { item -> item.placement?.cell == cell }
-
-@Composable
-private fun PageIndicator(
-    pageCount: Int,
-    selectedPageIndex: Int,
-) {
-    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        repeat(pageCount) { index ->
-            val color =
-                if (index == selectedPageIndex) {
-                    MaterialTheme.colorScheme.onSurface
-                } else {
-                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.28f)
-                }
-
-            Box(
-                modifier =
-                    Modifier
-                        .size(6.dp)
-                        .clip(CircleShape)
-                        .background(color),
-            )
-        }
-    }
-}
 
 @Composable
 private fun Dock(dock: DockModel) {
