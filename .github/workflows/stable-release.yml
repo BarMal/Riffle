@@ -1,4 +1,4 @@
-name: Alpha Release
+name: Stable Release
 
 on:
   workflow_dispatch:
@@ -7,8 +7,8 @@ permissions:
   contents: write
 
 jobs:
-  alpha-release:
-    name: Build signed alpha
+  stable-release:
+    name: Build signed stable
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -47,26 +47,25 @@ jobs:
       - name: Upload release artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: riffle-alpha-release
+          name: riffle-stable-release
           path: |
             app/build/outputs/apk/release/*.apk
             app/build/outputs/bundle/release/*.aab
           if-no-files-found: error
 
-      - name: Publish alpha prerelease
+      - name: Publish stable release
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: alpha-${{ github.run_number }}-${{ github.run_attempt }}
+          RELEASE_TAG: stable-${{ github.run_number }}-${{ github.run_attempt }}
         run: |
           mkdir -p "$RUNNER_TEMP/release"
-          cp app/build/outputs/apk/release/*.apk "$RUNNER_TEMP/release/riffle-alpha.apk"
-          cp app/build/outputs/bundle/release/*.aab "$RUNNER_TEMP/release/riffle-alpha.aab"
+          cp app/build/outputs/apk/release/*.apk "$RUNNER_TEMP/release/riffle-stable.apk"
+          cp app/build/outputs/bundle/release/*.aab "$RUNNER_TEMP/release/riffle-stable.aab"
 
           gh release create "$RELEASE_TAG" \
-            "$RUNNER_TEMP/release/riffle-alpha.apk" \
-            "$RUNNER_TEMP/release/riffle-alpha.aab" \
+            "$RUNNER_TEMP/release/riffle-stable.apk" \
+            "$RUNNER_TEMP/release/riffle-stable.aab" \
             --repo "$GITHUB_REPOSITORY" \
             --target "$GITHUB_SHA" \
-            --title "Riffle Alpha ${{ github.run_number }}" \
-            --notes "Signed alpha build from commit $GITHUB_SHA." \
-            --prerelease
+            --title "Riffle Stable ${{ github.run_number }}" \
+            --notes "Signed stable build from commit $GITHUB_SHA."

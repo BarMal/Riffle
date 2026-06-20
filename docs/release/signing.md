@@ -47,3 +47,12 @@ export RIFFLE_SIGNING_STORE_PASSWORD=...
 export RIFFLE_SIGNING_KEY_ALIAS=riffle-release
 export RIFFLE_SIGNING_KEY_PASSWORD=...
 ```
+
+## GitHub Releases
+
+Use the manual release workflows from the Actions tab:
+
+- `Alpha Release` publishes a GitHub prerelease with `riffle-alpha.apk` and `riffle-alpha.aab`.
+- `Stable Release` publishes a normal GitHub release with `riffle-stable.apk` and `riffle-stable.aab`.
+
+Both workflows also keep the raw build outputs as GitHub Actions artifacts for traceability.
