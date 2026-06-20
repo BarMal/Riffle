@@ -29,6 +29,7 @@ class HomeLayoutDefaultsTest {
         val layout = HomeLayoutDefaults.standard()
 
         assertEquals(GridDimensions(columns = 4, rows = 5), layout.selectedPage.grid)
+        assertEquals(GridDimensions(columns = 4, rows = 5), layout.settings.grid.dimensions)
         assertEquals(20, layout.selectedPage.grid.cellCount)
     }
 

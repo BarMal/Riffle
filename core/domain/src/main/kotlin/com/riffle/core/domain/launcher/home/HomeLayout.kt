@@ -5,6 +5,7 @@ data class HomeLayout(
     val pages: List<LauncherPage>,
     val selectedPageId: LauncherPageId,
     val dock: DockModel,
+    val settings: HomeLayoutSettings = HomeLayoutSettings.standardPhone(),
 ) {
     val selectedPage: LauncherPage =
         pages.first { page -> page.id == selectedPageId }
@@ -15,15 +16,18 @@ data class HomeLayout(
 
 object HomeLayoutDefaults {
     fun standard(): HomeLayout =
-        LauncherPage(
-            id = LauncherPageId("home"),
-            grid = GridDimensions(columns = 4, rows = 5),
-        ).let { firstPage ->
-            HomeLayout(
-                viewMode = LauncherViewMode.STANDARD_APP_DRAWER,
-                pages = listOf(firstPage),
-                selectedPageId = firstPage.id,
-                dock = DockModel(capacity = 5),
-            )
+        HomeLayoutSettings.standardPhone().let { settings ->
+            LauncherPage(
+                id = LauncherPageId("home"),
+                grid = settings.grid.dimensions,
+            ).let { firstPage ->
+                HomeLayout(
+                    viewMode = LauncherViewMode.STANDARD_APP_DRAWER,
+                    pages = listOf(firstPage),
+                    selectedPageId = firstPage.id,
+                    dock = DockModel(capacity = 5),
+                    settings = settings,
+                )
+            }
         }
 }
