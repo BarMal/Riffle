@@ -15,6 +15,7 @@ value class LauncherItemId(val value: String)
 data class AppShortcutItem(
     override val id: LauncherItemId,
     val appIdentity: AppIdentity,
+    val label: String,
     override val placement: GridPlacement? = null,
 ) : LauncherItem {
     override fun withPlacement(placement: GridPlacement): LauncherItem = copy(placement = placement)

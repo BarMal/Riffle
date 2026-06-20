@@ -10,6 +10,9 @@ import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppVisibility
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.apps.InstalledAppRepository
+import com.riffle.core.domain.launcher.home.AppShortcutItem
+import com.riffle.core.domain.launcher.home.GridCell
+import com.riffle.core.domain.launcher.home.GridPlacement
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -140,6 +143,46 @@ class LauncherShellViewModelTest {
 
         assertEquals("cal", viewModel.state.value.searchQuery)
         assertEquals(listOf("Calendar"), viewModel.state.value.searchResults.map { app -> app.label })
+    }
+
+    @Test
+    fun addsAppShortcutToFirstAvailableHomeCell() {
+        val camera = app(label = "Camera")
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                installedAppRepository = FakeInstalledAppRepository(apps = listOf(camera)),
+            )
+
+        viewModel.onAddAppToHome(camera)
+
+        val shortcut = viewModel.state.value.homeLayout.selectedPage.items.single() as AppShortcutItem
+        assertEquals(camera.identity, shortcut.appIdentity)
+        assertEquals("Camera", shortcut.label)
+        assertEquals(GridPlacement(cell = GridCell(column = 0, row = 0)), shortcut.placement)
+    }
+
+    @Test
+    fun addsDuplicateAppShortcutsWithUniqueItemIds() {
+        val camera = app(label = "Camera")
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                installedAppRepository = FakeInstalledAppRepository(apps = listOf(camera)),
+            )
+
+        viewModel.onAddAppToHome(camera)
+        viewModel.onAddAppToHome(camera)
+
+        val shortcuts = viewModel.state.value.homeLayout.selectedPage.items.filterIsInstance<AppShortcutItem>()
+        assertEquals(2, shortcuts.map { shortcut -> shortcut.id }.distinct().size)
+        assertEquals(
+            listOf(
+                GridPlacement(cell = GridCell(column = 0, row = 0)),
+                GridPlacement(cell = GridCell(column = 1, row = 0)),
+            ),
+            shortcuts.map { shortcut -> shortcut.placement },
+        )
     }
 
     private class FakeFirstRunRepository(
