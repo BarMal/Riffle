@@ -7,13 +7,13 @@ class LauncherShellViewModelFactory(
     private val firstRunRepository: FirstRunRepository,
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
-    override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        require(modelClass == LauncherShellViewModel::class.java) {
-            "Unknown ViewModel class: ${modelClass.name}"
-        }
+    override fun <T : ViewModel> create(modelClass: Class<T>): T =
+        when (modelClass) {
+            LauncherShellViewModel::class.java ->
+                LauncherShellViewModel(
+                    firstRunRepository = firstRunRepository,
+                ) as T
 
-        return LauncherShellViewModel(
-            firstRunRepository = firstRunRepository,
-        ) as T
-    }
+            else -> error("Unknown ViewModel class: ${modelClass.name}")
+        }
 }

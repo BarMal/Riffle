@@ -16,15 +16,11 @@ class LauncherShellViewModel(
     val state: StateFlow<LauncherShellState> = mutableState.asStateFlow()
 
     fun onHomeRoleStatusChanged(homeRoleStatus: HomeRoleStatus) {
-        val nextState =
+        mutableState.value =
             reducer.homeRoleChanged(
                 currentState = mutableState.value,
                 homeRoleStatus = homeRoleStatus,
-            )
-        if (nextState.shouldShowEmptyHome) {
-            firstRunRepository.setFirstRunComplete()
-        }
-        mutableState.value = nextState
+            ).also(::persistCompletedFirstRun)
     }
 
     fun onDefaultHomeRequestStarted() {
@@ -42,4 +38,10 @@ class LauncherShellViewModel(
         } else {
             LauncherShellState()
         }
+
+    private fun persistCompletedFirstRun(state: LauncherShellState) {
+        if (state.shouldShowEmptyHome) {
+            firstRunRepository.setFirstRunComplete()
+        }
+    }
 }
