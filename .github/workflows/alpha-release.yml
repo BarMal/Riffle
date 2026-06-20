@@ -1,0 +1,54 @@
+name: Alpha Release
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  alpha-release:
+    name: Build signed alpha
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Decode release keystore
+        env:
+          RIFFLE_SIGNING_KEYSTORE_BASE64: ${{ secrets.RIFFLE_SIGNING_KEYSTORE_BASE64 }}
+        run: |
+          test -n "$RIFFLE_SIGNING_KEYSTORE_BASE64"
+          mkdir -p "$RUNNER_TEMP/signing"
+          echo "$RIFFLE_SIGNING_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/signing/riffle-release.jks"
+
+      - name: Build release artifacts
+        env:
+          RIFFLE_SIGNING_STORE_FILE: ${{ runner.temp }}/signing/riffle-release.jks
+          RIFFLE_SIGNING_STORE_PASSWORD: ${{ secrets.RIFFLE_SIGNING_STORE_PASSWORD }}
+          RIFFLE_SIGNING_KEY_ALIAS: ${{ secrets.RIFFLE_SIGNING_KEY_ALIAS }}
+          RIFFLE_SIGNING_KEY_PASSWORD: ${{ secrets.RIFFLE_SIGNING_KEY_PASSWORD }}
+        run: ./gradlew assembleRelease bundleRelease
+
+      - name: Upload release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: riffle-alpha-release
+          path: |
+            app/build/outputs/apk/release/*.apk
+            app/build/outputs/bundle/release/*.aab
+          if-no-files-found: error
