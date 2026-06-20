@@ -48,6 +48,11 @@ fun LauncherShellContent(
     appIconLoader: AppIconLoader = EmptyAppIconLoader,
     onAction: (LauncherShellAction) -> Unit,
 ) {
+    PreloadLauncherAppIcons(
+        identities = state.appIconPreloadIdentities(),
+        iconLoader = appIconLoader,
+    )
+
     MaterialTheme {
         Surface(modifier = Modifier.fillMaxSize()) {
             if (state.shouldShowDefaultHomePrompt) {
