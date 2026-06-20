@@ -124,6 +124,81 @@ class GridPlacementEngineTest {
         assertEquals(2, placed.page.items.size)
     }
 
+    @Test
+    fun removesItemWithoutMutatingOriginalPage() {
+        val item =
+            appItem(
+                id = "camera",
+                placement = GridPlacement(cell = GridCell(column = 0, row = 0)),
+            )
+        val occupiedPage = page.copy(items = listOf(item))
+
+        val updatedPage = engine.removeItem(page = occupiedPage, itemId = item.id)
+
+        assertEquals(listOf(item), occupiedPage.items)
+        assertTrue(updatedPage.items.isEmpty())
+    }
+
+    @Test
+    fun movesItemWithoutMutatingOriginalPage() {
+        val item =
+            appItem(
+                id = "camera",
+                placement = GridPlacement(cell = GridCell(column = 0, row = 0)),
+            )
+        val occupiedPage = page.copy(items = listOf(item))
+        val newPlacement = GridPlacement(cell = GridCell(column = 2, row = 3))
+
+        val result =
+            engine.moveItem(
+                page = occupiedPage,
+                itemId = item.id,
+                placement = newPlacement,
+            )
+
+        val placed = assertIs<PlaceLauncherItemResult.Placed>(result)
+        assertEquals(GridPlacement(cell = GridCell(column = 0, row = 0)), occupiedPage.items.single().placement)
+        assertEquals(newPlacement, placed.page.items.single().placement)
+    }
+
+    @Test
+    fun rejectsMoveWhenItemIsMissing() {
+        val result =
+            engine.moveItem(
+                page = page,
+                itemId = LauncherItemId("missing"),
+                placement = GridPlacement(cell = GridCell(column = 0, row = 0)),
+            )
+
+        val rejected = assertIs<PlaceLauncherItemResult.Rejected>(result)
+        assertEquals(PlacementRejectionReason.ITEM_NOT_FOUND, rejected.reason)
+    }
+
+    @Test
+    fun rejectsMoveIntoOccupiedCells() {
+        val camera =
+            appItem(
+                id = "camera",
+                placement = GridPlacement(cell = GridCell(column = 0, row = 0)),
+            )
+        val calendar =
+            appItem(
+                id = "calendar",
+                placement = GridPlacement(cell = GridCell(column = 2, row = 2)),
+            )
+        val occupiedPage = page.copy(items = listOf(camera, calendar))
+
+        val result =
+            engine.moveItem(
+                page = occupiedPage,
+                itemId = camera.id,
+                placement = GridPlacement(cell = GridCell(column = 2, row = 2)),
+            )
+
+        val rejected = assertIs<PlaceLauncherItemResult.Rejected>(result)
+        assertEquals(PlacementRejectionReason.COLLISION, rejected.reason)
+    }
+
     private fun appItem(
         id: String,
         placement: GridPlacement? = null,
