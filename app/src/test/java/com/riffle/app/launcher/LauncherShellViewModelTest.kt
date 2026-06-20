@@ -2,6 +2,8 @@ package com.riffle.app.launcher
 
 import com.riffle.core.domain.launcher.FirstRunStatus
 import com.riffle.core.domain.launcher.HomeRoleStatus
+import com.riffle.core.domain.launcher.ShellDestination
+import com.riffle.core.domain.launcher.ShellNavigationAction
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -45,6 +47,17 @@ class LauncherShellViewModelTest {
 
         assertEquals(FirstRunStatus.COMPLETE, viewModel.state.value.firstRunStatus)
         assertTrue(viewModel.state.value.shouldShowEmptyHome)
+    }
+
+    @Test
+    fun navigatesBetweenShellDestinations() {
+        val viewModel = LauncherShellViewModel(firstRunRepository = FakeFirstRunRepository())
+
+        viewModel.onNavigationActionSelected(ShellNavigationAction.OpenAppDrawer)
+        assertEquals(ShellDestination.APP_DRAWER, viewModel.state.value.destination)
+
+        viewModel.onNavigationActionSelected(ShellNavigationAction.OpenHome)
+        assertEquals(ShellDestination.HOME, viewModel.state.value.destination)
     }
 
     private class FakeFirstRunRepository(
