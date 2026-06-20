@@ -6,6 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import com.riffle.app.launcher.AndroidHomeRoleGateway
+import com.riffle.app.launcher.AndroidLauncherWallpaperController
 import com.riffle.app.launcher.LauncherShell
 import com.riffle.app.launcher.LauncherShellAction
 import com.riffle.app.launcher.LauncherShellViewModel
@@ -28,6 +29,7 @@ class MainActivity : ComponentActivity() {
     private val homeRoleGateway by lazy { AndroidHomeRoleGateway(this) }
     private val appLauncher by lazy { AndroidAppLauncher(this) }
     private val appIconLoader by lazy { PackageManagerAppIconLoader(packageManager) }
+    private val wallpaperController by lazy { AndroidLauncherWallpaperController(window) }
 
     private val requestHomeRole =
         registerForActivityResult(
@@ -38,6 +40,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        wallpaperController.showSystemWallpaper()
 
         setContent {
             LauncherShell(

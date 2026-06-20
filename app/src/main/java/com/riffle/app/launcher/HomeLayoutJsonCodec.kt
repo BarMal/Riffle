@@ -13,6 +13,7 @@ import org.json.JSONObject
 fun encodeHomeLayout(layout: HomeLayout): String =
     JSONObject()
         .put("selectedPageId", layout.selectedPageId.value)
+        .put("settings", encodeSettings(layout.settings))
         .put("pages", JSONArray(layout.pages.map(::encodePage)))
         .put("dock", encodeDock(layout.dock))
         .toString()
@@ -31,6 +32,7 @@ fun decodeHomeLayout(value: String): HomeLayout =
             pages = pages.ifEmpty { defaults.pages },
             selectedPageId = safeSelectedPageId,
             dock = json.optJSONObject("dock")?.toDock() ?: defaults.dock,
+            settings = json.optJSONObject("settings")?.toSettings(defaults.settings) ?: defaults.settings,
         )
     }
 

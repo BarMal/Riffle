@@ -2,13 +2,28 @@ package com.riffle.core.domain.launcher.home
 
 data class HomeLayoutSettings(
     val grid: GridSettings,
+    val wallpaper: WallpaperSettings = WallpaperSettings.system(),
 ) {
     companion object {
         fun standardPhone(): HomeLayoutSettings =
             HomeLayoutSettings(
                 grid = GridSettings.standardPhone(),
+                wallpaper = WallpaperSettings.system(),
             )
     }
+}
+
+data class WallpaperSettings(
+    val source: WallpaperSource,
+) {
+    companion object {
+        fun system(): WallpaperSettings = WallpaperSettings(source = WallpaperSource.SYSTEM)
+    }
+}
+
+enum class WallpaperSource {
+    SYSTEM,
+    SOLID_COLOR,
 }
 
 data class GridSettings(
