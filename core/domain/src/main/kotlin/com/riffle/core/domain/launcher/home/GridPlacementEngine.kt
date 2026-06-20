@@ -18,6 +18,24 @@ class GridPlacementEngine {
             }
         } ?: PlaceLauncherItemResult.Rejected(PlacementRejectionReason.MISSING_PLACEMENT)
 
+    fun moveItem(
+        page: LauncherPage,
+        itemId: LauncherItemId,
+        placement: GridPlacement,
+    ): PlaceLauncherItemResult =
+        page.items.firstOrNull { item -> item.id == itemId }
+            ?.let { item ->
+                placeItem(
+                    page = removeItem(page = page, itemId = itemId),
+                    item = item.withPlacement(placement),
+                )
+            } ?: PlaceLauncherItemResult.Rejected(PlacementRejectionReason.ITEM_NOT_FOUND)
+
+    fun removeItem(
+        page: LauncherPage,
+        itemId: LauncherItemId,
+    ): LauncherPage = page.copy(items = page.items.filterNot { item -> item.id == itemId })
+
     private fun GridDimensions.contains(placement: GridPlacement): Boolean =
         placement.cell.column >= 0 &&
             placement.cell.row >= 0 &&
@@ -46,6 +64,7 @@ sealed interface PlaceLauncherItemResult {
 
 enum class PlacementRejectionReason {
     MISSING_PLACEMENT,
+    ITEM_NOT_FOUND,
     OUT_OF_BOUNDS,
     COLLISION,
 }
