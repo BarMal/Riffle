@@ -13,6 +13,9 @@ import com.riffle.core.domain.launcher.apps.InstalledAppRepository
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.GridCell
 import com.riffle.core.domain.launcher.home.GridPlacement
+import com.riffle.core.domain.launcher.home.HomeLayout
+import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
+import com.riffle.core.domain.launcher.home.HomeLayoutRepository
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -185,6 +188,35 @@ class LauncherShellViewModelTest {
         )
     }
 
+    @Test
+    fun restoresSavedHomeLayout() {
+        val repository = FakeHomeLayoutRepository(savedLayout = HomeLayoutDefaults.standard())
+
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                homeLayoutRepository = repository,
+            )
+
+        assertEquals(repository.savedLayout, viewModel.state.value.homeLayout)
+    }
+
+    @Test
+    fun savesHomeLayoutAfterAddingAppShortcut() {
+        val camera = app(label = "Camera")
+        val repository = FakeHomeLayoutRepository()
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                installedAppRepository = FakeInstalledAppRepository(apps = listOf(camera)),
+                homeLayoutRepository = repository,
+            )
+
+        viewModel.onAddAppToHome(camera)
+
+        assertEquals(viewModel.state.value.homeLayout, repository.savedLayout)
+    }
+
     private class FakeFirstRunRepository(
         private var isComplete: Boolean = false,
     ) : FirstRunRepository {
@@ -199,6 +231,16 @@ class LauncherShellViewModelTest {
         var apps: List<InstalledApp> = emptyList(),
     ) : InstalledAppRepository {
         override fun installedApps(): List<InstalledApp> = apps
+    }
+
+    private class FakeHomeLayoutRepository(
+        var savedLayout: HomeLayout? = null,
+    ) : HomeLayoutRepository {
+        override fun loadHomeLayout(): HomeLayout? = savedLayout
+
+        override fun saveHomeLayout(layout: HomeLayout) {
+            savedLayout = layout
+        }
     }
 
     private fun app(
