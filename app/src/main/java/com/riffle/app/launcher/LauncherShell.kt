@@ -105,6 +105,8 @@ private fun LauncherDestination(
 
         ShellDestination.SEARCH ->
             SearchSurface(
+                query = state.searchQuery,
+                results = state.searchResults,
                 onAction = onAction,
             )
 
@@ -142,6 +144,21 @@ private fun AppDrawerPreview() {
                 firstRunStatus = FirstRunStatus.COMPLETE,
                 destination = ShellDestination.APP_DRAWER,
                 installedApps = samplePreviewApps(),
+            ),
+        onAction = {},
+    )
+}
+
+@Preview
+@Composable
+private fun SearchPreview() {
+    LauncherShellContent(
+        state =
+            LauncherShellState(
+                firstRunStatus = FirstRunStatus.COMPLETE,
+                destination = ShellDestination.SEARCH,
+                searchQuery = "ca",
+                searchResults = samplePreviewApps().take(2),
             ),
         onAction = {},
     )

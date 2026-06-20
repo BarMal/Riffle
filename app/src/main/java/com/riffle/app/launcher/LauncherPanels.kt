@@ -17,6 +17,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -35,40 +36,40 @@ fun AppDrawer(
         title = "Apps",
         onAction = onAction,
     ) {
-        if (apps.isEmpty()) {
-            Text(
-                text = "No launchable apps found",
-                style = MaterialTheme.typography.bodyLarge,
-            )
-        } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                items(
-                    items = apps,
-                    key = { app -> app.drawerKey },
-                ) { app ->
-                    AppDrawerRow(
-                        app = app,
-                        onAction = onAction,
-                    )
-                }
-            }
-        }
+        AppList(
+            apps = apps,
+            emptyText = "No launchable apps found",
+            onAction = onAction,
+        )
     }
 }
 
 @Composable
-fun SearchSurface(onAction: (LauncherShellAction) -> Unit) {
+fun SearchSurface(
+    query: String,
+    results: List<InstalledApp>,
+    onAction: (LauncherShellAction) -> Unit,
+) {
     LauncherPanel(
         title = "Search",
         onAction = onAction,
     ) {
-        Text(
-            text = "Search index is empty",
-            style = MaterialTheme.typography.bodyLarge,
-        )
+        Column(modifier = Modifier.fillMaxSize()) {
+            OutlinedTextField(
+                modifier = Modifier.fillMaxWidth(),
+                value = query,
+                onValueChange = { value -> onAction(LauncherShellAction.SearchQueryChanged(value)) },
+                singleLine = true,
+                label = { Text(text = "Search apps") },
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            AppList(
+                modifier = Modifier.weight(1f),
+                apps = results,
+                emptyText = "No matching apps",
+                onAction = onAction,
+            )
+        }
     }
 }
 
@@ -82,6 +83,41 @@ fun SettingsSurface(onAction: (LauncherShellAction) -> Unit) {
             text = "No settings available",
             style = MaterialTheme.typography.bodyLarge,
         )
+    }
+}
+
+@Composable
+private fun AppList(
+    apps: List<InstalledApp>,
+    emptyText: String,
+    onAction: (LauncherShellAction) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    if (apps.isEmpty()) {
+        Box(
+            modifier = modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                text = emptyText,
+                style = MaterialTheme.typography.bodyLarge,
+            )
+        }
+    } else {
+        LazyColumn(
+            modifier = modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            items(
+                items = apps,
+                key = { app -> app.drawerKey },
+            ) { app ->
+                AppDrawerRow(
+                    app = app,
+                    onAction = onAction,
+                )
+            }
+        }
     }
 }
 

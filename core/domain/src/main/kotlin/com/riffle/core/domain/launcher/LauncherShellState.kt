@@ -10,6 +10,8 @@ data class LauncherShellState(
     val destination: ShellDestination = ShellDestination.HOME,
     val homeLayout: HomeLayout = HomeLayoutDefaults.standard(),
     val installedApps: List<InstalledApp> = emptyList(),
+    val searchQuery: String = "",
+    val searchResults: List<InstalledApp> = emptyList(),
 ) {
     val shouldShowDefaultHomePrompt: Boolean =
         firstRunStatus != FirstRunStatus.COMPLETE && homeRoleStatus != HomeRoleStatus.DEFAULT_HOME

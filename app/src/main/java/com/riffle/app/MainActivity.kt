@@ -66,6 +66,7 @@ class MainActivity : ComponentActivity() {
             LauncherShellAction.OpenSettings ->
                 shellViewModel.onNavigationActionSelected(ShellNavigationAction.OpenSettings)
             is LauncherShellAction.LaunchApp -> appLauncher.launch(action.identity)
+            is LauncherShellAction.SearchQueryChanged -> shellViewModel.onSearchQueryChanged(action.query)
         }
     }
 }

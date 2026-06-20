@@ -103,6 +103,45 @@ class LauncherShellViewModelTest {
         assertEquals(listOf("Calendar"), viewModel.state.value.installedApps.map { app -> app.label })
     }
 
+    @Test
+    fun filtersSearchResultsWhenQueryChanges() {
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                installedAppRepository =
+                    FakeInstalledAppRepository(
+                        apps =
+                            listOf(
+                                app(label = "Camera"),
+                                app(label = "Calendar"),
+                                app(label = "Maps"),
+                            ),
+                    ),
+            )
+
+        viewModel.onSearchQueryChanged("cam")
+
+        assertEquals("cam", viewModel.state.value.searchQuery)
+        assertEquals(listOf("Camera"), viewModel.state.value.searchResults.map { app -> app.label })
+    }
+
+    @Test
+    fun refreshesSearchResultsForCurrentQuery() {
+        val repository = FakeInstalledAppRepository(apps = listOf(app(label = "Camera")))
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                installedAppRepository = repository,
+            )
+        viewModel.onSearchQueryChanged("cal")
+
+        repository.apps = listOf(app(label = "Calendar"))
+        viewModel.refreshInstalledApps()
+
+        assertEquals("cal", viewModel.state.value.searchQuery)
+        assertEquals(listOf("Calendar"), viewModel.state.value.searchResults.map { app -> app.label })
+    }
+
     private class FakeFirstRunRepository(
         private var isComplete: Boolean = false,
     ) : FirstRunRepository {
