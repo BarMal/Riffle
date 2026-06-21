@@ -22,6 +22,8 @@ import com.riffle.core.domain.launcher.home.LauncherPage
 import com.riffle.core.domain.launcher.home.LauncherPageId
 import com.riffle.core.domain.launcher.home.PlacementRejectionReason
 import com.riffle.core.domain.launcher.home.WallpaperSettings
+import com.riffle.core.domain.launcher.notifications.AppNotificationCounter
+import com.riffle.core.domain.launcher.notifications.LauncherNotificationRepository
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettingsRepository
@@ -34,9 +36,11 @@ class LauncherShellViewModel(
     private val installedAppRepository: InstalledAppRepository = InstalledAppRepository { emptyList() },
     private val homeLayoutRepository: HomeLayoutRepository = NoopHomeLayoutRepository,
     private val launcherSettingsRepository: LauncherSettingsRepository = NoopLauncherSettingsRepository,
+    private val notificationRepository: LauncherNotificationRepository = LauncherNotificationRepository { emptyList() },
 ) : ViewModel() {
     private val reducer = LauncherShellStateReducer()
     private val appCatalog = InstalledAppCatalog()
+    private val appNotificationCounter = AppNotificationCounter()
     private val shortcutEngine = HomeShortcutEngine()
     private val homePageEngine = HomePageEngine()
     private val dockEngine = DockEngine()
@@ -48,7 +52,8 @@ class LauncherShellViewModel(
                 launcherSettingsRepository = launcherSettingsRepository,
                 firstRunRepository = firstRunRepository,
                 reducer = reducer,
-            ).withInstalledApps(installedAppRepository, appCatalog),
+            ).withInstalledApps(installedAppRepository, appCatalog)
+                .withNotificationCounts(notificationRepository, appNotificationCounter),
         )
     val state: StateFlow<LauncherShellState> = mutableState.asStateFlow()
 
@@ -78,7 +83,10 @@ class LauncherShellViewModel(
     }
 
     fun refreshInstalledApps() {
-        mutableState.value = mutableState.value.withInstalledApps(installedAppRepository, appCatalog)
+        mutableState.value =
+            mutableState.value
+                .withInstalledApps(installedAppRepository, appCatalog)
+                .withNotificationCounts(notificationRepository, appNotificationCounter)
     }
 
     fun onSearchQueryChanged(query: String) {

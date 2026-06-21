@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.riffle.core.domain.launcher.apps.InstalledAppRepository
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
+import com.riffle.core.domain.launcher.notifications.LauncherNotificationRepository
 import com.riffle.core.domain.launcher.settings.LauncherSettingsRepository
 
 class LauncherShellViewModelFactory(
@@ -11,6 +12,7 @@ class LauncherShellViewModelFactory(
     private val installedAppRepository: InstalledAppRepository,
     private val homeLayoutRepository: HomeLayoutRepository,
     private val launcherSettingsRepository: LauncherSettingsRepository,
+    private val notificationRepository: LauncherNotificationRepository,
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T =
@@ -21,6 +23,7 @@ class LauncherShellViewModelFactory(
                     installedAppRepository = installedAppRepository,
                     homeLayoutRepository = homeLayoutRepository,
                     launcherSettingsRepository = launcherSettingsRepository,
+                    notificationRepository = notificationRepository,
                 ) as T
 
             else -> error("Unknown ViewModel class: ${modelClass.name}")

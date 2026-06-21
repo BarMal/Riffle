@@ -24,6 +24,9 @@ import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.home.LauncherPageId
 import com.riffle.core.domain.launcher.home.WallpaperSettings
 import com.riffle.core.domain.launcher.home.WallpaperSource
+import com.riffle.core.domain.launcher.notifications.LauncherNotification
+import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
+import com.riffle.core.domain.launcher.notifications.LauncherNotificationRepository
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.settings.AppearanceSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettings
@@ -138,6 +141,39 @@ class LauncherShellViewModelTest {
         viewModel.refreshInstalledApps()
 
         assertEquals(listOf("Calendar"), viewModel.state.value.installedApps.map { app -> app.label })
+    }
+
+    @Test
+    fun loadsNotificationCountsIntoInitialState() {
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                notificationRepository =
+                    FakeNotificationRepository(
+                        notifications =
+                            listOf(
+                                notification(key = "camera-1", packageName = "com.riffle.camera"),
+                                notification(key = "camera-2", packageName = "com.riffle.camera"),
+                            ),
+                    ),
+            )
+
+        assertEquals(2, viewModel.state.value.notificationCountsByPackage[AppPackageName("com.riffle.camera")])
+    }
+
+    @Test
+    fun refreshesNotificationCounts() {
+        val repository = FakeNotificationRepository()
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                notificationRepository = repository,
+            )
+
+        repository.notifications = listOf(notification(key = "camera-1", packageName = "com.riffle.camera"))
+        viewModel.refreshInstalledApps()
+
+        assertEquals(1, viewModel.state.value.notificationCountsByPackage[AppPackageName("com.riffle.camera")])
     }
 
     @Test
@@ -721,6 +757,12 @@ class LauncherShellViewModelTest {
         }
     }
 
+    private class FakeNotificationRepository(
+        var notifications: List<LauncherNotification> = emptyList(),
+    ) : LauncherNotificationRepository {
+        override fun activeNotifications(): List<LauncherNotification> = notifications
+    }
+
     private fun app(
         label: String,
         visibility: AppVisibility = AppVisibility.VISIBLE,
@@ -733,6 +775,16 @@ class LauncherShellViewModelTest {
                 ),
             label = label,
             visibility = visibility,
+        )
+
+    private fun notification(
+        key: String,
+        packageName: String,
+    ): LauncherNotification =
+        LauncherNotification(
+            key = LauncherNotificationKey(key),
+            packageName = AppPackageName(packageName),
+            postedAtEpochMillis = 1_000L,
         )
 
     private val HomeLayout.pageIds: List<LauncherPageId>

@@ -19,6 +19,7 @@ import com.riffle.app.launcher.apps.PackageManagerAppIconLoader
 import com.riffle.app.launcher.apps.PackageManagerInstalledAppRepository
 import com.riffle.app.launcher.handleSettingsAction
 import com.riffle.app.launcher.notifications.AndroidNotificationAccessGateway
+import com.riffle.app.launcher.notifications.SharedPreferencesActiveNotificationRepository
 import com.riffle.core.domain.launcher.ShellNavigationAction
 
 class MainActivity : ComponentActivity() {
@@ -28,6 +29,7 @@ class MainActivity : ComponentActivity() {
             installedAppRepository = PackageManagerInstalledAppRepository(packageManager),
             homeLayoutRepository = SharedPreferencesHomeLayoutRepository(this),
             launcherSettingsRepository = SharedPreferencesLauncherSettingsRepository(this),
+            notificationRepository = SharedPreferencesActiveNotificationRepository(this),
         )
     }
     private val homeRoleGateway by lazy { AndroidHomeRoleGateway(this) }
