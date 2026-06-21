@@ -151,6 +151,7 @@ private fun LauncherDestination(
         ShellDestination.NOTIFICATIONS ->
             NotificationOverviewSurface(
                 groups = state.notificationGroupsByApp,
+                categoryCounts = state.notificationCountsByCategory,
                 apps = state.installedApps,
                 appIconLoader = appIconLoader,
                 onAction = onAction,

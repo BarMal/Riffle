@@ -27,6 +27,7 @@ import com.riffle.core.domain.launcher.notifications.NotificationPriority
 @Composable
 fun NotificationOverviewSurface(
     groups: List<AppNotificationGroup>,
+    categoryCounts: Map<NotificationCategory, Int>,
     apps: List<InstalledApp>,
     appIconLoader: AppIconLoader,
     onAction: (LauncherShellAction) -> Unit,
@@ -42,6 +43,9 @@ fun NotificationOverviewSurface(
                 modifier = Modifier.fillMaxSize(),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
+                item {
+                    NotificationCategorySummary(categoryCounts = categoryCounts)
+                }
                 items(
                     items = groups,
                     key = { group -> "${group.profileId.value}:${group.packageName.value}" },
@@ -56,6 +60,16 @@ fun NotificationOverviewSurface(
             }
         }
     }
+}
+
+@Composable
+private fun NotificationCategorySummary(categoryCounts: Map<NotificationCategory, Int>) {
+    Text(
+        text = categoryCounts.summaryLabel,
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(horizontal = 2.dp, vertical = 4.dp),
+    )
 }
 
 @Composable
@@ -127,6 +141,18 @@ private fun InstalledApp.matches(group: AppNotificationGroup): Boolean =
 
 private val AppNotificationGroup.metadataLabel: String
     get() = "${packageName.value} - ${latestCategory.label} - ${highestPriority.label} - $clearableLabel"
+
+private val Map<NotificationCategory, Int>.summaryLabel: String
+    get() =
+        entries
+            .sortedWith(
+                compareByDescending<Map.Entry<NotificationCategory, Int>> { entry -> entry.value }
+                    .thenBy { entry -> entry.key.label },
+            )
+            .take(MAX_CATEGORY_SUMMARY_ITEMS)
+            .joinToString(separator = " - ") { (category, count) -> "${category.label} $count" }
+
+private const val MAX_CATEGORY_SUMMARY_ITEMS = 4
 
 private val NotificationAgeBucket.label: String
     get() =
