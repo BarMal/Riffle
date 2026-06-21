@@ -14,6 +14,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -132,6 +133,15 @@ private fun NotificationGroupRow(
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+        if (group.dismissibleNotificationKeys.isNotEmpty()) {
+            TextButton(
+                onClick = {
+                    onAction(LauncherShellAction.DismissNotifications(group.dismissibleNotificationKeys))
+                },
+            ) {
+                Text(text = "Clear")
+            }
+        }
         NotificationCountBadge(count = group.count)
     }
 }

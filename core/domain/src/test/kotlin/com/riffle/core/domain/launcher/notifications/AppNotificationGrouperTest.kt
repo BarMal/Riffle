@@ -120,6 +120,21 @@ class AppNotificationGrouperTest {
     }
 
     @Test
+    fun exposesDismissibleNotificationKeys() {
+        val group =
+            grouper
+                .groupByApp(
+                    listOf(
+                        notification(key = "dismissable", packageName = "com.riffle.mail", canDismiss = true),
+                        notification(key = "ongoing", packageName = "com.riffle.mail", canDismiss = false),
+                    ),
+                    nowEpochMillis = nowEpochMillis,
+                ).single()
+
+        assertEquals(listOf(LauncherNotificationKey("dismissable")), group.dismissibleNotificationKeys)
+    }
+
+    @Test
     fun exposesHighestNotificationPriority() {
         val group =
             grouper

@@ -16,6 +16,12 @@ data class AppNotificationGroup(
     val clearableCount: Int
         get() = notifications.count { notification -> notification.canDismiss }
 
+    val dismissibleNotificationKeys: List<LauncherNotificationKey>
+        get() =
+            notifications
+                .filter { notification -> notification.canDismiss }
+                .map { notification -> notification.key }
+
     val highestPriority: NotificationPriority
         get() =
             notifications
