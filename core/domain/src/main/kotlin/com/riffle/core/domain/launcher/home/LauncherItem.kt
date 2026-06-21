@@ -20,3 +20,12 @@ data class AppShortcutItem(
 ) : LauncherItem {
     override fun withPlacement(placement: GridPlacement): LauncherItem = copy(placement = placement)
 }
+
+data class FolderItem(
+    override val id: LauncherItemId,
+    val label: String,
+    val items: List<AppShortcutItem>,
+    override val placement: GridPlacement? = null,
+) : LauncherItem {
+    override fun withPlacement(placement: GridPlacement): LauncherItem = copy(placement = placement)
+}
