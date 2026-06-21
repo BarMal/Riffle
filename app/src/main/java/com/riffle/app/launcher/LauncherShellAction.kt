@@ -16,6 +16,8 @@ sealed interface LauncherShellAction {
 
     data object OpenSearch : LauncherShellAction
 
+    data object OpenNotifications : LauncherShellAction
+
     data object OpenSettings : LauncherShellAction
 
     data object RequestNotificationAccess : LauncherShellAction

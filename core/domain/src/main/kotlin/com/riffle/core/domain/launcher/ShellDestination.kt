@@ -4,5 +4,6 @@ enum class ShellDestination {
     HOME,
     APP_DRAWER,
     SEARCH,
+    NOTIFICATIONS,
     SETTINGS,
 }

@@ -148,6 +148,14 @@ private fun LauncherDestination(
                 onAction = onAction,
             )
 
+        ShellDestination.NOTIFICATIONS ->
+            NotificationOverviewSurface(
+                groups = state.notificationGroupsByApp,
+                apps = state.installedApps,
+                appIconLoader = appIconLoader,
+                onAction = onAction,
+            )
+
         ShellDestination.SETTINGS ->
             SettingsSurface(
                 settings = state.launcherSettings,

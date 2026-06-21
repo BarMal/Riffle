@@ -63,15 +63,21 @@ class LauncherShellStateReducerTest {
                 currentState = searchState,
                 action = ShellNavigationAction.OpenSettings,
             )
-        val homeState =
+        val notificationsState =
             reducer.navigationActionSelected(
                 currentState = settingsState,
+                action = ShellNavigationAction.OpenNotifications,
+            )
+        val homeState =
+            reducer.navigationActionSelected(
+                currentState = notificationsState,
                 action = ShellNavigationAction.OpenHome,
             )
 
         assertEquals(ShellDestination.APP_DRAWER, appDrawerState.destination)
         assertEquals(ShellDestination.SEARCH, searchState.destination)
         assertEquals(ShellDestination.SETTINGS, settingsState.destination)
+        assertEquals(ShellDestination.NOTIFICATIONS, notificationsState.destination)
         assertEquals(ShellDestination.HOME, homeState.destination)
     }
 }
