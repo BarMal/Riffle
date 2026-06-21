@@ -1,5 +1,7 @@
 package com.riffle.app.launcher
 
+import com.riffle.core.domain.launcher.settings.HomeSwipeGestureSettings
+import com.riffle.core.domain.launcher.settings.LauncherGestureAction
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -48,5 +50,28 @@ class HomeSwipeGestureInterpreterTest {
         assertEquals(LauncherShellAction.OpenNotifications, actionMapper.actionFor(HomeSwipeGesture.DOWN))
         assertEquals(LauncherShellAction.SelectNextHomePage, actionMapper.actionFor(HomeSwipeGesture.LEFT))
         assertEquals(LauncherShellAction.SelectPreviousHomePage, actionMapper.actionFor(HomeSwipeGesture.RIGHT))
+    }
+
+    @Test
+    fun mapsSwipeGesturesToConfiguredActions() {
+        val settings =
+            HomeSwipeGestureSettings(
+                up = LauncherGestureAction.OPEN_SEARCH,
+                down = LauncherGestureAction.OPEN_SETTINGS,
+                left = LauncherGestureAction.ENTER_HOME_EDIT_MODE,
+                right = LauncherGestureAction.OPEN_APP_DRAWER,
+            )
+
+        assertEquals(LauncherShellAction.OpenSearch, actionMapper.actionFor(HomeSwipeGesture.UP, settings))
+        assertEquals(LauncherShellAction.OpenSettings, actionMapper.actionFor(HomeSwipeGesture.DOWN, settings))
+        assertEquals(LauncherShellAction.EnterHomeEditMode, actionMapper.actionFor(HomeSwipeGesture.LEFT, settings))
+        assertEquals(LauncherShellAction.OpenAppDrawer, actionMapper.actionFor(HomeSwipeGesture.RIGHT, settings))
+    }
+
+    @Test
+    fun mapsDisabledGestureToNoAction() {
+        val settings = HomeSwipeGestureSettings(up = LauncherGestureAction.NONE)
+
+        assertNull(actionMapper.actionFor(HomeSwipeGesture.UP, settings))
     }
 }
