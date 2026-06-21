@@ -8,6 +8,7 @@ import kotlin.test.assertEquals
 
 class AppNotificationGrouperTest {
     private val grouper = AppNotificationGrouper()
+    private val nowEpochMillis = 10 * 60 * 1_000L
 
     @Test
     fun groupsNotificationsByPackageAndProfile() {
@@ -18,6 +19,7 @@ class AppNotificationGrouperTest {
                     notification(key = "work-1", packageName = "com.riffle.mail", profileId = AppProfile.work().id),
                     notification(key = "personal-2", packageName = "com.riffle.mail"),
                 ),
+                nowEpochMillis = nowEpochMillis,
             )
 
         assertEquals(2, groups.size)
@@ -33,6 +35,7 @@ class AppNotificationGrouperTest {
                     notification(key = "older", packageName = "com.riffle.calendar", postedAtEpochMillis = 1_000L),
                     notification(key = "newer", packageName = "com.riffle.mail", postedAtEpochMillis = 2_000L),
                 ),
+                nowEpochMillis = nowEpochMillis,
             )
 
         assertEquals(AppPackageName("com.riffle.mail"), groups[0].packageName)
@@ -48,6 +51,7 @@ class AppNotificationGrouperTest {
                         notification(key = "older", packageName = "com.riffle.mail", postedAtEpochMillis = 1_000L),
                         notification(key = "newer", packageName = "com.riffle.mail", postedAtEpochMillis = 2_000L),
                     ),
+                    nowEpochMillis = nowEpochMillis,
                 ).single()
 
         assertEquals(
@@ -57,8 +61,27 @@ class AppNotificationGrouperTest {
     }
 
     @Test
+    fun assignsGroupAgeFromMostRecentNotification() {
+        val group =
+            grouper
+                .groupByApp(
+                    listOf(
+                        notification(key = "older", packageName = "com.riffle.mail", postedAtEpochMillis = 1_000L),
+                        notification(
+                            key = "newer",
+                            packageName = "com.riffle.mail",
+                            postedAtEpochMillis = 9 * 60 * 1_000L,
+                        ),
+                    ),
+                    nowEpochMillis = nowEpochMillis,
+                ).single()
+
+        assertEquals(NotificationAgeBucket.NOW, group.latestAgeBucket)
+    }
+
+    @Test
     fun returnsEmptyGroupsForEmptyNotifications() {
-        assertEquals(emptyList(), grouper.groupByApp(emptyList()))
+        assertEquals(emptyList(), grouper.groupByApp(emptyList(), nowEpochMillis = nowEpochMillis))
     }
 
     private fun List<AppNotificationGroup>.group(

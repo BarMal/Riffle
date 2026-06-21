@@ -38,6 +38,7 @@ class LauncherShellViewModel(
     private val homeLayoutRepository: HomeLayoutRepository = NoopHomeLayoutRepository,
     private val launcherSettingsRepository: LauncherSettingsRepository = NoopLauncherSettingsRepository,
     private val notificationRepository: LauncherNotificationRepository = LauncherNotificationRepository { emptyList() },
+    private val epochMillisProvider: EpochMillisProvider = SystemEpochMillisProvider,
 ) : ViewModel() {
     private val reducer = LauncherShellStateReducer()
     private val appCatalog = InstalledAppCatalog()
@@ -59,6 +60,7 @@ class LauncherShellViewModel(
                     notificationRepository = notificationRepository,
                     appNotificationCounter = appNotificationCounter,
                     appNotificationGrouper = appNotificationGrouper,
+                    nowEpochMillis = epochMillisProvider.nowEpochMillis(),
                 ),
         )
     val state: StateFlow<LauncherShellState> = mutableState.asStateFlow()
@@ -96,6 +98,7 @@ class LauncherShellViewModel(
                     notificationRepository = notificationRepository,
                     appNotificationCounter = appNotificationCounter,
                     appNotificationGrouper = appNotificationGrouper,
+                    nowEpochMillis = epochMillisProvider.nowEpochMillis(),
                 )
     }
 

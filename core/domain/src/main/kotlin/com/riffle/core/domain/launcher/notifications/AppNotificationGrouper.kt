@@ -1,7 +1,12 @@
 package com.riffle.core.domain.launcher.notifications
 
-class AppNotificationGrouper {
-    fun groupByApp(notifications: List<LauncherNotification>): List<AppNotificationGroup> =
+class AppNotificationGrouper(
+    private val ageBucketClassifier: NotificationAgeBucketClassifier = NotificationAgeBucketClassifier(),
+) {
+    fun groupByApp(
+        notifications: List<LauncherNotification>,
+        nowEpochMillis: Long,
+    ): List<AppNotificationGroup> =
         notifications
             .groupBy { notification ->
                 AppNotificationGroupKey(
@@ -10,10 +15,13 @@ class AppNotificationGrouper {
                 )
             }
             .map { (key, groupedNotifications) ->
+                val sortedNotifications = groupedNotifications.sortedForDisplay()
+
                 AppNotificationGroup(
                     packageName = key.packageName,
                     profileId = key.profileId,
-                    notifications = groupedNotifications.sortedForDisplay(),
+                    latestAgeBucket = ageBucketClassifier.bucketFor(sortedNotifications.first(), nowEpochMillis),
+                    notifications = sortedNotifications,
                 )
             }
             .sortedWith(displayOrder)
