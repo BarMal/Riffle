@@ -7,6 +7,8 @@ import com.riffle.core.domain.launcher.home.HomeShortcutMoveDirection
 import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.home.WallpaperSource
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
+import com.riffle.core.domain.launcher.settings.HomeSwipeGestureDirection
+import com.riffle.core.domain.launcher.settings.LauncherGestureAction
 
 sealed interface LauncherShellAction {
     data object RequestDefaultHome : LauncherShellAction
@@ -62,6 +64,11 @@ sealed interface LauncherShellAction {
     data class SearchQueryChanged(val query: String) : LauncherShellAction
 
     data class SelectWallpaperSource(val source: WallpaperSource) : LauncherShellAction
+
+    data class SelectHomeSwipeGestureAction(
+        val direction: HomeSwipeGestureDirection,
+        val action: LauncherGestureAction,
+    ) : LauncherShellAction
 
     data class DismissNotifications(val keys: List<LauncherNotificationKey>) : LauncherShellAction
 }

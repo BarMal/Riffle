@@ -22,6 +22,13 @@ data class HomeSwipeGestureSettings(
     val right: LauncherGestureAction = LauncherGestureAction.SELECT_PREVIOUS_HOME_PAGE,
 )
 
+enum class HomeSwipeGestureDirection {
+    UP,
+    DOWN,
+    LEFT,
+    RIGHT,
+}
+
 enum class LauncherGestureAction {
     NONE,
     OPEN_APP_DRAWER,

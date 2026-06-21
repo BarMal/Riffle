@@ -6,30 +6,57 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.riffle.core.domain.launcher.settings.HomeSwipeGestureDirection
 import com.riffle.core.domain.launcher.settings.HomeSwipeGestureSettings
 import com.riffle.core.domain.launcher.settings.LauncherGestureAction
 
 @Composable
-fun HomeSwipeGestureSetting(settings: HomeSwipeGestureSettings) {
+fun HomeSwipeGestureSetting(
+    settings: HomeSwipeGestureSettings,
+    onAction: (LauncherShellAction) -> Unit,
+) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
             text = "Home swipes",
             style = MaterialTheme.typography.bodyLarge,
         )
-        HomeSwipeGestureRow(label = "Up", action = settings.up)
-        HomeSwipeGestureRow(label = "Down", action = settings.down)
-        HomeSwipeGestureRow(label = "Left", action = settings.left)
-        HomeSwipeGestureRow(label = "Right", action = settings.right)
+        HomeSwipeGestureRow(
+            label = "Up",
+            direction = HomeSwipeGestureDirection.UP,
+            action = settings.up,
+            onAction = onAction,
+        )
+        HomeSwipeGestureRow(
+            label = "Down",
+            direction = HomeSwipeGestureDirection.DOWN,
+            action = settings.down,
+            onAction = onAction,
+        )
+        HomeSwipeGestureRow(
+            label = "Left",
+            direction = HomeSwipeGestureDirection.LEFT,
+            action = settings.left,
+            onAction = onAction,
+        )
+        HomeSwipeGestureRow(
+            label = "Right",
+            direction = HomeSwipeGestureDirection.RIGHT,
+            action = settings.right,
+            onAction = onAction,
+        )
     }
 }
 
 @Composable
 private fun HomeSwipeGestureRow(
     label: String,
+    direction: HomeSwipeGestureDirection,
     action: LauncherGestureAction,
+    onAction: (LauncherShellAction) -> Unit,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -39,12 +66,25 @@ private fun HomeSwipeGestureRow(
             text = label,
             style = MaterialTheme.typography.bodyMedium,
         )
-        Text(
-            text = action.label,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        TextButton(
+            onClick = {
+                onAction(
+                    LauncherShellAction.SelectHomeSwipeGestureAction(
+                        direction = direction,
+                        action = action.nextGestureAction(),
+                    ),
+                )
+            },
+        ) {
+            Text(text = action.label)
+        }
     }
+}
+
+private fun LauncherGestureAction.nextGestureAction(): LauncherGestureAction {
+    val actions = LauncherGestureAction.entries
+    val currentIndex = actions.indexOf(this)
+    return actions[(currentIndex + 1) % actions.size]
 }
 
 private val LauncherGestureAction.label: String

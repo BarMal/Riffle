@@ -299,7 +299,7 @@ class LauncherShellViewModelTest {
                 launcherSettingsRepository = repository,
             )
 
-        viewModel.onWallpaperSourceSelected(
+        viewModel.onLauncherSettingsActionSelected(
             LauncherShellAction.SelectWallpaperSource(WallpaperSource.SOLID_COLOR),
         )
 
