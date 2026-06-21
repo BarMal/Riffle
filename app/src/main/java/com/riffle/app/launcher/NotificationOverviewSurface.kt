@@ -107,7 +107,7 @@ private fun NotificationGroupRow(
                 style = MaterialTheme.typography.bodyLarge,
             )
             Text(
-                text = "${group.packageName.value} · ${group.latestCategory.label}",
+                text = "${group.packageName.value} - ${group.latestCategory.label} - ${group.clearableLabel}",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -157,4 +157,14 @@ private val NotificationCategory.label: String
             NotificationCategory.ERROR -> "Error"
             NotificationCategory.STOPWATCH -> "Stopwatch"
             NotificationCategory.WORKOUT -> "Workout"
+        }
+
+private val AppNotificationGroup.clearableLabel: String
+    get() =
+        clearableCount.let { clearable ->
+            when {
+                clearable == 0 -> "Pinned"
+                clearable == count -> "Clearable $count/$count"
+                else -> "Clearable $clearable/$count"
+            }
         }

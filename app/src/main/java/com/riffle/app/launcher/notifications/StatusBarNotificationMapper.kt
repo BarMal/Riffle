@@ -10,5 +10,6 @@ fun StatusBarNotification.toLauncherNotification(): LauncherNotification =
         key = LauncherNotificationKey(key),
         packageName = AppPackageName(packageName),
         category = notification.category.toLauncherNotificationCategory(),
+        canDismiss = isClearable,
         postedAtEpochMillis = postTime,
     )
