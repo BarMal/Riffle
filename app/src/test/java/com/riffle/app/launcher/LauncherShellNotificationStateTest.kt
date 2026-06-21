@@ -75,6 +75,43 @@ class LauncherShellNotificationStateTest {
         assertEquals(1, viewModel.state.value.notificationCountsByCategory[NotificationCategory.EMAIL])
     }
 
+    @Test
+    fun removesStaleClearableNotificationsFromLauncherState() {
+        val nowEpochMillis = 10 * 24 * 60 * 60 * 1_000L
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                epochMillisProvider = FixedEpochMillisProvider(nowEpochMillis = nowEpochMillis),
+                notificationRepository =
+                    FakeNotificationRepository(
+                        notifications =
+                            listOf(
+                                notification(
+                                    key = "old-clearable",
+                                    packageName = "com.riffle.mail",
+                                    category = NotificationCategory.EMAIL,
+                                    canDismiss = true,
+                                    postedAtEpochMillis = nowEpochMillis - 8 * 24 * 60 * 60 * 1_000L,
+                                ),
+                                notification(
+                                    key = "old-pinned",
+                                    packageName = "com.riffle.music",
+                                    category = NotificationCategory.SERVICE,
+                                    canDismiss = false,
+                                    postedAtEpochMillis = nowEpochMillis - 8 * 24 * 60 * 60 * 1_000L,
+                                ),
+                            ),
+                    ),
+            )
+
+        assertEquals(
+            listOf(AppPackageName("com.riffle.music")),
+            viewModel.state.value.notificationGroupsByApp.map { group -> group.packageName },
+        )
+        assertEquals(null, viewModel.state.value.notificationCountsByCategory[NotificationCategory.EMAIL])
+        assertEquals(1, viewModel.state.value.notificationCountsByCategory[NotificationCategory.SERVICE])
+    }
+
     private class FakeFirstRunRepository : FirstRunRepository {
         override fun isFirstRunComplete(): Boolean = false
 
@@ -97,11 +134,14 @@ class LauncherShellNotificationStateTest {
         key: String,
         packageName: String,
         category: NotificationCategory = NotificationCategory.UNKNOWN,
+        canDismiss: Boolean = false,
+        postedAtEpochMillis: Long = 1_000L,
     ): LauncherNotification =
         LauncherNotification(
             key = LauncherNotificationKey(key),
             packageName = AppPackageName(packageName),
             category = category,
-            postedAtEpochMillis = 1_000L,
+            canDismiss = canDismiss,
+            postedAtEpochMillis = postedAtEpochMillis,
         )
 }

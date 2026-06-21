@@ -26,6 +26,7 @@ import com.riffle.core.domain.launcher.notifications.AppNotificationCounter
 import com.riffle.core.domain.launcher.notifications.AppNotificationGrouper
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationRepository
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
+import com.riffle.core.domain.launcher.notifications.NotificationStaleFilter
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettingsRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -44,6 +45,7 @@ class LauncherShellViewModel(
     private val appCatalog = InstalledAppCatalog()
     private val appNotificationCounter = AppNotificationCounter()
     private val appNotificationGrouper = AppNotificationGrouper()
+    private val notificationStaleFilter = NotificationStaleFilter()
     private val shortcutEngine = HomeShortcutEngine()
     private val homePageEngine = HomePageEngine()
     private val dockEngine = DockEngine()
@@ -60,6 +62,7 @@ class LauncherShellViewModel(
                     notificationRepository = notificationRepository,
                     appNotificationCounter = appNotificationCounter,
                     appNotificationGrouper = appNotificationGrouper,
+                    notificationStaleFilter = notificationStaleFilter,
                     nowEpochMillis = epochMillisProvider.nowEpochMillis(),
                 ),
         )
@@ -98,6 +101,7 @@ class LauncherShellViewModel(
                     notificationRepository = notificationRepository,
                     appNotificationCounter = appNotificationCounter,
                     appNotificationGrouper = appNotificationGrouper,
+                    notificationStaleFilter = notificationStaleFilter,
                     nowEpochMillis = epochMillisProvider.nowEpochMillis(),
                 )
     }
