@@ -16,6 +16,7 @@ class ActiveNotificationJsonCodecTest {
                     key = LauncherNotificationKey("camera-1"),
                     packageName = AppPackageName("com.riffle.camera"),
                     category = NotificationCategory.MESSAGE,
+                    canDismiss = true,
                     postedAtEpochMillis = 1_000L,
                 ),
             )
@@ -44,5 +45,23 @@ class ActiveNotificationJsonCodecTest {
             )
 
         assertEquals(NotificationCategory.UNKNOWN, notifications.single().category)
+    }
+
+    @Test
+    fun decodesMissingDismissibleStateAsFalse() {
+        val notifications =
+            decodeActiveNotifications(
+                """
+                [
+                    {
+                        "key": "legacy",
+                        "packageName": "com.riffle.legacy",
+                        "postedAtEpochMillis": 1000
+                    }
+                ]
+                """.trimIndent(),
+            )
+
+        assertEquals(false, notifications.single().canDismiss)
     }
 }

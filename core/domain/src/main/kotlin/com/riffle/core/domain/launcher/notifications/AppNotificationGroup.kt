@@ -13,6 +13,9 @@ data class AppNotificationGroup(
     val count: Int
         get() = notifications.size
 
+    val clearableCount: Int
+        get() = notifications.count { notification -> notification.canDismiss }
+
     val latestPostedAtEpochMillis: Long
         get() = notifications.maxOfOrNull { notification -> notification.postedAtEpochMillis } ?: 0L
 }

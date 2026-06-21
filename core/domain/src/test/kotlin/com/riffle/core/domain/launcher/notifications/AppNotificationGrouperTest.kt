@@ -105,6 +105,21 @@ class AppNotificationGrouperTest {
     }
 
     @Test
+    fun exposesClearableNotificationCount() {
+        val group =
+            grouper
+                .groupByApp(
+                    listOf(
+                        notification(key = "dismissable", packageName = "com.riffle.mail", canDismiss = true),
+                        notification(key = "ongoing", packageName = "com.riffle.mail", canDismiss = false),
+                    ),
+                    nowEpochMillis = nowEpochMillis,
+                ).single()
+
+        assertEquals(1, group.clearableCount)
+    }
+
+    @Test
     fun returnsEmptyGroupsForEmptyNotifications() {
         assertEquals(emptyList(), grouper.groupByApp(emptyList(), nowEpochMillis = nowEpochMillis))
     }
@@ -123,6 +138,7 @@ class AppNotificationGrouperTest {
         packageName: String,
         profileId: AppProfileId = AppProfile.personal().id,
         category: NotificationCategory = NotificationCategory.UNKNOWN,
+        canDismiss: Boolean = false,
         postedAtEpochMillis: Long = 1_000L,
     ): LauncherNotification =
         LauncherNotification(
@@ -130,6 +146,7 @@ class AppNotificationGrouperTest {
             packageName = AppPackageName(packageName),
             profileId = profileId,
             category = category,
+            canDismiss = canDismiss,
             postedAtEpochMillis = postedAtEpochMillis,
         )
 }

@@ -9,6 +9,7 @@ data class LauncherNotification(
     val packageName: AppPackageName,
     val profileId: AppProfileId = AppProfile.personal().id,
     val category: NotificationCategory = NotificationCategory.UNKNOWN,
+    val canDismiss: Boolean = false,
     val postedAtEpochMillis: Long,
 )
 
