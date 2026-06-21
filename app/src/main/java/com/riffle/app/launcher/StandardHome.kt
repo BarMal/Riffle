@@ -44,11 +44,13 @@ import com.riffle.core.domain.launcher.home.HomeEditMode
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeShortcutMoveDirection
 import com.riffle.core.domain.launcher.home.LauncherPage
+import com.riffle.core.domain.launcher.settings.HomeSwipeGestureSettings
 import kotlin.math.roundToInt
 
 @Composable
 fun StandardHome(
     layout: HomeLayout,
+    homeSwipeGestures: HomeSwipeGestureSettings,
     notificationCountsByPackage: Map<AppPackageName, Int>,
     appIconLoader: AppIconLoader,
     onAction: (LauncherShellAction) -> Unit,
@@ -63,6 +65,7 @@ fun StandardHome(
                 .homeSwipeNavigation(
                     enabled = !isEditing,
                     thresholdPx = swipeThresholdPx,
+                    homeSwipeGestures = homeSwipeGestures,
                     onAction = onAction,
                 )
                 .padding(24.dp),
@@ -383,6 +386,7 @@ private fun LauncherPage.shortcutAt(cell: GridCell): AppShortcutItem? =
 private fun Modifier.homeSwipeNavigation(
     enabled: Boolean,
     thresholdPx: Float,
+    homeSwipeGestures: HomeSwipeGestureSettings,
     onAction: (LauncherShellAction) -> Unit,
 ): Modifier =
     if (!enabled) {
@@ -407,7 +411,7 @@ private fun Modifier.homeSwipeNavigation(
                 onDragEnd = {
                     interpreter
                         .gestureFor(horizontalDragPx, verticalDragPx)
-                        ?.let(actionMapper::actionFor)
+                        ?.let { gesture -> actionMapper.actionFor(gesture, homeSwipeGestures) }
                         ?.let(onAction)
                 },
                 onDragCancel = {
