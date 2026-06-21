@@ -8,11 +8,36 @@ data class LauncherNotification(
     val key: LauncherNotificationKey,
     val packageName: AppPackageName,
     val profileId: AppProfileId = AppProfile.personal().id,
+    val category: NotificationCategory = NotificationCategory.UNKNOWN,
     val postedAtEpochMillis: Long,
 )
 
 @JvmInline
 value class LauncherNotificationKey(val value: String)
+
+enum class NotificationCategory {
+    UNKNOWN,
+    MESSAGE,
+    EMAIL,
+    CALL,
+    MISSED_CALL,
+    ALARM,
+    EVENT,
+    REMINDER,
+    TRANSPORT,
+    NAVIGATION,
+    LOCATION,
+    SOCIAL,
+    PROMOTION,
+    RECOMMENDATION,
+    STATUS,
+    SYSTEM,
+    SERVICE,
+    PROGRESS,
+    ERROR,
+    STOPWATCH,
+    WORKOUT,
+}
 
 fun interface LauncherNotificationRepository {
     fun activeNotifications(): List<LauncherNotification>

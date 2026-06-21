@@ -6,6 +6,7 @@ import com.riffle.core.domain.launcher.apps.AppProfileId
 data class AppNotificationGroup(
     val packageName: AppPackageName,
     val profileId: AppProfileId,
+    val latestCategory: NotificationCategory,
     val latestAgeBucket: NotificationAgeBucket,
     val notifications: List<LauncherNotification>,
 ) {

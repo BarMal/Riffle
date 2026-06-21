@@ -20,6 +20,7 @@ class AppNotificationGrouper(
                 AppNotificationGroup(
                     packageName = key.packageName,
                     profileId = key.profileId,
+                    latestCategory = sortedNotifications.first().category,
                     latestAgeBucket = ageBucketClassifier.bucketFor(sortedNotifications.first(), nowEpochMillis),
                     notifications = sortedNotifications,
                 )

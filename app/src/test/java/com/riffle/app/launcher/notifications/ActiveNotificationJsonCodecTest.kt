@@ -3,6 +3,7 @@ package com.riffle.app.launcher.notifications
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.notifications.LauncherNotification
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
+import com.riffle.core.domain.launcher.notifications.NotificationCategory
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -14,6 +15,7 @@ class ActiveNotificationJsonCodecTest {
                 LauncherNotification(
                     key = LauncherNotificationKey("camera-1"),
                     packageName = AppPackageName("com.riffle.camera"),
+                    category = NotificationCategory.MESSAGE,
                     postedAtEpochMillis = 1_000L,
                 ),
             )
@@ -24,5 +26,23 @@ class ActiveNotificationJsonCodecTest {
     @Test
     fun decodesEmptyNotificationList() {
         assertEquals(emptyList<LauncherNotification>(), decodeActiveNotifications("[]"))
+    }
+
+    @Test
+    fun decodesMissingNotificationCategoryAsUnknown() {
+        val notifications =
+            decodeActiveNotifications(
+                """
+                [
+                    {
+                        "key": "legacy",
+                        "packageName": "com.riffle.legacy",
+                        "postedAtEpochMillis": 1000
+                    }
+                ]
+                """.trimIndent(),
+            )
+
+        assertEquals(NotificationCategory.UNKNOWN, notifications.single().category)
     }
 }

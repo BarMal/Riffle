@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
 import com.riffle.core.domain.launcher.notifications.NotificationAgeBucket
+import com.riffle.core.domain.launcher.notifications.NotificationCategory
 
 @Composable
 fun NotificationOverviewSurface(
@@ -106,7 +107,7 @@ private fun NotificationGroupRow(
                 style = MaterialTheme.typography.bodyLarge,
             )
             Text(
-                text = group.packageName.value,
+                text = "${group.packageName.value} · ${group.latestCategory.label}",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -130,4 +131,30 @@ private val NotificationAgeBucket.label: String
             NotificationAgeBucket.RECENT -> "Recent"
             NotificationAgeBucket.TODAY -> "Today"
             NotificationAgeBucket.OLDER -> "Older"
+        }
+
+private val NotificationCategory.label: String
+    get() =
+        when (this) {
+            NotificationCategory.UNKNOWN -> "Unknown"
+            NotificationCategory.MESSAGE -> "Message"
+            NotificationCategory.EMAIL -> "Email"
+            NotificationCategory.CALL -> "Call"
+            NotificationCategory.MISSED_CALL -> "Missed call"
+            NotificationCategory.ALARM -> "Alarm"
+            NotificationCategory.EVENT -> "Event"
+            NotificationCategory.REMINDER -> "Reminder"
+            NotificationCategory.TRANSPORT -> "Transport"
+            NotificationCategory.NAVIGATION -> "Navigation"
+            NotificationCategory.LOCATION -> "Location"
+            NotificationCategory.SOCIAL -> "Social"
+            NotificationCategory.PROMOTION -> "Promotion"
+            NotificationCategory.RECOMMENDATION -> "Recommendation"
+            NotificationCategory.STATUS -> "Status"
+            NotificationCategory.SYSTEM -> "System"
+            NotificationCategory.SERVICE -> "Service"
+            NotificationCategory.PROGRESS -> "Progress"
+            NotificationCategory.ERROR -> "Error"
+            NotificationCategory.STOPWATCH -> "Stopwatch"
+            NotificationCategory.WORKOUT -> "Workout"
         }
