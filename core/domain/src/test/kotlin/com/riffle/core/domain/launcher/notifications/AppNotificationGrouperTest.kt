@@ -80,6 +80,31 @@ class AppNotificationGrouperTest {
     }
 
     @Test
+    fun assignsGroupCategoryFromMostRecentNotification() {
+        val group =
+            grouper
+                .groupByApp(
+                    listOf(
+                        notification(
+                            key = "older",
+                            packageName = "com.riffle.mail",
+                            category = NotificationCategory.EMAIL,
+                            postedAtEpochMillis = 1_000L,
+                        ),
+                        notification(
+                            key = "newer",
+                            packageName = "com.riffle.mail",
+                            category = NotificationCategory.MESSAGE,
+                            postedAtEpochMillis = 2_000L,
+                        ),
+                    ),
+                    nowEpochMillis = nowEpochMillis,
+                ).single()
+
+        assertEquals(NotificationCategory.MESSAGE, group.latestCategory)
+    }
+
+    @Test
     fun returnsEmptyGroupsForEmptyNotifications() {
         assertEquals(emptyList(), grouper.groupByApp(emptyList(), nowEpochMillis = nowEpochMillis))
     }
@@ -97,12 +122,14 @@ class AppNotificationGrouperTest {
         key: String,
         packageName: String,
         profileId: AppProfileId = AppProfile.personal().id,
+        category: NotificationCategory = NotificationCategory.UNKNOWN,
         postedAtEpochMillis: Long = 1_000L,
     ): LauncherNotification =
         LauncherNotification(
             key = LauncherNotificationKey(key),
             packageName = AppPackageName(packageName),
             profileId = profileId,
+            category = category,
             postedAtEpochMillis = postedAtEpochMillis,
         )
 }
