@@ -22,6 +22,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.home.WallpaperSource
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
@@ -30,6 +31,7 @@ import com.riffle.core.domain.launcher.settings.LauncherSettings
 @Composable
 fun AppDrawer(
     apps: List<InstalledApp>,
+    notificationCountsByPackage: Map<AppPackageName, Int>,
     appIconLoader: AppIconLoader,
     onAction: (LauncherShellAction) -> Unit,
 ) {
@@ -39,6 +41,7 @@ fun AppDrawer(
     ) {
         AppList(
             apps = apps,
+            notificationCountsByPackage = notificationCountsByPackage,
             appIconLoader = appIconLoader,
             emptyText = "No launchable apps found",
             onAction = onAction,
@@ -50,6 +53,7 @@ fun AppDrawer(
 fun SearchSurface(
     query: String,
     results: List<InstalledApp>,
+    notificationCountsByPackage: Map<AppPackageName, Int>,
     appIconLoader: AppIconLoader,
     onAction: (LauncherShellAction) -> Unit,
 ) {
@@ -69,6 +73,7 @@ fun SearchSurface(
             AppList(
                 modifier = Modifier.weight(1f),
                 apps = results,
+                notificationCountsByPackage = notificationCountsByPackage,
                 appIconLoader = appIconLoader,
                 emptyText = "No matching apps",
                 onAction = onAction,
@@ -199,6 +204,7 @@ private val NotificationAccessStatus.label: String
 @Composable
 private fun AppList(
     apps: List<InstalledApp>,
+    notificationCountsByPackage: Map<AppPackageName, Int>,
     appIconLoader: AppIconLoader,
     emptyText: String,
     onAction: (LauncherShellAction) -> Unit,
@@ -225,6 +231,7 @@ private fun AppList(
             ) { app ->
                 AppDrawerRow(
                     app = app,
+                    notificationCount = notificationCountsByPackage[app.identity.packageName] ?: 0,
                     appIconLoader = appIconLoader,
                     onAction = onAction,
                 )
@@ -236,6 +243,7 @@ private fun AppList(
 @Composable
 private fun AppDrawerRow(
     app: InstalledApp,
+    notificationCount: Int,
     appIconLoader: AppIconLoader,
     onAction: (LauncherShellAction) -> Unit,
 ) {
@@ -268,6 +276,13 @@ private fun AppDrawerRow(
                 text = app.identity.packageName.value,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        if (notificationCount > 0) {
+            Text(
+                text = notificationCount.toString(),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary,
             )
         }
         TextButton(onClick = { onAction(LauncherShellAction.AddAppToHome(app)) }) {
