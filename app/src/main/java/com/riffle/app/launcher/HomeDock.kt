@@ -23,6 +23,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.DockItemMoveDirection
 import com.riffle.core.domain.launcher.home.DockModel
@@ -31,6 +32,7 @@ import com.riffle.core.domain.launcher.home.DockModel
 fun Dock(
     dock: DockModel,
     isEditing: Boolean,
+    notificationCountsByPackage: Map<AppPackageName, Int>,
     appIconLoader: AppIconLoader,
     onAction: (LauncherShellAction) -> Unit,
 ) {
@@ -53,6 +55,7 @@ fun Dock(
                         .aspectRatio(1f),
                 shortcut = dock.items.getOrNull(index) as? AppShortcutItem,
                 isEditing = isEditing,
+                notificationCountsByPackage = notificationCountsByPackage,
                 appIconLoader = appIconLoader,
                 onAction = onAction,
             )
@@ -65,6 +68,7 @@ private fun DockSlot(
     modifier: Modifier,
     shortcut: AppShortcutItem?,
     isEditing: Boolean,
+    notificationCountsByPackage: Map<AppPackageName, Int>,
     appIconLoader: AppIconLoader,
     onAction: (LauncherShellAction) -> Unit,
 ) {
@@ -83,6 +87,7 @@ private fun DockSlot(
             DockShortcut(
                 shortcut = shortcut,
                 isEditing = isEditing,
+                notificationCount = notificationCountsByPackage[shortcut.appIdentity.packageName] ?: 0,
                 appIconLoader = appIconLoader,
                 onAction = onAction,
             )
@@ -94,6 +99,7 @@ private fun DockSlot(
 private fun BoxScope.DockShortcut(
     shortcut: AppShortcutItem,
     isEditing: Boolean,
+    notificationCount: Int,
     appIconLoader: AppIconLoader,
     onAction: (LauncherShellAction) -> Unit,
 ) {
@@ -117,6 +123,11 @@ private fun BoxScope.DockShortcut(
         RemoveDockShortcutButton(
             label = shortcut.label,
             onClick = { onAction(LauncherShellAction.RemoveDockShortcut(shortcut.id)) },
+        )
+    } else {
+        NotificationCountBadge(
+            count = notificationCount,
+            modifier = Modifier.align(Alignment.TopEnd),
         )
     }
 }
