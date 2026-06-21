@@ -4,11 +4,34 @@ import com.riffle.core.domain.launcher.home.WallpaperSettings
 
 data class LauncherSettings(
     val appearance: AppearanceSettings = AppearanceSettings(),
+    val gestures: GestureSettings = GestureSettings(),
 )
 
 data class AppearanceSettings(
     val wallpaper: WallpaperSettings = WallpaperSettings.system(),
 )
+
+data class GestureSettings(
+    val homeSwipe: HomeSwipeGestureSettings = HomeSwipeGestureSettings(),
+)
+
+data class HomeSwipeGestureSettings(
+    val up: LauncherGestureAction = LauncherGestureAction.OPEN_APP_DRAWER,
+    val down: LauncherGestureAction = LauncherGestureAction.OPEN_NOTIFICATIONS,
+    val left: LauncherGestureAction = LauncherGestureAction.SELECT_NEXT_HOME_PAGE,
+    val right: LauncherGestureAction = LauncherGestureAction.SELECT_PREVIOUS_HOME_PAGE,
+)
+
+enum class LauncherGestureAction {
+    NONE,
+    OPEN_APP_DRAWER,
+    OPEN_NOTIFICATIONS,
+    OPEN_SEARCH,
+    OPEN_SETTINGS,
+    ENTER_HOME_EDIT_MODE,
+    SELECT_NEXT_HOME_PAGE,
+    SELECT_PREVIOUS_HOME_PAGE,
+}
 
 interface LauncherSettingsRepository {
     fun loadLauncherSettings(): LauncherSettings?

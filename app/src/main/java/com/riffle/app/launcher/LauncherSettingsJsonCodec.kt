@@ -9,6 +9,7 @@ import org.json.JSONObject
 fun encodeLauncherSettings(settings: LauncherSettings): String =
     JSONObject()
         .put("appearance", encodeAppearance(settings.appearance))
+        .put("gestures", encodeGestures(settings.gestures))
         .toString()
 
 fun decodeLauncherSettings(value: String): LauncherSettings =
@@ -16,6 +17,7 @@ fun decodeLauncherSettings(value: String): LauncherSettings =
         val defaults = LauncherSettings()
         defaults.copy(
             appearance = json.optJSONObject("appearance")?.toAppearance(defaults.appearance) ?: defaults.appearance,
+            gestures = json.optJSONObject("gestures")?.toGestures(defaults.gestures) ?: defaults.gestures,
         )
     }
 

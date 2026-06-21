@@ -14,6 +14,16 @@ class LauncherSettingsTest {
     }
 
     @Test
+    fun defaultsHomeSwipeGesturesToStandardLauncherActions() {
+        val settings = LauncherSettings()
+
+        assertEquals(LauncherGestureAction.OPEN_APP_DRAWER, settings.gestures.homeSwipe.up)
+        assertEquals(LauncherGestureAction.OPEN_NOTIFICATIONS, settings.gestures.homeSwipe.down)
+        assertEquals(LauncherGestureAction.SELECT_NEXT_HOME_PAGE, settings.gestures.homeSwipe.left)
+        assertEquals(LauncherGestureAction.SELECT_PREVIOUS_HOME_PAGE, settings.gestures.homeSwipe.right)
+    }
+
+    @Test
     fun appearanceCanSelectSolidColourWallpaperFallback() {
         val settings =
             LauncherSettings(
