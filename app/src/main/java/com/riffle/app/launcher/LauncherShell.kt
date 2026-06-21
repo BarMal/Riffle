@@ -76,7 +76,6 @@ fun LauncherShellContent(
                     .fillMaxSize()
                     .background(backdropColor),
         ) {
-            WallpaperBackdrop(settings = state.launcherSettings.appearance.wallpaper)
             Surface(
                 modifier = Modifier.fillMaxSize(),
                 color = Color.Transparent,
