@@ -9,10 +9,15 @@ fun LauncherShellState.withNotificationState(
     notificationRepository: LauncherNotificationRepository,
     appNotificationCounter: AppNotificationCounter,
     appNotificationGrouper: AppNotificationGrouper,
+    nowEpochMillis: Long,
 ): LauncherShellState =
     notificationRepository.activeNotifications().let { activeNotifications ->
         copy(
             notificationCountsByPackage = appNotificationCounter.countByPackage(activeNotifications),
-            notificationGroupsByApp = appNotificationGrouper.groupByApp(activeNotifications),
+            notificationGroupsByApp =
+                appNotificationGrouper.groupByApp(
+                    notifications = activeNotifications,
+                    nowEpochMillis = nowEpochMillis,
+                ),
         )
     }
