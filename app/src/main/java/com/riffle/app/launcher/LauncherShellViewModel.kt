@@ -170,6 +170,11 @@ class LauncherShellViewModel(
                         launcherSettingsRepository = launcherSettingsRepository,
                     )
 
+                LauncherShellAction.ResetHomeSwipeGestureActions ->
+                    mutableState.value.withDefaultHomeSwipes(
+                        repo = launcherSettingsRepository,
+                    )
+
                 else -> mutableState.value
             }
     }
