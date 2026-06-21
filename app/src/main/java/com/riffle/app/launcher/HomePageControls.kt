@@ -1,11 +1,14 @@
 package com.riffle.app.launcher
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -70,23 +73,34 @@ fun PageIndicator(
 ) {
     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         repeat(pageCount) { index ->
+            val isSelected = index == selectedPageIndex
+            val width =
+                animateDpAsState(
+                    targetValue = if (isSelected) 18.dp else 6.dp,
+                    label = "page-indicator-width",
+                )
+            val color =
+                animateColorAsState(
+                    targetValue = pageIndicatorColor(isSelected = isSelected),
+                    label = "page-indicator-color",
+                )
+
             Box(
                 modifier =
                     Modifier
-                        .size(6.dp)
+                        .width(width.value)
+                        .height(6.dp)
                         .clip(CircleShape)
-                        .background(pageIndicatorColor(index = index, selectedPageIndex = selectedPageIndex)),
+                        .background(color.value),
             )
         }
     }
 }
 
 @Composable
-private fun pageIndicatorColor(
-    index: Int,
-    selectedPageIndex: Int,
-) = if (index == selectedPageIndex) {
-    MaterialTheme.colorScheme.onSurface
-} else {
-    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.28f)
-}
+private fun pageIndicatorColor(isSelected: Boolean) =
+    if (isSelected) {
+        MaterialTheme.colorScheme.onSurface
+    } else {
+        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.28f)
+    }
