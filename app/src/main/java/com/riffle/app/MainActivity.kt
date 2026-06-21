@@ -17,6 +17,8 @@ import com.riffle.app.launcher.SharedPreferencesLauncherSettingsRepository
 import com.riffle.app.launcher.apps.AndroidAppLauncher
 import com.riffle.app.launcher.apps.PackageManagerAppIconLoader
 import com.riffle.app.launcher.apps.PackageManagerInstalledAppRepository
+import com.riffle.app.launcher.handleSettingsAction
+import com.riffle.app.launcher.notifications.AndroidNotificationAccessGateway
 import com.riffle.core.domain.launcher.ShellNavigationAction
 
 class MainActivity : ComponentActivity() {
@@ -32,12 +34,13 @@ class MainActivity : ComponentActivity() {
     private val appLauncher by lazy { AndroidAppLauncher(this) }
     private val appIconLoader by lazy { PackageManagerAppIconLoader(packageManager) }
     private val wallpaperController by lazy { AndroidLauncherWallpaperController(window) }
+    private val notificationAccessGateway by lazy { AndroidNotificationAccessGateway(this) }
 
     private val requestHomeRole =
         registerForActivityResult(
             ActivityResultContracts.StartActivityForResult(),
         ) {
-            shellViewModel.onHomeRoleStatusChanged(homeRoleGateway.getHomeRoleStatus())
+            refreshPlatformStatuses()
         }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -56,7 +59,14 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         shellViewModel.refreshInstalledApps()
-        shellViewModel.onHomeRoleStatusChanged(homeRoleGateway.getHomeRoleStatus())
+        refreshPlatformStatuses()
+    }
+
+    private fun refreshPlatformStatuses() {
+        shellViewModel.onHomeRoleStatusChanged(
+            homeRoleStatus = homeRoleGateway.getHomeRoleStatus(),
+            notificationAccessStatus = notificationAccessGateway.getNotificationAccessStatus(),
+        )
     }
 
     private fun handleAction(action: LauncherShellAction) {
@@ -66,7 +76,11 @@ class MainActivity : ComponentActivity() {
                 handleHomePageAction(action) ||
                 handleHomeShortcutAction(action) ||
                 handleDockAction(action) ||
-                handleSettingsAction(action)
+                action.handleSettingsAction(
+                    viewModel = shellViewModel,
+                    notificationAccessGateway = notificationAccessGateway,
+                    openIntent = ::startActivity,
+                )
 
         if (!handled) {
             handleAppAction(action)
@@ -127,16 +141,6 @@ class MainActivity : ComponentActivity() {
             is LauncherShellAction.MoveDockShortcut,
             -> {
                 shellViewModel.onDockEdited(action)
-                true
-            }
-
-            else -> false
-        }
-
-    private fun handleSettingsAction(action: LauncherShellAction): Boolean =
-        when (action) {
-            is LauncherShellAction.SelectWallpaperSource -> {
-                shellViewModel.onWallpaperSourceSelected(action)
                 true
             }
 

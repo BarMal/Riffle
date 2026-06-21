@@ -22,6 +22,7 @@ import com.riffle.core.domain.launcher.home.LauncherPage
 import com.riffle.core.domain.launcher.home.LauncherPageId
 import com.riffle.core.domain.launcher.home.PlacementRejectionReason
 import com.riffle.core.domain.launcher.home.WallpaperSettings
+import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettingsRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -51,11 +52,16 @@ class LauncherShellViewModel(
         )
     val state: StateFlow<LauncherShellState> = mutableState.asStateFlow()
 
-    fun onHomeRoleStatusChanged(homeRoleStatus: HomeRoleStatus) {
+    fun onHomeRoleStatusChanged(
+        homeRoleStatus: HomeRoleStatus,
+        notificationAccessStatus: NotificationAccessStatus = mutableState.value.notificationAccessStatus,
+    ) {
         mutableState.value =
             reducer.homeRoleChanged(
                 currentState = mutableState.value,
                 homeRoleStatus = homeRoleStatus,
+            ).copy(
+                notificationAccessStatus = notificationAccessStatus,
             ).also { state -> persistCompletedFirstRun(state, firstRunRepository) }
     }
 

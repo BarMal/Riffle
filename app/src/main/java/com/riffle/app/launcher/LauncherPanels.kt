@@ -24,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.home.WallpaperSource
+import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 
 @Composable
@@ -79,6 +80,7 @@ fun SearchSurface(
 @Composable
 fun SettingsSurface(
     settings: LauncherSettings,
+    notificationAccessStatus: NotificationAccessStatus,
     onAction: (LauncherShellAction) -> Unit,
 ) {
     LauncherPanel(
@@ -95,6 +97,14 @@ fun SettingsSurface(
             )
             WallpaperSourceSetting(
                 selectedSource = settings.appearance.wallpaper.source,
+                onAction = onAction,
+            )
+            Text(
+                text = "Permissions",
+                style = MaterialTheme.typography.titleMedium,
+            )
+            NotificationAccessSetting(
+                status = notificationAccessStatus,
                 onAction = onAction,
             )
         }
@@ -147,6 +157,44 @@ private fun WallpaperSourceButton(
         Text(text = label)
     }
 }
+
+@Composable
+private fun NotificationAccessSetting(
+    status: NotificationAccessStatus,
+    onAction: (LauncherShellAction) -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
+            Text(
+                text = "Notifications",
+                style = MaterialTheme.typography.bodyLarge,
+            )
+            Text(
+                text = status.label,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        TextButton(onClick = { onAction(LauncherShellAction.RequestNotificationAccess) }) {
+            Text(text = "Open")
+        }
+    }
+}
+
+private val NotificationAccessStatus.label: String
+    get() =
+        when (this) {
+            NotificationAccessStatus.UNKNOWN -> "Unknown"
+            NotificationAccessStatus.GRANTED -> "Allowed"
+            NotificationAccessStatus.NOT_GRANTED -> "Not allowed"
+        }
 
 @Composable
 private fun AppList(

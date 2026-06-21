@@ -24,6 +24,7 @@ import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.home.LauncherPageId
 import com.riffle.core.domain.launcher.home.WallpaperSettings
 import com.riffle.core.domain.launcher.home.WallpaperSource
+import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.settings.AppearanceSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettingsRepository
@@ -70,6 +71,25 @@ class LauncherShellViewModelTest {
 
         assertEquals(FirstRunStatus.COMPLETE, viewModel.state.value.firstRunStatus)
         assertTrue(viewModel.state.value.shouldShowEmptyHome)
+    }
+
+    @Test
+    fun startsWithUnknownNotificationAccessStatus() {
+        val viewModel = LauncherShellViewModel(firstRunRepository = FakeFirstRunRepository())
+
+        assertEquals(NotificationAccessStatus.UNKNOWN, viewModel.state.value.notificationAccessStatus)
+    }
+
+    @Test
+    fun refreshesNotificationAccessStatus() {
+        val viewModel = LauncherShellViewModel(firstRunRepository = FakeFirstRunRepository())
+
+        viewModel.onHomeRoleStatusChanged(
+            homeRoleStatus = HomeRoleStatus.DEFAULT_HOME,
+            notificationAccessStatus = NotificationAccessStatus.GRANTED,
+        )
+
+        assertEquals(NotificationAccessStatus.GRANTED, viewModel.state.value.notificationAccessStatus)
     }
 
     @Test
