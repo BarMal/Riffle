@@ -1,5 +1,6 @@
 package com.riffle.app.launcher
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -52,6 +53,10 @@ fun LauncherShellContent(
     appIconLoader: AppIconLoader = EmptyAppIconLoader,
     onAction: (LauncherShellAction) -> Unit,
 ) {
+    BackHandler(enabled = state.destination != ShellDestination.HOME) {
+        onAction(LauncherShellAction.OpenHome)
+    }
+
     PreloadLauncherAppIcons(
         identities = state.appIconPreloadIdentities(),
         iconLoader = appIconLoader,
