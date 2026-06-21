@@ -1,6 +1,5 @@
 package com.riffle.app.launcher
 
-import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.DockModel
 import com.riffle.core.domain.launcher.home.GridDimensions
 import com.riffle.core.domain.launcher.home.HomeLayout
@@ -39,12 +38,12 @@ fun decodeHomeLayout(value: String): HomeLayout =
 private fun encodeDock(dock: DockModel): JSONObject =
     JSONObject()
         .put("capacity", dock.capacity)
-        .put("items", JSONArray(dock.items.filterIsInstance<AppShortcutItem>().map(::encodeShortcut)))
+        .put("items", JSONArray(dock.items.map(::encodeLauncherItem)))
 
 private fun JSONObject.toDock(): DockModel =
     DockModel(
         capacity = optInt("capacity", HomeLayoutDefaults.standard().dock.capacity),
-        items = optJSONArray("items")?.toShortcuts().orEmpty(),
+        items = optJSONArray("items")?.toLauncherItems().orEmpty(),
     )
 
 private fun encodePage(page: LauncherPage): JSONObject =
@@ -52,7 +51,7 @@ private fun encodePage(page: LauncherPage): JSONObject =
         .put("id", page.id.value)
         .put("columns", page.grid.columns)
         .put("rows", page.grid.rows)
-        .put("items", JSONArray(page.items.filterIsInstance<AppShortcutItem>().map(::encodeShortcut)))
+        .put("items", JSONArray(page.items.map(::encodeLauncherItem)))
 
 private fun JSONArray.toPages(): List<LauncherPage> =
     (0 until length())
@@ -67,5 +66,5 @@ private fun JSONObject.toPage(): LauncherPage =
                 columns = getInt("columns"),
                 rows = getInt("rows"),
             ),
-        items = getJSONArray("items").toShortcuts(),
+        items = getJSONArray("items").toLauncherItems(),
     )
