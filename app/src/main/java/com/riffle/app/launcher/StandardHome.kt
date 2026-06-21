@@ -28,6 +28,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.GridCell
 import com.riffle.core.domain.launcher.home.HomeEditMode
@@ -38,6 +39,7 @@ import com.riffle.core.domain.launcher.home.LauncherPage
 @Composable
 fun StandardHome(
     layout: HomeLayout,
+    notificationCountsByPackage: Map<AppPackageName, Int>,
     appIconLoader: AppIconLoader,
     onAction: (LauncherShellAction) -> Unit,
 ) {
@@ -56,6 +58,7 @@ fun StandardHome(
         WorkspaceGrid(
             page = layout.selectedPage,
             isEditing = layout.editMode is HomeEditMode.EditingPage,
+            notificationCountsByPackage = notificationCountsByPackage,
             appIconLoader = appIconLoader,
             onAction = onAction,
             modifier =
@@ -78,6 +81,7 @@ fun StandardHome(
         Dock(
             dock = layout.dock,
             isEditing = layout.editMode is HomeEditMode.EditingPage,
+            notificationCountsByPackage = notificationCountsByPackage,
             appIconLoader = appIconLoader,
             onAction = onAction,
         )
@@ -127,6 +131,7 @@ private fun HomeToolbar(
 private fun WorkspaceGrid(
     page: LauncherPage,
     isEditing: Boolean,
+    notificationCountsByPackage: Map<AppPackageName, Int>,
     appIconLoader: AppIconLoader,
     onAction: (LauncherShellAction) -> Unit,
     modifier: Modifier = Modifier,
@@ -157,6 +162,7 @@ private fun WorkspaceGrid(
                             HomeShortcut(
                                 shortcut = shortcut,
                                 isEditing = isEditing,
+                                notificationCount = notificationCountsByPackage[shortcut.appIdentity.packageName] ?: 0,
                                 appIconLoader = appIconLoader,
                                 onAction = onAction,
                             )
@@ -173,6 +179,7 @@ private fun WorkspaceGrid(
 private fun HomeShortcut(
     shortcut: AppShortcutItem,
     isEditing: Boolean,
+    notificationCount: Int,
     appIconLoader: AppIconLoader,
     onAction: (LauncherShellAction) -> Unit,
 ) {
@@ -209,6 +216,11 @@ private fun HomeShortcut(
             RemoveShortcutButton(
                 label = shortcut.label,
                 onClick = { onAction(LauncherShellAction.RemoveHomeShortcut(shortcut.id)) },
+            )
+        } else {
+            NotificationCountBadge(
+                count = notificationCount,
+                modifier = Modifier.align(Alignment.TopEnd),
             )
         }
     }
