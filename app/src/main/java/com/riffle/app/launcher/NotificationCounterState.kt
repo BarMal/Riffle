@@ -14,6 +14,7 @@ fun LauncherShellState.withNotificationState(
     notificationRepository.activeNotifications().let { activeNotifications ->
         copy(
             notificationCountsByPackage = appNotificationCounter.countByPackage(activeNotifications),
+            notificationCountsByCategory = appNotificationCounter.countByCategory(activeNotifications),
             notificationGroupsByApp =
                 appNotificationGrouper.groupByApp(
                     notifications = activeNotifications,

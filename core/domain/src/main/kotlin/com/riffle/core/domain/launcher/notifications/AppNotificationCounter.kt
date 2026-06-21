@@ -8,4 +8,10 @@ class AppNotificationCounter {
             .groupingBy { notification -> notification.packageName }
             .eachCount()
             .filterValues { count -> count > 0 }
+
+    fun countByCategory(notifications: List<LauncherNotification>): Map<NotificationCategory, Int> =
+        notifications
+            .groupingBy { notification -> notification.category }
+            .eachCount()
+            .filterValues { count -> count > 0 }
 }
