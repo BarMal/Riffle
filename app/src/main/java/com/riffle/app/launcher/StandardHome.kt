@@ -1,5 +1,6 @@
 package com.riffle.app.launcher
 
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -8,6 +9,7 @@ import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -16,6 +18,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
@@ -32,6 +35,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.home.AppShortcutItem
@@ -40,6 +44,7 @@ import com.riffle.core.domain.launcher.home.HomeEditMode
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeShortcutMoveDirection
 import com.riffle.core.domain.launcher.home.LauncherPage
+import kotlin.math.roundToInt
 
 @Composable
 fun StandardHome(
@@ -68,8 +73,8 @@ fun StandardHome(
             isEditing = isEditing,
             onAction = onAction,
         )
-        WorkspaceGrid(
-            page = layout.selectedPage,
+        AnimatedWorkspaceGrid(
+            layout = layout,
             isEditing = isEditing,
             notificationCountsByPackage = notificationCountsByPackage,
             appIconLoader = appIconLoader,
@@ -137,6 +142,40 @@ private fun HomeToolbar(
         ) {
             Text(text = if (isEditing) "Done" else "Edit")
         }
+    }
+}
+
+@Composable
+private fun AnimatedWorkspaceGrid(
+    layout: HomeLayout,
+    isEditing: Boolean,
+    notificationCountsByPackage: Map<AppPackageName, Int>,
+    appIconLoader: AppIconLoader,
+    onAction: (LauncherShellAction) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val animatedPageIndex =
+        animateFloatAsState(
+            targetValue = layout.selectedPageIndex.toFloat(),
+            label = "home-page-index",
+        )
+
+    BoxWithConstraints(modifier = modifier) {
+        val widthPx = with(LocalDensity.current) { maxWidth.toPx() }
+        val pageOffsetPx =
+            ((layout.selectedPageIndex - animatedPageIndex.value) * widthPx).roundToInt()
+
+        WorkspaceGrid(
+            page = layout.selectedPage,
+            isEditing = isEditing,
+            notificationCountsByPackage = notificationCountsByPackage,
+            appIconLoader = appIconLoader,
+            onAction = onAction,
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .offset { IntOffset(x = pageOffsetPx, y = 0) },
+        )
     }
 }
 
