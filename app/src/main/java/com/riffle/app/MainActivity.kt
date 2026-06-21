@@ -29,7 +29,7 @@ class MainActivity : ComponentActivity() {
             installedAppRepository = PackageManagerInstalledAppRepository(packageManager),
             homeLayoutRepository = SharedPreferencesHomeLayoutRepository(this),
             launcherSettingsRepository = SharedPreferencesLauncherSettingsRepository(this),
-            notificationRepository = SharedPreferencesActiveNotificationRepository(this),
+            notificationRepository = activeNotificationRepository,
         )
     }
     private val homeRoleGateway by lazy { AndroidHomeRoleGateway(this) }
@@ -37,6 +37,7 @@ class MainActivity : ComponentActivity() {
     private val appIconLoader by lazy { PackageManagerAppIconLoader(packageManager) }
     private val wallpaperController by lazy { AndroidLauncherWallpaperController(window) }
     private val notificationAccessGateway by lazy { AndroidNotificationAccessGateway(this) }
+    private val activeNotificationRepository by lazy { SharedPreferencesActiveNotificationRepository(this) }
 
     private val requestHomeRole =
         registerForActivityResult(
@@ -48,6 +49,11 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         wallpaperController.showSystemWallpaper()
+        activeNotificationRepository.observeActiveNotifications {
+            runOnUiThread {
+                shellViewModel.refreshInstalledApps()
+            }
+        }
 
         setContent {
             LauncherShell(
