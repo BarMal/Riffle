@@ -5,6 +5,7 @@ import com.riffle.core.domain.launcher.notifications.LauncherNotification
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationRepository
 import com.riffle.core.domain.launcher.notifications.NotificationAgeBucket
+import com.riffle.core.domain.launcher.notifications.NotificationCategory
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -19,8 +20,16 @@ class LauncherShellNotificationStateTest {
                     FakeNotificationRepository(
                         notifications =
                             listOf(
-                                notification(key = "camera-1", packageName = "com.riffle.camera"),
-                                notification(key = "camera-2", packageName = "com.riffle.camera"),
+                                notification(
+                                    key = "camera-1",
+                                    packageName = "com.riffle.camera",
+                                    category = NotificationCategory.MESSAGE,
+                                ),
+                                notification(
+                                    key = "camera-2",
+                                    packageName = "com.riffle.camera",
+                                    category = NotificationCategory.MESSAGE,
+                                ),
                             ),
                     ),
             )
@@ -30,6 +39,7 @@ class LauncherShellNotificationStateTest {
         assertEquals(AppPackageName("com.riffle.camera"), group.packageName)
         assertEquals(2, group.count)
         assertEquals(NotificationAgeBucket.RECENT, group.latestAgeBucket)
+        assertEquals(2, viewModel.state.value.notificationCountsByCategory[NotificationCategory.MESSAGE])
     }
 
     @Test
@@ -44,8 +54,16 @@ class LauncherShellNotificationStateTest {
 
         repository.notifications =
             listOf(
-                notification(key = "camera-1", packageName = "com.riffle.camera"),
-                notification(key = "mail-1", packageName = "com.riffle.mail"),
+                notification(
+                    key = "camera-1",
+                    packageName = "com.riffle.camera",
+                    category = NotificationCategory.MESSAGE,
+                ),
+                notification(
+                    key = "mail-1",
+                    packageName = "com.riffle.mail",
+                    category = NotificationCategory.EMAIL,
+                ),
             )
         viewModel.refreshInstalledApps()
 
@@ -53,6 +71,8 @@ class LauncherShellNotificationStateTest {
             listOf(AppPackageName("com.riffle.camera"), AppPackageName("com.riffle.mail")),
             viewModel.state.value.notificationGroupsByApp.map { group -> group.packageName },
         )
+        assertEquals(1, viewModel.state.value.notificationCountsByCategory[NotificationCategory.MESSAGE])
+        assertEquals(1, viewModel.state.value.notificationCountsByCategory[NotificationCategory.EMAIL])
     }
 
     private class FakeFirstRunRepository : FirstRunRepository {
@@ -76,10 +96,12 @@ class LauncherShellNotificationStateTest {
     private fun notification(
         key: String,
         packageName: String,
+        category: NotificationCategory = NotificationCategory.UNKNOWN,
     ): LauncherNotification =
         LauncherNotification(
             key = LauncherNotificationKey(key),
             packageName = AppPackageName(packageName),
+            category = category,
             postedAtEpochMillis = 1_000L,
         )
 }
