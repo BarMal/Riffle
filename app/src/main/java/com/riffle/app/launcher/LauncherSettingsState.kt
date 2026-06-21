@@ -30,6 +30,20 @@ fun LauncherShellState.withHomeSwipeGestureAction(
         launcherSettingsRepository = launcherSettingsRepository,
     )
 
+fun LauncherShellState.withDefaultHomeSwipes(repo: LauncherSettingsRepository): LauncherShellState =
+    withLauncherSettings(
+        settings =
+            launcherSettings.copy(
+                gestures =
+                    launcherSettings.gestures.copy(
+                        homeSwipe = defaultHomeSwipeGestureSettings,
+                    ),
+            ),
+        launcherSettingsRepository = repo,
+    )
+
+private val defaultHomeSwipeGestureSettings = HomeSwipeGestureSettings()
+
 private fun HomeSwipeGestureSettings.withAction(
     direction: HomeSwipeGestureDirection,
     action: LauncherGestureAction,

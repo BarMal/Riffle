@@ -48,6 +48,9 @@ fun HomeSwipeGestureSetting(
             action = settings.right,
             onAction = onAction,
         )
+        TextButton(onClick = { onAction(LauncherShellAction.ResetHomeSwipeGestureActions) }) {
+            Text(text = "Reset")
+        }
     }
 }
 

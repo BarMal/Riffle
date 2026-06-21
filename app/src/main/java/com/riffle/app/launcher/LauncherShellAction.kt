@@ -70,5 +70,7 @@ sealed interface LauncherShellAction {
         val action: LauncherGestureAction,
     ) : LauncherShellAction
 
+    data object ResetHomeSwipeGestureActions : LauncherShellAction
+
     data class DismissNotifications(val keys: List<LauncherNotificationKey>) : LauncherShellAction
 }

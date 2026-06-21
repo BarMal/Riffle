@@ -19,6 +19,11 @@ fun LauncherShellAction.handleSettingsAction(
             true
         }
 
+        LauncherShellAction.ResetHomeSwipeGestureActions -> {
+            viewModel.onLauncherSettingsActionSelected(this)
+            true
+        }
+
         LauncherShellAction.RequestNotificationAccess -> {
             runCatching {
                 openIntent(notificationAccessGateway.createNotificationListenerSettingsIntent())
