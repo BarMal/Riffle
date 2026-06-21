@@ -1,8 +1,10 @@
 package com.riffle.app.launcher
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -96,6 +98,7 @@ private fun DockSlot(
 }
 
 @Composable
+@OptIn(ExperimentalFoundationApi::class)
 private fun BoxScope.DockShortcut(
     shortcut: AppShortcutItem,
     isEditing: Boolean,
@@ -110,9 +113,11 @@ private fun BoxScope.DockShortcut(
         modifier =
             Modifier
                 .size(44.dp)
-                .clickable(enabled = !isEditing) {
-                    onAction(LauncherShellAction.LaunchApp(shortcut.appIdentity))
-                },
+                .combinedClickable(
+                    enabled = !isEditing,
+                    onClick = { onAction(LauncherShellAction.LaunchApp(shortcut.appIdentity)) },
+                    onLongClick = { onAction(LauncherShellAction.EnterHomeEditMode) },
+                ),
     )
 
     if (isEditing) {
