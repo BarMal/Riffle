@@ -4,6 +4,7 @@ import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.notifications.LauncherNotification
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
 import com.riffle.core.domain.launcher.notifications.NotificationCategory
+import com.riffle.core.domain.launcher.notifications.NotificationPriority
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -22,6 +23,7 @@ private fun encodeNotification(notification: LauncherNotification): JSONObject =
         .put("key", notification.key.value)
         .put("packageName", notification.packageName.value)
         .put("category", notification.category.name)
+        .put("priority", notification.priority.name)
         .put("canDismiss", notification.canDismiss)
         .put("postedAtEpochMillis", notification.postedAtEpochMillis)
 
@@ -30,6 +32,7 @@ private fun JSONObject.toNotification(): LauncherNotification =
         key = LauncherNotificationKey(getString("key")),
         packageName = AppPackageName(getString("packageName")),
         category = optNotificationCategory(),
+        priority = optNotificationPriority(),
         canDismiss = optBoolean("canDismiss", false),
         postedAtEpochMillis = optLong("postedAtEpochMillis", 0L),
     )
@@ -39,3 +42,9 @@ private fun JSONObject.optNotificationCategory(): NotificationCategory =
         .takeIf(String::isNotBlank)
         ?.let { category -> runCatching { NotificationCategory.valueOf(category) }.getOrNull() }
         ?: NotificationCategory.UNKNOWN
+
+private fun JSONObject.optNotificationPriority(): NotificationPriority =
+    optString("priority")
+        .takeIf(String::isNotBlank)
+        ?.let { priority -> runCatching { NotificationPriority.valueOf(priority) }.getOrNull() }
+        ?: NotificationPriority.UNKNOWN

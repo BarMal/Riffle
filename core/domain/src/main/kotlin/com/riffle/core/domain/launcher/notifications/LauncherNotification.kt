@@ -9,6 +9,7 @@ data class LauncherNotification(
     val packageName: AppPackageName,
     val profileId: AppProfileId = AppProfile.personal().id,
     val category: NotificationCategory = NotificationCategory.UNKNOWN,
+    val priority: NotificationPriority = NotificationPriority.UNKNOWN,
     val canDismiss: Boolean = false,
     val postedAtEpochMillis: Long,
 )
@@ -38,6 +39,15 @@ enum class NotificationCategory {
     ERROR,
     STOPWATCH,
     WORKOUT,
+}
+
+enum class NotificationPriority(val rank: Int) {
+    UNKNOWN(rank = 0),
+    MIN(rank = 1),
+    LOW(rank = 2),
+    DEFAULT(rank = 3),
+    HIGH(rank = 4),
+    MAX(rank = 5),
 }
 
 fun interface LauncherNotificationRepository {
