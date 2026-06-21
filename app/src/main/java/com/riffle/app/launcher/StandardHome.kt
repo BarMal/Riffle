@@ -2,6 +2,7 @@ package com.riffle.app.launcher
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -25,6 +26,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
@@ -43,21 +46,29 @@ fun StandardHome(
     appIconLoader: AppIconLoader,
     onAction: (LauncherShellAction) -> Unit,
 ) {
+    val isEditing = layout.editMode is HomeEditMode.EditingPage
+    val swipeThresholdPx = with(LocalDensity.current) { HOME_SWIPE_THRESHOLD_DP.dp.toPx() }
+
     Column(
         modifier =
             Modifier
                 .fillMaxSize()
+                .homeSwipeNavigation(
+                    enabled = !isEditing,
+                    thresholdPx = swipeThresholdPx,
+                    onAction = onAction,
+                )
                 .padding(24.dp),
         verticalArrangement = Arrangement.SpaceBetween,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         HomeToolbar(
-            isEditing = layout.editMode is HomeEditMode.EditingPage,
+            isEditing = isEditing,
             onAction = onAction,
         )
         WorkspaceGrid(
             page = layout.selectedPage,
-            isEditing = layout.editMode is HomeEditMode.EditingPage,
+            isEditing = isEditing,
             notificationCountsByPackage = notificationCountsByPackage,
             appIconLoader = appIconLoader,
             onAction = onAction,
@@ -66,7 +77,7 @@ fun StandardHome(
                     .weight(1f)
                     .fillMaxWidth(),
         )
-        if (layout.editMode is HomeEditMode.EditingPage) {
+        if (isEditing) {
             PageEditControls(
                 pageCount = layout.pages.size,
                 selectedPageIndex = layout.selectedPageIndex,
@@ -80,7 +91,7 @@ fun StandardHome(
         Spacer(modifier = Modifier.height(20.dp))
         Dock(
             dock = layout.dock,
-            isEditing = layout.editMode is HomeEditMode.EditingPage,
+            isEditing = isEditing,
             notificationCountsByPackage = notificationCountsByPackage,
             appIconLoader = appIconLoader,
             onAction = onAction,
@@ -324,3 +335,35 @@ private fun BoxScope.RemoveShortcutButton(
 private fun LauncherPage.shortcutAt(cell: GridCell): AppShortcutItem? =
     items.filterIsInstance<AppShortcutItem>()
         .firstOrNull { item -> item.placement?.cell == cell }
+
+private fun Modifier.homeSwipeNavigation(
+    enabled: Boolean,
+    thresholdPx: Float,
+    onAction: (LauncherShellAction) -> Unit,
+): Modifier =
+    if (!enabled) {
+        this
+    } else {
+        pointerInput(thresholdPx) {
+            var verticalDragPx = 0f
+            val interpreter = HomeSwipeGestureInterpreter(thresholdPx = thresholdPx)
+
+            detectVerticalDragGestures(
+                onDragStart = { verticalDragPx = 0f },
+                onVerticalDrag = { change, dragAmount ->
+                    verticalDragPx += dragAmount
+                    change.consume()
+                },
+                onDragEnd = {
+                    when (interpreter.gestureFor(verticalDragPx)) {
+                        HomeSwipeGesture.UP -> onAction(LauncherShellAction.OpenAppDrawer)
+                        HomeSwipeGesture.DOWN -> onAction(LauncherShellAction.OpenNotifications)
+                        null -> Unit
+                    }
+                },
+                onDragCancel = { verticalDragPx = 0f },
+            )
+        }
+    }
+
+private const val HOME_SWIPE_THRESHOLD_DP = 80
