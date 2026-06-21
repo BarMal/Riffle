@@ -34,3 +34,13 @@ class HomeSwipeGestureInterpreter(
             else -> null
         }
 }
+
+class HomeSwipeGestureActionMapper {
+    fun actionFor(gesture: HomeSwipeGesture): LauncherShellAction =
+        when (gesture) {
+            HomeSwipeGesture.UP -> LauncherShellAction.OpenAppDrawer
+            HomeSwipeGesture.DOWN -> LauncherShellAction.OpenNotifications
+            HomeSwipeGesture.LEFT -> LauncherShellAction.SelectNextHomePage
+            HomeSwipeGesture.RIGHT -> LauncherShellAction.SelectPreviousHomePage
+        }
+}

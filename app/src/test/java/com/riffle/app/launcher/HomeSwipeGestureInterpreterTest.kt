@@ -6,6 +6,7 @@ import org.junit.Test
 
 class HomeSwipeGestureInterpreterTest {
     private val interpreter = HomeSwipeGestureInterpreter(thresholdPx = 80f)
+    private val actionMapper = HomeSwipeGestureActionMapper()
 
     @Test
     fun interpretsSwipeUpPastThreshold() {
@@ -39,5 +40,13 @@ class HomeSwipeGestureInterpreterTest {
         assertNull(interpreter.gestureFor(horizontalDragPx = 0f, verticalDragPx = -79f))
         assertNull(interpreter.gestureFor(horizontalDragPx = 79f, verticalDragPx = 0f))
         assertNull(interpreter.gestureFor(horizontalDragPx = -79f, verticalDragPx = 0f))
+    }
+
+    @Test
+    fun mapsSwipeGesturesToDefaultHomeActions() {
+        assertEquals(LauncherShellAction.OpenAppDrawer, actionMapper.actionFor(HomeSwipeGesture.UP))
+        assertEquals(LauncherShellAction.OpenNotifications, actionMapper.actionFor(HomeSwipeGesture.DOWN))
+        assertEquals(LauncherShellAction.SelectNextHomePage, actionMapper.actionFor(HomeSwipeGesture.LEFT))
+        assertEquals(LauncherShellAction.SelectPreviousHomePage, actionMapper.actionFor(HomeSwipeGesture.RIGHT))
     }
 }

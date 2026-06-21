@@ -392,6 +392,7 @@ private fun Modifier.homeSwipeNavigation(
             var horizontalDragPx = 0f
             var verticalDragPx = 0f
             val interpreter = HomeSwipeGestureInterpreter(thresholdPx = thresholdPx)
+            val actionMapper = HomeSwipeGestureActionMapper()
 
             detectDragGestures(
                 onDragStart = {
@@ -404,13 +405,10 @@ private fun Modifier.homeSwipeNavigation(
                     change.consume()
                 },
                 onDragEnd = {
-                    when (interpreter.gestureFor(horizontalDragPx, verticalDragPx)) {
-                        HomeSwipeGesture.UP -> onAction(LauncherShellAction.OpenAppDrawer)
-                        HomeSwipeGesture.DOWN -> onAction(LauncherShellAction.OpenNotifications)
-                        HomeSwipeGesture.LEFT -> onAction(LauncherShellAction.SelectNextHomePage)
-                        HomeSwipeGesture.RIGHT -> onAction(LauncherShellAction.SelectPreviousHomePage)
-                        null -> Unit
-                    }
+                    interpreter
+                        .gestureFor(horizontalDragPx, verticalDragPx)
+                        ?.let(actionMapper::actionFor)
+                        ?.let(onAction)
                 },
                 onDragCancel = {
                     horizontalDragPx = 0f
