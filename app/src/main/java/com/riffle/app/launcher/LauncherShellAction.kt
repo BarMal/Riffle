@@ -5,11 +5,10 @@ import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.home.DockItemMoveDirection
 import com.riffle.core.domain.launcher.home.HomeShortcutMoveDirection
 import com.riffle.core.domain.launcher.home.LauncherItemId
+import com.riffle.core.domain.launcher.home.WallpaperSource
 
 sealed interface LauncherShellAction {
     data object RequestDefaultHome : LauncherShellAction
-
-    data object CompleteFirstRun : LauncherShellAction
 
     data object OpenHome : LauncherShellAction
 
@@ -56,4 +55,6 @@ sealed interface LauncherShellAction {
     ) : LauncherShellAction
 
     data class SearchQueryChanged(val query: String) : LauncherShellAction
+
+    data class SelectWallpaperSource(val source: WallpaperSource) : LauncherShellAction
 }

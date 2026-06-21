@@ -23,6 +23,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.apps.InstalledApp
+import com.riffle.core.domain.launcher.home.WallpaperSource
+import com.riffle.core.domain.launcher.settings.LauncherSettings
 
 @Composable
 fun AppDrawer(
@@ -75,15 +77,74 @@ fun SearchSurface(
 }
 
 @Composable
-fun SettingsSurface(onAction: (LauncherShellAction) -> Unit) {
+fun SettingsSurface(
+    settings: LauncherSettings,
+    onAction: (LauncherShellAction) -> Unit,
+) {
     LauncherPanel(
         title = "Settings",
         onAction = onAction,
     ) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            Text(
+                text = "Appearance",
+                style = MaterialTheme.typography.titleMedium,
+            )
+            WallpaperSourceSetting(
+                selectedSource = settings.appearance.wallpaper.source,
+                onAction = onAction,
+            )
+        }
+    }
+}
+
+@Composable
+private fun WallpaperSourceSetting(
+    selectedSource: WallpaperSource,
+    onAction: (LauncherShellAction) -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
         Text(
-            text = "No settings available",
+            modifier = Modifier.weight(1f),
+            text = "Wallpaper",
             style = MaterialTheme.typography.bodyLarge,
         )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            WallpaperSourceButton(
+                label = "System",
+                source = WallpaperSource.SYSTEM,
+                selectedSource = selectedSource,
+                onAction = onAction,
+            )
+            WallpaperSourceButton(
+                label = "Solid",
+                source = WallpaperSource.SOLID_COLOR,
+                selectedSource = selectedSource,
+                onAction = onAction,
+            )
+        }
+    }
+}
+
+@Composable
+private fun WallpaperSourceButton(
+    label: String,
+    source: WallpaperSource,
+    selectedSource: WallpaperSource,
+    onAction: (LauncherShellAction) -> Unit,
+) {
+    TextButton(
+        enabled = source != selectedSource,
+        onClick = { onAction(LauncherShellAction.SelectWallpaperSource(source)) },
+    ) {
+        Text(text = label)
     }
 }
 

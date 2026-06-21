@@ -13,6 +13,7 @@ import com.riffle.app.launcher.LauncherShellViewModel
 import com.riffle.app.launcher.LauncherShellViewModelFactory
 import com.riffle.app.launcher.SharedPreferencesFirstRunRepository
 import com.riffle.app.launcher.SharedPreferencesHomeLayoutRepository
+import com.riffle.app.launcher.SharedPreferencesLauncherSettingsRepository
 import com.riffle.app.launcher.apps.AndroidAppLauncher
 import com.riffle.app.launcher.apps.PackageManagerAppIconLoader
 import com.riffle.app.launcher.apps.PackageManagerInstalledAppRepository
@@ -24,6 +25,7 @@ class MainActivity : ComponentActivity() {
             firstRunRepository = SharedPreferencesFirstRunRepository(this),
             installedAppRepository = PackageManagerInstalledAppRepository(packageManager),
             homeLayoutRepository = SharedPreferencesHomeLayoutRepository(this),
+            launcherSettingsRepository = SharedPreferencesLauncherSettingsRepository(this),
         )
     }
     private val homeRoleGateway by lazy { AndroidHomeRoleGateway(this) }
@@ -63,7 +65,8 @@ class MainActivity : ComponentActivity() {
                 handleNavigationAction(action) ||
                 handleHomePageAction(action) ||
                 handleHomeShortcutAction(action) ||
-                handleDockAction(action)
+                handleDockAction(action) ||
+                handleSettingsAction(action)
 
         if (!handled) {
             handleAppAction(action)
@@ -75,11 +78,6 @@ class MainActivity : ComponentActivity() {
             LauncherShellAction.RequestDefaultHome -> {
                 shellViewModel.onDefaultHomeRequestStarted()
                 requestHomeRole.launch(homeRoleGateway.createHomeRoleRequestIntent())
-                true
-            }
-
-            LauncherShellAction.CompleteFirstRun -> {
-                shellViewModel.onFirstRunCompleted()
                 true
             }
 
@@ -129,6 +127,16 @@ class MainActivity : ComponentActivity() {
             is LauncherShellAction.MoveDockShortcut,
             -> {
                 shellViewModel.onDockEdited(action)
+                true
+            }
+
+            else -> false
+        }
+
+    private fun handleSettingsAction(action: LauncherShellAction): Boolean =
+        when (action) {
+            is LauncherShellAction.SelectWallpaperSource -> {
+                shellViewModel.onWallpaperSourceSelected(action)
                 true
             }
 

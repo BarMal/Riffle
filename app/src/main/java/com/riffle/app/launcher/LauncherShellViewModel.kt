@@ -21,6 +21,9 @@ import com.riffle.core.domain.launcher.home.HomeShortcutResult
 import com.riffle.core.domain.launcher.home.LauncherPage
 import com.riffle.core.domain.launcher.home.LauncherPageId
 import com.riffle.core.domain.launcher.home.PlacementRejectionReason
+import com.riffle.core.domain.launcher.home.WallpaperSettings
+import com.riffle.core.domain.launcher.settings.LauncherSettings
+import com.riffle.core.domain.launcher.settings.LauncherSettingsRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -28,18 +31,20 @@ import kotlinx.coroutines.flow.asStateFlow
 class LauncherShellViewModel(
     private val firstRunRepository: FirstRunRepository,
     private val installedAppRepository: InstalledAppRepository = InstalledAppRepository { emptyList() },
-    private val reducer: LauncherShellStateReducer = LauncherShellStateReducer(),
-    private val appCatalog: InstalledAppCatalog = InstalledAppCatalog(),
-    private val shortcutEngine: HomeShortcutEngine = HomeShortcutEngine(),
-    private val homePageEngine: HomePageEngine = HomePageEngine(),
     private val homeLayoutRepository: HomeLayoutRepository = NoopHomeLayoutRepository,
+    private val launcherSettingsRepository: LauncherSettingsRepository = NoopLauncherSettingsRepository,
 ) : ViewModel() {
+    private val reducer = LauncherShellStateReducer()
+    private val appCatalog = InstalledAppCatalog()
+    private val shortcutEngine = HomeShortcutEngine()
+    private val homePageEngine = HomePageEngine()
     private val dockEngine = DockEngine()
 
     private val mutableState =
         MutableStateFlow(
             createInitialState(
                 homeLayoutRepository = homeLayoutRepository,
+                launcherSettingsRepository = launcherSettingsRepository,
                 firstRunRepository = firstRunRepository,
                 reducer = reducer,
             ).withInstalledApps(installedAppRepository, appCatalog),
@@ -56,11 +61,6 @@ class LauncherShellViewModel(
 
     fun onDefaultHomeRequestStarted() {
         mutableState.value = reducer.defaultHomeRequestStarted(mutableState.value)
-    }
-
-    fun onFirstRunCompleted() {
-        firstRunRepository.setFirstRunComplete()
-        mutableState.value = reducer.firstRunCompleted(mutableState.value)
     }
 
     fun onNavigationActionSelected(action: ShellNavigationAction) {
@@ -117,19 +117,43 @@ class LauncherShellViewModel(
             }
     }
 
+    fun onWallpaperSourceSelected(action: LauncherShellAction.SelectWallpaperSource) {
+        mutableState.value =
+            mutableState.value.withLauncherSettings(
+                settings =
+                    mutableState.value.launcherSettings.copy(
+                        appearance =
+                            mutableState.value.launcherSettings.appearance.copy(
+                                wallpaper = WallpaperSettings(source = action.source),
+                            ),
+                    ),
+                launcherSettingsRepository = launcherSettingsRepository,
+            )
+    }
+
     private object NoopHomeLayoutRepository : HomeLayoutRepository {
         override fun loadHomeLayout(): HomeLayout? = null
 
         override fun saveHomeLayout(layout: HomeLayout) = Unit
     }
+
+    private object NoopLauncherSettingsRepository : LauncherSettingsRepository {
+        override fun loadLauncherSettings(): LauncherSettings? = null
+
+        override fun saveLauncherSettings(settings: LauncherSettings) = Unit
+    }
 }
 
 private fun createInitialState(
     homeLayoutRepository: HomeLayoutRepository,
+    launcherSettingsRepository: LauncherSettingsRepository,
     firstRunRepository: FirstRunRepository,
     reducer: LauncherShellStateReducer,
 ): LauncherShellState =
-    LauncherShellState(homeLayout = homeLayoutRepository.loadHomeLayout() ?: HomeLayoutDefaults.standard())
+    LauncherShellState(
+        homeLayout = homeLayoutRepository.loadHomeLayout() ?: HomeLayoutDefaults.standard(),
+        launcherSettings = launcherSettingsRepository.loadLauncherSettings() ?: LauncherSettings(),
+    )
         .let { initialState ->
             if (firstRunRepository.isFirstRunComplete()) {
                 reducer.firstRunCompleted(initialState)
