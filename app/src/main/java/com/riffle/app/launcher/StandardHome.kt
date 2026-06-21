@@ -4,7 +4,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -350,23 +350,33 @@ private fun Modifier.homeSwipeNavigation(
         this
     } else {
         pointerInput(thresholdPx) {
+            var horizontalDragPx = 0f
             var verticalDragPx = 0f
             val interpreter = HomeSwipeGestureInterpreter(thresholdPx = thresholdPx)
 
-            detectVerticalDragGestures(
-                onDragStart = { verticalDragPx = 0f },
-                onVerticalDrag = { change, dragAmount ->
-                    verticalDragPx += dragAmount
+            detectDragGestures(
+                onDragStart = {
+                    horizontalDragPx = 0f
+                    verticalDragPx = 0f
+                },
+                onDrag = { change, dragAmount ->
+                    horizontalDragPx += dragAmount.x
+                    verticalDragPx += dragAmount.y
                     change.consume()
                 },
                 onDragEnd = {
-                    when (interpreter.gestureFor(verticalDragPx)) {
+                    when (interpreter.gestureFor(horizontalDragPx, verticalDragPx)) {
                         HomeSwipeGesture.UP -> onAction(LauncherShellAction.OpenAppDrawer)
                         HomeSwipeGesture.DOWN -> onAction(LauncherShellAction.OpenNotifications)
+                        HomeSwipeGesture.LEFT -> onAction(LauncherShellAction.SelectNextHomePage)
+                        HomeSwipeGesture.RIGHT -> onAction(LauncherShellAction.SelectPreviousHomePage)
                         null -> Unit
                     }
                 },
-                onDragCancel = { verticalDragPx = 0f },
+                onDragCancel = {
+                    horizontalDragPx = 0f
+                    verticalDragPx = 0f
+                },
             )
         }
     }
