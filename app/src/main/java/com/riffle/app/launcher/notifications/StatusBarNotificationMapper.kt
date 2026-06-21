@@ -5,11 +5,13 @@ import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.notifications.LauncherNotification
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
 
+@Suppress("DEPRECATION")
 fun StatusBarNotification.toLauncherNotification(): LauncherNotification =
     LauncherNotification(
         key = LauncherNotificationKey(key),
         packageName = AppPackageName(packageName),
         category = notification.category.toLauncherNotificationCategory(),
+        priority = notification.priority.toLauncherNotificationPriority(),
         canDismiss = isClearable,
         postedAtEpochMillis = postTime,
     )

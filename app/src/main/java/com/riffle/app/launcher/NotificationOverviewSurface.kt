@@ -22,6 +22,7 @@ import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
 import com.riffle.core.domain.launcher.notifications.NotificationAgeBucket
 import com.riffle.core.domain.launcher.notifications.NotificationCategory
+import com.riffle.core.domain.launcher.notifications.NotificationPriority
 
 @Composable
 fun NotificationOverviewSurface(
@@ -107,7 +108,7 @@ private fun NotificationGroupRow(
                 style = MaterialTheme.typography.bodyLarge,
             )
             Text(
-                text = "${group.packageName.value} - ${group.latestCategory.label} - ${group.clearableLabel}",
+                text = group.metadataLabel,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -123,6 +124,9 @@ private fun NotificationGroupRow(
 
 private fun InstalledApp.matches(group: AppNotificationGroup): Boolean =
     identity.packageName == group.packageName && identity.profile.id == group.profileId
+
+private val AppNotificationGroup.metadataLabel: String
+    get() = "${packageName.value} - ${latestCategory.label} - ${highestPriority.label} - $clearableLabel"
 
 private val NotificationAgeBucket.label: String
     get() =
@@ -167,4 +171,15 @@ private val AppNotificationGroup.clearableLabel: String
                 clearable == count -> "Clearable $count/$count"
                 else -> "Clearable $clearable/$count"
             }
+        }
+
+private val NotificationPriority.label: String
+    get() =
+        when (this) {
+            NotificationPriority.UNKNOWN -> "Priority unknown"
+            NotificationPriority.MIN -> "Min priority"
+            NotificationPriority.LOW -> "Low priority"
+            NotificationPriority.DEFAULT -> "Default priority"
+            NotificationPriority.HIGH -> "High priority"
+            NotificationPriority.MAX -> "Max priority"
         }

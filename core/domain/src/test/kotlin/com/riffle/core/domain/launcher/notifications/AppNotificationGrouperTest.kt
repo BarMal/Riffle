@@ -120,6 +120,29 @@ class AppNotificationGrouperTest {
     }
 
     @Test
+    fun exposesHighestNotificationPriority() {
+        val group =
+            grouper
+                .groupByApp(
+                    listOf(
+                        notification(
+                            key = "routine",
+                            packageName = "com.riffle.mail",
+                            priority = NotificationPriority.DEFAULT,
+                        ),
+                        notification(
+                            key = "urgent",
+                            packageName = "com.riffle.mail",
+                            priority = NotificationPriority.HIGH,
+                        ),
+                    ),
+                    nowEpochMillis = nowEpochMillis,
+                ).single()
+
+        assertEquals(NotificationPriority.HIGH, group.highestPriority)
+    }
+
+    @Test
     fun returnsEmptyGroupsForEmptyNotifications() {
         assertEquals(emptyList(), grouper.groupByApp(emptyList(), nowEpochMillis = nowEpochMillis))
     }
@@ -138,6 +161,7 @@ class AppNotificationGrouperTest {
         packageName: String,
         profileId: AppProfileId = AppProfile.personal().id,
         category: NotificationCategory = NotificationCategory.UNKNOWN,
+        priority: NotificationPriority = NotificationPriority.UNKNOWN,
         canDismiss: Boolean = false,
         postedAtEpochMillis: Long = 1_000L,
     ): LauncherNotification =
@@ -146,6 +170,7 @@ class AppNotificationGrouperTest {
             packageName = AppPackageName(packageName),
             profileId = profileId,
             category = category,
+            priority = priority,
             canDismiss = canDismiss,
             postedAtEpochMillis = postedAtEpochMillis,
         )
