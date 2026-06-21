@@ -60,4 +60,5 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
 
     testImplementation(libs.junit)
+    testImplementation(libs.org.json)
 }

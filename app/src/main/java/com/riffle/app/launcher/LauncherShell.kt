@@ -1,6 +1,8 @@
 package com.riffle.app.launcher
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -15,6 +17,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.RiffleProduct
@@ -26,6 +29,7 @@ import com.riffle.core.domain.launcher.apps.AppActivityName
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.InstalledApp
+import com.riffle.core.domain.launcher.home.WallpaperSource
 
 @Composable
 fun LauncherShell(
@@ -54,15 +58,33 @@ fun LauncherShellContent(
     )
 
     MaterialTheme {
-        Surface(modifier = Modifier.fillMaxSize()) {
-            if (state.shouldShowDefaultHomePrompt) {
-                DefaultHomePrompt(onAction = onAction)
+        val backdropColor =
+            if (state.homeLayout.settings.wallpaper.source == WallpaperSource.SYSTEM) {
+                Color.Transparent
             } else {
-                LauncherDestination(
-                    state = state,
-                    appIconLoader = appIconLoader,
-                    onAction = onAction,
-                )
+                MaterialTheme.colorScheme.background
+            }
+
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .background(backdropColor),
+        ) {
+            WallpaperBackdrop(settings = state.homeLayout.settings.wallpaper)
+            Surface(
+                modifier = Modifier.fillMaxSize(),
+                color = Color.Transparent,
+            ) {
+                if (state.shouldShowDefaultHomePrompt) {
+                    DefaultHomePrompt(onAction = onAction)
+                } else {
+                    LauncherDestination(
+                        state = state,
+                        appIconLoader = appIconLoader,
+                        onAction = onAction,
+                    )
+                }
             }
         }
     }

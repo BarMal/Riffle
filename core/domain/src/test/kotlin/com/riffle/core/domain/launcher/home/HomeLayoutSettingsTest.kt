@@ -12,6 +12,7 @@ class HomeLayoutSettingsTest {
         assertEquals(GridInsets(), settings.grid.margin)
         assertEquals(GridInsets(), settings.grid.padding)
         assertEquals(GridSpacing(), settings.grid.cellSpacing)
+        assertEquals(WallpaperSettings.system(), settings.wallpaper)
     }
 
     @Test
@@ -28,5 +29,12 @@ class HomeLayoutSettingsTest {
         assertEquals(GridInsets(start = 1, top = 2, end = 3, bottom = 4), settings.margin)
         assertEquals(GridInsets(start = 5, top = 6, end = 7, bottom = 8), settings.padding)
         assertEquals(GridSpacing(horizontal = 9, vertical = 10), settings.cellSpacing)
+    }
+
+    @Test
+    fun wallpaperSettingsCanUseASolidColourFallback() {
+        val settings = WallpaperSettings(source = WallpaperSource.SOLID_COLOR)
+
+        assertEquals(WallpaperSource.SOLID_COLOR, settings.source)
     }
 }
