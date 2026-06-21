@@ -148,6 +148,7 @@ private fun LauncherDestination(
         ShellDestination.SETTINGS ->
             SettingsSurface(
                 settings = state.launcherSettings,
+                notificationAccessStatus = state.notificationAccessStatus,
                 onAction = onAction,
             )
     }

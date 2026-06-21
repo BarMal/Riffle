@@ -18,6 +18,8 @@ sealed interface LauncherShellAction {
 
     data object OpenSettings : LauncherShellAction
 
+    data object RequestNotificationAccess : LauncherShellAction
+
     data object EnterHomeEditMode : LauncherShellAction
 
     data object ExitHomeEditMode : LauncherShellAction
