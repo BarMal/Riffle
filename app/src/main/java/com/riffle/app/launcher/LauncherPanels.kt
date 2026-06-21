@@ -108,7 +108,10 @@ fun SettingsSurface(
                 text = "Gestures",
                 style = MaterialTheme.typography.titleMedium,
             )
-            HomeSwipeGestureSetting(settings = settings.gestures.homeSwipe)
+            HomeSwipeGestureSetting(
+                settings = settings.gestures.homeSwipe,
+                onAction = onAction,
+            )
             Text(
                 text = "Permissions",
                 style = MaterialTheme.typography.titleMedium,

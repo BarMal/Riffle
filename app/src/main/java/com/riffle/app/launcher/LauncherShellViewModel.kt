@@ -148,18 +148,30 @@ class LauncherShellViewModel(
             }
     }
 
-    fun onWallpaperSourceSelected(action: LauncherShellAction.SelectWallpaperSource) {
+    fun onLauncherSettingsActionSelected(action: LauncherShellAction) {
         mutableState.value =
-            mutableState.value.withLauncherSettings(
-                settings =
-                    mutableState.value.launcherSettings.copy(
-                        appearance =
-                            mutableState.value.launcherSettings.appearance.copy(
-                                wallpaper = WallpaperSettings(source = action.source),
+            when (action) {
+                is LauncherShellAction.SelectWallpaperSource ->
+                    mutableState.value.withLauncherSettings(
+                        settings =
+                            mutableState.value.launcherSettings.copy(
+                                appearance =
+                                    mutableState.value.launcherSettings.appearance.copy(
+                                        wallpaper = WallpaperSettings(source = action.source),
+                                    ),
                             ),
-                    ),
-                launcherSettingsRepository = launcherSettingsRepository,
-            )
+                        launcherSettingsRepository = launcherSettingsRepository,
+                    )
+
+                is LauncherShellAction.SelectHomeSwipeGestureAction ->
+                    mutableState.value.withHomeSwipeGestureAction(
+                        direction = action.direction,
+                        action = action.action,
+                        launcherSettingsRepository = launcherSettingsRepository,
+                    )
+
+                else -> mutableState.value
+            }
     }
 
     private object NoopHomeLayoutRepository : HomeLayoutRepository {

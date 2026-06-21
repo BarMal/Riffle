@@ -10,7 +10,12 @@ fun LauncherShellAction.handleSettingsAction(
 ): Boolean =
     when (this) {
         is LauncherShellAction.SelectWallpaperSource -> {
-            viewModel.onWallpaperSourceSelected(this)
+            viewModel.onLauncherSettingsActionSelected(this)
+            true
+        }
+
+        is LauncherShellAction.SelectHomeSwipeGestureAction -> {
+            viewModel.onLauncherSettingsActionSelected(this)
             true
         }
 

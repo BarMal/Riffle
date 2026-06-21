@@ -1,6 +1,9 @@
 package com.riffle.app.launcher
 
 import com.riffle.core.domain.launcher.LauncherShellState
+import com.riffle.core.domain.launcher.settings.HomeSwipeGestureDirection
+import com.riffle.core.domain.launcher.settings.HomeSwipeGestureSettings
+import com.riffle.core.domain.launcher.settings.LauncherGestureAction
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettingsRepository
 
@@ -10,3 +13,30 @@ fun LauncherShellState.withLauncherSettings(
 ): LauncherShellState =
     copy(launcherSettings = settings)
         .also { state -> launcherSettingsRepository.saveLauncherSettings(state.launcherSettings) }
+
+fun LauncherShellState.withHomeSwipeGestureAction(
+    direction: HomeSwipeGestureDirection,
+    action: LauncherGestureAction,
+    launcherSettingsRepository: LauncherSettingsRepository,
+): LauncherShellState =
+    withLauncherSettings(
+        settings =
+            launcherSettings.copy(
+                gestures =
+                    launcherSettings.gestures.copy(
+                        homeSwipe = launcherSettings.gestures.homeSwipe.withAction(direction, action),
+                    ),
+            ),
+        launcherSettingsRepository = launcherSettingsRepository,
+    )
+
+private fun HomeSwipeGestureSettings.withAction(
+    direction: HomeSwipeGestureDirection,
+    action: LauncherGestureAction,
+): HomeSwipeGestureSettings =
+    when (direction) {
+        HomeSwipeGestureDirection.UP -> copy(up = action)
+        HomeSwipeGestureDirection.DOWN -> copy(down = action)
+        HomeSwipeGestureDirection.LEFT -> copy(left = action)
+        HomeSwipeGestureDirection.RIGHT -> copy(right = action)
+    }
