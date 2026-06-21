@@ -4,6 +4,7 @@ import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
+import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 
@@ -15,6 +16,7 @@ data class LauncherShellState(
     val launcherSettings: LauncherSettings = LauncherSettings(),
     val notificationAccessStatus: NotificationAccessStatus = NotificationAccessStatus.UNKNOWN,
     val notificationCountsByPackage: Map<AppPackageName, Int> = emptyMap(),
+    val notificationGroupsByApp: List<AppNotificationGroup> = emptyList(),
     val installedApps: List<InstalledApp> = emptyList(),
     val searchQuery: String = "",
     val searchResults: List<InstalledApp> = emptyList(),
