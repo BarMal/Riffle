@@ -23,6 +23,7 @@ import com.riffle.core.domain.launcher.home.LauncherPageId
 import com.riffle.core.domain.launcher.home.PlacementRejectionReason
 import com.riffle.core.domain.launcher.home.WallpaperSettings
 import com.riffle.core.domain.launcher.notifications.AppNotificationCounter
+import com.riffle.core.domain.launcher.notifications.AppNotificationGrouper
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationRepository
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.settings.LauncherSettings
@@ -41,6 +42,7 @@ class LauncherShellViewModel(
     private val reducer = LauncherShellStateReducer()
     private val appCatalog = InstalledAppCatalog()
     private val appNotificationCounter = AppNotificationCounter()
+    private val appNotificationGrouper = AppNotificationGrouper()
     private val shortcutEngine = HomeShortcutEngine()
     private val homePageEngine = HomePageEngine()
     private val dockEngine = DockEngine()
@@ -53,7 +55,11 @@ class LauncherShellViewModel(
                 firstRunRepository = firstRunRepository,
                 reducer = reducer,
             ).withInstalledApps(installedAppRepository, appCatalog)
-                .withNotificationCounts(notificationRepository, appNotificationCounter),
+                .withNotificationState(
+                    notificationRepository = notificationRepository,
+                    appNotificationCounter = appNotificationCounter,
+                    appNotificationGrouper = appNotificationGrouper,
+                ),
         )
     val state: StateFlow<LauncherShellState> = mutableState.asStateFlow()
 
@@ -86,7 +92,11 @@ class LauncherShellViewModel(
         mutableState.value =
             mutableState.value
                 .withInstalledApps(installedAppRepository, appCatalog)
-                .withNotificationCounts(notificationRepository, appNotificationCounter)
+                .withNotificationState(
+                    notificationRepository = notificationRepository,
+                    appNotificationCounter = appNotificationCounter,
+                    appNotificationGrouper = appNotificationGrouper,
+                )
     }
 
     fun onSearchQueryChanged(query: String) {
