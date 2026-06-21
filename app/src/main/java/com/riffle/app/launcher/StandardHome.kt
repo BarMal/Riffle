@@ -1,7 +1,9 @@
 package com.riffle.app.launcher
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -187,6 +189,7 @@ private fun WorkspaceGrid(
 }
 
 @Composable
+@OptIn(ExperimentalFoundationApi::class)
 private fun HomeShortcut(
     shortcut: AppShortcutItem,
     isEditing: Boolean,
@@ -199,9 +202,11 @@ private fun HomeShortcut(
             modifier =
                 Modifier
                     .align(Alignment.Center)
-                    .clickable(enabled = !isEditing) {
-                        onAction(LauncherShellAction.LaunchApp(shortcut.appIdentity))
-                    },
+                    .combinedClickable(
+                        enabled = !isEditing,
+                        onClick = { onAction(LauncherShellAction.LaunchApp(shortcut.appIdentity)) },
+                        onLongClick = { onAction(LauncherShellAction.EnterHomeEditMode) },
+                    ),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
