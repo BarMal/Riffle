@@ -22,6 +22,11 @@ import com.riffle.core.domain.launcher.home.HomeLayoutRepository
 import com.riffle.core.domain.launcher.home.HomeShortcutMoveDirection
 import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.home.LauncherPageId
+import com.riffle.core.domain.launcher.home.WallpaperSettings
+import com.riffle.core.domain.launcher.home.WallpaperSource
+import com.riffle.core.domain.launcher.settings.AppearanceSettings
+import com.riffle.core.domain.launcher.settings.LauncherSettings
+import com.riffle.core.domain.launcher.settings.LauncherSettingsRepository
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -205,6 +210,45 @@ class LauncherShellViewModelTest {
             )
 
         assertEquals(repository.savedLayout, viewModel.state.value.homeLayout)
+    }
+
+    @Test
+    fun restoresSavedLauncherSettings() {
+        val repository =
+            FakeLauncherSettingsRepository(
+                savedSettings =
+                    LauncherSettings(
+                        appearance =
+                            AppearanceSettings(
+                                wallpaper = WallpaperSettings(source = WallpaperSource.SOLID_COLOR),
+                            ),
+                    ),
+            )
+
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                launcherSettingsRepository = repository,
+            )
+
+        assertEquals(repository.savedSettings, viewModel.state.value.launcherSettings)
+    }
+
+    @Test
+    fun savesWallpaperSourceSelection() {
+        val repository = FakeLauncherSettingsRepository()
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                launcherSettingsRepository = repository,
+            )
+
+        viewModel.onWallpaperSourceSelected(
+            LauncherShellAction.SelectWallpaperSource(WallpaperSource.SOLID_COLOR),
+        )
+
+        assertEquals(WallpaperSource.SOLID_COLOR, viewModel.state.value.launcherSettings.appearance.wallpaper.source)
+        assertEquals(viewModel.state.value.launcherSettings, repository.savedSettings)
     }
 
     @Test
@@ -644,6 +688,16 @@ class LauncherShellViewModelTest {
 
         override fun saveHomeLayout(layout: HomeLayout) {
             savedLayout = layout
+        }
+    }
+
+    private class FakeLauncherSettingsRepository(
+        var savedSettings: LauncherSettings? = null,
+    ) : LauncherSettingsRepository {
+        override fun loadLauncherSettings(): LauncherSettings? = savedSettings
+
+        override fun saveLauncherSettings(settings: LauncherSettings) {
+            savedSettings = settings
         }
     }
 

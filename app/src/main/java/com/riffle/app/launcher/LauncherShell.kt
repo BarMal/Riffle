@@ -59,7 +59,7 @@ fun LauncherShellContent(
 
     MaterialTheme {
         val backdropColor =
-            if (state.homeLayout.settings.wallpaper.source == WallpaperSource.SYSTEM) {
+            if (state.launcherSettings.appearance.wallpaper.source == WallpaperSource.SYSTEM) {
                 Color.Transparent
             } else {
                 MaterialTheme.colorScheme.background
@@ -71,7 +71,7 @@ fun LauncherShellContent(
                     .fillMaxSize()
                     .background(backdropColor),
         ) {
-            WallpaperBackdrop(settings = state.homeLayout.settings.wallpaper)
+            WallpaperBackdrop(settings = state.launcherSettings.appearance.wallpaper)
             Surface(
                 modifier = Modifier.fillMaxSize(),
                 color = Color.Transparent,
@@ -147,6 +147,7 @@ private fun LauncherDestination(
 
         ShellDestination.SETTINGS ->
             SettingsSurface(
+                settings = state.launcherSettings,
                 onAction = onAction,
             )
     }

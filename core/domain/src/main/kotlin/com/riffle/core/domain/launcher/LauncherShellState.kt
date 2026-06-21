@@ -3,12 +3,14 @@ package com.riffle.core.domain.launcher
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
+import com.riffle.core.domain.launcher.settings.LauncherSettings
 
 data class LauncherShellState(
     val firstRunStatus: FirstRunStatus = FirstRunStatus.NEEDS_HOME_ROLE,
     val homeRoleStatus: HomeRoleStatus = HomeRoleStatus.UNKNOWN,
     val destination: ShellDestination = ShellDestination.HOME,
     val homeLayout: HomeLayout = HomeLayoutDefaults.standard(),
+    val launcherSettings: LauncherSettings = LauncherSettings(),
     val installedApps: List<InstalledApp> = emptyList(),
     val searchQuery: String = "",
     val searchResults: List<InstalledApp> = emptyList(),
