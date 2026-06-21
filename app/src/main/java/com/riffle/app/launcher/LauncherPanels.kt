@@ -187,8 +187,13 @@ private fun NotificationAccessSetting(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        TextButton(onClick = { onAction(LauncherShellAction.RequestNotificationAccess) }) {
-            Text(text = "Open")
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            TextButton(onClick = { onAction(LauncherShellAction.OpenNotifications) }) {
+                Text(text = "View")
+            }
+            TextButton(onClick = { onAction(LauncherShellAction.RequestNotificationAccess) }) {
+                Text(text = "Open")
+            }
         }
     }
 }
@@ -298,7 +303,7 @@ private val InstalledApp.drawerKey: String
     get() = "${identity.profile.id.value}:${identity.packageName.value}/${identity.activityName.value}"
 
 @Composable
-private fun LauncherPanel(
+fun LauncherPanel(
     title: String,
     onAction: (LauncherShellAction) -> Unit,
     content: @Composable () -> Unit,

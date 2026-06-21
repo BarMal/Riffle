@@ -41,6 +41,7 @@ class LauncherShellStateReducer {
                 ShellNavigationAction.OpenHome -> ShellDestination.HOME
                 ShellNavigationAction.OpenAppDrawer -> ShellDestination.APP_DRAWER
                 ShellNavigationAction.OpenSearch -> ShellDestination.SEARCH
+                ShellNavigationAction.OpenNotifications -> ShellDestination.NOTIFICATIONS
                 ShellNavigationAction.OpenSettings -> ShellDestination.SETTINGS
             }
 }
