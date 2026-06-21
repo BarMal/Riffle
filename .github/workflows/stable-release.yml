@@ -42,6 +42,8 @@ jobs:
           RIFFLE_SIGNING_STORE_PASSWORD: ${{ secrets.RIFFLE_SIGNING_STORE_PASSWORD }}
           RIFFLE_SIGNING_KEY_ALIAS: ${{ secrets.RIFFLE_SIGNING_KEY_ALIAS }}
           RIFFLE_SIGNING_KEY_PASSWORD: ${{ secrets.RIFFLE_SIGNING_KEY_PASSWORD }}
+          RIFFLE_VERSION_CODE: ${{ github.run_number }}
+          RIFFLE_VERSION_NAME: 0.1.0
         run: ./gradlew assembleRelease bundleRelease
 
       - name: Upload release artifacts

@@ -7,8 +7,13 @@ android {
 
     defaultConfig {
         applicationId = "com.riffle.app"
-        versionCode = 1
-        versionName = "0.1.0-alpha01"
+        versionCode =
+            providers.environmentVariable("RIFFLE_VERSION_CODE")
+                .map(String::toInt)
+                .getOrElse(1)
+        versionName =
+            providers.environmentVariable("RIFFLE_VERSION_NAME")
+                .getOrElse("0.1.0-alpha01")
     }
 
     signingConfigs {
