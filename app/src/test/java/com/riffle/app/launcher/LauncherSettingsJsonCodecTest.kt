@@ -3,6 +3,9 @@ package com.riffle.app.launcher
 import com.riffle.core.domain.launcher.home.WallpaperSettings
 import com.riffle.core.domain.launcher.home.WallpaperSource
 import com.riffle.core.domain.launcher.settings.AppearanceSettings
+import com.riffle.core.domain.launcher.settings.GestureSettings
+import com.riffle.core.domain.launcher.settings.HomeSwipeGestureSettings
+import com.riffle.core.domain.launcher.settings.LauncherGestureAction
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -31,6 +34,40 @@ class LauncherSettingsJsonCodecTest {
     }
 
     @Test
+    fun roundTripsHomeSwipeGestureActions() {
+        val settings =
+            LauncherSettings(
+                gestures =
+                    GestureSettings(
+                        homeSwipe =
+                            HomeSwipeGestureSettings(
+                                up = LauncherGestureAction.OPEN_SEARCH,
+                                down = LauncherGestureAction.NONE,
+                                left = LauncherGestureAction.OPEN_SETTINGS,
+                                right = LauncherGestureAction.ENTER_HOME_EDIT_MODE,
+                            ),
+                    ),
+            )
+
+        val decodedSettings = decodeLauncherSettings(encodeLauncherSettings(settings))
+
+        assertEquals(LauncherGestureAction.OPEN_SEARCH, decodedSettings.gestures.homeSwipe.up)
+        assertEquals(LauncherGestureAction.NONE, decodedSettings.gestures.homeSwipe.down)
+        assertEquals(LauncherGestureAction.OPEN_SETTINGS, decodedSettings.gestures.homeSwipe.left)
+        assertEquals(LauncherGestureAction.ENTER_HOME_EDIT_MODE, decodedSettings.gestures.homeSwipe.right)
+    }
+
+    @Test
+    fun defaultsMissingGestureSettings() {
+        val decodedSettings = decodeLauncherSettings("{}")
+
+        assertEquals(LauncherGestureAction.OPEN_APP_DRAWER, decodedSettings.gestures.homeSwipe.up)
+        assertEquals(LauncherGestureAction.OPEN_NOTIFICATIONS, decodedSettings.gestures.homeSwipe.down)
+        assertEquals(LauncherGestureAction.SELECT_NEXT_HOME_PAGE, decodedSettings.gestures.homeSwipe.left)
+        assertEquals(LauncherGestureAction.SELECT_PREVIOUS_HOME_PAGE, decodedSettings.gestures.homeSwipe.right)
+    }
+
+    @Test
     fun defaultsUnknownWallpaperSource() {
         val decodedSettings =
             decodeLauncherSettings(
@@ -46,5 +83,23 @@ class LauncherSettingsJsonCodecTest {
             )
 
         assertEquals(WallpaperSettings.system(), decodedSettings.appearance.wallpaper)
+    }
+
+    @Test
+    fun defaultsUnknownGestureAction() {
+        val decodedSettings =
+            decodeLauncherSettings(
+                """
+                {
+                  "gestures": {
+                    "homeSwipe": {
+                      "up": "UNKNOWN"
+                    }
+                  }
+                }
+                """.trimIndent(),
+            )
+
+        assertEquals(LauncherGestureAction.OPEN_APP_DRAWER, decodedSettings.gestures.homeSwipe.up)
     }
 }
