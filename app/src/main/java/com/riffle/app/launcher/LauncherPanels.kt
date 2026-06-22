@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -41,12 +40,10 @@ fun AppDrawer(
         onAction = onAction,
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            OutlinedTextField(
+            AppSearchField(
                 modifier = Modifier.fillMaxWidth(),
-                value = query,
-                onValueChange = { value -> onAction(LauncherShellAction.AppDrawerQueryChanged(value)) },
-                singleLine = true,
-                label = { Text(text = "Search apps") },
+                query = query,
+                onQueryChanged = { value -> onAction(LauncherShellAction.AppDrawerQueryChanged(value)) },
             )
             Spacer(modifier = Modifier.height(16.dp))
             AppList(
@@ -85,12 +82,10 @@ fun SearchSurface(
         onAction = onAction,
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            OutlinedTextField(
+            AppSearchField(
                 modifier = Modifier.fillMaxWidth(),
-                value = query,
-                onValueChange = { value -> onAction(LauncherShellAction.SearchQueryChanged(value)) },
-                singleLine = true,
-                label = { Text(text = "Search apps") },
+                query = query,
+                onQueryChanged = { value -> onAction(LauncherShellAction.SearchQueryChanged(value)) },
             )
             Spacer(modifier = Modifier.height(16.dp))
             AppList(
