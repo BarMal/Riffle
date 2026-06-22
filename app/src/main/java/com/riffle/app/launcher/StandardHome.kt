@@ -75,12 +75,6 @@ fun StandardHome(
         modifier =
             Modifier
                 .fillMaxSize()
-                .homeSwipeNavigation(
-                    enabled = !isEditing,
-                    thresholdPx = swipeThresholdPx,
-                    homeSwipeGestures = homeSwipeGestures,
-                    onAction = onAction,
-                )
                 .windowInsetsPadding(WindowInsets.safeDrawing)
                 .padding(24.dp),
         verticalArrangement = Arrangement.SpaceBetween,
@@ -100,7 +94,13 @@ fun StandardHome(
             modifier =
                 Modifier
                     .weight(1f)
-                    .fillMaxWidth(),
+                    .fillMaxWidth()
+                    .homeSwipeNavigation(
+                        enabled = !isEditing,
+                        thresholdPx = swipeThresholdPx,
+                        homeSwipeGestures = homeSwipeGestures,
+                        onAction = onAction,
+                    ),
         )
         if (isEditingPage) {
             PageEditControls(
