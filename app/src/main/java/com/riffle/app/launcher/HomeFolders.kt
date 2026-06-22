@@ -29,6 +29,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
+import com.riffle.core.domain.launcher.apps.AppDrawerProfileFilter
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.home.AppShortcutItem
@@ -101,9 +102,13 @@ fun FolderDialog(
 ) {
     val folderName = remember(folder.id, folder.label) { mutableStateOf(folder.label) }
     val addAppQuery = remember(folder.id) { mutableStateOf("") }
+    val addAppProfileFilter = remember(folder.id) { mutableStateOf(AppDrawerProfileFilter.ALL) }
     val trimmedFolderName = folderName.value.trim()
     val addableApps = installedApps.filterFolderAddCandidates(layout)
-    val visibleAddableApps = addableApps.filterFolderAddCandidates(addAppQuery.value)
+    val visibleAddableApps =
+        addableApps
+            .filterFolderAddCandidates(addAppQuery.value)
+            .filterFolderAddCandidates(addAppProfileFilter.value)
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -120,6 +125,10 @@ fun FolderDialog(
                     query = addAppQuery.value,
                     onQueryChanged = { value -> addAppQuery.value = value },
                     label = "Add app",
+                )
+                AppProfileFilterChips(
+                    selectedFilter = addAppProfileFilter.value,
+                    onFilterSelected = { filter -> addAppProfileFilter.value = filter },
                 )
                 FolderContentRows(
                     folder = folder,
