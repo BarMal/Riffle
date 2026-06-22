@@ -108,6 +108,30 @@ class FolderAddAppFilterTest {
     }
 
     @Test
+    fun describesEmptyFolderAddCandidatesWhenNoAppsAreLeft() {
+        val apps = emptyList<InstalledApp>()
+
+        assertEquals(
+            "No apps left to add",
+            apps.folderAddEmptyText(query = "", profileFilter = AppDrawerProfileFilter.ALL),
+        )
+    }
+
+    @Test
+    fun describesEmptyFolderAddCandidatesWhenFiltersHideMatches() {
+        val apps = listOf(app(label = "Camera"))
+
+        assertEquals(
+            "No matching apps",
+            apps.folderAddEmptyText(query = "docs", profileFilter = AppDrawerProfileFilter.ALL),
+        )
+        assertEquals(
+            "No matching apps",
+            apps.folderAddEmptyText(query = "", profileFilter = AppDrawerProfileFilter.WORK),
+        )
+    }
+
+    @Test
     fun candidateKeysIncludeProfileId() {
         val personalCamera = app(label = "Camera", profile = AppProfile.personal())
         val workCamera = app(label = "Camera", profile = AppProfile.work())

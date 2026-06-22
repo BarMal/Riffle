@@ -109,6 +109,11 @@ fun FolderDialog(
         addableApps
             .filterFolderAddCandidates(addAppQuery.value)
             .filterFolderAddCandidates(addAppProfileFilter.value)
+    val addableAppsEmptyText =
+        addableApps.folderAddEmptyText(
+            query = addAppQuery.value,
+            profileFilter = addAppProfileFilter.value,
+        )
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -133,6 +138,7 @@ fun FolderDialog(
                 FolderContentRows(
                     folder = folder,
                     addableApps = visibleAddableApps,
+                    addableAppsEmptyText = addableAppsEmptyText,
                     appIconLoader = appIconLoader,
                     onDismiss = onDismiss,
                     onAction = onAction,
@@ -259,6 +265,7 @@ private fun FolderAppRow(
 private fun FolderContentRows(
     folder: FolderItem,
     addableApps: List<InstalledApp>,
+    addableAppsEmptyText: String,
     appIconLoader: AppIconLoader,
     onDismiss: () -> Unit,
     onAction: (LauncherShellAction) -> Unit,
@@ -304,6 +311,11 @@ private fun FolderContentRows(
                 },
             )
         }
+        if (addableApps.isEmpty()) {
+            item(key = "folder-add-empty") {
+                FolderAddEmptyRow(text = addableAppsEmptyText)
+            }
+        }
         items(
             items = addableApps,
             key = { app -> app.folderAddCandidateKey() },
@@ -322,6 +334,19 @@ private fun FolderContentRows(
             )
         }
     }
+}
+
+@Composable
+private fun FolderAddEmptyRow(text: String) {
+    Text(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(vertical = 24.dp),
+        text = text,
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
 }
 
 @Composable

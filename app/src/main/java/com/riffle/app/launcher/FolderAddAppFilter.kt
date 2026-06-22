@@ -22,6 +22,16 @@ fun List<InstalledApp>.filterFolderAddCandidates(query: String): List<InstalledA
         }
         ?: this
 
+fun List<InstalledApp>.folderAddEmptyText(
+    query: String,
+    profileFilter: AppDrawerProfileFilter,
+): String =
+    when {
+        isEmpty() -> "No apps left to add"
+        query.isNotBlank() || profileFilter != AppDrawerProfileFilter.ALL -> "No matching apps"
+        else -> "No apps left to add"
+    }
+
 fun InstalledApp.folderAddCandidateKey(): String =
     "${identity.profile.id.value}:${identity.packageName.value}/${identity.activityName.value}"
 
