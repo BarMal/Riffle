@@ -20,6 +20,8 @@ data class LauncherShellState(
     val notificationCountsByCategory: Map<NotificationCategory, Int> = emptyMap(),
     val notificationGroupsByApp: List<AppNotificationGroup> = emptyList(),
     val installedApps: List<InstalledApp> = emptyList(),
+    val appDrawerQuery: String = "",
+    val appDrawerApps: List<InstalledApp> = emptyList(),
     val searchQuery: String = "",
     val searchResults: List<InstalledApp> = emptyList(),
 ) {

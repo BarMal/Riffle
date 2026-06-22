@@ -160,7 +160,10 @@ class MainActivity : ComponentActivity() {
         when (action) {
             is LauncherShellAction.LaunchApp -> appLauncher.launch(action.identity)
             is LauncherShellAction.AddAppToHome -> shellViewModel.onAddAppToHome(action.app)
-            is LauncherShellAction.SearchQueryChanged -> shellViewModel.onSearchQueryChanged(action.query)
+            is LauncherShellAction.AppDrawerQueryChanged,
+            is LauncherShellAction.SearchQueryChanged,
+            -> shellViewModel.onAppQueryChanged(action)
+
             else -> Unit
         }
     }
