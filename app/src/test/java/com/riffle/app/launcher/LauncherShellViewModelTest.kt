@@ -192,7 +192,7 @@ class LauncherShellViewModelTest {
                     ),
             )
 
-        viewModel.onAppQueryChanged(LauncherShellAction.SearchQueryChanged("cam"))
+        viewModel.onAppActionSelected(LauncherShellAction.SearchQueryChanged("cam"))
 
         assertEquals("cam", viewModel.state.value.searchQuery)
         assertEquals(listOf("Camera"), viewModel.state.value.searchResults.map { app -> app.label })
@@ -206,7 +206,7 @@ class LauncherShellViewModelTest {
                 firstRunRepository = FakeFirstRunRepository(),
                 installedAppRepository = repository,
             )
-        viewModel.onAppQueryChanged(LauncherShellAction.SearchQueryChanged("cal"))
+        viewModel.onAppActionSelected(LauncherShellAction.SearchQueryChanged("cal"))
 
         repository.apps = listOf(app(label = "Calendar"))
         viewModel.refreshInstalledApps()

@@ -27,7 +27,7 @@ class LauncherShellSearchViewModelTest {
                     ),
             )
 
-        viewModel.onAppQueryChanged(
+        viewModel.onAppActionSelected(
             LauncherShellAction.SearchProfileFilterSelected(AppDrawerProfileFilter.WORK),
         )
 
@@ -51,8 +51,8 @@ class LauncherShellSearchViewModelTest {
                     ),
             )
 
-        viewModel.onAppQueryChanged(LauncherShellAction.SearchQueryChanged("cal"))
-        viewModel.onAppQueryChanged(
+        viewModel.onAppActionSelected(LauncherShellAction.SearchQueryChanged("cal"))
+        viewModel.onAppActionSelected(
             LauncherShellAction.SearchProfileFilterSelected(AppDrawerProfileFilter.WORK),
         )
 
@@ -73,7 +73,7 @@ class LauncherShellSearchViewModelTest {
                 firstRunRepository = FakeFirstRunRepository(),
                 installedAppRepository = repository,
             )
-        viewModel.onAppQueryChanged(
+        viewModel.onAppActionSelected(
             LauncherShellAction.SearchProfileFilterSelected(AppDrawerProfileFilter.WORK),
         )
 

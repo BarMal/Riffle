@@ -47,7 +47,7 @@ class LauncherShellAppDrawerViewModelTest {
                     ),
             )
 
-        viewModel.onAppQueryChanged(LauncherShellAction.AppDrawerQueryChanged("cam"))
+        viewModel.onAppActionSelected(LauncherShellAction.AppDrawerQueryChanged("cam"))
 
         assertEquals("cam", viewModel.state.value.appDrawerQuery)
         assertEquals(listOf("Camera"), viewModel.state.value.appDrawerApps.map { app -> app.label })
@@ -62,7 +62,7 @@ class LauncherShellAppDrawerViewModelTest {
                 firstRunRepository = FakeFirstRunRepository(),
                 installedAppRepository = repository,
             )
-        viewModel.onAppQueryChanged(LauncherShellAction.AppDrawerQueryChanged("cal"))
+        viewModel.onAppActionSelected(LauncherShellAction.AppDrawerQueryChanged("cal"))
 
         repository.apps = listOf(app(label = "Calendar"))
         viewModel.refreshInstalledApps()
@@ -87,7 +87,7 @@ class LauncherShellAppDrawerViewModelTest {
                     ),
             )
 
-        viewModel.onAppQueryChanged(
+        viewModel.onAppActionSelected(
             LauncherShellAction.AppDrawerProfileFilterSelected(AppDrawerProfileFilter.WORK),
         )
 
@@ -111,8 +111,8 @@ class LauncherShellAppDrawerViewModelTest {
                     ),
             )
 
-        viewModel.onAppQueryChanged(LauncherShellAction.AppDrawerQueryChanged("cal"))
-        viewModel.onAppQueryChanged(
+        viewModel.onAppActionSelected(LauncherShellAction.AppDrawerQueryChanged("cal"))
+        viewModel.onAppActionSelected(
             LauncherShellAction.AppDrawerProfileFilterSelected(AppDrawerProfileFilter.WORK),
         )
 
@@ -133,7 +133,7 @@ class LauncherShellAppDrawerViewModelTest {
                 firstRunRepository = FakeFirstRunRepository(),
                 installedAppRepository = repository,
             )
-        viewModel.onAppQueryChanged(
+        viewModel.onAppActionSelected(
             LauncherShellAction.AppDrawerProfileFilterSelected(AppDrawerProfileFilter.WORK),
         )
 

@@ -14,10 +14,15 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -111,6 +116,8 @@ private fun AppDrawerRow(
     appIconLoader: AppIconLoader,
     onAction: (LauncherShellAction) -> Unit,
 ) {
+    val isMenuExpanded = remember(app.identity) { mutableStateOf(false) }
+
     Row(
         modifier =
             Modifier
@@ -153,23 +160,92 @@ private fun AppDrawerRow(
                 color = MaterialTheme.colorScheme.primary,
             )
         }
-        TextButton(
-            enabled = !isOnHome,
-            onClick = { onAction(LauncherShellAction.AddAppToHome(app)) },
-        ) {
-            Text(text = if (isOnHome) "Added" else "Add")
+        AppDrawerRowActions(
+            app = app,
+            isOnHome = isOnHome,
+            dockItemId = dockItemId,
+            isMenuExpanded = isMenuExpanded.value,
+            onMenuExpandedChange = { isExpanded -> isMenuExpanded.value = isExpanded },
+            onAction = onAction,
+        )
+    }
+}
+
+@Composable
+private fun AppDrawerRowActions(
+    app: InstalledApp,
+    isOnHome: Boolean,
+    dockItemId: LauncherItemId?,
+    isMenuExpanded: Boolean,
+    onMenuExpandedChange: (Boolean) -> Unit,
+    onAction: (LauncherShellAction) -> Unit,
+) {
+    TextButton(
+        enabled = !isOnHome,
+        onClick = { onAction(LauncherShellAction.AddAppToHome(app)) },
+    ) {
+        Text(text = if (isOnHome) "Added" else "Add")
+    }
+    TextButton(
+        onClick = {
+            when (dockItemId) {
+                null -> onAction(LauncherShellAction.AddAppToDock(app))
+                else -> onAction(LauncherShellAction.RemoveDockShortcut(dockItemId))
+            }
+        },
+    ) {
+        Text(text = if (dockItemId == null) "Dock" else "Undock")
+    }
+    AppDrawerRowOverflowMenu(
+        app = app,
+        isExpanded = isMenuExpanded,
+        onExpandedChange = onMenuExpandedChange,
+        onAction = onAction,
+    )
+}
+
+@Composable
+private fun AppDrawerRowOverflowMenu(
+    app: InstalledApp,
+    isExpanded: Boolean,
+    onExpandedChange: (Boolean) -> Unit,
+    onAction: (LauncherShellAction) -> Unit,
+) {
+    Box {
+        IconButton(onClick = { onExpandedChange(true) }) {
+            Text(text = "...")
         }
-        TextButton(
-            onClick = {
-                when (dockItemId) {
-                    null -> onAction(LauncherShellAction.AddAppToDock(app))
-                    else -> onAction(LauncherShellAction.RemoveDockShortcut(dockItemId))
-                }
-            },
+        DropdownMenu(
+            expanded = isExpanded,
+            onDismissRequest = { onExpandedChange(false) },
         ) {
-            Text(text = if (dockItemId == null) "Dock" else "Undock")
+            AppDrawerRowMenuItem(
+                text = "App info",
+                onClick = { onAction(LauncherShellAction.OpenAppInfo(app.identity)) },
+                onExpandedChange = onExpandedChange,
+            )
+            AppDrawerRowMenuItem(
+                text = "Hide",
+                onClick = { onAction(LauncherShellAction.HideApp(app.identity)) },
+                onExpandedChange = onExpandedChange,
+            )
         }
     }
+}
+
+@Composable
+private fun AppDrawerRowMenuItem(
+    text: String,
+    onClick: () -> Unit,
+    onExpandedChange: (Boolean) -> Unit,
+) {
+    DropdownMenuItem(
+        text = { Text(text = text) },
+        onClick = {
+            onExpandedChange(false)
+            onClick()
+        },
+    )
 }
 
 private val InstalledApp.drawerKey: String
