@@ -132,6 +132,27 @@ class HomePageEngine {
         HomePageEditResult.Updated(
             layout.copy(editMode = HomeEditMode.Browsing),
         )
+
+    fun updateGridDimensions(
+        layout: HomeLayout,
+        dimensions: GridDimensions,
+    ): HomePageEditResult =
+        when {
+            !dimensions.isValid -> HomePageEditResult.Rejected(HomePageEditRejectionReason.INVALID_GRID_DIMENSIONS)
+            layout.pages.any { page -> page.items.any { item -> !dimensions.contains(item.placement) } } ->
+                HomePageEditResult.Rejected(HomePageEditRejectionReason.GRID_ITEMS_OUT_OF_BOUNDS)
+
+            else ->
+                HomePageEditResult.Updated(
+                    layout.copy(
+                        pages = layout.pages.map { page -> page.copy(grid = dimensions) },
+                        settings =
+                            layout.settings.copy(
+                                grid = layout.settings.grid.copy(dimensions = dimensions),
+                            ),
+                    ),
+                )
+        }
 }
 
 private fun LauncherItem.duplicate(itemIdProvider: () -> LauncherItemId): LauncherItem =
@@ -203,4 +224,19 @@ enum class HomePageEditRejectionReason {
     DUPLICATE_PAGE_ID,
     CANNOT_DELETE_LAST_PAGE,
     INDEX_OUT_OF_BOUNDS,
+    INVALID_GRID_DIMENSIONS,
+    GRID_ITEMS_OUT_OF_BOUNDS,
 }
+
+private val GridDimensions.isValid: Boolean
+    get() = columns >= MIN_GRID_DIMENSION && rows >= MIN_GRID_DIMENSION
+
+private fun GridDimensions.contains(placement: GridPlacement?): Boolean =
+    placement?.let { existingPlacement ->
+        existingPlacement.cell.column >= 0 &&
+            existingPlacement.cell.row >= 0 &&
+            existingPlacement.cell.column + existingPlacement.span.columns <= columns &&
+            existingPlacement.cell.row + existingPlacement.span.rows <= rows
+    } ?: true
+
+private const val MIN_GRID_DIMENSION = 1

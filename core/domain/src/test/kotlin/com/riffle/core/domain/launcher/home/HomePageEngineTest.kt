@@ -325,6 +325,63 @@ class HomePageEngineTest {
         assertEquals(HomeEditMode.Browsing, updated.layout.editMode)
     }
 
+    @Test
+    fun updatesGridDimensionsForAllPagesAndSettings() {
+        val layoutWithPages =
+            layout.copy(
+                pages = listOf(page(id = "home"), page(id = "widgets")),
+            )
+
+        val result =
+            engine.updateGridDimensions(
+                layout = layoutWithPages,
+                dimensions = GridDimensions(columns = 5, rows = 6),
+            )
+
+        val updated = assertIs<HomePageEditResult.Updated>(result)
+        assertEquals(
+            listOf(GridDimensions(columns = 5, rows = 6), GridDimensions(columns = 5, rows = 6)),
+            updated.layout.pages.map { page -> page.grid },
+        )
+        assertEquals(GridDimensions(columns = 5, rows = 6), updated.layout.settings.grid.dimensions)
+    }
+
+    @Test
+    fun rejectsGridDimensionsSmallerThanOneCell() {
+        val result =
+            engine.updateGridDimensions(
+                layout = layout,
+                dimensions = GridDimensions(columns = 0, rows = 5),
+            )
+
+        val rejected = assertIs<HomePageEditResult.Rejected>(result)
+        assertEquals(HomePageEditRejectionReason.INVALID_GRID_DIMENSIONS, rejected.reason)
+    }
+
+    @Test
+    fun rejectsGridDimensionsThatWouldClipPlacedItems() {
+        val camera =
+            AppShortcutItem(
+                id = itemId("camera"),
+                appIdentity = appIdentity("camera"),
+                label = "Camera",
+                placement = GridPlacement(cell = GridCell(column = 3, row = 4)),
+            )
+        val layoutWithShortcut =
+            layout.copy(
+                pages = listOf(layout.selectedPage.copy(items = listOf(camera))),
+            )
+
+        val result =
+            engine.updateGridDimensions(
+                layout = layoutWithShortcut,
+                dimensions = GridDimensions(columns = 3, rows = 5),
+            )
+
+        val rejected = assertIs<HomePageEditResult.Rejected>(result)
+        assertEquals(HomePageEditRejectionReason.GRID_ITEMS_OUT_OF_BOUNDS, rejected.reason)
+    }
+
     private fun page(id: String): LauncherPage =
         LauncherPage(
             id = pageId(id),
