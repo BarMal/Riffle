@@ -100,6 +100,7 @@ sealed interface PlaceLauncherItemResult {
 enum class PlacementRejectionReason {
     MISSING_PLACEMENT,
     ITEM_NOT_FOUND,
+    DUPLICATE_APP,
     OUT_OF_BOUNDS,
     COLLISION,
     NO_AVAILABLE_CELL,

@@ -233,26 +233,24 @@ class LauncherShellViewModelTest {
     }
 
     @Test
-    fun addsDuplicateAppShortcutsWithUniqueItemIds() {
+    fun ignoresDuplicateHomeAppShortcut() {
         val camera = app(label = "Camera")
+        val repository = FakeHomeLayoutRepository()
         val viewModel =
             LauncherShellViewModel(
                 firstRunRepository = FakeFirstRunRepository(),
                 installedAppRepository = FakeInstalledAppRepository(apps = listOf(camera)),
+                homeLayoutRepository = repository,
             )
 
         viewModel.onAddAppToHome(camera)
+        val layoutBeforeDuplicate = viewModel.state.value.homeLayout
         viewModel.onAddAppToHome(camera)
 
         val shortcuts = viewModel.state.value.homeLayout.selectedPage.items.filterIsInstance<AppShortcutItem>()
-        assertEquals(2, shortcuts.map { shortcut -> shortcut.id }.distinct().size)
-        assertEquals(
-            listOf(
-                GridPlacement(cell = GridCell(column = 0, row = 0)),
-                GridPlacement(cell = GridCell(column = 1, row = 0)),
-            ),
-            shortcuts.map { shortcut -> shortcut.placement },
-        )
+        assertEquals(1, shortcuts.size)
+        assertEquals(layoutBeforeDuplicate, viewModel.state.value.homeLayout)
+        assertEquals(layoutBeforeDuplicate, repository.savedLayout)
     }
 
     @Test
