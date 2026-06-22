@@ -126,6 +126,10 @@ private fun BoxScope.DockShortcut(
             label = shortcut.label,
             onClick = { onAction(LauncherShellAction.RemoveDockShortcut(shortcut.id)) },
         )
+        AppInfoShortcutButton(
+            label = shortcut.label,
+            onClick = { onAction(shortcut.openAppInfoAction()) },
+        )
     } else {
         NotificationCountBadge(
             count = notificationCount,
