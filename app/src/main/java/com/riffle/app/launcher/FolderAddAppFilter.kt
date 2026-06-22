@@ -10,12 +10,19 @@ fun List<InstalledApp>.filterFolderAddCandidates(layout: HomeLayout): List<Insta
 fun List<InstalledApp>.filterFolderAddCandidates(query: String): List<InstalledApp> =
     query
         .trim()
+        .lowercase()
         .takeIf { trimmedQuery -> trimmedQuery.isNotEmpty() }
         ?.let { trimmedQuery ->
-            filter { app ->
-                app.label.contains(trimmedQuery, ignoreCase = true) ||
-                    app.identity.packageName.value.contains(trimmedQuery, ignoreCase = true) ||
-                    app.identity.activityName.value.contains(trimmedQuery, ignoreCase = true)
-            }
+            filter { app -> app.matchesFolderAddQuery(trimmedQuery) }
         }
         ?: this
+
+fun InstalledApp.folderAddCandidateKey(): String =
+    "${identity.profile.id.value}:${identity.packageName.value}/${identity.activityName.value}"
+
+private fun InstalledApp.matchesFolderAddQuery(query: String): Boolean =
+    label.lowercase().contains(query) ||
+        identity.packageName.value.lowercase().contains(query) ||
+        identity.activityName.value.lowercase().contains(query) ||
+        identity.profile.id.value.lowercase().contains(query) ||
+        identity.profile.type.name.lowercase().contains(query)

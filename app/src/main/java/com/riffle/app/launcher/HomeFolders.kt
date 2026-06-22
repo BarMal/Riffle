@@ -297,7 +297,7 @@ private fun FolderContentRows(
         }
         items(
             items = addableApps,
-            key = { app -> "${app.identity.packageName.value}/${app.identity.activityName.value}" },
+            key = { app -> app.folderAddCandidateKey() },
         ) { app ->
             FolderAddAppRow(
                 app = app,
@@ -332,10 +332,17 @@ private fun FolderAddAppRow(
             iconLoader = appIconLoader,
             modifier = Modifier.size(36.dp),
         )
-        Text(
+        Column(
             modifier = Modifier.weight(1f),
-            text = app.label,
-        )
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
+            Text(text = app.label)
+            Text(
+                text = app.drawerSubtitle(),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
         TextButton(onClick = onClick) {
             Text(text = "Add")
         }
