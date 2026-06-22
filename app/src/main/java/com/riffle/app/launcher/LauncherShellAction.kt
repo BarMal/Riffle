@@ -31,6 +31,8 @@ sealed interface LauncherShellAction {
 
     data object AddHomePage : LauncherShellAction
 
+    data object DuplicateSelectedHomePage : LauncherShellAction
+
     data object SelectPreviousHomePage : LauncherShellAction
 
     data object SelectNextHomePage : LauncherShellAction

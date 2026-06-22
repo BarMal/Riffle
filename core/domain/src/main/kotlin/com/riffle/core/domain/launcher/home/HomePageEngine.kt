@@ -55,6 +55,41 @@ class HomePageEngine {
             }
         }
 
+    fun duplicatePage(
+        layout: HomeLayout,
+        pageId: LauncherPageId,
+        duplicatedPageId: LauncherPageId,
+        itemIdProvider: () -> LauncherItemId,
+    ): HomePageEditResult =
+        when {
+            layout.pages.none { page -> page.id == pageId } ->
+                HomePageEditResult.Rejected(HomePageEditRejectionReason.PAGE_NOT_FOUND)
+
+            layout.pages.any { page -> page.id == duplicatedPageId } ->
+                HomePageEditResult.Rejected(HomePageEditRejectionReason.DUPLICATE_PAGE_ID)
+
+            else -> {
+                val sourceIndex = layout.pages.indexOfFirst { page -> page.id == pageId }
+                val duplicatedPage =
+                    layout.pages[sourceIndex].copy(
+                        id = duplicatedPageId,
+                        items = layout.pages[sourceIndex].items.map { item -> item.duplicate(itemIdProvider) },
+                    )
+
+                HomePageEditResult.Updated(
+                    layout.copy(
+                        pages = layout.pages.withPageInsertedAt(sourceIndex + 1, duplicatedPage),
+                        selectedPageId = duplicatedPageId,
+                        editMode =
+                            layout.editMode.afterPageDuplicated(
+                                pageId = pageId,
+                                duplicatedPageId = duplicatedPageId,
+                            ),
+                    ),
+                )
+            }
+        }
+
     fun movePage(
         layout: HomeLayout,
         pageId: LauncherPageId,
@@ -97,17 +132,50 @@ class HomePageEngine {
         HomePageEditResult.Updated(
             layout.copy(editMode = HomeEditMode.Browsing),
         )
-
-    private fun List<LauncherPage>.moveItem(
-        pageId: LauncherPageId,
-        targetIndex: Int,
-    ): List<LauncherPage> =
-        first { page -> page.id == pageId }.let { movingPage ->
-            filterNot { page -> page.id == pageId }.toMutableList()
-                .apply { add(targetIndex, movingPage) }
-                .toList()
-        }
 }
+
+private fun LauncherItem.duplicate(itemIdProvider: () -> LauncherItemId): LauncherItem =
+    when (this) {
+        is AppShortcutItem -> copy(id = itemIdProvider())
+        is FolderItem ->
+            copy(
+                id = itemIdProvider(),
+                items = items.map { shortcut -> shortcut.copy(id = itemIdProvider()) },
+            )
+    }
+
+private fun List<LauncherPage>.withPageInsertedAt(
+    index: Int,
+    page: LauncherPage,
+): List<LauncherPage> =
+    toMutableList()
+        .apply { add(index, page) }
+        .toList()
+
+private fun List<LauncherPage>.moveItem(
+    pageId: LauncherPageId,
+    targetIndex: Int,
+): List<LauncherPage> =
+    first { page -> page.id == pageId }.let { movingPage ->
+        filterNot { page -> page.id == pageId }.toMutableList()
+            .apply { add(targetIndex, movingPage) }
+            .toList()
+    }
+
+private fun HomeEditMode.afterPageDuplicated(
+    pageId: LauncherPageId,
+    duplicatedPageId: LauncherPageId,
+): HomeEditMode =
+    when (this) {
+        HomeEditMode.Browsing -> this
+        HomeEditMode.ManagingPages -> this
+        is HomeEditMode.EditingPage ->
+            if (this.pageId == pageId) {
+                HomeEditMode.EditingPage(pageId = duplicatedPageId)
+            } else {
+                this
+            }
+    }
 
 private fun HomeEditMode.afterPageDeleted(
     pageId: LauncherPageId,

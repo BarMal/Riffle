@@ -39,6 +39,9 @@ fun PageEditControls(
         TextButton(onClick = { onAction(LauncherShellAction.AddHomePage) }) {
             Text(text = "Add page")
         }
+        TextButton(onClick = { onAction(LauncherShellAction.DuplicateSelectedHomePage) }) {
+            Text(text = "Duplicate")
+        }
         TextButton(
             enabled = selectedPageIndex > 0,
             onClick = { onAction(LauncherShellAction.MoveSelectedHomePageLeft) },

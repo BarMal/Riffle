@@ -145,6 +145,107 @@ class HomePageEngineTest {
     }
 
     @Test
+    fun duplicatesPageAfterSourcePageAndSelectsCopy() {
+        val camera =
+            AppShortcutItem(
+                id = itemId("camera"),
+                appIdentity = appIdentity("camera"),
+                label = "Camera",
+                placement = GridPlacement(cell = GridCell(column = 1, row = 2)),
+            )
+        val layoutWithPages =
+            layout.copy(
+                pages = listOf(layout.selectedPage.copy(items = listOf(camera)), page(id = "widgets")),
+                selectedPageId = pageId("home"),
+                editMode = HomeEditMode.EditingPage(pageId = pageId("home")),
+            )
+
+        val result =
+            engine.duplicatePage(
+                layout = layoutWithPages,
+                pageId = pageId("home"),
+                duplicatedPageId = pageId("home-copy"),
+                itemIdProvider = itemIdProvider(),
+            )
+
+        val updated = assertIs<HomePageEditResult.Updated>(result)
+        assertEquals(
+            listOf(pageId("home"), pageId("home-copy"), pageId("widgets")),
+            updated.layout.pages.map { page -> page.id },
+        )
+        val duplicatedShortcut = updated.layout.selectedPage.items.single() as AppShortcutItem
+        assertEquals(pageId("home-copy"), updated.layout.selectedPageId)
+        assertEquals(HomeEditMode.EditingPage(pageId = pageId("home-copy")), updated.layout.editMode)
+        assertEquals(camera.appIdentity, duplicatedShortcut.appIdentity)
+        assertEquals(camera.label, duplicatedShortcut.label)
+        assertEquals(camera.placement, duplicatedShortcut.placement)
+        assertEquals(itemId("copy-1"), duplicatedShortcut.id)
+    }
+
+    @Test
+    fun duplicatesFolderItemsWithFreshIds() {
+        val folder =
+            FolderItem(
+                id = itemId("folder"),
+                label = "Tools",
+                items =
+                    listOf(
+                        AppShortcutItem(
+                            id = itemId("camera"),
+                            appIdentity = appIdentity("camera"),
+                            label = "Camera",
+                        ),
+                    ),
+            )
+        val layoutWithFolder =
+            layout.copy(
+                pages = listOf(layout.selectedPage.copy(items = listOf(folder))),
+            )
+
+        val result =
+            engine.duplicatePage(
+                layout = layoutWithFolder,
+                pageId = pageId("home"),
+                duplicatedPageId = pageId("home-copy"),
+                itemIdProvider = itemIdProvider(),
+            )
+
+        val updated = assertIs<HomePageEditResult.Updated>(result)
+        val duplicatedFolder = updated.layout.selectedPage.items.single() as FolderItem
+        assertEquals(itemId("copy-1"), duplicatedFolder.id)
+        assertEquals(itemId("copy-2"), duplicatedFolder.items.single().id)
+        assertEquals(folder.items.single().appIdentity, duplicatedFolder.items.single().appIdentity)
+    }
+
+    @Test
+    fun rejectsDuplicatePageWhenSourcePageIsMissing() {
+        val result =
+            engine.duplicatePage(
+                layout = layout,
+                pageId = pageId("missing"),
+                duplicatedPageId = pageId("home-copy"),
+                itemIdProvider = itemIdProvider(),
+            )
+
+        val rejected = assertIs<HomePageEditResult.Rejected>(result)
+        assertEquals(HomePageEditRejectionReason.PAGE_NOT_FOUND, rejected.reason)
+    }
+
+    @Test
+    fun rejectsDuplicatePageWhenNewPageIdAlreadyExists() {
+        val result =
+            engine.duplicatePage(
+                layout = layout,
+                pageId = pageId("home"),
+                duplicatedPageId = pageId("home"),
+                itemIdProvider = itemIdProvider(),
+            )
+
+        val rejected = assertIs<HomePageEditResult.Rejected>(result)
+        assertEquals(HomePageEditRejectionReason.DUPLICATE_PAGE_ID, rejected.reason)
+    }
+
+    @Test
     fun movesPageToTargetIndex() {
         val layoutWithPages =
             layout.copy(
@@ -231,4 +332,21 @@ class HomePageEngineTest {
         )
 
     private fun pageId(value: String): LauncherPageId = LauncherPageId(value)
+
+    private fun itemId(value: String): LauncherItemId = LauncherItemId(value)
+
+    private fun appIdentity(value: String) =
+        com.riffle.core.domain.launcher.apps.AppIdentity(
+            packageName = com.riffle.core.domain.launcher.apps.AppPackageName("com.riffle.$value"),
+            activityName = com.riffle.core.domain.launcher.apps.AppActivityName(".MainActivity"),
+        )
+
+    private fun itemIdProvider(): () -> LauncherItemId {
+        var ordinal = 0
+
+        return {
+            ordinal += 1
+            itemId("copy-$ordinal")
+        }
+    }
 }
