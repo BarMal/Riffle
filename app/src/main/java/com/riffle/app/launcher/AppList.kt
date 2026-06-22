@@ -135,7 +135,7 @@ private fun AppDrawerRow(
                 style = MaterialTheme.typography.bodyLarge,
             )
             Text(
-                text = app.identity.packageName.value,
+                text = app.drawerSubtitle(),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
