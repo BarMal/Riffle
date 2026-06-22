@@ -1,6 +1,11 @@
 package com.riffle.app.launcher
 
 import com.riffle.core.domain.launcher.apps.InstalledApp
+import com.riffle.core.domain.launcher.home.HomeLayout
+import com.riffle.core.domain.launcher.home.containsHomeApp
+
+fun List<InstalledApp>.filterFolderAddCandidates(layout: HomeLayout): List<InstalledApp> =
+    filterNot { app -> layout.containsHomeApp(app.identity) }
 
 fun List<InstalledApp>.filterFolderAddCandidates(query: String): List<InstalledApp> =
     query

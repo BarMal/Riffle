@@ -131,6 +131,7 @@ fun StandardHome(
     layout.openedFolder(openedFolderId.value)?.let { folder ->
         FolderDialog(
             folder = folder,
+            layout = layout,
             installedApps = installedApps,
             appIconLoader = appIconLoader,
             onDismiss = { openedFolderId.value = null },
