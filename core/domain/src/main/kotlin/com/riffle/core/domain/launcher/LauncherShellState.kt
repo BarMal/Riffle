@@ -1,5 +1,6 @@
 package com.riffle.core.domain.launcher
 
+import com.riffle.core.domain.launcher.apps.AppDrawerProfileFilter
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.home.HomeLayout
@@ -21,6 +22,7 @@ data class LauncherShellState(
     val notificationGroupsByApp: List<AppNotificationGroup> = emptyList(),
     val installedApps: List<InstalledApp> = emptyList(),
     val appDrawerQuery: String = "",
+    val appDrawerProfileFilter: AppDrawerProfileFilter = AppDrawerProfileFilter.ALL,
     val appDrawerApps: List<InstalledApp> = emptyList(),
     val searchQuery: String = "",
     val searchResults: List<InstalledApp> = emptyList(),

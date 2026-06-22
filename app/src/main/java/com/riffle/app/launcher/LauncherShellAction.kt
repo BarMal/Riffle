@@ -1,5 +1,6 @@
 package com.riffle.app.launcher
 
+import com.riffle.core.domain.launcher.apps.AppDrawerProfileFilter
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.home.DockItemMoveDirection
@@ -57,6 +58,10 @@ sealed interface LauncherShellAction {
     data class AddAppToDock(val app: InstalledApp) : LauncherShellAction
 
     data class AppDrawerQueryChanged(val query: String) : LauncherShellAction
+
+    data class AppDrawerProfileFilterSelected(
+        val filter: AppDrawerProfileFilter,
+    ) : LauncherShellAction
 
     data class RemoveHomeShortcut(val itemId: LauncherItemId) : LauncherShellAction
 

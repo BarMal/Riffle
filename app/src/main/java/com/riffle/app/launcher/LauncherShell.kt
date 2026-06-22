@@ -144,6 +144,7 @@ private fun LauncherDestination(
         ShellDestination.APP_DRAWER ->
             AppDrawer(
                 query = state.appDrawerQuery,
+                profileFilter = state.appDrawerProfileFilter,
                 apps = state.appDrawerApps,
                 homeLayout = state.homeLayout,
                 notificationCountsByPackage = state.notificationCountsByPackage,
