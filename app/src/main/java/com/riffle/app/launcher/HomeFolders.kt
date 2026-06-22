@@ -10,9 +10,12 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
@@ -247,45 +250,59 @@ private fun FolderContentRows(
     onDismiss: () -> Unit,
     onAction: (LauncherShellAction) -> Unit,
 ) {
-    folder.items.forEach { shortcut ->
-        FolderAppRow(
-            shortcut = shortcut,
-            appIconLoader = appIconLoader,
-            trailingContent = {
-                TextButton(
-                    onClick = {
-                        onAction(
-                            LauncherShellAction.RemoveAppFromFolder(
-                                folderId = folder.id,
-                                itemId = shortcut.id,
-                            ),
-                        )
-                        onDismiss()
-                    },
-                ) {
-                    Text(text = "Remove")
-                }
-            },
-            onClick = {
-                onAction(LauncherShellAction.LaunchApp(shortcut.appIdentity))
-                onDismiss()
-            },
-        )
-    }
-    addableApps.take(MAX_ADDABLE_APPS).forEach { app ->
-        FolderAddAppRow(
-            app = app,
-            appIconLoader = appIconLoader,
-            onClick = {
-                onAction(
-                    LauncherShellAction.AddAppToFolder(
-                        folderId = folder.id,
-                        app = app,
-                    ),
-                )
-                onDismiss()
-            },
-        )
+    LazyColumn(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .heightIn(max = FOLDER_CONTENT_MAX_HEIGHT_DP.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        items(
+            items = folder.items,
+            key = { shortcut -> shortcut.id.value },
+        ) { shortcut ->
+            FolderAppRow(
+                shortcut = shortcut,
+                appIconLoader = appIconLoader,
+                trailingContent = {
+                    TextButton(
+                        onClick = {
+                            onAction(
+                                LauncherShellAction.RemoveAppFromFolder(
+                                    folderId = folder.id,
+                                    itemId = shortcut.id,
+                                ),
+                            )
+                            onDismiss()
+                        },
+                    ) {
+                        Text(text = "Remove")
+                    }
+                },
+                onClick = {
+                    onAction(LauncherShellAction.LaunchApp(shortcut.appIdentity))
+                    onDismiss()
+                },
+            )
+        }
+        items(
+            items = addableApps,
+            key = { app -> "${app.identity.packageName.value}/${app.identity.activityName.value}" },
+        ) { app ->
+            FolderAddAppRow(
+                app = app,
+                appIconLoader = appIconLoader,
+                onClick = {
+                    onAction(
+                        LauncherShellAction.AddAppToFolder(
+                            folderId = folder.id,
+                            app = app,
+                        ),
+                    )
+                    onDismiss()
+                },
+            )
+        }
     }
 }
 
@@ -318,4 +335,4 @@ private fun FolderAddAppRow(
 
 private const val FOLDER_PREVIEW_ICON_COUNT = 4
 private const val MIN_FOLDER_SHORTCUT_COUNT = 2
-private const val MAX_ADDABLE_APPS = 8
+private const val FOLDER_CONTENT_MAX_HEIGHT_DP = 360
