@@ -160,7 +160,7 @@ fun HomeFolderEditControls(
     onAction: (LauncherShellAction) -> Unit,
 ) {
     val shortcuts = layout.selectedPage.items.filterIsInstance<AppShortcutItem>()
-    val folderItemIds = shortcuts.take(MIN_FOLDER_SHORTCUT_COUNT).map { shortcut -> shortcut.id }
+    val folderItemIds = shortcuts.folderCreationItemIds()
 
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -173,7 +173,7 @@ fun HomeFolderEditControls(
                 onAction(
                     LauncherShellAction.CreateHomeFolder(
                         itemIds = folderItemIds,
-                        label = "Folder",
+                        label = shortcuts.defaultFolderLabel(),
                     ),
                 )
             },
