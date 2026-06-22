@@ -1,6 +1,7 @@
 package com.riffle.app.launcher
 
 import com.riffle.core.domain.launcher.apps.AppActivityName
+import com.riffle.core.domain.launcher.apps.AppDrawerProfileFilter
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppProfile
@@ -82,6 +83,28 @@ class FolderAddAppFilterTest {
         assertEquals(listOf(workDocs, companySheets), apps.filterFolderAddCandidates("work"))
         assertEquals(listOf(companySheets), apps.filterFolderAddCandidates("company"))
         assertEquals(listOf(personalCamera), apps.filterFolderAddCandidates("personal"))
+    }
+
+    @Test
+    fun returnsAllAppsForAllProfileFilter() {
+        val apps =
+            listOf(
+                app(label = "Camera", profile = AppProfile.personal()),
+                app(label = "Docs", profile = AppProfile.work()),
+            )
+
+        assertEquals(apps, apps.filterFolderAddCandidates(AppDrawerProfileFilter.ALL))
+    }
+
+    @Test
+    fun filtersAppsBySelectedProfile() {
+        val personalCamera = app(label = "Camera", profile = AppProfile.personal())
+        val workDocs = app(label = "Docs", profile = AppProfile.work())
+        val companySheets = app(label = "Sheets", profile = AppProfile(AppProfileId("company"), AppProfileType.WORK))
+        val apps = listOf(personalCamera, workDocs, companySheets)
+
+        assertEquals(listOf(personalCamera), apps.filterFolderAddCandidates(AppDrawerProfileFilter.PERSONAL))
+        assertEquals(listOf(workDocs, companySheets), apps.filterFolderAddCandidates(AppDrawerProfileFilter.WORK))
     }
 
     @Test
