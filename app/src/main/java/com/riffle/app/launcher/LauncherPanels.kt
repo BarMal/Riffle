@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -121,6 +123,7 @@ fun SearchSurface(
 fun SettingsSurface(
     settings: LauncherSettings,
     notificationAccessStatus: NotificationAccessStatus,
+    hiddenApps: List<InstalledApp>,
     onAction: (LauncherShellAction) -> Unit,
 ) {
     LauncherPanel(
@@ -128,7 +131,10 @@ fun SettingsSurface(
         onAction = onAction,
     ) {
         Column(
-            modifier = Modifier.fillMaxWidth(),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             Text(
@@ -153,6 +159,14 @@ fun SettingsSurface(
             )
             NotificationAccessSetting(
                 status = notificationAccessStatus,
+                onAction = onAction,
+            )
+            Text(
+                text = "Hidden apps",
+                style = MaterialTheme.typography.titleMedium,
+            )
+            HiddenAppsSetting(
+                apps = hiddenApps,
                 onAction = onAction,
             )
         }
@@ -237,6 +251,59 @@ private fun NotificationAccessSetting(
             TextButton(onClick = { onAction(LauncherShellAction.RequestNotificationAccess) }) {
                 Text(text = "Open")
             }
+        }
+    }
+}
+
+@Composable
+private fun HiddenAppsSetting(
+    apps: List<InstalledApp>,
+    onAction: (LauncherShellAction) -> Unit,
+) {
+    if (apps.isEmpty()) {
+        Text(
+            text = "No hidden apps",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    } else {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            apps.forEach { app ->
+                HiddenAppRow(
+                    app = app,
+                    onAction = onAction,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun HiddenAppRow(
+    app: InstalledApp,
+    onAction: (LauncherShellAction) -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
+            Text(
+                text = app.label,
+                style = MaterialTheme.typography.bodyLarge,
+            )
+            Text(
+                text = app.drawerSubtitle(),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        TextButton(onClick = { onAction(LauncherShellAction.UnhideApp(app.identity)) }) {
+            Text(text = "Unhide")
         }
     }
 }

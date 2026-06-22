@@ -25,6 +25,7 @@ class LauncherShellHiddenAppsViewModelTest {
         viewModel.onAppActionSelected(LauncherShellAction.SearchQueryChanged(""))
 
         assertEquals(listOf(camera.identity), viewModel.state.value.installedApps.map { app -> app.identity })
+        assertEquals(listOf(docs.identity), viewModel.state.value.hiddenApps.map { app -> app.identity })
         assertEquals(listOf(camera.identity), viewModel.state.value.appDrawerApps.map { app -> app.identity })
         assertEquals(listOf(camera.identity), viewModel.state.value.searchResults.map { app -> app.identity })
     }
@@ -63,7 +64,30 @@ class LauncherShellHiddenAppsViewModelTest {
 
         assertEquals(setOf(camera.identity), appVisibilityRepository.hiddenApps)
         assertEquals(listOf(docs.identity), viewModel.state.value.installedApps.map { app -> app.identity })
+        assertEquals(listOf(camera.identity), viewModel.state.value.hiddenApps.map { app -> app.identity })
         assertEquals(listOf(docs.identity), viewModel.state.value.appDrawerApps.map { app -> app.identity })
+    }
+
+    @Test
+    fun unhidesAppAndRefreshesLauncherAppSurfaces() {
+        val camera = app(label = "Camera")
+        val docs = app(label = "Docs")
+        val appVisibilityRepository = FakeAppVisibilityRepository(hiddenApps = setOf(camera.identity))
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                installedAppRepository = FakeInstalledAppRepository(apps = listOf(camera, docs)),
+                appVisibilityRepository = appVisibilityRepository,
+            )
+
+        viewModel.onAppActionSelected(LauncherShellAction.UnhideApp(camera.identity))
+
+        assertEquals(emptySet<AppIdentity>(), appVisibilityRepository.hiddenApps)
+        assertEquals(
+            listOf(camera.identity, docs.identity),
+            viewModel.state.value.installedApps.map { app -> app.identity },
+        )
+        assertEquals(emptyList<AppIdentity>(), viewModel.state.value.hiddenApps.map { app -> app.identity })
     }
 
     private class FakeFirstRunRepository : FirstRunRepository {

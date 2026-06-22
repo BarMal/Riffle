@@ -172,6 +172,19 @@ class LauncherShellViewModel(
                         )
                 }
 
+                is LauncherShellAction.UnhideApp -> {
+                    appVisibilityRepository.showApp(action.identity)
+                    mutableState.value
+                        .withInstalledApps(installedAppRepository, appVisibilityRepository, appCatalog)
+                        .withNotificationState(
+                            notificationRepository = notificationRepository,
+                            appNotificationCounter = appNotificationCounter,
+                            appNotificationGrouper = appNotificationGrouper,
+                            notificationStaleFilter = notificationStaleFilter,
+                            nowEpochMillis = epochMillisProvider.nowEpochMillis(),
+                        )
+                }
+
                 else -> mutableState.value
             }
     }
@@ -314,26 +327,30 @@ private fun LauncherShellState.withInstalledApps(
     appVisibilityRepository: AppVisibilityRepository,
     appCatalog: InstalledAppCatalog,
 ): LauncherShellState =
-    appCatalog.visibleApps(
-        installedAppRepository.installedApps()
-            .withHiddenApps(appVisibilityRepository.hiddenAppIdentities()),
-    ).let { visibleApps ->
-        copy(
-            installedApps = visibleApps,
-            appDrawerApps =
-                appCatalog.drawerApps(
-                    apps = visibleApps,
-                    query = appDrawerQuery,
-                    profileFilter = appDrawerProfileFilter,
-                ),
-            searchResults =
-                appCatalog.filteredApps(
-                    apps = visibleApps,
-                    query = searchQuery,
-                    profileFilter = searchProfileFilter,
-                ),
-        )
-    }
+    installedAppRepository.installedApps()
+        .withHiddenApps(appVisibilityRepository.hiddenAppIdentities())
+        .let { apps ->
+            copy(
+                installedApps = appCatalog.visibleApps(apps),
+                hiddenApps = appCatalog.hiddenApps(apps),
+            )
+        }
+        .let { state ->
+            state.copy(
+                appDrawerApps =
+                    appCatalog.drawerApps(
+                        apps = state.installedApps,
+                        query = state.appDrawerQuery,
+                        profileFilter = state.appDrawerProfileFilter,
+                    ),
+                searchResults =
+                    appCatalog.filteredApps(
+                        apps = state.installedApps,
+                        query = state.searchQuery,
+                        profileFilter = state.searchProfileFilter,
+                    ),
+            )
+        }
 
 private fun InstalledAppCatalog.drawerApps(
     apps: List<InstalledApp>,

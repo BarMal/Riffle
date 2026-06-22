@@ -164,6 +164,7 @@ class MainActivity : ComponentActivity() {
             is LauncherShellAction.OpenAppInfo -> appLauncher.openAppInfo(action.identity)
             is LauncherShellAction.AddAppToHome -> shellViewModel.onAddAppToHome(action.app)
             is LauncherShellAction.HideApp,
+            is LauncherShellAction.UnhideApp,
             is LauncherShellAction.AppDrawerQueryChanged,
             is LauncherShellAction.AppDrawerProfileFilterSelected,
             is LauncherShellAction.SearchQueryChanged,

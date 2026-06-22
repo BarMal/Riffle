@@ -6,6 +6,11 @@ class InstalledAppCatalog {
             .filter { app -> app.enabled && app.visibility == AppVisibility.VISIBLE }
             .sortedWith(installedAppComparator)
 
+    fun hiddenApps(apps: List<InstalledApp>): List<InstalledApp> =
+        apps
+            .filter { app -> app.enabled && app.visibility == AppVisibility.HIDDEN }
+            .sortedWith(installedAppComparator)
+
     fun appsForProfile(
         apps: List<InstalledApp>,
         profile: AppProfile,
