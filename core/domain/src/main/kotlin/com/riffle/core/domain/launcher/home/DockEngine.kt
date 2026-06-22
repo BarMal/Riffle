@@ -12,9 +12,7 @@ class DockEngine {
             layout.dock.availableSlots <= 0 ->
                 DockEditResult.Rejected(DockEditRejectionReason.NO_AVAILABLE_SLOT)
 
-            layout.dock.items
-                .filterIsInstance<AppShortcutItem>()
-                .any { item -> item.appIdentity == app.identity } ->
+            layout.dock.containsDockApp(app.identity) ->
                 DockEditResult.Rejected(DockEditRejectionReason.DUPLICATE_APP)
 
             else ->

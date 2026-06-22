@@ -124,17 +124,6 @@ class HomeShortcutEngine(
         get() = "${profile.id.value}:${packageName.value}/${activityName.value}"
 }
 
-private fun HomeLayout.containsHomeApp(identity: AppIdentity): Boolean =
-    pages.any { page ->
-        page.items.any { item -> item.containsApp(identity) }
-    }
-
-private fun LauncherItem.containsApp(identity: AppIdentity): Boolean =
-    when (this) {
-        is AppShortcutItem -> appIdentity == identity
-        is FolderItem -> items.any { shortcut -> shortcut.appIdentity == identity }
-    }
-
 sealed interface HomeShortcutResult {
     data class Updated(val layout: HomeLayout) : HomeShortcutResult
 
