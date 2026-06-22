@@ -270,17 +270,24 @@ private fun FolderContentRows(
                 shortcut = shortcut,
                 appIconLoader = appIconLoader,
                 trailingContent = {
-                    TextButton(
-                        onClick = {
-                            onAction(
-                                LauncherShellAction.RemoveAppFromFolder(
-                                    folderId = folder.id,
-                                    itemId = shortcut.id,
-                                ),
-                            )
-                        },
-                    ) {
-                        Text(text = "Remove")
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        TextButton(
+                            onClick = { onAction(shortcut.openAppInfoAction()) },
+                        ) {
+                            Text(text = "Info")
+                        }
+                        TextButton(
+                            onClick = {
+                                onAction(
+                                    LauncherShellAction.RemoveAppFromFolder(
+                                        folderId = folder.id,
+                                        itemId = shortcut.id,
+                                    ),
+                                )
+                            },
+                        ) {
+                            Text(text = "Remove")
+                        }
                     }
                 },
                 onClick = {
