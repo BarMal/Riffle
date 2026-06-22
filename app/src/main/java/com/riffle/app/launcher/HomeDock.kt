@@ -2,7 +2,6 @@ package com.riffle.app.launcher
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -45,8 +44,8 @@ fun Dock(
                 .height(76.dp)
                 .clip(RoundedCornerShape(28.dp))
                 .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.72f))
-                .padding(horizontal = 18.dp, vertical = 12.dp),
-        horizontalArrangement = Arrangement.spacedBy(14.dp),
+                .padding(horizontal = 14.dp, vertical = 10.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         repeat(dock.capacity) { index ->
@@ -74,15 +73,13 @@ private fun DockSlot(
     appIconLoader: AppIconLoader,
     onAction: (LauncherShellAction) -> Unit,
 ) {
+    val editingSlotColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.10f)
+
     Box(
         modifier =
             modifier
-                .clip(RoundedCornerShape(16.dp))
-                .border(
-                    width = 1.dp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.28f),
-                    shape = RoundedCornerShape(16.dp),
-                ),
+                .clip(RoundedCornerShape(18.dp))
+                .then(if (isEditing) Modifier.background(editingSlotColor) else Modifier),
         contentAlignment = Alignment.Center,
     ) {
         if (shortcut != null) {
@@ -112,7 +109,7 @@ private fun BoxScope.DockShortcut(
         iconLoader = appIconLoader,
         modifier =
             Modifier
-                .size(44.dp)
+                .size(48.dp)
                 .combinedClickable(
                     enabled = !isEditing,
                     onClick = { onAction(LauncherShellAction.LaunchApp(shortcut.appIdentity)) },
