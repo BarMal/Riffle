@@ -27,6 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.apps.AppPackageName
+import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.FolderItem
 import com.riffle.core.domain.launcher.home.HomeLayout
@@ -89,12 +90,17 @@ fun HomeFolder(
 @Composable
 fun FolderDialog(
     folder: FolderItem,
+    installedApps: List<InstalledApp>,
     appIconLoader: AppIconLoader,
     onDismiss: () -> Unit,
     onAction: (LauncherShellAction) -> Unit,
 ) {
     val folderName = remember(folder.id, folder.label) { mutableStateOf(folder.label) }
     val trimmedFolderName = folderName.value.trim()
+    val addableApps =
+        installedApps.filterNot { app ->
+            folder.items.any { shortcut -> shortcut.appIdentity == app.identity }
+        }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -107,16 +113,13 @@ fun FolderDialog(
                     singleLine = true,
                     label = { Text(text = "Name") },
                 )
-                folder.items.forEach { shortcut ->
-                    FolderAppRow(
-                        shortcut = shortcut,
-                        appIconLoader = appIconLoader,
-                        onClick = {
-                            onAction(LauncherShellAction.LaunchApp(shortcut.appIdentity))
-                            onDismiss()
-                        },
-                    )
-                }
+                FolderContentRows(
+                    folder = folder,
+                    addableApps = addableApps,
+                    appIconLoader = appIconLoader,
+                    onDismiss = onDismiss,
+                    onAction = onAction,
+                )
             }
         },
         confirmButton = {
@@ -214,6 +217,7 @@ private fun FolderPreviewIcon(
 private fun FolderAppRow(
     shortcut: AppShortcutItem,
     appIconLoader: AppIconLoader,
+    trailingContent: @Composable () -> Unit,
     onClick: () -> Unit,
 ) {
     Row(
@@ -231,8 +235,87 @@ private fun FolderAppRow(
             modifier = Modifier.size(36.dp),
         )
         Text(text = shortcut.label)
+        trailingContent()
+    }
+}
+
+@Composable
+private fun FolderContentRows(
+    folder: FolderItem,
+    addableApps: List<InstalledApp>,
+    appIconLoader: AppIconLoader,
+    onDismiss: () -> Unit,
+    onAction: (LauncherShellAction) -> Unit,
+) {
+    folder.items.forEach { shortcut ->
+        FolderAppRow(
+            shortcut = shortcut,
+            appIconLoader = appIconLoader,
+            trailingContent = {
+                TextButton(
+                    onClick = {
+                        onAction(
+                            LauncherShellAction.RemoveAppFromFolder(
+                                folderId = folder.id,
+                                itemId = shortcut.id,
+                            ),
+                        )
+                        onDismiss()
+                    },
+                ) {
+                    Text(text = "Remove")
+                }
+            },
+            onClick = {
+                onAction(LauncherShellAction.LaunchApp(shortcut.appIdentity))
+                onDismiss()
+            },
+        )
+    }
+    addableApps.take(MAX_ADDABLE_APPS).forEach { app ->
+        FolderAddAppRow(
+            app = app,
+            appIconLoader = appIconLoader,
+            onClick = {
+                onAction(
+                    LauncherShellAction.AddAppToFolder(
+                        folderId = folder.id,
+                        app = app,
+                    ),
+                )
+                onDismiss()
+            },
+        )
+    }
+}
+
+@Composable
+private fun FolderAddAppRow(
+    app: InstalledApp,
+    appIconLoader: AppIconLoader,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        LauncherAppIcon(
+            identity = app.identity,
+            label = app.label,
+            iconLoader = appIconLoader,
+            modifier = Modifier.size(36.dp),
+        )
+        Text(
+            modifier = Modifier.weight(1f),
+            text = app.label,
+        )
+        TextButton(onClick = onClick) {
+            Text(text = "Add")
+        }
     }
 }
 
 private const val FOLDER_PREVIEW_ICON_COUNT = 4
 private const val MIN_FOLDER_SHORTCUT_COUNT = 2
+private const val MAX_ADDABLE_APPS = 8

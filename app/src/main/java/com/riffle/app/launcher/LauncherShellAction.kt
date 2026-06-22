@@ -59,6 +59,16 @@ sealed interface LauncherShellAction {
         val label: String,
     ) : LauncherShellAction
 
+    data class AddAppToFolder(
+        val folderId: LauncherItemId,
+        val app: InstalledApp,
+    ) : LauncherShellAction
+
+    data class RemoveAppFromFolder(
+        val folderId: LauncherItemId,
+        val itemId: LauncherItemId,
+    ) : LauncherShellAction
+
     data class RemoveDockShortcut(val itemId: LauncherItemId) : LauncherShellAction
 
     data class MoveDockShortcut(

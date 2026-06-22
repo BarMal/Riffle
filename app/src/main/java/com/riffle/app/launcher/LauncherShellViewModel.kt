@@ -132,6 +132,8 @@ class LauncherShellViewModel(
             when (action) {
                 is LauncherShellAction.CreateHomeFolder,
                 is LauncherShellAction.RenameHomeFolder,
+                is LauncherShellAction.AddAppToFolder,
+                is LauncherShellAction.RemoveAppFromFolder,
                 ->
                     when (
                         val result =

@@ -40,6 +40,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.apps.AppPackageName
+import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.FolderItem
 import com.riffle.core.domain.launcher.home.GridCell
@@ -54,6 +55,7 @@ import kotlin.math.roundToInt
 @Composable
 fun StandardHome(
     layout: HomeLayout,
+    installedApps: List<InstalledApp>,
     homeSwipeGestures: HomeSwipeGestureSettings,
     notificationCountsByPackage: Map<AppPackageName, Int>,
     appIconLoader: AppIconLoader,
@@ -120,6 +122,7 @@ fun StandardHome(
     openedFolder.value?.let { folder ->
         FolderDialog(
             folder = folder,
+            installedApps = installedApps,
             appIconLoader = appIconLoader,
             onDismiss = { openedFolder.value = null },
             onAction = onAction,
