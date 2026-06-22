@@ -62,7 +62,9 @@ fun StandardHome(
     appIconLoader: AppIconLoader,
     onAction: (LauncherShellAction) -> Unit,
 ) {
-    val isEditing = layout.editMode is HomeEditMode.EditingPage
+    val isEditingPage = layout.editMode is HomeEditMode.EditingPage
+    val isManagingPages = layout.editMode is HomeEditMode.ManagingPages
+    val isEditing = isEditingPage || isManagingPages
     val openedFolderId = remember { mutableStateOf<LauncherItemId?>(null) }
     val swipeThresholdPx = with(LocalDensity.current) { HOME_SWIPE_THRESHOLD_DP.dp.toPx() }
 
@@ -86,7 +88,7 @@ fun StandardHome(
         )
         AnimatedWorkspaceGrid(
             layout = layout,
-            isEditing = isEditing,
+            isEditing = isEditingPage,
             notificationCountsByPackage = notificationCountsByPackage,
             appIconLoader = appIconLoader,
             onFolderOpen = { folder -> openedFolderId.value = folder.id },
@@ -96,13 +98,19 @@ fun StandardHome(
                     .weight(1f)
                     .fillMaxWidth(),
         )
-        if (isEditing) {
+        if (isEditingPage) {
             PageEditControls(
                 pageCount = layout.pages.size,
                 selectedPageIndex = layout.selectedPageIndex,
                 onAction = onAction,
             )
             HomeFolderEditControls(
+                layout = layout,
+                onAction = onAction,
+            )
+        }
+        if (isManagingPages) {
+            PageOverviewControls(
                 layout = layout,
                 onAction = onAction,
             )
@@ -114,7 +122,7 @@ fun StandardHome(
         Spacer(modifier = Modifier.height(20.dp))
         Dock(
             dock = layout.dock,
-            isEditing = isEditing,
+            isEditing = isEditingPage,
             notificationCountsByPackage = notificationCountsByPackage,
             appIconLoader = appIconLoader,
             onAction = onAction,

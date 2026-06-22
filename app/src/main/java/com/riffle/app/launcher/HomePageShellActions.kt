@@ -16,6 +16,9 @@ fun HomePageEngine.applyEdit(
         LauncherShellAction.ExitHomeEditMode ->
             applyModeEdit(action = action, layout = layout)
 
+        LauncherShellAction.EnterHomePageOverview ->
+            applyModeEdit(action = action, layout = layout)
+
         LauncherShellAction.AddHomePage ->
             applyPageCreationEdit(action = action, layout = layout)
 
@@ -26,6 +29,9 @@ fun HomePageEngine.applyEdit(
             applyPageSelectionEdit(action = action, layout = layout)
 
         LauncherShellAction.SelectNextHomePage ->
+            applyPageSelectionEdit(action = action, layout = layout)
+
+        is LauncherShellAction.SelectHomePage ->
             applyPageSelectionEdit(action = action, layout = layout)
 
         LauncherShellAction.MoveSelectedHomePageLeft ->
@@ -52,6 +58,7 @@ private fun HomePageEngine.applyModeEdit(
             )
 
         LauncherShellAction.ExitHomeEditMode -> exitEditMode(layout = layout)
+        LauncherShellAction.EnterHomePageOverview -> enterPageOverview(layout = layout)
         else -> HomePageEditResult.Rejected(HomePageEditRejectionReason.PAGE_NOT_FOUND)
     }
 
@@ -72,6 +79,7 @@ private fun HomePageEngine.applyPageSelectionEdit(
     when (action) {
         LauncherShellAction.SelectPreviousHomePage -> selectPageAtOffset(layout = layout, offset = -1)
         LauncherShellAction.SelectNextHomePage -> selectPageAtOffset(layout = layout, offset = 1)
+        is LauncherShellAction.SelectHomePage -> selectPage(layout = layout, pageId = action.pageId)
         else -> HomePageEditResult.Rejected(HomePageEditRejectionReason.PAGE_NOT_FOUND)
     }
 
