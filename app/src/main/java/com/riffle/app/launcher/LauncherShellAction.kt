@@ -5,6 +5,7 @@ import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.home.DockItemMoveDirection
 import com.riffle.core.domain.launcher.home.HomeShortcutMoveDirection
 import com.riffle.core.domain.launcher.home.LauncherItemId
+import com.riffle.core.domain.launcher.home.LauncherPageId
 import com.riffle.core.domain.launcher.home.WallpaperSource
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
 import com.riffle.core.domain.launcher.settings.HomeSwipeGestureDirection
@@ -29,9 +30,13 @@ sealed interface LauncherShellAction {
 
     data object ExitHomeEditMode : LauncherShellAction
 
+    data object EnterHomePageOverview : LauncherShellAction
+
     data object AddHomePage : LauncherShellAction
 
     data object DuplicateSelectedHomePage : LauncherShellAction
+
+    data class SelectHomePage(val pageId: LauncherPageId) : LauncherShellAction
 
     data object SelectPreviousHomePage : LauncherShellAction
 
