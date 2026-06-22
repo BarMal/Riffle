@@ -25,7 +25,9 @@ class InstalledAppCatalog {
     private fun InstalledApp.matches(query: String): Boolean =
         label.lowercase().contains(query) ||
             identity.packageName.value.lowercase().contains(query) ||
-            identity.activityName.value.lowercase().contains(query)
+            identity.activityName.value.lowercase().contains(query) ||
+            identity.profile.id.value.lowercase().contains(query) ||
+            identity.profile.type.name.lowercase().contains(query)
 
     private val installedAppComparator: Comparator<InstalledApp> =
         compareBy<InstalledApp> { app -> app.label.lowercase() }
