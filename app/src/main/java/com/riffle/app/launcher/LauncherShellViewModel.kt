@@ -130,7 +130,9 @@ class LauncherShellViewModel(
     fun onHomeShortcutEdited(action: LauncherShellAction) {
         mutableState.value =
             when (action) {
-                is LauncherShellAction.CreateHomeFolder ->
+                is LauncherShellAction.CreateHomeFolder,
+                is LauncherShellAction.RenameHomeFolder,
+                ->
                     when (
                         val result =
                             folderEngine.applyEdit(

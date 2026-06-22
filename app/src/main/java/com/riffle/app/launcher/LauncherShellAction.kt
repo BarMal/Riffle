@@ -54,6 +54,11 @@ sealed interface LauncherShellAction {
         val label: String,
     ) : LauncherShellAction
 
+    data class RenameHomeFolder(
+        val itemId: LauncherItemId,
+        val label: String,
+    ) : LauncherShellAction
+
     data class RemoveDockShortcut(val itemId: LauncherItemId) : LauncherShellAction
 
     data class MoveDockShortcut(

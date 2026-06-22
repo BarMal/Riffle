@@ -45,6 +45,40 @@ class LauncherShellFolderViewModelTest {
         assertEquals(viewModel.state.value.homeLayout, repository.savedLayout)
     }
 
+    @Test
+    fun renamesHomeFolderAndSavesLayout() {
+        val camera = app(label = "Camera")
+        val calendar = app(label = "Calendar")
+        val repository = FakeHomeLayoutRepository()
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                installedAppRepository = FakeInstalledAppRepository(apps = listOf(camera, calendar)),
+                homeLayoutRepository = repository,
+            )
+        viewModel.onAddAppToHome(camera)
+        viewModel.onAddAppToHome(calendar)
+        val shortcuts = viewModel.state.value.homeLayout.selectedPage.items.filterIsInstance<AppShortcutItem>()
+        viewModel.onHomeShortcutEdited(
+            LauncherShellAction.CreateHomeFolder(
+                itemIds = shortcuts.map { shortcut -> shortcut.id },
+                label = "Folder",
+            ),
+        )
+        val folder = viewModel.state.value.homeLayout.selectedPage.items.single() as FolderItem
+
+        viewModel.onHomeShortcutEdited(
+            LauncherShellAction.RenameHomeFolder(
+                itemId = folder.id,
+                label = "Tools",
+            ),
+        )
+
+        val renamedFolder = viewModel.state.value.homeLayout.selectedPage.items.single() as FolderItem
+        assertEquals("Tools", renamedFolder.label)
+        assertEquals(viewModel.state.value.homeLayout, repository.savedLayout)
+    }
+
     private class FakeFirstRunRepository : FirstRunRepository {
         override fun isFirstRunComplete(): Boolean = false
 
