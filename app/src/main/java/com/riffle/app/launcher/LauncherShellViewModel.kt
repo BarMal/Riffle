@@ -15,13 +15,10 @@ import com.riffle.core.domain.launcher.home.FolderEngine
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
-import com.riffle.core.domain.launcher.home.HomePageEditRejectionReason
 import com.riffle.core.domain.launcher.home.HomePageEditResult
 import com.riffle.core.domain.launcher.home.HomePageEngine
 import com.riffle.core.domain.launcher.home.HomeShortcutEngine
 import com.riffle.core.domain.launcher.home.HomeShortcutResult
-import com.riffle.core.domain.launcher.home.LauncherPage
-import com.riffle.core.domain.launcher.home.LauncherPageId
 import com.riffle.core.domain.launcher.home.PlacementRejectionReason
 import com.riffle.core.domain.launcher.home.WallpaperSettings
 import com.riffle.core.domain.launcher.notifications.AppNotificationCounter
@@ -289,84 +286,3 @@ private fun HomeShortcutEngine.applyEdit(
 
         else -> HomeShortcutResult.Rejected(PlacementRejectionReason.ITEM_NOT_FOUND)
     }
-
-private fun HomePageEngine.applyEdit(
-    action: LauncherShellAction,
-    layout: HomeLayout,
-): HomePageEditResult =
-    when (action) {
-        LauncherShellAction.EnterHomeEditMode ->
-            enterPageEditMode(
-                layout = layout,
-                pageId = layout.selectedPageId,
-            )
-
-        LauncherShellAction.ExitHomeEditMode ->
-            exitEditMode(layout = layout)
-
-        LauncherShellAction.AddHomePage ->
-            layout.newHomePage().let { page ->
-                when (val result = addPage(layout = layout, page = page)) {
-                    is HomePageEditResult.Updated -> selectPage(layout = result.layout, pageId = page.id)
-                    is HomePageEditResult.Rejected -> result
-                }
-            }
-
-        LauncherShellAction.SelectPreviousHomePage ->
-            selectPageAtOffset(layout = layout, offset = -1)
-
-        LauncherShellAction.SelectNextHomePage ->
-            selectPageAtOffset(layout = layout, offset = 1)
-
-        LauncherShellAction.MoveSelectedHomePageLeft ->
-            moveSelectedPageByOffset(layout = layout, offset = -1)
-
-        LauncherShellAction.MoveSelectedHomePageRight ->
-            moveSelectedPageByOffset(layout = layout, offset = 1)
-
-        LauncherShellAction.DeleteSelectedHomePage ->
-            deletePage(
-                layout = layout,
-                pageId = layout.selectedPageId,
-            )
-
-        else -> HomePageEditResult.Rejected(HomePageEditRejectionReason.PAGE_NOT_FOUND)
-    }
-
-private fun HomePageEngine.selectPageAtOffset(
-    layout: HomeLayout,
-    offset: Int,
-): HomePageEditResult =
-    layout.pages.getOrNull(layout.selectedPageIndex + offset)
-        ?.let { page -> selectPage(layout = layout, pageId = page.id) }
-        ?: HomePageEditResult.Rejected(
-            HomePageEditRejectionReason.INDEX_OUT_OF_BOUNDS,
-        )
-
-private fun HomePageEngine.moveSelectedPageByOffset(
-    layout: HomeLayout,
-    offset: Int,
-): HomePageEditResult =
-    (layout.selectedPageIndex + offset)
-        .takeIf { targetIndex -> targetIndex in layout.pages.indices }
-        ?.let { targetIndex ->
-            movePage(
-                layout = layout,
-                pageId = layout.selectedPageId,
-                targetIndex = targetIndex,
-            )
-        }
-        ?: HomePageEditResult.Rejected(
-            HomePageEditRejectionReason.INDEX_OUT_OF_BOUNDS,
-        )
-
-private fun HomeLayout.newHomePage(): LauncherPage =
-    LauncherPage(
-        id = nextHomePageId(),
-        grid = settings.grid.dimensions,
-    )
-
-private fun HomeLayout.nextHomePageId(): LauncherPageId =
-    generateSequence(2) { pageNumber -> pageNumber + 1 }
-        .map { pageNumber -> LauncherPageId("home-$pageNumber") }
-        .first { candidate -> pages.none { page -> page.id == candidate } }
