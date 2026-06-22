@@ -55,6 +55,8 @@ sealed interface LauncherShellAction {
 
     data class HideApp(val identity: AppIdentity) : LauncherShellAction
 
+    data class UnhideApp(val identity: AppIdentity) : LauncherShellAction
+
     data class AddAppToHome(val app: InstalledApp) : LauncherShellAction
 
     data class AddAppToDock(val app: InstalledApp) : LauncherShellAction
