@@ -11,6 +11,7 @@ import com.riffle.app.launcher.LauncherShell
 import com.riffle.app.launcher.LauncherShellAction
 import com.riffle.app.launcher.LauncherShellViewModel
 import com.riffle.app.launcher.LauncherShellViewModelFactory
+import com.riffle.app.launcher.SharedPreferencesAppVisibilityRepository
 import com.riffle.app.launcher.SharedPreferencesFirstRunRepository
 import com.riffle.app.launcher.SharedPreferencesHomeLayoutRepository
 import com.riffle.app.launcher.SharedPreferencesLauncherSettingsRepository
@@ -30,6 +31,7 @@ class MainActivity : ComponentActivity() {
         LauncherShellViewModelFactory(
             firstRunRepository = SharedPreferencesFirstRunRepository(this),
             installedAppRepository = PackageManagerInstalledAppRepository(packageManager),
+            appVisibilityRepository = SharedPreferencesAppVisibilityRepository(this),
             homeLayoutRepository = SharedPreferencesHomeLayoutRepository(this),
             launcherSettingsRepository = SharedPreferencesLauncherSettingsRepository(this),
             notificationRepository = activeNotificationRepository,

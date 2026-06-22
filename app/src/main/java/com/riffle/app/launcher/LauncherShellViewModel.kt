@@ -6,10 +6,13 @@ import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.LauncherShellStateReducer
 import com.riffle.core.domain.launcher.ShellNavigationAction
 import com.riffle.core.domain.launcher.apps.AppDrawerProfileFilter
+import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppProfileType
+import com.riffle.core.domain.launcher.apps.AppVisibilityRepository
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.apps.InstalledAppCatalog
 import com.riffle.core.domain.launcher.apps.InstalledAppRepository
+import com.riffle.core.domain.launcher.apps.withHiddenApps
 import com.riffle.core.domain.launcher.home.DockEditResult
 import com.riffle.core.domain.launcher.home.DockEngine
 import com.riffle.core.domain.launcher.home.FolderEditResult
@@ -37,6 +40,7 @@ import kotlinx.coroutines.flow.asStateFlow
 class LauncherShellViewModel(
     private val firstRunRepository: FirstRunRepository,
     private val installedAppRepository: InstalledAppRepository = InstalledAppRepository { emptyList() },
+    private val appVisibilityRepository: AppVisibilityRepository = NoopAppVisibilityRepository,
     private val homeLayoutRepository: HomeLayoutRepository = NoopHomeLayoutRepository,
     private val launcherSettingsRepository: LauncherSettingsRepository = NoopLauncherSettingsRepository,
     private val notificationRepository: LauncherNotificationRepository = LauncherNotificationRepository { emptyList() },
@@ -59,7 +63,7 @@ class LauncherShellViewModel(
                 launcherSettingsRepository = launcherSettingsRepository,
                 firstRunRepository = firstRunRepository,
                 reducer = reducer,
-            ).withInstalledApps(installedAppRepository, appCatalog)
+            ).withInstalledApps(installedAppRepository, appVisibilityRepository, appCatalog)
                 .withNotificationState(
                     notificationRepository = notificationRepository,
                     appNotificationCounter = appNotificationCounter,
@@ -98,7 +102,7 @@ class LauncherShellViewModel(
     fun refreshInstalledApps() {
         mutableState.value =
             mutableState.value
-                .withInstalledApps(installedAppRepository, appCatalog)
+                .withInstalledApps(installedAppRepository, appVisibilityRepository, appCatalog)
                 .withNotificationState(
                     notificationRepository = notificationRepository,
                     appNotificationCounter = appNotificationCounter,
@@ -264,6 +268,14 @@ class LauncherShellViewModel(
 
         override fun saveLauncherSettings(settings: LauncherSettings) = Unit
     }
+
+    private object NoopAppVisibilityRepository : AppVisibilityRepository {
+        override fun hiddenAppIdentities(): Set<AppIdentity> = emptySet()
+
+        override fun hideApp(identity: AppIdentity) = Unit
+
+        override fun showApp(identity: AppIdentity) = Unit
+    }
 }
 
 private fun createInitialState(
@@ -286,9 +298,13 @@ private fun createInitialState(
 
 private fun LauncherShellState.withInstalledApps(
     installedAppRepository: InstalledAppRepository,
+    appVisibilityRepository: AppVisibilityRepository,
     appCatalog: InstalledAppCatalog,
 ): LauncherShellState =
-    appCatalog.visibleApps(installedAppRepository.installedApps()).let { visibleApps ->
+    appCatalog.visibleApps(
+        installedAppRepository.installedApps()
+            .withHiddenApps(appVisibilityRepository.hiddenAppIdentities()),
+    ).let { visibleApps ->
         copy(
             installedApps = visibleApps,
             appDrawerApps =

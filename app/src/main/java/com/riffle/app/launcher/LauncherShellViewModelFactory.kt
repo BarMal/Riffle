@@ -2,6 +2,7 @@ package com.riffle.app.launcher
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import com.riffle.core.domain.launcher.apps.AppVisibilityRepository
 import com.riffle.core.domain.launcher.apps.InstalledAppRepository
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationRepository
@@ -10,6 +11,7 @@ import com.riffle.core.domain.launcher.settings.LauncherSettingsRepository
 class LauncherShellViewModelFactory(
     private val firstRunRepository: FirstRunRepository,
     private val installedAppRepository: InstalledAppRepository,
+    private val appVisibilityRepository: AppVisibilityRepository,
     private val homeLayoutRepository: HomeLayoutRepository,
     private val launcherSettingsRepository: LauncherSettingsRepository,
     private val notificationRepository: LauncherNotificationRepository,
@@ -21,6 +23,7 @@ class LauncherShellViewModelFactory(
                 LauncherShellViewModel(
                     firstRunRepository = firstRunRepository,
                     installedAppRepository = installedAppRepository,
+                    appVisibilityRepository = appVisibilityRepository,
                     homeLayoutRepository = homeLayoutRepository,
                     launcherSettingsRepository = launcherSettingsRepository,
                     notificationRepository = notificationRepository,
