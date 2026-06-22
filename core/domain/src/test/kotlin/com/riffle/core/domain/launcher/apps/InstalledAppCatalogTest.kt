@@ -107,6 +107,29 @@ class InstalledAppCatalogTest {
         )
     }
 
+    @Test
+    fun searchMatchesProfileTypeAndId() {
+        val apps =
+            listOf(
+                app(label = "Camera", profile = AppProfile.personal()),
+                app(label = "Docs", profile = AppProfile.work()),
+                app(label = "Sheets", profile = AppProfile(AppProfileId("company"), AppProfileType.WORK)),
+            )
+
+        assertEquals(
+            listOf("Docs", "Sheets"),
+            catalog.searchApps(apps = apps, query = "work").map { app -> app.label },
+        )
+        assertEquals(
+            listOf("Sheets"),
+            catalog.searchApps(apps = apps, query = "company").map { app -> app.label },
+        )
+        assertEquals(
+            listOf("Camera"),
+            catalog.searchApps(apps = apps, query = "personal").map { app -> app.label },
+        )
+    }
+
     private fun app(
         label: String,
         packageName: String = "com.android.${label.lowercase().replace(" ", ".")}",
