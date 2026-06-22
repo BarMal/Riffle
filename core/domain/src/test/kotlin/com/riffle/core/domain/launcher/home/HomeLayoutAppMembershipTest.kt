@@ -4,7 +4,9 @@ import com.riffle.core.domain.launcher.apps.AppActivityName
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class HomeLayoutAppMembershipTest {
@@ -36,13 +38,16 @@ class HomeLayoutAppMembershipTest {
     @Test
     fun detectsAppShortcutInDock() {
         val phone = appIdentity("phone")
+        val dockShortcut = appShortcut(id = "dock-phone", identity = phone)
         val layout =
             HomeLayoutDefaults.standard().copy(
-                dock = DockModel(capacity = 5, items = listOf(appShortcut(id = "dock-phone", identity = phone))),
+                dock = DockModel(capacity = 5, items = listOf(dockShortcut)),
             )
 
         assertTrue(layout.dock.containsDockApp(phone))
         assertFalse(layout.dock.containsDockApp(appIdentity("camera")))
+        assertEquals(dockShortcut.id, layout.dock.dockShortcutIdFor(phone))
+        assertNull(layout.dock.dockShortcutIdFor(appIdentity("camera")))
     }
 
     private fun layoutWith(vararg items: LauncherItem): HomeLayout =

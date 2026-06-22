@@ -28,9 +28,10 @@ import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.home.HomeLayout
+import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.home.WallpaperSource
-import com.riffle.core.domain.launcher.home.containsDockApp
 import com.riffle.core.domain.launcher.home.containsHomeApp
+import com.riffle.core.domain.launcher.home.dockShortcutIdFor
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 
@@ -256,7 +257,7 @@ private fun AppList(
                 AppDrawerRow(
                     app = app,
                     isOnHome = homeLayout.containsHomeApp(app.identity),
-                    isInDock = homeLayout.dock.containsDockApp(app.identity),
+                    dockItemId = homeLayout.dock.dockShortcutIdFor(app.identity),
                     notificationCount = notificationCountsByPackage[app.identity.packageName] ?: 0,
                     appIconLoader = appIconLoader,
                     onAction = onAction,
@@ -270,7 +271,7 @@ private fun AppList(
 private fun AppDrawerRow(
     app: InstalledApp,
     isOnHome: Boolean,
-    isInDock: Boolean,
+    dockItemId: LauncherItemId?,
     notificationCount: Int,
     appIconLoader: AppIconLoader,
     onAction: (LauncherShellAction) -> Unit,
@@ -320,10 +321,14 @@ private fun AppDrawerRow(
             Text(text = if (isOnHome) "Added" else "Add")
         }
         TextButton(
-            enabled = !isInDock,
-            onClick = { onAction(LauncherShellAction.AddAppToDock(app)) },
+            onClick = {
+                when (dockItemId) {
+                    null -> onAction(LauncherShellAction.AddAppToDock(app))
+                    else -> onAction(LauncherShellAction.RemoveDockShortcut(dockItemId))
+                }
+            },
         ) {
-            Text(text = if (isInDock) "Docked" else "Dock")
+            Text(text = if (dockItemId == null) "Dock" else "Undock")
         }
     }
 }

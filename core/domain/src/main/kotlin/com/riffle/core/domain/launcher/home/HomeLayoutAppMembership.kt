@@ -6,6 +6,12 @@ fun HomeLayout.containsHomeApp(identity: AppIdentity): Boolean = pages.any { pag
 
 fun DockModel.containsDockApp(identity: AppIdentity): Boolean = items.any { item -> item.containsApp(identity) }
 
+fun DockModel.dockShortcutIdFor(identity: AppIdentity): LauncherItemId? =
+    items
+        .filterIsInstance<AppShortcutItem>()
+        .firstOrNull { item -> item.appIdentity == identity }
+        ?.id
+
 private fun LauncherPage.containsHomeApp(identity: AppIdentity): Boolean {
     return items.any { item -> item.containsApp(identity) }
 }
