@@ -70,6 +70,7 @@ class HomePageEngineTest {
             layout.copy(
                 pages = listOf(page(id = "home"), page(id = "widgets"), page(id = "search")),
                 selectedPageId = pageId("widgets"),
+                editMode = HomeEditMode.EditingPage(pageId = pageId("widgets")),
             )
 
         val result = engine.deletePage(layout = layoutWithPages, pageId = pageId("widgets"))
@@ -77,6 +78,7 @@ class HomePageEngineTest {
         val updated = assertIs<HomePageEditResult.Updated>(result)
         assertEquals(listOf(pageId("home"), pageId("search")), updated.layout.pages.map { page -> page.id })
         assertEquals(pageId("search"), updated.layout.selectedPageId)
+        assertEquals(HomeEditMode.EditingPage(pageId = pageId("search")), updated.layout.editMode)
     }
 
     @Test
@@ -85,6 +87,7 @@ class HomePageEngineTest {
             layout.copy(
                 pages = listOf(page(id = "home"), page(id = "widgets")),
                 selectedPageId = pageId("widgets"),
+                editMode = HomeEditMode.EditingPage(pageId = pageId("widgets")),
             )
 
         val result = engine.deletePage(layout = layoutWithPages, pageId = pageId("widgets"))
@@ -92,6 +95,37 @@ class HomePageEngineTest {
         val updated = assertIs<HomePageEditResult.Updated>(result)
         assertEquals(listOf(pageId("home")), updated.layout.pages.map { page -> page.id })
         assertEquals(pageId("home"), updated.layout.selectedPageId)
+        assertEquals(HomeEditMode.EditingPage(pageId = pageId("home")), updated.layout.editMode)
+    }
+
+    @Test
+    fun deletingDifferentPageKeepsCurrentPageEditMode() {
+        val layoutWithPages =
+            layout.copy(
+                pages = listOf(page(id = "home"), page(id = "widgets"), page(id = "search")),
+                selectedPageId = pageId("home"),
+                editMode = HomeEditMode.EditingPage(pageId = pageId("home")),
+            )
+
+        val result = engine.deletePage(layout = layoutWithPages, pageId = pageId("widgets"))
+
+        val updated = assertIs<HomePageEditResult.Updated>(result)
+        assertEquals(HomeEditMode.EditingPage(pageId = pageId("home")), updated.layout.editMode)
+    }
+
+    @Test
+    fun deletingPageKeepsPageOverviewMode() {
+        val layoutWithPages =
+            layout.copy(
+                pages = listOf(page(id = "home"), page(id = "widgets")),
+                selectedPageId = pageId("home"),
+                editMode = HomeEditMode.ManagingPages,
+            )
+
+        val result = engine.deletePage(layout = layoutWithPages, pageId = pageId("widgets"))
+
+        val updated = assertIs<HomePageEditResult.Updated>(result)
+        assertEquals(HomeEditMode.ManagingPages, updated.layout.editMode)
     }
 
     @Test
