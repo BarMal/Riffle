@@ -347,6 +347,10 @@ private fun HomeShortcut(
                 label = shortcut.label,
                 onClick = { onAction(LauncherShellAction.RemoveHomeShortcut(shortcut.id)) },
             )
+            AppInfoShortcutButton(
+                label = shortcut.label,
+                onClick = { onAction(shortcut.openAppInfoAction()) },
+            )
         } else {
             NotificationCountBadge(
                 count = notificationCount,
