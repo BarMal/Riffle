@@ -155,6 +155,7 @@ private fun LauncherDestination(
         ShellDestination.SEARCH ->
             SearchSurface(
                 query = state.searchQuery,
+                profileFilter = state.searchProfileFilter,
                 results = state.searchResults,
                 homeLayout = state.homeLayout,
                 notificationCountsByPackage = state.notificationCountsByPackage,

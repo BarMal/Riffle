@@ -164,6 +164,7 @@ class MainActivity : ComponentActivity() {
             is LauncherShellAction.AppDrawerQueryChanged,
             is LauncherShellAction.AppDrawerProfileFilterSelected,
             is LauncherShellAction.SearchQueryChanged,
+            is LauncherShellAction.SearchProfileFilterSelected,
             -> shellViewModel.onAppQueryChanged(action)
 
             else -> Unit
