@@ -1,6 +1,7 @@
 package com.riffle.app.launcher
 
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -101,6 +102,7 @@ private fun AppDrawerSectionHeader(title: String) {
 }
 
 @Composable
+@OptIn(ExperimentalFoundationApi::class)
 private fun AppDrawerRow(
     app: InstalledApp,
     isOnHome: Boolean,
@@ -114,7 +116,11 @@ private fun AppDrawerRow(
             Modifier
                 .fillMaxWidth()
                 .defaultMinSize(minHeight = 56.dp)
-                .clickable { onAction(LauncherShellAction.LaunchApp(app.identity)) }
+                .combinedClickable(
+                    onClick = { onAction(LauncherShellAction.LaunchApp(app.identity)) },
+                    onLongClick = { onAction(LauncherShellAction.OpenAppInfo(app.identity)) },
+                    onLongClickLabel = "Open ${app.label} app info",
+                )
                 .padding(horizontal = 2.dp, vertical = 4.dp),
         horizontalArrangement = Arrangement.spacedBy(14.dp),
         verticalAlignment = Alignment.CenterVertically,
