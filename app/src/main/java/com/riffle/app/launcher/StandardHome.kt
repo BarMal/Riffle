@@ -28,6 +28,8 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -39,10 +41,12 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.home.AppShortcutItem
+import com.riffle.core.domain.launcher.home.FolderItem
 import com.riffle.core.domain.launcher.home.GridCell
 import com.riffle.core.domain.launcher.home.HomeEditMode
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeShortcutMoveDirection
+import com.riffle.core.domain.launcher.home.LauncherItem
 import com.riffle.core.domain.launcher.home.LauncherPage
 import com.riffle.core.domain.launcher.settings.HomeSwipeGestureSettings
 import kotlin.math.roundToInt
@@ -56,6 +60,7 @@ fun StandardHome(
     onAction: (LauncherShellAction) -> Unit,
 ) {
     val isEditing = layout.editMode is HomeEditMode.EditingPage
+    val openedFolder = remember { mutableStateOf<FolderItem?>(null) }
     val swipeThresholdPx = with(LocalDensity.current) { HOME_SWIPE_THRESHOLD_DP.dp.toPx() }
 
     Column(
@@ -81,6 +86,7 @@ fun StandardHome(
             isEditing = isEditing,
             notificationCountsByPackage = notificationCountsByPackage,
             appIconLoader = appIconLoader,
+            onFolderOpen = { folder -> openedFolder.value = folder },
             onAction = onAction,
             modifier =
                 Modifier
@@ -91,6 +97,10 @@ fun StandardHome(
             PageEditControls(
                 pageCount = layout.pages.size,
                 selectedPageIndex = layout.selectedPageIndex,
+                onAction = onAction,
+            )
+            HomeFolderEditControls(
+                layout = layout,
                 onAction = onAction,
             )
         }
@@ -104,6 +114,14 @@ fun StandardHome(
             isEditing = isEditing,
             notificationCountsByPackage = notificationCountsByPackage,
             appIconLoader = appIconLoader,
+            onAction = onAction,
+        )
+    }
+    openedFolder.value?.let { folder ->
+        FolderDialog(
+            folder = folder,
+            appIconLoader = appIconLoader,
+            onDismiss = { openedFolder.value = null },
             onAction = onAction,
         )
     }
@@ -154,6 +172,7 @@ private fun AnimatedWorkspaceGrid(
     isEditing: Boolean,
     notificationCountsByPackage: Map<AppPackageName, Int>,
     appIconLoader: AppIconLoader,
+    onFolderOpen: (FolderItem) -> Unit,
     onAction: (LauncherShellAction) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -173,6 +192,7 @@ private fun AnimatedWorkspaceGrid(
             isEditing = isEditing,
             notificationCountsByPackage = notificationCountsByPackage,
             appIconLoader = appIconLoader,
+            onFolderOpen = onFolderOpen,
             onAction = onAction,
             modifier =
                 Modifier
@@ -188,6 +208,7 @@ private fun WorkspaceGrid(
     isEditing: Boolean,
     notificationCountsByPackage: Map<AppPackageName, Int>,
     appIconLoader: AppIconLoader,
+    onFolderOpen: (FolderItem) -> Unit,
     onAction: (LauncherShellAction) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -204,7 +225,7 @@ private fun WorkspaceGrid(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 repeat(grid.columns) { column ->
-                    val shortcut = page.shortcutAt(cell = GridCell(column = column, row = row))
+                    val item = page.itemAt(cell = GridCell(column = column, row = row))
 
                     Box(
                         modifier =
@@ -213,12 +234,13 @@ private fun WorkspaceGrid(
                                 .aspectRatio(1f),
                         contentAlignment = Alignment.Center,
                     ) {
-                        if (shortcut != null) {
-                            HomeShortcut(
-                                shortcut = shortcut,
+                        if (item != null) {
+                            HomeGridItem(
+                                item = item,
                                 isEditing = isEditing,
-                                notificationCount = notificationCountsByPackage[shortcut.appIdentity.packageName] ?: 0,
+                                notificationCount = notificationCountsByPackage.notificationCountFor(item),
                                 appIconLoader = appIconLoader,
+                                onFolderOpen = onFolderOpen,
                                 onAction = onAction,
                             )
                         }
@@ -227,6 +249,38 @@ private fun WorkspaceGrid(
             }
             Spacer(modifier = Modifier.height(12.dp))
         }
+    }
+}
+
+@Composable
+@OptIn(ExperimentalFoundationApi::class)
+private fun HomeGridItem(
+    item: LauncherItem,
+    isEditing: Boolean,
+    notificationCount: Int,
+    appIconLoader: AppIconLoader,
+    onFolderOpen: (FolderItem) -> Unit,
+    onAction: (LauncherShellAction) -> Unit,
+) {
+    when (item) {
+        is AppShortcutItem ->
+            HomeShortcut(
+                shortcut = item,
+                isEditing = isEditing,
+                notificationCount = notificationCount,
+                appIconLoader = appIconLoader,
+                onAction = onAction,
+            )
+
+        is FolderItem ->
+            HomeFolder(
+                folder = item,
+                isEditing = isEditing,
+                notificationCount = notificationCount,
+                appIconLoader = appIconLoader,
+                onFolderOpen = onFolderOpen,
+                onAction = onAction,
+            )
     }
 }
 
@@ -267,8 +321,9 @@ private fun HomeShortcut(
         }
 
         if (isEditing) {
-            MoveShortcutControls(
-                shortcut = shortcut,
+            MoveItemControls(
+                item = shortcut,
+                label = shortcut.label,
                 onAction = onAction,
             )
             RemoveShortcutButton(
@@ -285,46 +340,47 @@ private fun HomeShortcut(
 }
 
 @Composable
-private fun BoxScope.MoveShortcutControls(
-    shortcut: AppShortcutItem,
+fun BoxScope.MoveItemControls(
+    item: LauncherItem,
+    label: String,
     onAction: (LauncherShellAction) -> Unit,
 ) {
-    fun moveShortcut(direction: HomeShortcutMoveDirection) {
+    fun moveItem(direction: HomeShortcutMoveDirection) {
         onAction(
             LauncherShellAction.MoveHomeShortcut(
-                itemId = shortcut.id,
+                itemId = item.id,
                 direction = direction,
             ),
         )
     }
 
     MoveShortcutButton(
-        label = shortcut.label,
+        label = label,
         direction = HomeShortcutMoveDirection.UP,
         text = "U",
         alignment = Alignment.TopCenter,
-        onClick = { moveShortcut(HomeShortcutMoveDirection.UP) },
+        onClick = { moveItem(HomeShortcutMoveDirection.UP) },
     )
     MoveShortcutButton(
-        label = shortcut.label,
+        label = label,
         direction = HomeShortcutMoveDirection.DOWN,
         text = "D",
         alignment = Alignment.BottomCenter,
-        onClick = { moveShortcut(HomeShortcutMoveDirection.DOWN) },
+        onClick = { moveItem(HomeShortcutMoveDirection.DOWN) },
     )
     MoveShortcutButton(
-        label = shortcut.label,
+        label = label,
         direction = HomeShortcutMoveDirection.LEFT,
         text = "L",
         alignment = Alignment.CenterStart,
-        onClick = { moveShortcut(HomeShortcutMoveDirection.LEFT) },
+        onClick = { moveItem(HomeShortcutMoveDirection.LEFT) },
     )
     MoveShortcutButton(
-        label = shortcut.label,
+        label = label,
         direction = HomeShortcutMoveDirection.RIGHT,
         text = "R",
         alignment = Alignment.CenterEnd,
-        onClick = { moveShortcut(HomeShortcutMoveDirection.RIGHT) },
+        onClick = { moveItem(HomeShortcutMoveDirection.RIGHT) },
     )
 }
 
@@ -356,7 +412,7 @@ private fun BoxScope.MoveShortcutButton(
 }
 
 @Composable
-private fun BoxScope.RemoveShortcutButton(
+fun BoxScope.RemoveShortcutButton(
     label: String,
     onClick: () -> Unit,
 ) {
@@ -378,10 +434,6 @@ private fun BoxScope.RemoveShortcutButton(
         )
     }
 }
-
-private fun LauncherPage.shortcutAt(cell: GridCell): AppShortcutItem? =
-    items.filterIsInstance<AppShortcutItem>()
-        .firstOrNull { item -> item.placement?.cell == cell }
 
 private fun Modifier.homeSwipeNavigation(
     enabled: Boolean,
