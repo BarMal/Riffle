@@ -163,11 +163,12 @@ class MainActivity : ComponentActivity() {
             is LauncherShellAction.LaunchApp -> appLauncher.launch(action.identity)
             is LauncherShellAction.OpenAppInfo -> appLauncher.openAppInfo(action.identity)
             is LauncherShellAction.AddAppToHome -> shellViewModel.onAddAppToHome(action.app)
+            is LauncherShellAction.HideApp,
             is LauncherShellAction.AppDrawerQueryChanged,
             is LauncherShellAction.AppDrawerProfileFilterSelected,
             is LauncherShellAction.SearchQueryChanged,
             is LauncherShellAction.SearchProfileFilterSelected,
-            -> shellViewModel.onAppQueryChanged(action)
+            -> shellViewModel.onAppActionSelected(action)
 
             else -> Unit
         }

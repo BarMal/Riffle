@@ -112,7 +112,7 @@ class LauncherShellViewModel(
                 )
     }
 
-    fun onAppQueryChanged(action: LauncherShellAction) {
+    fun onAppActionSelected(action: LauncherShellAction) {
         mutableState.value =
             when (action) {
                 is LauncherShellAction.AppDrawerQueryChanged ->
@@ -158,6 +158,19 @@ class LauncherShellViewModel(
                                 profileFilter = action.filter,
                             ),
                     )
+
+                is LauncherShellAction.HideApp -> {
+                    appVisibilityRepository.hideApp(action.identity)
+                    mutableState.value
+                        .withInstalledApps(installedAppRepository, appVisibilityRepository, appCatalog)
+                        .withNotificationState(
+                            notificationRepository = notificationRepository,
+                            appNotificationCounter = appNotificationCounter,
+                            appNotificationGrouper = appNotificationGrouper,
+                            notificationStaleFilter = notificationStaleFilter,
+                            nowEpochMillis = epochMillisProvider.nowEpochMillis(),
+                        )
+                }
 
                 else -> mutableState.value
             }

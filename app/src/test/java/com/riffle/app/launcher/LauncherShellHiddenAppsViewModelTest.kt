@@ -22,7 +22,7 @@ class LauncherShellHiddenAppsViewModelTest {
                 appVisibilityRepository = FakeAppVisibilityRepository(hiddenApps = setOf(docs.identity)),
             )
 
-        viewModel.onAppQueryChanged(LauncherShellAction.SearchQueryChanged(""))
+        viewModel.onAppActionSelected(LauncherShellAction.SearchQueryChanged(""))
 
         assertEquals(listOf(camera.identity), viewModel.state.value.installedApps.map { app -> app.identity })
         assertEquals(listOf(camera.identity), viewModel.state.value.appDrawerApps.map { app -> app.identity })
@@ -45,6 +45,25 @@ class LauncherShellHiddenAppsViewModelTest {
         viewModel.refreshInstalledApps()
 
         assertEquals(listOf(docs.identity), viewModel.state.value.installedApps.map { app -> app.identity })
+    }
+
+    @Test
+    fun hidesAppAndRefreshesLauncherAppSurfaces() {
+        val camera = app(label = "Camera")
+        val docs = app(label = "Docs")
+        val appVisibilityRepository = FakeAppVisibilityRepository()
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                installedAppRepository = FakeInstalledAppRepository(apps = listOf(camera, docs)),
+                appVisibilityRepository = appVisibilityRepository,
+            )
+
+        viewModel.onAppActionSelected(LauncherShellAction.HideApp(camera.identity))
+
+        assertEquals(setOf(camera.identity), appVisibilityRepository.hiddenApps)
+        assertEquals(listOf(docs.identity), viewModel.state.value.installedApps.map { app -> app.identity })
+        assertEquals(listOf(docs.identity), viewModel.state.value.appDrawerApps.map { app -> app.identity })
     }
 
     private class FakeFirstRunRepository : FirstRunRepository {
