@@ -116,11 +116,10 @@ fun FolderDialog(
                     singleLine = true,
                     label = { Text(text = "Name") },
                 )
-                OutlinedTextField(
-                    value = addAppQuery.value,
-                    onValueChange = { value -> addAppQuery.value = value },
-                    singleLine = true,
-                    label = { Text(text = "Add app") },
+                AppSearchField(
+                    query = addAppQuery.value,
+                    onQueryChanged = { value -> addAppQuery.value = value },
+                    label = "Add app",
                 )
                 FolderContentRows(
                     folder = folder,
