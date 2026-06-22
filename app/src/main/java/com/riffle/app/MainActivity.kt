@@ -141,6 +141,8 @@ class MainActivity : ComponentActivity() {
             is LauncherShellAction.RemoveHomeShortcut,
             is LauncherShellAction.CreateHomeFolder,
             is LauncherShellAction.RenameHomeFolder,
+            is LauncherShellAction.AddAppToFolder,
+            is LauncherShellAction.RemoveAppFromFolder,
             is LauncherShellAction.MoveHomeShortcut,
             -> {
                 shellViewModel.onHomeShortcutEdited(action)

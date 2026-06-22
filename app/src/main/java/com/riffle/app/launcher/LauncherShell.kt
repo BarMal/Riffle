@@ -130,6 +130,7 @@ private fun LauncherDestination(
         ShellDestination.HOME ->
             StandardHome(
                 layout = state.homeLayout,
+                installedApps = state.installedApps,
                 homeSwipeGestures = state.launcherSettings.gestures.homeSwipe,
                 notificationCountsByPackage = state.notificationCountsByPackage,
                 appIconLoader = appIconLoader,

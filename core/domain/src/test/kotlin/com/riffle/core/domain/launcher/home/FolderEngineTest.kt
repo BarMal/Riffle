@@ -145,6 +145,88 @@ class FolderEngineTest {
         assertEquals(FolderEditRejectionReason.INVALID_LABEL, rejected.reason)
     }
 
+    @Test
+    fun addsShortcutToFolderOnSelectedPage() {
+        val camera =
+            appShortcut(id = "camera", placement = GridPlacement(cell = GridCell(column = 0, row = 0)))
+                .copy(placement = null)
+        val folder =
+            FolderItem(
+                id = LauncherItemId("folder:tools"),
+                label = "Tools",
+                items = listOf(camera),
+                placement = GridPlacement(cell = GridCell(column = 0, row = 0)),
+            )
+        val calendar = appShortcut(id = "calendar", placement = GridPlacement(cell = GridCell(column = 1, row = 0)))
+
+        val result =
+            engine.addShortcutToFolderOnSelectedPage(
+                layout = layoutWith(folder),
+                folderId = folder.id,
+                shortcut = calendar,
+            )
+
+        val updated = assertIs<FolderEditResult.Updated>(result)
+        val updatedFolder = assertIs<FolderItem>(updated.layout.selectedPage.items.single())
+        assertEquals(
+            listOf(camera.appIdentity, calendar.appIdentity),
+            updatedFolder.items.map { item -> item.appIdentity },
+        )
+        assertEquals(listOf(null, null), updatedFolder.items.map { item -> item.placement })
+    }
+
+    @Test
+    fun rejectsDuplicateShortcutInFolder() {
+        val camera =
+            appShortcut(id = "camera", placement = GridPlacement(cell = GridCell(column = 0, row = 0)))
+                .copy(placement = null)
+        val folder =
+            FolderItem(
+                id = LauncherItemId("folder:tools"),
+                label = "Tools",
+                items = listOf(camera),
+                placement = GridPlacement(cell = GridCell(column = 0, row = 0)),
+            )
+
+        val result =
+            engine.addShortcutToFolderOnSelectedPage(
+                layout = layoutWith(folder),
+                folderId = folder.id,
+                shortcut = camera.copy(id = LauncherItemId("camera-duplicate")),
+            )
+
+        val rejected = assertIs<FolderEditResult.Rejected>(result)
+        assertEquals(FolderEditRejectionReason.DUPLICATE_ITEM, rejected.reason)
+    }
+
+    @Test
+    fun removesShortcutFromFolderOnSelectedPage() {
+        val camera =
+            appShortcut(id = "camera", placement = GridPlacement(cell = GridCell(column = 0, row = 0)))
+                .copy(placement = null)
+        val calendar =
+            appShortcut(id = "calendar", placement = GridPlacement(cell = GridCell(column = 1, row = 0)))
+                .copy(placement = null)
+        val folder =
+            FolderItem(
+                id = LauncherItemId("folder:tools"),
+                label = "Tools",
+                items = listOf(camera, calendar),
+                placement = GridPlacement(cell = GridCell(column = 0, row = 0)),
+            )
+
+        val result =
+            engine.removeShortcutFromFolderOnSelectedPage(
+                layout = layoutWith(folder),
+                folderId = folder.id,
+                shortcutId = camera.id,
+            )
+
+        val updated = assertIs<FolderEditResult.Updated>(result)
+        val updatedFolder = assertIs<FolderItem>(updated.layout.selectedPage.items.single())
+        assertEquals(listOf(calendar.appIdentity), updatedFolder.items.map { item -> item.appIdentity })
+    }
+
     private fun layoutWith(vararg items: LauncherItem): HomeLayout =
         HomeLayoutDefaults.standard().copy(
             pages = listOf(HomeLayoutDefaults.standard().selectedPage.copy(items = items.toList())),

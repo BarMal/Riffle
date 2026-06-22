@@ -61,6 +61,52 @@ class FolderEngine(
             }
             ?: FolderEditResult.Rejected(FolderEditRejectionReason.INVALID_LABEL)
 
+    fun addShortcutToFolderOnSelectedPage(
+        layout: HomeLayout,
+        folderId: LauncherItemId,
+        shortcut: AppShortcutItem,
+    ): FolderEditResult =
+        layout.selectedPage.folder(folderId)
+            ?.let { folder ->
+                when {
+                    folder.items.any { item -> item.appIdentity == shortcut.appIdentity } ->
+                        FolderEditResult.Rejected(FolderEditRejectionReason.DUPLICATE_ITEM)
+
+                    else ->
+                        FolderEditResult.Updated(
+                            layout.withUpdatedSelectedPage(
+                                layout.selectedPage.replaceFolder(
+                                    folder.copy(items = folder.items + shortcut.copy(placement = null)),
+                                ),
+                            ),
+                        )
+                }
+            }
+            ?: FolderEditResult.Rejected(FolderEditRejectionReason.ITEM_NOT_FOUND)
+
+    fun removeShortcutFromFolderOnSelectedPage(
+        layout: HomeLayout,
+        folderId: LauncherItemId,
+        shortcutId: LauncherItemId,
+    ): FolderEditResult =
+        layout.selectedPage.folder(folderId)
+            ?.let { folder ->
+                when {
+                    folder.items.none { item -> item.id == shortcutId } ->
+                        FolderEditResult.Rejected(FolderEditRejectionReason.FOLDER_ITEM_NOT_FOUND)
+
+                    else ->
+                        FolderEditResult.Updated(
+                            layout.withUpdatedSelectedPage(
+                                layout.selectedPage.replaceFolder(
+                                    folder.copy(items = folder.items.filterNot { item -> item.id == shortcutId }),
+                                ),
+                            ),
+                        )
+                }
+            }
+            ?: FolderEditResult.Rejected(FolderEditRejectionReason.ITEM_NOT_FOUND)
+
     private fun createFolderFromShortcuts(
         layout: HomeLayout,
         folderId: LauncherItemId,
@@ -151,6 +197,23 @@ private sealed interface FolderShortcutSelection {
     data class Rejected(val reason: FolderEditRejectionReason) : FolderShortcutSelection
 }
 
+private fun LauncherPage.folder(folderId: LauncherItemId): FolderItem? {
+    val matchingItem = items.firstOrNull { item -> item.id == folderId }
+
+    return matchingItem as? FolderItem
+}
+
+private fun LauncherPage.replaceFolder(folder: FolderItem): LauncherPage =
+    copy(
+        items =
+            items.map { item ->
+                when (item.id) {
+                    folder.id -> folder
+                    else -> item
+                }
+            },
+    )
+
 sealed interface FolderEditResult {
     data class Updated(val layout: HomeLayout) : FolderEditResult
 
@@ -162,6 +225,8 @@ enum class FolderEditRejectionReason {
     ITEM_NOT_FOUND,
     UNSUPPORTED_ITEM,
     INVALID_LABEL,
+    DUPLICATE_ITEM,
+    FOLDER_ITEM_NOT_FOUND,
     MISSING_PLACEMENT,
     OUT_OF_BOUNDS,
     COLLISION,

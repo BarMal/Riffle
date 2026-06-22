@@ -79,6 +79,61 @@ class LauncherShellFolderViewModelTest {
         assertEquals(viewModel.state.value.homeLayout, repository.savedLayout)
     }
 
+    @Test
+    fun addsAppToHomeFolderAndSavesLayout() {
+        val camera = app(label = "Camera")
+        val calendar = app(label = "Calendar")
+        val maps = app(label = "Maps")
+        val repository = FakeHomeLayoutRepository()
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                installedAppRepository = FakeInstalledAppRepository(apps = listOf(camera, calendar, maps)),
+                homeLayoutRepository = repository,
+            )
+        val folder = viewModel.createFolder(camera, calendar)
+
+        viewModel.onHomeShortcutEdited(
+            LauncherShellAction.AddAppToFolder(
+                folderId = folder.id,
+                app = maps,
+            ),
+        )
+
+        val updatedFolder = viewModel.state.value.homeLayout.selectedPage.items.single() as FolderItem
+        assertEquals(
+            listOf(camera.identity, calendar.identity, maps.identity),
+            updatedFolder.items.map { item -> item.appIdentity },
+        )
+        assertEquals(viewModel.state.value.homeLayout, repository.savedLayout)
+    }
+
+    @Test
+    fun removesAppFromHomeFolderAndSavesLayout() {
+        val camera = app(label = "Camera")
+        val calendar = app(label = "Calendar")
+        val repository = FakeHomeLayoutRepository()
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                installedAppRepository = FakeInstalledAppRepository(apps = listOf(camera, calendar)),
+                homeLayoutRepository = repository,
+            )
+        val folder = viewModel.createFolder(camera, calendar)
+        val cameraShortcut = folder.items.first { item -> item.appIdentity == camera.identity }
+
+        viewModel.onHomeShortcutEdited(
+            LauncherShellAction.RemoveAppFromFolder(
+                folderId = folder.id,
+                itemId = cameraShortcut.id,
+            ),
+        )
+
+        val updatedFolder = viewModel.state.value.homeLayout.selectedPage.items.single() as FolderItem
+        assertEquals(listOf(calendar.identity), updatedFolder.items.map { item -> item.appIdentity })
+        assertEquals(viewModel.state.value.homeLayout, repository.savedLayout)
+    }
+
     private class FakeFirstRunRepository : FirstRunRepository {
         override fun isFirstRunComplete(): Boolean = false
 
@@ -114,4 +169,21 @@ class LauncherShellFolderViewModelTest {
             label = label,
             visibility = visibility,
         )
+
+    private fun LauncherShellViewModel.createFolder(
+        firstApp: InstalledApp,
+        secondApp: InstalledApp,
+    ): FolderItem {
+        onAddAppToHome(firstApp)
+        onAddAppToHome(secondApp)
+        val shortcuts = state.value.homeLayout.selectedPage.items.filterIsInstance<AppShortcutItem>()
+        onHomeShortcutEdited(
+            LauncherShellAction.CreateHomeFolder(
+                itemIds = shortcuts.map { shortcut -> shortcut.id },
+                label = "Folder",
+            ),
+        )
+
+        return state.value.homeLayout.selectedPage.items.single() as FolderItem
+    }
 }
