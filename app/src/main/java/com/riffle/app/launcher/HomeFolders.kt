@@ -99,11 +99,13 @@ fun FolderDialog(
     onAction: (LauncherShellAction) -> Unit,
 ) {
     val folderName = remember(folder.id, folder.label) { mutableStateOf(folder.label) }
+    val addAppQuery = remember(folder.id) { mutableStateOf("") }
     val trimmedFolderName = folderName.value.trim()
     val addableApps =
         installedApps.filterNot { app ->
             folder.items.any { shortcut -> shortcut.appIdentity == app.identity }
         }
+    val visibleAddableApps = addableApps.filterFolderAddCandidates(addAppQuery.value)
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -116,9 +118,15 @@ fun FolderDialog(
                     singleLine = true,
                     label = { Text(text = "Name") },
                 )
+                OutlinedTextField(
+                    value = addAppQuery.value,
+                    onValueChange = { value -> addAppQuery.value = value },
+                    singleLine = true,
+                    label = { Text(text = "Add app") },
+                )
                 FolderContentRows(
                     folder = folder,
-                    addableApps = addableApps,
+                    addableApps = visibleAddableApps,
                     appIconLoader = appIconLoader,
                     onDismiss = onDismiss,
                     onAction = onAction,
