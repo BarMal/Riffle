@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -19,6 +20,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.riffle.core.domain.launcher.apps.AppDrawerProfileFilter
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.home.HomeLayout
@@ -29,6 +31,7 @@ import com.riffle.core.domain.launcher.settings.LauncherSettings
 @Composable
 fun AppDrawer(
     query: String,
+    profileFilter: AppDrawerProfileFilter,
     apps: List<InstalledApp>,
     homeLayout: HomeLayout,
     notificationCountsByPackage: Map<AppPackageName, Int>,
@@ -44,6 +47,11 @@ fun AppDrawer(
                 modifier = Modifier.fillMaxWidth(),
                 query = query,
                 onQueryChanged = { value -> onAction(LauncherShellAction.AppDrawerQueryChanged(value)) },
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            AppDrawerProfileFilters(
+                selectedFilter = profileFilter,
+                onAction = onAction,
             )
             Spacer(modifier = Modifier.height(16.dp))
             AppList(
@@ -67,6 +75,33 @@ fun AppDrawer(
         }
     }
 }
+
+@Composable
+private fun AppDrawerProfileFilters(
+    selectedFilter: AppDrawerProfileFilter,
+    onAction: (LauncherShellAction) -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        AppDrawerProfileFilter.entries.forEach { filter ->
+            FilterChip(
+                selected = filter == selectedFilter,
+                onClick = { onAction(LauncherShellAction.AppDrawerProfileFilterSelected(filter)) },
+                label = { Text(text = filter.label) },
+            )
+        }
+    }
+}
+
+private val AppDrawerProfileFilter.label: String
+    get() =
+        when (this) {
+            AppDrawerProfileFilter.ALL -> "All"
+            AppDrawerProfileFilter.PERSONAL -> "Personal"
+            AppDrawerProfileFilter.WORK -> "Work"
+        }
 
 @Composable
 fun SearchSurface(

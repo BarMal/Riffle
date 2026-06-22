@@ -1,8 +1,10 @@
 package com.riffle.app.launcher
 
 import com.riffle.core.domain.launcher.apps.AppActivityName
+import com.riffle.core.domain.launcher.apps.AppDrawerProfileFilter
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
+import com.riffle.core.domain.launcher.apps.AppProfile
 import com.riffle.core.domain.launcher.apps.AppVisibility
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.apps.InstalledAppRepository
@@ -69,6 +71,83 @@ class LauncherShellAppDrawerViewModelTest {
         assertEquals(listOf("Calendar"), viewModel.state.value.appDrawerApps.map { app -> app.label })
     }
 
+    @Test
+    fun filtersAppDrawerAppsBySelectedProfile() {
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                installedAppRepository =
+                    FakeInstalledAppRepository(
+                        apps =
+                            listOf(
+                                app(label = "Camera", profile = AppProfile.personal()),
+                                app(label = "Docs", profile = AppProfile.work()),
+                                app(label = "Sheets", profile = AppProfile.work()),
+                            ),
+                    ),
+            )
+
+        viewModel.onAppQueryChanged(
+            LauncherShellAction.AppDrawerProfileFilterSelected(AppDrawerProfileFilter.WORK),
+        )
+
+        assertEquals(AppDrawerProfileFilter.WORK, viewModel.state.value.appDrawerProfileFilter)
+        assertEquals(listOf("Docs", "Sheets"), viewModel.state.value.appDrawerApps.map { app -> app.label })
+    }
+
+    @Test
+    fun combinesAppDrawerQueryAndProfileFilter() {
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                installedAppRepository =
+                    FakeInstalledAppRepository(
+                        apps =
+                            listOf(
+                                app(label = "Calendar", profile = AppProfile.personal()),
+                                app(label = "Calendar", profile = AppProfile.work()),
+                                app(label = "Camera", profile = AppProfile.work()),
+                            ),
+                    ),
+            )
+
+        viewModel.onAppQueryChanged(LauncherShellAction.AppDrawerQueryChanged("cal"))
+        viewModel.onAppQueryChanged(
+            LauncherShellAction.AppDrawerProfileFilterSelected(AppDrawerProfileFilter.WORK),
+        )
+
+        assertEquals("cal", viewModel.state.value.appDrawerQuery)
+        assertEquals(AppDrawerProfileFilter.WORK, viewModel.state.value.appDrawerProfileFilter)
+        assertEquals(listOf("Calendar"), viewModel.state.value.appDrawerApps.map { app -> app.label })
+        assertEquals(listOf(AppProfile.work()), viewModel.state.value.appDrawerApps.map { app -> app.identity.profile })
+    }
+
+    @Test
+    fun refreshesAppDrawerAppsForCurrentProfileFilter() {
+        val repository =
+            FakeInstalledAppRepository(
+                apps = listOf(app(label = "Docs", profile = AppProfile.work())),
+            )
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                installedAppRepository = repository,
+            )
+        viewModel.onAppQueryChanged(
+            LauncherShellAction.AppDrawerProfileFilterSelected(AppDrawerProfileFilter.WORK),
+        )
+
+        repository.apps =
+            listOf(
+                app(label = "Camera", profile = AppProfile.personal()),
+                app(label = "Sheets", profile = AppProfile.work()),
+            )
+        viewModel.refreshInstalledApps()
+
+        assertEquals(AppDrawerProfileFilter.WORK, viewModel.state.value.appDrawerProfileFilter)
+        assertEquals(listOf("Sheets"), viewModel.state.value.appDrawerApps.map { app -> app.label })
+    }
+
     private class FakeFirstRunRepository : FirstRunRepository {
         override fun isFirstRunComplete(): Boolean = false
 
@@ -84,12 +163,14 @@ class LauncherShellAppDrawerViewModelTest {
     private fun app(
         label: String,
         visibility: AppVisibility = AppVisibility.VISIBLE,
+        profile: AppProfile = AppProfile.personal(),
     ): InstalledApp =
         InstalledApp(
             identity =
                 AppIdentity(
                     packageName = AppPackageName("com.riffle.${label.lowercase()}"),
                     activityName = AppActivityName(".MainActivity"),
+                    profile = profile,
                 ),
             label = label,
             visibility = visibility,

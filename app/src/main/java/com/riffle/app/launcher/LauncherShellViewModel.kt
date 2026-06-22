@@ -5,6 +5,8 @@ import com.riffle.core.domain.launcher.HomeRoleStatus
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.LauncherShellStateReducer
 import com.riffle.core.domain.launcher.ShellNavigationAction
+import com.riffle.core.domain.launcher.apps.AppDrawerProfileFilter
+import com.riffle.core.domain.launcher.apps.AppProfileType
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.apps.InstalledAppCatalog
 import com.riffle.core.domain.launcher.apps.InstalledAppRepository
@@ -112,7 +114,23 @@ class LauncherShellViewModel(
                 is LauncherShellAction.AppDrawerQueryChanged ->
                     mutableState.value.copy(
                         appDrawerQuery = action.query,
-                        appDrawerApps = appCatalog.searchApps(mutableState.value.installedApps, action.query),
+                        appDrawerApps =
+                            appCatalog.drawerApps(
+                                apps = mutableState.value.installedApps,
+                                query = action.query,
+                                profileFilter = mutableState.value.appDrawerProfileFilter,
+                            ),
+                    )
+
+                is LauncherShellAction.AppDrawerProfileFilterSelected ->
+                    mutableState.value.copy(
+                        appDrawerProfileFilter = action.filter,
+                        appDrawerApps =
+                            appCatalog.drawerApps(
+                                apps = mutableState.value.installedApps,
+                                query = mutableState.value.appDrawerQuery,
+                                profileFilter = action.filter,
+                            ),
                     )
 
                 is LauncherShellAction.SearchQueryChanged ->
@@ -257,9 +275,29 @@ private fun LauncherShellState.withInstalledApps(
     appCatalog.visibleApps(installedAppRepository.installedApps()).let { visibleApps ->
         copy(
             installedApps = visibleApps,
-            appDrawerApps = appCatalog.searchApps(visibleApps, appDrawerQuery),
+            appDrawerApps =
+                appCatalog.drawerApps(
+                    apps = visibleApps,
+                    query = appDrawerQuery,
+                    profileFilter = appDrawerProfileFilter,
+                ),
             searchResults = appCatalog.searchApps(visibleApps, searchQuery),
         )
+    }
+
+private fun InstalledAppCatalog.drawerApps(
+    apps: List<InstalledApp>,
+    query: String,
+    profileFilter: AppDrawerProfileFilter,
+): List<InstalledApp> =
+    searchApps(apps = apps, query = query)
+        .filter { app -> app.matches(profileFilter) }
+
+private fun InstalledApp.matches(profileFilter: AppDrawerProfileFilter): Boolean =
+    when (profileFilter) {
+        AppDrawerProfileFilter.ALL -> true
+        AppDrawerProfileFilter.PERSONAL -> identity.profile.type == AppProfileType.PERSONAL
+        AppDrawerProfileFilter.WORK -> identity.profile.type == AppProfileType.WORK
     }
 
 private fun LauncherShellState.withHomeLayout(
