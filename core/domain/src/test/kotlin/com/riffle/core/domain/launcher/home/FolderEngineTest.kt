@@ -200,6 +200,31 @@ class FolderEngineTest {
     }
 
     @Test
+    fun rejectsShortcutAlreadyElsewhereOnHome() {
+        val camera = appShortcut(id = "camera", placement = GridPlacement(cell = GridCell(column = 1, row = 0)))
+        val calendar =
+            appShortcut(id = "calendar", placement = GridPlacement(cell = GridCell(column = 0, row = 0)))
+                .copy(placement = null)
+        val folder =
+            FolderItem(
+                id = LauncherItemId("folder:tools"),
+                label = "Tools",
+                items = listOf(calendar),
+                placement = GridPlacement(cell = GridCell(column = 0, row = 0)),
+            )
+
+        val result =
+            engine.addShortcutToFolderOnSelectedPage(
+                layout = layoutWith(folder, camera),
+                folderId = folder.id,
+                shortcut = camera.copy(id = LauncherItemId("folder-camera"), placement = null),
+            )
+
+        val rejected = assertIs<FolderEditResult.Rejected>(result)
+        assertEquals(FolderEditRejectionReason.DUPLICATE_ITEM, rejected.reason)
+    }
+
+    @Test
     fun removesShortcutFromFolderOnSelectedPage() {
         val camera =
             appShortcut(id = "camera", placement = GridPlacement(cell = GridCell(column = 0, row = 0)))

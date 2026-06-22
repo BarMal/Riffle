@@ -140,6 +140,7 @@ private fun LauncherDestination(
         ShellDestination.APP_DRAWER ->
             AppDrawer(
                 apps = state.installedApps,
+                homeLayout = state.homeLayout,
                 notificationCountsByPackage = state.notificationCountsByPackage,
                 appIconLoader = appIconLoader,
                 onAction = onAction,
@@ -149,6 +150,7 @@ private fun LauncherDestination(
             SearchSurface(
                 query = state.searchQuery,
                 results = state.searchResults,
+                homeLayout = state.homeLayout,
                 notificationCountsByPackage = state.notificationCountsByPackage,
                 appIconLoader = appIconLoader,
                 onAction = onAction,

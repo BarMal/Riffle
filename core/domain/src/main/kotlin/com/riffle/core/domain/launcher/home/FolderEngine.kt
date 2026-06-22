@@ -69,6 +69,9 @@ class FolderEngine(
         layout.selectedPage.folder(folderId)
             ?.let { folder ->
                 when {
+                    layout.containsHomeApp(shortcut.appIdentity) ->
+                        FolderEditResult.Rejected(FolderEditRejectionReason.DUPLICATE_ITEM)
+
                     folder.items.any { item -> item.appIdentity == shortcut.appIdentity } ->
                         FolderEditResult.Rejected(FolderEditRejectionReason.DUPLICATE_ITEM)
 
