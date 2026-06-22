@@ -13,13 +13,14 @@ fun AppSearchField(
     query: String,
     onQueryChanged: (String) -> Unit,
     modifier: Modifier = Modifier,
+    label: String = "Search apps",
 ) {
     OutlinedTextField(
         modifier = modifier,
         value = query,
         onValueChange = onQueryChanged,
         singleLine = true,
-        label = { Text(text = "Search apps") },
+        label = { Text(text = label) },
         trailingIcon = {
             if (query.isNotEmpty()) {
                 IconButton(
