@@ -136,7 +136,23 @@ class LauncherShellViewModel(
                 is LauncherShellAction.SearchQueryChanged ->
                     mutableState.value.copy(
                         searchQuery = action.query,
-                        searchResults = appCatalog.searchApps(mutableState.value.installedApps, action.query),
+                        searchResults =
+                            appCatalog.filteredApps(
+                                apps = mutableState.value.installedApps,
+                                query = action.query,
+                                profileFilter = mutableState.value.searchProfileFilter,
+                            ),
+                    )
+
+                is LauncherShellAction.SearchProfileFilterSelected ->
+                    mutableState.value.copy(
+                        searchProfileFilter = action.filter,
+                        searchResults =
+                            appCatalog.filteredApps(
+                                apps = mutableState.value.installedApps,
+                                query = mutableState.value.searchQuery,
+                                profileFilter = action.filter,
+                            ),
                     )
 
                 else -> mutableState.value
@@ -281,7 +297,12 @@ private fun LauncherShellState.withInstalledApps(
                     query = appDrawerQuery,
                     profileFilter = appDrawerProfileFilter,
                 ),
-            searchResults = appCatalog.searchApps(visibleApps, searchQuery),
+            searchResults =
+                appCatalog.filteredApps(
+                    apps = visibleApps,
+                    query = searchQuery,
+                    profileFilter = searchProfileFilter,
+                ),
         )
     }
 
@@ -290,8 +311,20 @@ private fun InstalledAppCatalog.drawerApps(
     query: String,
     profileFilter: AppDrawerProfileFilter,
 ): List<InstalledApp> =
-    searchApps(apps = apps, query = query)
+    filteredApps(
+        apps = apps,
+        query = query,
+        profileFilter = profileFilter,
+    )
+
+private fun InstalledAppCatalog.filteredApps(
+    apps: List<InstalledApp>,
+    query: String,
+    profileFilter: AppDrawerProfileFilter,
+): List<InstalledApp> {
+    return searchApps(apps = apps, query = query)
         .filter { app -> app.matches(profileFilter) }
+}
 
 private fun InstalledApp.matches(profileFilter: AppDrawerProfileFilter): Boolean =
     when (profileFilter) {

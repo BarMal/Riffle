@@ -99,6 +99,10 @@ sealed interface LauncherShellAction {
 
     data class SearchQueryChanged(val query: String) : LauncherShellAction
 
+    data class SearchProfileFilterSelected(
+        val filter: AppDrawerProfileFilter,
+    ) : LauncherShellAction
+
     data class SelectWallpaperSource(val source: WallpaperSource) : LauncherShellAction
 
     data class SelectHomeSwipeGestureAction(

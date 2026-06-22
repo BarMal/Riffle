@@ -49,9 +49,9 @@ fun AppDrawer(
                 onQueryChanged = { value -> onAction(LauncherShellAction.AppDrawerQueryChanged(value)) },
             )
             Spacer(modifier = Modifier.height(12.dp))
-            AppDrawerProfileFilters(
+            AppProfileFilterChips(
                 selectedFilter = profileFilter,
-                onAction = onAction,
+                onFilterSelected = { filter -> onAction(LauncherShellAction.AppDrawerProfileFilterSelected(filter)) },
             )
             Spacer(modifier = Modifier.height(16.dp))
             AppList(
@@ -77,9 +77,9 @@ fun AppDrawer(
 }
 
 @Composable
-private fun AppDrawerProfileFilters(
+private fun AppProfileFilterChips(
     selectedFilter: AppDrawerProfileFilter,
-    onAction: (LauncherShellAction) -> Unit,
+    onFilterSelected: (AppDrawerProfileFilter) -> Unit,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -88,7 +88,7 @@ private fun AppDrawerProfileFilters(
         AppDrawerProfileFilter.entries.forEach { filter ->
             FilterChip(
                 selected = filter == selectedFilter,
-                onClick = { onAction(LauncherShellAction.AppDrawerProfileFilterSelected(filter)) },
+                onClick = { onFilterSelected(filter) },
                 label = { Text(text = filter.label) },
             )
         }
@@ -106,6 +106,7 @@ private val AppDrawerProfileFilter.label: String
 @Composable
 fun SearchSurface(
     query: String,
+    profileFilter: AppDrawerProfileFilter,
     results: List<InstalledApp>,
     homeLayout: HomeLayout,
     notificationCountsByPackage: Map<AppPackageName, Int>,
@@ -121,6 +122,11 @@ fun SearchSurface(
                 modifier = Modifier.fillMaxWidth(),
                 query = query,
                 onQueryChanged = { value -> onAction(LauncherShellAction.SearchQueryChanged(value)) },
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            AppProfileFilterChips(
+                selectedFilter = profileFilter,
+                onFilterSelected = { filter -> onAction(LauncherShellAction.SearchProfileFilterSelected(filter)) },
             )
             Spacer(modifier = Modifier.height(16.dp))
             AppList(

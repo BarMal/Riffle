@@ -25,6 +25,7 @@ data class LauncherShellState(
     val appDrawerProfileFilter: AppDrawerProfileFilter = AppDrawerProfileFilter.ALL,
     val appDrawerApps: List<InstalledApp> = emptyList(),
     val searchQuery: String = "",
+    val searchProfileFilter: AppDrawerProfileFilter = AppDrawerProfileFilter.ALL,
     val searchResults: List<InstalledApp> = emptyList(),
 ) {
     val shouldShowDefaultHomePrompt: Boolean =
