@@ -19,6 +19,7 @@ import com.riffle.app.launcher.apps.PackageManagerAppIconLoader
 import com.riffle.app.launcher.apps.PackageManagerInstalledAppRepository
 import com.riffle.app.launcher.handleNotificationAction
 import com.riffle.app.launcher.handleSettingsAction
+import com.riffle.app.launcher.isHomePageEditAction
 import com.riffle.app.launcher.notifications.AndroidNotificationAccessGateway
 import com.riffle.app.launcher.notifications.AndroidNotificationDismissalGateway
 import com.riffle.app.launcher.notifications.SharedPreferencesActiveNotificationRepository
@@ -119,22 +120,12 @@ class MainActivity : ComponentActivity() {
             ?: false
 
     private fun handleHomePageAction(action: LauncherShellAction): Boolean =
-        when (action) {
-            LauncherShellAction.EnterHomeEditMode,
-            LauncherShellAction.ExitHomeEditMode,
-            LauncherShellAction.AddHomePage,
-            LauncherShellAction.SelectPreviousHomePage,
-            LauncherShellAction.SelectNextHomePage,
-            LauncherShellAction.MoveSelectedHomePageLeft,
-            LauncherShellAction.MoveSelectedHomePageRight,
-            LauncherShellAction.DeleteSelectedHomePage,
-            -> {
-                shellViewModel.onHomePageEdited(action)
-                true
+        action.isHomePageEditAction()
+            .also { isHomePageEditAction ->
+                if (isHomePageEditAction) {
+                    shellViewModel.onHomePageEdited(action)
+                }
             }
-
-            else -> false
-        }
 
     private fun handleHomeShortcutAction(action: LauncherShellAction): Boolean =
         when (action) {

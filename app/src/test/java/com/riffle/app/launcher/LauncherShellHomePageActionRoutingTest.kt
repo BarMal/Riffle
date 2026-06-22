@@ -1,0 +1,52 @@
+package com.riffle.app.launcher
+
+import com.riffle.core.domain.launcher.apps.AppActivityName
+import com.riffle.core.domain.launcher.apps.AppIdentity
+import com.riffle.core.domain.launcher.apps.AppPackageName
+import com.riffle.core.domain.launcher.home.LauncherPageId
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+class LauncherShellHomePageActionRoutingTest {
+    @Test
+    fun identifiesEveryHomePageEditAction() {
+        val actions =
+            listOf(
+                LauncherShellAction.EnterHomeEditMode,
+                LauncherShellAction.ExitHomeEditMode,
+                LauncherShellAction.EnterHomePageOverview,
+                LauncherShellAction.AddHomePage,
+                LauncherShellAction.DuplicateSelectedHomePage,
+                LauncherShellAction.SelectPreviousHomePage,
+                LauncherShellAction.SelectNextHomePage,
+                LauncherShellAction.SelectHomePage(LauncherPageId("home")),
+                LauncherShellAction.MoveSelectedHomePageLeft,
+                LauncherShellAction.MoveSelectedHomePageRight,
+                LauncherShellAction.DeleteSelectedHomePage,
+            )
+
+        actions.forEach { action ->
+            assertTrue("$action should route to home page edits", action.isHomePageEditAction())
+        }
+    }
+
+    @Test
+    fun ignoresNonHomePageEditActions() {
+        val actions =
+            listOf(
+                LauncherShellAction.OpenAppDrawer,
+                LauncherShellAction.OpenSettings,
+                LauncherShellAction.LaunchApp(
+                    AppIdentity(
+                        packageName = AppPackageName("com.riffle.camera"),
+                        activityName = AppActivityName(".MainActivity"),
+                    ),
+                ),
+            )
+
+        actions.forEach { action ->
+            assertFalse("$action should not route to home page edits", action.isHomePageEditAction())
+        }
+    }
+}
