@@ -23,9 +23,9 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -150,7 +150,12 @@ private fun HomeToolbar(
     onAction: (LauncherShellAction) -> Unit,
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(24.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.72f))
+                .padding(6.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -329,12 +334,7 @@ private fun HomeShortcut(
                 iconLoader = appIconLoader,
                 modifier = Modifier.size(44.dp),
             )
-            Text(
-                modifier = Modifier.widthIn(max = 72.dp),
-                text = shortcut.label,
-                style = MaterialTheme.typography.labelSmall,
-                maxLines = 1,
-            )
+            WallpaperReadableLabel(text = shortcut.label)
         }
 
         if (isEditing) {
