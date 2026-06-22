@@ -143,7 +143,8 @@ private fun LauncherDestination(
 
         ShellDestination.APP_DRAWER ->
             AppDrawer(
-                apps = state.installedApps,
+                query = state.appDrawerQuery,
+                apps = state.appDrawerApps,
                 homeLayout = state.homeLayout,
                 notificationCountsByPackage = state.notificationCountsByPackage,
                 appIconLoader = appIconLoader,
@@ -205,6 +206,7 @@ private fun AppDrawerPreview() {
                 firstRunStatus = FirstRunStatus.COMPLETE,
                 destination = ShellDestination.APP_DRAWER,
                 installedApps = samplePreviewApps(),
+                appDrawerApps = samplePreviewApps(),
             ),
         onAction = {},
     )

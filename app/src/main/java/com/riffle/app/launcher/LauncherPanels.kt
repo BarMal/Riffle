@@ -29,6 +29,7 @@ import com.riffle.core.domain.launcher.settings.LauncherSettings
 
 @Composable
 fun AppDrawer(
+    query: String,
     apps: List<InstalledApp>,
     homeLayout: HomeLayout,
     notificationCountsByPackage: Map<AppPackageName, Int>,
@@ -39,18 +40,34 @@ fun AppDrawer(
         title = "Apps",
         onAction = onAction,
     ) {
-        AppList(
-            apps = apps,
-            emptyText = "No launchable apps found",
-            context =
-                AppListContext(
-                    homeLayout = homeLayout,
-                    notificationCountsByPackage = notificationCountsByPackage,
-                    appIconLoader = appIconLoader,
-                    onAction = onAction,
-                ),
-            showSections = true,
-        )
+        Column(modifier = Modifier.fillMaxSize()) {
+            OutlinedTextField(
+                modifier = Modifier.fillMaxWidth(),
+                value = query,
+                onValueChange = { value -> onAction(LauncherShellAction.AppDrawerQueryChanged(value)) },
+                singleLine = true,
+                label = { Text(text = "Search apps") },
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            AppList(
+                modifier = Modifier.weight(1f),
+                apps = apps,
+                emptyText =
+                    if (query.isBlank()) {
+                        "No launchable apps found"
+                    } else {
+                        "No matching apps"
+                    },
+                context =
+                    AppListContext(
+                        homeLayout = homeLayout,
+                        notificationCountsByPackage = notificationCountsByPackage,
+                        appIconLoader = appIconLoader,
+                        onAction = onAction,
+                    ),
+                showSections = true,
+            )
+        }
     }
 }
 

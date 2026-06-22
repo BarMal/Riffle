@@ -106,12 +106,23 @@ class LauncherShellViewModel(
                 )
     }
 
-    fun onSearchQueryChanged(query: String) {
+    fun onAppQueryChanged(action: LauncherShellAction) {
         mutableState.value =
-            mutableState.value.copy(
-                searchQuery = query,
-                searchResults = appCatalog.searchApps(mutableState.value.installedApps, query),
-            )
+            when (action) {
+                is LauncherShellAction.AppDrawerQueryChanged ->
+                    mutableState.value.copy(
+                        appDrawerQuery = action.query,
+                        appDrawerApps = appCatalog.searchApps(mutableState.value.installedApps, action.query),
+                    )
+
+                is LauncherShellAction.SearchQueryChanged ->
+                    mutableState.value.copy(
+                        searchQuery = action.query,
+                        searchResults = appCatalog.searchApps(mutableState.value.installedApps, action.query),
+                    )
+
+                else -> mutableState.value
+            }
     }
 
     fun onAddAppToHome(app: InstalledApp) {
@@ -246,6 +257,7 @@ private fun LauncherShellState.withInstalledApps(
     appCatalog.visibleApps(installedAppRepository.installedApps()).let { visibleApps ->
         copy(
             installedApps = visibleApps,
+            appDrawerApps = appCatalog.searchApps(visibleApps, appDrawerQuery),
             searchResults = appCatalog.searchApps(visibleApps, searchQuery),
         )
     }
