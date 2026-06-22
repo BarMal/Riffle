@@ -1,22 +1,17 @@
 package com.riffle.app.launcher
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -28,10 +23,7 @@ import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.home.HomeLayout
-import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.home.WallpaperSource
-import com.riffle.core.domain.launcher.home.containsHomeApp
-import com.riffle.core.domain.launcher.home.dockShortcutIdFor
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 
@@ -49,11 +41,15 @@ fun AppDrawer(
     ) {
         AppList(
             apps = apps,
-            homeLayout = homeLayout,
-            notificationCountsByPackage = notificationCountsByPackage,
-            appIconLoader = appIconLoader,
             emptyText = "No launchable apps found",
-            onAction = onAction,
+            context =
+                AppListContext(
+                    homeLayout = homeLayout,
+                    notificationCountsByPackage = notificationCountsByPackage,
+                    appIconLoader = appIconLoader,
+                    onAction = onAction,
+                ),
+            showSections = true,
         )
     }
 }
@@ -83,11 +79,14 @@ fun SearchSurface(
             AppList(
                 modifier = Modifier.weight(1f),
                 apps = results,
-                homeLayout = homeLayout,
-                notificationCountsByPackage = notificationCountsByPackage,
-                appIconLoader = appIconLoader,
                 emptyText = "No matching apps",
-                onAction = onAction,
+                context =
+                    AppListContext(
+                        homeLayout = homeLayout,
+                        notificationCountsByPackage = notificationCountsByPackage,
+                        appIconLoader = appIconLoader,
+                        onAction = onAction,
+                    ),
             )
         }
     }
@@ -224,117 +223,6 @@ private val NotificationAccessStatus.label: String
             NotificationAccessStatus.GRANTED -> "Allowed"
             NotificationAccessStatus.NOT_GRANTED -> "Not allowed"
         }
-
-@Composable
-private fun AppList(
-    apps: List<InstalledApp>,
-    homeLayout: HomeLayout,
-    notificationCountsByPackage: Map<AppPackageName, Int>,
-    appIconLoader: AppIconLoader,
-    emptyText: String,
-    onAction: (LauncherShellAction) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    if (apps.isEmpty()) {
-        Box(
-            modifier = modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                text = emptyText,
-                style = MaterialTheme.typography.bodyLarge,
-            )
-        }
-    } else {
-        LazyColumn(
-            modifier = modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            items(
-                items = apps,
-                key = { app -> app.drawerKey },
-            ) { app ->
-                AppDrawerRow(
-                    app = app,
-                    isOnHome = homeLayout.containsHomeApp(app.identity),
-                    dockItemId = homeLayout.dock.dockShortcutIdFor(app.identity),
-                    notificationCount = notificationCountsByPackage[app.identity.packageName] ?: 0,
-                    appIconLoader = appIconLoader,
-                    onAction = onAction,
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun AppDrawerRow(
-    app: InstalledApp,
-    isOnHome: Boolean,
-    dockItemId: LauncherItemId?,
-    notificationCount: Int,
-    appIconLoader: AppIconLoader,
-    onAction: (LauncherShellAction) -> Unit,
-) {
-    Row(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .defaultMinSize(minHeight = 56.dp)
-                .clickable { onAction(LauncherShellAction.LaunchApp(app.identity)) }
-                .padding(horizontal = 2.dp, vertical = 4.dp),
-        horizontalArrangement = Arrangement.spacedBy(14.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        LauncherAppIcon(
-            identity = app.identity,
-            label = app.label,
-            iconLoader = appIconLoader,
-            modifier = Modifier.launcherIconSize(),
-            shape = CircleShape,
-        )
-        Column(
-            modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.Center,
-        ) {
-            Text(
-                text = app.label,
-                style = MaterialTheme.typography.bodyLarge,
-            )
-            Text(
-                text = app.identity.packageName.value,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        if (notificationCount > 0) {
-            Text(
-                text = notificationCount.toString(),
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.primary,
-            )
-        }
-        TextButton(
-            enabled = !isOnHome,
-            onClick = { onAction(LauncherShellAction.AddAppToHome(app)) },
-        ) {
-            Text(text = if (isOnHome) "Added" else "Add")
-        }
-        TextButton(
-            onClick = {
-                when (dockItemId) {
-                    null -> onAction(LauncherShellAction.AddAppToDock(app))
-                    else -> onAction(LauncherShellAction.RemoveDockShortcut(dockItemId))
-                }
-            },
-        ) {
-            Text(text = if (dockItemId == null) "Dock" else "Undock")
-        }
-    }
-}
-
-private val InstalledApp.drawerKey: String
-    get() = "${identity.profile.id.value}:${identity.packageName.value}/${identity.activityName.value}"
 
 @Composable
 fun LauncherPanel(
