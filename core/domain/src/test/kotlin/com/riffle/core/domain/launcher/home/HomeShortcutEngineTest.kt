@@ -25,6 +25,58 @@ class HomeShortcutEngineTest {
     }
 
     @Test
+    fun rejectsDuplicateAppShortcutOnHomePages() {
+        val app = app(label = "Camera")
+        val layout =
+            layoutWith(
+                AppShortcutItem(
+                    id = LauncherItemId("camera"),
+                    appIdentity = app.identity,
+                    label = app.label,
+                    placement = GridPlacement(cell = GridCell(column = 0, row = 0)),
+                ),
+            )
+
+        val result = engine.addAppToSelectedPage(layout = layout, app = app)
+
+        val rejected = assertIs<HomeShortcutResult.Rejected>(result)
+        assertEquals(PlacementRejectionReason.DUPLICATE_APP, rejected.reason)
+    }
+
+    @Test
+    fun rejectsDuplicateAppShortcutAlreadyInsideHomeFolder() {
+        val app = app(label = "Camera")
+        val layout =
+            HomeLayoutDefaults.standard().copy(
+                pages =
+                    listOf(
+                        HomeLayoutDefaults.standard().selectedPage.copy(
+                            items =
+                                listOf(
+                                    FolderItem(
+                                        id = LauncherItemId("folder"),
+                                        label = "Tools",
+                                        items =
+                                            listOf(
+                                                AppShortcutItem(
+                                                    id = LauncherItemId("folder-camera"),
+                                                    appIdentity = app.identity,
+                                                    label = app.label,
+                                                ),
+                                            ),
+                                    ),
+                                ),
+                        ),
+                    ),
+            )
+
+        val result = engine.addAppToSelectedPage(layout = layout, app = app)
+
+        val rejected = assertIs<HomeShortcutResult.Rejected>(result)
+        assertEquals(PlacementRejectionReason.DUPLICATE_APP, rejected.reason)
+    }
+
+    @Test
     fun rejectsWhenSelectedPageHasNoAvailableCells() {
         val fullPage =
             LauncherPage(

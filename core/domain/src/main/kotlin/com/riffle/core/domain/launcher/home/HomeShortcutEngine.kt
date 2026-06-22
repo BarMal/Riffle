@@ -10,14 +10,26 @@ class HomeShortcutEngine(
         layout: HomeLayout,
         app: InstalledApp,
     ): HomeShortcutResult =
-        appShortcutFor(app = app, layout = layout).let { shortcut ->
-            when (val result = gridPlacementEngine.placeItemInFirstAvailableCell(layout.selectedPage, shortcut)) {
-                is PlaceLauncherItemResult.Placed ->
-                    HomeShortcutResult.Updated(layout.withUpdatedSelectedPage(result.page))
+        when {
+            layout.containsHomeApp(app.identity) ->
+                HomeShortcutResult.Rejected(PlacementRejectionReason.DUPLICATE_APP)
 
-                is PlaceLauncherItemResult.Rejected ->
-                    HomeShortcutResult.Rejected(result.reason)
-            }
+            else ->
+                appShortcutFor(app = app, layout = layout).let { shortcut ->
+                    when (
+                        val result =
+                            gridPlacementEngine.placeItemInFirstAvailableCell(
+                                page = layout.selectedPage,
+                                item = shortcut,
+                            )
+                    ) {
+                        is PlaceLauncherItemResult.Placed ->
+                            HomeShortcutResult.Updated(layout.withUpdatedSelectedPage(result.page))
+
+                        is PlaceLauncherItemResult.Rejected ->
+                            HomeShortcutResult.Rejected(result.reason)
+                    }
+                }
         }
 
     fun removeShortcutFromSelectedPage(
@@ -111,6 +123,17 @@ class HomeShortcutEngine(
     private val AppIdentity.shortcutKey: String
         get() = "${profile.id.value}:${packageName.value}/${activityName.value}"
 }
+
+private fun HomeLayout.containsHomeApp(identity: AppIdentity): Boolean =
+    pages.any { page ->
+        page.items.any { item -> item.containsApp(identity) }
+    }
+
+private fun LauncherItem.containsApp(identity: AppIdentity): Boolean =
+    when (this) {
+        is AppShortcutItem -> appIdentity == identity
+        is FolderItem -> items.any { shortcut -> shortcut.appIdentity == identity }
+    }
 
 sealed interface HomeShortcutResult {
     data class Updated(val layout: HomeLayout) : HomeShortcutResult
