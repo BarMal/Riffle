@@ -48,6 +48,7 @@ import com.riffle.core.domain.launcher.home.HomeEditMode
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeShortcutMoveDirection
 import com.riffle.core.domain.launcher.home.LauncherItem
+import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.home.LauncherPage
 import com.riffle.core.domain.launcher.settings.HomeSwipeGestureSettings
 import kotlin.math.roundToInt
@@ -62,7 +63,7 @@ fun StandardHome(
     onAction: (LauncherShellAction) -> Unit,
 ) {
     val isEditing = layout.editMode is HomeEditMode.EditingPage
-    val openedFolder = remember { mutableStateOf<FolderItem?>(null) }
+    val openedFolderId = remember { mutableStateOf<LauncherItemId?>(null) }
     val swipeThresholdPx = with(LocalDensity.current) { HOME_SWIPE_THRESHOLD_DP.dp.toPx() }
 
     Column(
@@ -88,7 +89,7 @@ fun StandardHome(
             isEditing = isEditing,
             notificationCountsByPackage = notificationCountsByPackage,
             appIconLoader = appIconLoader,
-            onFolderOpen = { folder -> openedFolder.value = folder },
+            onFolderOpen = { folder -> openedFolderId.value = folder.id },
             onAction = onAction,
             modifier =
                 Modifier
@@ -119,12 +120,12 @@ fun StandardHome(
             onAction = onAction,
         )
     }
-    openedFolder.value?.let { folder ->
+    layout.openedFolder(openedFolderId.value)?.let { folder ->
         FolderDialog(
             folder = folder,
             installedApps = installedApps,
             appIconLoader = appIconLoader,
-            onDismiss = { openedFolder.value = null },
+            onDismiss = { openedFolderId.value = null },
             onAction = onAction,
         )
     }

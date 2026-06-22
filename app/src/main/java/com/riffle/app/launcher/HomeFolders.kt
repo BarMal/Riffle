@@ -138,7 +138,6 @@ fun FolderDialog(
                             label = trimmedFolderName,
                         ),
                     )
-                    onDismiss()
                 },
             ) {
                 Text(text = "Save")
@@ -273,7 +272,6 @@ private fun FolderContentRows(
                                     itemId = shortcut.id,
                                 ),
                             )
-                            onDismiss()
                         },
                     ) {
                         Text(text = "Remove")
@@ -299,7 +297,6 @@ private fun FolderContentRows(
                             app = app,
                         ),
                     )
-                    onDismiss()
                 },
             )
         }
