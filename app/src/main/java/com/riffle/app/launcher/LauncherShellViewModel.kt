@@ -10,6 +10,8 @@ import com.riffle.core.domain.launcher.apps.InstalledAppCatalog
 import com.riffle.core.domain.launcher.apps.InstalledAppRepository
 import com.riffle.core.domain.launcher.home.DockEditResult
 import com.riffle.core.domain.launcher.home.DockEngine
+import com.riffle.core.domain.launcher.home.FolderEditResult
+import com.riffle.core.domain.launcher.home.FolderEngine
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
@@ -49,6 +51,7 @@ class LauncherShellViewModel(
     private val shortcutEngine = HomeShortcutEngine()
     private val homePageEngine = HomePageEngine()
     private val dockEngine = DockEngine()
+    private val folderEngine = FolderEngine()
 
     private val mutableState =
         MutableStateFlow(
@@ -126,9 +129,34 @@ class LauncherShellViewModel(
 
     fun onHomeShortcutEdited(action: LauncherShellAction) {
         mutableState.value =
-            when (val result = shortcutEngine.applyEdit(action = action, layout = mutableState.value.homeLayout)) {
-                is HomeShortcutResult.Updated -> mutableState.value.withHomeLayout(result.layout, homeLayoutRepository)
-                is HomeShortcutResult.Rejected -> mutableState.value
+            when (action) {
+                is LauncherShellAction.CreateHomeFolder ->
+                    when (
+                        val result =
+                            folderEngine.applyEdit(
+                                action = action,
+                                layout = mutableState.value.homeLayout,
+                            )
+                    ) {
+                        is FolderEditResult.Updated ->
+                            mutableState.value.withHomeLayout(result.layout, homeLayoutRepository)
+
+                        is FolderEditResult.Rejected -> mutableState.value
+                    }
+
+                else ->
+                    when (
+                        val result =
+                            shortcutEngine.applyEdit(
+                                action = action,
+                                layout = mutableState.value.homeLayout,
+                            )
+                    ) {
+                        is HomeShortcutResult.Updated ->
+                            mutableState.value.withHomeLayout(result.layout, homeLayoutRepository)
+
+                        is HomeShortcutResult.Rejected -> mutableState.value
+                    }
             }
     }
 
