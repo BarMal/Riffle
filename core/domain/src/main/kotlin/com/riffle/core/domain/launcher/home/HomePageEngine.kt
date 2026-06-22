@@ -49,6 +49,7 @@ class HomePageEngine {
                     layout.copy(
                         pages = remainingPages,
                         selectedPageId = selectedPageId,
+                        editMode = layout.editMode.afterPageDeleted(pageId = pageId, selectedPageId = selectedPageId),
                     ),
                 )
             }
@@ -107,6 +108,21 @@ class HomePageEngine {
                 .toList()
         }
 }
+
+private fun HomeEditMode.afterPageDeleted(
+    pageId: LauncherPageId,
+    selectedPageId: LauncherPageId,
+): HomeEditMode =
+    when (this) {
+        HomeEditMode.Browsing -> this
+        HomeEditMode.ManagingPages -> this
+        is HomeEditMode.EditingPage ->
+            if (this.pageId == pageId) {
+                HomeEditMode.EditingPage(pageId = selectedPageId)
+            } else {
+                this
+            }
+    }
 
 sealed interface HomePageEditResult {
     data class Updated(val layout: HomeLayout) : HomePageEditResult
