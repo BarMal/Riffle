@@ -140,6 +140,7 @@ class MainActivity : ComponentActivity() {
         when (action) {
             is LauncherShellAction.RemoveHomeShortcut,
             is LauncherShellAction.CreateHomeFolder,
+            is LauncherShellAction.RenameHomeFolder,
             is LauncherShellAction.MoveHomeShortcut,
             -> {
                 shellViewModel.onHomeShortcutEdited(action)

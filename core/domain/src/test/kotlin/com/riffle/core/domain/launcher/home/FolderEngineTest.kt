@@ -94,6 +94,57 @@ class FolderEngineTest {
         assertEquals(FolderEditRejectionReason.UNSUPPORTED_ITEM, rejected.reason)
     }
 
+    @Test
+    fun renamesFolderOnSelectedPage() {
+        val folder =
+            FolderItem(
+                id = LauncherItemId("folder:tools"),
+                label = "Folder",
+                items =
+                    listOf(
+                        appShortcut(id = "camera", placement = GridPlacement(cell = GridCell(column = 0, row = 0)))
+                            .copy(placement = null),
+                    ),
+                placement = GridPlacement(cell = GridCell(column = 0, row = 0)),
+            )
+        val layout = layoutWith(folder)
+
+        val result =
+            engine.renameFolderOnSelectedPage(
+                layout = layout,
+                itemId = folder.id,
+                label = " Tools ",
+            )
+
+        val updated = assertIs<FolderEditResult.Updated>(result)
+        val renamedFolder = assertIs<FolderItem>(updated.layout.selectedPage.items.single())
+        assertEquals("Tools", renamedFolder.label)
+    }
+
+    @Test
+    fun rejectsBlankFolderName() {
+        val folder =
+            FolderItem(
+                id = LauncherItemId("folder:tools"),
+                label = "Folder",
+                items =
+                    listOf(
+                        appShortcut(id = "camera", placement = GridPlacement(cell = GridCell(column = 0, row = 0)))
+                            .copy(placement = null),
+                    ),
+                placement = GridPlacement(cell = GridCell(column = 0, row = 0)),
+            )
+        val result =
+            engine.renameFolderOnSelectedPage(
+                layout = layoutWith(folder),
+                itemId = folder.id,
+                label = " ",
+            )
+
+        val rejected = assertIs<FolderEditResult.Rejected>(result)
+        assertEquals(FolderEditRejectionReason.INVALID_LABEL, rejected.reason)
+    }
+
     private fun layoutWith(vararg items: LauncherItem): HomeLayout =
         HomeLayoutDefaults.standard().copy(
             pages = listOf(HomeLayoutDefaults.standard().selectedPage.copy(items = items.toList())),

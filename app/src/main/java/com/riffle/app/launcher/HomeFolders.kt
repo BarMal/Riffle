@@ -16,9 +16,12 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -90,11 +93,20 @@ fun FolderDialog(
     onDismiss: () -> Unit,
     onAction: (LauncherShellAction) -> Unit,
 ) {
+    val folderName = remember(folder.id, folder.label) { mutableStateOf(folder.label) }
+    val trimmedFolderName = folderName.value.trim()
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(text = folder.label) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                OutlinedTextField(
+                    value = folderName.value,
+                    onValueChange = { value -> folderName.value = value },
+                    singleLine = true,
+                    label = { Text(text = "Name") },
+                )
                 folder.items.forEach { shortcut ->
                     FolderAppRow(
                         shortcut = shortcut,
@@ -110,6 +122,20 @@ fun FolderDialog(
         confirmButton = {
             TextButton(onClick = onDismiss) {
                 Text(text = "Close")
+            }
+            TextButton(
+                enabled = trimmedFolderName.isNotEmpty() && trimmedFolderName != folder.label,
+                onClick = {
+                    onAction(
+                        LauncherShellAction.RenameHomeFolder(
+                            itemId = folder.id,
+                            label = trimmedFolderName,
+                        ),
+                    )
+                    onDismiss()
+                },
+            ) {
+                Text(text = "Save")
             }
         },
     )

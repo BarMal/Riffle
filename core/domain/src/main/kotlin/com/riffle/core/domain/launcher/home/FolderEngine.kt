@@ -28,6 +28,39 @@ class FolderEngine(
             is FolderShortcutSelection.Rejected -> FolderEditResult.Rejected(selection.reason)
         }
 
+    fun renameFolderOnSelectedPage(
+        layout: HomeLayout,
+        itemId: LauncherItemId,
+        label: String,
+    ): FolderEditResult =
+        label.trim()
+            .takeIf { trimmedLabel -> trimmedLabel.isNotEmpty() }
+            ?.let { trimmedLabel ->
+                layout.selectedPage.items.firstOrNull { item -> item.id == itemId }
+                    ?.let { item ->
+                        when (item) {
+                            is FolderItem ->
+                                FolderEditResult.Updated(
+                                    layout.withUpdatedSelectedPage(
+                                        layout.selectedPage.copy(
+                                            items =
+                                                layout.selectedPage.items.map { existingItem ->
+                                                    when (existingItem.id) {
+                                                        itemId -> item.copy(label = trimmedLabel)
+                                                        else -> existingItem
+                                                    }
+                                                },
+                                        ),
+                                    ),
+                                )
+
+                            is AppShortcutItem -> FolderEditResult.Rejected(FolderEditRejectionReason.UNSUPPORTED_ITEM)
+                        }
+                    }
+                    ?: FolderEditResult.Rejected(FolderEditRejectionReason.ITEM_NOT_FOUND)
+            }
+            ?: FolderEditResult.Rejected(FolderEditRejectionReason.INVALID_LABEL)
+
     private fun createFolderFromShortcuts(
         layout: HomeLayout,
         folderId: LauncherItemId,
@@ -128,6 +161,7 @@ enum class FolderEditRejectionReason {
     NOT_ENOUGH_ITEMS,
     ITEM_NOT_FOUND,
     UNSUPPORTED_ITEM,
+    INVALID_LABEL,
     MISSING_PLACEMENT,
     OUT_OF_BOUNDS,
     COLLISION,
