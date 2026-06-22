@@ -5,11 +5,11 @@ import com.riffle.core.domain.launcher.apps.AppProfileType
 import com.riffle.core.domain.launcher.apps.InstalledApp
 
 fun InstalledApp.drawerSubtitle(): String =
-    identity.profile.drawerPrefix()
+    identity.profile.drawerProfilePrefix()
         ?.let { prefix -> "$prefix - ${identity.packageName.value}" }
         ?: identity.packageName.value
 
-private fun AppProfile.drawerPrefix(): String? =
+fun AppProfile.drawerProfilePrefix(): String? =
     when {
         type == AppProfileType.WORK -> "Work"
         id != AppProfile.personal().id -> "Personal"

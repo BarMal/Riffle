@@ -19,14 +19,20 @@ object AppDrawerSections {
             }
 
     private val InstalledApp.sectionTitle: String
-        get() =
-            label
-                .trim()
-                .firstOrNull()
-                ?.takeIf { character -> character.isLetter() }
-                ?.uppercaseChar()
-                ?.toString()
-                ?: OTHER_SECTION_TITLE
+        get() {
+            val letterSection =
+                label
+                    .trim()
+                    .firstOrNull()
+                    ?.takeIf { character -> character.isLetter() }
+                    ?.uppercaseChar()
+                    ?.toString()
+                    ?: OTHER_SECTION_TITLE
+
+            return identity.profile.drawerProfilePrefix()
+                ?.let { prefix -> "$prefix - $letterSection" }
+                ?: letterSection
+        }
 }
 
 private const val OTHER_SECTION_TITLE = "#"
