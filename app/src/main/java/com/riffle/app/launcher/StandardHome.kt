@@ -65,6 +65,7 @@ fun StandardHome(
     appIconLoader: AppIconLoader,
     onAction: (LauncherShellAction) -> Unit,
 ) {
+    val visibleLayout = layout.visibleTo(installedApps)
     val isEditingPage = layout.editMode is HomeEditMode.EditingPage
     val isManagingPages = layout.editMode is HomeEditMode.ManagingPages
     val isEditing = isEditingPage || isManagingPages
@@ -85,7 +86,7 @@ fun StandardHome(
             onAction = onAction,
         )
         AnimatedWorkspaceGrid(
-            layout = layout,
+            layout = visibleLayout,
             isEditing = isEditingPage,
             notificationCountsByPackage = notificationCountsByPackage,
             appIconLoader = appIconLoader,
@@ -105,37 +106,37 @@ fun StandardHome(
         if (isEditingPage) {
             PageEditControls(
                 pageCount = layout.pages.size,
-                selectedPageIndex = layout.selectedPageIndex,
+                selectedPageIndex = visibleLayout.selectedPageIndex,
                 onAction = onAction,
             )
             HomeFolderEditControls(
-                layout = layout,
+                layout = visibleLayout,
                 onAction = onAction,
             )
         }
         if (isManagingPages) {
             PageOverviewControls(
-                layout = layout,
+                layout = visibleLayout,
                 onAction = onAction,
             )
         }
         PageIndicator(
-            pageCount = layout.pages.size,
-            selectedPageIndex = layout.selectedPageIndex,
+            pageCount = visibleLayout.pages.size,
+            selectedPageIndex = visibleLayout.selectedPageIndex,
         )
         Spacer(modifier = Modifier.height(20.dp))
         Dock(
-            dock = layout.dock,
+            dock = visibleLayout.dock,
             isEditing = isEditingPage,
             notificationCountsByPackage = notificationCountsByPackage,
             appIconLoader = appIconLoader,
             onAction = onAction,
         )
     }
-    layout.openedFolder(openedFolderId.value)?.let { folder ->
+    visibleLayout.openedFolder(openedFolderId.value)?.let { folder ->
         FolderDialog(
             folder = folder,
-            layout = layout,
+            layout = visibleLayout,
             installedApps = installedApps,
             appIconLoader = appIconLoader,
             onDismiss = { openedFolderId.value = null },
