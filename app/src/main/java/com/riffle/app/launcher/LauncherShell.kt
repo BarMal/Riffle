@@ -17,11 +17,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.RiffleProduct
@@ -33,6 +36,7 @@ import com.riffle.core.domain.launcher.apps.AppActivityName
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.InstalledApp
+import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClassClassifier
 import com.riffle.core.domain.launcher.home.WallpaperSource
 
 @Composable
@@ -42,6 +46,15 @@ fun LauncherShell(
     onAction: (LauncherShellAction) -> Unit,
 ) {
     val state by viewModel.state.collectAsState()
+    val configuration = LocalConfiguration.current
+    val deviceClass =
+        remember(configuration.screenWidthDp) {
+            HomeLayoutDeviceClassClassifier().classify(configuration.screenWidthDp)
+        }
+
+    LaunchedEffect(deviceClass) {
+        onAction(LauncherShellAction.SelectHomeLayoutDeviceClass(deviceClass))
+    }
 
     LauncherShellContent(
         state = state,
