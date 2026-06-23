@@ -16,6 +16,7 @@ import com.riffle.app.launcher.SharedPreferencesFirstRunRepository
 import com.riffle.app.launcher.SharedPreferencesHomeLayoutRepository
 import com.riffle.app.launcher.SharedPreferencesLauncherSettingsRepository
 import com.riffle.app.launcher.apps.AndroidAppLauncher
+import com.riffle.app.launcher.apps.AndroidAppShortcutRepository
 import com.riffle.app.launcher.apps.PackageManagerAppIconLoader
 import com.riffle.app.launcher.apps.PackageManagerInstalledAppRepository
 import com.riffle.app.launcher.handleNotificationAction
@@ -30,7 +31,11 @@ class MainActivity : ComponentActivity() {
     private val shellViewModel: LauncherShellViewModel by viewModels {
         LauncherShellViewModelFactory(
             firstRunRepository = SharedPreferencesFirstRunRepository(this),
-            installedAppRepository = PackageManagerInstalledAppRepository(packageManager),
+            installedAppRepository =
+                PackageManagerInstalledAppRepository(
+                    packageManager = packageManager,
+                    appShortcutRepository = AndroidAppShortcutRepository(this),
+                ),
             appVisibilityRepository = SharedPreferencesAppVisibilityRepository(this),
             homeLayoutRepository = SharedPreferencesHomeLayoutRepository(this),
             launcherSettingsRepository = SharedPreferencesLauncherSettingsRepository(this),
