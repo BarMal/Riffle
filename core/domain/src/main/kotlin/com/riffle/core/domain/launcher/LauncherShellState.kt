@@ -1,9 +1,8 @@
 package com.riffle.core.domain.launcher
 
 import com.riffle.core.domain.launcher.apps.AppDrawerProfileFilter
-import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
-import com.riffle.core.domain.launcher.apps.AppShortcut
+import com.riffle.core.domain.launcher.apps.AppShortcutsByApp
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
@@ -24,7 +23,7 @@ data class LauncherShellState(
     val notificationGroupsByApp: List<AppNotificationGroup> = emptyList(),
     val installedApps: List<InstalledApp> = emptyList(),
     val hiddenApps: List<InstalledApp> = emptyList(),
-    val appShortcutsByApp: Map<AppIdentity, List<AppShortcut>> = emptyMap(),
+    val appShortcutsByApp: AppShortcutsByApp = emptyMap(),
     val appDrawerQuery: String = "",
     val appDrawerProfileFilter: AppDrawerProfileFilter = AppDrawerProfileFilter.ALL,
     val appDrawerApps: List<InstalledApp> = emptyList(),

@@ -8,8 +8,8 @@ import com.riffle.core.domain.launcher.ShellNavigationAction
 import com.riffle.core.domain.launcher.apps.AppDrawerProfileFilter
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppProfileType
-import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.apps.AppShortcutRepository
+import com.riffle.core.domain.launcher.apps.AppShortcutsByApp
 import com.riffle.core.domain.launcher.apps.AppVisibilityRepository
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.apps.InstalledAppCatalog
@@ -312,7 +312,7 @@ class LauncherShellViewModel(
     }
 
     private object NoopAppShortcutRepository : AppShortcutRepository {
-        override fun shortcutsFor(apps: List<InstalledApp>): Map<AppIdentity, List<AppShortcut>> = emptyMap()
+        override fun shortcutsFor(apps: List<InstalledApp>): AppShortcutsByApp = emptyMap()
     }
 }
 

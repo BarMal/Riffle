@@ -8,6 +8,7 @@ import com.riffle.core.domain.launcher.apps.AppProfile
 import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.apps.AppShortcutId
 import com.riffle.core.domain.launcher.apps.AppShortcutRepository
+import com.riffle.core.domain.launcher.apps.AppShortcutsByApp
 import com.riffle.core.domain.launcher.apps.AppVisibility
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.apps.InstalledAppRepository
@@ -223,7 +224,7 @@ class LauncherShellAppDrawerViewModelTest {
 
         override fun installedApps(): List<InstalledApp> = apps
 
-        override fun shortcutsFor(apps: List<InstalledApp>): Map<AppIdentity, List<AppShortcut>> {
+        override fun shortcutsFor(apps: List<InstalledApp>): AppShortcutsByApp {
             requestedShortcutApps = apps
             return shortcuts
         }

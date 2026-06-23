@@ -12,6 +12,8 @@ data class AppShortcut(
 @JvmInline
 value class AppShortcutId(val value: String)
 
+typealias AppShortcutsByApp = Map<AppIdentity, List<AppShortcut>>
+
 fun interface AppShortcutRepository {
-    fun shortcutsFor(apps: List<InstalledApp>): Map<AppIdentity, List<AppShortcut>>
+    fun shortcutsFor(apps: List<InstalledApp>): AppShortcutsByApp
 }
