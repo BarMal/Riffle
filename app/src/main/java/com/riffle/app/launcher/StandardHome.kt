@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -278,8 +279,7 @@ private fun WorkspaceGrid(
         modifier = modifier,
         contentAlignment = Alignment.Center,
     ) {
-        val cellSpacing = 12.dp
-        val metrics = HomeGridLayoutMetrics(cellSpacingPx = with(LocalDensity.current) { cellSpacing.toPx() })
+        val metrics = HomeGridLayoutMetrics()
         val cellSize =
             with(LocalDensity.current) {
                 metrics
@@ -292,32 +292,43 @@ private fun WorkspaceGrid(
             }
 
         Column(
-            verticalArrangement = Arrangement.spacedBy(cellSpacing),
+            modifier = Modifier.fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             repeat(page.grid.rows) {
                 val row = it
 
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(cellSpacing),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     repeat(page.grid.columns) { column ->
                         val item = page.itemAt(cell = GridCell(column = column, row = row))
 
                         Box(
-                            modifier = Modifier.size(cellSize),
+                            modifier =
+                                Modifier
+                                    .weight(1f)
+                                    .fillMaxHeight(),
                             contentAlignment = Alignment.Center,
                         ) {
-                            if (item != null) {
-                                HomeGridItem(
-                                    item = item,
-                                    isEditing = isEditing,
-                                    notificationCount = notificationCountsByPackage.notificationCountFor(item),
-                                    appIconLoader = appIconLoader,
-                                    onFolderOpen = onFolderOpen,
-                                    onAction = onAction,
-                                )
+                            Box(
+                                modifier = Modifier.size(cellSize),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                if (item != null) {
+                                    HomeGridItem(
+                                        item = item,
+                                        isEditing = isEditing,
+                                        notificationCount = notificationCountsByPackage.notificationCountFor(item),
+                                        appIconLoader = appIconLoader,
+                                        onFolderOpen = onFolderOpen,
+                                        onAction = onAction,
+                                    )
+                                }
                             }
                         }
                     }
