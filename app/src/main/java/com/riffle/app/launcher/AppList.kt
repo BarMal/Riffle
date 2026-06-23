@@ -30,6 +30,7 @@ import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.home.containsHomeApp
+import com.riffle.core.domain.launcher.home.containsHomeAppShortcut
 import com.riffle.core.domain.launcher.home.dockShortcutIdFor
 
 @Composable
@@ -83,12 +84,25 @@ private fun LazyListScope.appRows(
         items = apps,
         key = { app -> app.drawerKey },
     ) { app ->
+        val shortcutItems =
+            context.appShortcutsByApp[app.identity]
+                .orEmpty()
+                .map { shortcut ->
+                    AppDrawerShortcutMenuItem(
+                        shortcut = shortcut,
+                        isOnHome =
+                            context.homeLayout.containsHomeAppShortcut(
+                                identity = shortcut.appIdentity,
+                                shortcutId = shortcut.id,
+                            ),
+                    )
+                }
         AppDrawerRow(
             app = app,
             isOnHome = context.homeLayout.containsHomeApp(app.identity),
             dockItemId = context.homeLayout.dock.dockShortcutIdFor(app.identity),
             notificationCount = context.notificationCountsByPackage[app.identity.packageName] ?: 0,
-            shortcuts = context.appShortcutsByApp[app.identity].orEmpty(),
+            shortcutItems = shortcutItems,
             appIconLoader = context.appIconLoader,
             onAction = context.onAction,
         )
@@ -115,7 +129,7 @@ private fun AppDrawerRow(
     isOnHome: Boolean,
     dockItemId: LauncherItemId?,
     notificationCount: Int,
-    shortcuts: List<AppShortcut>,
+    shortcutItems: List<AppDrawerShortcutMenuItem>,
     appIconLoader: AppIconLoader,
     onAction: (LauncherShellAction) -> Unit,
 ) {
@@ -167,7 +181,7 @@ private fun AppDrawerRow(
             app = app,
             isOnHome = isOnHome,
             dockItemId = dockItemId,
-            shortcuts = shortcuts,
+            shortcutItems = shortcutItems,
             isMenuExpanded = isMenuExpanded.value,
             onMenuExpandedChange = { isExpanded -> isMenuExpanded.value = isExpanded },
             onAction = onAction,
@@ -180,7 +194,7 @@ private fun AppDrawerRowActions(
     app: InstalledApp,
     isOnHome: Boolean,
     dockItemId: LauncherItemId?,
-    shortcuts: List<AppShortcut>,
+    shortcutItems: List<AppDrawerShortcutMenuItem>,
     isMenuExpanded: Boolean,
     onMenuExpandedChange: (Boolean) -> Unit,
     onAction: (LauncherShellAction) -> Unit,
@@ -203,7 +217,7 @@ private fun AppDrawerRowActions(
     }
     AppDrawerRowOverflowMenu(
         app = app,
-        shortcuts = shortcuts,
+        shortcutItems = shortcutItems,
         isExpanded = isMenuExpanded,
         onExpandedChange = onMenuExpandedChange,
         onAction = onAction,
@@ -213,7 +227,7 @@ private fun AppDrawerRowActions(
 @Composable
 private fun AppDrawerRowOverflowMenu(
     app: InstalledApp,
-    shortcuts: List<AppShortcut>,
+    shortcutItems: List<AppDrawerShortcutMenuItem>,
     isExpanded: Boolean,
     onExpandedChange: (Boolean) -> Unit,
     onAction: (LauncherShellAction) -> Unit,
@@ -226,11 +240,17 @@ private fun AppDrawerRowOverflowMenu(
             expanded = isExpanded,
             onDismissRequest = { onExpandedChange(false) },
         ) {
-            shortcuts.forEach { shortcut ->
+            shortcutItems.forEach { item ->
                 AppDrawerRowMenuItem(
-                    text = shortcut.menuLabel,
-                    enabled = shortcut.enabled,
-                    onClick = { onAction(LauncherShellAction.LaunchAppShortcut(shortcut)) },
+                    text = item.shortcut.menuLabel,
+                    enabled = item.shortcut.enabled,
+                    onClick = { onAction(LauncherShellAction.LaunchAppShortcut(item.shortcut)) },
+                    onExpandedChange = onExpandedChange,
+                )
+                AppDrawerRowMenuItem(
+                    text = item.addLabel,
+                    enabled = item.shortcut.enabled && !item.isOnHome,
+                    onClick = { onAction(LauncherShellAction.AddAppShortcutToHome(item.shortcut)) },
                     onExpandedChange = onExpandedChange,
                 )
             }
@@ -270,3 +290,11 @@ private val InstalledApp.drawerKey: String
 
 private val AppShortcut.menuLabel: String
     get() = longLabel ?: shortLabel
+
+private data class AppDrawerShortcutMenuItem(
+    val shortcut: AppShortcut,
+    val isOnHome: Boolean,
+) {
+    val addLabel: String
+        get() = if (isOnHome) "Added ${shortcut.menuLabel}" else "Add ${shortcut.menuLabel}"
+}

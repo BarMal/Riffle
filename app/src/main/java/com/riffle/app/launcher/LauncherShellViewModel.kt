@@ -424,6 +424,12 @@ private fun HomeShortcutEngine.applyEdit(
     layout: HomeLayout,
 ): HomeShortcutResult =
     when (action) {
+        is LauncherShellAction.AddAppShortcutToHome ->
+            addAppShortcutToSelectedPage(
+                layout = layout,
+                shortcut = action.shortcut,
+            )
+
         is LauncherShellAction.RemoveHomeShortcut ->
             removeShortcutFromSelectedPage(
                 layout = layout,

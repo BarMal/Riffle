@@ -65,6 +65,8 @@ sealed interface LauncherShellAction {
 
     data class AddAppToHome(val app: InstalledApp) : LauncherShellAction
 
+    data class AddAppShortcutToHome(val shortcut: AppShortcut) : LauncherShellAction
+
     data class AddAppToDock(val app: InstalledApp) : LauncherShellAction
 
     data class AppDrawerQueryChanged(val query: String) : LauncherShellAction
