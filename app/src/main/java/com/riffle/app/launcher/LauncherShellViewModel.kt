@@ -8,6 +8,8 @@ import com.riffle.core.domain.launcher.ShellNavigationAction
 import com.riffle.core.domain.launcher.apps.AppDrawerProfileFilter
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppProfileType
+import com.riffle.core.domain.launcher.apps.AppShortcut
+import com.riffle.core.domain.launcher.apps.AppShortcutRepository
 import com.riffle.core.domain.launcher.apps.AppVisibilityRepository
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.apps.InstalledAppCatalog
@@ -51,6 +53,8 @@ class LauncherShellViewModel(
     private val appNotificationCounter = AppNotificationCounter()
     private val appNotificationGrouper = AppNotificationGrouper()
     private val notificationStaleFilter = NotificationStaleFilter()
+    private val appShortcutRepository =
+        installedAppRepository as? AppShortcutRepository ?: NoopAppShortcutRepository
     private val shortcutEngine = HomeShortcutEngine()
     private val homePageEngine = HomePageEngine()
     private val dockEngine = DockEngine()
@@ -64,6 +68,7 @@ class LauncherShellViewModel(
                 firstRunRepository = firstRunRepository,
                 reducer = reducer,
             ).withInstalledApps(installedAppRepository, appVisibilityRepository, appCatalog)
+                .withAppShortcuts(appShortcutRepository)
                 .withNotificationState(
                     notificationRepository = notificationRepository,
                     appNotificationCounter = appNotificationCounter,
@@ -103,6 +108,7 @@ class LauncherShellViewModel(
         mutableState.value =
             mutableState.value
                 .withInstalledApps(installedAppRepository, appVisibilityRepository, appCatalog)
+                .withAppShortcuts(appShortcutRepository)
                 .withNotificationState(
                     notificationRepository = notificationRepository,
                     appNotificationCounter = appNotificationCounter,
@@ -163,6 +169,7 @@ class LauncherShellViewModel(
                     appVisibilityRepository.hideApp(action.identity)
                     mutableState.value
                         .withInstalledApps(installedAppRepository, appVisibilityRepository, appCatalog)
+                        .withAppShortcuts(appShortcutRepository)
                         .withNotificationState(
                             notificationRepository = notificationRepository,
                             appNotificationCounter = appNotificationCounter,
@@ -176,6 +183,7 @@ class LauncherShellViewModel(
                     appVisibilityRepository.showApp(action.identity)
                     mutableState.value
                         .withInstalledApps(installedAppRepository, appVisibilityRepository, appCatalog)
+                        .withAppShortcuts(appShortcutRepository)
                         .withNotificationState(
                             notificationRepository = notificationRepository,
                             appNotificationCounter = appNotificationCounter,
@@ -302,6 +310,10 @@ class LauncherShellViewModel(
 
         override fun showApp(identity: AppIdentity) = Unit
     }
+
+    private object NoopAppShortcutRepository : AppShortcutRepository {
+        override fun shortcutsFor(apps: List<InstalledApp>): Map<AppIdentity, List<AppShortcut>> = emptyMap()
+    }
 }
 
 private fun createInitialState(
@@ -349,6 +361,18 @@ private fun LauncherShellState.withInstalledApps(
                         query = state.searchQuery,
                         profileFilter = state.searchProfileFilter,
                     ),
+            )
+        }
+
+private fun LauncherShellState.withAppShortcuts(appShortcutRepository: AppShortcutRepository): LauncherShellState =
+    installedApps
+        .map { app -> app.identity }
+        .toSet()
+        .let { visibleAppIdentities ->
+            copy(
+                appShortcutsByApp =
+                    appShortcutRepository.shortcutsFor(installedApps)
+                        .filterKeys { identity -> identity in visibleAppIdentities },
             )
         }
 

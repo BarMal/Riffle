@@ -5,6 +5,9 @@ import com.riffle.core.domain.launcher.apps.AppDrawerProfileFilter
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppProfile
+import com.riffle.core.domain.launcher.apps.AppShortcut
+import com.riffle.core.domain.launcher.apps.AppShortcutId
+import com.riffle.core.domain.launcher.apps.AppShortcutRepository
 import com.riffle.core.domain.launcher.apps.AppVisibility
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.apps.InstalledAppRepository
@@ -69,6 +72,63 @@ class LauncherShellAppDrawerViewModelTest {
 
         assertEquals("cal", viewModel.state.value.appDrawerQuery)
         assertEquals(listOf("Calendar"), viewModel.state.value.appDrawerApps.map { app -> app.label })
+    }
+
+    @Test
+    fun loadsAppShortcutsForVisibleApps() {
+        val hidden = app(label = "Hidden", visibility = AppVisibility.HIDDEN)
+        val camera = app(label = "Camera")
+        val repository =
+            FakeInstalledAppRepository(
+                apps = listOf(hidden, camera),
+                shortcuts =
+                    mapOf(
+                        hidden.identity to listOf(shortcut(app = hidden, label = "Hidden action")),
+                        camera.identity to listOf(shortcut(app = camera, label = "Scan")),
+                    ),
+            )
+
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                installedAppRepository = repository,
+            )
+
+        assertEquals(listOf(camera), repository.requestedShortcutApps)
+        assertEquals(
+            listOf("Scan"),
+            viewModel.state.value.appShortcutsByApp.getValue(camera.identity).map { shortcut -> shortcut.shortLabel },
+        )
+        assertEquals(false, hidden.identity in viewModel.state.value.appShortcutsByApp)
+    }
+
+    @Test
+    fun refreshesAppShortcutsWithInstalledApps() {
+        val camera = app(label = "Camera")
+        val calendar = app(label = "Calendar")
+        val repository =
+            FakeInstalledAppRepository(
+                apps = listOf(camera),
+                shortcuts =
+                    mapOf(
+                        camera.identity to listOf(shortcut(app = camera, label = "Scan")),
+                        calendar.identity to listOf(shortcut(app = calendar, label = "Event")),
+                    ),
+            )
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                installedAppRepository = repository,
+            )
+
+        repository.apps = listOf(calendar)
+        viewModel.refreshInstalledApps()
+
+        assertEquals(listOf(calendar), repository.requestedShortcutApps)
+        assertEquals(
+            mapOf(calendar.identity to listOf(shortcut(app = calendar, label = "Event"))),
+            viewModel.state.value.appShortcutsByApp,
+        )
     }
 
     @Test
@@ -156,8 +216,17 @@ class LauncherShellAppDrawerViewModelTest {
 
     private class FakeInstalledAppRepository(
         var apps: List<InstalledApp> = emptyList(),
-    ) : InstalledAppRepository {
+        private val shortcuts: Map<AppIdentity, List<AppShortcut>> = emptyMap(),
+    ) : InstalledAppRepository,
+        AppShortcutRepository {
+        var requestedShortcutApps: List<InstalledApp> = emptyList()
+
         override fun installedApps(): List<InstalledApp> = apps
+
+        override fun shortcutsFor(apps: List<InstalledApp>): Map<AppIdentity, List<AppShortcut>> {
+            requestedShortcutApps = apps
+            return shortcuts
+        }
     }
 
     private fun app(
@@ -174,5 +243,15 @@ class LauncherShellAppDrawerViewModelTest {
                 ),
             label = label,
             visibility = visibility,
+        )
+
+    private fun shortcut(
+        app: InstalledApp,
+        label: String,
+    ): AppShortcut =
+        AppShortcut(
+            id = AppShortcutId("${app.identity.packageName.value}:$label"),
+            appIdentity = app.identity,
+            shortLabel = label,
         )
 }
