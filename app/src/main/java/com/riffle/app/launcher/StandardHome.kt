@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -275,42 +274,55 @@ private fun WorkspaceGrid(
     onAction: (LauncherShellAction) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(
+    BoxWithConstraints(
         modifier = modifier,
-        verticalArrangement = Arrangement.Center,
+        contentAlignment = Alignment.Center,
     ) {
-        val grid = page.grid
-        repeat(grid.rows) {
-            val row = it
+        val cellSpacing = 12.dp
+        val metrics = HomeGridLayoutMetrics(cellSpacingPx = with(LocalDensity.current) { cellSpacing.toPx() })
+        val cellSize =
+            with(LocalDensity.current) {
+                metrics
+                    .cellSizePx(
+                        grid = page.grid,
+                        maxWidthPx = maxWidth.toPx(),
+                        maxHeightPx = maxHeight.toPx(),
+                    )
+                    .toDp()
+            }
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                repeat(grid.columns) { column ->
-                    val item = page.itemAt(cell = GridCell(column = column, row = row))
+        Column(
+            verticalArrangement = Arrangement.spacedBy(cellSpacing),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            repeat(page.grid.rows) {
+                val row = it
 
-                    Box(
-                        modifier =
-                            Modifier
-                                .weight(1f)
-                                .aspectRatio(1f),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        if (item != null) {
-                            HomeGridItem(
-                                item = item,
-                                isEditing = isEditing,
-                                notificationCount = notificationCountsByPackage.notificationCountFor(item),
-                                appIconLoader = appIconLoader,
-                                onFolderOpen = onFolderOpen,
-                                onAction = onAction,
-                            )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(cellSpacing),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    repeat(page.grid.columns) { column ->
+                        val item = page.itemAt(cell = GridCell(column = column, row = row))
+
+                        Box(
+                            modifier = Modifier.size(cellSize),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            if (item != null) {
+                                HomeGridItem(
+                                    item = item,
+                                    isEditing = isEditing,
+                                    notificationCount = notificationCountsByPackage.notificationCountFor(item),
+                                    appIconLoader = appIconLoader,
+                                    onFolderOpen = onFolderOpen,
+                                    onAction = onAction,
+                                )
+                            }
                         }
                     }
                 }
             }
-            Spacer(modifier = Modifier.height(12.dp))
         }
     }
 }
