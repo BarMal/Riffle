@@ -176,6 +176,30 @@ class DockEngineTest {
         assertEquals(DockEditRejectionReason.CAPACITY_BELOW_ITEM_COUNT, rejected.reason)
     }
 
+    @Test
+    fun updatesDockIconSize() {
+        val result = engine.setDockIconSize(layout = HomeLayoutDefaults.standard(), sizeDp = 52)
+
+        val updated = assertIs<DockEditResult.Updated>(result)
+        assertEquals(52, updated.layout.dock.iconSizeDp)
+    }
+
+    @Test
+    fun rejectsDockIconSizeBelowMinimum() {
+        val result = engine.setDockIconSize(layout = HomeLayoutDefaults.standard(), sizeDp = MIN_DOCK_ICON_SIZE_DP - 1)
+
+        val rejected = assertIs<DockEditResult.Rejected>(result)
+        assertEquals(DockEditRejectionReason.INVALID_ICON_SIZE, rejected.reason)
+    }
+
+    @Test
+    fun rejectsDockIconSizeAboveMaximum() {
+        val result = engine.setDockIconSize(layout = HomeLayoutDefaults.standard(), sizeDp = MAX_DOCK_ICON_SIZE_DP + 1)
+
+        val rejected = assertIs<DockEditResult.Rejected>(result)
+        assertEquals(DockEditRejectionReason.INVALID_ICON_SIZE, rejected.reason)
+    }
+
     private fun layoutWithDockItems(vararg items: AppShortcutItem): HomeLayout =
         HomeLayoutDefaults.standard().copy(
             dock = DockModel(capacity = 5, items = items.toList()),

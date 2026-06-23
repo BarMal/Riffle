@@ -55,6 +55,7 @@ fun Dock(
                         .weight(1f)
                         .aspectRatio(1f),
                 shortcut = dock.items.getOrNull(index) as? AppShortcutItem,
+                iconSizeDp = dock.iconSizeDp,
                 isEditing = isEditing,
                 notificationCountsByPackage = notificationCountsByPackage,
                 appIconLoader = appIconLoader,
@@ -68,6 +69,7 @@ fun Dock(
 private fun DockSlot(
     modifier: Modifier,
     shortcut: AppShortcutItem?,
+    iconSizeDp: Int,
     isEditing: Boolean,
     notificationCountsByPackage: Map<AppPackageName, Int>,
     appIconLoader: AppIconLoader,
@@ -85,6 +87,7 @@ private fun DockSlot(
         if (shortcut != null) {
             DockShortcut(
                 shortcut = shortcut,
+                iconSizeDp = iconSizeDp,
                 isEditing = isEditing,
                 notificationCount = notificationCountsByPackage[shortcut.appIdentity.packageName] ?: 0,
                 appIconLoader = appIconLoader,
@@ -98,6 +101,7 @@ private fun DockSlot(
 @OptIn(ExperimentalFoundationApi::class)
 private fun BoxScope.DockShortcut(
     shortcut: AppShortcutItem,
+    iconSizeDp: Int,
     isEditing: Boolean,
     notificationCount: Int,
     appIconLoader: AppIconLoader,
@@ -109,7 +113,7 @@ private fun BoxScope.DockShortcut(
         iconLoader = appIconLoader,
         modifier =
             Modifier
-                .size(48.dp)
+                .size(iconSizeDp.dp)
                 .combinedClickable(
                     enabled = !isEditing,
                     onClick = { onAction(shortcut.launchAction()) },
