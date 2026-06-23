@@ -107,6 +107,21 @@ class DockEngine {
                 )
         }
 
+    fun setDockIconSize(
+        layout: HomeLayout,
+        sizeDp: Int,
+    ): DockEditResult =
+        when (sizeDp) {
+            in MIN_DOCK_ICON_SIZE_DP..MAX_DOCK_ICON_SIZE_DP ->
+                DockEditResult.Updated(
+                    layout.copy(
+                        dock = layout.dock.copy(iconSizeDp = sizeDp),
+                    ),
+                )
+
+            else -> DockEditResult.Rejected(DockEditRejectionReason.INVALID_ICON_SIZE)
+        }
+
     private fun appShortcutFor(
         app: InstalledApp,
         layout: HomeLayout,
@@ -149,6 +164,7 @@ enum class DockEditRejectionReason {
     INDEX_OUT_OF_BOUNDS,
     INVALID_CAPACITY,
     CAPACITY_BELOW_ITEM_COUNT,
+    INVALID_ICON_SIZE,
 }
 
 enum class DockItemMoveDirection(

@@ -69,6 +69,21 @@ class LauncherShellDockViewModelTest {
         assertEquals(savedLayout, repository.savedLayout)
     }
 
+    @Test
+    fun updatesDockIconSizeAndSavesLayout() {
+        val repository = FakeHomeLayoutRepository()
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                homeLayoutRepository = repository,
+            )
+
+        viewModel.onDockEdited(LauncherShellAction.SelectDockIconSize(sizeDp = 52))
+
+        assertEquals(52, viewModel.state.value.homeLayout.dock.iconSizeDp)
+        assertEquals(viewModel.state.value.homeLayout, repository.savedLayout)
+    }
+
     private class FakeFirstRunRepository : FirstRunRepository {
         override fun isFirstRunComplete(): Boolean = false
 

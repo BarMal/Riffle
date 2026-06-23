@@ -13,6 +13,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.home.DockModel
+import com.riffle.core.domain.launcher.home.MAX_DOCK_ICON_SIZE_DP
+import com.riffle.core.domain.launcher.home.MIN_DOCK_ICON_SIZE_DP
 
 @Composable
 internal fun DockSetting(
@@ -29,8 +31,55 @@ internal fun DockSetting(
             itemCount = dock.items.size,
             onAction = onAction,
         )
+        DockIconSizeSetting(
+            sizeDp = dock.iconSizeDp,
+            onAction = onAction,
+        )
     }
 }
+
+@Composable
+private fun DockIconSizeSetting(
+    sizeDp: Int,
+    onAction: (LauncherShellAction) -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
+            Text(
+                text = "Dock icon size",
+                style = MaterialTheme.typography.bodyLarge,
+            )
+            Text(
+                text = "$sizeDp dp",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            TextButton(
+                enabled = sizeDp > MIN_DOCK_ICON_SIZE_DP,
+                onClick = { onAction(LauncherShellAction.SelectDockIconSize(sizeDp - DOCK_ICON_SIZE_STEP_DP)) },
+            ) {
+                Text(text = "-")
+            }
+            TextButton(
+                enabled = sizeDp < MAX_DOCK_ICON_SIZE_DP,
+                onClick = { onAction(LauncherShellAction.SelectDockIconSize(sizeDp + DOCK_ICON_SIZE_STEP_DP)) },
+            ) {
+                Text(text = "+")
+            }
+        }
+    }
+}
+
+private const val DOCK_ICON_SIZE_STEP_DP = 4
 
 @Composable
 private fun DockVisibilitySetting(
