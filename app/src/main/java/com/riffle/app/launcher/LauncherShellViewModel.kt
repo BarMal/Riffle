@@ -68,6 +68,7 @@ class LauncherShellViewModel(
                 firstRunRepository = firstRunRepository,
                 reducer = reducer,
             ).withInstalledApps(installedAppRepository, appVisibilityRepository, appCatalog)
+                .withoutHiddenApps(homeLayoutRepository)
                 .withAppShortcuts(appShortcutRepository, appCatalog)
                 .withNotificationState(
                     notificationRepository = notificationRepository,
@@ -108,6 +109,7 @@ class LauncherShellViewModel(
         mutableState.value =
             mutableState.value
                 .withInstalledApps(installedAppRepository, appVisibilityRepository, appCatalog)
+                .withoutHiddenApps(homeLayoutRepository)
                 .withAppShortcuts(appShortcutRepository, appCatalog)
                 .withNotificationState(
                     notificationRepository = notificationRepository,
@@ -173,6 +175,7 @@ class LauncherShellViewModel(
                     appVisibilityRepository.hideApp(action.identity)
                     mutableState.value
                         .withInstalledApps(installedAppRepository, appVisibilityRepository, appCatalog)
+                        .withoutHiddenApps(homeLayoutRepository)
                         .withAppShortcuts(appShortcutRepository, appCatalog)
                         .withNotificationState(
                             notificationRepository = notificationRepository,
@@ -187,6 +190,7 @@ class LauncherShellViewModel(
                     appVisibilityRepository.showApp(action.identity)
                     mutableState.value
                         .withInstalledApps(installedAppRepository, appVisibilityRepository, appCatalog)
+                        .withoutHiddenApps(homeLayoutRepository)
                         .withAppShortcuts(appShortcutRepository, appCatalog)
                         .withNotificationState(
                             notificationRepository = notificationRepository,
