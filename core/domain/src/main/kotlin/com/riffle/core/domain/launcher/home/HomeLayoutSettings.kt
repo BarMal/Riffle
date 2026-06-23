@@ -18,6 +18,7 @@ data class HomeLayoutSettings(
 data class HomeLabelSettings(
     val backgroundAlphaPercent: Int = DEFAULT_HOME_LABEL_BACKGROUND_ALPHA_PERCENT,
     val textSizeSp: Int = DEFAULT_HOME_LABEL_TEXT_SIZE_SP,
+    val showText: Boolean = true,
 ) {
     companion object {
         fun standard(): HomeLabelSettings = HomeLabelSettings()

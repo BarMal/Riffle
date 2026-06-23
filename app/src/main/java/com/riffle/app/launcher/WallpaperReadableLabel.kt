@@ -20,6 +20,10 @@ fun WallpaperReadableLabel(
     text: String,
     settings: HomeLabelSettings,
 ) {
+    if (!settings.showText) {
+        return
+    }
+
     Text(
         modifier =
             Modifier

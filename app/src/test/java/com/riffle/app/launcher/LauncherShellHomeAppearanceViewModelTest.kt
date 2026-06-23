@@ -68,6 +68,21 @@ class LauncherShellHomeAppearanceViewModelTest {
         assertEquals(null, repository.savedLayout)
     }
 
+    @Test
+    fun updatesHomeLabelVisibilityAndSavesLayout() {
+        val repository = FakeHomeLayoutRepository()
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                homeLayoutRepository = repository,
+            )
+
+        viewModel.onHomePageEdited(LauncherShellAction.SelectHomeLabelTextVisible(visible = false))
+
+        assertEquals(false, viewModel.state.value.homeLayout.settings.labels.showText)
+        assertEquals(viewModel.state.value.homeLayout, repository.savedLayout)
+    }
+
     private class FakeFirstRunRepository : FirstRunRepository {
         override fun isFirstRunComplete(): Boolean = false
 

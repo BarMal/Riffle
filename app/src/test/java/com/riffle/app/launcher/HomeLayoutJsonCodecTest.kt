@@ -136,7 +136,7 @@ class HomeLayoutJsonCodecTest {
 
     @Test
     fun roundTripsHomeLabelSettings() {
-        val labelSettings = HomeLabelSettings(backgroundAlphaPercent = 75, textSizeSp = 14)
+        val labelSettings = HomeLabelSettings(backgroundAlphaPercent = 75, textSizeSp = 14, showText = false)
         val layout =
             HomeLayoutDefaults.standard().copy(
                 settings =
