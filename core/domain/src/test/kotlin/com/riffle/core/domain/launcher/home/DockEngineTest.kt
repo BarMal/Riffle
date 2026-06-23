@@ -150,6 +150,32 @@ class DockEngineTest {
         assertEquals(listOf(phone.id), updated.layout.dock.items.map { item -> item.id })
     }
 
+    @Test
+    fun updatesDockCapacity() {
+        val result = engine.setDockCapacity(layout = HomeLayoutDefaults.standard(), capacity = 7)
+
+        val updated = assertIs<DockEditResult.Updated>(result)
+        assertEquals(7, updated.layout.dock.capacity)
+    }
+
+    @Test
+    fun rejectsNegativeDockCapacity() {
+        val result = engine.setDockCapacity(layout = HomeLayoutDefaults.standard(), capacity = -1)
+
+        val rejected = assertIs<DockEditResult.Rejected>(result)
+        assertEquals(DockEditRejectionReason.INVALID_CAPACITY, rejected.reason)
+    }
+
+    @Test
+    fun rejectsDockCapacityBelowCurrentItemCount() {
+        val layout = layoutWithDockItems(appShortcut(id = "phone"), appShortcut(id = "camera"))
+
+        val result = engine.setDockCapacity(layout = layout, capacity = 1)
+
+        val rejected = assertIs<DockEditResult.Rejected>(result)
+        assertEquals(DockEditRejectionReason.CAPACITY_BELOW_ITEM_COUNT, rejected.reason)
+    }
+
     private fun layoutWithDockItems(vararg items: AppShortcutItem): HomeLayout =
         HomeLayoutDefaults.standard().copy(
             dock = DockModel(capacity = 5, items = items.toList()),

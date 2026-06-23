@@ -1,7 +1,15 @@
 package com.riffle.app.launcher
 
+import com.riffle.core.domain.launcher.apps.AppActivityName
+import com.riffle.core.domain.launcher.apps.AppIdentity
+import com.riffle.core.domain.launcher.apps.AppPackageName
+import com.riffle.core.domain.launcher.apps.InstalledApp
+import com.riffle.core.domain.launcher.apps.InstalledAppRepository
+import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.HomeLayout
+import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
+import com.riffle.core.domain.launcher.home.LauncherItemId
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -21,6 +29,46 @@ class LauncherShellDockViewModelTest {
         assertEquals(viewModel.state.value.homeLayout, repository.savedLayout)
     }
 
+    @Test
+    fun updatesDockCapacityAndSavesLayout() {
+        val repository = FakeHomeLayoutRepository()
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                homeLayoutRepository = repository,
+            )
+
+        viewModel.onDockEdited(LauncherShellAction.SelectDockCapacity(capacity = 7))
+
+        assertEquals(7, viewModel.state.value.homeLayout.dock.capacity)
+        assertEquals(viewModel.state.value.homeLayout, repository.savedLayout)
+    }
+
+    @Test
+    fun ignoresDockCapacityBelowCurrentItemCount() {
+        val phone = app(label = "Phone")
+        val camera = app(label = "Camera")
+        val savedLayout =
+            HomeLayoutDefaults.standard().copy(
+                dock =
+                    HomeLayoutDefaults.standard().dock.copy(
+                        items = listOf(appShortcut(app = phone), appShortcut(app = camera)),
+                    ),
+            )
+        val repository = FakeHomeLayoutRepository(savedLayout = savedLayout)
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                installedAppRepository = FakeInstalledAppRepository(listOf(phone, camera)),
+                homeLayoutRepository = repository,
+            )
+
+        viewModel.onDockEdited(LauncherShellAction.SelectDockCapacity(capacity = 1))
+
+        assertEquals(savedLayout, viewModel.state.value.homeLayout)
+        assertEquals(savedLayout, repository.savedLayout)
+    }
+
     private class FakeFirstRunRepository : FirstRunRepository {
         override fun isFirstRunComplete(): Boolean = false
 
@@ -36,4 +84,27 @@ class LauncherShellDockViewModelTest {
             savedLayout = layout
         }
     }
+
+    private class FakeInstalledAppRepository(
+        private val apps: List<InstalledApp>,
+    ) : InstalledAppRepository {
+        override fun installedApps(): List<InstalledApp> = apps
+    }
+
+    private fun app(label: String): InstalledApp =
+        InstalledApp(
+            identity =
+                AppIdentity(
+                    packageName = AppPackageName("com.riffle.${label.lowercase()}"),
+                    activityName = AppActivityName(".MainActivity"),
+                ),
+            label = label,
+        )
+
+    private fun appShortcut(app: InstalledApp): AppShortcutItem =
+        AppShortcutItem(
+            id = LauncherItemId("dock:${app.label.lowercase()}"),
+            appIdentity = app.identity,
+            label = app.label,
+        )
 }
