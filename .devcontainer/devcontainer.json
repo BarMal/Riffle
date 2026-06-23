@@ -1,0 +1,52 @@
+{
+  "name": "Riffle Android + Codex",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu-24.04",
+  "features": {
+    "ghcr.io/devcontainers/features/java:1": {
+      "version": "17",
+      "jdkDistro": "temurin"
+    },
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "lts"
+    },
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+  "hostRequirements": {
+    "cpus": 4,
+    "memory": "8gb",
+    "storage": "32gb"
+  },
+  "containerEnv": {
+    "ANDROID_HOME": "/opt/android-sdk",
+    "ANDROID_SDK_ROOT": "/opt/android-sdk",
+    "GRADLE_USER_HOME": "/home/vscode/.gradle"
+  },
+  "remoteEnv": {
+    "PATH": "${containerEnv:PATH}:/opt/android-sdk/cmdline-tools/latest/bin:/opt/android-sdk/platform-tools:/home/vscode/.npm-global/bin:/home/vscode/.local/bin"
+  },
+  "mounts": [
+    "source=riffle-gradle-cache,target=/home/vscode/.gradle,type=volume",
+    "source=riffle-android-sdk,target=/opt/android-sdk,type=volume"
+  ],
+  "postCreateCommand": "bash .devcontainer/postCreateCommand.sh",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "fwcd.kotlin",
+        "vscjava.vscode-gradle",
+        "redhat.java",
+        "ms-vscode.vscode-json"
+      ],
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "bash",
+        "java.configuration.runtimes": [
+          {
+            "name": "JavaSE-17",
+            "path": "/usr/local/sdkman/candidates/java/current",
+            "default": true
+          }
+        ]
+      }
+    }
+  }
+}
