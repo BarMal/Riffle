@@ -6,9 +6,11 @@ import com.riffle.core.domain.launcher.home.HomePageEditResult
 import com.riffle.core.domain.launcher.home.HomePageEngine
 import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.home.MAX_HOME_LABEL_BACKGROUND_ALPHA_PERCENT
+import com.riffle.core.domain.launcher.home.MAX_HOME_LABEL_MAX_LINES
 import com.riffle.core.domain.launcher.home.MAX_HOME_LABEL_MAX_WIDTH_DP
 import com.riffle.core.domain.launcher.home.MAX_HOME_LABEL_TEXT_SIZE_SP
 import com.riffle.core.domain.launcher.home.MIN_HOME_LABEL_BACKGROUND_ALPHA_PERCENT
+import com.riffle.core.domain.launcher.home.MIN_HOME_LABEL_MAX_LINES
 import com.riffle.core.domain.launcher.home.MIN_HOME_LABEL_MAX_WIDTH_DP
 import com.riffle.core.domain.launcher.home.MIN_HOME_LABEL_TEXT_SIZE_SP
 
@@ -38,6 +40,9 @@ internal fun HomePageEngine.applyHomeLayoutConfigurationEdit(
         is LauncherShellAction.SelectHomeLabelMaxWidth ->
             layout.withHomeLabelMaxWidth(action.maxWidthDp)
 
+        is LauncherShellAction.SelectHomeLabelMaxLines ->
+            layout.withHomeLabelMaxLines(action.maxLines)
+
         is LauncherShellAction.SelectLauncherViewMode ->
             HomePageEditResult.Updated(layout.withLauncherViewMode(action.mode))
 
@@ -52,6 +57,21 @@ private fun HomeLayout.withHomeLabelBackgroundAlpha(alphaPercent: Int): HomePage
                     settings =
                         settings.copy(
                             labels = settings.labels.copy(backgroundAlphaPercent = alphaPercent),
+                        ),
+                ),
+            )
+
+        else -> HomePageEditResult.Rejected(HomePageEditRejectionReason.INVALID_LABEL_SETTING)
+    }
+
+private fun HomeLayout.withHomeLabelMaxLines(maxLines: Int): HomePageEditResult =
+    when (maxLines) {
+        in MIN_HOME_LABEL_MAX_LINES..MAX_HOME_LABEL_MAX_LINES ->
+            HomePageEditResult.Updated(
+                copy(
+                    settings =
+                        settings.copy(
+                            labels = settings.labels.copy(maxLines = maxLines),
                         ),
                 ),
             )

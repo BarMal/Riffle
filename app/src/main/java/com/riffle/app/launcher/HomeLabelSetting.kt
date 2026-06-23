@@ -14,9 +14,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.home.HomeLabelSettings
 import com.riffle.core.domain.launcher.home.MAX_HOME_LABEL_BACKGROUND_ALPHA_PERCENT
+import com.riffle.core.domain.launcher.home.MAX_HOME_LABEL_MAX_LINES
 import com.riffle.core.domain.launcher.home.MAX_HOME_LABEL_MAX_WIDTH_DP
 import com.riffle.core.domain.launcher.home.MAX_HOME_LABEL_TEXT_SIZE_SP
 import com.riffle.core.domain.launcher.home.MIN_HOME_LABEL_BACKGROUND_ALPHA_PERCENT
+import com.riffle.core.domain.launcher.home.MIN_HOME_LABEL_MAX_LINES
 import com.riffle.core.domain.launcher.home.MIN_HOME_LABEL_MAX_WIDTH_DP
 import com.riffle.core.domain.launcher.home.MIN_HOME_LABEL_TEXT_SIZE_SP
 
@@ -39,6 +41,10 @@ internal fun HomeLabelSetting(
             onAction = onAction,
         )
         HomeLabelWidthSetting(
+            settings = settings,
+            onAction = onAction,
+        )
+        HomeLabelLineCountSetting(
             settings = settings,
             onAction = onAction,
         )
@@ -240,3 +246,44 @@ private fun HomeLabelWidthSetting(
 }
 
 private const val HOME_LABEL_WIDTH_STEP_DP = 8
+
+@Composable
+private fun HomeLabelLineCountSetting(
+    settings: HomeLabelSettings,
+    onAction: (LauncherShellAction) -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
+            Text(
+                text = "Label lines",
+                style = MaterialTheme.typography.bodyLarge,
+            )
+            Text(
+                text = settings.maxLines.toString(),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            TextButton(
+                enabled = settings.maxLines > MIN_HOME_LABEL_MAX_LINES,
+                onClick = { onAction(LauncherShellAction.SelectHomeLabelMaxLines(settings.maxLines - 1)) },
+            ) {
+                Text(text = "-")
+            }
+            TextButton(
+                enabled = settings.maxLines < MAX_HOME_LABEL_MAX_LINES,
+                onClick = { onAction(LauncherShellAction.SelectHomeLabelMaxLines(settings.maxLines + 1)) },
+            ) {
+                Text(text = "+")
+            }
+        }
+    }
+}

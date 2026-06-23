@@ -142,6 +142,7 @@ class HomeLayoutJsonCodecTest {
                 textSizeSp = 14,
                 showText = false,
                 maxWidthDp = 112,
+                maxLines = 2,
             )
         val layout =
             HomeLayoutDefaults.standard().copy(

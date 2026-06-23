@@ -114,6 +114,37 @@ class LauncherShellHomeAppearanceViewModelTest {
         assertEquals(null, repository.savedLayout)
     }
 
+    @Test
+    fun updatesHomeLabelMaxLinesAndSavesLayout() {
+        val repository = FakeHomeLayoutRepository()
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                homeLayoutRepository = repository,
+            )
+
+        viewModel.onHomePageEdited(LauncherShellAction.SelectHomeLabelMaxLines(maxLines = 2))
+
+        assertEquals(2, viewModel.state.value.homeLayout.settings.labels.maxLines)
+        assertEquals(viewModel.state.value.homeLayout, repository.savedLayout)
+    }
+
+    @Test
+    fun ignoresInvalidHomeLabelMaxLines() {
+        val repository = FakeHomeLayoutRepository()
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                homeLayoutRepository = repository,
+            )
+        val originalLayout = viewModel.state.value.homeLayout
+
+        viewModel.onHomePageEdited(LauncherShellAction.SelectHomeLabelMaxLines(maxLines = 0))
+
+        assertEquals(originalLayout, viewModel.state.value.homeLayout)
+        assertEquals(null, repository.savedLayout)
+    }
+
     private class FakeFirstRunRepository : FirstRunRepository {
         override fun isFirstRunComplete(): Boolean = false
 
