@@ -138,6 +138,18 @@ class DockEngineTest {
         assertEquals(DockEditRejectionReason.ITEM_NOT_FOUND, rejected.reason)
     }
 
+    @Test
+    fun updatesDockVisibilityWithoutChangingItems() {
+        val phone = appShortcut(id = "phone")
+        val layout = layoutWithDockItems(phone)
+
+        val result = engine.setDockEnabled(layout = layout, enabled = false)
+
+        val updated = assertIs<DockEditResult.Updated>(result)
+        assertEquals(false, updated.layout.dock.isEnabled)
+        assertEquals(listOf(phone.id), updated.layout.dock.items.map { item -> item.id })
+    }
+
     private fun layoutWithDockItems(vararg items: AppShortcutItem): HomeLayout =
         HomeLayoutDefaults.standard().copy(
             dock = DockModel(capacity = 5, items = items.toList()),

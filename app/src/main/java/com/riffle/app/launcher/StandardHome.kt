@@ -168,14 +168,16 @@ private fun StandardHomeColumn(
             pageCount = state.visibleLayout.pages.size,
             selectedPageIndex = state.visibleLayout.selectedPageIndex,
         )
-        Spacer(modifier = Modifier.height(20.dp))
-        Dock(
-            dock = state.visibleLayout.dock,
-            isEditing = state.editState.isEditingPage,
-            notificationCountsByPackage = state.notificationCountsByPackage,
-            appIconLoader = appIconLoader,
-            onAction = actions.onAction,
-        )
+        if (state.visibleLayout.dock.isEnabled) {
+            Spacer(modifier = Modifier.height(20.dp))
+            Dock(
+                dock = state.visibleLayout.dock,
+                isEditing = state.editState.isEditingPage,
+                notificationCountsByPackage = state.notificationCountsByPackage,
+                appIconLoader = appIconLoader,
+                onAction = actions.onAction,
+            )
+        }
     }
 }
 

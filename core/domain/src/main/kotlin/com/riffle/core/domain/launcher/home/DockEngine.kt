@@ -80,6 +80,16 @@ class DockEngine {
                 },
             )
 
+    fun setDockEnabled(
+        layout: HomeLayout,
+        enabled: Boolean,
+    ): DockEditResult =
+        DockEditResult.Updated(
+            layout.copy(
+                dock = layout.dock.copy(isEnabled = enabled),
+            ),
+        )
+
     private fun appShortcutFor(
         app: InstalledApp,
         layout: HomeLayout,

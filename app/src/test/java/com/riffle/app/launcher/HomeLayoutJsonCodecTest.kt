@@ -157,6 +157,18 @@ class HomeLayoutJsonCodecTest {
     }
 
     @Test
+    fun roundTripsDockVisibility() {
+        val layout =
+            HomeLayoutDefaults.standard().copy(
+                dock = HomeLayoutDefaults.standard().dock.copy(isEnabled = false),
+            )
+
+        val decodedLayout = decodeHomeLayout(encodeHomeLayout(layout))
+
+        assertEquals(false, decodedLayout.dock.isEnabled)
+    }
+
+    @Test
     fun roundTripsLauncherViewMode() {
         val layout = HomeLayoutDefaults.standard().copy(viewMode = LauncherViewMode.HOME_SCREEN_LIBRARY)
 
@@ -282,6 +294,32 @@ class HomeLayoutJsonCodecTest {
             )
 
         assertEquals(WallpaperSettings.system(), decodedLayout.settings.wallpaper)
+    }
+
+    @Test
+    fun defaultsDockVisibilityWhenOlderJsonDoesNotHaveIt() {
+        val decodedLayout =
+            decodeHomeLayout(
+                """
+                {
+                  "selectedPageId": "home",
+                  "pages": [
+                    {
+                      "id": "home",
+                      "columns": 4,
+                      "rows": 5,
+                      "items": []
+                    }
+                  ],
+                  "dock": {
+                    "capacity": 5,
+                    "items": []
+                  }
+                }
+                """.trimIndent(),
+            )
+
+        assertEquals(true, decodedLayout.dock.isEnabled)
     }
 
     private fun appShortcut(id: String): AppShortcutItem =

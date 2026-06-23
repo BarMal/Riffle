@@ -163,6 +163,7 @@ class MainActivity : ComponentActivity() {
     private fun handleDockAction(action: LauncherShellAction): Boolean =
         when (action) {
             is LauncherShellAction.AddAppToDock,
+            is LauncherShellAction.SelectDockEnabled,
             is LauncherShellAction.RemoveDockShortcut,
             is LauncherShellAction.MoveDockShortcut,
             -> {
