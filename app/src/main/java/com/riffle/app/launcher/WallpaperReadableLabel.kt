@@ -34,7 +34,7 @@ fun WallpaperReadableLabel(
         text = text,
         style = MaterialTheme.typography.labelSmall.copy(fontSize = settings.textSizeSp.sp),
         color = Color.White,
-        maxLines = 1,
+        maxLines = settings.maxLines,
         textAlign = TextAlign.Center,
     )
 }

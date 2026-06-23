@@ -20,6 +20,7 @@ data class HomeLabelSettings(
     val textSizeSp: Int = DEFAULT_HOME_LABEL_TEXT_SIZE_SP,
     val showText: Boolean = true,
     val maxWidthDp: Int = DEFAULT_HOME_LABEL_MAX_WIDTH_DP,
+    val maxLines: Int = DEFAULT_HOME_LABEL_MAX_LINES,
 ) {
     companion object {
         fun standard(): HomeLabelSettings = HomeLabelSettings()
@@ -75,3 +76,6 @@ const val MAX_HOME_LABEL_TEXT_SIZE_SP = 16
 const val DEFAULT_HOME_LABEL_MAX_WIDTH_DP = 76
 const val MIN_HOME_LABEL_MAX_WIDTH_DP = 48
 const val MAX_HOME_LABEL_MAX_WIDTH_DP = 120
+const val DEFAULT_HOME_LABEL_MAX_LINES = 1
+const val MIN_HOME_LABEL_MAX_LINES = 1
+const val MAX_HOME_LABEL_MAX_LINES = 2

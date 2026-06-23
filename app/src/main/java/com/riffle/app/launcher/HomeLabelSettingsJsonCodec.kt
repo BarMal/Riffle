@@ -9,6 +9,7 @@ internal fun encodeLabels(settings: HomeLabelSettings): JSONObject =
         .put("textSizeSp", settings.textSizeSp)
         .put("showText", settings.showText)
         .put("maxWidthDp", settings.maxWidthDp)
+        .put("maxLines", settings.maxLines)
 
 internal fun JSONObject.toLabelSettings(defaults: HomeLabelSettings): HomeLabelSettings =
     HomeLabelSettings(
@@ -16,4 +17,5 @@ internal fun JSONObject.toLabelSettings(defaults: HomeLabelSettings): HomeLabelS
         textSizeSp = optInt("textSizeSp", defaults.textSizeSp),
         showText = optBoolean("showText", defaults.showText),
         maxWidthDp = optInt("maxWidthDp", defaults.maxWidthDp),
+        maxLines = optInt("maxLines", defaults.maxLines),
     )
