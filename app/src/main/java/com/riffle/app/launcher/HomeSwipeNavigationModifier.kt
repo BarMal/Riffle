@@ -12,7 +12,12 @@ internal fun Modifier.homeSwipeNavigation(
     if (!state.enabled) {
         this
     } else {
-        pointerInput(state.thresholdPx) {
+        pointerInput(
+            state.thresholdPx,
+            state.homeSwipeGestures,
+            state.selectedPageIndex,
+            state.pageCount,
+        ) {
             var horizontalDragPx = 0f
             var verticalDragPx = 0f
             val interpreter = HomeSwipeGestureInterpreter(thresholdPx = state.thresholdPx)
