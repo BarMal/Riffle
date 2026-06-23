@@ -122,6 +122,7 @@ fun SearchSurface(
 @Composable
 fun SettingsSurface(
     settings: LauncherSettings,
+    homeLayout: HomeLayout,
     notificationAccessStatus: NotificationAccessStatus,
     hiddenApps: List<InstalledApp>,
     onAction: (LauncherShellAction) -> Unit,
@@ -143,6 +144,14 @@ fun SettingsSurface(
             )
             WallpaperSourceSetting(
                 selectedSource = settings.appearance.wallpaper.source,
+                onAction = onAction,
+            )
+            Text(
+                text = "Home layout",
+                style = MaterialTheme.typography.titleMedium,
+            )
+            HomeGridSetting(
+                dimensions = homeLayout.settings.grid.dimensions,
                 onAction = onAction,
             )
             Text(

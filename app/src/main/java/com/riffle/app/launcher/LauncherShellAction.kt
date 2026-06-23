@@ -4,6 +4,7 @@ import com.riffle.core.domain.launcher.apps.AppDrawerProfileFilter
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.home.DockItemMoveDirection
+import com.riffle.core.domain.launcher.home.GridDimensions
 import com.riffle.core.domain.launcher.home.HomeShortcutMoveDirection
 import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.home.LauncherPageId
@@ -48,6 +49,8 @@ sealed interface LauncherShellAction {
     data object MoveSelectedHomePageRight : LauncherShellAction
 
     data object DeleteSelectedHomePage : LauncherShellAction
+
+    data class SelectHomeGridDimensions(val dimensions: GridDimensions) : LauncherShellAction
 
     data class LaunchApp(val identity: AppIdentity) : LauncherShellAction
 

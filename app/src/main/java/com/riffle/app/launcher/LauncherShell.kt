@@ -175,6 +175,7 @@ private fun LauncherDestination(
         ShellDestination.SETTINGS ->
             SettingsSurface(
                 settings = state.launcherSettings,
+                homeLayout = state.homeLayout,
                 notificationAccessStatus = state.notificationAccessStatus,
                 hiddenApps = state.hiddenApps,
                 onAction = onAction,

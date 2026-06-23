@@ -3,6 +3,7 @@ package com.riffle.app.launcher
 import com.riffle.core.domain.launcher.apps.AppActivityName
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
+import com.riffle.core.domain.launcher.home.GridDimensions
 import com.riffle.core.domain.launcher.home.LauncherPageId
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -24,6 +25,7 @@ class LauncherShellHomePageActionRoutingTest {
                 LauncherShellAction.MoveSelectedHomePageLeft,
                 LauncherShellAction.MoveSelectedHomePageRight,
                 LauncherShellAction.DeleteSelectedHomePage,
+                LauncherShellAction.SelectHomeGridDimensions(GridDimensions(columns = 5, rows = 6)),
             )
 
         actions.forEach { action ->
