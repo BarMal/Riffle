@@ -12,6 +12,7 @@ import com.riffle.core.domain.launcher.home.GridInsets
 import com.riffle.core.domain.launcher.home.GridPlacement
 import com.riffle.core.domain.launcher.home.GridSettings
 import com.riffle.core.domain.launcher.home.GridSpacing
+import com.riffle.core.domain.launcher.home.HomeLabelSettings
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.HomeLayoutKey
 import com.riffle.core.domain.launcher.home.HomeLayoutSet
@@ -131,6 +132,22 @@ class HomeLayoutJsonCodecTest {
         val decodedLayout = decodeHomeLayout(encodeHomeLayout(layout))
 
         assertEquals(WallpaperSource.SOLID_COLOR, decodedLayout.settings.wallpaper.source)
+    }
+
+    @Test
+    fun roundTripsHomeLabelSettings() {
+        val labelSettings = HomeLabelSettings(backgroundAlphaPercent = 75)
+        val layout =
+            HomeLayoutDefaults.standard().copy(
+                settings =
+                    HomeLayoutDefaults.standard().settings.copy(
+                        labels = labelSettings,
+                    ),
+            )
+
+        val decodedLayout = decodeHomeLayout(encodeHomeLayout(layout))
+
+        assertEquals(labelSettings, decodedLayout.settings.labels)
     }
 
     @Test
@@ -330,6 +347,32 @@ class HomeLayoutJsonCodecTest {
             )
 
         assertEquals(WallpaperSettings.system(), decodedLayout.settings.wallpaper)
+    }
+
+    @Test
+    fun defaultsHomeLabelSettingsWhenOlderJsonDoesNotHaveSettings() {
+        val decodedLayout =
+            decodeHomeLayout(
+                """
+                {
+                  "selectedPageId": "home",
+                  "pages": [
+                    {
+                      "id": "home",
+                      "columns": 4,
+                      "rows": 5,
+                      "items": []
+                    }
+                  ],
+                  "dock": {
+                    "capacity": 5,
+                    "items": []
+                  }
+                }
+                """.trimIndent(),
+            )
+
+        assertEquals(HomeLabelSettings.standard(), decodedLayout.settings.labels)
     }
 
     @Test

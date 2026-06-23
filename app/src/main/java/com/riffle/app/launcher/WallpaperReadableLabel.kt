@@ -12,15 +12,19 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.riffle.core.domain.launcher.home.HomeLabelSettings
 
 @Composable
-fun WallpaperReadableLabel(text: String) {
+fun WallpaperReadableLabel(
+    text: String,
+    settings: HomeLabelSettings,
+) {
     Text(
         modifier =
             Modifier
                 .widthIn(max = 76.dp)
                 .clip(RoundedCornerShape(6.dp))
-                .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.54f))
+                .background(MaterialTheme.colorScheme.scrim.copy(alpha = settings.backgroundAlphaPercent / 100f))
                 .padding(horizontal = 6.dp, vertical = 2.dp),
         text = text,
         style = MaterialTheme.typography.labelSmall,

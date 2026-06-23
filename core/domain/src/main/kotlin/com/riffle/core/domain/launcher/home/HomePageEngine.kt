@@ -226,6 +226,7 @@ enum class HomePageEditRejectionReason {
     INDEX_OUT_OF_BOUNDS,
     INVALID_GRID_DIMENSIONS,
     GRID_ITEMS_OUT_OF_BOUNDS,
+    INVALID_LABEL_SETTING,
 }
 
 private val GridDimensions.isValid: Boolean

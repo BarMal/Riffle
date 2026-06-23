@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -34,6 +33,7 @@ import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.FolderItem
+import com.riffle.core.domain.launcher.home.HomeLabelSettings
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.LauncherItem
 
@@ -43,6 +43,7 @@ fun HomeFolder(
     folder: FolderItem,
     isEditing: Boolean,
     notificationCount: Int,
+    labelSettings: HomeLabelSettings,
     appIconLoader: AppIconLoader,
     onFolderOpen: (FolderItem) -> Unit,
     onAction: (LauncherShellAction) -> Unit,
@@ -64,11 +65,9 @@ fun HomeFolder(
                 folder = folder,
                 appIconLoader = appIconLoader,
             )
-            Text(
-                modifier = Modifier.widthIn(max = 72.dp),
+            WallpaperReadableLabel(
                 text = folder.label,
-                style = MaterialTheme.typography.labelSmall,
-                maxLines = 1,
+                settings = labelSettings,
             )
         }
 

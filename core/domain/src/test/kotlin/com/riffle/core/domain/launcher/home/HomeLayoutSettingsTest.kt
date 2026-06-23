@@ -14,6 +14,7 @@ class HomeLayoutSettingsTest {
         assertEquals(GridSpacing(), settings.grid.cellSpacing)
         assertEquals(false, settings.grid.compactLibraryPages)
         assertEquals(WallpaperSettings.system(), settings.wallpaper)
+        assertEquals(HomeLabelSettings.standard(), settings.labels)
     }
 
     @Test

@@ -3,13 +3,23 @@ package com.riffle.core.domain.launcher.home
 data class HomeLayoutSettings(
     val grid: GridSettings,
     val wallpaper: WallpaperSettings = WallpaperSettings.system(),
+    val labels: HomeLabelSettings = HomeLabelSettings.standard(),
 ) {
     companion object {
         fun standardPhone(): HomeLayoutSettings =
             HomeLayoutSettings(
                 grid = GridSettings.standardPhone(),
                 wallpaper = WallpaperSettings.system(),
+                labels = HomeLabelSettings.standard(),
             )
+    }
+}
+
+data class HomeLabelSettings(
+    val backgroundAlphaPercent: Int = DEFAULT_HOME_LABEL_BACKGROUND_ALPHA_PERCENT,
+) {
+    companion object {
+        fun standard(): HomeLabelSettings = HomeLabelSettings()
     }
 }
 
@@ -52,3 +62,7 @@ data class GridSpacing(
     val horizontal: Int = 0,
     val vertical: Int = 0,
 )
+
+const val DEFAULT_HOME_LABEL_BACKGROUND_ALPHA_PERCENT = 54
+const val MIN_HOME_LABEL_BACKGROUND_ALPHA_PERCENT = 0
+const val MAX_HOME_LABEL_BACKGROUND_ALPHA_PERCENT = 100
