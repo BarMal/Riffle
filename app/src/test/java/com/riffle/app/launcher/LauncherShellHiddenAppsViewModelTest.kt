@@ -150,6 +150,77 @@ class LauncherShellHiddenAppsViewModelTest {
     }
 
     @Test
+    fun refreshPrunesRemovedHomeAppAndFreesGridCell() {
+        val camera = app(label = "Camera")
+        val maps = app(label = "Maps")
+        val installedAppRepository = FakeInstalledAppRepository(apps = listOf(camera, maps))
+        val homeLayoutRepository =
+            FakeHomeLayoutRepository(
+                savedLayout =
+                    HomeLayoutDefaults.standard().copy(
+                        pages =
+                            listOf(
+                                LauncherPage(
+                                    id = LauncherPageId("home"),
+                                    grid = GridDimensions(columns = 1, rows = 1),
+                                    items =
+                                        listOf(
+                                            shortcut(
+                                                id = "camera",
+                                                app = camera,
+                                                placement = GridPlacement(cell = GridCell(column = 0, row = 0)),
+                                            ),
+                                        ),
+                                ),
+                            ),
+                    ),
+            )
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                installedAppRepository = installedAppRepository,
+                homeLayoutRepository = homeLayoutRepository,
+            )
+
+        installedAppRepository.apps = listOf(maps)
+        viewModel.refreshInstalledApps()
+        viewModel.onAddAppToHome(maps)
+
+        val shortcut = viewModel.state.value.homeLayout.selectedPage.items.single() as AppShortcutItem
+        assertEquals(maps.identity, shortcut.appIdentity)
+        assertEquals(GridPlacement(cell = GridCell(column = 0, row = 0)), shortcut.placement)
+        assertEquals(viewModel.state.value.homeLayout, homeLayoutRepository.savedLayout)
+    }
+
+    @Test
+    fun refreshPrunesRemovedDockAppAndFreesDockSlot() {
+        val phone = app(label = "Phone")
+        val camera = app(label = "Camera")
+        val installedAppRepository = FakeInstalledAppRepository(apps = listOf(phone, camera))
+        val homeLayoutRepository =
+            FakeHomeLayoutRepository(
+                savedLayout =
+                    HomeLayoutDefaults.standard().copy(
+                        dock = DockModel(capacity = 1, items = listOf(shortcut(id = "phone", app = phone))),
+                    ),
+            )
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                installedAppRepository = installedAppRepository,
+                homeLayoutRepository = homeLayoutRepository,
+            )
+
+        installedAppRepository.apps = listOf(camera)
+        viewModel.refreshInstalledApps()
+        viewModel.onDockEdited(LauncherShellAction.AddAppToDock(camera))
+
+        val shortcut = viewModel.state.value.homeLayout.dock.items.single() as AppShortcutItem
+        assertEquals(camera.identity, shortcut.appIdentity)
+        assertEquals(viewModel.state.value.homeLayout, homeLayoutRepository.savedLayout)
+    }
+
+    @Test
     fun unhidesAppAndRefreshesLauncherAppSurfaces() {
         val camera = app(label = "Camera")
         val docs = app(label = "Docs")
