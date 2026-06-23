@@ -6,7 +6,11 @@ import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.FolderItem
 import com.riffle.core.domain.launcher.home.GridCell
+import com.riffle.core.domain.launcher.home.GridDimensions
+import com.riffle.core.domain.launcher.home.GridInsets
 import com.riffle.core.domain.launcher.home.GridPlacement
+import com.riffle.core.domain.launcher.home.GridSettings
+import com.riffle.core.domain.launcher.home.GridSpacing
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.home.WallpaperSettings
@@ -97,6 +101,60 @@ class HomeLayoutJsonCodecTest {
 
         val decodedLayout = decodeHomeLayout(encodeHomeLayout(layout))
 
+        assertEquals(WallpaperSource.SOLID_COLOR, decodedLayout.settings.wallpaper.source)
+    }
+
+    @Test
+    fun roundTripsGridSettings() {
+        val gridSettings =
+            GridSettings(
+                dimensions = GridDimensions(columns = 5, rows = 6),
+                margin = GridInsets(start = 1, top = 2, end = 3, bottom = 4),
+                padding = GridInsets(start = 5, top = 6, end = 7, bottom = 8),
+                cellSpacing = GridSpacing(horizontal = 9, vertical = 10),
+            )
+        val layout =
+            HomeLayoutDefaults.standard().copy(
+                settings =
+                    HomeLayoutDefaults.standard().settings.copy(
+                        grid = gridSettings,
+                    ),
+            )
+
+        val decodedLayout = decodeHomeLayout(encodeHomeLayout(layout))
+
+        assertEquals(gridSettings, decodedLayout.settings.grid)
+    }
+
+    @Test
+    fun defaultsGridSettingsWhenOlderJsonOnlyHasWallpaperSettings() {
+        val decodedLayout =
+            decodeHomeLayout(
+                """
+                {
+                  "selectedPageId": "home",
+                  "settings": {
+                    "wallpaper": {
+                      "source": "SOLID_COLOR"
+                    }
+                  },
+                  "pages": [
+                    {
+                      "id": "home",
+                      "columns": 4,
+                      "rows": 5,
+                      "items": []
+                    }
+                  ],
+                  "dock": {
+                    "capacity": 5,
+                    "items": []
+                  }
+                }
+                """.trimIndent(),
+            )
+
+        assertEquals(HomeLayoutDefaults.standard().settings.grid, decodedLayout.settings.grid)
         assertEquals(WallpaperSource.SOLID_COLOR, decodedLayout.settings.wallpaper.source)
     }
 
