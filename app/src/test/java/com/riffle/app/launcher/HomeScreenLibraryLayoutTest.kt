@@ -113,6 +113,64 @@ class HomeScreenLibraryLayoutTest {
         assertEquals(calendar.identity, (libraryLayout.pages[1].items.single() as AppShortcutItem).appIdentity)
     }
 
+    @Test
+    fun removesGeneratedLibraryAppsWhenLeavingLibraryMode() {
+        val camera = app(label = "Camera")
+        val manualCalendar = app(label = "Calendar")
+        val manualShortcut =
+            AppShortcutItem(
+                id = LauncherItemId("manual-calendar"),
+                appIdentity = manualCalendar.identity,
+                label = manualCalendar.label,
+                placement = GridPlacement(cell = GridCell(column = 0, row = 0)),
+            )
+        val layout =
+            HomeLayoutDefaults.standard().copy(
+                viewMode = LauncherViewMode.HOME_SCREEN_LIBRARY,
+                pages =
+                    listOf(
+                        LauncherPage(
+                            id = LauncherPageId("home"),
+                            grid = GridDimensions(columns = 2, rows = 1),
+                            items = listOf(manualShortcut),
+                        ),
+                    ),
+            )
+
+        val cleanedLayout =
+            layout
+                .withHomeScreenLibraryApps(listOf(camera, manualCalendar))
+                .withoutHomeScreenLibraryApps()
+
+        assertEquals(listOf(manualCalendar.identity), cleanedLayout.selectedPage.items.appIdentities)
+    }
+
+    @Test
+    fun removesGeneratedAllAppsPagesWhenLeavingLibraryMode() {
+        val camera = app(label = "Camera")
+        val calendar = app(label = "Calendar")
+        val layout =
+            HomeLayoutDefaults.standard().copy(
+                viewMode = LauncherViewMode.HOME_SCREEN_LIBRARY,
+                pages =
+                    listOf(
+                        LauncherPage(
+                            id = LauncherPageId("home"),
+                            grid = GridDimensions(columns = 1, rows = 1),
+                        ),
+                    ),
+            )
+
+        val cleanedLayout =
+            layout
+                .withHomeScreenLibraryApps(listOf(camera, calendar))
+                .copy(selectedPageId = LauncherPageId("library:1"))
+                .withoutHomeScreenLibraryApps()
+
+        assertEquals(listOf(LauncherPageId("home")), cleanedLayout.pages.map { page -> page.id })
+        assertEquals(LauncherPageId("home"), cleanedLayout.selectedPageId)
+    }
+
     private fun app(label: String): InstalledApp =
         InstalledApp(
             identity =
@@ -122,4 +180,7 @@ class HomeScreenLibraryLayoutTest {
                 ),
             label = label,
         )
+
+    private val List<Any>.appIdentities: List<AppIdentity>
+        get() = filterIsInstance<AppShortcutItem>().map { item -> item.appIdentity }
 }

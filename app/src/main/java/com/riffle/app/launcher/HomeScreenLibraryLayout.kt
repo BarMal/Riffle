@@ -3,8 +3,11 @@ package com.riffle.app.launcher
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.home.AppShortcutItem
+import com.riffle.core.domain.launcher.home.FolderItem
 import com.riffle.core.domain.launcher.home.GridPlacementEngine
 import com.riffle.core.domain.launcher.home.HomeLayout
+import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
+import com.riffle.core.domain.launcher.home.LauncherItem
 import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.home.LauncherPage
 import com.riffle.core.domain.launcher.home.LauncherPageId
@@ -24,6 +27,22 @@ fun HomeLayout.withHomeScreenLibraryApps(apps: List<InstalledApp>): HomeLayout =
         LauncherViewMode.CARD_INTERFACE,
         -> this
     }
+
+fun HomeLayout.withoutHomeScreenLibraryApps(): HomeLayout {
+    val pagesWithoutLibraryItems =
+        pages
+            .filterNot { page -> page.type == LauncherPageType.AllApps }
+            .map { page -> page.copy(items = page.items.mapNotNull { item -> item.withoutLibraryApps() }) }
+            .ifEmpty { listOf(HomeLayoutDefaults.standard().selectedPage) }
+    val safeSelectedPageId =
+        pagesWithoutLibraryItems.firstOrNull { page -> page.id == selectedPageId }?.id
+            ?: pagesWithoutLibraryItems.first().id
+
+    return copy(
+        pages = pagesWithoutLibraryItems,
+        selectedPageId = safeSelectedPageId,
+    )
+}
 
 private fun HomeLayout.withLibraryApp(app: InstalledApp): HomeLayout =
     app.libraryShortcut()
@@ -88,5 +107,18 @@ private fun InstalledApp.libraryShortcut(): AppShortcutItem =
         label = label,
     )
 
+private fun LauncherItem.withoutLibraryApps(): LauncherItem? =
+    when (this) {
+        is AppShortcutItem -> takeUnless { item -> item.isLibraryApp }
+        is FolderItem ->
+            copy(items = items.filterNot { item -> item.isLibraryApp })
+                .takeIf { folder -> folder.items.isNotEmpty() }
+    }
+
+private val AppShortcutItem.isLibraryApp: Boolean
+    get() = id.value.startsWith(LIBRARY_APP_ITEM_PREFIX)
+
 private val AppIdentity.shortcutKey: String
     get() = "${profile.id.value}:${packageName.value}/${activityName.value}"
+
+private const val LIBRARY_APP_ITEM_PREFIX = "library-app:"
