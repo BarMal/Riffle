@@ -4,6 +4,7 @@ import com.riffle.core.domain.launcher.apps.AppActivityName
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.InstalledApp
+import com.riffle.core.domain.launcher.apps.InstalledAppRepository
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.GridCell
 import com.riffle.core.domain.launcher.home.GridDimensions
@@ -61,6 +62,7 @@ class LauncherShellHomeGridViewModelTest {
         val viewModel =
             LauncherShellViewModel(
                 firstRunRepository = FakeFirstRunRepository(),
+                installedAppRepository = FakeInstalledAppRepository(apps = listOf(camera)),
                 homeLayoutRepository = repository,
             )
         val layoutBeforeResize = viewModel.state.value.homeLayout
@@ -91,6 +93,12 @@ class LauncherShellHomeGridViewModelTest {
         override fun saveHomeLayout(layout: HomeLayout) {
             savedLayout = layout
         }
+    }
+
+    private class FakeInstalledAppRepository(
+        private val apps: List<InstalledApp>,
+    ) : InstalledAppRepository {
+        override fun installedApps(): List<InstalledApp> = apps
     }
 
     private fun app(label: String): InstalledApp =
