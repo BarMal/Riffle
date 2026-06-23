@@ -22,7 +22,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.apps.AppDrawerProfileFilter
-import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.WallpaperSource
@@ -34,9 +33,7 @@ fun AppDrawer(
     query: String,
     profileFilter: AppDrawerProfileFilter,
     apps: List<InstalledApp>,
-    homeLayout: HomeLayout,
-    notificationCountsByPackage: Map<AppPackageName, Int>,
-    appIconLoader: AppIconLoader,
+    appListContext: AppListContext,
     onAction: (LauncherShellAction) -> Unit,
 ) {
     LauncherPanel(
@@ -64,13 +61,7 @@ fun AppDrawer(
                     } else {
                         "No matching apps"
                     },
-                context =
-                    AppListContext(
-                        homeLayout = homeLayout,
-                        notificationCountsByPackage = notificationCountsByPackage,
-                        appIconLoader = appIconLoader,
-                        onAction = onAction,
-                    ),
+                context = appListContext,
                 showSections = true,
             )
         }
@@ -82,9 +73,7 @@ fun SearchSurface(
     query: String,
     profileFilter: AppDrawerProfileFilter,
     results: List<InstalledApp>,
-    homeLayout: HomeLayout,
-    notificationCountsByPackage: Map<AppPackageName, Int>,
-    appIconLoader: AppIconLoader,
+    appListContext: AppListContext,
     onAction: (LauncherShellAction) -> Unit,
 ) {
     LauncherPanel(
@@ -107,13 +96,7 @@ fun SearchSurface(
                 modifier = Modifier.weight(1f),
                 apps = results,
                 emptyText = "No matching apps",
-                context =
-                    AppListContext(
-                        homeLayout = homeLayout,
-                        notificationCountsByPackage = notificationCountsByPackage,
-                        appIconLoader = appIconLoader,
-                        onAction = onAction,
-                    ),
+                context = appListContext,
             )
         }
     }

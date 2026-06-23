@@ -3,16 +3,32 @@ package com.riffle.app.launcher.apps
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.pm.LauncherApps
 import android.net.Uri
+import android.os.Process
 import android.provider.Settings
 import com.riffle.core.domain.launcher.apps.AppIdentity
+import com.riffle.core.domain.launcher.apps.AppShortcut
 
 class AndroidAppLauncher(
     private val context: Context,
 ) {
+    private val launcherApps by lazy { context.getSystemService(LauncherApps::class.java) }
+
     fun launch(identity: AppIdentity): Boolean =
         runCatching {
             context.startActivity(identity.launchIntent)
+        }.isSuccess
+
+    fun launchShortcut(shortcut: AppShortcut): Boolean =
+        runCatching {
+            launcherApps.startShortcut(
+                shortcut.appIdentity.packageName.value,
+                shortcut.id.value,
+                null,
+                null,
+                Process.myUserHandle(),
+            )
         }.isSuccess
 
     fun openAppInfo(identity: AppIdentity): Boolean =

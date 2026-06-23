@@ -146,9 +146,14 @@ private fun LauncherDestination(
                 query = state.appDrawerQuery,
                 profileFilter = state.appDrawerProfileFilter,
                 apps = state.appDrawerApps,
-                homeLayout = state.homeLayout,
-                notificationCountsByPackage = state.notificationCountsByPackage,
-                appIconLoader = appIconLoader,
+                appListContext =
+                    AppListContext(
+                        homeLayout = state.homeLayout,
+                        notificationCountsByPackage = state.notificationCountsByPackage,
+                        appShortcutsByApp = state.appShortcutsByApp,
+                        appIconLoader = appIconLoader,
+                        onAction = onAction,
+                    ),
                 onAction = onAction,
             )
 
@@ -157,9 +162,14 @@ private fun LauncherDestination(
                 query = state.searchQuery,
                 profileFilter = state.searchProfileFilter,
                 results = state.searchResults,
-                homeLayout = state.homeLayout,
-                notificationCountsByPackage = state.notificationCountsByPackage,
-                appIconLoader = appIconLoader,
+                appListContext =
+                    AppListContext(
+                        homeLayout = state.homeLayout,
+                        notificationCountsByPackage = state.notificationCountsByPackage,
+                        appShortcutsByApp = state.appShortcutsByApp,
+                        appIconLoader = appIconLoader,
+                        onAction = onAction,
+                    ),
                 onAction = onAction,
             )
 
