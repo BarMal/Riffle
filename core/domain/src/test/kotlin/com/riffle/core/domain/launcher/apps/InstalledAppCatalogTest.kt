@@ -130,6 +130,43 @@ class InstalledAppCatalogTest {
         )
     }
 
+    @Test
+    fun searchMatchesShortcutLabelsAndIds() {
+        val camera = app(label = "Camera")
+        val browser = app(label = "Browser")
+        val shortcutsByApp =
+            mapOf(
+                camera.identity to
+                    listOf(
+                        AppShortcut(
+                            id = AppShortcutId("take-selfie"),
+                            appIdentity = camera.identity,
+                            shortLabel = "Selfie",
+                            longLabel = "Take a selfie",
+                        ),
+                    ),
+                browser.identity to
+                    listOf(
+                        AppShortcut(
+                            id = AppShortcutId("new-tab"),
+                            appIdentity = browser.identity,
+                            shortLabel = "Tab",
+                        ),
+                    ),
+            )
+
+        assertEquals(
+            listOf("Camera"),
+            catalog.searchApps(apps = listOf(camera, browser), query = "selfie", shortcutsByApp = shortcutsByApp)
+                .map { app -> app.label },
+        )
+        assertEquals(
+            listOf("Browser"),
+            catalog.searchApps(apps = listOf(camera, browser), query = "new-tab", shortcutsByApp = shortcutsByApp)
+                .map { app -> app.label },
+        )
+    }
+
     private fun app(
         label: String,
         packageName: String = "com.android.${label.lowercase().replace(" ", ".")}",

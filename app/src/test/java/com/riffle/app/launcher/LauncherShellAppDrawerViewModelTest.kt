@@ -59,6 +59,29 @@ class LauncherShellAppDrawerViewModelTest {
     }
 
     @Test
+    fun filtersAppDrawerAppsByShortcutLabels() {
+        val camera = app(label = "Camera")
+        val browser = app(label = "Browser")
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                installedAppRepository =
+                    FakeInstalledAppRepository(
+                        apps = listOf(camera, browser),
+                        shortcuts =
+                            mapOf(
+                                camera.identity to listOf(shortcut(app = camera, label = "Selfie")),
+                                browser.identity to listOf(shortcut(app = browser, label = "New tab")),
+                            ),
+                    ),
+            )
+
+        viewModel.onAppActionSelected(LauncherShellAction.AppDrawerQueryChanged("selfie"))
+
+        assertEquals(listOf("Camera"), viewModel.state.value.appDrawerApps.map { app -> app.label })
+    }
+
+    @Test
     fun refreshesAppDrawerAppsForCurrentQuery() {
         val repository = FakeInstalledAppRepository(apps = listOf(app(label = "Camera")))
         val viewModel =

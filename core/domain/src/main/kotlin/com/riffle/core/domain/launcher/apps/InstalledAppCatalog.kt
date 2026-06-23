@@ -19,11 +19,19 @@ class InstalledAppCatalog {
     fun searchApps(
         apps: List<InstalledApp>,
         query: String,
+        shortcutsByApp: AppShortcutsByApp = emptyMap(),
     ): List<InstalledApp> =
         query.trim().lowercase().let { normalizedQuery ->
             when {
                 normalizedQuery.isBlank() -> visibleApps(apps)
-                else -> visibleApps(apps).filter { app -> app.matches(normalizedQuery) }
+                else ->
+                    visibleApps(apps)
+                        .filter { app ->
+                            app.matches(normalizedQuery) ||
+                                shortcutsByApp[app.identity].orEmpty().any { shortcut ->
+                                    shortcut.matches(normalizedQuery)
+                                }
+                        }
             }
         }
 
@@ -33,6 +41,11 @@ class InstalledAppCatalog {
             identity.activityName.value.lowercase().contains(query) ||
             identity.profile.id.value.lowercase().contains(query) ||
             identity.profile.type.name.lowercase().contains(query)
+
+    private fun AppShortcut.matches(query: String): Boolean =
+        shortLabel.lowercase().contains(query) ||
+            longLabel.orEmpty().lowercase().contains(query) ||
+            id.value.lowercase().contains(query)
 
     private val installedAppComparator: Comparator<InstalledApp> =
         compareBy<InstalledApp> { app -> app.label.lowercase() }
