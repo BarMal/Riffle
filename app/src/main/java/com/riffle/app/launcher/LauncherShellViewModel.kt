@@ -69,6 +69,7 @@ class LauncherShellViewModel(
                 reducer = reducer,
             ).withInstalledApps(installedAppRepository, appVisibilityRepository, appCatalog)
                 .withoutUnavailableApps(homeLayoutRepository)
+                .withHomeScreenLibraryApps(homeLayoutRepository)
                 .withAppShortcuts(appShortcutRepository, appCatalog)
                 .withNotificationState(
                     notificationRepository = notificationRepository,
@@ -110,6 +111,7 @@ class LauncherShellViewModel(
             mutableState.value
                 .withInstalledApps(installedAppRepository, appVisibilityRepository, appCatalog)
                 .withoutUnavailableApps(homeLayoutRepository)
+                .withHomeScreenLibraryApps(homeLayoutRepository)
                 .withAppShortcuts(appShortcutRepository, appCatalog)
                 .withNotificationState(
                     notificationRepository = notificationRepository,
@@ -175,7 +177,7 @@ class LauncherShellViewModel(
                     appVisibilityRepository.hideApp(action.identity)
                     mutableState.value
                         .withInstalledApps(installedAppRepository, appVisibilityRepository, appCatalog)
-                        .withoutUnavailableApps(homeLayoutRepository)
+                        .withoutUnavailableApps(homeLayoutRepository).withHomeScreenLibraryApps(homeLayoutRepository)
                         .withAppShortcuts(appShortcutRepository, appCatalog)
                         .withNotificationState(
                             notificationRepository = notificationRepository,
@@ -190,7 +192,7 @@ class LauncherShellViewModel(
                     appVisibilityRepository.showApp(action.identity)
                     mutableState.value
                         .withInstalledApps(installedAppRepository, appVisibilityRepository, appCatalog)
-                        .withoutUnavailableApps(homeLayoutRepository)
+                        .withoutUnavailableApps(homeLayoutRepository).withHomeScreenLibraryApps(homeLayoutRepository)
                         .withAppShortcuts(appShortcutRepository, appCatalog)
                         .withNotificationState(
                             notificationRepository = notificationRepository,
@@ -255,7 +257,11 @@ class LauncherShellViewModel(
     fun onHomePageEdited(action: LauncherShellAction) {
         mutableState.value =
             when (val result = homePageEngine.applyEdit(action = action, layout = mutableState.value.homeLayout)) {
-                is HomePageEditResult.Updated -> mutableState.value.withHomeLayout(result.layout, homeLayoutRepository)
+                is HomePageEditResult.Updated ->
+                    mutableState.value
+                        .withHomeLayout(result.layout, homeLayoutRepository)
+                        .withHomeScreenLibraryApps(homeLayoutRepository)
+
                 is HomePageEditResult.Rejected -> mutableState.value
             }
     }
