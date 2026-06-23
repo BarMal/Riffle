@@ -7,6 +7,17 @@ import com.riffle.core.domain.launcher.apps.AppProfile
 import com.riffle.core.domain.launcher.apps.AppVisibilityRepository
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.apps.InstalledAppRepository
+import com.riffle.core.domain.launcher.home.AppShortcutItem
+import com.riffle.core.domain.launcher.home.DockModel
+import com.riffle.core.domain.launcher.home.GridCell
+import com.riffle.core.domain.launcher.home.GridDimensions
+import com.riffle.core.domain.launcher.home.GridPlacement
+import com.riffle.core.domain.launcher.home.HomeLayout
+import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
+import com.riffle.core.domain.launcher.home.HomeLayoutRepository
+import com.riffle.core.domain.launcher.home.LauncherItemId
+import com.riffle.core.domain.launcher.home.LauncherPage
+import com.riffle.core.domain.launcher.home.LauncherPageId
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -69,6 +80,76 @@ class LauncherShellHiddenAppsViewModelTest {
     }
 
     @Test
+    fun hidingHomeAppFreesGridCellForNewApps() {
+        val camera = app(label = "Camera")
+        val docs = app(label = "Docs")
+        val maps = app(label = "Maps")
+        val homeLayoutRepository =
+            FakeHomeLayoutRepository(
+                savedLayout =
+                    HomeLayoutDefaults.standard().copy(
+                        pages =
+                            listOf(
+                                LauncherPage(
+                                    id = LauncherPageId("home"),
+                                    grid = GridDimensions(columns = 1, rows = 1),
+                                    items =
+                                        listOf(
+                                            shortcut(
+                                                id = "camera",
+                                                app = camera,
+                                                placement = GridPlacement(cell = GridCell(column = 0, row = 0)),
+                                            ),
+                                        ),
+                                ),
+                            ),
+                    ),
+            )
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                installedAppRepository = FakeInstalledAppRepository(apps = listOf(camera, docs, maps)),
+                appVisibilityRepository = FakeAppVisibilityRepository(),
+                homeLayoutRepository = homeLayoutRepository,
+            )
+
+        viewModel.onAppActionSelected(LauncherShellAction.HideApp(camera.identity))
+        viewModel.onAddAppToHome(maps)
+
+        val shortcut = viewModel.state.value.homeLayout.selectedPage.items.single() as AppShortcutItem
+        assertEquals(maps.identity, shortcut.appIdentity)
+        assertEquals(GridPlacement(cell = GridCell(column = 0, row = 0)), shortcut.placement)
+        assertEquals(viewModel.state.value.homeLayout, homeLayoutRepository.savedLayout)
+    }
+
+    @Test
+    fun hidingDockAppFreesDockSlotForNewApps() {
+        val phone = app(label = "Phone")
+        val camera = app(label = "Camera")
+        val homeLayoutRepository =
+            FakeHomeLayoutRepository(
+                savedLayout =
+                    HomeLayoutDefaults.standard().copy(
+                        dock = DockModel(capacity = 1, items = listOf(shortcut(id = "phone", app = phone))),
+                    ),
+            )
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                installedAppRepository = FakeInstalledAppRepository(apps = listOf(phone, camera)),
+                appVisibilityRepository = FakeAppVisibilityRepository(),
+                homeLayoutRepository = homeLayoutRepository,
+            )
+
+        viewModel.onAppActionSelected(LauncherShellAction.HideApp(phone.identity))
+        viewModel.onDockEdited(LauncherShellAction.AddAppToDock(camera))
+
+        val shortcut = viewModel.state.value.homeLayout.dock.items.single() as AppShortcutItem
+        assertEquals(camera.identity, shortcut.appIdentity)
+        assertEquals(viewModel.state.value.homeLayout, homeLayoutRepository.savedLayout)
+    }
+
+    @Test
     fun unhidesAppAndRefreshesLauncherAppSurfaces() {
         val camera = app(label = "Camera")
         val docs = app(label = "Docs")
@@ -116,6 +197,16 @@ class LauncherShellHiddenAppsViewModelTest {
         }
     }
 
+    private class FakeHomeLayoutRepository(
+        var savedLayout: HomeLayout? = null,
+    ) : HomeLayoutRepository {
+        override fun loadHomeLayout(): HomeLayout? = savedLayout
+
+        override fun saveHomeLayout(layout: HomeLayout) {
+            savedLayout = layout
+        }
+    }
+
     private fun app(
         label: String,
         profile: AppProfile = AppProfile.personal(),
@@ -128,5 +219,17 @@ class LauncherShellHiddenAppsViewModelTest {
                     profile = profile,
                 ),
             label = label,
+        )
+
+    private fun shortcut(
+        id: String,
+        app: InstalledApp,
+        placement: GridPlacement? = null,
+    ): AppShortcutItem =
+        AppShortcutItem(
+            id = LauncherItemId(id),
+            appIdentity = app.identity,
+            label = app.label,
+            placement = placement,
         )
 }
