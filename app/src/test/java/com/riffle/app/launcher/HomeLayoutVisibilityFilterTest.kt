@@ -28,7 +28,11 @@ class HomeLayoutVisibilityFilterTest {
                                 items =
                                     listOf(
                                         shortcut(id = "camera", app = camera),
-                                        shortcut(id = "docs", app = docs),
+                                        shortcut(
+                                            id = "docs",
+                                            app = docs,
+                                            placement = GridPlacement(cell = GridCell(column = 1, row = 0)),
+                                        ),
                                     ),
                             ),
                         ),
@@ -37,8 +41,46 @@ class HomeLayoutVisibilityFilterTest {
 
         val visibleLayout = layout.visibleTo(apps = listOf(camera))
 
-        assertEquals(listOf("Camera"), visibleLayout.selectedPage.items.filterIsInstance<AppShortcutItem>().labels)
+        val visibleShortcut = visibleLayout.selectedPage.items.single() as AppShortcutItem
+        assertEquals("Camera", visibleShortcut.label)
+        assertEquals(GridPlacement(cell = GridCell(column = 0, row = 0)), visibleShortcut.placement)
         assertEquals(listOf("Camera", "Docs"), layout.selectedPage.items.filterIsInstance<AppShortcutItem>().labels)
+    }
+
+    @Test
+    fun compactsVisibleHomeShortcutsIntoHiddenCells() {
+        val camera = app("Camera")
+        val docs = app("Docs")
+        val layout =
+            HomeLayoutDefaults.standard().let { defaults ->
+                defaults.copy(
+                    pages =
+                        listOf(
+                            defaults.selectedPage.copy(
+                                items =
+                                    listOf(
+                                        shortcut(
+                                            id = "docs",
+                                            app = docs,
+                                            placement = GridPlacement(cell = GridCell(column = 0, row = 0)),
+                                        ),
+                                        shortcut(
+                                            id = "camera",
+                                            app = camera,
+                                            placement = GridPlacement(cell = GridCell(column = 1, row = 0)),
+                                        ),
+                                    ),
+                            ),
+                        ),
+                )
+            }
+
+        val visibleLayout = layout.visibleTo(apps = listOf(camera))
+
+        val visibleShortcut = visibleLayout.selectedPage.items.single() as AppShortcutItem
+        assertEquals("Camera", visibleShortcut.label)
+        assertEquals(GridPlacement(cell = GridCell(column = 0, row = 0)), visibleShortcut.placement)
+        assertEquals(GridPlacement(cell = GridCell(column = 1, row = 0)), (layout.selectedPage.items[1]).placement)
     }
 
     @Test
@@ -100,11 +142,13 @@ class HomeLayoutVisibilityFilterTest {
     private fun shortcut(
         id: String,
         app: InstalledApp,
+        placement: GridPlacement? = null,
     ): AppShortcutItem =
         AppShortcutItem(
             id = LauncherItemId(id),
             appIdentity = app.identity,
             label = app.label,
+            placement = placement,
         )
 
     private val List<AppShortcutItem>.labels: List<String>
