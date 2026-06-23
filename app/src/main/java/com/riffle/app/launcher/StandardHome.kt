@@ -322,7 +322,7 @@ private fun HomeShortcut(
                     .align(Alignment.Center)
                     .combinedClickable(
                         enabled = !isEditing,
-                        onClick = { onAction(LauncherShellAction.LaunchApp(shortcut.appIdentity)) },
+                        onClick = { onAction(shortcut.launchAction()) },
                         onLongClick = { onAction(LauncherShellAction.EnterHomeEditMode) },
                     ),
             horizontalAlignment = Alignment.CenterHorizontally,

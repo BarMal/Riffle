@@ -112,7 +112,7 @@ private fun BoxScope.DockShortcut(
                 .size(48.dp)
                 .combinedClickable(
                     enabled = !isEditing,
-                    onClick = { onAction(LauncherShellAction.LaunchApp(shortcut.appIdentity)) },
+                    onClick = { onAction(shortcut.launchAction()) },
                     onLongClick = { onAction(LauncherShellAction.EnterHomeEditMode) },
                 ),
     )

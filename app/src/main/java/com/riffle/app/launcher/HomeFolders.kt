@@ -306,7 +306,7 @@ private fun FolderContentRows(
                     }
                 },
                 onClick = {
-                    onAction(LauncherShellAction.LaunchApp(shortcut.appIdentity))
+                    onAction(shortcut.launchAction())
                     onDismiss()
                 },
             )
