@@ -113,6 +113,7 @@ fun SettingsSurface(
     LauncherPanel(
         title = "Settings",
         onAction = onAction,
+        showSettingsAction = false,
     ) {
         Column(
             modifier =
@@ -316,6 +317,7 @@ private val NotificationAccessStatus.label: String
 fun LauncherPanel(
     title: String,
     onAction: (LauncherShellAction) -> Unit,
+    showSettingsAction: Boolean = true,
     content: @Composable () -> Unit,
 ) {
     Column(
@@ -334,8 +336,15 @@ fun LauncherPanel(
                 text = title,
                 style = MaterialTheme.typography.headlineMedium,
             )
-            TextButton(onClick = { onAction(LauncherShellAction.OpenHome) }) {
-                Text(text = "Home")
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (showSettingsAction) {
+                    TextButton(onClick = { onAction(LauncherShellAction.OpenSettings) }) {
+                        Text(text = "Settings")
+                    }
+                }
+                TextButton(onClick = { onAction(LauncherShellAction.OpenHome) }) {
+                    Text(text = "Home")
+                }
             }
         }
         Spacer(modifier = Modifier.height(24.dp))
