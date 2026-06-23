@@ -19,6 +19,7 @@ data class HomeLabelSettings(
     val backgroundAlphaPercent: Int = DEFAULT_HOME_LABEL_BACKGROUND_ALPHA_PERCENT,
     val textSizeSp: Int = DEFAULT_HOME_LABEL_TEXT_SIZE_SP,
     val showText: Boolean = true,
+    val maxWidthDp: Int = DEFAULT_HOME_LABEL_MAX_WIDTH_DP,
 ) {
     companion object {
         fun standard(): HomeLabelSettings = HomeLabelSettings()
@@ -71,3 +72,6 @@ const val MAX_HOME_LABEL_BACKGROUND_ALPHA_PERCENT = 100
 const val DEFAULT_HOME_LABEL_TEXT_SIZE_SP = 11
 const val MIN_HOME_LABEL_TEXT_SIZE_SP = 9
 const val MAX_HOME_LABEL_TEXT_SIZE_SP = 16
+const val DEFAULT_HOME_LABEL_MAX_WIDTH_DP = 76
+const val MIN_HOME_LABEL_MAX_WIDTH_DP = 48
+const val MAX_HOME_LABEL_MAX_WIDTH_DP = 120

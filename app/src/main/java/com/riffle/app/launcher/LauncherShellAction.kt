@@ -63,6 +63,8 @@ sealed interface LauncherShellAction {
 
     data class SelectHomeLabelTextVisible(val visible: Boolean) : LauncherShellAction
 
+    data class SelectHomeLabelMaxWidth(val maxWidthDp: Int) : LauncherShellAction
+
     data class SelectLauncherViewMode(val mode: LauncherViewMode) : LauncherShellAction
 
     data class SelectHomeLayoutDeviceClass(val deviceClass: HomeLayoutDeviceClass) : LauncherShellAction

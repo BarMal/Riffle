@@ -6,8 +6,10 @@ import com.riffle.core.domain.launcher.home.HomePageEditResult
 import com.riffle.core.domain.launcher.home.HomePageEngine
 import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.home.MAX_HOME_LABEL_BACKGROUND_ALPHA_PERCENT
+import com.riffle.core.domain.launcher.home.MAX_HOME_LABEL_MAX_WIDTH_DP
 import com.riffle.core.domain.launcher.home.MAX_HOME_LABEL_TEXT_SIZE_SP
 import com.riffle.core.domain.launcher.home.MIN_HOME_LABEL_BACKGROUND_ALPHA_PERCENT
+import com.riffle.core.domain.launcher.home.MIN_HOME_LABEL_MAX_WIDTH_DP
 import com.riffle.core.domain.launcher.home.MIN_HOME_LABEL_TEXT_SIZE_SP
 
 internal fun HomePageEngine.applyHomeLayoutConfigurationEdit(
@@ -33,6 +35,9 @@ internal fun HomePageEngine.applyHomeLayoutConfigurationEdit(
         is LauncherShellAction.SelectHomeLabelTextVisible ->
             HomePageEditResult.Updated(layout.withHomeLabelTextVisible(action.visible))
 
+        is LauncherShellAction.SelectHomeLabelMaxWidth ->
+            layout.withHomeLabelMaxWidth(action.maxWidthDp)
+
         is LauncherShellAction.SelectLauncherViewMode ->
             HomePageEditResult.Updated(layout.withLauncherViewMode(action.mode))
 
@@ -47,6 +52,21 @@ private fun HomeLayout.withHomeLabelBackgroundAlpha(alphaPercent: Int): HomePage
                     settings =
                         settings.copy(
                             labels = settings.labels.copy(backgroundAlphaPercent = alphaPercent),
+                        ),
+                ),
+            )
+
+        else -> HomePageEditResult.Rejected(HomePageEditRejectionReason.INVALID_LABEL_SETTING)
+    }
+
+private fun HomeLayout.withHomeLabelMaxWidth(maxWidthDp: Int): HomePageEditResult =
+    when (maxWidthDp) {
+        in MIN_HOME_LABEL_MAX_WIDTH_DP..MAX_HOME_LABEL_MAX_WIDTH_DP ->
+            HomePageEditResult.Updated(
+                copy(
+                    settings =
+                        settings.copy(
+                            labels = settings.labels.copy(maxWidthDp = maxWidthDp),
                         ),
                 ),
             )
