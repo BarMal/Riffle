@@ -5,6 +5,7 @@ import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.home.GridDimensions
 import com.riffle.core.domain.launcher.home.LauncherPageId
+import com.riffle.core.domain.launcher.home.LauncherViewMode
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -26,6 +27,7 @@ class LauncherShellHomePageActionRoutingTest {
                 LauncherShellAction.MoveSelectedHomePageRight,
                 LauncherShellAction.DeleteSelectedHomePage,
                 LauncherShellAction.SelectHomeGridDimensions(GridDimensions(columns = 5, rows = 6)),
+                LauncherShellAction.SelectLauncherViewMode(LauncherViewMode.HOME_SCREEN_LIBRARY),
             )
 
         actions.forEach { action ->

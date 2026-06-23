@@ -6,11 +6,13 @@ import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.LauncherPage
 import com.riffle.core.domain.launcher.home.LauncherPageId
+import com.riffle.core.domain.launcher.home.LauncherViewMode
 import org.json.JSONArray
 import org.json.JSONObject
 
 fun encodeHomeLayout(layout: HomeLayout): String =
     JSONObject()
+        .put("viewMode", layout.viewMode.name)
         .put("selectedPageId", layout.selectedPageId.value)
         .put("settings", encodeSettings(layout.settings))
         .put("pages", JSONArray(layout.pages.map(::encodePage)))
@@ -28,12 +30,19 @@ fun decodeHomeLayout(value: String): HomeLayout =
                 ?: defaults.selectedPageId
 
         defaults.copy(
+            viewMode = json.optViewMode(defaults.viewMode),
             pages = pages.ifEmpty { defaults.pages },
             selectedPageId = safeSelectedPageId,
             dock = json.optJSONObject("dock")?.toDock() ?: defaults.dock,
             settings = json.optJSONObject("settings")?.toSettings(defaults.settings) ?: defaults.settings,
         )
     }
+
+private fun JSONObject.optViewMode(default: LauncherViewMode): LauncherViewMode =
+    optString("viewMode", "")
+        .takeIf(String::isNotBlank)
+        ?.let { value -> runCatching { LauncherViewMode.valueOf(value) }.getOrNull() }
+        ?: default
 
 private fun encodeDock(dock: DockModel): JSONObject =
     JSONObject()
