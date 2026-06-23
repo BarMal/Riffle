@@ -5,7 +5,6 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -31,12 +30,12 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -66,12 +65,58 @@ fun StandardHome(
     onAction: (LauncherShellAction) -> Unit,
 ) {
     val visibleLayout = layout.visibleTo(installedApps)
-    val isEditingPage = layout.editMode is HomeEditMode.EditingPage
-    val isManagingPages = layout.editMode is HomeEditMode.ManagingPages
-    val isEditing = isEditingPage || isManagingPages
+    val editState = HomeEditState(layout.editMode)
     val openedFolderId = remember { mutableStateOf<LauncherItemId?>(null) }
     val swipeThresholdPx = with(LocalDensity.current) { HOME_SWIPE_THRESHOLD_DP.dp.toPx() }
+    val pageDragOffsetPx = remember { mutableFloatStateOf(0f) }
+    val swipeNavigationState =
+        HomeSwipeNavigationState(
+            enabled = !editState.isEditing,
+            thresholdPx = swipeThresholdPx,
+            homeSwipeGestures = homeSwipeGestures,
+            selectedPageIndex = visibleLayout.selectedPageIndex,
+            pageCount = visibleLayout.pages.size,
+            pageSwipeMotion = remember { HomePageSwipeMotion() },
+        )
+    val actions =
+        HomeWorkspaceActions(
+            onFolderOpen = { folder -> openedFolderId.value = folder.id },
+            onAction = onAction,
+        )
 
+    StandardHomeColumn(
+        state =
+            StandardHomeContentState(
+                layout = layout,
+                visibleLayout = visibleLayout,
+                editState = editState,
+                swipeNavigationState = swipeNavigationState,
+                pageDragOffsetPx = pageDragOffsetPx.floatValue,
+                notificationCountsByPackage = notificationCountsByPackage,
+            ),
+        appIconLoader = appIconLoader,
+        actions = actions,
+        onPageDragOffsetChange = { offsetPx -> pageDragOffsetPx.floatValue = offsetPx },
+    )
+    visibleLayout.openedFolder(openedFolderId.value)?.let { folder ->
+        FolderDialog(
+            folder = folder,
+            layout = visibleLayout,
+            installedApps = installedApps,
+            appIconLoader = appIconLoader,
+            onDismiss = { openedFolderId.value = null },
+            onAction = onAction,
+        )
+    }
+}
+
+@Composable
+private fun StandardHomeColumn(
+    state: StandardHomeContentState,
+    appIconLoader: AppIconLoader,
+    actions: HomeWorkspaceActions,
+    onPageDragOffsetChange: (Float) -> Unit,
+) {
     Column(
         modifier =
             Modifier
@@ -82,65 +127,54 @@ fun StandardHome(
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         HomeToolbar(
-            isEditing = isEditing,
-            onAction = onAction,
+            isEditing = state.editState.isEditing,
+            onAction = actions.onAction,
         )
         AnimatedWorkspaceGrid(
-            layout = visibleLayout,
-            isEditing = isEditingPage,
-            notificationCountsByPackage = notificationCountsByPackage,
+            layout = state.visibleLayout,
+            isEditing = state.editState.isEditingPage,
+            notificationCountsByPackage = state.notificationCountsByPackage,
             appIconLoader = appIconLoader,
-            onFolderOpen = { folder -> openedFolderId.value = folder.id },
-            onAction = onAction,
+            actions = actions,
+            pageDragOffsetPx = state.pageDragOffsetPx,
             modifier =
                 Modifier
                     .weight(1f)
                     .fillMaxWidth()
                     .homeSwipeNavigation(
-                        enabled = !isEditing,
-                        thresholdPx = swipeThresholdPx,
-                        homeSwipeGestures = homeSwipeGestures,
-                        onAction = onAction,
+                        state = state.swipeNavigationState,
+                        onPageDragOffsetChange = onPageDragOffsetChange,
+                        onAction = actions.onAction,
                     ),
         )
-        if (isEditingPage) {
+        if (state.editState.isEditingPage) {
             PageEditControls(
-                pageCount = layout.pages.size,
-                selectedPageIndex = visibleLayout.selectedPageIndex,
-                onAction = onAction,
+                pageCount = state.layout.pages.size,
+                selectedPageIndex = state.visibleLayout.selectedPageIndex,
+                onAction = actions.onAction,
             )
             HomeFolderEditControls(
-                layout = visibleLayout,
-                onAction = onAction,
+                layout = state.visibleLayout,
+                onAction = actions.onAction,
             )
         }
-        if (isManagingPages) {
+        if (state.editState.isManagingPages) {
             PageOverviewControls(
-                layout = visibleLayout,
-                onAction = onAction,
+                layout = state.visibleLayout,
+                onAction = actions.onAction,
             )
         }
         PageIndicator(
-            pageCount = visibleLayout.pages.size,
-            selectedPageIndex = visibleLayout.selectedPageIndex,
+            pageCount = state.visibleLayout.pages.size,
+            selectedPageIndex = state.visibleLayout.selectedPageIndex,
         )
         Spacer(modifier = Modifier.height(20.dp))
         Dock(
-            dock = visibleLayout.dock,
-            isEditing = isEditingPage,
-            notificationCountsByPackage = notificationCountsByPackage,
+            dock = state.visibleLayout.dock,
+            isEditing = state.editState.isEditingPage,
+            notificationCountsByPackage = state.notificationCountsByPackage,
             appIconLoader = appIconLoader,
-            onAction = onAction,
-        )
-    }
-    visibleLayout.openedFolder(openedFolderId.value)?.let { folder ->
-        FolderDialog(
-            folder = folder,
-            layout = visibleLayout,
-            installedApps = installedApps,
-            appIconLoader = appIconLoader,
-            onDismiss = { openedFolderId.value = null },
-            onAction = onAction,
+            onAction = actions.onAction,
         )
     }
 }
@@ -195,8 +229,8 @@ private fun AnimatedWorkspaceGrid(
     isEditing: Boolean,
     notificationCountsByPackage: Map<AppPackageName, Int>,
     appIconLoader: AppIconLoader,
-    onFolderOpen: (FolderItem) -> Unit,
-    onAction: (LauncherShellAction) -> Unit,
+    actions: HomeWorkspaceActions,
+    pageDragOffsetPx: Float,
     modifier: Modifier = Modifier,
 ) {
     val animatedPageIndex =
@@ -207,21 +241,27 @@ private fun AnimatedWorkspaceGrid(
 
     BoxWithConstraints(modifier = modifier) {
         val widthPx = with(LocalDensity.current) { maxWidth.toPx() }
-        val pageOffsetPx =
-            ((layout.selectedPageIndex - animatedPageIndex.value) * widthPx).roundToInt()
+        val settledPageOffsetPx = (layout.selectedPageIndex - animatedPageIndex.value) * widthPx
+        val boundedDragOffsetPx = pageDragOffsetPx.coerceIn(-widthPx, widthPx)
 
-        WorkspaceGrid(
-            page = layout.selectedPage,
-            isEditing = isEditing,
-            notificationCountsByPackage = notificationCountsByPackage,
-            appIconLoader = appIconLoader,
-            onFolderOpen = onFolderOpen,
-            onAction = onAction,
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .offset { IntOffset(x = pageOffsetPx, y = 0) },
-        )
+        layout.pages.forEachIndexed { index, page ->
+            val pageOffsetPx =
+                (((index - layout.selectedPageIndex) * widthPx) + settledPageOffsetPx + boundedDragOffsetPx)
+                    .roundToInt()
+
+            WorkspaceGrid(
+                page = page,
+                isEditing = isEditing,
+                notificationCountsByPackage = notificationCountsByPackage,
+                appIconLoader = appIconLoader,
+                onFolderOpen = actions.onFolderOpen,
+                onAction = actions.onAction,
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .offset { IntOffset(x = pageOffsetPx, y = 0) },
+            )
+        }
     }
 }
 
@@ -457,43 +497,26 @@ fun BoxScope.RemoveShortcutButton(
     }
 }
 
-private fun Modifier.homeSwipeNavigation(
-    enabled: Boolean,
-    thresholdPx: Float,
-    homeSwipeGestures: HomeSwipeGestureSettings,
-    onAction: (LauncherShellAction) -> Unit,
-): Modifier =
-    if (!enabled) {
-        this
-    } else {
-        pointerInput(thresholdPx) {
-            var horizontalDragPx = 0f
-            var verticalDragPx = 0f
-            val interpreter = HomeSwipeGestureInterpreter(thresholdPx = thresholdPx)
-            val actionMapper = HomeSwipeGestureActionMapper()
+private data class HomeEditState(
+    val editMode: HomeEditMode,
+) {
+    val isEditingPage: Boolean = editMode is HomeEditMode.EditingPage
+    val isManagingPages: Boolean = editMode is HomeEditMode.ManagingPages
+    val isEditing: Boolean = isEditingPage || isManagingPages
+}
 
-            detectDragGestures(
-                onDragStart = {
-                    horizontalDragPx = 0f
-                    verticalDragPx = 0f
-                },
-                onDrag = { change, dragAmount ->
-                    horizontalDragPx += dragAmount.x
-                    verticalDragPx += dragAmount.y
-                    change.consume()
-                },
-                onDragEnd = {
-                    interpreter
-                        .gestureFor(horizontalDragPx, verticalDragPx)
-                        ?.let { gesture -> actionMapper.actionFor(gesture, homeSwipeGestures) }
-                        ?.let(onAction)
-                },
-                onDragCancel = {
-                    horizontalDragPx = 0f
-                    verticalDragPx = 0f
-                },
-            )
-        }
-    }
+private data class StandardHomeContentState(
+    val layout: HomeLayout,
+    val visibleLayout: HomeLayout,
+    val editState: HomeEditState,
+    val swipeNavigationState: HomeSwipeNavigationState,
+    val pageDragOffsetPx: Float,
+    val notificationCountsByPackage: Map<AppPackageName, Int>,
+)
+
+private data class HomeWorkspaceActions(
+    val onFolderOpen: (FolderItem) -> Unit,
+    val onAction: (LauncherShellAction) -> Unit,
+)
 
 private const val HOME_SWIPE_THRESHOLD_DP = 80
