@@ -101,6 +101,7 @@ enum class PlacementRejectionReason {
     MISSING_PLACEMENT,
     ITEM_NOT_FOUND,
     DUPLICATE_APP,
+    DUPLICATE_APP_SHORTCUT,
     OUT_OF_BOUNDS,
     COLLISION,
     NO_AVAILABLE_CELL,

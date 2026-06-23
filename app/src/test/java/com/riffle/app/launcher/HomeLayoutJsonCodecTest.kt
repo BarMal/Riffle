@@ -3,6 +3,7 @@ package com.riffle.app.launcher
 import com.riffle.core.domain.launcher.apps.AppActivityName
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
+import com.riffle.core.domain.launcher.apps.AppShortcutId
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.FolderItem
 import com.riffle.core.domain.launcher.home.GridCell
@@ -87,6 +88,31 @@ class HomeLayoutJsonCodecTest {
         val shortcut = decodedLayout.selectedPage.items.single()
         assertTrue(shortcut is AppShortcutItem)
         assertEquals("Camera", (shortcut as AppShortcutItem).label)
+    }
+
+    @Test
+    fun roundTripsPlatformAppShortcutItems() {
+        val shortcut =
+            appShortcut(id = "compose")
+                .copy(
+                    label = "Compose",
+                    appShortcutId = AppShortcutId("dynamic-compose"),
+                    placement = GridPlacement(cell = GridCell(column = 2, row = 3)),
+                )
+        val layout =
+            HomeLayoutDefaults.standard().let { defaults ->
+                defaults.copy(
+                    pages = listOf(defaults.selectedPage.copy(items = listOf(shortcut))),
+                )
+            }
+
+        val decodedLayout = decodeHomeLayout(encodeHomeLayout(layout))
+
+        val decodedShortcut = decodedLayout.selectedPage.items.single() as AppShortcutItem
+        assertEquals(shortcut.id, decodedShortcut.id)
+        assertEquals(shortcut.appShortcutId, decodedShortcut.appShortcutId)
+        assertEquals(shortcut.label, decodedShortcut.label)
+        assertEquals(shortcut.placement, decodedShortcut.placement)
     }
 
     @Test

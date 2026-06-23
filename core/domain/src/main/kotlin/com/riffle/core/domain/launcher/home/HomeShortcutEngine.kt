@@ -1,6 +1,7 @@
 package com.riffle.core.domain.launcher.home
 
 import com.riffle.core.domain.launcher.apps.AppIdentity
+import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.apps.InstalledApp
 
 class HomeShortcutEngine(
@@ -21,6 +22,32 @@ class HomeShortcutEngine(
                             gridPlacementEngine.placeItemInFirstAvailableCell(
                                 page = layout.selectedPage,
                                 item = shortcut,
+                            )
+                    ) {
+                        is PlaceLauncherItemResult.Placed ->
+                            HomeShortcutResult.Updated(layout.withUpdatedSelectedPage(result.page))
+
+                        is PlaceLauncherItemResult.Rejected ->
+                            HomeShortcutResult.Rejected(result.reason)
+                    }
+                }
+        }
+
+    fun addAppShortcutToSelectedPage(
+        layout: HomeLayout,
+        shortcut: AppShortcut,
+    ): HomeShortcutResult =
+        when {
+            layout.containsHomeAppShortcut(identity = shortcut.appIdentity, shortcutId = shortcut.id) ->
+                HomeShortcutResult.Rejected(PlacementRejectionReason.DUPLICATE_APP_SHORTCUT)
+
+            else ->
+                homeShortcutFor(shortcut = shortcut, layout = layout).let { item ->
+                    when (
+                        val result =
+                            gridPlacementEngine.placeItemInFirstAvailableCell(
+                                page = layout.selectedPage,
+                                item = item,
                             )
                     ) {
                         is PlaceLauncherItemResult.Placed ->
@@ -103,11 +130,32 @@ class HomeShortcutEngine(
             label = app.label,
         )
 
+    private fun homeShortcutFor(
+        shortcut: AppShortcut,
+        layout: HomeLayout,
+    ): AppShortcutItem =
+        AppShortcutItem(
+            id =
+                LauncherItemId(
+                    "app-shortcut:${shortcut.appIdentity.shortcutKey}:${shortcut.id.value}:" +
+                        layout.nextShortcutOrdinal(shortcut),
+                ),
+            appIdentity = shortcut.appIdentity,
+            label = shortcut.longLabel ?: shortcut.shortLabel,
+            appShortcutId = shortcut.id,
+        )
+
     private fun HomeLayout.nextShortcutOrdinal(app: InstalledApp): Int =
         pages
             .flatMap { page -> page.items }
             .filterIsInstance<AppShortcutItem>()
-            .count { item -> item.appIdentity == app.identity } + 1
+            .count { item -> item.appIdentity == app.identity && item.appShortcutId == null } + 1
+
+    private fun HomeLayout.nextShortcutOrdinal(shortcut: AppShortcut): Int =
+        pages
+            .flatMap { page -> page.items }
+            .filterIsInstance<AppShortcutItem>()
+            .count { item -> item.appIdentity == shortcut.appIdentity && item.appShortcutId == shortcut.id } + 1
 
     private fun HomeLayout.withUpdatedSelectedPage(page: LauncherPage): HomeLayout =
         copy(

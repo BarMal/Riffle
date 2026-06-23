@@ -3,6 +3,7 @@ package com.riffle.core.domain.launcher.home
 import com.riffle.core.domain.launcher.apps.AppActivityName
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
+import com.riffle.core.domain.launcher.apps.AppShortcutId
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -33,6 +34,19 @@ class HomeLayoutAppMembershipTest {
             )
 
         assertTrue(layout.containsHomeApp(camera))
+    }
+
+    @Test
+    fun ignoresPlatformAppShortcutsWhenCheckingMainAppMembership() {
+        val camera = appIdentity("camera")
+        val layout =
+            layoutWith(
+                appShortcut(id = "camera-shortcut", identity = camera)
+                    .copy(appShortcutId = AppShortcutId("selfie")),
+            )
+
+        assertFalse(layout.containsHomeApp(camera))
+        assertTrue(layout.containsHomeAppShortcut(identity = camera, shortcutId = AppShortcutId("selfie")))
     }
 
     @Test

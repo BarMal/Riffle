@@ -3,6 +3,8 @@ package com.riffle.core.domain.launcher.home
 import com.riffle.core.domain.launcher.apps.AppActivityName
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
+import com.riffle.core.domain.launcher.apps.AppShortcut
+import com.riffle.core.domain.launcher.apps.AppShortcutId
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -74,6 +76,65 @@ class HomeShortcutEngineTest {
 
         val rejected = assertIs<HomeShortcutResult.Rejected>(result)
         assertEquals(PlacementRejectionReason.DUPLICATE_APP, rejected.reason)
+    }
+
+    @Test
+    fun addsPlatformAppShortcutToSelectedPage() {
+        val shortcut = appShortcut(label = "Compose", shortcutId = "compose")
+
+        val result = engine.addAppShortcutToSelectedPage(layout = HomeLayoutDefaults.standard(), shortcut = shortcut)
+
+        val updated = assertIs<HomeShortcutResult.Updated>(result)
+        val item = updated.layout.selectedPage.items.single() as AppShortcutItem
+        assertEquals(shortcut.appIdentity, item.appIdentity)
+        assertEquals(shortcut.id, item.appShortcutId)
+        assertEquals("Compose message", item.label)
+        assertEquals(GridPlacement(cell = GridCell(column = 0, row = 0)), item.placement)
+    }
+
+    @Test
+    fun allowsMainAppShortcutAndPlatformShortcutForSameApp() {
+        val app = app(label = "Messages")
+        val layoutWithMainApp =
+            layoutWith(
+                AppShortcutItem(
+                    id = LauncherItemId("messages"),
+                    appIdentity = app.identity,
+                    label = app.label,
+                    placement = GridPlacement(cell = GridCell(column = 0, row = 0)),
+                ),
+            )
+        val shortcut =
+            AppShortcut(
+                id = AppShortcutId("compose"),
+                appIdentity = app.identity,
+                shortLabel = "Compose",
+            )
+
+        val result = engine.addAppShortcutToSelectedPage(layout = layoutWithMainApp, shortcut = shortcut)
+
+        val updated = assertIs<HomeShortcutResult.Updated>(result)
+        assertEquals(2, updated.layout.selectedPage.items.size)
+    }
+
+    @Test
+    fun rejectsDuplicatePlatformAppShortcut() {
+        val shortcut = appShortcut(label = "Compose", shortcutId = "compose")
+        val layout =
+            layoutWith(
+                AppShortcutItem(
+                    id = LauncherItemId("shortcut:compose"),
+                    appIdentity = shortcut.appIdentity,
+                    label = shortcut.shortLabel,
+                    appShortcutId = shortcut.id,
+                    placement = GridPlacement(cell = GridCell(column = 0, row = 0)),
+                ),
+            )
+
+        val result = engine.addAppShortcutToSelectedPage(layout = layout, shortcut = shortcut)
+
+        val rejected = assertIs<HomeShortcutResult.Rejected>(result)
+        assertEquals(PlacementRejectionReason.DUPLICATE_APP_SHORTCUT, rejected.reason)
     }
 
     @Test
@@ -227,6 +288,21 @@ class HomeShortcutEngineTest {
                     activityName = AppActivityName(".MainActivity"),
                 ),
             label = label,
+        )
+
+    private fun appShortcut(
+        label: String,
+        shortcutId: String,
+    ): AppShortcut =
+        AppShortcut(
+            id = AppShortcutId(shortcutId),
+            appIdentity =
+                AppIdentity(
+                    packageName = AppPackageName("com.riffle.${label.lowercase()}"),
+                    activityName = AppActivityName(".MainActivity"),
+                ),
+            shortLabel = label,
+            longLabel = "$label message",
         )
 
     private fun appShortcut(
