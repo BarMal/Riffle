@@ -10,17 +10,26 @@ import com.riffle.core.domain.launcher.home.LauncherViewMode
 import org.json.JSONArray
 import org.json.JSONObject
 
-fun encodeHomeLayout(layout: HomeLayout): String =
+fun encodeHomeLayout(layout: HomeLayout): String = encodeHomeLayoutObject(layout).toString()
+
+fun decodeHomeLayout(value: String): HomeLayout =
+    JSONObject(value).let { json ->
+        when {
+            json.isHomeLayoutSetJson -> json.toHomeLayoutSet().activeLayout
+            else -> json.toHomeLayout()
+        }
+    }
+
+internal fun encodeHomeLayoutObject(layout: HomeLayout): JSONObject =
     JSONObject()
         .put("viewMode", layout.viewMode.name)
         .put("selectedPageId", layout.selectedPageId.value)
         .put("settings", encodeSettings(layout.settings))
         .put("pages", JSONArray(layout.pages.map(::encodePage)))
         .put("dock", encodeDock(layout.dock))
-        .toString()
 
-fun decodeHomeLayout(value: String): HomeLayout =
-    JSONObject(value).let { json ->
+internal fun JSONObject.toHomeLayout(): HomeLayout =
+    let { json ->
         val defaults = HomeLayoutDefaults.standard()
         val pages = json.getJSONArray("pages").toPages()
         val selectedPageId = LauncherPageId(json.optString("selectedPageId", defaults.selectedPageId.value))

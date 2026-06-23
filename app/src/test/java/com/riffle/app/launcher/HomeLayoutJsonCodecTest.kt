@@ -13,6 +13,8 @@ import com.riffle.core.domain.launcher.home.GridPlacement
 import com.riffle.core.domain.launcher.home.GridSettings
 import com.riffle.core.domain.launcher.home.GridSpacing
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
+import com.riffle.core.domain.launcher.home.HomeLayoutKey
+import com.riffle.core.domain.launcher.home.HomeLayoutSet
 import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.home.WallpaperSettings
@@ -160,6 +162,41 @@ class HomeLayoutJsonCodecTest {
         val decodedLayout = decodeHomeLayout(encodeHomeLayout(layout))
 
         assertEquals(LauncherViewMode.HOME_SCREEN_LIBRARY, decodedLayout.viewMode)
+    }
+
+    @Test
+    fun roundTripsHomeLayoutSet() {
+        val standard = HomeLayoutDefaults.standard()
+        val cards =
+            HomeLayoutDefaults.standard().copy(
+                viewMode = LauncherViewMode.CARD_INTERFACE,
+                dock = HomeLayoutDefaults.standard().dock.copy(capacity = 4),
+            )
+        val layoutSet =
+            HomeLayoutSet(
+                activeKey = HomeLayoutKey(LauncherViewMode.CARD_INTERFACE),
+                layouts =
+                    mapOf(
+                        HomeLayoutKey(LauncherViewMode.STANDARD_APP_DRAWER) to standard,
+                        HomeLayoutKey(LauncherViewMode.CARD_INTERFACE) to cards,
+                    ),
+            )
+
+        val decodedLayoutSet = decodeHomeLayoutSet(encodeHomeLayoutSet(layoutSet))
+
+        assertEquals(HomeLayoutKey(LauncherViewMode.CARD_INTERFACE), decodedLayoutSet.activeKey)
+        assertEquals(4, decodedLayoutSet.activeLayout.dock.capacity)
+        assertEquals(5, decodedLayoutSet.layoutFor(HomeLayoutKey(LauncherViewMode.STANDARD_APP_DRAWER)).dock.capacity)
+    }
+
+    @Test
+    fun decodesLegacySingleLayoutAsHomeLayoutSet() {
+        val layout = HomeLayoutDefaults.standard().copy(viewMode = LauncherViewMode.HOME_SCREEN_LIBRARY)
+
+        val decodedLayoutSet = decodeHomeLayoutSet(encodeHomeLayout(layout))
+
+        assertEquals(HomeLayoutKey(LauncherViewMode.HOME_SCREEN_LIBRARY), decodedLayoutSet.activeKey)
+        assertEquals(LauncherViewMode.HOME_SCREEN_LIBRARY, decodedLayoutSet.activeLayout.viewMode)
     }
 
     @Test

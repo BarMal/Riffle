@@ -256,13 +256,27 @@ class LauncherShellViewModel(
 
     fun onHomePageEdited(action: LauncherShellAction) {
         mutableState.value =
-            when (val result = homePageEngine.applyEdit(action = action, layout = mutableState.value.homeLayout)) {
-                is HomePageEditResult.Updated ->
+            when (action) {
+                is LauncherShellAction.SelectLauncherViewMode ->
                     mutableState.value
-                        .withHomeLayout(result.layout, homeLayoutRepository)
+                        .withSelectedHomeLayoutMode(action.mode, homeLayoutRepository)
                         .withHomeScreenLibraryApps(homeLayoutRepository)
 
-                is HomePageEditResult.Rejected -> mutableState.value
+                else ->
+                    when (
+                        val result =
+                            homePageEngine.applyEdit(
+                                action = action,
+                                layout = mutableState.value.homeLayout,
+                            )
+                    ) {
+                        is HomePageEditResult.Updated ->
+                            mutableState.value
+                                .withHomeLayout(result.layout, homeLayoutRepository)
+                                .withHomeScreenLibraryApps(homeLayoutRepository)
+
+                        is HomePageEditResult.Rejected -> mutableState.value
+                    }
             }
     }
 
@@ -447,13 +461,6 @@ private fun InstalledApp.matches(profileFilter: AppDrawerProfileFilter): Boolean
         AppDrawerProfileFilter.PERSONAL -> identity.profile.type == AppProfileType.PERSONAL
         AppDrawerProfileFilter.WORK -> identity.profile.type == AppProfileType.WORK
     }
-
-private fun LauncherShellState.withHomeLayout(
-    layout: HomeLayout,
-    homeLayoutRepository: HomeLayoutRepository,
-): LauncherShellState =
-    copy(homeLayout = layout)
-        .also { state -> homeLayoutRepository.saveHomeLayout(state.homeLayout) }
 
 private fun persistCompletedFirstRun(
     state: LauncherShellState,
