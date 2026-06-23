@@ -4,6 +4,7 @@ import com.riffle.core.domain.launcher.apps.AppActivityName
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppProfile
+import com.riffle.core.domain.launcher.apps.AppShortcutId
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.FolderItem
 import com.riffle.core.domain.launcher.home.GridCell
@@ -25,6 +26,7 @@ fun encodeShortcut(shortcut: AppShortcutItem): JSONObject =
         .put("type", "shortcut")
         .put("id", shortcut.id.value)
         .put("label", shortcut.label)
+        .put("appShortcutId", shortcut.appShortcutId?.value)
         .put("packageName", shortcut.appIdentity.packageName.value)
         .put("activityName", shortcut.appIdentity.activityName.value)
         .put("column", shortcut.placement?.cell?.column)
@@ -77,8 +79,14 @@ private fun JSONObject.toShortcut(): AppShortcutItem =
                 profile = AppProfile.personal(),
             ),
         label = getString("label"),
+        appShortcutId = optAppShortcutId(),
         placement = toPlacementOrNull(),
     )
+
+private fun JSONObject.optAppShortcutId(): AppShortcutId? =
+    optString("appShortcutId", "")
+        .takeIf(String::isNotBlank)
+        ?.let(::AppShortcutId)
 
 private fun JSONObject.toPlacementOrNull(): GridPlacement? =
     when {
