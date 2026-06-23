@@ -8,7 +8,9 @@ import com.riffle.core.domain.launcher.apps.InstalledAppRepository
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
+import com.riffle.core.domain.launcher.home.HomeLayoutKey
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
+import com.riffle.core.domain.launcher.home.HomeLayoutSet
 import com.riffle.core.domain.launcher.home.LauncherViewMode
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -88,6 +90,41 @@ class LauncherShellViewModeViewModelTest {
         assertEquals(viewModel.state.value.homeLayout, repository.savedLayout)
     }
 
+    @Test
+    fun switchingModesPreservesSeparateModeLayouts() {
+        val camera = app(label = "Camera")
+        val repository = FakeHomeLayoutRepository(savedLayout = HomeLayoutDefaults.standard())
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                installedAppRepository = FakeInstalledAppRepository(apps = listOf(camera)),
+                homeLayoutRepository = repository,
+            )
+
+        viewModel.onHomePageEdited(
+            LauncherShellAction.SelectLauncherViewMode(LauncherViewMode.HOME_SCREEN_LIBRARY),
+        )
+        viewModel.onHomePageEdited(
+            LauncherShellAction.SelectLauncherViewMode(LauncherViewMode.STANDARD_APP_DRAWER),
+        )
+        viewModel.onHomePageEdited(
+            LauncherShellAction.SelectLauncherViewMode(LauncherViewMode.HOME_SCREEN_LIBRARY),
+        )
+
+        assertEquals(LauncherViewMode.HOME_SCREEN_LIBRARY, viewModel.state.value.homeLayout.viewMode)
+        assertEquals(
+            camera.identity,
+            viewModel.state.value.homeLayout.selectedPage.items.singleAppShortcut().appIdentity,
+        )
+        assertEquals(
+            emptyList<AppShortcutItem>(),
+            repository.savedLayoutSet
+                ?.layoutFor(HomeLayoutKey(LauncherViewMode.STANDARD_APP_DRAWER))
+                ?.selectedPage
+                ?.items,
+        )
+    }
+
     private class FakeFirstRunRepository : FirstRunRepository {
         override fun isFirstRunComplete(): Boolean = false
 
@@ -97,10 +134,23 @@ class LauncherShellViewModeViewModelTest {
     private class FakeHomeLayoutRepository(
         var savedLayout: HomeLayout? = null,
     ) : HomeLayoutRepository {
-        override fun loadHomeLayout(): HomeLayout? = savedLayout
+        var savedLayoutSet: HomeLayoutSet? = savedLayout?.let(HomeLayoutSet::fromLayout)
+
+        override fun loadHomeLayout(): HomeLayout? = savedLayoutSet?.activeLayout ?: savedLayout
 
         override fun saveHomeLayout(layout: HomeLayout) {
             savedLayout = layout
+            savedLayoutSet =
+                savedLayoutSet
+                    ?.withActiveLayout(layout)
+                    ?: HomeLayoutSet.fromLayout(layout)
+        }
+
+        override fun loadHomeLayoutSet(): HomeLayoutSet? = savedLayoutSet
+
+        override fun saveHomeLayoutSet(layoutSet: HomeLayoutSet) {
+            savedLayoutSet = layoutSet
+            savedLayout = layoutSet.activeLayout
         }
     }
 
