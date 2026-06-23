@@ -43,7 +43,11 @@ fun Dock(
                 .fillMaxWidth()
                 .height(76.dp)
                 .clip(RoundedCornerShape(28.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.72f))
+                .background(
+                    MaterialTheme.colorScheme.surfaceVariant.copy(
+                        alpha = dock.backgroundAlphaPercent / 100f,
+                    ),
+                )
                 .padding(horizontal = 14.dp, vertical = 10.dp),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalAlignment = Alignment.CenterVertically,

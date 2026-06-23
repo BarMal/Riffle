@@ -200,6 +200,38 @@ class DockEngineTest {
         assertEquals(DockEditRejectionReason.INVALID_ICON_SIZE, rejected.reason)
     }
 
+    @Test
+    fun updatesDockBackgroundAlpha() {
+        val result = engine.setDockBackgroundAlpha(layout = HomeLayoutDefaults.standard(), alphaPercent = 85)
+
+        val updated = assertIs<DockEditResult.Updated>(result)
+        assertEquals(85, updated.layout.dock.backgroundAlphaPercent)
+    }
+
+    @Test
+    fun rejectsDockBackgroundAlphaBelowMinimum() {
+        val result =
+            engine.setDockBackgroundAlpha(
+                layout = HomeLayoutDefaults.standard(),
+                alphaPercent = MIN_DOCK_BACKGROUND_ALPHA_PERCENT - 1,
+            )
+
+        val rejected = assertIs<DockEditResult.Rejected>(result)
+        assertEquals(DockEditRejectionReason.INVALID_BACKGROUND_ALPHA, rejected.reason)
+    }
+
+    @Test
+    fun rejectsDockBackgroundAlphaAboveMaximum() {
+        val result =
+            engine.setDockBackgroundAlpha(
+                layout = HomeLayoutDefaults.standard(),
+                alphaPercent = MAX_DOCK_BACKGROUND_ALPHA_PERCENT + 1,
+            )
+
+        val rejected = assertIs<DockEditResult.Rejected>(result)
+        assertEquals(DockEditRejectionReason.INVALID_BACKGROUND_ALPHA, rejected.reason)
+    }
+
     private fun layoutWithDockItems(vararg items: AppShortcutItem): HomeLayout =
         HomeLayoutDefaults.standard().copy(
             dock = DockModel(capacity = 5, items = items.toList()),

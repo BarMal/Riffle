@@ -13,7 +13,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.home.DockModel
+import com.riffle.core.domain.launcher.home.MAX_DOCK_BACKGROUND_ALPHA_PERCENT
 import com.riffle.core.domain.launcher.home.MAX_DOCK_ICON_SIZE_DP
+import com.riffle.core.domain.launcher.home.MIN_DOCK_BACKGROUND_ALPHA_PERCENT
 import com.riffle.core.domain.launcher.home.MIN_DOCK_ICON_SIZE_DP
 
 @Composable
@@ -33,6 +35,10 @@ internal fun DockSetting(
         )
         DockIconSizeSetting(
             sizeDp = dock.iconSizeDp,
+            onAction = onAction,
+        )
+        DockBackgroundAlphaSetting(
+            alphaPercent = dock.backgroundAlphaPercent,
             onAction = onAction,
         )
     }
@@ -80,6 +86,61 @@ private fun DockIconSizeSetting(
 }
 
 private const val DOCK_ICON_SIZE_STEP_DP = 4
+
+@Composable
+private fun DockBackgroundAlphaSetting(
+    alphaPercent: Int,
+    onAction: (LauncherShellAction) -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
+            Text(
+                text = "Dock background",
+                style = MaterialTheme.typography.bodyLarge,
+            )
+            Text(
+                text = "$alphaPercent%",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            TextButton(
+                enabled = alphaPercent > MIN_DOCK_BACKGROUND_ALPHA_PERCENT,
+                onClick = {
+                    onAction(
+                        LauncherShellAction.SelectDockBackgroundAlpha(
+                            alphaPercent - DOCK_BACKGROUND_ALPHA_STEP_PERCENT,
+                        ),
+                    )
+                },
+            ) {
+                Text(text = "-")
+            }
+            TextButton(
+                enabled = alphaPercent < MAX_DOCK_BACKGROUND_ALPHA_PERCENT,
+                onClick = {
+                    onAction(
+                        LauncherShellAction.SelectDockBackgroundAlpha(
+                            alphaPercent + DOCK_BACKGROUND_ALPHA_STEP_PERCENT,
+                        ),
+                    )
+                },
+            ) {
+                Text(text = "+")
+            }
+        }
+    }
+}
+
+private const val DOCK_BACKGROUND_ALPHA_STEP_PERCENT = 5
 
 @Composable
 private fun DockVisibilitySetting(
