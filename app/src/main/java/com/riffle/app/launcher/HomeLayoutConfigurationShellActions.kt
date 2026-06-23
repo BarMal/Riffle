@@ -12,7 +12,13 @@ internal fun HomePageEngine.applyHomeLayoutConfigurationEdit(
 ): HomePageEditResult =
     when (action) {
         is LauncherShellAction.SelectHomeGridDimensions ->
-            updateGridDimensions(layout = layout, dimensions = action.dimensions)
+            updateGridDimensions(
+                layout = layout.layoutForGridDimensionUpdate(),
+                dimensions = action.dimensions,
+            )
+
+        is LauncherShellAction.SelectLibraryPageCompaction ->
+            HomePageEditResult.Updated(layout.withLibraryPageCompaction(action.enabled))
 
         is LauncherShellAction.SelectLauncherViewMode ->
             HomePageEditResult.Updated(layout.withLauncherViewMode(action.mode))
@@ -27,5 +33,28 @@ private fun HomeLayout.withLauncherViewMode(mode: LauncherViewMode): HomeLayout 
             LauncherViewMode.STANDARD_APP_DRAWER,
             LauncherViewMode.CARD_INTERFACE,
             -> updatedLayout.withoutHomeScreenLibraryApps()
+        }
+    }
+
+private fun HomeLayout.layoutForGridDimensionUpdate(): HomeLayout =
+    when {
+        viewMode == LauncherViewMode.HOME_SCREEN_LIBRARY && settings.grid.compactLibraryPages ->
+            withoutHomeScreenLibraryApps().copy(viewMode = viewMode)
+
+        else -> this
+    }
+
+private fun HomeLayout.withLibraryPageCompaction(enabled: Boolean): HomeLayout =
+    copy(
+        settings =
+            settings.copy(
+                grid = settings.grid.copy(compactLibraryPages = enabled),
+            ),
+    ).let { updatedLayout ->
+        when {
+            enabled && viewMode == LauncherViewMode.HOME_SCREEN_LIBRARY ->
+                updatedLayout.withoutHomeScreenLibraryApps().copy(viewMode = viewMode)
+
+            else -> updatedLayout
         }
     }

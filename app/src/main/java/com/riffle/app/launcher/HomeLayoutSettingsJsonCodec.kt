@@ -27,6 +27,7 @@ private fun encodeGrid(settings: GridSettings): JSONObject =
         .put("margin", encodeInsets(settings.margin))
         .put("padding", encodeInsets(settings.padding))
         .put("cellSpacing", encodeSpacing(settings.cellSpacing))
+        .put("compactLibraryPages", settings.compactLibraryPages)
 
 private fun JSONObject.toGridSettings(defaults: GridSettings): GridSettings =
     defaults.copy(
@@ -38,6 +39,7 @@ private fun JSONObject.toGridSettings(defaults: GridSettings): GridSettings =
         margin = optJSONObject("margin")?.toInsets(defaults.margin) ?: defaults.margin,
         padding = optJSONObject("padding")?.toInsets(defaults.padding) ?: defaults.padding,
         cellSpacing = optJSONObject("cellSpacing")?.toSpacing(defaults.cellSpacing) ?: defaults.cellSpacing,
+        compactLibraryPages = optBoolean("compactLibraryPages", defaults.compactLibraryPages),
     )
 
 private fun encodeInsets(insets: GridInsets): JSONObject =

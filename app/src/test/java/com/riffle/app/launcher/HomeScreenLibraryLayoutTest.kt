@@ -8,6 +8,7 @@ import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.GridCell
 import com.riffle.core.domain.launcher.home.GridDimensions
 import com.riffle.core.domain.launcher.home.GridPlacement
+import com.riffle.core.domain.launcher.home.GridSettings
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.home.LauncherPage
@@ -111,6 +112,97 @@ class HomeScreenLibraryLayoutTest {
         )
         assertEquals(LauncherPageType.AllApps, libraryLayout.pages[1].type)
         assertEquals(calendar.identity, (libraryLayout.pages[1].items.single() as AppShortcutItem).appIdentity)
+    }
+
+    @Test
+    fun sparseLibraryModeAllowsIncompletePagesAfterGridExpansion() {
+        val camera = app(label = "Camera")
+        val calendar = app(label = "Calendar")
+        val clock = app(label = "Clock")
+        val compactGrid = GridDimensions(columns = 2, rows = 1)
+        val expandedGrid = GridDimensions(columns = 3, rows = 1)
+        val layout =
+            HomeLayoutDefaults.standard().copy(
+                viewMode = LauncherViewMode.HOME_SCREEN_LIBRARY,
+                pages =
+                    listOf(
+                        LauncherPage(
+                            id = LauncherPageId("home"),
+                            grid = compactGrid,
+                        ),
+                    ),
+                settings =
+                    HomeLayoutDefaults.standard().settings.copy(
+                        grid = GridSettings(dimensions = compactGrid),
+                    ),
+            )
+
+        val initialLibraryLayout = layout.withHomeScreenLibraryApps(listOf(camera, calendar, clock))
+        val expandedLayout =
+            initialLibraryLayout
+                .copy(
+                    pages = initialLibraryLayout.pages.map { page -> page.copy(grid = expandedGrid) },
+                    settings = layout.settings.copy(grid = GridSettings(dimensions = expandedGrid)),
+                ).withHomeScreenLibraryApps(listOf(camera, calendar, clock))
+
+        assertEquals(listOf(2, 1), expandedLayout.pages.map { page -> page.items.size })
+        assertEquals(
+            listOf(LauncherPageId("home"), LauncherPageId("library:1")),
+            expandedLayout.pages.map { page -> page.id },
+        )
+    }
+
+    @Test
+    fun compactLibraryModeCollapsesGeneratedAppsAfterGridExpansion() {
+        val camera = app(label = "Camera")
+        val calendar = app(label = "Calendar")
+        val clock = app(label = "Clock")
+        val compactGrid = GridDimensions(columns = 2, rows = 1)
+        val expandedGrid = GridDimensions(columns = 3, rows = 1)
+        val layout =
+            HomeLayoutDefaults.standard().copy(
+                viewMode = LauncherViewMode.HOME_SCREEN_LIBRARY,
+                pages =
+                    listOf(
+                        LauncherPage(
+                            id = LauncherPageId("home"),
+                            grid = compactGrid,
+                        ),
+                    ),
+                settings =
+                    HomeLayoutDefaults.standard().settings.copy(
+                        grid =
+                            GridSettings(
+                                dimensions = compactGrid,
+                                compactLibraryPages = true,
+                            ),
+                    ),
+            )
+
+        val initialLibraryLayout = layout.withHomeScreenLibraryApps(listOf(camera, calendar, clock))
+        val expandedLayout =
+            initialLibraryLayout
+                .copy(
+                    pages = initialLibraryLayout.pages.map { page -> page.copy(grid = expandedGrid) },
+                    settings =
+                        layout.settings.copy(
+                            grid =
+                                GridSettings(
+                                    dimensions = expandedGrid,
+                                    compactLibraryPages = true,
+                                ),
+                        ),
+                ).withHomeScreenLibraryApps(listOf(camera, calendar, clock))
+
+        assertEquals(listOf(LauncherPageId("home")), expandedLayout.pages.map { page -> page.id })
+        assertEquals(
+            listOf(camera.identity, calendar.identity, clock.identity),
+            expandedLayout.selectedPage.items.appIdentities,
+        )
+        assertEquals(
+            listOf(GridCell(column = 0, row = 0), GridCell(column = 1, row = 0), GridCell(column = 2, row = 0)),
+            expandedLayout.selectedPage.items.map { item -> item.placement?.cell },
+        )
     }
 
     @Test

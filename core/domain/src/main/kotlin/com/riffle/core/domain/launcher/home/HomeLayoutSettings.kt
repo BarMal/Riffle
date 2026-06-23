@@ -31,6 +31,7 @@ data class GridSettings(
     val margin: GridInsets = GridInsets(),
     val padding: GridInsets = GridInsets(),
     val cellSpacing: GridSpacing = GridSpacing(),
+    val compactLibraryPages: Boolean = false,
 ) {
     companion object {
         fun standardPhone(): GridSettings =
