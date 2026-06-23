@@ -17,6 +17,7 @@ data class HomeLayoutSettings(
 
 data class HomeLabelSettings(
     val backgroundAlphaPercent: Int = DEFAULT_HOME_LABEL_BACKGROUND_ALPHA_PERCENT,
+    val textSizeSp: Int = DEFAULT_HOME_LABEL_TEXT_SIZE_SP,
 ) {
     companion object {
         fun standard(): HomeLabelSettings = HomeLabelSettings()
@@ -66,3 +67,6 @@ data class GridSpacing(
 const val DEFAULT_HOME_LABEL_BACKGROUND_ALPHA_PERCENT = 54
 const val MIN_HOME_LABEL_BACKGROUND_ALPHA_PERCENT = 0
 const val MAX_HOME_LABEL_BACKGROUND_ALPHA_PERCENT = 100
+const val DEFAULT_HOME_LABEL_TEXT_SIZE_SP = 11
+const val MIN_HOME_LABEL_TEXT_SIZE_SP = 9
+const val MAX_HOME_LABEL_TEXT_SIZE_SP = 16

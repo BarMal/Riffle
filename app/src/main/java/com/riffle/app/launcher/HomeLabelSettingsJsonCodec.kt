@@ -6,8 +6,10 @@ import org.json.JSONObject
 internal fun encodeLabels(settings: HomeLabelSettings): JSONObject =
     JSONObject()
         .put("backgroundAlphaPercent", settings.backgroundAlphaPercent)
+        .put("textSizeSp", settings.textSizeSp)
 
 internal fun JSONObject.toLabelSettings(defaults: HomeLabelSettings): HomeLabelSettings =
     HomeLabelSettings(
         backgroundAlphaPercent = optInt("backgroundAlphaPercent", defaults.backgroundAlphaPercent),
+        textSizeSp = optInt("textSizeSp", defaults.textSizeSp),
     )

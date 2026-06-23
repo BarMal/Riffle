@@ -6,7 +6,9 @@ import com.riffle.core.domain.launcher.home.HomePageEditResult
 import com.riffle.core.domain.launcher.home.HomePageEngine
 import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.home.MAX_HOME_LABEL_BACKGROUND_ALPHA_PERCENT
+import com.riffle.core.domain.launcher.home.MAX_HOME_LABEL_TEXT_SIZE_SP
 import com.riffle.core.domain.launcher.home.MIN_HOME_LABEL_BACKGROUND_ALPHA_PERCENT
+import com.riffle.core.domain.launcher.home.MIN_HOME_LABEL_TEXT_SIZE_SP
 
 internal fun HomePageEngine.applyHomeLayoutConfigurationEdit(
     action: LauncherShellAction,
@@ -25,6 +27,9 @@ internal fun HomePageEngine.applyHomeLayoutConfigurationEdit(
         is LauncherShellAction.SelectHomeLabelBackgroundAlpha ->
             layout.withHomeLabelBackgroundAlpha(action.alphaPercent)
 
+        is LauncherShellAction.SelectHomeLabelTextSize ->
+            layout.withHomeLabelTextSize(action.textSizeSp)
+
         is LauncherShellAction.SelectLauncherViewMode ->
             HomePageEditResult.Updated(layout.withLauncherViewMode(action.mode))
 
@@ -39,6 +44,21 @@ private fun HomeLayout.withHomeLabelBackgroundAlpha(alphaPercent: Int): HomePage
                     settings =
                         settings.copy(
                             labels = settings.labels.copy(backgroundAlphaPercent = alphaPercent),
+                        ),
+                ),
+            )
+
+        else -> HomePageEditResult.Rejected(HomePageEditRejectionReason.INVALID_LABEL_SETTING)
+    }
+
+private fun HomeLayout.withHomeLabelTextSize(textSizeSp: Int): HomePageEditResult =
+    when (textSizeSp) {
+        in MIN_HOME_LABEL_TEXT_SIZE_SP..MAX_HOME_LABEL_TEXT_SIZE_SP ->
+            HomePageEditResult.Updated(
+                copy(
+                    settings =
+                        settings.copy(
+                            labels = settings.labels.copy(textSizeSp = textSizeSp),
                         ),
                 ),
             )

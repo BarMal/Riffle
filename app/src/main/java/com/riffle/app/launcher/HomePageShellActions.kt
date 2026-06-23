@@ -46,6 +46,7 @@ fun HomePageEngine.applyEdit(
         is LauncherShellAction.SelectHomeGridDimensions,
         is LauncherShellAction.SelectLibraryPageCompaction,
         is LauncherShellAction.SelectHomeLabelBackgroundAlpha,
+        is LauncherShellAction.SelectHomeLabelTextSize,
         is LauncherShellAction.SelectLauncherViewMode,
         -> applyHomeLayoutConfigurationEdit(action = action, layout = layout)
 
