@@ -58,6 +58,7 @@ private fun encodeDock(dock: DockModel): JSONObject =
         .put("isEnabled", dock.isEnabled)
         .put("iconSizeDp", dock.iconSizeDp)
         .put("backgroundAlphaPercent", dock.backgroundAlphaPercent)
+        .put("itemSpacingDp", dock.itemSpacingDp)
         .put("capacity", dock.capacity)
         .put("items", JSONArray(dock.items.map(::encodeLauncherItem)))
 
@@ -70,6 +71,7 @@ private fun JSONObject.toDock(): DockModel =
                 "backgroundAlphaPercent",
                 HomeLayoutDefaults.standard().dock.backgroundAlphaPercent,
             ),
+        itemSpacingDp = optInt("itemSpacingDp", HomeLayoutDefaults.standard().dock.itemSpacingDp),
         capacity = optInt("capacity", HomeLayoutDefaults.standard().dock.capacity),
         items = optJSONArray("items")?.toLauncherItems().orEmpty(),
     )

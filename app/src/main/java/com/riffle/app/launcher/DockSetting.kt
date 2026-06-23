@@ -15,8 +15,10 @@ import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.home.DockModel
 import com.riffle.core.domain.launcher.home.MAX_DOCK_BACKGROUND_ALPHA_PERCENT
 import com.riffle.core.domain.launcher.home.MAX_DOCK_ICON_SIZE_DP
+import com.riffle.core.domain.launcher.home.MAX_DOCK_ITEM_SPACING_DP
 import com.riffle.core.domain.launcher.home.MIN_DOCK_BACKGROUND_ALPHA_PERCENT
 import com.riffle.core.domain.launcher.home.MIN_DOCK_ICON_SIZE_DP
+import com.riffle.core.domain.launcher.home.MIN_DOCK_ITEM_SPACING_DP
 
 @Composable
 internal fun DockSetting(
@@ -39,6 +41,10 @@ internal fun DockSetting(
         )
         DockBackgroundAlphaSetting(
             alphaPercent = dock.backgroundAlphaPercent,
+            onAction = onAction,
+        )
+        DockItemSpacingSetting(
+            spacingDp = dock.itemSpacingDp,
             onAction = onAction,
         )
     }
@@ -141,6 +147,49 @@ private fun DockBackgroundAlphaSetting(
 }
 
 private const val DOCK_BACKGROUND_ALPHA_STEP_PERCENT = 5
+
+@Composable
+private fun DockItemSpacingSetting(
+    spacingDp: Int,
+    onAction: (LauncherShellAction) -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
+            Text(
+                text = "Dock item spacing",
+                style = MaterialTheme.typography.bodyLarge,
+            )
+            Text(
+                text = "$spacingDp dp",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            TextButton(
+                enabled = spacingDp > MIN_DOCK_ITEM_SPACING_DP,
+                onClick = { onAction(LauncherShellAction.SelectDockItemSpacing(spacingDp - DOCK_SPACING_STEP_DP)) },
+            ) {
+                Text(text = "-")
+            }
+            TextButton(
+                enabled = spacingDp < MAX_DOCK_ITEM_SPACING_DP,
+                onClick = { onAction(LauncherShellAction.SelectDockItemSpacing(spacingDp + DOCK_SPACING_STEP_DP)) },
+            ) {
+                Text(text = "+")
+            }
+        }
+    }
+}
+
+private const val DOCK_SPACING_STEP_DP = 2
 
 @Composable
 private fun DockVisibilitySetting(

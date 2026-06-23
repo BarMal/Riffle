@@ -6,6 +6,7 @@ data class DockModel(
     val isEnabled: Boolean = true,
     val iconSizeDp: Int = DEFAULT_DOCK_ICON_SIZE_DP,
     val backgroundAlphaPercent: Int = DEFAULT_DOCK_BACKGROUND_ALPHA_PERCENT,
+    val itemSpacingDp: Int = DEFAULT_DOCK_ITEM_SPACING_DP,
 ) {
     val availableSlots: Int = capacity - items.size
 }
@@ -16,3 +17,6 @@ const val MAX_DOCK_ICON_SIZE_DP = 56
 const val DEFAULT_DOCK_BACKGROUND_ALPHA_PERCENT = 72
 const val MIN_DOCK_BACKGROUND_ALPHA_PERCENT = 0
 const val MAX_DOCK_BACKGROUND_ALPHA_PERCENT = 100
+const val DEFAULT_DOCK_ITEM_SPACING_DP = 10
+const val MIN_DOCK_ITEM_SPACING_DP = 0
+const val MAX_DOCK_ITEM_SPACING_DP = 24

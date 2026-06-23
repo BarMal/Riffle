@@ -49,7 +49,7 @@ fun Dock(
                     ),
                 )
                 .padding(horizontal = 14.dp, vertical = 10.dp),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        horizontalArrangement = Arrangement.spacedBy(dock.itemSpacingDp.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         repeat(dock.capacity) { index ->

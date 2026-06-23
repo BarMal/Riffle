@@ -1,5 +1,6 @@
 package com.riffle.app.launcher
 
+import com.riffle.core.domain.launcher.home.DockConfigurationEngine
 import com.riffle.core.domain.launcher.home.DockEditRejectionReason
 import com.riffle.core.domain.launcher.home.DockEditResult
 import com.riffle.core.domain.launcher.home.DockEngine
@@ -14,16 +15,19 @@ fun DockEngine.applyEdit(
             addAppToDock(layout = layout, app = action.app)
 
         is LauncherShellAction.SelectDockEnabled ->
-            setDockEnabled(layout = layout, enabled = action.enabled)
+            DockConfigurationEngine().setDockEnabled(layout = layout, enabled = action.enabled)
 
         is LauncherShellAction.SelectDockCapacity ->
-            setDockCapacity(layout = layout, capacity = action.capacity)
+            DockConfigurationEngine().setDockCapacity(layout = layout, capacity = action.capacity)
 
         is LauncherShellAction.SelectDockIconSize ->
-            setDockIconSize(layout = layout, sizeDp = action.sizeDp)
+            DockConfigurationEngine().setDockIconSize(layout = layout, sizeDp = action.sizeDp)
 
         is LauncherShellAction.SelectDockBackgroundAlpha ->
-            setDockBackgroundAlpha(layout = layout, alphaPercent = action.alphaPercent)
+            DockConfigurationEngine().setDockBackgroundAlpha(layout = layout, alphaPercent = action.alphaPercent)
+
+        is LauncherShellAction.SelectDockItemSpacing ->
+            DockConfigurationEngine().setDockItemSpacing(layout = layout, spacingDp = action.spacingDp)
 
         is LauncherShellAction.RemoveDockShortcut ->
             removeDockItem(layout = layout, itemId = action.itemId)

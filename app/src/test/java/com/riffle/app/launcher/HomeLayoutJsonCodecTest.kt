@@ -193,6 +193,18 @@ class HomeLayoutJsonCodecTest {
     }
 
     @Test
+    fun roundTripsDockItemSpacing() {
+        val layout =
+            HomeLayoutDefaults.standard().copy(
+                dock = HomeLayoutDefaults.standard().dock.copy(itemSpacingDp = 14),
+            )
+
+        val decodedLayout = decodeHomeLayout(encodeHomeLayout(layout))
+
+        assertEquals(14, decodedLayout.dock.itemSpacingDp)
+    }
+
+    @Test
     fun roundTripsLauncherViewMode() {
         val layout = HomeLayoutDefaults.standard().copy(viewMode = LauncherViewMode.HOME_SCREEN_LIBRARY)
 
@@ -399,6 +411,32 @@ class HomeLayoutJsonCodecTest {
             HomeLayoutDefaults.standard().dock.backgroundAlphaPercent,
             decodedLayout.dock.backgroundAlphaPercent,
         )
+    }
+
+    @Test
+    fun defaultsDockItemSpacingWhenOlderJsonDoesNotHaveIt() {
+        val decodedLayout =
+            decodeHomeLayout(
+                """
+                {
+                  "selectedPageId": "home",
+                  "pages": [
+                    {
+                      "id": "home",
+                      "columns": 4,
+                      "rows": 5,
+                      "items": []
+                    }
+                  ],
+                  "dock": {
+                    "capacity": 5,
+                    "items": []
+                  }
+                }
+                """.trimIndent(),
+            )
+
+        assertEquals(HomeLayoutDefaults.standard().dock.itemSpacingDp, decodedLayout.dock.itemSpacingDp)
     }
 
     private fun appShortcut(id: String): AppShortcutItem =
