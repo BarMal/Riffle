@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -141,6 +142,14 @@ fun SettingsSurface(
             HomeGridSetting(
                 grid = homeLayout.settings.grid,
                 viewMode = homeLayout.viewMode,
+                onAction = onAction,
+            )
+            Text(
+                text = "Dock",
+                style = MaterialTheme.typography.titleMedium,
+            )
+            DockVisibilitySetting(
+                enabled = homeLayout.dock.isEnabled,
                 onAction = onAction,
             )
             Text(
@@ -303,6 +312,37 @@ private fun HiddenAppRow(
         TextButton(onClick = { onAction(LauncherShellAction.UnhideApp(app.identity)) }) {
             Text(text = "Unhide")
         }
+    }
+}
+
+@Composable
+private fun DockVisibilitySetting(
+    enabled: Boolean,
+    onAction: (LauncherShellAction) -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
+            Text(
+                text = "Show dock",
+                style = MaterialTheme.typography.bodyLarge,
+            )
+            Text(
+                text = if (enabled) "Dock visible on home" else "Home grid uses dock space",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Switch(
+            checked = enabled,
+            onCheckedChange = { value -> onAction(LauncherShellAction.SelectDockEnabled(value)) },
+        )
     }
 }
 

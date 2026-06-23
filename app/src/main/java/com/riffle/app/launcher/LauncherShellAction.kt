@@ -77,6 +77,8 @@ sealed interface LauncherShellAction {
 
     data class AddAppToDock(val app: InstalledApp) : LauncherShellAction
 
+    data class SelectDockEnabled(val enabled: Boolean) : LauncherShellAction
+
     data class AppDrawerQueryChanged(val query: String) : LauncherShellAction
 
     data class AppDrawerProfileFilterSelected(
