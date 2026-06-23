@@ -133,6 +133,10 @@ fun SettingsSurface(
                 text = "Home layout",
                 style = MaterialTheme.typography.titleMedium,
             )
+            HomeViewModeSetting(
+                viewMode = homeLayout.viewMode,
+                onAction = onAction,
+            )
             HomeGridSetting(
                 dimensions = homeLayout.settings.grid.dimensions,
                 onAction = onAction,

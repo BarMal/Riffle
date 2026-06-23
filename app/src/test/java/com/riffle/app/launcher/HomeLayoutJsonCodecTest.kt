@@ -14,6 +14,7 @@ import com.riffle.core.domain.launcher.home.GridSettings
 import com.riffle.core.domain.launcher.home.GridSpacing
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.LauncherItemId
+import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.home.WallpaperSettings
 import com.riffle.core.domain.launcher.home.WallpaperSource
 import org.junit.Assert.assertEquals
@@ -150,6 +151,41 @@ class HomeLayoutJsonCodecTest {
         val decodedLayout = decodeHomeLayout(encodeHomeLayout(layout))
 
         assertEquals(gridSettings, decodedLayout.settings.grid)
+    }
+
+    @Test
+    fun roundTripsLauncherViewMode() {
+        val layout = HomeLayoutDefaults.standard().copy(viewMode = LauncherViewMode.HOME_SCREEN_LIBRARY)
+
+        val decodedLayout = decodeHomeLayout(encodeHomeLayout(layout))
+
+        assertEquals(LauncherViewMode.HOME_SCREEN_LIBRARY, decodedLayout.viewMode)
+    }
+
+    @Test
+    fun defaultsLauncherViewModeWhenOlderJsonDoesNotHaveViewMode() {
+        val decodedLayout =
+            decodeHomeLayout(
+                """
+                {
+                  "selectedPageId": "home",
+                  "pages": [
+                    {
+                      "id": "home",
+                      "columns": 4,
+                      "rows": 5,
+                      "items": []
+                    }
+                  ],
+                  "dock": {
+                    "capacity": 5,
+                    "items": []
+                  }
+                }
+                """.trimIndent(),
+            )
+
+        assertEquals(HomeLayoutDefaults.standard().viewMode, decodedLayout.viewMode)
     }
 
     @Test

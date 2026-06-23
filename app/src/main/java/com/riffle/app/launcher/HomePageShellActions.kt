@@ -43,8 +43,9 @@ fun HomePageEngine.applyEdit(
         LauncherShellAction.DeleteSelectedHomePage ->
             applyPageDeletionEdit(layout = layout)
 
-        is LauncherShellAction.SelectHomeGridDimensions ->
-            updateGridDimensions(layout = layout, dimensions = action.dimensions)
+        is LauncherShellAction.SelectHomeGridDimensions,
+        is LauncherShellAction.SelectLauncherViewMode,
+        -> applyHomeLayoutConfigurationEdit(action = action, layout = layout)
 
         else -> HomePageEditResult.Rejected(HomePageEditRejectionReason.PAGE_NOT_FOUND)
     }
