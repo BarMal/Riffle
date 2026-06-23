@@ -1,6 +1,12 @@
 package com.riffle.app.launcher
 
+import com.riffle.core.domain.launcher.apps.AppActivityName
+import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
+import com.riffle.core.domain.launcher.apps.AppProfile
+import com.riffle.core.domain.launcher.apps.AppVisibilityRepository
+import com.riffle.core.domain.launcher.apps.InstalledApp
+import com.riffle.core.domain.launcher.apps.InstalledAppRepository
 import com.riffle.core.domain.launcher.notifications.LauncherNotification
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationRepository
@@ -112,6 +118,33 @@ class LauncherShellNotificationStateTest {
         assertEquals(1, viewModel.state.value.notificationCountsByCategory[NotificationCategory.SERVICE])
     }
 
+    @Test
+    fun excludesHiddenAppNotificationsFromLauncherState() {
+        val camera = app(label = "Camera")
+        val docs = app(label = "Docs")
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                installedAppRepository = FakeInstalledAppRepository(apps = listOf(camera, docs)),
+                appVisibilityRepository = FakeAppVisibilityRepository(hiddenApps = setOf(docs.identity)),
+                notificationRepository =
+                    FakeNotificationRepository(
+                        notifications =
+                            listOf(
+                                notification(key = "camera-1", packageName = camera.identity.packageName.value),
+                                notification(key = "docs-1", packageName = docs.identity.packageName.value),
+                            ),
+                    ),
+            )
+
+        assertEquals(
+            listOf(camera.identity.packageName),
+            viewModel.state.value.notificationGroupsByApp.map { group -> group.packageName },
+        )
+        assertEquals(1, viewModel.state.value.notificationCountsByPackage[camera.identity.packageName])
+        assertEquals(null, viewModel.state.value.notificationCountsByPackage[docs.identity.packageName])
+    }
+
     private class FakeFirstRunRepository : FirstRunRepository {
         override fun isFirstRunComplete(): Boolean = false
 
@@ -122,6 +155,26 @@ class LauncherShellNotificationStateTest {
         var notifications: List<LauncherNotification> = emptyList(),
     ) : LauncherNotificationRepository {
         override fun activeNotifications(): List<LauncherNotification> = notifications
+    }
+
+    private class FakeInstalledAppRepository(
+        var apps: List<InstalledApp> = emptyList(),
+    ) : InstalledAppRepository {
+        override fun installedApps(): List<InstalledApp> = apps
+    }
+
+    private class FakeAppVisibilityRepository(
+        var hiddenApps: Set<AppIdentity> = emptySet(),
+    ) : AppVisibilityRepository {
+        override fun hiddenAppIdentities(): Set<AppIdentity> = hiddenApps
+
+        override fun hideApp(identity: AppIdentity) {
+            hiddenApps = hiddenApps + identity
+        }
+
+        override fun showApp(identity: AppIdentity) {
+            hiddenApps = hiddenApps - identity
+        }
     }
 
     private class FixedEpochMillisProvider(
@@ -143,5 +196,19 @@ class LauncherShellNotificationStateTest {
             category = category,
             canDismiss = canDismiss,
             postedAtEpochMillis = postedAtEpochMillis,
+        )
+
+    private fun app(
+        label: String,
+        profile: AppProfile = AppProfile.personal(),
+    ): InstalledApp =
+        InstalledApp(
+            identity =
+                AppIdentity(
+                    packageName = AppPackageName("com.riffle.${label.lowercase()}"),
+                    activityName = AppActivityName(".MainActivity"),
+                    profile = profile,
+                ),
+            label = label,
         )
 }
