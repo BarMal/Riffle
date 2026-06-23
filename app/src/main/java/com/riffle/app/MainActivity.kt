@@ -164,6 +164,7 @@ class MainActivity : ComponentActivity() {
         when (action) {
             is LauncherShellAction.AddAppToDock,
             is LauncherShellAction.SelectDockEnabled,
+            is LauncherShellAction.SelectDockCapacity,
             is LauncherShellAction.RemoveDockShortcut,
             is LauncherShellAction.MoveDockShortcut,
             -> {

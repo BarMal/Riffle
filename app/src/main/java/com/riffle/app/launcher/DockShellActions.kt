@@ -16,6 +16,9 @@ fun DockEngine.applyEdit(
         is LauncherShellAction.SelectDockEnabled ->
             setDockEnabled(layout = layout, enabled = action.enabled)
 
+        is LauncherShellAction.SelectDockCapacity ->
+            setDockCapacity(layout = layout, capacity = action.capacity)
+
         is LauncherShellAction.RemoveDockShortcut ->
             removeDockItem(layout = layout, itemId = action.itemId)
 

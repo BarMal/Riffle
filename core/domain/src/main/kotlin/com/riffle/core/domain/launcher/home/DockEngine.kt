@@ -90,6 +90,23 @@ class DockEngine {
             ),
         )
 
+    fun setDockCapacity(
+        layout: HomeLayout,
+        capacity: Int,
+    ): DockEditResult =
+        when {
+            capacity < MIN_DOCK_CAPACITY -> DockEditResult.Rejected(DockEditRejectionReason.INVALID_CAPACITY)
+            capacity < layout.dock.items.size ->
+                DockEditResult.Rejected(DockEditRejectionReason.CAPACITY_BELOW_ITEM_COUNT)
+
+            else ->
+                DockEditResult.Updated(
+                    layout.copy(
+                        dock = layout.dock.copy(capacity = capacity),
+                    ),
+                )
+        }
+
     private fun appShortcutFor(
         app: InstalledApp,
         layout: HomeLayout,
@@ -130,6 +147,8 @@ enum class DockEditRejectionReason {
     DUPLICATE_APP,
     ITEM_NOT_FOUND,
     INDEX_OUT_OF_BOUNDS,
+    INVALID_CAPACITY,
+    CAPACITY_BELOW_ITEM_COUNT,
 }
 
 enum class DockItemMoveDirection(
@@ -138,3 +157,5 @@ enum class DockItemMoveDirection(
     LEFT(indexDelta = -1),
     RIGHT(indexDelta = 1),
 }
+
+private const val MIN_DOCK_CAPACITY = 0
