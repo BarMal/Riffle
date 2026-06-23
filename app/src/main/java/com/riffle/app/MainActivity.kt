@@ -17,6 +17,7 @@ import com.riffle.app.launcher.SharedPreferencesHomeLayoutRepository
 import com.riffle.app.launcher.SharedPreferencesLauncherSettingsRepository
 import com.riffle.app.launcher.apps.AndroidAppLauncher
 import com.riffle.app.launcher.apps.AndroidAppShortcutRepository
+import com.riffle.app.launcher.apps.AndroidPackageChangeObserver
 import com.riffle.app.launcher.apps.PackageManagerAppIconLoader
 import com.riffle.app.launcher.apps.PackageManagerInstalledAppRepository
 import com.riffle.app.launcher.handleNotificationAction
@@ -45,6 +46,13 @@ class MainActivity : ComponentActivity() {
     private val homeRoleGateway by lazy { AndroidHomeRoleGateway(this) }
     private val appLauncher by lazy { AndroidAppLauncher(this) }
     private val appIconLoader by lazy { PackageManagerAppIconLoader(packageManager) }
+    private val packageChangeObserver by lazy {
+        AndroidPackageChangeObserver(this) {
+            runOnUiThread {
+                shellViewModel.refreshInstalledApps()
+            }
+        }
+    }
     private val wallpaperController by lazy { AndroidLauncherWallpaperController(window) }
     private val notificationAccessGateway by lazy { AndroidNotificationAccessGateway(this) }
     private val activeNotificationRepository by lazy { SharedPreferencesActiveNotificationRepository(this) }
@@ -64,6 +72,7 @@ class MainActivity : ComponentActivity() {
                 shellViewModel.refreshInstalledApps()
             }
         }
+        lifecycle.addObserver(packageChangeObserver)
 
         setContent {
             LauncherShell(
