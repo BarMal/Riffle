@@ -83,6 +83,8 @@ sealed interface LauncherShellAction {
 
     data class SelectDockIconSize(val sizeDp: Int) : LauncherShellAction
 
+    data class SelectDockBackgroundAlpha(val alphaPercent: Int) : LauncherShellAction
+
     data class AppDrawerQueryChanged(val query: String) : LauncherShellAction
 
     data class AppDrawerProfileFilterSelected(

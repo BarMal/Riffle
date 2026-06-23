@@ -122,6 +122,21 @@ class DockEngine {
             else -> DockEditResult.Rejected(DockEditRejectionReason.INVALID_ICON_SIZE)
         }
 
+    fun setDockBackgroundAlpha(
+        layout: HomeLayout,
+        alphaPercent: Int,
+    ): DockEditResult =
+        when (alphaPercent) {
+            in MIN_DOCK_BACKGROUND_ALPHA_PERCENT..MAX_DOCK_BACKGROUND_ALPHA_PERCENT ->
+                DockEditResult.Updated(
+                    layout.copy(
+                        dock = layout.dock.copy(backgroundAlphaPercent = alphaPercent),
+                    ),
+                )
+
+            else -> DockEditResult.Rejected(DockEditRejectionReason.INVALID_BACKGROUND_ALPHA)
+        }
+
     private fun appShortcutFor(
         app: InstalledApp,
         layout: HomeLayout,
@@ -165,6 +180,7 @@ enum class DockEditRejectionReason {
     INVALID_CAPACITY,
     CAPACITY_BELOW_ITEM_COUNT,
     INVALID_ICON_SIZE,
+    INVALID_BACKGROUND_ALPHA,
 }
 
 enum class DockItemMoveDirection(
