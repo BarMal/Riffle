@@ -167,6 +167,49 @@ class InstalledAppCatalogTest {
         )
     }
 
+    @Test
+    fun searchRanksAppLabelMatchesBeforeShortcutAndIdentityMatches() {
+        val shortcutMatch = app(label = "Alpha")
+        val labelMatch = app(label = "Camera")
+        val identityMatch = app(label = "Beta", packageName = "com.android.camera.tools")
+        val shortcutsByApp =
+            mapOf(
+                shortcutMatch.identity to
+                    listOf(
+                        AppShortcut(
+                            id = AppShortcutId("camera-scan"),
+                            appIdentity = shortcutMatch.identity,
+                            shortLabel = "Scan",
+                        ),
+                    ),
+            )
+
+        val results =
+            catalog.searchApps(
+                apps = listOf(shortcutMatch, identityMatch, labelMatch),
+                query = "cam",
+                shortcutsByApp = shortcutsByApp,
+            )
+
+        assertEquals(
+            listOf("Camera", "Alpha", "Beta"),
+            results.map { app -> app.label },
+        )
+    }
+
+    @Test
+    fun searchRanksLabelPrefixMatchesBeforeContainedLabelMatches() {
+        val containedMatch = app(label = "Acme Camera")
+        val prefixMatch = app(label = "Camera")
+
+        val results = catalog.searchApps(apps = listOf(containedMatch, prefixMatch), query = "cam")
+
+        assertEquals(
+            listOf("Camera", "Acme Camera"),
+            results.map { app -> app.label },
+        )
+    }
+
     private fun app(
         label: String,
         packageName: String = "com.android.${label.lowercase().replace(" ", ".")}",
