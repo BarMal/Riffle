@@ -130,6 +130,10 @@ fun SettingsSurface(
                 selectedSource = settings.appearance.wallpaper.source,
                 onAction = onAction,
             )
+            HomeLabelSetting(
+                settings = homeLayout.settings.labels,
+                onAction = onAction,
+            )
             Text(
                 text = "Home layout",
                 style = MaterialTheme.typography.titleMedium,

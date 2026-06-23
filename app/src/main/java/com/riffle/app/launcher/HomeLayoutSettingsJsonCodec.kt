@@ -13,11 +13,13 @@ fun encodeSettings(settings: HomeLayoutSettings): JSONObject =
     JSONObject()
         .put("grid", encodeGrid(settings.grid))
         .put("wallpaper", encodeWallpaper(settings.wallpaper))
+        .put("labels", encodeLabels(settings.labels))
 
 fun JSONObject.toSettings(defaults: HomeLayoutSettings): HomeLayoutSettings =
     defaults.copy(
         grid = optJSONObject("grid")?.toGridSettings(defaults.grid) ?: defaults.grid,
         wallpaper = optJSONObject("wallpaper")?.toWallpaperSettings(defaults.wallpaper) ?: defaults.wallpaper,
+        labels = optJSONObject("labels")?.toLabelSettings(defaults.labels) ?: defaults.labels,
     )
 
 private fun encodeGrid(settings: GridSettings): JSONObject =

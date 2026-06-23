@@ -5,6 +5,8 @@ import com.riffle.core.domain.launcher.home.HomePageEditRejectionReason
 import com.riffle.core.domain.launcher.home.HomePageEditResult
 import com.riffle.core.domain.launcher.home.HomePageEngine
 import com.riffle.core.domain.launcher.home.LauncherViewMode
+import com.riffle.core.domain.launcher.home.MAX_HOME_LABEL_BACKGROUND_ALPHA_PERCENT
+import com.riffle.core.domain.launcher.home.MIN_HOME_LABEL_BACKGROUND_ALPHA_PERCENT
 
 internal fun HomePageEngine.applyHomeLayoutConfigurationEdit(
     action: LauncherShellAction,
@@ -20,10 +22,28 @@ internal fun HomePageEngine.applyHomeLayoutConfigurationEdit(
         is LauncherShellAction.SelectLibraryPageCompaction ->
             HomePageEditResult.Updated(layout.withLibraryPageCompaction(action.enabled))
 
+        is LauncherShellAction.SelectHomeLabelBackgroundAlpha ->
+            layout.withHomeLabelBackgroundAlpha(action.alphaPercent)
+
         is LauncherShellAction.SelectLauncherViewMode ->
             HomePageEditResult.Updated(layout.withLauncherViewMode(action.mode))
 
         else -> HomePageEditResult.Rejected(HomePageEditRejectionReason.PAGE_NOT_FOUND)
+    }
+
+private fun HomeLayout.withHomeLabelBackgroundAlpha(alphaPercent: Int): HomePageEditResult =
+    when (alphaPercent) {
+        in MIN_HOME_LABEL_BACKGROUND_ALPHA_PERCENT..MAX_HOME_LABEL_BACKGROUND_ALPHA_PERCENT ->
+            HomePageEditResult.Updated(
+                copy(
+                    settings =
+                        settings.copy(
+                            labels = settings.labels.copy(backgroundAlphaPercent = alphaPercent),
+                        ),
+                ),
+            )
+
+        else -> HomePageEditResult.Rejected(HomePageEditRejectionReason.INVALID_LABEL_SETTING)
     }
 
 private fun HomeLayout.withLauncherViewMode(mode: LauncherViewMode): HomeLayout =
