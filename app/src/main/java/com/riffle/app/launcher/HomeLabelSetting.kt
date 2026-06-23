@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -23,6 +24,10 @@ internal fun HomeLabelSetting(
     onAction: (LauncherShellAction) -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        HomeLabelVisibilitySetting(
+            settings = settings,
+            onAction = onAction,
+        )
         HomeLabelBackgroundSetting(
             settings = settings,
             onAction = onAction,
@@ -30,6 +35,37 @@ internal fun HomeLabelSetting(
         HomeLabelTextSizeSetting(
             settings = settings,
             onAction = onAction,
+        )
+    }
+}
+
+@Composable
+private fun HomeLabelVisibilitySetting(
+    settings: HomeLabelSettings,
+    onAction: (LauncherShellAction) -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
+            Text(
+                text = "Show labels",
+                style = MaterialTheme.typography.bodyLarge,
+            )
+            Text(
+                text = if (settings.showText) "Labels visible on home" else "Icon-only home",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Switch(
+            checked = settings.showText,
+            onCheckedChange = { value -> onAction(LauncherShellAction.SelectHomeLabelTextVisible(value)) },
         )
     }
 }

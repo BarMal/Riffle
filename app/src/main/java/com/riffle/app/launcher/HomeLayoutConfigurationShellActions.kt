@@ -30,6 +30,9 @@ internal fun HomePageEngine.applyHomeLayoutConfigurationEdit(
         is LauncherShellAction.SelectHomeLabelTextSize ->
             layout.withHomeLabelTextSize(action.textSizeSp)
 
+        is LauncherShellAction.SelectHomeLabelTextVisible ->
+            HomePageEditResult.Updated(layout.withHomeLabelTextVisible(action.visible))
+
         is LauncherShellAction.SelectLauncherViewMode ->
             HomePageEditResult.Updated(layout.withLauncherViewMode(action.mode))
 
@@ -50,6 +53,14 @@ private fun HomeLayout.withHomeLabelBackgroundAlpha(alphaPercent: Int): HomePage
 
         else -> HomePageEditResult.Rejected(HomePageEditRejectionReason.INVALID_LABEL_SETTING)
     }
+
+private fun HomeLayout.withHomeLabelTextVisible(visible: Boolean): HomeLayout =
+    copy(
+        settings =
+            settings.copy(
+                labels = settings.labels.copy(showText = visible),
+            ),
+    )
 
 private fun HomeLayout.withHomeLabelTextSize(textSizeSp: Int): HomePageEditResult =
     when (textSizeSp) {
