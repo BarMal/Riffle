@@ -26,6 +26,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.home.containsHomeApp
@@ -87,6 +88,7 @@ private fun LazyListScope.appRows(
             isOnHome = context.homeLayout.containsHomeApp(app.identity),
             dockItemId = context.homeLayout.dock.dockShortcutIdFor(app.identity),
             notificationCount = context.notificationCountsByPackage[app.identity.packageName] ?: 0,
+            shortcuts = context.appShortcutsByApp[app.identity].orEmpty(),
             appIconLoader = context.appIconLoader,
             onAction = context.onAction,
         )
@@ -113,6 +115,7 @@ private fun AppDrawerRow(
     isOnHome: Boolean,
     dockItemId: LauncherItemId?,
     notificationCount: Int,
+    shortcuts: List<AppShortcut>,
     appIconLoader: AppIconLoader,
     onAction: (LauncherShellAction) -> Unit,
 ) {
@@ -164,6 +167,7 @@ private fun AppDrawerRow(
             app = app,
             isOnHome = isOnHome,
             dockItemId = dockItemId,
+            shortcuts = shortcuts,
             isMenuExpanded = isMenuExpanded.value,
             onMenuExpandedChange = { isExpanded -> isMenuExpanded.value = isExpanded },
             onAction = onAction,
@@ -176,6 +180,7 @@ private fun AppDrawerRowActions(
     app: InstalledApp,
     isOnHome: Boolean,
     dockItemId: LauncherItemId?,
+    shortcuts: List<AppShortcut>,
     isMenuExpanded: Boolean,
     onMenuExpandedChange: (Boolean) -> Unit,
     onAction: (LauncherShellAction) -> Unit,
@@ -198,6 +203,7 @@ private fun AppDrawerRowActions(
     }
     AppDrawerRowOverflowMenu(
         app = app,
+        shortcuts = shortcuts,
         isExpanded = isMenuExpanded,
         onExpandedChange = onMenuExpandedChange,
         onAction = onAction,
@@ -207,6 +213,7 @@ private fun AppDrawerRowActions(
 @Composable
 private fun AppDrawerRowOverflowMenu(
     app: InstalledApp,
+    shortcuts: List<AppShortcut>,
     isExpanded: Boolean,
     onExpandedChange: (Boolean) -> Unit,
     onAction: (LauncherShellAction) -> Unit,
@@ -219,6 +226,14 @@ private fun AppDrawerRowOverflowMenu(
             expanded = isExpanded,
             onDismissRequest = { onExpandedChange(false) },
         ) {
+            shortcuts.forEach { shortcut ->
+                AppDrawerRowMenuItem(
+                    text = shortcut.menuLabel,
+                    enabled = shortcut.enabled,
+                    onClick = { onAction(LauncherShellAction.LaunchAppShortcut(shortcut)) },
+                    onExpandedChange = onExpandedChange,
+                )
+            }
             AppDrawerRowMenuItem(
                 text = "App info",
                 onClick = { onAction(LauncherShellAction.OpenAppInfo(app.identity)) },
@@ -236,11 +251,13 @@ private fun AppDrawerRowOverflowMenu(
 @Composable
 private fun AppDrawerRowMenuItem(
     text: String,
+    enabled: Boolean = true,
     onClick: () -> Unit,
     onExpandedChange: (Boolean) -> Unit,
 ) {
     DropdownMenuItem(
         text = { Text(text = text) },
+        enabled = enabled,
         onClick = {
             onExpandedChange(false)
             onClick()
@@ -250,3 +267,6 @@ private fun AppDrawerRowMenuItem(
 
 private val InstalledApp.drawerKey: String
     get() = "${identity.profile.id.value}:${identity.packageName.value}/${identity.activityName.value}"
+
+private val AppShortcut.menuLabel: String
+    get() = longLabel ?: shortLabel

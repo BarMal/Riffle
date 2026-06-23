@@ -166,6 +166,7 @@ class MainActivity : ComponentActivity() {
     private fun handleAppAction(action: LauncherShellAction) {
         when (action) {
             is LauncherShellAction.LaunchApp -> appLauncher.launch(action.identity)
+            is LauncherShellAction.LaunchAppShortcut -> appLauncher.launchShortcut(action.shortcut)
             is LauncherShellAction.OpenAppInfo -> appLauncher.openAppInfo(action.identity)
             is LauncherShellAction.AddAppToHome -> shellViewModel.onAddAppToHome(action.app)
             is LauncherShellAction.HideApp,
