@@ -139,7 +139,8 @@ fun SettingsSurface(
                 onAction = onAction,
             )
             HomeGridSetting(
-                dimensions = homeLayout.settings.grid.dimensions,
+                grid = homeLayout.settings.grid,
+                viewMode = homeLayout.viewMode,
                 onAction = onAction,
             )
             Text(

@@ -44,6 +44,7 @@ fun HomePageEngine.applyEdit(
             applyPageDeletionEdit(layout = layout)
 
         is LauncherShellAction.SelectHomeGridDimensions,
+        is LauncherShellAction.SelectLibraryPageCompaction,
         is LauncherShellAction.SelectLauncherViewMode,
         -> applyHomeLayoutConfigurationEdit(action = action, layout = layout)
 

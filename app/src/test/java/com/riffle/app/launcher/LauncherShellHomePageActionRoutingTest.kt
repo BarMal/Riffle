@@ -28,6 +28,7 @@ class LauncherShellHomePageActionRoutingTest {
                 LauncherShellAction.MoveSelectedHomePageRight,
                 LauncherShellAction.DeleteSelectedHomePage,
                 LauncherShellAction.SelectHomeGridDimensions(GridDimensions(columns = 5, rows = 6)),
+                LauncherShellAction.SelectLibraryPageCompaction(enabled = true),
                 LauncherShellAction.SelectLauncherViewMode(LauncherViewMode.HOME_SCREEN_LIBRARY),
                 LauncherShellAction.SelectHomeLayoutDeviceClass(HomeLayoutDeviceClass.FOLDABLE),
             )

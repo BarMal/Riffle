@@ -19,14 +19,24 @@ import com.riffle.core.domain.launcher.home.containsHomeApp
 fun HomeLayout.withHomeScreenLibraryApps(apps: List<InstalledApp>): HomeLayout =
     when (viewMode) {
         LauncherViewMode.HOME_SCREEN_LIBRARY ->
-            apps
-                .filterNot { app -> containsHomeApp(app.identity) }
-                .fold(this) { layout, app -> layout.withLibraryApp(app) }
+            when {
+                settings.grid.compactLibraryPages ->
+                    withoutHomeScreenLibraryApps()
+                        .copy(viewMode = LauncherViewMode.HOME_SCREEN_LIBRARY)
+                        .withMissingLibraryApps(apps)
+
+                else -> withMissingLibraryApps(apps)
+            }
 
         LauncherViewMode.STANDARD_APP_DRAWER,
         LauncherViewMode.CARD_INTERFACE,
         -> this
     }
+
+private fun HomeLayout.withMissingLibraryApps(apps: List<InstalledApp>): HomeLayout =
+    apps
+        .filterNot { app -> containsHomeApp(app.identity) }
+        .fold(this) { layout, app -> layout.withLibraryApp(app) }
 
 fun HomeLayout.withoutHomeScreenLibraryApps(): HomeLayout {
     val pagesWithoutLibraryItems =

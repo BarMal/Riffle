@@ -141,6 +141,7 @@ class HomeLayoutJsonCodecTest {
                 margin = GridInsets(start = 1, top = 2, end = 3, bottom = 4),
                 padding = GridInsets(start = 5, top = 6, end = 7, bottom = 8),
                 cellSpacing = GridSpacing(horizontal = 9, vertical = 10),
+                compactLibraryPages = true,
             )
         val layout =
             HomeLayoutDefaults.standard().copy(
