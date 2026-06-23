@@ -68,7 +68,7 @@ class LauncherShellViewModel(
                 firstRunRepository = firstRunRepository,
                 reducer = reducer,
             ).withInstalledApps(installedAppRepository, appVisibilityRepository, appCatalog)
-                .withAppShortcuts(appShortcutRepository)
+                .withAppShortcuts(appShortcutRepository, appCatalog)
                 .withNotificationState(
                     notificationRepository = notificationRepository,
                     appNotificationCounter = appNotificationCounter,
@@ -108,7 +108,7 @@ class LauncherShellViewModel(
         mutableState.value =
             mutableState.value
                 .withInstalledApps(installedAppRepository, appVisibilityRepository, appCatalog)
-                .withAppShortcuts(appShortcutRepository)
+                .withAppShortcuts(appShortcutRepository, appCatalog)
                 .withNotificationState(
                     notificationRepository = notificationRepository,
                     appNotificationCounter = appNotificationCounter,
@@ -129,6 +129,7 @@ class LauncherShellViewModel(
                                 apps = mutableState.value.installedApps,
                                 query = action.query,
                                 profileFilter = mutableState.value.appDrawerProfileFilter,
+                                appShortcutsByApp = mutableState.value.appShortcutsByApp,
                             ),
                     )
 
@@ -140,6 +141,7 @@ class LauncherShellViewModel(
                                 apps = mutableState.value.installedApps,
                                 query = mutableState.value.appDrawerQuery,
                                 profileFilter = action.filter,
+                                appShortcutsByApp = mutableState.value.appShortcutsByApp,
                             ),
                     )
 
@@ -151,6 +153,7 @@ class LauncherShellViewModel(
                                 apps = mutableState.value.installedApps,
                                 query = action.query,
                                 profileFilter = mutableState.value.searchProfileFilter,
+                                appShortcutsByApp = mutableState.value.appShortcutsByApp,
                             ),
                     )
 
@@ -162,6 +165,7 @@ class LauncherShellViewModel(
                                 apps = mutableState.value.installedApps,
                                 query = mutableState.value.searchQuery,
                                 profileFilter = action.filter,
+                                appShortcutsByApp = mutableState.value.appShortcutsByApp,
                             ),
                     )
 
@@ -169,7 +173,7 @@ class LauncherShellViewModel(
                     appVisibilityRepository.hideApp(action.identity)
                     mutableState.value
                         .withInstalledApps(installedAppRepository, appVisibilityRepository, appCatalog)
-                        .withAppShortcuts(appShortcutRepository)
+                        .withAppShortcuts(appShortcutRepository, appCatalog)
                         .withNotificationState(
                             notificationRepository = notificationRepository,
                             appNotificationCounter = appNotificationCounter,
@@ -183,7 +187,7 @@ class LauncherShellViewModel(
                     appVisibilityRepository.showApp(action.identity)
                     mutableState.value
                         .withInstalledApps(installedAppRepository, appVisibilityRepository, appCatalog)
-                        .withAppShortcuts(appShortcutRepository)
+                        .withAppShortcuts(appShortcutRepository, appCatalog)
                         .withNotificationState(
                             notificationRepository = notificationRepository,
                             appNotificationCounter = appNotificationCounter,
@@ -354,47 +358,78 @@ private fun LauncherShellState.withInstalledApps(
                         apps = state.installedApps,
                         query = state.appDrawerQuery,
                         profileFilter = state.appDrawerProfileFilter,
+                        appShortcutsByApp = state.appShortcutsByApp,
                     ),
                 searchResults =
                     appCatalog.filteredApps(
                         apps = state.installedApps,
                         query = state.searchQuery,
                         profileFilter = state.searchProfileFilter,
+                        appShortcutsByApp = state.appShortcutsByApp,
                     ),
             )
         }
 
-private fun LauncherShellState.withAppShortcuts(appShortcutRepository: AppShortcutRepository): LauncherShellState =
+private fun LauncherShellState.withAppShortcuts(
+    appShortcutRepository: AppShortcutRepository,
+    appCatalog: InstalledAppCatalog,
+): LauncherShellState =
     installedApps
         .map { app -> app.identity }
         .toSet()
         .let { visibleAppIdentities ->
-            copy(
-                appShortcutsByApp =
-                    appShortcutRepository.shortcutsFor(installedApps)
-                        .filterKeys { identity -> identity in visibleAppIdentities },
-            )
+            appShortcutRepository.shortcutsFor(installedApps)
+                .filterKeys { identity -> identity in visibleAppIdentities }
+                .let { shortcutsByApp ->
+                    copy(appShortcutsByApp = shortcutsByApp)
+                        .withFilteredApps(appCatalog)
+                }
         }
 
 private fun InstalledAppCatalog.drawerApps(
     apps: List<InstalledApp>,
     query: String,
     profileFilter: AppDrawerProfileFilter,
+    appShortcutsByApp: AppShortcutsByApp,
 ): List<InstalledApp> =
     filteredApps(
         apps = apps,
         query = query,
         profileFilter = profileFilter,
+        appShortcutsByApp = appShortcutsByApp,
     )
 
 private fun InstalledAppCatalog.filteredApps(
     apps: List<InstalledApp>,
     query: String,
     profileFilter: AppDrawerProfileFilter,
+    appShortcutsByApp: AppShortcutsByApp,
 ): List<InstalledApp> {
-    return searchApps(apps = apps, query = query)
+    return searchApps(
+        apps = apps,
+        query = query,
+        shortcutsByApp = appShortcutsByApp,
+    )
         .filter { app -> app.matches(profileFilter) }
 }
+
+private fun LauncherShellState.withFilteredApps(appCatalog: InstalledAppCatalog): LauncherShellState =
+    copy(
+        appDrawerApps =
+            appCatalog.drawerApps(
+                apps = installedApps,
+                query = appDrawerQuery,
+                profileFilter = appDrawerProfileFilter,
+                appShortcutsByApp = appShortcutsByApp,
+            ),
+        searchResults =
+            appCatalog.filteredApps(
+                apps = installedApps,
+                query = searchQuery,
+                profileFilter = searchProfileFilter,
+                appShortcutsByApp = appShortcutsByApp,
+            ),
+    )
 
 private fun InstalledApp.matches(profileFilter: AppDrawerProfileFilter): Boolean =
     when (profileFilter) {

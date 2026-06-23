@@ -5,12 +5,39 @@ import com.riffle.core.domain.launcher.apps.AppDrawerProfileFilter
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppProfile
+import com.riffle.core.domain.launcher.apps.AppShortcut
+import com.riffle.core.domain.launcher.apps.AppShortcutId
+import com.riffle.core.domain.launcher.apps.AppShortcutRepository
+import com.riffle.core.domain.launcher.apps.AppShortcutsByApp
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.apps.InstalledAppRepository
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class LauncherShellSearchViewModelTest {
+    @Test
+    fun filtersSearchResultsByShortcutLabels() {
+        val camera = app(label = "Camera")
+        val browser = app(label = "Browser")
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                installedAppRepository =
+                    FakeInstalledAppRepository(
+                        apps = listOf(camera, browser),
+                        shortcuts =
+                            mapOf(
+                                camera.identity to listOf(shortcut(app = camera, label = "Selfie")),
+                                browser.identity to listOf(shortcut(app = browser, label = "New tab")),
+                            ),
+                    ),
+            )
+
+        viewModel.onAppActionSelected(LauncherShellAction.SearchQueryChanged("new tab"))
+
+        assertEquals(listOf("Browser"), viewModel.state.value.searchResults.map { app -> app.label })
+    }
+
     @Test
     fun filtersSearchResultsBySelectedProfile() {
         val viewModel =
@@ -96,8 +123,12 @@ class LauncherShellSearchViewModelTest {
 
     private class FakeInstalledAppRepository(
         var apps: List<InstalledApp> = emptyList(),
-    ) : InstalledAppRepository {
+        private val shortcuts: Map<AppIdentity, List<AppShortcut>> = emptyMap(),
+    ) : InstalledAppRepository,
+        AppShortcutRepository {
         override fun installedApps(): List<InstalledApp> = apps
+
+        override fun shortcutsFor(apps: List<InstalledApp>): AppShortcutsByApp = shortcuts
     }
 
     private fun app(
@@ -112,5 +143,15 @@ class LauncherShellSearchViewModelTest {
                     profile = profile,
                 ),
             label = label,
+        )
+
+    private fun shortcut(
+        app: InstalledApp,
+        label: String,
+    ): AppShortcut =
+        AppShortcut(
+            id = AppShortcutId("${app.identity.packageName.value}:$label"),
+            appIdentity = app.identity,
+            shortLabel = label,
         )
 }
