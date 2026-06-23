@@ -1,0 +1,33 @@
+package com.riffle.app.launcher
+
+import androidx.compose.runtime.Composable
+import com.riffle.core.domain.launcher.LauncherShellState
+
+@Composable
+fun HomeDestination(
+    state: LauncherShellState,
+    appIconLoader: AppIconLoader,
+    onAction: (LauncherShellAction) -> Unit,
+) {
+    when (state.homeLayout.viewMode.homeSurfaceKind()) {
+        HomeSurfaceKind.CARDS ->
+            NotificationOverviewSurface(
+                title = "Cards",
+                groups = state.notificationGroupsByApp,
+                categoryCounts = state.notificationCountsByCategory,
+                apps = state.installedApps,
+                appIconLoader = appIconLoader,
+                onAction = onAction,
+            )
+
+        HomeSurfaceKind.GRID ->
+            StandardHome(
+                layout = state.homeLayout,
+                installedApps = state.installedApps,
+                homeSwipeGestures = state.launcherSettings.gestures.homeSwipe,
+                notificationCountsByPackage = state.notificationCountsByPackage,
+                appIconLoader = appIconLoader,
+                onAction = onAction,
+            )
+    }
+}
