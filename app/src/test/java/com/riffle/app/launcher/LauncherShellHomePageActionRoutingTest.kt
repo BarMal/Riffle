@@ -30,6 +30,7 @@ class LauncherShellHomePageActionRoutingTest {
                 LauncherShellAction.SelectHomeGridDimensions(GridDimensions(columns = 5, rows = 6)),
                 LauncherShellAction.SelectLibraryPageCompaction(enabled = true),
                 LauncherShellAction.SelectHomeLabelBackgroundAlpha(alphaPercent = 75),
+                LauncherShellAction.SelectHomeLabelTextSize(textSizeSp = 14),
                 LauncherShellAction.SelectLauncherViewMode(LauncherViewMode.HOME_SCREEN_LIBRARY),
                 LauncherShellAction.SelectHomeLayoutDeviceClass(HomeLayoutDeviceClass.FOLDABLE),
             )

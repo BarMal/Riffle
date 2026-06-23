@@ -37,6 +37,37 @@ class LauncherShellHomeAppearanceViewModelTest {
         assertEquals(null, repository.savedLayout)
     }
 
+    @Test
+    fun updatesHomeLabelTextSizeAndSavesLayout() {
+        val repository = FakeHomeLayoutRepository()
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                homeLayoutRepository = repository,
+            )
+
+        viewModel.onHomePageEdited(LauncherShellAction.SelectHomeLabelTextSize(textSizeSp = 14))
+
+        assertEquals(14, viewModel.state.value.homeLayout.settings.labels.textSizeSp)
+        assertEquals(viewModel.state.value.homeLayout, repository.savedLayout)
+    }
+
+    @Test
+    fun ignoresInvalidHomeLabelTextSize() {
+        val repository = FakeHomeLayoutRepository()
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                homeLayoutRepository = repository,
+            )
+        val originalLayout = viewModel.state.value.homeLayout
+
+        viewModel.onHomePageEdited(LauncherShellAction.SelectHomeLabelTextSize(textSizeSp = 0))
+
+        assertEquals(originalLayout, viewModel.state.value.homeLayout)
+        assertEquals(null, repository.savedLayout)
+    }
+
     private class FakeFirstRunRepository : FirstRunRepository {
         override fun isFirstRunComplete(): Boolean = false
 

@@ -12,6 +12,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.riffle.core.domain.launcher.home.HomeLabelSettings
 
 @Composable
@@ -27,7 +28,7 @@ fun WallpaperReadableLabel(
                 .background(MaterialTheme.colorScheme.scrim.copy(alpha = settings.backgroundAlphaPercent / 100f))
                 .padding(horizontal = 6.dp, vertical = 2.dp),
         text = text,
-        style = MaterialTheme.typography.labelSmall,
+        style = MaterialTheme.typography.labelSmall.copy(fontSize = settings.textSizeSp.sp),
         color = Color.White,
         maxLines = 1,
         textAlign = TextAlign.Center,
