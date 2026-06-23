@@ -5,12 +5,12 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class HomeGridLayoutMetricsTest {
-    private val metrics = HomeGridLayoutMetrics(cellSpacingPx = 12f)
+    private val metrics = HomeGridLayoutMetrics()
 
     @Test
     fun cellSizeUsesWidthBoundWhenWidthIsTighter() {
         assertEquals(
-            91f,
+            100f,
             metrics.cellSizePx(
                 grid = GridDimensions(columns = 4, rows = 5),
                 maxWidthPx = 400f,
@@ -22,7 +22,7 @@ class HomeGridLayoutMetricsTest {
     @Test
     fun cellSizeUsesHeightBoundWhenHeightIsTighter() {
         assertEquals(
-            70.4f,
+            80f,
             metrics.cellSizePx(
                 grid = GridDimensions(columns = 4, rows = 5),
                 maxWidthPx = 800f,
@@ -32,9 +32,9 @@ class HomeGridLayoutMetricsTest {
     }
 
     @Test
-    fun cellSizeDoesNotGoNegativeWhenWorkspaceIsTooSmall() {
+    fun cellSizeCanShrinkIntoTinyWorkspace() {
         assertEquals(
-            0f,
+            2f,
             metrics.cellSizePx(
                 grid = GridDimensions(columns = 4, rows = 5),
                 maxWidthPx = 10f,
