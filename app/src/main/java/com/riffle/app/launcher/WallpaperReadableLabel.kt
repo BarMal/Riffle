@@ -27,7 +27,7 @@ fun WallpaperReadableLabel(
     Text(
         modifier =
             Modifier
-                .widthIn(max = 76.dp)
+                .widthIn(max = settings.maxWidthDp.dp)
                 .clip(RoundedCornerShape(6.dp))
                 .background(MaterialTheme.colorScheme.scrim.copy(alpha = settings.backgroundAlphaPercent / 100f))
                 .padding(horizontal = 6.dp, vertical = 2.dp),
