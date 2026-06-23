@@ -8,6 +8,7 @@ import com.riffle.core.domain.launcher.apps.InstalledAppRepository
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
+import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.HomeLayoutKey
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
 import com.riffle.core.domain.launcher.home.HomeLayoutSet
@@ -122,6 +123,51 @@ class LauncherShellViewModeViewModelTest {
                 ?.layoutFor(HomeLayoutKey(LauncherViewMode.STANDARD_APP_DRAWER))
                 ?.selectedPage
                 ?.items,
+        )
+    }
+
+    @Test
+    fun switchingDeviceClassPreservesSeparateDeviceLayoutsForCurrentMode() {
+        val camera = app(label = "Camera")
+        val repository = FakeHomeLayoutRepository(savedLayout = HomeLayoutDefaults.standard())
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                installedAppRepository = FakeInstalledAppRepository(apps = listOf(camera)),
+                homeLayoutRepository = repository,
+            )
+
+        viewModel.onHomePageEdited(
+            LauncherShellAction.SelectLauncherViewMode(LauncherViewMode.HOME_SCREEN_LIBRARY),
+        )
+        viewModel.onHomePageEdited(
+            LauncherShellAction.SelectHomeLayoutDeviceClass(HomeLayoutDeviceClass.FOLDABLE),
+        )
+        viewModel.onHomePageEdited(
+            LauncherShellAction.SelectHomeLayoutDeviceClass(HomeLayoutDeviceClass.PHONE),
+        )
+
+        assertEquals(
+            HomeLayoutKey(
+                viewMode = LauncherViewMode.HOME_SCREEN_LIBRARY,
+                deviceClass = HomeLayoutDeviceClass.PHONE,
+            ),
+            repository.savedLayoutSet?.activeKey,
+        )
+        assertEquals(
+            camera.identity,
+            viewModel.state.value.homeLayout.selectedPage.items.singleAppShortcut().appIdentity,
+        )
+        assertEquals(
+            HomeLayoutDefaults.standard().selectedPageId,
+            repository.savedLayoutSet
+                ?.layoutFor(
+                    HomeLayoutKey(
+                        viewMode = LauncherViewMode.HOME_SCREEN_LIBRARY,
+                        deviceClass = HomeLayoutDeviceClass.FOLDABLE,
+                    ),
+                )
+                ?.selectedPageId,
         )
     }
 

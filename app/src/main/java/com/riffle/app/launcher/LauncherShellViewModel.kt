@@ -262,6 +262,11 @@ class LauncherShellViewModel(
                         .withSelectedHomeLayoutMode(action.mode, homeLayoutRepository)
                         .withHomeScreenLibraryApps(homeLayoutRepository)
 
+                is LauncherShellAction.SelectHomeLayoutDeviceClass ->
+                    mutableState.value
+                        .withSelectedHomeLayoutDeviceClass(action.deviceClass, homeLayoutRepository)
+                        .withHomeScreenLibraryApps(homeLayoutRepository)
+
                 else ->
                     when (
                         val result =

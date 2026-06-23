@@ -15,6 +15,7 @@ internal fun LauncherShellAction.isHomePageEditAction(): Boolean =
         LauncherShellAction.DeleteSelectedHomePage,
         is LauncherShellAction.SelectHomeGridDimensions,
         is LauncherShellAction.SelectLauncherViewMode,
+        is LauncherShellAction.SelectHomeLayoutDeviceClass,
         -> true
 
         else -> false

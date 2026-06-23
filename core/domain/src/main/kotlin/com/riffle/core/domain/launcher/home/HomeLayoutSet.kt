@@ -7,6 +7,8 @@ data class HomeLayoutKey(
 
 enum class HomeLayoutDeviceClass {
     PHONE,
+    FOLDABLE,
+    TABLET,
 }
 
 data class HomeLayoutSet(
@@ -22,6 +24,10 @@ data class HomeLayoutSet(
 
     fun selectMode(mode: LauncherViewMode): HomeLayoutSet =
         activeKey.copy(viewMode = mode)
+            .let { key -> copy(activeKey = key, layouts = layouts + (key to layoutFor(key))) }
+
+    fun selectDeviceClass(deviceClass: HomeLayoutDeviceClass): HomeLayoutSet =
+        activeKey.copy(deviceClass = deviceClass)
             .let { key -> copy(activeKey = key, layouts = layouts + (key to layoutFor(key))) }
 
     companion object {
