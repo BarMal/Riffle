@@ -32,9 +32,10 @@ fun NotificationOverviewSurface(
     apps: List<InstalledApp>,
     appIconLoader: AppIconLoader,
     onAction: (LauncherShellAction) -> Unit,
+    title: String = "Notifications",
 ) {
     LauncherPanel(
-        title = "Notifications",
+        title = title,
         onAction = onAction,
     ) {
         if (groups.isEmpty()) {
