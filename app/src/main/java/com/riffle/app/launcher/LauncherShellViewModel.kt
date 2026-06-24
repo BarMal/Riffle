@@ -252,6 +252,7 @@ class LauncherShellViewModel(
                                 layout = mutableState.value.homeLayout,
                                 hostedWidgetId = action.hostedWidgetId,
                                 label = action.label,
+                                preferredSpan = action.preferredSpan,
                             )
                     ) {
                         is WidgetEditResult.Updated ->

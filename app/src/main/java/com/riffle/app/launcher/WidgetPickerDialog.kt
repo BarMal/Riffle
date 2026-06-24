@@ -128,6 +128,7 @@ internal fun InstalledWidgetProvider.requestAddWidgetAction(): LauncherShellActi
     LauncherShellAction.RequestAddWidget(
         provider = identity,
         label = label,
+        dimensions = dimensions,
     )
 
 internal fun InstalledWidgetProvider.widgetPickerSummary(): String =
