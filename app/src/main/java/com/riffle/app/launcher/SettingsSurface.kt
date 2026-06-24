@@ -159,7 +159,7 @@ private fun SettingsSection(
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = SETTINGS_SECTION_ALPHA),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -318,4 +318,3 @@ private val NotificationAccessStatus.label: String
         }
 
 private const val SETTINGS_PAGE_MAX_WIDTH_DP = 840
-private const val SETTINGS_SECTION_ALPHA = 0.64f
