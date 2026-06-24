@@ -189,6 +189,32 @@ class HomeScreenLibraryLayoutTest {
     }
 
     @Test
+    fun libraryModeRemovesTrailingEmptyHomePages() {
+        val camera = app(label = "Camera")
+        val layout =
+            HomeLayoutDefaults.standard().copy(
+                viewMode = LauncherViewMode.HOME_SCREEN_LIBRARY,
+                pages =
+                    listOf(
+                        LauncherPage(
+                            id = LauncherPageId("home"),
+                            grid = GridDimensions(columns = 2, rows = 1),
+                        ),
+                        LauncherPage(
+                            id = LauncherPageId("spare"),
+                            grid = GridDimensions(columns = 2, rows = 1),
+                        ),
+                    ),
+                selectedPageId = LauncherPageId("spare"),
+            )
+
+        val libraryLayout = layout.withHomeScreenLibraryApps(listOf(camera))
+
+        assertEquals(listOf(LauncherPageId("home")), libraryLayout.pages.map { page -> page.id })
+        assertEquals(LauncherPageId("home"), libraryLayout.selectedPageId)
+    }
+
+    @Test
     fun compactLibraryModeCollapsesGeneratedAppsAfterGridExpansion() {
         val camera = app(label = "Camera")
         val calendar = app(label = "Calendar")

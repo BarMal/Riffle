@@ -26,7 +26,7 @@ private fun HomeLayout.visibleTo(visibleAppIdentities: Set<AppIdentity>): HomeLa
             dock.copy(
                 items = dock.items.mapNotNull { item -> item.visibleTo(visibleAppIdentities) },
             ),
-    ).withoutTrailingEmptyAllAppsPages()
+    ).withoutTrailingEmptyLibraryPages()
 
 private fun LauncherPage.visibleTo(visibleAppIdentities: Set<AppIdentity>): LauncherPage =
     copy(items = emptyList())

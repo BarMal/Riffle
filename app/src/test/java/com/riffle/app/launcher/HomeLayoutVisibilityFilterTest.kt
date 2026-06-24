@@ -14,6 +14,7 @@ import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.home.LauncherPage
 import com.riffle.core.domain.launcher.home.LauncherPageId
 import com.riffle.core.domain.launcher.home.LauncherPageType
+import com.riffle.core.domain.launcher.home.LauncherViewMode
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -139,6 +140,7 @@ class HomeLayoutVisibilityFilterTest {
         val layout =
             HomeLayoutDefaults.standard().let { defaults ->
                 defaults.copy(
+                    viewMode = LauncherViewMode.HOME_SCREEN_LIBRARY,
                     pages =
                         listOf(
                             defaults.selectedPage.copy(items = listOf(shortcut(id = "camera", app = camera))),
@@ -150,6 +152,31 @@ class HomeLayoutVisibilityFilterTest {
                             ),
                         ),
                     selectedPageId = LauncherPageId("library:1"),
+                )
+            }
+
+        val visibleLayout = layout.visibleTo(apps = listOf(camera))
+
+        assertEquals(listOf(LauncherPageId("home")), visibleLayout.pages.map { page -> page.id })
+        assertEquals(LauncherPageId("home"), visibleLayout.selectedPageId)
+    }
+
+    @Test
+    fun removesTrailingEmptyHomePagesInLibraryModeAfterFiltering() {
+        val camera = app("Camera")
+        val layout =
+            HomeLayoutDefaults.standard().let { defaults ->
+                defaults.copy(
+                    viewMode = LauncherViewMode.HOME_SCREEN_LIBRARY,
+                    pages =
+                        listOf(
+                            defaults.selectedPage.copy(items = listOf(shortcut(id = "camera", app = camera))),
+                            LauncherPage(
+                                id = LauncherPageId("spare"),
+                                grid = defaults.settings.grid.dimensions,
+                            ),
+                        ),
+                    selectedPageId = LauncherPageId("spare"),
                 )
             }
 
