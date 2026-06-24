@@ -124,14 +124,18 @@ private fun StandardHomeColumn(
             Modifier
                 .fillMaxSize()
                 .windowInsetsPadding(WindowInsets.safeDrawing)
-                .padding(24.dp),
-        verticalArrangement = Arrangement.SpaceBetween,
+                .padding(
+                    horizontal = HOME_SURFACE_HORIZONTAL_PADDING_DP.dp,
+                    vertical = HOME_SURFACE_VERTICAL_PADDING_DP.dp,
+                ),
+        verticalArrangement = Arrangement.Top,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         HomeToolbar(
             isEditing = state.editState.isEditing,
             onAction = actions.onAction,
         )
+        Spacer(modifier = Modifier.height(HOME_TOOLBAR_WORKSPACE_SPACING_DP.dp))
         AnimatedWorkspaceGrid(
             layout = state.visibleLayout,
             isEditing = state.editState.isEditingPage,
@@ -170,12 +174,13 @@ private fun StandardHomeColumn(
                 onAction = actions.onAction,
             )
         }
+        Spacer(modifier = Modifier.height(HOME_PAGE_INDICATOR_TOP_SPACING_DP.dp))
         PageIndicator(
             pageCount = state.visibleLayout.pages.size,
             selectedPageIndex = state.visibleLayout.selectedPageIndex,
         )
         if (state.visibleLayout.dock.isEnabled) {
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(HOME_DOCK_TOP_SPACING_DP.dp))
             Dock(
                 dock = state.visibleLayout.dock,
                 isEditing = state.editState.isEditingPage,
@@ -568,3 +573,8 @@ private data class HomeWorkspaceActions(
 )
 
 private const val HOME_SWIPE_THRESHOLD_DP = 80
+private const val HOME_SURFACE_HORIZONTAL_PADDING_DP = 24
+private const val HOME_SURFACE_VERTICAL_PADDING_DP = 24
+private const val HOME_TOOLBAR_WORKSPACE_SPACING_DP = 16
+private const val HOME_PAGE_INDICATOR_TOP_SPACING_DP = 12
+private const val HOME_DOCK_TOP_SPACING_DP = 16
