@@ -41,6 +41,7 @@ fun AppList(
     context: AppListContext,
     modifier: Modifier = Modifier,
     showSections: Boolean = false,
+    showInlineActions: Boolean = true,
 ) {
     if (apps.isEmpty()) {
         Box(
@@ -65,12 +66,14 @@ fun AppList(
                     appRows(
                         apps = section.apps,
                         context = context,
+                        showInlineActions = showInlineActions,
                     )
                 }
             } else {
                 appRows(
                     apps = apps,
                     context = context,
+                    showInlineActions = showInlineActions,
                 )
             }
         }
@@ -80,6 +83,7 @@ fun AppList(
 private fun LazyListScope.appRows(
     apps: List<InstalledApp>,
     context: AppListContext,
+    showInlineActions: Boolean,
 ) {
     items(
         items = apps,
@@ -99,11 +103,15 @@ private fun LazyListScope.appRows(
                     )
                 }
         AppDrawerRow(
-            app = app,
-            isOnHome = context.homeLayout.containsHomeApp(app.identity),
-            dockItemId = context.homeLayout.dock.dockShortcutIdFor(app.identity),
-            notificationCount = context.notificationCountsByPackage[app.identity.packageName] ?: 0,
-            shortcutItems = shortcutItems,
+            state =
+                AppDrawerRowState(
+                    app = app,
+                    isOnHome = context.homeLayout.containsHomeApp(app.identity),
+                    dockItemId = context.homeLayout.dock.dockShortcutIdFor(app.identity),
+                    notificationCount = context.notificationCountsByPackage[app.identity.packageName] ?: 0,
+                    shortcutItems = shortcutItems,
+                    showInlineActions = showInlineActions,
+                ),
             appIconLoader = context.appIconLoader,
             onAction = context.onAction,
         )
@@ -126,14 +134,11 @@ private fun AppDrawerSectionHeader(title: String) {
 @Composable
 @OptIn(ExperimentalFoundationApi::class)
 private fun AppDrawerRow(
-    app: InstalledApp,
-    isOnHome: Boolean,
-    dockItemId: LauncherItemId?,
-    notificationCount: Int,
-    shortcutItems: List<AppDrawerShortcutMenuItem>,
+    state: AppDrawerRowState,
     appIconLoader: AppIconLoader,
     onAction: (LauncherShellAction) -> Unit,
 ) {
+    val app = state.app
     val isMenuExpanded = remember(app.identity) { mutableStateOf(false) }
 
     Row(
@@ -143,8 +148,8 @@ private fun AppDrawerRow(
                 .defaultMinSize(minHeight = 56.dp)
                 .combinedClickable(
                     onClick = { onAction(LauncherShellAction.LaunchApp(app.identity)) },
-                    onLongClick = { onAction(LauncherShellAction.OpenAppInfo(app.identity)) },
-                    onLongClickLabel = "Open ${app.label} app info",
+                    onLongClick = { isMenuExpanded.value = true },
+                    onLongClickLabel = "Show ${app.label} actions",
                 )
                 .padding(horizontal = 2.dp, vertical = 4.dp),
         horizontalArrangement = Arrangement.spacedBy(14.dp),
@@ -180,77 +185,99 @@ private fun AppDrawerRow(
                 softWrap = false,
             )
         }
-        if (notificationCount > 0) {
+        if (state.notificationCount > 0) {
             Text(
-                text = notificationCount.toString(),
+                text = state.notificationCount.toString(),
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.primary,
             )
         }
-        AppDrawerRowActions(
-            app = app,
-            isOnHome = isOnHome,
-            dockItemId = dockItemId,
-            shortcutItems = shortcutItems,
-            isMenuExpanded = isMenuExpanded.value,
-            onMenuExpandedChange = { isExpanded -> isMenuExpanded.value = isExpanded },
-            onAction = onAction,
-        )
+        if (state.showInlineActions) {
+            AppDrawerRowActions(
+                state = state,
+                isMenuExpanded = isMenuExpanded.value,
+                onMenuExpandedChange = { isExpanded -> isMenuExpanded.value = isExpanded },
+                onAction = onAction,
+            )
+        } else {
+            AppDrawerRowOverflowMenu(
+                state = state,
+                isExpanded = isMenuExpanded.value,
+                onExpandedChange = { isExpanded -> isMenuExpanded.value = isExpanded },
+                showButton = false,
+                onAction = onAction,
+            )
+        }
     }
 }
 
 @Composable
 private fun AppDrawerRowActions(
-    app: InstalledApp,
-    isOnHome: Boolean,
-    dockItemId: LauncherItemId?,
-    shortcutItems: List<AppDrawerShortcutMenuItem>,
+    state: AppDrawerRowState,
     isMenuExpanded: Boolean,
     onMenuExpandedChange: (Boolean) -> Unit,
     onAction: (LauncherShellAction) -> Unit,
 ) {
     TextButton(
-        enabled = !isOnHome,
-        onClick = { onAction(LauncherShellAction.AddAppToHome(app)) },
+        enabled = !state.isOnHome,
+        onClick = { onAction(LauncherShellAction.AddAppToHome(state.app)) },
     ) {
-        Text(text = if (isOnHome) "Added" else "Add")
+        Text(text = if (state.isOnHome) "Added" else "Add")
     }
     TextButton(
         onClick = {
-            when (dockItemId) {
-                null -> onAction(LauncherShellAction.AddAppToDock(app))
-                else -> onAction(LauncherShellAction.RemoveDockShortcut(dockItemId))
+            when (state.dockItemId) {
+                null -> onAction(LauncherShellAction.AddAppToDock(state.app))
+                else -> onAction(LauncherShellAction.RemoveDockShortcut(state.dockItemId))
             }
         },
     ) {
-        Text(text = if (dockItemId == null) "Dock" else "Undock")
+        Text(text = if (state.dockItemId == null) "Dock" else "Undock")
     }
     AppDrawerRowOverflowMenu(
-        app = app,
-        shortcutItems = shortcutItems,
+        state = state,
         isExpanded = isMenuExpanded,
         onExpandedChange = onMenuExpandedChange,
+        showButton = true,
         onAction = onAction,
     )
 }
 
 @Composable
 private fun AppDrawerRowOverflowMenu(
-    app: InstalledApp,
-    shortcutItems: List<AppDrawerShortcutMenuItem>,
+    state: AppDrawerRowState,
     isExpanded: Boolean,
     onExpandedChange: (Boolean) -> Unit,
+    showButton: Boolean,
     onAction: (LauncherShellAction) -> Unit,
 ) {
     Box {
-        IconButton(onClick = { onExpandedChange(true) }) {
-            Text(text = "...")
+        if (showButton) {
+            IconButton(onClick = { onExpandedChange(true) }) {
+                Text(text = "...")
+            }
         }
         DropdownMenu(
             expanded = isExpanded,
             onDismissRequest = { onExpandedChange(false) },
         ) {
-            shortcutItems.forEach { item ->
+            AppDrawerRowMenuItem(
+                text = if (state.isOnHome) "Added to home" else "Add to home",
+                enabled = !state.isOnHome,
+                onClick = { onAction(LauncherShellAction.AddAppToHome(state.app)) },
+                onExpandedChange = onExpandedChange,
+            )
+            AppDrawerRowMenuItem(
+                text = if (state.dockItemId == null) "Add to dock" else "Remove from dock",
+                onClick = {
+                    when (state.dockItemId) {
+                        null -> onAction(LauncherShellAction.AddAppToDock(state.app))
+                        else -> onAction(LauncherShellAction.RemoveDockShortcut(state.dockItemId))
+                    }
+                },
+                onExpandedChange = onExpandedChange,
+            )
+            state.shortcutItems.forEach { item ->
                 AppDrawerRowMenuItem(
                     text = item.shortcut.menuLabel,
                     enabled = item.shortcut.enabled,
@@ -266,17 +293,17 @@ private fun AppDrawerRowOverflowMenu(
             }
             AppDrawerRowMenuItem(
                 text = "App info",
-                onClick = { onAction(LauncherShellAction.OpenAppInfo(app.identity)) },
+                onClick = { onAction(LauncherShellAction.OpenAppInfo(state.app.identity)) },
                 onExpandedChange = onExpandedChange,
             )
             AppDrawerRowMenuItem(
                 text = "Hide",
-                onClick = { onAction(LauncherShellAction.HideApp(app.identity)) },
+                onClick = { onAction(LauncherShellAction.HideApp(state.app.identity)) },
                 onExpandedChange = onExpandedChange,
             )
             AppDrawerRowMenuItem(
                 text = "Uninstall",
-                onClick = { onAction(LauncherShellAction.UninstallApp(app.identity)) },
+                onClick = { onAction(LauncherShellAction.UninstallApp(state.app.identity)) },
                 onExpandedChange = onExpandedChange,
             )
         }
@@ -313,3 +340,12 @@ private data class AppDrawerShortcutMenuItem(
     val addLabel: String
         get() = if (isOnHome) "Added ${shortcut.menuLabel}" else "Add ${shortcut.menuLabel}"
 }
+
+private data class AppDrawerRowState(
+    val app: InstalledApp,
+    val isOnHome: Boolean,
+    val dockItemId: LauncherItemId?,
+    val notificationCount: Int,
+    val shortcutItems: List<AppDrawerShortcutMenuItem>,
+    val showInlineActions: Boolean,
+)

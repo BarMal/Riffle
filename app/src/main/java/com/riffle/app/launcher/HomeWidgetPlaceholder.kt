@@ -120,7 +120,6 @@ private fun BoxScope.WidgetGestureLayer(
         modifier =
             Modifier
                 .matchParentSize()
-                .then(dragModifier)
                 .combinedClickable(
                     onClick = {
                         Unit
@@ -132,7 +131,8 @@ private fun BoxScope.WidgetGestureLayer(
                         }
                     },
                     onLongClickLabel = "Show ${widget.label} actions",
-                ),
+                )
+                .then(dragModifier),
     )
 }
 

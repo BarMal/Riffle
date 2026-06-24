@@ -95,6 +95,7 @@ fun SearchSurface(
                 apps = results,
                 emptyText = "No matching apps",
                 context = appListContext,
+                showInlineActions = false,
             )
         }
     }
