@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -323,7 +324,10 @@ private fun WorkspaceGrid(
                             contentAlignment = Alignment.Center,
                         ) {
                             Box(
-                                modifier = Modifier.size(cellSize),
+                                modifier =
+                                    Modifier
+                                        .width(cellSize)
+                                        .fillMaxHeight(),
                                 contentAlignment = Alignment.Center,
                             ) {
                                 if (item != null) {
