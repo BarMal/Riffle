@@ -103,7 +103,6 @@ internal fun BoxScope.HomeDraggedItemOverlay(
 
 internal fun Modifier.homeItemDrag(
     enabled: Boolean,
-    enterEditModeOnStart: Boolean,
     item: LauncherItem,
     dragState: HomeItemDragState,
     actions: HomeWorkspaceActions,
@@ -120,9 +119,6 @@ internal fun Modifier.homeItemDrag(
                     dragX = 0f
                     dragY = 0f
                     actions.haptics.longPress()
-                    if (enterEditModeOnStart) {
-                        actions.onAction(LauncherShellAction.EnterHomeEditMode)
-                    }
                     actions.onDragSessionChanged(
                         HomeDragSession(
                             item = item,

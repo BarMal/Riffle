@@ -70,7 +70,6 @@ internal fun HomeFolder(
                     )
                     .homeItemDrag(
                         enabled = true,
-                        enterEditModeOnStart = !isEditing,
                         item = folder,
                         dragState = dragState,
                         actions = actions,

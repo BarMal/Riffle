@@ -46,7 +46,6 @@ import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.home.FolderItem
 import com.riffle.core.domain.launcher.home.GridCell
 import com.riffle.core.domain.launcher.home.GridDimensions
-import com.riffle.core.domain.launcher.home.HomeEditMode
 import com.riffle.core.domain.launcher.home.HomeLabelSettings
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.LauncherItem
@@ -66,14 +65,13 @@ internal fun StandardHome(
     onAction: (LauncherShellAction) -> Unit,
 ) {
     val visibleLayout = layout.visibleTo(installedApps)
-    val editState = HomeEditState(layout.editMode)
     val openedFolderId = remember { mutableStateOf<LauncherItemId?>(null) }
     val swipeThresholdPx = with(LocalDensity.current) { HOME_SWIPE_THRESHOLD_DP.dp.toPx() }
     val pageDragOffsetPx = remember { mutableFloatStateOf(0f) }
     val homeDragSession = remember { mutableStateOf<HomeDragSession?>(null) }
     val swipeNavigationState =
         HomeSwipeNavigationState(
-            enabled = !editState.isEditing,
+            enabled = true,
             thresholdPx = swipeThresholdPx,
             homeSwipeGestures = interactions.homeSwipeGestures,
             selectedPageIndex = visibleLayout.selectedPageIndex,
@@ -93,7 +91,6 @@ internal fun StandardHome(
             StandardHomeContentState(
                 layout = layout,
                 visibleLayout = visibleLayout,
-                editState = editState,
                 swipeNavigationState = swipeNavigationState,
                 pageDragOffsetPx = pageDragOffsetPx.floatValue,
                 dragSession = homeDragSession.value,
@@ -141,7 +138,6 @@ private fun StandardHomeColumn(
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         HomeToolbar(
-            isEditing = state.editState.isEditing,
             onAction = actions.onAction,
         )
         Spacer(modifier = Modifier.height(HOME_TOOLBAR_WORKSPACE_SPACING_DP.dp))
@@ -149,7 +145,9 @@ private fun StandardHomeColumn(
             layout = state.visibleLayout,
             gridState =
                 HomeGridState(
-                    isEditing = state.editState.isEditingPage,
+                    isEditing = false,
+                    pageCount = state.visibleLayout.pages.size,
+                    selectedPageIndex = state.visibleLayout.selectedPageIndex,
                     dragSession = state.dragSession,
                     pageDragOffsetPx = state.pageDragOffsetPx,
                 ),
@@ -166,22 +164,6 @@ private fun StandardHomeColumn(
                         onAction = actions.onAction,
                     ),
         )
-        if (state.editState.isEditingPage) {
-            PageEditControls(
-                pageCount = state.layout.pages.size,
-                selectedPageIndex = state.visibleLayout.selectedPageIndex,
-                onAction = actions.onAction,
-            )
-            HomeFolderEditControls(
-                onAction = actions.onAction,
-            )
-        }
-        if (state.editState.isManagingPages) {
-            PageOverviewControls(
-                layout = state.visibleLayout,
-                onAction = actions.onAction,
-            )
-        }
         Spacer(modifier = Modifier.height(HOME_PAGE_INDICATOR_TOP_SPACING_DP.dp))
         PageIndicator(
             pageCount = state.visibleLayout.pages.size,
@@ -191,7 +173,7 @@ private fun StandardHomeColumn(
             Spacer(modifier = Modifier.height(HOME_DOCK_TOP_SPACING_DP.dp))
             Dock(
                 dock = state.visibleLayout.dock,
-                isEditing = state.editState.isEditingPage,
+                isEditing = false,
                 notificationCountsByPackage = state.presentation.notificationCountsByPackage,
                 appShortcutsByApp = state.presentation.appShortcutsByApp,
                 appIconLoader = appIconLoader,
@@ -203,10 +185,7 @@ private fun StandardHomeColumn(
 }
 
 @Composable
-private fun HomeToolbar(
-    isEditing: Boolean,
-    onAction: (LauncherShellAction) -> Unit,
-) {
+private fun HomeToolbar(onAction: (LauncherShellAction) -> Unit) {
     Row(
         modifier =
             Modifier
@@ -230,19 +209,6 @@ private fun HomeToolbar(
         }
         TextButton(onClick = { onAction(LauncherShellAction.OpenSettings) }) {
             Text(text = "Settings")
-        }
-        TextButton(
-            onClick = {
-                onAction(
-                    if (isEditing) {
-                        LauncherShellAction.ExitHomeEditMode
-                    } else {
-                        LauncherShellAction.EnterHomeEditMode
-                    },
-                )
-            },
-        ) {
-            Text(text = if (isEditing) "Done" else "Edit")
         }
     }
 }
@@ -322,18 +288,9 @@ fun BoxScope.RemoveShortcutButton(
     }
 }
 
-private data class HomeEditState(
-    val editMode: HomeEditMode,
-) {
-    val isEditingPage: Boolean = editMode is HomeEditMode.EditingPage
-    val isManagingPages: Boolean = editMode is HomeEditMode.ManagingPages
-    val isEditing: Boolean = isEditingPage || isManagingPages
-}
-
 private data class StandardHomeContentState(
     val layout: HomeLayout,
     val visibleLayout: HomeLayout,
-    val editState: HomeEditState,
     val swipeNavigationState: HomeSwipeNavigationState,
     val pageDragOffsetPx: Float,
     val dragSession: HomeDragSession?,
