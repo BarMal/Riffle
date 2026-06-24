@@ -1,6 +1,7 @@
 package com.riffle.app.launcher
 
 import com.riffle.core.domain.launcher.apps.AppPackageName
+import com.riffle.core.domain.launcher.apps.AppProfile
 import com.riffle.core.domain.launcher.widgets.InstalledWidgetProvider
 import com.riffle.core.domain.launcher.widgets.WidgetProviderClassName
 import com.riffle.core.domain.launcher.widgets.WidgetProviderDimensions
@@ -19,6 +20,19 @@ class WidgetPickerDialogTest {
             )
 
         assertEquals("com.example.weather - 120x80dp", provider.widgetPickerSummary())
+    }
+
+    @Test
+    fun providerSummaryIncludesWorkProfilePrefix() {
+        val provider =
+            widgetProvider(
+                label = "Weather",
+                packageName = "com.example.weather",
+                className = ".WeatherWidget",
+                profile = AppProfile.work(),
+            )
+
+        assertEquals("Work - com.example.weather - 120x80dp", provider.widgetPickerSummary())
     }
 
     @Test
@@ -54,16 +68,32 @@ class WidgetPickerDialogTest {
         assertEquals(providers, providers.filteredWidgetProviders(" "))
     }
 
+    @Test
+    fun filtersWidgetProvidersByProfileLabel() {
+        val personal = widgetProvider(label = "Weather", packageName = "com.example.weather", className = ".Weather")
+        val work =
+            widgetProvider(
+                label = "Weather",
+                packageName = "com.example.weather.work",
+                className = ".Weather",
+                profile = AppProfile.work(),
+            )
+
+        assertEquals(listOf(work), listOf(personal, work).filteredWidgetProviders("work"))
+    }
+
     private fun widgetProvider(
         label: String,
         packageName: String,
         className: String,
+        profile: AppProfile = AppProfile.personal(),
     ): InstalledWidgetProvider =
         InstalledWidgetProvider(
             identity =
                 WidgetProviderIdentity(
                     packageName = AppPackageName(packageName),
                     className = WidgetProviderClassName(className),
+                    profile = profile,
                 ),
             label = label,
             dimensions = WidgetProviderDimensions(minWidthDp = 120, minHeightDp = 80),
