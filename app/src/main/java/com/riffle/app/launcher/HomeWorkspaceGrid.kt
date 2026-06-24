@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -134,36 +135,40 @@ private fun RowScope.HomeGridCell(
                 HomeDragPlaceholder()
             }
             state.previewItems.itemAt(cell = state.cell)?.let { item ->
-                HomeGridItem(
-                    item = item,
-                    state =
-                        HomeGridItemState(
-                            cell = state.cell,
-                            cellSizePx = state.cellSizePx,
-                            grid = state.page.grid,
-                            isEditing = state.gridState.isEditing,
-                            isActiveDragSource = false,
-                        ),
-                    presentation = presentation,
-                    appIconLoader = appIconLoader,
-                    actions = actions,
-                )
+                key(item.id.value) {
+                    HomeGridItem(
+                        item = item,
+                        state =
+                            HomeGridItemState(
+                                cell = state.cell,
+                                cellSizePx = state.cellSizePx,
+                                grid = state.page.grid,
+                                isEditing = state.gridState.isEditing,
+                                isActiveDragSource = false,
+                            ),
+                        presentation = presentation,
+                        appIconLoader = appIconLoader,
+                        actions = actions,
+                    )
+                }
             }
             activeDragSource?.let { item ->
-                HomeGridItem(
-                    item = item,
-                    state =
-                        HomeGridItemState(
-                            cell = state.cell,
-                            cellSizePx = state.cellSizePx,
-                            grid = state.page.grid,
-                            isEditing = state.gridState.isEditing,
-                            isActiveDragSource = true,
-                        ),
-                    presentation = presentation,
-                    appIconLoader = appIconLoader,
-                    actions = actions,
-                )
+                key(item.id.value) {
+                    HomeGridItem(
+                        item = item,
+                        state =
+                            HomeGridItemState(
+                                cell = state.cell,
+                                cellSizePx = state.cellSizePx,
+                                grid = state.page.grid,
+                                isEditing = state.gridState.isEditing,
+                                isActiveDragSource = true,
+                            ),
+                        presentation = presentation,
+                        appIconLoader = appIconLoader,
+                        actions = actions,
+                    )
+                }
             }
         }
     }
@@ -260,9 +265,9 @@ private fun HomeShortcut(
                         onClick = { actions.onAction(shortcut.launchAction()) },
                         onLongClick = {
                             actions.haptics.longPress()
-                            isContextMenuExpanded.value = true
+                            actions.onAction(LauncherShellAction.EnterHomeEditMode)
                         },
-                        onLongClickLabel = "Show ${shortcut.label} actions",
+                        onLongClickLabel = "Edit ${shortcut.label}",
                     ),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(6.dp),
