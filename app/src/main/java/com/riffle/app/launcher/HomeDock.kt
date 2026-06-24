@@ -111,19 +111,32 @@ private fun BoxScope.DockShortcut(
     appIconLoader: AppIconLoader,
     onAction: (LauncherShellAction) -> Unit,
 ) {
-    LauncherAppIcon(
-        identity = shortcut.appIdentity,
-        label = shortcut.label,
-        iconLoader = appIconLoader,
+    Box(
         modifier =
             Modifier
-                .size(iconSizeDp.dp)
-                .combinedClickable(
-                    enabled = !isEditing,
-                    onClick = { onAction(shortcut.launchAction()) },
-                    onLongClick = { onAction(LauncherShellAction.EnterHomeEditMode) },
-                ),
-    )
+                .size(iconSizeDp.dp),
+    ) {
+        LauncherAppIcon(
+            identity = shortcut.appIdentity,
+            label = shortcut.label,
+            iconLoader = appIconLoader,
+            modifier =
+                Modifier
+                    .size(iconSizeDp.dp)
+                    .combinedClickable(
+                        enabled = !isEditing,
+                        onClick = { onAction(shortcut.launchAction()) },
+                        onLongClick = { onAction(LauncherShellAction.EnterHomeEditMode) },
+                    ),
+        )
+
+        if (!isEditing) {
+            NotificationCountBadge(
+                count = notificationCount,
+                modifier = Modifier.align(Alignment.TopEnd),
+            )
+        }
+    }
 
     if (isEditing) {
         MoveDockShortcutControls(
@@ -137,11 +150,6 @@ private fun BoxScope.DockShortcut(
         AppInfoShortcutButton(
             label = shortcut.label,
             onClick = { onAction(shortcut.openAppInfoAction()) },
-        )
-    } else {
-        NotificationCountBadge(
-            count = notificationCount,
-            modifier = Modifier.align(Alignment.TopEnd),
         )
     }
 }
