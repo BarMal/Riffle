@@ -25,6 +25,15 @@ class AndroidAppLauncherTest {
         assertEquals(Intent.FLAG_ACTIVITY_NEW_TASK, APP_INFO_FLAGS)
     }
 
+    @Test
+    fun uninstallIntentUsesAndroidPackageDeletePieces() {
+        val identity = appIdentity(packageName = "com.example.camera")
+
+        assertEquals(Intent.ACTION_DELETE, UNINSTALL_ACTION)
+        assertEquals("package:com.example.camera", identity.uninstallPackageUriString())
+        assertEquals(Intent.FLAG_ACTIVITY_NEW_TASK, UNINSTALL_FLAGS)
+    }
+
     private fun appIdentity(packageName: String): AppIdentity =
         AppIdentity(
             packageName = AppPackageName(packageName),

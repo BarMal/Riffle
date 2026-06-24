@@ -264,6 +264,11 @@ private fun AppDrawerRowOverflowMenu(
                 onClick = { onAction(LauncherShellAction.HideApp(app.identity)) },
                 onExpandedChange = onExpandedChange,
             )
+            AppDrawerRowMenuItem(
+                text = "Uninstall",
+                onClick = { onAction(LauncherShellAction.UninstallApp(app.identity)) },
+                onExpandedChange = onExpandedChange,
+            )
         }
     }
 }
