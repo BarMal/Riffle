@@ -32,6 +32,7 @@ fun HomeWidgetPlaceholder(
     isEditing: Boolean,
     onAction: (LauncherShellAction) -> Unit,
     widgetViewFactory: HomeWidgetViewFactory = EmptyHomeWidgetViewFactory,
+    haptics: LauncherHaptics = NoopLauncherHaptics,
 ) {
     val isContextMenuExpanded = remember(widget.id) { mutableStateOf(false) }
     val context = LocalContext.current
@@ -51,18 +52,7 @@ fun HomeWidgetPlaceholder(
             Modifier
                 .fillMaxSize()
                 .clip(RoundedCornerShape(18.dp))
-                .background(MaterialTheme.colorScheme.surfaceContainerHighest)
-                .then(
-                    if (isEditing) {
-                        Modifier.combinedClickable(
-                            onClick = { isContextMenuExpanded.value = true },
-                            onLongClick = { isContextMenuExpanded.value = true },
-                            onLongClickLabel = "Show ${widget.label} actions",
-                        )
-                    } else {
-                        Modifier
-                    },
-                ),
+                .background(MaterialTheme.colorScheme.surfaceContainerHighest),
         contentAlignment = Alignment.Center,
     ) {
         if (hostedWidgetView == null) {
@@ -71,6 +61,22 @@ fun HomeWidgetPlaceholder(
             AndroidView(
                 modifier = Modifier.fillMaxSize(),
                 factory = { hostedWidgetView },
+                update = { view ->
+                    view.setOnLongClickListener {
+                        haptics.longPress()
+                        onAction(LauncherShellAction.EnterHomeEditMode)
+                        true
+                    }
+                },
+            )
+        }
+        if (isEditing || hostedWidgetView == null) {
+            WidgetGestureLayer(
+                widget = widget,
+                isEditing = isEditing,
+                haptics = haptics,
+                onMenuRequest = { isContextMenuExpanded.value = true },
+                onAction = onAction,
             )
         }
         if (isEditing) {
@@ -82,6 +88,38 @@ fun HomeWidgetPlaceholder(
             )
         }
     }
+}
+
+@Composable
+@OptIn(ExperimentalFoundationApi::class)
+private fun BoxScope.WidgetGestureLayer(
+    widget: WidgetItem,
+    isEditing: Boolean,
+    haptics: LauncherHaptics,
+    onMenuRequest: () -> Unit,
+    onAction: (LauncherShellAction) -> Unit,
+) {
+    Box(
+        modifier =
+            Modifier
+                .matchParentSize()
+                .combinedClickable(
+                    onClick = {
+                        if (isEditing) {
+                            onMenuRequest()
+                        }
+                    },
+                    onLongClick = {
+                        haptics.longPress()
+                        if (isEditing) {
+                            onMenuRequest()
+                        } else {
+                            onAction(LauncherShellAction.EnterHomeEditMode)
+                        }
+                    },
+                    onLongClickLabel = "Show ${widget.label} actions",
+                ),
+    )
 }
 
 @Composable
