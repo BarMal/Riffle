@@ -2,6 +2,7 @@ package com.riffle.app.launcher
 
 import com.riffle.core.domain.launcher.home.GridDimensions
 import com.riffle.core.domain.launcher.home.HomeLabelSettings
+import com.riffle.core.domain.launcher.home.HomeLabelSizing
 
 class HomeGridLayoutMetrics {
     fun cellSizePx(
@@ -30,6 +31,12 @@ class HomeGridLayoutMetrics {
 
         return HOME_LABEL_VERTICAL_PADDING_DP * 2 + labelTextHeightDp
     }
+
+    fun fixedHomeLabelContainerWidthDp(labelSettings: HomeLabelSettings): Int? =
+        when (labelSettings.sizing) {
+            HomeLabelSizing.FIXED -> labelSettings.maxWidthDp
+            HomeLabelSizing.DYNAMIC -> null
+        }
 }
 
 internal const val HOME_ICON_SIZE_DP = 44

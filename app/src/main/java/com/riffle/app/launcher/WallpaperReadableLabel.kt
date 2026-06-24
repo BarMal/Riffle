@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -29,11 +30,18 @@ fun WallpaperReadableLabel(
     }
 
     val metrics = HomeGridLayoutMetrics()
+    val fixedWidthDp = metrics.fixedHomeLabelContainerWidthDp(settings)
 
     Box(
         modifier =
             Modifier
-                .width(settings.maxWidthDp.dp)
+                .then(
+                    if (fixedWidthDp == null) {
+                        Modifier.widthIn(max = settings.maxWidthDp.dp)
+                    } else {
+                        Modifier.width(fixedWidthDp.dp)
+                    },
+                )
                 .height(metrics.homeLabelContainerHeightDp(settings).dp)
                 .clip(RoundedCornerShape(6.dp))
                 .background(MaterialTheme.colorScheme.scrim.copy(alpha = settings.backgroundAlphaPercent / 100f))
