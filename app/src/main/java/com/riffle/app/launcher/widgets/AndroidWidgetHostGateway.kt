@@ -5,14 +5,28 @@ import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.view.View
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.LifecycleOwner
 import com.riffle.core.domain.launcher.home.HostedWidgetId
+import com.riffle.core.domain.launcher.home.WidgetItem
 import com.riffle.core.domain.launcher.widgets.WidgetProviderIdentity
 
 class AndroidWidgetHostGateway(
     context: Context,
     private val appWidgetManager: AppWidgetManager = AppWidgetManager.getInstance(context),
     private val appWidgetHost: AppWidgetHost = AppWidgetHost(context, RIFFLE_APP_WIDGET_HOST_ID),
-) : WidgetHostGateway {
+) : WidgetHostGateway,
+    HomeWidgetViewFactory,
+    DefaultLifecycleObserver {
+    override fun onStart(owner: LifecycleOwner) {
+        appWidgetHost.startListening()
+    }
+
+    override fun onStop(owner: LifecycleOwner) {
+        appWidgetHost.stopListening()
+    }
+
     override fun allocateHostedWidgetId(): HostedWidgetId = HostedWidgetId(appWidgetHost.allocateAppWidgetId())
 
     override fun bindHostedWidget(
@@ -39,6 +53,15 @@ class AndroidWidgetHostGateway(
                 AppWidgetManager.EXTRA_APPWIDGET_PROVIDER,
                 provider.androidBindingTarget().toComponentName(),
             )
+
+    override fun createHostedWidgetView(
+        context: Context,
+        widget: WidgetItem,
+    ): View? =
+        appWidgetManager.getAppWidgetInfo(widget.appWidgetId.value)
+            ?.let { providerInfo ->
+                appWidgetHost.createView(context, widget.appWidgetId.value, providerInfo)
+            }
 
     override fun deleteHostedWidgetId(hostedWidgetId: HostedWidgetId) {
         appWidgetHost.deleteAppWidgetId(hostedWidgetId.value)

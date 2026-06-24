@@ -1,12 +1,15 @@
 package com.riffle.app.launcher
 
 import androidx.compose.runtime.Composable
+import com.riffle.app.launcher.widgets.EmptyHomeWidgetViewFactory
+import com.riffle.app.launcher.widgets.HomeWidgetViewFactory
 import com.riffle.core.domain.launcher.LauncherShellState
 
 @Composable
 fun HomeDestination(
     state: LauncherShellState,
     appIconLoader: AppIconLoader,
+    widgetViewFactory: HomeWidgetViewFactory = EmptyHomeWidgetViewFactory,
     onAction: (LauncherShellAction) -> Unit,
 ) {
     val haptics = rememberLauncherHaptics(state.launcherSettings.haptics.feedbackStrength)
@@ -35,6 +38,7 @@ fun HomeDestination(
                     StandardHomePresentation(
                         notificationCountsByPackage = state.notificationCountsByPackage,
                         appShortcutsByApp = state.appShortcutsByApp,
+                        widgetViewFactory = widgetViewFactory,
                         widgetPicker =
                             StandardHomeWidgetPickerState(
                                 providers = state.installedWidgetProviders,

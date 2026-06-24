@@ -38,6 +38,8 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import com.riffle.app.launcher.widgets.EmptyHomeWidgetViewFactory
+import com.riffle.app.launcher.widgets.HomeWidgetViewFactory
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppShortcutsByApp
 import com.riffle.core.domain.launcher.apps.InstalledApp
@@ -151,12 +153,7 @@ private fun StandardHomeColumn(
                     dragSession = state.dragSession,
                     pageDragOffsetPx = state.pageDragOffsetPx,
                 ),
-            presentation =
-                HomeGridPresentation(
-                    notificationCountsByPackage = state.presentation.notificationCountsByPackage,
-                    appShortcutsByApp = state.presentation.appShortcutsByApp,
-                    labelSettings = state.layout.settings.labels,
-                ),
+            presentation = state.homeGridPresentation(),
             appIconLoader = appIconLoader,
             actions = actions,
             modifier =
@@ -343,6 +340,14 @@ private data class StandardHomeContentState(
     val presentation: StandardHomePresentation,
 )
 
+private fun StandardHomeContentState.homeGridPresentation(): HomeGridPresentation =
+    HomeGridPresentation(
+        notificationCountsByPackage = presentation.notificationCountsByPackage,
+        appShortcutsByApp = presentation.appShortcutsByApp,
+        labelSettings = layout.settings.labels,
+        widgetViewFactory = presentation.widgetViewFactory,
+    )
+
 internal data class HomeDragSession(
     val item: LauncherItem,
     val originCell: GridCell,
@@ -359,6 +364,7 @@ internal data class StandardHomeInteractions(
 internal data class StandardHomePresentation(
     val notificationCountsByPackage: Map<AppPackageName, Int>,
     val appShortcutsByApp: AppShortcutsByApp,
+    val widgetViewFactory: HomeWidgetViewFactory = EmptyHomeWidgetViewFactory,
     val widgetPicker: StandardHomeWidgetPickerState = StandardHomeWidgetPickerState(),
 )
 
@@ -371,6 +377,7 @@ internal data class HomeGridPresentation(
     val notificationCountsByPackage: Map<AppPackageName, Int>,
     val appShortcutsByApp: AppShortcutsByApp,
     val labelSettings: HomeLabelSettings,
+    val widgetViewFactory: HomeWidgetViewFactory,
 )
 
 internal data class HomeItemDragState(
