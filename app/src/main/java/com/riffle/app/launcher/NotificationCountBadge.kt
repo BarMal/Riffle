@@ -32,10 +32,18 @@ fun NotificationCountBadge(
         contentAlignment = Alignment.Center,
     ) {
         Text(
-            text = count.toString(),
+            text = count.notificationBadgeLabel(),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onPrimary,
             maxLines = 1,
         )
     }
 }
+
+fun Int.notificationBadgeLabel(): String =
+    when {
+        this > MAX_NOTIFICATION_BADGE_COUNT -> "$MAX_NOTIFICATION_BADGE_COUNT+"
+        else -> toString()
+    }
+
+private const val MAX_NOTIFICATION_BADGE_COUNT = 99
