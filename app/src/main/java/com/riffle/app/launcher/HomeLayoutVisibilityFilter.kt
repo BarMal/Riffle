@@ -10,6 +10,7 @@ import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.LauncherItem
 import com.riffle.core.domain.launcher.home.LauncherPage
 import com.riffle.core.domain.launcher.home.PlaceLauncherItemResult
+import com.riffle.core.domain.launcher.home.WidgetItem
 
 fun HomeLayout.visibleTo(apps: List<InstalledApp>): HomeLayout =
     visibleTo(
@@ -43,6 +44,7 @@ private fun LauncherItem.visibleTo(visibleAppIdentities: Set<AppIdentity>): Laun
         is FolderItem ->
             copy(items = items.filter { item -> item.appIdentity in visibleAppIdentities })
                 .takeIf { folder -> folder.items.isNotEmpty() }
+        is WidgetItem -> this
     }
 
 private fun LauncherPage.packIntoFirstAvailableCells(items: List<LauncherItem>): LauncherPage =

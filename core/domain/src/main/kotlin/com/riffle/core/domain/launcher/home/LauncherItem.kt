@@ -31,3 +31,15 @@ data class FolderItem(
 ) : LauncherItem {
     override fun withPlacement(placement: GridPlacement): LauncherItem = copy(placement = placement)
 }
+
+data class WidgetItem(
+    override val id: LauncherItemId,
+    val appWidgetId: HostedWidgetId,
+    val label: String,
+    override val placement: GridPlacement? = null,
+) : LauncherItem {
+    override fun withPlacement(placement: GridPlacement): LauncherItem = copy(placement = placement)
+}
+
+@JvmInline
+value class HostedWidgetId(val value: Int)

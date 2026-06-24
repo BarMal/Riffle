@@ -14,6 +14,7 @@ import com.riffle.core.domain.launcher.home.LauncherPageId
 import com.riffle.core.domain.launcher.home.LauncherPageType
 import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.home.PlaceLauncherItemResult
+import com.riffle.core.domain.launcher.home.WidgetItem
 import com.riffle.core.domain.launcher.home.containsHomeApp
 
 fun HomeLayout.withHomeScreenLibraryApps(apps: List<InstalledApp>): HomeLayout =
@@ -124,6 +125,7 @@ private fun LauncherItem.withoutLibraryApps(): LauncherItem? =
         is FolderItem ->
             copy(items = items.filterNot { item -> item.isLibraryApp })
                 .takeIf { folder -> folder.items.isNotEmpty() }
+        is WidgetItem -> this
     }
 
 private val AppShortcutItem.isLibraryApp: Boolean
