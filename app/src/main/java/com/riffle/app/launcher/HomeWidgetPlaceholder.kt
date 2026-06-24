@@ -32,12 +32,14 @@ import com.riffle.core.domain.launcher.home.WidgetItem
 
 @Composable
 @OptIn(ExperimentalFoundationApi::class)
-fun HomeWidgetPlaceholder(
+internal fun HomeWidgetPlaceholder(
     widget: WidgetItem,
     isEditing: Boolean,
     onAction: (LauncherShellAction) -> Unit,
     widgetViewFactory: HomeWidgetViewFactory = EmptyHomeWidgetViewFactory,
     haptics: LauncherHaptics = NoopLauncherHaptics,
+    dragState: HomeItemDragState? = null,
+    workspaceActions: HomeWorkspaceActions? = null,
 ) {
     val context = LocalContext.current
     val hostedWidgetView =
@@ -77,6 +79,8 @@ fun HomeWidgetPlaceholder(
         WidgetGestureLayer(
             widget = widget,
             isEditing = isEditing,
+            dragState = dragState,
+            workspaceActions = workspaceActions,
             haptics = haptics,
             onAction = onAction,
         )
@@ -94,13 +98,29 @@ fun HomeWidgetPlaceholder(
 private fun BoxScope.WidgetGestureLayer(
     widget: WidgetItem,
     isEditing: Boolean,
+    dragState: HomeItemDragState?,
+    workspaceActions: HomeWorkspaceActions?,
     haptics: LauncherHaptics,
     onAction: (LauncherShellAction) -> Unit,
 ) {
+    val dragModifier =
+        when {
+            dragState != null && workspaceActions != null ->
+                Modifier.homeItemDrag(
+                    enabled = isEditing,
+                    item = widget,
+                    dragState = dragState,
+                    actions = workspaceActions,
+                )
+
+            else -> Modifier
+        }
+
     Box(
         modifier =
             Modifier
                 .matchParentSize()
+                .then(dragModifier)
                 .combinedClickable(
                     onClick = {
                         Unit

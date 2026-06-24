@@ -9,12 +9,15 @@ import com.riffle.core.domain.launcher.home.DockModel
 import com.riffle.core.domain.launcher.home.FolderItem
 import com.riffle.core.domain.launcher.home.GridCell
 import com.riffle.core.domain.launcher.home.GridPlacement
+import com.riffle.core.domain.launcher.home.GridSpan
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
+import com.riffle.core.domain.launcher.home.HostedWidgetId
 import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.home.LauncherPage
 import com.riffle.core.domain.launcher.home.LauncherPageId
 import com.riffle.core.domain.launcher.home.LauncherPageType
 import com.riffle.core.domain.launcher.home.LauncherViewMode
+import com.riffle.core.domain.launcher.home.WidgetItem
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -31,7 +34,11 @@ class HomeLayoutVisibilityFilterTest {
                             defaults.selectedPage.copy(
                                 items =
                                     listOf(
-                                        shortcut(id = "camera", app = camera),
+                                        shortcut(
+                                            id = "camera",
+                                            app = camera,
+                                            placement = GridPlacement(cell = GridCell(column = 0, row = 0)),
+                                        ),
                                         shortcut(
                                             id = "docs",
                                             app = docs,
@@ -52,7 +59,7 @@ class HomeLayoutVisibilityFilterTest {
     }
 
     @Test
-    fun compactsVisibleHomeShortcutsIntoHiddenCells() {
+    fun preservesVisibleHomeShortcutPlacements() {
         val camera = app("Camera")
         val docs = app("Docs")
         val layout =
@@ -83,8 +90,48 @@ class HomeLayoutVisibilityFilterTest {
 
         val visibleShortcut = visibleLayout.selectedPage.items.single() as AppShortcutItem
         assertEquals("Camera", visibleShortcut.label)
-        assertEquals(GridPlacement(cell = GridCell(column = 0, row = 0)), visibleShortcut.placement)
+        assertEquals(GridPlacement(cell = GridCell(column = 1, row = 0)), visibleShortcut.placement)
         assertEquals(GridPlacement(cell = GridCell(column = 1, row = 0)), (layout.selectedPage.items[1]).placement)
+    }
+
+    @Test
+    fun preservesVisibleWidgetAnchorAndSpan() {
+        val camera = app("Camera")
+        val widget =
+            WidgetItem(
+                id = LauncherItemId("widget:clock"),
+                appWidgetId = HostedWidgetId(42),
+                label = "Clock",
+                placement =
+                    GridPlacement(
+                        cell = GridCell(column = 2, row = 1),
+                        span = GridSpan(columns = 2, rows = 2),
+                    ),
+            )
+        val layout =
+            HomeLayoutDefaults.standard().let { defaults ->
+                defaults.copy(
+                    pages =
+                        listOf(
+                            defaults.selectedPage.copy(
+                                items =
+                                    listOf(
+                                        shortcut(
+                                            id = "camera",
+                                            app = camera,
+                                            placement = GridPlacement(cell = GridCell(column = 0, row = 0)),
+                                        ),
+                                        widget,
+                                    ),
+                            ),
+                        ),
+                )
+            }
+
+        val visibleLayout = layout.visibleTo(apps = listOf(camera))
+
+        val visibleWidget = visibleLayout.selectedPage.items.filterIsInstance<WidgetItem>().single()
+        assertEquals(widget.placement, visibleWidget.placement)
     }
 
     @Test
