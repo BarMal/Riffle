@@ -131,7 +131,11 @@ internal fun InstalledWidgetProvider.requestAddWidgetAction(): LauncherShellActi
     )
 
 internal fun InstalledWidgetProvider.widgetPickerSummary(): String =
-    "${identity.packageName.value} - ${dimensions.minWidthDp}x${dimensions.minHeightDp}dp"
+    listOfNotNull(
+        identity.profile.drawerProfilePrefix(),
+        identity.packageName.value,
+        "${dimensions.minWidthDp}x${dimensions.minHeightDp}dp",
+    ).joinToString(" - ")
 
 internal fun List<InstalledWidgetProvider>.filteredWidgetProviders(query: String): List<InstalledWidgetProvider> =
     query
@@ -143,7 +147,7 @@ internal fun List<InstalledWidgetProvider>.filteredWidgetProviders(query: String
         ?: this
 
 private fun InstalledWidgetProvider.matchesWidgetQuery(query: String): Boolean =
-    listOf(label, identity.packageName.value, identity.className.value)
+    listOfNotNull(label, identity.packageName.value, identity.className.value, identity.profile.drawerProfilePrefix())
         .any { value -> value.contains(query, ignoreCase = true) }
 
 private val InstalledWidgetProvider.widgetPickerKey: String
