@@ -86,7 +86,7 @@ private fun ColumnScope.SettingsPageHeader(onAction: (LauncherShellAction) -> Un
             style = MaterialTheme.typography.headlineMedium,
         )
         TextButton(onClick = { onAction(LauncherShellAction.OpenHome) }) {
-            Text(text = "Home")
+            SettingsButtonText(text = "Home")
         }
     }
 }
@@ -168,10 +168,9 @@ private fun HapticStrengthSetting(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(
+        SettingsTextColumn(
             modifier = Modifier.weight(1f),
-            text = "Feedback strength",
-            style = MaterialTheme.typography.bodyLarge,
+            title = "Feedback strength",
         )
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             HapticFeedbackStrength.entries.forEach { strength ->
@@ -179,7 +178,7 @@ private fun HapticStrengthSetting(
                     enabled = strength != selectedStrength,
                     onClick = { onAction(LauncherShellAction.SelectHapticFeedbackStrength(strength)) },
                 ) {
-                    Text(text = strength.label)
+                    SettingsButtonText(text = strength.label)
                 }
             }
         }
@@ -219,10 +218,9 @@ private fun WallpaperSourceSetting(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(
+        SettingsTextColumn(
             modifier = Modifier.weight(1f),
-            text = "Wallpaper",
-            style = MaterialTheme.typography.bodyLarge,
+            title = "Wallpaper",
         )
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             WallpaperSourceButton(
@@ -252,7 +250,7 @@ private fun WallpaperSourceButton(
         enabled = source != selectedSource,
         onClick = { onAction(LauncherShellAction.SelectWallpaperSource(source)) },
     ) {
-        Text(text = label)
+        SettingsButtonText(text = label)
     }
 }
 
@@ -266,26 +264,17 @@ private fun NotificationAccessSetting(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Column(
+        SettingsTextColumn(
             modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(2.dp),
-        ) {
-            Text(
-                text = "Notifications",
-                style = MaterialTheme.typography.bodyLarge,
-            )
-            Text(
-                text = status.label,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
+            title = "Notifications",
+            subtitle = status.label,
+        )
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             TextButton(onClick = { onAction(LauncherShellAction.OpenNotifications) }) {
-                Text(text = "View")
+                SettingsButtonText(text = "View")
             }
             TextButton(onClick = { onAction(LauncherShellAction.RequestNotificationAccess) }) {
-                Text(text = "Open")
+                SettingsButtonText(text = "Open")
             }
         }
     }
@@ -324,22 +313,13 @@ private fun HiddenAppRow(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Column(
+        SettingsTextColumn(
             modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(2.dp),
-        ) {
-            Text(
-                text = app.label,
-                style = MaterialTheme.typography.bodyLarge,
-            )
-            Text(
-                text = app.drawerSubtitle(),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
+            title = app.label,
+            subtitle = app.drawerSubtitle(),
+        )
         TextButton(onClick = { onAction(LauncherShellAction.UnhideApp(app.identity)) }) {
-            Text(text = "Unhide")
+            SettingsButtonText(text = "Unhide")
         }
     }
 }

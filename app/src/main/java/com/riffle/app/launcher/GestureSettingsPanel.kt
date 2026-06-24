@@ -49,7 +49,7 @@ fun HomeSwipeGestureSetting(
             onAction = onAction,
         )
         TextButton(onClick = { onAction(LauncherShellAction.ResetHomeSwipeGestureActions) }) {
-            Text(text = "Reset")
+            SettingsButtonText(text = "Reset")
         }
     }
 }
@@ -67,6 +67,7 @@ private fun HomeSwipeGestureRow(
     ) {
         Text(
             text = label,
+            maxLines = 1,
             style = MaterialTheme.typography.bodyMedium,
         )
         TextButton(
@@ -79,7 +80,7 @@ private fun HomeSwipeGestureRow(
                 )
             },
         ) {
-            Text(text = action.label)
+            SettingsButtonText(text = action.label)
         }
     }
 }
