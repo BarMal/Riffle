@@ -3,6 +3,7 @@ package com.riffle.app.launcher
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -126,63 +127,74 @@ fun SettingsSurface(
                     .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
+            SettingsSection(title = "Appearance") {
+                WallpaperSourceSetting(
+                    selectedSource = settings.appearance.wallpaper.source,
+                    onAction = onAction,
+                )
+                HomeLabelSetting(
+                    settings = homeLayout.settings.labels,
+                    onAction = onAction,
+                )
+            }
+            SettingsSection(title = "Home layout") {
+                HomeViewModeSetting(
+                    viewMode = homeLayout.viewMode,
+                    onAction = onAction,
+                )
+                HomeGridSetting(
+                    grid = homeLayout.settings.grid,
+                    viewMode = homeLayout.viewMode,
+                    onAction = onAction,
+                )
+            }
+            SettingsSection(title = "Dock") {
+                DockSetting(
+                    dock = homeLayout.dock,
+                    onAction = onAction,
+                )
+            }
+            SettingsSection(title = "Gestures") {
+                HomeSwipeGestureSetting(
+                    settings = settings.gestures.homeSwipe,
+                    onAction = onAction,
+                )
+            }
+            SettingsSection(title = "Permissions") {
+                NotificationAccessSetting(
+                    status = notificationAccessStatus,
+                    onAction = onAction,
+                )
+            }
+            SettingsSection(title = "Hidden apps") {
+                HiddenAppsSetting(
+                    apps = hiddenApps,
+                    onAction = onAction,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SettingsSection(
+    title: String,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = SETTINGS_SECTION_ALPHA),
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
             Text(
-                text = "Appearance",
+                text = title,
                 style = MaterialTheme.typography.titleMedium,
             )
-            WallpaperSourceSetting(
-                selectedSource = settings.appearance.wallpaper.source,
-                onAction = onAction,
-            )
-            HomeLabelSetting(
-                settings = homeLayout.settings.labels,
-                onAction = onAction,
-            )
-            Text(
-                text = "Home layout",
-                style = MaterialTheme.typography.titleMedium,
-            )
-            HomeViewModeSetting(
-                viewMode = homeLayout.viewMode,
-                onAction = onAction,
-            )
-            HomeGridSetting(
-                grid = homeLayout.settings.grid,
-                viewMode = homeLayout.viewMode,
-                onAction = onAction,
-            )
-            Text(
-                text = "Dock",
-                style = MaterialTheme.typography.titleMedium,
-            )
-            DockSetting(
-                dock = homeLayout.dock,
-                onAction = onAction,
-            )
-            Text(
-                text = "Gestures",
-                style = MaterialTheme.typography.titleMedium,
-            )
-            HomeSwipeGestureSetting(
-                settings = settings.gestures.homeSwipe,
-                onAction = onAction,
-            )
-            Text(
-                text = "Permissions",
-                style = MaterialTheme.typography.titleMedium,
-            )
-            NotificationAccessSetting(
-                status = notificationAccessStatus,
-                onAction = onAction,
-            )
-            Text(
-                text = "Hidden apps",
-                style = MaterialTheme.typography.titleMedium,
-            )
-            HiddenAppsSetting(
-                apps = hiddenApps,
-                onAction = onAction,
-            )
+            content()
         }
     }
 }
@@ -395,3 +407,4 @@ fun LauncherPanel(
 
 private const val PANEL_MAX_WIDTH_DP = 840
 private const val PANEL_SURFACE_ALPHA = 0.96f
+private const val SETTINGS_SECTION_ALPHA = 0.64f
