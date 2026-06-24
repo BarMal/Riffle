@@ -151,7 +151,6 @@ class MainActivity : ComponentActivity() {
             is LauncherShellAction.RenameHomeFolder,
             is LauncherShellAction.AddAppToFolder,
             is LauncherShellAction.RemoveAppFromFolder,
-            is LauncherShellAction.MoveHomeShortcut,
             is LauncherShellAction.MoveHomeShortcutToCell,
             is LauncherShellAction.AddAppShortcutToHome,
             -> {
