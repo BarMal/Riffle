@@ -248,7 +248,72 @@ class HomeShortcutEngineTest {
         )
     }
 
-    private fun layoutWith(vararg shortcuts: AppShortcutItem): HomeLayout =
+    @Test
+    fun movesShortcutToEmptyCellWithoutShiftingSpannedWidget() {
+        val camera =
+            appShortcut(
+                id = "camera",
+                placement = GridPlacement(cell = GridCell(column = 0, row = 0)),
+            )
+        val widget =
+            widget(
+                id = "clock",
+                placement =
+                    GridPlacement(
+                        cell = GridCell(column = 1, row = 1),
+                        span = GridSpan(columns = 2, rows = 2),
+                    ),
+            )
+        val layout = layoutWith(camera, widget)
+
+        val result =
+            engine.moveShortcutToCellOnSelectedPage(
+                layout = layout,
+                itemId = camera.id,
+                cell = GridCell(column = 3, row = 4),
+            )
+
+        val updated = assertIs<HomeShortcutResult.Updated>(result)
+        assertEquals(
+            GridPlacement(cell = GridCell(column = 3, row = 4)),
+            updated.layout.selectedPage.items.single { item -> item.id == camera.id }.placement,
+        )
+        assertEquals(
+            widget.placement,
+            updated.layout.selectedPage.items.single { item -> item.id == widget.id }.placement,
+        )
+    }
+
+    @Test
+    fun rejectsMovingShortcutIntoSpannedWidget() {
+        val camera =
+            appShortcut(
+                id = "camera",
+                placement = GridPlacement(cell = GridCell(column = 0, row = 0)),
+            )
+        val widget =
+            widget(
+                id = "clock",
+                placement =
+                    GridPlacement(
+                        cell = GridCell(column = 1, row = 1),
+                        span = GridSpan(columns = 2, rows = 2),
+                    ),
+            )
+        val layout = layoutWith(camera, widget)
+
+        val result =
+            engine.moveShortcutToCellOnSelectedPage(
+                layout = layout,
+                itemId = camera.id,
+                cell = GridCell(column = 2, row = 2),
+            )
+
+        val rejected = assertIs<HomeShortcutResult.Rejected>(result)
+        assertEquals(PlacementRejectionReason.COLLISION, rejected.reason)
+    }
+
+    private fun layoutWith(vararg shortcuts: LauncherItem): HomeLayout =
         HomeLayoutDefaults.standard().copy(
             pages = listOf(HomeLayoutDefaults.standard().selectedPage.copy(items = shortcuts.toList())),
         )
@@ -289,6 +354,17 @@ class HomeShortcutEngineTest {
                     packageName = AppPackageName("com.riffle.$id"),
                     activityName = AppActivityName(".MainActivity"),
                 ),
+            label = id,
+            placement = placement,
+        )
+
+    private fun widget(
+        id: String,
+        placement: GridPlacement,
+    ): WidgetItem =
+        WidgetItem(
+            id = LauncherItemId(id),
+            appWidgetId = HostedWidgetId(42),
             label = id,
             placement = placement,
         )

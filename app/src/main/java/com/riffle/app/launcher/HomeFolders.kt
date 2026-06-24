@@ -73,6 +73,7 @@ internal fun HomeFolder(
                         item = folder,
                         dragState = dragState,
                         actions = actions,
+                        onStationaryLongPress = { isContextMenuExpanded.value = true },
                     ),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(6.dp),
