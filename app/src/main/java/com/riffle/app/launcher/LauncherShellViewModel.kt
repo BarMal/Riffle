@@ -30,11 +30,11 @@ import com.riffle.core.domain.launcher.home.PlacementRejectionReason
 import com.riffle.core.domain.launcher.home.WallpaperSettings
 import com.riffle.core.domain.launcher.notifications.AppNotificationCounter
 import com.riffle.core.domain.launcher.notifications.AppNotificationGrouper
-import com.riffle.core.domain.launcher.notifications.LauncherNotificationRepository
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.notifications.NotificationStaleFilter
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettingsRepository
+import com.riffle.core.domain.launcher.widgets.WidgetProviderCatalog
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -45,8 +45,7 @@ class LauncherShellViewModel(
     private val appVisibilityRepository: AppVisibilityRepository = NoopAppVisibilityRepository,
     private val homeLayoutRepository: HomeLayoutRepository = NoopHomeLayoutRepository,
     private val launcherSettingsRepository: LauncherSettingsRepository = NoopLauncherSettingsRepository,
-    private val notificationRepository: LauncherNotificationRepository = LauncherNotificationRepository { emptyList() },
-    private val epochMillisProvider: EpochMillisProvider = SystemEpochMillisProvider,
+    private val platformDependencies: LauncherShellPlatformDependencies = LauncherShellPlatformDependencies(),
 ) : ViewModel() {
     private val reducer = LauncherShellStateReducer()
     private val appCatalog = InstalledAppCatalog()
@@ -55,6 +54,9 @@ class LauncherShellViewModel(
     private val notificationStaleFilter = NotificationStaleFilter()
     private val appShortcutRepository =
         installedAppRepository as? AppShortcutRepository ?: NoopAppShortcutRepository
+    private val notificationRepository = platformDependencies.notificationRepository
+    private val epochMillisProvider = platformDependencies.epochMillisProvider
+    private val widgetProviderCatalog = WidgetProviderCatalog()
     private val shortcutEngine = HomeShortcutEngine()
     private val homePageEngine = HomePageEngine()
     private val dockEngine = DockEngine()
@@ -68,6 +70,7 @@ class LauncherShellViewModel(
                 firstRunRepository = firstRunRepository,
                 reducer = reducer,
             ).withInstalledApps(installedAppRepository, appVisibilityRepository, appCatalog)
+                .copy(installedWidgetProviders = platformDependencies.installedWidgetProviders(widgetProviderCatalog))
                 .withoutUnavailableApps(homeLayoutRepository)
                 .withHomeScreenLibraryApps(homeLayoutRepository)
                 .withAppShortcuts(appShortcutRepository, appCatalog)
@@ -110,6 +113,7 @@ class LauncherShellViewModel(
         mutableState.value =
             mutableState.value
                 .withInstalledApps(installedAppRepository, appVisibilityRepository, appCatalog)
+                .copy(installedWidgetProviders = platformDependencies.installedWidgetProviders(widgetProviderCatalog))
                 .withoutUnavailableApps(homeLayoutRepository)
                 .withHomeScreenLibraryApps(homeLayoutRepository)
                 .withAppShortcuts(appShortcutRepository, appCatalog)
@@ -173,11 +177,19 @@ class LauncherShellViewModel(
                             ),
                     )
 
-                is LauncherShellAction.HideApp -> {
-                    appVisibilityRepository.hideApp(action.identity)
+                is LauncherShellAction.HideApp,
+                is LauncherShellAction.UnhideApp,
+                -> {
+                    if (action is LauncherShellAction.HideApp) appVisibilityRepository.hideApp(action.identity)
+                    if (action is LauncherShellAction.UnhideApp) appVisibilityRepository.showApp(action.identity)
                     mutableState.value
                         .withInstalledApps(installedAppRepository, appVisibilityRepository, appCatalog)
-                        .withoutUnavailableApps(homeLayoutRepository).withHomeScreenLibraryApps(homeLayoutRepository)
+                        .copy(
+                            installedWidgetProviders =
+                                platformDependencies.installedWidgetProviders(widgetProviderCatalog),
+                        )
+                        .withoutUnavailableApps(homeLayoutRepository)
+                        .withHomeScreenLibraryApps(homeLayoutRepository)
                         .withAppShortcuts(appShortcutRepository, appCatalog)
                         .withNotificationState(
                             notificationRepository = notificationRepository,
@@ -188,20 +200,11 @@ class LauncherShellViewModel(
                         )
                 }
 
-                is LauncherShellAction.UnhideApp -> {
-                    appVisibilityRepository.showApp(action.identity)
+                LauncherShellAction.OpenWidgetPicker,
+                LauncherShellAction.CloseWidgetPicker,
+                ->
                     mutableState.value
-                        .withInstalledApps(installedAppRepository, appVisibilityRepository, appCatalog)
-                        .withoutUnavailableApps(homeLayoutRepository).withHomeScreenLibraryApps(homeLayoutRepository)
-                        .withAppShortcuts(appShortcutRepository, appCatalog)
-                        .withNotificationState(
-                            notificationRepository = notificationRepository,
-                            appNotificationCounter = appNotificationCounter,
-                            appNotificationGrouper = appNotificationGrouper,
-                            notificationStaleFilter = notificationStaleFilter,
-                            nowEpochMillis = epochMillisProvider.nowEpochMillis(),
-                        )
-                }
+                        .withWidgetPickerAction(action, platformDependencies, widgetProviderCatalog)
 
                 else -> mutableState.value
             }

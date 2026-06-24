@@ -9,6 +9,7 @@ import com.riffle.app.launcher.AndroidHomeRoleGateway
 import com.riffle.app.launcher.AndroidLauncherWallpaperController
 import com.riffle.app.launcher.LauncherShell
 import com.riffle.app.launcher.LauncherShellAction
+import com.riffle.app.launcher.LauncherShellPlatformDependencies
 import com.riffle.app.launcher.LauncherShellViewModel
 import com.riffle.app.launcher.LauncherShellViewModelFactory
 import com.riffle.app.launcher.SharedPreferencesAppVisibilityRepository
@@ -26,6 +27,7 @@ import com.riffle.app.launcher.isHomePageEditAction
 import com.riffle.app.launcher.notifications.AndroidNotificationAccessGateway
 import com.riffle.app.launcher.notifications.AndroidNotificationDismissalGateway
 import com.riffle.app.launcher.notifications.SharedPreferencesActiveNotificationRepository
+import com.riffle.app.launcher.widgets.AndroidInstalledWidgetProviderRepository
 import com.riffle.core.domain.launcher.ShellNavigationAction
 
 class MainActivity : ComponentActivity() {
@@ -40,7 +42,11 @@ class MainActivity : ComponentActivity() {
             appVisibilityRepository = SharedPreferencesAppVisibilityRepository(this),
             homeLayoutRepository = SharedPreferencesHomeLayoutRepository(this),
             launcherSettingsRepository = SharedPreferencesLauncherSettingsRepository(this),
-            notificationRepository = activeNotificationRepository,
+            platformDependencies =
+                LauncherShellPlatformDependencies(
+                    notificationRepository = activeNotificationRepository,
+                    widgetProviderRepository = AndroidInstalledWidgetProviderRepository(this),
+                ),
         )
     }
     private val homeRoleGateway by lazy { AndroidHomeRoleGateway(this) }
@@ -192,6 +198,8 @@ class MainActivity : ComponentActivity() {
             is LauncherShellAction.AppDrawerProfileFilterSelected,
             is LauncherShellAction.SearchQueryChanged,
             is LauncherShellAction.SearchProfileFilterSelected,
+            LauncherShellAction.OpenWidgetPicker,
+            LauncherShellAction.CloseWidgetPicker,
             -> shellViewModel.onAppActionSelected(action)
 
             else -> Unit
