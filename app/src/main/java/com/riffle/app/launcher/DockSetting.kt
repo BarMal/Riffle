@@ -4,9 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
-import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -60,32 +58,23 @@ private fun DockIconSizeSetting(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Column(
+        SettingsTextColumn(
             modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(2.dp),
-        ) {
-            Text(
-                text = "Dock icon size",
-                style = MaterialTheme.typography.bodyLarge,
-            )
-            Text(
-                text = "$sizeDp dp",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
+            title = "Dock icon size",
+            subtitle = "$sizeDp dp",
+        )
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             TextButton(
                 enabled = sizeDp > MIN_DOCK_ICON_SIZE_DP,
                 onClick = { onAction(LauncherShellAction.SelectDockIconSize(sizeDp - DOCK_ICON_SIZE_STEP_DP)) },
             ) {
-                Text(text = "-")
+                SettingsButtonText(text = "-")
             }
             TextButton(
                 enabled = sizeDp < MAX_DOCK_ICON_SIZE_DP,
                 onClick = { onAction(LauncherShellAction.SelectDockIconSize(sizeDp + DOCK_ICON_SIZE_STEP_DP)) },
             ) {
-                Text(text = "+")
+                SettingsButtonText(text = "+")
             }
         }
     }
@@ -103,20 +92,11 @@ private fun DockBackgroundAlphaSetting(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Column(
+        SettingsTextColumn(
             modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(2.dp),
-        ) {
-            Text(
-                text = "Dock background",
-                style = MaterialTheme.typography.bodyLarge,
-            )
-            Text(
-                text = "$alphaPercent%",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
+            title = "Dock background",
+            subtitle = "$alphaPercent%",
+        )
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             TextButton(
                 enabled = alphaPercent > MIN_DOCK_BACKGROUND_ALPHA_PERCENT,
@@ -128,7 +108,7 @@ private fun DockBackgroundAlphaSetting(
                     )
                 },
             ) {
-                Text(text = "-")
+                SettingsButtonText(text = "-")
             }
             TextButton(
                 enabled = alphaPercent < MAX_DOCK_BACKGROUND_ALPHA_PERCENT,
@@ -140,7 +120,7 @@ private fun DockBackgroundAlphaSetting(
                     )
                 },
             ) {
-                Text(text = "+")
+                SettingsButtonText(text = "+")
             }
         }
     }
@@ -158,32 +138,23 @@ private fun DockItemSpacingSetting(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Column(
+        SettingsTextColumn(
             modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(2.dp),
-        ) {
-            Text(
-                text = "Dock item spacing",
-                style = MaterialTheme.typography.bodyLarge,
-            )
-            Text(
-                text = "$spacingDp dp",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
+            title = "Dock item spacing",
+            subtitle = "$spacingDp dp",
+        )
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             TextButton(
                 enabled = spacingDp > MIN_DOCK_ITEM_SPACING_DP,
                 onClick = { onAction(LauncherShellAction.SelectDockItemSpacing(spacingDp - DOCK_SPACING_STEP_DP)) },
             ) {
-                Text(text = "-")
+                SettingsButtonText(text = "-")
             }
             TextButton(
                 enabled = spacingDp < MAX_DOCK_ITEM_SPACING_DP,
                 onClick = { onAction(LauncherShellAction.SelectDockItemSpacing(spacingDp + DOCK_SPACING_STEP_DP)) },
             ) {
-                Text(text = "+")
+                SettingsButtonText(text = "+")
             }
         }
     }
@@ -201,20 +172,11 @@ private fun DockVisibilitySetting(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Column(
+        SettingsTextColumn(
             modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(2.dp),
-        ) {
-            Text(
-                text = "Show dock",
-                style = MaterialTheme.typography.bodyLarge,
-            )
-            Text(
-                text = if (enabled) "Dock visible on home" else "Home grid uses dock space",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
+            title = "Show dock",
+            subtitle = if (enabled) "Dock visible on home" else "Home grid uses dock space",
+        )
         Switch(
             checked = enabled,
             onCheckedChange = { value -> onAction(LauncherShellAction.SelectDockEnabled(value)) },
@@ -233,29 +195,20 @@ private fun DockCapacitySetting(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Column(
+        SettingsTextColumn(
             modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(2.dp),
-        ) {
-            Text(
-                text = "Dock slots",
-                style = MaterialTheme.typography.bodyLarge,
-            )
-            Text(
-                text = capacity.toString(),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
+            title = "Dock slots",
+            subtitle = capacity.toString(),
+        )
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             TextButton(
                 enabled = capacity > itemCount,
                 onClick = { onAction(LauncherShellAction.SelectDockCapacity(capacity - 1)) },
             ) {
-                Text(text = "-")
+                SettingsButtonText(text = "-")
             }
             TextButton(onClick = { onAction(LauncherShellAction.SelectDockCapacity(capacity + 1)) }) {
-                Text(text = "+")
+                SettingsButtonText(text = "+")
             }
         }
     }

@@ -19,6 +19,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -125,7 +126,11 @@ private fun RowScope.HomeGridCell(
                     .fillMaxHeight(),
             contentAlignment = Alignment.Center,
         ) {
-            if (state.activeDragSession?.projectedCell == state.cell) {
+            val activeDragSession = state.activeDragSession
+            val activeDragSource =
+                activeDragSession?.takeIf { session -> session.originCell == state.cell }?.item
+
+            if (activeDragSession?.projectedCell == state.cell) {
                 HomeDragPlaceholder()
             }
             state.previewItems.itemAt(cell = state.cell)?.let { item ->
@@ -137,6 +142,23 @@ private fun RowScope.HomeGridCell(
                             cellSizePx = state.cellSizePx,
                             grid = state.page.grid,
                             isEditing = state.gridState.isEditing,
+                            isActiveDragSource = false,
+                        ),
+                    presentation = presentation,
+                    appIconLoader = appIconLoader,
+                    actions = actions,
+                )
+            }
+            activeDragSource?.let { item ->
+                HomeGridItem(
+                    item = item,
+                    state =
+                        HomeGridItemState(
+                            cell = state.cell,
+                            cellSizePx = state.cellSizePx,
+                            grid = state.page.grid,
+                            isEditing = state.gridState.isEditing,
+                            isActiveDragSource = true,
                         ),
                     presentation = presentation,
                     appIconLoader = appIconLoader,
@@ -172,6 +194,7 @@ private fun HomeGridItem(
                 shortcut = item,
                 dragState = HomeItemDragState(cell = state.cell, cellSizePx = state.cellSizePx, grid = state.grid),
                 isEditing = state.isEditing,
+                modifier = state.dragSourceModifier,
                 presentation =
                     HomeShortcutPresentation(
                         notificationCount = presentation.notificationCountsByPackage.notificationCountFor(item),
@@ -183,22 +206,26 @@ private fun HomeGridItem(
             )
 
         is FolderItem ->
-            HomeFolder(
-                folder = item,
-                dragState = HomeItemDragState(cell = state.cell, cellSizePx = state.cellSizePx, grid = state.grid),
-                isEditing = state.isEditing,
-                notificationCount = presentation.notificationCountsByPackage.notificationCountFor(item),
-                labelSettings = presentation.labelSettings,
-                appIconLoader = appIconLoader,
-                actions = actions,
-            )
+            Box(modifier = state.dragSourceModifier.fillMaxSize()) {
+                HomeFolder(
+                    folder = item,
+                    dragState = HomeItemDragState(cell = state.cell, cellSizePx = state.cellSizePx, grid = state.grid),
+                    isEditing = state.isEditing,
+                    notificationCount = presentation.notificationCountsByPackage.notificationCountFor(item),
+                    labelSettings = presentation.labelSettings,
+                    appIconLoader = appIconLoader,
+                    actions = actions,
+                )
+            }
 
         is WidgetItem ->
-            HomeWidgetPlaceholder(
-                widget = item,
-                isEditing = state.isEditing,
-                onAction = actions.onAction,
-            )
+            Box(modifier = state.dragSourceModifier.fillMaxSize()) {
+                HomeWidgetPlaceholder(
+                    widget = item,
+                    isEditing = state.isEditing,
+                    onAction = actions.onAction,
+                )
+            }
     }
 }
 
@@ -208,6 +235,7 @@ private fun HomeShortcut(
     shortcut: AppShortcutItem,
     dragState: HomeItemDragState,
     isEditing: Boolean,
+    modifier: Modifier,
     presentation: HomeShortcutPresentation,
     appIconLoader: AppIconLoader,
     actions: HomeWorkspaceActions,
@@ -215,7 +243,7 @@ private fun HomeShortcut(
     val metrics = HomeGridLayoutMetrics()
     val isContextMenuExpanded = remember(shortcut.id) { mutableStateOf(false) }
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(modifier = modifier.fillMaxSize()) {
         Column(
             modifier =
                 Modifier
@@ -296,7 +324,14 @@ internal data class HomeGridItemState(
     val cellSizePx: Float,
     val grid: GridDimensions,
     val isEditing: Boolean,
-)
+    val isActiveDragSource: Boolean,
+) {
+    val dragSourceModifier: Modifier =
+        when {
+            isActiveDragSource -> Modifier.graphicsLayer { alpha = 0f }
+            else -> Modifier
+        }
+}
 
 private data class HomeShortcutPresentation(
     val notificationCount: Int,

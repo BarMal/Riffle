@@ -1,11 +1,8 @@
 package com.riffle.app.launcher
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -23,27 +20,18 @@ internal fun HomeViewModeSetting(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Column(
+        SettingsTextColumn(
             modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(2.dp),
-        ) {
-            Text(
-                text = "Mode",
-                style = MaterialTheme.typography.bodyLarge,
-            )
-            Text(
-                text = viewMode.label,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
+            title = "Mode",
+            subtitle = viewMode.label,
+        )
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             LauncherViewMode.entries.forEach { mode ->
                 TextButton(
                     enabled = mode != viewMode,
                     onClick = { onAction(LauncherShellAction.SelectLauncherViewMode(mode)) },
                 ) {
-                    Text(text = mode.shortLabel)
+                    SettingsButtonText(text = mode.shortLabel)
                 }
             }
         }

@@ -4,9 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
-import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -79,29 +77,20 @@ private fun GridDimensionSetting(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Column(
+        SettingsTextColumn(
             modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(2.dp),
-        ) {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.bodyLarge,
-            )
-            Text(
-                text = value.toString(),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
+            title = label,
+            subtitle = value.toString(),
+        )
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             TextButton(
                 enabled = value > MIN_GRID_DIMENSION,
                 onClick = onDecrease,
             ) {
-                Text(text = "-")
+                SettingsButtonText(text = "-")
             }
             TextButton(onClick = onIncrease) {
-                Text(text = "+")
+                SettingsButtonText(text = "+")
             }
         }
     }
@@ -117,25 +106,16 @@ private fun LibraryPageCompactionSetting(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Column(
+        SettingsTextColumn(
             modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(2.dp),
-        ) {
-            Text(
-                text = "Compact library pages",
-                style = MaterialTheme.typography.bodyLarge,
-            )
-            Text(
-                text =
-                    if (enabled) {
-                        "Reflow generated apps to fill earlier pages"
-                    } else {
-                        "Keep incomplete pages when the grid changes"
-                    },
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
+            title = "Compact library pages",
+            subtitle =
+                if (enabled) {
+                    "Reflow generated apps to fill earlier pages"
+                } else {
+                    "Keep incomplete pages when the grid changes"
+                },
+        )
         Switch(
             checked = enabled,
             onCheckedChange = { value -> onAction(LauncherShellAction.SelectLibraryPageCompaction(value)) },
