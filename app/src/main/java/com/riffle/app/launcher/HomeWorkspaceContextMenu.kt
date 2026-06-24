@@ -16,12 +16,13 @@ internal fun HomeEmptyCellContextMenu(
     selectedPageIndex: Int,
     haptics: LauncherHaptics,
     onAction: (LauncherShellAction) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val isMenuExpanded = remember { mutableStateOf(false) }
 
     Box(
         modifier =
-            Modifier
+            modifier
                 .fillMaxSize()
                 .combinedClickable(
                     onClick = { Unit },

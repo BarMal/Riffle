@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.requiredHeight
+import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
@@ -19,23 +21,41 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.FolderItem
 import com.riffle.core.domain.launcher.home.GridCell
 import com.riffle.core.domain.launcher.home.GridDimensions
+import com.riffle.core.domain.launcher.home.GridSpan
 import com.riffle.core.domain.launcher.home.LauncherItem
 import com.riffle.core.domain.launcher.home.WidgetItem
 import kotlin.math.roundToInt
 
 @Composable
-internal fun HomeDragPlaceholder() {
+internal fun HomeDragPlaceholder(
+    span: GridSpan,
+    cellSize: Dp,
+    cellSizePx: Float,
+    fillSpan: Boolean,
+) {
     val outlineColor = MaterialTheme.colorScheme.outline
+    val sizeModifier =
+        if (fillSpan) {
+            Modifier
+                .requiredWidth(cellSize * span.columns.coerceAtLeast(1))
+                .requiredHeight(cellSize * span.rows.coerceAtLeast(1))
+                .graphicsLayer {
+                    translationX = ((span.columns.coerceAtLeast(1) - 1) * cellSizePx) / 2f
+                    translationY = ((span.rows.coerceAtLeast(1) - 1) * cellSizePx) / 2f
+                }
+        } else {
+            Modifier.size(HOME_ICON_SIZE_DP.dp)
+        }
 
     Box(
         modifier =
-            Modifier
-                .size(HOME_ICON_SIZE_DP.dp)
+            sizeModifier
                 .clip(RoundedCornerShape(DRAG_PLACEHOLDER_CORNER_RADIUS_DP.dp))
                 .background(MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = DRAG_PLACEHOLDER_ALPHA))
                 .drawBehind {
