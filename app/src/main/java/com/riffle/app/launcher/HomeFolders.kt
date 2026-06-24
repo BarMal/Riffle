@@ -58,12 +58,6 @@ internal fun HomeFolder(
                 Modifier
                     .align(Alignment.Center)
                     .heightIn(min = metrics.homeItemContentHeightDp(labelSettings).dp)
-                    .homeItemDrag(
-                        enabled = isEditing,
-                        item = folder,
-                        dragState = dragState,
-                        actions = actions,
-                    )
                     .combinedClickable(
                         enabled = true,
                         onClick = {
@@ -81,6 +75,12 @@ internal fun HomeFolder(
                                 actions.onAction(LauncherShellAction.EnterHomeEditMode)
                             }
                         },
+                    )
+                    .homeItemDrag(
+                        enabled = isEditing,
+                        item = folder,
+                        dragState = dragState,
+                        actions = actions,
                     ),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(6.dp),

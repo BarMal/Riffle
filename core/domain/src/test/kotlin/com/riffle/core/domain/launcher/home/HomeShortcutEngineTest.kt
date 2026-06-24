@@ -217,7 +217,7 @@ class HomeShortcutEngineTest {
     }
 
     @Test
-    fun rejectsMoveToCellThatWouldCollideWithAnotherShortcut() {
+    fun shiftsShortcutsWhenMovingToOccupiedCell() {
         val camera =
             appShortcut(
                 id = "camera",
@@ -237,8 +237,15 @@ class HomeShortcutEngineTest {
                 cell = GridCell(column = 1, row = 0),
             )
 
-        val rejected = assertIs<HomeShortcutResult.Rejected>(result)
-        assertEquals(PlacementRejectionReason.COLLISION, rejected.reason)
+        val updated = assertIs<HomeShortcutResult.Updated>(result)
+        assertEquals(
+            GridPlacement(cell = GridCell(column = 1, row = 0)),
+            updated.layout.selectedPage.items.single { item -> item.id == camera.id }.placement,
+        )
+        assertEquals(
+            GridPlacement(cell = GridCell(column = 0, row = 0)),
+            updated.layout.selectedPage.items.single { item -> item.id == calendar.id }.placement,
+        )
     }
 
     private fun layoutWith(vararg shortcuts: AppShortcutItem): HomeLayout =

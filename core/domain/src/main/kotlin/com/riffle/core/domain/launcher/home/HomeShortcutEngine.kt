@@ -89,10 +89,10 @@ class HomeShortcutEngine(
             ?.let { placement ->
                 when (
                     val result =
-                        gridPlacementEngine.moveItem(
+                        gridPlacementEngine.moveItemShiftingAnchors(
                             page = layout.selectedPage,
                             itemId = itemId,
-                            placement = placement,
+                            cell = placement.cell,
                         )
                 ) {
                     is PlaceLauncherItemResult.Placed ->

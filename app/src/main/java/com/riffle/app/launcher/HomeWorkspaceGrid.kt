@@ -254,12 +254,6 @@ private fun HomeShortcut(
                 Modifier
                     .align(Alignment.Center)
                     .heightIn(min = metrics.homeItemContentHeightDp(presentation.labelSettings).dp)
-                    .homeItemDrag(
-                        enabled = isEditing,
-                        item = shortcut,
-                        dragState = dragState,
-                        actions = actions,
-                    )
                     .combinedClickable(
                         enabled = true,
                         onClick = {
@@ -278,6 +272,12 @@ private fun HomeShortcut(
                             }
                         },
                         onLongClickLabel = longClickLabel,
+                    )
+                    .homeItemDrag(
+                        enabled = isEditing,
+                        item = shortcut,
+                        dragState = dragState,
+                        actions = actions,
                     ),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(6.dp),

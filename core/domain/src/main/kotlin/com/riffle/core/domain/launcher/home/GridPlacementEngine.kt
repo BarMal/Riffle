@@ -42,6 +42,17 @@ class GridPlacementEngine {
                 )
             } ?: PlaceLauncherItemResult.Rejected(PlacementRejectionReason.ITEM_NOT_FOUND)
 
+    fun moveItemShiftingAnchors(
+        page: LauncherPage,
+        itemId: LauncherItemId,
+        cell: GridCell,
+    ): PlaceLauncherItemResult =
+        GridAnchorShiftPlanner()
+            .shiftedPage(page = page, itemId = itemId, cell = cell)
+            ?.takeIf { shiftedPage -> shiftedPage.isValidPlacementPage() }
+            ?.let { shiftedPage -> PlaceLauncherItemResult.Placed(shiftedPage) }
+            ?: moveItemWithoutShifting(page = page, itemId = itemId, cell = cell)
+
     fun resizeItem(
         page: LauncherPage,
         itemId: LauncherItemId,
@@ -62,6 +73,30 @@ class GridPlacementEngine {
         page: LauncherPage,
         itemId: LauncherItemId,
     ): LauncherPage = page.copy(items = page.items.filterNot { item -> item.id == itemId })
+
+    private fun moveItemWithoutShifting(
+        page: LauncherPage,
+        itemId: LauncherItemId,
+        cell: GridCell,
+    ): PlaceLauncherItemResult =
+        page.items.firstOrNull { item -> item.id == itemId }
+            ?.placement
+            ?.copy(cell = cell)
+            ?.let { placement -> moveItem(page = page, itemId = itemId, placement = placement) }
+            ?: PlaceLauncherItemResult.Rejected(
+                when {
+                    page.items.any { item -> item.id == itemId } -> PlacementRejectionReason.MISSING_PLACEMENT
+                    else -> PlacementRejectionReason.ITEM_NOT_FOUND
+                },
+            )
+
+    private fun LauncherPage.isValidPlacementPage(): Boolean =
+        items.all { item -> item.placement?.let { placement -> grid.contains(placement) } == true } &&
+            items.none { item ->
+                items.any { otherItem ->
+                    item.id != otherItem.id && item.collidesWith(otherItem)
+                }
+            }
 
     private fun GridDimensions.contains(placement: GridPlacement): Boolean =
         placement.cell.column >= 0 &&
