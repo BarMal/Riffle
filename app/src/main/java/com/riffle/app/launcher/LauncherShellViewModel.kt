@@ -28,6 +28,8 @@ import com.riffle.core.domain.launcher.home.HomeShortcutEngine
 import com.riffle.core.domain.launcher.home.HomeShortcutResult
 import com.riffle.core.domain.launcher.home.PlacementRejectionReason
 import com.riffle.core.domain.launcher.home.WallpaperSettings
+import com.riffle.core.domain.launcher.home.WidgetEditResult
+import com.riffle.core.domain.launcher.home.WidgetEngine
 import com.riffle.core.domain.launcher.notifications.AppNotificationCounter
 import com.riffle.core.domain.launcher.notifications.AppNotificationGrouper
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
@@ -61,6 +63,7 @@ class LauncherShellViewModel(
     private val homePageEngine = HomePageEngine()
     private val dockEngine = DockEngine()
     private val folderEngine = FolderEngine()
+    private val widgetEngine = WidgetEngine()
 
     private val mutableState =
         MutableStateFlow(
@@ -240,6 +243,21 @@ class LauncherShellViewModel(
                             mutableState.value.withHomeLayout(result.layout, homeLayoutRepository)
 
                         is FolderEditResult.Rejected -> mutableState.value
+                    }
+
+                is LauncherShellAction.AddHostedWidgetToHome ->
+                    when (
+                        val result =
+                            widgetEngine.addWidgetToSelectedPage(
+                                layout = mutableState.value.homeLayout,
+                                hostedWidgetId = action.hostedWidgetId,
+                                label = action.label,
+                            )
+                    ) {
+                        is WidgetEditResult.Updated ->
+                            mutableState.value.withHomeLayout(result.layout, homeLayoutRepository)
+
+                        is WidgetEditResult.Rejected -> mutableState.value
                     }
 
                 else ->

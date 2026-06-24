@@ -159,6 +159,7 @@ class MainActivity : ComponentActivity() {
             is LauncherShellAction.RemoveAppFromFolder,
             is LauncherShellAction.MoveHomeShortcutToCell,
             is LauncherShellAction.AddAppShortcutToHome,
+            is LauncherShellAction.AddHostedWidgetToHome,
             -> {
                 shellViewModel.onHomeShortcutEdited(action)
                 true
