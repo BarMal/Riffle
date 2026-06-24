@@ -216,7 +216,7 @@ private fun HomeLabelWidthSetting(
                 style = MaterialTheme.typography.bodyLarge,
             )
             Text(
-                text = "${settings.maxWidthDp} dp",
+                text = homeLabelWidthDescription(settings),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -251,6 +251,12 @@ private fun HomeLabelWidthSetting(
 }
 
 private const val HOME_LABEL_WIDTH_STEP_DP = 8
+
+internal fun homeLabelWidthDescription(settings: HomeLabelSettings): String =
+    when (settings.sizing) {
+        HomeLabelSizing.FIXED -> "Fixed ${settings.maxWidthDp} dp"
+        HomeLabelSizing.DYNAMIC -> "Up to ${settings.maxWidthDp} dp"
+    }
 
 @Composable
 private fun HomeLabelSizingSetting(
