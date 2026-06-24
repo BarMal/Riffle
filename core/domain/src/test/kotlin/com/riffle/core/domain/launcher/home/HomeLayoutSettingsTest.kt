@@ -15,6 +15,7 @@ class HomeLayoutSettingsTest {
         assertEquals(false, settings.grid.compactLibraryPages)
         assertEquals(WallpaperSettings.system(), settings.wallpaper)
         assertEquals(HomeLabelSettings.standard(), settings.labels)
+        assertEquals(HomeLabelSizing.FIXED, settings.labels.sizing)
     }
 
     @Test

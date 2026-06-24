@@ -13,6 +13,7 @@ import com.riffle.core.domain.launcher.home.GridPlacement
 import com.riffle.core.domain.launcher.home.GridSettings
 import com.riffle.core.domain.launcher.home.GridSpacing
 import com.riffle.core.domain.launcher.home.HomeLabelSettings
+import com.riffle.core.domain.launcher.home.HomeLabelSizing
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.HomeLayoutKey
 import com.riffle.core.domain.launcher.home.HomeLayoutSet
@@ -143,6 +144,7 @@ class HomeLayoutJsonCodecTest {
                 showText = false,
                 maxWidthDp = 112,
                 maxLines = 2,
+                sizing = HomeLabelSizing.DYNAMIC,
             )
         val layout =
             HomeLayoutDefaults.standard().copy(
@@ -380,6 +382,41 @@ class HomeLayoutJsonCodecTest {
             )
 
         assertEquals(HomeLabelSettings.standard(), decodedLayout.settings.labels)
+    }
+
+    @Test
+    fun defaultsHomeLabelSizingWhenOlderJsonDoesNotHaveIt() {
+        val decodedLayout =
+            decodeHomeLayout(
+                """
+                {
+                  "selectedPageId": "home",
+                  "settings": {
+                    "labels": {
+                      "backgroundAlphaPercent": 75,
+                      "textSizeSp": 14,
+                      "showText": true,
+                      "maxWidthDp": 112,
+                      "maxLines": 2
+                    }
+                  },
+                  "pages": [
+                    {
+                      "id": "home",
+                      "columns": 4,
+                      "rows": 5,
+                      "items": []
+                    }
+                  ],
+                  "dock": {
+                    "capacity": 5,
+                    "items": []
+                  }
+                }
+                """.trimIndent(),
+            )
+
+        assertEquals(HomeLabelSizing.FIXED, decodedLayout.settings.labels.sizing)
     }
 
     @Test
