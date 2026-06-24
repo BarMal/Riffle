@@ -24,6 +24,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.FolderItem
@@ -92,17 +93,6 @@ internal fun WorkspaceGrid(
                 }
             }
         }
-        activeDragSession?.let { session ->
-            HomeDraggedItemOverlay(
-                session = session,
-                grid = page.grid,
-                maxWidthPx = with(LocalDensity.current) { maxWidth.toPx() },
-                maxHeightPx = with(LocalDensity.current) { maxHeight.toPx() },
-                cellSizePx = cellSizePx,
-                presentation = presentation,
-                appIconLoader = appIconLoader,
-            )
-        }
     }
 }
 
@@ -134,7 +124,9 @@ private fun RowScope.HomeGridCell(
             if (activeDragSession?.projectedCell == state.cell) {
                 HomeDragPlaceholder()
             }
-            state.previewItems.itemAt(cell = state.cell)?.let { item ->
+            val visibleItem = activeDragSource ?: state.previewItems.itemAt(cell = state.cell)
+
+            visibleItem?.let { item ->
                 key(item.id.value) {
                     HomeGridItem(
                         item = item,
@@ -144,25 +136,7 @@ private fun RowScope.HomeGridCell(
                                 cellSizePx = state.cellSizePx,
                                 grid = state.page.grid,
                                 isEditing = state.gridState.isEditing,
-                                isActiveDragSource = false,
-                            ),
-                        presentation = presentation,
-                        appIconLoader = appIconLoader,
-                        actions = actions,
-                    )
-                }
-            }
-            activeDragSource?.let { item ->
-                key(item.id.value) {
-                    HomeGridItem(
-                        item = item,
-                        state =
-                            HomeGridItemState(
-                                cell = state.cell,
-                                cellSizePx = state.cellSizePx,
-                                grid = state.page.grid,
-                                isEditing = state.gridState.isEditing,
-                                isActiveDragSource = true,
+                                activeDragSession = activeDragSession?.takeIf { session -> session.item.id == item.id },
                             ),
                         presentation = presentation,
                         appIconLoader = appIconLoader,
@@ -329,13 +303,20 @@ internal data class HomeGridItemState(
     val cellSizePx: Float,
     val grid: GridDimensions,
     val isEditing: Boolean,
-    val isActiveDragSource: Boolean,
+    val activeDragSession: HomeDragSession?,
 ) {
     val dragSourceModifier: Modifier =
-        when {
-            isActiveDragSource -> Modifier.graphicsLayer { alpha = 0f }
-            else -> Modifier
-        }
+        activeDragSession
+            ?.let { session ->
+                Modifier
+                    .zIndex(DRAGGED_GRID_ITEM_Z_INDEX)
+                    .graphicsLayer {
+                        translationX = session.dragOffsetX
+                        translationY = session.dragOffsetY
+                        shadowElevation = DRAGGED_GRID_ITEM_ELEVATION
+                    }
+            }
+            ?: Modifier
 }
 
 private data class HomeShortcutPresentation(
@@ -431,3 +412,6 @@ private fun GridDimensions.cellAt(index: Int): GridCell? =
                 row = checkedIndex / columns,
             )
         }
+
+private const val DRAGGED_GRID_ITEM_Z_INDEX = 1f
+private const val DRAGGED_GRID_ITEM_ELEVATION = 12f
