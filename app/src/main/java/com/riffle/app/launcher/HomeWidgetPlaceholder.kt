@@ -16,6 +16,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -45,6 +46,7 @@ internal fun HomeWidgetPlaceholder(
         remember(context, widget.appWidgetId, widgetViewFactory) {
             widgetViewFactory.createHostedWidgetView(context, widget)
         }
+    val isContextMenuExpanded = remember(widget.id) { mutableStateOf(false) }
 
     DisposableEffect(hostedWidgetView) {
         onDispose {
@@ -75,6 +77,7 @@ internal fun HomeWidgetPlaceholder(
             widget = widget,
             dragState = dragState,
             workspaceActions = workspaceActions,
+            onStationaryLongPress = { isContextMenuExpanded.value = true },
         )
         if (isEditing) {
             WidgetEditHandles(
@@ -82,6 +85,12 @@ internal fun HomeWidgetPlaceholder(
                 onAction = onAction,
             )
         }
+        ShortcutContextMenu(
+            expanded = isContextMenuExpanded.value,
+            items = widgetPlaceholderContextMenuItems(widget),
+            onDismissRequest = { isContextMenuExpanded.value = false },
+            onAction = onAction,
+        )
     }
 }
 
@@ -91,6 +100,7 @@ private fun BoxScope.WidgetGestureLayer(
     widget: WidgetItem,
     dragState: HomeItemDragState?,
     workspaceActions: HomeWorkspaceActions?,
+    onStationaryLongPress: () -> Unit,
 ) {
     val dragModifier =
         when {
@@ -100,6 +110,7 @@ private fun BoxScope.WidgetGestureLayer(
                     item = widget,
                     dragState = dragState,
                     actions = workspaceActions,
+                    onStationaryLongPress = onStationaryLongPress,
                 )
 
             else -> Modifier

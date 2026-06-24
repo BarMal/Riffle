@@ -46,12 +46,22 @@ class GridPlacementEngine {
         page: LauncherPage,
         itemId: LauncherItemId,
         cell: GridCell,
-    ): PlaceLauncherItemResult =
-        GridAnchorShiftPlanner()
-            .shiftedPage(page = page, itemId = itemId, cell = cell)
-            ?.takeIf { shiftedPage -> shiftedPage.isValidPlacementPage() }
-            ?.let { shiftedPage -> PlaceLauncherItemResult.Placed(shiftedPage) }
-            ?: moveItemWithoutShifting(page = page, itemId = itemId, cell = cell)
+    ): PlaceLauncherItemResult {
+        val directMove = moveItemWithoutShifting(page = page, itemId = itemId, cell = cell)
+
+        return when {
+            directMove is PlaceLauncherItemResult.Placed -> directMove
+            directMove !is PlaceLauncherItemResult.Rejected -> directMove
+            directMove.reason != PlacementRejectionReason.COLLISION -> directMove
+            !page.canShiftAnchorsFor(itemId = itemId, cell = cell) -> directMove
+            else ->
+                GridAnchorShiftPlanner()
+                    .shiftedPage(page = page, itemId = itemId, cell = cell)
+                    ?.takeIf { shiftedPage -> shiftedPage.isValidPlacementPage() }
+                    ?.let { shiftedPage -> PlaceLauncherItemResult.Placed(shiftedPage) }
+                    ?: directMove
+        }
+    }
 
     fun resizeItem(
         page: LauncherPage,

@@ -126,6 +126,7 @@ internal fun Modifier.homeItemDrag(
     item: LauncherItem,
     dragState: HomeItemDragState,
     actions: HomeWorkspaceActions,
+    onStationaryLongPress: (() -> Unit)? = null,
 ): Modifier =
     if (!enabled) {
         this
@@ -164,13 +165,17 @@ internal fun Modifier.homeItemDrag(
                 onDragEnd = {
                     actions.onDragSessionChanged(null)
                     dragState.dropCell(dragX = dragX, dragY = dragY)
-                        ?.let { targetCell ->
-                            actions.onAction(
-                                LauncherShellAction.MoveHomeShortcutToCell(
-                                    itemId = item.id,
-                                    cell = targetCell,
-                                ),
-                            )
+                        .let { targetCell ->
+                            if (targetCell == null) {
+                                onStationaryLongPress?.invoke()
+                            } else {
+                                actions.onAction(
+                                    LauncherShellAction.MoveHomeShortcutToCell(
+                                        itemId = item.id,
+                                        cell = targetCell,
+                                    ),
+                                )
+                            }
                         }
                 },
                 onDragCancel = {

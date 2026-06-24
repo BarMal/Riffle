@@ -136,12 +136,14 @@ private fun RowScope.HomeGridCell(
             contentAlignment = Alignment.Center,
         ) {
             if (activeDragSession?.projectedCell == state.cell) {
-                HomeDragPlaceholder(
-                    span = activeDragSession.item.placement?.span ?: GridSpan(),
-                    cellSize = state.cellSize,
-                    cellSizePx = state.cellSizePx,
-                    fillSpan = activeDragSession.item is WidgetItem,
-                )
+                state.dragPlaceholderAtProjectedCell(activeDragSession)?.let { placeholder ->
+                    HomeDragPlaceholder(
+                        span = placeholder.span,
+                        cellSize = state.cellSize,
+                        cellSizePx = state.cellSizePx,
+                        fillSpan = placeholder.fillSpan,
+                    )
+                }
             }
 
             visibleItem?.let { item ->
@@ -167,7 +169,7 @@ private fun RowScope.HomeGridCell(
     }
 }
 
-private data class HomeGridCellState(
+internal data class HomeGridCellState(
     val cell: GridCell,
     val cellSize: Dp,
     val cellSizePx: Float,
@@ -284,6 +286,7 @@ private fun HomeShortcut(
                         item = shortcut,
                         dragState = dragState,
                         actions = actions,
+                        onStationaryLongPress = { isContextMenuExpanded.value = true },
                     ),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(6.dp),
@@ -356,94 +359,6 @@ private data class HomeShortcutPresentation(
     val appShortcuts: List<AppShortcut>,
     val labelSettings: HomeLabelSettings,
 )
-
-private fun LauncherPage.itemsForDragPreview(session: HomeDragSession?): List<LauncherItem> =
-    session
-        ?.takeIf { dragSession -> items.any { item -> item.id == dragSession.item.id } }
-        ?.let { dragSession ->
-            val originIndex = grid.indexOf(dragSession.originCell)
-            val targetIndex = grid.indexOf(dragSession.projectedCell)
-
-            when {
-                originIndex == null || targetIndex == null -> items
-                originIndex == targetIndex -> items.filterNot { item -> item.id == dragSession.item.id }
-                else -> items.shiftedForDrag(originIndex = originIndex, targetIndex = targetIndex, grid = grid)
-            }
-        }
-        ?: items
-
-private fun List<LauncherItem>.shiftedForDrag(
-    originIndex: Int,
-    targetIndex: Int,
-    grid: GridDimensions,
-): List<LauncherItem> {
-    val itemsByCellIndex =
-        mapNotNull { item ->
-            item.placement?.cell
-                ?.let(grid::indexOf)
-                ?.let { index -> index to item }
-        }
-            .toMap()
-            .toMutableMap()
-    itemsByCellIndex.remove(originIndex)
-
-    when {
-        targetIndex > originIndex ->
-            for (index in originIndex until targetIndex) {
-                itemsByCellIndex.moveIndex(from = index + 1, to = index)
-            }
-
-        else ->
-            for (index in originIndex downTo targetIndex + 1) {
-                itemsByCellIndex.moveIndex(from = index - 1, to = index)
-            }
-    }
-
-    return itemsByCellIndex
-        .mapNotNull { (index, item) ->
-            grid.cellAt(index)?.let { cell -> item.withPreviewCell(cell) }
-        }
-}
-
-private fun MutableMap<Int, LauncherItem>.moveIndex(
-    from: Int,
-    to: Int,
-) {
-    val item = remove(from)
-
-    if (item == null) {
-        remove(to)
-    } else {
-        this[to] = item
-    }
-}
-
-private fun LauncherItem.withPreviewCell(cell: GridCell): LauncherItem? =
-    placement?.copy(cell = cell)?.let { previewPlacement ->
-        when (this) {
-            is AppShortcutItem -> copy(placement = previewPlacement)
-            is FolderItem -> copy(placement = previewPlacement)
-            is WidgetItem -> copy(placement = previewPlacement)
-        }
-    }
-
-private fun GridDimensions.indexOf(cell: GridCell): Int? =
-    cell
-        .takeIf { checkedCell ->
-            checkedCell.column in 0 until columns &&
-                checkedCell.row in 0 until rows
-        }
-        ?.let { checkedCell -> checkedCell.row * columns + checkedCell.column }
-
-private fun GridDimensions.cellAt(index: Int): GridCell? =
-    index
-        .takeIf { checkedIndex -> checkedIndex in 0 until (columns * rows) }
-        ?.let { checkedIndex ->
-            GridCell(
-                column = checkedIndex % columns,
-                row = checkedIndex / columns,
-            )
-        }
 
 private const val DRAGGED_GRID_ITEM_Z_INDEX = 1f
 private const val DRAGGED_GRID_ITEM_ELEVATION = 12f
