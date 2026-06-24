@@ -162,7 +162,7 @@ class HomeLayoutVisibilityFilterTest {
     }
 
     @Test
-    fun removesTrailingEmptyHomePagesInLibraryModeAfterFiltering() {
+    fun keepsTrailingEmptyHomePagesInLibraryModeAfterFiltering() {
         val camera = app("Camera")
         val layout =
             HomeLayoutDefaults.standard().let { defaults ->
@@ -182,8 +182,40 @@ class HomeLayoutVisibilityFilterTest {
 
         val visibleLayout = layout.visibleTo(apps = listOf(camera))
 
-        assertEquals(listOf(LauncherPageId("home")), visibleLayout.pages.map { page -> page.id })
-        assertEquals(LauncherPageId("home"), visibleLayout.selectedPageId)
+        assertEquals(
+            listOf(LauncherPageId("home"), LauncherPageId("spare")),
+            visibleLayout.pages.map { page -> page.id },
+        )
+        assertEquals(LauncherPageId("spare"), visibleLayout.selectedPageId)
+    }
+
+    @Test
+    fun keepsEmptyFoldersVisible() {
+        val layout =
+            HomeLayoutDefaults.standard().let { defaults ->
+                defaults.copy(
+                    pages =
+                        listOf(
+                            defaults.selectedPage.copy(
+                                items =
+                                    listOf(
+                                        FolderItem(
+                                            id = LauncherItemId("folder:empty"),
+                                            label = "Folder",
+                                            items = emptyList(),
+                                            placement = GridPlacement(cell = GridCell(column = 0, row = 0)),
+                                        ),
+                                    ),
+                            ),
+                        ),
+                )
+            }
+
+        val visibleLayout = layout.visibleTo(apps = emptyList())
+
+        val folder = visibleLayout.selectedPage.items.single() as FolderItem
+        assertEquals("Folder", folder.label)
+        assertEquals(emptyList<AppShortcutItem>(), folder.items)
     }
 
     private fun app(label: String): InstalledApp =

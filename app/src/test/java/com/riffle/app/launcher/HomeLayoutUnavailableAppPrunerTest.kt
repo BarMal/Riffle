@@ -45,7 +45,7 @@ class HomeLayoutUnavailableAppPrunerTest {
     }
 
     @Test
-    fun removesTrailingEmptyHomePagesInLibraryModeAfterPruningUnavailableApps() {
+    fun keepsTrailingEmptyHomePagesInLibraryModeAfterPruningUnavailableApps() {
         val camera = app("Camera")
         val layout =
             HomeLayoutDefaults.standard().let { defaults ->
@@ -65,8 +65,11 @@ class HomeLayoutUnavailableAppPrunerTest {
 
         val prunedLayout = layout.keepingApps(setOf(camera))
 
-        assertEquals(listOf(LauncherPageId("home")), prunedLayout.pages.map { page -> page.id })
-        assertEquals(LauncherPageId("home"), prunedLayout.selectedPageId)
+        assertEquals(
+            listOf(LauncherPageId("home"), LauncherPageId("spare")),
+            prunedLayout.pages.map { page -> page.id },
+        )
+        assertEquals(LauncherPageId("spare"), prunedLayout.selectedPageId)
     }
 
     private fun app(label: String): AppIdentity =
