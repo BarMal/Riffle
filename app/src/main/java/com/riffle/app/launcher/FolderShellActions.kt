@@ -7,8 +7,12 @@ import com.riffle.core.domain.launcher.home.FolderEditRejectionReason
 import com.riffle.core.domain.launcher.home.FolderEditResult
 import com.riffle.core.domain.launcher.home.FolderEngine
 import com.riffle.core.domain.launcher.home.FolderItem
+import com.riffle.core.domain.launcher.home.GridPlacementEngine
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.LauncherItemId
+import com.riffle.core.domain.launcher.home.LauncherPage
+import com.riffle.core.domain.launcher.home.PlaceLauncherItemResult
+import com.riffle.core.domain.launcher.home.PlacementRejectionReason
 
 fun FolderEngine.applyEdit(
     action: LauncherShellAction,
@@ -16,8 +20,7 @@ fun FolderEngine.applyEdit(
 ): FolderEditResult =
     when (action) {
         is LauncherShellAction.CreateEmptyHomeFolder ->
-            createEmptyFolderOnSelectedPage(
-                layout = layout,
+            layout.createEmptyFolderOnSelectedPage(
                 folderId = layout.nextFolderId(),
                 label = action.label,
             )
@@ -52,6 +55,56 @@ fun FolderEngine.applyEdit(
             )
 
         else -> FolderEditResult.Rejected(FolderEditRejectionReason.ITEM_NOT_FOUND)
+    }
+
+private fun HomeLayout.createEmptyFolderOnSelectedPage(
+    folderId: LauncherItemId,
+    label: String,
+): FolderEditResult =
+    label.trim()
+        .takeIf { trimmedLabel -> trimmedLabel.isNotEmpty() }
+        ?.let { trimmedLabel ->
+            when (
+                val result =
+                    GridPlacementEngine().placeItemInFirstAvailableCell(
+                        page = selectedPage,
+                        item =
+                            FolderItem(
+                                id = folderId,
+                                label = trimmedLabel,
+                                items = emptyList(),
+                            ),
+                    )
+            ) {
+                is PlaceLauncherItemResult.Placed ->
+                    FolderEditResult.Updated(withUpdatedSelectedPage(result.page))
+
+                is PlaceLauncherItemResult.Rejected ->
+                    FolderEditResult.Rejected(result.reason.toFolderRejectionReason())
+            }
+        }
+        ?: FolderEditResult.Rejected(FolderEditRejectionReason.INVALID_LABEL)
+
+private fun HomeLayout.withUpdatedSelectedPage(page: LauncherPage): HomeLayout =
+    copy(
+        pages =
+            pages.map { existingPage ->
+                when (existingPage.id) {
+                    page.id -> page
+                    else -> existingPage
+                }
+            },
+    )
+
+private fun PlacementRejectionReason.toFolderRejectionReason(): FolderEditRejectionReason =
+    when (this) {
+        PlacementRejectionReason.MISSING_PLACEMENT -> FolderEditRejectionReason.MISSING_PLACEMENT
+        PlacementRejectionReason.ITEM_NOT_FOUND -> FolderEditRejectionReason.ITEM_NOT_FOUND
+        PlacementRejectionReason.DUPLICATE_APP -> FolderEditRejectionReason.DUPLICATE_ITEM
+        PlacementRejectionReason.DUPLICATE_APP_SHORTCUT -> FolderEditRejectionReason.DUPLICATE_ITEM
+        PlacementRejectionReason.OUT_OF_BOUNDS -> FolderEditRejectionReason.OUT_OF_BOUNDS
+        PlacementRejectionReason.COLLISION -> FolderEditRejectionReason.COLLISION
+        PlacementRejectionReason.NO_AVAILABLE_CELL -> FolderEditRejectionReason.NO_AVAILABLE_CELL
     }
 
 private fun HomeLayout.nextFolderId(): LauncherItemId {

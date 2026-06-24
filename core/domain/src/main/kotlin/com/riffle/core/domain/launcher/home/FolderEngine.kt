@@ -3,35 +3,6 @@ package com.riffle.core.domain.launcher.home
 class FolderEngine(
     private val gridPlacementEngine: GridPlacementEngine = GridPlacementEngine(),
 ) {
-    fun createEmptyFolderOnSelectedPage(
-        layout: HomeLayout,
-        folderId: LauncherItemId,
-        label: String,
-    ): FolderEditResult =
-        label.trim()
-            .takeIf { trimmedLabel -> trimmedLabel.isNotEmpty() }
-            ?.let { trimmedLabel ->
-                when (
-                    val result =
-                        gridPlacementEngine.placeItemInFirstAvailableCell(
-                            page = layout.selectedPage,
-                            item =
-                                FolderItem(
-                                    id = folderId,
-                                    label = trimmedLabel,
-                                    items = emptyList(),
-                                ),
-                        )
-                ) {
-                    is PlaceLauncherItemResult.Placed ->
-                        FolderEditResult.Updated(layout.withUpdatedSelectedPage(result.page))
-
-                    is PlaceLauncherItemResult.Rejected ->
-                        FolderEditResult.Rejected(result.reason.toFolderRejectionReason())
-                }
-            }
-            ?: FolderEditResult.Rejected(FolderEditRejectionReason.INVALID_LABEL)
-
     fun createFolderOnSelectedPage(
         layout: HomeLayout,
         folderId: LauncherItemId,

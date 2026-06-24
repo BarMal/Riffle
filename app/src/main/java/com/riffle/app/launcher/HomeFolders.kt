@@ -1,7 +1,6 @@
 package com.riffle.app.launcher
 
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -15,7 +14,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -26,7 +24,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.apps.AppDrawerProfileFilter
 import com.riffle.core.domain.launcher.apps.AppPackageName
@@ -60,10 +57,8 @@ internal fun HomeFolder(
                     .homeItemDrag(
                         enabled = isEditing,
                         item = folder,
-                        cell = dragState.cell,
-                        cellSizePx = dragState.cellSizePx,
-                        haptics = actions.haptics,
-                        onAction = actions.onAction,
+                        dragState = dragState,
+                        actions = actions,
                     )
                     .combinedClickable(
                         enabled = !isEditing,
@@ -179,9 +174,7 @@ fun FolderDialog(
 }
 
 @Composable
-fun HomeFolderEditControls(
-    onAction: (LauncherShellAction) -> Unit,
-) {
+fun HomeFolderEditControls(onAction: (LauncherShellAction) -> Unit) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.Center,
@@ -210,37 +203,6 @@ fun Map<AppPackageName, Int>.notificationCountFor(item: LauncherItem): Int =
             }
         is WidgetItem -> 0
     }
-
-@Composable
-private fun FolderPreviewIcon(
-    folder: FolderItem,
-    appIconLoader: AppIconLoader,
-) {
-    Column(
-        modifier =
-            Modifier
-                .size(HOME_ICON_SIZE_DP.dp)
-                .clip(RoundedCornerShape(12.dp))
-                .background(MaterialTheme.colorScheme.secondaryContainer)
-                .padding(4.dp),
-        verticalArrangement = Arrangement.spacedBy(2.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        folder.items.take(FOLDER_PREVIEW_ICON_COUNT).chunked(2).forEach { rowItems ->
-            Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                rowItems.forEach { shortcut ->
-                    LauncherAppIcon(
-                        identity = shortcut.appIdentity,
-                        label = shortcut.label,
-                        iconLoader = appIconLoader,
-                        modifier = Modifier.size(17.dp),
-                        shape = RoundedCornerShape(5.dp),
-                    )
-                }
-            }
-        }
-    }
-}
 
 @Composable
 private fun FolderAppRow(
@@ -390,6 +352,5 @@ private fun FolderAddAppRow(
     }
 }
 
-private const val FOLDER_PREVIEW_ICON_COUNT = 4
 private const val FOLDER_CONTENT_MAX_HEIGHT_DP = 360
 private const val DEFAULT_FOLDER_LABEL = "Folder"
