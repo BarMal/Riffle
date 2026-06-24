@@ -25,6 +25,8 @@ class AndroidInstalledWidgetProviderMapper {
                     minHeightDp = provider.minHeightDp,
                     minResizeWidthDp = provider.minResizeWidthDp,
                     minResizeHeightDp = provider.minResizeHeightDp,
+                    targetCellWidth = provider.targetCellWidth,
+                    targetCellHeight = provider.targetCellHeight,
                 ),
             supportsHorizontalResize =
                 provider.resizeMode and AppWidgetProviderInfo.RESIZE_HORIZONTAL != 0,

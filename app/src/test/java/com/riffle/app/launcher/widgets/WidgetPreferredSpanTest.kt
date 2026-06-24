@@ -24,6 +24,23 @@ class WidgetPreferredSpanTest {
     }
 
     @Test
+    fun prefersAndroidTargetCellsWhenAvailable() {
+        val span =
+            WidgetProviderDimensions(
+                minWidthDp = 40,
+                minHeightDp = 40,
+                targetCellWidth = 3,
+                targetCellHeight = 2,
+            ).preferredGridSpan(
+                grid = GridDimensions(columns = 4, rows = 5),
+                availableWidthDp = 400,
+                availableHeightDp = 500,
+            )
+
+        assertEquals(GridSpan(columns = 3, rows = 2), span)
+    }
+
+    @Test
     fun clampsPreferredSpanToGridBounds() {
         val span =
             WidgetProviderDimensions(

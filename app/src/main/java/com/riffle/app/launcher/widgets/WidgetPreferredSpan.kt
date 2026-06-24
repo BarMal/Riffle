@@ -12,11 +12,13 @@ fun WidgetProviderDimensions.preferredGridSpan(
 ): GridSpan =
     GridSpan(
         columns =
-            minWidthDp
-                .spanCells(availableDp = availableWidthDp, gridCells = grid.columns),
+            targetCellWidth
+                ?.coerceIn(1, grid.columns)
+                ?: minWidthDp.spanCells(availableDp = availableWidthDp, gridCells = grid.columns),
         rows =
-            minHeightDp
-                .spanCells(availableDp = availableHeightDp, gridCells = grid.rows),
+            targetCellHeight
+                ?.coerceIn(1, grid.rows)
+                ?: minHeightDp.spanCells(availableDp = availableHeightDp, gridCells = grid.rows),
     )
 
 fun widgetSpanAdjustmentToast(

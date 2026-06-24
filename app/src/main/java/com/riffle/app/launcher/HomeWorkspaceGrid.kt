@@ -11,8 +11,9 @@ import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.requiredHeight
+import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
@@ -206,8 +207,12 @@ private fun HomeGridItem(
             Box(
                 modifier =
                     state.dragSourceModifier
-                        .width(state.cellSize * span.columns)
-                        .height(state.cellSize * span.rows),
+                        .requiredWidth(state.cellSize * span.columns)
+                        .requiredHeight(state.cellSize * span.rows)
+                        .graphicsLayer {
+                            translationX = ((span.columns - 1) * state.cellSizePx) / 2f
+                            translationY = ((span.rows - 1) * state.cellSizePx) / 2f
+                        },
             ) {
                 HomeWidgetPlaceholder(
                     widget = item,

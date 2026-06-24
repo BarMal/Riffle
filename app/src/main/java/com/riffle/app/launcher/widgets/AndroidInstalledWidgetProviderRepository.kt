@@ -3,6 +3,7 @@ package com.riffle.app.launcher.widgets
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProviderInfo
 import android.content.Context
+import android.os.Build
 import android.os.UserHandle
 import com.riffle.core.domain.launcher.widgets.InstalledWidgetProvider
 import com.riffle.core.domain.launcher.widgets.InstalledWidgetProviderRepository
@@ -30,6 +31,8 @@ private fun AppWidgetProviderInfo.toAndroidWidgetProvider(): AndroidWidgetProvid
         minHeightDp = minHeight,
         minResizeWidthDp = minResizeWidth.takeIf { value -> value > 0 },
         minResizeHeightDp = minResizeHeight.takeIf { value -> value > 0 },
+        targetCellWidth = targetCellWidthCompat,
+        targetCellHeight = targetCellHeightCompat,
         resizeMode = resizeMode,
     )
 
@@ -43,5 +46,23 @@ internal data class AndroidWidgetProvider(
     val minHeightDp: Int,
     val minResizeWidthDp: Int?,
     val minResizeHeightDp: Int?,
+    val targetCellWidth: Int?,
+    val targetCellHeight: Int?,
     val resizeMode: Int,
 )
+
+private val AppWidgetProviderInfo.targetCellWidthCompat: Int?
+    get() =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            targetCellWidth.takeIf { value -> value > 0 }
+        } else {
+            null
+        }
+
+private val AppWidgetProviderInfo.targetCellHeightCompat: Int?
+    get() =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            targetCellHeight.takeIf { value -> value > 0 }
+        } else {
+            null
+        }

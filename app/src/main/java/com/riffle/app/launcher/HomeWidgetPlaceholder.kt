@@ -74,14 +74,12 @@ fun HomeWidgetPlaceholder(
                 },
             )
         }
-        if (isEditing || hostedWidgetView == null) {
-            WidgetGestureLayer(
-                widget = widget,
-                isEditing = isEditing,
-                haptics = haptics,
-                onAction = onAction,
-            )
-        }
+        WidgetGestureLayer(
+            widget = widget,
+            isEditing = isEditing,
+            haptics = haptics,
+            onAction = onAction,
+        )
         if (isEditing) {
             WidgetEditHandles(
                 widget = widget,

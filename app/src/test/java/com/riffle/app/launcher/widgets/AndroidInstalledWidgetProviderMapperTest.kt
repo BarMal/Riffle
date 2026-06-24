@@ -26,6 +26,8 @@ class AndroidInstalledWidgetProviderMapperTest {
                 minHeightDp = 80,
                 minResizeWidthDp = 80,
                 minResizeHeightDp = 60,
+                targetCellWidth = 3,
+                targetCellHeight = 2,
                 resizeMode = AppWidgetProviderInfo.RESIZE_HORIZONTAL or AppWidgetProviderInfo.RESIZE_VERTICAL,
             )
 
@@ -46,6 +48,8 @@ class AndroidInstalledWidgetProviderMapperTest {
                 minHeightDp = 80,
                 minResizeWidthDp = 80,
                 minResizeHeightDp = 60,
+                targetCellWidth = 3,
+                targetCellHeight = 2,
             ),
             mapped.dimensions,
         )
@@ -66,6 +70,8 @@ class AndroidInstalledWidgetProviderMapperTest {
                 minHeightDp = 50,
                 minResizeWidthDp = null,
                 minResizeHeightDp = null,
+                targetCellWidth = null,
+                targetCellHeight = null,
                 resizeMode = AppWidgetProviderInfo.RESIZE_NONE,
             )
 
