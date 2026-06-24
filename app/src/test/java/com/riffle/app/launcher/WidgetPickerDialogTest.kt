@@ -24,4 +24,26 @@ class WidgetPickerDialogTest {
 
         assertEquals("com.example.weather - 120x80dp", provider.widgetPickerSummary())
     }
+
+    @Test
+    fun requestAddWidgetActionUsesProviderIdentityAndLabel() {
+        val provider =
+            InstalledWidgetProvider(
+                identity =
+                    WidgetProviderIdentity(
+                        packageName = AppPackageName("com.example.clock"),
+                        className = WidgetProviderClassName(".ClockWidget"),
+                    ),
+                label = "Clock",
+                dimensions = WidgetProviderDimensions(minWidthDp = 80, minHeightDp = 80),
+            )
+
+        assertEquals(
+            LauncherShellAction.RequestAddWidget(
+                provider = provider.identity,
+                label = "Clock",
+            ),
+            provider.requestAddWidgetAction(),
+        )
+    }
 }

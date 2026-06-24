@@ -47,7 +47,10 @@ fun WidgetPickerDialog(
                         items = providers,
                         key = { provider -> provider.widgetPickerKey },
                     ) { provider ->
-                        WidgetProviderRow(provider = provider)
+                        WidgetProviderRow(
+                            provider = provider,
+                            onAction = onAction,
+                        )
                     }
                 }
             }
@@ -61,7 +64,10 @@ fun WidgetPickerDialog(
 }
 
 @Composable
-private fun WidgetProviderRow(provider: InstalledWidgetProvider) {
+private fun WidgetProviderRow(
+    provider: InstalledWidgetProvider,
+    onAction: (LauncherShellAction) -> Unit,
+) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -85,8 +91,17 @@ private fun WidgetProviderRow(provider: InstalledWidgetProvider) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+        TextButton(onClick = { onAction(provider.requestAddWidgetAction()) }) {
+            Text(text = "Add")
+        }
     }
 }
+
+internal fun InstalledWidgetProvider.requestAddWidgetAction(): LauncherShellAction.RequestAddWidget =
+    LauncherShellAction.RequestAddWidget(
+        provider = identity,
+        label = label,
+    )
 
 internal fun InstalledWidgetProvider.widgetPickerSummary(): String =
     "${identity.packageName.value} - ${dimensions.minWidthDp}x${dimensions.minHeightDp}dp"
