@@ -11,6 +11,9 @@ import com.riffle.core.domain.launcher.home.GridCell
 import com.riffle.core.domain.launcher.home.GridPlacement
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.LauncherItemId
+import com.riffle.core.domain.launcher.home.LauncherPage
+import com.riffle.core.domain.launcher.home.LauncherPageId
+import com.riffle.core.domain.launcher.home.LauncherPageType
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -127,6 +130,33 @@ class HomeLayoutVisibilityFilterTest {
         val visibleLayout = layout.visibleTo(apps = emptyList())
 
         assertEquals(emptyList<AppShortcutItem>(), visibleLayout.selectedPage.items)
+    }
+
+    @Test
+    fun removesTrailingEmptyAllAppsPagesAfterFiltering() {
+        val camera = app("Camera")
+        val docs = app("Docs")
+        val layout =
+            HomeLayoutDefaults.standard().let { defaults ->
+                defaults.copy(
+                    pages =
+                        listOf(
+                            defaults.selectedPage.copy(items = listOf(shortcut(id = "camera", app = camera))),
+                            LauncherPage(
+                                id = LauncherPageId("library:1"),
+                                type = LauncherPageType.AllApps,
+                                grid = defaults.settings.grid.dimensions,
+                                items = listOf(shortcut(id = "library-docs", app = docs)),
+                            ),
+                        ),
+                    selectedPageId = LauncherPageId("library:1"),
+                )
+            }
+
+        val visibleLayout = layout.visibleTo(apps = listOf(camera))
+
+        assertEquals(listOf(LauncherPageId("home")), visibleLayout.pages.map { page -> page.id })
+        assertEquals(LauncherPageId("home"), visibleLayout.selectedPageId)
     }
 
     private fun app(label: String): InstalledApp =
