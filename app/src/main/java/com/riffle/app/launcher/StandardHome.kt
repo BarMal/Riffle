@@ -68,6 +68,7 @@ fun StandardHome(
     notificationCountsByPackage: Map<AppPackageName, Int>,
     appShortcutsByApp: AppShortcutsByApp,
     appIconLoader: AppIconLoader,
+    haptics: LauncherHaptics = NoopLauncherHaptics,
     onAction: (LauncherShellAction) -> Unit,
 ) {
     val visibleLayout = layout.visibleTo(installedApps)
@@ -100,6 +101,7 @@ fun StandardHome(
                 pageDragOffsetPx = pageDragOffsetPx.floatValue,
                 notificationCountsByPackage = notificationCountsByPackage,
                 appShortcutsByApp = appShortcutsByApp,
+                haptics = haptics,
             ),
         appIconLoader = appIconLoader,
         actions = actions,
@@ -151,6 +153,7 @@ private fun StandardHomeColumn(
                     labelSettings = state.layout.settings.labels,
                 ),
             appIconLoader = appIconLoader,
+            haptics = state.haptics,
             actions = actions,
             pageDragOffsetPx = state.pageDragOffsetPx,
             modifier =
@@ -193,6 +196,7 @@ private fun StandardHomeColumn(
                 notificationCountsByPackage = state.notificationCountsByPackage,
                 appShortcutsByApp = state.appShortcutsByApp,
                 appIconLoader = appIconLoader,
+                haptics = state.haptics,
                 onAction = actions.onAction,
             )
         }
@@ -250,6 +254,7 @@ private fun AnimatedWorkspaceGrid(
     isEditing: Boolean,
     presentation: HomeGridPresentation,
     appIconLoader: AppIconLoader,
+    haptics: LauncherHaptics,
     actions: HomeWorkspaceActions,
     pageDragOffsetPx: Float,
     modifier: Modifier = Modifier,
@@ -274,6 +279,7 @@ private fun AnimatedWorkspaceGrid(
                 isEditing = isEditing,
                 presentation = presentation,
                 appIconLoader = appIconLoader,
+                haptics = haptics,
                 onFolderOpen = actions.onFolderOpen,
                 onAction = actions.onAction,
                 modifier =
@@ -291,6 +297,7 @@ private fun WorkspaceGrid(
     isEditing: Boolean,
     presentation: HomeGridPresentation,
     appIconLoader: AppIconLoader,
+    haptics: LauncherHaptics,
     onFolderOpen: (FolderItem) -> Unit,
     onAction: (LauncherShellAction) -> Unit,
     modifier: Modifier = Modifier,
@@ -348,6 +355,7 @@ private fun WorkspaceGrid(
                                         isEditing = isEditing,
                                         presentation = presentation,
                                         appIconLoader = appIconLoader,
+                                        haptics = haptics,
                                         onFolderOpen = onFolderOpen,
                                         onAction = onAction,
                                     )
@@ -368,6 +376,7 @@ private fun HomeGridItem(
     isEditing: Boolean,
     presentation: HomeGridPresentation,
     appIconLoader: AppIconLoader,
+    haptics: LauncherHaptics,
     onFolderOpen: (FolderItem) -> Unit,
     onAction: (LauncherShellAction) -> Unit,
 ) {
@@ -380,6 +389,7 @@ private fun HomeGridItem(
                 appShortcuts = presentation.appShortcutsByApp[item.appIdentity].orEmpty(),
                 labelSettings = presentation.labelSettings,
                 appIconLoader = appIconLoader,
+                haptics = haptics,
                 onAction = onAction,
             )
 
@@ -390,6 +400,7 @@ private fun HomeGridItem(
                 notificationCount = presentation.notificationCountsByPackage.notificationCountFor(item),
                 labelSettings = presentation.labelSettings,
                 appIconLoader = appIconLoader,
+                haptics = haptics,
                 onFolderOpen = onFolderOpen,
                 onAction = onAction,
             )
@@ -412,6 +423,7 @@ private fun HomeShortcut(
     appShortcuts: List<AppShortcut>,
     labelSettings: HomeLabelSettings,
     appIconLoader: AppIconLoader,
+    haptics: LauncherHaptics,
     onAction: (LauncherShellAction) -> Unit,
 ) {
     val metrics = HomeGridLayoutMetrics()
@@ -426,7 +438,10 @@ private fun HomeShortcut(
                     .combinedClickable(
                         enabled = !isEditing,
                         onClick = { onAction(shortcut.launchAction()) },
-                        onLongClick = { isContextMenuExpanded.value = true },
+                        onLongClick = {
+                            haptics.longPress()
+                            isContextMenuExpanded.value = true
+                        },
                         onLongClickLabel = "Show ${shortcut.label} actions",
                     ),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -595,6 +610,7 @@ private data class StandardHomeContentState(
     val pageDragOffsetPx: Float,
     val notificationCountsByPackage: Map<AppPackageName, Int>,
     val appShortcutsByApp: AppShortcutsByApp,
+    val haptics: LauncherHaptics,
 )
 
 private data class HomeGridPresentation(

@@ -41,6 +41,7 @@ fun Dock(
     notificationCountsByPackage: Map<AppPackageName, Int>,
     appShortcutsByApp: AppShortcutsByApp,
     appIconLoader: AppIconLoader,
+    haptics: LauncherHaptics = NoopLauncherHaptics,
     onAction: (LauncherShellAction) -> Unit,
 ) {
     val presentation =
@@ -76,6 +77,7 @@ fun Dock(
                 isEditing = isEditing,
                 presentation = presentation,
                 appIconLoader = appIconLoader,
+                haptics = haptics,
                 onAction = onAction,
             )
         }
@@ -100,6 +102,7 @@ private fun DockSlot(
     isEditing: Boolean,
     presentation: DockPresentation,
     appIconLoader: AppIconLoader,
+    haptics: LauncherHaptics,
     onAction: (LauncherShellAction) -> Unit,
 ) {
     val editingSlotColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.10f)
@@ -119,6 +122,7 @@ private fun DockSlot(
                 notificationCount = presentation.notificationCountsByPackage[shortcut.appIdentity.packageName] ?: 0,
                 appShortcuts = presentation.appShortcutsByApp[shortcut.appIdentity].orEmpty(),
                 appIconLoader = appIconLoader,
+                haptics = haptics,
                 onAction = onAction,
             )
         }
@@ -134,6 +138,7 @@ private fun BoxScope.DockShortcut(
     notificationCount: Int,
     appShortcuts: List<AppShortcut>,
     appIconLoader: AppIconLoader,
+    haptics: LauncherHaptics,
     onAction: (LauncherShellAction) -> Unit,
 ) {
     val isContextMenuExpanded = remember(shortcut.id) { mutableStateOf(false) }
@@ -153,7 +158,10 @@ private fun BoxScope.DockShortcut(
                     .combinedClickable(
                         enabled = !isEditing,
                         onClick = { onAction(shortcut.launchAction()) },
-                        onLongClick = { isContextMenuExpanded.value = true },
+                        onLongClick = {
+                            haptics.longPress()
+                            isContextMenuExpanded.value = true
+                        },
                         onLongClickLabel = "Show ${shortcut.label} actions",
                     ),
         )

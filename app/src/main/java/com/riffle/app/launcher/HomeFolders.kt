@@ -46,6 +46,7 @@ fun HomeFolder(
     notificationCount: Int,
     labelSettings: HomeLabelSettings,
     appIconLoader: AppIconLoader,
+    haptics: LauncherHaptics = NoopLauncherHaptics,
     onFolderOpen: (FolderItem) -> Unit,
     onAction: (LauncherShellAction) -> Unit,
 ) {
@@ -60,7 +61,10 @@ fun HomeFolder(
                     .combinedClickable(
                         enabled = !isEditing,
                         onClick = { onFolderOpen(folder) },
-                        onLongClick = { onAction(LauncherShellAction.EnterHomeEditMode) },
+                        onLongClick = {
+                            haptics.longPress()
+                            onAction(LauncherShellAction.EnterHomeEditMode)
+                        },
                     ),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(6.dp),
