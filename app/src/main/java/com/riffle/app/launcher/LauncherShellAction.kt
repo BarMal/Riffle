@@ -9,6 +9,7 @@ import com.riffle.core.domain.launcher.home.GridCell
 import com.riffle.core.domain.launcher.home.GridDimensions
 import com.riffle.core.domain.launcher.home.HomeLabelSizing
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
+import com.riffle.core.domain.launcher.home.HostedWidgetId
 import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.home.LauncherPageId
 import com.riffle.core.domain.launcher.home.LauncherViewMode
@@ -150,6 +151,11 @@ sealed interface LauncherShellAction {
     data object OpenWidgetPicker : LauncherShellAction
 
     data object CloseWidgetPicker : LauncherShellAction
+
+    data class AddHostedWidgetToHome(
+        val hostedWidgetId: HostedWidgetId,
+        val label: String,
+    ) : LauncherShellAction
 
     data class SearchQueryChanged(val query: String) : LauncherShellAction
 
