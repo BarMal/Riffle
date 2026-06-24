@@ -22,6 +22,7 @@ internal fun shortcutContextMenuItems(
     shortcut: AppShortcutItem,
     surface: ShortcutContextSurface,
     appShortcuts: List<AppShortcut> = emptyList(),
+    includeEditHome: Boolean = true,
 ): List<ShortcutContextMenuItem> {
     val platformShortcutItems =
         appShortcuts.map { appShortcut ->
@@ -33,10 +34,7 @@ internal fun shortcutContextMenuItems(
         }
     val managementItems =
         listOf(
-            ShortcutContextMenuItem(
-                label = "Edit home",
-                action = LauncherShellAction.EnterHomeEditMode,
-            ),
+            editHomeContextMenuItem(includeEditHome),
             ShortcutContextMenuItem(
                 label = "App info",
                 action = shortcut.openAppInfoAction(),
@@ -53,10 +51,20 @@ internal fun shortcutContextMenuItems(
                 label = surface.removeLabel,
                 action = surface.removeAction(shortcut),
             ),
-        )
+        ).filterNotNull()
 
     return platformShortcutItems + managementItems
 }
+
+private fun editHomeContextMenuItem(includeEditHome: Boolean): ShortcutContextMenuItem? =
+    if (includeEditHome) {
+        ShortcutContextMenuItem(
+            label = "Edit home",
+            action = LauncherShellAction.EnterHomeEditMode,
+        )
+    } else {
+        null
+    }
 
 @Composable
 internal fun ShortcutContextMenu(

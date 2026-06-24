@@ -221,6 +221,12 @@ private fun HomeShortcut(
 ) {
     val metrics = HomeGridLayoutMetrics()
     val isContextMenuExpanded = remember(shortcut.id) { mutableStateOf(false) }
+    val longClickLabel =
+        if (isEditing) {
+            "Show ${shortcut.label} actions"
+        } else {
+            "Edit ${shortcut.label}"
+        }
 
     Box(modifier = modifier.fillMaxSize()) {
         Column(
@@ -235,13 +241,23 @@ private fun HomeShortcut(
                         actions = actions,
                     )
                     .combinedClickable(
-                        enabled = !isEditing,
-                        onClick = { actions.onAction(shortcut.launchAction()) },
+                        enabled = true,
+                        onClick = {
+                            if (isEditing) {
+                                isContextMenuExpanded.value = true
+                            } else {
+                                actions.onAction(shortcut.launchAction())
+                            }
+                        },
                         onLongClick = {
                             actions.haptics.longPress()
-                            actions.onAction(LauncherShellAction.EnterHomeEditMode)
+                            if (isEditing) {
+                                isContextMenuExpanded.value = true
+                            } else {
+                                actions.onAction(LauncherShellAction.EnterHomeEditMode)
+                            }
                         },
-                        onLongClickLabel = "Edit ${shortcut.label}",
+                        onLongClickLabel = longClickLabel,
                     ),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(6.dp),
@@ -265,30 +281,18 @@ private fun HomeShortcut(
                 settings = presentation.labelSettings,
             )
         }
-        if (!isEditing) {
-            ShortcutContextMenu(
-                expanded = isContextMenuExpanded.value,
-                items =
-                    shortcutContextMenuItems(
-                        shortcut = shortcut,
-                        surface = ShortcutContextSurface.HOME,
-                        appShortcuts = presentation.appShortcuts,
-                    ),
-                onDismissRequest = { isContextMenuExpanded.value = false },
-                onAction = actions.onAction,
-            )
-        }
-
-        if (isEditing) {
-            RemoveShortcutButton(
-                label = shortcut.label,
-                onClick = { actions.onAction(LauncherShellAction.RemoveHomeShortcut(shortcut.id)) },
-            )
-            AppInfoShortcutButton(
-                label = shortcut.label,
-                onClick = { actions.onAction(shortcut.openAppInfoAction()) },
-            )
-        }
+        ShortcutContextMenu(
+            expanded = isContextMenuExpanded.value,
+            items =
+                shortcutContextMenuItems(
+                    shortcut = shortcut,
+                    surface = ShortcutContextSurface.HOME,
+                    appShortcuts = presentation.appShortcuts,
+                    includeEditHome = !isEditing,
+                ),
+            onDismissRequest = { isContextMenuExpanded.value = false },
+            onAction = actions.onAction,
+        )
     }
 }
 
