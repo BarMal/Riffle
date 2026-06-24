@@ -4,6 +4,8 @@ import com.riffle.core.domain.launcher.home.WallpaperSettings
 import com.riffle.core.domain.launcher.home.WallpaperSource
 import com.riffle.core.domain.launcher.settings.AppearanceSettings
 import com.riffle.core.domain.launcher.settings.GestureSettings
+import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
+import com.riffle.core.domain.launcher.settings.HapticSettings
 import com.riffle.core.domain.launcher.settings.HomeSwipeGestureSettings
 import com.riffle.core.domain.launcher.settings.LauncherGestureAction
 import com.riffle.core.domain.launcher.settings.LauncherSettings
@@ -68,6 +70,28 @@ class LauncherSettingsJsonCodecTest {
     }
 
     @Test
+    fun roundTripsHapticFeedbackStrength() {
+        val settings =
+            LauncherSettings(
+                haptics =
+                    HapticSettings(
+                        feedbackStrength = HapticFeedbackStrength.STRONG,
+                    ),
+            )
+
+        val decodedSettings = decodeLauncherSettings(encodeLauncherSettings(settings))
+
+        assertEquals(HapticFeedbackStrength.STRONG, decodedSettings.haptics.feedbackStrength)
+    }
+
+    @Test
+    fun defaultsMissingHapticSettings() {
+        val decodedSettings = decodeLauncherSettings("{}")
+
+        assertEquals(HapticFeedbackStrength.MEDIUM, decodedSettings.haptics.feedbackStrength)
+    }
+
+    @Test
     fun defaultsUnknownWallpaperSource() {
         val decodedSettings =
             decodeLauncherSettings(
@@ -101,5 +125,21 @@ class LauncherSettingsJsonCodecTest {
             )
 
         assertEquals(LauncherGestureAction.OPEN_APP_DRAWER, decodedSettings.gestures.homeSwipe.up)
+    }
+
+    @Test
+    fun defaultsUnknownHapticFeedbackStrength() {
+        val decodedSettings =
+            decodeLauncherSettings(
+                """
+                {
+                  "haptics": {
+                    "feedbackStrength": "UNKNOWN"
+                  }
+                }
+                """.trimIndent(),
+            )
+
+        assertEquals(HapticFeedbackStrength.MEDIUM, decodedSettings.haptics.feedbackStrength)
     }
 }

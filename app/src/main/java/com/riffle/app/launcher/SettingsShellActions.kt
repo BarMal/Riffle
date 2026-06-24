@@ -24,6 +24,11 @@ fun LauncherShellAction.handleSettingsAction(
             true
         }
 
+        is LauncherShellAction.SelectHapticFeedbackStrength -> {
+            viewModel.onLauncherSettingsActionSelected(this)
+            true
+        }
+
         LauncherShellAction.RequestNotificationAccess -> {
             runCatching {
                 openIntent(notificationAccessGateway.createNotificationListenerSettingsIntent())

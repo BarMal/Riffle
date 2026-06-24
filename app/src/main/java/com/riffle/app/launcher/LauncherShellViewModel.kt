@@ -320,6 +320,18 @@ class LauncherShellViewModel(
                         repo = launcherSettingsRepository,
                     )
 
+                is LauncherShellAction.SelectHapticFeedbackStrength ->
+                    mutableState.value.withLauncherSettings(
+                        settings =
+                            mutableState.value.launcherSettings.copy(
+                                haptics =
+                                    mutableState.value.launcherSettings.haptics.copy(
+                                        feedbackStrength = action.strength,
+                                    ),
+                            ),
+                        launcherSettingsRepository = launcherSettingsRepository,
+                    )
+
                 else -> mutableState.value
             }
     }
