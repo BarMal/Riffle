@@ -37,7 +37,6 @@ internal fun HomeWidgetPlaceholder(
     isEditing: Boolean,
     onAction: (LauncherShellAction) -> Unit,
     widgetViewFactory: HomeWidgetViewFactory = EmptyHomeWidgetViewFactory,
-    haptics: LauncherHaptics = NoopLauncherHaptics,
     dragState: HomeItemDragState? = null,
     workspaceActions: HomeWorkspaceActions? = null,
 ) {
@@ -68,17 +67,12 @@ internal fun HomeWidgetPlaceholder(
                 modifier = Modifier.fillMaxSize(),
                 factory = { hostedWidgetView },
                 update = { view ->
-                    view.setOnLongClickListener {
-                        haptics.longPress()
-                        onAction(LauncherShellAction.EnterHomeEditMode)
-                        true
-                    }
+                    view.setOnLongClickListener(null)
                 },
             )
         }
         WidgetGestureLayer(
             widget = widget,
-            isEditing = isEditing,
             dragState = dragState,
             workspaceActions = workspaceActions,
         )
@@ -95,7 +89,6 @@ internal fun HomeWidgetPlaceholder(
 @OptIn(ExperimentalFoundationApi::class)
 private fun BoxScope.WidgetGestureLayer(
     widget: WidgetItem,
-    isEditing: Boolean,
     dragState: HomeItemDragState?,
     workspaceActions: HomeWorkspaceActions?,
 ) {
@@ -104,7 +97,6 @@ private fun BoxScope.WidgetGestureLayer(
             dragState != null && workspaceActions != null ->
                 Modifier.homeItemDrag(
                     enabled = true,
-                    enterEditModeOnStart = !isEditing,
                     item = widget,
                     dragState = dragState,
                     actions = workspaceActions,

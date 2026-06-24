@@ -246,6 +246,5 @@ internal fun dockShortcutContextMenuItems(
             shortcut = shortcut,
             surface = ShortcutContextSurface.DOCK,
             appShortcuts = appShortcuts,
-            includeEditHome = !isEditing,
         )
 }

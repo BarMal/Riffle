@@ -53,4 +53,35 @@ class HomePageControlsTest {
             items,
         )
     }
+
+    @Test
+    fun emptyHomeCellMenuExposesHomeManagementActionsWithoutOverviewMode() {
+        val items = homeWorkspaceContextMenuItems(pageCount = 2, selectedPageIndex = 0)
+
+        assertEquals(
+            listOf(
+                ShortcutContextMenuItem(
+                    "Create folder",
+                    LauncherShellAction.CreateEmptyHomeFolder(label = "Folder"),
+                ),
+                ShortcutContextMenuItem("Widgets", LauncherShellAction.OpenWidgetPicker),
+                ShortcutContextMenuItem(
+                    label = "Previous page",
+                    action = LauncherShellAction.SelectPreviousHomePage,
+                    enabled = false,
+                ),
+                ShortcutContextMenuItem("Next page", LauncherShellAction.SelectNextHomePage),
+                ShortcutContextMenuItem("Add page", LauncherShellAction.AddHomePage),
+                ShortcutContextMenuItem("Duplicate page", LauncherShellAction.DuplicateSelectedHomePage),
+                ShortcutContextMenuItem(
+                    label = "Move page left",
+                    action = LauncherShellAction.MoveSelectedHomePageLeft,
+                    enabled = false,
+                ),
+                ShortcutContextMenuItem("Move page right", LauncherShellAction.MoveSelectedHomePageRight),
+                ShortcutContextMenuItem("Delete page", LauncherShellAction.DeleteSelectedHomePage),
+            ),
+            items,
+        )
+    }
 }

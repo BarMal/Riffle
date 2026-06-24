@@ -147,7 +147,12 @@ private fun RowScope.HomeGridCell(
                         actions = actions,
                     )
                 }
-            }
+            } ?: HomeEmptyCellContextMenu(
+                pageCount = state.gridState.pageCount,
+                selectedPageIndex = state.gridState.selectedPageIndex,
+                haptics = actions.haptics,
+                onAction = actions.onAction,
+            )
         }
     }
 }
@@ -218,7 +223,6 @@ private fun HomeGridItem(
                     widget = item,
                     isEditing = state.isEditing,
                     widgetViewFactory = presentation.widgetViewFactory,
-                    haptics = actions.haptics,
                     dragState = HomeItemDragState(cell = state.cell, cellSizePx = state.cellSizePx, grid = state.grid),
                     workspaceActions = actions,
                     onAction = actions.onAction,
@@ -267,7 +271,6 @@ private fun HomeShortcut(
                     )
                     .homeItemDrag(
                         enabled = true,
-                        enterEditModeOnStart = !isEditing,
                         item = shortcut,
                         dragState = dragState,
                         actions = actions,
@@ -301,7 +304,6 @@ private fun HomeShortcut(
                     shortcut = shortcut,
                     surface = ShortcutContextSurface.HOME,
                     appShortcuts = presentation.appShortcuts,
-                    includeEditHome = !isEditing,
                 ),
             onDismissRequest = { isContextMenuExpanded.value = false },
             onAction = actions.onAction,
@@ -311,6 +313,8 @@ private fun HomeShortcut(
 
 internal data class HomeGridState(
     val isEditing: Boolean,
+    val pageCount: Int,
+    val selectedPageIndex: Int,
     val dragSession: HomeDragSession?,
     val pageDragOffsetPx: Float,
 )

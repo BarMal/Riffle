@@ -19,7 +19,6 @@ class ShortcutContextMenuTest {
 
         assertEquals(
             listOf(
-                ShortcutContextMenuItem("Edit home", LauncherShellAction.EnterHomeEditMode),
                 ShortcutContextMenuItem("App info", LauncherShellAction.OpenAppInfo(shortcut.appIdentity)),
                 ShortcutContextMenuItem("Hide app", LauncherShellAction.HideApp(shortcut.appIdentity)),
                 ShortcutContextMenuItem("Uninstall", LauncherShellAction.UninstallApp(shortcut.appIdentity)),
@@ -42,14 +41,13 @@ class ShortcutContextMenuTest {
     }
 
     @Test
-    fun editModeHomeShortcutMenuOmitsEditHomeAction() {
+    fun homeShortcutMenuDoesNotExposeEditMode() {
         val shortcut = shortcut()
 
         val items =
             shortcutContextMenuItems(
                 shortcut = shortcut,
                 surface = ShortcutContextSurface.HOME,
-                includeEditHome = false,
             )
 
         assertEquals(
