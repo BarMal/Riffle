@@ -57,6 +57,7 @@ import com.riffle.core.domain.launcher.home.HomeShortcutMoveDirection
 import com.riffle.core.domain.launcher.home.LauncherItem
 import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.home.LauncherPage
+import com.riffle.core.domain.launcher.home.WidgetItem
 import com.riffle.core.domain.launcher.settings.HomeSwipeGestureSettings
 
 @Composable
@@ -390,6 +391,13 @@ private fun HomeGridItem(
                 labelSettings = presentation.labelSettings,
                 appIconLoader = appIconLoader,
                 onFolderOpen = onFolderOpen,
+                onAction = onAction,
+            )
+
+        is WidgetItem ->
+            HomeWidgetPlaceholder(
+                widget = item,
+                isEditing = isEditing,
                 onAction = onAction,
             )
     }

@@ -36,6 +36,7 @@ import com.riffle.core.domain.launcher.home.FolderItem
 import com.riffle.core.domain.launcher.home.HomeLabelSettings
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.LauncherItem
+import com.riffle.core.domain.launcher.home.WidgetItem
 
 @Composable
 @OptIn(ExperimentalFoundationApi::class)
@@ -207,6 +208,7 @@ fun Map<AppPackageName, Int>.notificationCountFor(item: LauncherItem): Int =
             item.items.sumOf { shortcut ->
                 this[shortcut.appIdentity.packageName] ?: 0
             }
+        is WidgetItem -> 0
     }
 
 @Composable

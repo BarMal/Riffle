@@ -163,6 +163,7 @@ private fun LauncherItem.duplicate(itemIdProvider: () -> LauncherItemId): Launch
                 id = itemIdProvider(),
                 items = items.map { shortcut -> shortcut.copy(id = itemIdProvider()) },
             )
+        is WidgetItem -> copy(id = itemIdProvider())
     }
 
 private fun List<LauncherPage>.withPageInsertedAt(

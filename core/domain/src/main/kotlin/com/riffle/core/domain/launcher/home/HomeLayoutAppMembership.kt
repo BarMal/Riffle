@@ -40,6 +40,7 @@ private fun LauncherItem.containsApp(identity: AppIdentity): Boolean =
             items.any { shortcut ->
                 shortcut.appIdentity == identity && shortcut.appShortcutId == null
             }
+        is WidgetItem -> false
     }
 
 private fun LauncherItem.containsAppShortcut(
@@ -52,4 +53,5 @@ private fun LauncherItem.containsAppShortcut(
             items.any { shortcut ->
                 shortcut.appIdentity == identity && shortcut.appShortcutId == shortcutId
             }
+        is WidgetItem -> false
     }

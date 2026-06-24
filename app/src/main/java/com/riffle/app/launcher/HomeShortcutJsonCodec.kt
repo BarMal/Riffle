@@ -12,6 +12,7 @@ import com.riffle.core.domain.launcher.home.GridPlacement
 import com.riffle.core.domain.launcher.home.GridSpan
 import com.riffle.core.domain.launcher.home.LauncherItem
 import com.riffle.core.domain.launcher.home.LauncherItemId
+import com.riffle.core.domain.launcher.home.WidgetItem
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -19,6 +20,7 @@ fun encodeLauncherItem(item: LauncherItem): JSONObject =
     when (item) {
         is AppShortcutItem -> encodeShortcut(item)
         is FolderItem -> encodeFolder(item)
+        is WidgetItem -> encodeWidget(item)
     }
 
 fun encodeShortcut(shortcut: AppShortcutItem): JSONObject =
@@ -58,6 +60,7 @@ private fun encodeFolder(folder: FolderItem): JSONObject =
 private fun JSONObject.toLauncherItem(): LauncherItem =
     when (optString("type", "shortcut")) {
         "folder" -> toFolder()
+        "widget" -> toWidget()
         else -> toShortcut()
     }
 
@@ -88,7 +91,7 @@ private fun JSONObject.optAppShortcutId(): AppShortcutId? =
         .takeIf(String::isNotBlank)
         ?.let(::AppShortcutId)
 
-private fun JSONObject.toPlacementOrNull(): GridPlacement? =
+fun JSONObject.toPlacementOrNull(): GridPlacement? =
     when {
         isNull("column") || isNull("row") -> null
         else ->

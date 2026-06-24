@@ -12,15 +12,18 @@ import com.riffle.core.domain.launcher.home.GridInsets
 import com.riffle.core.domain.launcher.home.GridPlacement
 import com.riffle.core.domain.launcher.home.GridSettings
 import com.riffle.core.domain.launcher.home.GridSpacing
+import com.riffle.core.domain.launcher.home.GridSpan
 import com.riffle.core.domain.launcher.home.HomeLabelSettings
 import com.riffle.core.domain.launcher.home.HomeLabelSizing
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.HomeLayoutKey
 import com.riffle.core.domain.launcher.home.HomeLayoutSet
+import com.riffle.core.domain.launcher.home.HostedWidgetId
 import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.home.WallpaperSettings
 import com.riffle.core.domain.launcher.home.WallpaperSource
+import com.riffle.core.domain.launcher.home.WidgetItem
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -54,6 +57,32 @@ class HomeLayoutJsonCodecTest {
             listOf(camera.appIdentity, calendar.appIdentity),
             decodedFolder.items.map { item -> item.appIdentity },
         )
+    }
+
+    @Test
+    fun roundTripsWidgetItems() {
+        val widget =
+            WidgetItem(
+                id = LauncherItemId("widget:weather"),
+                appWidgetId = HostedWidgetId(42),
+                label = "Weather",
+                placement =
+                    GridPlacement(
+                        cell = GridCell(column = 1, row = 2),
+                        span = GridSpan(columns = 2, rows = 2),
+                    ),
+            )
+        val layout =
+            HomeLayoutDefaults.standard().let { defaults ->
+                defaults.copy(
+                    pages = listOf(defaults.selectedPage.copy(items = listOf(widget))),
+                )
+            }
+
+        val decodedLayout = decodeHomeLayout(encodeHomeLayout(layout))
+        val decodedWidget = decodedLayout.selectedPage.items.single() as WidgetItem
+
+        assertEquals(widget, decodedWidget)
     }
 
     @Test

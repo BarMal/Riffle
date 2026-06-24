@@ -7,6 +7,7 @@ import com.riffle.core.domain.launcher.home.FolderItem
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
 import com.riffle.core.domain.launcher.home.LauncherItem
+import com.riffle.core.domain.launcher.home.WidgetItem
 
 fun LauncherShellState.withoutUnavailableApps(homeLayoutRepository: HomeLayoutRepository): LauncherShellState =
     homeLayout
@@ -38,4 +39,5 @@ private fun LauncherItem.keepingApps(identities: Set<AppIdentity>): LauncherItem
         is FolderItem ->
             copy(items = items.filter { item -> item.appIdentity in identities })
                 .takeIf { folder -> folder.items.isNotEmpty() }
+        is WidgetItem -> this
     }

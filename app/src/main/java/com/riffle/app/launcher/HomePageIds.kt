@@ -7,6 +7,7 @@ import com.riffle.core.domain.launcher.home.LauncherItem
 import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.home.LauncherPage
 import com.riffle.core.domain.launcher.home.LauncherPageId
+import com.riffle.core.domain.launcher.home.WidgetItem
 
 fun HomeLayout.newHomePage(): LauncherPage =
     LauncherPage(
@@ -40,4 +41,5 @@ private fun LauncherItem.itemIds(): List<LauncherItemId> =
     when (this) {
         is AppShortcutItem -> listOf(id)
         is FolderItem -> listOf(id) + items.map { shortcut -> shortcut.id }
+        is WidgetItem -> listOf(id)
     }

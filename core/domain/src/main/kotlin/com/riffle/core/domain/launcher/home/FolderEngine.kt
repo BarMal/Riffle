@@ -55,6 +55,7 @@ class FolderEngine(
                                 )
 
                             is AppShortcutItem -> FolderEditResult.Rejected(FolderEditRejectionReason.UNSUPPORTED_ITEM)
+                            is WidgetItem -> FolderEditResult.Rejected(FolderEditRejectionReason.UNSUPPORTED_ITEM)
                         }
                     }
                     ?: FolderEditResult.Rejected(FolderEditRejectionReason.ITEM_NOT_FOUND)
