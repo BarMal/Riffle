@@ -263,18 +263,11 @@ private fun HomeShortcut(
                                 actions.onAction(shortcut.launchAction())
                             }
                         },
-                        onLongClick = {
-                            actions.haptics.longPress()
-                            if (isEditing) {
-                                isContextMenuExpanded.value = true
-                            } else {
-                                actions.onAction(LauncherShellAction.EnterHomeEditMode)
-                            }
-                        },
                         onLongClickLabel = longClickLabel,
                     )
                     .homeItemDrag(
-                        enabled = isEditing,
+                        enabled = true,
+                        enterEditModeOnStart = !isEditing,
                         item = shortcut,
                         dragState = dragState,
                         actions = actions,

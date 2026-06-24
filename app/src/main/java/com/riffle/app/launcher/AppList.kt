@@ -111,6 +111,7 @@ private fun LazyListScope.appRows(
                     notificationCount = context.notificationCountsByPackage[app.identity.packageName] ?: 0,
                     shortcutItems = shortcutItems,
                     showInlineActions = showInlineActions,
+                    haptics = context.haptics,
                 ),
             appIconLoader = context.appIconLoader,
             onAction = context.onAction,
@@ -148,7 +149,10 @@ private fun AppDrawerRow(
                 .defaultMinSize(minHeight = 56.dp)
                 .combinedClickable(
                     onClick = { onAction(LauncherShellAction.LaunchApp(app.identity)) },
-                    onLongClick = { isMenuExpanded.value = true },
+                    onLongClick = {
+                        state.haptics.longPress()
+                        isMenuExpanded.value = true
+                    },
                     onLongClickLabel = "Show ${app.label} actions",
                 )
                 .padding(horizontal = 2.dp, vertical = 4.dp),
@@ -348,4 +352,5 @@ private data class AppDrawerRowState(
     val notificationCount: Int,
     val shortcutItems: List<AppDrawerShortcutMenuItem>,
     val showInlineActions: Boolean,
+    val haptics: LauncherHaptics,
 )

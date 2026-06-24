@@ -10,10 +10,9 @@ fun HomeDestination(
     state: LauncherShellState,
     appIconLoader: AppIconLoader,
     widgetViewFactory: HomeWidgetViewFactory = EmptyHomeWidgetViewFactory,
+    haptics: LauncherHaptics = NoopLauncherHaptics,
     onAction: (LauncherShellAction) -> Unit,
 ) {
-    val haptics = rememberLauncherHaptics(state.launcherSettings.haptics.feedbackStrength)
-
     when (state.homeLayout.viewMode.homeSurfaceKind()) {
         HomeSurfaceKind.CARDS ->
             NotificationOverviewSurface(

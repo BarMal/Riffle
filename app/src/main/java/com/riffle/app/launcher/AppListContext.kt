@@ -9,5 +9,6 @@ data class AppListContext(
     val notificationCountsByPackage: Map<AppPackageName, Int>,
     val appShortcutsByApp: AppShortcutsByApp = emptyMap(),
     val appIconLoader: AppIconLoader,
+    val haptics: LauncherHaptics = NoopLauncherHaptics,
     val onAction: (LauncherShellAction) -> Unit,
 )

@@ -81,8 +81,6 @@ internal fun HomeWidgetPlaceholder(
             isEditing = isEditing,
             dragState = dragState,
             workspaceActions = workspaceActions,
-            haptics = haptics,
-            onAction = onAction,
         )
         if (isEditing) {
             WidgetEditHandles(
@@ -100,14 +98,13 @@ private fun BoxScope.WidgetGestureLayer(
     isEditing: Boolean,
     dragState: HomeItemDragState?,
     workspaceActions: HomeWorkspaceActions?,
-    haptics: LauncherHaptics,
-    onAction: (LauncherShellAction) -> Unit,
 ) {
     val dragModifier =
         when {
             dragState != null && workspaceActions != null ->
                 Modifier.homeItemDrag(
-                    enabled = isEditing,
+                    enabled = true,
+                    enterEditModeOnStart = !isEditing,
                     item = widget,
                     dragState = dragState,
                     actions = workspaceActions,
@@ -123,12 +120,6 @@ private fun BoxScope.WidgetGestureLayer(
                 .combinedClickable(
                     onClick = {
                         Unit
-                    },
-                    onLongClick = {
-                        haptics.longPress()
-                        if (!isEditing) {
-                            onAction(LauncherShellAction.EnterHomeEditMode)
-                        }
                     },
                     onLongClickLabel = "Show ${widget.label} actions",
                 )
