@@ -1,5 +1,6 @@
 package com.riffle.app.launcher
 
+import com.riffle.core.domain.launcher.home.HomeLabelSizing
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomePageEditRejectionReason
 import com.riffle.core.domain.launcher.home.HomePageEditResult
@@ -42,6 +43,9 @@ internal fun HomePageEngine.applyHomeLayoutConfigurationEdit(
 
         is LauncherShellAction.SelectHomeLabelMaxLines ->
             layout.withHomeLabelMaxLines(action.maxLines)
+
+        is LauncherShellAction.SelectHomeLabelSizing ->
+            HomePageEditResult.Updated(layout.withHomeLabelSizing(action.sizing))
 
         is LauncherShellAction.SelectLauncherViewMode ->
             HomePageEditResult.Updated(layout.withLauncherViewMode(action.mode))
@@ -99,6 +103,14 @@ private fun HomeLayout.withHomeLabelTextVisible(visible: Boolean): HomeLayout =
         settings =
             settings.copy(
                 labels = settings.labels.copy(showText = visible),
+            ),
+    )
+
+private fun HomeLayout.withHomeLabelSizing(sizing: HomeLabelSizing): HomeLayout =
+    copy(
+        settings =
+            settings.copy(
+                labels = settings.labels.copy(sizing = sizing),
             ),
     )
 

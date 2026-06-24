@@ -6,6 +6,7 @@ import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.home.DockItemMoveDirection
 import com.riffle.core.domain.launcher.home.GridDimensions
+import com.riffle.core.domain.launcher.home.HomeLabelSizing
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.HomeShortcutMoveDirection
 import com.riffle.core.domain.launcher.home.LauncherItemId
@@ -66,6 +67,8 @@ sealed interface LauncherShellAction {
     data class SelectHomeLabelMaxWidth(val maxWidthDp: Int) : LauncherShellAction
 
     data class SelectHomeLabelMaxLines(val maxLines: Int) : LauncherShellAction
+
+    data class SelectHomeLabelSizing(val sizing: HomeLabelSizing) : LauncherShellAction
 
     data class SelectLauncherViewMode(val mode: LauncherViewMode) : LauncherShellAction
 

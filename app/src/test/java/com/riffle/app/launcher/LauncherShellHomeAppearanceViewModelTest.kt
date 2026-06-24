@@ -1,5 +1,6 @@
 package com.riffle.app.launcher
 
+import com.riffle.core.domain.launcher.home.HomeLabelSizing
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
 import org.junit.Assert.assertEquals
@@ -143,6 +144,21 @@ class LauncherShellHomeAppearanceViewModelTest {
 
         assertEquals(originalLayout, viewModel.state.value.homeLayout)
         assertEquals(null, repository.savedLayout)
+    }
+
+    @Test
+    fun updatesHomeLabelSizingAndSavesLayout() {
+        val repository = FakeHomeLayoutRepository()
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                homeLayoutRepository = repository,
+            )
+
+        viewModel.onHomePageEdited(LauncherShellAction.SelectHomeLabelSizing(HomeLabelSizing.DYNAMIC))
+
+        assertEquals(HomeLabelSizing.DYNAMIC, viewModel.state.value.homeLayout.settings.labels.sizing)
+        assertEquals(viewModel.state.value.homeLayout, repository.savedLayout)
     }
 
     private class FakeFirstRunRepository : FirstRunRepository {

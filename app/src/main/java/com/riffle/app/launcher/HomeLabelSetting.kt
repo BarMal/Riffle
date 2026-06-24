@@ -13,6 +13,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.home.HomeLabelSettings
+import com.riffle.core.domain.launcher.home.HomeLabelSizing
 import com.riffle.core.domain.launcher.home.MAX_HOME_LABEL_BACKGROUND_ALPHA_PERCENT
 import com.riffle.core.domain.launcher.home.MAX_HOME_LABEL_MAX_LINES
 import com.riffle.core.domain.launcher.home.MAX_HOME_LABEL_MAX_WIDTH_DP
@@ -41,6 +42,10 @@ internal fun HomeLabelSetting(
             onAction = onAction,
         )
         HomeLabelWidthSetting(
+            settings = settings,
+            onAction = onAction,
+        )
+        HomeLabelSizingSetting(
             settings = settings,
             onAction = onAction,
         )
@@ -248,6 +253,43 @@ private fun HomeLabelWidthSetting(
 private const val HOME_LABEL_WIDTH_STEP_DP = 8
 
 @Composable
+private fun HomeLabelSizingSetting(
+    settings: HomeLabelSettings,
+    onAction: (LauncherShellAction) -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
+            Text(
+                text = "Label sizing",
+                style = MaterialTheme.typography.bodyLarge,
+            )
+            Text(
+                text = settings.sizing.label,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            HomeLabelSizing.values().forEach { sizing ->
+                TextButton(
+                    enabled = settings.sizing != sizing,
+                    onClick = { onAction(LauncherShellAction.SelectHomeLabelSizing(sizing)) },
+                ) {
+                    Text(text = sizing.buttonLabel)
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun HomeLabelLineCountSetting(
     settings: HomeLabelSettings,
     onAction: (LauncherShellAction) -> Unit,
@@ -287,3 +329,17 @@ private fun HomeLabelLineCountSetting(
         }
     }
 }
+
+private val HomeLabelSizing.buttonLabel: String
+    get() =
+        when (this) {
+            HomeLabelSizing.FIXED -> "Fixed"
+            HomeLabelSizing.DYNAMIC -> "Dynamic"
+        }
+
+private val HomeLabelSizing.label: String
+    get() =
+        when (this) {
+            HomeLabelSizing.FIXED -> "Fixed-width label backgrounds"
+            HomeLabelSizing.DYNAMIC -> "Resize backgrounds to label text"
+        }
