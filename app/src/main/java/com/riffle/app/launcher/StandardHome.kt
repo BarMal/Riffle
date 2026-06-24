@@ -402,6 +402,7 @@ private fun HomeShortcut(
     onAction: (LauncherShellAction) -> Unit,
 ) {
     val metrics = HomeGridLayoutMetrics()
+    val isContextMenuExpanded = remember(shortcut.id) { mutableStateOf(false) }
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
@@ -412,7 +413,8 @@ private fun HomeShortcut(
                     .combinedClickable(
                         enabled = !isEditing,
                         onClick = { onAction(shortcut.launchAction()) },
-                        onLongClick = { onAction(LauncherShellAction.EnterHomeEditMode) },
+                        onLongClick = { isContextMenuExpanded.value = true },
+                        onLongClickLabel = "Show ${shortcut.label} actions",
                     ),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(6.dp),
@@ -434,6 +436,18 @@ private fun HomeShortcut(
             WallpaperReadableLabel(
                 text = shortcut.label,
                 settings = labelSettings,
+            )
+        }
+        if (!isEditing) {
+            ShortcutContextMenu(
+                expanded = isContextMenuExpanded.value,
+                items =
+                    shortcutContextMenuItems(
+                        shortcut = shortcut,
+                        surface = ShortcutContextSurface.HOME,
+                    ),
+                onDismissRequest = { isContextMenuExpanded.value = false },
+                onAction = onAction,
             )
         }
 
