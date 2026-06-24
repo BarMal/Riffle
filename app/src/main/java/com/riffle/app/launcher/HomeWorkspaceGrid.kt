@@ -113,6 +113,21 @@ private fun RowScope.HomeGridCell(
                 .fillMaxHeight(),
         contentAlignment = Alignment.Center,
     ) {
+        val activeDragSession = state.activeDragSession
+        val activeDragSource =
+            activeDragSession?.takeIf { session -> session.originCell == state.cell }?.item
+        val visibleItem = activeDragSource ?: state.previewItems.itemAt(cell = state.cell)
+        val occupyingItem = visibleItem ?: state.previewItems.occupyingItemAt(cell = state.cell)
+
+        if (occupyingItem == null) {
+            HomeEmptyCellContextMenu(
+                pageCount = state.gridState.pageCount,
+                selectedPageIndex = state.gridState.selectedPageIndex,
+                haptics = actions.haptics,
+                onAction = actions.onAction,
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
         Box(
             modifier =
                 Modifier
@@ -120,14 +135,14 @@ private fun RowScope.HomeGridCell(
                     .fillMaxHeight(),
             contentAlignment = Alignment.Center,
         ) {
-            val activeDragSession = state.activeDragSession
-            val activeDragSource =
-                activeDragSession?.takeIf { session -> session.originCell == state.cell }?.item
-
             if (activeDragSession?.projectedCell == state.cell) {
-                HomeDragPlaceholder()
+                HomeDragPlaceholder(
+                    span = activeDragSession.item.placement?.span ?: GridSpan(),
+                    cellSize = state.cellSize,
+                    cellSizePx = state.cellSizePx,
+                    fillSpan = activeDragSession.item is WidgetItem,
+                )
             }
-            val visibleItem = activeDragSource ?: state.previewItems.itemAt(cell = state.cell)
 
             visibleItem?.let { item ->
                 key(item.id.value) {
@@ -147,12 +162,7 @@ private fun RowScope.HomeGridCell(
                         actions = actions,
                     )
                 }
-            } ?: HomeEmptyCellContextMenu(
-                pageCount = state.gridState.pageCount,
-                selectedPageIndex = state.gridState.selectedPageIndex,
-                haptics = actions.haptics,
-                onAction = actions.onAction,
-            )
+            }
         }
     }
 }
