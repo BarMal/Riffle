@@ -1,5 +1,6 @@
 package com.riffle.app
 
+import android.app.Activity
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -28,7 +29,10 @@ import com.riffle.app.launcher.notifications.AndroidNotificationAccessGateway
 import com.riffle.app.launcher.notifications.AndroidNotificationDismissalGateway
 import com.riffle.app.launcher.notifications.SharedPreferencesActiveNotificationRepository
 import com.riffle.app.launcher.widgets.AndroidInstalledWidgetProviderRepository
+import com.riffle.app.launcher.widgets.AndroidWidgetHostGateway
+import com.riffle.app.launcher.widgets.WidgetBindingResult
 import com.riffle.core.domain.launcher.ShellNavigationAction
+import com.riffle.core.domain.launcher.home.HostedWidgetId
 
 class MainActivity : ComponentActivity() {
     private val shellViewModel: LauncherShellViewModel by viewModels {
@@ -62,12 +66,36 @@ class MainActivity : ComponentActivity() {
     private val wallpaperController by lazy { AndroidLauncherWallpaperController(window) }
     private val notificationAccessGateway by lazy { AndroidNotificationAccessGateway(this) }
     private val activeNotificationRepository by lazy { SharedPreferencesActiveNotificationRepository(this) }
+    private val widgetHostGateway by lazy { AndroidWidgetHostGateway(this) }
+    private var pendingWidgetBind: PendingWidgetBind? = null
 
     private val requestHomeRole =
         registerForActivityResult(
             ActivityResultContracts.StartActivityForResult(),
         ) {
             refreshPlatformStatuses()
+        }
+
+    private val requestWidgetBind =
+        registerForActivityResult(
+            ActivityResultContracts.StartActivityForResult(),
+        ) { result ->
+            val pending = pendingWidgetBind
+            pendingWidgetBind = null
+            when {
+                pending == null -> Unit
+                result.resultCode == Activity.RESULT_OK -> {
+                    shellViewModel.onHomeShortcutEdited(
+                        LauncherShellAction.AddHostedWidgetToHome(
+                            hostedWidgetId = pending.hostedWidgetId,
+                            label = pending.label,
+                        ),
+                    )
+                    shellViewModel.onAppActionSelected(LauncherShellAction.CloseWidgetPicker)
+                }
+
+                else -> widgetHostGateway.deleteHostedWidgetId(pending.hostedWidgetId)
+            }
         }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -193,6 +221,35 @@ class MainActivity : ComponentActivity() {
             is LauncherShellAction.OpenAppInfo -> appLauncher.openAppInfo(action.identity)
             is LauncherShellAction.UninstallApp -> appLauncher.uninstall(action.identity)
             is LauncherShellAction.AddAppToHome -> shellViewModel.onAddAppToHome(action.app)
+            is LauncherShellAction.RequestAddWidget -> {
+                val hostedWidgetId = widgetHostGateway.allocateHostedWidgetId()
+                when (widgetHostGateway.bindHostedWidget(hostedWidgetId, action.provider)) {
+                    WidgetBindingResult.Bound -> {
+                        shellViewModel.onHomeShortcutEdited(
+                            LauncherShellAction.AddHostedWidgetToHome(
+                                hostedWidgetId = hostedWidgetId,
+                                label = action.label,
+                            ),
+                        )
+                        shellViewModel.onAppActionSelected(LauncherShellAction.CloseWidgetPicker)
+                    }
+
+                    WidgetBindingResult.RequiresPermission -> {
+                        pendingWidgetBind?.let { pending ->
+                            widgetHostGateway.deleteHostedWidgetId(pending.hostedWidgetId)
+                        }
+                        pendingWidgetBind =
+                            PendingWidgetBind(
+                                hostedWidgetId = hostedWidgetId,
+                                label = action.label,
+                            )
+                        requestWidgetBind.launch(
+                            widgetHostGateway.createBindHostedWidgetIntent(hostedWidgetId, action.provider),
+                        )
+                    }
+                }
+            }
+
             is LauncherShellAction.HideApp,
             is LauncherShellAction.UnhideApp,
             is LauncherShellAction.AppDrawerQueryChanged,
@@ -217,3 +274,8 @@ private fun LauncherShellAction.navigationAction(): ShellNavigationAction? =
         LauncherShellAction.OpenSettings -> ShellNavigationAction.OpenSettings
         else -> null
     }
+
+private data class PendingWidgetBind(
+    val hostedWidgetId: HostedWidgetId,
+    val label: String,
+)

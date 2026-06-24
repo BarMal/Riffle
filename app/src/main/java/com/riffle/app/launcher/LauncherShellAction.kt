@@ -18,6 +18,7 @@ import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
 import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
 import com.riffle.core.domain.launcher.settings.HomeSwipeGestureDirection
 import com.riffle.core.domain.launcher.settings.LauncherGestureAction
+import com.riffle.core.domain.launcher.widgets.WidgetProviderIdentity
 
 sealed interface LauncherShellAction {
     data object RequestDefaultHome : LauncherShellAction
@@ -151,6 +152,11 @@ sealed interface LauncherShellAction {
     data object OpenWidgetPicker : LauncherShellAction
 
     data object CloseWidgetPicker : LauncherShellAction
+
+    data class RequestAddWidget(
+        val provider: WidgetProviderIdentity,
+        val label: String,
+    ) : LauncherShellAction
 
     data class AddHostedWidgetToHome(
         val hostedWidgetId: HostedWidgetId,

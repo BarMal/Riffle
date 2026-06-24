@@ -4,6 +4,7 @@ import android.appwidget.AppWidgetHost
 import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import android.content.Context
+import android.content.Intent
 import com.riffle.core.domain.launcher.home.HostedWidgetId
 import com.riffle.core.domain.launcher.widgets.WidgetProviderIdentity
 
@@ -27,6 +28,17 @@ class AndroidWidgetHostGateway(
             true -> WidgetBindingResult.Bound
             false -> WidgetBindingResult.RequiresPermission
         }
+
+    override fun createBindHostedWidgetIntent(
+        hostedWidgetId: HostedWidgetId,
+        provider: WidgetProviderIdentity,
+    ): Intent =
+        Intent(AppWidgetManager.ACTION_APPWIDGET_BIND)
+            .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, hostedWidgetId.value)
+            .putExtra(
+                AppWidgetManager.EXTRA_APPWIDGET_PROVIDER,
+                provider.androidBindingTarget().toComponentName(),
+            )
 
     override fun deleteHostedWidgetId(hostedWidgetId: HostedWidgetId) {
         appWidgetHost.deleteAppWidgetId(hostedWidgetId.value)
