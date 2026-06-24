@@ -220,6 +220,7 @@ class LauncherShellViewModel(
     fun onHomeShortcutEdited(action: LauncherShellAction) {
         mutableState.value =
             when (action) {
+                is LauncherShellAction.CreateEmptyHomeFolder,
                 is LauncherShellAction.CreateHomeFolder,
                 is LauncherShellAction.RenameHomeFolder,
                 is LauncherShellAction.AddAppToFolder,
@@ -524,6 +525,7 @@ private fun HomeShortcutEngine.applyEdit(
 
 private fun LauncherShellState.folderEditLayout(action: LauncherShellAction): HomeLayout =
     when (action) {
+        is LauncherShellAction.CreateEmptyHomeFolder,
         is LauncherShellAction.CreateHomeFolder -> homeLayout.withHomeScreenLibraryApps(installedApps)
         else -> homeLayout
     }

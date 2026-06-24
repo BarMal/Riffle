@@ -15,6 +15,13 @@ fun FolderEngine.applyEdit(
     layout: HomeLayout,
 ): FolderEditResult =
     when (action) {
+        is LauncherShellAction.CreateEmptyHomeFolder ->
+            createEmptyFolderOnSelectedPage(
+                layout = layout,
+                folderId = layout.nextFolderId(),
+                label = action.label,
+            )
+
         is LauncherShellAction.CreateHomeFolder ->
             createFolderOnSelectedPage(
                 layout = layout,

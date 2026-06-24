@@ -180,24 +180,18 @@ fun FolderDialog(
 
 @Composable
 fun HomeFolderEditControls(
-    layout: HomeLayout,
     onAction: (LauncherShellAction) -> Unit,
 ) {
-    val shortcuts = layout.selectedPage.items.filterIsInstance<AppShortcutItem>()
-    val folderItemIds = shortcuts.folderCreationItemIds()
-
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
     ) {
         TextButton(
-            enabled = shortcuts.size >= MIN_FOLDER_SHORTCUT_COUNT,
             onClick = {
                 onAction(
-                    LauncherShellAction.CreateHomeFolder(
-                        itemIds = folderItemIds,
-                        label = shortcuts.defaultFolderLabel(),
+                    LauncherShellAction.CreateEmptyHomeFolder(
+                        label = DEFAULT_FOLDER_LABEL,
                     ),
                 )
             },
@@ -397,5 +391,5 @@ private fun FolderAddAppRow(
 }
 
 private const val FOLDER_PREVIEW_ICON_COUNT = 4
-private const val MIN_FOLDER_SHORTCUT_COUNT = 2
 private const val FOLDER_CONTENT_MAX_HEIGHT_DP = 360
+private const val DEFAULT_FOLDER_LABEL = "Folder"

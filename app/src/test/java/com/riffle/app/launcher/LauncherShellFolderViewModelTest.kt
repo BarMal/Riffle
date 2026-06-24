@@ -47,6 +47,54 @@ class LauncherShellFolderViewModelTest {
     }
 
     @Test
+    fun createsEmptyHomeFolderAndSavesLayout() {
+        val camera = app(label = "Camera")
+        val repository = FakeHomeLayoutRepository()
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                installedAppRepository = FakeInstalledAppRepository(apps = listOf(camera)),
+                homeLayoutRepository = repository,
+            )
+        viewModel.onAddAppToHome(camera)
+
+        viewModel.onHomeShortcutEdited(
+            LauncherShellAction.CreateEmptyHomeFolder(label = "Folder"),
+        )
+
+        val folder = viewModel.state.value.homeLayout.selectedPage.items.filterIsInstance<FolderItem>().single()
+        assertEquals("Folder", folder.label)
+        assertEquals(emptyList<AppShortcutItem>(), folder.items)
+        assertEquals(
+            GridPlacement(cell = GridCell(column = 1, row = 0)),
+            folder.placement,
+        )
+        assertEquals(viewModel.state.value.homeLayout, repository.savedLayout)
+    }
+
+    @Test
+    fun createsEmptyHomeFolderInLibraryModeAndSavesLayout() {
+        val camera = app(label = "Camera")
+        val calendar = app(label = "Calendar")
+        val repository = FakeHomeLayoutRepository()
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                installedAppRepository = FakeInstalledAppRepository(apps = listOf(camera, calendar)),
+                homeLayoutRepository = repository,
+            )
+        viewModel.onHomePageEdited(LauncherShellAction.SelectLauncherViewMode(LauncherViewMode.HOME_SCREEN_LIBRARY))
+
+        viewModel.onHomeShortcutEdited(
+            LauncherShellAction.CreateEmptyHomeFolder(label = "Folder"),
+        )
+
+        val folder = viewModel.state.value.homeLayout.selectedPage.items.filterIsInstance<FolderItem>().single()
+        assertEquals(emptyList<AppShortcutItem>(), folder.items)
+        assertEquals(viewModel.state.value.homeLayout, repository.savedLayout)
+    }
+
+    @Test
     fun createsHomeFolderFromLibraryModeShortcutsAndSavesLayout() {
         val camera = app(label = "Camera")
         val calendar = app(label = "Calendar")

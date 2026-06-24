@@ -112,6 +112,10 @@ sealed interface LauncherShellAction {
 
     data class RemoveHomeShortcut(val itemId: LauncherItemId) : LauncherShellAction
 
+    data class CreateEmptyHomeFolder(
+        val label: String,
+    ) : LauncherShellAction
+
     data class CreateHomeFolder(
         val itemIds: List<LauncherItemId>,
         val label: String,

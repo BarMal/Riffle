@@ -146,6 +146,7 @@ class MainActivity : ComponentActivity() {
     private fun handleHomeShortcutAction(action: LauncherShellAction): Boolean =
         when (action) {
             is LauncherShellAction.RemoveHomeShortcut,
+            is LauncherShellAction.CreateEmptyHomeFolder,
             is LauncherShellAction.CreateHomeFolder,
             is LauncherShellAction.RenameHomeFolder,
             is LauncherShellAction.AddAppToFolder,

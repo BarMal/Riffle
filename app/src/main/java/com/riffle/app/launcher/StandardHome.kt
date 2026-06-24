@@ -173,7 +173,6 @@ private fun StandardHomeColumn(
                 onAction = actions.onAction,
             )
             HomeFolderEditControls(
-                layout = state.visibleLayout,
                 onAction = actions.onAction,
             )
         }
