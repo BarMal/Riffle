@@ -2,7 +2,9 @@ package com.riffle.app.launcher
 
 import com.riffle.core.domain.launcher.home.GridDimensions
 import com.riffle.core.domain.launcher.home.HomeLabelSettings
+import com.riffle.core.domain.launcher.home.HomeLabelSizing
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Test
 
 class HomeGridLayoutMetricsTest {
@@ -91,6 +93,28 @@ class HomeGridLayoutMetricsTest {
                 HomeLabelSettings(
                     textSizeSp = 16,
                     maxLines = 2,
+                ),
+            ),
+        )
+    }
+
+    @Test
+    fun fixedHomeLabelContainerWidthUsesConfiguredMaxWidth() {
+        assertEquals(
+            112,
+            metrics.fixedHomeLabelContainerWidthDp(
+                HomeLabelSettings(maxWidthDp = 112),
+            ),
+        )
+    }
+
+    @Test
+    fun dynamicHomeLabelContainerWidthIsContentSized() {
+        assertNull(
+            metrics.fixedHomeLabelContainerWidthDp(
+                HomeLabelSettings(
+                    maxWidthDp = 112,
+                    sizing = HomeLabelSizing.DYNAMIC,
                 ),
             ),
         )
