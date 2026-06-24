@@ -1,15 +1,18 @@
 package com.riffle.app.launcher
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -33,6 +36,8 @@ internal fun HomeDragPlaceholder() {
         modifier =
             Modifier
                 .size(HOME_ICON_SIZE_DP.dp)
+                .clip(RoundedCornerShape(DRAG_PLACEHOLDER_CORNER_RADIUS_DP.dp))
+                .background(MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = DRAG_PLACEHOLDER_ALPHA))
                 .drawBehind {
                     drawRoundRect(
                         color = outlineColor,
@@ -78,6 +83,7 @@ internal fun BoxScope.HomeDraggedItemOverlay(
     Box(
         modifier =
             Modifier
+                .align(Alignment.TopStart)
                 .size(cellSize)
                 .graphicsLayer {
                     this.translationX = translationX
@@ -236,5 +242,7 @@ private val LauncherItem.dragLabel: String
 private const val DRAG_PLACEHOLDER_STROKE_WIDTH_DP = 2
 private const val DRAG_PLACEHOLDER_DASH_DP = 8
 private const val DRAG_PLACEHOLDER_GAP_DP = 6
+private const val DRAG_PLACEHOLDER_CORNER_RADIUS_DP = 12
+private const val DRAG_PLACEHOLDER_ALPHA = 0.68f
 private const val DRAG_GHOST_ELEVATION = 12f
 private const val DRAG_GHOST_ALPHA = 0.92f
