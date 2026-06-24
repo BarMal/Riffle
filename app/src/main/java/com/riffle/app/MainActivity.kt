@@ -183,6 +183,7 @@ class MainActivity : ComponentActivity() {
             is LauncherShellAction.LaunchApp -> appLauncher.launch(action.identity)
             is LauncherShellAction.LaunchAppShortcut -> appLauncher.launchShortcut(action.shortcut)
             is LauncherShellAction.OpenAppInfo -> appLauncher.openAppInfo(action.identity)
+            is LauncherShellAction.UninstallApp -> appLauncher.uninstall(action.identity)
             is LauncherShellAction.AddAppToHome -> shellViewModel.onAddAppToHome(action.app)
             is LauncherShellAction.HideApp,
             is LauncherShellAction.UnhideApp,

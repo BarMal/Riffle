@@ -34,6 +34,10 @@ internal fun shortcutContextMenuItems(
             action = LauncherShellAction.HideApp(shortcut.appIdentity),
         ),
         ShortcutContextMenuItem(
+            label = "Uninstall",
+            action = LauncherShellAction.UninstallApp(shortcut.appIdentity),
+        ),
+        ShortcutContextMenuItem(
             label = surface.removeLabel,
             action = surface.removeAction(shortcut),
         ),

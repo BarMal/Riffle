@@ -80,6 +80,8 @@ sealed interface LauncherShellAction {
 
     data class OpenAppInfo(val identity: AppIdentity) : LauncherShellAction
 
+    data class UninstallApp(val identity: AppIdentity) : LauncherShellAction
+
     data class HideApp(val identity: AppIdentity) : LauncherShellAction
 
     data class UnhideApp(val identity: AppIdentity) : LauncherShellAction
