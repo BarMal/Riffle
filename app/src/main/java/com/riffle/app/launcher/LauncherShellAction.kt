@@ -9,7 +9,6 @@ import com.riffle.core.domain.launcher.home.GridCell
 import com.riffle.core.domain.launcher.home.GridDimensions
 import com.riffle.core.domain.launcher.home.HomeLabelSizing
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
-import com.riffle.core.domain.launcher.home.HomeShortcutMoveDirection
 import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.home.LauncherPageId
 import com.riffle.core.domain.launcher.home.LauncherViewMode
@@ -141,11 +140,6 @@ sealed interface LauncherShellAction {
     data class MoveDockShortcut(
         val itemId: LauncherItemId,
         val direction: DockItemMoveDirection,
-    ) : LauncherShellAction
-
-    data class MoveHomeShortcut(
-        val itemId: LauncherItemId,
-        val direction: HomeShortcutMoveDirection,
     ) : LauncherShellAction
 
     data class MoveHomeShortcutToCell(

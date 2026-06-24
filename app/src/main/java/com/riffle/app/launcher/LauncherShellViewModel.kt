@@ -506,13 +506,6 @@ private fun HomeShortcutEngine.applyEdit(
                 itemId = action.itemId,
             )
 
-        is LauncherShellAction.MoveHomeShortcut ->
-            moveShortcutOnSelectedPage(
-                layout = layout,
-                itemId = action.itemId,
-                direction = action.direction,
-            )
-
         is LauncherShellAction.MoveHomeShortcutToCell ->
             moveShortcutToCellOnSelectedPage(
                 layout = layout,
