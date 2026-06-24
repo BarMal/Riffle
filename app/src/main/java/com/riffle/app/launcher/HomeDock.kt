@@ -8,7 +8,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -57,7 +57,7 @@ fun Dock(
                 modifier =
                     Modifier
                         .weight(1f)
-                        .aspectRatio(1f),
+                        .fillMaxHeight(),
                 shortcut = dock.items.getOrNull(index) as? AppShortcutItem,
                 iconSizeDp = dock.iconSizeDp,
                 isEditing = isEditing,
