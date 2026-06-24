@@ -21,10 +21,16 @@ data class HomeLabelSettings(
     val showText: Boolean = true,
     val maxWidthDp: Int = DEFAULT_HOME_LABEL_MAX_WIDTH_DP,
     val maxLines: Int = DEFAULT_HOME_LABEL_MAX_LINES,
+    val sizing: HomeLabelSizing = HomeLabelSizing.FIXED,
 ) {
     companion object {
         fun standard(): HomeLabelSettings = HomeLabelSettings()
     }
+}
+
+enum class HomeLabelSizing {
+    FIXED,
+    DYNAMIC,
 }
 
 data class WallpaperSettings(
