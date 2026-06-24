@@ -2,11 +2,9 @@ package com.riffle.app.launcher
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -14,18 +12,14 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppShortcut
@@ -74,9 +68,14 @@ fun Dock(
                     Modifier
                         .weight(1f)
                         .fillMaxHeight(),
-                shortcut = dock.items.getOrNull(index) as? AppShortcutItem,
-                iconSizeDp = dock.iconSizeDp,
-                isEditing = isEditing,
+                state =
+                    DockSlotState(
+                        shortcut = dock.items.getOrNull(index) as? AppShortcutItem,
+                        shortcutIndex = index,
+                        shortcutCount = dock.items.size,
+                        iconSizeDp = dock.iconSizeDp,
+                        isEditing = isEditing,
+                    ),
                 presentation = presentation,
                 appIconLoader = appIconLoader,
             )
@@ -96,8 +95,18 @@ private data class DockPresentation(
     val onAction: (LauncherShellAction) -> Unit,
 )
 
+private data class DockSlotState(
+    val shortcut: AppShortcutItem?,
+    val shortcutIndex: Int,
+    val shortcutCount: Int,
+    val iconSizeDp: Int,
+    val isEditing: Boolean,
+)
+
 private data class DockShortcutState(
     val iconSizeDp: Int,
+    val shortcutIndex: Int,
+    val shortcutCount: Int,
     val isEditing: Boolean,
     val notificationCount: Int,
     val appShortcuts: List<AppShortcut>,
@@ -106,9 +115,7 @@ private data class DockShortcutState(
 @Composable
 private fun DockSlot(
     modifier: Modifier,
-    shortcut: AppShortcutItem?,
-    iconSizeDp: Int,
-    isEditing: Boolean,
+    state: DockSlotState,
     presentation: DockPresentation,
     appIconLoader: AppIconLoader,
 ) {
@@ -118,19 +125,21 @@ private fun DockSlot(
         modifier =
             modifier
                 .clip(RoundedCornerShape(18.dp))
-                .then(if (isEditing) Modifier.background(editingSlotColor) else Modifier),
+                .then(if (state.isEditing) Modifier.background(editingSlotColor) else Modifier),
         contentAlignment = Alignment.Center,
     ) {
-        if (shortcut != null) {
+        if (state.shortcut != null) {
             DockShortcut(
-                shortcut = shortcut,
+                shortcut = state.shortcut,
                 state =
                     DockShortcutState(
-                        iconSizeDp = iconSizeDp,
-                        isEditing = isEditing,
+                        iconSizeDp = state.iconSizeDp,
+                        shortcutIndex = state.shortcutIndex,
+                        shortcutCount = state.shortcutCount,
+                        isEditing = state.isEditing,
                         notificationCount =
-                            presentation.notificationCountsByPackage[shortcut.appIdentity.packageName] ?: 0,
-                        appShortcuts = presentation.appShortcutsByApp[shortcut.appIdentity].orEmpty(),
+                            presentation.notificationCountsByPackage[state.shortcut.appIdentity.packageName] ?: 0,
+                        appShortcuts = presentation.appShortcutsByApp[state.shortcut.appIdentity].orEmpty(),
                     ),
                 presentation = presentation,
                 appIconLoader = appIconLoader,
@@ -141,7 +150,7 @@ private fun DockSlot(
 
 @Composable
 @OptIn(ExperimentalFoundationApi::class)
-private fun BoxScope.DockShortcut(
+private fun DockShortcut(
     shortcut: AppShortcutItem,
     state: DockShortcutState,
     presentation: DockPresentation,
@@ -162,8 +171,13 @@ private fun BoxScope.DockShortcut(
                 Modifier
                     .size(state.iconSizeDp.dp)
                     .combinedClickable(
-                        enabled = !state.isEditing,
-                        onClick = { presentation.onAction(shortcut.launchAction()) },
+                        onClick = {
+                            if (state.isEditing) {
+                                isContextMenuExpanded.value = true
+                            } else {
+                                presentation.onAction(shortcut.launchAction())
+                            }
+                        },
                         onLongClick = {
                             presentation.haptics.longPress()
                             isContextMenuExpanded.value = true
@@ -178,119 +192,60 @@ private fun BoxScope.DockShortcut(
                 modifier = Modifier.align(Alignment.TopEnd),
             )
         }
-        if (!state.isEditing) {
-            ShortcutContextMenu(
-                expanded = isContextMenuExpanded.value,
-                items =
-                    shortcutContextMenuItems(
-                        shortcut = shortcut,
-                        surface = ShortcutContextSurface.DOCK,
-                        appShortcuts = state.appShortcuts,
-                    ),
-                onDismissRequest = { isContextMenuExpanded.value = false },
-                onAction = presentation.onAction,
-            )
-        }
-    }
-
-    if (state.isEditing) {
-        MoveDockShortcutControls(
-            shortcut = shortcut,
+        ShortcutContextMenu(
+            expanded = isContextMenuExpanded.value,
+            items =
+                dockShortcutContextMenuItems(
+                    shortcut = shortcut,
+                    appShortcuts = state.appShortcuts,
+                    isEditing = state.isEditing,
+                    shortcutIndex = state.shortcutIndex,
+                    shortcutCount = state.shortcutCount,
+                ),
+            onDismissRequest = { isContextMenuExpanded.value = false },
             onAction = presentation.onAction,
         )
-        RemoveDockShortcutButton(
-            label = shortcut.label,
-            onClick = { presentation.onAction(LauncherShellAction.RemoveDockShortcut(shortcut.id)) },
-        )
-        AppInfoShortcutButton(
-            label = shortcut.label,
-            onClick = { presentation.onAction(shortcut.openAppInfoAction()) },
-        )
     }
 }
 
-@Composable
-private fun BoxScope.MoveDockShortcutControls(
+internal fun dockShortcutContextMenuItems(
     shortcut: AppShortcutItem,
-    onAction: (LauncherShellAction) -> Unit,
-) {
-    MoveDockShortcutButton(
-        label = shortcut.label,
-        direction = DockItemMoveDirection.LEFT,
-        text = "<",
-        alignment = Alignment.CenterStart,
-        onClick = {
-            onAction(
-                LauncherShellAction.MoveDockShortcut(
-                    itemId = shortcut.id,
-                    direction = DockItemMoveDirection.LEFT,
+    appShortcuts: List<AppShortcut> = emptyList(),
+    isEditing: Boolean = false,
+    shortcutIndex: Int = 0,
+    shortcutCount: Int = 1,
+): List<ShortcutContextMenuItem> {
+    val editItems =
+        if (isEditing) {
+            listOf(
+                ShortcutContextMenuItem(
+                    label = "Move left",
+                    action =
+                        LauncherShellAction.MoveDockShortcut(
+                            itemId = shortcut.id,
+                            direction = DockItemMoveDirection.LEFT,
+                        ),
+                    enabled = shortcutIndex > 0,
+                ),
+                ShortcutContextMenuItem(
+                    label = "Move right",
+                    action =
+                        LauncherShellAction.MoveDockShortcut(
+                            itemId = shortcut.id,
+                            direction = DockItemMoveDirection.RIGHT,
+                        ),
+                    enabled = shortcutIndex < shortcutCount - 1,
                 ),
             )
-        },
-    )
-    MoveDockShortcutButton(
-        label = shortcut.label,
-        direction = DockItemMoveDirection.RIGHT,
-        text = ">",
-        alignment = Alignment.CenterEnd,
-        onClick = {
-            onAction(
-                LauncherShellAction.MoveDockShortcut(
-                    itemId = shortcut.id,
-                    direction = DockItemMoveDirection.RIGHT,
-                ),
-            )
-        },
-    )
-}
+        } else {
+            emptyList()
+        }
 
-@Composable
-private fun BoxScope.MoveDockShortcutButton(
-    label: String,
-    direction: DockItemMoveDirection,
-    text: String,
-    alignment: Alignment,
-    onClick: () -> Unit,
-) {
-    Box(
-        modifier =
-            Modifier
-                .align(alignment)
-                .size(20.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.secondaryContainer)
-                .clickable(onClick = onClick)
-                .semantics { contentDescription = "Move $label in dock ${direction.name.lowercase()}" },
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSecondaryContainer,
+    return editItems +
+        shortcutContextMenuItems(
+            shortcut = shortcut,
+            surface = ShortcutContextSurface.DOCK,
+            appShortcuts = appShortcuts,
+            includeEditHome = !isEditing,
         )
-    }
-}
-
-@Composable
-private fun BoxScope.RemoveDockShortcutButton(
-    label: String,
-    onClick: () -> Unit,
-) {
-    Box(
-        modifier =
-            Modifier
-                .align(Alignment.TopEnd)
-                .size(22.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.errorContainer)
-                .clickable(onClick = onClick)
-                .semantics { contentDescription = "Remove $label from dock" },
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = "X",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onErrorContainer,
-        )
-    }
 }
