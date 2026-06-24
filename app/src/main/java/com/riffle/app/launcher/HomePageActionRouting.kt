@@ -20,6 +20,7 @@ internal fun LauncherShellAction.isHomePageEditAction(): Boolean =
         is LauncherShellAction.SelectHomeLabelTextVisible,
         is LauncherShellAction.SelectHomeLabelMaxWidth,
         is LauncherShellAction.SelectHomeLabelMaxLines,
+        is LauncherShellAction.SelectHomeLabelSizing,
         is LauncherShellAction.SelectLauncherViewMode,
         is LauncherShellAction.SelectHomeLayoutDeviceClass,
         -> true

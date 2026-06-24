@@ -4,6 +4,7 @@ import com.riffle.core.domain.launcher.apps.AppActivityName
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.home.GridDimensions
+import com.riffle.core.domain.launcher.home.HomeLabelSizing
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.LauncherPageId
 import com.riffle.core.domain.launcher.home.LauncherViewMode
@@ -34,6 +35,7 @@ class LauncherShellHomePageActionRoutingTest {
                 LauncherShellAction.SelectHomeLabelTextVisible(visible = false),
                 LauncherShellAction.SelectHomeLabelMaxWidth(maxWidthDp = 112),
                 LauncherShellAction.SelectHomeLabelMaxLines(maxLines = 2),
+                LauncherShellAction.SelectHomeLabelSizing(HomeLabelSizing.DYNAMIC),
                 LauncherShellAction.SelectLauncherViewMode(LauncherViewMode.HOME_SCREEN_LIBRARY),
                 LauncherShellAction.SelectHomeLayoutDeviceClass(HomeLayoutDeviceClass.FOLDABLE),
             )

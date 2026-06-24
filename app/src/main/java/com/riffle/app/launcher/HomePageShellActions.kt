@@ -50,6 +50,7 @@ fun HomePageEngine.applyEdit(
         is LauncherShellAction.SelectHomeLabelTextVisible,
         is LauncherShellAction.SelectHomeLabelMaxWidth,
         is LauncherShellAction.SelectHomeLabelMaxLines,
+        is LauncherShellAction.SelectHomeLabelSizing,
         is LauncherShellAction.SelectLauncherViewMode,
         -> applyHomeLayoutConfigurationEdit(action = action, layout = layout)
 
