@@ -43,7 +43,7 @@ fun Dock(
             Modifier
                 .widthIn(max = DOCK_MAX_WIDTH_DP.dp)
                 .fillMaxWidth()
-                .height(76.dp)
+                .height(dockHeightDp(dock.iconSizeDp).dp)
                 .clip(RoundedCornerShape(28.dp))
                 .background(
                     MaterialTheme.colorScheme.surfaceVariant.copy(
@@ -72,6 +72,9 @@ fun Dock(
 }
 
 private const val DOCK_MAX_WIDTH_DP = 560
+private const val DOCK_VERTICAL_CHROME_DP = 32
+
+internal fun dockHeightDp(iconSizeDp: Int): Int = iconSizeDp + DOCK_VERTICAL_CHROME_DP
 
 @Composable
 private fun DockSlot(
