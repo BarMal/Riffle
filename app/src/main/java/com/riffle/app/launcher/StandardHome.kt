@@ -5,6 +5,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -39,6 +40,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -53,12 +55,12 @@ import com.riffle.core.domain.launcher.home.GridCell
 import com.riffle.core.domain.launcher.home.HomeEditMode
 import com.riffle.core.domain.launcher.home.HomeLabelSettings
 import com.riffle.core.domain.launcher.home.HomeLayout
-import com.riffle.core.domain.launcher.home.HomeShortcutMoveDirection
 import com.riffle.core.domain.launcher.home.LauncherItem
 import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.home.LauncherPage
 import com.riffle.core.domain.launcher.home.WidgetItem
 import com.riffle.core.domain.launcher.settings.HomeSwipeGestureSettings
+import kotlin.math.roundToInt
 
 @Composable
 fun StandardHome(
@@ -307,16 +309,13 @@ private fun WorkspaceGrid(
         contentAlignment = Alignment.Center,
     ) {
         val metrics = HomeGridLayoutMetrics()
-        val cellSize =
-            with(LocalDensity.current) {
-                metrics
-                    .cellSizePx(
-                        grid = page.grid,
-                        maxWidthPx = maxWidth.toPx(),
-                        maxHeightPx = maxHeight.toPx(),
-                    )
-                    .toDp()
-            }
+        val cellSizePx =
+            metrics.cellSizePx(
+                grid = page.grid,
+                maxWidthPx = with(LocalDensity.current) { maxWidth.toPx() },
+                maxHeightPx = with(LocalDensity.current) { maxHeight.toPx() },
+            )
+        val cellSize = with(LocalDensity.current) { cellSizePx.toDp() }
 
         Column(
             modifier = Modifier.fillMaxSize(),
@@ -352,6 +351,8 @@ private fun WorkspaceGrid(
                                 if (item != null) {
                                     HomeGridItem(
                                         item = item,
+                                        cell = GridCell(column = column, row = row),
+                                        cellSizePx = cellSizePx,
                                         isEditing = isEditing,
                                         presentation = presentation,
                                         appIconLoader = appIconLoader,
@@ -373,6 +374,8 @@ private fun WorkspaceGrid(
 @OptIn(ExperimentalFoundationApi::class)
 private fun HomeGridItem(
     item: LauncherItem,
+    cell: GridCell,
+    cellSizePx: Float,
     isEditing: Boolean,
     presentation: HomeGridPresentation,
     appIconLoader: AppIconLoader,
@@ -384,6 +387,8 @@ private fun HomeGridItem(
         is AppShortcutItem ->
             HomeShortcut(
                 shortcut = item,
+                cell = cell,
+                cellSizePx = cellSizePx,
                 isEditing = isEditing,
                 notificationCount = presentation.notificationCountsByPackage.notificationCountFor(item),
                 appShortcuts = presentation.appShortcutsByApp[item.appIdentity].orEmpty(),
@@ -396,6 +401,8 @@ private fun HomeGridItem(
         is FolderItem ->
             HomeFolder(
                 folder = item,
+                cell = cell,
+                cellSizePx = cellSizePx,
                 isEditing = isEditing,
                 notificationCount = presentation.notificationCountsByPackage.notificationCountFor(item),
                 labelSettings = presentation.labelSettings,
@@ -418,6 +425,8 @@ private fun HomeGridItem(
 @OptIn(ExperimentalFoundationApi::class)
 private fun HomeShortcut(
     shortcut: AppShortcutItem,
+    cell: GridCell,
+    cellSizePx: Float,
     isEditing: Boolean,
     notificationCount: Int,
     appShortcuts: List<AppShortcut>,
@@ -435,6 +444,14 @@ private fun HomeShortcut(
                 Modifier
                     .align(Alignment.Center)
                     .heightIn(min = metrics.homeItemContentHeightDp(labelSettings).dp)
+                    .homeItemDrag(
+                        enabled = isEditing,
+                        item = shortcut,
+                        cell = cell,
+                        cellSizePx = cellSizePx,
+                        haptics = haptics,
+                        onAction = onAction,
+                    )
                     .combinedClickable(
                         enabled = !isEditing,
                         onClick = { onAction(shortcut.launchAction()) },
@@ -481,11 +498,6 @@ private fun HomeShortcut(
         }
 
         if (isEditing) {
-            MoveItemControls(
-                item = shortcut,
-                label = shortcut.label,
-                onAction = onAction,
-            )
             RemoveShortcutButton(
                 label = shortcut.label,
                 onClick = { onAction(LauncherShellAction.RemoveHomeShortcut(shortcut.id)) },
@@ -498,77 +510,52 @@ private fun HomeShortcut(
     }
 }
 
-@Composable
-fun BoxScope.MoveItemControls(
+internal fun Modifier.homeItemDrag(
+    enabled: Boolean,
     item: LauncherItem,
-    label: String,
+    cell: GridCell,
+    cellSizePx: Float,
+    haptics: LauncherHaptics,
     onAction: (LauncherShellAction) -> Unit,
-) {
-    fun moveItem(direction: HomeShortcutMoveDirection) {
-        onAction(
-            LauncherShellAction.MoveHomeShortcut(
-                itemId = item.id,
-                direction = direction,
-            ),
-        )
-    }
+): Modifier =
+    if (!enabled) {
+        this
+    } else {
+        pointerInput(item.id, cell, cellSizePx) {
+            var dragX = 0f
+            var dragY = 0f
 
-    MoveShortcutButton(
-        label = label,
-        direction = HomeShortcutMoveDirection.UP,
-        text = "U",
-        alignment = Alignment.TopCenter,
-        onClick = { moveItem(HomeShortcutMoveDirection.UP) },
-    )
-    MoveShortcutButton(
-        label = label,
-        direction = HomeShortcutMoveDirection.DOWN,
-        text = "D",
-        alignment = Alignment.BottomCenter,
-        onClick = { moveItem(HomeShortcutMoveDirection.DOWN) },
-    )
-    MoveShortcutButton(
-        label = label,
-        direction = HomeShortcutMoveDirection.LEFT,
-        text = "L",
-        alignment = Alignment.CenterStart,
-        onClick = { moveItem(HomeShortcutMoveDirection.LEFT) },
-    )
-    MoveShortcutButton(
-        label = label,
-        direction = HomeShortcutMoveDirection.RIGHT,
-        text = "R",
-        alignment = Alignment.CenterEnd,
-        onClick = { moveItem(HomeShortcutMoveDirection.RIGHT) },
-    )
-}
+            detectDragGestures(
+                onDragStart = {
+                    dragX = 0f
+                    dragY = 0f
+                    haptics.longPress()
+                },
+                onDrag = { change, dragAmount ->
+                    change.consume()
+                    dragX += dragAmount.x
+                    dragY += dragAmount.y
+                },
+                onDragEnd = {
+                    val columnDelta = (dragX / cellSizePx).roundToInt()
+                    val rowDelta = (dragY / cellSizePx).roundToInt()
 
-@Composable
-private fun BoxScope.MoveShortcutButton(
-    label: String,
-    direction: HomeShortcutMoveDirection,
-    text: String,
-    alignment: Alignment,
-    onClick: () -> Unit,
-) {
-    Box(
-        modifier =
-            Modifier
-                .align(alignment)
-                .size(20.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.secondaryContainer)
-                .clickable(onClick = onClick)
-                .semantics { contentDescription = "Move $label ${direction.name.lowercase()}" },
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSecondaryContainer,
-        )
+                    if (columnDelta != 0 || rowDelta != 0) {
+                        onAction(
+                            LauncherShellAction.MoveHomeShortcutToCell(
+                                itemId = item.id,
+                                cell =
+                                    GridCell(
+                                        column = cell.column + columnDelta,
+                                        row = cell.row + rowDelta,
+                                    ),
+                            ),
+                        )
+                    }
+                },
+            )
+        }
     }
-}
 
 @Composable
 fun BoxScope.RemoveShortcutButton(

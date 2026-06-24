@@ -33,6 +33,7 @@ import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.FolderItem
+import com.riffle.core.domain.launcher.home.GridCell
 import com.riffle.core.domain.launcher.home.HomeLabelSettings
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.LauncherItem
@@ -42,6 +43,8 @@ import com.riffle.core.domain.launcher.home.WidgetItem
 @OptIn(ExperimentalFoundationApi::class)
 fun HomeFolder(
     folder: FolderItem,
+    cell: GridCell,
+    cellSizePx: Float,
     isEditing: Boolean,
     notificationCount: Int,
     labelSettings: HomeLabelSettings,
@@ -58,6 +61,14 @@ fun HomeFolder(
                 Modifier
                     .align(Alignment.Center)
                     .heightIn(min = metrics.homeItemContentHeightDp(labelSettings).dp)
+                    .homeItemDrag(
+                        enabled = isEditing,
+                        item = folder,
+                        cell = cell,
+                        cellSizePx = cellSizePx,
+                        haptics = haptics,
+                        onAction = onAction,
+                    )
                     .combinedClickable(
                         enabled = !isEditing,
                         onClick = { onFolderOpen(folder) },
@@ -88,11 +99,6 @@ fun HomeFolder(
         }
 
         if (isEditing) {
-            MoveItemControls(
-                item = folder,
-                label = folder.label,
-                onAction = onAction,
-            )
             RemoveShortcutButton(
                 label = folder.label,
                 onClick = { onAction(LauncherShellAction.RemoveHomeShortcut(folder.id)) },
