@@ -17,6 +17,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -234,9 +235,12 @@ fun Map<AppPackageName, Int>.notificationCountFor(item: LauncherItem): Int =
 private fun FolderAppRow(
     shortcut: AppShortcutItem,
     appIconLoader: AppIconLoader,
-    trailingContent: @Composable () -> Unit,
+    menuItems: List<ShortcutContextMenuItem>,
     onClick: () -> Unit,
+    onAction: (LauncherShellAction) -> Unit,
 ) {
+    val isMenuExpanded = remember(shortcut.id) { mutableStateOf(false) }
+
     Row(
         modifier =
             Modifier
@@ -251,8 +255,21 @@ private fun FolderAppRow(
             iconLoader = appIconLoader,
             modifier = Modifier.size(36.dp),
         )
-        Text(text = shortcut.label)
-        trailingContent()
+        Text(
+            modifier = Modifier.weight(1f),
+            text = shortcut.label,
+        )
+        Box {
+            IconButton(onClick = { isMenuExpanded.value = true }) {
+                Text(text = "...")
+            }
+            ShortcutContextMenu(
+                expanded = isMenuExpanded.value,
+                items = menuItems,
+                onDismissRequest = { isMenuExpanded.value = false },
+                onAction = onAction,
+            )
+        }
     }
 }
 
@@ -279,31 +296,12 @@ private fun FolderContentRows(
             FolderAppRow(
                 shortcut = shortcut,
                 appIconLoader = appIconLoader,
-                trailingContent = {
-                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        TextButton(
-                            onClick = { onAction(shortcut.openAppInfoAction()) },
-                        ) {
-                            Text(text = "Info")
-                        }
-                        TextButton(
-                            onClick = {
-                                onAction(
-                                    LauncherShellAction.RemoveAppFromFolder(
-                                        folderId = folder.id,
-                                        itemId = shortcut.id,
-                                    ),
-                                )
-                            },
-                        ) {
-                            Text(text = "Remove")
-                        }
-                    }
-                },
+                menuItems = folderShortcutContextMenuItems(folder = folder, shortcut = shortcut),
                 onClick = {
                     onAction(shortcut.launchAction())
                     onDismiss()
                 },
+                onAction = onAction,
             )
         }
         if (addableApps.isEmpty()) {
@@ -380,3 +378,22 @@ private fun FolderAddAppRow(
 
 private const val FOLDER_CONTENT_MAX_HEIGHT_DP = 360
 private const val DEFAULT_FOLDER_LABEL = "Folder"
+
+internal fun folderShortcutContextMenuItems(
+    folder: FolderItem,
+    shortcut: AppShortcutItem,
+): List<ShortcutContextMenuItem> =
+    listOf(
+        ShortcutContextMenuItem(
+            label = "App info",
+            action = shortcut.openAppInfoAction(),
+        ),
+        ShortcutContextMenuItem(
+            label = "Remove from folder",
+            action =
+                LauncherShellAction.RemoveAppFromFolder(
+                    folderId = folder.id,
+                    itemId = shortcut.id,
+                ),
+        ),
+    )
