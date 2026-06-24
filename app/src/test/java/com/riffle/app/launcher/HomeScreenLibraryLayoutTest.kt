@@ -9,6 +9,7 @@ import com.riffle.core.domain.launcher.home.GridCell
 import com.riffle.core.domain.launcher.home.GridDimensions
 import com.riffle.core.domain.launcher.home.GridPlacement
 import com.riffle.core.domain.launcher.home.GridSettings
+import com.riffle.core.domain.launcher.home.FolderItem
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.home.LauncherPage
@@ -385,6 +386,48 @@ class HomeScreenLibraryLayoutTest {
 
         assertEquals(listOf(LauncherPageId("home")), cleanedLayout.pages.map { page -> page.id })
         assertEquals(LauncherPageId("home"), cleanedLayout.selectedPageId)
+    }
+
+    @Test
+    fun preservesFoldersWhenLeavingLibraryMode() {
+        val camera = app(label = "Camera")
+        val calendar = app(label = "Calendar")
+        val folder =
+            FolderItem(
+                id = LauncherItemId("folder:home:1"),
+                label = "Folder",
+                items =
+                    listOf(
+                        AppShortcutItem(
+                            id = LauncherItemId("library-app:personal:com.riffle.camera/.MainActivity"),
+                            appIdentity = camera.identity,
+                            label = camera.label,
+                        ),
+                        AppShortcutItem(
+                            id = LauncherItemId("library-app:personal:com.riffle.calendar/.MainActivity"),
+                            appIdentity = calendar.identity,
+                            label = calendar.label,
+                        ),
+                    ),
+                placement = GridPlacement(cell = GridCell(column = 0, row = 0)),
+            )
+        val layout =
+            HomeLayoutDefaults.standard().copy(
+                viewMode = LauncherViewMode.HOME_SCREEN_LIBRARY,
+                pages =
+                    listOf(
+                        LauncherPage(
+                            id = LauncherPageId("home"),
+                            grid = GridDimensions(columns = 2, rows = 1),
+                            items = listOf(folder),
+                        ),
+                    ),
+            )
+
+        val cleanedLayout = layout.withoutHomeScreenLibraryApps()
+
+        val cleanedFolder = cleanedLayout.selectedPage.items.single() as FolderItem
+        assertEquals(listOf(camera.identity, calendar.identity), cleanedFolder.items.map { item -> item.appIdentity })
     }
 
     private fun app(label: String): InstalledApp =

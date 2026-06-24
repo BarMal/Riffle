@@ -122,9 +122,7 @@ private fun InstalledApp.libraryShortcut(): AppShortcutItem =
 private fun LauncherItem.withoutLibraryApps(): LauncherItem? =
     when (this) {
         is AppShortcutItem -> takeUnless { item -> item.isLibraryApp }
-        is FolderItem ->
-            copy(items = items.filterNot { item -> item.isLibraryApp })
-                .takeIf { folder -> folder.items.isNotEmpty() }
+        is FolderItem -> this
         is WidgetItem -> this
     }
 

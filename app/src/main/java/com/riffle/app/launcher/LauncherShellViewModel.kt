@@ -229,7 +229,7 @@ class LauncherShellViewModel(
                         val result =
                             folderEngine.applyEdit(
                                 action = action,
-                                layout = mutableState.value.homeLayout,
+                                layout = mutableState.value.folderEditLayout(action),
                             )
                     ) {
                         is FolderEditResult.Updated ->
@@ -513,4 +513,10 @@ private fun HomeShortcutEngine.applyEdit(
             )
 
         else -> HomeShortcutResult.Rejected(PlacementRejectionReason.ITEM_NOT_FOUND)
+    }
+
+private fun LauncherShellState.folderEditLayout(action: LauncherShellAction): HomeLayout =
+    when (action) {
+        is LauncherShellAction.CreateHomeFolder -> homeLayout.withHomeScreenLibraryApps(installedApps)
+        else -> homeLayout
     }
