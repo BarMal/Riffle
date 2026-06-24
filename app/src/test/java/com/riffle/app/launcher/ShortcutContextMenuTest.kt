@@ -3,6 +3,8 @@ package com.riffle.app.launcher
 import com.riffle.core.domain.launcher.apps.AppActivityName
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
+import com.riffle.core.domain.launcher.apps.AppShortcut
+import com.riffle.core.domain.launcher.apps.AppShortcutId
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.LauncherItemId
 import org.junit.Assert.assertEquals
@@ -36,6 +38,61 @@ class ShortcutContextMenuTest {
         assertEquals(
             ShortcutContextMenuItem("Remove from dock", LauncherShellAction.RemoveDockShortcut(shortcut.id)),
             items.last(),
+        )
+    }
+
+    @Test
+    fun shortcutMenuIncludesPlatformAppShortcutsFirst() {
+        val shortcut = shortcut()
+        val platformShortcut =
+            AppShortcut(
+                id = AppShortcutId("compose"),
+                appIdentity = shortcut.appIdentity,
+                shortLabel = "Compose",
+                longLabel = "Compose message",
+            )
+
+        val items =
+            shortcutContextMenuItems(
+                shortcut = shortcut,
+                surface = ShortcutContextSurface.HOME,
+                appShortcuts = listOf(platformShortcut),
+            )
+
+        assertEquals(
+            ShortcutContextMenuItem(
+                label = "Compose message",
+                action = LauncherShellAction.LaunchAppShortcut(platformShortcut),
+            ),
+            items.first(),
+        )
+    }
+
+    @Test
+    fun disabledPlatformShortcutMenuItemsAreDisabled() {
+        val shortcut = shortcut()
+        val platformShortcut =
+            AppShortcut(
+                id = AppShortcutId("compose"),
+                appIdentity = shortcut.appIdentity,
+                shortLabel = "Compose",
+                enabled = false,
+            )
+
+        val items =
+            shortcutContextMenuItems(
+                shortcut = shortcut,
+                surface = ShortcutContextSurface.HOME,
+                appShortcuts = listOf(platformShortcut),
+            )
+
+        assertEquals(
+            ShortcutContextMenuItem(
+                label = "Compose",
+                action = LauncherShellAction.LaunchAppShortcut(platformShortcut),
+                enabled = false,
+            ),
+            items.first(),
         )
     }
 

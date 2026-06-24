@@ -44,6 +44,8 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.apps.AppPackageName
+import com.riffle.core.domain.launcher.apps.AppShortcut
+import com.riffle.core.domain.launcher.apps.AppShortcutsByApp
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.FolderItem
@@ -63,6 +65,7 @@ fun StandardHome(
     installedApps: List<InstalledApp>,
     homeSwipeGestures: HomeSwipeGestureSettings,
     notificationCountsByPackage: Map<AppPackageName, Int>,
+    appShortcutsByApp: AppShortcutsByApp,
     appIconLoader: AppIconLoader,
     onAction: (LauncherShellAction) -> Unit,
 ) {
@@ -95,6 +98,7 @@ fun StandardHome(
                 swipeNavigationState = swipeNavigationState,
                 pageDragOffsetPx = pageDragOffsetPx.floatValue,
                 notificationCountsByPackage = notificationCountsByPackage,
+                appShortcutsByApp = appShortcutsByApp,
             ),
         appIconLoader = appIconLoader,
         actions = actions,
@@ -142,6 +146,7 @@ private fun StandardHomeColumn(
             presentation =
                 HomeGridPresentation(
                     notificationCountsByPackage = state.notificationCountsByPackage,
+                    appShortcutsByApp = state.appShortcutsByApp,
                     labelSettings = state.layout.settings.labels,
                 ),
             appIconLoader = appIconLoader,
@@ -185,6 +190,7 @@ private fun StandardHomeColumn(
                 dock = state.visibleLayout.dock,
                 isEditing = state.editState.isEditingPage,
                 notificationCountsByPackage = state.notificationCountsByPackage,
+                appShortcutsByApp = state.appShortcutsByApp,
                 appIconLoader = appIconLoader,
                 onAction = actions.onAction,
             )
@@ -339,9 +345,7 @@ private fun WorkspaceGrid(
                                     HomeGridItem(
                                         item = item,
                                         isEditing = isEditing,
-                                        notificationCount =
-                                            presentation.notificationCountsByPackage.notificationCountFor(item),
-                                        labelSettings = presentation.labelSettings,
+                                        presentation = presentation,
                                         appIconLoader = appIconLoader,
                                         onFolderOpen = onFolderOpen,
                                         onAction = onAction,
@@ -361,8 +365,7 @@ private fun WorkspaceGrid(
 private fun HomeGridItem(
     item: LauncherItem,
     isEditing: Boolean,
-    notificationCount: Int,
-    labelSettings: HomeLabelSettings,
+    presentation: HomeGridPresentation,
     appIconLoader: AppIconLoader,
     onFolderOpen: (FolderItem) -> Unit,
     onAction: (LauncherShellAction) -> Unit,
@@ -372,8 +375,9 @@ private fun HomeGridItem(
             HomeShortcut(
                 shortcut = item,
                 isEditing = isEditing,
-                notificationCount = notificationCount,
-                labelSettings = labelSettings,
+                notificationCount = presentation.notificationCountsByPackage.notificationCountFor(item),
+                appShortcuts = presentation.appShortcutsByApp[item.appIdentity].orEmpty(),
+                labelSettings = presentation.labelSettings,
                 appIconLoader = appIconLoader,
                 onAction = onAction,
             )
@@ -382,8 +386,8 @@ private fun HomeGridItem(
             HomeFolder(
                 folder = item,
                 isEditing = isEditing,
-                notificationCount = notificationCount,
-                labelSettings = labelSettings,
+                notificationCount = presentation.notificationCountsByPackage.notificationCountFor(item),
+                labelSettings = presentation.labelSettings,
                 appIconLoader = appIconLoader,
                 onFolderOpen = onFolderOpen,
                 onAction = onAction,
@@ -397,6 +401,7 @@ private fun HomeShortcut(
     shortcut: AppShortcutItem,
     isEditing: Boolean,
     notificationCount: Int,
+    appShortcuts: List<AppShortcut>,
     labelSettings: HomeLabelSettings,
     appIconLoader: AppIconLoader,
     onAction: (LauncherShellAction) -> Unit,
@@ -445,6 +450,7 @@ private fun HomeShortcut(
                     shortcutContextMenuItems(
                         shortcut = shortcut,
                         surface = ShortcutContextSurface.HOME,
+                        appShortcuts = appShortcuts,
                     ),
                 onDismissRequest = { isContextMenuExpanded.value = false },
                 onAction = onAction,
@@ -580,10 +586,12 @@ private data class StandardHomeContentState(
     val swipeNavigationState: HomeSwipeNavigationState,
     val pageDragOffsetPx: Float,
     val notificationCountsByPackage: Map<AppPackageName, Int>,
+    val appShortcutsByApp: AppShortcutsByApp,
 )
 
 private data class HomeGridPresentation(
     val notificationCountsByPackage: Map<AppPackageName, Int>,
+    val appShortcutsByApp: AppShortcutsByApp,
     val labelSettings: HomeLabelSettings,
 )
 
