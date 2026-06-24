@@ -21,21 +21,24 @@ class LauncherShellNotificationStateTest {
         val viewModel =
             LauncherShellViewModel(
                 firstRunRepository = FakeFirstRunRepository(),
-                epochMillisProvider = FixedEpochMillisProvider(nowEpochMillis = 10 * 60 * 1_000L),
-                notificationRepository =
-                    FakeNotificationRepository(
-                        notifications =
-                            listOf(
-                                notification(
-                                    key = "camera-1",
-                                    packageName = "com.riffle.camera",
-                                    category = NotificationCategory.MESSAGE,
-                                ),
-                                notification(
-                                    key = "camera-2",
-                                    packageName = "com.riffle.camera",
-                                    category = NotificationCategory.MESSAGE,
-                                ),
+                platformDependencies =
+                    LauncherShellPlatformDependencies(
+                        epochMillisProvider = FixedEpochMillisProvider(nowEpochMillis = 10 * 60 * 1_000L),
+                        notificationRepository =
+                            FakeNotificationRepository(
+                                notifications =
+                                    listOf(
+                                        notification(
+                                            key = "camera-1",
+                                            packageName = "com.riffle.camera",
+                                            category = NotificationCategory.MESSAGE,
+                                        ),
+                                        notification(
+                                            key = "camera-2",
+                                            packageName = "com.riffle.camera",
+                                            category = NotificationCategory.MESSAGE,
+                                        ),
+                                    ),
                             ),
                     ),
             )
@@ -54,8 +57,11 @@ class LauncherShellNotificationStateTest {
         val viewModel =
             LauncherShellViewModel(
                 firstRunRepository = FakeFirstRunRepository(),
-                notificationRepository = repository,
-                epochMillisProvider = FixedEpochMillisProvider(nowEpochMillis = 10 * 60 * 1_000L),
+                platformDependencies =
+                    LauncherShellPlatformDependencies(
+                        notificationRepository = repository,
+                        epochMillisProvider = FixedEpochMillisProvider(nowEpochMillis = 10 * 60 * 1_000L),
+                    ),
             )
 
         repository.notifications =
@@ -87,25 +93,28 @@ class LauncherShellNotificationStateTest {
         val viewModel =
             LauncherShellViewModel(
                 firstRunRepository = FakeFirstRunRepository(),
-                epochMillisProvider = FixedEpochMillisProvider(nowEpochMillis = nowEpochMillis),
-                notificationRepository =
-                    FakeNotificationRepository(
-                        notifications =
-                            listOf(
-                                notification(
-                                    key = "old-clearable",
-                                    packageName = "com.riffle.mail",
-                                    category = NotificationCategory.EMAIL,
-                                    canDismiss = true,
-                                    postedAtEpochMillis = nowEpochMillis - 8 * 24 * 60 * 60 * 1_000L,
-                                ),
-                                notification(
-                                    key = "old-pinned",
-                                    packageName = "com.riffle.music",
-                                    category = NotificationCategory.SERVICE,
-                                    canDismiss = false,
-                                    postedAtEpochMillis = nowEpochMillis - 8 * 24 * 60 * 60 * 1_000L,
-                                ),
+                platformDependencies =
+                    LauncherShellPlatformDependencies(
+                        epochMillisProvider = FixedEpochMillisProvider(nowEpochMillis = nowEpochMillis),
+                        notificationRepository =
+                            FakeNotificationRepository(
+                                notifications =
+                                    listOf(
+                                        notification(
+                                            key = "old-clearable",
+                                            packageName = "com.riffle.mail",
+                                            category = NotificationCategory.EMAIL,
+                                            canDismiss = true,
+                                            postedAtEpochMillis = nowEpochMillis - 8 * 24 * 60 * 60 * 1_000L,
+                                        ),
+                                        notification(
+                                            key = "old-pinned",
+                                            packageName = "com.riffle.music",
+                                            category = NotificationCategory.SERVICE,
+                                            canDismiss = false,
+                                            postedAtEpochMillis = nowEpochMillis - 8 * 24 * 60 * 60 * 1_000L,
+                                        ),
+                                    ),
                             ),
                     ),
             )
@@ -127,12 +136,15 @@ class LauncherShellNotificationStateTest {
                 firstRunRepository = FakeFirstRunRepository(),
                 installedAppRepository = FakeInstalledAppRepository(apps = listOf(camera, docs)),
                 appVisibilityRepository = FakeAppVisibilityRepository(hiddenApps = setOf(docs.identity)),
-                notificationRepository =
-                    FakeNotificationRepository(
-                        notifications =
-                            listOf(
-                                notification(key = "camera-1", packageName = camera.identity.packageName.value),
-                                notification(key = "docs-1", packageName = docs.identity.packageName.value),
+                platformDependencies =
+                    LauncherShellPlatformDependencies(
+                        notificationRepository =
+                            FakeNotificationRepository(
+                                notifications =
+                                    listOf(
+                                        notification(key = "camera-1", packageName = camera.identity.packageName.value),
+                                        notification(key = "docs-1", packageName = docs.identity.packageName.value),
+                                    ),
                             ),
                     ),
             )

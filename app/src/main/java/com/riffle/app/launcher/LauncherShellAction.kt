@@ -147,6 +147,10 @@ sealed interface LauncherShellAction {
         val cell: GridCell,
     ) : LauncherShellAction
 
+    data object OpenWidgetPicker : LauncherShellAction
+
+    data object CloseWidgetPicker : LauncherShellAction
+
     data class SearchQueryChanged(val query: String) : LauncherShellAction
 
     data class SearchProfileFilterSelected(

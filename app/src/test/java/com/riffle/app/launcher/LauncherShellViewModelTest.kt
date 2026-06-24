@@ -30,6 +30,11 @@ import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.settings.AppearanceSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettingsRepository
+import com.riffle.core.domain.launcher.widgets.InstalledWidgetProvider
+import com.riffle.core.domain.launcher.widgets.InstalledWidgetProviderRepository
+import com.riffle.core.domain.launcher.widgets.WidgetProviderClassName
+import com.riffle.core.domain.launcher.widgets.WidgetProviderDimensions
+import com.riffle.core.domain.launcher.widgets.WidgetProviderIdentity
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -80,6 +85,35 @@ class LauncherShellViewModelTest {
         val viewModel = LauncherShellViewModel(firstRunRepository = FakeFirstRunRepository())
 
         assertEquals(NotificationAccessStatus.UNKNOWN, viewModel.state.value.notificationAccessStatus)
+    }
+
+    @Test
+    fun loadsSortedWidgetProviders() {
+        val clock = widgetProvider(label = "Clock", packageName = "com.example.clock")
+        val calendar = widgetProvider(label = "Calendar", packageName = "com.example.calendar")
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                platformDependencies =
+                    LauncherShellPlatformDependencies(
+                        widgetProviderRepository = FakeWidgetProviderRepository(providers = listOf(clock, calendar)),
+                    ),
+            )
+
+        assertEquals(listOf(calendar, clock), viewModel.state.value.installedWidgetProviders)
+    }
+
+    @Test
+    fun opensAndClosesWidgetPicker() {
+        val viewModel = LauncherShellViewModel(firstRunRepository = FakeFirstRunRepository())
+
+        viewModel.onAppActionSelected(LauncherShellAction.OpenWidgetPicker)
+
+        assertTrue(viewModel.state.value.isWidgetPickerOpen)
+
+        viewModel.onAppActionSelected(LauncherShellAction.CloseWidgetPicker)
+
+        assertFalse(viewModel.state.value.isWidgetPickerOpen)
     }
 
     @Test
@@ -147,12 +181,15 @@ class LauncherShellViewModelTest {
         val viewModel =
             LauncherShellViewModel(
                 firstRunRepository = FakeFirstRunRepository(),
-                notificationRepository =
-                    FakeNotificationRepository(
-                        notifications =
-                            listOf(
-                                notification(key = "camera-1", packageName = "com.riffle.camera"),
-                                notification(key = "camera-2", packageName = "com.riffle.camera"),
+                platformDependencies =
+                    LauncherShellPlatformDependencies(
+                        notificationRepository =
+                            FakeNotificationRepository(
+                                notifications =
+                                    listOf(
+                                        notification(key = "camera-1", packageName = "com.riffle.camera"),
+                                        notification(key = "camera-2", packageName = "com.riffle.camera"),
+                                    ),
                             ),
                     ),
             )
@@ -166,7 +203,7 @@ class LauncherShellViewModelTest {
         val viewModel =
             LauncherShellViewModel(
                 firstRunRepository = FakeFirstRunRepository(),
-                notificationRepository = repository,
+                platformDependencies = LauncherShellPlatformDependencies(notificationRepository = repository),
             )
 
         repository.notifications = listOf(notification(key = "camera-1", packageName = "com.riffle.camera"))
@@ -708,6 +745,12 @@ class LauncherShellViewModelTest {
         override fun activeNotifications(): List<LauncherNotification> = notifications
     }
 
+    private class FakeWidgetProviderRepository(
+        var providers: List<InstalledWidgetProvider> = emptyList(),
+    ) : InstalledWidgetProviderRepository {
+        override fun installedWidgetProviders(): List<InstalledWidgetProvider> = providers
+    }
+
     private fun app(
         label: String,
         visibility: AppVisibility = AppVisibility.VISIBLE,
@@ -730,6 +773,20 @@ class LauncherShellViewModelTest {
             key = LauncherNotificationKey(key),
             packageName = AppPackageName(packageName),
             postedAtEpochMillis = 1_000L,
+        )
+
+    private fun widgetProvider(
+        label: String,
+        packageName: String,
+    ): InstalledWidgetProvider =
+        InstalledWidgetProvider(
+            identity =
+                WidgetProviderIdentity(
+                    packageName = AppPackageName(packageName),
+                    className = WidgetProviderClassName(".WidgetProvider"),
+                ),
+            label = label,
+            dimensions = WidgetProviderDimensions(minWidthDp = 100, minHeightDp = 50),
         )
 
     private val HomeLayout.pageIds: List<LauncherPageId>

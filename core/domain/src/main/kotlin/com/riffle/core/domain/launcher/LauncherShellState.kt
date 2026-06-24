@@ -10,6 +10,7 @@ import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.notifications.NotificationCategory
 import com.riffle.core.domain.launcher.settings.LauncherSettings
+import com.riffle.core.domain.launcher.widgets.InstalledWidgetProvider
 
 data class LauncherShellState(
     val firstRunStatus: FirstRunStatus = FirstRunStatus.NEEDS_HOME_ROLE,
@@ -30,6 +31,8 @@ data class LauncherShellState(
     val searchQuery: String = "",
     val searchProfileFilter: AppDrawerProfileFilter = AppDrawerProfileFilter.ALL,
     val searchResults: List<InstalledApp> = emptyList(),
+    val installedWidgetProviders: List<InstalledWidgetProvider> = emptyList(),
+    val isWidgetPickerOpen: Boolean = false,
 ) {
     val shouldShowDefaultHomePrompt: Boolean =
         firstRunStatus != FirstRunStatus.COMPLETE && homeRoleStatus != HomeRoleStatus.DEFAULT_HOME
