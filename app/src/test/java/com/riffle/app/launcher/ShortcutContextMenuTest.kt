@@ -42,6 +42,28 @@ class ShortcutContextMenuTest {
     }
 
     @Test
+    fun editModeHomeShortcutMenuOmitsEditHomeAction() {
+        val shortcut = shortcut()
+
+        val items =
+            shortcutContextMenuItems(
+                shortcut = shortcut,
+                surface = ShortcutContextSurface.HOME,
+                includeEditHome = false,
+            )
+
+        assertEquals(
+            listOf(
+                ShortcutContextMenuItem("App info", LauncherShellAction.OpenAppInfo(shortcut.appIdentity)),
+                ShortcutContextMenuItem("Hide app", LauncherShellAction.HideApp(shortcut.appIdentity)),
+                ShortcutContextMenuItem("Uninstall", LauncherShellAction.UninstallApp(shortcut.appIdentity)),
+                ShortcutContextMenuItem("Remove from home", LauncherShellAction.RemoveHomeShortcut(shortcut.id)),
+            ),
+            items,
+        )
+    }
+
+    @Test
     fun shortcutMenuIncludesPlatformAppShortcutsFirst() {
         val shortcut = shortcut()
         val platformShortcut =

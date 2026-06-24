@@ -15,6 +15,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -47,6 +49,7 @@ internal fun HomeFolder(
     actions: HomeWorkspaceActions,
 ) {
     val metrics = HomeGridLayoutMetrics()
+    val isContextMenuExpanded = remember(folder.id) { mutableStateOf(false) }
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
@@ -61,11 +64,21 @@ internal fun HomeFolder(
                         actions = actions,
                     )
                     .combinedClickable(
-                        enabled = !isEditing,
-                        onClick = { actions.onFolderOpen(folder) },
+                        enabled = true,
+                        onClick = {
+                            if (isEditing) {
+                                isContextMenuExpanded.value = true
+                            } else {
+                                actions.onFolderOpen(folder)
+                            }
+                        },
                         onLongClick = {
                             actions.haptics.longPress()
-                            actions.onAction(LauncherShellAction.EnterHomeEditMode)
+                            if (isEditing) {
+                                isContextMenuExpanded.value = true
+                            } else {
+                                actions.onAction(LauncherShellAction.EnterHomeEditMode)
+                            }
                         },
                     ),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -89,10 +102,23 @@ internal fun HomeFolder(
             )
         }
 
-        if (isEditing) {
-            RemoveShortcutButton(
-                label = folder.label,
-                onClick = { actions.onAction(LauncherShellAction.RemoveHomeShortcut(folder.id)) },
+        DropdownMenu(
+            expanded = isContextMenuExpanded.value,
+            onDismissRequest = { isContextMenuExpanded.value = false },
+        ) {
+            DropdownMenuItem(
+                text = { Text(text = "Edit folder") },
+                onClick = {
+                    isContextMenuExpanded.value = false
+                    actions.onFolderOpen(folder)
+                },
+            )
+            DropdownMenuItem(
+                text = { Text(text = "Remove from home") },
+                onClick = {
+                    isContextMenuExpanded.value = false
+                    actions.onAction(LauncherShellAction.RemoveHomeShortcut(folder.id))
+                },
             )
         }
     }
