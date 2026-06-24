@@ -219,6 +219,8 @@ private fun HomeGridItem(
                     isEditing = state.isEditing,
                     widgetViewFactory = presentation.widgetViewFactory,
                     haptics = actions.haptics,
+                    dragState = HomeItemDragState(cell = state.cell, cellSizePx = state.cellSizePx, grid = state.grid),
+                    workspaceActions = actions,
                     onAction = actions.onAction,
                 )
             }

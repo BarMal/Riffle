@@ -25,6 +25,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.apps.InstalledApp
@@ -157,17 +158,26 @@ private fun AppDrawerRow(
             shape = CircleShape,
         )
         Column(
-            modifier = Modifier.weight(1f),
+            modifier =
+                Modifier
+                    .weight(1f)
+                    .fillMaxWidth(),
             verticalArrangement = Arrangement.Center,
         ) {
             Text(
                 text = app.label,
                 style = MaterialTheme.typography.bodyLarge,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                softWrap = false,
             )
             Text(
                 text = app.drawerSubtitle(),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                softWrap = false,
             )
         }
         if (notificationCount > 0) {
