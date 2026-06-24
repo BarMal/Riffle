@@ -13,8 +13,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -333,39 +335,56 @@ fun LauncherPanel(
     showSettingsAction: Boolean = true,
     content: @Composable () -> Unit,
 ) {
-    Column(
+    Box(
         modifier =
             Modifier
                 .fillMaxSize()
                 .windowInsetsPadding(WindowInsets.safeDrawing)
-                .padding(24.dp),
+                .padding(16.dp),
+        contentAlignment = Alignment.Center,
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            shape = RoundedCornerShape(32.dp),
+            color = MaterialTheme.colorScheme.surface.copy(alpha = PANEL_SURFACE_ALPHA),
+            tonalElevation = 6.dp,
         ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.headlineMedium,
-            )
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (showSettingsAction) {
-                    TextButton(onClick = { onAction(LauncherShellAction.OpenSettings) }) {
-                        Text(text = "Settings")
+            Column(
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .padding(24.dp),
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.headlineMedium,
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        if (showSettingsAction) {
+                            TextButton(onClick = { onAction(LauncherShellAction.OpenSettings) }) {
+                                Text(text = "Settings")
+                            }
+                        }
+                        TextButton(onClick = { onAction(LauncherShellAction.OpenHome) }) {
+                            Text(text = "Home")
+                        }
                     }
                 }
-                TextButton(onClick = { onAction(LauncherShellAction.OpenHome) }) {
-                    Text(text = "Home")
+                Spacer(modifier = Modifier.height(24.dp))
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    content()
                 }
             }
         }
-        Spacer(modifier = Modifier.height(24.dp))
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center,
-        ) {
-            content()
-        }
     }
 }
+
+private const val PANEL_SURFACE_ALPHA = 0.96f
