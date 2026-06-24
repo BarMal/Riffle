@@ -203,6 +203,7 @@ private fun HomeGridItem(
                     widget = item,
                     isEditing = state.isEditing,
                     widgetViewFactory = presentation.widgetViewFactory,
+                    haptics = actions.haptics,
                     onAction = actions.onAction,
                 )
             }
