@@ -61,10 +61,18 @@ fun HomeFolder(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            FolderPreviewIcon(
-                folder = folder,
-                appIconLoader = appIconLoader,
-            )
+            Box(modifier = Modifier.size(FOLDER_PREVIEW_ICON_SIZE_DP.dp)) {
+                FolderPreviewIcon(
+                    folder = folder,
+                    appIconLoader = appIconLoader,
+                )
+                if (!isEditing) {
+                    NotificationCountBadge(
+                        count = notificationCount,
+                        modifier = Modifier.align(Alignment.TopEnd),
+                    )
+                }
+            }
             WallpaperReadableLabel(
                 text = folder.label,
                 settings = labelSettings,
@@ -80,11 +88,6 @@ fun HomeFolder(
             RemoveShortcutButton(
                 label = folder.label,
                 onClick = { onAction(LauncherShellAction.RemoveHomeShortcut(folder.id)) },
-            )
-        } else {
-            NotificationCountBadge(
-                count = notificationCount,
-                modifier = Modifier.align(Alignment.TopEnd),
             )
         }
     }
@@ -211,7 +214,7 @@ private fun FolderPreviewIcon(
     Column(
         modifier =
             Modifier
-                .size(44.dp)
+                .size(FOLDER_PREVIEW_ICON_SIZE_DP.dp)
                 .clip(RoundedCornerShape(12.dp))
                 .background(MaterialTheme.colorScheme.secondaryContainer)
                 .padding(4.dp),
@@ -383,5 +386,6 @@ private fun FolderAddAppRow(
 }
 
 private const val FOLDER_PREVIEW_ICON_COUNT = 4
+private const val FOLDER_PREVIEW_ICON_SIZE_DP = 44
 private const val MIN_FOLDER_SHORTCUT_COUNT = 2
 private const val FOLDER_CONTENT_MAX_HEIGHT_DP = 360
