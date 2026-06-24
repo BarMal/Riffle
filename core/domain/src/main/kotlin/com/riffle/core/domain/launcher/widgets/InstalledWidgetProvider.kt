@@ -26,6 +26,8 @@ data class WidgetProviderDimensions(
     val minHeightDp: Int,
     val minResizeWidthDp: Int? = null,
     val minResizeHeightDp: Int? = null,
+    val targetCellWidth: Int? = null,
+    val targetCellHeight: Int? = null,
 )
 
 fun interface InstalledWidgetProviderRepository {
