@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -199,9 +200,10 @@ private fun HomeToolbar(
     Row(
         modifier =
             Modifier
+                .widthIn(max = HOME_TOOLBAR_MAX_WIDTH_DP.dp)
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(24.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.72f))
+                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = HOME_TOOLBAR_SURFACE_ALPHA))
                 .padding(6.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -580,5 +582,7 @@ private const val HOME_SWIPE_THRESHOLD_DP = 80
 private const val HOME_SURFACE_HORIZONTAL_PADDING_DP = 24
 private const val HOME_SURFACE_VERTICAL_PADDING_DP = 24
 private const val HOME_TOOLBAR_WORKSPACE_SPACING_DP = 16
+private const val HOME_TOOLBAR_MAX_WIDTH_DP = 560
+private const val HOME_TOOLBAR_SURFACE_ALPHA = 0.88f
 private const val HOME_PAGE_INDICATOR_TOP_SPACING_DP = 12
 private const val HOME_DOCK_TOP_SPACING_DP = 16
