@@ -215,6 +215,68 @@ class HomeScreenLibraryLayoutTest {
     }
 
     @Test
+    fun sparseLibraryModeKeepsIncompletePagesWhileTrimmingEmptyTrailingPages() {
+        val camera = app(label = "Camera")
+        val calendar = app(label = "Calendar")
+        val clock = app(label = "Clock")
+        val layout =
+            HomeLayoutDefaults.standard().copy(
+                viewMode = LauncherViewMode.HOME_SCREEN_LIBRARY,
+                pages =
+                    listOf(
+                        LauncherPage(
+                            id = LauncherPageId("home"),
+                            grid = GridDimensions(columns = 2, rows = 1),
+                            items =
+                                listOf(
+                                    AppShortcutItem(
+                                        id = LauncherItemId("library-app:personal:com.riffle.camera/.MainActivity"),
+                                        appIdentity = camera.identity,
+                                        label = camera.label,
+                                        placement = GridPlacement(cell = GridCell(column = 0, row = 0)),
+                                    ),
+                                    AppShortcutItem(
+                                        id = LauncherItemId("library-app:personal:com.riffle.calendar/.MainActivity"),
+                                        appIdentity = calendar.identity,
+                                        label = calendar.label,
+                                        placement = GridPlacement(cell = GridCell(column = 1, row = 0)),
+                                    ),
+                                ),
+                        ),
+                        LauncherPage(
+                            id = LauncherPageId("library:1"),
+                            type = LauncherPageType.AllApps,
+                            grid = GridDimensions(columns = 2, rows = 1),
+                            items =
+                                listOf(
+                                    AppShortcutItem(
+                                        id = LauncherItemId("library-app:personal:com.riffle.clock/.MainActivity"),
+                                        appIdentity = clock.identity,
+                                        label = clock.label,
+                                        placement = GridPlacement(cell = GridCell(column = 0, row = 0)),
+                                    ),
+                                ),
+                        ),
+                        LauncherPage(
+                            id = LauncherPageId("library:2"),
+                            type = LauncherPageType.AllApps,
+                            grid = GridDimensions(columns = 2, rows = 1),
+                        ),
+                    ),
+                selectedPageId = LauncherPageId("library:2"),
+            )
+
+        val libraryLayout = layout.withHomeScreenLibraryApps(listOf(camera, calendar, clock))
+
+        assertEquals(
+            listOf(LauncherPageId("home"), LauncherPageId("library:1")),
+            libraryLayout.pages.map { page -> page.id },
+        )
+        assertEquals(listOf(2, 1), libraryLayout.pages.map { page -> page.items.size })
+        assertEquals(LauncherPageId("library:1"), libraryLayout.selectedPageId)
+    }
+
+    @Test
     fun compactLibraryModeCollapsesGeneratedAppsAfterGridExpansion() {
         val camera = app(label = "Camera")
         val calendar = app(label = "Calendar")
