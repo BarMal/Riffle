@@ -107,11 +107,13 @@ class MainActivity : ComponentActivity() {
             }
         }
         lifecycle.addObserver(packageChangeObserver)
+        lifecycle.addObserver(widgetHostGateway)
 
         setContent {
             LauncherShell(
                 viewModel = shellViewModel,
                 appIconLoader = appIconLoader,
+                widgetViewFactory = widgetHostGateway,
                 onAction = ::handleAction,
             )
         }

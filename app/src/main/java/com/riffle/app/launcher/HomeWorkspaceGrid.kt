@@ -202,6 +202,7 @@ private fun HomeGridItem(
                 HomeWidgetPlaceholder(
                     widget = item,
                     isEditing = state.isEditing,
+                    widgetViewFactory = presentation.widgetViewFactory,
                     onAction = actions.onAction,
                 )
             }

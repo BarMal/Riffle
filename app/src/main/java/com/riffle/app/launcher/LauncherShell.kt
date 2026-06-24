@@ -25,6 +25,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.riffle.app.launcher.widgets.EmptyHomeWidgetViewFactory
+import com.riffle.app.launcher.widgets.HomeWidgetViewFactory
 import com.riffle.core.domain.RiffleProduct
 import com.riffle.core.domain.launcher.FirstRunStatus
 import com.riffle.core.domain.launcher.HomeRoleStatus
@@ -41,6 +43,7 @@ import com.riffle.core.domain.launcher.home.WallpaperSource
 fun LauncherShell(
     viewModel: LauncherShellViewModel,
     appIconLoader: AppIconLoader = EmptyAppIconLoader,
+    widgetViewFactory: HomeWidgetViewFactory = EmptyHomeWidgetViewFactory,
     onAction: (LauncherShellAction) -> Unit,
 ) {
     val state by viewModel.state.collectAsState()
@@ -57,6 +60,7 @@ fun LauncherShell(
     LauncherShellContent(
         state = state,
         appIconLoader = appIconLoader,
+        widgetViewFactory = widgetViewFactory,
         onAction = onAction,
     )
 }
@@ -65,6 +69,7 @@ fun LauncherShell(
 fun LauncherShellContent(
     state: LauncherShellState,
     appIconLoader: AppIconLoader = EmptyAppIconLoader,
+    widgetViewFactory: HomeWidgetViewFactory = EmptyHomeWidgetViewFactory,
     onAction: (LauncherShellAction) -> Unit,
 ) {
     BackHandler(enabled = state.destination != ShellDestination.HOME) {
@@ -96,6 +101,7 @@ fun LauncherShellContent(
                 LauncherDestination(
                     state = state,
                     appIconLoader = appIconLoader,
+                    widgetViewFactory = widgetViewFactory,
                     onAction = onAction,
                 )
             }
@@ -134,6 +140,7 @@ private fun DefaultHomePrompt(onAction: (LauncherShellAction) -> Unit) {
 private fun LauncherDestination(
     state: LauncherShellState,
     appIconLoader: AppIconLoader,
+    widgetViewFactory: HomeWidgetViewFactory,
     onAction: (LauncherShellAction) -> Unit,
 ) {
     when (state.destination) {
@@ -141,6 +148,7 @@ private fun LauncherDestination(
             HomeDestination(
                 state = state,
                 appIconLoader = appIconLoader,
+                widgetViewFactory = widgetViewFactory,
                 onAction = onAction,
             )
 
