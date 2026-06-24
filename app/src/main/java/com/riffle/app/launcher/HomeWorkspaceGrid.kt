@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -30,6 +31,7 @@ import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.FolderItem
 import com.riffle.core.domain.launcher.home.GridCell
 import com.riffle.core.domain.launcher.home.GridDimensions
+import com.riffle.core.domain.launcher.home.GridSpan
 import com.riffle.core.domain.launcher.home.HomeLabelSettings
 import com.riffle.core.domain.launcher.home.LauncherItem
 import com.riffle.core.domain.launcher.home.LauncherPage
@@ -133,6 +135,7 @@ private fun RowScope.HomeGridCell(
                         state =
                             HomeGridItemState(
                                 cell = state.cell,
+                                cellSize = state.cellSize,
                                 cellSizePx = state.cellSizePx,
                                 grid = state.page.grid,
                                 isEditing = state.gridState.isEditing,
@@ -197,8 +200,15 @@ private fun HomeGridItem(
                 )
             }
 
-        is WidgetItem ->
-            Box(modifier = state.dragSourceModifier.fillMaxSize()) {
+        is WidgetItem -> {
+            val span = item.placement?.span ?: GridSpan()
+
+            Box(
+                modifier =
+                    state.dragSourceModifier
+                        .width(state.cellSize * span.columns)
+                        .height(state.cellSize * span.rows),
+            ) {
                 HomeWidgetPlaceholder(
                     widget = item,
                     isEditing = state.isEditing,
@@ -207,6 +217,7 @@ private fun HomeGridItem(
                     onAction = actions.onAction,
                 )
             }
+        }
     }
 }
 
@@ -306,6 +317,7 @@ internal data class HomeGridState(
 
 internal data class HomeGridItemState(
     val cell: GridCell,
+    val cellSize: Dp,
     val cellSizePx: Float,
     val grid: GridDimensions,
     val isEditing: Boolean,

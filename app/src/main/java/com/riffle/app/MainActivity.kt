@@ -198,6 +198,7 @@ class MainActivity : ComponentActivity() {
             is LauncherShellAction.MoveHomeShortcutToCell,
             is LauncherShellAction.AddAppShortcutToHome,
             is LauncherShellAction.AddHostedWidgetToHome,
+            is LauncherShellAction.ResizeHomeWidget,
             -> {
                 shellViewModel.onHomeShortcutEdited(action)
                 true

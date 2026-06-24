@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.riffle.app.launcher.widgets.EmptyHomeWidgetViewFactory
 import com.riffle.app.launcher.widgets.HomeWidgetViewFactory
+import com.riffle.core.domain.launcher.home.GridSpan
 import com.riffle.core.domain.launcher.home.WidgetItem
 
 @Composable
@@ -139,7 +140,39 @@ private fun View.removeFromParent() {
 internal fun widgetPlaceholderContextMenuItems(widget: WidgetItem): List<ShortcutContextMenuItem> =
     listOf(
         ShortcutContextMenuItem(
+            label = "Make wider",
+            action = widget.resizeAction(columnsDelta = 1, rowsDelta = 0),
+        ),
+        ShortcutContextMenuItem(
+            label = "Make narrower",
+            action = widget.resizeAction(columnsDelta = -1, rowsDelta = 0),
+        ),
+        ShortcutContextMenuItem(
+            label = "Make taller",
+            action = widget.resizeAction(columnsDelta = 0, rowsDelta = 1),
+        ),
+        ShortcutContextMenuItem(
+            label = "Make shorter",
+            action = widget.resizeAction(columnsDelta = 0, rowsDelta = -1),
+        ),
+        ShortcutContextMenuItem(
             label = "Remove from home",
             action = LauncherShellAction.RemoveHomeShortcut(widget.id),
         ),
     )
+
+private fun WidgetItem.resizeAction(
+    columnsDelta: Int,
+    rowsDelta: Int,
+): LauncherShellAction.ResizeHomeWidget {
+    val currentSpan = placement?.span ?: GridSpan()
+
+    return LauncherShellAction.ResizeHomeWidget(
+        itemId = id,
+        span =
+            GridSpan(
+                columns = (currentSpan.columns + columnsDelta).coerceAtLeast(1),
+                rows = (currentSpan.rows + rowsDelta).coerceAtLeast(1),
+            ),
+    )
+}

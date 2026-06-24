@@ -7,6 +7,7 @@ import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.home.DockItemMoveDirection
 import com.riffle.core.domain.launcher.home.GridCell
 import com.riffle.core.domain.launcher.home.GridDimensions
+import com.riffle.core.domain.launcher.home.GridSpan
 import com.riffle.core.domain.launcher.home.HomeLabelSizing
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.HostedWidgetId
@@ -147,6 +148,11 @@ sealed interface LauncherShellAction {
     data class MoveHomeShortcutToCell(
         val itemId: LauncherItemId,
         val cell: GridCell,
+    ) : LauncherShellAction
+
+    data class ResizeHomeWidget(
+        val itemId: LauncherItemId,
+        val span: GridSpan,
     ) : LauncherShellAction
 
     data object OpenWidgetPicker : LauncherShellAction
