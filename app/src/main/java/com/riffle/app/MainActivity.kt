@@ -28,6 +28,7 @@ import com.riffle.app.launcher.isHomePageEditAction
 import com.riffle.app.launcher.notifications.AndroidNotificationAccessGateway
 import com.riffle.app.launcher.notifications.AndroidNotificationDismissalGateway
 import com.riffle.app.launcher.notifications.SharedPreferencesActiveNotificationRepository
+import com.riffle.app.launcher.selectedPageHostedWidgetIdForItem
 import com.riffle.app.launcher.widgets.AndroidInstalledWidgetProviderRepository
 import com.riffle.app.launcher.widgets.AndroidWidgetHostGateway
 import com.riffle.app.launcher.widgets.WidgetBindingResult
@@ -181,7 +182,14 @@ class MainActivity : ComponentActivity() {
 
     private fun handleHomeShortcutAction(action: LauncherShellAction): Boolean =
         when (action) {
-            is LauncherShellAction.RemoveHomeShortcut,
+            is LauncherShellAction.RemoveHomeShortcut -> {
+                shellViewModel.state.value.homeLayout
+                    .selectedPageHostedWidgetIdForItem(action.itemId)
+                    ?.let(widgetHostGateway::deleteHostedWidgetId)
+                shellViewModel.onHomeShortcutEdited(action)
+                true
+            }
+
             is LauncherShellAction.CreateEmptyHomeFolder,
             is LauncherShellAction.CreateHomeFolder,
             is LauncherShellAction.RenameHomeFolder,
