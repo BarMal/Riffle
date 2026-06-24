@@ -63,10 +63,31 @@ class HomeGridLayoutMetricsTest {
     }
 
     @Test
+    fun homeLabelContainerHeightReservesDefaultSingleLineLabel() {
+        assertEquals(
+            18,
+            metrics.homeLabelContainerHeightDp(HomeLabelSettings.standard()),
+        )
+    }
+
+    @Test
     fun homeItemContentHeightReservesConfiguredMultilineLabel() {
         assertEquals(
             92,
             metrics.homeItemContentHeightDp(
+                HomeLabelSettings(
+                    textSizeSp = 16,
+                    maxLines = 2,
+                ),
+            ),
+        )
+    }
+
+    @Test
+    fun homeLabelContainerHeightReservesConfiguredMultilineLabel() {
+        assertEquals(
+            42,
+            metrics.homeLabelContainerHeightDp(
                 HomeLabelSettings(
                     textSizeSp = 16,
                     maxLines = 2,
