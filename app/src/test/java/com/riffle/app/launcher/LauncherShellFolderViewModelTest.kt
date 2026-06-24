@@ -67,8 +67,12 @@ class LauncherShellFolderViewModelTest {
             ),
         )
 
-        val folder = viewModel.state.value.homeLayout.selectedPage.items.single { item -> item is FolderItem } as FolderItem
-        assertEquals(setOf(camera.identity, calendar.identity), folder.items.map { item -> item.appIdentity }.toSet())
+        val folder =
+            viewModel.state.value.homeLayout.selectedPage.items.single { item -> item is FolderItem } as FolderItem
+        assertEquals(
+            setOf(camera.identity, calendar.identity),
+            folder.items.map { item -> item.appIdentity }.toSet(),
+        )
         assertEquals(viewModel.state.value.homeLayout, repository.savedLayout)
     }
 

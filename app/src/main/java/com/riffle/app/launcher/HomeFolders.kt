@@ -33,7 +33,6 @@ import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.FolderItem
-import com.riffle.core.domain.launcher.home.GridCell
 import com.riffle.core.domain.launcher.home.HomeLabelSettings
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.LauncherItem
@@ -41,17 +40,14 @@ import com.riffle.core.domain.launcher.home.WidgetItem
 
 @Composable
 @OptIn(ExperimentalFoundationApi::class)
-fun HomeFolder(
+internal fun HomeFolder(
     folder: FolderItem,
-    cell: GridCell,
-    cellSizePx: Float,
+    dragState: HomeItemDragState,
     isEditing: Boolean,
     notificationCount: Int,
     labelSettings: HomeLabelSettings,
     appIconLoader: AppIconLoader,
-    haptics: LauncherHaptics = NoopLauncherHaptics,
-    onFolderOpen: (FolderItem) -> Unit,
-    onAction: (LauncherShellAction) -> Unit,
+    actions: HomeWorkspaceActions,
 ) {
     val metrics = HomeGridLayoutMetrics()
 
@@ -64,17 +60,17 @@ fun HomeFolder(
                     .homeItemDrag(
                         enabled = isEditing,
                         item = folder,
-                        cell = cell,
-                        cellSizePx = cellSizePx,
-                        haptics = haptics,
-                        onAction = onAction,
+                        cell = dragState.cell,
+                        cellSizePx = dragState.cellSizePx,
+                        haptics = actions.haptics,
+                        onAction = actions.onAction,
                     )
                     .combinedClickable(
                         enabled = !isEditing,
-                        onClick = { onFolderOpen(folder) },
+                        onClick = { actions.onFolderOpen(folder) },
                         onLongClick = {
-                            haptics.longPress()
-                            onAction(LauncherShellAction.EnterHomeEditMode)
+                            actions.haptics.longPress()
+                            actions.onAction(LauncherShellAction.EnterHomeEditMode)
                         },
                     ),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -101,7 +97,7 @@ fun HomeFolder(
         if (isEditing) {
             RemoveShortcutButton(
                 label = folder.label,
-                onClick = { onAction(LauncherShellAction.RemoveHomeShortcut(folder.id)) },
+                onClick = { actions.onAction(LauncherShellAction.RemoveHomeShortcut(folder.id)) },
             )
         }
     }

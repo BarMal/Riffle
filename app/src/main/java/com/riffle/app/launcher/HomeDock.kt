@@ -48,6 +48,8 @@ fun Dock(
         DockPresentation(
             notificationCountsByPackage = notificationCountsByPackage,
             appShortcutsByApp = appShortcutsByApp,
+            haptics = haptics,
+            onAction = onAction,
         )
 
     Row(
@@ -77,8 +79,6 @@ fun Dock(
                 isEditing = isEditing,
                 presentation = presentation,
                 appIconLoader = appIconLoader,
-                haptics = haptics,
-                onAction = onAction,
             )
         }
     }
@@ -92,6 +92,15 @@ internal fun dockHeightDp(iconSizeDp: Int): Int = iconSizeDp + DOCK_VERTICAL_CHR
 private data class DockPresentation(
     val notificationCountsByPackage: Map<AppPackageName, Int>,
     val appShortcutsByApp: AppShortcutsByApp,
+    val haptics: LauncherHaptics,
+    val onAction: (LauncherShellAction) -> Unit,
+)
+
+private data class DockShortcutState(
+    val iconSizeDp: Int,
+    val isEditing: Boolean,
+    val notificationCount: Int,
+    val appShortcuts: List<AppShortcut>,
 )
 
 @Composable
@@ -102,8 +111,6 @@ private fun DockSlot(
     isEditing: Boolean,
     presentation: DockPresentation,
     appIconLoader: AppIconLoader,
-    haptics: LauncherHaptics,
-    onAction: (LauncherShellAction) -> Unit,
 ) {
     val editingSlotColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.10f)
 
@@ -117,13 +124,16 @@ private fun DockSlot(
         if (shortcut != null) {
             DockShortcut(
                 shortcut = shortcut,
-                iconSizeDp = iconSizeDp,
-                isEditing = isEditing,
-                notificationCount = presentation.notificationCountsByPackage[shortcut.appIdentity.packageName] ?: 0,
-                appShortcuts = presentation.appShortcutsByApp[shortcut.appIdentity].orEmpty(),
+                state =
+                    DockShortcutState(
+                        iconSizeDp = iconSizeDp,
+                        isEditing = isEditing,
+                        notificationCount =
+                            presentation.notificationCountsByPackage[shortcut.appIdentity.packageName] ?: 0,
+                        appShortcuts = presentation.appShortcutsByApp[shortcut.appIdentity].orEmpty(),
+                    ),
+                presentation = presentation,
                 appIconLoader = appIconLoader,
-                haptics = haptics,
-                onAction = onAction,
             )
         }
     }
@@ -133,20 +143,16 @@ private fun DockSlot(
 @OptIn(ExperimentalFoundationApi::class)
 private fun BoxScope.DockShortcut(
     shortcut: AppShortcutItem,
-    iconSizeDp: Int,
-    isEditing: Boolean,
-    notificationCount: Int,
-    appShortcuts: List<AppShortcut>,
+    state: DockShortcutState,
+    presentation: DockPresentation,
     appIconLoader: AppIconLoader,
-    haptics: LauncherHaptics,
-    onAction: (LauncherShellAction) -> Unit,
 ) {
     val isContextMenuExpanded = remember(shortcut.id) { mutableStateOf(false) }
 
     Box(
         modifier =
             Modifier
-                .size(iconSizeDp.dp),
+                .size(state.iconSizeDp.dp),
     ) {
         LauncherAppIcon(
             identity = shortcut.appIdentity,
@@ -154,51 +160,51 @@ private fun BoxScope.DockShortcut(
             iconLoader = appIconLoader,
             modifier =
                 Modifier
-                    .size(iconSizeDp.dp)
+                    .size(state.iconSizeDp.dp)
                     .combinedClickable(
-                        enabled = !isEditing,
-                        onClick = { onAction(shortcut.launchAction()) },
+                        enabled = !state.isEditing,
+                        onClick = { presentation.onAction(shortcut.launchAction()) },
                         onLongClick = {
-                            haptics.longPress()
+                            presentation.haptics.longPress()
                             isContextMenuExpanded.value = true
                         },
                         onLongClickLabel = "Show ${shortcut.label} actions",
                     ),
         )
 
-        if (!isEditing) {
+        if (!state.isEditing) {
             NotificationCountBadge(
-                count = notificationCount,
+                count = state.notificationCount,
                 modifier = Modifier.align(Alignment.TopEnd),
             )
         }
-        if (!isEditing) {
+        if (!state.isEditing) {
             ShortcutContextMenu(
                 expanded = isContextMenuExpanded.value,
                 items =
                     shortcutContextMenuItems(
                         shortcut = shortcut,
                         surface = ShortcutContextSurface.DOCK,
-                        appShortcuts = appShortcuts,
+                        appShortcuts = state.appShortcuts,
                     ),
                 onDismissRequest = { isContextMenuExpanded.value = false },
-                onAction = onAction,
+                onAction = presentation.onAction,
             )
         }
     }
 
-    if (isEditing) {
+    if (state.isEditing) {
         MoveDockShortcutControls(
             shortcut = shortcut,
-            onAction = onAction,
+            onAction = presentation.onAction,
         )
         RemoveDockShortcutButton(
             label = shortcut.label,
-            onClick = { onAction(LauncherShellAction.RemoveDockShortcut(shortcut.id)) },
+            onClick = { presentation.onAction(LauncherShellAction.RemoveDockShortcut(shortcut.id)) },
         )
         AppInfoShortcutButton(
             label = shortcut.label,
-            onClick = { onAction(shortcut.openAppInfoAction()) },
+            onClick = { presentation.onAction(shortcut.openAppInfoAction()) },
         )
     }
 }

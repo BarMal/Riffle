@@ -63,14 +63,13 @@ import com.riffle.core.domain.launcher.settings.HomeSwipeGestureSettings
 import kotlin.math.roundToInt
 
 @Composable
-fun StandardHome(
+internal fun StandardHome(
     layout: HomeLayout,
     installedApps: List<InstalledApp>,
-    homeSwipeGestures: HomeSwipeGestureSettings,
+    interactions: StandardHomeInteractions,
     notificationCountsByPackage: Map<AppPackageName, Int>,
     appShortcutsByApp: AppShortcutsByApp,
     appIconLoader: AppIconLoader,
-    haptics: LauncherHaptics = NoopLauncherHaptics,
     onAction: (LauncherShellAction) -> Unit,
 ) {
     val visibleLayout = layout.visibleTo(installedApps)
@@ -82,7 +81,7 @@ fun StandardHome(
         HomeSwipeNavigationState(
             enabled = !editState.isEditing,
             thresholdPx = swipeThresholdPx,
-            homeSwipeGestures = homeSwipeGestures,
+            homeSwipeGestures = interactions.homeSwipeGestures,
             selectedPageIndex = visibleLayout.selectedPageIndex,
             pageCount = visibleLayout.pages.size,
             pageSwipeMotion = remember { HomePageSwipeMotion() },
@@ -90,6 +89,7 @@ fun StandardHome(
     val actions =
         HomeWorkspaceActions(
             onFolderOpen = { folder -> openedFolderId.value = folder.id },
+            haptics = interactions.haptics,
             onAction = onAction,
         )
 
@@ -103,7 +103,6 @@ fun StandardHome(
                 pageDragOffsetPx = pageDragOffsetPx.floatValue,
                 notificationCountsByPackage = notificationCountsByPackage,
                 appShortcutsByApp = appShortcutsByApp,
-                haptics = haptics,
             ),
         appIconLoader = appIconLoader,
         actions = actions,
@@ -155,7 +154,6 @@ private fun StandardHomeColumn(
                     labelSettings = state.layout.settings.labels,
                 ),
             appIconLoader = appIconLoader,
-            haptics = state.haptics,
             actions = actions,
             pageDragOffsetPx = state.pageDragOffsetPx,
             modifier =
@@ -198,7 +196,7 @@ private fun StandardHomeColumn(
                 notificationCountsByPackage = state.notificationCountsByPackage,
                 appShortcutsByApp = state.appShortcutsByApp,
                 appIconLoader = appIconLoader,
-                haptics = state.haptics,
+                haptics = actions.haptics,
                 onAction = actions.onAction,
             )
         }
@@ -256,7 +254,6 @@ private fun AnimatedWorkspaceGrid(
     isEditing: Boolean,
     presentation: HomeGridPresentation,
     appIconLoader: AppIconLoader,
-    haptics: LauncherHaptics,
     actions: HomeWorkspaceActions,
     pageDragOffsetPx: Float,
     modifier: Modifier = Modifier,
@@ -281,9 +278,7 @@ private fun AnimatedWorkspaceGrid(
                 isEditing = isEditing,
                 presentation = presentation,
                 appIconLoader = appIconLoader,
-                haptics = haptics,
-                onFolderOpen = actions.onFolderOpen,
-                onAction = actions.onAction,
+                actions = actions,
                 modifier =
                     Modifier
                         .fillMaxSize()
@@ -299,9 +294,7 @@ private fun WorkspaceGrid(
     isEditing: Boolean,
     presentation: HomeGridPresentation,
     appIconLoader: AppIconLoader,
-    haptics: LauncherHaptics,
-    onFolderOpen: (FolderItem) -> Unit,
-    onAction: (LauncherShellAction) -> Unit,
+    actions: HomeWorkspaceActions,
     modifier: Modifier = Modifier,
 ) {
     BoxWithConstraints(
@@ -356,9 +349,7 @@ private fun WorkspaceGrid(
                                         isEditing = isEditing,
                                         presentation = presentation,
                                         appIconLoader = appIconLoader,
-                                        haptics = haptics,
-                                        onFolderOpen = onFolderOpen,
-                                        onAction = onAction,
+                                        actions = actions,
                                     )
                                 }
                             }
@@ -379,44 +370,40 @@ private fun HomeGridItem(
     isEditing: Boolean,
     presentation: HomeGridPresentation,
     appIconLoader: AppIconLoader,
-    haptics: LauncherHaptics,
-    onFolderOpen: (FolderItem) -> Unit,
-    onAction: (LauncherShellAction) -> Unit,
+    actions: HomeWorkspaceActions,
 ) {
     when (item) {
         is AppShortcutItem ->
             HomeShortcut(
                 shortcut = item,
-                cell = cell,
-                cellSizePx = cellSizePx,
+                dragState = HomeItemDragState(cell = cell, cellSizePx = cellSizePx),
                 isEditing = isEditing,
-                notificationCount = presentation.notificationCountsByPackage.notificationCountFor(item),
-                appShortcuts = presentation.appShortcutsByApp[item.appIdentity].orEmpty(),
-                labelSettings = presentation.labelSettings,
+                presentation =
+                    HomeShortcutPresentation(
+                        notificationCount = presentation.notificationCountsByPackage.notificationCountFor(item),
+                        appShortcuts = presentation.appShortcutsByApp[item.appIdentity].orEmpty(),
+                        labelSettings = presentation.labelSettings,
+                    ),
                 appIconLoader = appIconLoader,
-                haptics = haptics,
-                onAction = onAction,
+                actions = actions,
             )
 
         is FolderItem ->
             HomeFolder(
                 folder = item,
-                cell = cell,
-                cellSizePx = cellSizePx,
+                dragState = HomeItemDragState(cell = cell, cellSizePx = cellSizePx),
                 isEditing = isEditing,
                 notificationCount = presentation.notificationCountsByPackage.notificationCountFor(item),
                 labelSettings = presentation.labelSettings,
                 appIconLoader = appIconLoader,
-                haptics = haptics,
-                onFolderOpen = onFolderOpen,
-                onAction = onAction,
+                actions = actions,
             )
 
         is WidgetItem ->
             HomeWidgetPlaceholder(
                 widget = item,
                 isEditing = isEditing,
-                onAction = onAction,
+                onAction = actions.onAction,
             )
     }
 }
@@ -425,15 +412,11 @@ private fun HomeGridItem(
 @OptIn(ExperimentalFoundationApi::class)
 private fun HomeShortcut(
     shortcut: AppShortcutItem,
-    cell: GridCell,
-    cellSizePx: Float,
+    dragState: HomeItemDragState,
     isEditing: Boolean,
-    notificationCount: Int,
-    appShortcuts: List<AppShortcut>,
-    labelSettings: HomeLabelSettings,
+    presentation: HomeShortcutPresentation,
     appIconLoader: AppIconLoader,
-    haptics: LauncherHaptics,
-    onAction: (LauncherShellAction) -> Unit,
+    actions: HomeWorkspaceActions,
 ) {
     val metrics = HomeGridLayoutMetrics()
     val isContextMenuExpanded = remember(shortcut.id) { mutableStateOf(false) }
@@ -443,20 +426,20 @@ private fun HomeShortcut(
             modifier =
                 Modifier
                     .align(Alignment.Center)
-                    .heightIn(min = metrics.homeItemContentHeightDp(labelSettings).dp)
+                    .heightIn(min = metrics.homeItemContentHeightDp(presentation.labelSettings).dp)
                     .homeItemDrag(
                         enabled = isEditing,
                         item = shortcut,
-                        cell = cell,
-                        cellSizePx = cellSizePx,
-                        haptics = haptics,
-                        onAction = onAction,
+                        cell = dragState.cell,
+                        cellSizePx = dragState.cellSizePx,
+                        haptics = actions.haptics,
+                        onAction = actions.onAction,
                     )
                     .combinedClickable(
                         enabled = !isEditing,
-                        onClick = { onAction(shortcut.launchAction()) },
+                        onClick = { actions.onAction(shortcut.launchAction()) },
                         onLongClick = {
-                            haptics.longPress()
+                            actions.haptics.longPress()
                             isContextMenuExpanded.value = true
                         },
                         onLongClickLabel = "Show ${shortcut.label} actions",
@@ -473,14 +456,14 @@ private fun HomeShortcut(
                 )
                 if (!isEditing) {
                     NotificationCountBadge(
-                        count = notificationCount,
+                        count = presentation.notificationCount,
                         modifier = Modifier.align(Alignment.TopEnd),
                     )
                 }
             }
             WallpaperReadableLabel(
                 text = shortcut.label,
-                settings = labelSettings,
+                settings = presentation.labelSettings,
             )
         }
         if (!isEditing) {
@@ -490,21 +473,21 @@ private fun HomeShortcut(
                     shortcutContextMenuItems(
                         shortcut = shortcut,
                         surface = ShortcutContextSurface.HOME,
-                        appShortcuts = appShortcuts,
+                        appShortcuts = presentation.appShortcuts,
                     ),
                 onDismissRequest = { isContextMenuExpanded.value = false },
-                onAction = onAction,
+                onAction = actions.onAction,
             )
         }
 
         if (isEditing) {
             RemoveShortcutButton(
                 label = shortcut.label,
-                onClick = { onAction(LauncherShellAction.RemoveHomeShortcut(shortcut.id)) },
+                onClick = { actions.onAction(LauncherShellAction.RemoveHomeShortcut(shortcut.id)) },
             )
             AppInfoShortcutButton(
                 label = shortcut.label,
-                onClick = { onAction(shortcut.openAppInfoAction()) },
+                onClick = { actions.onAction(shortcut.openAppInfoAction()) },
             )
         }
     }
@@ -597,7 +580,11 @@ private data class StandardHomeContentState(
     val pageDragOffsetPx: Float,
     val notificationCountsByPackage: Map<AppPackageName, Int>,
     val appShortcutsByApp: AppShortcutsByApp,
-    val haptics: LauncherHaptics,
+)
+
+internal data class StandardHomeInteractions(
+    val homeSwipeGestures: HomeSwipeGestureSettings,
+    val haptics: LauncherHaptics = NoopLauncherHaptics,
 )
 
 private data class HomeGridPresentation(
@@ -606,8 +593,20 @@ private data class HomeGridPresentation(
     val labelSettings: HomeLabelSettings,
 )
 
-private data class HomeWorkspaceActions(
+internal data class HomeItemDragState(
+    val cell: GridCell,
+    val cellSizePx: Float,
+)
+
+private data class HomeShortcutPresentation(
+    val notificationCount: Int,
+    val appShortcuts: List<AppShortcut>,
+    val labelSettings: HomeLabelSettings,
+)
+
+internal data class HomeWorkspaceActions(
     val onFolderOpen: (FolderItem) -> Unit,
+    val haptics: LauncherHaptics,
     val onAction: (LauncherShellAction) -> Unit,
 )
 

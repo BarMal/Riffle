@@ -10,8 +10,17 @@ class LauncherHapticsTest {
     @Test
     fun mapsConfiguredStrengthsToLongPressFeedbackConstants() {
         assertNull(HapticFeedbackStrength.OFF.longPressHapticFeedbackConstant())
-        assertEquals(HapticFeedbackConstants.CLOCK_TICK, HapticFeedbackStrength.LIGHT.longPressHapticFeedbackConstant())
-        assertEquals(HapticFeedbackConstants.CONTEXT_CLICK, HapticFeedbackStrength.MEDIUM.longPressHapticFeedbackConstant())
-        assertEquals(HapticFeedbackConstants.LONG_PRESS, HapticFeedbackStrength.STRONG.longPressHapticFeedbackConstant())
+        assertEquals(
+            HapticFeedbackConstants.CLOCK_TICK,
+            HapticFeedbackStrength.LIGHT.longPressHapticFeedbackConstant(),
+        )
+        assertEquals(
+            HapticFeedbackConstants.CONTEXT_CLICK,
+            HapticFeedbackStrength.MEDIUM.longPressHapticFeedbackConstant(),
+        )
+        assertEquals(
+            HapticFeedbackConstants.LONG_PRESS,
+            HapticFeedbackStrength.STRONG.longPressHapticFeedbackConstant(),
+        )
     }
 }
