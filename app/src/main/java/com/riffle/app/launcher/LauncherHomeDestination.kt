@@ -26,6 +26,7 @@ fun HomeDestination(
                 installedApps = state.installedApps,
                 homeSwipeGestures = state.launcherSettings.gestures.homeSwipe,
                 notificationCountsByPackage = state.notificationCountsByPackage,
+                appShortcutsByApp = state.appShortcutsByApp,
                 appIconLoader = appIconLoader,
                 onAction = onAction,
             )

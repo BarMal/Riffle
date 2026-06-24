@@ -28,6 +28,8 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.apps.AppPackageName
+import com.riffle.core.domain.launcher.apps.AppShortcut
+import com.riffle.core.domain.launcher.apps.AppShortcutsByApp
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.DockItemMoveDirection
 import com.riffle.core.domain.launcher.home.DockModel
@@ -37,9 +39,16 @@ fun Dock(
     dock: DockModel,
     isEditing: Boolean,
     notificationCountsByPackage: Map<AppPackageName, Int>,
+    appShortcutsByApp: AppShortcutsByApp,
     appIconLoader: AppIconLoader,
     onAction: (LauncherShellAction) -> Unit,
 ) {
+    val presentation =
+        DockPresentation(
+            notificationCountsByPackage = notificationCountsByPackage,
+            appShortcutsByApp = appShortcutsByApp,
+        )
+
     Row(
         modifier =
             Modifier
@@ -65,7 +74,7 @@ fun Dock(
                 shortcut = dock.items.getOrNull(index) as? AppShortcutItem,
                 iconSizeDp = dock.iconSizeDp,
                 isEditing = isEditing,
-                notificationCountsByPackage = notificationCountsByPackage,
+                presentation = presentation,
                 appIconLoader = appIconLoader,
                 onAction = onAction,
             )
@@ -78,13 +87,18 @@ private const val DOCK_VERTICAL_CHROME_DP = 32
 
 internal fun dockHeightDp(iconSizeDp: Int): Int = iconSizeDp + DOCK_VERTICAL_CHROME_DP
 
+private data class DockPresentation(
+    val notificationCountsByPackage: Map<AppPackageName, Int>,
+    val appShortcutsByApp: AppShortcutsByApp,
+)
+
 @Composable
 private fun DockSlot(
     modifier: Modifier,
     shortcut: AppShortcutItem?,
     iconSizeDp: Int,
     isEditing: Boolean,
-    notificationCountsByPackage: Map<AppPackageName, Int>,
+    presentation: DockPresentation,
     appIconLoader: AppIconLoader,
     onAction: (LauncherShellAction) -> Unit,
 ) {
@@ -102,7 +116,8 @@ private fun DockSlot(
                 shortcut = shortcut,
                 iconSizeDp = iconSizeDp,
                 isEditing = isEditing,
-                notificationCount = notificationCountsByPackage[shortcut.appIdentity.packageName] ?: 0,
+                notificationCount = presentation.notificationCountsByPackage[shortcut.appIdentity.packageName] ?: 0,
+                appShortcuts = presentation.appShortcutsByApp[shortcut.appIdentity].orEmpty(),
                 appIconLoader = appIconLoader,
                 onAction = onAction,
             )
@@ -117,6 +132,7 @@ private fun BoxScope.DockShortcut(
     iconSizeDp: Int,
     isEditing: Boolean,
     notificationCount: Int,
+    appShortcuts: List<AppShortcut>,
     appIconLoader: AppIconLoader,
     onAction: (LauncherShellAction) -> Unit,
 ) {
@@ -155,6 +171,7 @@ private fun BoxScope.DockShortcut(
                     shortcutContextMenuItems(
                         shortcut = shortcut,
                         surface = ShortcutContextSurface.DOCK,
+                        appShortcuts = appShortcuts,
                     ),
                 onDismissRequest = { isContextMenuExpanded.value = false },
                 onAction = onAction,

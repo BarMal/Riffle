@@ -4,6 +4,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 
 internal enum class ShortcutContextSurface {
@@ -14,34 +15,48 @@ internal enum class ShortcutContextSurface {
 internal data class ShortcutContextMenuItem(
     val label: String,
     val action: LauncherShellAction,
+    val enabled: Boolean = true,
 )
 
 internal fun shortcutContextMenuItems(
     shortcut: AppShortcutItem,
     surface: ShortcutContextSurface,
-): List<ShortcutContextMenuItem> =
-    listOf(
-        ShortcutContextMenuItem(
-            label = "Edit home",
-            action = LauncherShellAction.EnterHomeEditMode,
-        ),
-        ShortcutContextMenuItem(
-            label = "App info",
-            action = shortcut.openAppInfoAction(),
-        ),
-        ShortcutContextMenuItem(
-            label = "Hide app",
-            action = LauncherShellAction.HideApp(shortcut.appIdentity),
-        ),
-        ShortcutContextMenuItem(
-            label = "Uninstall",
-            action = LauncherShellAction.UninstallApp(shortcut.appIdentity),
-        ),
-        ShortcutContextMenuItem(
-            label = surface.removeLabel,
-            action = surface.removeAction(shortcut),
-        ),
-    )
+    appShortcuts: List<AppShortcut> = emptyList(),
+): List<ShortcutContextMenuItem> {
+    val platformShortcutItems =
+        appShortcuts.map { appShortcut ->
+            ShortcutContextMenuItem(
+                label = appShortcut.contextMenuLabel,
+                action = LauncherShellAction.LaunchAppShortcut(appShortcut),
+                enabled = appShortcut.enabled,
+            )
+        }
+    val managementItems =
+        listOf(
+            ShortcutContextMenuItem(
+                label = "Edit home",
+                action = LauncherShellAction.EnterHomeEditMode,
+            ),
+            ShortcutContextMenuItem(
+                label = "App info",
+                action = shortcut.openAppInfoAction(),
+            ),
+            ShortcutContextMenuItem(
+                label = "Hide app",
+                action = LauncherShellAction.HideApp(shortcut.appIdentity),
+            ),
+            ShortcutContextMenuItem(
+                label = "Uninstall",
+                action = LauncherShellAction.UninstallApp(shortcut.appIdentity),
+            ),
+            ShortcutContextMenuItem(
+                label = surface.removeLabel,
+                action = surface.removeAction(shortcut),
+            ),
+        )
+
+    return platformShortcutItems + managementItems
+}
 
 @Composable
 internal fun ShortcutContextMenu(
@@ -57,6 +72,7 @@ internal fun ShortcutContextMenu(
         items.forEach { item ->
             DropdownMenuItem(
                 text = { Text(text = item.label) },
+                enabled = item.enabled,
                 onClick = {
                     onDismissRequest()
                     onAction(item.action)
@@ -78,3 +94,6 @@ private fun ShortcutContextSurface.removeAction(shortcut: AppShortcutItem): Laun
         ShortcutContextSurface.HOME -> LauncherShellAction.RemoveHomeShortcut(shortcut.id)
         ShortcutContextSurface.DOCK -> LauncherShellAction.RemoveDockShortcut(shortcut.id)
     }
+
+private val AppShortcut.contextMenuLabel: String
+    get() = longLabel ?: shortLabel
