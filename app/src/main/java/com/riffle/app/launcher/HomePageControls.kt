@@ -17,6 +17,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -29,6 +31,8 @@ fun PageEditControls(
     selectedPageIndex: Int,
     onAction: (LauncherShellAction) -> Unit,
 ) {
+    val isPageMenuExpanded = remember { mutableStateOf(false) }
+
     Row(
         modifier =
             Modifier
@@ -43,33 +47,19 @@ fun PageEditControls(
         ) {
             Text(text = "<")
         }
-        TextButton(onClick = { onAction(LauncherShellAction.AddHomePage) }) {
-            Text(text = "Add page")
+        TextButton(onClick = { isPageMenuExpanded.value = true }) {
+            Text(text = "Page ${selectedPageIndex + 1} / $pageCount")
         }
-        TextButton(onClick = { onAction(LauncherShellAction.EnterHomePageOverview) }) {
-            Text(text = "Pages")
-        }
-        TextButton(onClick = { onAction(LauncherShellAction.DuplicateSelectedHomePage) }) {
-            Text(text = "Duplicate")
-        }
-        TextButton(
-            enabled = selectedPageIndex > 0,
-            onClick = { onAction(LauncherShellAction.MoveSelectedHomePageLeft) },
-        ) {
-            Text(text = "Move <")
-        }
-        TextButton(
-            enabled = selectedPageIndex < pageCount - 1,
-            onClick = { onAction(LauncherShellAction.MoveSelectedHomePageRight) },
-        ) {
-            Text(text = "Move >")
-        }
-        TextButton(
-            enabled = pageCount > 1,
-            onClick = { onAction(LauncherShellAction.DeleteSelectedHomePage) },
-        ) {
-            Text(text = "Delete page")
-        }
+        ShortcutContextMenu(
+            expanded = isPageMenuExpanded.value,
+            items =
+                pageManagementMenuItems(
+                    pageCount = pageCount,
+                    selectedPageIndex = selectedPageIndex,
+                ),
+            onDismissRequest = { isPageMenuExpanded.value = false },
+            onAction = onAction,
+        )
         TextButton(
             enabled = selectedPageIndex < pageCount - 1,
             onClick = { onAction(LauncherShellAction.SelectNextHomePage) },
@@ -84,6 +74,8 @@ fun PageOverviewControls(
     layout: HomeLayout,
     onAction: (LauncherShellAction) -> Unit,
 ) {
+    val isPageMenuExpanded = remember { mutableStateOf(false) }
+
     Column(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -116,33 +108,65 @@ fun PageOverviewControls(
             TextButton(onClick = { onAction(LauncherShellAction.EnterHomeEditMode) }) {
                 Text(text = "Edit page")
             }
-            TextButton(onClick = { onAction(LauncherShellAction.AddHomePage) }) {
-                Text(text = "Add page")
+            TextButton(onClick = { isPageMenuExpanded.value = true }) {
+                Text(text = "Page menu")
             }
-            TextButton(onClick = { onAction(LauncherShellAction.DuplicateSelectedHomePage) }) {
-                Text(text = "Duplicate")
-            }
-            TextButton(
-                enabled = layout.selectedPageIndex > 0,
-                onClick = { onAction(LauncherShellAction.MoveSelectedHomePageLeft) },
-            ) {
-                Text(text = "Move <")
-            }
-            TextButton(
-                enabled = layout.selectedPageIndex < layout.pages.lastIndex,
-                onClick = { onAction(LauncherShellAction.MoveSelectedHomePageRight) },
-            ) {
-                Text(text = "Move >")
-            }
-            TextButton(
-                enabled = layout.pages.size > 1,
-                onClick = { onAction(LauncherShellAction.DeleteSelectedHomePage) },
-            ) {
-                Text(text = "Delete")
-            }
+            ShortcutContextMenu(
+                expanded = isPageMenuExpanded.value,
+                items =
+                    pageManagementMenuItems(
+                        pageCount = layout.pages.size,
+                        selectedPageIndex = layout.selectedPageIndex,
+                        includeOverview = false,
+                    ),
+                onDismissRequest = { isPageMenuExpanded.value = false },
+                onAction = onAction,
+            )
         }
     }
 }
+
+internal fun pageManagementMenuItems(
+    pageCount: Int,
+    selectedPageIndex: Int,
+    includeOverview: Boolean = true,
+): List<ShortcutContextMenuItem> =
+    listOfNotNull(
+        ShortcutContextMenuItem(
+            label = "Add page",
+            action = LauncherShellAction.AddHomePage,
+        ),
+        overviewMenuItem(includeOverview),
+        ShortcutContextMenuItem(
+            label = "Duplicate page",
+            action = LauncherShellAction.DuplicateSelectedHomePage,
+        ),
+        ShortcutContextMenuItem(
+            label = "Move page left",
+            action = LauncherShellAction.MoveSelectedHomePageLeft,
+            enabled = selectedPageIndex > 0,
+        ),
+        ShortcutContextMenuItem(
+            label = "Move page right",
+            action = LauncherShellAction.MoveSelectedHomePageRight,
+            enabled = selectedPageIndex < pageCount - 1,
+        ),
+        ShortcutContextMenuItem(
+            label = "Delete page",
+            action = LauncherShellAction.DeleteSelectedHomePage,
+            enabled = pageCount > 1,
+        ),
+    )
+
+private fun overviewMenuItem(includeOverview: Boolean): ShortcutContextMenuItem? =
+    if (includeOverview) {
+        ShortcutContextMenuItem(
+            label = "Manage pages",
+            action = LauncherShellAction.EnterHomePageOverview,
+        )
+    } else {
+        null
+    }
 
 @Composable
 fun PageIndicator(
