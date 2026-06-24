@@ -1,7 +1,7 @@
 package com.riffle.app.launcher
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -103,6 +103,7 @@ internal fun BoxScope.HomeDraggedItemOverlay(
 
 internal fun Modifier.homeItemDrag(
     enabled: Boolean,
+    enterEditModeOnStart: Boolean,
     item: LauncherItem,
     dragState: HomeItemDragState,
     actions: HomeWorkspaceActions,
@@ -114,11 +115,14 @@ internal fun Modifier.homeItemDrag(
             var dragX = 0f
             var dragY = 0f
 
-            detectDragGestures(
+            detectDragGesturesAfterLongPress(
                 onDragStart = {
                     dragX = 0f
                     dragY = 0f
                     actions.haptics.longPress()
+                    if (enterEditModeOnStart) {
+                        actions.onAction(LauncherShellAction.EnterHomeEditMode)
+                    }
                     actions.onDragSessionChanged(
                         HomeDragSession(
                             item = item,

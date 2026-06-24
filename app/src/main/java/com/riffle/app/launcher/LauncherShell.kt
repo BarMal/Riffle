@@ -72,6 +72,8 @@ fun LauncherShellContent(
     widgetViewFactory: HomeWidgetViewFactory = EmptyHomeWidgetViewFactory,
     onAction: (LauncherShellAction) -> Unit,
 ) {
+    val haptics = rememberLauncherHaptics(state.launcherSettings.haptics.feedbackStrength)
+
     BackHandler(enabled = state.destination != ShellDestination.HOME) {
         onAction(LauncherShellAction.OpenHome)
     }
@@ -102,6 +104,7 @@ fun LauncherShellContent(
                     state = state,
                     appIconLoader = appIconLoader,
                     widgetViewFactory = widgetViewFactory,
+                    haptics = haptics,
                     onAction = onAction,
                 )
             }
@@ -141,6 +144,7 @@ private fun LauncherDestination(
     state: LauncherShellState,
     appIconLoader: AppIconLoader,
     widgetViewFactory: HomeWidgetViewFactory,
+    haptics: LauncherHaptics,
     onAction: (LauncherShellAction) -> Unit,
 ) {
     when (state.destination) {
@@ -149,6 +153,7 @@ private fun LauncherDestination(
                 state = state,
                 appIconLoader = appIconLoader,
                 widgetViewFactory = widgetViewFactory,
+                haptics = haptics,
                 onAction = onAction,
             )
 
@@ -163,6 +168,7 @@ private fun LauncherDestination(
                         notificationCountsByPackage = state.notificationCountsByPackage,
                         appShortcutsByApp = state.appShortcutsByApp,
                         appIconLoader = appIconLoader,
+                        haptics = haptics,
                         onAction = onAction,
                     ),
                 onAction = onAction,
@@ -179,6 +185,7 @@ private fun LauncherDestination(
                         notificationCountsByPackage = state.notificationCountsByPackage,
                         appShortcutsByApp = state.appShortcutsByApp,
                         appIconLoader = appIconLoader,
+                        haptics = haptics,
                         onAction = onAction,
                     ),
                 onAction = onAction,

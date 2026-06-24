@@ -67,17 +67,10 @@ internal fun HomeFolder(
                                 actions.onFolderOpen(folder)
                             }
                         },
-                        onLongClick = {
-                            actions.haptics.longPress()
-                            if (isEditing) {
-                                isContextMenuExpanded.value = true
-                            } else {
-                                actions.onAction(LauncherShellAction.EnterHomeEditMode)
-                            }
-                        },
                     )
                     .homeItemDrag(
-                        enabled = isEditing,
+                        enabled = true,
+                        enterEditModeOnStart = !isEditing,
                         item = folder,
                         dragState = dragState,
                         actions = actions,
