@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
@@ -398,11 +399,14 @@ private fun HomeShortcut(
     appIconLoader: AppIconLoader,
     onAction: (LauncherShellAction) -> Unit,
 ) {
+    val metrics = HomeGridLayoutMetrics()
+
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier =
                 Modifier
                     .align(Alignment.Center)
+                    .heightIn(min = metrics.homeItemContentHeightDp(labelSettings).dp)
                     .combinedClickable(
                         enabled = !isEditing,
                         onClick = { onAction(shortcut.launchAction()) },
@@ -578,4 +582,3 @@ private const val HOME_SURFACE_VERTICAL_PADDING_DP = 24
 private const val HOME_TOOLBAR_WORKSPACE_SPACING_DP = 16
 private const val HOME_PAGE_INDICATOR_TOP_SPACING_DP = 12
 private const val HOME_DOCK_TOP_SPACING_DP = 16
-private const val HOME_ICON_SIZE_DP = 44

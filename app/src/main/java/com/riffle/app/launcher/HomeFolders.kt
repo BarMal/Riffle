@@ -48,11 +48,14 @@ fun HomeFolder(
     onFolderOpen: (FolderItem) -> Unit,
     onAction: (LauncherShellAction) -> Unit,
 ) {
+    val metrics = HomeGridLayoutMetrics()
+
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier =
                 Modifier
                     .align(Alignment.Center)
+                    .heightIn(min = metrics.homeItemContentHeightDp(labelSettings).dp)
                     .combinedClickable(
                         enabled = !isEditing,
                         onClick = { onFolderOpen(folder) },
@@ -61,7 +64,7 @@ fun HomeFolder(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            Box(modifier = Modifier.size(FOLDER_PREVIEW_ICON_SIZE_DP.dp)) {
+            Box(modifier = Modifier.size(HOME_ICON_SIZE_DP.dp)) {
                 FolderPreviewIcon(
                     folder = folder,
                     appIconLoader = appIconLoader,
@@ -214,7 +217,7 @@ private fun FolderPreviewIcon(
     Column(
         modifier =
             Modifier
-                .size(FOLDER_PREVIEW_ICON_SIZE_DP.dp)
+                .size(HOME_ICON_SIZE_DP.dp)
                 .clip(RoundedCornerShape(12.dp))
                 .background(MaterialTheme.colorScheme.secondaryContainer)
                 .padding(4.dp),
@@ -386,6 +389,5 @@ private fun FolderAddAppRow(
 }
 
 private const val FOLDER_PREVIEW_ICON_COUNT = 4
-private const val FOLDER_PREVIEW_ICON_SIZE_DP = 44
 private const val MIN_FOLDER_SHORTCUT_COUNT = 2
 private const val FOLDER_CONTENT_MAX_HEIGHT_DP = 360
