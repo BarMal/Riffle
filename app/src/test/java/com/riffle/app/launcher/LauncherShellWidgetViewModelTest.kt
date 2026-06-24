@@ -2,6 +2,7 @@ package com.riffle.app.launcher
 
 import com.riffle.core.domain.launcher.home.GridCell
 import com.riffle.core.domain.launcher.home.GridPlacement
+import com.riffle.core.domain.launcher.home.GridSpan
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
 import com.riffle.core.domain.launcher.home.HostedWidgetId
@@ -35,6 +36,38 @@ class LauncherShellWidgetViewModelTest {
                 placement = GridPlacement(cell = GridCell(column = 0, row = 0)),
             ),
             viewModel.state.value.homeLayout.selectedPage.items.single(),
+        )
+        assertEquals(viewModel.state.value.homeLayout, repository.savedLayout)
+    }
+
+    @Test
+    fun resizesHostedWidgetAndSavesLayout() {
+        val repository = FakeHomeLayoutRepository()
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                homeLayoutRepository = repository,
+            )
+        viewModel.onHomeShortcutEdited(
+            LauncherShellAction.AddHostedWidgetToHome(
+                hostedWidgetId = HostedWidgetId(42),
+                label = "Weather",
+            ),
+        )
+
+        viewModel.onHomeShortcutEdited(
+            LauncherShellAction.ResizeHomeWidget(
+                itemId = LauncherItemId("widget:42"),
+                span = GridSpan(columns = 2, rows = 2),
+            ),
+        )
+
+        assertEquals(
+            GridPlacement(
+                cell = GridCell(column = 0, row = 0),
+                span = GridSpan(columns = 2, rows = 2),
+            ),
+            viewModel.state.value.homeLayout.selectedPage.items.single().placement,
         )
         assertEquals(viewModel.state.value.homeLayout, repository.savedLayout)
     }

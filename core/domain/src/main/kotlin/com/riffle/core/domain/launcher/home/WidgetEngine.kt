@@ -27,6 +27,26 @@ class WidgetEngine(
                 WidgetEditResult.Rejected(result.reason)
         }
 
+    fun resizeWidgetOnSelectedPage(
+        layout: HomeLayout,
+        itemId: LauncherItemId,
+        span: GridSpan,
+    ): WidgetEditResult =
+        when (
+            val result =
+                gridPlacementEngine.resizeItem(
+                    page = layout.selectedPage,
+                    itemId = itemId,
+                    span = span.coerceAtLeastOneCell(),
+                )
+        ) {
+            is PlaceLauncherItemResult.Placed ->
+                WidgetEditResult.Updated(layout.withUpdatedSelectedPage(result.page))
+
+            is PlaceLauncherItemResult.Rejected ->
+                WidgetEditResult.Rejected(result.reason)
+        }
+
     private fun HomeLayout.withUpdatedSelectedPage(page: LauncherPage): HomeLayout =
         copy(
             pages =
@@ -38,6 +58,12 @@ class WidgetEngine(
                 },
         )
 }
+
+private fun GridSpan.coerceAtLeastOneCell(): GridSpan =
+    GridSpan(
+        columns = columns.coerceAtLeast(1),
+        rows = rows.coerceAtLeast(1),
+    )
 
 sealed interface WidgetEditResult {
     data class Updated(val layout: HomeLayout) : WidgetEditResult

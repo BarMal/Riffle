@@ -260,6 +260,21 @@ class LauncherShellViewModel(
                         is WidgetEditResult.Rejected -> mutableState.value
                     }
 
+                is LauncherShellAction.ResizeHomeWidget ->
+                    when (
+                        val result =
+                            widgetEngine.resizeWidgetOnSelectedPage(
+                                layout = mutableState.value.homeLayout,
+                                itemId = action.itemId,
+                                span = action.span,
+                            )
+                    ) {
+                        is WidgetEditResult.Updated ->
+                            mutableState.value.withHomeLayout(result.layout, homeLayoutRepository)
+
+                        is WidgetEditResult.Rejected -> mutableState.value
+                    }
+
                 else ->
                     when (
                         val result =
