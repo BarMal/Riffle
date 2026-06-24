@@ -20,12 +20,15 @@ class HomeGridLayoutMetrics {
             return HOME_ICON_SIZE_DP
         }
 
-        val labelTextHeightDp = (labelSettings.textSizeSp + HOME_LABEL_LINE_HEIGHT_EXTRA_DP) * labelSettings.maxLines
-
         return HOME_ICON_SIZE_DP +
             HOME_ICON_LABEL_SPACING_DP +
-            HOME_LABEL_VERTICAL_PADDING_DP * 2 +
-            labelTextHeightDp
+            homeLabelContainerHeightDp(labelSettings)
+    }
+
+    fun homeLabelContainerHeightDp(labelSettings: HomeLabelSettings): Int {
+        val labelTextHeightDp = (labelSettings.textSizeSp + HOME_LABEL_LINE_HEIGHT_EXTRA_DP) * labelSettings.maxLines
+
+        return HOME_LABEL_VERTICAL_PADDING_DP * 2 + labelTextHeightDp
     }
 }
 
