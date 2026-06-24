@@ -43,6 +43,7 @@ class WidgetPickerDialogTest {
             LauncherShellAction.RequestAddWidget(
                 provider = provider.identity,
                 label = "Clock",
+                dimensions = provider.dimensions,
             ),
             provider.requestAddWidgetAction(),
         )

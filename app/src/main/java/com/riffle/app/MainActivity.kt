@@ -2,6 +2,7 @@ package com.riffle.app
 
 import android.app.Activity
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
@@ -32,8 +33,12 @@ import com.riffle.app.launcher.selectedPageHostedWidgetIdForItem
 import com.riffle.app.launcher.widgets.AndroidInstalledWidgetProviderRepository
 import com.riffle.app.launcher.widgets.AndroidWidgetHostGateway
 import com.riffle.app.launcher.widgets.WidgetBindingResult
+import com.riffle.app.launcher.widgets.preferredGridSpan
+import com.riffle.app.launcher.widgets.widgetSpanAdjustmentToast
 import com.riffle.core.domain.launcher.ShellNavigationAction
+import com.riffle.core.domain.launcher.home.GridSpan
 import com.riffle.core.domain.launcher.home.HostedWidgetId
+import com.riffle.core.domain.launcher.home.WidgetItem
 
 class MainActivity : ComponentActivity() {
     private val shellViewModel: LauncherShellViewModel by viewModels {
@@ -90,8 +95,17 @@ class MainActivity : ComponentActivity() {
                         LauncherShellAction.AddHostedWidgetToHome(
                             hostedWidgetId = pending.hostedWidgetId,
                             label = pending.label,
+                            preferredSpan = pending.preferredSpan,
                         ),
                     )
+                    widgetSpanAdjustmentMessage(
+                        viewModel = shellViewModel,
+                        label = pending.label,
+                        idealSpan = pending.preferredSpan,
+                        hostedWidgetId = pending.hostedWidgetId,
+                    )?.let { message ->
+                        Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+                    }
                     shellViewModel.onAppActionSelected(LauncherShellAction.CloseWidgetPicker)
                 }
 
@@ -234,14 +248,29 @@ class MainActivity : ComponentActivity() {
             is LauncherShellAction.AddAppToHome -> shellViewModel.onAddAppToHome(action.app)
             is LauncherShellAction.RequestAddWidget -> {
                 val hostedWidgetId = widgetHostGateway.allocateHostedWidgetId()
+                val preferredSpan =
+                    action.dimensions.preferredGridSpan(
+                        grid = shellViewModel.state.value.homeLayout.selectedPage.grid,
+                        availableWidthDp = resources.configuration.screenWidthDp,
+                        availableHeightDp = resources.configuration.screenHeightDp,
+                    )
                 when (widgetHostGateway.bindHostedWidget(hostedWidgetId, action.provider)) {
                     WidgetBindingResult.Bound -> {
                         shellViewModel.onHomeShortcutEdited(
                             LauncherShellAction.AddHostedWidgetToHome(
                                 hostedWidgetId = hostedWidgetId,
                                 label = action.label,
+                                preferredSpan = preferredSpan,
                             ),
                         )
+                        widgetSpanAdjustmentMessage(
+                            viewModel = shellViewModel,
+                            label = action.label,
+                            idealSpan = preferredSpan,
+                            hostedWidgetId = hostedWidgetId,
+                        )?.let { message ->
+                            Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+                        }
                         shellViewModel.onAppActionSelected(LauncherShellAction.CloseWidgetPicker)
                     }
 
@@ -253,6 +282,7 @@ class MainActivity : ComponentActivity() {
                             PendingWidgetBind(
                                 hostedWidgetId = hostedWidgetId,
                                 label = action.label,
+                                preferredSpan = preferredSpan,
                             )
                         requestWidgetBind.launch(
                             widgetHostGateway.createBindHostedWidgetIntent(hostedWidgetId, action.provider),
@@ -289,4 +319,25 @@ private fun LauncherShellAction.navigationAction(): ShellNavigationAction? =
 private data class PendingWidgetBind(
     val hostedWidgetId: HostedWidgetId,
     val label: String,
+    val preferredSpan: GridSpan,
 )
+
+private fun widgetSpanAdjustmentMessage(
+    viewModel: LauncherShellViewModel,
+    label: String,
+    idealSpan: GridSpan,
+    hostedWidgetId: HostedWidgetId,
+): String? =
+    viewModel.state.value.homeLayout.pages
+        .flatMap { page -> page.items }
+        .filterIsInstance<WidgetItem>()
+        .firstOrNull { widget -> widget.appWidgetId == hostedWidgetId }
+        ?.placement
+        ?.span
+        ?.let { actualSpan ->
+            widgetSpanAdjustmentToast(
+                label = label,
+                idealSpan = idealSpan,
+                actualSpan = actualSpan,
+            )
+        }

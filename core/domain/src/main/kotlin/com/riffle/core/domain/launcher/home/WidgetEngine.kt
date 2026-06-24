@@ -7,24 +7,31 @@ class WidgetEngine(
         layout: HomeLayout,
         hostedWidgetId: HostedWidgetId,
         label: String,
+        preferredSpan: GridSpan = GridSpan(),
     ): WidgetEditResult =
-        when (
-            val result =
-                gridPlacementEngine.placeItemInFirstAvailableCell(
-                    page = layout.selectedPage,
-                    item =
-                        WidgetItem(
-                            id = LauncherItemId("widget:${hostedWidgetId.value}"),
-                            appWidgetId = hostedWidgetId,
-                            label = label.ifBlank { DEFAULT_WIDGET_LABEL },
-                        ),
-                )
-        ) {
-            is PlaceLauncherItemResult.Placed ->
-                WidgetEditResult.Updated(layout.withUpdatedSelectedPage(result.page))
-
-            is PlaceLauncherItemResult.Rejected ->
-                WidgetEditResult.Rejected(result.reason)
+        WidgetItem(
+            id = LauncherItemId("widget:${hostedWidgetId.value}"),
+            appWidgetId = hostedWidgetId,
+            label = label.ifBlank { DEFAULT_WIDGET_LABEL },
+        ).let { widget ->
+            preferredSpan
+                .placementCandidates()
+                .map { span ->
+                    span to
+                        gridPlacementEngine.placeItemInFirstAvailableCell(
+                            page = layout.selectedPage,
+                            item = widget,
+                            span = span,
+                        )
+                }
+                .firstOrNull { (_, result) -> result is PlaceLauncherItemResult.Placed }
+                ?.let { (span, result) ->
+                    WidgetEditResult.Updated(
+                        layout = layout.withUpdatedSelectedPage((result as PlaceLauncherItemResult.Placed).page),
+                        placedSpan = span,
+                    )
+                }
+                ?: WidgetEditResult.Rejected(PlacementRejectionReason.NO_AVAILABLE_CELL)
         }
 
     fun resizeWidgetOnSelectedPage(
@@ -65,8 +72,28 @@ private fun GridSpan.coerceAtLeastOneCell(): GridSpan =
         rows = rows.coerceAtLeast(1),
     )
 
+private fun GridSpan.placementCandidates(): List<GridSpan> =
+    coerceAtLeastOneCell().let { preferredSpan ->
+        (preferredSpan.columns downTo 1).flatMap { columns ->
+            (preferredSpan.rows downTo 1).map { rows ->
+                GridSpan(columns = columns, rows = rows)
+            }
+        }.distinct()
+            .sortedWith(
+                compareBy<GridSpan> { span -> preferredSpan.area - span.area }
+                    .thenBy { span -> preferredSpan.columns - span.columns }
+                    .thenBy { span -> preferredSpan.rows - span.rows },
+            )
+    }
+
+private val GridSpan.area: Int
+    get() = columns * rows
+
 sealed interface WidgetEditResult {
-    data class Updated(val layout: HomeLayout) : WidgetEditResult
+    data class Updated(
+        val layout: HomeLayout,
+        val placedSpan: GridSpan? = null,
+    ) : WidgetEditResult
 
     data class Rejected(val reason: PlacementRejectionReason) : WidgetEditResult
 }

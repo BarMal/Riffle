@@ -14,6 +14,7 @@ class WidgetEngineTest {
                 layout = HomeLayoutDefaults.standard(),
                 hostedWidgetId = HostedWidgetId(42),
                 label = "Weather",
+                preferredSpan = GridSpan(columns = 2, rows = 2),
             )
 
         val updated = assertIs<WidgetEditResult.Updated>(result)
@@ -22,10 +23,15 @@ class WidgetEngineTest {
                 id = LauncherItemId("widget:42"),
                 appWidgetId = HostedWidgetId(42),
                 label = "Weather",
-                placement = GridPlacement(cell = GridCell(column = 0, row = 0)),
+                placement =
+                    GridPlacement(
+                        cell = GridCell(column = 0, row = 0),
+                        span = GridSpan(columns = 2, rows = 2),
+                    ),
             ),
             updated.layout.selectedPage.items.single(),
         )
+        assertEquals(GridSpan(columns = 2, rows = 2), updated.placedSpan)
     }
 
     @Test
@@ -39,6 +45,38 @@ class WidgetEngineTest {
 
         val updated = assertIs<WidgetEditResult.Updated>(result)
         assertEquals("Widget", (updated.layout.selectedPage.items.single() as WidgetItem).label)
+    }
+
+    @Test
+    fun shrinksWidgetSpanWhenPreferredSpanDoesNotFit() {
+        val layout =
+            HomeLayoutDefaults.standard()
+                .copy(
+                    pages =
+                        listOf(
+                            HomeLayoutDefaults.standard().selectedPage.copy(
+                                grid = GridDimensions(columns = 2, rows = 2),
+                            ),
+                        ),
+                )
+
+        val result =
+            engine.addWidgetToSelectedPage(
+                layout = layout,
+                hostedWidgetId = HostedWidgetId(42),
+                label = "Weather",
+                preferredSpan = GridSpan(columns = 4, rows = 3),
+            )
+
+        val updated = assertIs<WidgetEditResult.Updated>(result)
+        assertEquals(
+            GridPlacement(
+                cell = GridCell(column = 0, row = 0),
+                span = GridSpan(columns = 2, rows = 2),
+            ),
+            updated.layout.selectedPage.items.single().placement,
+        )
+        assertEquals(GridSpan(columns = 2, rows = 2), updated.placedSpan)
     }
 
     @Test
