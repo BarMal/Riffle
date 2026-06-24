@@ -50,6 +50,8 @@ import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.LauncherItem
 import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.settings.HomeSwipeGestureSettings
+import kotlin.math.abs
+import kotlin.math.roundToInt
 
 @Composable
 internal fun StandardHome(
@@ -263,7 +265,12 @@ private fun AnimatedWorkspaceGrid(
         val settledPageOffsetPx = (layout.selectedPageIndex - animatedPageIndex.value) * widthPx
         val boundedDragOffsetPx = gridState.pageDragOffsetPx.coerceIn(-widthPx, widthPx)
 
+        val animatedPageIndexValue = animatedPageIndex.value
+
         layout.pages.forEachIndexed { index, page ->
+            if (!index.isNearAnimatedPage(selectedPageIndex = layout.selectedPageIndex, animatedPageIndexValue)) {
+                return@forEachIndexed
+            }
             val pageOffsetPx =
                 (((index - layout.selectedPageIndex) * widthPx) + settledPageOffsetPx + boundedDragOffsetPx)
 
@@ -281,6 +288,13 @@ private fun AnimatedWorkspaceGrid(
         }
     }
 }
+
+private fun Int.isNearAnimatedPage(
+    selectedPageIndex: Int,
+    animatedPageIndex: Float,
+): Boolean =
+    abs(this - selectedPageIndex) <= ANIMATED_WORKSPACE_PAGE_RADIUS ||
+        abs(this - animatedPageIndex.roundToInt()) <= ANIMATED_WORKSPACE_PAGE_RADIUS
 
 @Composable
 fun BoxScope.RemoveShortcutButton(
@@ -365,3 +379,4 @@ private const val HOME_TOOLBAR_MAX_WIDTH_DP = 560
 private const val HOME_TOOLBAR_SURFACE_ALPHA = 0.88f
 private const val HOME_PAGE_INDICATOR_TOP_SPACING_DP = 12
 private const val HOME_DOCK_TOP_SPACING_DP = 16
+private const val ANIMATED_WORKSPACE_PAGE_RADIUS = 1

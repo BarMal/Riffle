@@ -190,7 +190,7 @@ class HomeScreenLibraryLayoutTest {
     }
 
     @Test
-    fun libraryModeRemovesTrailingEmptyHomePages() {
+    fun libraryModeKeepsTrailingEmptyHomePages() {
         val camera = app(label = "Camera")
         val layout =
             HomeLayoutDefaults.standard().copy(
@@ -211,8 +211,11 @@ class HomeScreenLibraryLayoutTest {
 
         val libraryLayout = layout.withHomeScreenLibraryApps(listOf(camera))
 
-        assertEquals(listOf(LauncherPageId("home")), libraryLayout.pages.map { page -> page.id })
-        assertEquals(LauncherPageId("home"), libraryLayout.selectedPageId)
+        assertEquals(
+            listOf(LauncherPageId("home"), LauncherPageId("spare")),
+            libraryLayout.pages.map { page -> page.id },
+        )
+        assertEquals(LauncherPageId("spare"), libraryLayout.selectedPageId)
     }
 
     @Test

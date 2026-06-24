@@ -43,7 +43,7 @@ private fun LauncherItem.visibleTo(visibleAppIdentities: Set<AppIdentity>): Laun
         is AppShortcutItem -> takeIf { item -> item.appIdentity in visibleAppIdentities }
         is FolderItem ->
             copy(items = items.filter { item -> item.appIdentity in visibleAppIdentities })
-                .takeIf { folder -> folder.items.isNotEmpty() }
+                .takeIf { folder -> items.isEmpty() || folder.items.isNotEmpty() }
         is WidgetItem -> this
     }
 
