@@ -122,11 +122,16 @@ private fun LibraryPageCompactionSetting(
             verticalArrangement = Arrangement.spacedBy(2.dp),
         ) {
             Text(
-                text = "Compact Library pages",
+                text = "Compact library pages",
                 style = MaterialTheme.typography.bodyLarge,
             )
             Text(
-                text = if (enabled) "Fill earlier pages first" else "Allow incomplete pages",
+                text =
+                    if (enabled) {
+                        "Reflow generated apps to fill earlier pages"
+                    } else {
+                        "Keep incomplete pages when the grid changes"
+                    },
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
