@@ -30,7 +30,7 @@ fun HomeLayout.keepingApps(identities: Set<AppIdentity>): HomeLayout =
             dock.copy(
                 items = dock.items.mapNotNull { item -> item.keepingApps(identities) },
             ),
-    )
+    ).withoutTrailingEmptyAllAppsPages()
 
 private fun LauncherItem.keepingApps(identities: Set<AppIdentity>): LauncherItem? =
     when (this) {
