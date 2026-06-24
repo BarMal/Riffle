@@ -42,6 +42,8 @@ private fun EmptyFolderPreviewIcon() {
         modifier =
             Modifier
                 .size(HOME_ICON_SIZE_DP.dp)
+                .clip(RoundedCornerShape(EMPTY_FOLDER_CORNER_RADIUS_DP.dp))
+                .background(MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = EMPTY_FOLDER_ALPHA))
                 .drawBehind {
                     drawRoundRect(
                         color = outlineColor,
@@ -97,3 +99,5 @@ private const val FOLDER_PREVIEW_ICON_COUNT = 4
 private const val EMPTY_FOLDER_STROKE_WIDTH_DP = 2
 private const val EMPTY_FOLDER_DASH_DP = 8
 private const val EMPTY_FOLDER_GAP_DP = 6
+private const val EMPTY_FOLDER_CORNER_RADIUS_DP = 12
+private const val EMPTY_FOLDER_ALPHA = 0.72f

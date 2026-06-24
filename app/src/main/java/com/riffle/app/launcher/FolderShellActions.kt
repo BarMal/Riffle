@@ -64,26 +64,52 @@ private fun HomeLayout.createEmptyFolderOnSelectedPage(
     label.trim()
         .takeIf { trimmedLabel -> trimmedLabel.isNotEmpty() }
         ?.let { trimmedLabel ->
-            when (
-                val result =
-                    GridPlacementEngine().placeItemInFirstAvailableCell(
-                        page = selectedPage,
-                        item =
-                            FolderItem(
-                                id = folderId,
-                                label = trimmedLabel,
-                                items = emptyList(),
-                            ),
-                    )
-            ) {
+            when (val result = placeEmptyFolder(page = selectedPage, folderId = folderId, label = trimmedLabel)) {
                 is PlaceLauncherItemResult.Placed ->
                     FolderEditResult.Updated(withUpdatedSelectedPage(result.page))
 
                 is PlaceLauncherItemResult.Rejected ->
-                    FolderEditResult.Rejected(result.reason.toFolderRejectionReason())
+                    when (result.reason) {
+                        PlacementRejectionReason.NO_AVAILABLE_CELL ->
+                            createEmptyFolderOnNewSelectedPage(folderId = folderId, label = trimmedLabel)
+
+                        else -> FolderEditResult.Rejected(result.reason.toFolderRejectionReason())
+                    }
             }
         }
         ?: FolderEditResult.Rejected(FolderEditRejectionReason.INVALID_LABEL)
+
+private fun HomeLayout.createEmptyFolderOnNewSelectedPage(
+    folderId: LauncherItemId,
+    label: String,
+): FolderEditResult =
+    when (val result = placeEmptyFolder(page = newHomePage(), folderId = folderId, label = label)) {
+        is PlaceLauncherItemResult.Placed ->
+            FolderEditResult.Updated(
+                copy(
+                    pages = pages + result.page,
+                    selectedPageId = result.page.id,
+                ),
+            )
+
+        is PlaceLauncherItemResult.Rejected ->
+            FolderEditResult.Rejected(result.reason.toFolderRejectionReason())
+    }
+
+private fun placeEmptyFolder(
+    page: LauncherPage,
+    folderId: LauncherItemId,
+    label: String,
+): PlaceLauncherItemResult =
+    GridPlacementEngine().placeItemInFirstAvailableCell(
+        page = page,
+        item =
+            FolderItem(
+                id = folderId,
+                label = label,
+                items = emptyList(),
+            ),
+    )
 
 private fun HomeLayout.withUpdatedSelectedPage(page: LauncherPage): HomeLayout =
     copy(

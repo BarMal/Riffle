@@ -9,9 +9,14 @@ import com.riffle.core.domain.launcher.apps.InstalledAppRepository
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.FolderItem
 import com.riffle.core.domain.launcher.home.GridCell
+import com.riffle.core.domain.launcher.home.GridDimensions
 import com.riffle.core.domain.launcher.home.GridPlacement
 import com.riffle.core.domain.launcher.home.HomeLayout
+import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
+import com.riffle.core.domain.launcher.home.LauncherItemId
+import com.riffle.core.domain.launcher.home.LauncherPage
+import com.riffle.core.domain.launcher.home.LauncherPageId
 import com.riffle.core.domain.launcher.home.LauncherViewMode
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -92,6 +97,51 @@ class LauncherShellFolderViewModelTest {
         val folder = viewModel.state.value.homeLayout.selectedPage.items.filterIsInstance<FolderItem>().single()
         assertEquals(emptyList<AppShortcutItem>(), folder.items)
         assertEquals(viewModel.state.value.homeLayout, repository.savedLayout)
+    }
+
+    @Test
+    fun createsEmptyHomeFolderOnNewPageWhenSelectedPageIsFull() {
+        val camera = app(label = "Camera")
+        val fullPage =
+            LauncherPage(
+                id = LauncherPageId("home"),
+                grid = GridDimensions(columns = 1, rows = 1),
+                items =
+                    listOf(
+                        AppShortcutItem(
+                            id = LauncherItemId("app:camera"),
+                            appIdentity = camera.identity,
+                            label = camera.label,
+                            placement = GridPlacement(cell = GridCell(column = 0, row = 0)),
+                        ),
+                    ),
+            )
+        val repository =
+            FakeHomeLayoutRepository(
+                savedLayout =
+                    HomeLayoutDefaults.standard().copy(
+                        pages = listOf(fullPage),
+                        selectedPageId = fullPage.id,
+                    ),
+            )
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                installedAppRepository = FakeInstalledAppRepository(apps = listOf(camera)),
+                homeLayoutRepository = repository,
+            )
+
+        viewModel.onHomeShortcutEdited(
+            LauncherShellAction.CreateEmptyHomeFolder(label = "Folder"),
+        )
+
+        val layout = viewModel.state.value.homeLayout
+        val folder = layout.selectedPage.items.single() as FolderItem
+        assertEquals(listOf(LauncherPageId("home"), LauncherPageId("home-2")), layout.pages.map { page -> page.id })
+        assertEquals(LauncherPageId("home-2"), layout.selectedPageId)
+        assertEquals(GridPlacement(cell = GridCell(column = 0, row = 0)), folder.placement)
+        assertEquals(emptyList<AppShortcutItem>(), folder.items)
+        assertEquals(layout, repository.savedLayout)
     }
 
     @Test
