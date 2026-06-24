@@ -719,6 +719,33 @@ class LauncherShellViewModelTest {
         assertEquals(layoutBeforeMove, repository.savedLayout)
     }
 
+    @Test
+    fun movesHomeShortcutToCellAndSavesLayout() {
+        val camera = app(label = "Camera")
+        val repository = FakeHomeLayoutRepository()
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                installedAppRepository = FakeInstalledAppRepository(apps = listOf(camera)),
+                homeLayoutRepository = repository,
+            )
+        viewModel.onAddAppToHome(camera)
+        val shortcut = viewModel.state.value.homeLayout.selectedPage.items.single() as AppShortcutItem
+
+        viewModel.onHomeShortcutEdited(
+            LauncherShellAction.MoveHomeShortcutToCell(
+                itemId = shortcut.id,
+                cell = GridCell(column = 2, row = 1),
+            ),
+        )
+
+        assertEquals(
+            GridPlacement(cell = GridCell(column = 2, row = 1)),
+            viewModel.state.value.homeLayout.selectedPage.items.single().placement,
+        )
+        assertEquals(viewModel.state.value.homeLayout, repository.savedLayout)
+    }
+
     private class FakeFirstRunRepository(
         private var isComplete: Boolean = false,
     ) : FirstRunRepository {

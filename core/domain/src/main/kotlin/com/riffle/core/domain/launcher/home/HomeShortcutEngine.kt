@@ -120,6 +120,40 @@ class HomeShortcutEngine(
                 },
             )
 
+    fun moveShortcutToCellOnSelectedPage(
+        layout: HomeLayout,
+        itemId: LauncherItemId,
+        cell: GridCell,
+    ): HomeShortcutResult =
+        layout.selectedPage.items.firstOrNull { item -> item.id == itemId }
+            ?.placement
+            ?.copy(cell = cell)
+            ?.let { placement ->
+                when (
+                    val result =
+                        gridPlacementEngine.moveItem(
+                            page = layout.selectedPage,
+                            itemId = itemId,
+                            placement = placement,
+                        )
+                ) {
+                    is PlaceLauncherItemResult.Placed ->
+                        HomeShortcutResult.Updated(layout.withUpdatedSelectedPage(result.page))
+
+                    is PlaceLauncherItemResult.Rejected ->
+                        HomeShortcutResult.Rejected(result.reason)
+                }
+            }
+            ?: HomeShortcutResult.Rejected(
+                when {
+                    layout.selectedPage.items.any { item -> item.id == itemId } ->
+                        PlacementRejectionReason.MISSING_PLACEMENT
+
+                    else ->
+                        PlacementRejectionReason.ITEM_NOT_FOUND
+                },
+            )
+
     private fun appShortcutFor(
         app: InstalledApp,
         layout: HomeLayout,

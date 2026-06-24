@@ -275,6 +275,54 @@ class HomeShortcutEngineTest {
         assertEquals(PlacementRejectionReason.ITEM_NOT_FOUND, rejected.reason)
     }
 
+    @Test
+    fun movesShortcutToCellOnSelectedPage() {
+        val shortcut =
+            appShortcut(
+                id = "camera",
+                placement = GridPlacement(cell = GridCell(column = 0, row = 0)),
+            )
+        val layout = layoutWith(shortcut)
+
+        val result =
+            engine.moveShortcutToCellOnSelectedPage(
+                layout = layout,
+                itemId = shortcut.id,
+                cell = GridCell(column = 2, row = 1),
+            )
+
+        val updated = assertIs<HomeShortcutResult.Updated>(result)
+        assertEquals(
+            GridPlacement(cell = GridCell(column = 2, row = 1)),
+            updated.layout.selectedPage.items.single().placement,
+        )
+    }
+
+    @Test
+    fun rejectsMoveToCellThatWouldCollideWithAnotherShortcut() {
+        val camera =
+            appShortcut(
+                id = "camera",
+                placement = GridPlacement(cell = GridCell(column = 0, row = 0)),
+            )
+        val calendar =
+            appShortcut(
+                id = "calendar",
+                placement = GridPlacement(cell = GridCell(column = 1, row = 0)),
+            )
+        val layout = layoutWith(camera, calendar)
+
+        val result =
+            engine.moveShortcutToCellOnSelectedPage(
+                layout = layout,
+                itemId = camera.id,
+                cell = GridCell(column = 1, row = 0),
+            )
+
+        val rejected = assertIs<HomeShortcutResult.Rejected>(result)
+        assertEquals(PlacementRejectionReason.COLLISION, rejected.reason)
+    }
+
     private fun layoutWith(vararg shortcuts: AppShortcutItem): HomeLayout =
         HomeLayoutDefaults.standard().copy(
             pages = listOf(HomeLayoutDefaults.standard().selectedPage.copy(items = shortcuts.toList())),

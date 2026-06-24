@@ -512,6 +512,13 @@ private fun HomeShortcutEngine.applyEdit(
                 direction = action.direction,
             )
 
+        is LauncherShellAction.MoveHomeShortcutToCell ->
+            moveShortcutToCellOnSelectedPage(
+                layout = layout,
+                itemId = action.itemId,
+                cell = action.cell,
+            )
+
         else -> HomeShortcutResult.Rejected(PlacementRejectionReason.ITEM_NOT_FOUND)
     }
 
