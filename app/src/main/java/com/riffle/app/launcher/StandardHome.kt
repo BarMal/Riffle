@@ -50,6 +50,7 @@ import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.LauncherItem
 import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.settings.HomeSwipeGestureSettings
+import com.riffle.core.domain.launcher.widgets.InstalledWidgetProvider
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
@@ -58,8 +59,7 @@ internal fun StandardHome(
     layout: HomeLayout,
     installedApps: List<InstalledApp>,
     interactions: StandardHomeInteractions,
-    notificationCountsByPackage: Map<AppPackageName, Int>,
-    appShortcutsByApp: AppShortcutsByApp,
+    presentation: StandardHomePresentation,
     appIconLoader: AppIconLoader,
     onAction: (LauncherShellAction) -> Unit,
 ) {
@@ -95,13 +95,18 @@ internal fun StandardHome(
                 swipeNavigationState = swipeNavigationState,
                 pageDragOffsetPx = pageDragOffsetPx.floatValue,
                 dragSession = homeDragSession.value,
-                notificationCountsByPackage = notificationCountsByPackage,
-                appShortcutsByApp = appShortcutsByApp,
+                presentation = presentation,
             ),
         appIconLoader = appIconLoader,
         actions = actions,
         onPageDragOffsetChange = { offsetPx -> pageDragOffsetPx.floatValue = offsetPx },
     )
+    if (presentation.widgetPicker.isOpen) {
+        WidgetPickerDialog(
+            providers = presentation.widgetPicker.providers,
+            onAction = onAction,
+        )
+    }
     visibleLayout.openedFolder(openedFolderId.value)?.let { folder ->
         FolderDialog(
             folder = folder,
@@ -148,8 +153,8 @@ private fun StandardHomeColumn(
                 ),
             presentation =
                 HomeGridPresentation(
-                    notificationCountsByPackage = state.notificationCountsByPackage,
-                    appShortcutsByApp = state.appShortcutsByApp,
+                    notificationCountsByPackage = state.presentation.notificationCountsByPackage,
+                    appShortcutsByApp = state.presentation.appShortcutsByApp,
                     labelSettings = state.layout.settings.labels,
                 ),
             appIconLoader = appIconLoader,
@@ -190,8 +195,8 @@ private fun StandardHomeColumn(
             Dock(
                 dock = state.visibleLayout.dock,
                 isEditing = state.editState.isEditingPage,
-                notificationCountsByPackage = state.notificationCountsByPackage,
-                appShortcutsByApp = state.appShortcutsByApp,
+                notificationCountsByPackage = state.presentation.notificationCountsByPackage,
+                appShortcutsByApp = state.presentation.appShortcutsByApp,
                 appIconLoader = appIconLoader,
                 haptics = actions.haptics,
                 onAction = actions.onAction,
@@ -335,8 +340,7 @@ private data class StandardHomeContentState(
     val swipeNavigationState: HomeSwipeNavigationState,
     val pageDragOffsetPx: Float,
     val dragSession: HomeDragSession?,
-    val notificationCountsByPackage: Map<AppPackageName, Int>,
-    val appShortcutsByApp: AppShortcutsByApp,
+    val presentation: StandardHomePresentation,
 )
 
 internal data class HomeDragSession(
@@ -350,6 +354,17 @@ internal data class HomeDragSession(
 internal data class StandardHomeInteractions(
     val homeSwipeGestures: HomeSwipeGestureSettings,
     val haptics: LauncherHaptics = NoopLauncherHaptics,
+)
+
+internal data class StandardHomePresentation(
+    val notificationCountsByPackage: Map<AppPackageName, Int>,
+    val appShortcutsByApp: AppShortcutsByApp,
+    val widgetPicker: StandardHomeWidgetPickerState = StandardHomeWidgetPickerState(),
+)
+
+internal data class StandardHomeWidgetPickerState(
+    val providers: List<InstalledWidgetProvider> = emptyList(),
+    val isOpen: Boolean = false,
 )
 
 internal data class HomeGridPresentation(

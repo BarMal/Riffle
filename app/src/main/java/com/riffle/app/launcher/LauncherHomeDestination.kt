@@ -31,8 +31,16 @@ fun HomeDestination(
                         homeSwipeGestures = state.launcherSettings.gestures.homeSwipe,
                         haptics = haptics,
                     ),
-                notificationCountsByPackage = state.notificationCountsByPackage,
-                appShortcutsByApp = state.appShortcutsByApp,
+                presentation =
+                    StandardHomePresentation(
+                        notificationCountsByPackage = state.notificationCountsByPackage,
+                        appShortcutsByApp = state.appShortcutsByApp,
+                        widgetPicker =
+                            StandardHomeWidgetPickerState(
+                                providers = state.installedWidgetProviders,
+                                isOpen = state.isWidgetPickerOpen,
+                            ),
+                    ),
                 appIconLoader = appIconLoader,
                 onAction = onAction,
             )

@@ -218,6 +218,11 @@ fun HomeFolderEditControls(onAction: (LauncherShellAction) -> Unit) {
         ) {
             Text(text = "Create folder")
         }
+        TextButton(
+            onClick = { onAction(LauncherShellAction.OpenWidgetPicker) },
+        ) {
+            Text(text = "Widgets")
+        }
     }
 }
 
