@@ -5,6 +5,7 @@ import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.home.DockItemMoveDirection
+import com.riffle.core.domain.launcher.home.GridCell
 import com.riffle.core.domain.launcher.home.GridDimensions
 import com.riffle.core.domain.launcher.home.HomeLabelSizing
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
@@ -14,6 +15,7 @@ import com.riffle.core.domain.launcher.home.LauncherPageId
 import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.home.WallpaperSource
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
+import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
 import com.riffle.core.domain.launcher.settings.HomeSwipeGestureDirection
 import com.riffle.core.domain.launcher.settings.LauncherGestureAction
 
@@ -142,6 +144,11 @@ sealed interface LauncherShellAction {
         val direction: HomeShortcutMoveDirection,
     ) : LauncherShellAction
 
+    data class MoveHomeShortcutToCell(
+        val itemId: LauncherItemId,
+        val cell: GridCell,
+    ) : LauncherShellAction
+
     data class SearchQueryChanged(val query: String) : LauncherShellAction
 
     data class SearchProfileFilterSelected(
@@ -156,6 +163,10 @@ sealed interface LauncherShellAction {
     ) : LauncherShellAction
 
     data object ResetHomeSwipeGestureActions : LauncherShellAction
+
+    data class SelectHapticFeedbackStrength(
+        val strength: HapticFeedbackStrength,
+    ) : LauncherShellAction
 
     data class DismissNotifications(val keys: List<LauncherNotificationKey>) : LauncherShellAction
 }

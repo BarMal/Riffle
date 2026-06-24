@@ -229,7 +229,7 @@ class LauncherShellViewModel(
                         val result =
                             folderEngine.applyEdit(
                                 action = action,
-                                layout = mutableState.value.homeLayout,
+                                layout = mutableState.value.folderEditLayout(action),
                             )
                     ) {
                         is FolderEditResult.Updated ->
@@ -318,6 +318,18 @@ class LauncherShellViewModel(
                 LauncherShellAction.ResetHomeSwipeGestureActions ->
                     mutableState.value.withDefaultHomeSwipes(
                         repo = launcherSettingsRepository,
+                    )
+
+                is LauncherShellAction.SelectHapticFeedbackStrength ->
+                    mutableState.value.withLauncherSettings(
+                        settings =
+                            mutableState.value.launcherSettings.copy(
+                                haptics =
+                                    mutableState.value.launcherSettings.haptics.copy(
+                                        feedbackStrength = action.strength,
+                                    ),
+                            ),
+                        launcherSettingsRepository = launcherSettingsRepository,
                     )
 
                 else -> mutableState.value
@@ -500,5 +512,18 @@ private fun HomeShortcutEngine.applyEdit(
                 direction = action.direction,
             )
 
+        is LauncherShellAction.MoveHomeShortcutToCell ->
+            moveShortcutToCellOnSelectedPage(
+                layout = layout,
+                itemId = action.itemId,
+                cell = action.cell,
+            )
+
         else -> HomeShortcutResult.Rejected(PlacementRejectionReason.ITEM_NOT_FOUND)
+    }
+
+private fun LauncherShellState.folderEditLayout(action: LauncherShellAction): HomeLayout =
+    when (action) {
+        is LauncherShellAction.CreateHomeFolder -> homeLayout.withHomeScreenLibraryApps(installedApps)
+        else -> homeLayout
     }

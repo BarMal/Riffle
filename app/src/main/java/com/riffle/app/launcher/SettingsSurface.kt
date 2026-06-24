@@ -28,6 +28,7 @@ import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.WallpaperSource
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
+import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 
 @Composable
@@ -136,6 +137,12 @@ private fun SettingsPageContent(
                 onAction = onAction,
             )
         }
+        SettingsSection(title = "Haptics") {
+            HapticStrengthSetting(
+                selectedStrength = settings.haptics.feedbackStrength,
+                onAction = onAction,
+            )
+        }
         SettingsSection(title = "Permissions") {
             NotificationAccessSetting(
                 status = notificationAccessStatus,
@@ -147,6 +154,34 @@ private fun SettingsPageContent(
                 apps = hiddenApps,
                 onAction = onAction,
             )
+        }
+    }
+}
+
+@Composable
+private fun HapticStrengthSetting(
+    selectedStrength: HapticFeedbackStrength,
+    onAction: (LauncherShellAction) -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            modifier = Modifier.weight(1f),
+            text = "Feedback strength",
+            style = MaterialTheme.typography.bodyLarge,
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            HapticFeedbackStrength.entries.forEach { strength ->
+                TextButton(
+                    enabled = strength != selectedStrength,
+                    onClick = { onAction(LauncherShellAction.SelectHapticFeedbackStrength(strength)) },
+                ) {
+                    Text(text = strength.label)
+                }
+            }
         }
     }
 }
@@ -315,6 +350,15 @@ private val NotificationAccessStatus.label: String
             NotificationAccessStatus.UNKNOWN -> "Unknown"
             NotificationAccessStatus.GRANTED -> "Allowed"
             NotificationAccessStatus.NOT_GRANTED -> "Not allowed"
+        }
+
+private val HapticFeedbackStrength.label: String
+    get() =
+        when (this) {
+            HapticFeedbackStrength.OFF -> "Off"
+            HapticFeedbackStrength.LIGHT -> "Light"
+            HapticFeedbackStrength.MEDIUM -> "Medium"
+            HapticFeedbackStrength.STRONG -> "Strong"
         }
 
 private const val SETTINGS_PAGE_MAX_WIDTH_DP = 840

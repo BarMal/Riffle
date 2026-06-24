@@ -5,6 +5,7 @@ import com.riffle.core.domain.launcher.home.WallpaperSettings
 data class LauncherSettings(
     val appearance: AppearanceSettings = AppearanceSettings(),
     val gestures: GestureSettings = GestureSettings(),
+    val haptics: HapticSettings = HapticSettings(),
 )
 
 data class AppearanceSettings(
@@ -13,6 +14,10 @@ data class AppearanceSettings(
 
 data class GestureSettings(
     val homeSwipe: HomeSwipeGestureSettings = HomeSwipeGestureSettings(),
+)
+
+data class HapticSettings(
+    val feedbackStrength: HapticFeedbackStrength = HapticFeedbackStrength.MEDIUM,
 )
 
 data class HomeSwipeGestureSettings(
@@ -38,6 +43,13 @@ enum class LauncherGestureAction {
     ENTER_HOME_EDIT_MODE,
     SELECT_NEXT_HOME_PAGE,
     SELECT_PREVIOUS_HOME_PAGE,
+}
+
+enum class HapticFeedbackStrength {
+    OFF,
+    LIGHT,
+    MEDIUM,
+    STRONG,
 }
 
 interface LauncherSettingsRepository {

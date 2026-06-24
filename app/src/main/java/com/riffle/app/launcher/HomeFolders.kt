@@ -40,14 +40,14 @@ import com.riffle.core.domain.launcher.home.WidgetItem
 
 @Composable
 @OptIn(ExperimentalFoundationApi::class)
-fun HomeFolder(
+internal fun HomeFolder(
     folder: FolderItem,
+    dragState: HomeItemDragState,
     isEditing: Boolean,
     notificationCount: Int,
     labelSettings: HomeLabelSettings,
     appIconLoader: AppIconLoader,
-    onFolderOpen: (FolderItem) -> Unit,
-    onAction: (LauncherShellAction) -> Unit,
+    actions: HomeWorkspaceActions,
 ) {
     val metrics = HomeGridLayoutMetrics()
 
@@ -57,10 +57,21 @@ fun HomeFolder(
                 Modifier
                     .align(Alignment.Center)
                     .heightIn(min = metrics.homeItemContentHeightDp(labelSettings).dp)
+                    .homeItemDrag(
+                        enabled = isEditing,
+                        item = folder,
+                        cell = dragState.cell,
+                        cellSizePx = dragState.cellSizePx,
+                        haptics = actions.haptics,
+                        onAction = actions.onAction,
+                    )
                     .combinedClickable(
                         enabled = !isEditing,
-                        onClick = { onFolderOpen(folder) },
-                        onLongClick = { onAction(LauncherShellAction.EnterHomeEditMode) },
+                        onClick = { actions.onFolderOpen(folder) },
+                        onLongClick = {
+                            actions.haptics.longPress()
+                            actions.onAction(LauncherShellAction.EnterHomeEditMode)
+                        },
                     ),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(6.dp),
@@ -84,14 +95,9 @@ fun HomeFolder(
         }
 
         if (isEditing) {
-            MoveItemControls(
-                item = folder,
-                label = folder.label,
-                onAction = onAction,
-            )
             RemoveShortcutButton(
                 label = folder.label,
-                onClick = { onAction(LauncherShellAction.RemoveHomeShortcut(folder.id)) },
+                onClick = { actions.onAction(LauncherShellAction.RemoveHomeShortcut(folder.id)) },
             )
         }
     }

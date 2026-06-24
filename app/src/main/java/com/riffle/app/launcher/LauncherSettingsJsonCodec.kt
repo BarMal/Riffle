@@ -3,6 +3,8 @@ package com.riffle.app.launcher
 import com.riffle.core.domain.launcher.home.WallpaperSettings
 import com.riffle.core.domain.launcher.home.WallpaperSource
 import com.riffle.core.domain.launcher.settings.AppearanceSettings
+import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
+import com.riffle.core.domain.launcher.settings.HapticSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import org.json.JSONObject
 
@@ -10,6 +12,7 @@ fun encodeLauncherSettings(settings: LauncherSettings): String =
     JSONObject()
         .put("appearance", encodeAppearance(settings.appearance))
         .put("gestures", encodeGestures(settings.gestures))
+        .put("haptics", encodeHaptics(settings.haptics))
         .toString()
 
 fun decodeLauncherSettings(value: String): LauncherSettings =
@@ -18,6 +21,7 @@ fun decodeLauncherSettings(value: String): LauncherSettings =
         defaults.copy(
             appearance = json.optJSONObject("appearance")?.toAppearance(defaults.appearance) ?: defaults.appearance,
             gestures = json.optJSONObject("gestures")?.toGestures(defaults.gestures) ?: defaults.gestures,
+            haptics = json.optJSONObject("haptics")?.toHaptics(defaults.haptics) ?: defaults.haptics,
         )
     }
 
@@ -39,4 +43,15 @@ private fun JSONObject.toWallpaper(defaults: WallpaperSettings): WallpaperSettin
         source =
             runCatching { WallpaperSource.valueOf(optString("source")) }
                 .getOrDefault(defaults.source),
+    )
+
+private fun encodeHaptics(settings: HapticSettings): JSONObject =
+    JSONObject()
+        .put("feedbackStrength", settings.feedbackStrength.name)
+
+private fun JSONObject.toHaptics(defaults: HapticSettings): HapticSettings =
+    defaults.copy(
+        feedbackStrength =
+            runCatching { HapticFeedbackStrength.valueOf(optString("feedbackStrength")) }
+                .getOrDefault(defaults.feedbackStrength),
     )

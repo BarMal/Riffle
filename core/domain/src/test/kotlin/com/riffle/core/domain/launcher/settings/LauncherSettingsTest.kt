@@ -24,6 +24,13 @@ class LauncherSettingsTest {
     }
 
     @Test
+    fun defaultsHapticFeedbackStrengthToMedium() {
+        val settings = LauncherSettings()
+
+        assertEquals(HapticFeedbackStrength.MEDIUM, settings.haptics.feedbackStrength)
+    }
+
+    @Test
     fun appearanceCanSelectSolidColourWallpaperFallback() {
         val settings =
             LauncherSettings(

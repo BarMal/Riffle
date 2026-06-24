@@ -9,6 +9,8 @@ fun HomeDestination(
     appIconLoader: AppIconLoader,
     onAction: (LauncherShellAction) -> Unit,
 ) {
+    val haptics = rememberLauncherHaptics(state.launcherSettings.haptics.feedbackStrength)
+
     when (state.homeLayout.viewMode.homeSurfaceKind()) {
         HomeSurfaceKind.CARDS ->
             NotificationOverviewSurface(
@@ -24,7 +26,11 @@ fun HomeDestination(
             StandardHome(
                 layout = state.homeLayout,
                 installedApps = state.installedApps,
-                homeSwipeGestures = state.launcherSettings.gestures.homeSwipe,
+                interactions =
+                    StandardHomeInteractions(
+                        homeSwipeGestures = state.launcherSettings.gestures.homeSwipe,
+                        haptics = haptics,
+                    ),
                 notificationCountsByPackage = state.notificationCountsByPackage,
                 appShortcutsByApp = state.appShortcutsByApp,
                 appIconLoader = appIconLoader,
