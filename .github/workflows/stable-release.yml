@@ -66,6 +66,11 @@ jobs:
           mkdir -p "$RUNNER_TEMP/release"
           cp app/build/outputs/apk/release/*.apk "$RUNNER_TEMP/release/riffle-stable.apk"
           cp app/build/outputs/bundle/release/*.aab "$RUNNER_TEMP/release/riffle-stable.aab"
+          pwsh .github/scripts/assert-artifact-size.ps1 \
+            -ArtifactPath "$RUNNER_TEMP/release/riffle-stable.apk" \
+            -MaxBytes 26214400 \
+            -BudgetName "Stable APK"
+
           pwsh .github/scripts/write-release-notes.ps1 \
             -ReleaseChannel stable \
             -CommitSha "$GITHUB_SHA" \

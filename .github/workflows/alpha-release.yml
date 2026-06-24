@@ -66,6 +66,11 @@ jobs:
           mkdir -p "$RUNNER_TEMP/release"
           cp app/build/outputs/apk/release/*.apk "$RUNNER_TEMP/release/riffle-alpha.apk"
           cp app/build/outputs/bundle/release/*.aab "$RUNNER_TEMP/release/riffle-alpha.aab"
+          pwsh .github/scripts/assert-artifact-size.ps1 \
+            -ArtifactPath "$RUNNER_TEMP/release/riffle-alpha.apk" \
+            -MaxBytes 26214400 \
+            -BudgetName "Alpha APK"
+
           pwsh .github/scripts/write-release-notes.ps1 \
             -ReleaseChannel alpha \
             -CommitSha "$GITHUB_SHA" \

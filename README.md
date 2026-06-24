@@ -22,3 +22,6 @@ For a cloud development environment with Codex CLI, see
 
 Alpha release signing is automated through GitHub Actions. Required secrets are documented in
 [`docs/release/signing.md`](docs/release/signing.md).
+
+Release APK size is budgeted and tracked in
+[`docs/release/apk-size-budget.md`](docs/release/apk-size-budget.md).
