@@ -411,12 +411,20 @@ private fun HomeShortcut(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            LauncherAppIcon(
-                identity = shortcut.appIdentity,
-                label = shortcut.label,
-                iconLoader = appIconLoader,
-                modifier = Modifier.size(44.dp),
-            )
+            Box(modifier = Modifier.size(HOME_ICON_SIZE_DP.dp)) {
+                LauncherAppIcon(
+                    identity = shortcut.appIdentity,
+                    label = shortcut.label,
+                    iconLoader = appIconLoader,
+                    modifier = Modifier.size(HOME_ICON_SIZE_DP.dp),
+                )
+                if (!isEditing) {
+                    NotificationCountBadge(
+                        count = notificationCount,
+                        modifier = Modifier.align(Alignment.TopEnd),
+                    )
+                }
+            }
             WallpaperReadableLabel(
                 text = shortcut.label,
                 settings = labelSettings,
@@ -436,11 +444,6 @@ private fun HomeShortcut(
             AppInfoShortcutButton(
                 label = shortcut.label,
                 onClick = { onAction(shortcut.openAppInfoAction()) },
-            )
-        } else {
-            NotificationCountBadge(
-                count = notificationCount,
-                modifier = Modifier.align(Alignment.TopEnd),
             )
         }
     }
@@ -575,3 +578,4 @@ private const val HOME_SURFACE_VERTICAL_PADDING_DP = 24
 private const val HOME_TOOLBAR_WORKSPACE_SPACING_DP = 16
 private const val HOME_PAGE_INDICATOR_TOP_SPACING_DP = 12
 private const val HOME_DOCK_TOP_SPACING_DP = 16
+private const val HOME_ICON_SIZE_DP = 44
