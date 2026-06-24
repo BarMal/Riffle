@@ -19,6 +19,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -118,6 +120,8 @@ private fun BoxScope.DockShortcut(
     appIconLoader: AppIconLoader,
     onAction: (LauncherShellAction) -> Unit,
 ) {
+    val isContextMenuExpanded = remember(shortcut.id) { mutableStateOf(false) }
+
     Box(
         modifier =
             Modifier
@@ -133,7 +137,8 @@ private fun BoxScope.DockShortcut(
                     .combinedClickable(
                         enabled = !isEditing,
                         onClick = { onAction(shortcut.launchAction()) },
-                        onLongClick = { onAction(LauncherShellAction.EnterHomeEditMode) },
+                        onLongClick = { isContextMenuExpanded.value = true },
+                        onLongClickLabel = "Show ${shortcut.label} actions",
                     ),
         )
 
@@ -141,6 +146,18 @@ private fun BoxScope.DockShortcut(
             NotificationCountBadge(
                 count = notificationCount,
                 modifier = Modifier.align(Alignment.TopEnd),
+            )
+        }
+        if (!isEditing) {
+            ShortcutContextMenu(
+                expanded = isContextMenuExpanded.value,
+                items =
+                    shortcutContextMenuItems(
+                        shortcut = shortcut,
+                        surface = ShortcutContextSurface.DOCK,
+                    ),
+                onDismissRequest = { isContextMenuExpanded.value = false },
+                onAction = onAction,
             )
         }
     }
