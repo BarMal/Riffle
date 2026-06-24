@@ -2,12 +2,16 @@ package com.riffle.app.launcher
 
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.LauncherPage
-import com.riffle.core.domain.launcher.home.LauncherPageType
+import com.riffle.core.domain.launcher.home.LauncherViewMode
 
-fun HomeLayout.withoutTrailingEmptyAllAppsPages(): HomeLayout {
+fun HomeLayout.withoutTrailingEmptyLibraryPages(): HomeLayout {
+    if (viewMode != LauncherViewMode.HOME_SCREEN_LIBRARY) {
+        return this
+    }
+
     val keptPages =
         pages
-            .dropLastWhile { page -> page.isEmptyAllAppsPage }
+            .dropLastWhile { page -> page.isEmpty }
             .ifEmpty { pages.take(1) }
     val safeSelectedPageId =
         keptPages.firstOrNull { page -> page.id == selectedPageId }?.id
@@ -19,5 +23,5 @@ fun HomeLayout.withoutTrailingEmptyAllAppsPages(): HomeLayout {
     )
 }
 
-private val LauncherPage.isEmptyAllAppsPage: Boolean
-    get() = type == LauncherPageType.AllApps && items.isEmpty()
+private val LauncherPage.isEmpty: Boolean
+    get() = items.isEmpty()

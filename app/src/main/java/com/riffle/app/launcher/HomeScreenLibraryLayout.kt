@@ -27,7 +27,7 @@ fun HomeLayout.withHomeScreenLibraryApps(apps: List<InstalledApp>): HomeLayout =
 
                 else -> withMissingLibraryApps(apps)
             }
-                .withoutTrailingEmptyAllAppsPages()
+                .withoutTrailingEmptyLibraryPages()
 
         LauncherViewMode.STANDARD_APP_DRAWER,
         LauncherViewMode.CARD_INTERFACE,

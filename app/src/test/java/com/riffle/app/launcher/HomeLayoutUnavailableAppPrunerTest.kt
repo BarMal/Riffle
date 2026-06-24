@@ -11,6 +11,7 @@ import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.home.LauncherPage
 import com.riffle.core.domain.launcher.home.LauncherPageId
 import com.riffle.core.domain.launcher.home.LauncherPageType
+import com.riffle.core.domain.launcher.home.LauncherViewMode
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -22,6 +23,7 @@ class HomeLayoutUnavailableAppPrunerTest {
         val layout =
             HomeLayoutDefaults.standard().let { defaults ->
                 defaults.copy(
+                    viewMode = LauncherViewMode.HOME_SCREEN_LIBRARY,
                     pages =
                         listOf(
                             defaults.selectedPage.copy(items = listOf(shortcut(id = "camera", app = camera))),
@@ -33,6 +35,31 @@ class HomeLayoutUnavailableAppPrunerTest {
                             ),
                         ),
                     selectedPageId = LauncherPageId("library:1"),
+                )
+            }
+
+        val prunedLayout = layout.keepingApps(setOf(camera))
+
+        assertEquals(listOf(LauncherPageId("home")), prunedLayout.pages.map { page -> page.id })
+        assertEquals(LauncherPageId("home"), prunedLayout.selectedPageId)
+    }
+
+    @Test
+    fun removesTrailingEmptyHomePagesInLibraryModeAfterPruningUnavailableApps() {
+        val camera = app("Camera")
+        val layout =
+            HomeLayoutDefaults.standard().let { defaults ->
+                defaults.copy(
+                    viewMode = LauncherViewMode.HOME_SCREEN_LIBRARY,
+                    pages =
+                        listOf(
+                            defaults.selectedPage.copy(items = listOf(shortcut(id = "camera", app = camera))),
+                            LauncherPage(
+                                id = LauncherPageId("spare"),
+                                grid = defaults.settings.grid.dimensions,
+                            ),
+                        ),
+                    selectedPageId = LauncherPageId("spare"),
                 )
             }
 
