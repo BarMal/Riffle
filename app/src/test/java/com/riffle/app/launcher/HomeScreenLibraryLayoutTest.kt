@@ -153,6 +153,42 @@ class HomeScreenLibraryLayoutTest {
     }
 
     @Test
+    fun libraryModeRemovesTrailingEmptyAllAppsPages() {
+        val camera = app(label = "Camera")
+        val layout =
+            HomeLayoutDefaults.standard().copy(
+                viewMode = LauncherViewMode.HOME_SCREEN_LIBRARY,
+                pages =
+                    listOf(
+                        LauncherPage(
+                            id = LauncherPageId("home"),
+                            grid = GridDimensions(columns = 1, rows = 1),
+                            items =
+                                listOf(
+                                    AppShortcutItem(
+                                        id = LauncherItemId("library-app:personal:com.riffle.camera/.MainActivity"),
+                                        appIdentity = camera.identity,
+                                        label = camera.label,
+                                        placement = GridPlacement(cell = GridCell(column = 0, row = 0)),
+                                    ),
+                                ),
+                        ),
+                        LauncherPage(
+                            id = LauncherPageId("library:1"),
+                            type = LauncherPageType.AllApps,
+                            grid = GridDimensions(columns = 1, rows = 1),
+                        ),
+                    ),
+                selectedPageId = LauncherPageId("library:1"),
+            )
+
+        val libraryLayout = layout.withHomeScreenLibraryApps(listOf(camera))
+
+        assertEquals(listOf(LauncherPageId("home")), libraryLayout.pages.map { page -> page.id })
+        assertEquals(LauncherPageId("home"), libraryLayout.selectedPageId)
+    }
+
+    @Test
     fun compactLibraryModeCollapsesGeneratedAppsAfterGridExpansion() {
         val camera = app(label = "Camera")
         val calendar = app(label = "Calendar")
