@@ -12,14 +12,10 @@ class WidgetPickerDialogTest {
     @Test
     fun providerSummaryIncludesPackageAndMinimumDimensions() {
         val provider =
-            InstalledWidgetProvider(
-                identity =
-                    WidgetProviderIdentity(
-                        packageName = AppPackageName("com.example.weather"),
-                        className = WidgetProviderClassName(".WeatherWidget"),
-                    ),
+            widgetProvider(
                 label = "Weather",
-                dimensions = WidgetProviderDimensions(minWidthDp = 120, minHeightDp = 80),
+                packageName = "com.example.weather",
+                className = ".WeatherWidget",
             )
 
         assertEquals("com.example.weather - 120x80dp", provider.widgetPickerSummary())
@@ -27,16 +23,7 @@ class WidgetPickerDialogTest {
 
     @Test
     fun requestAddWidgetActionUsesProviderIdentityAndLabel() {
-        val provider =
-            InstalledWidgetProvider(
-                identity =
-                    WidgetProviderIdentity(
-                        packageName = AppPackageName("com.example.clock"),
-                        className = WidgetProviderClassName(".ClockWidget"),
-                    ),
-                label = "Clock",
-                dimensions = WidgetProviderDimensions(minWidthDp = 80, minHeightDp = 80),
-            )
+        val provider = widgetProvider(label = "Clock", packageName = "com.example.clock", className = ".ClockWidget")
 
         assertEquals(
             LauncherShellAction.RequestAddWidget(
@@ -46,4 +33,39 @@ class WidgetPickerDialogTest {
             provider.requestAddWidgetAction(),
         )
     }
+
+    @Test
+    fun filtersWidgetProvidersByLabelPackageAndClassName() {
+        val weather =
+            widgetProvider(
+                label = "Weather",
+                packageName = "com.example.weather",
+                className = ".WeatherWidget",
+            )
+        val clock = widgetProvider(label = "Clock", packageName = "com.example.clock", className = ".ClockWidget")
+        val calendar =
+            widgetProvider(label = "Agenda", packageName = "com.example.calendar", className = ".MonthWidget")
+
+        val providers = listOf(weather, clock, calendar)
+
+        assertEquals(listOf(weather), providers.filteredWidgetProviders("weather"))
+        assertEquals(listOf(clock), providers.filteredWidgetProviders("CLOCK"))
+        assertEquals(listOf(calendar), providers.filteredWidgetProviders("month"))
+        assertEquals(providers, providers.filteredWidgetProviders(" "))
+    }
+
+    private fun widgetProvider(
+        label: String,
+        packageName: String,
+        className: String,
+    ): InstalledWidgetProvider =
+        InstalledWidgetProvider(
+            identity =
+                WidgetProviderIdentity(
+                    packageName = AppPackageName(packageName),
+                    className = WidgetProviderClassName(className),
+                ),
+            label = label,
+            dimensions = WidgetProviderDimensions(minWidthDp = 120, minHeightDp = 80),
+        )
 }

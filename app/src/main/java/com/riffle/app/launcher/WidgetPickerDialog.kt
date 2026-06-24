@@ -10,9 +10,14 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
@@ -24,34 +29,46 @@ fun WidgetPickerDialog(
     providers: List<InstalledWidgetProvider>,
     onAction: (LauncherShellAction) -> Unit,
 ) {
+    var query by rememberSaveable { mutableStateOf("") }
+    val filteredProviders = providers.filteredWidgetProviders(query)
+
     AlertDialog(
         onDismissRequest = { onAction(LauncherShellAction.CloseWidgetPicker) },
         title = { Text(text = "Widgets") },
         text = {
-            if (providers.isEmpty()) {
-                Text(
-                    modifier = Modifier.padding(vertical = 24.dp),
-                    text = "No widgets available",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedTextField(
+                    modifier = Modifier.fillMaxWidth(),
+                    value = query,
+                    onValueChange = { value -> query = value },
+                    singleLine = true,
+                    label = { Text(text = "Search widgets") },
                 )
-            } else {
-                LazyColumn(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .heightIn(max = WIDGET_PICKER_MAX_HEIGHT_DP.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                ) {
-                    items(
-                        items = providers,
-                        key = { provider -> provider.widgetPickerKey },
-                    ) { provider ->
-                        WidgetProviderRow(
-                            provider = provider,
-                            onAction = onAction,
-                        )
-                    }
+                when {
+                    providers.isEmpty() ->
+                        WidgetPickerEmptyMessage(text = "No widgets available")
+
+                    filteredProviders.isEmpty() ->
+                        WidgetPickerEmptyMessage(text = "No matching widgets")
+
+                    else ->
+                        LazyColumn(
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .heightIn(max = WIDGET_PICKER_MAX_HEIGHT_DP.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp),
+                        ) {
+                            items(
+                                items = filteredProviders,
+                                key = { provider -> provider.widgetPickerKey },
+                            ) { provider ->
+                                WidgetProviderRow(
+                                    provider = provider,
+                                    onAction = onAction,
+                                )
+                            }
+                        }
                 }
             }
         },
@@ -60,6 +77,16 @@ fun WidgetPickerDialog(
                 Text(text = "Close")
             }
         },
+    )
+}
+
+@Composable
+private fun WidgetPickerEmptyMessage(text: String) {
+    Text(
+        modifier = Modifier.padding(vertical = 24.dp),
+        text = text,
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
 }
 
@@ -105,6 +132,19 @@ internal fun InstalledWidgetProvider.requestAddWidgetAction(): LauncherShellActi
 
 internal fun InstalledWidgetProvider.widgetPickerSummary(): String =
     "${identity.packageName.value} - ${dimensions.minWidthDp}x${dimensions.minHeightDp}dp"
+
+internal fun List<InstalledWidgetProvider>.filteredWidgetProviders(query: String): List<InstalledWidgetProvider> =
+    query
+        .trim()
+        .takeIf(String::isNotEmpty)
+        ?.let { trimmedQuery ->
+            filter { provider -> provider.matchesWidgetQuery(trimmedQuery) }
+        }
+        ?: this
+
+private fun InstalledWidgetProvider.matchesWidgetQuery(query: String): Boolean =
+    listOf(label, identity.packageName.value, identity.className.value)
+        .any { value -> value.contains(query, ignoreCase = true) }
 
 private val InstalledWidgetProvider.widgetPickerKey: String
     get() = "${identity.profile.id.value}:${identity.packageName.value}/${identity.className.value}"
