@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -23,7 +22,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -79,32 +77,27 @@ fun LauncherShellContent(
     )
 
     MaterialTheme {
-        val backdropColor =
-            if (state.launcherSettings.appearance.wallpaper.source == WallpaperSource.SYSTEM) {
-                Color.Transparent
+        val usesSystemWallpaper = state.launcherSettings.appearance.wallpaper.source == WallpaperSource.SYSTEM
+        val rootModifier =
+            if (usesSystemWallpaper) {
+                Modifier.fillMaxSize()
             } else {
-                MaterialTheme.colorScheme.background
+                Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.background)
             }
 
         Box(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .background(backdropColor),
+            modifier = rootModifier,
         ) {
-            Surface(
-                modifier = Modifier.fillMaxSize(),
-                color = Color.Transparent,
-            ) {
-                if (state.shouldShowDefaultHomePrompt) {
-                    DefaultHomePrompt(onAction = onAction)
-                } else {
-                    LauncherDestination(
-                        state = state,
-                        appIconLoader = appIconLoader,
-                        onAction = onAction,
-                    )
-                }
+            if (state.shouldShowDefaultHomePrompt) {
+                DefaultHomePrompt(onAction = onAction)
+            } else {
+                LauncherDestination(
+                    state = state,
+                    appIconLoader = appIconLoader,
+                    onAction = onAction,
+                )
             }
         }
     }
