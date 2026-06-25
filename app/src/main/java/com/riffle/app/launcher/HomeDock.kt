@@ -27,6 +27,7 @@ import com.riffle.core.domain.launcher.apps.AppShortcutsByApp
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.DockItemMoveDirection
 import com.riffle.core.domain.launcher.home.DockModel
+import kotlin.math.min
 
 @Composable
 fun Dock(
@@ -62,7 +63,14 @@ fun Dock(
         horizontalArrangement = Arrangement.spacedBy(dock.itemSpacingDp.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        repeat(dock.capacity) { index ->
+        val renderedSlotCount =
+            dockRenderedSlotCount(
+                capacity = dock.capacity,
+                itemCount = dock.items.size,
+                isEditing = isEditing,
+            )
+
+        repeat(renderedSlotCount) { index ->
             DockSlot(
                 modifier =
                     Modifier
@@ -87,6 +95,18 @@ private const val DOCK_MAX_WIDTH_DP = 560
 private const val DOCK_VERTICAL_CHROME_DP = 32
 
 internal fun dockHeightDp(iconSizeDp: Int): Int = iconSizeDp + DOCK_VERTICAL_CHROME_DP
+
+internal fun dockRenderedSlotCount(
+    capacity: Int,
+    itemCount: Int,
+    isEditing: Boolean,
+): Int =
+    when {
+        capacity <= 0 -> 0
+        isEditing -> capacity
+        itemCount <= 0 -> capacity
+        else -> min(itemCount, capacity)
+    }
 
 private data class DockPresentation(
     val notificationCountsByPackage: Map<AppPackageName, Int>,
