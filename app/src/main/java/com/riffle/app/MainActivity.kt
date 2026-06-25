@@ -1,6 +1,7 @@
 package com.riffle.app
 
 import android.app.Activity
+import android.net.Uri
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -9,6 +10,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import com.riffle.app.launcher.AndroidHomeRoleGateway
 import com.riffle.app.launcher.AndroidLauncherWallpaperController
+import com.riffle.app.launcher.LauncherBackupDocument
 import com.riffle.app.launcher.LauncherShell
 import com.riffle.app.launcher.LauncherShellAction
 import com.riffle.app.launcher.LauncherShellPlatformDependencies
@@ -23,9 +25,11 @@ import com.riffle.app.launcher.apps.AndroidAppShortcutRepository
 import com.riffle.app.launcher.apps.AndroidPackageChangeObserver
 import com.riffle.app.launcher.apps.PackageManagerAppIconLoader
 import com.riffle.app.launcher.apps.PackageManagerInstalledAppRepository
+import com.riffle.app.launcher.encodeLauncherBackupDocument
 import com.riffle.app.launcher.handleNotificationAction
 import com.riffle.app.launcher.handleSettingsAction
 import com.riffle.app.launcher.isHomePageEditAction
+import com.riffle.app.launcher.launcherBackupDocument
 import com.riffle.app.launcher.notifications.AndroidNotificationAccessGateway
 import com.riffle.app.launcher.notifications.AndroidNotificationDismissalGateway
 import com.riffle.app.launcher.notifications.SharedPreferencesActiveNotificationRepository
@@ -41,6 +45,8 @@ import com.riffle.core.domain.launcher.home.HostedWidgetId
 import com.riffle.core.domain.launcher.home.WidgetItem
 
 class MainActivity : ComponentActivity() {
+    private val homeLayoutRepository by lazy { SharedPreferencesHomeLayoutRepository(this) }
+    private val launcherSettingsRepository by lazy { SharedPreferencesLauncherSettingsRepository(this) }
     private val shellViewModel: LauncherShellViewModel by viewModels {
         LauncherShellViewModelFactory(
             firstRunRepository = SharedPreferencesFirstRunRepository(this),
@@ -50,8 +56,8 @@ class MainActivity : ComponentActivity() {
                     appShortcutRepository = AndroidAppShortcutRepository(this),
                 ),
             appVisibilityRepository = SharedPreferencesAppVisibilityRepository(this),
-            homeLayoutRepository = SharedPreferencesHomeLayoutRepository(this),
-            launcherSettingsRepository = SharedPreferencesLauncherSettingsRepository(this),
+            homeLayoutRepository = homeLayoutRepository,
+            launcherSettingsRepository = launcherSettingsRepository,
             platformDependencies =
                 LauncherShellPlatformDependencies(
                     notificationRepository = activeNotificationRepository,
@@ -113,6 +119,24 @@ class MainActivity : ComponentActivity() {
             }
         }
 
+    private val createBackupDocument =
+        registerForActivityResult(
+            ActivityResultContracts.CreateDocument(BACKUP_DOCUMENT_MIME_TYPE),
+        ) { uri ->
+            uri?.let { selectedUri ->
+                exportLauncherBackup(
+                    activity = this,
+                    uri = selectedUri,
+                    document =
+                        launcherBackupDocument(
+                            storedLayoutSet = homeLayoutRepository.loadHomeLayoutSet(),
+                            activeLayout = shellViewModel.state.value.homeLayout,
+                            launcherSettings = shellViewModel.state.value.launcherSettings,
+                        ),
+                )
+            }
+        }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         wallpaperController.showSystemWallpaper()
@@ -162,6 +186,7 @@ class MainActivity : ComponentActivity() {
                     viewModel = shellViewModel,
                     notificationAccessGateway = notificationAccessGateway,
                     openIntent = ::startActivity,
+                    exportBackup = { createBackupDocument.launch(BACKUP_DOCUMENT_NAME) },
                 )
 
         if (!handled) {
@@ -321,6 +346,30 @@ private data class PendingWidgetBind(
     val label: String,
     val preferredSpan: GridSpan,
 )
+
+private const val BACKUP_DOCUMENT_MIME_TYPE = "application/json"
+private const val BACKUP_DOCUMENT_NAME = "riffle-backup.json"
+
+private fun exportLauncherBackup(
+    activity: ComponentActivity,
+    uri: Uri,
+    document: LauncherBackupDocument,
+) {
+    val backupJson = encodeLauncherBackupDocument(document)
+
+    runCatching {
+        activity.contentResolver.openOutputStream(uri)?.use { output ->
+            output.write(backupJson.toByteArray(Charsets.UTF_8))
+        } ?: error("Could not open backup destination")
+    }.fold(
+        onSuccess = {
+            Toast.makeText(activity, "Backup exported", Toast.LENGTH_SHORT).show()
+        },
+        onFailure = {
+            Toast.makeText(activity, "Backup export failed", Toast.LENGTH_SHORT).show()
+        },
+    )
+}
 
 private fun widgetSpanAdjustmentMessage(
     viewModel: LauncherShellViewModel,

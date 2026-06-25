@@ -18,6 +18,38 @@ import org.junit.Test
 
 class LauncherShellViewModeViewModelTest {
     @Test
+    fun backupDocumentPreservesStoredLayoutSet() {
+        val standardKey = HomeLayoutKey(LauncherViewMode.STANDARD_APP_DRAWER)
+        val libraryKey = HomeLayoutKey(LauncherViewMode.HOME_SCREEN_LIBRARY)
+        val layoutSet =
+            HomeLayoutSet(
+                activeKey = standardKey,
+                layouts =
+                    mapOf(
+                        standardKey to HomeLayoutDefaults.standard(),
+                        libraryKey to
+                            HomeLayoutDefaults.standard()
+                                .copy(viewMode = LauncherViewMode.HOME_SCREEN_LIBRARY),
+                    ),
+            )
+        val repository = FakeHomeLayoutRepository().also { it.savedLayoutSet = layoutSet }
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                homeLayoutRepository = repository,
+            )
+
+        val backupDocument =
+            launcherBackupDocument(
+                storedLayoutSet = repository.loadHomeLayoutSet(),
+                activeLayout = viewModel.state.value.homeLayout,
+                launcherSettings = viewModel.state.value.launcherSettings,
+            )
+
+        assertEquals(layoutSet, backupDocument.homeLayoutSet)
+    }
+
+    @Test
     fun savesLauncherViewModeSelection() {
         val camera = app(label = "Camera")
         val repository = FakeHomeLayoutRepository(savedLayout = HomeLayoutDefaults.standard())

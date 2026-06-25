@@ -149,6 +149,22 @@ private fun SettingsPageContent(
                 onAction = onAction,
             )
         }
+        SettingsSection(title = "Backup") {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                SettingsTextColumn(
+                    modifier = Modifier.weight(1f),
+                    title = "Launcher backup",
+                    subtitle = "Layouts and settings",
+                )
+                TextButton(onClick = { onAction(LauncherShellAction.ExportLauncherBackup) }) {
+                    SettingsButtonText(text = "Export")
+                }
+            }
+        }
         SettingsSection(title = "Hidden apps") {
             HiddenAppsSetting(
                 apps = hiddenApps,
