@@ -2,5 +2,6 @@
     <style name="Theme.Riffle" parent="android:style/Theme.Material.NoActionBar">
         <item name="android:windowActionBar">false</item>
         <item name="android:windowNoTitle">true</item>
+        <item name="android:forceDarkAllowed">false</item>
     </style>
 </resources>

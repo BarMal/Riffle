@@ -1,26 +1,36 @@
 package com.riffle.app.launcher
 
 import android.os.Build
+import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
+import androidx.core.view.WindowCompat
 
 @Composable
 fun RiffleLauncherTheme(content: @Composable () -> Unit) {
     val darkTheme = isSystemInDarkTheme()
     val context = LocalContext.current
     val colorScheme =
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        } else {
-            if (darkTheme) riffleDarkColorScheme else riffleLightColorScheme
+        when {
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && darkTheme -> dynamicDarkColorScheme(context)
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> dynamicLightColorScheme(context)
+            else -> fallbackScheme(darkTheme = darkTheme)
         }
+
+    RiffleSystemBars(
+        colorScheme = colorScheme,
+        darkTheme = darkTheme,
+    )
 
     MaterialTheme(
         colorScheme = colorScheme,
@@ -28,11 +38,30 @@ fun RiffleLauncherTheme(content: @Composable () -> Unit) {
     )
 }
 
-internal fun supportsDynamicMaterialColor(sdkInt: Int): Boolean = sdkInt >= ANDROID_12_API_LEVEL
+internal fun supportsDynamicMaterialColor(sdkInt: Int): Boolean = sdkInt >= Build.VERSION_CODES.S
 
-private const val ANDROID_12_API_LEVEL = 31
+internal fun fallbackScheme(darkTheme: Boolean): ColorScheme = if (darkTheme) darkScheme else lightScheme
 
-private val riffleLightColorScheme =
+@Composable
+private fun RiffleSystemBars(
+    colorScheme: ColorScheme,
+    darkTheme: Boolean,
+) {
+    val window = LocalActivity.current?.window ?: return
+    val statusBarColor = Color.Transparent.toArgb()
+    val navigationBarColor = colorScheme.background.toArgb()
+
+    SideEffect {
+        window.statusBarColor = statusBarColor
+        window.navigationBarColor = navigationBarColor
+        WindowCompat.getInsetsController(window, window.decorView).apply {
+            isAppearanceLightStatusBars = !darkTheme
+            isAppearanceLightNavigationBars = !darkTheme
+        }
+    }
+}
+
+internal val lightScheme =
     lightColorScheme(
         primary = Color(0xFF4D5C92),
         onPrimary = Color.White,
@@ -58,7 +87,7 @@ private val riffleLightColorScheme =
         onErrorContainer = Color(0xFF410002),
     )
 
-private val riffleDarkColorScheme =
+internal val darkScheme =
     darkColorScheme(
         primary = Color(0xFFB7C4FF),
         onPrimary = Color(0xFF1E2E61),
