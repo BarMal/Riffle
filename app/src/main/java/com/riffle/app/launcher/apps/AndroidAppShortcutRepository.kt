@@ -6,6 +6,7 @@ import android.content.pm.LauncherApps
 import android.content.pm.ShortcutInfo
 import android.os.Process
 import android.os.UserHandle
+import android.os.UserManager
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.apps.AppShortcutId
@@ -15,10 +16,11 @@ import com.riffle.core.domain.launcher.apps.InstalledApp
 
 internal class AndroidAppShortcutRepository(
     context: Context,
-    private val userHandle: UserHandle = Process.myUserHandle(),
+    private val currentUser: UserHandle = Process.myUserHandle(),
     private val mapper: AndroidAppShortcutMapper = AndroidAppShortcutMapper(),
 ) : AppShortcutRepository {
     private val launcherApps = context.getSystemService(LauncherApps::class.java)
+    private val userManager = context.getSystemService(UserManager::class.java)
 
     override fun shortcutsFor(apps: List<InstalledApp>): AppShortcutsByApp =
         apps.associate { app -> app.identity to app.shortcuts() }
@@ -26,7 +28,10 @@ internal class AndroidAppShortcutRepository(
 
     private fun InstalledApp.shortcuts(): List<AppShortcut> =
         runCatching {
-            launcherApps.getShortcuts(shortcutQuery, userHandle)
+            launcherApps.getShortcuts(
+                shortcutQuery,
+                identity.profile.toUserHandle(userManager.userProfiles, currentUser),
+            )
                 .orEmpty()
                 .map { shortcut -> mapper.map(identity = identity, shortcut = shortcut.toAndroidShortcut()) }
         }.getOrDefault(emptyList())

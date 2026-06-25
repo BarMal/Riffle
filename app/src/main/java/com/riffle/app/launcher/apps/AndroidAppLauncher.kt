@@ -5,7 +5,8 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.LauncherApps
 import android.net.Uri
-import android.os.Process
+import android.os.UserHandle
+import android.os.UserManager
 import android.provider.Settings
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppShortcut
@@ -14,10 +15,19 @@ class AndroidAppLauncher(
     private val context: Context,
 ) {
     private val launcherApps by lazy { context.getSystemService(LauncherApps::class.java) }
+    private val userManager by lazy { context.getSystemService(UserManager::class.java) }
 
     fun launch(identity: AppIdentity): Boolean =
         runCatching {
-            context.startActivity(identity.launchIntent)
+            launcherApps.startMainActivity(
+                ComponentName(
+                    identity.packageName.value,
+                    identity.activityName.value,
+                ),
+                identity.userHandle,
+                null,
+                null,
+            )
         }.isSuccess
 
     fun launchShortcut(shortcut: AppShortcut): Boolean =
@@ -27,7 +37,7 @@ class AndroidAppLauncher(
                 shortcut.id.value,
                 null,
                 null,
-                Process.myUserHandle(),
+                shortcut.appIdentity.userHandle,
             )
         }.isSuccess
 
@@ -40,6 +50,9 @@ class AndroidAppLauncher(
         runCatching {
             context.startActivity(identity.uninstallIntent)
         }.isSuccess
+
+    private val AppIdentity.userHandle: UserHandle
+        get() = profile.toUserHandle(userManager.userProfiles)
 }
 
 internal val AppIdentity.launchIntent: Intent
