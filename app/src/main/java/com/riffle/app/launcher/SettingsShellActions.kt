@@ -7,6 +7,7 @@ fun LauncherShellAction.handleSettingsAction(
     viewModel: LauncherShellViewModel,
     notificationAccessGateway: AndroidNotificationAccessGateway,
     openIntent: (Intent) -> Unit,
+    exportBackup: () -> Unit,
 ): Boolean =
     when (this) {
         is LauncherShellAction.SelectWallpaperSource -> {
@@ -33,6 +34,11 @@ fun LauncherShellAction.handleSettingsAction(
             runCatching {
                 openIntent(notificationAccessGateway.createNotificationListenerSettingsIntent())
             }
+            true
+        }
+
+        LauncherShellAction.ExportLauncherBackup -> {
+            exportBackup()
             true
         }
 
