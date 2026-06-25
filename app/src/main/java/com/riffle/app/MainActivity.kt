@@ -46,7 +46,7 @@ class MainActivity : ComponentActivity() {
             firstRunRepository = SharedPreferencesFirstRunRepository(this),
             installedAppRepository =
                 PackageManagerInstalledAppRepository(
-                    packageManager = packageManager,
+                    context = this,
                     appShortcutRepository = AndroidAppShortcutRepository(this),
                 ),
             appVisibilityRepository = SharedPreferencesAppVisibilityRepository(this),

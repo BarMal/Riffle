@@ -1,6 +1,7 @@
 package com.riffle.app.launcher.widgets
 
 import android.appwidget.AppWidgetProviderInfo
+import com.riffle.app.launcher.apps.toAppProfile
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppProfile
 import com.riffle.core.domain.launcher.widgets.InstalledWidgetProvider
@@ -15,7 +16,7 @@ class AndroidInstalledWidgetProviderMapper {
                 WidgetProviderIdentity(
                     packageName = AppPackageName(provider.packageName),
                     className = WidgetProviderClassName(provider.className),
-                    profile = provider.profile.toAppProfile(),
+                    profile = provider.profile?.toAppProfile() ?: AppProfile.personal(),
                 ),
             label = provider.label.ifBlank { provider.packageName },
             description = provider.description?.takeIf(String::isNotBlank),
@@ -33,6 +34,4 @@ class AndroidInstalledWidgetProviderMapper {
             supportsVerticalResize =
                 provider.resizeMode and AppWidgetProviderInfo.RESIZE_VERTICAL != 0,
         )
-
-    private fun Any?.toAppProfile(): AppProfile = AppProfile.personal()
 }
