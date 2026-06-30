@@ -149,26 +149,11 @@ private fun SettingsPageContent(
                 onAction = onAction,
             )
         }
+        SettingsSection(title = "Apps") {
+            AppRefreshSetting(onAction = onAction)
+        }
         SettingsSection(title = "Backup") {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                SettingsTextColumn(
-                    modifier = Modifier.weight(1f),
-                    title = "Launcher backup",
-                    subtitle = "Layouts and settings",
-                )
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    TextButton(onClick = { onAction(LauncherShellAction.RequestImportLauncherBackup) }) {
-                        SettingsButtonText(text = "Import")
-                    }
-                    TextButton(onClick = { onAction(LauncherShellAction.ExportLauncherBackup) }) {
-                        SettingsButtonText(text = "Export")
-                    }
-                }
-            }
+            BackupSetting(onAction = onAction)
         }
         SettingsSection(title = "Hidden apps") {
             HiddenAppsSetting(

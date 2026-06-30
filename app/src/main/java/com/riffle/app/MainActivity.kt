@@ -337,13 +337,19 @@ class MainActivity : ComponentActivity() {
 
             is LauncherShellAction.HideApp,
             is LauncherShellAction.UnhideApp,
+            LauncherShellAction.RefreshInstalledApps,
             is LauncherShellAction.AppDrawerQueryChanged,
             is LauncherShellAction.AppDrawerProfileFilterSelected,
             is LauncherShellAction.SearchQueryChanged,
             is LauncherShellAction.SearchProfileFilterSelected,
             LauncherShellAction.OpenWidgetPicker,
             LauncherShellAction.CloseWidgetPicker,
-            -> shellViewModel.onAppActionSelected(action)
+            -> {
+                shellViewModel.onAppActionSelected(action)
+                if (action == LauncherShellAction.RefreshInstalledApps) {
+                    Toast.makeText(this, "App list refreshed", Toast.LENGTH_SHORT).show()
+                }
+            }
 
             else -> Unit
         }

@@ -115,6 +115,8 @@ sealed interface LauncherShellAction {
 
     data class AppDrawerQueryChanged(val query: String) : LauncherShellAction
 
+    data object RefreshInstalledApps : LauncherShellAction
+
     data class AppDrawerProfileFilterSelected(
         val filter: AppDrawerProfileFilter,
     ) : LauncherShellAction
