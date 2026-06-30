@@ -1,5 +1,6 @@
 package com.riffle.app.launcher
 
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -27,7 +28,9 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -67,6 +70,7 @@ internal fun StandardHome(
     val openedFolderId = remember { mutableStateOf<LauncherItemId?>(null) }
     val swipeThresholdPx = with(LocalDensity.current) { HOME_SWIPE_THRESHOLD_DP.dp.toPx() }
     val pageDragOffsetPx = remember { mutableFloatStateOf(0f) }
+    val pageDragReleaseCount = remember { mutableIntStateOf(0) }
     val homeDragSession = remember { mutableStateOf<HomeDragSession?>(null) }
     val swipeNavigationState =
         HomeSwipeNavigationState(
@@ -85,6 +89,15 @@ internal fun StandardHome(
             onAction = onAction,
         )
 
+    LaunchedEffect(pageDragReleaseCount.intValue, visibleLayout.selectedPageId) {
+        val releaseOffsetPx = pageDragOffsetPx.floatValue
+        if (releaseOffsetPx != 0f) {
+            Animatable(releaseOffsetPx).animateTo(0f) {
+                pageDragOffsetPx.floatValue = value
+            }
+        }
+    }
+
     StandardHomeColumn(
         state =
             StandardHomeContentState(
@@ -98,6 +111,7 @@ internal fun StandardHome(
         appIconLoader = appIconLoader,
         actions = actions,
         onPageDragOffsetChange = { offsetPx -> pageDragOffsetPx.floatValue = offsetPx },
+        onPageDragReleased = { pageDragReleaseCount.intValue += 1 },
     )
     if (presentation.widgetPicker.isOpen) {
         WidgetPickerDialog(
@@ -123,6 +137,7 @@ private fun StandardHomeColumn(
     appIconLoader: AppIconLoader,
     actions: HomeWorkspaceActions,
     onPageDragOffsetChange: (Float) -> Unit,
+    onPageDragReleased: () -> Unit,
 ) {
     Column(
         modifier =
@@ -160,6 +175,7 @@ private fun StandardHomeColumn(
                     .homeSwipeNavigation(
                         state = state.swipeNavigationState,
                         onPageDragOffsetChange = onPageDragOffsetChange,
+                        onPageDragReleased = onPageDragReleased,
                         onAction = actions.onAction,
                     ),
         )
