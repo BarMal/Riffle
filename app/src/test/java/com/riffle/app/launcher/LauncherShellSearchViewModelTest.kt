@@ -11,6 +11,7 @@ import com.riffle.core.domain.launcher.apps.AppShortcutRepository
 import com.riffle.core.domain.launcher.apps.AppShortcutsByApp
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.apps.InstalledAppRepository
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -109,7 +110,7 @@ class LauncherShellSearchViewModelTest {
                 app(label = "Camera", profile = AppProfile.personal()),
                 app(label = "Sheets", profile = AppProfile.work()),
             )
-        viewModel.refreshInstalledApps()
+        runBlocking { viewModel.refreshInstalledApps().join() }
 
         assertEquals(AppDrawerProfileFilter.WORK, viewModel.state.value.searchProfileFilter)
         assertEquals(listOf("Sheets"), viewModel.state.value.searchResults.map { app -> app.label })

@@ -35,6 +35,7 @@ import com.riffle.core.domain.launcher.widgets.InstalledWidgetProviderRepository
 import com.riffle.core.domain.launcher.widgets.WidgetProviderClassName
 import com.riffle.core.domain.launcher.widgets.WidgetProviderDimensions
 import com.riffle.core.domain.launcher.widgets.WidgetProviderIdentity
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -171,7 +172,7 @@ class LauncherShellViewModelTest {
             )
 
         repository.apps = listOf(app(label = "Calendar"))
-        viewModel.refreshInstalledApps()
+        runBlocking { viewModel.refreshInstalledApps().join() }
 
         assertEquals(listOf("Calendar"), viewModel.state.value.installedApps.map { app -> app.label })
     }
@@ -186,7 +187,7 @@ class LauncherShellViewModelTest {
             )
 
         repository.apps = listOf(app(label = "Calendar"))
-        viewModel.onAppActionSelected(LauncherShellAction.RefreshInstalledApps)
+        runBlocking { viewModel.onAppActionSelected(LauncherShellAction.RefreshInstalledApps)?.join() }
 
         assertEquals(listOf("Calendar"), viewModel.state.value.installedApps.map { app -> app.label })
     }
@@ -222,7 +223,7 @@ class LauncherShellViewModelTest {
             )
 
         repository.notifications = listOf(notification(key = "camera-1", packageName = "com.riffle.camera"))
-        viewModel.refreshInstalledApps()
+        runBlocking { viewModel.refreshInstalledApps().join() }
 
         assertEquals(1, viewModel.state.value.notificationCountsByPackage[AppPackageName("com.riffle.camera")])
     }
@@ -260,7 +261,7 @@ class LauncherShellViewModelTest {
         viewModel.onAppActionSelected(LauncherShellAction.SearchQueryChanged("cal"))
 
         repository.apps = listOf(app(label = "Calendar"))
-        viewModel.refreshInstalledApps()
+        runBlocking { viewModel.refreshInstalledApps().join() }
 
         assertEquals("cal", viewModel.state.value.searchQuery)
         assertEquals(listOf("Calendar"), viewModel.state.value.searchResults.map { app -> app.label })

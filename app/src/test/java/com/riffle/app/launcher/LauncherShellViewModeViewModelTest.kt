@@ -18,6 +18,7 @@ import com.riffle.core.domain.launcher.home.WallpaperSource
 import com.riffle.core.domain.launcher.settings.AppearanceSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettingsRepository
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -138,7 +139,7 @@ class LauncherShellViewModeViewModelTest {
             )
 
         installedAppRepository.apps = listOf(camera, calendar)
-        viewModel.refreshInstalledApps()
+        runBlocking { viewModel.refreshInstalledApps().join() }
 
         assertEquals(
             listOf(camera.identity, calendar.identity),

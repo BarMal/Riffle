@@ -18,6 +18,7 @@ import com.riffle.core.domain.launcher.home.HomeLayoutRepository
 import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.home.LauncherPage
 import com.riffle.core.domain.launcher.home.LauncherPageId
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -54,7 +55,7 @@ class LauncherShellHiddenAppsViewModelTest {
             )
 
         appVisibilityRepository.hiddenApps = setOf(camera.identity)
-        viewModel.refreshInstalledApps()
+        runBlocking { viewModel.refreshInstalledApps().join() }
 
         assertEquals(listOf(docs.identity), viewModel.state.value.installedApps.map { app -> app.identity })
     }
@@ -71,7 +72,7 @@ class LauncherShellHiddenAppsViewModelTest {
                 appVisibilityRepository = appVisibilityRepository,
             )
 
-        viewModel.onAppActionSelected(LauncherShellAction.HideApp(camera.identity))
+        runBlocking { viewModel.onAppActionSelected(LauncherShellAction.HideApp(camera.identity))?.join() }
 
         assertEquals(setOf(camera.identity), appVisibilityRepository.hiddenApps)
         assertEquals(listOf(docs.identity), viewModel.state.value.installedApps.map { app -> app.identity })
@@ -113,7 +114,7 @@ class LauncherShellHiddenAppsViewModelTest {
                 homeLayoutRepository = homeLayoutRepository,
             )
 
-        viewModel.onAppActionSelected(LauncherShellAction.HideApp(camera.identity))
+        runBlocking { viewModel.onAppActionSelected(LauncherShellAction.HideApp(camera.identity))?.join() }
         viewModel.onAddAppToHome(maps)
 
         val shortcut = viewModel.state.value.homeLayout.selectedPage.items.single() as AppShortcutItem
@@ -141,7 +142,7 @@ class LauncherShellHiddenAppsViewModelTest {
                 homeLayoutRepository = homeLayoutRepository,
             )
 
-        viewModel.onAppActionSelected(LauncherShellAction.HideApp(phone.identity))
+        runBlocking { viewModel.onAppActionSelected(LauncherShellAction.HideApp(phone.identity))?.join() }
         viewModel.onDockEdited(LauncherShellAction.AddAppToDock(camera))
 
         val shortcut = viewModel.state.value.homeLayout.dock.items.single() as AppShortcutItem
@@ -183,7 +184,7 @@ class LauncherShellHiddenAppsViewModelTest {
             )
 
         installedAppRepository.apps = listOf(maps)
-        viewModel.refreshInstalledApps()
+        runBlocking { viewModel.refreshInstalledApps().join() }
         viewModel.onAddAppToHome(maps)
 
         val shortcut = viewModel.state.value.homeLayout.selectedPage.items.single() as AppShortcutItem
@@ -212,7 +213,7 @@ class LauncherShellHiddenAppsViewModelTest {
             )
 
         installedAppRepository.apps = listOf(camera)
-        viewModel.refreshInstalledApps()
+        runBlocking { viewModel.refreshInstalledApps().join() }
         viewModel.onDockEdited(LauncherShellAction.AddAppToDock(camera))
 
         val shortcut = viewModel.state.value.homeLayout.dock.items.single() as AppShortcutItem
@@ -232,7 +233,7 @@ class LauncherShellHiddenAppsViewModelTest {
                 appVisibilityRepository = appVisibilityRepository,
             )
 
-        viewModel.onAppActionSelected(LauncherShellAction.UnhideApp(camera.identity))
+        runBlocking { viewModel.onAppActionSelected(LauncherShellAction.UnhideApp(camera.identity))?.join() }
 
         assertEquals(emptySet<AppIdentity>(), appVisibilityRepository.hiddenApps)
         assertEquals(

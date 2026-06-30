@@ -1,6 +1,7 @@
 package com.riffle.app.launcher
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.riffle.core.domain.launcher.HomeRoleStatus
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.LauncherShellStateReducer
@@ -37,9 +38,13 @@ import com.riffle.core.domain.launcher.notifications.NotificationStaleFilter
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettingsRepository
 import com.riffle.core.domain.launcher.widgets.WidgetProviderCatalog
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
 class LauncherShellViewModel(
     private val firstRunRepository: FirstRunRepository,
@@ -48,6 +53,7 @@ class LauncherShellViewModel(
     private val homeLayoutRepository: HomeLayoutRepository = NoopHomeLayoutRepository,
     private val launcherSettingsRepository: LauncherSettingsRepository = NoopLauncherSettingsRepository,
     private val platformDependencies: LauncherShellPlatformDependencies = LauncherShellPlatformDependencies(),
+    private val refreshDispatcher: CoroutineDispatcher = Dispatchers.Default,
 ) : ViewModel() {
     private val reducer = LauncherShellStateReducer()
     private val appCatalog = InstalledAppCatalog()
@@ -64,6 +70,7 @@ class LauncherShellViewModel(
     private val dockEngine = DockEngine()
     private val folderEngine = FolderEngine()
     private val widgetEngine = WidgetEngine()
+    private var refreshJob: Job? = null
 
     private val mutableState =
         MutableStateFlow(
@@ -112,28 +119,40 @@ class LauncherShellViewModel(
             )
     }
 
-    fun refreshInstalledApps() {
-        mutableState.value =
-            mutableState.value
-                .withInstalledApps(installedAppRepository, appVisibilityRepository, appCatalog)
-                .copy(installedWidgetProviders = platformDependencies.installedWidgetProviders(widgetProviderCatalog))
-                .withoutUnavailableApps(homeLayoutRepository)
-                .withHomeScreenLibraryApps(homeLayoutRepository)
-                .withAppShortcuts(appShortcutRepository, appCatalog)
-                .withNotificationState(
-                    notificationRepository = notificationRepository,
-                    appNotificationCounter = appNotificationCounter,
-                    appNotificationGrouper = appNotificationGrouper,
-                    notificationStaleFilter = notificationStaleFilter,
-                    nowEpochMillis = epochMillisProvider.nowEpochMillis(),
-                )
+    fun refreshInstalledApps(): Job {
+        refreshJob?.cancel()
+        val job =
+            viewModelScope.launch(refreshDispatcher) {
+                mutableState.value =
+                    mutableState.value
+                        .withInstalledApps(installedAppRepository, appVisibilityRepository, appCatalog)
+                        .copy(
+                            installedWidgetProviders =
+                                platformDependencies.installedWidgetProviders(widgetProviderCatalog),
+                        )
+                        .withoutUnavailableApps(homeLayoutRepository)
+                        .withHomeScreenLibraryApps(homeLayoutRepository)
+                        .withAppShortcuts(appShortcutRepository, appCatalog)
+                        .withNotificationState(
+                            notificationRepository = notificationRepository,
+                            appNotificationCounter = appNotificationCounter,
+                            appNotificationGrouper = appNotificationGrouper,
+                            notificationStaleFilter = notificationStaleFilter,
+                            nowEpochMillis = epochMillisProvider.nowEpochMillis(),
+                        )
+            }
+        refreshJob = job
+
+        return job
     }
 
-    fun onAppActionSelected(action: LauncherShellAction) {
+    fun onAppActionSelected(action: LauncherShellAction): Job? {
+        var launchedRefresh: Job? = null
+
         mutableState.value =
             when (action) {
                 LauncherShellAction.RefreshInstalledApps -> {
-                    refreshInstalledApps()
+                    launchedRefresh = refreshInstalledApps()
                     mutableState.value
                 }
 
@@ -190,7 +209,7 @@ class LauncherShellViewModel(
                 -> {
                     if (action is LauncherShellAction.HideApp) appVisibilityRepository.hideApp(action.identity)
                     if (action is LauncherShellAction.UnhideApp) appVisibilityRepository.showApp(action.identity)
-                    refreshInstalledApps()
+                    launchedRefresh = refreshInstalledApps()
                     mutableState.value
                 }
 
@@ -202,6 +221,8 @@ class LauncherShellViewModel(
 
                 else -> mutableState.value
             }
+
+        return launchedRefresh
     }
 
     fun onAddAppToHome(app: InstalledApp) {
