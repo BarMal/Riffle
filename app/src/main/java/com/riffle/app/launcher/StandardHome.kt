@@ -330,12 +330,12 @@ private fun StandardHomeContentState.homeGridPresentation(): HomeGridPresentatio
 
 private fun HomeLayout.shouldShowDock(): Boolean =
     dock.isEnabled &&
-        dockRenderedSlotCount(
+        dockBackgroundVisible(
             capacity = dock.capacity,
             itemCount = dock.items.size,
             isEditing = false,
             backgroundSizing = dock.backgroundSizing,
-        ) > 0
+        )
 
 internal data class HomeDragSession(
     val item: LauncherItem,

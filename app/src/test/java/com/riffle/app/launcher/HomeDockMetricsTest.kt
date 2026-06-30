@@ -23,7 +23,6 @@ class HomeDockMetricsTest {
                 capacity = 5,
                 itemCount = 4,
                 isEditing = false,
-                backgroundSizing = DockBackgroundSizing.DYNAMIC,
             ),
         )
     }
@@ -36,7 +35,6 @@ class HomeDockMetricsTest {
                 capacity = 5,
                 itemCount = 6,
                 isEditing = false,
-                backgroundSizing = DockBackgroundSizing.DYNAMIC,
             ),
         )
     }
@@ -49,7 +47,6 @@ class HomeDockMetricsTest {
                 capacity = 5,
                 itemCount = 4,
                 isEditing = true,
-                backgroundSizing = DockBackgroundSizing.DYNAMIC,
             ),
         )
     }
@@ -62,20 +59,18 @@ class HomeDockMetricsTest {
                 capacity = 5,
                 itemCount = 0,
                 isEditing = false,
-                backgroundSizing = DockBackgroundSizing.DYNAMIC,
             ),
         )
     }
 
     @Test
-    fun fixedDockRendersCapacitySlots() {
+    fun fixedDockOnlyRendersOccupiedSlotsWhenNotEditing() {
         assertEquals(
-            5,
+            2,
             dockRenderedSlotCount(
                 capacity = 5,
                 itemCount = 2,
                 isEditing = false,
-                backgroundSizing = DockBackgroundSizing.FIXED,
             ),
         )
     }
@@ -87,6 +82,44 @@ class HomeDockMetricsTest {
             dockRenderedSlotCount(
                 capacity = 0,
                 itemCount = 4,
+                isEditing = false,
+            ),
+        )
+    }
+
+    @Test
+    fun emptyDynamicDockHidesBackground() {
+        assertEquals(
+            false,
+            dockBackgroundVisible(
+                capacity = 5,
+                itemCount = 0,
+                isEditing = false,
+                backgroundSizing = DockBackgroundSizing.DYNAMIC,
+            ),
+        )
+    }
+
+    @Test
+    fun emptyFixedDockShowsBackground() {
+        assertEquals(
+            true,
+            dockBackgroundVisible(
+                capacity = 5,
+                itemCount = 0,
+                isEditing = false,
+                backgroundSizing = DockBackgroundSizing.FIXED,
+            ),
+        )
+    }
+
+    @Test
+    fun zeroCapacityFixedDockHidesBackground() {
+        assertEquals(
+            false,
+            dockBackgroundVisible(
+                capacity = 0,
+                itemCount = 0,
                 isEditing = false,
                 backgroundSizing = DockBackgroundSizing.FIXED,
             ),
