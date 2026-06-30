@@ -54,14 +54,20 @@ fun LauncherShell(
         val heightDp = maxHeight.value.roundToInt()
         val deviceClass =
             remember(widthDp, heightDp) {
-                HomeLayoutDeviceClassClassifier().classify(
-                    screenWidthDp = widthDp,
-                    screenHeightDp = heightDp,
-                )
+                if (widthDp > 0 && heightDp > 0) {
+                    HomeLayoutDeviceClassClassifier().classify(
+                        screenWidthDp = widthDp,
+                        screenHeightDp = heightDp,
+                    )
+                } else {
+                    null
+                }
             }
 
         LaunchedEffect(deviceClass) {
-            onAction(LauncherShellAction.SelectHomeLayoutDeviceClass(deviceClass))
+            deviceClass?.let { layoutDeviceClass ->
+                onAction(LauncherShellAction.SelectHomeLayoutDeviceClass(layoutDeviceClass))
+            }
         }
 
         LauncherShellContent(
