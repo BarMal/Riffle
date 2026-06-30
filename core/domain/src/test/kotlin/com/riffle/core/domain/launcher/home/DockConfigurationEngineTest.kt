@@ -81,6 +81,18 @@ class DockConfigurationEngineTest {
     }
 
     @Test
+    fun updatesDockBackgroundSizing() {
+        val result =
+            engine.setDockBackgroundSizing(
+                layout = HomeLayoutDefaults.standard(),
+                sizing = DockBackgroundSizing.FIXED,
+            )
+
+        val updated = assertIs<DockEditResult.Updated>(result)
+        assertEquals(DockBackgroundSizing.FIXED, updated.layout.dock.backgroundSizing)
+    }
+
+    @Test
     fun rejectsDockBackgroundAlphaBelowMinimum() {
         val result =
             engine.setDockBackgroundAlpha(

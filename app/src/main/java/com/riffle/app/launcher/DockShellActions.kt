@@ -26,6 +26,9 @@ fun DockEngine.applyEdit(
         is LauncherShellAction.SelectDockBackgroundAlpha ->
             DockConfigurationEngine().setDockBackgroundAlpha(layout = layout, alphaPercent = action.alphaPercent)
 
+        is LauncherShellAction.SelectDockBackgroundSizing ->
+            DockConfigurationEngine().setDockBackgroundSizing(layout = layout, sizing = action.sizing)
+
         is LauncherShellAction.SelectDockItemSpacing ->
             DockConfigurationEngine().setDockItemSpacing(layout = layout, spacingDp = action.spacingDp)
 

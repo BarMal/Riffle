@@ -1,5 +1,6 @@
 package com.riffle.app.launcher
 
+import com.riffle.core.domain.launcher.home.DockBackgroundSizing
 import com.riffle.core.domain.launcher.home.DockModel
 import com.riffle.core.domain.launcher.home.GridDimensions
 import com.riffle.core.domain.launcher.home.HomeLayout
@@ -58,6 +59,7 @@ private fun encodeDock(dock: DockModel): JSONObject =
         .put("isEnabled", dock.isEnabled)
         .put("iconSizeDp", dock.iconSizeDp)
         .put("backgroundAlphaPercent", dock.backgroundAlphaPercent)
+        .put("backgroundSizing", dock.backgroundSizing.name)
         .put("itemSpacingDp", dock.itemSpacingDp)
         .put("capacity", dock.capacity)
         .put("items", JSONArray(dock.items.map(::encodeLauncherItem)))
@@ -71,6 +73,11 @@ private fun JSONObject.toDock(): DockModel =
                 "backgroundAlphaPercent",
                 HomeLayoutDefaults.standard().dock.backgroundAlphaPercent,
             ),
+        backgroundSizing =
+            optString("backgroundSizing", "")
+                .takeIf(String::isNotBlank)
+                ?.let { value -> runCatching { DockBackgroundSizing.valueOf(value) }.getOrNull() }
+                ?: HomeLayoutDefaults.standard().dock.backgroundSizing,
         itemSpacingDp = optInt("itemSpacingDp", HomeLayoutDefaults.standard().dock.itemSpacingDp),
         capacity = optInt("capacity", HomeLayoutDefaults.standard().dock.capacity),
         items = optJSONArray("items")?.toLauncherItems().orEmpty(),

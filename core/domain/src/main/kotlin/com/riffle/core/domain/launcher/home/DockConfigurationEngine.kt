@@ -58,6 +58,16 @@ class DockConfigurationEngine {
             else -> DockEditResult.Rejected(DockEditRejectionReason.INVALID_BACKGROUND_ALPHA)
         }
 
+    fun setDockBackgroundSizing(
+        layout: HomeLayout,
+        sizing: DockBackgroundSizing,
+    ): DockEditResult =
+        DockEditResult.Updated(
+            layout.copy(
+                dock = layout.dock.copy(backgroundSizing = sizing),
+            ),
+        )
+
     fun setDockItemSpacing(
         layout: HomeLayout,
         spacingDp: Int,
