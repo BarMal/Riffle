@@ -6,6 +6,7 @@ import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.apps.InstalledAppRepository
 import com.riffle.core.domain.launcher.home.AppShortcutItem
+import com.riffle.core.domain.launcher.home.FolderItem
 import com.riffle.core.domain.launcher.home.GridCell
 import com.riffle.core.domain.launcher.home.GridDimensions
 import com.riffle.core.domain.launcher.home.GridPlacement
@@ -86,6 +87,37 @@ class LauncherShellMoveHomeShortcutToCellViewModelTest {
         )
         assertEquals(listOf(2, 1), updatedLayout.pages.map { page -> page.items.size })
         assertEquals(updatedLayout, repository.savedLayout)
+    }
+
+    @Test
+    fun droppingAppShortcutOntoAppShortcutCreatesFolder() {
+        val camera = app(label = "Camera")
+        val calendar = app(label = "Calendar")
+        val repository = FakeHomeLayoutRepository()
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                installedAppRepository = FakeInstalledAppRepository(apps = listOf(camera, calendar)),
+                homeLayoutRepository = repository,
+            )
+        viewModel.onAddAppToHome(camera)
+        viewModel.onAddAppToHome(calendar)
+        val shortcuts = viewModel.state.value.homeLayout.selectedPage.items.filterIsInstance<AppShortcutItem>()
+        val source = shortcuts.single { shortcut -> shortcut.appIdentity == camera.identity }
+        val target = shortcuts.single { shortcut -> shortcut.appIdentity == calendar.identity }
+
+        viewModel.onHomeShortcutEdited(
+            LauncherShellAction.MoveHomeShortcutToCell(
+                itemId = source.id,
+                cell = target.placement?.cell ?: error("Target shortcut should be placed"),
+            ),
+        )
+
+        val folder = viewModel.state.value.homeLayout.selectedPage.items.single() as FolderItem
+        assertEquals("Folder", folder.label)
+        assertEquals(target.placement, folder.placement)
+        assertEquals(listOf(calendar.identity, camera.identity), folder.items.map { item -> item.appIdentity })
+        assertEquals(viewModel.state.value.homeLayout, repository.savedLayout)
     }
 
     private class FakeFirstRunRepository : FirstRunRepository {
