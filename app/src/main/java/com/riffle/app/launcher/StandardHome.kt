@@ -149,8 +149,8 @@ private fun StandardHomeColumn(
                     pageCount = state.visibleLayout.pages.size,
                     selectedPageIndex = state.visibleLayout.selectedPageIndex,
                     dragSession = state.dragSession,
-                    pageDragOffsetPx = state.pageDragOffsetPx,
                 ),
+            pageDragOffsetPx = state.pageDragOffsetPx,
             presentation = state.homeGridPresentation(),
             appIconLoader = appIconLoader,
             actions = actions,
@@ -217,6 +217,7 @@ private fun HomeToolbar(onAction: (LauncherShellAction) -> Unit) {
 private fun AnimatedWorkspaceGrid(
     layout: HomeLayout,
     gridState: HomeGridState,
+    pageDragOffsetPx: Float,
     presentation: HomeGridPresentation,
     appIconLoader: AppIconLoader,
     actions: HomeWorkspaceActions,
@@ -231,7 +232,7 @@ private fun AnimatedWorkspaceGrid(
     BoxWithConstraints(modifier = modifier) {
         val widthPx = with(LocalDensity.current) { maxWidth.toPx() }
         val settledPageOffsetPx = (layout.selectedPageIndex - animatedPageIndex.value) * widthPx
-        val boundedDragOffsetPx = gridState.pageDragOffsetPx.coerceIn(-widthPx, widthPx)
+        val boundedDragOffsetPx = pageDragOffsetPx.coerceIn(-widthPx, widthPx)
 
         val animatedPageIndexValue = animatedPageIndex.value
 

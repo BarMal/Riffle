@@ -329,7 +329,6 @@ internal data class HomeGridState(
     val pageCount: Int,
     val selectedPageIndex: Int,
     val dragSession: HomeDragSession?,
-    val pageDragOffsetPx: Float,
 )
 
 internal data class HomeGridItemState(
