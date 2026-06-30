@@ -4,6 +4,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -22,7 +23,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.riffle.app.launcher.widgets.EmptyHomeWidgetViewFactory
@@ -38,6 +38,7 @@ import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClassClassifier
 import com.riffle.core.domain.launcher.home.WallpaperSource
+import kotlin.math.roundToInt
 
 @Composable
 fun LauncherShell(
@@ -47,25 +48,29 @@ fun LauncherShell(
     onAction: (LauncherShellAction) -> Unit,
 ) {
     val state by viewModel.state.collectAsState()
-    val configuration = LocalConfiguration.current
-    val deviceClass =
-        remember(configuration.screenWidthDp, configuration.screenHeightDp) {
-            HomeLayoutDeviceClassClassifier().classify(
-                screenWidthDp = configuration.screenWidthDp,
-                screenHeightDp = configuration.screenHeightDp,
-            )
+
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        val widthDp = maxWidth.value.roundToInt()
+        val heightDp = maxHeight.value.roundToInt()
+        val deviceClass =
+            remember(widthDp, heightDp) {
+                HomeLayoutDeviceClassClassifier().classify(
+                    screenWidthDp = widthDp,
+                    screenHeightDp = heightDp,
+                )
+            }
+
+        LaunchedEffect(deviceClass) {
+            onAction(LauncherShellAction.SelectHomeLayoutDeviceClass(deviceClass))
         }
 
-    LaunchedEffect(deviceClass) {
-        onAction(LauncherShellAction.SelectHomeLayoutDeviceClass(deviceClass))
+        LauncherShellContent(
+            state = state,
+            appIconLoader = appIconLoader,
+            widgetViewFactory = widgetViewFactory,
+            onAction = onAction,
+        )
     }
-
-    LauncherShellContent(
-        state = state,
-        appIconLoader = appIconLoader,
-        widgetViewFactory = widgetViewFactory,
-        onAction = onAction,
-    )
 }
 
 @Composable
