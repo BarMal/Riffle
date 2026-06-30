@@ -177,6 +177,21 @@ class LauncherShellViewModelTest {
     }
 
     @Test
+    fun refreshInstalledAppsActionRefreshesInstalledApps() {
+        val repository = FakeInstalledAppRepository(apps = listOf(app(label = "Camera")))
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                installedAppRepository = repository,
+            )
+
+        repository.apps = listOf(app(label = "Calendar"))
+        viewModel.onAppActionSelected(LauncherShellAction.RefreshInstalledApps)
+
+        assertEquals(listOf("Calendar"), viewModel.state.value.installedApps.map { app -> app.label })
+    }
+
+    @Test
     fun loadsNotificationCountsIntoInitialState() {
         val viewModel =
             LauncherShellViewModel(

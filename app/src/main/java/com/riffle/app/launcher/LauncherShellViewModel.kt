@@ -132,6 +132,11 @@ class LauncherShellViewModel(
     fun onAppActionSelected(action: LauncherShellAction) {
         mutableState.value =
             when (action) {
+                LauncherShellAction.RefreshInstalledApps -> {
+                    refreshInstalledApps()
+                    mutableState.value
+                }
+
                 is LauncherShellAction.AppDrawerQueryChanged ->
                     mutableState.value.copy(
                         appDrawerQuery = action.query,
@@ -185,22 +190,8 @@ class LauncherShellViewModel(
                 -> {
                     if (action is LauncherShellAction.HideApp) appVisibilityRepository.hideApp(action.identity)
                     if (action is LauncherShellAction.UnhideApp) appVisibilityRepository.showApp(action.identity)
+                    refreshInstalledApps()
                     mutableState.value
-                        .withInstalledApps(installedAppRepository, appVisibilityRepository, appCatalog)
-                        .copy(
-                            installedWidgetProviders =
-                                platformDependencies.installedWidgetProviders(widgetProviderCatalog),
-                        )
-                        .withoutUnavailableApps(homeLayoutRepository)
-                        .withHomeScreenLibraryApps(homeLayoutRepository)
-                        .withAppShortcuts(appShortcutRepository, appCatalog)
-                        .withNotificationState(
-                            notificationRepository = notificationRepository,
-                            appNotificationCounter = appNotificationCounter,
-                            appNotificationGrouper = appNotificationGrouper,
-                            notificationStaleFilter = notificationStaleFilter,
-                            nowEpochMillis = epochMillisProvider.nowEpochMillis(),
-                        )
                 }
 
                 LauncherShellAction.OpenWidgetPicker,
