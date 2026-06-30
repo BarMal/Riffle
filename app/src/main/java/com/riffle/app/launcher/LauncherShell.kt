@@ -49,8 +49,11 @@ fun LauncherShell(
     val state by viewModel.state.collectAsState()
     val configuration = LocalConfiguration.current
     val deviceClass =
-        remember(configuration.screenWidthDp) {
-            HomeLayoutDeviceClassClassifier().classify(configuration.screenWidthDp)
+        remember(configuration.screenWidthDp, configuration.screenHeightDp) {
+            HomeLayoutDeviceClassClassifier().classify(
+                screenWidthDp = configuration.screenWidthDp,
+                screenHeightDp = configuration.screenHeightDp,
+            )
         }
 
     LaunchedEffect(deviceClass) {
