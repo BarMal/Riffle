@@ -270,17 +270,19 @@ class LauncherShellViewModel(
                 else ->
                     when (
                         val result =
-                            shortcutEngine.applyEdit(
+                            applyShortcutOrFolderDropEdit(
                                 action = action,
                                 layout = mutableState.value.homeLayout,
+                                shortcutEngine = shortcutEngine,
+                                folderEngine = folderEngine,
                             )
                     ) {
-                        is HomeShortcutResult.Updated ->
+                        is ShortcutOrFolderDropEditResult.Updated ->
                             mutableState.value
                                 .withHomeLayout(result.layout, homeLayoutRepository)
                                 .withLibraryReflowAfterShortcutMove(action, homeLayoutRepository)
 
-                        is HomeShortcutResult.Rejected -> mutableState.value
+                        ShortcutOrFolderDropEditResult.Rejected -> mutableState.value
                     }
             }
     }
@@ -529,7 +531,7 @@ private fun persistCompletedFirstRun(
     }
 }
 
-private fun HomeShortcutEngine.applyEdit(
+internal fun HomeShortcutEngine.applyEdit(
     action: LauncherShellAction,
     layout: HomeLayout,
 ): HomeShortcutResult =

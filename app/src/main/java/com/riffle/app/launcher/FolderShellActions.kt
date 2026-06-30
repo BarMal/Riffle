@@ -133,7 +133,7 @@ private fun PlacementRejectionReason.toFolderRejectionReason(): FolderEditReject
         PlacementRejectionReason.NO_AVAILABLE_CELL -> FolderEditRejectionReason.NO_AVAILABLE_CELL
     }
 
-private fun HomeLayout.nextFolderId(): LauncherItemId {
+internal fun HomeLayout.nextFolderId(): LauncherItemId {
     val id = "folder:${selectedPageId.value}:${nextFolderOrdinal()}"
 
     return LauncherItemId(id)
