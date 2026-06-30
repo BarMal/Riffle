@@ -6,8 +6,6 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -53,14 +51,20 @@ fun Dock(
             capacity = dock.capacity,
             itemCount = dock.items.size,
             isEditing = isEditing,
+        )
+    val isBackgroundVisible =
+        dockBackgroundVisible(
+            capacity = dock.capacity,
+            itemCount = dock.items.size,
+            isEditing = isEditing,
             backgroundSizing = dock.backgroundSizing,
         )
 
-    if (renderedSlotCount == 0) {
+    if (!isBackgroundVisible) {
         return
     }
 
-    Row(
+    Box(
         modifier =
             Modifier
                 .widthIn(max = DOCK_MAX_WIDTH_DP.dp)
@@ -73,23 +77,29 @@ fun Dock(
                     ),
                 )
                 .padding(horizontal = 14.dp, vertical = 10.dp),
-        horizontalArrangement = Arrangement.spacedBy(dock.itemSpacingDp.dp),
-        verticalAlignment = Alignment.CenterVertically,
+        contentAlignment = Alignment.Center,
     ) {
-        repeat(renderedSlotCount) { index ->
-            DockSlot(
-                modifier = dockSlotModifier(sizing = dock.backgroundSizing, iconSizeDp = dock.iconSizeDp),
-                state =
-                    DockSlotState(
-                        shortcut = dock.items.getOrNull(index) as? AppShortcutItem,
-                        shortcutIndex = index,
-                        shortcutCount = dock.items.size,
-                        iconSizeDp = dock.iconSizeDp,
-                        isEditing = isEditing,
-                    ),
-                presentation = presentation,
-                appIconLoader = appIconLoader,
-            )
+        if (renderedSlotCount > 0) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(dock.itemSpacingDp.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                repeat(renderedSlotCount) { index ->
+                    DockSlot(
+                        modifier = Modifier.size(dock.iconSizeDp.dp),
+                        state =
+                            DockSlotState(
+                                shortcut = dock.items.getOrNull(index) as? AppShortcutItem,
+                                shortcutIndex = index,
+                                shortcutCount = dock.items.size,
+                                iconSizeDp = dock.iconSizeDp,
+                                isEditing = isEditing,
+                            ),
+                        presentation = presentation,
+                        appIconLoader = appIconLoader,
+                    )
+                }
+            }
         }
     }
 }
@@ -103,25 +113,24 @@ internal fun dockRenderedSlotCount(
     capacity: Int,
     itemCount: Int,
     isEditing: Boolean,
-    backgroundSizing: DockBackgroundSizing,
 ): Int =
     when {
         capacity <= 0 -> 0
         isEditing -> capacity
-        backgroundSizing == DockBackgroundSizing.FIXED -> capacity
         else -> min(itemCount, capacity)
     }
 
-private fun RowScope.dockSlotModifier(
-    sizing: DockBackgroundSizing,
-    iconSizeDp: Int,
-): Modifier =
-    when (sizing) {
-        DockBackgroundSizing.DYNAMIC -> Modifier.size(iconSizeDp.dp)
-        DockBackgroundSizing.FIXED ->
-            Modifier
-                .weight(1f)
-                .fillMaxHeight()
+internal fun dockBackgroundVisible(
+    capacity: Int,
+    itemCount: Int,
+    isEditing: Boolean,
+    backgroundSizing: DockBackgroundSizing,
+): Boolean =
+    when {
+        capacity <= 0 -> false
+        backgroundSizing == DockBackgroundSizing.FIXED -> true
+        isEditing -> true
+        else -> itemCount > 0
     }
 
 private data class DockPresentation(
