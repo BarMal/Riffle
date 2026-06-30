@@ -6,6 +6,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 
 internal fun Modifier.homeSwipeNavigation(
     state: HomeSwipeNavigationState,
+    onPageDragStarted: () -> Unit,
     onPageDragOffsetChange: (Float) -> Unit,
     onPageDragReleased: () -> Unit,
     onAction: (LauncherShellAction) -> Unit,
@@ -28,6 +29,7 @@ internal fun Modifier.homeSwipeNavigation(
                 onDragStart = {
                     horizontalDragPx = 0f
                     verticalDragPx = 0f
+                    onPageDragStarted()
                     onPageDragOffsetChange(0f)
                 },
                 onDrag = { change, dragAmount ->

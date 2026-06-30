@@ -70,6 +70,7 @@ internal fun StandardHome(
     val openedFolderId = remember { mutableStateOf<LauncherItemId?>(null) }
     val swipeThresholdPx = with(LocalDensity.current) { HOME_SWIPE_THRESHOLD_DP.dp.toPx() }
     val pageDragOffsetPx = remember { mutableFloatStateOf(0f) }
+    val isPageDragActive = remember { mutableStateOf(false) }
     val pageDragReleaseCount = remember { mutableIntStateOf(0) }
     val homeDragSession = remember { mutableStateOf<HomeDragSession?>(null) }
     val swipeNavigationState =
@@ -89,7 +90,10 @@ internal fun StandardHome(
             onAction = onAction,
         )
 
-    LaunchedEffect(pageDragReleaseCount.intValue, visibleLayout.selectedPageId) {
+    LaunchedEffect(pageDragReleaseCount.intValue, visibleLayout.selectedPageId, isPageDragActive.value) {
+        if (isPageDragActive.value) {
+            return@LaunchedEffect
+        }
         val releaseOffsetPx = pageDragOffsetPx.floatValue
         if (releaseOffsetPx != 0f) {
             Animatable(releaseOffsetPx).animateTo(0f) {
@@ -110,8 +114,12 @@ internal fun StandardHome(
             ),
         appIconLoader = appIconLoader,
         actions = actions,
+        onPageDragStarted = { isPageDragActive.value = true },
         onPageDragOffsetChange = { offsetPx -> pageDragOffsetPx.floatValue = offsetPx },
-        onPageDragReleased = { pageDragReleaseCount.intValue += 1 },
+        onPageDragReleased = {
+            isPageDragActive.value = false
+            pageDragReleaseCount.intValue += 1
+        },
     )
     if (presentation.widgetPicker.isOpen) {
         WidgetPickerDialog(
@@ -136,6 +144,7 @@ private fun StandardHomeColumn(
     state: StandardHomeContentState,
     appIconLoader: AppIconLoader,
     actions: HomeWorkspaceActions,
+    onPageDragStarted: () -> Unit,
     onPageDragOffsetChange: (Float) -> Unit,
     onPageDragReleased: () -> Unit,
 ) {
@@ -174,6 +183,7 @@ private fun StandardHomeColumn(
                     .fillMaxWidth()
                     .homeSwipeNavigation(
                         state = state.swipeNavigationState,
+                        onPageDragStarted = onPageDragStarted,
                         onPageDragOffsetChange = onPageDragOffsetChange,
                         onPageDragReleased = onPageDragReleased,
                         onAction = actions.onAction,
