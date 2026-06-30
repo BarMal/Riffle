@@ -31,6 +31,7 @@ import com.riffle.app.launcher.handleNotificationAction
 import com.riffle.app.launcher.handleSettingsAction
 import com.riffle.app.launcher.isHomePageEditAction
 import com.riffle.app.launcher.launcherBackupDocument
+import com.riffle.app.launcher.notifications.ActiveNotificationRefreshCoordinator
 import com.riffle.app.launcher.notifications.AndroidNotificationAccessGateway
 import com.riffle.app.launcher.notifications.AndroidNotificationDismissalGateway
 import com.riffle.app.launcher.notifications.SharedPreferencesActiveNotificationRepository
@@ -80,6 +81,13 @@ class MainActivity : ComponentActivity() {
     private val wallpaperController by lazy { AndroidLauncherWallpaperController(window) }
     private val notificationAccessGateway by lazy { AndroidNotificationAccessGateway(this) }
     private val activeNotificationRepository by lazy { SharedPreferencesActiveNotificationRepository(this) }
+    private val activeNotificationRefreshCoordinator by lazy {
+        ActiveNotificationRefreshCoordinator(
+            notificationChangeSource = activeNotificationRepository,
+            dispatchOnMainThread = { action -> runOnUiThread { action() } },
+            refreshNotifications = { shellViewModel.refreshNotifications() },
+        )
+    }
     private val widgetHostGateway by lazy { AndroidWidgetHostGateway(this) }
     private var pendingWidgetBind: PendingWidgetBind? = null
 
@@ -159,11 +167,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         wallpaperController.showSystemWallpaper()
-        activeNotificationRepository.observeActiveNotifications {
-            runOnUiThread {
-                shellViewModel.refreshNotifications()
-            }
-        }
+        activeNotificationRefreshCoordinator.start()
         lifecycle.addObserver(packageChangeObserver)
         lifecycle.addObserver(widgetHostGateway)
 
