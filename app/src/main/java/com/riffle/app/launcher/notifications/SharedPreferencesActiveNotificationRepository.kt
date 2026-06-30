@@ -5,7 +5,9 @@ import android.content.SharedPreferences
 import com.riffle.core.domain.launcher.notifications.LauncherNotification
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationRepository
 
-class SharedPreferencesActiveNotificationRepository(context: Context) : LauncherNotificationRepository {
+class SharedPreferencesActiveNotificationRepository(context: Context) :
+    LauncherNotificationRepository,
+    ActiveNotificationChangeSource {
     private val preferences =
         context.getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE)
     private val listeners = mutableListOf<SharedPreferences.OnSharedPreferenceChangeListener>()
@@ -21,7 +23,7 @@ class SharedPreferencesActiveNotificationRepository(context: Context) : Launcher
             .apply()
     }
 
-    fun observeActiveNotifications(onChanged: () -> Unit) {
+    override fun observeActiveNotifications(onChanged: () -> Unit) {
         SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
             if (key == KEY_ACTIVE_NOTIFICATIONS) {
                 onChanged()
