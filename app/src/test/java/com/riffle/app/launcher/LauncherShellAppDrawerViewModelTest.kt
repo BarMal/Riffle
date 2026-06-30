@@ -12,6 +12,7 @@ import com.riffle.core.domain.launcher.apps.AppShortcutsByApp
 import com.riffle.core.domain.launcher.apps.AppVisibility
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.apps.InstalledAppRepository
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -92,7 +93,7 @@ class LauncherShellAppDrawerViewModelTest {
         viewModel.onAppActionSelected(LauncherShellAction.AppDrawerQueryChanged("cal"))
 
         repository.apps = listOf(app(label = "Calendar"))
-        viewModel.refreshInstalledApps()
+        runBlocking { viewModel.refreshInstalledApps().join() }
 
         assertEquals("cal", viewModel.state.value.appDrawerQuery)
         assertEquals(listOf("Calendar"), viewModel.state.value.appDrawerApps.map { app -> app.label })
@@ -146,7 +147,7 @@ class LauncherShellAppDrawerViewModelTest {
             )
 
         repository.apps = listOf(calendar)
-        viewModel.refreshInstalledApps()
+        runBlocking { viewModel.refreshInstalledApps().join() }
 
         assertEquals(listOf(calendar), repository.requestedShortcutApps)
         assertEquals(
@@ -226,7 +227,7 @@ class LauncherShellAppDrawerViewModelTest {
                 app(label = "Camera", profile = AppProfile.personal()),
                 app(label = "Sheets", profile = AppProfile.work()),
             )
-        viewModel.refreshInstalledApps()
+        runBlocking { viewModel.refreshInstalledApps().join() }
 
         assertEquals(AppDrawerProfileFilter.WORK, viewModel.state.value.appDrawerProfileFilter)
         assertEquals(listOf("Sheets"), viewModel.state.value.appDrawerApps.map { app -> app.label })

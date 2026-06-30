@@ -12,6 +12,7 @@ import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationRepository
 import com.riffle.core.domain.launcher.notifications.NotificationAgeBucket
 import com.riffle.core.domain.launcher.notifications.NotificationCategory
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -77,7 +78,7 @@ class LauncherShellNotificationStateTest {
                     category = NotificationCategory.EMAIL,
                 ),
             )
-        viewModel.refreshInstalledApps()
+        runBlocking { viewModel.refreshInstalledApps().join() }
 
         assertEquals(
             listOf(AppPackageName("com.riffle.camera"), AppPackageName("com.riffle.mail")),
