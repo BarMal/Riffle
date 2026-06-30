@@ -89,6 +89,32 @@ class LauncherShellNotificationStateTest {
     }
 
     @Test
+    fun refreshNotificationsDoesNotRefreshInstalledApps() {
+        val installedAppRepository = FakeInstalledAppRepository(apps = listOf(app(label = "Camera")))
+        val notificationRepository = FakeNotificationRepository()
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                installedAppRepository = installedAppRepository,
+                platformDependencies =
+                    LauncherShellPlatformDependencies(
+                        notificationRepository = notificationRepository,
+                    ),
+            )
+
+        installedAppRepository.apps = listOf(app(label = "Calendar"))
+        notificationRepository.notifications =
+            listOf(notification(key = "calendar-1", packageName = "com.riffle.calendar"))
+        runBlocking { viewModel.refreshNotifications().join() }
+
+        assertEquals(listOf("Camera"), viewModel.state.value.installedApps.map { app -> app.label })
+        assertEquals(
+            listOf(AppPackageName("com.riffle.calendar")),
+            viewModel.state.value.notificationGroupsByApp.map { group -> group.packageName },
+        )
+    }
+
+    @Test
     fun removesStaleClearableNotificationsFromLauncherState() {
         val nowEpochMillis = 10 * 24 * 60 * 60 * 1_000L
         val viewModel =

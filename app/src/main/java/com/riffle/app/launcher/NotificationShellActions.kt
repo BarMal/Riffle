@@ -9,7 +9,7 @@ fun LauncherShellAction.handleNotificationAction(
     when (this) {
         is LauncherShellAction.DismissNotifications -> {
             if (notificationDismissalGateway.dismissNotifications(keys)) {
-                viewModel.refreshInstalledApps()
+                viewModel.refreshNotifications()
             }
             true
         }
