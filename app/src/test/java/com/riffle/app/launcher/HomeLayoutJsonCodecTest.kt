@@ -5,6 +5,7 @@ import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppShortcutId
 import com.riffle.core.domain.launcher.home.AppShortcutItem
+import com.riffle.core.domain.launcher.home.DockBackgroundSizing
 import com.riffle.core.domain.launcher.home.FolderItem
 import com.riffle.core.domain.launcher.home.GridCell
 import com.riffle.core.domain.launcher.home.GridDimensions
@@ -245,6 +246,18 @@ class HomeLayoutJsonCodecTest {
         val decodedLayout = decodeHomeLayout(encodeHomeLayout(layout))
 
         assertEquals(85, decodedLayout.dock.backgroundAlphaPercent)
+    }
+
+    @Test
+    fun roundTripsDockBackgroundSizing() {
+        val layout =
+            HomeLayoutDefaults.standard().copy(
+                dock = HomeLayoutDefaults.standard().dock.copy(backgroundSizing = DockBackgroundSizing.FIXED),
+            )
+
+        val decodedLayout = decodeHomeLayout(encodeHomeLayout(layout))
+
+        assertEquals(DockBackgroundSizing.FIXED, decodedLayout.dock.backgroundSizing)
     }
 
     @Test
@@ -526,6 +539,35 @@ class HomeLayoutJsonCodecTest {
         assertEquals(
             HomeLayoutDefaults.standard().dock.backgroundAlphaPercent,
             decodedLayout.dock.backgroundAlphaPercent,
+        )
+    }
+
+    @Test
+    fun defaultsDockBackgroundSizingWhenOlderJsonDoesNotHaveIt() {
+        val decodedLayout =
+            decodeHomeLayout(
+                """
+                {
+                  "selectedPageId": "home",
+                  "pages": [
+                    {
+                      "id": "home",
+                      "columns": 4,
+                      "rows": 5,
+                      "items": []
+                    }
+                  ],
+                  "dock": {
+                    "capacity": 5,
+                    "items": []
+                  }
+                }
+                """.trimIndent(),
+            )
+
+        assertEquals(
+            HomeLayoutDefaults.standard().dock.backgroundSizing,
+            decodedLayout.dock.backgroundSizing,
         )
     }
 

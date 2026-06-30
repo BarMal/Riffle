@@ -278,6 +278,7 @@ class MainActivity : ComponentActivity() {
             is LauncherShellAction.SelectDockCapacity,
             is LauncherShellAction.SelectDockIconSize,
             is LauncherShellAction.SelectDockBackgroundAlpha,
+            is LauncherShellAction.SelectDockBackgroundSizing,
             is LauncherShellAction.SelectDockItemSpacing,
             is LauncherShellAction.RemoveDockShortcut,
             is LauncherShellAction.MoveDockShortcut,

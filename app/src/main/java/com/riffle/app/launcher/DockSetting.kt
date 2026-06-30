@@ -10,6 +10,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.riffle.core.domain.launcher.home.DockBackgroundSizing
 import com.riffle.core.domain.launcher.home.DockModel
 import com.riffle.core.domain.launcher.home.MAX_DOCK_BACKGROUND_ALPHA_PERCENT
 import com.riffle.core.domain.launcher.home.MAX_DOCK_ICON_SIZE_DP
@@ -39,6 +40,10 @@ internal fun DockSetting(
         )
         DockBackgroundAlphaSetting(
             alphaPercent = dock.backgroundAlphaPercent,
+            onAction = onAction,
+        )
+        DockBackgroundSizingSetting(
+            sizing = dock.backgroundSizing,
             onAction = onAction,
         )
         DockItemSpacingSetting(
@@ -127,6 +132,42 @@ private fun DockBackgroundAlphaSetting(
 }
 
 private const val DOCK_BACKGROUND_ALPHA_STEP_PERCENT = 5
+
+@Composable
+private fun DockBackgroundSizingSetting(
+    sizing: DockBackgroundSizing,
+    onAction: (LauncherShellAction) -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        SettingsTextColumn(
+            modifier = Modifier.weight(1f),
+            title = "Dock background size",
+            subtitle =
+                when (sizing) {
+                    DockBackgroundSizing.DYNAMIC -> "Dynamic"
+                    DockBackgroundSizing.FIXED -> "Fixed"
+                },
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            TextButton(
+                enabled = sizing != DockBackgroundSizing.DYNAMIC,
+                onClick = { onAction(LauncherShellAction.SelectDockBackgroundSizing(DockBackgroundSizing.DYNAMIC)) },
+            ) {
+                SettingsButtonText(text = "Dynamic")
+            }
+            TextButton(
+                enabled = sizing != DockBackgroundSizing.FIXED,
+                onClick = { onAction(LauncherShellAction.SelectDockBackgroundSizing(DockBackgroundSizing.FIXED)) },
+            ) {
+                SettingsButtonText(text = "Fixed")
+            }
+        }
+    }
+}
 
 @Composable
 private fun DockItemSpacingSetting(

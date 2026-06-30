@@ -6,6 +6,7 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -25,6 +26,7 @@ import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.apps.AppShortcutsByApp
 import com.riffle.core.domain.launcher.home.AppShortcutItem
+import com.riffle.core.domain.launcher.home.DockBackgroundSizing
 import com.riffle.core.domain.launcher.home.DockItemMoveDirection
 import com.riffle.core.domain.launcher.home.DockModel
 import kotlin.math.min
@@ -46,12 +48,23 @@ fun Dock(
             haptics = haptics,
             onAction = onAction,
         )
+    val renderedSlotCount =
+        dockRenderedSlotCount(
+            capacity = dock.capacity,
+            itemCount = dock.items.size,
+            isEditing = isEditing,
+            backgroundSizing = dock.backgroundSizing,
+        )
+
+    if (renderedSlotCount == 0) {
+        return
+    }
 
     Row(
         modifier =
             Modifier
                 .widthIn(max = DOCK_MAX_WIDTH_DP.dp)
-                .fillMaxWidth()
+                .then(if (dock.backgroundSizing == DockBackgroundSizing.FIXED) Modifier.fillMaxWidth() else Modifier)
                 .height(dockHeightDp(dock.iconSizeDp).dp)
                 .clip(RoundedCornerShape(28.dp))
                 .background(
@@ -63,19 +76,9 @@ fun Dock(
         horizontalArrangement = Arrangement.spacedBy(dock.itemSpacingDp.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        val renderedSlotCount =
-            dockRenderedSlotCount(
-                capacity = dock.capacity,
-                itemCount = dock.items.size,
-                isEditing = isEditing,
-            )
-
         repeat(renderedSlotCount) { index ->
             DockSlot(
-                modifier =
-                    Modifier
-                        .weight(1f)
-                        .fillMaxHeight(),
+                modifier = dockSlotModifier(sizing = dock.backgroundSizing, iconSizeDp = dock.iconSizeDp),
                 state =
                     DockSlotState(
                         shortcut = dock.items.getOrNull(index) as? AppShortcutItem,
@@ -100,12 +103,25 @@ internal fun dockRenderedSlotCount(
     capacity: Int,
     itemCount: Int,
     isEditing: Boolean,
+    backgroundSizing: DockBackgroundSizing,
 ): Int =
     when {
         capacity <= 0 -> 0
         isEditing -> capacity
-        itemCount <= 0 -> capacity
+        backgroundSizing == DockBackgroundSizing.FIXED -> capacity
         else -> min(itemCount, capacity)
+    }
+
+private fun RowScope.dockSlotModifier(
+    sizing: DockBackgroundSizing,
+    iconSizeDp: Int,
+): Modifier =
+    when (sizing) {
+        DockBackgroundSizing.DYNAMIC -> Modifier.size(iconSizeDp.dp)
+        DockBackgroundSizing.FIXED ->
+            Modifier
+                .weight(1f)
+                .fillMaxHeight()
     }
 
 private data class DockPresentation(

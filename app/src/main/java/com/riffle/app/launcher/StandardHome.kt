@@ -184,7 +184,7 @@ private fun StandardHomeColumn(
             pageCount = state.visibleLayout.pages.size,
             selectedPageIndex = state.visibleLayout.selectedPageIndex,
         )
-        if (state.visibleLayout.dock.isEnabled) {
+        if (state.visibleLayout.shouldShowDock()) {
             Spacer(modifier = Modifier.height(HOME_DOCK_TOP_SPACING_DP.dp))
             Dock(
                 dock = state.visibleLayout.dock,
@@ -316,6 +316,15 @@ private fun StandardHomeContentState.homeGridPresentation(): HomeGridPresentatio
         labelSettings = layout.settings.labels,
         widgetViewFactory = presentation.widgetViewFactory,
     )
+
+private fun HomeLayout.shouldShowDock(): Boolean =
+    dock.isEnabled &&
+        dockRenderedSlotCount(
+            capacity = dock.capacity,
+            itemCount = dock.items.size,
+            isEditing = false,
+            backgroundSizing = dock.backgroundSizing,
+        ) > 0
 
 internal data class HomeDragSession(
     val item: LauncherItem,
