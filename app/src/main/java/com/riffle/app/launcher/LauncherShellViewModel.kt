@@ -276,7 +276,9 @@ class LauncherShellViewModel(
                             )
                     ) {
                         is HomeShortcutResult.Updated ->
-                            mutableState.value.withHomeLayout(result.layout, homeLayoutRepository)
+                            mutableState.value
+                                .withHomeLayout(result.layout, homeLayoutRepository)
+                                .withLibraryReflowAfterShortcutMove(action, homeLayoutRepository)
 
                         is HomeShortcutResult.Rejected -> mutableState.value
                     }
