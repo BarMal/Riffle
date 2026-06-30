@@ -71,6 +71,7 @@ class LauncherShellViewModel(
     private val folderEngine = FolderEngine()
     private val widgetEngine = WidgetEngine()
     private var refreshJob: Job? = null
+    private var notificationRefreshJob: Job? = null
 
     private val mutableState =
         MutableStateFlow(
@@ -119,29 +120,47 @@ class LauncherShellViewModel(
             )
     }
 
-    fun refreshInstalledApps(): Job {
-        refreshJob?.cancel()
+    fun refreshInstalledApps(scope: LauncherShellRefreshScope = LauncherShellRefreshScope.INSTALLED_APPS): Job {
+        when (scope) {
+            LauncherShellRefreshScope.INSTALLED_APPS -> refreshJob?.cancel()
+            LauncherShellRefreshScope.NOTIFICATIONS -> notificationRefreshJob?.cancel()
+        }
         val job =
             viewModelScope.launch(refreshDispatcher) {
                 mutableState.value =
-                    mutableState.value
-                        .withInstalledApps(installedAppRepository, appVisibilityRepository, appCatalog)
-                        .copy(
-                            installedWidgetProviders =
-                                platformDependencies.installedWidgetProviders(widgetProviderCatalog),
-                        )
-                        .withoutUnavailableApps(homeLayoutRepository)
-                        .withHomeScreenLibraryApps(homeLayoutRepository)
-                        .withAppShortcuts(appShortcutRepository, appCatalog)
-                        .withNotificationState(
-                            notificationRepository = notificationRepository,
-                            appNotificationCounter = appNotificationCounter,
-                            appNotificationGrouper = appNotificationGrouper,
-                            notificationStaleFilter = notificationStaleFilter,
-                            nowEpochMillis = epochMillisProvider.nowEpochMillis(),
-                        )
+                    when (scope) {
+                        LauncherShellRefreshScope.INSTALLED_APPS ->
+                            mutableState.value
+                                .withInstalledApps(installedAppRepository, appVisibilityRepository, appCatalog)
+                                .copy(
+                                    installedWidgetProviders =
+                                        platformDependencies.installedWidgetProviders(widgetProviderCatalog),
+                                )
+                                .withoutUnavailableApps(homeLayoutRepository)
+                                .withHomeScreenLibraryApps(homeLayoutRepository)
+                                .withAppShortcuts(appShortcutRepository, appCatalog)
+                                .withNotificationState(
+                                    notificationRepository = notificationRepository,
+                                    appNotificationCounter = appNotificationCounter,
+                                    appNotificationGrouper = appNotificationGrouper,
+                                    notificationStaleFilter = notificationStaleFilter,
+                                    nowEpochMillis = epochMillisProvider.nowEpochMillis(),
+                                )
+
+                        LauncherShellRefreshScope.NOTIFICATIONS ->
+                            mutableState.value.withNotificationState(
+                                notificationRepository = notificationRepository,
+                                appNotificationCounter = appNotificationCounter,
+                                appNotificationGrouper = appNotificationGrouper,
+                                notificationStaleFilter = notificationStaleFilter,
+                                nowEpochMillis = epochMillisProvider.nowEpochMillis(),
+                            )
+                    }
             }
-        refreshJob = job
+        when (scope) {
+            LauncherShellRefreshScope.INSTALLED_APPS -> refreshJob = job
+            LauncherShellRefreshScope.NOTIFICATIONS -> notificationRefreshJob = job
+        }
 
         return job
     }

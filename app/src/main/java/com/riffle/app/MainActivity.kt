@@ -34,6 +34,7 @@ import com.riffle.app.launcher.launcherBackupDocument
 import com.riffle.app.launcher.notifications.AndroidNotificationAccessGateway
 import com.riffle.app.launcher.notifications.AndroidNotificationDismissalGateway
 import com.riffle.app.launcher.notifications.SharedPreferencesActiveNotificationRepository
+import com.riffle.app.launcher.refreshNotifications
 import com.riffle.app.launcher.selectedPageHostedWidgetIdForItem
 import com.riffle.app.launcher.widgets.AndroidInstalledWidgetProviderRepository
 import com.riffle.app.launcher.widgets.AndroidWidgetHostGateway
@@ -160,7 +161,7 @@ class MainActivity : ComponentActivity() {
         wallpaperController.showSystemWallpaper()
         activeNotificationRepository.observeActiveNotifications {
             runOnUiThread {
-                shellViewModel.refreshInstalledApps()
+                shellViewModel.refreshNotifications()
             }
         }
         lifecycle.addObserver(packageChangeObserver)
