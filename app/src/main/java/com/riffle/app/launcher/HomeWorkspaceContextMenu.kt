@@ -2,6 +2,7 @@ package com.riffle.app.launcher
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
@@ -19,12 +20,15 @@ internal fun HomeEmptyCellContextMenu(
     modifier: Modifier = Modifier,
 ) {
     val isMenuExpanded = remember { mutableStateOf(false) }
+    val interactionSource = remember { MutableInteractionSource() }
 
     Box(
         modifier =
             modifier
                 .fillMaxSize()
                 .combinedClickable(
+                    interactionSource = interactionSource,
+                    indication = null,
                     onClick = { Unit },
                     onLongClick = {
                         haptics.longPress()
