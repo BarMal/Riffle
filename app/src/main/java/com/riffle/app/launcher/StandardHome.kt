@@ -53,7 +53,6 @@ import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.settings.HomeSwipeGestureSettings
 import com.riffle.core.domain.launcher.widgets.InstalledWidgetProvider
 import kotlin.math.abs
-import kotlin.math.roundToInt
 
 @Composable
 internal fun StandardHome(
@@ -92,7 +91,7 @@ internal fun StandardHome(
                 layout = layout,
                 visibleLayout = visibleLayout,
                 swipeNavigationState = swipeNavigationState,
-                pageDragOffsetPx = pageDragOffsetPx.floatValue,
+                pageDragOffsetPx = { pageDragOffsetPx.floatValue },
                 dragSession = homeDragSession.value,
                 presentation = presentation,
             ),
@@ -217,7 +216,7 @@ private fun HomeToolbar(onAction: (LauncherShellAction) -> Unit) {
 private fun AnimatedWorkspaceGrid(
     layout: HomeLayout,
     gridState: HomeGridState,
-    pageDragOffsetPx: Float,
+    pageDragOffsetPx: () -> Float,
     presentation: HomeGridPresentation,
     appIconLoader: AppIconLoader,
     actions: HomeWorkspaceActions,
@@ -231,17 +230,11 @@ private fun AnimatedWorkspaceGrid(
 
     BoxWithConstraints(modifier = modifier) {
         val widthPx = with(LocalDensity.current) { maxWidth.toPx() }
-        val settledPageOffsetPx = (layout.selectedPageIndex - animatedPageIndex.value) * widthPx
-        val boundedDragOffsetPx = pageDragOffsetPx.coerceIn(-widthPx, widthPx)
-
-        val animatedPageIndexValue = animatedPageIndex.value
 
         layout.pages.forEachIndexed { index, page ->
-            if (!index.isNearAnimatedPage(selectedPageIndex = layout.selectedPageIndex, animatedPageIndexValue)) {
+            if (abs(index - layout.selectedPageIndex) > ANIMATED_WORKSPACE_PAGE_RADIUS) {
                 return@forEachIndexed
             }
-            val pageOffsetPx =
-                (((index - layout.selectedPageIndex) * widthPx) + settledPageOffsetPx + boundedDragOffsetPx)
 
             WorkspaceGrid(
                 page = page,
@@ -252,18 +245,20 @@ private fun AnimatedWorkspaceGrid(
                 modifier =
                     Modifier
                         .fillMaxSize()
-                        .graphicsLayer { translationX = pageOffsetPx },
+                        .graphicsLayer {
+                            val settledPageOffsetPx =
+                                (layout.selectedPageIndex - animatedPageIndex.value) * widthPx
+                            val boundedDragOffsetPx = pageDragOffsetPx().coerceIn(-widthPx, widthPx)
+
+                            translationX =
+                                ((index - layout.selectedPageIndex) * widthPx) +
+                                settledPageOffsetPx +
+                                boundedDragOffsetPx
+                        },
             )
         }
     }
 }
-
-private fun Int.isNearAnimatedPage(
-    selectedPageIndex: Int,
-    animatedPageIndex: Float,
-): Boolean =
-    abs(this - selectedPageIndex) <= ANIMATED_WORKSPACE_PAGE_RADIUS ||
-        abs(this - animatedPageIndex.roundToInt()) <= ANIMATED_WORKSPACE_PAGE_RADIUS
 
 @Composable
 fun BoxScope.RemoveShortcutButton(
@@ -293,7 +288,7 @@ private data class StandardHomeContentState(
     val layout: HomeLayout,
     val visibleLayout: HomeLayout,
     val swipeNavigationState: HomeSwipeNavigationState,
-    val pageDragOffsetPx: Float,
+    val pageDragOffsetPx: () -> Float,
     val dragSession: HomeDragSession?,
     val presentation: StandardHomePresentation,
 )
