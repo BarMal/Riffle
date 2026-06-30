@@ -11,6 +11,7 @@ import androidx.activity.viewModels
 import com.riffle.app.launcher.AndroidHomeRoleGateway
 import com.riffle.app.launcher.AndroidLauncherWallpaperController
 import com.riffle.app.launcher.LauncherBackupDocument
+import com.riffle.app.launcher.LauncherBackupExportCoordinator
 import com.riffle.app.launcher.LauncherShell
 import com.riffle.app.launcher.LauncherShellAction
 import com.riffle.app.launcher.LauncherShellPlatformDependencies
@@ -30,7 +31,6 @@ import com.riffle.app.launcher.encodeLauncherBackupDocument
 import com.riffle.app.launcher.handleNotificationAction
 import com.riffle.app.launcher.handleSettingsAction
 import com.riffle.app.launcher.isHomePageEditAction
-import com.riffle.app.launcher.launcherBackupDocument
 import com.riffle.app.launcher.notifications.ActiveNotificationRefreshCoordinator
 import com.riffle.app.launcher.notifications.AndroidNotificationAccessGateway
 import com.riffle.app.launcher.notifications.AndroidNotificationDismissalGateway
@@ -88,6 +88,12 @@ class MainActivity : ComponentActivity() {
             refreshNotifications = { shellViewModel.refreshNotifications() },
         )
     }
+    private val backupExportCoordinator by lazy {
+        LauncherBackupExportCoordinator(
+            homeLayoutRepository = homeLayoutRepository,
+            currentState = { shellViewModel.state.value },
+        )
+    }
     private val widgetHostGateway by lazy { AndroidWidgetHostGateway(this) }
     private var pendingWidgetBind: PendingWidgetBind? = null
 
@@ -137,12 +143,7 @@ class MainActivity : ComponentActivity() {
                 exportLauncherBackup(
                     activity = this,
                     uri = selectedUri,
-                    document =
-                        launcherBackupDocument(
-                            storedLayoutSet = homeLayoutRepository.loadHomeLayoutSet(),
-                            activeLayout = shellViewModel.state.value.homeLayout,
-                            launcherSettings = shellViewModel.state.value.launcherSettings,
-                        ),
+                    document = backupExportCoordinator.currentBackupDocument(),
                 )
             }
         }
