@@ -160,8 +160,13 @@ private fun SettingsPageContent(
                     title = "Launcher backup",
                     subtitle = "Layouts and settings",
                 )
-                TextButton(onClick = { onAction(LauncherShellAction.ExportLauncherBackup) }) {
-                    SettingsButtonText(text = "Export")
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TextButton(onClick = { onAction(LauncherShellAction.RequestImportLauncherBackup) }) {
+                        SettingsButtonText(text = "Import")
+                    }
+                    TextButton(onClick = { onAction(LauncherShellAction.ExportLauncherBackup) }) {
+                        SettingsButtonText(text = "Export")
+                    }
                 }
             }
         }

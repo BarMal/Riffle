@@ -39,6 +39,10 @@ sealed interface LauncherShellAction {
 
     data object ExportLauncherBackup : LauncherShellAction
 
+    data object RequestImportLauncherBackup : LauncherShellAction
+
+    data class ImportLauncherBackup(val document: LauncherBackupDocument) : LauncherShellAction
+
     data object EnterHomeEditMode : LauncherShellAction
 
     data object ExitHomeEditMode : LauncherShellAction

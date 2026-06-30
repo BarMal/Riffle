@@ -13,10 +13,59 @@ import com.riffle.core.domain.launcher.home.HomeLayoutKey
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
 import com.riffle.core.domain.launcher.home.HomeLayoutSet
 import com.riffle.core.domain.launcher.home.LauncherViewMode
+import com.riffle.core.domain.launcher.home.WallpaperSettings
+import com.riffle.core.domain.launcher.home.WallpaperSource
+import com.riffle.core.domain.launcher.settings.AppearanceSettings
+import com.riffle.core.domain.launcher.settings.LauncherSettings
+import com.riffle.core.domain.launcher.settings.LauncherSettingsRepository
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class LauncherShellViewModeViewModelTest {
+    @Test
+    fun importsBackupDocumentIntoStateAndRepositories() {
+        val libraryKey = HomeLayoutKey(LauncherViewMode.HOME_SCREEN_LIBRARY)
+        val layoutSet =
+            HomeLayoutSet(
+                activeKey = libraryKey,
+                layouts =
+                    mapOf(
+                        libraryKey to
+                            HomeLayoutDefaults.standard()
+                                .copy(viewMode = LauncherViewMode.HOME_SCREEN_LIBRARY),
+                    ),
+            )
+        val settings =
+            LauncherSettings(
+                appearance =
+                    AppearanceSettings(
+                        wallpaper = WallpaperSettings(source = WallpaperSource.SOLID_COLOR),
+                    ),
+            )
+        val homeLayoutRepository = FakeHomeLayoutRepository(savedLayout = HomeLayoutDefaults.standard())
+        val launcherSettingsRepository = FakeLauncherSettingsRepository()
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                homeLayoutRepository = homeLayoutRepository,
+                launcherSettingsRepository = launcherSettingsRepository,
+            )
+
+        viewModel.onLauncherSettingsActionSelected(
+            LauncherShellAction.ImportLauncherBackup(
+                LauncherBackupDocument(
+                    homeLayoutSet = layoutSet,
+                    launcherSettings = settings,
+                ),
+            ),
+        )
+
+        assertEquals(layoutSet, homeLayoutRepository.savedLayoutSet)
+        assertEquals(settings, launcherSettingsRepository.savedSettings)
+        assertEquals(layoutSet.activeLayout, viewModel.state.value.homeLayout)
+        assertEquals(settings, viewModel.state.value.launcherSettings)
+    }
+
     @Test
     fun backupDocumentPreservesStoredLayoutSet() {
         val standardKey = HomeLayoutKey(LauncherViewMode.STANDARD_APP_DRAWER)
@@ -229,6 +278,16 @@ class LauncherShellViewModeViewModelTest {
         override fun saveHomeLayoutSet(layoutSet: HomeLayoutSet) {
             savedLayoutSet = layoutSet
             savedLayout = layoutSet.activeLayout
+        }
+    }
+
+    private class FakeLauncherSettingsRepository : LauncherSettingsRepository {
+        var savedSettings: LauncherSettings? = null
+
+        override fun loadLauncherSettings(): LauncherSettings? = savedSettings
+
+        override fun saveLauncherSettings(settings: LauncherSettings) {
+            savedSettings = settings
         }
     }
 
