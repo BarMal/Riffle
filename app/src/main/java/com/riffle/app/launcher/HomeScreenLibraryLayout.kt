@@ -22,9 +22,7 @@ fun HomeLayout.withHomeScreenLibraryApps(apps: List<InstalledApp>): HomeLayout =
         LauncherViewMode.HOME_SCREEN_LIBRARY ->
             when {
                 settings.grid.compactLibraryPages ->
-                    withoutHomeScreenLibraryApps()
-                        .copy(viewMode = LauncherViewMode.HOME_SCREEN_LIBRARY)
-                        .withMissingLibraryApps(apps)
+                    withCompactedLibraryApps(apps)
 
                 else -> withMissingLibraryApps(apps)
             }
@@ -60,7 +58,7 @@ private fun HomeLayout.withLibraryApp(app: InstalledApp): HomeLayout =
     app.libraryShortcut()
         .let { shortcut -> placeLibraryShortcut(shortcut) }
 
-private fun HomeLayout.placeLibraryShortcut(shortcut: AppShortcutItem): HomeLayout =
+internal fun HomeLayout.placeLibraryShortcut(shortcut: AppShortcutItem): HomeLayout =
     pages.fold(this as HomeLayout?) { layout, page ->
         layout?.takeUnless { currentLayout -> currentLayout.containsHomeApp(shortcut.appIdentity) }
             ?.placeLibraryShortcut(page = page, shortcut = shortcut)
@@ -112,7 +110,7 @@ private fun HomeLayout.nextLibraryPageId(): LauncherPageId =
         .map { index -> LauncherPageId("library:$index") }
         .first { pageId -> pages.none { page -> page.id == pageId } }
 
-private fun InstalledApp.libraryShortcut(): AppShortcutItem =
+internal fun InstalledApp.libraryShortcut(): AppShortcutItem =
     AppShortcutItem(
         id = LauncherItemId("library-app:${identity.shortcutKey}"),
         appIdentity = identity,
@@ -126,7 +124,7 @@ private fun LauncherItem.withoutLibraryApps(): LauncherItem? =
         is WidgetItem -> this
     }
 
-private val AppShortcutItem.isLibraryApp: Boolean
+internal val AppShortcutItem.isLibraryApp: Boolean
     get() = id.value.startsWith(LIBRARY_APP_ITEM_PREFIX)
 
 private val AppIdentity.shortcutKey: String
