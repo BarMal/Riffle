@@ -25,6 +25,7 @@ import com.riffle.app.launcher.apps.AndroidAppShortcutRepository
 import com.riffle.app.launcher.apps.AndroidPackageChangeObserver
 import com.riffle.app.launcher.apps.PackageManagerAppIconLoader
 import com.riffle.app.launcher.apps.PackageManagerInstalledAppRepository
+import com.riffle.app.launcher.decodeLauncherBackupDocument
 import com.riffle.app.launcher.encodeLauncherBackupDocument
 import com.riffle.app.launcher.handleNotificationAction
 import com.riffle.app.launcher.handleSettingsAction
@@ -137,6 +138,23 @@ class MainActivity : ComponentActivity() {
             }
         }
 
+    private val openBackupDocument =
+        registerForActivityResult(
+            ActivityResultContracts.OpenDocument(),
+        ) { uri ->
+            uri?.let { selectedUri ->
+                importLauncherBackup(
+                    activity = this,
+                    uri = selectedUri,
+                    onImported = { document ->
+                        shellViewModel.onLauncherSettingsActionSelected(
+                            LauncherShellAction.ImportLauncherBackup(document),
+                        )
+                    },
+                )
+            }
+        }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         wallpaperController.showSystemWallpaper()
@@ -187,6 +205,7 @@ class MainActivity : ComponentActivity() {
                     notificationAccessGateway = notificationAccessGateway,
                     openIntent = ::startActivity,
                     exportBackup = { createBackupDocument.launch(BACKUP_DOCUMENT_NAME) },
+                    importBackup = { openBackupDocument.launch(BACKUP_DOCUMENT_OPEN_MIME_TYPES) },
                 )
 
         if (!handled) {
@@ -349,6 +368,12 @@ private data class PendingWidgetBind(
 
 private const val BACKUP_DOCUMENT_MIME_TYPE = "application/json"
 private const val BACKUP_DOCUMENT_NAME = "riffle-backup.json"
+private val BACKUP_DOCUMENT_OPEN_MIME_TYPES =
+    arrayOf(
+        BACKUP_DOCUMENT_MIME_TYPE,
+        "text/*",
+        "application/octet-stream",
+    )
 
 private fun exportLauncherBackup(
     activity: ComponentActivity,
@@ -367,6 +392,28 @@ private fun exportLauncherBackup(
         },
         onFailure = {
             Toast.makeText(activity, "Backup export failed", Toast.LENGTH_SHORT).show()
+        },
+    )
+}
+
+private fun importLauncherBackup(
+    activity: ComponentActivity,
+    uri: Uri,
+    onImported: (LauncherBackupDocument) -> Unit,
+) {
+    runCatching {
+        activity.contentResolver.openInputStream(uri)
+            ?.bufferedReader(Charsets.UTF_8)
+            ?.use { reader -> reader.readText() }
+            ?.let(::decodeLauncherBackupDocument)
+            ?: error("Could not open backup source")
+    }.fold(
+        onSuccess = { document ->
+            onImported(document)
+            Toast.makeText(activity, "Backup imported", Toast.LENGTH_SHORT).show()
+        },
+        onFailure = {
+            Toast.makeText(activity, "Backup import failed", Toast.LENGTH_SHORT).show()
         },
     )
 }

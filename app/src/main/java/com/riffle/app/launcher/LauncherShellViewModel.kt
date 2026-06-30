@@ -370,6 +370,16 @@ class LauncherShellViewModel(
                         launcherSettingsRepository = launcherSettingsRepository,
                     )
 
+                is LauncherShellAction.ImportLauncherBackup ->
+                    mutableState.value
+                        .withImportedBackup(
+                            document = action.document,
+                            homeLayoutRepository = homeLayoutRepository,
+                            launcherSettingsRepository = launcherSettingsRepository,
+                        )
+                        .withoutUnavailableApps(homeLayoutRepository)
+                        .withHomeScreenLibraryApps(homeLayoutRepository)
+
                 else -> mutableState.value
             }
     }
