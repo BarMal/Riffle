@@ -80,6 +80,27 @@ class LauncherShellWidgetViewModelTest {
     }
 
     @Test
+    fun refreshWidgetProvidersPreservesExistingProvidersWhenRepositoryFails() {
+        val clock = widgetProvider(label = "Clock", packageName = "com.example.clock")
+        val widgetProviderRepository = FakeWidgetProviderRepository(providers = listOf(clock))
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                platformDependencies =
+                    LauncherShellPlatformDependencies(
+                        widgetProviderRepository = widgetProviderRepository,
+                    ),
+            )
+
+        widgetProviderRepository.failReads = true
+        val refreshJob = viewModel.refreshWidgetProviders()
+        runBlocking { refreshJob.join() }
+
+        assertEquals(false, refreshJob.isCancelled)
+        assertEquals(listOf(clock), viewModel.state.value.installedWidgetProviders)
+    }
+
+    @Test
     fun refreshWidgetProvidersCoalescesQueuedRefreshes() {
         val clock = widgetProvider(label = "Clock", packageName = "com.example.clock")
         val calendar = widgetProvider(label = "Calendar", packageName = "com.example.calendar")
@@ -219,9 +240,13 @@ class LauncherShellWidgetViewModelTest {
         var providers: List<InstalledWidgetProvider> = emptyList(),
     ) : InstalledWidgetProviderRepository {
         var providerReadCount: Int = 0
+        var failReads: Boolean = false
 
         override fun installedWidgetProviders(): List<InstalledWidgetProvider> {
             providerReadCount += 1
+            if (failReads) {
+                error("Widget provider query failed")
+            }
             return providers
         }
     }

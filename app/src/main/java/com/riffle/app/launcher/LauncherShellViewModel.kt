@@ -148,27 +148,30 @@ class LauncherShellViewModel(
         }
         val job =
             viewModelScope.launch(refreshDispatcher) {
+                val currentState = mutableState.value
                 mutableState.value =
-                    when (scope) {
-                        LauncherShellRefreshScope.INSTALLED_APPS ->
-                            mutableState.value
-                                .withRefreshedInstalledApps(installedAppRefreshDependencies)
+                    runCatching {
+                        when (scope) {
+                            LauncherShellRefreshScope.INSTALLED_APPS ->
+                                currentState
+                                    .withRefreshedInstalledApps(installedAppRefreshDependencies)
 
-                        LauncherShellRefreshScope.NOTIFICATIONS ->
-                            mutableState.value.withNotificationState(
-                                notificationRepository = notificationRepository,
-                                appNotificationCounter = appNotificationCounter,
-                                appNotificationGrouper = appNotificationGrouper,
-                                notificationStaleFilter = notificationStaleFilter,
-                                nowEpochMillis = epochMillisProvider.nowEpochMillis(),
-                            )
+                            LauncherShellRefreshScope.NOTIFICATIONS ->
+                                currentState.withNotificationState(
+                                    notificationRepository = notificationRepository,
+                                    appNotificationCounter = appNotificationCounter,
+                                    appNotificationGrouper = appNotificationGrouper,
+                                    notificationStaleFilter = notificationStaleFilter,
+                                    nowEpochMillis = epochMillisProvider.nowEpochMillis(),
+                                )
 
-                        LauncherShellRefreshScope.WIDGET_PROVIDERS ->
-                            mutableState.value.copy(
-                                installedWidgetProviders =
-                                    platformDependencies.installedWidgetProviders(widgetProviderCatalog),
-                            )
-                    }
+                            LauncherShellRefreshScope.WIDGET_PROVIDERS ->
+                                currentState.copy(
+                                    installedWidgetProviders =
+                                        platformDependencies.installedWidgetProviders(widgetProviderCatalog),
+                                )
+                        }
+                    }.getOrElse { currentState }
             }
         when (scope) {
             LauncherShellRefreshScope.INSTALLED_APPS -> refreshJob = job
