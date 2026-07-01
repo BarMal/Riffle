@@ -31,7 +31,6 @@ internal fun DockSetting(
         )
         DockCapacitySetting(
             capacity = dock.capacity,
-            itemCount = dock.items.size,
             onAction = onAction,
         )
         DockIconSizeSetting(
@@ -228,7 +227,6 @@ private fun DockVisibilitySetting(
 @Composable
 private fun DockCapacitySetting(
     capacity: Int,
-    itemCount: Int,
     onAction: (LauncherShellAction) -> Unit,
 ) {
     Row(
@@ -243,7 +241,7 @@ private fun DockCapacitySetting(
         )
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             TextButton(
-                enabled = capacity > itemCount,
+                enabled = capacity > 0,
                 onClick = { onAction(LauncherShellAction.SelectDockCapacity(capacity - 1)) },
             ) {
                 SettingsButtonText(text = "-")
