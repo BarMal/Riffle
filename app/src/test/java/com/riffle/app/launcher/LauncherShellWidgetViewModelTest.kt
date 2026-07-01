@@ -80,6 +80,38 @@ class LauncherShellWidgetViewModelTest {
     }
 
     @Test
+    fun refreshWidgetProvidersCoalescesQueuedRefreshes() {
+        val clock = widgetProvider(label = "Clock", packageName = "com.example.clock")
+        val calendar = widgetProvider(label = "Calendar", packageName = "com.example.calendar")
+        val widgetProviderRepository = FakeWidgetProviderRepository()
+        val dispatcher = QueuedDispatcher()
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                platformDependencies =
+                    LauncherShellPlatformDependencies(
+                        widgetProviderRepository = widgetProviderRepository,
+                        loadInitialPlatformState = false,
+                    ),
+                refreshDispatcher = dispatcher,
+            )
+
+        widgetProviderRepository.providers = listOf(clock)
+        val firstRefresh = viewModel.refreshWidgetProviders()
+        widgetProviderRepository.providers = listOf(calendar)
+        val secondRefresh = viewModel.refreshWidgetProviders()
+
+        dispatcher.runQueued()
+        runBlocking {
+            firstRefresh.join()
+            secondRefresh.join()
+        }
+
+        assertEquals(1, widgetProviderRepository.providerReadCount)
+        assertEquals(listOf(calendar), viewModel.state.value.installedWidgetProviders)
+    }
+
+    @Test
     fun openingWidgetPickerDefersWidgetProviderRefresh() {
         val clock = widgetProvider(label = "Clock", packageName = "com.example.clock")
         val widgetProviderRepository = FakeWidgetProviderRepository(providers = listOf(clock))

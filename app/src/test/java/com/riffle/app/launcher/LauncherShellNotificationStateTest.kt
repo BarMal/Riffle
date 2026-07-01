@@ -12,9 +12,11 @@ import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationRepository
 import com.riffle.core.domain.launcher.notifications.NotificationAgeBucket
 import com.riffle.core.domain.launcher.notifications.NotificationCategory
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Test
+import kotlin.coroutines.CoroutineContext
 
 class LauncherShellNotificationStateTest {
     @Test
@@ -110,6 +112,41 @@ class LauncherShellNotificationStateTest {
         assertEquals(listOf("Camera"), viewModel.state.value.installedApps.map { app -> app.label })
         assertEquals(
             listOf(AppPackageName("com.riffle.calendar")),
+            viewModel.state.value.notificationGroupsByApp.map { group -> group.packageName },
+        )
+    }
+
+    @Test
+    fun refreshNotificationsCoalescesQueuedRefreshes() {
+        val notificationRepository = FakeNotificationRepository()
+        val dispatcher = QueuedDispatcher()
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                platformDependencies =
+                    LauncherShellPlatformDependencies(
+                        notificationRepository = notificationRepository,
+                        loadInitialPlatformState = false,
+                    ),
+                refreshDispatcher = dispatcher,
+            )
+
+        notificationRepository.notifications =
+            listOf(notification(key = "calendar-1", packageName = "com.riffle.calendar"))
+        val firstRefresh = viewModel.refreshNotifications()
+        notificationRepository.notifications =
+            listOf(notification(key = "mail-1", packageName = "com.riffle.mail"))
+        val secondRefresh = viewModel.refreshNotifications()
+
+        dispatcher.runQueued()
+        runBlocking {
+            firstRefresh.join()
+            secondRefresh.join()
+        }
+
+        assertEquals(1, notificationRepository.activeNotificationReadCount)
+        assertEquals(
+            listOf(AppPackageName("com.riffle.mail")),
             viewModel.state.value.notificationGroupsByApp.map { group -> group.packageName },
         )
     }
@@ -245,6 +282,23 @@ class LauncherShellNotificationStateTest {
 
         override fun showApp(identity: AppIdentity) {
             hiddenApps = hiddenApps - identity
+        }
+    }
+
+    private class QueuedDispatcher : CoroutineDispatcher() {
+        private val blocks = ArrayDeque<Runnable>()
+
+        override fun dispatch(
+            context: CoroutineContext,
+            block: Runnable,
+        ) {
+            blocks += block
+        }
+
+        fun runQueued() {
+            while (blocks.isNotEmpty()) {
+                blocks.removeFirst().run()
+            }
         }
     }
 
