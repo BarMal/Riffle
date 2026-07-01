@@ -9,6 +9,7 @@ data class LauncherShellPlatformDependencies(
     val notificationRepository: LauncherNotificationRepository = LauncherNotificationRepository { emptyList() },
     val widgetProviderRepository: InstalledWidgetProviderRepository = InstalledWidgetProviderRepository { emptyList() },
     val epochMillisProvider: EpochMillisProvider = SystemEpochMillisProvider,
+    val loadInitialPlatformState: Boolean = true,
 ) {
     fun installedWidgetProviders(catalog: WidgetProviderCatalog): List<InstalledWidgetProvider> =
         catalog.sortedProviders(widgetProviderRepository.installedWidgetProviders())
