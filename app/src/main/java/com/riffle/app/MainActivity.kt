@@ -40,8 +40,9 @@ import com.riffle.app.launcher.refreshWidgetProviders
 import com.riffle.app.launcher.selectedPageHostedWidgetIdForItem
 import com.riffle.app.launcher.widgets.AndroidInstalledWidgetProviderRepository
 import com.riffle.app.launcher.widgets.AndroidWidgetHostGateway
-import com.riffle.app.launcher.widgets.WidgetBindingResult
-import com.riffle.app.launcher.widgets.preferredGridSpan
+import com.riffle.app.launcher.widgets.WidgetAddRequestResult
+import com.riffle.app.launcher.widgets.WidgetBindPermissionResult
+import com.riffle.app.launcher.widgets.WidgetBindingCoordinator
 import com.riffle.app.launcher.widgets.widgetSpanAdjustmentToast
 import com.riffle.core.domain.launcher.ShellNavigationAction
 import com.riffle.core.domain.launcher.home.GridSpan
@@ -96,7 +97,7 @@ class MainActivity : ComponentActivity() {
         )
     }
     private val widgetHostGateway by lazy { AndroidWidgetHostGateway(this) }
-    private var pendingWidgetBind: PendingWidgetBind? = null
+    private val widgetBindingCoordinator by lazy { WidgetBindingCoordinator(widgetHostGateway) }
 
     private val requestHomeRole =
         registerForActivityResult(
@@ -109,30 +110,19 @@ class MainActivity : ComponentActivity() {
         registerForActivityResult(
             ActivityResultContracts.StartActivityForResult(),
         ) { result ->
-            val pending = pendingWidgetBind
-            pendingWidgetBind = null
-            when {
-                pending == null -> Unit
-                result.resultCode == Activity.RESULT_OK -> {
-                    shellViewModel.onHomeShortcutEdited(
-                        LauncherShellAction.AddHostedWidgetToHome(
-                            hostedWidgetId = pending.hostedWidgetId,
-                            label = pending.label,
-                            preferredSpan = pending.preferredSpan,
-                        ),
-                    )
-                    widgetSpanAdjustmentMessage(
+            val permissionResult =
+                widgetBindingCoordinator.onPermissionResult(result.resultCode == Activity.RESULT_OK)
+            when (permissionResult) {
+                is WidgetBindPermissionResult.Bound ->
+                    completeHostedWidgetAdd(
+                        activity = this,
                         viewModel = shellViewModel,
-                        label = pending.label,
-                        idealSpan = pending.preferredSpan,
-                        hostedWidgetId = pending.hostedWidgetId,
-                    )?.let { message ->
-                        Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
-                    }
-                    shellViewModel.onAppActionSelected(LauncherShellAction.CloseWidgetPicker)
-                }
+                        action = permissionResult.action,
+                    )
 
-                else -> widgetHostGateway.deleteHostedWidgetId(pending.hostedWidgetId)
+                WidgetBindPermissionResult.Cancelled,
+                WidgetBindPermissionResult.Ignored,
+                -> Unit
             }
         }
 
@@ -301,47 +291,29 @@ class MainActivity : ComponentActivity() {
             is LauncherShellAction.UninstallApp -> appLauncher.uninstall(action.identity)
             is LauncherShellAction.AddAppToHome -> shellViewModel.onAddAppToHome(action.app)
             is LauncherShellAction.RequestAddWidget -> {
-                val hostedWidgetId = widgetHostGateway.allocateHostedWidgetId()
-                val preferredSpan =
-                    action.dimensions.preferredGridSpan(
-                        grid = shellViewModel.state.value.homeLayout.selectedPage.grid,
-                        availableWidthDp = resources.configuration.screenWidthDp,
-                        availableHeightDp = resources.configuration.screenHeightDp,
-                    )
-                when (widgetHostGateway.bindHostedWidget(hostedWidgetId, action.provider)) {
-                    WidgetBindingResult.Bound -> {
-                        shellViewModel.onHomeShortcutEdited(
-                            LauncherShellAction.AddHostedWidgetToHome(
-                                hostedWidgetId = hostedWidgetId,
-                                label = action.label,
-                                preferredSpan = preferredSpan,
+                when (
+                    val requestResult =
+                        widgetBindingCoordinator.requestAddWidget(
+                            action = action,
+                            grid = shellViewModel.state.value.homeLayout.selectedPage.grid,
+                            availableWidthDp = resources.configuration.screenWidthDp,
+                            availableHeightDp = resources.configuration.screenHeightDp,
+                        )
+                ) {
+                    is WidgetAddRequestResult.Bound ->
+                        completeHostedWidgetAdd(
+                            activity = this,
+                            viewModel = shellViewModel,
+                            action = requestResult.action,
+                        )
+
+                    is WidgetAddRequestResult.RequiresPermission ->
+                        requestWidgetBind.launch(
+                            widgetHostGateway.createBindHostedWidgetIntent(
+                                requestResult.hostedWidgetId,
+                                requestResult.provider,
                             ),
                         )
-                        widgetSpanAdjustmentMessage(
-                            viewModel = shellViewModel,
-                            label = action.label,
-                            idealSpan = preferredSpan,
-                            hostedWidgetId = hostedWidgetId,
-                        )?.let { message ->
-                            Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
-                        }
-                        shellViewModel.onAppActionSelected(LauncherShellAction.CloseWidgetPicker)
-                    }
-
-                    WidgetBindingResult.RequiresPermission -> {
-                        pendingWidgetBind?.let { pending ->
-                            widgetHostGateway.deleteHostedWidgetId(pending.hostedWidgetId)
-                        }
-                        pendingWidgetBind =
-                            PendingWidgetBind(
-                                hostedWidgetId = hostedWidgetId,
-                                label = action.label,
-                                preferredSpan = preferredSpan,
-                            )
-                        requestWidgetBind.launch(
-                            widgetHostGateway.createBindHostedWidgetIntent(hostedWidgetId, action.provider),
-                        )
-                    }
                 }
             }
 
@@ -376,12 +348,6 @@ private fun LauncherShellAction.navigationAction(): ShellNavigationAction? =
         else -> null
     }
 
-private data class PendingWidgetBind(
-    val hostedWidgetId: HostedWidgetId,
-    val label: String,
-    val preferredSpan: GridSpan,
-)
-
 private const val BACKUP_DOCUMENT_MIME_TYPE = "application/json"
 private const val BACKUP_DOCUMENT_NAME = "riffle-backup.json"
 private val BACKUP_DOCUMENT_OPEN_MIME_TYPES =
@@ -390,6 +356,23 @@ private val BACKUP_DOCUMENT_OPEN_MIME_TYPES =
         "text/*",
         "application/octet-stream",
     )
+
+private fun completeHostedWidgetAdd(
+    activity: ComponentActivity,
+    viewModel: LauncherShellViewModel,
+    action: LauncherShellAction.AddHostedWidgetToHome,
+) {
+    viewModel.onHomeShortcutEdited(action)
+    widgetSpanAdjustmentMessage(
+        viewModel = viewModel,
+        label = action.label,
+        idealSpan = action.preferredSpan,
+        hostedWidgetId = action.hostedWidgetId,
+    )?.let { message ->
+        Toast.makeText(activity, message, Toast.LENGTH_SHORT).show()
+    }
+    viewModel.onAppActionSelected(LauncherShellAction.CloseWidgetPicker)
+}
 
 private fun exportLauncherBackup(
     activity: ComponentActivity,
