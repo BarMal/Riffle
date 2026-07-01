@@ -12,10 +12,10 @@ import com.riffle.app.launcher.AndroidLauncherWallpaperController
 import com.riffle.app.launcher.LauncherActivityRoute
 import com.riffle.app.launcher.LauncherAppActionRoute
 import com.riffle.app.launcher.LauncherBackupDocumentGateway
+import com.riffle.app.launcher.LauncherBackupDocumentHandler
 import com.riffle.app.launcher.LauncherBackupExportCoordinator
-import com.riffle.app.launcher.LauncherBackupExportResult
 import com.riffle.app.launcher.LauncherBackupImportCoordinator
-import com.riffle.app.launcher.LauncherBackupImportOutcome
+import com.riffle.app.launcher.LauncherBackupImportHandlingResult
 import com.riffle.app.launcher.LauncherShell
 import com.riffle.app.launcher.LauncherShellAction
 import com.riffle.app.launcher.LauncherShellPlatformDependencies
@@ -105,14 +105,17 @@ class MainActivity : ComponentActivity() {
             refreshNotifications = { shellViewModel.refreshNotifications() },
         )
     }
-    private val backupExportCoordinator by lazy {
-        LauncherBackupExportCoordinator(
-            homeLayoutRepository = homeLayoutRepository,
-            currentState = { shellViewModel.state.value },
+    private val backupDocumentHandler by lazy {
+        LauncherBackupDocumentHandler(
+            exportCoordinator =
+                LauncherBackupExportCoordinator(
+                    homeLayoutRepository = homeLayoutRepository,
+                    currentState = { shellViewModel.state.value },
+                ),
+            importCoordinator = LauncherBackupImportCoordinator(),
+            documentGateway = LauncherBackupDocumentGateway(),
         )
     }
-    private val backupImportCoordinator by lazy { LauncherBackupImportCoordinator() }
-    private val backupDocumentGateway by lazy { LauncherBackupDocumentGateway() }
     private val widgetHostGateway by lazy { AndroidWidgetHostGateway(this) }
     private val widgetBindingCoordinator by lazy { WidgetBindingCoordinator(widgetHostGateway) }
 
@@ -145,18 +148,11 @@ class MainActivity : ComponentActivity() {
             ActivityResultContracts.CreateDocument(BACKUP_DOCUMENT_MIME_TYPE),
         ) { uri ->
             uri?.let { selectedUri ->
-                when (
-                    backupDocumentGateway.exportDocument(
-                        document = backupExportCoordinator.currentBackupDocument(),
-                        openOutputStream = { contentResolver.openOutputStream(selectedUri) },
-                    )
-                ) {
-                    LauncherBackupExportResult.Success ->
-                        Toast.makeText(this, "Backup exported", Toast.LENGTH_SHORT).show()
-
-                    LauncherBackupExportResult.Failure ->
-                        Toast.makeText(this, "Backup export failed", Toast.LENGTH_SHORT).show()
-                }
+                backupDocumentHandler
+                    .exportBackup { contentResolver.openOutputStream(selectedUri) }
+                    .message
+                    .text
+                    .let { message -> Toast.makeText(this, message, Toast.LENGTH_SHORT).show() }
             }
         }
 
@@ -165,22 +161,18 @@ class MainActivity : ComponentActivity() {
             ActivityResultContracts.OpenDocument(),
         ) { uri ->
             uri?.let { selectedUri ->
-                when (
-                    val importOutcome =
-                        backupImportCoordinator.handleImportResult(
-                            backupDocumentGateway.importDocument {
-                                contentResolver.openInputStream(selectedUri)
-                            },
-                        )
-                ) {
-                    is LauncherBackupImportOutcome.Imported -> {
-                        shellViewModel.onLauncherSettingsActionSelected(importOutcome.action)
-                        Toast.makeText(this, "Backup imported", Toast.LENGTH_SHORT).show()
+                val result =
+                    backupDocumentHandler.importBackup {
+                        contentResolver.openInputStream(selectedUri)
                     }
 
-                    LauncherBackupImportOutcome.Failure ->
-                        Toast.makeText(this, "Backup import failed", Toast.LENGTH_SHORT).show()
+                when (result) {
+                    is LauncherBackupImportHandlingResult.Imported ->
+                        shellViewModel.onLauncherSettingsActionSelected(result.action)
+
+                    is LauncherBackupImportHandlingResult.Failure -> Unit
                 }
+                Toast.makeText(this, result.message.text, Toast.LENGTH_SHORT).show()
             }
         }
 
