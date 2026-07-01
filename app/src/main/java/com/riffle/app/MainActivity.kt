@@ -9,6 +9,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import com.riffle.app.launcher.AndroidHomeRoleGateway
 import com.riffle.app.launcher.AndroidLauncherWallpaperController
+import com.riffle.app.launcher.LauncherActivityRoute
 import com.riffle.app.launcher.LauncherBackupDocumentGateway
 import com.riffle.app.launcher.LauncherBackupExportCoordinator
 import com.riffle.app.launcher.LauncherBackupExportResult
@@ -29,7 +30,7 @@ import com.riffle.app.launcher.apps.PackageManagerAppIconLoader
 import com.riffle.app.launcher.apps.PackageManagerInstalledAppRepository
 import com.riffle.app.launcher.handleNotificationAction
 import com.riffle.app.launcher.handleSettingsAction
-import com.riffle.app.launcher.isHomePageEditAction
+import com.riffle.app.launcher.launcherActivityRoute
 import com.riffle.app.launcher.notifications.ActiveNotificationRefreshCoordinator
 import com.riffle.app.launcher.notifications.AndroidNotificationAccessGateway
 import com.riffle.app.launcher.notifications.AndroidNotificationDismissalGateway
@@ -43,7 +44,6 @@ import com.riffle.app.launcher.widgets.WidgetAddRequestResult
 import com.riffle.app.launcher.widgets.WidgetBindPermissionResult
 import com.riffle.app.launcher.widgets.WidgetBindingCoordinator
 import com.riffle.app.launcher.widgets.widgetSpanAdjustmentToast
-import com.riffle.core.domain.launcher.ShellNavigationAction
 import com.riffle.core.domain.launcher.home.GridSpan
 import com.riffle.core.domain.launcher.home.HostedWidgetId
 import com.riffle.core.domain.launcher.home.WidgetItem
@@ -204,11 +204,7 @@ class MainActivity : ComponentActivity() {
 
     private fun handleAction(action: LauncherShellAction) {
         val handled =
-            handleFirstRunAction(action) ||
-                handleNavigationAction(action) ||
-                handleHomePageAction(action) ||
-                handleHomeShortcutAction(action) ||
-                handleDockAction(action) ||
+            handleActivityRoute(action) ||
                 action.handleNotificationAction(
                     viewModel = shellViewModel,
                     notificationDismissalGateway = AndroidNotificationDismissalGateway,
@@ -226,75 +222,40 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun handleFirstRunAction(action: LauncherShellAction): Boolean =
-        when (action) {
-            LauncherShellAction.RequestDefaultHome -> {
+    private fun handleActivityRoute(action: LauncherShellAction): Boolean =
+        when (val route = action.launcherActivityRoute()) {
+            LauncherActivityRoute.RequestDefaultHome -> {
                 shellViewModel.onDefaultHomeRequestStarted()
                 requestHomeRole.launch(homeRoleGateway.createHomeRoleRequestIntent())
                 true
             }
 
-            else -> false
-        }
+            is LauncherActivityRoute.Navigation -> {
+                shellViewModel.onNavigationActionSelected(route.action)
+                true
+            }
 
-    private fun handleNavigationAction(action: LauncherShellAction): Boolean =
-        action.navigationAction()
-            ?.also(shellViewModel::onNavigationActionSelected)
-            ?.let { true }
-            ?: false
+            LauncherActivityRoute.HomePageEdit -> {
+                shellViewModel.onHomePageEdited(action)
+                true
+            }
 
-    private fun handleHomePageAction(action: LauncherShellAction): Boolean =
-        action.isHomePageEditAction()
-            .also { isHomePageEditAction ->
-                if (isHomePageEditAction) {
-                    shellViewModel.onHomePageEdited(action)
+            LauncherActivityRoute.HomeShortcutEdit -> {
+                if (action is LauncherShellAction.RemoveHomeShortcut) {
+                    shellViewModel.state.value.homeLayout
+                        .selectedPageHostedWidgetIdForItem(action.itemId)
+                        ?.let(widgetHostGateway::deleteHostedWidgetId)
                 }
-            }
-
-    private fun handleHomeShortcutAction(action: LauncherShellAction): Boolean =
-        when (action) {
-            is LauncherShellAction.RemoveHomeShortcut -> {
-                shellViewModel.state.value.homeLayout
-                    .selectedPageHostedWidgetIdForItem(action.itemId)
-                    ?.let(widgetHostGateway::deleteHostedWidgetId)
                 shellViewModel.onHomeShortcutEdited(action)
                 true
             }
 
-            is LauncherShellAction.CreateEmptyHomeFolder,
-            is LauncherShellAction.CreateHomeFolder,
-            is LauncherShellAction.RenameHomeFolder,
-            is LauncherShellAction.AddAppToFolder,
-            is LauncherShellAction.RemoveAppFromFolder,
-            is LauncherShellAction.MoveHomeShortcutToCell,
-            is LauncherShellAction.AddAppShortcutToHome,
-            is LauncherShellAction.AddHostedWidgetToHome,
-            is LauncherShellAction.ResizeHomeWidget,
-            -> {
-                shellViewModel.onHomeShortcutEdited(action)
-                true
-            }
-
-            else -> false
-        }
-
-    private fun handleDockAction(action: LauncherShellAction): Boolean =
-        when (action) {
-            is LauncherShellAction.AddAppToDock,
-            is LauncherShellAction.SelectDockEnabled,
-            is LauncherShellAction.SelectDockCapacity,
-            is LauncherShellAction.SelectDockIconSize,
-            is LauncherShellAction.SelectDockBackgroundAlpha,
-            is LauncherShellAction.SelectDockBackgroundSizing,
-            is LauncherShellAction.SelectDockItemSpacing,
-            is LauncherShellAction.RemoveDockShortcut,
-            is LauncherShellAction.MoveDockShortcut,
-            -> {
+            LauncherActivityRoute.DockEdit -> {
                 shellViewModel.onDockEdited(action)
                 true
             }
 
-            else -> false
+            null -> false
         }
 
     private fun handleAppAction(action: LauncherShellAction) {
@@ -351,16 +312,6 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
-
-private fun LauncherShellAction.navigationAction(): ShellNavigationAction? =
-    when (this) {
-        LauncherShellAction.OpenHome -> ShellNavigationAction.OpenHome
-        LauncherShellAction.OpenAppDrawer -> ShellNavigationAction.OpenAppDrawer
-        LauncherShellAction.OpenSearch -> ShellNavigationAction.OpenSearch
-        LauncherShellAction.OpenNotifications -> ShellNavigationAction.OpenNotifications
-        LauncherShellAction.OpenSettings -> ShellNavigationAction.OpenSettings
-        else -> null
-    }
 
 private const val BACKUP_DOCUMENT_MIME_TYPE = "application/json"
 private const val BACKUP_DOCUMENT_NAME = "riffle-backup.json"
