@@ -23,23 +23,16 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.apps.InstalledApp
-import com.riffle.core.domain.launcher.home.HomeLayout
-import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.WallpaperSource
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
-import com.riffle.core.domain.launcher.settings.LauncherSettings
 
 @Composable
 fun SettingsSurface(
-    settings: LauncherSettings,
-    homeLayout: HomeLayout,
-    selectedLayoutDeviceClass: HomeLayoutDeviceClass,
-    notificationAccessStatus: NotificationAccessStatus,
-    hiddenApps: List<InstalledApp>,
-    appVersionLabel: String,
+    state: SettingsSurfaceState,
     onAction: (LauncherShellAction) -> Unit,
 ) {
     Surface(
@@ -54,7 +47,7 @@ fun SettingsSurface(
                     .padding(horizontal = 20.dp, vertical = 16.dp),
         ) {
             SettingsPageHeader(
-                appVersionLabel = appVersionLabel,
+                appVersionLabel = state.appVersionLabel,
                 onAction = onAction,
             )
             Spacer(modifier = Modifier.height(24.dp))
@@ -66,11 +59,7 @@ fun SettingsSurface(
                         .widthIn(max = SETTINGS_PAGE_MAX_WIDTH_DP.dp)
                         .align(Alignment.CenterHorizontally)
                         .verticalScroll(rememberScrollState()),
-                settings = settings,
-                homeLayout = homeLayout,
-                selectedLayoutDeviceClass = selectedLayoutDeviceClass,
-                notificationAccessStatus = notificationAccessStatus,
-                hiddenApps = hiddenApps,
+                state = state,
                 onAction = onAction,
             )
         }
@@ -111,11 +100,7 @@ private fun ColumnScope.SettingsPageHeader(
 @Composable
 private fun SettingsPageContent(
     modifier: Modifier,
-    settings: LauncherSettings,
-    homeLayout: HomeLayout,
-    selectedLayoutDeviceClass: HomeLayoutDeviceClass,
-    notificationAccessStatus: NotificationAccessStatus,
-    hiddenApps: List<InstalledApp>,
+    state: SettingsSurfaceState,
     onAction: (LauncherShellAction) -> Unit,
 ) {
     Column(
@@ -123,51 +108,51 @@ private fun SettingsPageContent(
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         SettingsLayoutDeviceTabs(
-            selectedDeviceClass = selectedLayoutDeviceClass,
+            selectedDeviceClass = state.selectedLayoutDeviceClass,
             onAction = onAction,
         )
         SettingsSection(title = "Appearance") {
             WallpaperSourceSetting(
-                selectedSource = settings.appearance.wallpaper.source,
+                selectedSource = state.settings.appearance.wallpaper.source,
                 onAction = onAction,
             )
             HomeLabelSetting(
-                settings = homeLayout.settings.labels,
+                settings = state.homeLayout.settings.labels,
                 onAction = onAction,
             )
         }
         SettingsSection(title = "Home layout") {
             HomeViewModeSetting(
-                viewMode = homeLayout.viewMode,
+                viewMode = state.homeLayout.viewMode,
                 onAction = onAction,
             )
             HomeGridSetting(
-                grid = homeLayout.settings.grid,
-                viewMode = homeLayout.viewMode,
+                grid = state.homeLayout.settings.grid,
+                viewMode = state.homeLayout.viewMode,
                 onAction = onAction,
             )
         }
         SettingsSection(title = "Dock") {
             DockSetting(
-                dock = homeLayout.dock,
+                dock = state.homeLayout.dock,
                 onAction = onAction,
             )
         }
         SettingsSection(title = "Gestures") {
             HomeSwipeGestureSetting(
-                settings = settings.gestures.homeSwipe,
+                settings = state.settings.gestures.homeSwipe,
                 onAction = onAction,
             )
         }
         SettingsSection(title = "Haptics") {
             HapticStrengthSetting(
-                selectedStrength = settings.haptics.feedbackStrength,
+                selectedStrength = state.settings.haptics.feedbackStrength,
                 onAction = onAction,
             )
         }
         SettingsSection(title = "Permissions") {
             NotificationAccessSetting(
-                status = notificationAccessStatus,
+                status = state.notificationAccessStatus,
                 onAction = onAction,
             )
         }
@@ -179,8 +164,38 @@ private fun SettingsPageContent(
         }
         SettingsSection(title = "Hidden apps") {
             HiddenAppsSetting(
-                apps = hiddenApps,
+                apps = state.hiddenApps,
                 onAction = onAction,
+            )
+        }
+        SettingsSection(title = "Version") {
+            VersionInformationSetting(
+                appVersionLabel = state.appVersionLabel,
+                appBuildIdentityLabel = state.appBuildIdentityLabel,
+            )
+        }
+    }
+}
+
+@Composable
+private fun VersionInformationSetting(
+    appVersionLabel: String,
+    appBuildIdentityLabel: String,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        SettingsTextColumn(
+            title = "Version",
+            subtitle = appVersionLabel,
+        )
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            SettingsPrimaryText(text = "Build")
+            Text(
+                text = appBuildIdentityLabel,
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis,
+                softWrap = true,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }
@@ -251,34 +266,19 @@ private fun WallpaperSourceSetting(
             title = "Wallpaper",
         )
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            WallpaperSourceButton(
-                label = "System",
-                source = WallpaperSource.SYSTEM,
-                selectedSource = selectedSource,
-                onAction = onAction,
-            )
-            WallpaperSourceButton(
-                label = "Solid",
-                source = WallpaperSource.SOLID_COLOR,
-                selectedSource = selectedSource,
-                onAction = onAction,
-            )
+            TextButton(
+                enabled = WallpaperSource.SYSTEM != selectedSource,
+                onClick = { onAction(LauncherShellAction.SelectWallpaperSource(WallpaperSource.SYSTEM)) },
+            ) {
+                SettingsButtonText(text = "System")
+            }
+            TextButton(
+                enabled = WallpaperSource.SOLID_COLOR != selectedSource,
+                onClick = { onAction(LauncherShellAction.SelectWallpaperSource(WallpaperSource.SOLID_COLOR)) },
+            ) {
+                SettingsButtonText(text = "Solid")
+            }
         }
-    }
-}
-
-@Composable
-private fun WallpaperSourceButton(
-    label: String,
-    source: WallpaperSource,
-    selectedSource: WallpaperSource,
-    onAction: (LauncherShellAction) -> Unit,
-) {
-    TextButton(
-        enabled = source != selectedSource,
-        onClick = { onAction(LauncherShellAction.SelectWallpaperSource(source)) },
-    ) {
-        SettingsButtonText(text = label)
     }
 }
 

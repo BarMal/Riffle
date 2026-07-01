@@ -30,7 +30,6 @@ fun HomeDestination(
                 installedApps = state.installedApps,
                 interactions =
                     StandardHomeInteractions(
-                        homeSwipeGestures = state.launcherSettings.gestures.homeSwipe,
                         haptics = haptics,
                     ),
                 presentation =

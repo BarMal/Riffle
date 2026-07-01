@@ -39,6 +39,7 @@ import com.riffle.core.domain.launcher.home.WallpaperSource
 fun LauncherShell(
     viewModel: LauncherShellViewModel,
     appVersionLabel: String,
+    appBuildIdentityLabel: String,
     appIconLoader: AppIconLoader = EmptyAppIconLoader,
     widgetViewFactory: HomeWidgetViewFactory = EmptyHomeWidgetViewFactory,
     onAction: (LauncherShellAction) -> Unit,
@@ -49,6 +50,7 @@ fun LauncherShell(
         LauncherShellContent(
             state = state,
             appVersionLabel = appVersionLabel,
+            appBuildIdentityLabel = appBuildIdentityLabel,
             appIconLoader = appIconLoader,
             widgetViewFactory = widgetViewFactory,
             onAction = onAction,
@@ -60,6 +62,7 @@ fun LauncherShell(
 fun LauncherShellContent(
     state: LauncherShellState,
     appVersionLabel: String = "",
+    appBuildIdentityLabel: String = "",
     appIconLoader: AppIconLoader = EmptyAppIconLoader,
     widgetViewFactory: HomeWidgetViewFactory = EmptyHomeWidgetViewFactory,
     onAction: (LauncherShellAction) -> Unit,
@@ -95,6 +98,7 @@ fun LauncherShellContent(
                 LauncherDestination(
                     state = state,
                     appVersionLabel = appVersionLabel,
+                    appBuildIdentityLabel = appBuildIdentityLabel,
                     appIconLoader = appIconLoader,
                     widgetViewFactory = widgetViewFactory,
                     haptics = haptics,
@@ -136,6 +140,7 @@ private fun DefaultHomePrompt(onAction: (LauncherShellAction) -> Unit) {
 private fun LauncherDestination(
     state: LauncherShellState,
     appVersionLabel: String,
+    appBuildIdentityLabel: String,
     appIconLoader: AppIconLoader,
     widgetViewFactory: HomeWidgetViewFactory,
     haptics: LauncherHaptics,
@@ -196,12 +201,16 @@ private fun LauncherDestination(
 
         ShellDestination.SETTINGS ->
             SettingsSurface(
-                settings = state.launcherSettings,
-                homeLayout = state.homeLayoutSet.layoutFor(state.settingsTargetLayoutKey),
-                selectedLayoutDeviceClass = state.settingsLayoutDeviceClass,
-                notificationAccessStatus = state.notificationAccessStatus,
-                hiddenApps = state.hiddenApps,
-                appVersionLabel = appVersionLabel,
+                state =
+                    SettingsSurfaceState(
+                        settings = state.launcherSettings,
+                        homeLayout = state.homeLayoutSet.layoutFor(state.settingsTargetLayoutKey),
+                        selectedLayoutDeviceClass = state.settingsLayoutDeviceClass,
+                        notificationAccessStatus = state.notificationAccessStatus,
+                        hiddenApps = state.hiddenApps,
+                        appVersionLabel = appVersionLabel,
+                        appBuildIdentityLabel = appBuildIdentityLabel,
+                    ),
                 onAction = onAction,
             )
     }
