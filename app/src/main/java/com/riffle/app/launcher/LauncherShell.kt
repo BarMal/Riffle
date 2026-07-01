@@ -41,6 +41,7 @@ import com.riffle.core.domain.launcher.home.WallpaperSource
 @Composable
 fun LauncherShell(
     viewModel: LauncherShellViewModel,
+    appVersionLabel: String,
     appIconLoader: AppIconLoader = EmptyAppIconLoader,
     widgetViewFactory: HomeWidgetViewFactory = EmptyHomeWidgetViewFactory,
     onAction: (LauncherShellAction) -> Unit,
@@ -64,6 +65,7 @@ fun LauncherShell(
     Box(modifier = Modifier.fillMaxSize()) {
         LauncherShellContent(
             state = state,
+            appVersionLabel = appVersionLabel,
             appIconLoader = appIconLoader,
             widgetViewFactory = widgetViewFactory,
             onAction = onAction,
@@ -74,6 +76,7 @@ fun LauncherShell(
 @Composable
 fun LauncherShellContent(
     state: LauncherShellState,
+    appVersionLabel: String = "",
     appIconLoader: AppIconLoader = EmptyAppIconLoader,
     widgetViewFactory: HomeWidgetViewFactory = EmptyHomeWidgetViewFactory,
     onAction: (LauncherShellAction) -> Unit,
@@ -108,6 +111,7 @@ fun LauncherShellContent(
             } else {
                 LauncherDestination(
                     state = state,
+                    appVersionLabel = appVersionLabel,
                     appIconLoader = appIconLoader,
                     widgetViewFactory = widgetViewFactory,
                     haptics = haptics,
@@ -148,6 +152,7 @@ private fun DefaultHomePrompt(onAction: (LauncherShellAction) -> Unit) {
 @Composable
 private fun LauncherDestination(
     state: LauncherShellState,
+    appVersionLabel: String,
     appIconLoader: AppIconLoader,
     widgetViewFactory: HomeWidgetViewFactory,
     haptics: LauncherHaptics,
@@ -212,6 +217,7 @@ private fun LauncherDestination(
                 homeLayout = state.homeLayout,
                 notificationAccessStatus = state.notificationAccessStatus,
                 hiddenApps = state.hiddenApps,
+                appVersionLabel = appVersionLabel,
                 onAction = onAction,
             )
     }

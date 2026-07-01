@@ -37,6 +37,7 @@ fun SettingsSurface(
     homeLayout: HomeLayout,
     notificationAccessStatus: NotificationAccessStatus,
     hiddenApps: List<InstalledApp>,
+    appVersionLabel: String,
     onAction: (LauncherShellAction) -> Unit,
 ) {
     Surface(
@@ -64,6 +65,7 @@ fun SettingsSurface(
                 homeLayout = homeLayout,
                 notificationAccessStatus = notificationAccessStatus,
                 hiddenApps = hiddenApps,
+                appVersionLabel = appVersionLabel,
                 onAction = onAction,
             )
         }
@@ -98,6 +100,7 @@ private fun SettingsPageContent(
     homeLayout: HomeLayout,
     notificationAccessStatus: NotificationAccessStatus,
     hiddenApps: List<InstalledApp>,
+    appVersionLabel: String,
     onAction: (LauncherShellAction) -> Unit,
 ) {
     Column(
@@ -159,6 +162,13 @@ private fun SettingsPageContent(
             HiddenAppsSetting(
                 apps = hiddenApps,
                 onAction = onAction,
+            )
+        }
+        SettingsSection(title = "About") {
+            SettingsTextColumn(
+                modifier = Modifier.fillMaxWidth(),
+                title = "Version",
+                subtitle = appVersionLabel,
             )
         }
     }
