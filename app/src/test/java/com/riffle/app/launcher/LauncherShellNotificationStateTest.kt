@@ -20,7 +20,7 @@ import kotlin.coroutines.CoroutineContext
 
 class LauncherShellNotificationStateTest {
     @Test
-    fun loadsNotificationGroupsIntoInitialState() {
+    fun refreshLoadsNotificationGroups() {
         val viewModel =
             LauncherShellViewModel(
                 firstRunRepository = FakeFirstRunRepository(),
@@ -45,6 +45,8 @@ class LauncherShellNotificationStateTest {
                             ),
                     ),
             )
+
+        runBlocking { viewModel.refreshNotifications().join() }
 
         val group = viewModel.state.value.notificationGroupsByApp.single()
 
@@ -103,6 +105,7 @@ class LauncherShellNotificationStateTest {
                         notificationRepository = notificationRepository,
                     ),
             )
+        runBlocking { viewModel.refreshInstalledApps().join() }
 
         installedAppRepository.apps = listOf(app(label = "Calendar"))
         notificationRepository.notifications =
@@ -166,6 +169,7 @@ class LauncherShellNotificationStateTest {
                         notificationRepository = notificationRepository,
                     ),
             )
+        runBlocking { viewModel.refreshNotifications().join() }
         notificationRepository.notifications = listOf(notification(key = "mail-1", packageName = "com.riffle.mail"))
         notificationRepository.activeNotificationReadCount = 0
 
@@ -210,6 +214,8 @@ class LauncherShellNotificationStateTest {
                     ),
             )
 
+        runBlocking { viewModel.refreshNotifications().join() }
+
         assertEquals(
             listOf(AppPackageName("com.riffle.music")),
             viewModel.state.value.notificationGroupsByApp.map { group -> group.packageName },
@@ -239,6 +245,11 @@ class LauncherShellNotificationStateTest {
                             ),
                     ),
             )
+
+        runBlocking {
+            viewModel.refreshInstalledApps().join()
+            viewModel.refreshNotifications().join()
+        }
 
         assertEquals(
             listOf(camera.identity.packageName),

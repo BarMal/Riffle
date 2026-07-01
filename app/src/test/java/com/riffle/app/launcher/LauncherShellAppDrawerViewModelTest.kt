@@ -33,6 +33,8 @@ class LauncherShellAppDrawerViewModelTest {
                     ),
             )
 
+        runBlocking { viewModel.refreshInstalledApps().join() }
+
         assertEquals(listOf("Browser", "Camera"), viewModel.state.value.appDrawerApps.map { app -> app.label })
     }
 
@@ -52,6 +54,7 @@ class LauncherShellAppDrawerViewModelTest {
                     ),
             )
 
+        runBlocking { viewModel.refreshInstalledApps().join() }
         viewModel.onAppActionSelected(LauncherShellAction.AppDrawerQueryChanged("cam"))
 
         assertEquals("cam", viewModel.state.value.appDrawerQuery)
@@ -77,6 +80,7 @@ class LauncherShellAppDrawerViewModelTest {
                     ),
             )
 
+        runBlocking { viewModel.refreshInstalledApps().join() }
         viewModel.onAppActionSelected(LauncherShellAction.AppDrawerQueryChanged("selfie"))
 
         assertEquals(listOf("Camera"), viewModel.state.value.appDrawerApps.map { app -> app.label })
@@ -118,6 +122,8 @@ class LauncherShellAppDrawerViewModelTest {
                 firstRunRepository = FakeFirstRunRepository(),
                 installedAppRepository = repository,
             )
+
+        runBlocking { viewModel.refreshInstalledApps().join() }
 
         assertEquals(listOf(camera), repository.requestedShortcutApps)
         assertEquals(
@@ -173,6 +179,7 @@ class LauncherShellAppDrawerViewModelTest {
                     ),
             )
 
+        runBlocking { viewModel.refreshInstalledApps().join() }
         viewModel.onAppActionSelected(
             LauncherShellAction.AppDrawerProfileFilterSelected(AppDrawerProfileFilter.WORK),
         )
@@ -204,6 +211,7 @@ class LauncherShellAppDrawerViewModelTest {
                     ),
             )
 
+        runBlocking { viewModel.refreshInstalledApps().join() }
         viewModel.onAppActionSelected(LauncherShellAction.AppDrawerQueryChanged("cal"))
         viewModel.onAppActionSelected(
             LauncherShellAction.AppDrawerProfileFilterSelected(AppDrawerProfileFilter.WORK),

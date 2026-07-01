@@ -91,30 +91,17 @@ class LauncherShellViewModel(
                 firstRunRepository = firstRunRepository,
                 reducer = reducer,
                 platformDependencies = platformDependencies,
-            ).let { state ->
-                when {
-                    platformDependencies.loadInitialPlatformState ->
-                        state.withInstalledApps(installedAppRepository, appVisibilityRepository, appCatalog)
-                            .copy(
-                                installedWidgetProviders =
-                                    platformDependencies.installedWidgetProviders(widgetProviderCatalog),
-                            )
-                            .withoutUnavailableApps(homeLayoutRepository)
-                            .withHomeScreenLibraryApps(homeLayoutRepository)
-                            .withAppShortcuts(appShortcutRepository, appCatalog)
-                            .withNotificationState(
-                                notificationRepository = notificationRepository,
-                                appNotificationCounter = appNotificationCounter,
-                                appNotificationGrouper = appNotificationGrouper,
-                                notificationStaleFilter = notificationStaleFilter,
-                                nowEpochMillis = epochMillisProvider.nowEpochMillis(),
-                            )
-
-                    else -> state
-                }
-            },
+            ),
         )
     val state: StateFlow<LauncherShellState> = mutableState.asStateFlow()
+
+    init {
+        if (platformDependencies.loadInitialPlatformState) {
+            refreshInstalledApps()
+            refreshNotifications()
+            refreshWidgetProviders()
+        }
+    }
 
     fun onHomeRoleStatusChanged(
         homeRoleStatus: HomeRoleStatus,
