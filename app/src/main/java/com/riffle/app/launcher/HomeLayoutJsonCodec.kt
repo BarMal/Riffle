@@ -7,6 +7,7 @@ import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.LauncherPage
 import com.riffle.core.domain.launcher.home.LauncherPageId
+import com.riffle.core.domain.launcher.home.LauncherPageType
 import com.riffle.core.domain.launcher.home.LauncherViewMode
 import org.json.JSONArray
 import org.json.JSONObject
@@ -86,6 +87,13 @@ private fun JSONObject.toDock(): DockModel =
 private fun encodePage(page: LauncherPage): JSONObject =
     JSONObject()
         .put("id", page.id.value)
+        .put("type", page.type.typeName)
+        .apply {
+            val pageType = page.type
+            if (pageType is LauncherPageType.Generated) {
+                put("generatedKind", pageType.kind.name)
+            }
+        }
         .put("columns", page.grid.columns)
         .put("rows", page.grid.rows)
         .put("items", JSONArray(page.items.map(::encodeLauncherItem)))
@@ -98,6 +106,7 @@ private fun JSONArray.toPages(): List<LauncherPage> =
 private fun JSONObject.toPage(): LauncherPage =
     LauncherPage(
         id = LauncherPageId(getString("id")),
+        type = optPageType(),
         grid =
             GridDimensions(
                 columns = getInt("columns"),

@@ -21,6 +21,9 @@ import com.riffle.core.domain.launcher.home.HomeLayoutKey
 import com.riffle.core.domain.launcher.home.HomeLayoutSet
 import com.riffle.core.domain.launcher.home.HostedWidgetId
 import com.riffle.core.domain.launcher.home.LauncherItemId
+import com.riffle.core.domain.launcher.home.LauncherPage
+import com.riffle.core.domain.launcher.home.LauncherPageId
+import com.riffle.core.domain.launcher.home.LauncherPageType
 import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.home.WallpaperSettings
 import com.riffle.core.domain.launcher.home.WallpaperSource
@@ -279,6 +282,60 @@ class HomeLayoutJsonCodecTest {
         val decodedLayout = decodeHomeLayout(encodeHomeLayout(layout))
 
         assertEquals(LauncherViewMode.HOME_SCREEN_LIBRARY, decodedLayout.viewMode)
+    }
+
+    @Test
+    fun roundTripsGeneratedLibraryPageType() {
+        val layout =
+            HomeLayoutDefaults.standard().copy(
+                viewMode = LauncherViewMode.HOME_SCREEN_LIBRARY,
+                pages =
+                    listOf(
+                        HomeLayoutDefaults.standard().selectedPage,
+                        LauncherPage(
+                            id = LauncherPageId("library:1"),
+                            type = LauncherPageType.AllApps,
+                            grid = GridDimensions(columns = 4, rows = 5),
+                        ),
+                    ),
+            )
+
+        val decodedLayout = decodeHomeLayout(encodeHomeLayout(layout))
+
+        assertEquals(LauncherPageType.AllApps, decodedLayout.pages[1].type)
+    }
+
+    @Test
+    fun infersGeneratedLibraryPageTypeForLegacyJson() {
+        val decodedLayout =
+            decodeHomeLayout(
+                """
+                {
+                  "viewMode": "HOME_SCREEN_LIBRARY",
+                  "selectedPageId": "library:1",
+                  "pages": [
+                    {
+                      "id": "home",
+                      "columns": 4,
+                      "rows": 5,
+                      "items": []
+                    },
+                    {
+                      "id": "library:1",
+                      "columns": 4,
+                      "rows": 5,
+                      "items": []
+                    }
+                  ],
+                  "dock": {
+                    "capacity": 5,
+                    "items": []
+                  }
+                }
+                """.trimIndent(),
+            )
+
+        assertEquals(LauncherPageType.AllApps, decodedLayout.pages[1].type)
     }
 
     @Test

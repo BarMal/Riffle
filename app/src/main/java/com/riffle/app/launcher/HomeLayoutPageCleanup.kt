@@ -24,5 +24,10 @@ fun HomeLayout.withoutTrailingEmptyLibraryPages(): HomeLayout {
     )
 }
 
+internal val LauncherPage.isGeneratedLibraryPage: Boolean
+    get() = type == LauncherPageType.AllApps || id.value.startsWith(LIBRARY_PAGE_ID_PREFIX)
+
 private val LauncherPage.isEmptyGeneratedLibraryPage: Boolean
-    get() = type == LauncherPageType.AllApps && items.isEmpty()
+    get() = isGeneratedLibraryPage && items.isEmpty()
+
+private const val LIBRARY_PAGE_ID_PREFIX = "library:"
