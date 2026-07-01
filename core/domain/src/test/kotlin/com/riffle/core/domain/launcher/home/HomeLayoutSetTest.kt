@@ -63,5 +63,32 @@ class HomeLayoutSetTest {
         assertEquals(LauncherPageId("library-home"), layoutSet.activeLayout.selectedPageId)
     }
 
+    @Test
+    fun updatingSpecificLayoutDoesNotChangeActiveKey() {
+        val foldableKey =
+            HomeLayoutKey(
+                viewMode = LauncherViewMode.STANDARD_APP_DRAWER,
+                deviceClass = HomeLayoutDeviceClass.FOLDABLE,
+            )
+        val foldablePage =
+            HomeLayoutDefaults.standard()
+                .selectedPage
+                .copy(id = LauncherPageId("foldable-home"))
+        val layoutSet =
+            HomeLayoutSet.standard()
+                .withLayout(
+                    key = foldableKey,
+                    layout =
+                        HomeLayoutDefaults.standard().copy(
+                            pages = listOf(foldablePage),
+                            selectedPageId = foldablePage.id,
+                        ),
+                )
+
+        assertEquals(standardKey, layoutSet.activeKey)
+        assertEquals(LauncherPageId("home"), layoutSet.activeLayout.selectedPageId)
+        assertEquals(LauncherPageId("foldable-home"), layoutSet.layoutFor(foldableKey).selectedPageId)
+    }
+
     private val standardKey = HomeLayoutKey(LauncherViewMode.STANDARD_APP_DRAWER)
 }

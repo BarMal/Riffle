@@ -31,6 +31,11 @@ fun LauncherShellAction.handleSettingsAction(
             true
         }
 
+        is LauncherShellAction.SelectSettingsLayoutDeviceClass -> {
+            viewModel.onLauncherSettingsActionSelected(this)
+            true
+        }
+
         LauncherShellAction.RequestNotificationAccess -> {
             runCatching {
                 openIntent(notificationAccessGateway.createNotificationListenerSettingsIntent())

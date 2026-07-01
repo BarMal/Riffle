@@ -29,6 +29,8 @@ fun LauncherShellState.withImportedBackup(
 
     return copy(
         homeLayout = document.homeLayoutSet.activeLayout,
+        homeLayoutSet = document.homeLayoutSet,
+        settingsLayoutDeviceClass = document.homeLayoutSet.activeKey.deviceClass,
         launcherSettings = document.launcherSettings,
     )
 }

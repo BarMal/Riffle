@@ -9,8 +9,6 @@ fun LauncherShellState.withHomeScreenLibraryApps(homeLayoutRepository: HomeLayou
         .let { libraryLayout ->
             when (libraryLayout) {
                 homeLayout -> this
-                else ->
-                    copy(homeLayout = libraryLayout)
-                        .also { state -> homeLayoutRepository.saveHomeLayout(state.homeLayout) }
+                else -> withHomeLayout(libraryLayout, homeLayoutRepository)
             }
         }

@@ -15,9 +15,7 @@ fun LauncherShellState.withoutUnavailableApps(homeLayoutRepository: HomeLayoutRe
         .let { prunedLayout ->
             when (prunedLayout) {
                 homeLayout -> this
-                else ->
-                    copy(homeLayout = prunedLayout)
-                        .also { state -> homeLayoutRepository.saveHomeLayout(state.homeLayout) }
+                else -> withHomeLayout(prunedLayout, homeLayoutRepository)
             }
         }
 

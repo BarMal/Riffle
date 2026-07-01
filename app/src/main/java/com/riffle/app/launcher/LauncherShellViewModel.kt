@@ -23,6 +23,7 @@ import com.riffle.core.domain.launcher.home.FolderEngine
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
+import com.riffle.core.domain.launcher.home.HomeLayoutSet
 import com.riffle.core.domain.launcher.home.HomePageEditResult
 import com.riffle.core.domain.launcher.home.HomePageEngine
 import com.riffle.core.domain.launcher.home.HomeShortcutEngine
@@ -355,16 +356,23 @@ class LauncherShellViewModel(
 
     fun onHomePageEdited(action: LauncherShellAction) {
         mutableState.value =
-            when (action) {
-                is LauncherShellAction.SelectLauncherViewMode ->
+            when {
+                action is LauncherShellAction.SelectLauncherViewMode ->
                     mutableState.value
                         .withSelectedHomeLayoutMode(action.mode, homeLayoutRepository)
                         .withHomeScreenLibraryApps(homeLayoutRepository)
 
-                is LauncherShellAction.SelectHomeLayoutDeviceClass ->
+                action is LauncherShellAction.SelectHomeLayoutDeviceClass ->
                     mutableState.value
                         .withSelectedHomeLayoutDeviceClass(action.deviceClass, homeLayoutRepository)
                         .withHomeScreenLibraryApps(homeLayoutRepository)
+
+                mutableState.value.shouldEditSettingsTargetLayout(action) ->
+                    mutableState.value.withSettingsHomePageEdit(
+                        action = action,
+                        homePageEngine = homePageEngine,
+                        homeLayoutRepository = homeLayoutRepository,
+                    )
 
                 else ->
                     when (
@@ -386,9 +394,17 @@ class LauncherShellViewModel(
 
     fun onDockEdited(action: LauncherShellAction) {
         mutableState.value =
-            when (val result = dockEngine.applyEdit(action = action, layout = mutableState.value.homeLayout)) {
-                is DockEditResult.Updated -> mutableState.value.withHomeLayout(result.layout, homeLayoutRepository)
-                is DockEditResult.Rejected -> mutableState.value
+            if (mutableState.value.shouldEditSettingsTargetDock(action)) {
+                mutableState.value.withSettingsDockEdit(
+                    action = action,
+                    dockEngine = dockEngine,
+                    homeLayoutRepository = homeLayoutRepository,
+                )
+            } else {
+                when (val result = dockEngine.applyEdit(action = action, layout = mutableState.value.homeLayout)) {
+                    is DockEditResult.Updated -> mutableState.value.withHomeLayout(result.layout, homeLayoutRepository)
+                    is DockEditResult.Rejected -> mutableState.value
+                }
             }
     }
 
@@ -430,6 +446,9 @@ class LauncherShellViewModel(
                             ),
                         launcherSettingsRepository = launcherSettingsRepository,
                     )
+
+                is LauncherShellAction.SelectSettingsLayoutDeviceClass ->
+                    mutableState.value.withSettingsLayoutDeviceClass(action.deviceClass)
 
                 is LauncherShellAction.ImportLauncherBackup ->
                     mutableState.value
@@ -489,8 +508,12 @@ private fun createInitialState(
         homeLayoutRepository.saveHomeLayoutSet(initialLayoutSet)
     }
 
+    val layoutSet = initialLayoutSet ?: HomeLayoutSet.fromLayout(HomeLayoutDefaults.standard())
+
     return LauncherShellState(
-        homeLayout = initialLayoutSet?.activeLayout ?: HomeLayoutDefaults.standard(),
+        homeLayout = layoutSet.activeLayout,
+        homeLayoutSet = layoutSet,
+        settingsLayoutDeviceClass = layoutSet.activeKey.deviceClass,
         launcherSettings = launcherSettingsRepository.loadLauncherSettings() ?: LauncherSettings(),
     ).let { initialState ->
         if (firstRunRepository.isFirstRunComplete()) {

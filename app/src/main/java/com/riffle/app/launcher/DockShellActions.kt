@@ -44,3 +44,16 @@ fun DockEngine.applyEdit(
 
         else -> DockEditResult.Rejected(DockEditRejectionReason.ITEM_NOT_FOUND)
     }
+
+internal fun LauncherShellAction.isDockConfigurationAction(): Boolean =
+    when (this) {
+        is LauncherShellAction.SelectDockEnabled,
+        is LauncherShellAction.SelectDockCapacity,
+        is LauncherShellAction.SelectDockIconSize,
+        is LauncherShellAction.SelectDockBackgroundAlpha,
+        is LauncherShellAction.SelectDockBackgroundSizing,
+        is LauncherShellAction.SelectDockItemSpacing,
+        -> true
+
+        else -> false
+    }
