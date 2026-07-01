@@ -9,7 +9,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
@@ -86,7 +86,7 @@ fun Dock(
             ) {
                 repeat(renderedSlotCount) { index ->
                     DockSlot(
-                        modifier = Modifier.size(dock.iconSizeDp.dp),
+                        modifier = Modifier.requiredSize(dock.iconSizeDp.dp),
                         state =
                             DockSlotState(
                                 shortcut = dock.items.getOrNull(index) as? AppShortcutItem,
@@ -206,7 +206,7 @@ private fun DockShortcut(
     Box(
         modifier =
             Modifier
-                .size(state.iconSizeDp.dp),
+                .requiredSize(state.iconSizeDp.dp),
     ) {
         LauncherAppIcon(
             identity = shortcut.appIdentity,
@@ -214,7 +214,7 @@ private fun DockShortcut(
             iconLoader = appIconLoader,
             modifier =
                 Modifier
-                    .size(state.iconSizeDp.dp)
+                    .requiredSize(state.iconSizeDp.dp)
                     .combinedClickable(
                         onClick = {
                             if (state.isEditing) {
