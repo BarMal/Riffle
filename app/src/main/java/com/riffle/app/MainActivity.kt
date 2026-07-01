@@ -74,6 +74,16 @@ class MainActivity : ComponentActivity() {
     }
     private val homeRoleGateway by lazy { AndroidHomeRoleGateway(this) }
     private val appLauncher by lazy { AndroidAppLauncher(this) }
+    private val appVersionLabel by lazy {
+        packageManager
+            .getPackageInfo(packageName, 0)
+            .let { packageInfo ->
+                launcherVersionLabel(
+                    versionName = packageInfo.versionName,
+                    versionCode = packageInfo.longVersionCode,
+                )
+            }
+    }
     private val appIconLoader by lazy { PackageManagerAppIconLoader(packageManager) }
     private val packageChangeObserver by lazy {
         AndroidPackageChangeObserver(this) {
@@ -184,6 +194,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             LauncherShell(
                 viewModel = shellViewModel,
+                appVersionLabel = appVersionLabel,
                 appIconLoader = appIconLoader,
                 widgetViewFactory = widgetHostGateway,
                 onAction = ::handleAction,
