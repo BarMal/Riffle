@@ -17,6 +17,7 @@ import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.home.LauncherPage
 import com.riffle.core.domain.launcher.home.LauncherPageId
 import com.riffle.core.domain.launcher.home.LauncherViewMode
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -164,6 +165,7 @@ class LauncherShellHomeGridViewModelTest {
                 homeLayoutRepository = repository,
             )
 
+        runBlocking { viewModel.refreshInstalledApps().join() }
         viewModel.onHomePageEdited(LauncherShellAction.SelectLibraryPageCompaction(enabled = true))
         viewModel.onHomePageEdited(LauncherShellAction.SelectHomeGridDimensions(expandedGrid))
 

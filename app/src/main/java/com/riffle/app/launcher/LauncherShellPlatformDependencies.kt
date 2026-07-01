@@ -10,7 +10,7 @@ data class LauncherShellPlatformDependencies(
     val notificationRepository: LauncherNotificationRepository = LauncherNotificationRepository { emptyList() },
     val widgetProviderRepository: InstalledWidgetProviderRepository = InstalledWidgetProviderRepository { emptyList() },
     val epochMillisProvider: EpochMillisProvider = SystemEpochMillisProvider,
-    val loadInitialPlatformState: Boolean = true,
+    val loadInitialPlatformState: Boolean = false,
     val initialHomeLayoutDeviceClass: HomeLayoutDeviceClass? = null,
 ) {
     fun installedWidgetProviders(catalog: WidgetProviderCatalog): List<InstalledWidgetProvider> =

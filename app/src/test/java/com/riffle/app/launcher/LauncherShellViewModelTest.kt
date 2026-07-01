@@ -120,7 +120,7 @@ class LauncherShellViewModelTest {
     }
 
     @Test
-    fun loadsVisibleInstalledAppsIntoInitialState() {
+    fun refreshLoadsVisibleInstalledApps() {
         val viewModel =
             LauncherShellViewModel(
                 firstRunRepository = FakeFirstRunRepository(),
@@ -134,6 +134,8 @@ class LauncherShellViewModelTest {
                             ),
                     ),
             )
+
+        runBlocking { viewModel.refreshInstalledApps().join() }
 
         assertEquals(
             listOf("Browser", "Camera"),
@@ -172,7 +174,7 @@ class LauncherShellViewModelTest {
     }
 
     @Test
-    fun loadsNotificationCountsIntoInitialState() {
+    fun refreshLoadsNotificationCounts() {
         val viewModel =
             LauncherShellViewModel(
                 firstRunRepository = FakeFirstRunRepository(),
@@ -188,6 +190,8 @@ class LauncherShellViewModelTest {
                             ),
                     ),
             )
+
+        runBlocking { viewModel.refreshNotifications().join() }
 
         assertEquals(2, viewModel.state.value.notificationCountsByPackage[AppPackageName("com.riffle.camera")])
     }
@@ -223,6 +227,7 @@ class LauncherShellViewModelTest {
                     ),
             )
 
+        runBlocking { viewModel.refreshInstalledApps().join() }
         viewModel.onAppActionSelected(LauncherShellAction.SearchQueryChanged("cam"))
 
         assertEquals("cam", viewModel.state.value.searchQuery)

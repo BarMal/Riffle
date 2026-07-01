@@ -22,7 +22,7 @@ import kotlin.coroutines.CoroutineContext
 
 class LauncherShellWidgetViewModelTest {
     @Test
-    fun loadsSortedWidgetProviders() {
+    fun refreshLoadsSortedWidgetProviders() {
         val clock = widgetProvider(label = "Clock", packageName = "com.example.clock")
         val calendar = widgetProvider(label = "Calendar", packageName = "com.example.calendar")
         val viewModel =
@@ -33,6 +33,8 @@ class LauncherShellWidgetViewModelTest {
                         widgetProviderRepository = FakeWidgetProviderRepository(providers = listOf(clock, calendar)),
                     ),
             )
+
+        runBlocking { viewModel.refreshWidgetProviders().join() }
 
         assertEquals(listOf(calendar, clock), viewModel.state.value.installedWidgetProviders)
     }
@@ -50,6 +52,7 @@ class LauncherShellWidgetViewModelTest {
                         widgetProviderRepository = widgetProviderRepository,
                     ),
             )
+        runBlocking { viewModel.refreshWidgetProviders().join() }
         widgetProviderRepository.providers = listOf(calendar)
         widgetProviderRepository.providerReadCount = 0
 
@@ -91,6 +94,7 @@ class LauncherShellWidgetViewModelTest {
                         widgetProviderRepository = widgetProviderRepository,
                     ),
             )
+        runBlocking { viewModel.refreshWidgetProviders().join() }
 
         widgetProviderRepository.failReads = true
         val refreshJob = viewModel.refreshWidgetProviders()

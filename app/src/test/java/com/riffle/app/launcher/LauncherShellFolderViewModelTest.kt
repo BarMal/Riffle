@@ -18,6 +18,7 @@ import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.home.LauncherPage
 import com.riffle.core.domain.launcher.home.LauncherPageId
 import com.riffle.core.domain.launcher.home.LauncherViewMode
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -88,6 +89,7 @@ class LauncherShellFolderViewModelTest {
                 installedAppRepository = FakeInstalledAppRepository(apps = listOf(camera, calendar)),
                 homeLayoutRepository = repository,
             )
+        runBlocking { viewModel.refreshInstalledApps().join() }
         viewModel.onHomePageEdited(LauncherShellAction.SelectLauncherViewMode(LauncherViewMode.HOME_SCREEN_LIBRARY))
 
         viewModel.onHomeShortcutEdited(
@@ -155,6 +157,7 @@ class LauncherShellFolderViewModelTest {
                 installedAppRepository = FakeInstalledAppRepository(apps = listOf(camera, calendar)),
                 homeLayoutRepository = repository,
             )
+        runBlocking { viewModel.refreshInstalledApps().join() }
         viewModel.onHomePageEdited(LauncherShellAction.SelectLauncherViewMode(LauncherViewMode.HOME_SCREEN_LIBRARY))
         val shortcuts = viewModel.state.value.homeLayout.selectedPage.items.filterIsInstance<AppShortcutItem>()
 

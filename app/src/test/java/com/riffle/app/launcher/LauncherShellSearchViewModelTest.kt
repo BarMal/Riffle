@@ -34,6 +34,7 @@ class LauncherShellSearchViewModelTest {
                     ),
             )
 
+        runBlocking { viewModel.refreshInstalledApps().join() }
         viewModel.onAppActionSelected(LauncherShellAction.SearchQueryChanged("new tab"))
 
         assertEquals(listOf("Browser"), viewModel.state.value.searchResults.map { app -> app.label })
@@ -55,6 +56,7 @@ class LauncherShellSearchViewModelTest {
                     ),
             )
 
+        runBlocking { viewModel.refreshInstalledApps().join() }
         viewModel.onAppActionSelected(
             LauncherShellAction.SearchProfileFilterSelected(AppDrawerProfileFilter.WORK),
         )
@@ -79,6 +81,7 @@ class LauncherShellSearchViewModelTest {
                     ),
             )
 
+        runBlocking { viewModel.refreshInstalledApps().join() }
         viewModel.onAppActionSelected(LauncherShellAction.SearchQueryChanged("cal"))
         viewModel.onAppActionSelected(
             LauncherShellAction.SearchProfileFilterSelected(AppDrawerProfileFilter.WORK),

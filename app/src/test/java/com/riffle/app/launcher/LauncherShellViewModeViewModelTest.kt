@@ -118,6 +118,7 @@ class LauncherShellViewModeViewModelTest {
                 homeLayoutRepository = repository,
             )
 
+        runBlocking { viewModel.refreshInstalledApps().join() }
         viewModel.onHomePageEdited(
             LauncherShellAction.SelectLauncherViewMode(LauncherViewMode.HOME_SCREEN_LIBRARY),
         )
@@ -150,7 +151,7 @@ class LauncherShellViewModeViewModelTest {
         runBlocking { viewModel.refreshInstalledApps().join() }
 
         assertEquals(
-            listOf(camera.identity, calendar.identity),
+            listOf(calendar.identity, camera.identity),
             viewModel.state.value.homeLayout.selectedPage.items
                 .filterIsInstance<AppShortcutItem>()
                 .map { item -> item.appIdentity },
@@ -169,6 +170,7 @@ class LauncherShellViewModeViewModelTest {
                 homeLayoutRepository = repository,
             )
 
+        runBlocking { viewModel.refreshInstalledApps().join() }
         viewModel.onHomePageEdited(
             LauncherShellAction.SelectLauncherViewMode(LauncherViewMode.HOME_SCREEN_LIBRARY),
         )
@@ -192,6 +194,7 @@ class LauncherShellViewModeViewModelTest {
                 homeLayoutRepository = repository,
             )
 
+        runBlocking { viewModel.refreshInstalledApps().join() }
         viewModel.onHomePageEdited(
             LauncherShellAction.SelectLauncherViewMode(LauncherViewMode.HOME_SCREEN_LIBRARY),
         )
@@ -227,6 +230,7 @@ class LauncherShellViewModeViewModelTest {
                 homeLayoutRepository = repository,
             )
 
+        runBlocking { viewModel.refreshInstalledApps().join() }
         viewModel.onHomePageEdited(
             LauncherShellAction.SelectLauncherViewMode(LauncherViewMode.HOME_SCREEN_LIBRARY),
         )
@@ -455,6 +459,7 @@ class LauncherShellViewModeViewModelTest {
                     ),
             )
 
+        runBlocking { viewModel.refreshNotifications().join() }
         viewModel.onHomePageEdited(
             LauncherShellAction.SelectHomeLayoutDeviceClass(HomeLayoutDeviceClass.FOLDABLE),
         )

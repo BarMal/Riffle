@@ -37,6 +37,7 @@ class LauncherShellHiddenAppsViewModelTest {
                 appVisibilityRepository = FakeAppVisibilityRepository(hiddenApps = setOf(docs.identity)),
             )
 
+        runBlocking { viewModel.refreshInstalledApps().join() }
         viewModel.onAppActionSelected(LauncherShellAction.SearchQueryChanged(""))
 
         assertEquals(listOf(camera.identity), viewModel.state.value.installedApps.map { app -> app.identity })
