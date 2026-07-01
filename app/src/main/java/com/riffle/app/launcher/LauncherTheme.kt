@@ -1,7 +1,6 @@
 package com.riffle.app.launcher
 
 import android.os.Build
-import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
@@ -10,11 +9,8 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
-import androidx.core.view.WindowCompat
 
 @Composable
 fun RiffleLauncherTheme(content: @Composable () -> Unit) {
@@ -27,11 +23,6 @@ fun RiffleLauncherTheme(content: @Composable () -> Unit) {
             else -> fallbackScheme(darkTheme = darkTheme)
         }
 
-    RiffleSystemBars(
-        colorScheme = colorScheme,
-        darkTheme = darkTheme,
-    )
-
     MaterialTheme(
         colorScheme = colorScheme,
         content = content,
@@ -41,25 +32,6 @@ fun RiffleLauncherTheme(content: @Composable () -> Unit) {
 internal fun supportsDynamicMaterialColor(sdkInt: Int): Boolean = sdkInt >= Build.VERSION_CODES.S
 
 internal fun fallbackScheme(darkTheme: Boolean): ColorScheme = if (darkTheme) darkScheme else lightScheme
-
-@Composable
-private fun RiffleSystemBars(
-    colorScheme: ColorScheme,
-    darkTheme: Boolean,
-) {
-    val window = LocalActivity.current?.window ?: return
-    val statusBarColor = Color.Transparent.toArgb()
-    val navigationBarColor = colorScheme.background.toArgb()
-
-    SideEffect {
-        window.statusBarColor = statusBarColor
-        window.navigationBarColor = navigationBarColor
-        WindowCompat.getInsetsController(window, window.decorView).apply {
-            isAppearanceLightStatusBars = !darkTheme
-            isAppearanceLightNavigationBars = !darkTheme
-        }
-    }
-}
 
 internal val lightScheme =
     lightColorScheme(
