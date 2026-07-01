@@ -72,6 +72,7 @@ class LauncherShellViewModel(
     private val widgetEngine = WidgetEngine()
     private var refreshJob: Job? = null
     private var notificationRefreshJob: Job? = null
+    private var widgetProviderRefreshJob: Job? = null
 
     private val mutableState =
         MutableStateFlow(
@@ -124,6 +125,7 @@ class LauncherShellViewModel(
         when (scope) {
             LauncherShellRefreshScope.INSTALLED_APPS -> refreshJob?.cancel()
             LauncherShellRefreshScope.NOTIFICATIONS -> notificationRefreshJob?.cancel()
+            LauncherShellRefreshScope.WIDGET_PROVIDERS -> widgetProviderRefreshJob?.cancel()
         }
         val job =
             viewModelScope.launch(refreshDispatcher) {
@@ -132,10 +134,6 @@ class LauncherShellViewModel(
                         LauncherShellRefreshScope.INSTALLED_APPS ->
                             mutableState.value
                                 .withInstalledApps(installedAppRepository, appVisibilityRepository, appCatalog)
-                                .copy(
-                                    installedWidgetProviders =
-                                        platformDependencies.installedWidgetProviders(widgetProviderCatalog),
-                                )
                                 .withoutUnavailableApps(homeLayoutRepository)
                                 .withHomeScreenLibraryApps(homeLayoutRepository)
                                 .withAppShortcuts(appShortcutRepository, appCatalog)
@@ -148,11 +146,18 @@ class LauncherShellViewModel(
                                 notificationStaleFilter = notificationStaleFilter,
                                 nowEpochMillis = epochMillisProvider.nowEpochMillis(),
                             )
+
+                        LauncherShellRefreshScope.WIDGET_PROVIDERS ->
+                            mutableState.value.copy(
+                                installedWidgetProviders =
+                                    platformDependencies.installedWidgetProviders(widgetProviderCatalog),
+                            )
                     }
             }
         when (scope) {
             LauncherShellRefreshScope.INSTALLED_APPS -> refreshJob = job
             LauncherShellRefreshScope.NOTIFICATIONS -> notificationRefreshJob = job
+            LauncherShellRefreshScope.WIDGET_PROVIDERS -> widgetProviderRefreshJob = job
         }
 
         return job
