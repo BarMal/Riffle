@@ -32,20 +32,15 @@ import com.riffle.core.domain.launcher.home.PlacementRejectionReason
 import com.riffle.core.domain.launcher.home.WallpaperSettings
 import com.riffle.core.domain.launcher.home.WidgetEditResult
 import com.riffle.core.domain.launcher.home.WidgetEngine
-import com.riffle.core.domain.launcher.notifications.AppNotificationCounter
-import com.riffle.core.domain.launcher.notifications.AppNotificationGrouper
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
-import com.riffle.core.domain.launcher.notifications.NotificationStaleFilter
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettingsRepository
-import com.riffle.core.domain.launcher.widgets.WidgetProviderCatalog
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
 
 class LauncherShellViewModel(
     private val firstRunRepository: FirstRunRepository,
@@ -58,9 +53,6 @@ class LauncherShellViewModel(
 ) : ViewModel() {
     private val reducer = LauncherShellStateReducer()
     private val appCatalog = InstalledAppCatalog()
-    private val appNotificationCounter = AppNotificationCounter()
-    private val appNotificationGrouper = AppNotificationGrouper()
-    private val notificationStaleFilter = NotificationStaleFilter()
     private val appShortcutRepository =
         installedAppRepository as? AppShortcutRepository ?: NoopAppShortcutRepository
     private val installedAppRefreshDependencies =
@@ -71,17 +63,24 @@ class LauncherShellViewModel(
             homeLayoutRepository = homeLayoutRepository,
             appShortcutRepository = appShortcutRepository,
         )
-    private val notificationRepository = platformDependencies.notificationRepository
-    private val epochMillisProvider = platformDependencies.epochMillisProvider
-    private val widgetProviderCatalog = WidgetProviderCatalog()
+    private val refreshCoordinator =
+        LauncherShellRefreshCoordinator(
+            installedAppDependencies = installedAppRefreshDependencies,
+            notificationDependencies =
+                LauncherNotificationRefreshDependencies(
+                    notificationRepository = platformDependencies.notificationRepository,
+                    epochMillisProvider = platformDependencies.epochMillisProvider,
+                ),
+            widgetProviderDependencies =
+                LauncherWidgetProviderRefreshDependencies(
+                    widgetProviderRepository = platformDependencies.widgetProviderRepository,
+                ),
+        )
     private val shortcutEngine = HomeShortcutEngine()
     private val homePageEngine = HomePageEngine()
     private val dockEngine = DockEngine()
     private val folderEngine = FolderEngine()
     private val widgetEngine = WidgetEngine()
-    private var refreshJob: Job? = null
-    private var notificationRefreshJob: Job? = null
-    private var widgetProviderRefreshJob: Job? = null
 
     private val mutableState =
         MutableStateFlow(
@@ -94,6 +93,14 @@ class LauncherShellViewModel(
             ),
         )
     val state: StateFlow<LauncherShellState> = mutableState.asStateFlow()
+    internal val refreshActions =
+        LauncherShellRefreshActions(
+            coroutineScope = viewModelScope,
+            refreshDispatcher = refreshDispatcher,
+            currentState = { mutableState.value },
+            updateState = { state -> mutableState.value = state },
+            refreshCoordinator = refreshCoordinator,
+        )
 
     init {
         if (platformDependencies.loadInitialPlatformState) {
@@ -126,48 +133,6 @@ class LauncherShellViewModel(
                 currentState = mutableState.value,
                 action = action,
             )
-    }
-
-    fun refreshInstalledApps(scope: LauncherShellRefreshScope = LauncherShellRefreshScope.INSTALLED_APPS): Job {
-        when (scope) {
-            LauncherShellRefreshScope.INSTALLED_APPS -> refreshJob?.cancel()
-            LauncherShellRefreshScope.NOTIFICATIONS -> notificationRefreshJob?.cancel()
-            LauncherShellRefreshScope.WIDGET_PROVIDERS -> widgetProviderRefreshJob?.cancel()
-        }
-        val job =
-            viewModelScope.launch(refreshDispatcher) {
-                val currentState = mutableState.value
-                mutableState.value =
-                    runCatching {
-                        when (scope) {
-                            LauncherShellRefreshScope.INSTALLED_APPS ->
-                                currentState
-                                    .withRefreshedInstalledApps(installedAppRefreshDependencies)
-
-                            LauncherShellRefreshScope.NOTIFICATIONS ->
-                                currentState.withNotificationState(
-                                    notificationRepository = notificationRepository,
-                                    appNotificationCounter = appNotificationCounter,
-                                    appNotificationGrouper = appNotificationGrouper,
-                                    notificationStaleFilter = notificationStaleFilter,
-                                    nowEpochMillis = epochMillisProvider.nowEpochMillis(),
-                                )
-
-                            LauncherShellRefreshScope.WIDGET_PROVIDERS ->
-                                currentState.copy(
-                                    installedWidgetProviders =
-                                        platformDependencies.installedWidgetProviders(widgetProviderCatalog),
-                                )
-                        }
-                    }.getOrElse { currentState }
-            }
-        when (scope) {
-            LauncherShellRefreshScope.INSTALLED_APPS -> refreshJob = job
-            LauncherShellRefreshScope.NOTIFICATIONS -> notificationRefreshJob = job
-            LauncherShellRefreshScope.WIDGET_PROVIDERS -> widgetProviderRefreshJob = job
-        }
-
-        return job
     }
 
     fun onAppActionSelected(action: LauncherShellAction): Job? {
@@ -231,14 +196,10 @@ class LauncherShellViewModel(
                 is LauncherShellAction.HideApp,
                 is LauncherShellAction.UnhideApp,
                 -> {
-                    refreshJob?.cancel()
                     launchedRefresh =
-                        viewModelScope.launch(refreshDispatcher) {
+                        refreshActions.refreshInstalledApps {
                             action.applyAppVisibilityAction(appVisibilityRepository)
-                            mutableState.value =
-                                mutableState.value.withRefreshedInstalledApps(installedAppRefreshDependencies)
                         }
-                    refreshJob = launchedRefresh
                     mutableState.value
                 }
 
