@@ -32,6 +32,7 @@ import com.riffle.app.launcher.apps.PackageManagerAppIconLoader
 import com.riffle.app.launcher.apps.PackageManagerInstalledAppRepository
 import com.riffle.app.launcher.handleNotificationAction
 import com.riffle.app.launcher.handleSettingsAction
+import com.riffle.app.launcher.homeLayoutDeviceClassFromConfiguration
 import com.riffle.app.launcher.launcherActivityRoute
 import com.riffle.app.launcher.launcherAppActionRoute
 import com.riffle.app.launcher.notifications.ActiveNotificationRefreshCoordinator
@@ -69,6 +70,11 @@ class MainActivity : ComponentActivity() {
                 LauncherShellPlatformDependencies(
                     notificationRepository = activeNotificationRepository,
                     widgetProviderRepository = AndroidInstalledWidgetProviderRepository(this),
+                    initialHomeLayoutDeviceClass =
+                        homeLayoutDeviceClassFromConfiguration(
+                            screenWidthDp = resources.configuration.screenWidthDp,
+                            screenHeightDp = resources.configuration.screenHeightDp,
+                        ),
                 ),
         )
     }

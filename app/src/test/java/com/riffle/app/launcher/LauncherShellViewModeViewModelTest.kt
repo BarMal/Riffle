@@ -12,6 +12,7 @@ import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.HomeLayoutKey
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
 import com.riffle.core.domain.launcher.home.HomeLayoutSet
+import com.riffle.core.domain.launcher.home.LauncherPageId
 import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.home.WallpaperSettings
 import com.riffle.core.domain.launcher.home.WallpaperSource
@@ -251,6 +252,54 @@ class LauncherShellViewModeViewModelTest {
                 )
                 ?.selectedPageId,
         )
+    }
+
+    @Test
+    fun startsWithCurrentDeviceLayoutFromStoredLayoutSet() {
+        val phonePage = HomeLayoutDefaults.standard().selectedPage.copy(id = LauncherPageId("phone-home"))
+        val foldablePage = HomeLayoutDefaults.standard().selectedPage.copy(id = LauncherPageId("foldable-home"))
+        val phoneKey =
+            HomeLayoutKey(
+                viewMode = LauncherViewMode.STANDARD_APP_DRAWER,
+                deviceClass = HomeLayoutDeviceClass.PHONE,
+            )
+        val foldableKey =
+            HomeLayoutKey(
+                viewMode = LauncherViewMode.STANDARD_APP_DRAWER,
+                deviceClass = HomeLayoutDeviceClass.FOLDABLE,
+            )
+        val layoutSet =
+            HomeLayoutSet(
+                activeKey = foldableKey,
+                layouts =
+                    mapOf(
+                        phoneKey to
+                            HomeLayoutDefaults.standard().copy(
+                                pages = listOf(phonePage),
+                                selectedPageId = phonePage.id,
+                            ),
+                        foldableKey to
+                            HomeLayoutDefaults.standard().copy(
+                                pages = listOf(foldablePage),
+                                selectedPageId = foldablePage.id,
+                            ),
+                    ),
+            )
+        val repository = FakeHomeLayoutRepository().also { repo -> repo.savedLayoutSet = layoutSet }
+        repository.savedLayoutSetSaveCount = 0
+
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                homeLayoutRepository = repository,
+                platformDependencies =
+                    LauncherShellPlatformDependencies(
+                        initialHomeLayoutDeviceClass = HomeLayoutDeviceClass.PHONE,
+                    ),
+            )
+
+        assertEquals(phonePage.id, viewModel.state.value.homeLayout.selectedPageId)
+        assertEquals(0, repository.savedLayoutSetSaveCount)
     }
 
     @Test
