@@ -36,4 +36,28 @@ class HomeLayoutDeviceClassSelectionTest {
             homeLayoutDeviceClassFromConfiguration(screenWidthDp = 900, screenHeightDp = 1200),
         )
     }
+
+    @Test
+    fun classifiesWindowWithFoldingFeatureAsFoldableEvenWhenConfigurationIsTabletSized() {
+        assertEquals(
+            HomeLayoutDeviceClass.FOLDABLE,
+            homeLayoutDeviceClassFromWindowLayout(
+                hasFoldingFeature = true,
+                screenWidthDp = 900,
+                screenHeightDp = 1200,
+            ),
+        )
+    }
+
+    @Test
+    fun classifiesWindowWithoutFoldingFeatureFromConfiguration() {
+        assertEquals(
+            HomeLayoutDeviceClass.TABLET,
+            homeLayoutDeviceClassFromWindowLayout(
+                hasFoldingFeature = false,
+                screenWidthDp = 900,
+                screenHeightDp = 1200,
+            ),
+        )
+    }
 }

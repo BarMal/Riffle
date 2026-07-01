@@ -7,6 +7,10 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
+import com.riffle.app.launcher.AndroidHomeLayoutDeviceClassObserver
 import com.riffle.app.launcher.AndroidHomeRoleGateway
 import com.riffle.app.launcher.AndroidLauncherWallpaperController
 import com.riffle.app.launcher.LauncherActivityActionHandler
@@ -49,6 +53,7 @@ import com.riffle.app.launcher.widgets.AndroidInstalledWidgetProviderRepository
 import com.riffle.app.launcher.widgets.AndroidWidgetHostGateway
 import com.riffle.app.launcher.widgets.WidgetBindPermissionResult
 import com.riffle.app.launcher.widgets.WidgetBindingCoordinator
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     private val homeLayoutRepository by lazy { SharedPreferencesHomeLayoutRepository(this) }
@@ -98,6 +103,7 @@ class MainActivity : ComponentActivity() {
     }
     private val wallpaperController by lazy { AndroidLauncherWallpaperController(window) }
     private val notificationAccessGateway by lazy { AndroidNotificationAccessGateway(this) }
+    private val homeLayoutDeviceClassObserver by lazy { AndroidHomeLayoutDeviceClassObserver(this) }
     private val activeNotificationRepository by lazy { SharedPreferencesActiveNotificationRepository(this) }
     private val activeNotificationRefreshCoordinator by lazy {
         ActiveNotificationRefreshCoordinator(
@@ -214,6 +220,7 @@ class MainActivity : ComponentActivity() {
         activeNotificationRefreshCoordinator.start()
         lifecycle.addObserver(packageChangeObserver)
         lifecycle.addObserver(widgetHostGateway)
+        observeHomeLayoutDeviceClass()
 
         setContent {
             LauncherShell(
@@ -239,6 +246,21 @@ class MainActivity : ComponentActivity() {
             homeRoleStatus = homeRoleGateway.getHomeRoleStatus(),
             notificationAccessStatus = notificationAccessGateway.getNotificationAccessStatus(),
         )
+    }
+
+    private fun observeHomeLayoutDeviceClass() {
+        lifecycleScope.launch {
+            lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                homeLayoutDeviceClassObserver.deviceClasses()
+                    .collect { deviceClass ->
+                        deviceClass?.let { layoutDeviceClass ->
+                            shellViewModel.onHomePageEdited(
+                                LauncherShellAction.SelectHomeLayoutDeviceClass(layoutDeviceClass),
+                            )
+                        }
+                    }
+            }
+        }
     }
 
     private fun handleAction(action: LauncherShellAction) {
