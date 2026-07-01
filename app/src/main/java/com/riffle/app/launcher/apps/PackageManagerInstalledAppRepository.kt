@@ -10,6 +10,7 @@ import android.os.Build
 import android.os.Process
 import android.os.UserHandle
 import android.os.UserManager
+import com.riffle.core.domain.launcher.apps.AppProfileType
 import com.riffle.core.domain.launcher.apps.AppShortcutRepository
 import com.riffle.core.domain.launcher.apps.AppShortcutsByApp
 import com.riffle.core.domain.launcher.apps.InstalledApp
@@ -45,7 +46,7 @@ class PackageManagerInstalledAppRepository(
     private fun queryLaunchableActivities(): List<LaunchableActivity> =
         launcherApps
             ?.let { apps ->
-                userProfiles.flatMap { user -> apps.launchableActivitiesFor(user) }
+                launcherProfiles(apps).flatMap { user -> apps.launchableActivitiesFor(user) }
             }
             .orEmpty()
 
@@ -60,7 +61,11 @@ class PackageManagerInstalledAppRepository(
             packageName = componentName.packageName,
             activityName = componentName.className,
             label = label?.toString().orEmpty(),
-            profile = user.toAppProfile(),
+            profile =
+                user.toAppProfile(
+                    userManager = userManager,
+                    launcherApps = launcherApps,
+                ),
             enabled = true,
         )
 
@@ -89,6 +94,16 @@ class PackageManagerInstalledAppRepository(
     private val launcherIntent: Intent
         get() = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
 
-    private val userProfiles: List<UserHandle>
-        get() = userManager?.userProfiles.orEmpty().ifEmpty { listOf(Process.myUserHandle()) }
+    private fun launcherProfiles(launcherApps: LauncherApps): List<UserHandle> =
+        runCatching { launcherApps.getProfiles() }
+            .getOrDefault(userManager?.userProfiles.orEmpty())
+            .filterNot { user -> user.isLockedPrivateProfile() }
+            .ifEmpty { listOf(Process.myUserHandle()) }
+
+    private fun UserHandle.isLockedPrivateProfile(): Boolean =
+        toAppProfile(
+            userManager = userManager,
+            launcherApps = launcherApps,
+        ).type == AppProfileType.PRIVATE &&
+            runCatching { userManager?.isQuietModeEnabled(this) == true }.getOrDefault(false)
 }

@@ -100,11 +100,13 @@ class FolderAddAppFilterTest {
     fun filtersAppsBySelectedProfile() {
         val personalCamera = app(label = "Camera", profile = AppProfile.personal())
         val workDocs = app(label = "Docs", profile = AppProfile.work())
+        val privateVault = app(label = "Vault", profile = AppProfile.private())
         val companySheets = app(label = "Sheets", profile = AppProfile(AppProfileId("company"), AppProfileType.WORK))
-        val apps = listOf(personalCamera, workDocs, companySheets)
+        val apps = listOf(personalCamera, workDocs, privateVault, companySheets)
 
         assertEquals(listOf(personalCamera), apps.filterFolderAddCandidates(AppDrawerProfileFilter.PERSONAL))
         assertEquals(listOf(workDocs, companySheets), apps.filterFolderAddCandidates(AppDrawerProfileFilter.WORK))
+        assertEquals(listOf(privateVault), apps.filterFolderAddCandidates(AppDrawerProfileFilter.PRIVATE))
     }
 
     @Test

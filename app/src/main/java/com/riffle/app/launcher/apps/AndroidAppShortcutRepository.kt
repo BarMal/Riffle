@@ -30,7 +30,12 @@ internal class AndroidAppShortcutRepository(
         runCatching {
             launcherApps.getShortcuts(
                 shortcutQuery,
-                identity.profile.toUserHandle(userManager.userProfiles, currentUser),
+                identity.profile.toUserHandle(
+                    userProfiles = launcherProfiles,
+                    currentUser = currentUser,
+                    userManager = userManager,
+                    launcherApps = launcherApps,
+                ),
             )
                 .orEmpty()
                 .map { shortcut -> mapper.map(identity = identity, shortcut = shortcut.toAndroidShortcut()) }
@@ -47,6 +52,9 @@ internal class AndroidAppShortcutRepository(
                     ),
                 )
                 .setQueryFlags(SHORTCUT_QUERY_FLAGS)
+
+    private val launcherProfiles: List<UserHandle>
+        get() = runCatching { launcherApps.getProfiles() }.getOrDefault(userManager.userProfiles)
 }
 
 internal class AndroidAppShortcutMapper {

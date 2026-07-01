@@ -599,6 +599,7 @@ private fun InstalledApp.matches(profileFilter: AppDrawerProfileFilter): Boolean
         AppDrawerProfileFilter.ALL -> true
         AppDrawerProfileFilter.PERSONAL -> identity.profile.type == AppProfileType.PERSONAL
         AppDrawerProfileFilter.WORK -> identity.profile.type == AppProfileType.WORK
+        AppDrawerProfileFilter.PRIVATE -> identity.profile.type == AppProfileType.PRIVATE
     }
 
 private fun persistCompletedFirstRun(

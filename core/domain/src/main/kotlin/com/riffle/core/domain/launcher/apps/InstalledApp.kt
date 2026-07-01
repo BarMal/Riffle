@@ -30,6 +30,12 @@ data class AppProfile(
                 id = AppProfileId("work"),
                 type = AppProfileType.WORK,
             )
+
+        fun private(): AppProfile =
+            AppProfile(
+                id = AppProfileId("private"),
+                type = AppProfileType.PRIVATE,
+            )
     }
 }
 
@@ -48,6 +54,7 @@ value class AppIconKey(val value: String)
 enum class AppProfileType {
     PERSONAL,
     WORK,
+    PRIVATE,
 }
 
 enum class AppVisibility {
