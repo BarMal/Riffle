@@ -15,8 +15,11 @@ import com.riffle.app.launcher.AndroidHomeLayoutDeviceClassObserver
 import com.riffle.app.launcher.AndroidHomeRoleGateway
 import com.riffle.app.launcher.AndroidLauncherWallpaperController
 import com.riffle.app.launcher.AndroidWidgetAddWindowSizeProvider
+import com.riffle.app.launcher.LauncherActionRouter
 import com.riffle.app.launcher.LauncherActivityActionHandler
-import com.riffle.app.launcher.LauncherAppActionRoute
+import com.riffle.app.launcher.LauncherAppActionCallbacks
+import com.riffle.app.launcher.LauncherAppActionHandler
+import com.riffle.app.launcher.LauncherAppLaunchCallbacks
 import com.riffle.app.launcher.LauncherBackupDocumentGateway
 import com.riffle.app.launcher.LauncherBackupDocumentHandler
 import com.riffle.app.launcher.LauncherBackupExportCoordinator
@@ -42,7 +45,6 @@ import com.riffle.app.launcher.completeWidgetAdd
 import com.riffle.app.launcher.handleNotificationAction
 import com.riffle.app.launcher.handleSettingsAction
 import com.riffle.app.launcher.homeLayoutDeviceClassFromConfiguration
-import com.riffle.app.launcher.launcherAppActionRoute
 import com.riffle.app.launcher.notifications.ActiveNotificationRefreshCoordinator
 import com.riffle.app.launcher.notifications.AndroidNotificationAccessGateway
 import com.riffle.app.launcher.notifications.AndroidNotificationDismissalGateway
@@ -176,6 +178,45 @@ class MainActivity : ComponentActivity() {
             deleteHostedWidget = widgetHostGateway::deleteHostedWidgetId,
         )
     }
+    private val launcherActionRouter by lazy {
+        LauncherActionRouter(
+            activityActionHandler = activityActionHandler,
+            handleNotificationAction = { action ->
+                action.handleNotificationAction(
+                    viewModel = shellViewModel,
+                    notificationDismissalGateway = AndroidNotificationDismissalGateway,
+                )
+            },
+            handleSettingsAction = { action ->
+                action.handleSettingsAction(
+                    viewModel = shellViewModel,
+                    notificationAccessGateway = notificationAccessGateway,
+                    openIntent = ::startActivity,
+                    exportBackup = { createBackupDocument.launch(BACKUP_DOCUMENT_NAME) },
+                    importBackup = { openBackupDocument.launch(BACKUP_DOCUMENT_OPEN_MIME_TYPES) },
+                )
+            },
+            appActionHandler =
+                LauncherAppActionHandler(
+                    callbacks =
+                        LauncherAppActionCallbacks(
+                            launch =
+                                LauncherAppLaunchCallbacks(
+                                    launchApp = { action -> appLauncher.launch(action.identity) },
+                                    launchAppShortcut = { action -> appLauncher.launchShortcut(action.shortcut) },
+                                    openAppInfo = { action -> appLauncher.openAppInfo(action.identity) },
+                                    uninstallApp = { action -> appLauncher.uninstall(action.identity) },
+                                ),
+                            addAppToHome = { action -> shellViewModel.onAddAppToHome(action.app) },
+                            requestAddWidget = ::handleWidgetAddRequest,
+                            applyAppState = { action -> shellViewModel.onAppActionSelected(action) },
+                            appListRefreshed = {
+                                Toast.makeText(this, "App list refreshed", Toast.LENGTH_SHORT).show()
+                            },
+                        ),
+                ),
+        )
+    }
 
     private val createBackupDocument =
         registerForActivityResult(
@@ -225,7 +266,7 @@ class MainActivity : ComponentActivity() {
                 appVersionLabel = appVersionLabel,
                 appIconLoader = appIconLoader,
                 widgetViewFactory = widgetHostGateway,
-                onAction = ::handleAction,
+                onAction = launcherActionRouter::handle,
             )
         }
     }
@@ -257,46 +298,6 @@ class MainActivity : ComponentActivity() {
                         }
                     }
             }
-        }
-    }
-
-    private fun handleAction(action: LauncherShellAction) {
-        val handled =
-            activityActionHandler.handle(action) ||
-                action.handleNotificationAction(
-                    viewModel = shellViewModel,
-                    notificationDismissalGateway = AndroidNotificationDismissalGateway,
-                ) ||
-                action.handleSettingsAction(
-                    viewModel = shellViewModel,
-                    notificationAccessGateway = notificationAccessGateway,
-                    openIntent = ::startActivity,
-                    exportBackup = { createBackupDocument.launch(BACKUP_DOCUMENT_NAME) },
-                    importBackup = { openBackupDocument.launch(BACKUP_DOCUMENT_OPEN_MIME_TYPES) },
-                )
-
-        if (!handled) {
-            handleAppAction(action)
-        }
-    }
-
-    private fun handleAppAction(action: LauncherShellAction) {
-        when (val route = action.launcherAppActionRoute()) {
-            is LauncherAppActionRoute.LaunchApp -> appLauncher.launch(route.action.identity)
-            is LauncherAppActionRoute.LaunchAppShortcut -> appLauncher.launchShortcut(route.action.shortcut)
-            is LauncherAppActionRoute.OpenAppInfo -> appLauncher.openAppInfo(route.action.identity)
-            is LauncherAppActionRoute.UninstallApp -> appLauncher.uninstall(route.action.identity)
-            is LauncherAppActionRoute.AddAppToHome -> shellViewModel.onAddAppToHome(route.action.app)
-            is LauncherAppActionRoute.RequestAddWidget -> handleWidgetAddRequest(route.action)
-
-            is LauncherAppActionRoute.AppState -> {
-                shellViewModel.onAppActionSelected(route.action)
-                if (route.action == LauncherShellAction.RefreshInstalledApps) {
-                    Toast.makeText(this, "App list refreshed", Toast.LENGTH_SHORT).show()
-                }
-            }
-
-            null -> Unit
         }
     }
 
