@@ -14,7 +14,8 @@ import com.riffle.app.launcher.LauncherAppActionRoute
 import com.riffle.app.launcher.LauncherBackupDocumentGateway
 import com.riffle.app.launcher.LauncherBackupExportCoordinator
 import com.riffle.app.launcher.LauncherBackupExportResult
-import com.riffle.app.launcher.LauncherBackupImportResult
+import com.riffle.app.launcher.LauncherBackupImportCoordinator
+import com.riffle.app.launcher.LauncherBackupImportOutcome
 import com.riffle.app.launcher.LauncherShell
 import com.riffle.app.launcher.LauncherShellAction
 import com.riffle.app.launcher.LauncherShellPlatformDependencies
@@ -97,6 +98,7 @@ class MainActivity : ComponentActivity() {
             currentState = { shellViewModel.state.value },
         )
     }
+    private val backupImportCoordinator by lazy { LauncherBackupImportCoordinator() }
     private val backupDocumentGateway by lazy { LauncherBackupDocumentGateway() }
     private val widgetHostGateway by lazy { AndroidWidgetHostGateway(this) }
     private val widgetBindingCoordinator by lazy { WidgetBindingCoordinator(widgetHostGateway) }
@@ -154,19 +156,19 @@ class MainActivity : ComponentActivity() {
         ) { uri ->
             uri?.let { selectedUri ->
                 when (
-                    val importResult =
-                        backupDocumentGateway.importDocument {
-                            contentResolver.openInputStream(selectedUri)
-                        }
-                ) {
-                    is LauncherBackupImportResult.Imported -> {
-                        shellViewModel.onLauncherSettingsActionSelected(
-                            LauncherShellAction.ImportLauncherBackup(importResult.document),
+                    val importOutcome =
+                        backupImportCoordinator.handleImportResult(
+                            backupDocumentGateway.importDocument {
+                                contentResolver.openInputStream(selectedUri)
+                            },
                         )
+                ) {
+                    is LauncherBackupImportOutcome.Imported -> {
+                        shellViewModel.onLauncherSettingsActionSelected(importOutcome.action)
                         Toast.makeText(this, "Backup imported", Toast.LENGTH_SHORT).show()
                     }
 
-                    LauncherBackupImportResult.Failure ->
+                    LauncherBackupImportOutcome.Failure ->
                         Toast.makeText(this, "Backup import failed", Toast.LENGTH_SHORT).show()
                 }
             }
