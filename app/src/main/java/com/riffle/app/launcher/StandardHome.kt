@@ -72,6 +72,7 @@ internal fun StandardHome(
     val pageDragOffsetPx = remember { mutableFloatStateOf(0f) }
     val isPageDragActive = remember { mutableStateOf(false) }
     val dragStartPageIndex = remember { mutableIntStateOf(visibleLayout.selectedPageIndex) }
+    val pageSettleTargetIndex = remember { mutableStateOf<Int?>(null) }
     val homeDragSession = remember { mutableStateOf<HomeDragSession?>(null) }
     val pageSwipeMotion = remember { HomePageSwipeMotion() }
     val swipeNavigationState =
@@ -99,6 +100,7 @@ internal fun StandardHome(
                 swipeNavigationState = swipeNavigationState,
                 isPageDragActive = isPageDragActive.value,
                 dragStartPageIndex = dragStartPageIndex.intValue,
+                pageSettleTargetIndex = pageSettleTargetIndex.value,
                 pageDragOffsetPx = { pageDragOffsetPx.floatValue },
                 pageSwipeMotion = pageSwipeMotion,
                 dragSession = homeDragSession.value,
@@ -108,10 +110,12 @@ internal fun StandardHome(
         actions = actions,
         onPageDragStarted = {
             dragStartPageIndex.intValue = visibleLayout.selectedPageIndex
+            pageSettleTargetIndex.value = null
             isPageDragActive.value = true
         },
         onPageDragOffsetChange = { offsetPx -> pageDragOffsetPx.floatValue = offsetPx },
-        onPageDragReleased = {
+        onPageDragReleased = { targetPageIndex ->
+            pageSettleTargetIndex.value = targetPageIndex
             isPageDragActive.value = false
         },
     )
@@ -140,7 +144,7 @@ private fun StandardHomeColumn(
     actions: HomeWorkspaceActions,
     onPageDragStarted: () -> Unit,
     onPageDragOffsetChange: (Float) -> Unit,
-    onPageDragReleased: () -> Unit,
+    onPageDragReleased: (Int?) -> Unit,
 ) {
     Column(
         modifier =
@@ -171,6 +175,7 @@ private fun StandardHomeColumn(
                 HomeWorkspaceSwipeMotion(
                     isPageDragActive = state.isPageDragActive,
                     dragStartPageIndex = state.dragStartPageIndex,
+                    pageSettleTargetIndex = state.pageSettleTargetIndex,
                     pageDragOffsetPx = state.pageDragOffsetPx,
                     pageSwipeMotion = state.pageSwipeMotion,
                 ),
@@ -272,9 +277,17 @@ private fun AnimatedWorkspaceGrid(
             }
         }
 
-        LaunchedEffect(swipeMotion.isPageDragActive, layout.selectedPageIndex) {
+        LaunchedEffect(
+            swipeMotion.isPageDragActive,
+            layout.selectedPageIndex,
+            swipeMotion.pageSettleTargetIndex,
+        ) {
             if (!swipeMotion.isPageDragActive) {
-                animatedPageIndex.animateTo(layout.selectedPageIndex.toFloat())
+                val targetPageIndex =
+                    swipeMotion.pageSettleTargetIndex
+                        ?.coerceIn(0, layout.pages.lastIndex)
+                        ?: layout.selectedPageIndex
+                animatedPageIndex.animateTo(targetPageIndex.toFloat())
             }
         }
 
@@ -332,6 +345,7 @@ private data class StandardHomeContentState(
     val swipeNavigationState: HomeSwipeNavigationState,
     val isPageDragActive: Boolean,
     val dragStartPageIndex: Int,
+    val pageSettleTargetIndex: Int?,
     val pageDragOffsetPx: () -> Float,
     val pageSwipeMotion: HomePageSwipeMotion,
     val dragSession: HomeDragSession?,
@@ -341,6 +355,7 @@ private data class StandardHomeContentState(
 private data class HomeWorkspaceSwipeMotion(
     val isPageDragActive: Boolean,
     val dragStartPageIndex: Int,
+    val pageSettleTargetIndex: Int?,
     val pageDragOffsetPx: () -> Float,
     val pageSwipeMotion: HomePageSwipeMotion,
 )

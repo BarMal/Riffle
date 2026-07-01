@@ -8,7 +8,7 @@ internal fun Modifier.homeSwipeNavigation(
     state: HomeSwipeNavigationState,
     onPageDragStarted: () -> Unit,
     onPageDragOffsetChange: (Float) -> Unit,
-    onPageDragReleased: () -> Unit,
+    onPageDragReleased: (Int?) -> Unit,
     onAction: (LauncherShellAction) -> Unit,
 ): Modifier =
     if (!state.enabled) {
@@ -39,16 +39,23 @@ internal fun Modifier.homeSwipeNavigation(
                     change.consume()
                 },
                 onDragEnd = {
-                    interpreter
-                        .gestureFor(horizontalDragPx, verticalDragPx)
-                        ?.let { gesture -> actionMapper.actionFor(gesture, state.homeSwipeGestures) }
-                        ?.let(onAction)
-                    onPageDragReleased()
+                    val action =
+                        interpreter
+                            .gestureFor(horizontalDragPx, verticalDragPx)
+                            ?.let { gesture -> actionMapper.actionFor(gesture, state.homeSwipeGestures) }
+                    onPageDragReleased(
+                        state.pageSwipeMotion.pageSettleTargetIndex(
+                            action = action,
+                            selectedPageIndex = state.selectedPageIndex,
+                            pageCount = state.pageCount,
+                        ),
+                    )
+                    action?.let(onAction)
                 },
                 onDragCancel = {
                     horizontalDragPx = 0f
                     verticalDragPx = 0f
-                    onPageDragReleased()
+                    onPageDragReleased(null)
                 },
             )
         }

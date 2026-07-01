@@ -75,6 +75,46 @@ class HomePageSwipeMotionTest {
     }
 
     @Test
+    fun settleTargetUsesPageActionTarget() {
+        assertEquals(
+            1,
+            motion.pageSettleTargetIndex(
+                action = LauncherShellAction.SelectNextHomePage,
+                selectedPageIndex = 0,
+                pageCount = 3,
+            ),
+        )
+        assertEquals(
+            1,
+            motion.pageSettleTargetIndex(
+                action = LauncherShellAction.SelectPreviousHomePage,
+                selectedPageIndex = 2,
+                pageCount = 3,
+            ),
+        )
+    }
+
+    @Test
+    fun settleTargetIgnoresUnavailableOrNonPageActions() {
+        assertEquals(
+            null,
+            motion.pageSettleTargetIndex(
+                action = LauncherShellAction.SelectNextHomePage,
+                selectedPageIndex = 0,
+                pageCount = 1,
+            ),
+        )
+        assertEquals(
+            null,
+            motion.pageSettleTargetIndex(
+                action = LauncherShellAction.OpenSettings,
+                selectedPageIndex = 0,
+                pageCount = 3,
+            ),
+        )
+    }
+
+    @Test
     fun doesNotOffsetWhenThereIsNoAdjacentPage() {
         assertEquals(
             0f,
