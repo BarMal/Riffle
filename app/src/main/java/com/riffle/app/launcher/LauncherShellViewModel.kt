@@ -242,9 +242,13 @@ class LauncherShellViewModel(
 
                 LauncherShellAction.OpenWidgetPicker,
                 LauncherShellAction.CloseWidgetPicker,
-                ->
+                -> {
+                    if (action == LauncherShellAction.OpenWidgetPicker) {
+                        launchedRefresh = refreshWidgetProviders()
+                    }
                     mutableState.value
-                        .withWidgetPickerAction(action, platformDependencies, widgetProviderCatalog)
+                        .withWidgetPickerAction(action)
+                }
 
                 else -> mutableState.value
             }
