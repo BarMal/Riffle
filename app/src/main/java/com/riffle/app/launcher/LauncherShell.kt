@@ -197,7 +197,8 @@ private fun LauncherDestination(
         ShellDestination.SETTINGS ->
             SettingsSurface(
                 settings = state.launcherSettings,
-                homeLayout = state.homeLayout,
+                homeLayout = state.homeLayoutSet.layoutFor(state.settingsTargetLayoutKey),
+                selectedLayoutDeviceClass = state.settingsLayoutDeviceClass,
                 notificationAccessStatus = state.notificationAccessStatus,
                 hiddenApps = state.hiddenApps,
                 appVersionLabel = appVersionLabel,

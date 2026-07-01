@@ -1,11 +1,15 @@
 package com.riffle.app.launcher
 
+import com.riffle.core.domain.launcher.ShellDestination
+import com.riffle.core.domain.launcher.ShellNavigationAction
 import com.riffle.core.domain.launcher.apps.AppActivityName
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.apps.InstalledAppRepository
 import com.riffle.core.domain.launcher.home.AppShortcutItem
+import com.riffle.core.domain.launcher.home.GridDimensions
+import com.riffle.core.domain.launcher.home.GridSettings
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
@@ -16,6 +20,9 @@ import com.riffle.core.domain.launcher.home.LauncherPageId
 import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.home.WallpaperSettings
 import com.riffle.core.domain.launcher.home.WallpaperSource
+import com.riffle.core.domain.launcher.notifications.LauncherNotification
+import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
+import com.riffle.core.domain.launcher.notifications.LauncherNotificationRepository
 import com.riffle.core.domain.launcher.settings.AppearanceSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettingsRepository
@@ -372,6 +379,92 @@ class LauncherShellViewModeViewModelTest {
         assertEquals(HomeLayoutDefaults.standard(), viewModel.state.value.homeLayout)
     }
 
+    @Test
+    fun settingsCanEditFoldedLayoutWithoutChangingActiveUnfoldedLayout() {
+        val phoneKey =
+            HomeLayoutKey(
+                viewMode = LauncherViewMode.STANDARD_APP_DRAWER,
+                deviceClass = HomeLayoutDeviceClass.PHONE,
+            )
+        val foldableKey =
+            HomeLayoutKey(
+                viewMode = LauncherViewMode.STANDARD_APP_DRAWER,
+                deviceClass = HomeLayoutDeviceClass.FOLDABLE,
+            )
+        val phoneLayout =
+            HomeLayoutDefaults.standard()
+                .copy(settings = HomeLayoutDefaults.standard().settings.copy(grid = grid(columns = 4, rows = 5)))
+        val foldableLayout =
+            HomeLayoutDefaults.standard()
+                .copy(settings = HomeLayoutDefaults.standard().settings.copy(grid = grid(columns = 3, rows = 4)))
+        val repository =
+            FakeHomeLayoutRepository().also { repo ->
+                repo.savedLayoutSet =
+                    HomeLayoutSet(
+                        activeKey = phoneKey,
+                        layouts = mapOf(phoneKey to phoneLayout, foldableKey to foldableLayout),
+                    )
+            }
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                homeLayoutRepository = repository,
+            )
+
+        viewModel.onNavigationActionSelected(ShellNavigationAction.OpenSettings)
+        viewModel.onLauncherSettingsActionSelected(
+            LauncherShellAction.SelectSettingsLayoutDeviceClass(HomeLayoutDeviceClass.FOLDABLE),
+        )
+        viewModel.onHomePageEdited(
+            LauncherShellAction.SelectHomeGridDimensions(GridDimensions(columns = 5, rows = 6)),
+        )
+
+        assertEquals(ShellDestination.SETTINGS, viewModel.state.value.destination)
+        assertEquals(phoneLayout, viewModel.state.value.homeLayout)
+        assertEquals(
+            GridDimensions(columns = 5, rows = 6),
+            repository.savedLayoutSet?.layoutFor(foldableKey)?.settings?.grid?.dimensions,
+        )
+        assertEquals(
+            phoneLayout.settings.grid.dimensions,
+            repository.savedLayoutSet?.layoutFor(phoneKey)?.settings?.grid?.dimensions,
+        )
+        assertEquals(phoneKey, repository.savedLayoutSet?.activeKey)
+    }
+
+    @Test
+    fun deviceClassSwitchPreservesNotificationCounters() {
+        val camera = app(label = "Camera")
+        val repository = FakeHomeLayoutRepository(savedLayout = HomeLayoutDefaults.standard())
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                homeLayoutRepository = repository,
+                platformDependencies =
+                    LauncherShellPlatformDependencies(
+                        notificationRepository =
+                            FakeNotificationRepository(
+                                notifications =
+                                    listOf(
+                                        notification(
+                                            key = "camera-1",
+                                            packageName = camera.identity.packageName.value,
+                                        ),
+                                    ),
+                            ),
+                    ),
+            )
+
+        viewModel.onHomePageEdited(
+            LauncherShellAction.SelectHomeLayoutDeviceClass(HomeLayoutDeviceClass.FOLDABLE),
+        )
+        viewModel.onHomePageEdited(
+            LauncherShellAction.SelectHomeLayoutDeviceClass(HomeLayoutDeviceClass.PHONE),
+        )
+
+        assertEquals(1, viewModel.state.value.notificationCountsByPackage[camera.identity.packageName])
+    }
+
     private class FakeFirstRunRepository : FirstRunRepository {
         override fun isFirstRunComplete(): Boolean = false
 
@@ -419,6 +512,12 @@ class LauncherShellViewModeViewModelTest {
         override fun installedApps(): List<InstalledApp> = apps
     }
 
+    private class FakeNotificationRepository(
+        private val notifications: List<LauncherNotification>,
+    ) : LauncherNotificationRepository {
+        override fun activeNotifications(): List<LauncherNotification> = notifications
+    }
+
     private fun app(label: String): InstalledApp =
         InstalledApp(
             identity =
@@ -428,6 +527,23 @@ class LauncherShellViewModeViewModelTest {
                 ),
             label = label,
         )
+
+    private fun notification(
+        key: String,
+        packageName: String,
+    ): LauncherNotification =
+        LauncherNotification(
+            key = LauncherNotificationKey(key),
+            packageName = AppPackageName(packageName),
+            postedAtEpochMillis = 1_000L,
+        )
+
+    private fun grid(
+        columns: Int,
+        rows: Int,
+    ) = GridSettings(
+        dimensions = GridDimensions(columns = columns, rows = rows),
+    )
 
     private fun List<Any>.singleAppShortcut(): AppShortcutItem = single() as AppShortcutItem
 }

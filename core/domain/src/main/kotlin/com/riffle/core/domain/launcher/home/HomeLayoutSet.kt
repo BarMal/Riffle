@@ -22,6 +22,11 @@ data class HomeLayoutSet(
     fun withActiveLayout(layout: HomeLayout): HomeLayoutSet =
         copy(layouts = layouts + (activeKey to layout.copy(viewMode = activeKey.viewMode)))
 
+    fun withLayout(
+        key: HomeLayoutKey,
+        layout: HomeLayout,
+    ): HomeLayoutSet = copy(layouts = layouts + (key to layout.copy(viewMode = key.viewMode)))
+
     fun selectMode(mode: LauncherViewMode): HomeLayoutSet =
         activeKey.copy(viewMode = mode)
             .let { key -> copy(activeKey = key, layouts = layouts + (key to layoutFor(key))) }

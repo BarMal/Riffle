@@ -27,3 +27,18 @@ internal fun LauncherShellAction.isHomePageEditAction(): Boolean =
 
         else -> false
     }
+
+internal fun LauncherShellAction.isHomeLayoutConfigurationAction(): Boolean =
+    when (this) {
+        is LauncherShellAction.SelectHomeGridDimensions,
+        is LauncherShellAction.SelectLibraryPageCompaction,
+        is LauncherShellAction.SelectHomeLabelBackgroundAlpha,
+        is LauncherShellAction.SelectHomeLabelTextSize,
+        is LauncherShellAction.SelectHomeLabelTextVisible,
+        is LauncherShellAction.SelectHomeLabelMaxWidth,
+        is LauncherShellAction.SelectHomeLabelMaxLines,
+        is LauncherShellAction.SelectHomeLabelSizing,
+        -> true
+
+        else -> false
+    }

@@ -86,6 +86,8 @@ sealed interface LauncherShellAction {
 
     data class SelectHomeLayoutDeviceClass(val deviceClass: HomeLayoutDeviceClass) : LauncherShellAction
 
+    data class SelectSettingsLayoutDeviceClass(val deviceClass: HomeLayoutDeviceClass) : LauncherShellAction
+
     data class LaunchApp(val identity: AppIdentity) : LauncherShellAction
 
     data class LaunchAppShortcut(val shortcut: AppShortcut) : LauncherShellAction

@@ -26,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.home.HomeLayout
+import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.WallpaperSource
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
@@ -35,6 +36,7 @@ import com.riffle.core.domain.launcher.settings.LauncherSettings
 fun SettingsSurface(
     settings: LauncherSettings,
     homeLayout: HomeLayout,
+    selectedLayoutDeviceClass: HomeLayoutDeviceClass,
     notificationAccessStatus: NotificationAccessStatus,
     hiddenApps: List<InstalledApp>,
     appVersionLabel: String,
@@ -66,6 +68,7 @@ fun SettingsSurface(
                         .verticalScroll(rememberScrollState()),
                 settings = settings,
                 homeLayout = homeLayout,
+                selectedLayoutDeviceClass = selectedLayoutDeviceClass,
                 notificationAccessStatus = notificationAccessStatus,
                 hiddenApps = hiddenApps,
                 onAction = onAction,
@@ -110,6 +113,7 @@ private fun SettingsPageContent(
     modifier: Modifier,
     settings: LauncherSettings,
     homeLayout: HomeLayout,
+    selectedLayoutDeviceClass: HomeLayoutDeviceClass,
     notificationAccessStatus: NotificationAccessStatus,
     hiddenApps: List<InstalledApp>,
     onAction: (LauncherShellAction) -> Unit,
@@ -118,6 +122,10 @@ private fun SettingsPageContent(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
+        SettingsLayoutDeviceTabs(
+            selectedDeviceClass = selectedLayoutDeviceClass,
+            onAction = onAction,
+        )
         SettingsSection(title = "Appearance") {
             WallpaperSourceSetting(
                 selectedSource = settings.appearance.wallpaper.source,
