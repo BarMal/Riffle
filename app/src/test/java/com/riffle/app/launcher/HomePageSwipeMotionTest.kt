@@ -95,6 +95,35 @@ class HomePageSwipeMotionTest {
     }
 
     @Test
+    fun settleInitialVelocityContinuesDragDirectionInPageUnits() {
+        assertEquals(
+            2f,
+            motion.pageSettleInitialVelocity(
+                horizontalVelocityPxPerSecond = -800f,
+                pageWidthPx = 400f,
+            ),
+        )
+        assertEquals(
+            -2f,
+            motion.pageSettleInitialVelocity(
+                horizontalVelocityPxPerSecond = 800f,
+                pageWidthPx = 400f,
+            ),
+        )
+    }
+
+    @Test
+    fun settleInitialVelocityIgnoresMissingPageWidth() {
+        assertEquals(
+            0f,
+            motion.pageSettleInitialVelocity(
+                horizontalVelocityPxPerSecond = -800f,
+                pageWidthPx = 0f,
+            ),
+        )
+    }
+
+    @Test
     fun settleTargetIgnoresUnavailableOrNonPageActions() {
         assertEquals(
             null,
