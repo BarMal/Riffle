@@ -15,3 +15,17 @@ internal fun homeLayoutDeviceClassFromConfiguration(
                 screenHeightDp = screenHeightDp,
             )
     }
+
+internal fun homeLayoutDeviceClassFromWindowLayout(
+    hasFoldingFeature: Boolean,
+    screenWidthDp: Int,
+    screenHeightDp: Int,
+): HomeLayoutDeviceClass? =
+    when {
+        hasFoldingFeature -> HomeLayoutDeviceClass.FOLDABLE
+        else ->
+            homeLayoutDeviceClassFromConfiguration(
+                screenWidthDp = screenWidthDp,
+                screenHeightDp = screenHeightDp,
+            )
+    }
