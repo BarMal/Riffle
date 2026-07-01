@@ -1,7 +1,6 @@
 package com.riffle.app
 
 import android.app.Activity
-import android.net.Uri
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -10,8 +9,10 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import com.riffle.app.launcher.AndroidHomeRoleGateway
 import com.riffle.app.launcher.AndroidLauncherWallpaperController
-import com.riffle.app.launcher.LauncherBackupDocument
+import com.riffle.app.launcher.LauncherBackupDocumentGateway
 import com.riffle.app.launcher.LauncherBackupExportCoordinator
+import com.riffle.app.launcher.LauncherBackupExportResult
+import com.riffle.app.launcher.LauncherBackupImportResult
 import com.riffle.app.launcher.LauncherShell
 import com.riffle.app.launcher.LauncherShellAction
 import com.riffle.app.launcher.LauncherShellPlatformDependencies
@@ -26,8 +27,6 @@ import com.riffle.app.launcher.apps.AndroidAppShortcutRepository
 import com.riffle.app.launcher.apps.AndroidPackageChangeObserver
 import com.riffle.app.launcher.apps.PackageManagerAppIconLoader
 import com.riffle.app.launcher.apps.PackageManagerInstalledAppRepository
-import com.riffle.app.launcher.decodeLauncherBackupDocument
-import com.riffle.app.launcher.encodeLauncherBackupDocument
 import com.riffle.app.launcher.handleNotificationAction
 import com.riffle.app.launcher.handleSettingsAction
 import com.riffle.app.launcher.isHomePageEditAction
@@ -96,6 +95,7 @@ class MainActivity : ComponentActivity() {
             currentState = { shellViewModel.state.value },
         )
     }
+    private val backupDocumentGateway by lazy { LauncherBackupDocumentGateway() }
     private val widgetHostGateway by lazy { AndroidWidgetHostGateway(this) }
     private val widgetBindingCoordinator by lazy { WidgetBindingCoordinator(widgetHostGateway) }
 
@@ -131,11 +131,18 @@ class MainActivity : ComponentActivity() {
             ActivityResultContracts.CreateDocument(BACKUP_DOCUMENT_MIME_TYPE),
         ) { uri ->
             uri?.let { selectedUri ->
-                exportLauncherBackup(
-                    activity = this,
-                    uri = selectedUri,
-                    document = backupExportCoordinator.currentBackupDocument(),
-                )
+                when (
+                    backupDocumentGateway.exportDocument(
+                        document = backupExportCoordinator.currentBackupDocument(),
+                        openOutputStream = { contentResolver.openOutputStream(selectedUri) },
+                    )
+                ) {
+                    LauncherBackupExportResult.Success ->
+                        Toast.makeText(this, "Backup exported", Toast.LENGTH_SHORT).show()
+
+                    LauncherBackupExportResult.Failure ->
+                        Toast.makeText(this, "Backup export failed", Toast.LENGTH_SHORT).show()
+                }
             }
         }
 
@@ -144,15 +151,22 @@ class MainActivity : ComponentActivity() {
             ActivityResultContracts.OpenDocument(),
         ) { uri ->
             uri?.let { selectedUri ->
-                importLauncherBackup(
-                    activity = this,
-                    uri = selectedUri,
-                    onImported = { document ->
+                when (
+                    val importResult =
+                        backupDocumentGateway.importDocument {
+                            contentResolver.openInputStream(selectedUri)
+                        }
+                ) {
+                    is LauncherBackupImportResult.Imported -> {
                         shellViewModel.onLauncherSettingsActionSelected(
-                            LauncherShellAction.ImportLauncherBackup(document),
+                            LauncherShellAction.ImportLauncherBackup(importResult.document),
                         )
-                    },
-                )
+                        Toast.makeText(this, "Backup imported", Toast.LENGTH_SHORT).show()
+                    }
+
+                    LauncherBackupImportResult.Failure ->
+                        Toast.makeText(this, "Backup import failed", Toast.LENGTH_SHORT).show()
+                }
             }
         }
 
@@ -372,49 +386,6 @@ private fun completeHostedWidgetAdd(
         Toast.makeText(activity, message, Toast.LENGTH_SHORT).show()
     }
     viewModel.onAppActionSelected(LauncherShellAction.CloseWidgetPicker)
-}
-
-private fun exportLauncherBackup(
-    activity: ComponentActivity,
-    uri: Uri,
-    document: LauncherBackupDocument,
-) {
-    val backupJson = encodeLauncherBackupDocument(document)
-
-    runCatching {
-        activity.contentResolver.openOutputStream(uri)?.use { output ->
-            output.write(backupJson.toByteArray(Charsets.UTF_8))
-        } ?: error("Could not open backup destination")
-    }.fold(
-        onSuccess = {
-            Toast.makeText(activity, "Backup exported", Toast.LENGTH_SHORT).show()
-        },
-        onFailure = {
-            Toast.makeText(activity, "Backup export failed", Toast.LENGTH_SHORT).show()
-        },
-    )
-}
-
-private fun importLauncherBackup(
-    activity: ComponentActivity,
-    uri: Uri,
-    onImported: (LauncherBackupDocument) -> Unit,
-) {
-    runCatching {
-        activity.contentResolver.openInputStream(uri)
-            ?.bufferedReader(Charsets.UTF_8)
-            ?.use { reader -> reader.readText() }
-            ?.let(::decodeLauncherBackupDocument)
-            ?: error("Could not open backup source")
-    }.fold(
-        onSuccess = { document ->
-            onImported(document)
-            Toast.makeText(activity, "Backup imported", Toast.LENGTH_SHORT).show()
-        },
-        onFailure = {
-            Toast.makeText(activity, "Backup import failed", Toast.LENGTH_SHORT).show()
-        },
-    )
 }
 
 private fun widgetSpanAdjustmentMessage(
