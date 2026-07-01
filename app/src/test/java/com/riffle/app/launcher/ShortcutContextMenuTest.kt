@@ -5,9 +5,11 @@ import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.apps.AppShortcutId
+import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.LauncherItemId
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Test
 
 class ShortcutContextMenuTest {
@@ -22,6 +24,12 @@ class ShortcutContextMenuTest {
                 ShortcutContextMenuItem("App info", LauncherShellAction.OpenAppInfo(shortcut.appIdentity)),
                 ShortcutContextMenuItem("Hide app", LauncherShellAction.HideApp(shortcut.appIdentity)),
                 ShortcutContextMenuItem("Uninstall", LauncherShellAction.UninstallApp(shortcut.appIdentity)),
+                ShortcutContextMenuItem(
+                    "Add to dock",
+                    LauncherShellAction.AddAppToDock(
+                        InstalledApp(identity = shortcut.appIdentity, label = shortcut.label),
+                    ),
+                ),
                 ShortcutContextMenuItem("Remove from home", LauncherShellAction.RemoveHomeShortcut(shortcut.id)),
             ),
             items,
@@ -34,6 +42,7 @@ class ShortcutContextMenuTest {
 
         val items = shortcutContextMenuItems(shortcut, ShortcutContextSurface.DOCK)
 
+        assertFalse(items.any { it.label == "Add to dock" })
         assertEquals(
             ShortcutContextMenuItem("Remove from dock", LauncherShellAction.RemoveDockShortcut(shortcut.id)),
             items.last(),
@@ -55,6 +64,12 @@ class ShortcutContextMenuTest {
                 ShortcutContextMenuItem("App info", LauncherShellAction.OpenAppInfo(shortcut.appIdentity)),
                 ShortcutContextMenuItem("Hide app", LauncherShellAction.HideApp(shortcut.appIdentity)),
                 ShortcutContextMenuItem("Uninstall", LauncherShellAction.UninstallApp(shortcut.appIdentity)),
+                ShortcutContextMenuItem(
+                    "Add to dock",
+                    LauncherShellAction.AddAppToDock(
+                        InstalledApp(identity = shortcut.appIdentity, label = shortcut.label),
+                    ),
+                ),
                 ShortcutContextMenuItem("Remove from home", LauncherShellAction.RemoveHomeShortcut(shortcut.id)),
             ),
             items,

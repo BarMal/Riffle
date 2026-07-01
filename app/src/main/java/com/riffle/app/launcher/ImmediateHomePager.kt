@@ -217,7 +217,7 @@ private fun Modifier.immediateHomePageDrag(
                 val velocityTracker = VelocityTracker()
                 velocityTracker.addPosition(down.uptimeMillis, down.position)
 
-                val startPageIndex = pagerState.pagePosition.roundToInt()
+                val startPagePosition = pagerState.pagePosition
                 var dragX = 0f
                 var dragY = 0f
                 var isPageDrag = false
@@ -241,7 +241,7 @@ private fun Modifier.immediateHomePageDrag(
 
                         if (isPageDrag) {
                             pagerState.snapTo(
-                                (startPageIndex - (dragX / pageWidthPx))
+                                (startPagePosition - (dragX / pageWidthPx))
                                     .coerceIn(0f, layout.lastPageIndex.toFloat()),
                             )
                             change.consume()
@@ -251,9 +251,13 @@ private fun Modifier.immediateHomePageDrag(
 
                 if (isPageDrag) {
                     val velocity = velocityTracker.calculateVelocity().x
+                    val releasedPagePosition =
+                        (startPagePosition - (dragX / pageWidthPx))
+                            .coerceIn(0f, layout.lastPageIndex.toFloat())
                     val targetIndex =
                         pageSettleTargetIndex(
-                            startPageIndex = startPageIndex,
+                            startPagePosition = startPagePosition,
+                            releasedPagePosition = releasedPagePosition,
                             horizontalDragPx = dragX,
                             pageWidthPx = pageWidthPx,
                             horizontalVelocityPxPerSecond = velocity,
@@ -273,13 +277,15 @@ private fun Modifier.immediateHomePageDrag(
     }
 
 private fun pageSettleTargetIndex(
-    startPageIndex: Int,
+    startPagePosition: Float,
+    releasedPagePosition: Float,
     horizontalDragPx: Float,
     pageWidthPx: Float,
     horizontalVelocityPxPerSecond: Float,
     pageCount: Int,
 ): Int {
     val draggedPageFraction = abs(horizontalDragPx) / pageWidthPx.coerceAtLeast(1f)
+    val startPageIndex = startPagePosition.roundToInt()
     val hasMeaningfulLeftFling =
         horizontalDragPx < 0f &&
             horizontalVelocityPxPerSecond <= -PAGE_FLING_VELOCITY_THRESHOLD_PX_PER_SECOND
@@ -296,7 +302,7 @@ private fun pageSettleTargetIndex(
 
         hasMeaningfulRightFling -> startPageIndex - 1
 
-        else -> startPageIndex
+        else -> releasedPagePosition.roundToInt()
     }.coerceIn(0, (pageCount - 1).coerceAtLeast(0))
 }
 

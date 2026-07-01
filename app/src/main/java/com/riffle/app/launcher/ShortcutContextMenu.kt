@@ -5,6 +5,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import com.riffle.core.domain.launcher.apps.AppShortcut
+import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 
 internal enum class ShortcutContextSurface {
@@ -45,11 +46,12 @@ internal fun shortcutContextMenuItems(
                 label = "Uninstall",
                 action = LauncherShellAction.UninstallApp(shortcut.appIdentity),
             ),
+        ) +
+            surface.dockManagementItems(shortcut) +
             ShortcutContextMenuItem(
                 label = surface.removeLabel,
                 action = surface.removeAction(shortcut),
-            ),
-        )
+            )
 
     return platformShortcutItems + managementItems
 }
@@ -89,6 +91,25 @@ private fun ShortcutContextSurface.removeAction(shortcut: AppShortcutItem): Laun
     when (this) {
         ShortcutContextSurface.HOME -> LauncherShellAction.RemoveHomeShortcut(shortcut.id)
         ShortcutContextSurface.DOCK -> LauncherShellAction.RemoveDockShortcut(shortcut.id)
+    }
+
+private fun ShortcutContextSurface.dockManagementItems(shortcut: AppShortcutItem): List<ShortcutContextMenuItem> =
+    when (this) {
+        ShortcutContextSurface.HOME ->
+            listOf(
+                ShortcutContextMenuItem(
+                    label = "Add to dock",
+                    action =
+                        LauncherShellAction.AddAppToDock(
+                            InstalledApp(
+                                identity = shortcut.appIdentity,
+                                label = shortcut.label,
+                            ),
+                        ),
+                ),
+            )
+
+        ShortcutContextSurface.DOCK -> emptyList()
     }
 
 private val AppShortcut.contextMenuLabel: String
