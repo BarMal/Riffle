@@ -1,14 +1,10 @@
 package com.riffle.app.launcher
 
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -29,16 +25,11 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
@@ -54,10 +45,7 @@ import com.riffle.core.domain.launcher.home.HomeLabelSettings
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.LauncherItem
 import com.riffle.core.domain.launcher.home.LauncherItemId
-import com.riffle.core.domain.launcher.settings.HomeSwipeGestureSettings
 import com.riffle.core.domain.launcher.widgets.InstalledWidgetProvider
-import kotlin.math.abs
-import kotlin.math.roundToInt
 
 @Composable
 internal fun StandardHome(
@@ -70,23 +58,7 @@ internal fun StandardHome(
 ) {
     val visibleLayout = layout.visibleTo(installedApps)
     val openedFolderId = remember { mutableStateOf<LauncherItemId?>(null) }
-    val swipeThresholdPx = with(LocalDensity.current) { HOME_SWIPE_THRESHOLD_DP.dp.toPx() }
-    val pageDragOffsetPx = remember { mutableFloatStateOf(0f) }
-    val isPageDragActive = remember { mutableStateOf(false) }
-    val dragStartPageIndex = remember { mutableIntStateOf(visibleLayout.selectedPageIndex) }
-    val pageSettleTargetIndex = remember { mutableStateOf<Int?>(null) }
-    val pageSettleVelocityPxPerSecond = remember { mutableFloatStateOf(0f) }
     val homeDragSession = remember { mutableStateOf<HomeDragSession?>(null) }
-    val pageSwipeMotion = remember { HomePageSwipeMotion() }
-    val swipeNavigationState =
-        HomeSwipeNavigationState(
-            enabled = true,
-            thresholdPx = swipeThresholdPx,
-            homeSwipeGestures = interactions.homeSwipeGestures,
-            selectedPageIndex = visibleLayout.selectedPageIndex,
-            pageCount = visibleLayout.pages.size,
-            pageSwipeMotion = pageSwipeMotion,
-        )
     val actions =
         HomeWorkspaceActions(
             onFolderOpen = { folder -> openedFolderId.value = folder.id },
@@ -100,30 +72,11 @@ internal fun StandardHome(
             StandardHomeContentState(
                 layout = layout,
                 visibleLayout = visibleLayout,
-                swipeNavigationState = swipeNavigationState,
-                isPageDragActive = isPageDragActive.value,
-                dragStartPageIndex = dragStartPageIndex.intValue,
-                pageSettleTargetIndex = pageSettleTargetIndex.value,
-                pageSettleVelocityPxPerSecond = pageSettleVelocityPxPerSecond.floatValue,
-                pageDragOffsetPx = { pageDragOffsetPx.floatValue },
-                pageSwipeMotion = pageSwipeMotion,
                 dragSession = homeDragSession.value,
                 presentation = presentation,
             ),
         appIconLoader = appIconLoader,
         actions = actions,
-        onPageDragStarted = {
-            dragStartPageIndex.intValue = visibleLayout.selectedPageIndex
-            pageSettleTargetIndex.value = null
-            pageSettleVelocityPxPerSecond.floatValue = 0f
-            isPageDragActive.value = true
-        },
-        onPageDragOffsetChange = { offsetPx -> pageDragOffsetPx.floatValue = offsetPx },
-        onPageDragReleased = { targetPageIndex, horizontalVelocityPxPerSecond ->
-            pageSettleTargetIndex.value = targetPageIndex
-            pageSettleVelocityPxPerSecond.floatValue = horizontalVelocityPxPerSecond
-            isPageDragActive.value = false
-        },
     )
     if (presentation.widgetPicker.isOpen) {
         WidgetPickerDialog(
@@ -148,10 +101,9 @@ private fun StandardHomeColumn(
     state: StandardHomeContentState,
     appIconLoader: AppIconLoader,
     actions: HomeWorkspaceActions,
-    onPageDragStarted: () -> Unit,
-    onPageDragOffsetChange: (Float) -> Unit,
-    onPageDragReleased: (Int?, Float) -> Unit,
 ) {
+    val pagerState = rememberImmediateHomePagerState(layout = state.visibleLayout, actions = actions)
+
     Column(
         modifier =
             Modifier
@@ -168,8 +120,9 @@ private fun StandardHomeColumn(
             onAction = actions.onAction,
         )
         Spacer(modifier = Modifier.height(HOME_TOOLBAR_WORKSPACE_SPACING_DP.dp))
-        AnimatedWorkspaceGrid(
+        ImmediateWorkspacePager(
             layout = state.visibleLayout,
+            pagerState = pagerState,
             gridState =
                 HomeGridState(
                     isEditing = false,
@@ -177,34 +130,18 @@ private fun StandardHomeColumn(
                     selectedPageIndex = state.visibleLayout.selectedPageIndex,
                     dragSession = state.dragSession,
                 ),
-            swipeMotion =
-                HomeWorkspaceSwipeMotion(
-                    isPageDragActive = state.isPageDragActive,
-                    dragStartPageIndex = state.dragStartPageIndex,
-                    pageSettleTargetIndex = state.pageSettleTargetIndex,
-                    pageSettleVelocityPxPerSecond = state.pageSettleVelocityPxPerSecond,
-                    pageDragOffsetPx = state.pageDragOffsetPx,
-                    pageSwipeMotion = state.pageSwipeMotion,
-                ),
             presentation = state.homeGridPresentation(),
             appIconLoader = appIconLoader,
             actions = actions,
             modifier =
                 Modifier
                     .weight(1f)
-                    .fillMaxWidth()
-                    .homeSwipeNavigation(
-                        state = state.swipeNavigationState,
-                        onPageDragStarted = onPageDragStarted,
-                        onPageDragOffsetChange = onPageDragOffsetChange,
-                        onPageDragReleased = onPageDragReleased,
-                        onAction = actions.onAction,
-                    ),
+                    .fillMaxWidth(),
         )
         Spacer(modifier = Modifier.height(HOME_PAGE_INDICATOR_TOP_SPACING_DP.dp))
         PageIndicator(
             pageCount = state.visibleLayout.pages.size,
-            selectedPageIndex = state.visibleLayout.selectedPageIndex,
+            selectedPageIndex = pagerState.visualSelectedPageIndex,
         )
         if (state.visibleLayout.shouldShowDock()) {
             Spacer(modifier = Modifier.height(HOME_DOCK_TOP_SPACING_DP.dp))
@@ -251,92 +188,6 @@ private fun HomeToolbar(onAction: (LauncherShellAction) -> Unit) {
 }
 
 @Composable
-private fun AnimatedWorkspaceGrid(
-    layout: HomeLayout,
-    gridState: HomeGridState,
-    swipeMotion: HomeWorkspaceSwipeMotion,
-    presentation: HomeGridPresentation,
-    appIconLoader: AppIconLoader,
-    actions: HomeWorkspaceActions,
-    modifier: Modifier = Modifier,
-) {
-    val animatedPageIndex =
-        remember { Animatable(layout.selectedPageIndex.toFloat()) }
-
-    BoxWithConstraints(modifier = modifier) {
-        val widthPx = with(LocalDensity.current) { maxWidth.toPx() }
-        val boundedDragOffsetPx = swipeMotion.pageDragOffsetPx().coerceIn(-widthPx, widthPx)
-
-        LaunchedEffect(
-            swipeMotion.isPageDragActive,
-            swipeMotion.dragStartPageIndex,
-            boundedDragOffsetPx,
-            widthPx,
-        ) {
-            if (swipeMotion.isPageDragActive && widthPx > 0f) {
-                animatedPageIndex.snapTo(
-                    swipeMotion.pageSwipeMotion.pagePositionDuringDrag(
-                        dragStartPageIndex = swipeMotion.dragStartPageIndex,
-                        pageDragOffsetPx = boundedDragOffsetPx,
-                        pageWidthPx = widthPx,
-                    ),
-                )
-            }
-        }
-
-        val settleTargetPageIndex =
-            swipeMotion.pageSettleTargetIndex
-                ?.coerceIn(0, layout.pages.lastIndex)
-                ?: layout.selectedPageIndex
-
-        LaunchedEffect(
-            swipeMotion.isPageDragActive,
-            settleTargetPageIndex,
-            widthPx,
-        ) {
-            if (!swipeMotion.isPageDragActive) {
-                animatedPageIndex.animateTo(
-                    settleTargetPageIndex.toFloat(),
-                    animationSpec =
-                        spring(
-                            dampingRatio = Spring.DampingRatioNoBouncy,
-                            stiffness = Spring.StiffnessMediumLow,
-                            visibilityThreshold = 0.001f,
-                        ),
-                    initialVelocity =
-                        swipeMotion.pageSwipeMotion.pageSettleInitialVelocity(
-                            horizontalVelocityPxPerSecond = swipeMotion.pageSettleVelocityPxPerSecond,
-                            pageWidthPx = widthPx,
-                        ),
-                )
-            }
-        }
-
-        val currentPagePosition = animatedPageIndex.value
-
-        layout.pages.forEachIndexed { index, page ->
-            if (abs(index - currentPagePosition.roundToInt()) > ANIMATED_WORKSPACE_PAGE_RADIUS) {
-                return@forEachIndexed
-            }
-
-            WorkspaceGrid(
-                page = page,
-                gridState = gridState,
-                presentation = presentation,
-                appIconLoader = appIconLoader,
-                actions = actions,
-                modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .graphicsLayer {
-                            translationX = (index - currentPagePosition) * widthPx
-                        },
-            )
-        }
-    }
-}
-
-@Composable
 fun BoxScope.RemoveShortcutButton(
     label: String,
     onClick: () -> Unit,
@@ -363,24 +214,8 @@ fun BoxScope.RemoveShortcutButton(
 private data class StandardHomeContentState(
     val layout: HomeLayout,
     val visibleLayout: HomeLayout,
-    val swipeNavigationState: HomeSwipeNavigationState,
-    val isPageDragActive: Boolean,
-    val dragStartPageIndex: Int,
-    val pageSettleTargetIndex: Int?,
-    val pageSettleVelocityPxPerSecond: Float,
-    val pageDragOffsetPx: () -> Float,
-    val pageSwipeMotion: HomePageSwipeMotion,
     val dragSession: HomeDragSession?,
     val presentation: StandardHomePresentation,
-)
-
-private data class HomeWorkspaceSwipeMotion(
-    val isPageDragActive: Boolean,
-    val dragStartPageIndex: Int,
-    val pageSettleTargetIndex: Int?,
-    val pageSettleVelocityPxPerSecond: Float,
-    val pageDragOffsetPx: () -> Float,
-    val pageSwipeMotion: HomePageSwipeMotion,
 )
 
 private fun StandardHomeContentState.homeGridPresentation(): HomeGridPresentation =
@@ -409,7 +244,6 @@ internal data class HomeDragSession(
 )
 
 internal data class StandardHomeInteractions(
-    val homeSwipeGestures: HomeSwipeGestureSettings,
     val haptics: LauncherHaptics = NoopLauncherHaptics,
 )
 
@@ -445,7 +279,6 @@ internal data class HomeWorkspaceActions(
     val onAction: (LauncherShellAction) -> Unit,
 )
 
-private const val HOME_SWIPE_THRESHOLD_DP = 80
 private const val HOME_SURFACE_HORIZONTAL_PADDING_DP = 24
 private const val HOME_SURFACE_VERTICAL_PADDING_DP = 24
 private const val HOME_TOOLBAR_WORKSPACE_SPACING_DP = 16
@@ -453,4 +286,3 @@ private const val HOME_TOOLBAR_MAX_WIDTH_DP = 560
 private const val HOME_TOOLBAR_SURFACE_ALPHA = 0.88f
 private const val HOME_PAGE_INDICATOR_TOP_SPACING_DP = 12
 private const val HOME_DOCK_TOP_SPACING_DP = 16
-private const val ANIMATED_WORKSPACE_PAGE_RADIUS = 1

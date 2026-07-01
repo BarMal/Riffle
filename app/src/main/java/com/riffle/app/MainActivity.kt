@@ -11,10 +11,6 @@ import androidx.activity.viewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
-import com.riffle.app.launcher.AndroidHomeLayoutDeviceClassObserver
-import com.riffle.app.launcher.AndroidHomeRoleGateway
-import com.riffle.app.launcher.AndroidLauncherWallpaperController
-import com.riffle.app.launcher.AndroidWidgetAddWindowSizeProvider
 import com.riffle.app.launcher.DefaultLauncherNotificationActionHandler
 import com.riffle.app.launcher.DefaultLauncherSettingsActionHandler
 import com.riffle.app.launcher.LauncherActionRouter
@@ -22,72 +18,38 @@ import com.riffle.app.launcher.LauncherActivityActionHandler
 import com.riffle.app.launcher.LauncherAppActionCallbacks
 import com.riffle.app.launcher.LauncherAppActionHandler
 import com.riffle.app.launcher.LauncherAppLaunchCallbacks
-import com.riffle.app.launcher.LauncherBackupDocumentGateway
-import com.riffle.app.launcher.LauncherBackupDocumentHandler
-import com.riffle.app.launcher.LauncherBackupExportCoordinator
-import com.riffle.app.launcher.LauncherBackupImportCoordinator
 import com.riffle.app.launcher.LauncherBackupImportHandlingResult
 import com.riffle.app.launcher.LauncherSettingsActionCallbacks
 import com.riffle.app.launcher.LauncherShell
 import com.riffle.app.launcher.LauncherShellAction
-import com.riffle.app.launcher.LauncherShellPlatformDependencies
 import com.riffle.app.launcher.LauncherShellViewModel
 import com.riffle.app.launcher.LauncherShellViewModelFactory
 import com.riffle.app.launcher.LauncherWidgetAddHandlingResult
-import com.riffle.app.launcher.LauncherWidgetAddRequestHandler
-import com.riffle.app.launcher.SharedPreferencesAppVisibilityRepository
-import com.riffle.app.launcher.SharedPreferencesFirstRunRepository
-import com.riffle.app.launcher.SharedPreferencesHomeLayoutRepository
-import com.riffle.app.launcher.SharedPreferencesLauncherSettingsRepository
-import com.riffle.app.launcher.apps.AndroidAppLauncher
-import com.riffle.app.launcher.apps.AndroidAppShortcutRepository
-import com.riffle.app.launcher.apps.AndroidPackageChangeObserver
-import com.riffle.app.launcher.apps.PackageManagerAppIconLoader
-import com.riffle.app.launcher.apps.PackageManagerInstalledAppRepository
 import com.riffle.app.launcher.completeWidgetAdd
-import com.riffle.app.launcher.homeLayoutDeviceClassFromConfiguration
-import com.riffle.app.launcher.notifications.ActiveNotificationRefreshCoordinator
-import com.riffle.app.launcher.notifications.AndroidNotificationAccessGateway
 import com.riffle.app.launcher.notifications.AndroidNotificationDismissalGateway
-import com.riffle.app.launcher.notifications.SharedPreferencesActiveNotificationRepository
 import com.riffle.app.launcher.refreshInstalledApps
 import com.riffle.app.launcher.refreshNotifications
 import com.riffle.app.launcher.refreshWidgetProviders
 import com.riffle.app.launcher.selectedPageHostedWidgetIdForItem
-import com.riffle.app.launcher.widgets.AndroidInstalledWidgetProviderRepository
-import com.riffle.app.launcher.widgets.AndroidWidgetHostGateway
 import com.riffle.app.launcher.widgets.WidgetBindPermissionResult
-import com.riffle.app.launcher.widgets.WidgetBindingCoordinator
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
-    private val homeLayoutRepository by lazy { SharedPreferencesHomeLayoutRepository(this) }
-    private val launcherSettingsRepository by lazy { SharedPreferencesLauncherSettingsRepository(this) }
+    private val dependencies by lazy { MainActivityDependencies(this) }
+    private val homeLayoutRepository get() = dependencies.homeLayoutRepository
+    private val launcherSettingsRepository get() = dependencies.launcherSettingsRepository
     private val shellViewModel: LauncherShellViewModel by viewModels {
         LauncherShellViewModelFactory(
-            firstRunRepository = SharedPreferencesFirstRunRepository(this),
-            installedAppRepository =
-                PackageManagerInstalledAppRepository(
-                    context = this,
-                    appShortcutRepository = AndroidAppShortcutRepository(this),
-                ),
-            appVisibilityRepository = SharedPreferencesAppVisibilityRepository(this),
+            firstRunRepository = dependencies.firstRunRepository,
+            installedAppRepository = dependencies.installedAppRepository,
+            appVisibilityRepository = dependencies.appVisibilityRepository,
             homeLayoutRepository = homeLayoutRepository,
             launcherSettingsRepository = launcherSettingsRepository,
-            platformDependencies =
-                LauncherShellPlatformDependencies(
-                    notificationRepository = activeNotificationRepository,
-                    widgetProviderRepository = AndroidInstalledWidgetProviderRepository(this),
-                    initialHomeLayoutDeviceClass =
-                        homeLayoutDeviceClassFromConfiguration(
-                            screenWidthDp = resources.configuration.screenWidthDp,
-                            screenHeightDp = resources.configuration.screenHeightDp,
-                        ),
-                ),
+            platformDependencies = dependencies.platformDependencies(),
         )
     }
-    private val homeRoleGateway by lazy { AndroidHomeRoleGateway(this) }
-    private val appLauncher by lazy { AndroidAppLauncher(this) }
+    private val homeRoleGateway get() = dependencies.homeRoleGateway
+    private val appLauncher get() = dependencies.appLauncher
     private val appVersionLabel by lazy {
         packageManager
             .getPackageInfo(packageName, 0)
@@ -98,44 +60,31 @@ class MainActivity : ComponentActivity() {
                 )
             }
     }
-    private val appIconLoader by lazy { PackageManagerAppIconLoader(packageManager) }
-    private val packageChangeObserver by lazy {
-        AndroidPackageChangeObserver(this) {
-            runOnUiThread {
-                shellViewModel.refreshInstalledApps()
-            }
-        }
-    }
-    private val wallpaperController by lazy { AndroidLauncherWallpaperController(window) }
-    private val notificationAccessGateway by lazy { AndroidNotificationAccessGateway(this) }
-    private val homeLayoutDeviceClassObserver by lazy { AndroidHomeLayoutDeviceClassObserver(this) }
-    private val activeNotificationRepository by lazy { SharedPreferencesActiveNotificationRepository(this) }
-    private val activeNotificationRefreshCoordinator by lazy {
-        ActiveNotificationRefreshCoordinator(
-            notificationChangeSource = activeNotificationRepository,
-            dispatchOnMainThread = { action -> runOnUiThread { action() } },
-            refreshNotifications = { shellViewModel.refreshNotifications() },
+    private val appBuildIdentityLabel by lazy {
+        launcherBuildIdentityLabel(
+            appVersionLabel = appVersionLabel,
+            packageName = packageName,
+            buildType = packageName.launcherBuildTypeLabel(),
         )
+    }
+    private val appIconLoader get() = dependencies.appIconLoader
+    private val packageChangeObserver by lazy {
+        dependencies.packageChangeObserver { shellViewModel.refreshInstalledApps() }
+    }
+    private val wallpaperController get() = dependencies.wallpaperController
+    private val notificationAccessGateway get() = dependencies.notificationAccessGateway
+    private val homeLayoutDeviceClassObserver get() = dependencies.homeLayoutDeviceClassObserver
+    private val activeNotificationRefreshCoordinator by lazy {
+        dependencies.activeNotificationRefreshCoordinator { shellViewModel.refreshNotifications() }
     }
     private val backupDocumentHandler by lazy {
-        LauncherBackupDocumentHandler(
-            exportCoordinator =
-                LauncherBackupExportCoordinator(
-                    homeLayoutRepository = homeLayoutRepository,
-                    currentState = { shellViewModel.state.value },
-                ),
-            importCoordinator = LauncherBackupImportCoordinator(),
-            documentGateway = LauncherBackupDocumentGateway(),
-        )
+        dependencies.backupDocumentHandler { shellViewModel.state.value }
     }
-    private val widgetHostGateway by lazy { AndroidWidgetHostGateway(this) }
-    private val widgetBindingCoordinator by lazy { WidgetBindingCoordinator(widgetHostGateway) }
-    private val widgetAddWindowSizeProvider by lazy { AndroidWidgetAddWindowSizeProvider(this) }
+    private val widgetHostGateway get() = dependencies.widgetHostGateway
+    private val widgetBindingCoordinator get() = dependencies.widgetBindingCoordinator
     private val widgetAddRequestHandler by lazy {
-        LauncherWidgetAddRequestHandler(
-            widgetBindingCoordinator = widgetBindingCoordinator,
+        dependencies.widgetAddRequestHandler(
             selectedGrid = { shellViewModel.state.value.homeLayout.selectedPage.grid },
-            windowSize = widgetAddWindowSizeProvider::windowSize,
             completeWidgetAdd = shellViewModel::completeWidgetAdd,
         )
     }
@@ -270,6 +219,7 @@ class MainActivity : ComponentActivity() {
             LauncherShell(
                 viewModel = shellViewModel,
                 appVersionLabel = appVersionLabel,
+                appBuildIdentityLabel = appBuildIdentityLabel,
                 appIconLoader = appIconLoader,
                 widgetViewFactory = widgetHostGateway,
                 onAction = launcherActionRouter::handle,
@@ -325,6 +275,13 @@ class MainActivity : ComponentActivity() {
 
 private const val BACKUP_DOCUMENT_MIME_TYPE = "application/json"
 private const val BACKUP_DOCUMENT_NAME = "riffle-backup.json"
+
+private fun String.launcherBuildTypeLabel(): String =
+    when {
+        endsWith(".debug") -> "debug"
+        else -> "release"
+    }
+
 private val BACKUP_DOCUMENT_OPEN_MIME_TYPES =
     arrayOf(
         BACKUP_DOCUMENT_MIME_TYPE,

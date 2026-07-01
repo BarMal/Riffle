@@ -13,4 +13,16 @@ class LauncherAppVersionTest {
     fun fallsBackToVersionCodeWhenNameIsBlank() {
         assertEquals("109", launcherVersionLabel(versionName = "", versionCode = 109))
     }
+
+    @Test
+    fun formatsBuildIdentityWithPackageAndBuildType() {
+        assertEquals(
+            "0.1.0-alpha109 (109) / com.riffle.app.debug / debug",
+            launcherBuildIdentityLabel(
+                appVersionLabel = "0.1.0-alpha109 (109)",
+                packageName = "com.riffle.app.debug",
+                buildType = "debug",
+            ),
+        )
+    }
 }

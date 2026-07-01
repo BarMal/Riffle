@@ -5,7 +5,7 @@ import android.service.notification.StatusBarNotification
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
 
 class RiffleNotificationListenerService : NotificationListenerService() {
-    private val repository by lazy { SharedPreferencesActiveNotificationRepository(this) }
+    private val repository by lazy { DataStoreActiveNotificationRepository(this) }
 
     override fun onListenerConnected() {
         RiffleNotificationListenerConnection.connect(this)
