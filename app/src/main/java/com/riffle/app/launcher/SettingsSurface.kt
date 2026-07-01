@@ -51,7 +51,10 @@ fun SettingsSurface(
                     .windowInsetsPadding(WindowInsets.safeDrawing)
                     .padding(horizontal = 20.dp, vertical = 16.dp),
         ) {
-            SettingsPageHeader(onAction = onAction)
+            SettingsPageHeader(
+                appVersionLabel = appVersionLabel,
+                onAction = onAction,
+            )
             Spacer(modifier = Modifier.height(24.dp))
             SettingsPageContent(
                 modifier =
@@ -65,7 +68,6 @@ fun SettingsSurface(
                 homeLayout = homeLayout,
                 notificationAccessStatus = notificationAccessStatus,
                 hiddenApps = hiddenApps,
-                appVersionLabel = appVersionLabel,
                 onAction = onAction,
             )
         }
@@ -73,7 +75,10 @@ fun SettingsSurface(
 }
 
 @Composable
-private fun ColumnScope.SettingsPageHeader(onAction: (LauncherShellAction) -> Unit) {
+private fun ColumnScope.SettingsPageHeader(
+    appVersionLabel: String,
+    onAction: (LauncherShellAction) -> Unit,
+) {
     Row(
         modifier =
             Modifier
@@ -83,10 +88,17 @@ private fun ColumnScope.SettingsPageHeader(onAction: (LauncherShellAction) -> Un
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(
-            text = "Settings",
-            style = MaterialTheme.typography.headlineMedium,
-        )
+        Column {
+            Text(
+                text = "Settings",
+                style = MaterialTheme.typography.headlineMedium,
+            )
+            Text(
+                text = appVersionLabel,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
         TextButton(onClick = { onAction(LauncherShellAction.OpenHome) }) {
             SettingsButtonText(text = "Home")
         }
@@ -100,7 +112,6 @@ private fun SettingsPageContent(
     homeLayout: HomeLayout,
     notificationAccessStatus: NotificationAccessStatus,
     hiddenApps: List<InstalledApp>,
-    appVersionLabel: String,
     onAction: (LauncherShellAction) -> Unit,
 ) {
     Column(
@@ -162,13 +173,6 @@ private fun SettingsPageContent(
             HiddenAppsSetting(
                 apps = hiddenApps,
                 onAction = onAction,
-            )
-        }
-        SettingsSection(title = "About") {
-            SettingsTextColumn(
-                modifier = Modifier.fillMaxWidth(),
-                title = "Version",
-                subtitle = appVersionLabel,
             )
         }
     }
