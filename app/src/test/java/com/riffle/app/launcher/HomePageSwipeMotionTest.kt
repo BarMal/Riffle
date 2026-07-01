@@ -113,12 +113,81 @@ class HomePageSwipeMotionTest {
     }
 
     @Test
+    fun settleInitialVelocityIsCappedToAvoidJolts() {
+        assertEquals(
+            5f,
+            motion.pageSettleInitialVelocity(
+                horizontalVelocityPxPerSecond = -8_000f,
+                pageWidthPx = 400f,
+            ),
+        )
+        assertEquals(
+            -5f,
+            motion.pageSettleInitialVelocity(
+                horizontalVelocityPxPerSecond = 8_000f,
+                pageWidthPx = 400f,
+            ),
+        )
+    }
+
+    @Test
     fun settleInitialVelocityIgnoresMissingPageWidth() {
         assertEquals(
             0f,
             motion.pageSettleInitialVelocity(
                 horizontalVelocityPxPerSecond = -800f,
                 pageWidthPx = 0f,
+            ),
+        )
+    }
+
+    @Test
+    fun fastHorizontalFlingSelectsAdjacentPageAction() {
+        assertEquals(
+            LauncherShellAction.SelectNextHomePage,
+            motion.pageFlingAction(
+                horizontalVelocityPxPerSecond = -1_100f,
+                selectedPageIndex = 0,
+                pageCount = 3,
+                homeSwipeGestures = HomeSwipeGestureSettings(),
+            ),
+        )
+        assertEquals(
+            LauncherShellAction.SelectPreviousHomePage,
+            motion.pageFlingAction(
+                horizontalVelocityPxPerSecond = 1_100f,
+                selectedPageIndex = 2,
+                pageCount = 3,
+                homeSwipeGestures = HomeSwipeGestureSettings(),
+            ),
+        )
+    }
+
+    @Test
+    fun pageFlingIgnoresUnavailableOrRemappedDirections() {
+        assertEquals(
+            null,
+            motion.pageFlingAction(
+                horizontalVelocityPxPerSecond = -1_100f,
+                selectedPageIndex = 0,
+                pageCount = 1,
+                homeSwipeGestures = HomeSwipeGestureSettings(),
+            ),
+        )
+
+        val settings =
+            HomeSwipeGestureSettings(
+                left = LauncherGestureAction.OPEN_SETTINGS,
+                right = LauncherGestureAction.OPEN_SEARCH,
+            )
+
+        assertEquals(
+            null,
+            motion.pageFlingAction(
+                horizontalVelocityPxPerSecond = -1_100f,
+                selectedPageIndex = 0,
+                pageCount = 3,
+                homeSwipeGestures = settings,
             ),
         )
     }
