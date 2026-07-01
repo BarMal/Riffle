@@ -39,13 +39,14 @@ class DockConfigurationEngineTest {
     }
 
     @Test
-    fun rejectsDockCapacityBelowCurrentItemCount() {
+    fun updatesDockCapacityBelowCurrentItemCount() {
         val layout = layoutWithDockItems(appShortcut(id = "phone"), appShortcut(id = "camera"))
 
         val result = engine.setDockCapacity(layout = layout, capacity = 1)
 
-        val rejected = assertIs<DockEditResult.Rejected>(result)
-        assertEquals(DockEditRejectionReason.CAPACITY_BELOW_ITEM_COUNT, rejected.reason)
+        val updated = assertIs<DockEditResult.Updated>(result)
+        assertEquals(1, updated.layout.dock.capacity)
+        assertEquals(layout.dock.items, updated.layout.dock.items)
     }
 
     @Test

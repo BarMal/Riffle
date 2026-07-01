@@ -17,9 +17,6 @@ class DockConfigurationEngine {
     ): DockEditResult =
         when {
             capacity < MIN_DOCK_CAPACITY -> DockEditResult.Rejected(DockEditRejectionReason.INVALID_CAPACITY)
-            capacity < layout.dock.items.size ->
-                DockEditResult.Rejected(DockEditRejectionReason.CAPACITY_BELOW_ITEM_COUNT)
-
             else ->
                 DockEditResult.Updated(
                     layout.copy(

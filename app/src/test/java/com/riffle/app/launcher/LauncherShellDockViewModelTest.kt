@@ -45,7 +45,7 @@ class LauncherShellDockViewModelTest {
     }
 
     @Test
-    fun ignoresDockCapacityBelowCurrentItemCount() {
+    fun updatesDockCapacityBelowCurrentItemCountAndSavesLayout() {
         val phone = app(label = "Phone")
         val camera = app(label = "Camera")
         val savedLayout =
@@ -65,8 +65,9 @@ class LauncherShellDockViewModelTest {
 
         viewModel.onDockEdited(LauncherShellAction.SelectDockCapacity(capacity = 1))
 
-        assertEquals(savedLayout, viewModel.state.value.homeLayout)
-        assertEquals(savedLayout, repository.savedLayout)
+        assertEquals(1, viewModel.state.value.homeLayout.dock.capacity)
+        assertEquals(savedLayout.dock.items, viewModel.state.value.homeLayout.dock.items)
+        assertEquals(viewModel.state.value.homeLayout, repository.savedLayout)
     }
 
     @Test
