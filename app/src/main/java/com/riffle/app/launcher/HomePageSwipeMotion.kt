@@ -40,7 +40,29 @@ class HomePageSwipeMotion {
     ): Float =
         when {
             pageWidthPx <= 0f -> 0f
-            else -> -horizontalVelocityPxPerSecond / pageWidthPx
+            else ->
+                (-horizontalVelocityPxPerSecond / pageWidthPx)
+                    .coerceIn(-MAX_PAGE_SETTLE_VELOCITY_PAGES_PER_SECOND, MAX_PAGE_SETTLE_VELOCITY_PAGES_PER_SECOND)
+        }
+
+    fun pageFlingAction(
+        horizontalVelocityPxPerSecond: Float,
+        selectedPageIndex: Int,
+        pageCount: Int,
+        homeSwipeGestures: HomeSwipeGestureSettings,
+    ): LauncherShellAction? =
+        when {
+            horizontalVelocityPxPerSecond <= -PAGE_FLING_VELOCITY_THRESHOLD_PX_PER_SECOND &&
+                selectedPageIndex < pageCount - 1 &&
+                homeSwipeGestures.left == LauncherGestureAction.SELECT_NEXT_HOME_PAGE ->
+                LauncherShellAction.SelectNextHomePage
+
+            horizontalVelocityPxPerSecond >= PAGE_FLING_VELOCITY_THRESHOLD_PX_PER_SECOND &&
+                selectedPageIndex > 0 &&
+                homeSwipeGestures.right == LauncherGestureAction.SELECT_PREVIOUS_HOME_PAGE ->
+                LauncherShellAction.SelectPreviousHomePage
+
+            else -> null
         }
 
     fun pageSettleTargetIndex(
@@ -57,4 +79,9 @@ class HomePageSwipeMotion {
 
             else -> null
         }
+
+    private companion object {
+        const val PAGE_FLING_VELOCITY_THRESHOLD_PX_PER_SECOND = 900f
+        const val MAX_PAGE_SETTLE_VELOCITY_PAGES_PER_SECOND = 5f
+    }
 }

@@ -44,10 +44,18 @@ internal fun Modifier.homeSwipeNavigation(
                 },
                 onDragEnd = {
                     val horizontalVelocityPxPerSecond = velocityTracker.calculateVelocity().x
-                    val action =
+                    val interpretedAction =
                         interpreter
                             .gestureFor(horizontalDragPx, verticalDragPx)
                             ?.let { gesture -> actionMapper.actionFor(gesture, state.homeSwipeGestures) }
+                    val action =
+                        interpretedAction
+                            ?: state.pageSwipeMotion.pageFlingAction(
+                                horizontalVelocityPxPerSecond = horizontalVelocityPxPerSecond,
+                                selectedPageIndex = state.selectedPageIndex,
+                                pageCount = state.pageCount,
+                                homeSwipeGestures = state.homeSwipeGestures,
+                            )
                     onPageDragReleased(
                         state.pageSwipeMotion.pageSettleTargetIndex(
                             action = action,
