@@ -29,6 +29,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -70,7 +71,9 @@ internal fun StandardHome(
     val swipeThresholdPx = with(LocalDensity.current) { HOME_SWIPE_THRESHOLD_DP.dp.toPx() }
     val pageDragOffsetPx = remember { mutableFloatStateOf(0f) }
     val isPageDragActive = remember { mutableStateOf(false) }
+    val dragStartPageIndex = remember { mutableIntStateOf(visibleLayout.selectedPageIndex) }
     val homeDragSession = remember { mutableStateOf<HomeDragSession?>(null) }
+    val pageSwipeMotion = remember { HomePageSwipeMotion() }
     val swipeNavigationState =
         HomeSwipeNavigationState(
             enabled = true,
@@ -78,7 +81,7 @@ internal fun StandardHome(
             homeSwipeGestures = interactions.homeSwipeGestures,
             selectedPageIndex = visibleLayout.selectedPageIndex,
             pageCount = visibleLayout.pages.size,
-            pageSwipeMotion = remember { HomePageSwipeMotion() },
+            pageSwipeMotion = pageSwipeMotion,
         )
     val actions =
         HomeWorkspaceActions(
@@ -95,13 +98,18 @@ internal fun StandardHome(
                 visibleLayout = visibleLayout,
                 swipeNavigationState = swipeNavigationState,
                 isPageDragActive = isPageDragActive.value,
+                dragStartPageIndex = dragStartPageIndex.intValue,
                 pageDragOffsetPx = { pageDragOffsetPx.floatValue },
+                pageSwipeMotion = pageSwipeMotion,
                 dragSession = homeDragSession.value,
                 presentation = presentation,
             ),
         appIconLoader = appIconLoader,
         actions = actions,
-        onPageDragStarted = { isPageDragActive.value = true },
+        onPageDragStarted = {
+            dragStartPageIndex.intValue = visibleLayout.selectedPageIndex
+            isPageDragActive.value = true
+        },
         onPageDragOffsetChange = { offsetPx -> pageDragOffsetPx.floatValue = offsetPx },
         onPageDragReleased = {
             isPageDragActive.value = false
@@ -162,7 +170,9 @@ private fun StandardHomeColumn(
             swipeMotion =
                 HomeWorkspaceSwipeMotion(
                     isPageDragActive = state.isPageDragActive,
+                    dragStartPageIndex = state.dragStartPageIndex,
                     pageDragOffsetPx = state.pageDragOffsetPx,
+                    pageSwipeMotion = state.pageSwipeMotion,
                 ),
             presentation = state.homeGridPresentation(),
             appIconLoader = appIconLoader,
@@ -245,9 +255,20 @@ private fun AnimatedWorkspaceGrid(
         val widthPx = with(LocalDensity.current) { maxWidth.toPx() }
         val boundedDragOffsetPx = swipeMotion.pageDragOffsetPx().coerceIn(-widthPx, widthPx)
 
-        LaunchedEffect(swipeMotion.isPageDragActive, boundedDragOffsetPx, layout.selectedPageIndex, widthPx) {
+        LaunchedEffect(
+            swipeMotion.isPageDragActive,
+            swipeMotion.dragStartPageIndex,
+            boundedDragOffsetPx,
+            widthPx,
+        ) {
             if (swipeMotion.isPageDragActive && widthPx > 0f) {
-                animatedPageIndex.snapTo(layout.selectedPageIndex - (boundedDragOffsetPx / widthPx))
+                animatedPageIndex.snapTo(
+                    swipeMotion.pageSwipeMotion.pagePositionDuringDrag(
+                        dragStartPageIndex = swipeMotion.dragStartPageIndex,
+                        pageDragOffsetPx = boundedDragOffsetPx,
+                        pageWidthPx = widthPx,
+                    ),
+                )
             }
         }
 
@@ -310,14 +331,18 @@ private data class StandardHomeContentState(
     val visibleLayout: HomeLayout,
     val swipeNavigationState: HomeSwipeNavigationState,
     val isPageDragActive: Boolean,
+    val dragStartPageIndex: Int,
     val pageDragOffsetPx: () -> Float,
+    val pageSwipeMotion: HomePageSwipeMotion,
     val dragSession: HomeDragSession?,
     val presentation: StandardHomePresentation,
 )
 
 private data class HomeWorkspaceSwipeMotion(
     val isPageDragActive: Boolean,
+    val dragStartPageIndex: Int,
     val pageDragOffsetPx: () -> Float,
+    val pageSwipeMotion: HomePageSwipeMotion,
 )
 
 private fun StandardHomeContentState.homeGridPresentation(): HomeGridPresentation =

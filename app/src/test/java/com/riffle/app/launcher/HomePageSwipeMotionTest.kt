@@ -35,6 +35,46 @@ class HomePageSwipeMotionTest {
     }
 
     @Test
+    fun dragPositionStaysAnchoredToPageWhereDragStarted() {
+        assertEquals(
+            0.25f,
+            motion.pagePositionDuringDrag(
+                dragStartPageIndex = 0,
+                pageDragOffsetPx = -100f,
+                pageWidthPx = 400f,
+            ),
+        )
+        assertEquals(
+            0.75f,
+            motion.pagePositionDuringDrag(
+                dragStartPageIndex = 1,
+                pageDragOffsetPx = 100f,
+                pageWidthPx = 400f,
+            ),
+        )
+    }
+
+    @Test
+    fun dragPositionClampsToAdjacentPage() {
+        assertEquals(
+            1f,
+            motion.pagePositionDuringDrag(
+                dragStartPageIndex = 0,
+                pageDragOffsetPx = -800f,
+                pageWidthPx = 400f,
+            ),
+        )
+        assertEquals(
+            0f,
+            motion.pagePositionDuringDrag(
+                dragStartPageIndex = 1,
+                pageDragOffsetPx = 800f,
+                pageWidthPx = 400f,
+            ),
+        )
+    }
+
+    @Test
     fun doesNotOffsetWhenThereIsNoAdjacentPage() {
         assertEquals(
             0f,

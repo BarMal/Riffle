@@ -23,4 +23,14 @@ class HomePageSwipeMotion {
 
             else -> 0f
         }
+
+    fun pagePositionDuringDrag(
+        dragStartPageIndex: Int,
+        pageDragOffsetPx: Float,
+        pageWidthPx: Float,
+    ): Float =
+        when {
+            pageWidthPx <= 0f -> dragStartPageIndex.toFloat()
+            else -> dragStartPageIndex - (pageDragOffsetPx.coerceIn(-pageWidthPx, pageWidthPx) / pageWidthPx)
+        }
 }
