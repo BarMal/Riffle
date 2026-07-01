@@ -52,6 +52,7 @@ class LauncherShellViewModel(
     private val reducer = LauncherShellStateReducer()
     private val appCatalog = InstalledAppCatalog()
     private val appListActionReducer = LauncherAppListActionReducer(appCatalog)
+    private val widgetPickerActionReducer = LauncherWidgetPickerActionReducer()
     private val appShortcutRepository =
         installedAppRepository as? AppShortcutRepository ?: NoopAppShortcutRepository
     private val installedAppRefreshDependencies =
@@ -166,8 +167,7 @@ class LauncherShellViewModel(
                     if (action == LauncherShellAction.OpenWidgetPicker) {
                         launchedRefresh = refreshWidgetProviders()
                     }
-                    mutableState.value
-                        .withWidgetPickerAction(action)
+                    widgetPickerActionReducer.reduce(mutableState.value, action) ?: mutableState.value
                 }
 
                 else -> mutableState.value
