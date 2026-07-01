@@ -253,6 +253,24 @@ class LauncherShellViewModeViewModelTest {
         )
     }
 
+    @Test
+    fun selectingAlreadyActiveDeviceClassDoesNotRewriteStoredLayoutSet() {
+        val repository = FakeHomeLayoutRepository(savedLayout = HomeLayoutDefaults.standard())
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                homeLayoutRepository = repository,
+            )
+        repository.savedLayoutSetSaveCount = 0
+
+        viewModel.onHomePageEdited(
+            LauncherShellAction.SelectHomeLayoutDeviceClass(HomeLayoutDeviceClass.PHONE),
+        )
+
+        assertEquals(0, repository.savedLayoutSetSaveCount)
+        assertEquals(HomeLayoutDefaults.standard(), viewModel.state.value.homeLayout)
+    }
+
     private class FakeFirstRunRepository : FirstRunRepository {
         override fun isFirstRunComplete(): Boolean = false
 
@@ -263,6 +281,7 @@ class LauncherShellViewModeViewModelTest {
         var savedLayout: HomeLayout? = null,
     ) : HomeLayoutRepository {
         var savedLayoutSet: HomeLayoutSet? = savedLayout?.let(HomeLayoutSet::fromLayout)
+        var savedLayoutSetSaveCount: Int = 0
 
         override fun loadHomeLayout(): HomeLayout? = savedLayoutSet?.activeLayout ?: savedLayout
 
@@ -277,6 +296,7 @@ class LauncherShellViewModeViewModelTest {
         override fun loadHomeLayoutSet(): HomeLayoutSet? = savedLayoutSet
 
         override fun saveHomeLayoutSet(layoutSet: HomeLayoutSet) {
+            savedLayoutSetSaveCount += 1
             savedLayoutSet = layoutSet
             savedLayout = layoutSet.activeLayout
         }
