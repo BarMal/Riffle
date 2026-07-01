@@ -1,23 +1,75 @@
 package com.riffle.app.launcher.apps
 
-import android.content.BroadcastReceiver
 import android.content.Context
-import android.content.Intent
-import android.content.IntentFilter
-import androidx.core.content.ContextCompat
+import android.content.pm.LauncherApps
+import android.content.pm.ShortcutInfo
+import android.os.UserHandle
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 
-class AndroidPackageChangeObserver(
+internal class AndroidPackageChangeObserver(
     private val context: Context,
     private val onPackagesChanged: () -> Unit,
 ) : DefaultLifecycleObserver {
     private var registered = false
-    private val receiver =
-        object : BroadcastReceiver() {
-            override fun onReceive(
-                context: Context,
-                intent: Intent,
+    private val launcherApps by lazy { context.getSystemService(LauncherApps::class.java) }
+    private val callback =
+        object : LauncherApps.Callback() {
+            override fun onPackageAdded(
+                packageName: String,
+                user: UserHandle,
+            ) {
+                onPackagesChanged()
+            }
+
+            override fun onPackageRemoved(
+                packageName: String,
+                user: UserHandle,
+            ) {
+                onPackagesChanged()
+            }
+
+            override fun onPackageChanged(
+                packageName: String,
+                user: UserHandle,
+            ) {
+                onPackagesChanged()
+            }
+
+            override fun onPackagesAvailable(
+                packageNames: Array<out String>,
+                user: UserHandle,
+                replacing: Boolean,
+            ) {
+                onPackagesChanged()
+            }
+
+            override fun onPackagesUnavailable(
+                packageNames: Array<out String>,
+                user: UserHandle,
+                replacing: Boolean,
+            ) {
+                onPackagesChanged()
+            }
+
+            override fun onPackagesSuspended(
+                packageNames: Array<out String>,
+                user: UserHandle,
+            ) {
+                onPackagesChanged()
+            }
+
+            override fun onPackagesUnsuspended(
+                packageNames: Array<out String>,
+                user: UserHandle,
+            ) {
+                onPackagesChanged()
+            }
+
+            override fun onShortcutsChanged(
+                packageName: String,
+                shortcuts: MutableList<ShortcutInfo>,
+                user: UserHandle,
             ) {
                 onPackagesChanged()
             }
@@ -33,12 +85,7 @@ class AndroidPackageChangeObserver(
 
     private fun register() {
         if (!registered) {
-            ContextCompat.registerReceiver(
-                context,
-                receiver,
-                packageChangeIntentFilter(),
-                ContextCompat.RECEIVER_EXPORTED,
-            )
+            launcherApps.registerCallback(callback)
             registered = true
         }
     }
@@ -46,19 +93,9 @@ class AndroidPackageChangeObserver(
     private fun unregister() {
         if (registered) {
             runCatching {
-                context.unregisterReceiver(receiver)
+                launcherApps.unregisterCallback(callback)
             }
             registered = false
         }
     }
 }
-
-fun packageChangeIntentFilter(): IntentFilter =
-    IntentFilter().apply {
-        addAction(Intent.ACTION_PACKAGE_ADDED)
-        addAction(Intent.ACTION_PACKAGE_CHANGED)
-        addAction(Intent.ACTION_PACKAGE_FULLY_REMOVED)
-        addAction(Intent.ACTION_PACKAGE_REMOVED)
-        addAction(Intent.ACTION_PACKAGE_REPLACED)
-        addDataScheme("package")
-    }

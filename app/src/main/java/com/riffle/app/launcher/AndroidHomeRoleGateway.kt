@@ -12,11 +12,11 @@ class AndroidHomeRoleGateway(
     private val context: Context,
 ) {
     fun getHomeRoleStatus(): HomeRoleStatus =
-        when (resolveDefaultHomePackageName()) {
-            context.packageName -> HomeRoleStatus.DEFAULT_HOME
-            null -> HomeRoleStatus.UNKNOWN
-            else -> HomeRoleStatus.NOT_DEFAULT_HOME
-        }
+        homeRoleStatusFromRoleManager()
+            ?: homeRoleStatusFromResolvedDefaultHome(
+                appPackageName = context.packageName,
+                resolvedDefaultHomePackageName = resolveDefaultHomePackageName(),
+            )
 
     fun createHomeRoleRequestIntent(): Intent =
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -28,9 +28,45 @@ class AndroidHomeRoleGateway(
             Intent(Settings.ACTION_HOME_SETTINGS)
         }
 
+    private fun homeRoleStatusFromRoleManager(): HomeRoleStatus? =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            context.getSystemService(RoleManager::class.java)
+                ?.let { roleManager ->
+                    val isHomeRoleAvailable = roleManager.isRoleAvailable(RoleManager.ROLE_HOME)
+                    homeRoleStatusFromRoleManager(
+                        isHomeRoleAvailable = isHomeRoleAvailable,
+                        isHomeRoleHeld =
+                            isHomeRoleAvailable &&
+                                roleManager.isRoleHeld(RoleManager.ROLE_HOME),
+                    )
+                }
+        } else {
+            null
+        }
+
     private fun resolveDefaultHomePackageName(): String? =
         context.packageManager.resolveActivity(
             Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME),
             PackageManager.MATCH_DEFAULT_ONLY,
         )?.activityInfo?.packageName
 }
+
+internal fun homeRoleStatusFromRoleManager(
+    isHomeRoleAvailable: Boolean,
+    isHomeRoleHeld: Boolean,
+): HomeRoleStatus? =
+    when {
+        !isHomeRoleAvailable -> null
+        isHomeRoleHeld -> HomeRoleStatus.DEFAULT_HOME
+        else -> HomeRoleStatus.NOT_DEFAULT_HOME
+    }
+
+internal fun homeRoleStatusFromResolvedDefaultHome(
+    appPackageName: String,
+    resolvedDefaultHomePackageName: String?,
+): HomeRoleStatus =
+    when (resolvedDefaultHomePackageName) {
+        appPackageName -> HomeRoleStatus.DEFAULT_HOME
+        null -> HomeRoleStatus.UNKNOWN
+        else -> HomeRoleStatus.NOT_DEFAULT_HOME
+    }
