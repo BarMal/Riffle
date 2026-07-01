@@ -30,6 +30,7 @@ import com.riffle.app.launcher.apps.AndroidAppShortcutRepository
 import com.riffle.app.launcher.apps.AndroidPackageChangeObserver
 import com.riffle.app.launcher.apps.PackageManagerAppIconLoader
 import com.riffle.app.launcher.apps.PackageManagerInstalledAppRepository
+import com.riffle.app.launcher.completeWidgetAdd
 import com.riffle.app.launcher.handleNotificationAction
 import com.riffle.app.launcher.handleSettingsAction
 import com.riffle.app.launcher.homeLayoutDeviceClassFromConfiguration
@@ -47,10 +48,6 @@ import com.riffle.app.launcher.widgets.AndroidWidgetHostGateway
 import com.riffle.app.launcher.widgets.WidgetAddRequestResult
 import com.riffle.app.launcher.widgets.WidgetBindPermissionResult
 import com.riffle.app.launcher.widgets.WidgetBindingCoordinator
-import com.riffle.app.launcher.widgets.widgetSpanAdjustmentToast
-import com.riffle.core.domain.launcher.home.GridSpan
-import com.riffle.core.domain.launcher.home.HostedWidgetId
-import com.riffle.core.domain.launcher.home.WidgetItem
 
 class MainActivity : ComponentActivity() {
     private val homeLayoutRepository by lazy { SharedPreferencesHomeLayoutRepository(this) }
@@ -134,11 +131,8 @@ class MainActivity : ComponentActivity() {
                 widgetBindingCoordinator.onPermissionResult(result.resultCode == Activity.RESULT_OK)
             when (permissionResult) {
                 is WidgetBindPermissionResult.Bound ->
-                    completeHostedWidgetAdd(
-                        activity = this,
-                        viewModel = shellViewModel,
-                        action = permissionResult.action,
-                    )
+                    shellViewModel.completeWidgetAdd(permissionResult.action)
+                        ?.let { message -> Toast.makeText(this, message, Toast.LENGTH_SHORT).show() }
 
                 WidgetBindPermissionResult.Cancelled,
                 WidgetBindPermissionResult.Ignored,
@@ -297,11 +291,8 @@ class MainActivity : ComponentActivity() {
                         )
                 ) {
                     is WidgetAddRequestResult.Bound ->
-                        completeHostedWidgetAdd(
-                            activity = this,
-                            viewModel = shellViewModel,
-                            action = requestResult.action,
-                        )
+                        shellViewModel.completeWidgetAdd(requestResult.action)
+                            ?.let { message -> Toast.makeText(this, message, Toast.LENGTH_SHORT).show() }
 
                     is WidgetAddRequestResult.RequiresPermission ->
                         requestWidgetBind.launch(
@@ -333,40 +324,3 @@ private val BACKUP_DOCUMENT_OPEN_MIME_TYPES =
         "text/*",
         "application/octet-stream",
     )
-
-private fun completeHostedWidgetAdd(
-    activity: ComponentActivity,
-    viewModel: LauncherShellViewModel,
-    action: LauncherShellAction.AddHostedWidgetToHome,
-) {
-    viewModel.onHomeShortcutEdited(action)
-    widgetSpanAdjustmentMessage(
-        viewModel = viewModel,
-        label = action.label,
-        idealSpan = action.preferredSpan,
-        hostedWidgetId = action.hostedWidgetId,
-    )?.let { message ->
-        Toast.makeText(activity, message, Toast.LENGTH_SHORT).show()
-    }
-    viewModel.onAppActionSelected(LauncherShellAction.CloseWidgetPicker)
-}
-
-private fun widgetSpanAdjustmentMessage(
-    viewModel: LauncherShellViewModel,
-    label: String,
-    idealSpan: GridSpan,
-    hostedWidgetId: HostedWidgetId,
-): String? =
-    viewModel.state.value.homeLayout.pages
-        .flatMap { page -> page.items }
-        .filterIsInstance<WidgetItem>()
-        .firstOrNull { widget -> widget.appWidgetId == hostedWidgetId }
-        ?.placement
-        ?.span
-        ?.let { actualSpan ->
-            widgetSpanAdjustmentToast(
-                label = label,
-                idealSpan = idealSpan,
-                actualSpan = actualSpan,
-            )
-        }
