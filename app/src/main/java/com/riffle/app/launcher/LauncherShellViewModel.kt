@@ -139,13 +139,6 @@ class LauncherShellViewModel(
                                 .withoutUnavailableApps(homeLayoutRepository)
                                 .withHomeScreenLibraryApps(homeLayoutRepository)
                                 .withAppShortcuts(appShortcutRepository, appCatalog)
-                                .withNotificationState(
-                                    notificationRepository = notificationRepository,
-                                    appNotificationCounter = appNotificationCounter,
-                                    appNotificationGrouper = appNotificationGrouper,
-                                    notificationStaleFilter = notificationStaleFilter,
-                                    nowEpochMillis = epochMillisProvider.nowEpochMillis(),
-                                )
 
                         LauncherShellRefreshScope.NOTIFICATIONS ->
                             mutableState.value.withNotificationState(

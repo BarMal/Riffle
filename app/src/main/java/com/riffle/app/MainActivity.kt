@@ -185,6 +185,7 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         shellViewModel.refreshInstalledApps()
+        shellViewModel.refreshNotifications()
         refreshPlatformStatuses()
     }
 

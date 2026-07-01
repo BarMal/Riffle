@@ -223,7 +223,7 @@ class LauncherShellViewModelTest {
             )
 
         repository.notifications = listOf(notification(key = "camera-1", packageName = "com.riffle.camera"))
-        runBlocking { viewModel.refreshInstalledApps().join() }
+        runBlocking { viewModel.refreshNotifications().join() }
 
         assertEquals(1, viewModel.state.value.notificationCountsByPackage[AppPackageName("com.riffle.camera")])
     }
