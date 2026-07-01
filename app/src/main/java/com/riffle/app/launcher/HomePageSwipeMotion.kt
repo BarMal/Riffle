@@ -34,6 +34,15 @@ class HomePageSwipeMotion {
             else -> dragStartPageIndex - (pageDragOffsetPx.coerceIn(-pageWidthPx, pageWidthPx) / pageWidthPx)
         }
 
+    fun pageSettleInitialVelocity(
+        horizontalVelocityPxPerSecond: Float,
+        pageWidthPx: Float,
+    ): Float =
+        when {
+            pageWidthPx <= 0f -> 0f
+            else -> -horizontalVelocityPxPerSecond / pageWidthPx
+        }
+
     fun pageSettleTargetIndex(
         action: LauncherShellAction?,
         selectedPageIndex: Int,
