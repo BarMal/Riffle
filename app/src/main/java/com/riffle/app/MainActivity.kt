@@ -9,7 +9,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import com.riffle.app.launcher.AndroidHomeRoleGateway
 import com.riffle.app.launcher.AndroidLauncherWallpaperController
-import com.riffle.app.launcher.LauncherActivityRoute
+import com.riffle.app.launcher.LauncherActivityActionHandler
 import com.riffle.app.launcher.LauncherAppActionRoute
 import com.riffle.app.launcher.LauncherBackupDocumentGateway
 import com.riffle.app.launcher.LauncherBackupDocumentHandler
@@ -37,7 +37,6 @@ import com.riffle.app.launcher.completeWidgetAdd
 import com.riffle.app.launcher.handleNotificationAction
 import com.riffle.app.launcher.handleSettingsAction
 import com.riffle.app.launcher.homeLayoutDeviceClassFromConfiguration
-import com.riffle.app.launcher.launcherActivityRoute
 import com.riffle.app.launcher.launcherAppActionRoute
 import com.riffle.app.launcher.notifications.ActiveNotificationRefreshCoordinator
 import com.riffle.app.launcher.notifications.AndroidNotificationAccessGateway
@@ -159,6 +158,23 @@ class MainActivity : ComponentActivity() {
             }
         }
 
+    private val activityActionHandler by lazy {
+        LauncherActivityActionHandler(
+            requestDefaultHome = {
+                shellViewModel.onDefaultHomeRequestStarted()
+                requestHomeRole.launch(homeRoleGateway.createHomeRoleRequestIntent())
+            },
+            navigate = shellViewModel::onNavigationActionSelected,
+            editHomePage = shellViewModel::onHomePageEdited,
+            editHomeShortcut = shellViewModel::onHomeShortcutEdited,
+            editDock = shellViewModel::onDockEdited,
+            hostedWidgetIdForRemovedShortcut = { itemId ->
+                shellViewModel.state.value.homeLayout.selectedPageHostedWidgetIdForItem(itemId)
+            },
+            deleteHostedWidget = widgetHostGateway::deleteHostedWidgetId,
+        )
+    }
+
     private val createBackupDocument =
         registerForActivityResult(
             ActivityResultContracts.CreateDocument(BACKUP_DOCUMENT_MIME_TYPE),
@@ -227,7 +243,7 @@ class MainActivity : ComponentActivity() {
 
     private fun handleAction(action: LauncherShellAction) {
         val handled =
-            handleActivityRoute(action) ||
+            activityActionHandler.handle(action) ||
                 action.handleNotificationAction(
                     viewModel = shellViewModel,
                     notificationDismissalGateway = AndroidNotificationDismissalGateway,
@@ -244,42 +260,6 @@ class MainActivity : ComponentActivity() {
             handleAppAction(action)
         }
     }
-
-    private fun handleActivityRoute(action: LauncherShellAction): Boolean =
-        when (val route = action.launcherActivityRoute()) {
-            LauncherActivityRoute.RequestDefaultHome -> {
-                shellViewModel.onDefaultHomeRequestStarted()
-                requestHomeRole.launch(homeRoleGateway.createHomeRoleRequestIntent())
-                true
-            }
-
-            is LauncherActivityRoute.Navigation -> {
-                shellViewModel.onNavigationActionSelected(route.action)
-                true
-            }
-
-            LauncherActivityRoute.HomePageEdit -> {
-                shellViewModel.onHomePageEdited(action)
-                true
-            }
-
-            LauncherActivityRoute.HomeShortcutEdit -> {
-                if (action is LauncherShellAction.RemoveHomeShortcut) {
-                    shellViewModel.state.value.homeLayout
-                        .selectedPageHostedWidgetIdForItem(action.itemId)
-                        ?.let(widgetHostGateway::deleteHostedWidgetId)
-                }
-                shellViewModel.onHomeShortcutEdited(action)
-                true
-            }
-
-            LauncherActivityRoute.DockEdit -> {
-                shellViewModel.onDockEdited(action)
-                true
-            }
-
-            null -> false
-        }
 
     private fun handleAppAction(action: LauncherShellAction) {
         when (val route = action.launcherAppActionRoute()) {
