@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredSize
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -78,12 +79,21 @@ fun Dock(
                         alpha = dock.backgroundAlphaPercent / 100f,
                     ),
                 )
-                .padding(horizontal = 14.dp, vertical = 10.dp),
+                .padding(horizontal = DOCK_HORIZONTAL_PADDING_DP.dp, vertical = DOCK_VERTICAL_PADDING_DP.dp),
         contentAlignment = Alignment.Center,
     ) {
         if (renderedSlotCount > 0) {
             Row(
-                modifier = Modifier.horizontalScroll(rememberScrollState()),
+                modifier =
+                    Modifier
+                        .width(
+                            dockContentViewportWidthDp(
+                                slotCount = renderedSlotCount,
+                                iconSizeDp = dock.iconSizeDp,
+                                itemSpacingDp = dock.itemSpacingDp,
+                            ).dp,
+                        )
+                        .horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(dock.itemSpacingDp.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -109,8 +119,23 @@ fun Dock(
 
 private const val DOCK_MAX_WIDTH_DP = 560
 private const val DOCK_VERTICAL_CHROME_DP = 32
+private const val DOCK_HORIZONTAL_PADDING_DP = 14
+private const val DOCK_VERTICAL_PADDING_DP = 10
 
 internal fun dockHeightDp(iconSizeDp: Int): Int = iconSizeDp + DOCK_VERTICAL_CHROME_DP
+
+internal fun dockContentViewportWidthDp(
+    slotCount: Int,
+    iconSizeDp: Int,
+    itemSpacingDp: Int,
+): Int {
+    if (slotCount <= 0) {
+        return 0
+    }
+    val contentWidth = (slotCount * iconSizeDp) + ((slotCount - 1) * itemSpacingDp)
+    val maxContentWidth = (DOCK_MAX_WIDTH_DP - (DOCK_HORIZONTAL_PADDING_DP * 2)).coerceAtLeast(0)
+    return min(contentWidth, maxContentWidth)
+}
 
 internal fun dockRenderedSlotCount(
     capacity: Int,
@@ -130,8 +155,8 @@ internal fun dockBackgroundVisible(
     backgroundSizing: DockBackgroundSizing,
 ): Boolean =
     when {
-        capacity <= 0 -> false
         backgroundSizing == DockBackgroundSizing.FIXED -> true
+        capacity <= 0 -> false
         isEditing -> true
         else -> itemCount > 0
     }

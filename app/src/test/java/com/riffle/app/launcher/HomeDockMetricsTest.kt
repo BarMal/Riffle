@@ -16,6 +16,42 @@ class HomeDockMetricsTest {
     }
 
     @Test
+    fun dockContentViewportUsesOccupiedIconWidthAndSpacing() {
+        assertEquals(
+            212,
+            dockContentViewportWidthDp(
+                slotCount = 4,
+                iconSizeDp = 44,
+                itemSpacingDp = 12,
+            ),
+        )
+    }
+
+    @Test
+    fun dockContentViewportCapsAtDockInteriorWidth() {
+        assertEquals(
+            532,
+            dockContentViewportWidthDp(
+                slotCount = 20,
+                iconSizeDp = 56,
+                itemSpacingDp = 24,
+            ),
+        )
+    }
+
+    @Test
+    fun emptyDockHasNoContentViewport() {
+        assertEquals(
+            0,
+            dockContentViewportWidthDp(
+                slotCount = 0,
+                iconSizeDp = 44,
+                itemSpacingDp = 12,
+            ),
+        )
+    }
+
+    @Test
     fun normalDockRendersOccupiedSlotsSoIconsFillTheDock() {
         assertEquals(
             4,
@@ -126,9 +162,9 @@ class HomeDockMetricsTest {
     }
 
     @Test
-    fun zeroCapacityFixedDockHidesBackground() {
+    fun zeroCapacityFixedDockShowsFullWidthBackground() {
         assertEquals(
-            false,
+            true,
             dockBackgroundVisible(
                 capacity = 0,
                 itemCount = 0,
