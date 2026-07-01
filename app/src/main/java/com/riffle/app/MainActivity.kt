@@ -10,6 +10,7 @@ import androidx.activity.viewModels
 import com.riffle.app.launcher.AndroidHomeRoleGateway
 import com.riffle.app.launcher.AndroidLauncherWallpaperController
 import com.riffle.app.launcher.LauncherActivityRoute
+import com.riffle.app.launcher.LauncherAppActionRoute
 import com.riffle.app.launcher.LauncherBackupDocumentGateway
 import com.riffle.app.launcher.LauncherBackupExportCoordinator
 import com.riffle.app.launcher.LauncherBackupExportResult
@@ -31,6 +32,7 @@ import com.riffle.app.launcher.apps.PackageManagerInstalledAppRepository
 import com.riffle.app.launcher.handleNotificationAction
 import com.riffle.app.launcher.handleSettingsAction
 import com.riffle.app.launcher.launcherActivityRoute
+import com.riffle.app.launcher.launcherAppActionRoute
 import com.riffle.app.launcher.notifications.ActiveNotificationRefreshCoordinator
 import com.riffle.app.launcher.notifications.AndroidNotificationAccessGateway
 import com.riffle.app.launcher.notifications.AndroidNotificationDismissalGateway
@@ -259,17 +261,17 @@ class MainActivity : ComponentActivity() {
         }
 
     private fun handleAppAction(action: LauncherShellAction) {
-        when (action) {
-            is LauncherShellAction.LaunchApp -> appLauncher.launch(action.identity)
-            is LauncherShellAction.LaunchAppShortcut -> appLauncher.launchShortcut(action.shortcut)
-            is LauncherShellAction.OpenAppInfo -> appLauncher.openAppInfo(action.identity)
-            is LauncherShellAction.UninstallApp -> appLauncher.uninstall(action.identity)
-            is LauncherShellAction.AddAppToHome -> shellViewModel.onAddAppToHome(action.app)
-            is LauncherShellAction.RequestAddWidget -> {
+        when (val route = action.launcherAppActionRoute()) {
+            is LauncherAppActionRoute.LaunchApp -> appLauncher.launch(route.action.identity)
+            is LauncherAppActionRoute.LaunchAppShortcut -> appLauncher.launchShortcut(route.action.shortcut)
+            is LauncherAppActionRoute.OpenAppInfo -> appLauncher.openAppInfo(route.action.identity)
+            is LauncherAppActionRoute.UninstallApp -> appLauncher.uninstall(route.action.identity)
+            is LauncherAppActionRoute.AddAppToHome -> shellViewModel.onAddAppToHome(route.action.app)
+            is LauncherAppActionRoute.RequestAddWidget -> {
                 when (
                     val requestResult =
                         widgetBindingCoordinator.requestAddWidget(
-                            action = action,
+                            action = route.action,
                             grid = shellViewModel.state.value.homeLayout.selectedPage.grid,
                             availableWidthDp = resources.configuration.screenWidthDp,
                             availableHeightDp = resources.configuration.screenHeightDp,
@@ -292,23 +294,14 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
-            is LauncherShellAction.HideApp,
-            is LauncherShellAction.UnhideApp,
-            LauncherShellAction.RefreshInstalledApps,
-            is LauncherShellAction.AppDrawerQueryChanged,
-            is LauncherShellAction.AppDrawerProfileFilterSelected,
-            is LauncherShellAction.SearchQueryChanged,
-            is LauncherShellAction.SearchProfileFilterSelected,
-            LauncherShellAction.OpenWidgetPicker,
-            LauncherShellAction.CloseWidgetPicker,
-            -> {
-                shellViewModel.onAppActionSelected(action)
-                if (action == LauncherShellAction.RefreshInstalledApps) {
+            is LauncherAppActionRoute.AppState -> {
+                shellViewModel.onAppActionSelected(route.action)
+                if (route.action == LauncherShellAction.RefreshInstalledApps) {
                     Toast.makeText(this, "App list refreshed", Toast.LENGTH_SHORT).show()
                 }
             }
 
-            else -> Unit
+            null -> Unit
         }
     }
 }
