@@ -168,6 +168,7 @@ class LauncherShellAppDrawerViewModelTest {
                                 app(label = "Camera", profile = AppProfile.personal()),
                                 app(label = "Docs", profile = AppProfile.work()),
                                 app(label = "Sheets", profile = AppProfile.work()),
+                                app(label = "Vault", profile = AppProfile.private()),
                             ),
                     ),
             )
@@ -178,6 +179,13 @@ class LauncherShellAppDrawerViewModelTest {
 
         assertEquals(AppDrawerProfileFilter.WORK, viewModel.state.value.appDrawerProfileFilter)
         assertEquals(listOf("Docs", "Sheets"), viewModel.state.value.appDrawerApps.map { app -> app.label })
+
+        viewModel.onAppActionSelected(
+            LauncherShellAction.AppDrawerProfileFilterSelected(AppDrawerProfileFilter.PRIVATE),
+        )
+
+        assertEquals(AppDrawerProfileFilter.PRIVATE, viewModel.state.value.appDrawerProfileFilter)
+        assertEquals(listOf("Vault"), viewModel.state.value.appDrawerApps.map { app -> app.label })
     }
 
     @Test

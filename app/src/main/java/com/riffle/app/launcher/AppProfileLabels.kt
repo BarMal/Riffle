@@ -11,6 +11,7 @@ fun InstalledApp.drawerSubtitle(): String =
 
 fun AppProfile.drawerProfilePrefix(): String? =
     when {
+        type == AppProfileType.PRIVATE -> "Private"
         type == AppProfileType.WORK -> "Work"
         id != AppProfile.personal().id -> "Personal"
         else -> null

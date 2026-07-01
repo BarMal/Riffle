@@ -22,8 +22,13 @@ class AppProfileLabelsTest {
     }
 
     @Test
+    fun privateAppsShowProfilePrefix() {
+        assertEquals("Private - com.riffle.camera", app(profile = AppProfile.private()).drawerSubtitle())
+    }
+
+    @Test
     fun customPersonalProfilesShowProfilePrefix() {
-        val profile = AppProfile(id = AppProfileId("private"), type = AppProfileType.PERSONAL)
+        val profile = AppProfile(id = AppProfileId("secondary"), type = AppProfileType.PERSONAL)
 
         assertEquals("Personal - com.riffle.camera", app(profile = profile).drawerSubtitle())
     }

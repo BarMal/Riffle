@@ -4,4 +4,5 @@ enum class AppDrawerProfileFilter {
     ALL,
     PERSONAL,
     WORK,
+    PRIVATE,
 }

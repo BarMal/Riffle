@@ -35,4 +35,5 @@ private val AppDrawerProfileFilter.label: String
             AppDrawerProfileFilter.ALL -> "All"
             AppDrawerProfileFilter.PERSONAL -> "Personal"
             AppDrawerProfileFilter.WORK -> "Work"
+            AppDrawerProfileFilter.PRIVATE -> "Private"
         }

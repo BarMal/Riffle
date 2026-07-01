@@ -52,7 +52,15 @@ class AndroidAppLauncher(
         }.isSuccess
 
     private val AppIdentity.userHandle: UserHandle
-        get() = profile.toUserHandle(userManager.userProfiles)
+        get() =
+            profile.toUserHandle(
+                userProfiles = launcherProfiles,
+                userManager = userManager,
+                launcherApps = launcherApps,
+            )
+
+    private val launcherProfiles: List<UserHandle>
+        get() = runCatching { launcherApps.getProfiles() }.getOrDefault(userManager.userProfiles)
 }
 
 internal val AppIdentity.launchIntent: Intent
