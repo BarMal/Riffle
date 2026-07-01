@@ -81,18 +81,28 @@ class LauncherShellViewModel(
                 launcherSettingsRepository = launcherSettingsRepository,
                 firstRunRepository = firstRunRepository,
                 reducer = reducer,
-            ).withInstalledApps(installedAppRepository, appVisibilityRepository, appCatalog)
-                .copy(installedWidgetProviders = platformDependencies.installedWidgetProviders(widgetProviderCatalog))
-                .withoutUnavailableApps(homeLayoutRepository)
-                .withHomeScreenLibraryApps(homeLayoutRepository)
-                .withAppShortcuts(appShortcutRepository, appCatalog)
-                .withNotificationState(
-                    notificationRepository = notificationRepository,
-                    appNotificationCounter = appNotificationCounter,
-                    appNotificationGrouper = appNotificationGrouper,
-                    notificationStaleFilter = notificationStaleFilter,
-                    nowEpochMillis = epochMillisProvider.nowEpochMillis(),
-                ),
+            ).let { state ->
+                when {
+                    platformDependencies.loadInitialPlatformState ->
+                        state.withInstalledApps(installedAppRepository, appVisibilityRepository, appCatalog)
+                            .copy(
+                                installedWidgetProviders =
+                                    platformDependencies.installedWidgetProviders(widgetProviderCatalog),
+                            )
+                            .withoutUnavailableApps(homeLayoutRepository)
+                            .withHomeScreenLibraryApps(homeLayoutRepository)
+                            .withAppShortcuts(appShortcutRepository, appCatalog)
+                            .withNotificationState(
+                                notificationRepository = notificationRepository,
+                                appNotificationCounter = appNotificationCounter,
+                                appNotificationGrouper = appNotificationGrouper,
+                                notificationStaleFilter = notificationStaleFilter,
+                                nowEpochMillis = epochMillisProvider.nowEpochMillis(),
+                            )
+
+                    else -> state
+                }
+            },
         )
     val state: StateFlow<LauncherShellState> = mutableState.asStateFlow()
 

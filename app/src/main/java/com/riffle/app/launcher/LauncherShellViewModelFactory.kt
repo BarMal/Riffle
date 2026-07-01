@@ -25,7 +25,7 @@ class LauncherShellViewModelFactory(
                     appVisibilityRepository = appVisibilityRepository,
                     homeLayoutRepository = homeLayoutRepository,
                     launcherSettingsRepository = launcherSettingsRepository,
-                    platformDependencies = platformDependencies,
+                    platformDependencies = platformDependencies.copy(loadInitialPlatformState = false),
                 ) as T
 
             else -> error("Unknown ViewModel class: ${modelClass.name}")
