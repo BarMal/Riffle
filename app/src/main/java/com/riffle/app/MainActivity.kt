@@ -21,6 +21,9 @@ import com.riffle.app.launcher.LauncherShellAction
 import com.riffle.app.launcher.LauncherShellPlatformDependencies
 import com.riffle.app.launcher.LauncherShellViewModel
 import com.riffle.app.launcher.LauncherShellViewModelFactory
+import com.riffle.app.launcher.LauncherWidgetAddHandlingResult
+import com.riffle.app.launcher.LauncherWidgetAddRequestHandler
+import com.riffle.app.launcher.LauncherWidgetAddWindowSize
 import com.riffle.app.launcher.SharedPreferencesAppVisibilityRepository
 import com.riffle.app.launcher.SharedPreferencesFirstRunRepository
 import com.riffle.app.launcher.SharedPreferencesHomeLayoutRepository
@@ -45,7 +48,6 @@ import com.riffle.app.launcher.refreshWidgetProviders
 import com.riffle.app.launcher.selectedPageHostedWidgetIdForItem
 import com.riffle.app.launcher.widgets.AndroidInstalledWidgetProviderRepository
 import com.riffle.app.launcher.widgets.AndroidWidgetHostGateway
-import com.riffle.app.launcher.widgets.WidgetAddRequestResult
 import com.riffle.app.launcher.widgets.WidgetBindPermissionResult
 import com.riffle.app.launcher.widgets.WidgetBindingCoordinator
 
@@ -118,6 +120,20 @@ class MainActivity : ComponentActivity() {
     }
     private val widgetHostGateway by lazy { AndroidWidgetHostGateway(this) }
     private val widgetBindingCoordinator by lazy { WidgetBindingCoordinator(widgetHostGateway) }
+    private val widgetAddRequestHandler by lazy {
+        LauncherWidgetAddRequestHandler(
+            widgetBindingCoordinator = widgetBindingCoordinator,
+            selectedGrid = { shellViewModel.state.value.homeLayout.selectedPage.grid },
+            windowSize =
+                {
+                    LauncherWidgetAddWindowSize(
+                        availableWidthDp = resources.configuration.screenWidthDp,
+                        availableHeightDp = resources.configuration.screenHeightDp,
+                    )
+                },
+            completeWidgetAdd = shellViewModel::completeWidgetAdd,
+        )
+    }
 
     private val requestHomeRole =
         registerForActivityResult(
@@ -272,29 +288,7 @@ class MainActivity : ComponentActivity() {
             is LauncherAppActionRoute.OpenAppInfo -> appLauncher.openAppInfo(route.action.identity)
             is LauncherAppActionRoute.UninstallApp -> appLauncher.uninstall(route.action.identity)
             is LauncherAppActionRoute.AddAppToHome -> shellViewModel.onAddAppToHome(route.action.app)
-            is LauncherAppActionRoute.RequestAddWidget -> {
-                when (
-                    val requestResult =
-                        widgetBindingCoordinator.requestAddWidget(
-                            action = route.action,
-                            grid = shellViewModel.state.value.homeLayout.selectedPage.grid,
-                            availableWidthDp = resources.configuration.screenWidthDp,
-                            availableHeightDp = resources.configuration.screenHeightDp,
-                        )
-                ) {
-                    is WidgetAddRequestResult.Bound ->
-                        shellViewModel.completeWidgetAdd(requestResult.action)
-                            ?.let { message -> Toast.makeText(this, message, Toast.LENGTH_SHORT).show() }
-
-                    is WidgetAddRequestResult.RequiresPermission ->
-                        requestWidgetBind.launch(
-                            widgetHostGateway.createBindHostedWidgetIntent(
-                                requestResult.hostedWidgetId,
-                                requestResult.provider,
-                            ),
-                        )
-                }
-            }
+            is LauncherAppActionRoute.RequestAddWidget -> handleWidgetAddRequest(route.action)
 
             is LauncherAppActionRoute.AppState -> {
                 shellViewModel.onAppActionSelected(route.action)
@@ -304,6 +298,21 @@ class MainActivity : ComponentActivity() {
             }
 
             null -> Unit
+        }
+    }
+
+    private fun handleWidgetAddRequest(action: LauncherShellAction.RequestAddWidget) {
+        when (val result = widgetAddRequestHandler.handle(action)) {
+            is LauncherWidgetAddHandlingResult.Completed ->
+                result.message?.let { message -> Toast.makeText(this, message, Toast.LENGTH_SHORT).show() }
+
+            is LauncherWidgetAddHandlingResult.RequiresPermission ->
+                requestWidgetBind.launch(
+                    widgetHostGateway.createBindHostedWidgetIntent(
+                        result.hostedWidgetId,
+                        result.provider,
+                    ),
+                )
         }
     }
 }
