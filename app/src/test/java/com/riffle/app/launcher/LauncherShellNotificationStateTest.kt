@@ -78,7 +78,7 @@ class LauncherShellNotificationStateTest {
                     category = NotificationCategory.EMAIL,
                 ),
             )
-        runBlocking { viewModel.refreshInstalledApps().join() }
+        runBlocking { viewModel.refreshNotifications().join() }
 
         assertEquals(
             listOf(AppPackageName("com.riffle.camera"), AppPackageName("com.riffle.mail")),
@@ -110,6 +110,33 @@ class LauncherShellNotificationStateTest {
         assertEquals(listOf("Camera"), viewModel.state.value.installedApps.map { app -> app.label })
         assertEquals(
             listOf(AppPackageName("com.riffle.calendar")),
+            viewModel.state.value.notificationGroupsByApp.map { group -> group.packageName },
+        )
+    }
+
+    @Test
+    fun refreshInstalledAppsDoesNotRefreshNotifications() {
+        val notificationRepository =
+            FakeNotificationRepository(
+                notifications = listOf(notification(key = "camera-1", packageName = "com.riffle.camera")),
+            )
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                installedAppRepository = FakeInstalledAppRepository(apps = listOf(app(label = "Camera"))),
+                platformDependencies =
+                    LauncherShellPlatformDependencies(
+                        notificationRepository = notificationRepository,
+                    ),
+            )
+        notificationRepository.notifications = listOf(notification(key = "mail-1", packageName = "com.riffle.mail"))
+        notificationRepository.activeNotificationReadCount = 0
+
+        runBlocking { viewModel.refreshInstalledApps().join() }
+
+        assertEquals(0, notificationRepository.activeNotificationReadCount)
+        assertEquals(
+            listOf(AppPackageName("com.riffle.camera")),
             viewModel.state.value.notificationGroupsByApp.map { group -> group.packageName },
         )
     }
@@ -193,7 +220,12 @@ class LauncherShellNotificationStateTest {
     private class FakeNotificationRepository(
         var notifications: List<LauncherNotification> = emptyList(),
     ) : LauncherNotificationRepository {
-        override fun activeNotifications(): List<LauncherNotification> = notifications
+        var activeNotificationReadCount: Int = 0
+
+        override fun activeNotifications(): List<LauncherNotification> {
+            activeNotificationReadCount += 1
+            return notifications
+        }
     }
 
     private class FakeInstalledAppRepository(
