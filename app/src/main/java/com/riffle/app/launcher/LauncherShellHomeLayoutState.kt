@@ -27,9 +27,16 @@ internal fun LauncherShellState.withSelectedHomeLayoutMode(
 internal fun LauncherShellState.withSelectedHomeLayoutDeviceClass(
     deviceClass: HomeLayoutDeviceClass,
     homeLayoutRepository: HomeLayoutRepository,
-): LauncherShellState =
-    (homeLayoutRepository.loadHomeLayoutSet() ?: HomeLayoutSet.fromLayout(homeLayout))
+): LauncherShellState {
+    val layoutSet = homeLayoutRepository.loadHomeLayoutSet() ?: HomeLayoutSet.fromLayout(homeLayout)
+
+    if (layoutSet.activeKey.deviceClass == deviceClass && layoutSet.activeLayout == homeLayout) {
+        return this
+    }
+
+    return layoutSet
         .withActiveLayout(homeLayout)
         .selectDeviceClass(deviceClass)
         .also(homeLayoutRepository::saveHomeLayoutSet)
         .let { layoutSet -> copy(homeLayout = layoutSet.activeLayout) }
+}
