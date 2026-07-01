@@ -6,9 +6,7 @@ import com.riffle.core.domain.launcher.HomeRoleStatus
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.LauncherShellStateReducer
 import com.riffle.core.domain.launcher.ShellNavigationAction
-import com.riffle.core.domain.launcher.apps.AppDrawerProfileFilter
 import com.riffle.core.domain.launcher.apps.AppIdentity
-import com.riffle.core.domain.launcher.apps.AppProfileType
 import com.riffle.core.domain.launcher.apps.AppShortcutRepository
 import com.riffle.core.domain.launcher.apps.AppShortcutsByApp
 import com.riffle.core.domain.launcher.apps.AppVisibilityRepository
@@ -53,6 +51,7 @@ class LauncherShellViewModel(
 ) : ViewModel() {
     private val reducer = LauncherShellStateReducer()
     private val appCatalog = InstalledAppCatalog()
+    private val appListActionReducer = LauncherAppListActionReducer(appCatalog)
     private val appShortcutRepository =
         installedAppRepository as? AppShortcutRepository ?: NoopAppShortcutRepository
     private val installedAppRefreshDependencies =
@@ -145,53 +144,11 @@ class LauncherShellViewModel(
                     mutableState.value
                 }
 
-                is LauncherShellAction.AppDrawerQueryChanged ->
-                    mutableState.value.copy(
-                        appDrawerQuery = action.query,
-                        appDrawerApps =
-                            appCatalog.drawerApps(
-                                apps = mutableState.value.installedApps,
-                                query = action.query,
-                                profileFilter = mutableState.value.appDrawerProfileFilter,
-                                appShortcutsByApp = mutableState.value.appShortcutsByApp,
-                            ),
-                    )
-
-                is LauncherShellAction.AppDrawerProfileFilterSelected ->
-                    mutableState.value.copy(
-                        appDrawerProfileFilter = action.filter,
-                        appDrawerApps =
-                            appCatalog.drawerApps(
-                                apps = mutableState.value.installedApps,
-                                query = mutableState.value.appDrawerQuery,
-                                profileFilter = action.filter,
-                                appShortcutsByApp = mutableState.value.appShortcutsByApp,
-                            ),
-                    )
-
-                is LauncherShellAction.SearchQueryChanged ->
-                    mutableState.value.copy(
-                        searchQuery = action.query,
-                        searchResults =
-                            appCatalog.filteredApps(
-                                apps = mutableState.value.installedApps,
-                                query = action.query,
-                                profileFilter = mutableState.value.searchProfileFilter,
-                                appShortcutsByApp = mutableState.value.appShortcutsByApp,
-                            ),
-                    )
-
-                is LauncherShellAction.SearchProfileFilterSelected ->
-                    mutableState.value.copy(
-                        searchProfileFilter = action.filter,
-                        searchResults =
-                            appCatalog.filteredApps(
-                                apps = mutableState.value.installedApps,
-                                query = mutableState.value.searchQuery,
-                                profileFilter = action.filter,
-                                appShortcutsByApp = mutableState.value.appShortcutsByApp,
-                            ),
-                    )
+                is LauncherShellAction.AppDrawerQueryChanged,
+                is LauncherShellAction.AppDrawerProfileFilterSelected,
+                is LauncherShellAction.SearchQueryChanged,
+                is LauncherShellAction.SearchProfileFilterSelected,
+                -> appListActionReducer.reduce(mutableState.value, action) ?: mutableState.value
 
                 is LauncherShellAction.HideApp,
                 is LauncherShellAction.UnhideApp,
@@ -519,59 +476,6 @@ internal fun LauncherShellState.withAppShortcuts(
                         .withFilteredApps(appCatalog)
                 }
         }
-
-private fun InstalledAppCatalog.drawerApps(
-    apps: List<InstalledApp>,
-    query: String,
-    profileFilter: AppDrawerProfileFilter,
-    appShortcutsByApp: AppShortcutsByApp,
-): List<InstalledApp> =
-    filteredApps(
-        apps = apps,
-        query = query,
-        profileFilter = profileFilter,
-        appShortcutsByApp = appShortcutsByApp,
-    )
-
-private fun InstalledAppCatalog.filteredApps(
-    apps: List<InstalledApp>,
-    query: String,
-    profileFilter: AppDrawerProfileFilter,
-    appShortcutsByApp: AppShortcutsByApp,
-): List<InstalledApp> {
-    return searchApps(
-        apps = apps,
-        query = query,
-        shortcutsByApp = appShortcutsByApp,
-    )
-        .filter { app -> app.matches(profileFilter) }
-}
-
-private fun LauncherShellState.withFilteredApps(appCatalog: InstalledAppCatalog): LauncherShellState =
-    copy(
-        appDrawerApps =
-            appCatalog.drawerApps(
-                apps = installedApps,
-                query = appDrawerQuery,
-                profileFilter = appDrawerProfileFilter,
-                appShortcutsByApp = appShortcutsByApp,
-            ),
-        searchResults =
-            appCatalog.filteredApps(
-                apps = installedApps,
-                query = searchQuery,
-                profileFilter = searchProfileFilter,
-                appShortcutsByApp = appShortcutsByApp,
-            ),
-    )
-
-private fun InstalledApp.matches(profileFilter: AppDrawerProfileFilter): Boolean =
-    when (profileFilter) {
-        AppDrawerProfileFilter.ALL -> true
-        AppDrawerProfileFilter.PERSONAL -> identity.profile.type == AppProfileType.PERSONAL
-        AppDrawerProfileFilter.WORK -> identity.profile.type == AppProfileType.WORK
-        AppDrawerProfileFilter.PRIVATE -> identity.profile.type == AppProfileType.PRIVATE
-    }
 
 private fun persistCompletedFirstRun(
     state: LauncherShellState,
