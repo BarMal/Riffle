@@ -476,26 +476,30 @@ private fun createInitialState(
     firstRunRepository: FirstRunRepository,
     reducer: LauncherShellStateReducer,
     platformDependencies: LauncherShellPlatformDependencies,
-): LauncherShellState =
-    LauncherShellState(
-        homeLayout =
-            homeLayoutRepository.loadHomeLayoutSet()
-                ?.let { layoutSet ->
-                    platformDependencies.initialHomeLayoutDeviceClass
-                        ?.let(layoutSet::selectDeviceClass)
-                        ?: layoutSet
-                }
-                ?.activeLayout
-                ?: HomeLayoutDefaults.standard(),
-        launcherSettings = launcherSettingsRepository.loadLauncherSettings() ?: LauncherSettings(),
-    )
-        .let { initialState ->
-            if (firstRunRepository.isFirstRunComplete()) {
-                reducer.firstRunCompleted(initialState)
-            } else {
-                initialState
-            }
+): LauncherShellState {
+    val storedLayoutSet = homeLayoutRepository.loadHomeLayoutSet()
+    val initialLayoutSet =
+        storedLayoutSet?.let { layoutSet ->
+            platformDependencies.initialHomeLayoutDeviceClass
+                ?.let(layoutSet::selectDeviceClass)
+                ?: layoutSet
         }
+
+    if (initialLayoutSet != null && initialLayoutSet.activeKey != storedLayoutSet?.activeKey) {
+        homeLayoutRepository.saveHomeLayoutSet(initialLayoutSet)
+    }
+
+    return LauncherShellState(
+        homeLayout = initialLayoutSet?.activeLayout ?: HomeLayoutDefaults.standard(),
+        launcherSettings = launcherSettingsRepository.loadLauncherSettings() ?: LauncherSettings(),
+    ).let { initialState ->
+        if (firstRunRepository.isFirstRunComplete()) {
+            reducer.firstRunCompleted(initialState)
+        } else {
+            initialState
+        }
+    }
+}
 
 internal fun LauncherShellState.withInstalledApps(
     installedAppRepository: InstalledAppRepository,

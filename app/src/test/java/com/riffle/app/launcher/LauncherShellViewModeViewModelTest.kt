@@ -299,7 +299,59 @@ class LauncherShellViewModeViewModelTest {
             )
 
         assertEquals(phonePage.id, viewModel.state.value.homeLayout.selectedPageId)
-        assertEquals(0, repository.savedLayoutSetSaveCount)
+        assertEquals(phoneKey, repository.savedLayoutSet?.activeKey)
+    }
+
+    @Test
+    fun editsAfterInitialDeviceSelectionDoNotOverwritePreviousDeviceLayout() {
+        val phonePage = HomeLayoutDefaults.standard().selectedPage.copy(id = LauncherPageId("phone-home"))
+        val foldablePage = HomeLayoutDefaults.standard().selectedPage.copy(id = LauncherPageId("foldable-home"))
+        val phoneKey =
+            HomeLayoutKey(
+                viewMode = LauncherViewMode.STANDARD_APP_DRAWER,
+                deviceClass = HomeLayoutDeviceClass.PHONE,
+            )
+        val foldableKey =
+            HomeLayoutKey(
+                viewMode = LauncherViewMode.STANDARD_APP_DRAWER,
+                deviceClass = HomeLayoutDeviceClass.FOLDABLE,
+            )
+        val foldableLayout =
+            HomeLayoutDefaults.standard().copy(
+                pages = listOf(foldablePage),
+                selectedPageId = foldablePage.id,
+            )
+        val layoutSet =
+            HomeLayoutSet(
+                activeKey = foldableKey,
+                layouts =
+                    mapOf(
+                        phoneKey to
+                            HomeLayoutDefaults.standard().copy(
+                                pages = listOf(phonePage),
+                                selectedPageId = phonePage.id,
+                            ),
+                        foldableKey to foldableLayout,
+                    ),
+            )
+        val repository = FakeHomeLayoutRepository().also { repo -> repo.savedLayoutSet = layoutSet }
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                homeLayoutRepository = repository,
+                platformDependencies =
+                    LauncherShellPlatformDependencies(
+                        initialHomeLayoutDeviceClass = HomeLayoutDeviceClass.PHONE,
+                    ),
+            )
+
+        viewModel.onHomePageEdited(LauncherShellAction.AddHomePage)
+
+        assertEquals(foldableLayout, repository.savedLayoutSet?.layoutFor(foldableKey))
+        assertEquals(
+            listOf(LauncherPageId("phone-home"), LauncherPageId("home-2")),
+            repository.savedLayoutSet?.layoutFor(phoneKey)?.pages?.map { page -> page.id },
+        )
     }
 
     @Test
