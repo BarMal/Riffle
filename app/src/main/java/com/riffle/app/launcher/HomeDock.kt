@@ -3,6 +3,7 @@ package com.riffle.app.launcher
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -11,6 +12,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -81,6 +83,7 @@ fun Dock(
     ) {
         if (renderedSlotCount > 0) {
             Row(
+                modifier = Modifier.horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(dock.itemSpacingDp.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {

@@ -52,6 +52,18 @@ class HomeDockMetricsTest {
     }
 
     @Test
+    fun editingDockRendersConfiguredSlotsAboveSix() {
+        assertEquals(
+            8,
+            dockRenderedSlotCount(
+                capacity = 8,
+                itemCount = 8,
+                isEditing = true,
+            ),
+        )
+    }
+
+    @Test
     fun emptyDynamicDockRendersNoSlots() {
         assertEquals(
             0,
