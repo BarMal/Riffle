@@ -25,7 +25,17 @@ internal sealed interface LauncherAppActionRoute {
         val action: LauncherShellAction.RequestAddWidget,
     ) : LauncherAppActionRoute
 
-    data class AppState(
+    data object RefreshInstalledApps : LauncherAppActionRoute
+
+    data class AppVisibilityState(
+        val action: LauncherShellAction,
+    ) : LauncherAppActionRoute
+
+    data class AppListState(
+        val action: LauncherShellAction,
+    ) : LauncherAppActionRoute
+
+    data class WidgetPickerState(
         val action: LauncherShellAction,
     ) : LauncherAppActionRoute
 }
@@ -38,16 +48,20 @@ internal fun LauncherShellAction.launcherAppActionRoute(): LauncherAppActionRout
         is LauncherShellAction.UninstallApp -> LauncherAppActionRoute.UninstallApp(this)
         is LauncherShellAction.AddAppToHome -> LauncherAppActionRoute.AddAppToHome(this)
         is LauncherShellAction.RequestAddWidget -> LauncherAppActionRoute.RequestAddWidget(this)
+        LauncherShellAction.RefreshInstalledApps -> LauncherAppActionRoute.RefreshInstalledApps
         is LauncherShellAction.HideApp,
         is LauncherShellAction.UnhideApp,
-        LauncherShellAction.RefreshInstalledApps,
+        -> LauncherAppActionRoute.AppVisibilityState(this)
+
         is LauncherShellAction.AppDrawerQueryChanged,
         is LauncherShellAction.AppDrawerProfileFilterSelected,
         is LauncherShellAction.SearchQueryChanged,
         is LauncherShellAction.SearchProfileFilterSelected,
+        -> LauncherAppActionRoute.AppListState(this)
+
         LauncherShellAction.OpenWidgetPicker,
         LauncherShellAction.CloseWidgetPicker,
-        -> LauncherAppActionRoute.AppState(this)
+        -> LauncherAppActionRoute.WidgetPickerState(this)
 
         else -> null
     }

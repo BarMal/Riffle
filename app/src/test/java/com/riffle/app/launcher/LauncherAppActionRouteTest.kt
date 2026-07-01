@@ -53,21 +53,32 @@ class LauncherAppActionRouteTest {
 
     @Test
     fun routesAppStateActions() {
-        val actions =
-            listOf(
-                LauncherShellAction.HideApp(appIdentity),
-                LauncherShellAction.UnhideApp(appIdentity),
-                LauncherShellAction.RefreshInstalledApps,
-                LauncherShellAction.AppDrawerQueryChanged("clock"),
-                LauncherShellAction.AppDrawerProfileFilterSelected(AppDrawerProfileFilter.WORK),
-                LauncherShellAction.SearchQueryChanged("camera"),
-                LauncherShellAction.SearchProfileFilterSelected(AppDrawerProfileFilter.PERSONAL),
-                LauncherShellAction.OpenWidgetPicker,
-                LauncherShellAction.CloseWidgetPicker,
-            )
+        assertEquals(
+            LauncherAppActionRoute.RefreshInstalledApps,
+            LauncherShellAction.RefreshInstalledApps.launcherAppActionRoute(),
+        )
 
-        actions.forEach { action ->
-            assertEquals(LauncherAppActionRoute.AppState(action), action.launcherAppActionRoute())
+        listOf(
+            LauncherShellAction.HideApp(appIdentity),
+            LauncherShellAction.UnhideApp(appIdentity),
+        ).forEach { action ->
+            assertEquals(LauncherAppActionRoute.AppVisibilityState(action), action.launcherAppActionRoute())
+        }
+
+        listOf(
+            LauncherShellAction.AppDrawerQueryChanged("clock"),
+            LauncherShellAction.AppDrawerProfileFilterSelected(AppDrawerProfileFilter.WORK),
+            LauncherShellAction.SearchQueryChanged("camera"),
+            LauncherShellAction.SearchProfileFilterSelected(AppDrawerProfileFilter.PERSONAL),
+        ).forEach { action ->
+            assertEquals(LauncherAppActionRoute.AppListState(action), action.launcherAppActionRoute())
+        }
+
+        listOf(
+            LauncherShellAction.OpenWidgetPicker,
+            LauncherShellAction.CloseWidgetPicker,
+        ).forEach { action ->
+            assertEquals(LauncherAppActionRoute.WidgetPickerState(action), action.launcherAppActionRoute())
         }
     }
 

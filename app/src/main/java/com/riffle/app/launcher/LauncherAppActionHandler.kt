@@ -35,11 +35,24 @@ internal class LauncherAppActionHandler(
                 true
             }
 
-            is LauncherAppActionRoute.AppState -> {
+            LauncherAppActionRoute.RefreshInstalledApps -> {
+                callbacks.applyAppState(action)
+                callbacks.appListRefreshed()
+                true
+            }
+
+            is LauncherAppActionRoute.AppVisibilityState -> {
                 callbacks.applyAppState(route.action)
-                if (route.action == LauncherShellAction.RefreshInstalledApps) {
-                    callbacks.appListRefreshed()
-                }
+                true
+            }
+
+            is LauncherAppActionRoute.AppListState -> {
+                callbacks.applyAppState(route.action)
+                true
+            }
+
+            is LauncherAppActionRoute.WidgetPickerState -> {
+                callbacks.applyAppState(route.action)
                 true
             }
 

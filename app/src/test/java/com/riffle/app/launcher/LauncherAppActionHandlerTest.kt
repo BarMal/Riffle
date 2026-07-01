@@ -1,6 +1,7 @@
 package com.riffle.app.launcher
 
 import com.riffle.core.domain.launcher.apps.AppActivityName
+import com.riffle.core.domain.launcher.apps.AppDrawerProfileFilter
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.widgets.WidgetProviderClassName
@@ -71,6 +72,36 @@ class LauncherAppActionHandlerTest {
 
         assertEquals(listOf(LauncherShellAction.RefreshInstalledApps), appStateActions)
         assertEquals(1, refreshMessageCount)
+    }
+
+    @Test
+    fun delegatesAppStateBucketsWithoutRefreshMessage() {
+        val appStateActions = mutableListOf<LauncherShellAction>()
+        var refreshMessageCount = 0
+        val handler =
+            handler(
+                callbacks =
+                    callbacks(
+                        applyAppState = appStateActions::add,
+                        appListRefreshed = { refreshMessageCount += 1 },
+                    ),
+            )
+        val actions =
+            listOf(
+                LauncherShellAction.HideApp(appIdentity),
+                LauncherShellAction.UnhideApp(appIdentity),
+                LauncherShellAction.AppDrawerQueryChanged("clock"),
+                LauncherShellAction.AppDrawerProfileFilterSelected(AppDrawerProfileFilter.WORK),
+                LauncherShellAction.SearchQueryChanged("camera"),
+                LauncherShellAction.SearchProfileFilterSelected(AppDrawerProfileFilter.PERSONAL),
+                LauncherShellAction.OpenWidgetPicker,
+                LauncherShellAction.CloseWidgetPicker,
+            )
+
+        actions.forEach { action -> assertTrue(handler.handle(action)) }
+
+        assertEquals(actions, appStateActions)
+        assertEquals(0, refreshMessageCount)
     }
 
     @Test
