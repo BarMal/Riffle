@@ -13,6 +13,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import com.riffle.app.launcher.AndroidHomeLayoutDeviceClassObserver
 import com.riffle.app.launcher.AndroidHomeRoleGateway
 import com.riffle.app.launcher.AndroidLauncherWallpaperController
+import com.riffle.app.launcher.AndroidWidgetAddWindowSizeProvider
 import com.riffle.app.launcher.LauncherActivityActionHandler
 import com.riffle.app.launcher.LauncherAppActionRoute
 import com.riffle.app.launcher.LauncherBackupDocumentGateway
@@ -27,7 +28,6 @@ import com.riffle.app.launcher.LauncherShellViewModel
 import com.riffle.app.launcher.LauncherShellViewModelFactory
 import com.riffle.app.launcher.LauncherWidgetAddHandlingResult
 import com.riffle.app.launcher.LauncherWidgetAddRequestHandler
-import com.riffle.app.launcher.LauncherWidgetAddWindowSize
 import com.riffle.app.launcher.SharedPreferencesAppVisibilityRepository
 import com.riffle.app.launcher.SharedPreferencesFirstRunRepository
 import com.riffle.app.launcher.SharedPreferencesHomeLayoutRepository
@@ -125,17 +125,12 @@ class MainActivity : ComponentActivity() {
     }
     private val widgetHostGateway by lazy { AndroidWidgetHostGateway(this) }
     private val widgetBindingCoordinator by lazy { WidgetBindingCoordinator(widgetHostGateway) }
+    private val widgetAddWindowSizeProvider by lazy { AndroidWidgetAddWindowSizeProvider(this) }
     private val widgetAddRequestHandler by lazy {
         LauncherWidgetAddRequestHandler(
             widgetBindingCoordinator = widgetBindingCoordinator,
             selectedGrid = { shellViewModel.state.value.homeLayout.selectedPage.grid },
-            windowSize =
-                {
-                    LauncherWidgetAddWindowSize(
-                        availableWidthDp = resources.configuration.screenWidthDp,
-                        availableHeightDp = resources.configuration.screenHeightDp,
-                    )
-                },
+            windowSize = widgetAddWindowSizeProvider::windowSize,
             completeWidgetAdd = shellViewModel::completeWidgetAdd,
         )
     }
