@@ -89,6 +89,7 @@ class LauncherShellViewModel(
                 launcherSettingsRepository = launcherSettingsRepository,
                 firstRunRepository = firstRunRepository,
                 reducer = reducer,
+                platformDependencies = platformDependencies,
             ).let { state ->
                 when {
                     platformDependencies.loadInitialPlatformState ->
@@ -471,9 +472,18 @@ private fun createInitialState(
     launcherSettingsRepository: LauncherSettingsRepository,
     firstRunRepository: FirstRunRepository,
     reducer: LauncherShellStateReducer,
+    platformDependencies: LauncherShellPlatformDependencies,
 ): LauncherShellState =
     LauncherShellState(
-        homeLayout = homeLayoutRepository.loadHomeLayout() ?: HomeLayoutDefaults.standard(),
+        homeLayout =
+            homeLayoutRepository.loadHomeLayoutSet()
+                ?.let { layoutSet ->
+                    platformDependencies.initialHomeLayoutDeviceClass
+                        ?.let(layoutSet::selectDeviceClass)
+                        ?: layoutSet
+                }
+                ?.activeLayout
+                ?: HomeLayoutDefaults.standard(),
         launcherSettings = launcherSettingsRepository.loadLauncherSettings() ?: LauncherSettings(),
     )
         .let { initialState ->
