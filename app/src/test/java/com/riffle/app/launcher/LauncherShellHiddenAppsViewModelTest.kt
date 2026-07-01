@@ -18,9 +18,12 @@ import com.riffle.core.domain.launcher.home.HomeLayoutRepository
 import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.home.LauncherPage
 import com.riffle.core.domain.launcher.home.LauncherPageId
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Test
+import kotlin.coroutines.CoroutineContext
 
 class LauncherShellHiddenAppsViewModelTest {
     @Test
@@ -65,14 +68,19 @@ class LauncherShellHiddenAppsViewModelTest {
         val camera = app(label = "Camera")
         val docs = app(label = "Docs")
         val appVisibilityRepository = FakeAppVisibilityRepository()
+        val dispatcher = QueuedDispatcher()
         val viewModel =
             LauncherShellViewModel(
                 firstRunRepository = FakeFirstRunRepository(),
                 installedAppRepository = FakeInstalledAppRepository(apps = listOf(camera, docs)),
                 appVisibilityRepository = appVisibilityRepository,
+                refreshDispatcher = dispatcher,
             )
 
-        runBlocking { viewModel.onAppActionSelected(LauncherShellAction.HideApp(camera.identity))?.join() }
+        runQueuedRefresh(
+            refreshJob = viewModel.onAppActionSelected(LauncherShellAction.HideApp(camera.identity)),
+            dispatcher = dispatcher,
+        )
 
         assertEquals(setOf(camera.identity), appVisibilityRepository.hiddenApps)
         assertEquals(listOf(docs.identity), viewModel.state.value.installedApps.map { app -> app.identity })
@@ -81,10 +89,37 @@ class LauncherShellHiddenAppsViewModelTest {
     }
 
     @Test
+    fun hidingAppDefersVisibilityWriteAndRefresh() {
+        val camera = app(label = "Camera")
+        val docs = app(label = "Docs")
+        val appVisibilityRepository = FakeAppVisibilityRepository()
+        val dispatcher = QueuedDispatcher()
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                installedAppRepository = FakeInstalledAppRepository(apps = listOf(camera, docs)),
+                appVisibilityRepository = appVisibilityRepository,
+                platformDependencies = LauncherShellPlatformDependencies(loadInitialPlatformState = false),
+                refreshDispatcher = dispatcher,
+            )
+
+        val refreshJob = viewModel.onAppActionSelected(LauncherShellAction.HideApp(camera.identity))
+
+        assertEquals(emptySet<AppIdentity>(), appVisibilityRepository.hiddenApps)
+
+        dispatcher.runQueued()
+        runBlocking { refreshJob?.join() }
+
+        assertEquals(setOf(camera.identity), appVisibilityRepository.hiddenApps)
+        assertEquals(listOf(docs.identity), viewModel.state.value.installedApps.map { app -> app.identity })
+    }
+
+    @Test
     fun hidingHomeAppFreesGridCellForNewApps() {
         val camera = app(label = "Camera")
         val docs = app(label = "Docs")
         val maps = app(label = "Maps")
+        val dispatcher = QueuedDispatcher()
         val homeLayoutRepository =
             FakeHomeLayoutRepository(
                 savedLayout =
@@ -112,9 +147,13 @@ class LauncherShellHiddenAppsViewModelTest {
                 installedAppRepository = FakeInstalledAppRepository(apps = listOf(camera, docs, maps)),
                 appVisibilityRepository = FakeAppVisibilityRepository(),
                 homeLayoutRepository = homeLayoutRepository,
+                refreshDispatcher = dispatcher,
             )
 
-        runBlocking { viewModel.onAppActionSelected(LauncherShellAction.HideApp(camera.identity))?.join() }
+        runQueuedRefresh(
+            refreshJob = viewModel.onAppActionSelected(LauncherShellAction.HideApp(camera.identity)),
+            dispatcher = dispatcher,
+        )
         viewModel.onAddAppToHome(maps)
 
         val shortcut = viewModel.state.value.homeLayout.selectedPage.items.single() as AppShortcutItem
@@ -127,6 +166,7 @@ class LauncherShellHiddenAppsViewModelTest {
     fun hidingDockAppFreesDockSlotForNewApps() {
         val phone = app(label = "Phone")
         val camera = app(label = "Camera")
+        val dispatcher = QueuedDispatcher()
         val homeLayoutRepository =
             FakeHomeLayoutRepository(
                 savedLayout =
@@ -140,9 +180,13 @@ class LauncherShellHiddenAppsViewModelTest {
                 installedAppRepository = FakeInstalledAppRepository(apps = listOf(phone, camera)),
                 appVisibilityRepository = FakeAppVisibilityRepository(),
                 homeLayoutRepository = homeLayoutRepository,
+                refreshDispatcher = dispatcher,
             )
 
-        runBlocking { viewModel.onAppActionSelected(LauncherShellAction.HideApp(phone.identity))?.join() }
+        runQueuedRefresh(
+            refreshJob = viewModel.onAppActionSelected(LauncherShellAction.HideApp(phone.identity)),
+            dispatcher = dispatcher,
+        )
         viewModel.onDockEdited(LauncherShellAction.AddAppToDock(camera))
 
         val shortcut = viewModel.state.value.homeLayout.dock.items.single() as AppShortcutItem
@@ -226,14 +270,19 @@ class LauncherShellHiddenAppsViewModelTest {
         val camera = app(label = "Camera")
         val docs = app(label = "Docs")
         val appVisibilityRepository = FakeAppVisibilityRepository(hiddenApps = setOf(camera.identity))
+        val dispatcher = QueuedDispatcher()
         val viewModel =
             LauncherShellViewModel(
                 firstRunRepository = FakeFirstRunRepository(),
                 installedAppRepository = FakeInstalledAppRepository(apps = listOf(camera, docs)),
                 appVisibilityRepository = appVisibilityRepository,
+                refreshDispatcher = dispatcher,
             )
 
-        runBlocking { viewModel.onAppActionSelected(LauncherShellAction.UnhideApp(camera.identity))?.join() }
+        runQueuedRefresh(
+            refreshJob = viewModel.onAppActionSelected(LauncherShellAction.UnhideApp(camera.identity)),
+            dispatcher = dispatcher,
+        )
 
         assertEquals(emptySet<AppIdentity>(), appVisibilityRepository.hiddenApps)
         assertEquals(
@@ -241,6 +290,14 @@ class LauncherShellHiddenAppsViewModelTest {
             viewModel.state.value.installedApps.map { app -> app.identity },
         )
         assertEquals(emptyList<AppIdentity>(), viewModel.state.value.hiddenApps.map { app -> app.identity })
+    }
+
+    private fun runQueuedRefresh(
+        refreshJob: Job?,
+        dispatcher: QueuedDispatcher,
+    ) {
+        dispatcher.runQueued()
+        runBlocking { refreshJob?.join() }
     }
 
     private class FakeFirstRunRepository : FirstRunRepository {
@@ -266,6 +323,23 @@ class LauncherShellHiddenAppsViewModelTest {
 
         override fun showApp(identity: AppIdentity) {
             hiddenApps = hiddenApps - identity
+        }
+    }
+
+    private class QueuedDispatcher : CoroutineDispatcher() {
+        private val blocks = ArrayDeque<Runnable>()
+
+        override fun dispatch(
+            context: CoroutineContext,
+            block: Runnable,
+        ) {
+            blocks += block
+        }
+
+        fun runQueued() {
+            while (blocks.isNotEmpty()) {
+                blocks.removeFirst().run()
+            }
         }
     }
 

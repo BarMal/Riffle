@@ -62,6 +62,14 @@ class LauncherShellViewModel(
     private val notificationStaleFilter = NotificationStaleFilter()
     private val appShortcutRepository =
         installedAppRepository as? AppShortcutRepository ?: NoopAppShortcutRepository
+    private val installedAppRefreshDependencies =
+        InstalledAppRefreshDependencies(
+            installedAppRepository = installedAppRepository,
+            appVisibilityRepository = appVisibilityRepository,
+            appCatalog = appCatalog,
+            homeLayoutRepository = homeLayoutRepository,
+            appShortcutRepository = appShortcutRepository,
+        )
     private val notificationRepository = platformDependencies.notificationRepository
     private val epochMillisProvider = platformDependencies.epochMillisProvider
     private val widgetProviderCatalog = WidgetProviderCatalog()
@@ -143,10 +151,7 @@ class LauncherShellViewModel(
                     when (scope) {
                         LauncherShellRefreshScope.INSTALLED_APPS ->
                             mutableState.value
-                                .withInstalledApps(installedAppRepository, appVisibilityRepository, appCatalog)
-                                .withoutUnavailableApps(homeLayoutRepository)
-                                .withHomeScreenLibraryApps(homeLayoutRepository)
-                                .withAppShortcuts(appShortcutRepository, appCatalog)
+                                .withRefreshedInstalledApps(installedAppRefreshDependencies)
 
                         LauncherShellRefreshScope.NOTIFICATIONS ->
                             mutableState.value.withNotificationState(
@@ -234,9 +239,14 @@ class LauncherShellViewModel(
                 is LauncherShellAction.HideApp,
                 is LauncherShellAction.UnhideApp,
                 -> {
-                    if (action is LauncherShellAction.HideApp) appVisibilityRepository.hideApp(action.identity)
-                    if (action is LauncherShellAction.UnhideApp) appVisibilityRepository.showApp(action.identity)
-                    launchedRefresh = refreshInstalledApps()
+                    refreshJob?.cancel()
+                    launchedRefresh =
+                        viewModelScope.launch(refreshDispatcher) {
+                            action.applyAppVisibilityAction(appVisibilityRepository)
+                            mutableState.value =
+                                mutableState.value.withRefreshedInstalledApps(installedAppRefreshDependencies)
+                        }
+                    refreshJob = launchedRefresh
                     mutableState.value
                 }
 
@@ -474,7 +484,7 @@ private fun createInitialState(
             }
         }
 
-private fun LauncherShellState.withInstalledApps(
+internal fun LauncherShellState.withInstalledApps(
     installedAppRepository: InstalledAppRepository,
     appVisibilityRepository: AppVisibilityRepository,
     appCatalog: InstalledAppCatalog,
@@ -506,7 +516,7 @@ private fun LauncherShellState.withInstalledApps(
             )
         }
 
-private fun LauncherShellState.withAppShortcuts(
+internal fun LauncherShellState.withAppShortcuts(
     appShortcutRepository: AppShortcutRepository,
     appCatalog: InstalledAppCatalog,
 ): LauncherShellState =
