@@ -33,4 +33,19 @@ class HomePageSwipeMotion {
             pageWidthPx <= 0f -> dragStartPageIndex.toFloat()
             else -> dragStartPageIndex - (pageDragOffsetPx.coerceIn(-pageWidthPx, pageWidthPx) / pageWidthPx)
         }
+
+    fun pageSettleTargetIndex(
+        action: LauncherShellAction?,
+        selectedPageIndex: Int,
+        pageCount: Int,
+    ): Int? =
+        when (action) {
+            LauncherShellAction.SelectNextHomePage ->
+                (selectedPageIndex + 1).takeIf { targetIndex -> targetIndex < pageCount }
+
+            LauncherShellAction.SelectPreviousHomePage ->
+                (selectedPageIndex - 1).takeIf { targetIndex -> targetIndex >= 0 }
+
+            else -> null
+        }
 }
