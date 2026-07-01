@@ -2,13 +2,13 @@ package com.riffle.app.launcher
 
 internal class LauncherActionRouter(
     private val activityActionHandler: LauncherActivityActionHandler,
-    private val handleNotificationAction: (LauncherShellAction) -> Boolean,
-    private val handleSettingsAction: (LauncherShellAction) -> Boolean,
+    private val notificationActionHandler: LauncherNotificationActionHandler,
+    private val settingsActionHandler: LauncherSettingsActionHandler,
     private val appActionHandler: LauncherAppActionHandler,
 ) {
     fun handle(action: LauncherShellAction): Boolean =
         activityActionHandler.handle(action) ||
-            handleNotificationAction(action) ||
-            handleSettingsAction(action) ||
+            notificationActionHandler.handle(action) ||
+            settingsActionHandler.handle(action) ||
             appActionHandler.handle(action)
 }

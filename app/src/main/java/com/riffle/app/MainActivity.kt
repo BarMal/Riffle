@@ -15,6 +15,8 @@ import com.riffle.app.launcher.AndroidHomeLayoutDeviceClassObserver
 import com.riffle.app.launcher.AndroidHomeRoleGateway
 import com.riffle.app.launcher.AndroidLauncherWallpaperController
 import com.riffle.app.launcher.AndroidWidgetAddWindowSizeProvider
+import com.riffle.app.launcher.DefaultLauncherNotificationActionHandler
+import com.riffle.app.launcher.DefaultLauncherSettingsActionHandler
 import com.riffle.app.launcher.LauncherActionRouter
 import com.riffle.app.launcher.LauncherActivityActionHandler
 import com.riffle.app.launcher.LauncherAppActionCallbacks
@@ -25,6 +27,7 @@ import com.riffle.app.launcher.LauncherBackupDocumentHandler
 import com.riffle.app.launcher.LauncherBackupExportCoordinator
 import com.riffle.app.launcher.LauncherBackupImportCoordinator
 import com.riffle.app.launcher.LauncherBackupImportHandlingResult
+import com.riffle.app.launcher.LauncherSettingsActionCallbacks
 import com.riffle.app.launcher.LauncherShell
 import com.riffle.app.launcher.LauncherShellAction
 import com.riffle.app.launcher.LauncherShellPlatformDependencies
@@ -42,8 +45,6 @@ import com.riffle.app.launcher.apps.AndroidPackageChangeObserver
 import com.riffle.app.launcher.apps.PackageManagerAppIconLoader
 import com.riffle.app.launcher.apps.PackageManagerInstalledAppRepository
 import com.riffle.app.launcher.completeWidgetAdd
-import com.riffle.app.launcher.handleNotificationAction
-import com.riffle.app.launcher.handleSettingsAction
 import com.riffle.app.launcher.homeLayoutDeviceClassFromConfiguration
 import com.riffle.app.launcher.notifications.ActiveNotificationRefreshCoordinator
 import com.riffle.app.launcher.notifications.AndroidNotificationAccessGateway
@@ -182,21 +183,25 @@ class MainActivity : ComponentActivity() {
     private val launcherActionRouter by lazy {
         LauncherActionRouter(
             activityActionHandler = activityActionHandler,
-            handleNotificationAction = { action ->
-                action.handleNotificationAction(
-                    viewModel = shellViewModel,
+            notificationActionHandler =
+                DefaultLauncherNotificationActionHandler(
                     notificationDismissalGateway = AndroidNotificationDismissalGateway,
-                )
-            },
-            handleSettingsAction = { action ->
-                action.handleSettingsAction(
-                    viewModel = shellViewModel,
-                    notificationAccessGateway = notificationAccessGateway,
-                    openIntent = ::startActivity,
-                    exportBackup = { createBackupDocument.launch(BACKUP_DOCUMENT_NAME) },
-                    importBackup = { openBackupDocument.launch(BACKUP_DOCUMENT_OPEN_MIME_TYPES) },
-                )
-            },
+                    refreshNotifications = { shellViewModel.refreshNotifications() },
+                ),
+            settingsActionHandler =
+                DefaultLauncherSettingsActionHandler(
+                    callbacks =
+                        LauncherSettingsActionCallbacks(
+                            applySettingsState = { action -> shellViewModel.onLauncherSettingsActionSelected(action) },
+                            requestNotificationAccess = {
+                                runCatching {
+                                    startActivity(notificationAccessGateway.createNotificationListenerSettingsIntent())
+                                }
+                            },
+                            exportBackup = { createBackupDocument.launch(BACKUP_DOCUMENT_NAME) },
+                            importBackup = { openBackupDocument.launch(BACKUP_DOCUMENT_OPEN_MIME_TYPES) },
+                        ),
+                ),
             appActionHandler =
                 LauncherAppActionHandler(
                     callbacks =

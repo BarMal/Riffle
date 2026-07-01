@@ -16,10 +16,11 @@ class LauncherActionRouterTest {
                     activityHandler(
                         navigate = { calls += "activity" },
                     ),
-                handleNotificationAction = {
-                    calls += "notification"
-                    true
-                },
+                notificationActionHandler =
+                    LauncherNotificationActionHandler {
+                        calls += "notification"
+                        true
+                    },
             )
 
         assertTrue(router.handle(LauncherShellAction.OpenSettings))
@@ -32,14 +33,16 @@ class LauncherActionRouterTest {
         val calls = mutableListOf<String>()
         val router =
             router(
-                handleNotificationAction = {
-                    calls += "notification"
-                    false
-                },
-                handleSettingsAction = {
-                    calls += "settings"
-                    false
-                },
+                notificationActionHandler =
+                    LauncherNotificationActionHandler {
+                        calls += "notification"
+                        false
+                    },
+                settingsActionHandler =
+                    LauncherSettingsActionHandler {
+                        calls += "settings"
+                        false
+                    },
                 appActionHandler =
                     appHandler(
                         applyAppState = { calls += "app" },
@@ -60,14 +63,14 @@ class LauncherActionRouterTest {
 
     private fun router(
         activityActionHandler: LauncherActivityActionHandler = activityHandler(),
-        handleNotificationAction: (LauncherShellAction) -> Boolean = { false },
-        handleSettingsAction: (LauncherShellAction) -> Boolean = { false },
+        notificationActionHandler: LauncherNotificationActionHandler = notificationHandler(),
+        settingsActionHandler: LauncherSettingsActionHandler = settingsHandler(),
         appActionHandler: LauncherAppActionHandler = appHandler(),
     ): LauncherActionRouter =
         LauncherActionRouter(
             activityActionHandler = activityActionHandler,
-            handleNotificationAction = handleNotificationAction,
-            handleSettingsAction = handleSettingsAction,
+            notificationActionHandler = notificationActionHandler,
+            settingsActionHandler = settingsActionHandler,
             appActionHandler = appActionHandler,
         )
 
@@ -81,6 +84,10 @@ class LauncherActionRouterTest {
             hostedWidgetIdForRemovedShortcut = { null },
             deleteHostedWidget = {},
         )
+
+    private fun notificationHandler(): LauncherNotificationActionHandler = LauncherNotificationActionHandler { false }
+
+    private fun settingsHandler(): LauncherSettingsActionHandler = LauncherSettingsActionHandler { false }
 
     private fun appHandler(applyAppState: (LauncherShellAction) -> Unit = {}): LauncherAppActionHandler =
         LauncherAppActionHandler(

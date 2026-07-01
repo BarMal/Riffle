@@ -1,57 +1,69 @@
 package com.riffle.app.launcher
 
-import android.content.Intent
-import com.riffle.app.launcher.notifications.AndroidNotificationAccessGateway
+internal fun interface LauncherSettingsActionHandler {
+    fun handle(action: LauncherShellAction): Boolean
+}
 
-fun LauncherShellAction.handleSettingsAction(
-    viewModel: LauncherShellViewModel,
-    notificationAccessGateway: AndroidNotificationAccessGateway,
-    openIntent: (Intent) -> Unit,
-    exportBackup: () -> Unit,
-    importBackup: () -> Unit,
-): Boolean =
-    when (this) {
-        is LauncherShellAction.SelectWallpaperSource -> {
-            viewModel.onLauncherSettingsActionSelected(this)
-            true
-        }
-
-        is LauncherShellAction.SelectHomeSwipeGestureAction -> {
-            viewModel.onLauncherSettingsActionSelected(this)
-            true
-        }
-
-        LauncherShellAction.ResetHomeSwipeGestureActions -> {
-            viewModel.onLauncherSettingsActionSelected(this)
-            true
-        }
-
-        is LauncherShellAction.SelectHapticFeedbackStrength -> {
-            viewModel.onLauncherSettingsActionSelected(this)
-            true
-        }
-
-        is LauncherShellAction.SelectSettingsLayoutDeviceClass -> {
-            viewModel.onLauncherSettingsActionSelected(this)
-            true
-        }
-
-        LauncherShellAction.RequestNotificationAccess -> {
-            runCatching {
-                openIntent(notificationAccessGateway.createNotificationListenerSettingsIntent())
+internal class DefaultLauncherSettingsActionHandler(
+    private val callbacks: LauncherSettingsActionCallbacks,
+) : LauncherSettingsActionHandler {
+    override fun handle(action: LauncherShellAction): Boolean =
+        when (val route = action.launcherSettingsActionRoute()) {
+            is LauncherSettingsActionRoute.SettingsState -> {
+                callbacks.applySettingsState(route.action)
+                true
             }
-            true
-        }
 
-        LauncherShellAction.ExportLauncherBackup -> {
-            exportBackup()
-            true
-        }
+            LauncherSettingsActionRoute.RequestNotificationAccess -> {
+                callbacks.requestNotificationAccess()
+                true
+            }
 
-        LauncherShellAction.RequestImportLauncherBackup -> {
-            importBackup()
-            true
-        }
+            LauncherSettingsActionRoute.ExportBackup -> {
+                callbacks.exportBackup()
+                true
+            }
 
-        else -> false
+            LauncherSettingsActionRoute.RequestImportBackup -> {
+                callbacks.importBackup()
+                true
+            }
+
+            null -> false
+        }
+}
+
+internal data class LauncherSettingsActionCallbacks(
+    val applySettingsState: (LauncherShellAction) -> Unit,
+    val requestNotificationAccess: () -> Unit,
+    val exportBackup: () -> Unit,
+    val importBackup: () -> Unit,
+)
+
+internal sealed interface LauncherSettingsActionRoute {
+    data class SettingsState(
+        val action: LauncherShellAction,
+    ) : LauncherSettingsActionRoute
+
+    data object RequestNotificationAccess : LauncherSettingsActionRoute
+
+    data object ExportBackup : LauncherSettingsActionRoute
+
+    data object RequestImportBackup : LauncherSettingsActionRoute
+}
+
+internal fun LauncherShellAction.launcherSettingsActionRoute(): LauncherSettingsActionRoute? =
+    when (this) {
+        is LauncherShellAction.SelectWallpaperSource,
+        is LauncherShellAction.SelectHomeSwipeGestureAction,
+        LauncherShellAction.ResetHomeSwipeGestureActions,
+        is LauncherShellAction.SelectHapticFeedbackStrength,
+        is LauncherShellAction.SelectSettingsLayoutDeviceClass,
+        is LauncherShellAction.ImportLauncherBackup,
+        -> LauncherSettingsActionRoute.SettingsState(this)
+
+        LauncherShellAction.RequestNotificationAccess -> LauncherSettingsActionRoute.RequestNotificationAccess
+        LauncherShellAction.ExportLauncherBackup -> LauncherSettingsActionRoute.ExportBackup
+        LauncherShellAction.RequestImportLauncherBackup -> LauncherSettingsActionRoute.RequestImportBackup
+        else -> null
     }
