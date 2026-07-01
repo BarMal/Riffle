@@ -80,6 +80,61 @@ class LauncherShellHomeGridViewModelTest {
     }
 
     @Test
+    fun enablingLibraryPageCompactionImmediatelyReflowsGeneratedApps() {
+        val camera = app(label = "Camera")
+        val calendar = app(label = "Calendar")
+        val clock = app(label = "Clock")
+        val grid = GridDimensions(columns = 2, rows = 1)
+        val savedLayout =
+            HomeLayoutDefaults.standard().copy(
+                viewMode = LauncherViewMode.HOME_SCREEN_LIBRARY,
+                pages =
+                    listOf(
+                        LauncherPage(
+                            id = LauncherPageId("home"),
+                            grid = grid,
+                            items = listOf(camera.libraryShortcut()),
+                        ),
+                        LauncherPage(
+                            id = LauncherPageId("library:1"),
+                            grid = grid,
+                            items = listOf(clock.libraryShortcut()),
+                        ),
+                        LauncherPage(
+                            id = LauncherPageId("library:2"),
+                            grid = grid,
+                            items = listOf(calendar.libraryShortcut()),
+                        ),
+                    ),
+                settings =
+                    HomeLayoutDefaults.standard().settings.copy(
+                        grid = GridSettings(dimensions = grid),
+                    ),
+            )
+        val repository = FakeHomeLayoutRepository(savedLayout = savedLayout)
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                installedAppRepository = FakeInstalledAppRepository(listOf(camera, calendar, clock)),
+                homeLayoutRepository = repository,
+            )
+
+        viewModel.onHomePageEdited(LauncherShellAction.SelectLibraryPageCompaction(enabled = true))
+
+        assertEquals(
+            listOf(LauncherPageId("home"), LauncherPageId("library:1")),
+            viewModel.state.value.homeLayout.pages.map { page -> page.id },
+        )
+        assertEquals(
+            listOf(camera.identity, clock.identity),
+            viewModel.state.value.homeLayout.pages[0].items.appIdentities,
+        )
+        assertEquals(listOf(calendar.identity), viewModel.state.value.homeLayout.pages[1].items.appIdentities)
+        assertEquals(true, viewModel.state.value.homeLayout.settings.grid.compactLibraryPages)
+        assertEquals(viewModel.state.value.homeLayout, repository.savedLayout)
+    }
+
+    @Test
     fun compactLibraryPagesReflowGeneratedAppsAfterGridChanges() {
         val camera = app(label = "Camera")
         val calendar = app(label = "Calendar")

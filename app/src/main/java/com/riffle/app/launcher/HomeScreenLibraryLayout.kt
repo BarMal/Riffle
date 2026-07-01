@@ -41,7 +41,7 @@ private fun HomeLayout.withMissingLibraryApps(apps: List<InstalledApp>): HomeLay
 fun HomeLayout.withoutHomeScreenLibraryApps(): HomeLayout {
     val pagesWithoutLibraryItems =
         pages
-            .filterNot { page -> page.type == LauncherPageType.AllApps }
+            .filterNot { page -> page.isGeneratedLibraryPage }
             .map { page -> page.copy(items = page.items.mapNotNull { item -> item.withoutLibraryApps() }) }
             .ifEmpty { listOf(HomeLayoutDefaults.standard().selectedPage) }
     val safeSelectedPageId =

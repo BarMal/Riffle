@@ -153,11 +153,4 @@ private fun HomeLayout.withLibraryPageCompaction(enabled: Boolean): HomeLayout =
             settings.copy(
                 grid = settings.grid.copy(compactLibraryPages = enabled),
             ),
-    ).let { updatedLayout ->
-        when {
-            enabled && viewMode == LauncherViewMode.HOME_SCREEN_LIBRARY ->
-                updatedLayout.withoutHomeScreenLibraryApps().copy(viewMode = viewMode)
-
-            else -> updatedLayout
-        }
-    }
+    )
