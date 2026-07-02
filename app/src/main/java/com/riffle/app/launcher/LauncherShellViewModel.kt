@@ -362,6 +362,7 @@ class LauncherShellViewModel(
                 is LauncherShellAction.SelectOverlayDockVerticalOffset,
                 is LauncherShellAction.SelectOverlayDockHandleAlpha,
                 is LauncherShellAction.SelectOverlayDockExpandedIconSize,
+                is LauncherShellAction.SelectOverlayDockExpandedOrientation,
                 is LauncherShellAction.SelectOverlayDockShowLabels,
                 ->
                     mutableState.value.withOverlayDockSettingsAction(

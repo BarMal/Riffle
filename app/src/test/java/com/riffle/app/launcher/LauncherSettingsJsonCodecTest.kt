@@ -10,6 +10,7 @@ import com.riffle.core.domain.launcher.settings.HomeSwipeGestureSettings
 import com.riffle.core.domain.launcher.settings.LauncherGestureAction
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.OverlayDockEdge
+import com.riffle.core.domain.launcher.settings.OverlayDockExpandedOrientation
 import com.riffle.core.domain.launcher.settings.OverlayDockSettings
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -106,6 +107,7 @@ class LauncherSettingsJsonCodecTest {
                         verticalOffsetDp = -48,
                         handleAlphaPercent = 65,
                         expandedIconSizeDp = 64,
+                        expandedOrientation = OverlayDockExpandedOrientation.TALL,
                         showLabels = true,
                     ),
             )
@@ -119,6 +121,7 @@ class LauncherSettingsJsonCodecTest {
         assertEquals(-48, decodedSettings.overlayDock.verticalOffsetDp)
         assertEquals(65, decodedSettings.overlayDock.handleAlphaPercent)
         assertEquals(64, decodedSettings.overlayDock.expandedIconSizeDp)
+        assertEquals(OverlayDockExpandedOrientation.TALL, decodedSettings.overlayDock.expandedOrientation)
         assertEquals(true, decodedSettings.overlayDock.showLabels)
     }
 

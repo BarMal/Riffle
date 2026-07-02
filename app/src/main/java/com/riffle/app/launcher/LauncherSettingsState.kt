@@ -107,6 +107,9 @@ internal fun LauncherShellState.withOverlayDockSettingsAction(
                                     ),
                             )
 
+                        is LauncherShellAction.SelectOverlayDockExpandedOrientation ->
+                            launcherSettings.overlayDock.copy(expandedOrientation = action.orientation)
+
                         is LauncherShellAction.SelectOverlayDockShowLabels ->
                             launcherSettings.overlayDock.copy(showLabels = action.showLabels)
 

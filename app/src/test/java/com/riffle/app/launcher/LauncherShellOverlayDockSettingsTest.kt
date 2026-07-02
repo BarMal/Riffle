@@ -13,6 +13,7 @@ import com.riffle.core.domain.launcher.settings.MIN_OVERLAY_DOCK_HANDLE_HEIGHT_D
 import com.riffle.core.domain.launcher.settings.MIN_OVERLAY_DOCK_HANDLE_THICKNESS_DP
 import com.riffle.core.domain.launcher.settings.MIN_OVERLAY_DOCK_VERTICAL_OFFSET_DP
 import com.riffle.core.domain.launcher.settings.OverlayDockEdge
+import com.riffle.core.domain.launcher.settings.OverlayDockExpandedOrientation
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -51,6 +52,9 @@ class LauncherShellOverlayDockSettingsTest {
         viewModel.onLauncherSettingsActionSelected(LauncherShellAction.SelectOverlayDockVerticalOffset(offsetDp = -48))
         viewModel.onLauncherSettingsActionSelected(LauncherShellAction.SelectOverlayDockHandleAlpha(alphaPercent = 65))
         viewModel.onLauncherSettingsActionSelected(LauncherShellAction.SelectOverlayDockExpandedIconSize(sizeDp = 64))
+        viewModel.onLauncherSettingsActionSelected(
+            LauncherShellAction.SelectOverlayDockExpandedOrientation(OverlayDockExpandedOrientation.TALL),
+        )
         viewModel.onLauncherSettingsActionSelected(LauncherShellAction.SelectOverlayDockShowLabels(showLabels = true))
 
         val settings = viewModel.state.value.launcherSettings.overlayDock
@@ -60,6 +64,7 @@ class LauncherShellOverlayDockSettingsTest {
         assertEquals(-48, settings.verticalOffsetDp)
         assertEquals(65, settings.handleAlphaPercent)
         assertEquals(64, settings.expandedIconSizeDp)
+        assertEquals(OverlayDockExpandedOrientation.TALL, settings.expandedOrientation)
         assertEquals(true, settings.showLabels)
         assertEquals(viewModel.state.value.launcherSettings, repository.savedSettings)
     }
