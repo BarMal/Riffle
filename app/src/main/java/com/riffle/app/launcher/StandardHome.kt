@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -16,15 +15,14 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -46,6 +44,7 @@ import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.LauncherItem
 import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.widgets.InstalledWidgetProvider
+import kotlinx.coroutines.delay
 
 @Composable
 internal fun StandardHome(
@@ -116,10 +115,6 @@ private fun StandardHomeColumn(
         verticalArrangement = Arrangement.Top,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        HomeToolbar(
-            onAction = actions.onAction,
-        )
-        Spacer(modifier = Modifier.height(HOME_TOOLBAR_WORKSPACE_SPACING_DP.dp))
         ImmediateWorkspacePager(
             layout = state.visibleLayout,
             pagerState = pagerState,
@@ -138,10 +133,12 @@ private fun StandardHomeColumn(
                     .weight(1f)
                     .fillMaxWidth(),
         )
-        Spacer(modifier = Modifier.height(HOME_PAGE_INDICATOR_TOP_SPACING_DP.dp))
-        PageIndicator(
+        Spacer(modifier = Modifier.height(HOME_BOTTOM_CONTROLS_TOP_SPACING_DP.dp))
+        HomeBottomSearchArea(
             pageCount = state.visibleLayout.pages.size,
             selectedPageIndex = pagerState.visualSelectedPageIndex,
+            showPageIndicator = pagerState.rememberPageIndicatorVisible(),
+            onAction = actions.onAction,
         )
         if (state.visibleLayout.shouldShowDock()) {
             Spacer(modifier = Modifier.height(HOME_DOCK_TOP_SPACING_DP.dp))
@@ -159,32 +156,53 @@ private fun StandardHomeColumn(
 }
 
 @Composable
-private fun HomeToolbar(onAction: (LauncherShellAction) -> Unit) {
-    Row(
+private fun HomeBottomSearchArea(
+    pageCount: Int,
+    selectedPageIndex: Int,
+    showPageIndicator: Boolean,
+    onAction: (LauncherShellAction) -> Unit,
+) {
+    Box(
         modifier =
             Modifier
-                .widthIn(max = HOME_TOOLBAR_MAX_WIDTH_DP.dp)
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(24.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = HOME_TOOLBAR_SURFACE_ALPHA))
-                .padding(6.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically,
+                .height(HOME_SEARCH_AREA_HEIGHT_DP.dp),
+        contentAlignment = Alignment.Center,
     ) {
-        OutlinedButton(
-            modifier = Modifier.weight(1f),
-            onClick = { onAction(LauncherShellAction.OpenSearch) },
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp),
-        ) {
-            Text(text = "Search")
-        }
-        TextButton(onClick = { onAction(LauncherShellAction.OpenAppDrawer) }) {
-            Text(text = "Apps")
-        }
-        TextButton(onClick = { onAction(LauncherShellAction.OpenSettings) }) {
-            Text(text = "Settings")
+        if (showPageIndicator) {
+            PageIndicator(
+                pageCount = pageCount,
+                selectedPageIndex = selectedPageIndex,
+            )
+        } else {
+            OutlinedButton(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(24.dp)),
+                onClick = { onAction(LauncherShellAction.OpenSearch) },
+                contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
+            ) {
+                Text(text = "Search")
+            }
         }
     }
+}
+
+@Composable
+private fun ImmediateHomePagerState.rememberPageIndicatorVisible(): Boolean {
+    val isVisible = remember { mutableStateOf(false) }
+
+    LaunchedEffect(isPageGestureActive, visualSelectedPageIndex) {
+        if (isPageGestureActive) {
+            isVisible.value = true
+        } else {
+            delay(PAGE_INDICATOR_SETTLED_VISIBLE_MS)
+            isVisible.value = false
+        }
+    }
+
+    return isVisible.value
 }
 
 @Composable
@@ -279,10 +297,9 @@ internal data class HomeWorkspaceActions(
     val onAction: (LauncherShellAction) -> Unit,
 )
 
-private const val HOME_SURFACE_HORIZONTAL_PADDING_DP = 24
-private const val HOME_SURFACE_VERTICAL_PADDING_DP = 24
-private const val HOME_TOOLBAR_WORKSPACE_SPACING_DP = 16
-private const val HOME_TOOLBAR_MAX_WIDTH_DP = 560
-private const val HOME_TOOLBAR_SURFACE_ALPHA = 0.88f
-private const val HOME_PAGE_INDICATOR_TOP_SPACING_DP = 12
-private const val HOME_DOCK_TOP_SPACING_DP = 16
+private const val HOME_SURFACE_HORIZONTAL_PADDING_DP = 12
+private const val HOME_SURFACE_VERTICAL_PADDING_DP = 16
+private const val HOME_BOTTOM_CONTROLS_TOP_SPACING_DP = 8
+private const val HOME_SEARCH_AREA_HEIGHT_DP = 48
+private const val HOME_DOCK_TOP_SPACING_DP = 10
+private const val PAGE_INDICATOR_SETTLED_VISIBLE_MS = 1200L

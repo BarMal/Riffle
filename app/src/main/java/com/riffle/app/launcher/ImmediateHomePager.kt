@@ -7,7 +7,9 @@ import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableFloatState
@@ -70,6 +72,7 @@ internal fun rememberImmediateHomePagerState(
         pagePositionState = dragPagePosition,
         settlePagePosition = settlePagePosition,
         isSettling = isSettling,
+        isDragging = isDragging,
         onDragStarted = {
             isDragging.value = true
             isSettling.value = false
@@ -105,6 +108,7 @@ internal class ImmediateHomePagerState(
     private val pagePositionState: MutableFloatState,
     private val settlePagePosition: Animatable<Float, *>,
     private val isSettling: MutableState<Boolean>,
+    private val isDragging: MutableState<Boolean>,
     val onDragStarted: () -> Unit,
     val onTargetPageSettling: (Int) -> Unit,
     val onDragStopped: (Int) -> Unit,
@@ -114,6 +118,9 @@ internal class ImmediateHomePagerState(
 
     val visualSelectedPageIndex: Int
         get() = pagePosition.roundToInt()
+
+    val isPageGestureActive: Boolean
+        get() = isDragging.value || isSettling.value
 
     suspend fun stopSettling() {
         settlePagePosition.stop()
@@ -160,7 +167,9 @@ internal fun ImmediateWorkspacePager(
     BoxWithConstraints(
         modifier = modifier.fillMaxSize(),
     ) {
-        val pageWidthPx = with(LocalDensity.current) { maxWidth.toPx() }
+        val pageWidth = maxWidth * PAGE_WIDTH_FRACTION
+        val pageWidthPx = with(LocalDensity.current) { pageWidth.toPx() }
+        val pageCenterOffsetPx = with(LocalDensity.current) { ((maxWidth - pageWidth) / 2).toPx() }
 
         Box(
             modifier =
@@ -185,9 +194,10 @@ internal fun ImmediateWorkspacePager(
                     actions = actions,
                     modifier =
                         Modifier
-                            .fillMaxSize()
+                            .width(pageWidth)
+                            .fillMaxHeight()
                             .graphicsLayer {
-                                translationX = (index - pagerState.pagePosition) * pageWidthPx
+                                translationX = pageCenterOffsetPx + ((index - pagerState.pagePosition) * pageWidthPx)
                             },
                 )
             }
@@ -316,6 +326,7 @@ private fun homePageSettleAnimation() =
 private val HomeLayout.lastPageIndex: Int
     get() = pages.lastIndex.coerceAtLeast(0)
 
-private const val HORIZONTAL_DRAG_INTENT_PX = 3f
+private const val PAGE_WIDTH_FRACTION = 0.9f
+private const val HORIZONTAL_DRAG_INTENT_PX = 18f
 private const val PAGE_CHANGE_DISTANCE_THRESHOLD = 0.22f
 private const val PAGE_FLING_VELOCITY_THRESHOLD_PX_PER_SECOND = 900f

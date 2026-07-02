@@ -64,6 +64,10 @@ internal fun homeWorkspaceContextMenuItems(
             action = LauncherShellAction.OpenWidgetPicker,
         ),
         ShortcutContextMenuItem(
+            label = "Settings",
+            action = LauncherShellAction.OpenSettings,
+        ),
+        ShortcutContextMenuItem(
             label = "Previous page",
             action = LauncherShellAction.SelectPreviousHomePage,
             enabled = selectedPageIndex > 0,
