@@ -39,4 +39,15 @@ class OverlayDockServiceControllerTest {
             ),
         )
     }
+
+    @Test
+    fun refreshesOverlayDockWhenPermissionStatusIsStale() {
+        assertEquals(
+            OverlayDockServiceCommand.START,
+            overlayDockServiceCommand(
+                settings = LauncherSettings(overlayDock = OverlayDockSettings(enabled = true)),
+                permissionStatus = OverlayDockPermissionStatus.UNKNOWN,
+            ),
+        )
+    }
 }
