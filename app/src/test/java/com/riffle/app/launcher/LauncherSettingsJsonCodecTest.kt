@@ -1,5 +1,10 @@
 package com.riffle.app.launcher
 
+import com.riffle.core.domain.launcher.apps.AppActivityName
+import com.riffle.core.domain.launcher.apps.AppIdentity
+import com.riffle.core.domain.launcher.apps.AppPackageName
+import com.riffle.core.domain.launcher.home.AppShortcutItem
+import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.home.WallpaperSettings
 import com.riffle.core.domain.launcher.home.WallpaperSource
 import com.riffle.core.domain.launcher.settings.AppearanceSettings
@@ -109,6 +114,14 @@ class LauncherSettingsJsonCodecTest {
                         expandedIconSizeDp = 64,
                         expandedOrientation = OverlayDockExpandedOrientation.TALL,
                         showLabels = true,
+                        items =
+                            listOf(
+                                AppShortcutItem(
+                                    id = LauncherItemId("floating-dock:camera:1"),
+                                    appIdentity = appIdentity,
+                                    label = "Camera",
+                                ),
+                            ),
                     ),
             )
 
@@ -123,6 +136,7 @@ class LauncherSettingsJsonCodecTest {
         assertEquals(64, decodedSettings.overlayDock.expandedIconSizeDp)
         assertEquals(OverlayDockExpandedOrientation.TALL, decodedSettings.overlayDock.expandedOrientation)
         assertEquals(true, decodedSettings.overlayDock.showLabels)
+        assertEquals(settings.overlayDock.items, decodedSettings.overlayDock.items)
     }
 
     @Test
@@ -182,5 +196,13 @@ class LauncherSettingsJsonCodecTest {
             )
 
         assertEquals(HapticFeedbackStrength.MEDIUM, decodedSettings.haptics.feedbackStrength)
+    }
+
+    private companion object {
+        val appIdentity =
+            AppIdentity(
+                packageName = AppPackageName("com.example.camera"),
+                activityName = AppActivityName(".CameraActivity"),
+            )
     }
 }

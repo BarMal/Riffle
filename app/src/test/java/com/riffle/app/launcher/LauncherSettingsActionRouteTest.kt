@@ -1,5 +1,9 @@
 package com.riffle.app.launcher
 
+import com.riffle.core.domain.launcher.apps.AppActivityName
+import com.riffle.core.domain.launcher.apps.AppIdentity
+import com.riffle.core.domain.launcher.apps.AppPackageName
+import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
 import com.riffle.core.domain.launcher.settings.OverlayDockEdge
 import com.riffle.core.domain.launcher.settings.OverlayDockExpandedOrientation
@@ -31,6 +35,7 @@ class LauncherSettingsActionRouteTest {
                 LauncherShellAction.SelectOverlayDockExpandedIconSize(sizeDp = 64),
                 LauncherShellAction.SelectOverlayDockExpandedOrientation(OverlayDockExpandedOrientation.TALL),
                 LauncherShellAction.SelectOverlayDockShowLabels(showLabels = true),
+                LauncherShellAction.AddAppToFloatingDock(installedApp),
             )
 
         actions.forEach { action ->
@@ -66,5 +71,14 @@ class LauncherSettingsActionRouteTest {
         assertNull(LauncherShellAction.OpenHome.launcherSettingsActionRoute())
         assertNull(LauncherShellAction.RefreshInstalledApps.launcherSettingsActionRoute())
         assertNull(LauncherShellAction.DismissNotifications(emptyList()).launcherSettingsActionRoute())
+    }
+
+    private companion object {
+        val appIdentity =
+            AppIdentity(
+                packageName = AppPackageName("com.example.app"),
+                activityName = AppActivityName(".MainActivity"),
+            )
+        val installedApp = InstalledApp(identity = appIdentity, label = "Example")
     }
 }

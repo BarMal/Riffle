@@ -1,5 +1,9 @@
 package com.riffle.app.launcher
 
+import com.riffle.core.domain.launcher.apps.AppActivityName
+import com.riffle.core.domain.launcher.apps.AppIdentity
+import com.riffle.core.domain.launcher.apps.AppPackageName
+import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
@@ -66,6 +70,35 @@ class LauncherShellOverlayDockSettingsTest {
         assertEquals(true, viewModel.state.value.launcherSettings.overlayDock.enabled)
         assertEquals(viewModel.state.value.launcherSettings, launcherSettingsRepository.savedSettings)
         assertEquals(layoutSaveCountAfterDeviceSwitch, homeLayoutRepository.saveLayoutSetCount)
+    }
+
+    @Test
+    fun addsFloatingDockShortcutGloballyWithoutRewritingLayout() {
+        val homeLayoutRepository = FakeHomeLayoutRepository()
+        val launcherSettingsRepository = FakeLauncherSettingsRepository()
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                homeLayoutRepository = homeLayoutRepository,
+                launcherSettingsRepository = launcherSettingsRepository,
+            )
+        val app = InstalledApp(identity = appIdentity, label = "Example")
+
+        viewModel.onLauncherSettingsActionSelected(
+            LauncherShellAction.AddAppToFloatingDock(app),
+        )
+        viewModel.onLauncherSettingsActionSelected(
+            LauncherShellAction.AddAppToFloatingDock(app),
+        )
+
+        val overlayDock = viewModel.state.value.launcherSettings.overlayDock
+        assertEquals(true, overlayDock.enabled)
+        assertEquals(1, overlayDock.items.size)
+        assertEquals(app.identity, overlayDock.items.single().appIdentity)
+        assertEquals(app.label, overlayDock.items.single().label)
+        assertEquals("floating-dock:personal:com.example.app/.MainActivity:1", overlayDock.items.single().id.value)
+        assertEquals(viewModel.state.value.launcherSettings, launcherSettingsRepository.savedSettings)
+        assertEquals(0, homeLayoutRepository.saveLayoutSetCount)
     }
 
     @Test
@@ -176,5 +209,13 @@ class LauncherShellOverlayDockSettingsTest {
         override fun saveLauncherSettings(settings: LauncherSettings) {
             savedSettings = settings
         }
+    }
+
+    private companion object {
+        val appIdentity =
+            AppIdentity(
+                packageName = AppPackageName("com.example.app"),
+                activityName = AppActivityName(".MainActivity"),
+            )
     }
 }

@@ -6,13 +6,10 @@ import android.os.IBinder
 import android.provider.Settings
 import android.view.View
 import android.view.WindowManager
-import com.riffle.app.launcher.DataStoreHomeLayoutRepository
 import com.riffle.app.launcher.DataStoreLauncherSettingsRepository
 import com.riffle.app.launcher.apps.AndroidAppLauncher
 import com.riffle.app.launcher.apps.PackageManagerInstalledAppRepository
-import com.riffle.app.launcher.visibleTo
 import com.riffle.core.domain.launcher.home.AppShortcutItem
-import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.OverlayDockSettings
 import com.riffle.core.domain.launcher.settings.coerceOverlayDockSettings
@@ -56,7 +53,7 @@ class OverlayDockService : Service() {
 
         val overlaySettings = loadLauncherSettings().overlayDock.coerceOverlayDockSettings()
         currentOverlaySettings = overlaySettings
-        val shortcuts = overlayDockShortcuts()
+        val shortcuts = overlayDockShortcuts(overlaySettings)
         val view =
             if (expanded) {
                 viewFactory.expandedDockView(
@@ -87,14 +84,10 @@ class OverlayDockService : Service() {
         windowManager.addView(view, viewFactory.overlayLayoutParams(overlaySettings, expanded = expanded))
     }
 
-    private fun overlayDockShortcuts(): List<AppShortcutItem> {
-        val layout = DataStoreHomeLayoutRepository(this).loadHomeLayout() ?: HomeLayoutDefaults.standard()
+    private fun overlayDockShortcuts(settings: OverlayDockSettings): List<AppShortcutItem> {
         val installedApps = PackageManagerInstalledAppRepository(this).installedApps()
-        val visibleDock = layout.visibleTo(installedApps).dock
 
-        return visibleDock.items
-            .filterIsInstance<AppShortcutItem>()
-            .take(visibleDock.capacity.coerceAtLeast(0))
+        return settings.visibleOverlayDockShortcuts(installedApps)
     }
 
     private fun loadLauncherSettings(): LauncherSettings {

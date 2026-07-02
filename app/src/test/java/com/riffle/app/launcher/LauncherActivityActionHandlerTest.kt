@@ -4,6 +4,7 @@ import com.riffle.core.domain.launcher.ShellNavigationAction
 import com.riffle.core.domain.launcher.apps.AppActivityName
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
+import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.home.DockBackgroundSizing
 import com.riffle.core.domain.launcher.home.HostedWidgetId
 import com.riffle.core.domain.launcher.home.LauncherItemId
@@ -62,6 +63,23 @@ class LauncherActivityActionHandlerTest {
         assertTrue(handler.handle(action))
 
         assertEquals(listOf(action), dockActions)
+    }
+
+    @Test
+    fun routesAddAppToDockToDockEdits() {
+        val dockActions = mutableListOf<LauncherShellAction>()
+        val homeShortcutActions = mutableListOf<LauncherShellAction>()
+        val handler =
+            handler(
+                editDock = dockActions::add,
+                editHomeShortcut = homeShortcutActions::add,
+            )
+        val action = LauncherShellAction.AddAppToDock(InstalledApp(identity = appIdentity, label = "Example"))
+
+        assertTrue(handler.handle(action))
+
+        assertEquals(listOf(action), dockActions)
+        assertEquals(emptyList<LauncherShellAction>(), homeShortcutActions)
     }
 
     @Test

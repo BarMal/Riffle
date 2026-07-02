@@ -1,6 +1,10 @@
 package com.riffle.app.launcher
 
 import com.riffle.core.domain.launcher.LauncherShellState
+import com.riffle.core.domain.launcher.apps.AppIdentity
+import com.riffle.core.domain.launcher.apps.InstalledApp
+import com.riffle.core.domain.launcher.home.AppShortcutItem
+import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.settings.HomeSwipeGestureDirection
 import com.riffle.core.domain.launcher.settings.HomeSwipeGestureSettings
 import com.riffle.core.domain.launcher.settings.LauncherGestureAction
@@ -14,6 +18,7 @@ import com.riffle.core.domain.launcher.settings.MIN_OVERLAY_DOCK_EXPANDED_ICON_S
 import com.riffle.core.domain.launcher.settings.MIN_OVERLAY_DOCK_HANDLE_ALPHA_PERCENT
 import com.riffle.core.domain.launcher.settings.MIN_OVERLAY_DOCK_HANDLE_HEIGHT_DP
 import com.riffle.core.domain.launcher.settings.MIN_OVERLAY_DOCK_HANDLE_THICKNESS_DP
+import com.riffle.core.domain.launcher.settings.OverlayDockSettings
 import com.riffle.core.domain.launcher.settings.coerceOverlayDockVerticalOffset
 
 fun LauncherShellState.withLauncherSettings(
@@ -113,6 +118,9 @@ internal fun LauncherShellState.withOverlayDockSettingsAction(
                         is LauncherShellAction.SelectOverlayDockShowLabels ->
                             launcherSettings.overlayDock.copy(showLabels = action.showLabels)
 
+                        is LauncherShellAction.AddAppToFloatingDock ->
+                            launcherSettings.overlayDock.withAddedFloatingDockApp(action.app)
+
                         else -> launcherSettings.overlayDock
                     },
             ),
@@ -120,6 +128,34 @@ internal fun LauncherShellState.withOverlayDockSettingsAction(
     )
 
 private val defaultHomeSwipeGestureSettings = HomeSwipeGestureSettings()
+
+private fun OverlayDockSettings.withAddedFloatingDockApp(app: InstalledApp): OverlayDockSettings =
+    when {
+        items.any { item -> item.appIdentity == app.identity && item.appShortcutId == null } ->
+            copy(enabled = true)
+
+        else ->
+            copy(
+                enabled = true,
+                items = items + app.floatingDockShortcut(existingShortcuts = items),
+            )
+    }
+
+private fun InstalledApp.floatingDockShortcut(existingShortcuts: List<AppShortcutItem>): AppShortcutItem =
+    AppShortcutItem(
+        id =
+            LauncherItemId(
+                "floating-dock:${identity.shortcutKey}:${nextFloatingDockShortcutOrdinal(existingShortcuts)}",
+            ),
+        appIdentity = identity,
+        label = label,
+    )
+
+private fun InstalledApp.nextFloatingDockShortcutOrdinal(existingShortcuts: List<AppShortcutItem>): Int =
+    existingShortcuts.count { item -> item.appIdentity == identity } + 1
+
+private val AppIdentity.shortcutKey: String
+    get() = "${profile.id.value}:${packageName.value}/${activityName.value}"
 
 private fun HomeSwipeGestureSettings.withAction(
     direction: HomeSwipeGestureDirection,
