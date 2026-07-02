@@ -9,9 +9,6 @@ class DockEngine {
         app: InstalledApp,
     ): DockEditResult =
         when {
-            layout.dock.availableSlots <= 0 ->
-                DockEditResult.Rejected(DockEditRejectionReason.NO_AVAILABLE_SLOT)
-
             layout.dock.containsDockApp(app.identity) ->
                 DockEditResult.Rejected(DockEditRejectionReason.DUPLICATE_APP)
 
@@ -20,6 +17,8 @@ class DockEngine {
                     layout.copy(
                         dock =
                             layout.dock.copy(
+                                capacity = layout.dock.capacity.coerceAtLeast(layout.dock.items.size + 1),
+                                isEnabled = true,
                                 items = layout.dock.items + appShortcutFor(app = app, layout = layout),
                             ),
                     ),
