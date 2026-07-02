@@ -65,6 +65,7 @@ class HomePageControlsTest {
                     LauncherShellAction.CreateEmptyHomeFolder(label = "Folder"),
                 ),
                 ShortcutContextMenuItem("Widgets", LauncherShellAction.OpenWidgetPicker),
+                ShortcutContextMenuItem("Settings", LauncherShellAction.OpenSettings),
                 ShortcutContextMenuItem(
                     label = "Previous page",
                     action = LauncherShellAction.SelectPreviousHomePage,
