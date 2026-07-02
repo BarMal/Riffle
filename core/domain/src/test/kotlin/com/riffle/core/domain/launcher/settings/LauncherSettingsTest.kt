@@ -41,6 +41,7 @@ class LauncherSettingsTest {
         assertEquals(DEFAULT_OVERLAY_DOCK_VERTICAL_OFFSET_DP, settings.overlayDock.verticalOffsetDp)
         assertEquals(DEFAULT_OVERLAY_DOCK_HANDLE_ALPHA_PERCENT, settings.overlayDock.handleAlphaPercent)
         assertEquals(DEFAULT_OVERLAY_DOCK_EXPANDED_ICON_SIZE_DP, settings.overlayDock.expandedIconSizeDp)
+        assertEquals(OverlayDockExpandedOrientation.WIDE, settings.overlayDock.expandedOrientation)
         assertEquals(false, settings.overlayDock.showLabels)
     }
 

@@ -29,12 +29,18 @@ data class OverlayDockSettings(
     val verticalOffsetDp: Int = DEFAULT_OVERLAY_DOCK_VERTICAL_OFFSET_DP,
     val handleAlphaPercent: Int = DEFAULT_OVERLAY_DOCK_HANDLE_ALPHA_PERCENT,
     val expandedIconSizeDp: Int = DEFAULT_OVERLAY_DOCK_EXPANDED_ICON_SIZE_DP,
+    val expandedOrientation: OverlayDockExpandedOrientation = OverlayDockExpandedOrientation.WIDE,
     val showLabels: Boolean = false,
 )
 
 enum class OverlayDockEdge {
     START,
     END,
+}
+
+enum class OverlayDockExpandedOrientation {
+    WIDE,
+    TALL,
 }
 
 const val DEFAULT_OVERLAY_DOCK_HANDLE_THICKNESS_DP = 18

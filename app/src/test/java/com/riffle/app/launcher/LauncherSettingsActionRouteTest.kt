@@ -2,6 +2,7 @@ package com.riffle.app.launcher
 
 import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
 import com.riffle.core.domain.launcher.settings.OverlayDockEdge
+import com.riffle.core.domain.launcher.settings.OverlayDockExpandedOrientation
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -28,6 +29,7 @@ class LauncherSettingsActionRouteTest {
                 LauncherShellAction.SelectOverlayDockVerticalOffset(offsetDp = -48),
                 LauncherShellAction.SelectOverlayDockHandleAlpha(alphaPercent = 65),
                 LauncherShellAction.SelectOverlayDockExpandedIconSize(sizeDp = 64),
+                LauncherShellAction.SelectOverlayDockExpandedOrientation(OverlayDockExpandedOrientation.TALL),
                 LauncherShellAction.SelectOverlayDockShowLabels(showLabels = true),
             )
 

@@ -57,6 +57,10 @@ internal fun OverlayDockSetting(
             sizeDp = settings.expandedIconSizeDp,
             onAction = onAction,
         )
+        OverlayDockExpandedOrientationSetting(
+            orientation = settings.expandedOrientation,
+            onAction = onAction,
+        )
         OverlayDockLabelSetting(
             showLabels = settings.showLabels,
             onAction = onAction,

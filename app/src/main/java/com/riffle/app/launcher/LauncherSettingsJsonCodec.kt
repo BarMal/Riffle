@@ -7,6 +7,7 @@ import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
 import com.riffle.core.domain.launcher.settings.HapticSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.OverlayDockEdge
+import com.riffle.core.domain.launcher.settings.OverlayDockExpandedOrientation
 import com.riffle.core.domain.launcher.settings.OverlayDockSettings
 import org.json.JSONObject
 
@@ -70,6 +71,7 @@ private fun encodeOverlayDock(settings: OverlayDockSettings): JSONObject =
         .put("verticalOffsetDp", settings.verticalOffsetDp)
         .put("handleAlphaPercent", settings.handleAlphaPercent)
         .put("expandedIconSizeDp", settings.expandedIconSizeDp)
+        .put("expandedOrientation", settings.expandedOrientation.name)
         .put("showLabels", settings.showLabels)
 
 private fun JSONObject.toOverlayDock(defaults: OverlayDockSettings): OverlayDockSettings =
@@ -83,5 +85,8 @@ private fun JSONObject.toOverlayDock(defaults: OverlayDockSettings): OverlayDock
         verticalOffsetDp = optInt("verticalOffsetDp", defaults.verticalOffsetDp),
         handleAlphaPercent = optInt("handleAlphaPercent", defaults.handleAlphaPercent),
         expandedIconSizeDp = optInt("expandedIconSizeDp", defaults.expandedIconSizeDp),
+        expandedOrientation =
+            runCatching { OverlayDockExpandedOrientation.valueOf(optString("expandedOrientation")) }
+                .getOrDefault(defaults.expandedOrientation),
         showLabels = optBoolean("showLabels", defaults.showLabels),
     )

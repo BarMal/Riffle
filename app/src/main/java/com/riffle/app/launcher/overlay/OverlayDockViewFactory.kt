@@ -4,25 +4,21 @@ import android.content.ComponentName
 import android.content.Context
 import android.graphics.Color
 import android.graphics.PixelFormat
-import android.graphics.drawable.GradientDrawable
 import android.text.TextUtils
 import android.view.Gravity
-import android.view.MotionEvent
 import android.view.View
-import android.view.ViewConfiguration
 import android.view.WindowManager
 import android.widget.FrameLayout
 import android.widget.HorizontalScrollView
 import android.widget.ImageButton
 import android.widget.LinearLayout
+import android.widget.ScrollView
 import android.widget.TextView
 import androidx.core.view.setPadding
 import com.riffle.app.launcher.apps.AndroidAppLauncher
 import com.riffle.core.domain.launcher.home.AppShortcutItem
-import com.riffle.core.domain.launcher.settings.OverlayDockEdge
+import com.riffle.core.domain.launcher.settings.OverlayDockExpandedOrientation
 import com.riffle.core.domain.launcher.settings.OverlayDockSettings
-import com.riffle.core.domain.launcher.settings.overlayDockVerticalOffsetFromDrag
-import kotlin.math.abs
 
 internal class OverlayDockViewFactory(
     private val context: Context,
@@ -35,7 +31,7 @@ internal class OverlayDockViewFactory(
         onVerticalOffsetCommit: (Int) -> Unit,
     ): View =
         FrameLayout(context).apply {
-            background = edgeHandleBackground(settings)
+            background = context.edgeHandleBackground(settings)
             contentDescription = "Open Riffle overlay dock"
             layoutParams =
                 FrameLayout.LayoutParams(
@@ -44,7 +40,7 @@ internal class OverlayDockViewFactory(
                 )
             addView(
                 View(context).apply {
-                    background = handleGripBackground(settings.handleAlphaPercent)
+                    background = context.handleGripBackground(settings.handleAlphaPercent)
                     layoutParams =
                         FrameLayout.LayoutParams(
                             context.dp(GRIP_WIDTH_DP),
@@ -68,33 +64,17 @@ internal class OverlayDockViewFactory(
         onLaunch: () -> Unit,
     ): View =
         FrameLayout(context).apply {
-            background = roundedBackground(alphaPercent = settings.handleAlphaPercent)
+            background = context.roundedBackground(alphaPercent = settings.handleAlphaPercent)
             setPadding(context.dp(8))
             contentDescription = "Riffle overlay dock"
 
             addView(
-                HorizontalScrollView(context).apply {
-                    isHorizontalScrollBarEnabled = false
-                    addView(
-                        LinearLayout(context).apply {
-                            orientation = LinearLayout.HORIZONTAL
-                            gravity = Gravity.CENTER_VERTICAL
-                            shortcuts.forEach { shortcut ->
-                                addView(
-                                    shortcutButton(
-                                        shortcut = shortcut,
-                                        settings = settings,
-                                        onLaunch = onLaunch,
-                                    ),
-                                )
-                            }
-                            if (shortcuts.isEmpty()) {
-                                addView(emptyDockText())
-                            }
-                            addView(collapseButton(onCollapse))
-                        },
-                    )
-                },
+                expandedDockScrollView(
+                    shortcuts = shortcuts,
+                    settings = settings,
+                    onCollapse = onCollapse,
+                    onLaunch = onLaunch,
+                ),
             )
         }
 
@@ -114,6 +94,7 @@ internal class OverlayDockViewFactory(
     private fun shortcutButton(
         shortcut: AppShortcutItem,
         settings: OverlayDockSettings,
+        itemOrientation: OverlayDockExpandedOrientation,
         onLaunch: () -> Unit,
     ): View {
         val iconSizeDp = settings.expandedIconSizeDp
@@ -130,7 +111,7 @@ internal class OverlayDockViewFactory(
                         )
                     }.getOrNull()
                 setImageDrawable(icon)
-                background = transparentRoundedBackground()
+                background = context.transparentRoundedBackground()
                 contentDescription = shortcut.label
                 setPadding(context.dp(8))
                 layoutParams = LinearLayout.LayoutParams(context.dp(iconSizeDp), context.dp(iconSizeDp))
@@ -144,7 +125,10 @@ internal class OverlayDockViewFactory(
             return iconButton.apply {
                 layoutParams =
                     LinearLayout.LayoutParams(context.dp(iconSizeDp), context.dp(iconSizeDp))
-                        .apply { marginEnd = context.dp(6) }
+                        .withItemMargin(
+                            orientation = itemOrientation,
+                            spacingPx = context.dp(EXPANDED_ITEM_SPACING_DP),
+                        )
             }
         }
 
@@ -153,7 +137,10 @@ internal class OverlayDockViewFactory(
             gravity = Gravity.CENTER
             layoutParams =
                 LinearLayout.LayoutParams(context.dp(labelWidthDp), LinearLayout.LayoutParams.WRAP_CONTENT)
-                    .apply { marginEnd = context.dp(6) }
+                    .withItemMargin(
+                        orientation = itemOrientation,
+                        spacingPx = context.dp(EXPANDED_ITEM_SPACING_DP),
+                    )
             addView(iconButton)
             addView(
                 TextView(context).apply {
@@ -172,6 +159,56 @@ internal class OverlayDockViewFactory(
             )
         }
     }
+
+    private fun expandedDockScrollView(
+        shortcuts: List<AppShortcutItem>,
+        settings: OverlayDockSettings,
+        onCollapse: () -> Unit,
+        onLaunch: () -> Unit,
+    ): View =
+        when (settings.expandedOrientation) {
+            OverlayDockExpandedOrientation.WIDE ->
+                HorizontalScrollView(context).apply {
+                    isHorizontalScrollBarEnabled = false
+                    addView(expandedDockItems(shortcuts, settings, onCollapse, onLaunch))
+                }
+
+            OverlayDockExpandedOrientation.TALL ->
+                ScrollView(context).apply {
+                    isVerticalScrollBarEnabled = false
+                    layoutParams =
+                        FrameLayout.LayoutParams(
+                            FrameLayout.LayoutParams.WRAP_CONTENT,
+                            context.dp(context.tallExpandedDockHeightDp(shortcuts, settings)),
+                        )
+                    addView(expandedDockItems(shortcuts, settings, onCollapse, onLaunch))
+                }
+        }
+
+    private fun expandedDockItems(
+        shortcuts: List<AppShortcutItem>,
+        settings: OverlayDockSettings,
+        onCollapse: () -> Unit,
+        onLaunch: () -> Unit,
+    ): LinearLayout =
+        LinearLayout(context).apply {
+            orientation = settings.expandedOrientation.linearOrientation
+            gravity = settings.expandedOrientation.itemGravity
+            shortcuts.forEach { shortcut ->
+                addView(
+                    shortcutButton(
+                        shortcut = shortcut,
+                        settings = settings,
+                        itemOrientation = settings.expandedOrientation,
+                        onLaunch = onLaunch,
+                    ),
+                )
+            }
+            if (shortcuts.isEmpty()) {
+                addView(emptyDockText())
+            }
+            addView(collapseButton(onCollapse))
+        }
 
     private fun emptyDockText(): TextView =
         TextView(context).apply {
@@ -192,131 +229,4 @@ internal class OverlayDockViewFactory(
             contentDescription = "Close Riffle overlay dock"
             setOnClickListener { onCollapse() }
         }
-
-    private fun roundedBackground(alphaPercent: Int): GradientDrawable =
-        GradientDrawable().apply {
-            shape = GradientDrawable.RECTANGLE
-            cornerRadius = context.dpFloat(28)
-            setColor(Color.argb(alphaPercent.toColorAlpha(), 31, 36, 42))
-        }
-
-    private fun edgeHandleBackground(settings: OverlayDockSettings): GradientDrawable =
-        GradientDrawable().apply {
-            shape = GradientDrawable.RECTANGLE
-            cornerRadii =
-                when (settings.edge) {
-                    OverlayDockEdge.START ->
-                        floatArrayOf(
-                            0f,
-                            0f,
-                            context.dpFloat(14),
-                            context.dpFloat(14),
-                            context.dpFloat(14),
-                            context.dpFloat(14),
-                            0f,
-                            0f,
-                        )
-
-                    OverlayDockEdge.END ->
-                        floatArrayOf(
-                            context.dpFloat(14),
-                            context.dpFloat(14),
-                            0f,
-                            0f,
-                            0f,
-                            0f,
-                            context.dpFloat(14),
-                            context.dpFloat(14),
-                        )
-                }
-            setColor(Color.argb(settings.handleAlphaPercent.toColorAlpha(), 31, 36, 42))
-        }
-
-    private fun handleGripBackground(alphaPercent: Int): GradientDrawable =
-        GradientDrawable().apply {
-            shape = GradientDrawable.RECTANGLE
-            cornerRadius = context.dpFloat(2)
-            setColor(Color.argb(alphaPercent.toColorAlpha(), 255, 255, 255))
-        }
-
-    private fun transparentRoundedBackground(): GradientDrawable =
-        GradientDrawable().apply {
-            shape = GradientDrawable.RECTANGLE
-            cornerRadius = context.dpFloat(18)
-            setColor(Color.argb(24, 255, 255, 255))
-        }
-}
-
-private const val GRIP_WIDTH_DP = 3
-private const val GRIP_MIN_HEIGHT_DP = 20
-
-private val OverlayDockEdge.edgeGravity: Int
-    get() =
-        when (this) {
-            OverlayDockEdge.START -> Gravity.START
-            OverlayDockEdge.END -> Gravity.END
-        }
-
-private fun Int.toColorAlpha(): Int = (this.coerceIn(0, 100) * 255) / 100
-
-private fun Context.dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
-
-private fun Context.dpFloat(value: Int): Float = value * resources.displayMetrics.density
-
-private fun View.setPadding(
-    horizontal: Int,
-    vertical: Int,
-) {
-    setPadding(horizontal, vertical, horizontal, vertical)
-}
-
-private fun View.setDragPositionListener(
-    settings: OverlayDockSettings,
-    onVerticalOffsetChange: (Int) -> Unit,
-    onVerticalOffsetCommit: (Int) -> Unit,
-) {
-    val touchSlop = ViewConfiguration.get(context).scaledTouchSlop
-    var startRawY = 0f
-    var latestOffsetDp = settings.verticalOffsetDp
-    var dragging = false
-
-    setOnTouchListener { view, event ->
-        when (event.actionMasked) {
-            MotionEvent.ACTION_DOWN -> {
-                startRawY = event.rawY
-                latestOffsetDp = settings.verticalOffsetDp
-                dragging = false
-                true
-            }
-
-            MotionEvent.ACTION_MOVE -> {
-                val dragDeltaPx = event.rawY - startRawY
-                if (abs(dragDeltaPx) > touchSlop) {
-                    dragging = true
-                }
-                if (dragging) {
-                    latestOffsetDp =
-                        overlayDockVerticalOffsetFromDrag(
-                            startOffsetDp = settings.verticalOffsetDp,
-                            dragDeltaPx = dragDeltaPx,
-                            density = context.resources.displayMetrics.density,
-                        )
-                    onVerticalOffsetChange(latestOffsetDp)
-                }
-                true
-            }
-
-            MotionEvent.ACTION_UP -> {
-                if (dragging) {
-                    onVerticalOffsetCommit(latestOffsetDp)
-                } else {
-                    view.performClick()
-                }
-                true
-            }
-
-            MotionEvent.ACTION_CANCEL -> true
-            else -> false
-        }
-    }
 }

@@ -21,6 +21,7 @@ import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
 import com.riffle.core.domain.launcher.settings.HomeSwipeGestureDirection
 import com.riffle.core.domain.launcher.settings.LauncherGestureAction
 import com.riffle.core.domain.launcher.settings.OverlayDockEdge
+import com.riffle.core.domain.launcher.settings.OverlayDockExpandedOrientation
 import com.riffle.core.domain.launcher.widgets.WidgetProviderDimensions
 import com.riffle.core.domain.launcher.widgets.WidgetProviderIdentity
 
@@ -220,6 +221,10 @@ sealed interface LauncherShellAction {
     data class SelectOverlayDockHandleAlpha(val alphaPercent: Int) : LauncherShellAction
 
     data class SelectOverlayDockExpandedIconSize(val sizeDp: Int) : LauncherShellAction
+
+    data class SelectOverlayDockExpandedOrientation(
+        val orientation: OverlayDockExpandedOrientation,
+    ) : LauncherShellAction
 
     data class SelectOverlayDockShowLabels(val showLabels: Boolean) : LauncherShellAction
 
