@@ -6,9 +6,11 @@ import com.riffle.core.domain.launcher.settings.HomeSwipeGestureSettings
 import com.riffle.core.domain.launcher.settings.LauncherGestureAction
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettingsRepository
+import com.riffle.core.domain.launcher.settings.MAX_OVERLAY_DOCK_EXPANDED_ICON_SIZE_DP
 import com.riffle.core.domain.launcher.settings.MAX_OVERLAY_DOCK_HANDLE_ALPHA_PERCENT
 import com.riffle.core.domain.launcher.settings.MAX_OVERLAY_DOCK_HANDLE_HEIGHT_DP
 import com.riffle.core.domain.launcher.settings.MAX_OVERLAY_DOCK_HANDLE_THICKNESS_DP
+import com.riffle.core.domain.launcher.settings.MIN_OVERLAY_DOCK_EXPANDED_ICON_SIZE_DP
 import com.riffle.core.domain.launcher.settings.MIN_OVERLAY_DOCK_HANDLE_ALPHA_PERCENT
 import com.riffle.core.domain.launcher.settings.MIN_OVERLAY_DOCK_HANDLE_HEIGHT_DP
 import com.riffle.core.domain.launcher.settings.MIN_OVERLAY_DOCK_HANDLE_THICKNESS_DP
@@ -93,6 +95,15 @@ internal fun LauncherShellState.withOverlayDockSettingsAction(
                                     action.alphaPercent.coerceIn(
                                         MIN_OVERLAY_DOCK_HANDLE_ALPHA_PERCENT,
                                         MAX_OVERLAY_DOCK_HANDLE_ALPHA_PERCENT,
+                                    ),
+                            )
+
+                        is LauncherShellAction.SelectOverlayDockExpandedIconSize ->
+                            launcherSettings.overlayDock.copy(
+                                expandedIconSizeDp =
+                                    action.sizeDp.coerceIn(
+                                        MIN_OVERLAY_DOCK_EXPANDED_ICON_SIZE_DP,
+                                        MAX_OVERLAY_DOCK_EXPANDED_ICON_SIZE_DP,
                                     ),
                             )
 

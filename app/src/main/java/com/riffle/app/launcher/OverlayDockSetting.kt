@@ -10,10 +10,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.riffle.core.domain.launcher.settings.MAX_OVERLAY_DOCK_EXPANDED_ICON_SIZE_DP
 import com.riffle.core.domain.launcher.settings.MAX_OVERLAY_DOCK_HANDLE_ALPHA_PERCENT
 import com.riffle.core.domain.launcher.settings.MAX_OVERLAY_DOCK_HANDLE_HEIGHT_DP
 import com.riffle.core.domain.launcher.settings.MAX_OVERLAY_DOCK_HANDLE_THICKNESS_DP
 import com.riffle.core.domain.launcher.settings.MAX_OVERLAY_DOCK_VERTICAL_OFFSET_DP
+import com.riffle.core.domain.launcher.settings.MIN_OVERLAY_DOCK_EXPANDED_ICON_SIZE_DP
 import com.riffle.core.domain.launcher.settings.MIN_OVERLAY_DOCK_HANDLE_ALPHA_PERCENT
 import com.riffle.core.domain.launcher.settings.MIN_OVERLAY_DOCK_HANDLE_HEIGHT_DP
 import com.riffle.core.domain.launcher.settings.MIN_OVERLAY_DOCK_HANDLE_THICKNESS_DP
@@ -49,6 +51,10 @@ internal fun OverlayDockSetting(
         )
         OverlayDockHandleAlphaSetting(
             alphaPercent = settings.handleAlphaPercent,
+            onAction = onAction,
+        )
+        OverlayDockExpandedIconSizeSetting(
+            sizeDp = settings.expandedIconSizeDp,
             onAction = onAction,
         )
         OverlayDockLabelSetting(
@@ -194,6 +200,21 @@ private fun OverlayDockHandleAlphaSetting(
 }
 
 @Composable
+private fun OverlayDockExpandedIconSizeSetting(
+    sizeDp: Int,
+    onAction: (LauncherShellAction) -> Unit,
+) {
+    OverlayDockStepperSetting(
+        title = "Expanded icon size",
+        subtitle = "$sizeDp dp",
+        decreaseEnabled = sizeDp > MIN_OVERLAY_DOCK_EXPANDED_ICON_SIZE_DP,
+        increaseEnabled = sizeDp < MAX_OVERLAY_DOCK_EXPANDED_ICON_SIZE_DP,
+        onDecrease = { onAction(LauncherShellAction.SelectOverlayDockExpandedIconSize(sizeDp - OVERLAY_ICON_STEP_DP)) },
+        onIncrease = { onAction(LauncherShellAction.SelectOverlayDockExpandedIconSize(sizeDp + OVERLAY_ICON_STEP_DP)) },
+    )
+}
+
+@Composable
 private fun OverlayDockLabelSetting(
     showLabels: Boolean,
     onAction: (LauncherShellAction) -> Unit,
@@ -255,6 +276,7 @@ private const val OVERLAY_THICKNESS_STEP_DP = 2
 private const val OVERLAY_SIZE_STEP_DP = 8
 private const val OVERLAY_OFFSET_STEP_DP = 24
 private const val OVERLAY_ALPHA_STEP = 5
+private const val OVERLAY_ICON_STEP_DP = 4
 
 private val OverlayDockEdge.label: String
     get() =

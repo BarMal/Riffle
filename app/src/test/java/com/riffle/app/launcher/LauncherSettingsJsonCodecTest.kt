@@ -105,6 +105,7 @@ class LauncherSettingsJsonCodecTest {
                         handleHeightDp = 96,
                         verticalOffsetDp = -48,
                         handleAlphaPercent = 65,
+                        expandedIconSizeDp = 64,
                         showLabels = true,
                     ),
             )
@@ -117,6 +118,7 @@ class LauncherSettingsJsonCodecTest {
         assertEquals(96, decodedSettings.overlayDock.handleHeightDp)
         assertEquals(-48, decodedSettings.overlayDock.verticalOffsetDp)
         assertEquals(65, decodedSettings.overlayDock.handleAlphaPercent)
+        assertEquals(64, decodedSettings.overlayDock.expandedIconSizeDp)
         assertEquals(true, decodedSettings.overlayDock.showLabels)
     }
 

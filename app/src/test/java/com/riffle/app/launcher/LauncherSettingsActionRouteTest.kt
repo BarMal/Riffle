@@ -27,6 +27,7 @@ class LauncherSettingsActionRouteTest {
                 LauncherShellAction.SelectOverlayDockHandleHeight(heightDp = 96),
                 LauncherShellAction.SelectOverlayDockVerticalOffset(offsetDp = -48),
                 LauncherShellAction.SelectOverlayDockHandleAlpha(alphaPercent = 65),
+                LauncherShellAction.SelectOverlayDockExpandedIconSize(sizeDp = 64),
                 LauncherShellAction.SelectOverlayDockShowLabels(showLabels = true),
             )
 

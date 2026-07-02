@@ -69,6 +69,7 @@ private fun encodeOverlayDock(settings: OverlayDockSettings): JSONObject =
         .put("handleHeightDp", settings.handleHeightDp)
         .put("verticalOffsetDp", settings.verticalOffsetDp)
         .put("handleAlphaPercent", settings.handleAlphaPercent)
+        .put("expandedIconSizeDp", settings.expandedIconSizeDp)
         .put("showLabels", settings.showLabels)
 
 private fun JSONObject.toOverlayDock(defaults: OverlayDockSettings): OverlayDockSettings =
@@ -81,5 +82,6 @@ private fun JSONObject.toOverlayDock(defaults: OverlayDockSettings): OverlayDock
         handleHeightDp = optInt("handleHeightDp", defaults.handleHeightDp),
         verticalOffsetDp = optInt("verticalOffsetDp", defaults.verticalOffsetDp),
         handleAlphaPercent = optInt("handleAlphaPercent", defaults.handleAlphaPercent),
+        expandedIconSizeDp = optInt("expandedIconSizeDp", defaults.expandedIconSizeDp),
         showLabels = optBoolean("showLabels", defaults.showLabels),
     )
