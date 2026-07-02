@@ -13,6 +13,7 @@ import com.riffle.app.launcher.apps.PackageManagerInstalledAppRepository
 import com.riffle.app.launcher.visibleTo
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
+import com.riffle.core.domain.launcher.settings.LauncherSettings
 
 class OverlayDockService : Service() {
     private val windowManager by lazy { getSystemService(WindowManager::class.java) }
@@ -44,16 +45,18 @@ class OverlayDockService : Service() {
 
     private fun shouldShowOverlay(): Boolean =
         Settings.canDrawOverlays(this) &&
-            (DataStoreLauncherSettingsRepository(this).loadLauncherSettings()?.overlayDock?.enabled == true)
+            (loadLauncherSettings().overlayDock.enabled)
 
     private fun renderOverlay() {
         removeOverlay()
 
+        val overlaySettings = loadLauncherSettings().overlayDock
         val shortcuts = overlayDockShortcuts()
         val view =
             if (expanded) {
                 viewFactory.expandedDockView(
                     shortcuts = shortcuts,
+                    settings = overlaySettings,
                     onCollapse = {
                         expanded = false
                         renderOverlay()
@@ -65,7 +68,7 @@ class OverlayDockService : Service() {
                 )
             } else {
                 viewFactory.collapsedHandleView(
-                    shortcuts = shortcuts,
+                    settings = overlaySettings,
                     onExpand = {
                         expanded = true
                         renderOverlay()
@@ -74,7 +77,7 @@ class OverlayDockService : Service() {
             }
 
         overlayView = view
-        windowManager.addView(view, viewFactory.overlayLayoutParams())
+        windowManager.addView(view, viewFactory.overlayLayoutParams(overlaySettings))
     }
 
     private fun overlayDockShortcuts(): List<AppShortcutItem> {
@@ -86,6 +89,9 @@ class OverlayDockService : Service() {
             .filterIsInstance<AppShortcutItem>()
             .take(visibleDock.capacity.coerceAtLeast(0))
     }
+
+    private fun loadLauncherSettings(): LauncherSettings =
+        DataStoreLauncherSettingsRepository(this).loadLauncherSettings() ?: LauncherSettings()
 
     private fun removeOverlay() {
         overlayView?.let { view ->

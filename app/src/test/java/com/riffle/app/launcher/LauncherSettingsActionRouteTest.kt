@@ -1,6 +1,7 @@
 package com.riffle.app.launcher
 
 import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
+import com.riffle.core.domain.launcher.settings.OverlayDockEdge
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -18,12 +19,21 @@ class LauncherSettingsActionRouteTest {
 
     @Test
     fun routesOverlayDockSettingAsSettingsStateAction() {
-        val action = LauncherShellAction.SelectOverlayDockEnabled(enabled = true)
+        val actions =
+            listOf(
+                LauncherShellAction.SelectOverlayDockEnabled(enabled = true),
+                LauncherShellAction.SelectOverlayDockEdge(OverlayDockEdge.START),
+                LauncherShellAction.SelectOverlayDockHandleHeight(heightDp = 96),
+                LauncherShellAction.SelectOverlayDockVerticalOffset(offsetDp = -48),
+                LauncherShellAction.SelectOverlayDockHandleAlpha(alphaPercent = 65),
+            )
 
-        assertEquals(
-            LauncherSettingsActionRoute.SettingsState(action),
-            action.launcherSettingsActionRoute(),
-        )
+        actions.forEach { action ->
+            assertEquals(
+                LauncherSettingsActionRoute.SettingsState(action),
+                action.launcherSettingsActionRoute(),
+            )
+        }
     }
 
     @Test

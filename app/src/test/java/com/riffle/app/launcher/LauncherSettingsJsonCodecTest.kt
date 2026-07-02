@@ -9,6 +9,7 @@ import com.riffle.core.domain.launcher.settings.HapticSettings
 import com.riffle.core.domain.launcher.settings.HomeSwipeGestureSettings
 import com.riffle.core.domain.launcher.settings.LauncherGestureAction
 import com.riffle.core.domain.launcher.settings.LauncherSettings
+import com.riffle.core.domain.launcher.settings.OverlayDockEdge
 import com.riffle.core.domain.launcher.settings.OverlayDockSettings
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -93,22 +94,33 @@ class LauncherSettingsJsonCodecTest {
     }
 
     @Test
-    fun roundTripsOverlayDockEnabled() {
+    fun roundTripsOverlayDockSettings() {
         val settings =
             LauncherSettings(
-                overlayDock = OverlayDockSettings(enabled = true),
+                overlayDock =
+                    OverlayDockSettings(
+                        enabled = true,
+                        edge = OverlayDockEdge.START,
+                        handleHeightDp = 96,
+                        verticalOffsetDp = -48,
+                        handleAlphaPercent = 65,
+                    ),
             )
 
         val decodedSettings = decodeLauncherSettings(encodeLauncherSettings(settings))
 
         assertEquals(true, decodedSettings.overlayDock.enabled)
+        assertEquals(OverlayDockEdge.START, decodedSettings.overlayDock.edge)
+        assertEquals(96, decodedSettings.overlayDock.handleHeightDp)
+        assertEquals(-48, decodedSettings.overlayDock.verticalOffsetDp)
+        assertEquals(65, decodedSettings.overlayDock.handleAlphaPercent)
     }
 
     @Test
     fun defaultsMissingOverlayDockSettings() {
         val decodedSettings = decodeLauncherSettings("{}")
 
-        assertEquals(false, decodedSettings.overlayDock.enabled)
+        assertEquals(OverlayDockSettings(), decodedSettings.overlayDock)
     }
 
     @Test

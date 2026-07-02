@@ -23,7 +23,26 @@ data class HapticSettings(
 
 data class OverlayDockSettings(
     val enabled: Boolean = false,
+    val edge: OverlayDockEdge = OverlayDockEdge.END,
+    val handleHeightDp: Int = DEFAULT_OVERLAY_DOCK_HANDLE_HEIGHT_DP,
+    val verticalOffsetDp: Int = DEFAULT_OVERLAY_DOCK_VERTICAL_OFFSET_DP,
+    val handleAlphaPercent: Int = DEFAULT_OVERLAY_DOCK_HANDLE_ALPHA_PERCENT,
 )
+
+enum class OverlayDockEdge {
+    START,
+    END,
+}
+
+const val DEFAULT_OVERLAY_DOCK_HANDLE_HEIGHT_DP = 72
+const val MIN_OVERLAY_DOCK_HANDLE_HEIGHT_DP = 44
+const val MAX_OVERLAY_DOCK_HANDLE_HEIGHT_DP = 144
+const val DEFAULT_OVERLAY_DOCK_VERTICAL_OFFSET_DP = 0
+const val MIN_OVERLAY_DOCK_VERTICAL_OFFSET_DP = -240
+const val MAX_OVERLAY_DOCK_VERTICAL_OFFSET_DP = 240
+const val DEFAULT_OVERLAY_DOCK_HANDLE_ALPHA_PERCENT = 80
+const val MIN_OVERLAY_DOCK_HANDLE_ALPHA_PERCENT = 20
+const val MAX_OVERLAY_DOCK_HANDLE_ALPHA_PERCENT = 100
 
 data class HomeSwipeGestureSettings(
     val up: LauncherGestureAction = LauncherGestureAction.OPEN_APP_DRAWER,
