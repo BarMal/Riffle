@@ -26,6 +26,7 @@ import com.riffle.app.launcher.notifications.ActiveNotificationRefreshCoordinato
 import com.riffle.app.launcher.notifications.AndroidNotificationAccessGateway
 import com.riffle.app.launcher.notifications.DataStoreActiveNotificationRepository
 import com.riffle.app.launcher.overlay.AndroidOverlayDockPermissionGateway
+import com.riffle.app.launcher.overlay.AndroidOverlayDockServiceController
 import com.riffle.app.launcher.widgets.AndroidInstalledWidgetProviderRepository
 import com.riffle.app.launcher.widgets.AndroidWidgetHostGateway
 import com.riffle.app.launcher.widgets.WidgetBindingCoordinator
@@ -51,6 +52,7 @@ internal class MainActivityDependencies(
     val wallpaperController by lazy { AndroidLauncherWallpaperController(activity.window) }
     val notificationAccessGateway by lazy { AndroidNotificationAccessGateway(activity) }
     val overlayDockPermissionGateway by lazy { AndroidOverlayDockPermissionGateway(activity) }
+    val overlayDockServiceController by lazy { AndroidOverlayDockServiceController(activity) }
     val homeLayoutDeviceClassObserver by lazy { AndroidHomeLayoutDeviceClassObserver(activity) }
     val activeNotificationRepository by lazy { DataStoreActiveNotificationRepository(activity) }
     val widgetHostGateway by lazy { AndroidWidgetHostGateway(activity) }

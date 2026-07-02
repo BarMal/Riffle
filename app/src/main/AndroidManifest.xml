@@ -41,6 +41,9 @@
                 <action android:name="android.service.notification.NotificationListenerService" />
             </intent-filter>
         </service>
+        <service
+            android:name=".launcher.overlay.OverlayDockService"
+            android:exported="false" />
     </application>
 
 </manifest>
