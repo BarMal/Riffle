@@ -117,17 +117,14 @@ private fun RowScope.HomeGridCell(
         val activeDragSource =
             activeDragSession?.takeIf { session -> session.originCell == state.cell }?.item
         val visibleItem = activeDragSource ?: state.previewItems.itemAt(cell = state.cell)
-        val occupyingItem = visibleItem ?: state.previewItems.occupyingItemAt(cell = state.cell)
 
-        if (occupyingItem == null) {
-            HomeEmptyCellContextMenu(
-                pageCount = state.gridState.pageCount,
-                selectedPageIndex = state.gridState.selectedPageIndex,
-                haptics = actions.haptics,
-                onAction = actions.onAction,
-                modifier = Modifier.fillMaxSize(),
-            )
-        }
+        HomeBackgroundContextMenu(
+            pageCount = state.gridState.pageCount,
+            selectedPageIndex = state.gridState.selectedPageIndex,
+            haptics = actions.haptics,
+            onAction = actions.onAction,
+            modifier = Modifier.fillMaxSize(),
+        )
         Box(
             modifier =
                 Modifier

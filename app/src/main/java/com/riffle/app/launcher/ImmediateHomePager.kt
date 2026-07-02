@@ -198,6 +198,7 @@ internal fun ImmediateWorkspacePager(
                             .fillMaxHeight()
                             .graphicsLayer {
                                 translationX = pageCenterOffsetPx + ((index - pagerState.pagePosition) * pageWidthPx)
+                                clip = true
                             },
                 )
             }
@@ -326,7 +327,7 @@ private fun homePageSettleAnimation() =
 private val HomeLayout.lastPageIndex: Int
     get() = pages.lastIndex.coerceAtLeast(0)
 
-private const val PAGE_WIDTH_FRACTION = 0.9f
+private const val PAGE_WIDTH_FRACTION = 1f
 private const val HORIZONTAL_DRAG_INTENT_PX = 18f
 private const val PAGE_CHANGE_DISTANCE_THRESHOLD = 0.22f
 private const val PAGE_FLING_VELOCITY_THRESHOLD_PX_PER_SECOND = 900f

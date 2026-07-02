@@ -12,7 +12,7 @@ import androidx.compose.ui.Modifier
 
 @Composable
 @OptIn(ExperimentalFoundationApi::class)
-internal fun HomeEmptyCellContextMenu(
+internal fun HomeBackgroundContextMenu(
     pageCount: Int,
     selectedPageIndex: Int,
     haptics: LauncherHaptics,

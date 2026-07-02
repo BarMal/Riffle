@@ -1,12 +1,12 @@
 package com.riffle.app.launcher
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -15,11 +15,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -175,15 +176,27 @@ private fun HomeBottomSearchArea(
                 selectedPageIndex = selectedPageIndex,
             )
         } else {
-            OutlinedButton(
+            Surface(
                 modifier =
                     Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(24.dp)),
-                onClick = { onAction(LauncherShellAction.OpenSearch) },
-                contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
+                        .widthIn(max = HOME_SEARCH_MAX_WIDTH_DP.dp)
+                        .height(HOME_SEARCH_PILL_HEIGHT_DP.dp)
+                        .clip(RoundedCornerShape(HOME_SEARCH_PILL_HEIGHT_DP.dp))
+                        .clickable(onClick = { onAction(LauncherShellAction.OpenSearch) }),
+                shape = RoundedCornerShape(HOME_SEARCH_PILL_HEIGHT_DP.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = HOME_SEARCH_SURFACE_ALPHA),
+                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = HOME_SEARCH_BORDER_ALPHA)),
             ) {
-                Text(text = "Search")
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = "Search",
+                        style = MaterialTheme.typography.labelLarge,
+                    )
+                }
             }
         }
     }
@@ -300,6 +313,10 @@ internal data class HomeWorkspaceActions(
 private const val HOME_SURFACE_HORIZONTAL_PADDING_DP = 12
 private const val HOME_SURFACE_VERTICAL_PADDING_DP = 16
 private const val HOME_BOTTOM_CONTROLS_TOP_SPACING_DP = 8
-private const val HOME_SEARCH_AREA_HEIGHT_DP = 48
+private const val HOME_SEARCH_AREA_HEIGHT_DP = 40
+private const val HOME_SEARCH_MAX_WIDTH_DP = 280
+private const val HOME_SEARCH_PILL_HEIGHT_DP = 34
+private const val HOME_SEARCH_SURFACE_ALPHA = 0.82f
+private const val HOME_SEARCH_BORDER_ALPHA = 0.38f
 private const val HOME_DOCK_TOP_SPACING_DP = 10
 private const val PAGE_INDICATOR_SETTLED_VISIBLE_MS = 1200L
