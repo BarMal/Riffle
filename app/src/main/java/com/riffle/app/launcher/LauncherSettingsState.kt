@@ -121,6 +121,22 @@ internal fun LauncherShellState.withOverlayDockSettingsAction(
                         is LauncherShellAction.AddAppToFloatingDock ->
                             launcherSettings.overlayDock.withAddedFloatingDockApp(action.app)
 
+                        is LauncherShellAction.RemoveFloatingDockShortcut ->
+                            launcherSettings.overlayDock.copy(
+                                items =
+                                    launcherSettings.overlayDock.items
+                                        .filterNot { item -> item.id == action.itemId },
+                            )
+
+                        is LauncherShellAction.MoveFloatingDockShortcut ->
+                            launcherSettings.overlayDock.copy(
+                                items =
+                                    launcherSettings.overlayDock.items.moveFloatingDockItem(
+                                        itemId = action.itemId,
+                                        indexDelta = action.direction.indexDelta,
+                                    ),
+                            )
+
                         else -> launcherSettings.overlayDock
                     },
             ),
@@ -156,6 +172,22 @@ private fun InstalledApp.nextFloatingDockShortcutOrdinal(existingShortcuts: List
 
 private val AppIdentity.shortcutKey: String
     get() = "${profile.id.value}:${packageName.value}/${activityName.value}"
+
+private fun List<AppShortcutItem>.moveFloatingDockItem(
+    itemId: LauncherItemId,
+    indexDelta: Int,
+): List<AppShortcutItem> {
+    val currentIndex = indexOfFirst { item -> item.id == itemId }
+    val targetIndex = currentIndex + indexDelta
+
+    if (currentIndex !in indices || targetIndex !in indices) {
+        return this
+    }
+
+    return toMutableList()
+        .apply { add(targetIndex, removeAt(currentIndex)) }
+        .toList()
+}
 
 private fun HomeSwipeGestureSettings.withAction(
     direction: HomeSwipeGestureDirection,

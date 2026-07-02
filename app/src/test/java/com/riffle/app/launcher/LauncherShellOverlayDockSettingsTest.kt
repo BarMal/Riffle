@@ -4,11 +4,13 @@ import com.riffle.core.domain.launcher.apps.AppActivityName
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.InstalledApp
+import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
 import com.riffle.core.domain.launcher.home.HomeLayoutSet
+import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettingsRepository
 import com.riffle.core.domain.launcher.settings.MAX_OVERLAY_DOCK_EXPANDED_ICON_SIZE_DP
@@ -23,6 +25,8 @@ import com.riffle.core.domain.launcher.settings.MIN_OVERLAY_DOCK_HANDLE_THICKNES
 import com.riffle.core.domain.launcher.settings.MIN_OVERLAY_DOCK_VERTICAL_OFFSET_DP
 import com.riffle.core.domain.launcher.settings.OverlayDockEdge
 import com.riffle.core.domain.launcher.settings.OverlayDockExpandedOrientation
+import com.riffle.core.domain.launcher.settings.OverlayDockItemMoveDirection
+import com.riffle.core.domain.launcher.settings.OverlayDockSettings
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -97,6 +101,80 @@ class LauncherShellOverlayDockSettingsTest {
         assertEquals(app.identity, overlayDock.items.single().appIdentity)
         assertEquals(app.label, overlayDock.items.single().label)
         assertEquals("floating-dock:personal:com.example.app/.MainActivity:1", overlayDock.items.single().id.value)
+        assertEquals(viewModel.state.value.launcherSettings, launcherSettingsRepository.savedSettings)
+        assertEquals(0, homeLayoutRepository.saveLayoutSetCount)
+    }
+
+    @Test
+    fun removesFloatingDockShortcutGloballyWithoutRewritingLayout() {
+        val homeLayoutRepository = FakeHomeLayoutRepository()
+        val camera = shortcut(id = "camera", label = "Camera")
+        val phone = shortcut(id = "phone", label = "Phone")
+        val launcherSettingsRepository =
+            FakeLauncherSettingsRepository(
+                savedSettings =
+                    LauncherSettings(
+                        overlayDock = OverlayDockSettings(enabled = true, items = listOf(camera, phone)),
+                    ),
+            )
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                homeLayoutRepository = homeLayoutRepository,
+                launcherSettingsRepository = launcherSettingsRepository,
+            )
+
+        viewModel.onLauncherSettingsActionSelected(
+            LauncherShellAction.RemoveFloatingDockShortcut(camera.id),
+        )
+
+        val overlayDock = viewModel.state.value.launcherSettings.overlayDock
+        assertEquals(listOf(phone), overlayDock.items)
+        assertEquals(viewModel.state.value.launcherSettings, launcherSettingsRepository.savedSettings)
+        assertEquals(0, homeLayoutRepository.saveLayoutSetCount)
+    }
+
+    @Test
+    fun movesFloatingDockShortcutsGloballyWithoutRewritingLayout() {
+        val homeLayoutRepository = FakeHomeLayoutRepository()
+        val camera = shortcut(id = "camera", label = "Camera")
+        val phone = shortcut(id = "phone", label = "Phone")
+        val maps = shortcut(id = "maps", label = "Maps")
+        val launcherSettingsRepository =
+            FakeLauncherSettingsRepository(
+                savedSettings =
+                    LauncherSettings(
+                        overlayDock = OverlayDockSettings(enabled = true, items = listOf(camera, phone, maps)),
+                    ),
+            )
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                homeLayoutRepository = homeLayoutRepository,
+                launcherSettingsRepository = launcherSettingsRepository,
+            )
+
+        viewModel.onLauncherSettingsActionSelected(
+            LauncherShellAction.MoveFloatingDockShortcut(
+                itemId = phone.id,
+                direction = OverlayDockItemMoveDirection.UP,
+            ),
+        )
+        viewModel.onLauncherSettingsActionSelected(
+            LauncherShellAction.MoveFloatingDockShortcut(
+                itemId = phone.id,
+                direction = OverlayDockItemMoveDirection.DOWN,
+            ),
+        )
+        viewModel.onLauncherSettingsActionSelected(
+            LauncherShellAction.MoveFloatingDockShortcut(
+                itemId = maps.id,
+                direction = OverlayDockItemMoveDirection.DOWN,
+            ),
+        )
+
+        val overlayDock = viewModel.state.value.launcherSettings.overlayDock
+        assertEquals(listOf(camera, phone, maps), overlayDock.items)
         assertEquals(viewModel.state.value.launcherSettings, launcherSettingsRepository.savedSettings)
         assertEquals(0, homeLayoutRepository.saveLayoutSetCount)
     }
@@ -210,6 +288,20 @@ class LauncherShellOverlayDockSettingsTest {
             savedSettings = settings
         }
     }
+
+    private fun shortcut(
+        id: String,
+        label: String,
+    ): AppShortcutItem =
+        AppShortcutItem(
+            id = LauncherItemId(id),
+            appIdentity =
+                AppIdentity(
+                    packageName = AppPackageName("com.example.${label.lowercase()}"),
+                    activityName = AppActivityName(".MainActivity"),
+                ),
+            label = label,
+        )
 
     private companion object {
         val appIdentity =

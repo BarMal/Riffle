@@ -164,6 +164,7 @@ private fun LauncherDestination(
                 appListContext =
                     AppListContext(
                         homeLayout = state.homeLayout,
+                        overlayDock = state.launcherSettings.overlayDock,
                         notificationCountsByPackage = state.notificationCountsByPackage,
                         appShortcutsByApp = state.appShortcutsByApp,
                         appIconLoader = appIconLoader,
@@ -181,6 +182,7 @@ private fun LauncherDestination(
                 appListContext =
                     AppListContext(
                         homeLayout = state.homeLayout,
+                        overlayDock = state.launcherSettings.overlayDock,
                         notificationCountsByPackage = state.notificationCountsByPackage,
                         appShortcutsByApp = state.appShortcutsByApp,
                         appIconLoader = appIconLoader,
