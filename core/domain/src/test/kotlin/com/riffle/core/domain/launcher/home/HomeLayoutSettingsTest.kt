@@ -19,6 +19,24 @@ class HomeLayoutSettingsTest {
     }
 
     @Test
+    fun standardFoldableSettingsUseAnExpandedGrid() {
+        val settings = HomeLayoutSettings.standardFoldable()
+
+        assertEquals(GridDimensions(columns = 5, rows = 6), settings.grid.dimensions)
+        assertEquals(WallpaperSettings.system(), settings.wallpaper)
+        assertEquals(HomeLabelSettings.standard(), settings.labels)
+    }
+
+    @Test
+    fun standardTabletSettingsUseTheLargestDefaultGrid() {
+        val settings = HomeLayoutSettings.standardTablet()
+
+        assertEquals(GridDimensions(columns = 6, rows = 6), settings.grid.dimensions)
+        assertEquals(WallpaperSettings.system(), settings.wallpaper)
+        assertEquals(HomeLabelSettings.standard(), settings.labels)
+    }
+
+    @Test
     fun gridSettingsCanConfigureSpacingWithoutChangingGridOccupancy() {
         val settings =
             GridSettings(

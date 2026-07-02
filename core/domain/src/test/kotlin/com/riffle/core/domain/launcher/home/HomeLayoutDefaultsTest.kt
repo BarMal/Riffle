@@ -42,4 +42,22 @@ class HomeLayoutDefaultsTest {
         assertEquals(5, layout.dock.availableSlots)
         assertTrue(layout.dock.items.isEmpty())
     }
+
+    @Test
+    fun foldableLayoutStartsWithLargerGridAndDock() {
+        val layout = HomeLayoutDefaults.standard(HomeLayoutDeviceClass.FOLDABLE)
+
+        assertEquals(GridDimensions(columns = 5, rows = 6), layout.selectedPage.grid)
+        assertEquals(GridDimensions(columns = 5, rows = 6), layout.settings.grid.dimensions)
+        assertEquals(6, layout.dock.capacity)
+    }
+
+    @Test
+    fun tabletLayoutStartsWithLargestGridAndDock() {
+        val layout = HomeLayoutDefaults.standard(HomeLayoutDeviceClass.TABLET)
+
+        assertEquals(GridDimensions(columns = 6, rows = 6), layout.selectedPage.grid)
+        assertEquals(GridDimensions(columns = 6, rows = 6), layout.settings.grid.dimensions)
+        assertEquals(7, layout.dock.capacity)
+    }
 }
