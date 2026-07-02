@@ -84,7 +84,7 @@ class OverlayDockService : Service() {
             }
 
         overlayView = view
-        windowManager.addView(view, viewFactory.overlayLayoutParams(overlaySettings))
+        windowManager.addView(view, viewFactory.overlayLayoutParams(overlaySettings, expanded = expanded))
     }
 
     private fun overlayDockShortcuts(): List<AppShortcutItem> {
@@ -105,7 +105,7 @@ class OverlayDockService : Service() {
         val view = overlayView ?: return
         val settings = currentOverlaySettings?.copy(verticalOffsetDp = offsetDp)?.coerceOverlayDockSettings() ?: return
         currentOverlaySettings = settings
-        windowManager.updateViewLayout(view, viewFactory.overlayLayoutParams(settings))
+        windowManager.updateViewLayout(view, viewFactory.overlayLayoutParams(settings, expanded = false))
     }
 
     private fun saveCollapsedHandleOffset(offsetDp: Int) {

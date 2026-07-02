@@ -33,11 +33,6 @@ internal class OverlayDockViewFactory(
         FrameLayout(context).apply {
             background = context.edgeHandleBackground(settings)
             contentDescription = "Open Riffle overlay dock"
-            layoutParams =
-                FrameLayout.LayoutParams(
-                    context.dp(settings.handleThicknessDp),
-                    context.dp(settings.handleHeightDp),
-                )
             addView(
                 View(context).apply {
                     background = context.handleGripBackground(settings.handleAlphaPercent)
@@ -78,10 +73,21 @@ internal class OverlayDockViewFactory(
             )
         }
 
-    fun overlayLayoutParams(settings: OverlayDockSettings): WindowManager.LayoutParams =
+    fun overlayLayoutParams(
+        settings: OverlayDockSettings,
+        expanded: Boolean,
+    ): WindowManager.LayoutParams =
         WindowManager.LayoutParams(
-            WindowManager.LayoutParams.WRAP_CONTENT,
-            WindowManager.LayoutParams.WRAP_CONTENT,
+            if (expanded) {
+                WindowManager.LayoutParams.WRAP_CONTENT
+            } else {
+                context.dp(settings.handleThicknessDp)
+            },
+            if (expanded) {
+                WindowManager.LayoutParams.WRAP_CONTENT
+            } else {
+                context.dp(settings.handleHeightDp)
+            },
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
             PixelFormat.TRANSLUCENT,
