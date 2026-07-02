@@ -20,12 +20,16 @@ internal fun homeLayoutDeviceClassFromWindowLayout(
     hasFoldingFeature: Boolean,
     screenWidthDp: Int,
     screenHeightDp: Int,
-): HomeLayoutDeviceClass? =
-    when {
-        hasFoldingFeature -> HomeLayoutDeviceClass.FOLDABLE
-        else ->
-            homeLayoutDeviceClassFromConfiguration(
-                screenWidthDp = screenWidthDp,
-                screenHeightDp = screenHeightDp,
-            )
+): HomeLayoutDeviceClass? {
+    val configurationClass =
+        homeLayoutDeviceClassFromConfiguration(
+            screenWidthDp = screenWidthDp,
+            screenHeightDp = screenHeightDp,
+        )
+
+    return when {
+        configurationClass == null -> null
+        hasFoldingFeature && configurationClass != HomeLayoutDeviceClass.PHONE -> HomeLayoutDeviceClass.FOLDABLE
+        else -> configurationClass
     }
+}
