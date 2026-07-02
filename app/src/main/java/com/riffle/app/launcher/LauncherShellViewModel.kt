@@ -355,6 +355,18 @@ class LauncherShellViewModel(
                         launcherSettingsRepository = launcherSettingsRepository,
                     )
 
+                is LauncherShellAction.SelectOverlayDockEnabled ->
+                    mutableState.value.withLauncherSettings(
+                        settings =
+                            mutableState.value.launcherSettings.copy(
+                                overlayDock =
+                                    mutableState.value.launcherSettings.overlayDock.copy(
+                                        enabled = action.enabled,
+                                    ),
+                            ),
+                        launcherSettingsRepository = launcherSettingsRepository,
+                    )
+
                 is LauncherShellAction.SelectSettingsLayoutDeviceClass ->
                     mutableState.value.withSettingsLayoutDeviceClass(action.deviceClass)
 

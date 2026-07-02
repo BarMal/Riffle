@@ -9,6 +9,7 @@ import com.riffle.core.domain.launcher.settings.HapticSettings
 import com.riffle.core.domain.launcher.settings.HomeSwipeGestureSettings
 import com.riffle.core.domain.launcher.settings.LauncherGestureAction
 import com.riffle.core.domain.launcher.settings.LauncherSettings
+import com.riffle.core.domain.launcher.settings.OverlayDockSettings
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -89,6 +90,25 @@ class LauncherSettingsJsonCodecTest {
         val decodedSettings = decodeLauncherSettings("{}")
 
         assertEquals(HapticFeedbackStrength.MEDIUM, decodedSettings.haptics.feedbackStrength)
+    }
+
+    @Test
+    fun roundTripsOverlayDockEnabled() {
+        val settings =
+            LauncherSettings(
+                overlayDock = OverlayDockSettings(enabled = true),
+            )
+
+        val decodedSettings = decodeLauncherSettings(encodeLauncherSettings(settings))
+
+        assertEquals(true, decodedSettings.overlayDock.enabled)
+    }
+
+    @Test
+    fun defaultsMissingOverlayDockSettings() {
+        val decodedSettings = decodeLauncherSettings("{}")
+
+        assertEquals(false, decodedSettings.overlayDock.enabled)
     }
 
     @Test

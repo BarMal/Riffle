@@ -66,6 +66,7 @@ internal fun LauncherShellAction.launcherSettingsActionRoute(): LauncherSettings
         is LauncherShellAction.SelectHomeSwipeGestureAction,
         LauncherShellAction.ResetHomeSwipeGestureActions,
         is LauncherShellAction.SelectHapticFeedbackStrength,
+        is LauncherShellAction.SelectOverlayDockEnabled,
         is LauncherShellAction.SelectSettingsLayoutDeviceClass,
         is LauncherShellAction.ImportLauncherBackup,
         -> LauncherSettingsActionRoute.SettingsState(this)

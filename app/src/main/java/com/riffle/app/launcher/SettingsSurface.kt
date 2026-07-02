@@ -138,6 +138,7 @@ private fun SettingsPageContent(
         SettingsSection(title = "Dock") {
             DockSetting(
                 dock = state.homeLayout.dock,
+                overlayDockEnabled = state.settings.overlayDock.enabled,
                 onAction = onAction,
             )
         }

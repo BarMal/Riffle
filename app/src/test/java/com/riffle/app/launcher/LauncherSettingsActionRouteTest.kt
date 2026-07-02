@@ -17,6 +17,16 @@ class LauncherSettingsActionRouteTest {
     }
 
     @Test
+    fun routesOverlayDockSettingAsSettingsStateAction() {
+        val action = LauncherShellAction.SelectOverlayDockEnabled(enabled = true)
+
+        assertEquals(
+            LauncherSettingsActionRoute.SettingsState(action),
+            action.launcherSettingsActionRoute(),
+        )
+    }
+
+    @Test
     fun routesSettingsSideEffects() {
         assertEquals(
             LauncherSettingsActionRoute.RequestNotificationAccess,

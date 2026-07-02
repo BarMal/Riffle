@@ -6,6 +6,7 @@ import com.riffle.core.domain.launcher.settings.AppearanceSettings
 import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
 import com.riffle.core.domain.launcher.settings.HapticSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettings
+import com.riffle.core.domain.launcher.settings.OverlayDockSettings
 import org.json.JSONObject
 
 fun encodeLauncherSettings(settings: LauncherSettings): String =
@@ -13,6 +14,7 @@ fun encodeLauncherSettings(settings: LauncherSettings): String =
         .put("appearance", encodeAppearance(settings.appearance))
         .put("gestures", encodeGestures(settings.gestures))
         .put("haptics", encodeHaptics(settings.haptics))
+        .put("overlayDock", encodeOverlayDock(settings.overlayDock))
         .toString()
 
 fun decodeLauncherSettings(value: String): LauncherSettings =
@@ -22,6 +24,8 @@ fun decodeLauncherSettings(value: String): LauncherSettings =
             appearance = json.optJSONObject("appearance")?.toAppearance(defaults.appearance) ?: defaults.appearance,
             gestures = json.optJSONObject("gestures")?.toGestures(defaults.gestures) ?: defaults.gestures,
             haptics = json.optJSONObject("haptics")?.toHaptics(defaults.haptics) ?: defaults.haptics,
+            overlayDock =
+                json.optJSONObject("overlayDock")?.toOverlayDock(defaults.overlayDock) ?: defaults.overlayDock,
         )
     }
 
@@ -54,4 +58,13 @@ private fun JSONObject.toHaptics(defaults: HapticSettings): HapticSettings =
         feedbackStrength =
             runCatching { HapticFeedbackStrength.valueOf(optString("feedbackStrength")) }
                 .getOrDefault(defaults.feedbackStrength),
+    )
+
+private fun encodeOverlayDock(settings: OverlayDockSettings): JSONObject =
+    JSONObject()
+        .put("enabled", settings.enabled)
+
+private fun JSONObject.toOverlayDock(defaults: OverlayDockSettings): OverlayDockSettings =
+    defaults.copy(
+        enabled = optBoolean("enabled", defaults.enabled),
     )
