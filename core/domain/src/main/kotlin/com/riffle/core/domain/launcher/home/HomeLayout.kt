@@ -16,8 +16,8 @@ data class HomeLayout(
 }
 
 object HomeLayoutDefaults {
-    fun standard(): HomeLayout =
-        HomeLayoutSettings.standardPhone().let { settings ->
+    fun standard(deviceClass: HomeLayoutDeviceClass = HomeLayoutDeviceClass.PHONE): HomeLayout =
+        HomeLayoutSettings.standard(deviceClass).let { settings ->
             LauncherPage(
                 id = LauncherPageId("home"),
                 grid = settings.grid.dimensions,
@@ -26,9 +26,17 @@ object HomeLayoutDefaults {
                     viewMode = LauncherViewMode.STANDARD_APP_DRAWER,
                     pages = listOf(firstPage),
                     selectedPageId = firstPage.id,
-                    dock = DockModel(capacity = 5),
+                    dock = DockModel(capacity = deviceClass.standardDockCapacity),
                     settings = settings,
                 )
             }
         }
 }
+
+private val HomeLayoutDeviceClass.standardDockCapacity: Int
+    get() =
+        when (this) {
+            HomeLayoutDeviceClass.PHONE -> 5
+            HomeLayoutDeviceClass.FOLDABLE -> 6
+            HomeLayoutDeviceClass.TABLET -> 7
+        }

@@ -40,6 +40,8 @@ class HomeLayoutSetTest {
         )
         assertEquals(HomeLayoutDeviceClass.PHONE, standardKey.deviceClass)
         assertEquals(LauncherViewMode.STANDARD_APP_DRAWER, layoutSet.activeLayout.viewMode)
+        assertEquals(GridDimensions(columns = 5, rows = 6), layoutSet.activeLayout.settings.grid.dimensions)
+        assertEquals(6, layoutSet.activeLayout.dock.capacity)
     }
 
     @Test

@@ -6,9 +6,30 @@ data class HomeLayoutSettings(
     val labels: HomeLabelSettings = HomeLabelSettings.standard(),
 ) {
     companion object {
+        fun standard(deviceClass: HomeLayoutDeviceClass): HomeLayoutSettings =
+            when (deviceClass) {
+                HomeLayoutDeviceClass.PHONE -> standardPhone()
+                HomeLayoutDeviceClass.FOLDABLE -> standardFoldable()
+                HomeLayoutDeviceClass.TABLET -> standardTablet()
+            }
+
         fun standardPhone(): HomeLayoutSettings =
             HomeLayoutSettings(
                 grid = GridSettings.standardPhone(),
+                wallpaper = WallpaperSettings.system(),
+                labels = HomeLabelSettings.standard(),
+            )
+
+        fun standardFoldable(): HomeLayoutSettings =
+            HomeLayoutSettings(
+                grid = GridSettings.standardFoldable(),
+                wallpaper = WallpaperSettings.system(),
+                labels = HomeLabelSettings.standard(),
+            )
+
+        fun standardTablet(): HomeLayoutSettings =
+            HomeLayoutSettings(
+                grid = GridSettings.standardTablet(),
                 wallpaper = WallpaperSettings.system(),
                 labels = HomeLabelSettings.standard(),
             )
@@ -57,6 +78,16 @@ data class GridSettings(
         fun standardPhone(): GridSettings =
             GridSettings(
                 dimensions = GridDimensions(columns = 4, rows = 5),
+            )
+
+        fun standardFoldable(): GridSettings =
+            GridSettings(
+                dimensions = GridDimensions(columns = 5, rows = 6),
+            )
+
+        fun standardTablet(): GridSettings =
+            GridSettings(
+                dimensions = GridDimensions(columns = 6, rows = 6),
             )
     }
 }

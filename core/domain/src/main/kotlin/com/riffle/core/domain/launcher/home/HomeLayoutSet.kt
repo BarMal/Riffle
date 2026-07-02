@@ -42,6 +42,9 @@ data class HomeLayoutSet(
             HomeLayoutKey(viewMode = layout.viewMode)
                 .let { key -> HomeLayoutSet(activeKey = key, layouts = mapOf(key to layout)) }
 
-        fun defaultLayout(key: HomeLayoutKey): HomeLayout = HomeLayoutDefaults.standard().copy(viewMode = key.viewMode)
+        fun defaultLayout(key: HomeLayoutKey): HomeLayout =
+            HomeLayoutDefaults
+                .standard(key.deviceClass)
+                .copy(viewMode = key.viewMode)
     }
 }
