@@ -74,6 +74,7 @@ class MainActivity : ComponentActivity() {
     private val wallpaperController get() = dependencies.wallpaperController
     private val notificationAccessGateway get() = dependencies.notificationAccessGateway
     private val overlayDockPermissionGateway get() = dependencies.overlayDockPermissionGateway
+    private val overlayDockServiceController get() = dependencies.overlayDockServiceController
     private val homeLayoutDeviceClassObserver get() = dependencies.homeLayoutDeviceClassObserver
     private val activeNotificationRefreshCoordinator by lazy {
         dependencies.activeNotificationRefreshCoordinator { shellViewModel.refreshNotifications() }
@@ -149,7 +150,10 @@ class MainActivity : ComponentActivity() {
                 DefaultLauncherSettingsActionHandler(
                     callbacks =
                         LauncherSettingsActionCallbacks(
-                            applySettingsState = { action -> shellViewModel.onLauncherSettingsActionSelected(action) },
+                            applySettingsState = { action ->
+                                shellViewModel.onLauncherSettingsActionSelected(action)
+                                syncOverlayDockService()
+                            },
                             requestNotificationAccess = {
                                 runCatching {
                                     startActivity(notificationAccessGateway.createNotificationListenerSettingsIntent())
@@ -253,6 +257,14 @@ class MainActivity : ComponentActivity() {
             homeRoleStatus = homeRoleGateway.getHomeRoleStatus(),
             notificationAccessStatus = notificationAccessGateway.getNotificationAccessStatus(),
             overlayDockPermissionStatus = overlayDockPermissionGateway.getOverlayDockPermissionStatus(),
+        )
+        syncOverlayDockService()
+    }
+
+    private fun syncOverlayDockService() {
+        overlayDockServiceController.sync(
+            settings = shellViewModel.state.value.launcherSettings,
+            permissionStatus = shellViewModel.state.value.overlayDockPermissionStatus,
         )
     }
 
