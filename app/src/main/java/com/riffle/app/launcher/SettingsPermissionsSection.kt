@@ -67,7 +67,7 @@ private fun OverlayDockPermissionSetting(
     ) {
         SettingsTextColumn(
             modifier = Modifier.weight(1f),
-            title = "Overlay dock",
+            title = "Floating dock",
             subtitle = status.settingsOverlayDockPermissionLabel(),
         )
         TextButton(onClick = { onAction(LauncherShellAction.RequestOverlayDockPermission) }) {

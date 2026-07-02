@@ -80,7 +80,7 @@ private fun OverlayDockEnabledSetting(
     ) {
         SettingsTextColumn(
             modifier = Modifier.weight(1f),
-            title = "Overlay dock",
+            title = "Floating dock",
             subtitle = if (settings.enabled) "Edge handle visible over apps" else "Only use the home dock",
         )
         Switch(
