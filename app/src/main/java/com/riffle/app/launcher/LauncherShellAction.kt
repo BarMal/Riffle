@@ -88,7 +88,10 @@ sealed interface LauncherShellAction {
 
     data class SelectLauncherViewMode(val mode: LauncherViewMode) : LauncherShellAction
 
-    data class SelectHomeLayoutDeviceClass(val deviceClass: HomeLayoutDeviceClass) : LauncherShellAction
+    data class SelectHomeLayoutDeviceClass(
+        val deviceClass: HomeLayoutDeviceClass,
+        val availableDeviceClasses: Set<HomeLayoutDeviceClass> = setOf(deviceClass),
+    ) : LauncherShellAction
 
     data class SelectSettingsLayoutDeviceClass(val deviceClass: HomeLayoutDeviceClass) : LauncherShellAction
 

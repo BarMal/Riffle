@@ -13,32 +13,48 @@ import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 @Composable
 internal fun SettingsLayoutDeviceTabs(
     selectedDeviceClass: HomeLayoutDeviceClass,
+    availableDeviceClasses: Set<HomeLayoutDeviceClass>,
     onAction: (LauncherShellAction) -> Unit,
 ) {
+    val tabs = settingsLayoutDeviceTabs(availableDeviceClasses)
+    if (tabs.size <= 1) return
+
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        SettingsLayoutDeviceButton(
-            label = "Unfolded",
-            deviceClass = HomeLayoutDeviceClass.PHONE,
-            selectedDeviceClass = selectedDeviceClass,
-            onAction = onAction,
-        )
-        SettingsLayoutDeviceButton(
-            label = "Folded",
-            deviceClass = HomeLayoutDeviceClass.FOLDABLE,
-            selectedDeviceClass = selectedDeviceClass,
-            onAction = onAction,
-        )
-        SettingsLayoutDeviceButton(
-            label = "Tablet",
-            deviceClass = HomeLayoutDeviceClass.TABLET,
-            selectedDeviceClass = selectedDeviceClass,
-            onAction = onAction,
-        )
+        tabs.forEach { tab ->
+            SettingsLayoutDeviceButton(
+                label = tab.label,
+                deviceClass = tab.deviceClass,
+                selectedDeviceClass = selectedDeviceClass,
+                onAction = onAction,
+            )
+        }
     }
+}
+
+internal data class SettingsLayoutDeviceTab(
+    val label: String,
+    val deviceClass: HomeLayoutDeviceClass,
+)
+
+internal fun settingsLayoutDeviceTabs(classes: Set<HomeLayoutDeviceClass>): List<SettingsLayoutDeviceTab> {
+    val isFoldableDevice = HomeLayoutDeviceClass.FOLDABLE in classes
+
+    return listOf(
+        HomeLayoutDeviceClass.PHONE,
+        HomeLayoutDeviceClass.FOLDABLE,
+        HomeLayoutDeviceClass.TABLET,
+    )
+        .filter { deviceClass -> deviceClass in classes }
+        .map { deviceClass ->
+            SettingsLayoutDeviceTab(
+                label = deviceClass.settingsLabel(isFoldableDevice),
+                deviceClass = deviceClass,
+            )
+        }
 }
 
 @Composable
@@ -55,3 +71,10 @@ private fun SettingsLayoutDeviceButton(
         SettingsButtonText(text = label)
     }
 }
+
+private fun HomeLayoutDeviceClass.settingsLabel(isFoldableDevice: Boolean): String =
+    when (this) {
+        HomeLayoutDeviceClass.PHONE -> if (isFoldableDevice) "Folded" else "Phone"
+        HomeLayoutDeviceClass.FOLDABLE -> "Unfolded"
+        HomeLayoutDeviceClass.TABLET -> "Tablet"
+    }

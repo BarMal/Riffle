@@ -22,6 +22,7 @@ data class LauncherShellState(
     val homeLayout: HomeLayout = HomeLayoutDefaults.standard(),
     val homeLayoutSet: HomeLayoutSet = HomeLayoutSet.fromLayout(homeLayout),
     val settingsLayoutDeviceClass: HomeLayoutDeviceClass = homeLayoutSet.activeKey.deviceClass,
+    val availableLayoutDeviceClasses: Set<HomeLayoutDeviceClass> = setOf(homeLayoutSet.activeKey.deviceClass),
     val launcherSettings: LauncherSettings = LauncherSettings(),
     val notificationAccessStatus: NotificationAccessStatus = NotificationAccessStatus.UNKNOWN,
     val notificationCountsByPackage: Map<AppPackageName, Int> = emptyMap(),

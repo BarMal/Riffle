@@ -41,12 +41,19 @@ internal fun LauncherShellState.withSelectedHomeLayoutMode(
 
 internal fun LauncherShellState.withSelectedHomeLayoutDeviceClass(
     deviceClass: HomeLayoutDeviceClass,
+    availableDeviceClasses: Set<HomeLayoutDeviceClass> = setOf(deviceClass),
     homeLayoutRepository: HomeLayoutRepository,
 ): LauncherShellState {
     val layoutSet = currentLayoutSet(homeLayoutRepository)
+    val updatedAvailableDeviceClasses = availableLayoutDeviceClasses + availableDeviceClasses + deviceClass
 
     if (layoutSet.activeKey.deviceClass == deviceClass && layoutSet.activeLayout == homeLayout) {
-        return this
+        return copy(
+            availableLayoutDeviceClasses = updatedAvailableDeviceClasses,
+            settingsLayoutDeviceClass =
+                settingsLayoutDeviceClass.takeIf { deviceClass -> deviceClass in updatedAvailableDeviceClasses }
+                    ?: layoutSet.activeKey.deviceClass,
+        )
     }
 
     return layoutSet
@@ -57,9 +64,16 @@ internal fun LauncherShellState.withSelectedHomeLayoutDeviceClass(
             copy(
                 homeLayout = updatedLayoutSet.activeLayout,
                 homeLayoutSet = updatedLayoutSet,
+                availableLayoutDeviceClasses = updatedAvailableDeviceClasses,
                 settingsLayoutDeviceClass =
                     when (destination) {
-                        ShellDestination.SETTINGS -> settingsLayoutDeviceClass
+                        ShellDestination.SETTINGS ->
+                            settingsLayoutDeviceClass
+                                .takeIf { selectedDeviceClass ->
+                                    selectedDeviceClass in updatedAvailableDeviceClasses
+                                }
+                                ?: updatedLayoutSet.activeKey.deviceClass
+
                         else -> updatedLayoutSet.activeKey.deviceClass
                     },
             )
@@ -67,7 +81,10 @@ internal fun LauncherShellState.withSelectedHomeLayoutDeviceClass(
 }
 
 internal fun LauncherShellState.withSettingsLayoutDeviceClass(deviceClass: HomeLayoutDeviceClass): LauncherShellState =
-    copy(settingsLayoutDeviceClass = deviceClass)
+    when (deviceClass) {
+        in availableLayoutDeviceClasses -> copy(settingsLayoutDeviceClass = deviceClass)
+        else -> this
+    }
 
 internal fun LauncherShellState.withSettingsTargetLayout(
     layout: HomeLayout,

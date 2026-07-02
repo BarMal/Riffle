@@ -271,11 +271,14 @@ class MainActivity : ComponentActivity() {
     private fun observeHomeLayoutDeviceClass() {
         lifecycleScope.launch {
             lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                homeLayoutDeviceClassObserver.deviceClasses()
-                    .collect { deviceClass ->
-                        deviceClass?.let { layoutDeviceClass ->
+                homeLayoutDeviceClassObserver.deviceClassSelections()
+                    .collect { selection ->
+                        selection?.let { layoutDeviceClassSelection ->
                             shellViewModel.onHomePageEdited(
-                                LauncherShellAction.SelectHomeLayoutDeviceClass(layoutDeviceClass),
+                                LauncherShellAction.SelectHomeLayoutDeviceClass(
+                                    deviceClass = layoutDeviceClassSelection.activeDeviceClass,
+                                    availableDeviceClasses = layoutDeviceClassSelection.availableDeviceClasses,
+                                ),
                             )
                         }
                     }
