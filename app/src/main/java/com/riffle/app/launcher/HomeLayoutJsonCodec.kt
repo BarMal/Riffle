@@ -33,7 +33,11 @@ internal fun encodeHomeLayoutObject(layout: HomeLayout): JSONObject =
 internal fun JSONObject.toHomeLayout(): HomeLayout =
     let { json ->
         val defaults = HomeLayoutDefaults.standard()
-        val pages = json.getJSONArray("pages").toPages()
+        val settings = json.optJSONObject("settings")?.toSettings(defaults.settings) ?: defaults.settings
+        val pages =
+            json.getJSONArray("pages")
+                .toPages()
+                .map { page -> page.copy(grid = settings.grid.dimensions) }
         val selectedPageId = LauncherPageId(json.optString("selectedPageId", defaults.selectedPageId.value))
         val safeSelectedPageId =
             pages.firstOrNull { page -> page.id == selectedPageId }?.id
@@ -45,7 +49,7 @@ internal fun JSONObject.toHomeLayout(): HomeLayout =
             pages = pages.ifEmpty { defaults.pages },
             selectedPageId = safeSelectedPageId,
             dock = json.optJSONObject("dock")?.toDock() ?: defaults.dock,
-            settings = json.optJSONObject("settings")?.toSettings(defaults.settings) ?: defaults.settings,
+            settings = settings,
         )
     }
 
