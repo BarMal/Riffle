@@ -47,4 +47,22 @@ class OverlayDockPositioningTest {
             ),
         )
     }
+
+    @Test
+    fun coercesOverlayDockSettingsToVisibleBounds() {
+        val settings =
+            OverlayDockSettings(
+                handleThicknessDp = -1,
+                handleHeightDp = -1,
+                verticalOffsetDp = 999,
+                handleAlphaPercent = -1,
+                expandedIconSizeDp = 999,
+            ).coerceOverlayDockSettings()
+
+        assertEquals(MIN_OVERLAY_DOCK_HANDLE_THICKNESS_DP, settings.handleThicknessDp)
+        assertEquals(MIN_OVERLAY_DOCK_HANDLE_HEIGHT_DP, settings.handleHeightDp)
+        assertEquals(MAX_OVERLAY_DOCK_VERTICAL_OFFSET_DP, settings.verticalOffsetDp)
+        assertEquals(MIN_OVERLAY_DOCK_HANDLE_ALPHA_PERCENT, settings.handleAlphaPercent)
+        assertEquals(MAX_OVERLAY_DOCK_EXPANDED_ICON_SIZE_DP, settings.expandedIconSizeDp)
+    }
 }
