@@ -272,8 +272,8 @@ private fun OverlayDockStepperSetting(
     }
 }
 
-private const val OVERLAY_THICKNESS_STEP_DP = 2
-private const val OVERLAY_SIZE_STEP_DP = 8
+private const val OVERLAY_THICKNESS_STEP_DP = 6
+private const val OVERLAY_SIZE_STEP_DP = 24
 private const val OVERLAY_OFFSET_STEP_DP = 24
 private const val OVERLAY_ALPHA_STEP = 5
 private const val OVERLAY_ICON_STEP_DP = 4
