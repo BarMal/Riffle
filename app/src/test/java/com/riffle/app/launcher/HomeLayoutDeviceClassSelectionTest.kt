@@ -50,6 +50,18 @@ class HomeLayoutDeviceClassSelectionTest {
     }
 
     @Test
+    fun classifiesPhoneSizedWindowWithFoldingFeatureAsPhone() {
+        assertEquals(
+            HomeLayoutDeviceClass.PHONE,
+            homeLayoutDeviceClassFromWindowLayout(
+                hasFoldingFeature = true,
+                screenWidthDp = 412,
+                screenHeightDp = 915,
+            ),
+        )
+    }
+
+    @Test
     fun classifiesWindowWithoutFoldingFeatureFromConfiguration() {
         assertEquals(
             HomeLayoutDeviceClass.TABLET,
