@@ -6,7 +6,9 @@ import android.graphics.Color
 import android.graphics.PixelFormat
 import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
+import android.view.MotionEvent
 import android.view.View
+import android.view.ViewConfiguration
 import android.view.WindowManager
 import android.widget.FrameLayout
 import android.widget.HorizontalScrollView
@@ -18,6 +20,8 @@ import com.riffle.app.launcher.apps.AndroidAppLauncher
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.settings.OverlayDockEdge
 import com.riffle.core.domain.launcher.settings.OverlayDockSettings
+import com.riffle.core.domain.launcher.settings.overlayDockVerticalOffsetFromDrag
+import kotlin.math.abs
 
 internal class OverlayDockViewFactory(
     private val context: Context,
@@ -26,6 +30,8 @@ internal class OverlayDockViewFactory(
     fun collapsedHandleView(
         settings: OverlayDockSettings,
         onExpand: () -> Unit,
+        onVerticalOffsetChange: (Int) -> Unit,
+        onVerticalOffsetCommit: (Int) -> Unit,
     ): View =
         TextView(context).apply {
             text = ""
@@ -39,6 +45,11 @@ internal class OverlayDockViewFactory(
                     context.dp(settings.handleHeightDp),
                 )
             setOnClickListener { onExpand() }
+            setDragPositionListener(
+                settings = settings,
+                onVerticalOffsetChange = onVerticalOffsetChange,
+                onVerticalOffsetCommit = onVerticalOffsetCommit,
+            )
         }
 
     fun expandedDockView(
@@ -175,13 +186,6 @@ internal class OverlayDockViewFactory(
             cornerRadius = context.dpFloat(18)
             setColor(Color.argb(24, 255, 255, 255))
         }
-
-    private fun View.setPadding(
-        horizontal: Int,
-        vertical: Int,
-    ) {
-        setPadding(horizontal, vertical, horizontal, vertical)
-    }
 }
 
 private const val EDGE_HANDLE_THICKNESS_DP = 18
@@ -198,3 +202,61 @@ private fun Int.toColorAlpha(): Int = (this.coerceIn(0, 100) * 255) / 100
 private fun Context.dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
 
 private fun Context.dpFloat(value: Int): Float = value * resources.displayMetrics.density
+
+private fun View.setPadding(
+    horizontal: Int,
+    vertical: Int,
+) {
+    setPadding(horizontal, vertical, horizontal, vertical)
+}
+
+private fun View.setDragPositionListener(
+    settings: OverlayDockSettings,
+    onVerticalOffsetChange: (Int) -> Unit,
+    onVerticalOffsetCommit: (Int) -> Unit,
+) {
+    val touchSlop = ViewConfiguration.get(context).scaledTouchSlop
+    var startRawY = 0f
+    var latestOffsetDp = settings.verticalOffsetDp
+    var dragging = false
+
+    setOnTouchListener { view, event ->
+        when (event.actionMasked) {
+            MotionEvent.ACTION_DOWN -> {
+                startRawY = event.rawY
+                latestOffsetDp = settings.verticalOffsetDp
+                dragging = false
+                true
+            }
+
+            MotionEvent.ACTION_MOVE -> {
+                val dragDeltaPx = event.rawY - startRawY
+                if (abs(dragDeltaPx) > touchSlop) {
+                    dragging = true
+                }
+                if (dragging) {
+                    latestOffsetDp =
+                        overlayDockVerticalOffsetFromDrag(
+                            startOffsetDp = settings.verticalOffsetDp,
+                            dragDeltaPx = dragDeltaPx,
+                            density = context.resources.displayMetrics.density,
+                        )
+                    onVerticalOffsetChange(latestOffsetDp)
+                }
+                true
+            }
+
+            MotionEvent.ACTION_UP -> {
+                if (dragging) {
+                    onVerticalOffsetCommit(latestOffsetDp)
+                } else {
+                    view.performClick()
+                }
+                true
+            }
+
+            MotionEvent.ACTION_CANCEL -> true
+            else -> false
+        }
+    }
+}
