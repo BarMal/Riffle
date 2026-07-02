@@ -2,6 +2,7 @@ package com.riffle.app.launcher
 
 import com.riffle.core.domain.launcher.FirstRunStatus
 import com.riffle.core.domain.launcher.HomeRoleStatus
+import com.riffle.core.domain.launcher.OverlayDockPermissionStatus
 import com.riffle.core.domain.launcher.ShellDestination
 import com.riffle.core.domain.launcher.ShellNavigationAction
 import com.riffle.core.domain.launcher.apps.AppActivityName
@@ -106,6 +107,18 @@ class LauncherShellViewModelTest {
         )
 
         assertEquals(NotificationAccessStatus.GRANTED, viewModel.state.value.notificationAccessStatus)
+    }
+
+    @Test
+    fun refreshesOverlayDockPermissionStatus() {
+        val viewModel = LauncherShellViewModel(firstRunRepository = FakeFirstRunRepository())
+
+        viewModel.onHomeRoleStatusChanged(
+            homeRoleStatus = HomeRoleStatus.NOT_DEFAULT_HOME,
+            overlayDockPermissionStatus = OverlayDockPermissionStatus.GRANTED,
+        )
+
+        assertEquals(OverlayDockPermissionStatus.GRANTED, viewModel.state.value.overlayDockPermissionStatus)
     }
 
     @Test

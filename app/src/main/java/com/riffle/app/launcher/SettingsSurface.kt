@@ -27,7 +27,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.home.WallpaperSource
-import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
 
 @Composable
@@ -154,12 +153,11 @@ private fun SettingsPageContent(
                 onAction = onAction,
             )
         }
-        SettingsSection(title = "Permissions") {
-            NotificationAccessSetting(
-                status = state.notificationAccessStatus,
-                onAction = onAction,
-            )
-        }
+        SettingsPermissionsSection(
+            notificationAccessStatus = state.notificationAccessStatus,
+            overlayDockPermissionStatus = state.overlayDockPermissionStatus,
+            onAction = onAction,
+        )
         SettingsSection(title = "Apps") {
             AppRefreshSetting(onAction = onAction)
         }
@@ -287,32 +285,6 @@ private fun WallpaperSourceSetting(
 }
 
 @Composable
-private fun NotificationAccessSetting(
-    status: NotificationAccessStatus,
-    onAction: (LauncherShellAction) -> Unit,
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        SettingsTextColumn(
-            modifier = Modifier.weight(1f),
-            title = "Notifications",
-            subtitle = status.label,
-        )
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            TextButton(onClick = { onAction(LauncherShellAction.OpenNotifications) }) {
-                SettingsButtonText(text = "View")
-            }
-            TextButton(onClick = { onAction(LauncherShellAction.RequestNotificationAccess) }) {
-                SettingsButtonText(text = "Open")
-            }
-        }
-    }
-}
-
-@Composable
 private fun HiddenAppsSetting(
     apps: List<InstalledApp>,
     onAction: (LauncherShellAction) -> Unit,
@@ -355,14 +327,6 @@ private fun HiddenAppRow(
         }
     }
 }
-
-private val NotificationAccessStatus.label: String
-    get() =
-        when (this) {
-            NotificationAccessStatus.UNKNOWN -> "Unknown"
-            NotificationAccessStatus.GRANTED -> "Allowed"
-            NotificationAccessStatus.NOT_GRANTED -> "Not allowed"
-        }
 
 private val HapticFeedbackStrength.label: String
     get() =

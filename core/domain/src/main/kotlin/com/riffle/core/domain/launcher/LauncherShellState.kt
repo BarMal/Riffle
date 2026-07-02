@@ -17,6 +17,7 @@ import com.riffle.core.domain.launcher.widgets.InstalledWidgetProvider
 data class LauncherShellState(
     val firstRunStatus: FirstRunStatus = FirstRunStatus.NEEDS_HOME_ROLE,
     val homeRoleStatus: HomeRoleStatus = HomeRoleStatus.UNKNOWN,
+    val overlayDockPermissionStatus: OverlayDockPermissionStatus = OverlayDockPermissionStatus.UNKNOWN,
     val destination: ShellDestination = ShellDestination.HOME,
     val homeLayout: HomeLayout = HomeLayoutDefaults.standard(),
     val homeLayoutSet: HomeLayoutSet = HomeLayoutSet.fromLayout(homeLayout),

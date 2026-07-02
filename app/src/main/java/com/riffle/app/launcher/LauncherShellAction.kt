@@ -38,6 +38,8 @@ sealed interface LauncherShellAction {
 
     data object RequestNotificationAccess : LauncherShellAction
 
+    data object RequestOverlayDockPermission : LauncherShellAction
+
     data object ExportLauncherBackup : LauncherShellAction
 
     data object RequestImportLauncherBackup : LauncherShellAction

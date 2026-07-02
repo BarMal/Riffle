@@ -19,6 +19,11 @@ internal class DefaultLauncherSettingsActionHandler(
                 true
             }
 
+            LauncherSettingsActionRoute.RequestOverlayDockPermission -> {
+                callbacks.requestOverlayDockPermission()
+                true
+            }
+
             LauncherSettingsActionRoute.ExportBackup -> {
                 callbacks.exportBackup()
                 true
@@ -36,6 +41,7 @@ internal class DefaultLauncherSettingsActionHandler(
 internal data class LauncherSettingsActionCallbacks(
     val applySettingsState: (LauncherShellAction) -> Unit,
     val requestNotificationAccess: () -> Unit,
+    val requestOverlayDockPermission: () -> Unit,
     val exportBackup: () -> Unit,
     val importBackup: () -> Unit,
 )
@@ -46,6 +52,8 @@ internal sealed interface LauncherSettingsActionRoute {
     ) : LauncherSettingsActionRoute
 
     data object RequestNotificationAccess : LauncherSettingsActionRoute
+
+    data object RequestOverlayDockPermission : LauncherSettingsActionRoute
 
     data object ExportBackup : LauncherSettingsActionRoute
 
@@ -63,6 +71,7 @@ internal fun LauncherShellAction.launcherSettingsActionRoute(): LauncherSettings
         -> LauncherSettingsActionRoute.SettingsState(this)
 
         LauncherShellAction.RequestNotificationAccess -> LauncherSettingsActionRoute.RequestNotificationAccess
+        LauncherShellAction.RequestOverlayDockPermission -> LauncherSettingsActionRoute.RequestOverlayDockPermission
         LauncherShellAction.ExportLauncherBackup -> LauncherSettingsActionRoute.ExportBackup
         LauncherShellAction.RequestImportLauncherBackup -> LauncherSettingsActionRoute.RequestImportBackup
         else -> null
