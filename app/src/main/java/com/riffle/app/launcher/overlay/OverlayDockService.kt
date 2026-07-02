@@ -15,6 +15,7 @@ import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.OverlayDockSettings
+import com.riffle.core.domain.launcher.settings.coerceOverlayDockSettings
 
 class OverlayDockService : Service() {
     private val windowManager by lazy { getSystemService(WindowManager::class.java) }
@@ -53,7 +54,7 @@ class OverlayDockService : Service() {
     private fun renderOverlay() {
         removeOverlay()
 
-        val overlaySettings = loadLauncherSettings().overlayDock
+        val overlaySettings = loadLauncherSettings().overlayDock.coerceOverlayDockSettings()
         currentOverlaySettings = overlaySettings
         val shortcuts = overlayDockShortcuts()
         val view =
@@ -102,7 +103,7 @@ class OverlayDockService : Service() {
 
     private fun moveCollapsedHandle(offsetDp: Int) {
         val view = overlayView ?: return
-        val settings = currentOverlaySettings?.copy(verticalOffsetDp = offsetDp) ?: return
+        val settings = currentOverlaySettings?.copy(verticalOffsetDp = offsetDp)?.coerceOverlayDockSettings() ?: return
         currentOverlaySettings = settings
         windowManager.updateViewLayout(view, viewFactory.overlayLayoutParams(settings))
     }
@@ -111,7 +112,10 @@ class OverlayDockService : Service() {
         val launcherSettings = loadLauncherSettings()
         launcherSettingsRepository.saveLauncherSettings(
             launcherSettings.copy(
-                overlayDock = launcherSettings.overlayDock.copy(verticalOffsetDp = offsetDp),
+                overlayDock =
+                    launcherSettings.overlayDock
+                        .copy(verticalOffsetDp = offsetDp)
+                        .coerceOverlayDockSettings(),
             ),
         )
     }

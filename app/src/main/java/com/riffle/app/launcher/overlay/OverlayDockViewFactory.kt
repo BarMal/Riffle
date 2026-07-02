@@ -34,10 +34,7 @@ internal class OverlayDockViewFactory(
         onVerticalOffsetChange: (Int) -> Unit,
         onVerticalOffsetCommit: (Int) -> Unit,
     ): View =
-        TextView(context).apply {
-            text = ""
-            setTextColor(Color.WHITE)
-            gravity = Gravity.CENTER
+        FrameLayout(context).apply {
             background = edgeHandleBackground(settings)
             contentDescription = "Open Riffle overlay dock"
             layoutParams =
@@ -45,6 +42,17 @@ internal class OverlayDockViewFactory(
                     context.dp(settings.handleThicknessDp),
                     context.dp(settings.handleHeightDp),
                 )
+            addView(
+                View(context).apply {
+                    background = handleGripBackground()
+                    layoutParams =
+                        FrameLayout.LayoutParams(
+                            context.dp(GRIP_WIDTH_DP),
+                            context.dp((settings.handleHeightDp / 2).coerceAtLeast(GRIP_MIN_HEIGHT_DP)),
+                            Gravity.CENTER,
+                        )
+                },
+            )
             setOnClickListener { onExpand() }
             setDragPositionListener(
                 settings = settings,
@@ -224,6 +232,13 @@ internal class OverlayDockViewFactory(
             setColor(Color.argb(settings.handleAlphaPercent.toColorAlpha(), 31, 36, 42))
         }
 
+    private fun handleGripBackground(): GradientDrawable =
+        GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadius = context.dpFloat(2)
+            setColor(Color.argb(210, 255, 255, 255))
+        }
+
     private fun transparentRoundedBackground(): GradientDrawable =
         GradientDrawable().apply {
             shape = GradientDrawable.RECTANGLE
@@ -231,6 +246,9 @@ internal class OverlayDockViewFactory(
             setColor(Color.argb(24, 255, 255, 255))
         }
 }
+
+private const val GRIP_WIDTH_DP = 3
+private const val GRIP_MIN_HEIGHT_DP = 20
 
 private val OverlayDockEdge.edgeGravity: Int
     get() =
