@@ -75,7 +75,7 @@ internal class OverlayDockViewFactory(
                                 addView(
                                     shortcutButton(
                                         shortcut = shortcut,
-                                        showLabel = settings.showLabels,
+                                        settings = settings,
                                         onLaunch = onLaunch,
                                     ),
                                 )
@@ -105,9 +105,11 @@ internal class OverlayDockViewFactory(
 
     private fun shortcutButton(
         shortcut: AppShortcutItem,
-        showLabel: Boolean,
+        settings: OverlayDockSettings,
         onLaunch: () -> Unit,
     ): View {
+        val iconSizeDp = settings.expandedIconSizeDp
+        val labelWidthDp = iconSizeDp + 16
         val iconButton =
             ImageButton(context).apply {
                 val icon =
@@ -123,17 +125,17 @@ internal class OverlayDockViewFactory(
                 background = transparentRoundedBackground()
                 contentDescription = shortcut.label
                 setPadding(context.dp(8))
-                layoutParams = LinearLayout.LayoutParams(context.dp(52), context.dp(52))
+                layoutParams = LinearLayout.LayoutParams(context.dp(iconSizeDp), context.dp(iconSizeDp))
                 setOnClickListener {
                     appLauncher.launch(shortcut.appIdentity)
                     onLaunch()
                 }
             }
 
-        if (!showLabel) {
+        if (!settings.showLabels) {
             return iconButton.apply {
                 layoutParams =
-                    LinearLayout.LayoutParams(context.dp(52), context.dp(52))
+                    LinearLayout.LayoutParams(context.dp(iconSizeDp), context.dp(iconSizeDp))
                         .apply { marginEnd = context.dp(6) }
             }
         }
@@ -142,7 +144,7 @@ internal class OverlayDockViewFactory(
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
             layoutParams =
-                LinearLayout.LayoutParams(context.dp(68), LinearLayout.LayoutParams.WRAP_CONTENT)
+                LinearLayout.LayoutParams(context.dp(labelWidthDp), LinearLayout.LayoutParams.WRAP_CONTENT)
                     .apply { marginEnd = context.dp(6) }
             addView(iconButton)
             addView(
@@ -155,7 +157,7 @@ internal class OverlayDockViewFactory(
                     ellipsize = TextUtils.TruncateAt.END
                     layoutParams =
                         LinearLayout.LayoutParams(
-                            context.dp(68),
+                            context.dp(labelWidthDp),
                             LinearLayout.LayoutParams.WRAP_CONTENT,
                         )
                 },

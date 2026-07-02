@@ -2,10 +2,12 @@ package com.riffle.app.launcher
 
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettingsRepository
+import com.riffle.core.domain.launcher.settings.MAX_OVERLAY_DOCK_EXPANDED_ICON_SIZE_DP
 import com.riffle.core.domain.launcher.settings.MAX_OVERLAY_DOCK_HANDLE_ALPHA_PERCENT
 import com.riffle.core.domain.launcher.settings.MAX_OVERLAY_DOCK_HANDLE_HEIGHT_DP
 import com.riffle.core.domain.launcher.settings.MAX_OVERLAY_DOCK_HANDLE_THICKNESS_DP
 import com.riffle.core.domain.launcher.settings.MAX_OVERLAY_DOCK_VERTICAL_OFFSET_DP
+import com.riffle.core.domain.launcher.settings.MIN_OVERLAY_DOCK_EXPANDED_ICON_SIZE_DP
 import com.riffle.core.domain.launcher.settings.MIN_OVERLAY_DOCK_HANDLE_ALPHA_PERCENT
 import com.riffle.core.domain.launcher.settings.MIN_OVERLAY_DOCK_HANDLE_HEIGHT_DP
 import com.riffle.core.domain.launcher.settings.MIN_OVERLAY_DOCK_HANDLE_THICKNESS_DP
@@ -48,6 +50,7 @@ class LauncherShellOverlayDockSettingsTest {
         viewModel.onLauncherSettingsActionSelected(LauncherShellAction.SelectOverlayDockHandleHeight(heightDp = 96))
         viewModel.onLauncherSettingsActionSelected(LauncherShellAction.SelectOverlayDockVerticalOffset(offsetDp = -48))
         viewModel.onLauncherSettingsActionSelected(LauncherShellAction.SelectOverlayDockHandleAlpha(alphaPercent = 65))
+        viewModel.onLauncherSettingsActionSelected(LauncherShellAction.SelectOverlayDockExpandedIconSize(sizeDp = 64))
         viewModel.onLauncherSettingsActionSelected(LauncherShellAction.SelectOverlayDockShowLabels(showLabels = true))
 
         val settings = viewModel.state.value.launcherSettings.overlayDock
@@ -56,6 +59,7 @@ class LauncherShellOverlayDockSettingsTest {
         assertEquals(96, settings.handleHeightDp)
         assertEquals(-48, settings.verticalOffsetDp)
         assertEquals(65, settings.handleAlphaPercent)
+        assertEquals(64, settings.expandedIconSizeDp)
         assertEquals(true, settings.showLabels)
         assertEquals(viewModel.state.value.launcherSettings, repository.savedSettings)
     }
@@ -75,12 +79,14 @@ class LauncherShellOverlayDockSettingsTest {
         viewModel.onLauncherSettingsActionSelected(LauncherShellAction.SelectOverlayDockHandleHeight(heightDp = -1))
         viewModel.onLauncherSettingsActionSelected(LauncherShellAction.SelectOverlayDockVerticalOffset(offsetDp = -999))
         viewModel.onLauncherSettingsActionSelected(LauncherShellAction.SelectOverlayDockHandleAlpha(alphaPercent = -1))
+        viewModel.onLauncherSettingsActionSelected(LauncherShellAction.SelectOverlayDockExpandedIconSize(sizeDp = -1))
 
         var settings = viewModel.state.value.launcherSettings.overlayDock
         assertEquals(MIN_OVERLAY_DOCK_HANDLE_THICKNESS_DP, settings.handleThicknessDp)
         assertEquals(MIN_OVERLAY_DOCK_HANDLE_HEIGHT_DP, settings.handleHeightDp)
         assertEquals(MIN_OVERLAY_DOCK_VERTICAL_OFFSET_DP, settings.verticalOffsetDp)
         assertEquals(MIN_OVERLAY_DOCK_HANDLE_ALPHA_PERCENT, settings.handleAlphaPercent)
+        assertEquals(MIN_OVERLAY_DOCK_EXPANDED_ICON_SIZE_DP, settings.expandedIconSizeDp)
 
         viewModel.onLauncherSettingsActionSelected(
             LauncherShellAction.SelectOverlayDockHandleThickness(thicknessDp = 999),
@@ -88,12 +94,14 @@ class LauncherShellOverlayDockSettingsTest {
         viewModel.onLauncherSettingsActionSelected(LauncherShellAction.SelectOverlayDockHandleHeight(heightDp = 999))
         viewModel.onLauncherSettingsActionSelected(LauncherShellAction.SelectOverlayDockVerticalOffset(offsetDp = 999))
         viewModel.onLauncherSettingsActionSelected(LauncherShellAction.SelectOverlayDockHandleAlpha(alphaPercent = 999))
+        viewModel.onLauncherSettingsActionSelected(LauncherShellAction.SelectOverlayDockExpandedIconSize(sizeDp = 999))
 
         settings = viewModel.state.value.launcherSettings.overlayDock
         assertEquals(MAX_OVERLAY_DOCK_HANDLE_THICKNESS_DP, settings.handleThicknessDp)
         assertEquals(MAX_OVERLAY_DOCK_HANDLE_HEIGHT_DP, settings.handleHeightDp)
         assertEquals(MAX_OVERLAY_DOCK_VERTICAL_OFFSET_DP, settings.verticalOffsetDp)
         assertEquals(MAX_OVERLAY_DOCK_HANDLE_ALPHA_PERCENT, settings.handleAlphaPercent)
+        assertEquals(MAX_OVERLAY_DOCK_EXPANDED_ICON_SIZE_DP, settings.expandedIconSizeDp)
         assertEquals(viewModel.state.value.launcherSettings, repository.savedSettings)
     }
 

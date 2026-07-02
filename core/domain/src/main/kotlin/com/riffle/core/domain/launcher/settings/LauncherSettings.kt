@@ -28,6 +28,7 @@ data class OverlayDockSettings(
     val handleHeightDp: Int = DEFAULT_OVERLAY_DOCK_HANDLE_HEIGHT_DP,
     val verticalOffsetDp: Int = DEFAULT_OVERLAY_DOCK_VERTICAL_OFFSET_DP,
     val handleAlphaPercent: Int = DEFAULT_OVERLAY_DOCK_HANDLE_ALPHA_PERCENT,
+    val expandedIconSizeDp: Int = DEFAULT_OVERLAY_DOCK_EXPANDED_ICON_SIZE_DP,
     val showLabels: Boolean = false,
 )
 
@@ -48,6 +49,9 @@ const val MAX_OVERLAY_DOCK_VERTICAL_OFFSET_DP = 240
 const val DEFAULT_OVERLAY_DOCK_HANDLE_ALPHA_PERCENT = 80
 const val MIN_OVERLAY_DOCK_HANDLE_ALPHA_PERCENT = 20
 const val MAX_OVERLAY_DOCK_HANDLE_ALPHA_PERCENT = 100
+const val DEFAULT_OVERLAY_DOCK_EXPANDED_ICON_SIZE_DP = 52
+const val MIN_OVERLAY_DOCK_EXPANDED_ICON_SIZE_DP = 40
+const val MAX_OVERLAY_DOCK_EXPANDED_ICON_SIZE_DP = 80
 
 data class HomeSwipeGestureSettings(
     val up: LauncherGestureAction = LauncherGestureAction.OPEN_APP_DRAWER,
