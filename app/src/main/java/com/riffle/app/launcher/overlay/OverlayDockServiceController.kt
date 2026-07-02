@@ -32,7 +32,7 @@ internal fun overlayDockServiceCommand(
     permissionStatus: OverlayDockPermissionStatus,
 ): OverlayDockServiceCommand =
     when {
-        settings.overlayDock.enabled && permissionStatus == OverlayDockPermissionStatus.GRANTED ->
+        settings.overlayDock.enabled && permissionStatus != OverlayDockPermissionStatus.NOT_GRANTED ->
             OverlayDockServiceCommand.START
 
         else -> OverlayDockServiceCommand.STOP
