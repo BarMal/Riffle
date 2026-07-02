@@ -103,7 +103,11 @@ internal fun LauncherShellState.withSettingsTargetLayout(
     homeLayoutRepository.saveHomeLayoutSet(layoutSet)
 
     return copy(
-        homeLayout = layoutSet.activeLayout,
+        homeLayout =
+            when (layoutSet.activeKey) {
+                key -> layoutSet.activeLayout
+                else -> homeLayout
+            },
         homeLayoutSet = layoutSet,
     )
 }
