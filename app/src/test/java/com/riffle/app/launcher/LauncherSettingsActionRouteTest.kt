@@ -23,6 +23,10 @@ class LauncherSettingsActionRouteTest {
             LauncherShellAction.RequestNotificationAccess.launcherSettingsActionRoute(),
         )
         assertEquals(
+            LauncherSettingsActionRoute.RequestOverlayDockPermission,
+            LauncherShellAction.RequestOverlayDockPermission.launcherSettingsActionRoute(),
+        )
+        assertEquals(
             LauncherSettingsActionRoute.ExportBackup,
             LauncherShellAction.ExportLauncherBackup.launcherSettingsActionRoute(),
         )

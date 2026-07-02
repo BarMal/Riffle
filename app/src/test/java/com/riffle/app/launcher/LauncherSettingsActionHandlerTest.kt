@@ -32,16 +32,18 @@ class LauncherSettingsActionHandlerTest {
                 callbacks =
                     callbacks(
                         requestNotificationAccess = { calls += "notifications" },
+                        requestOverlayDockPermission = { calls += "overlay" },
                         exportBackup = { calls += "export" },
                         importBackup = { calls += "import" },
                     ),
             )
 
         assertTrue(handler.handle(LauncherShellAction.RequestNotificationAccess))
+        assertTrue(handler.handle(LauncherShellAction.RequestOverlayDockPermission))
         assertTrue(handler.handle(LauncherShellAction.ExportLauncherBackup))
         assertTrue(handler.handle(LauncherShellAction.RequestImportLauncherBackup))
 
-        assertEquals(listOf("notifications", "export", "import"), calls)
+        assertEquals(listOf("notifications", "overlay", "export", "import"), calls)
     }
 
     @Test
@@ -57,12 +59,14 @@ class LauncherSettingsActionHandlerTest {
     private fun callbacks(
         applySettingsState: (LauncherShellAction) -> Unit = {},
         requestNotificationAccess: () -> Unit = {},
+        requestOverlayDockPermission: () -> Unit = {},
         exportBackup: () -> Unit = {},
         importBackup: () -> Unit = {},
     ): LauncherSettingsActionCallbacks =
         LauncherSettingsActionCallbacks(
             applySettingsState = applySettingsState,
             requestNotificationAccess = requestNotificationAccess,
+            requestOverlayDockPermission = requestOverlayDockPermission,
             exportBackup = exportBackup,
             importBackup = importBackup,
         )

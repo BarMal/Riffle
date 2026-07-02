@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.riffle.core.domain.launcher.HomeRoleStatus
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.LauncherShellStateReducer
+import com.riffle.core.domain.launcher.OverlayDockPermissionStatus
 import com.riffle.core.domain.launcher.ShellNavigationAction
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppShortcutRepository
@@ -113,6 +114,7 @@ class LauncherShellViewModel(
     fun onHomeRoleStatusChanged(
         homeRoleStatus: HomeRoleStatus,
         notificationAccessStatus: NotificationAccessStatus = mutableState.value.notificationAccessStatus,
+        overlayDockPermissionStatus: OverlayDockPermissionStatus = mutableState.value.overlayDockPermissionStatus,
     ) {
         mutableState.value =
             reducer.homeRoleChanged(
@@ -120,6 +122,7 @@ class LauncherShellViewModel(
                 homeRoleStatus = homeRoleStatus,
             ).copy(
                 notificationAccessStatus = notificationAccessStatus,
+                overlayDockPermissionStatus = overlayDockPermissionStatus,
             ).also { state -> persistCompletedFirstRun(state, firstRunRepository) }
     }
 

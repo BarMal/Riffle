@@ -73,6 +73,7 @@ class MainActivity : ComponentActivity() {
     }
     private val wallpaperController get() = dependencies.wallpaperController
     private val notificationAccessGateway get() = dependencies.notificationAccessGateway
+    private val overlayDockPermissionGateway get() = dependencies.overlayDockPermissionGateway
     private val homeLayoutDeviceClassObserver get() = dependencies.homeLayoutDeviceClassObserver
     private val activeNotificationRefreshCoordinator by lazy {
         dependencies.activeNotificationRefreshCoordinator { shellViewModel.refreshNotifications() }
@@ -90,6 +91,13 @@ class MainActivity : ComponentActivity() {
     }
 
     private val requestHomeRole =
+        registerForActivityResult(
+            ActivityResultContracts.StartActivityForResult(),
+        ) {
+            refreshPlatformStatuses()
+        }
+
+    private val requestOverlayDockPermission =
         registerForActivityResult(
             ActivityResultContracts.StartActivityForResult(),
         ) {
@@ -146,6 +154,11 @@ class MainActivity : ComponentActivity() {
                                 runCatching {
                                     startActivity(notificationAccessGateway.createNotificationListenerSettingsIntent())
                                 }
+                            },
+                            requestOverlayDockPermission = {
+                                requestOverlayDockPermission.launch(
+                                    overlayDockPermissionGateway.createOverlayPermissionSettingsIntent(),
+                                )
                             },
                             exportBackup = { createBackupDocument.launch(BACKUP_DOCUMENT_NAME) },
                             importBackup = { openBackupDocument.launch(BACKUP_DOCUMENT_OPEN_MIME_TYPES) },
@@ -239,6 +252,7 @@ class MainActivity : ComponentActivity() {
         shellViewModel.onHomeRoleStatusChanged(
             homeRoleStatus = homeRoleGateway.getHomeRoleStatus(),
             notificationAccessStatus = notificationAccessGateway.getNotificationAccessStatus(),
+            overlayDockPermissionStatus = overlayDockPermissionGateway.getOverlayDockPermissionStatus(),
         )
     }
 
