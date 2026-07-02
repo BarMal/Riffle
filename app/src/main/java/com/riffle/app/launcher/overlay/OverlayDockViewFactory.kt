@@ -44,7 +44,7 @@ internal class OverlayDockViewFactory(
                 )
             addView(
                 View(context).apply {
-                    background = handleGripBackground()
+                    background = handleGripBackground(settings.handleAlphaPercent)
                     layoutParams =
                         FrameLayout.LayoutParams(
                             context.dp(GRIP_WIDTH_DP),
@@ -232,11 +232,11 @@ internal class OverlayDockViewFactory(
             setColor(Color.argb(settings.handleAlphaPercent.toColorAlpha(), 31, 36, 42))
         }
 
-    private fun handleGripBackground(): GradientDrawable =
+    private fun handleGripBackground(alphaPercent: Int): GradientDrawable =
         GradientDrawable().apply {
             shape = GradientDrawable.RECTANGLE
             cornerRadius = context.dpFloat(2)
-            setColor(Color.argb(210, 255, 255, 255))
+            setColor(Color.argb(alphaPercent.toColorAlpha(), 255, 255, 255))
         }
 
     private fun transparentRoundedBackground(): GradientDrawable =
