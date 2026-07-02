@@ -18,12 +18,10 @@ import com.riffle.core.domain.launcher.home.MAX_DOCK_ITEM_SPACING_DP
 import com.riffle.core.domain.launcher.home.MIN_DOCK_BACKGROUND_ALPHA_PERCENT
 import com.riffle.core.domain.launcher.home.MIN_DOCK_ICON_SIZE_DP
 import com.riffle.core.domain.launcher.home.MIN_DOCK_ITEM_SPACING_DP
-import com.riffle.core.domain.launcher.settings.OverlayDockSettings
 
 @Composable
 internal fun DockSetting(
     dock: DockModel,
-    overlayDock: OverlayDockSettings,
     onAction: (LauncherShellAction) -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -49,10 +47,6 @@ internal fun DockSetting(
         )
         DockItemSpacingSetting(
             spacingDp = dock.itemSpacingDp,
-            onAction = onAction,
-        )
-        OverlayDockSetting(
-            settings = overlayDock,
             onAction = onAction,
         )
     }

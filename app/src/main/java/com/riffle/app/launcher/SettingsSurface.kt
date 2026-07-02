@@ -136,13 +136,7 @@ private fun SettingsPageContent(
                 onAction = onAction,
             )
         }
-        SettingsSection(title = "Dock") {
-            DockSetting(
-                dock = state.homeLayout.dock,
-                overlayDock = state.settings.overlayDock,
-                onAction = onAction,
-            )
-        }
+        SettingsDockSections(state = state, onAction = onAction)
         SettingsSection(title = "Gestures") {
             HomeSwipeGestureSetting(
                 settings = state.settings.gestures.homeSwipe,
@@ -178,6 +172,25 @@ private fun SettingsPageContent(
                 appBuildIdentityLabel = state.appBuildIdentityLabel,
             )
         }
+    }
+}
+
+@Composable
+private fun SettingsDockSections(
+    state: SettingsSurfaceState,
+    onAction: (LauncherShellAction) -> Unit,
+) {
+    SettingsSection(title = "Dock") {
+        DockSetting(
+            dock = state.homeLayout.dock,
+            onAction = onAction,
+        )
+    }
+    SettingsSection(title = "Floating dock") {
+        OverlayDockSetting(
+            settings = state.settings.overlayDock,
+            onAction = onAction,
+        )
     }
 }
 

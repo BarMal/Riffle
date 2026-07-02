@@ -1,5 +1,10 @@
 package com.riffle.app.launcher
 
+import com.riffle.core.domain.launcher.home.HomeLayout
+import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
+import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
+import com.riffle.core.domain.launcher.home.HomeLayoutRepository
+import com.riffle.core.domain.launcher.home.HomeLayoutSet
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettingsRepository
 import com.riffle.core.domain.launcher.settings.MAX_OVERLAY_DOCK_EXPANDED_ICON_SIZE_DP
@@ -33,6 +38,34 @@ class LauncherShellOverlayDockSettingsTest {
 
         assertEquals(true, viewModel.state.value.launcherSettings.overlayDock.enabled)
         assertEquals(viewModel.state.value.launcherSettings, repository.savedSettings)
+    }
+
+    @Test
+    fun savesOverlayDockSettingsGloballyWithoutRewritingLayout() {
+        val homeLayoutRepository = FakeHomeLayoutRepository()
+        val launcherSettingsRepository = FakeLauncherSettingsRepository()
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                homeLayoutRepository = homeLayoutRepository,
+                launcherSettingsRepository = launcherSettingsRepository,
+            )
+
+        viewModel.onHomePageEdited(
+            LauncherShellAction.SelectHomeLayoutDeviceClass(
+                deviceClass = HomeLayoutDeviceClass.FOLDABLE,
+                availableDeviceClasses = setOf(HomeLayoutDeviceClass.PHONE, HomeLayoutDeviceClass.FOLDABLE),
+            ),
+        )
+        val layoutSaveCountAfterDeviceSwitch = homeLayoutRepository.saveLayoutSetCount
+
+        viewModel.onLauncherSettingsActionSelected(
+            LauncherShellAction.SelectOverlayDockEnabled(enabled = true),
+        )
+
+        assertEquals(true, viewModel.state.value.launcherSettings.overlayDock.enabled)
+        assertEquals(viewModel.state.value.launcherSettings, launcherSettingsRepository.savedSettings)
+        assertEquals(layoutSaveCountAfterDeviceSwitch, homeLayoutRepository.saveLayoutSetCount)
     }
 
     @Test
@@ -114,6 +147,25 @@ class LauncherShellOverlayDockSettingsTest {
         override fun isFirstRunComplete(): Boolean = false
 
         override fun setFirstRunComplete() = Unit
+    }
+
+    private class FakeHomeLayoutRepository(
+        private var layoutSet: HomeLayoutSet = HomeLayoutSet.fromLayout(HomeLayoutDefaults.standard()),
+    ) : HomeLayoutRepository {
+        var saveLayoutSetCount: Int = 0
+
+        override fun loadHomeLayout(): HomeLayout = layoutSet.activeLayout
+
+        override fun saveHomeLayout(layout: HomeLayout) {
+            layoutSet = layoutSet.withActiveLayout(layout)
+        }
+
+        override fun loadHomeLayoutSet(): HomeLayoutSet = layoutSet
+
+        override fun saveHomeLayoutSet(layoutSet: HomeLayoutSet) {
+            saveLayoutSetCount += 1
+            this.layoutSet = layoutSet
+        }
     }
 
     private class FakeLauncherSettingsRepository(
