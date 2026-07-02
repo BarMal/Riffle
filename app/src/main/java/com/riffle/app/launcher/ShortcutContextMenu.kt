@@ -107,6 +107,16 @@ private fun ShortcutContextSurface.dockManagementItems(shortcut: AppShortcutItem
                             ),
                         ),
                 ),
+                ShortcutContextMenuItem(
+                    label = "Add to floating dock",
+                    action =
+                        LauncherShellAction.AddAppToFloatingDock(
+                            InstalledApp(
+                                identity = shortcut.appIdentity,
+                                label = shortcut.label,
+                            ),
+                        ),
+                ),
             )
 
         ShortcutContextSurface.DOCK -> emptyList()

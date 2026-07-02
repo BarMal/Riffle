@@ -1,5 +1,6 @@
 package com.riffle.core.domain.launcher.settings
 
+import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.WallpaperSettings
 
 data class LauncherSettings(
@@ -23,6 +24,7 @@ data class HapticSettings(
 
 data class OverlayDockSettings(
     val enabled: Boolean = false,
+    val items: List<AppShortcutItem> = emptyList(),
     val edge: OverlayDockEdge = OverlayDockEdge.END,
     val handleThicknessDp: Int = DEFAULT_OVERLAY_DOCK_HANDLE_THICKNESS_DP,
     val handleHeightDp: Int = DEFAULT_OVERLAY_DOCK_HANDLE_HEIGHT_DP,

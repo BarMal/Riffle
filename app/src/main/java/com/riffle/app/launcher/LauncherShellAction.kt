@@ -113,6 +113,8 @@ sealed interface LauncherShellAction {
 
     data class AddAppToDock(val app: InstalledApp) : LauncherShellAction
 
+    data class AddAppToFloatingDock(val app: InstalledApp) : LauncherShellAction
+
     data class SelectDockEnabled(val enabled: Boolean) : LauncherShellAction
 
     data class SelectDockCapacity(val capacity: Int) : LauncherShellAction

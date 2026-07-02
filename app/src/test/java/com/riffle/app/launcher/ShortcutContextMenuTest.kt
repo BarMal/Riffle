@@ -30,6 +30,12 @@ class ShortcutContextMenuTest {
                         InstalledApp(identity = shortcut.appIdentity, label = shortcut.label),
                     ),
                 ),
+                ShortcutContextMenuItem(
+                    "Add to floating dock",
+                    LauncherShellAction.AddAppToFloatingDock(
+                        InstalledApp(identity = shortcut.appIdentity, label = shortcut.label),
+                    ),
+                ),
                 ShortcutContextMenuItem("Remove from home", LauncherShellAction.RemoveHomeShortcut(shortcut.id)),
             ),
             items,
@@ -67,6 +73,12 @@ class ShortcutContextMenuTest {
                 ShortcutContextMenuItem(
                     "Add to dock",
                     LauncherShellAction.AddAppToDock(
+                        InstalledApp(identity = shortcut.appIdentity, label = shortcut.label),
+                    ),
+                ),
+                ShortcutContextMenuItem(
+                    "Add to floating dock",
+                    LauncherShellAction.AddAppToFloatingDock(
                         InstalledApp(identity = shortcut.appIdentity, label = shortcut.label),
                     ),
                 ),

@@ -9,6 +9,7 @@ import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.OverlayDockEdge
 import com.riffle.core.domain.launcher.settings.OverlayDockExpandedOrientation
 import com.riffle.core.domain.launcher.settings.OverlayDockSettings
+import org.json.JSONArray
 import org.json.JSONObject
 
 fun encodeLauncherSettings(settings: LauncherSettings): String =
@@ -65,6 +66,7 @@ private fun JSONObject.toHaptics(defaults: HapticSettings): HapticSettings =
 private fun encodeOverlayDock(settings: OverlayDockSettings): JSONObject =
     JSONObject()
         .put("enabled", settings.enabled)
+        .put("items", JSONArray(settings.items.map(::encodeShortcut)))
         .put("edge", settings.edge.name)
         .put("handleThicknessDp", settings.handleThicknessDp)
         .put("handleHeightDp", settings.handleHeightDp)
@@ -77,6 +79,7 @@ private fun encodeOverlayDock(settings: OverlayDockSettings): JSONObject =
 private fun JSONObject.toOverlayDock(defaults: OverlayDockSettings): OverlayDockSettings =
     defaults.copy(
         enabled = optBoolean("enabled", defaults.enabled),
+        items = optJSONArray("items")?.toShortcuts() ?: defaults.items,
         edge =
             runCatching { OverlayDockEdge.valueOf(optString("edge")) }
                 .getOrDefault(defaults.edge),

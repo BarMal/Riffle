@@ -368,6 +368,7 @@ class LauncherShellViewModel(
                 is LauncherShellAction.SelectOverlayDockExpandedIconSize,
                 is LauncherShellAction.SelectOverlayDockExpandedOrientation,
                 is LauncherShellAction.SelectOverlayDockShowLabels,
+                is LauncherShellAction.AddAppToFloatingDock,
                 ->
                     mutableState.value.withOverlayDockSettingsAction(
                         action = action,
