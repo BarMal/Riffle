@@ -219,5 +219,7 @@ sealed interface LauncherShellAction {
 
     data class SelectOverlayDockHandleAlpha(val alphaPercent: Int) : LauncherShellAction
 
+    data class SelectOverlayDockShowLabels(val showLabels: Boolean) : LauncherShellAction
+
     data class DismissNotifications(val keys: List<LauncherNotificationKey>) : LauncherShellAction
 }

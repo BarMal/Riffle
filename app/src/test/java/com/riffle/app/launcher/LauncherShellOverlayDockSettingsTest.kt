@@ -48,6 +48,7 @@ class LauncherShellOverlayDockSettingsTest {
         viewModel.onLauncherSettingsActionSelected(LauncherShellAction.SelectOverlayDockHandleHeight(heightDp = 96))
         viewModel.onLauncherSettingsActionSelected(LauncherShellAction.SelectOverlayDockVerticalOffset(offsetDp = -48))
         viewModel.onLauncherSettingsActionSelected(LauncherShellAction.SelectOverlayDockHandleAlpha(alphaPercent = 65))
+        viewModel.onLauncherSettingsActionSelected(LauncherShellAction.SelectOverlayDockShowLabels(showLabels = true))
 
         val settings = viewModel.state.value.launcherSettings.overlayDock
         assertEquals(OverlayDockEdge.START, settings.edge)
@@ -55,6 +56,7 @@ class LauncherShellOverlayDockSettingsTest {
         assertEquals(96, settings.handleHeightDp)
         assertEquals(-48, settings.verticalOffsetDp)
         assertEquals(65, settings.handleAlphaPercent)
+        assertEquals(true, settings.showLabels)
         assertEquals(viewModel.state.value.launcherSettings, repository.savedSettings)
     }
 

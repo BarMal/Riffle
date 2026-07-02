@@ -361,6 +361,7 @@ class LauncherShellViewModel(
                 is LauncherShellAction.SelectOverlayDockHandleHeight,
                 is LauncherShellAction.SelectOverlayDockVerticalOffset,
                 is LauncherShellAction.SelectOverlayDockHandleAlpha,
+                is LauncherShellAction.SelectOverlayDockShowLabels,
                 ->
                     mutableState.value.withOverlayDockSettingsAction(
                         action = action,
