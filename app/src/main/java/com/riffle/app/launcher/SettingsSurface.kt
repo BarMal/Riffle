@@ -111,6 +111,10 @@ private fun SettingsPageContent(
             selectedDeviceClass = state.selectedLayoutDeviceClass,
             onAction = onAction,
         )
+        SettingsLauncherSection(
+            status = state.homeRoleStatus,
+            onAction = onAction,
+        )
         SettingsSection(title = "Appearance") {
             WallpaperSourceSetting(
                 selectedSource = state.settings.appearance.wallpaper.source,
@@ -229,7 +233,7 @@ private fun HapticStrengthSetting(
 }
 
 @Composable
-private fun SettingsSection(
+internal fun SettingsSection(
     title: String,
     content: @Composable ColumnScope.() -> Unit,
 ) {

@@ -206,6 +206,7 @@ private fun LauncherDestination(
                         settings = state.launcherSettings,
                         homeLayout = state.homeLayoutSet.layoutFor(state.settingsTargetLayoutKey),
                         selectedLayoutDeviceClass = state.settingsLayoutDeviceClass,
+                        homeRoleStatus = state.homeRoleStatus,
                         notificationAccessStatus = state.notificationAccessStatus,
                         hiddenApps = state.hiddenApps,
                         appVersionLabel = appVersionLabel,
