@@ -206,5 +206,7 @@ sealed interface LauncherShellAction {
         val strength: HapticFeedbackStrength,
     ) : LauncherShellAction
 
+    data class SelectOverlayDockEnabled(val enabled: Boolean) : LauncherShellAction
+
     data class DismissNotifications(val keys: List<LauncherNotificationKey>) : LauncherShellAction
 }

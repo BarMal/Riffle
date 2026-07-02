@@ -6,6 +6,7 @@ data class LauncherSettings(
     val appearance: AppearanceSettings = AppearanceSettings(),
     val gestures: GestureSettings = GestureSettings(),
     val haptics: HapticSettings = HapticSettings(),
+    val overlayDock: OverlayDockSettings = OverlayDockSettings(),
 )
 
 data class AppearanceSettings(
@@ -18,6 +19,10 @@ data class GestureSettings(
 
 data class HapticSettings(
     val feedbackStrength: HapticFeedbackStrength = HapticFeedbackStrength.MEDIUM,
+)
+
+data class OverlayDockSettings(
+    val enabled: Boolean = false,
 )
 
 data class HomeSwipeGestureSettings(

@@ -31,6 +31,13 @@ class LauncherSettingsTest {
     }
 
     @Test
+    fun defaultsOverlayDockToDisabled() {
+        val settings = LauncherSettings()
+
+        assertEquals(false, settings.overlayDock.enabled)
+    }
+
+    @Test
     fun appearanceCanSelectSolidColourWallpaperFallback() {
         val settings =
             LauncherSettings(

@@ -22,6 +22,7 @@ import com.riffle.core.domain.launcher.home.MIN_DOCK_ITEM_SPACING_DP
 @Composable
 internal fun DockSetting(
     dock: DockModel,
+    overlayDockEnabled: Boolean,
     onAction: (LauncherShellAction) -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -48,6 +49,32 @@ internal fun DockSetting(
         DockItemSpacingSetting(
             spacingDp = dock.itemSpacingDp,
             onAction = onAction,
+        )
+        OverlayDockEnabledSetting(
+            enabled = overlayDockEnabled,
+            onAction = onAction,
+        )
+    }
+}
+
+@Composable
+private fun OverlayDockEnabledSetting(
+    enabled: Boolean,
+    onAction: (LauncherShellAction) -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        SettingsTextColumn(
+            modifier = Modifier.weight(1f),
+            title = "Overlay dock",
+            subtitle = if (enabled) "Summon over other apps" else "Only use the home dock",
+        )
+        Switch(
+            checked = enabled,
+            onCheckedChange = { value -> onAction(LauncherShellAction.SelectOverlayDockEnabled(value)) },
         )
     }
 }
