@@ -415,6 +415,12 @@ class LauncherShellViewModeViewModelTest {
                 homeLayoutRepository = repository,
             )
 
+        viewModel.onHomePageEdited(
+            LauncherShellAction.SelectHomeLayoutDeviceClass(
+                deviceClass = HomeLayoutDeviceClass.PHONE,
+                availableDeviceClasses = setOf(HomeLayoutDeviceClass.PHONE, HomeLayoutDeviceClass.FOLDABLE),
+            ),
+        )
         viewModel.onNavigationActionSelected(ShellNavigationAction.OpenSettings)
         viewModel.onLauncherSettingsActionSelected(
             LauncherShellAction.SelectSettingsLayoutDeviceClass(HomeLayoutDeviceClass.FOLDABLE),

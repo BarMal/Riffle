@@ -272,7 +272,11 @@ class LauncherShellViewModel(
 
                 action is LauncherShellAction.SelectHomeLayoutDeviceClass ->
                     mutableState.value
-                        .withSelectedHomeLayoutDeviceClass(action.deviceClass, homeLayoutRepository)
+                        .withSelectedHomeLayoutDeviceClass(
+                            deviceClass = action.deviceClass,
+                            availableDeviceClasses = action.availableDeviceClasses,
+                            homeLayoutRepository = homeLayoutRepository,
+                        )
                         .withHomeScreenLibraryApps(homeLayoutRepository)
 
                 mutableState.value.shouldEditSettingsTargetLayout(action) ->
@@ -437,6 +441,7 @@ private fun createInitialState(
         homeLayout = layoutSet.activeLayout,
         homeLayoutSet = layoutSet,
         settingsLayoutDeviceClass = layoutSet.activeKey.deviceClass,
+        availableLayoutDeviceClasses = setOf(layoutSet.activeKey.deviceClass),
         launcherSettings = launcherSettingsRepository.loadLauncherSettings() ?: LauncherSettings(),
     ).let { initialState ->
         if (firstRunRepository.isFirstRunComplete()) {

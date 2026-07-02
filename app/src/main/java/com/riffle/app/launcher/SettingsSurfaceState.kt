@@ -12,6 +12,7 @@ data class SettingsSurfaceState(
     val settings: LauncherSettings,
     val homeLayout: HomeLayout,
     val selectedLayoutDeviceClass: HomeLayoutDeviceClass,
+    val availableLayoutDeviceClasses: Set<HomeLayoutDeviceClass>,
     val homeRoleStatus: HomeRoleStatus,
     val overlayDockPermissionStatus: OverlayDockPermissionStatus,
     val notificationAccessStatus: NotificationAccessStatus,

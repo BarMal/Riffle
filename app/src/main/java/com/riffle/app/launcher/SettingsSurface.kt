@@ -108,6 +108,7 @@ private fun SettingsPageContent(
     ) {
         SettingsLayoutDeviceTabs(
             selectedDeviceClass = state.selectedLayoutDeviceClass,
+            availableDeviceClasses = state.availableLayoutDeviceClasses,
             onAction = onAction,
         )
         SettingsLauncherSection(

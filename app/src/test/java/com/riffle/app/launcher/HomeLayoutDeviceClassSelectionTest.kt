@@ -62,6 +62,30 @@ class HomeLayoutDeviceClassSelectionTest {
     }
 
     @Test
+    fun exposesFoldedAndUnfoldedClassesForFoldingHardware() {
+        assertEquals(
+            setOf(HomeLayoutDeviceClass.PHONE, HomeLayoutDeviceClass.FOLDABLE),
+            homeLayoutDeviceClassSelectionFromWindowLayout(
+                hasFoldingFeature = true,
+                screenWidthDp = 412,
+                screenHeightDp = 915,
+            )?.availableDeviceClasses,
+        )
+    }
+
+    @Test
+    fun exposesOnlyTabletClassForTabletHardware() {
+        assertEquals(
+            setOf(HomeLayoutDeviceClass.TABLET),
+            homeLayoutDeviceClassSelectionFromWindowLayout(
+                hasFoldingFeature = false,
+                screenWidthDp = 900,
+                screenHeightDp = 1200,
+            )?.availableDeviceClasses,
+        )
+    }
+
+    @Test
     fun classifiesWindowWithoutFoldingFeatureFromConfiguration() {
         assertEquals(
             HomeLayoutDeviceClass.TABLET,
