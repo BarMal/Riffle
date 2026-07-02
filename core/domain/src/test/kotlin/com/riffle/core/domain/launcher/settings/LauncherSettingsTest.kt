@@ -36,6 +36,7 @@ class LauncherSettingsTest {
 
         assertEquals(false, settings.overlayDock.enabled)
         assertEquals(OverlayDockEdge.END, settings.overlayDock.edge)
+        assertEquals(DEFAULT_OVERLAY_DOCK_HANDLE_THICKNESS_DP, settings.overlayDock.handleThicknessDp)
         assertEquals(DEFAULT_OVERLAY_DOCK_HANDLE_HEIGHT_DP, settings.overlayDock.handleHeightDp)
         assertEquals(DEFAULT_OVERLAY_DOCK_VERTICAL_OFFSET_DP, settings.overlayDock.verticalOffsetDp)
         assertEquals(DEFAULT_OVERLAY_DOCK_HANDLE_ALPHA_PERCENT, settings.overlayDock.handleAlphaPercent)

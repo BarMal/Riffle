@@ -101,6 +101,7 @@ class LauncherSettingsJsonCodecTest {
                     OverlayDockSettings(
                         enabled = true,
                         edge = OverlayDockEdge.START,
+                        handleThicknessDp = 24,
                         handleHeightDp = 96,
                         verticalOffsetDp = -48,
                         handleAlphaPercent = 65,
@@ -111,6 +112,7 @@ class LauncherSettingsJsonCodecTest {
 
         assertEquals(true, decodedSettings.overlayDock.enabled)
         assertEquals(OverlayDockEdge.START, decodedSettings.overlayDock.edge)
+        assertEquals(24, decodedSettings.overlayDock.handleThicknessDp)
         assertEquals(96, decodedSettings.overlayDock.handleHeightDp)
         assertEquals(-48, decodedSettings.overlayDock.verticalOffsetDp)
         assertEquals(65, decodedSettings.overlayDock.handleAlphaPercent)

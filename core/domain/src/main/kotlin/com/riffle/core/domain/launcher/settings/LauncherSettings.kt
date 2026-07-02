@@ -24,6 +24,7 @@ data class HapticSettings(
 data class OverlayDockSettings(
     val enabled: Boolean = false,
     val edge: OverlayDockEdge = OverlayDockEdge.END,
+    val handleThicknessDp: Int = DEFAULT_OVERLAY_DOCK_HANDLE_THICKNESS_DP,
     val handleHeightDp: Int = DEFAULT_OVERLAY_DOCK_HANDLE_HEIGHT_DP,
     val verticalOffsetDp: Int = DEFAULT_OVERLAY_DOCK_VERTICAL_OFFSET_DP,
     val handleAlphaPercent: Int = DEFAULT_OVERLAY_DOCK_HANDLE_ALPHA_PERCENT,
@@ -34,6 +35,9 @@ enum class OverlayDockEdge {
     END,
 }
 
+const val DEFAULT_OVERLAY_DOCK_HANDLE_THICKNESS_DP = 18
+const val MIN_OVERLAY_DOCK_HANDLE_THICKNESS_DP = 12
+const val MAX_OVERLAY_DOCK_HANDLE_THICKNESS_DP = 40
 const val DEFAULT_OVERLAY_DOCK_HANDLE_HEIGHT_DP = 72
 const val MIN_OVERLAY_DOCK_HANDLE_HEIGHT_DP = 44
 const val MAX_OVERLAY_DOCK_HANDLE_HEIGHT_DP = 144

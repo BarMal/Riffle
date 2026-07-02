@@ -65,6 +65,7 @@ private fun encodeOverlayDock(settings: OverlayDockSettings): JSONObject =
     JSONObject()
         .put("enabled", settings.enabled)
         .put("edge", settings.edge.name)
+        .put("handleThicknessDp", settings.handleThicknessDp)
         .put("handleHeightDp", settings.handleHeightDp)
         .put("verticalOffsetDp", settings.verticalOffsetDp)
         .put("handleAlphaPercent", settings.handleAlphaPercent)
@@ -75,6 +76,7 @@ private fun JSONObject.toOverlayDock(defaults: OverlayDockSettings): OverlayDock
         edge =
             runCatching { OverlayDockEdge.valueOf(optString("edge")) }
                 .getOrDefault(defaults.edge),
+        handleThicknessDp = optInt("handleThicknessDp", defaults.handleThicknessDp),
         handleHeightDp = optInt("handleHeightDp", defaults.handleHeightDp),
         verticalOffsetDp = optInt("verticalOffsetDp", defaults.verticalOffsetDp),
         handleAlphaPercent = optInt("handleAlphaPercent", defaults.handleAlphaPercent),

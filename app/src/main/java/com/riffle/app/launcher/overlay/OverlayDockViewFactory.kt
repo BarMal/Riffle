@@ -41,7 +41,7 @@ internal class OverlayDockViewFactory(
             contentDescription = "Open Riffle overlay dock"
             layoutParams =
                 FrameLayout.LayoutParams(
-                    context.dp(EDGE_HANDLE_THICKNESS_DP),
+                    context.dp(settings.handleThicknessDp),
                     context.dp(settings.handleHeightDp),
                 )
             setOnClickListener { onExpand() }
@@ -187,8 +187,6 @@ internal class OverlayDockViewFactory(
             setColor(Color.argb(24, 255, 255, 255))
         }
 }
-
-private const val EDGE_HANDLE_THICKNESS_DP = 18
 
 private val OverlayDockEdge.edgeGravity: Int
     get() =
