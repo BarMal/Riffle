@@ -28,6 +28,7 @@ data class OverlayDockSettings(
     val handleHeightDp: Int = DEFAULT_OVERLAY_DOCK_HANDLE_HEIGHT_DP,
     val verticalOffsetDp: Int = DEFAULT_OVERLAY_DOCK_VERTICAL_OFFSET_DP,
     val handleAlphaPercent: Int = DEFAULT_OVERLAY_DOCK_HANDLE_ALPHA_PERCENT,
+    val showLabels: Boolean = false,
 )
 
 enum class OverlayDockEdge {

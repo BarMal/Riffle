@@ -96,6 +96,9 @@ internal fun LauncherShellState.withOverlayDockSettingsAction(
                                     ),
                             )
 
+                        is LauncherShellAction.SelectOverlayDockShowLabels ->
+                            launcherSettings.overlayDock.copy(showLabels = action.showLabels)
+
                         else -> launcherSettings.overlayDock
                     },
             ),

@@ -51,6 +51,10 @@ internal fun OverlayDockSetting(
             alphaPercent = settings.handleAlphaPercent,
             onAction = onAction,
         )
+        OverlayDockLabelSetting(
+            showLabels = settings.showLabels,
+            onAction = onAction,
+        )
     }
 }
 
@@ -187,6 +191,28 @@ private fun OverlayDockHandleAlphaSetting(
         onDecrease = { onAction(LauncherShellAction.SelectOverlayDockHandleAlpha(alphaPercent - OVERLAY_ALPHA_STEP)) },
         onIncrease = { onAction(LauncherShellAction.SelectOverlayDockHandleAlpha(alphaPercent + OVERLAY_ALPHA_STEP)) },
     )
+}
+
+@Composable
+private fun OverlayDockLabelSetting(
+    showLabels: Boolean,
+    onAction: (LauncherShellAction) -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        SettingsTextColumn(
+            modifier = Modifier.weight(1f),
+            title = "Expanded labels",
+            subtitle = if (showLabels) "Show app names" else "Icons only",
+        )
+        Switch(
+            checked = showLabels,
+            onCheckedChange = { value -> onAction(LauncherShellAction.SelectOverlayDockShowLabels(value)) },
+        )
+    }
 }
 
 @Composable

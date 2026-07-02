@@ -5,6 +5,7 @@ import android.content.Context
 import android.graphics.Color
 import android.graphics.PixelFormat
 import android.graphics.drawable.GradientDrawable
+import android.text.TextUtils
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
@@ -70,7 +71,15 @@ internal class OverlayDockViewFactory(
                         LinearLayout(context).apply {
                             orientation = LinearLayout.HORIZONTAL
                             gravity = Gravity.CENTER_VERTICAL
-                            shortcuts.forEach { shortcut -> addView(shortcutButton(shortcut, onLaunch)) }
+                            shortcuts.forEach { shortcut ->
+                                addView(
+                                    shortcutButton(
+                                        shortcut = shortcut,
+                                        showLabel = settings.showLabels,
+                                        onLaunch = onLaunch,
+                                    ),
+                                )
+                            }
                             if (shortcuts.isEmpty()) {
                                 addView(emptyDockText())
                             }
@@ -96,30 +105,63 @@ internal class OverlayDockViewFactory(
 
     private fun shortcutButton(
         shortcut: AppShortcutItem,
+        showLabel: Boolean,
         onLaunch: () -> Unit,
-    ): ImageButton =
-        ImageButton(context).apply {
-            val icon =
-                runCatching {
-                    context.packageManager.getActivityIcon(
-                        ComponentName(
-                            shortcut.appIdentity.packageName.value,
-                            shortcut.appIdentity.activityName.value,
-                        ),
-                    )
-                }.getOrNull()
-            setImageDrawable(icon)
-            background = transparentRoundedBackground()
-            contentDescription = shortcut.label
-            setPadding(context.dp(8))
-            layoutParams =
-                LinearLayout.LayoutParams(context.dp(52), context.dp(52))
-                    .apply { marginEnd = context.dp(6) }
-            setOnClickListener {
-                appLauncher.launch(shortcut.appIdentity)
-                onLaunch()
+    ): View {
+        val iconButton =
+            ImageButton(context).apply {
+                val icon =
+                    runCatching {
+                        context.packageManager.getActivityIcon(
+                            ComponentName(
+                                shortcut.appIdentity.packageName.value,
+                                shortcut.appIdentity.activityName.value,
+                            ),
+                        )
+                    }.getOrNull()
+                setImageDrawable(icon)
+                background = transparentRoundedBackground()
+                contentDescription = shortcut.label
+                setPadding(context.dp(8))
+                layoutParams = LinearLayout.LayoutParams(context.dp(52), context.dp(52))
+                setOnClickListener {
+                    appLauncher.launch(shortcut.appIdentity)
+                    onLaunch()
+                }
+            }
+
+        if (!showLabel) {
+            return iconButton.apply {
+                layoutParams =
+                    LinearLayout.LayoutParams(context.dp(52), context.dp(52))
+                        .apply { marginEnd = context.dp(6) }
             }
         }
+
+        return LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+            layoutParams =
+                LinearLayout.LayoutParams(context.dp(68), LinearLayout.LayoutParams.WRAP_CONTENT)
+                    .apply { marginEnd = context.dp(6) }
+            addView(iconButton)
+            addView(
+                TextView(context).apply {
+                    text = shortcut.label
+                    textSize = 11f
+                    setTextColor(Color.WHITE)
+                    gravity = Gravity.CENTER
+                    maxLines = 1
+                    ellipsize = TextUtils.TruncateAt.END
+                    layoutParams =
+                        LinearLayout.LayoutParams(
+                            context.dp(68),
+                            LinearLayout.LayoutParams.WRAP_CONTENT,
+                        )
+                },
+            )
+        }
+    }
 
     private fun emptyDockText(): TextView =
         TextView(context).apply {

@@ -72,6 +72,7 @@ internal fun LauncherShellAction.launcherSettingsActionRoute(): LauncherSettings
         is LauncherShellAction.SelectOverlayDockHandleHeight,
         is LauncherShellAction.SelectOverlayDockVerticalOffset,
         is LauncherShellAction.SelectOverlayDockHandleAlpha,
+        is LauncherShellAction.SelectOverlayDockShowLabels,
         is LauncherShellAction.SelectSettingsLayoutDeviceClass,
         is LauncherShellAction.ImportLauncherBackup,
         -> LauncherSettingsActionRoute.SettingsState(this)
