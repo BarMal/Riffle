@@ -31,16 +31,15 @@ internal class OverlayDockViewFactory(
         onVerticalOffsetCommit: (Int) -> Unit,
     ): View =
         FrameLayout(context).apply {
-            background = context.edgeHandleBackground(settings)
             contentDescription = "Open Riffle overlay dock"
             addView(
                 View(context).apply {
-                    background = context.handleGripBackground(settings.handleAlphaPercent)
+                    background = context.handleGripBackground(settings)
                     layoutParams =
                         FrameLayout.LayoutParams(
-                            context.dp(GRIP_WIDTH_DP),
-                            context.dp((settings.handleHeightDp / 2).coerceAtLeast(GRIP_MIN_HEIGHT_DP)),
-                            Gravity.CENTER,
+                            context.dp(settings.handleThicknessDp),
+                            context.dp(settings.handleHeightDp),
+                            Gravity.CENTER_VERTICAL or settings.edge.edgeGravity,
                         )
                 },
             )
@@ -81,7 +80,7 @@ internal class OverlayDockViewFactory(
             if (expanded) {
                 WindowManager.LayoutParams.WRAP_CONTENT
             } else {
-                context.dp(settings.handleThicknessDp)
+                context.dp(settings.collapsedHandleTouchTargetWidthDp())
             },
             if (expanded) {
                 WindowManager.LayoutParams.WRAP_CONTENT

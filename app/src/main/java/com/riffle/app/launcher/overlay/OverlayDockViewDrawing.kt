@@ -13,43 +13,37 @@ internal fun Context.roundedBackground(alphaPercent: Int): GradientDrawable =
         setColor(Color.argb(alphaPercent.toColorAlpha(), 31, 36, 42))
     }
 
-internal fun Context.edgeHandleBackground(settings: OverlayDockSettings): GradientDrawable =
+internal fun Context.handleGripBackground(settings: OverlayDockSettings): GradientDrawable =
     GradientDrawable().apply {
         shape = GradientDrawable.RECTANGLE
+        val radius = dpFloat((settings.handleThicknessDp / 2).coerceAtMost(14))
         cornerRadii =
             when (settings.edge) {
                 OverlayDockEdge.START ->
                     floatArrayOf(
                         0f,
                         0f,
-                        dpFloat(14),
-                        dpFloat(14),
-                        dpFloat(14),
-                        dpFloat(14),
+                        radius,
+                        radius,
+                        radius,
+                        radius,
                         0f,
                         0f,
                     )
 
                 OverlayDockEdge.END ->
                     floatArrayOf(
-                        dpFloat(14),
-                        dpFloat(14),
+                        radius,
+                        radius,
                         0f,
                         0f,
                         0f,
                         0f,
-                        dpFloat(14),
-                        dpFloat(14),
+                        radius,
+                        radius,
                     )
             }
-        setColor(Color.argb(settings.handleAlphaPercent.toColorAlpha(), 31, 36, 42))
-    }
-
-internal fun Context.handleGripBackground(alphaPercent: Int): GradientDrawable =
-    GradientDrawable().apply {
-        shape = GradientDrawable.RECTANGLE
-        cornerRadius = dpFloat(2)
-        setColor(Color.argb(alphaPercent.toColorAlpha(), 255, 255, 255))
+        setColor(Color.argb(settings.handleAlphaPercent.toColorAlpha(), 255, 255, 255))
     }
 
 internal fun Context.transparentRoundedBackground(): GradientDrawable =

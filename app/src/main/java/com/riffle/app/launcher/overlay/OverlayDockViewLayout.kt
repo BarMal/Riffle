@@ -14,8 +14,7 @@ import com.riffle.core.domain.launcher.settings.OverlayDockSettings
 import com.riffle.core.domain.launcher.settings.overlayDockVerticalOffsetFromDrag
 import kotlin.math.abs
 
-internal const val GRIP_WIDTH_DP = 3
-internal const val GRIP_MIN_HEIGHT_DP = 20
+internal const val COLLAPSED_HANDLE_TOUCH_TARGET_WIDTH_DP = 48
 internal const val EXPANDED_ITEM_SPACING_DP = 6
 
 private const val EXPANDED_LABEL_HEIGHT_DP = 24
@@ -28,6 +27,9 @@ internal val OverlayDockEdge.edgeGravity: Int
             OverlayDockEdge.START -> Gravity.START
             OverlayDockEdge.END -> Gravity.END
         }
+
+internal fun OverlayDockSettings.collapsedHandleTouchTargetWidthDp(): Int =
+    handleThicknessDp.coerceAtLeast(COLLAPSED_HANDLE_TOUCH_TARGET_WIDTH_DP)
 
 internal val OverlayDockExpandedOrientation.linearOrientation: Int
     get() =
