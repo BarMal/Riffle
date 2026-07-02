@@ -12,9 +12,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.settings.MAX_OVERLAY_DOCK_HANDLE_ALPHA_PERCENT
 import com.riffle.core.domain.launcher.settings.MAX_OVERLAY_DOCK_HANDLE_HEIGHT_DP
+import com.riffle.core.domain.launcher.settings.MAX_OVERLAY_DOCK_HANDLE_THICKNESS_DP
 import com.riffle.core.domain.launcher.settings.MAX_OVERLAY_DOCK_VERTICAL_OFFSET_DP
 import com.riffle.core.domain.launcher.settings.MIN_OVERLAY_DOCK_HANDLE_ALPHA_PERCENT
 import com.riffle.core.domain.launcher.settings.MIN_OVERLAY_DOCK_HANDLE_HEIGHT_DP
+import com.riffle.core.domain.launcher.settings.MIN_OVERLAY_DOCK_HANDLE_THICKNESS_DP
 import com.riffle.core.domain.launcher.settings.MIN_OVERLAY_DOCK_VERTICAL_OFFSET_DP
 import com.riffle.core.domain.launcher.settings.OverlayDockEdge
 import com.riffle.core.domain.launcher.settings.OverlayDockSettings
@@ -31,6 +33,10 @@ internal fun OverlayDockSetting(
         )
         OverlayDockEdgeSetting(
             edge = settings.edge,
+            onAction = onAction,
+        )
+        OverlayDockHandleThicknessSetting(
+            thicknessDp = settings.handleThicknessDp,
             onAction = onAction,
         )
         OverlayDockHandleHeightSetting(
@@ -100,6 +106,33 @@ private fun OverlayDockEdgeSetting(
             }
         }
     }
+}
+
+@Composable
+private fun OverlayDockHandleThicknessSetting(
+    thicknessDp: Int,
+    onAction: (LauncherShellAction) -> Unit,
+) {
+    OverlayDockStepperSetting(
+        title = "Handle thickness",
+        subtitle = "$thicknessDp dp",
+        decreaseEnabled = thicknessDp > MIN_OVERLAY_DOCK_HANDLE_THICKNESS_DP,
+        increaseEnabled = thicknessDp < MAX_OVERLAY_DOCK_HANDLE_THICKNESS_DP,
+        onDecrease = {
+            onAction(
+                LauncherShellAction.SelectOverlayDockHandleThickness(
+                    thicknessDp = thicknessDp - OVERLAY_THICKNESS_STEP_DP,
+                ),
+            )
+        },
+        onIncrease = {
+            onAction(
+                LauncherShellAction.SelectOverlayDockHandleThickness(
+                    thicknessDp = thicknessDp + OVERLAY_THICKNESS_STEP_DP,
+                ),
+            )
+        },
+    )
 }
 
 @Composable
@@ -192,6 +225,7 @@ private fun OverlayDockStepperSetting(
     }
 }
 
+private const val OVERLAY_THICKNESS_STEP_DP = 2
 private const val OVERLAY_SIZE_STEP_DP = 8
 private const val OVERLAY_OFFSET_STEP_DP = 24
 private const val OVERLAY_ALPHA_STEP = 5

@@ -23,6 +23,7 @@ class LauncherSettingsActionRouteTest {
             listOf(
                 LauncherShellAction.SelectOverlayDockEnabled(enabled = true),
                 LauncherShellAction.SelectOverlayDockEdge(OverlayDockEdge.START),
+                LauncherShellAction.SelectOverlayDockHandleThickness(thicknessDp = 24),
                 LauncherShellAction.SelectOverlayDockHandleHeight(heightDp = 96),
                 LauncherShellAction.SelectOverlayDockVerticalOffset(offsetDp = -48),
                 LauncherShellAction.SelectOverlayDockHandleAlpha(alphaPercent = 65),

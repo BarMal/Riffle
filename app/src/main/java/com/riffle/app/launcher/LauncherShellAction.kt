@@ -211,6 +211,8 @@ sealed interface LauncherShellAction {
 
     data class SelectOverlayDockEdge(val edge: OverlayDockEdge) : LauncherShellAction
 
+    data class SelectOverlayDockHandleThickness(val thicknessDp: Int) : LauncherShellAction
+
     data class SelectOverlayDockHandleHeight(val heightDp: Int) : LauncherShellAction
 
     data class SelectOverlayDockVerticalOffset(val offsetDp: Int) : LauncherShellAction

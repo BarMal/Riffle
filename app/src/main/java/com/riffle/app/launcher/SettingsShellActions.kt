@@ -68,6 +68,7 @@ internal fun LauncherShellAction.launcherSettingsActionRoute(): LauncherSettings
         is LauncherShellAction.SelectHapticFeedbackStrength,
         is LauncherShellAction.SelectOverlayDockEnabled,
         is LauncherShellAction.SelectOverlayDockEdge,
+        is LauncherShellAction.SelectOverlayDockHandleThickness,
         is LauncherShellAction.SelectOverlayDockHandleHeight,
         is LauncherShellAction.SelectOverlayDockVerticalOffset,
         is LauncherShellAction.SelectOverlayDockHandleAlpha,

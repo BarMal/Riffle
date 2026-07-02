@@ -357,6 +357,7 @@ class LauncherShellViewModel(
 
                 is LauncherShellAction.SelectOverlayDockEnabled,
                 is LauncherShellAction.SelectOverlayDockEdge,
+                is LauncherShellAction.SelectOverlayDockHandleThickness,
                 is LauncherShellAction.SelectOverlayDockHandleHeight,
                 is LauncherShellAction.SelectOverlayDockVerticalOffset,
                 is LauncherShellAction.SelectOverlayDockHandleAlpha,
