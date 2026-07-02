@@ -18,11 +18,12 @@ import com.riffle.core.domain.launcher.home.MAX_DOCK_ITEM_SPACING_DP
 import com.riffle.core.domain.launcher.home.MIN_DOCK_BACKGROUND_ALPHA_PERCENT
 import com.riffle.core.domain.launcher.home.MIN_DOCK_ICON_SIZE_DP
 import com.riffle.core.domain.launcher.home.MIN_DOCK_ITEM_SPACING_DP
+import com.riffle.core.domain.launcher.settings.OverlayDockSettings
 
 @Composable
 internal fun DockSetting(
     dock: DockModel,
-    overlayDockEnabled: Boolean,
+    overlayDock: OverlayDockSettings,
     onAction: (LauncherShellAction) -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -50,31 +51,9 @@ internal fun DockSetting(
             spacingDp = dock.itemSpacingDp,
             onAction = onAction,
         )
-        OverlayDockEnabledSetting(
-            enabled = overlayDockEnabled,
+        OverlayDockSetting(
+            settings = overlayDock,
             onAction = onAction,
-        )
-    }
-}
-
-@Composable
-private fun OverlayDockEnabledSetting(
-    enabled: Boolean,
-    onAction: (LauncherShellAction) -> Unit,
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        SettingsTextColumn(
-            modifier = Modifier.weight(1f),
-            title = "Overlay dock",
-            subtitle = if (enabled) "Summon over other apps" else "Only use the home dock",
-        )
-        Switch(
-            checked = enabled,
-            onCheckedChange = { value -> onAction(LauncherShellAction.SelectOverlayDockEnabled(value)) },
         )
     }
 }

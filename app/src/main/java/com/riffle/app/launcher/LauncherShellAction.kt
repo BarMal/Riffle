@@ -20,6 +20,7 @@ import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
 import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
 import com.riffle.core.domain.launcher.settings.HomeSwipeGestureDirection
 import com.riffle.core.domain.launcher.settings.LauncherGestureAction
+import com.riffle.core.domain.launcher.settings.OverlayDockEdge
 import com.riffle.core.domain.launcher.widgets.WidgetProviderDimensions
 import com.riffle.core.domain.launcher.widgets.WidgetProviderIdentity
 
@@ -207,6 +208,14 @@ sealed interface LauncherShellAction {
     ) : LauncherShellAction
 
     data class SelectOverlayDockEnabled(val enabled: Boolean) : LauncherShellAction
+
+    data class SelectOverlayDockEdge(val edge: OverlayDockEdge) : LauncherShellAction
+
+    data class SelectOverlayDockHandleHeight(val heightDp: Int) : LauncherShellAction
+
+    data class SelectOverlayDockVerticalOffset(val offsetDp: Int) : LauncherShellAction
+
+    data class SelectOverlayDockHandleAlpha(val alphaPercent: Int) : LauncherShellAction
 
     data class DismissNotifications(val keys: List<LauncherNotificationKey>) : LauncherShellAction
 }

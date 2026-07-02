@@ -6,6 +6,7 @@ import com.riffle.core.domain.launcher.settings.AppearanceSettings
 import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
 import com.riffle.core.domain.launcher.settings.HapticSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettings
+import com.riffle.core.domain.launcher.settings.OverlayDockEdge
 import com.riffle.core.domain.launcher.settings.OverlayDockSettings
 import org.json.JSONObject
 
@@ -63,8 +64,18 @@ private fun JSONObject.toHaptics(defaults: HapticSettings): HapticSettings =
 private fun encodeOverlayDock(settings: OverlayDockSettings): JSONObject =
     JSONObject()
         .put("enabled", settings.enabled)
+        .put("edge", settings.edge.name)
+        .put("handleHeightDp", settings.handleHeightDp)
+        .put("verticalOffsetDp", settings.verticalOffsetDp)
+        .put("handleAlphaPercent", settings.handleAlphaPercent)
 
 private fun JSONObject.toOverlayDock(defaults: OverlayDockSettings): OverlayDockSettings =
     defaults.copy(
         enabled = optBoolean("enabled", defaults.enabled),
+        edge =
+            runCatching { OverlayDockEdge.valueOf(optString("edge")) }
+                .getOrDefault(defaults.edge),
+        handleHeightDp = optInt("handleHeightDp", defaults.handleHeightDp),
+        verticalOffsetDp = optInt("verticalOffsetDp", defaults.verticalOffsetDp),
+        handleAlphaPercent = optInt("handleAlphaPercent", defaults.handleAlphaPercent),
     )

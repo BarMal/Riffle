@@ -355,15 +355,14 @@ class LauncherShellViewModel(
                         launcherSettingsRepository = launcherSettingsRepository,
                     )
 
-                is LauncherShellAction.SelectOverlayDockEnabled ->
-                    mutableState.value.withLauncherSettings(
-                        settings =
-                            mutableState.value.launcherSettings.copy(
-                                overlayDock =
-                                    mutableState.value.launcherSettings.overlayDock.copy(
-                                        enabled = action.enabled,
-                                    ),
-                            ),
+                is LauncherShellAction.SelectOverlayDockEnabled,
+                is LauncherShellAction.SelectOverlayDockEdge,
+                is LauncherShellAction.SelectOverlayDockHandleHeight,
+                is LauncherShellAction.SelectOverlayDockVerticalOffset,
+                is LauncherShellAction.SelectOverlayDockHandleAlpha,
+                ->
+                    mutableState.value.withOverlayDockSettingsAction(
+                        action = action,
                         launcherSettingsRepository = launcherSettingsRepository,
                     )
 

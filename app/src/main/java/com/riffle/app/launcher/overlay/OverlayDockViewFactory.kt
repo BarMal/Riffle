@@ -16,34 +16,40 @@ import android.widget.TextView
 import androidx.core.view.setPadding
 import com.riffle.app.launcher.apps.AndroidAppLauncher
 import com.riffle.core.domain.launcher.home.AppShortcutItem
+import com.riffle.core.domain.launcher.settings.OverlayDockEdge
+import com.riffle.core.domain.launcher.settings.OverlayDockSettings
 
 internal class OverlayDockViewFactory(
     private val context: Context,
     private val appLauncher: AndroidAppLauncher,
 ) {
     fun collapsedHandleView(
-        shortcuts: List<AppShortcutItem>,
+        settings: OverlayDockSettings,
         onExpand: () -> Unit,
     ): View =
         TextView(context).apply {
-            text = shortcuts.size.coerceAtMost(MAX_COLLAPSED_COUNT).takeIf { count -> count > 0 }?.toString() ?: "+"
-            textSize = 16f
+            text = ""
             setTextColor(Color.WHITE)
             gravity = Gravity.CENTER
-            setPadding(12.dp)
-            background = pillBackground(alpha = COLLAPSED_ALPHA)
+            background = edgeHandleBackground(settings)
             contentDescription = "Open Riffle overlay dock"
+            layoutParams =
+                FrameLayout.LayoutParams(
+                    context.dp(EDGE_HANDLE_THICKNESS_DP),
+                    context.dp(settings.handleHeightDp),
+                )
             setOnClickListener { onExpand() }
         }
 
     fun expandedDockView(
         shortcuts: List<AppShortcutItem>,
+        settings: OverlayDockSettings,
         onCollapse: () -> Unit,
         onLaunch: () -> Unit,
     ): View =
         FrameLayout(context).apply {
-            background = pillBackground(alpha = EXPANDED_ALPHA)
-            setPadding(8.dp)
+            background = roundedBackground(alphaPercent = settings.handleAlphaPercent)
+            setPadding(context.dp(8))
             contentDescription = "Riffle overlay dock"
 
             addView(
@@ -64,7 +70,7 @@ internal class OverlayDockViewFactory(
             )
         }
 
-    fun overlayLayoutParams(): WindowManager.LayoutParams =
+    fun overlayLayoutParams(settings: OverlayDockSettings): WindowManager.LayoutParams =
         WindowManager.LayoutParams(
             WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.WRAP_CONTENT,
@@ -72,9 +78,9 @@ internal class OverlayDockViewFactory(
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
             PixelFormat.TRANSLUCENT,
         ).apply {
-            gravity = Gravity.BOTTOM or Gravity.END
-            x = 18.dp
-            y = 96.dp
+            gravity = Gravity.CENTER_VERTICAL or settings.edge.edgeGravity
+            x = 0
+            y = context.dp(settings.verticalOffsetDp)
         }
 
     private fun shortcutButton(
@@ -94,8 +100,10 @@ internal class OverlayDockViewFactory(
             setImageDrawable(icon)
             background = transparentRoundedBackground()
             contentDescription = shortcut.label
-            setPadding(8.dp)
-            layoutParams = LinearLayout.LayoutParams(52.dp, 52.dp).apply { marginEnd = 6.dp }
+            setPadding(context.dp(8))
+            layoutParams =
+                LinearLayout.LayoutParams(context.dp(52), context.dp(52))
+                    .apply { marginEnd = context.dp(6) }
             setOnClickListener {
                 appLauncher.launch(shortcut.appIdentity)
                 onLaunch()
@@ -108,7 +116,7 @@ internal class OverlayDockViewFactory(
             textSize = 14f
             setTextColor(Color.WHITE)
             gravity = Gravity.CENTER
-            setPadding(horizontal = 12.dp, vertical = 8.dp)
+            setPadding(horizontal = context.dp(12), vertical = context.dp(8))
         }
 
     private fun collapseButton(onCollapse: () -> Unit): TextView =
@@ -117,27 +125,56 @@ internal class OverlayDockViewFactory(
             textSize = 14f
             setTextColor(Color.WHITE)
             gravity = Gravity.CENTER
-            setPadding(12.dp)
+            setPadding(context.dp(12))
             contentDescription = "Close Riffle overlay dock"
             setOnClickListener { onCollapse() }
         }
 
-    private fun pillBackground(alpha: Int): GradientDrawable =
+    private fun roundedBackground(alphaPercent: Int): GradientDrawable =
         GradientDrawable().apply {
             shape = GradientDrawable.RECTANGLE
-            cornerRadius = 28.dp.toFloat()
-            setColor(Color.argb(alpha, 31, 36, 42))
+            cornerRadius = context.dpFloat(28)
+            setColor(Color.argb(alphaPercent.toColorAlpha(), 31, 36, 42))
+        }
+
+    private fun edgeHandleBackground(settings: OverlayDockSettings): GradientDrawable =
+        GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadii =
+                when (settings.edge) {
+                    OverlayDockEdge.START ->
+                        floatArrayOf(
+                            0f,
+                            0f,
+                            context.dpFloat(14),
+                            context.dpFloat(14),
+                            context.dpFloat(14),
+                            context.dpFloat(14),
+                            0f,
+                            0f,
+                        )
+
+                    OverlayDockEdge.END ->
+                        floatArrayOf(
+                            context.dpFloat(14),
+                            context.dpFloat(14),
+                            0f,
+                            0f,
+                            0f,
+                            0f,
+                            context.dpFloat(14),
+                            context.dpFloat(14),
+                        )
+                }
+            setColor(Color.argb(settings.handleAlphaPercent.toColorAlpha(), 31, 36, 42))
         }
 
     private fun transparentRoundedBackground(): GradientDrawable =
         GradientDrawable().apply {
             shape = GradientDrawable.RECTANGLE
-            cornerRadius = 18.dp.toFloat()
+            cornerRadius = context.dpFloat(18)
             setColor(Color.argb(24, 255, 255, 255))
         }
-
-    private val Int.dp: Int
-        get() = (this * context.resources.displayMetrics.density).toInt()
 
     private fun View.setPadding(
         horizontal: Int,
@@ -147,6 +184,17 @@ internal class OverlayDockViewFactory(
     }
 }
 
-private const val COLLAPSED_ALPHA = 218
-private const val EXPANDED_ALPHA = 232
-private const val MAX_COLLAPSED_COUNT = 9
+private const val EDGE_HANDLE_THICKNESS_DP = 18
+
+private val OverlayDockEdge.edgeGravity: Int
+    get() =
+        when (this) {
+            OverlayDockEdge.START -> Gravity.START
+            OverlayDockEdge.END -> Gravity.END
+        }
+
+private fun Int.toColorAlpha(): Int = (this.coerceIn(0, 100) * 255) / 100
+
+private fun Context.dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
+
+private fun Context.dpFloat(value: Int): Float = value * resources.displayMetrics.density

@@ -6,6 +6,12 @@ import com.riffle.core.domain.launcher.settings.HomeSwipeGestureSettings
 import com.riffle.core.domain.launcher.settings.LauncherGestureAction
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettingsRepository
+import com.riffle.core.domain.launcher.settings.MAX_OVERLAY_DOCK_HANDLE_ALPHA_PERCENT
+import com.riffle.core.domain.launcher.settings.MAX_OVERLAY_DOCK_HANDLE_HEIGHT_DP
+import com.riffle.core.domain.launcher.settings.MAX_OVERLAY_DOCK_VERTICAL_OFFSET_DP
+import com.riffle.core.domain.launcher.settings.MIN_OVERLAY_DOCK_HANDLE_ALPHA_PERCENT
+import com.riffle.core.domain.launcher.settings.MIN_OVERLAY_DOCK_HANDLE_HEIGHT_DP
+import com.riffle.core.domain.launcher.settings.MIN_OVERLAY_DOCK_VERTICAL_OFFSET_DP
 
 fun LauncherShellState.withLauncherSettings(
     settings: LauncherSettings,
@@ -40,6 +46,54 @@ fun LauncherShellState.withDefaultHomeSwipes(repo: LauncherSettingsRepository): 
                     ),
             ),
         launcherSettingsRepository = repo,
+    )
+
+internal fun LauncherShellState.withOverlayDockSettingsAction(
+    action: LauncherShellAction,
+    launcherSettingsRepository: LauncherSettingsRepository,
+): LauncherShellState =
+    withLauncherSettings(
+        settings =
+            launcherSettings.copy(
+                overlayDock =
+                    when (action) {
+                        is LauncherShellAction.SelectOverlayDockEnabled ->
+                            launcherSettings.overlayDock.copy(enabled = action.enabled)
+
+                        is LauncherShellAction.SelectOverlayDockEdge ->
+                            launcherSettings.overlayDock.copy(edge = action.edge)
+
+                        is LauncherShellAction.SelectOverlayDockHandleHeight ->
+                            launcherSettings.overlayDock.copy(
+                                handleHeightDp =
+                                    action.heightDp.coerceIn(
+                                        MIN_OVERLAY_DOCK_HANDLE_HEIGHT_DP,
+                                        MAX_OVERLAY_DOCK_HANDLE_HEIGHT_DP,
+                                    ),
+                            )
+
+                        is LauncherShellAction.SelectOverlayDockVerticalOffset ->
+                            launcherSettings.overlayDock.copy(
+                                verticalOffsetDp =
+                                    action.offsetDp.coerceIn(
+                                        MIN_OVERLAY_DOCK_VERTICAL_OFFSET_DP,
+                                        MAX_OVERLAY_DOCK_VERTICAL_OFFSET_DP,
+                                    ),
+                            )
+
+                        is LauncherShellAction.SelectOverlayDockHandleAlpha ->
+                            launcherSettings.overlayDock.copy(
+                                handleAlphaPercent =
+                                    action.alphaPercent.coerceIn(
+                                        MIN_OVERLAY_DOCK_HANDLE_ALPHA_PERCENT,
+                                        MAX_OVERLAY_DOCK_HANDLE_ALPHA_PERCENT,
+                                    ),
+                            )
+
+                        else -> launcherSettings.overlayDock
+                    },
+            ),
+        launcherSettingsRepository = launcherSettingsRepository,
     )
 
 private val defaultHomeSwipeGestureSettings = HomeSwipeGestureSettings()
