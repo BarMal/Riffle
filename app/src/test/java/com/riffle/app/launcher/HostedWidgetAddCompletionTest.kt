@@ -3,6 +3,7 @@ package com.riffle.app.launcher
 import com.riffle.core.domain.launcher.home.GridSpan
 import com.riffle.core.domain.launcher.home.HostedWidgetId
 import com.riffle.core.domain.launcher.home.WidgetItem
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -12,7 +13,9 @@ class HostedWidgetAddCompletionTest {
     @Test
     fun completesHostedWidgetAddAndClosesWidgetPicker() {
         val viewModel = LauncherShellViewModel(firstRunRepository = FakeFirstRunRepository())
-        viewModel.onAppActionSelected(LauncherShellAction.OpenWidgetPicker)
+        runBlocking {
+            viewModel.onAppActionSelected(LauncherShellAction.OpenWidgetPicker)?.join()
+        }
 
         val message =
             viewModel.completeWidgetAdd(

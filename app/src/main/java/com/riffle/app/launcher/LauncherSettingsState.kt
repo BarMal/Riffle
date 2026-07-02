@@ -8,10 +8,9 @@ import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettingsRepository
 import com.riffle.core.domain.launcher.settings.MAX_OVERLAY_DOCK_HANDLE_ALPHA_PERCENT
 import com.riffle.core.domain.launcher.settings.MAX_OVERLAY_DOCK_HANDLE_HEIGHT_DP
-import com.riffle.core.domain.launcher.settings.MAX_OVERLAY_DOCK_VERTICAL_OFFSET_DP
 import com.riffle.core.domain.launcher.settings.MIN_OVERLAY_DOCK_HANDLE_ALPHA_PERCENT
 import com.riffle.core.domain.launcher.settings.MIN_OVERLAY_DOCK_HANDLE_HEIGHT_DP
-import com.riffle.core.domain.launcher.settings.MIN_OVERLAY_DOCK_VERTICAL_OFFSET_DP
+import com.riffle.core.domain.launcher.settings.coerceOverlayDockVerticalOffset
 
 fun LauncherShellState.withLauncherSettings(
     settings: LauncherSettings,
@@ -74,11 +73,7 @@ internal fun LauncherShellState.withOverlayDockSettingsAction(
 
                         is LauncherShellAction.SelectOverlayDockVerticalOffset ->
                             launcherSettings.overlayDock.copy(
-                                verticalOffsetDp =
-                                    action.offsetDp.coerceIn(
-                                        MIN_OVERLAY_DOCK_VERTICAL_OFFSET_DP,
-                                        MAX_OVERLAY_DOCK_VERTICAL_OFFSET_DP,
-                                    ),
+                                verticalOffsetDp = action.offsetDp.coerceOverlayDockVerticalOffset(),
                             )
 
                         is LauncherShellAction.SelectOverlayDockHandleAlpha ->

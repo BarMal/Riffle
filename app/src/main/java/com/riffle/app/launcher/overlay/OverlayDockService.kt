@@ -14,13 +14,16 @@ import com.riffle.app.launcher.visibleTo
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.settings.LauncherSettings
+import com.riffle.core.domain.launcher.settings.OverlayDockSettings
 
 class OverlayDockService : Service() {
     private val windowManager by lazy { getSystemService(WindowManager::class.java) }
     private val appLauncher by lazy { AndroidAppLauncher(this) }
     private val viewFactory by lazy { OverlayDockViewFactory(context = this, appLauncher = appLauncher) }
+    private val launcherSettingsRepository by lazy { DataStoreLauncherSettingsRepository(this) }
     private var overlayView: View? = null
     private var expanded: Boolean = false
+    private var currentOverlaySettings: OverlayDockSettings? = null
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -51,6 +54,7 @@ class OverlayDockService : Service() {
         removeOverlay()
 
         val overlaySettings = loadLauncherSettings().overlayDock
+        currentOverlaySettings = overlaySettings
         val shortcuts = overlayDockShortcuts()
         val view =
             if (expanded) {
@@ -73,6 +77,8 @@ class OverlayDockService : Service() {
                         expanded = true
                         renderOverlay()
                     },
+                    onVerticalOffsetChange = ::moveCollapsedHandle,
+                    onVerticalOffsetCommit = ::saveCollapsedHandleOffset,
                 )
             }
 
@@ -90,13 +96,31 @@ class OverlayDockService : Service() {
             .take(visibleDock.capacity.coerceAtLeast(0))
     }
 
-    private fun loadLauncherSettings(): LauncherSettings =
-        DataStoreLauncherSettingsRepository(this).loadLauncherSettings() ?: LauncherSettings()
+    private fun loadLauncherSettings(): LauncherSettings {
+        return launcherSettingsRepository.loadLauncherSettings() ?: LauncherSettings()
+    }
+
+    private fun moveCollapsedHandle(offsetDp: Int) {
+        val view = overlayView ?: return
+        val settings = currentOverlaySettings?.copy(verticalOffsetDp = offsetDp) ?: return
+        currentOverlaySettings = settings
+        windowManager.updateViewLayout(view, viewFactory.overlayLayoutParams(settings))
+    }
+
+    private fun saveCollapsedHandleOffset(offsetDp: Int) {
+        val launcherSettings = loadLauncherSettings()
+        launcherSettingsRepository.saveLauncherSettings(
+            launcherSettings.copy(
+                overlayDock = launcherSettings.overlayDock.copy(verticalOffsetDp = offsetDp),
+            ),
+        )
+    }
 
     private fun removeOverlay() {
         overlayView?.let { view ->
             runCatching { windowManager.removeView(view) }
         }
         overlayView = null
+        currentOverlaySettings = null
     }
 }

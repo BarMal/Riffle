@@ -1,0 +1,19 @@
+package com.riffle.core.domain.launcher.settings
+
+import kotlin.math.roundToInt
+
+fun overlayDockVerticalOffsetFromDrag(
+    startOffsetDp: Int,
+    dragDeltaPx: Float,
+    density: Float,
+): Int {
+    if (density <= 0f) return startOffsetDp.coerceOverlayDockVerticalOffset()
+
+    return (startOffsetDp + (dragDeltaPx / density).roundToInt()).coerceOverlayDockVerticalOffset()
+}
+
+fun Int.coerceOverlayDockVerticalOffset(): Int =
+    coerceIn(
+        MIN_OVERLAY_DOCK_VERTICAL_OFFSET_DP,
+        MAX_OVERLAY_DOCK_VERTICAL_OFFSET_DP,
+    )
