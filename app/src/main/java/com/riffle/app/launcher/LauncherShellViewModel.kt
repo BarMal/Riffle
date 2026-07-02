@@ -369,6 +369,8 @@ class LauncherShellViewModel(
                 is LauncherShellAction.SelectOverlayDockExpandedOrientation,
                 is LauncherShellAction.SelectOverlayDockShowLabels,
                 is LauncherShellAction.AddAppToFloatingDock,
+                is LauncherShellAction.RemoveFloatingDockShortcut,
+                is LauncherShellAction.MoveFloatingDockShortcut,
                 ->
                     mutableState.value.withOverlayDockSettingsAction(
                         action = action,

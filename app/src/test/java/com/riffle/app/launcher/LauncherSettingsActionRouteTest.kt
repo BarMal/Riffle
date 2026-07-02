@@ -4,9 +4,11 @@ import com.riffle.core.domain.launcher.apps.AppActivityName
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.InstalledApp
+import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
 import com.riffle.core.domain.launcher.settings.OverlayDockEdge
 import com.riffle.core.domain.launcher.settings.OverlayDockExpandedOrientation
+import com.riffle.core.domain.launcher.settings.OverlayDockItemMoveDirection
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -36,6 +38,11 @@ class LauncherSettingsActionRouteTest {
                 LauncherShellAction.SelectOverlayDockExpandedOrientation(OverlayDockExpandedOrientation.TALL),
                 LauncherShellAction.SelectOverlayDockShowLabels(showLabels = true),
                 LauncherShellAction.AddAppToFloatingDock(installedApp),
+                LauncherShellAction.RemoveFloatingDockShortcut(LauncherItemId("floating-dock:example")),
+                LauncherShellAction.MoveFloatingDockShortcut(
+                    itemId = LauncherItemId("floating-dock:example"),
+                    direction = OverlayDockItemMoveDirection.DOWN,
+                ),
             )
 
         actions.forEach { action ->

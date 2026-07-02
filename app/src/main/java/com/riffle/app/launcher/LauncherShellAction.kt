@@ -22,6 +22,7 @@ import com.riffle.core.domain.launcher.settings.HomeSwipeGestureDirection
 import com.riffle.core.domain.launcher.settings.LauncherGestureAction
 import com.riffle.core.domain.launcher.settings.OverlayDockEdge
 import com.riffle.core.domain.launcher.settings.OverlayDockExpandedOrientation
+import com.riffle.core.domain.launcher.settings.OverlayDockItemMoveDirection
 import com.riffle.core.domain.launcher.widgets.WidgetProviderDimensions
 import com.riffle.core.domain.launcher.widgets.WidgetProviderIdentity
 
@@ -114,6 +115,13 @@ sealed interface LauncherShellAction {
     data class AddAppToDock(val app: InstalledApp) : LauncherShellAction
 
     data class AddAppToFloatingDock(val app: InstalledApp) : LauncherShellAction
+
+    data class RemoveFloatingDockShortcut(val itemId: LauncherItemId) : LauncherShellAction
+
+    data class MoveFloatingDockShortcut(
+        val itemId: LauncherItemId,
+        val direction: OverlayDockItemMoveDirection,
+    ) : LauncherShellAction
 
     data class SelectDockEnabled(val enabled: Boolean) : LauncherShellAction
 

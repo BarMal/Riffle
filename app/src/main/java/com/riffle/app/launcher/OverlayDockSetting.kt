@@ -65,6 +65,10 @@ internal fun OverlayDockSetting(
             showLabels = settings.showLabels,
             onAction = onAction,
         )
+        OverlayDockItemsSetting(
+            items = settings.items,
+            onAction = onAction,
+        )
     }
 }
 

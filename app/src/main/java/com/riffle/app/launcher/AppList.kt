@@ -108,6 +108,10 @@ private fun LazyListScope.appRows(
                     app = app,
                     isOnHome = context.homeLayout.containsHomeApp(app.identity),
                     dockItemId = context.homeLayout.dock.dockShortcutIdFor(app.identity),
+                    floatingDockItemId =
+                        context.overlayDock.items
+                            .firstOrNull { item -> item.appIdentity == app.identity && item.appShortcutId == null }
+                            ?.id,
                     notificationCount = context.notificationCountsByPackage[app.identity.packageName] ?: 0,
                     shortcutItems = shortcutItems,
                     showInlineActions = showInlineActions,
@@ -238,6 +242,16 @@ private fun AppDrawerRowActions(
     ) {
         Text(text = if (state.dockItemId == null) "Dock" else "Undock")
     }
+    TextButton(
+        onClick = {
+            when (state.floatingDockItemId) {
+                null -> onAction(LauncherShellAction.AddAppToFloatingDock(state.app))
+                else -> onAction(LauncherShellAction.RemoveFloatingDockShortcut(state.floatingDockItemId))
+            }
+        },
+    ) {
+        Text(text = if (state.floatingDockItemId == null) "Float" else "Unfloat")
+    }
     AppDrawerRowOverflowMenu(
         state = state,
         isExpanded = isMenuExpanded,
@@ -277,6 +291,21 @@ private fun AppDrawerRowOverflowMenu(
                     when (state.dockItemId) {
                         null -> onAction(LauncherShellAction.AddAppToDock(state.app))
                         else -> onAction(LauncherShellAction.RemoveDockShortcut(state.dockItemId))
+                    }
+                },
+                onExpandedChange = onExpandedChange,
+            )
+            AppDrawerRowMenuItem(
+                text =
+                    if (state.floatingDockItemId == null) {
+                        "Add to floating dock"
+                    } else {
+                        "Remove from floating dock"
+                    },
+                onClick = {
+                    when (state.floatingDockItemId) {
+                        null -> onAction(LauncherShellAction.AddAppToFloatingDock(state.app))
+                        else -> onAction(LauncherShellAction.RemoveFloatingDockShortcut(state.floatingDockItemId))
                     }
                 },
                 onExpandedChange = onExpandedChange,
@@ -349,6 +378,7 @@ private data class AppDrawerRowState(
     val app: InstalledApp,
     val isOnHome: Boolean,
     val dockItemId: LauncherItemId?,
+    val floatingDockItemId: LauncherItemId?,
     val notificationCount: Int,
     val shortcutItems: List<AppDrawerShortcutMenuItem>,
     val showInlineActions: Boolean,

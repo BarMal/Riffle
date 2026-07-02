@@ -45,6 +45,13 @@ enum class OverlayDockExpandedOrientation {
     TALL,
 }
 
+enum class OverlayDockItemMoveDirection(
+    val indexDelta: Int,
+) {
+    UP(indexDelta = -1),
+    DOWN(indexDelta = 1),
+}
+
 const val DEFAULT_OVERLAY_DOCK_HANDLE_THICKNESS_DP = 18
 const val MIN_OVERLAY_DOCK_HANDLE_THICKNESS_DP = 6
 const val MAX_OVERLAY_DOCK_HANDLE_THICKNESS_DP = 120
