@@ -37,7 +37,7 @@ class DockEngineTest {
     }
 
     @Test
-    fun rejectsWhenDockHasNoAvailableSlots() {
+    fun expandsDockWhenAddingToFullDock() {
         val fullDock =
             DockModel(
                 capacity = 1,
@@ -47,8 +47,22 @@ class DockEngineTest {
 
         val result = engine.addAppToDock(layout = layout, app = app(label = "Camera"))
 
-        val rejected = assertIs<DockEditResult.Rejected>(result)
-        assertEquals(DockEditRejectionReason.NO_AVAILABLE_SLOT, rejected.reason)
+        val updated = assertIs<DockEditResult.Updated>(result)
+        assertEquals(2, updated.layout.dock.capacity)
+        assertEquals(listOf("phone", "Camera"), updated.layout.dock.items.filterIsInstance<AppShortcutItem>().labels)
+    }
+
+    @Test
+    fun enablesDockWhenAddingAppShortcut() {
+        val app = app(label = "Phone")
+        val layout = HomeLayoutDefaults.standard().copy(dock = DockModel(capacity = 0, isEnabled = false))
+
+        val result = engine.addAppToDock(layout = layout, app = app)
+
+        val updated = assertIs<DockEditResult.Updated>(result)
+        assertEquals(true, updated.layout.dock.isEnabled)
+        assertEquals(1, updated.layout.dock.capacity)
+        assertEquals("Phone", updated.layout.dock.items.filterIsInstance<AppShortcutItem>().single().label)
     }
 
     @Test
@@ -163,4 +177,7 @@ class DockEngineTest {
                 ),
             label = id,
         )
+
+    private val List<AppShortcutItem>.labels: List<String>
+        get() = map { item -> item.label }
 }

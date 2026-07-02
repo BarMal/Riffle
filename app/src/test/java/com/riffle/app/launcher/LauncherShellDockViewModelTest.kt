@@ -6,6 +6,7 @@ import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.apps.InstalledAppRepository
 import com.riffle.core.domain.launcher.home.AppShortcutItem
+import com.riffle.core.domain.launcher.home.DockModel
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
@@ -67,6 +68,56 @@ class LauncherShellDockViewModelTest {
 
         assertEquals(1, viewModel.state.value.homeLayout.dock.capacity)
         assertEquals(savedLayout.dock.items, viewModel.state.value.homeLayout.dock.items)
+        assertEquals(viewModel.state.value.homeLayout, repository.savedLayout)
+    }
+
+    @Test
+    fun addsDockShortcutAndExpandsFullDock() {
+        val phone = app(label = "Phone")
+        val repository =
+            FakeHomeLayoutRepository(
+                savedLayout = HomeLayoutDefaults.standard().copy(dock = DockModel(capacity = 0)),
+            )
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                homeLayoutRepository = repository,
+            )
+
+        viewModel.onDockEdited(LauncherShellAction.AddAppToDock(phone))
+
+        assertEquals(1, viewModel.state.value.homeLayout.dock.capacity)
+        assertEquals(
+            listOf("Phone"),
+            viewModel.state.value.homeLayout.dock.items.filterIsInstance<AppShortcutItem>().labels,
+        )
+        assertEquals(viewModel.state.value.homeLayout, repository.savedLayout)
+    }
+
+    @Test
+    fun addDockShortcutEnablesDockAndSavesLayout() {
+        val phone = app(label = "Phone")
+        val repository =
+            FakeHomeLayoutRepository(
+                savedLayout =
+                    HomeLayoutDefaults.standard().copy(
+                        dock = DockModel(capacity = 0, isEnabled = false),
+                    ),
+            )
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                homeLayoutRepository = repository,
+            )
+
+        viewModel.onDockEdited(LauncherShellAction.AddAppToDock(phone))
+
+        assertEquals(true, viewModel.state.value.homeLayout.dock.isEnabled)
+        assertEquals(1, viewModel.state.value.homeLayout.dock.capacity)
+        assertEquals(
+            listOf("Phone"),
+            viewModel.state.value.homeLayout.dock.items.filterIsInstance<AppShortcutItem>().labels,
+        )
         assertEquals(viewModel.state.value.homeLayout, repository.savedLayout)
     }
 
@@ -153,4 +204,7 @@ class LauncherShellDockViewModelTest {
             appIdentity = app.identity,
             label = app.label,
         )
+
+    private val List<AppShortcutItem>.labels: List<String>
+        get() = map { item -> item.label }
 }

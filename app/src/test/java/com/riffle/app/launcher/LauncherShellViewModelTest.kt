@@ -567,26 +567,6 @@ class LauncherShellViewModelTest {
     }
 
     @Test
-    fun ignoresDockShortcutWhenDockIsFull() {
-        val phone = app(label = "Phone")
-        val repository =
-            FakeHomeLayoutRepository(
-                savedLayout = HomeLayoutDefaults.standard().copy(dock = DockModel(capacity = 0)),
-            )
-        val viewModel =
-            LauncherShellViewModel(
-                firstRunRepository = FakeFirstRunRepository(),
-                homeLayoutRepository = repository,
-            )
-        val layoutBeforeAdd = viewModel.state.value.homeLayout
-
-        viewModel.onDockEdited(LauncherShellAction.AddAppToDock(phone))
-
-        assertEquals(layoutBeforeAdd, viewModel.state.value.homeLayout)
-        assertEquals(layoutBeforeAdd, repository.savedLayout)
-    }
-
-    @Test
     fun removesDockShortcutAndSavesLayout() {
         val phone = app(label = "Phone")
         val repository = FakeHomeLayoutRepository()
