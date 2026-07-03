@@ -8,6 +8,7 @@ import com.riffle.core.domain.launcher.settings.AppearanceSettings
 import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
 import com.riffle.core.domain.launcher.settings.HapticSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettings
+import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
 import org.junit.Test
@@ -28,12 +29,33 @@ class LauncherBackupDocumentTest {
             LauncherBackupDocument(
                 homeLayoutSet = layoutSet,
                 launcherSettings = settings,
+                exportedAtEpochMillis = 123_456L,
             )
 
         val decodedDocument = decodeLauncherBackupDocument(encodeLauncherBackupDocument(document))
 
         assertEquals(layoutSet, decodedDocument.homeLayoutSet)
         assertEquals(settings, decodedDocument.launcherSettings)
+        assertEquals(123_456L, decodedDocument.exportedAtEpochMillis)
+    }
+
+    @Test
+    fun decodesBackupWithoutExportTimestamp() {
+        val value =
+            JSONObject(
+                encodeLauncherBackupDocument(
+                    LauncherBackupDocument(
+                        homeLayoutSet = HomeLayoutSet.fromLayout(HomeLayoutDefaults.standard()),
+                        launcherSettings = LauncherSettings(),
+                    ),
+                ),
+            )
+                .apply { remove("exportedAtEpochMillis") }
+                .toString()
+
+        val decodedDocument = decodeLauncherBackupDocument(value)
+
+        assertEquals(null, decodedDocument.exportedAtEpochMillis)
     }
 
     @Test
