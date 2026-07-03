@@ -39,6 +39,7 @@ class InstalledAppSearchIndex(
             when {
                 label.matchesAll(queryTokens) && label.startsWith(queryTokens.first()) -> 0
                 label.matchesAll(queryTokens) -> 1
+                label.acronym().matchesAll(queryTokens) -> 1
                 else -> null
             }
         }
@@ -79,6 +80,11 @@ private fun String.normalizedSearchTokens(): List<String> =
 private fun String.matchesAll(queryTokens: List<String>): Boolean {
     return queryTokens.all { queryToken -> contains(queryToken) }
 }
+
+private fun String.acronym(): String =
+    split(Regex("[^a-z0-9]+"))
+        .filter(String::isNotBlank)
+        .joinToString(separator = "") { token -> token.first().toString() }
 
 private fun List<String>.matchesAll(queryTokens: List<String>): Boolean =
     queryTokens.all { queryToken -> any { token -> token.contains(queryToken) } }
