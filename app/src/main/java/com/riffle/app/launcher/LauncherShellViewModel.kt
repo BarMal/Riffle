@@ -135,7 +135,14 @@ class LauncherShellViewModel(
             reducer.navigationActionSelected(
                 currentState = mutableState.value,
                 action = action,
-            )
+            ).let { state ->
+                when (action) {
+                    ShellNavigationAction.OpenSettings ->
+                        state.copy(settingsLayoutDeviceClass = state.homeLayoutSet.activeKey.deviceClass)
+
+                    else -> state
+                }
+            }
     }
 
     fun onAppActionSelected(action: LauncherShellAction): Job? {

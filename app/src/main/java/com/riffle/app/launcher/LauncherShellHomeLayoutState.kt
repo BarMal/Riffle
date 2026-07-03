@@ -51,8 +51,10 @@ internal fun LauncherShellState.withSelectedHomeLayoutDeviceClass(
         return copy(
             availableLayoutDeviceClasses = updatedAvailableDeviceClasses,
             settingsLayoutDeviceClass =
-                settingsLayoutDeviceClass.takeIf { deviceClass -> deviceClass in updatedAvailableDeviceClasses }
-                    ?: layoutSet.activeKey.deviceClass,
+                settingsLayoutDeviceClassForDeviceSelection(
+                    layoutSet = layoutSet,
+                    availableDeviceClasses = updatedAvailableDeviceClasses,
+                ),
         )
     }
 
@@ -66,19 +68,26 @@ internal fun LauncherShellState.withSelectedHomeLayoutDeviceClass(
                 homeLayoutSet = updatedLayoutSet,
                 availableLayoutDeviceClasses = updatedAvailableDeviceClasses,
                 settingsLayoutDeviceClass =
-                    when (destination) {
-                        ShellDestination.SETTINGS ->
-                            settingsLayoutDeviceClass
-                                .takeIf { selectedDeviceClass ->
-                                    selectedDeviceClass in updatedAvailableDeviceClasses
-                                }
-                                ?: updatedLayoutSet.activeKey.deviceClass
-
-                        else -> updatedLayoutSet.activeKey.deviceClass
-                    },
+                    settingsLayoutDeviceClassForDeviceSelection(
+                        layoutSet = updatedLayoutSet,
+                        availableDeviceClasses = updatedAvailableDeviceClasses,
+                    ),
             )
         }
 }
+
+private fun LauncherShellState.settingsLayoutDeviceClassForDeviceSelection(
+    layoutSet: HomeLayoutSet,
+    availableDeviceClasses: Set<HomeLayoutDeviceClass>,
+): HomeLayoutDeviceClass =
+    when (destination) {
+        ShellDestination.SETTINGS ->
+            settingsLayoutDeviceClass
+                .takeIf { selectedDeviceClass -> selectedDeviceClass in availableDeviceClasses }
+                ?: layoutSet.activeKey.deviceClass
+
+        else -> layoutSet.activeKey.deviceClass
+    }
 
 internal fun LauncherShellState.withSettingsLayoutDeviceClass(deviceClass: HomeLayoutDeviceClass): LauncherShellState {
     val supportsSettingsDeviceClass =
