@@ -9,13 +9,13 @@ import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -179,7 +179,6 @@ private fun HomeBottomSearchArea(
             Surface(
                 modifier =
                     Modifier
-                        .widthIn(max = HOME_SEARCH_MAX_WIDTH_DP.dp)
                         .height(HOME_SEARCH_PILL_HEIGHT_DP.dp)
                         .clip(RoundedCornerShape(HOME_SEARCH_PILL_HEIGHT_DP.dp))
                         .clickable(onClick = { onAction(LauncherShellAction.OpenSearch) }),
@@ -189,7 +188,10 @@ private fun HomeBottomSearchArea(
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = HOME_SEARCH_BORDER_ALPHA)),
             ) {
                 Box(
-                    modifier = Modifier.fillMaxSize(),
+                    modifier =
+                        Modifier
+                            .fillMaxHeight()
+                            .padding(horizontal = HOME_SEARCH_HORIZONTAL_PADDING_DP.dp),
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
@@ -313,9 +315,9 @@ internal data class HomeWorkspaceActions(
 private const val HOME_SURFACE_HORIZONTAL_PADDING_DP = 12
 private const val HOME_SURFACE_VERTICAL_PADDING_DP = 16
 private const val HOME_BOTTOM_CONTROLS_TOP_SPACING_DP = 8
-private const val HOME_SEARCH_AREA_HEIGHT_DP = 40
-private const val HOME_SEARCH_MAX_WIDTH_DP = 280
-private const val HOME_SEARCH_PILL_HEIGHT_DP = 34
+private const val HOME_SEARCH_AREA_HEIGHT_DP = 36
+private const val HOME_SEARCH_PILL_HEIGHT_DP = 30
+private const val HOME_SEARCH_HORIZONTAL_PADDING_DP = 14
 private const val HOME_SEARCH_SURFACE_ALPHA = 0.82f
 private const val HOME_SEARCH_BORDER_ALPHA = 0.38f
 private const val HOME_DOCK_TOP_SPACING_DP = 10

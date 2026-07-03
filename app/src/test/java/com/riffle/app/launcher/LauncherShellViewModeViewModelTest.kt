@@ -500,6 +500,114 @@ class LauncherShellViewModeViewModelTest {
     }
 
     @Test
+    fun materializingUnfoldedLayoutAfterFoldedSettingsEditUsesUnfoldedDefaults() {
+        val phoneKey =
+            HomeLayoutKey(
+                viewMode = LauncherViewMode.STANDARD_APP_DRAWER,
+                deviceClass = HomeLayoutDeviceClass.PHONE,
+            )
+        val foldableKey =
+            HomeLayoutKey(
+                viewMode = LauncherViewMode.STANDARD_APP_DRAWER,
+                deviceClass = HomeLayoutDeviceClass.FOLDABLE,
+            )
+        val repository =
+            FakeHomeLayoutRepository(
+                savedLayout = HomeLayoutDefaults.standard(HomeLayoutDeviceClass.PHONE),
+            )
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                homeLayoutRepository = repository,
+            )
+        val foldedGrid = GridDimensions(columns = 3, rows = 4)
+
+        viewModel.onHomePageEdited(
+            LauncherShellAction.SelectHomeLayoutDeviceClass(
+                deviceClass = HomeLayoutDeviceClass.PHONE,
+                availableDeviceClasses = setOf(HomeLayoutDeviceClass.PHONE, HomeLayoutDeviceClass.FOLDABLE),
+            ),
+        )
+        viewModel.onNavigationActionSelected(ShellNavigationAction.OpenSettings)
+        viewModel.onHomePageEdited(LauncherShellAction.SelectHomeGridDimensions(foldedGrid))
+        viewModel.onHomePageEdited(
+            LauncherShellAction.SelectHomeLayoutDeviceClass(
+                deviceClass = HomeLayoutDeviceClass.FOLDABLE,
+                availableDeviceClasses = setOf(HomeLayoutDeviceClass.PHONE, HomeLayoutDeviceClass.FOLDABLE),
+            ),
+        )
+
+        val savedLayoutSet = checkNotNull(repository.savedLayoutSet)
+        assertEquals(foldedGrid, savedLayoutSet.layoutFor(phoneKey).settings.grid.dimensions)
+        assertEquals(
+            GridDimensions(columns = 5, rows = 6),
+            savedLayoutSet.layoutFor(foldableKey).settings.grid.dimensions,
+        )
+        assertEquals(foldableKey, savedLayoutSet.activeKey)
+        assertEquals(GridDimensions(columns = 5, rows = 6), viewModel.state.value.homeLayout.settings.grid.dimensions)
+    }
+
+    @Test
+    fun foldedSettingsGridEditWhileUnfoldedDoesNotChangeUnfoldedLayout() {
+        val phoneKey =
+            HomeLayoutKey(
+                viewMode = LauncherViewMode.STANDARD_APP_DRAWER,
+                deviceClass = HomeLayoutDeviceClass.PHONE,
+            )
+        val foldableKey =
+            HomeLayoutKey(
+                viewMode = LauncherViewMode.STANDARD_APP_DRAWER,
+                deviceClass = HomeLayoutDeviceClass.FOLDABLE,
+            )
+        val repository =
+            FakeHomeLayoutRepository().also { repo ->
+                repo.savedLayoutSet =
+                    HomeLayoutSet(
+                        activeKey = phoneKey,
+                        layouts =
+                            mapOf(
+                                phoneKey to HomeLayoutDefaults.standard(HomeLayoutDeviceClass.PHONE),
+                                foldableKey to HomeLayoutDefaults.standard(HomeLayoutDeviceClass.FOLDABLE),
+                            ),
+                    )
+            }
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                homeLayoutRepository = repository,
+            )
+        val foldedGrid = GridDimensions(columns = 3, rows = 4)
+
+        viewModel.onHomePageEdited(
+            LauncherShellAction.SelectHomeLayoutDeviceClass(
+                deviceClass = HomeLayoutDeviceClass.PHONE,
+                availableDeviceClasses = setOf(HomeLayoutDeviceClass.PHONE, HomeLayoutDeviceClass.FOLDABLE),
+            ),
+        )
+        viewModel.onNavigationActionSelected(ShellNavigationAction.OpenSettings)
+        viewModel.onLauncherSettingsActionSelected(
+            LauncherShellAction.SelectSettingsLayoutDeviceClass(HomeLayoutDeviceClass.PHONE),
+        )
+        viewModel.onHomePageEdited(
+            LauncherShellAction.SelectHomeLayoutDeviceClass(
+                deviceClass = HomeLayoutDeviceClass.FOLDABLE,
+                availableDeviceClasses = setOf(HomeLayoutDeviceClass.PHONE, HomeLayoutDeviceClass.FOLDABLE),
+            ),
+        )
+        viewModel.onHomePageEdited(LauncherShellAction.SelectHomeGridDimensions(foldedGrid))
+
+        val savedLayoutSet = checkNotNull(repository.savedLayoutSet)
+        assertEquals(foldedGrid, savedLayoutSet.layoutFor(phoneKey).settings.grid.dimensions)
+        assertEquals(
+            GridDimensions(columns = 5, rows = 6),
+            savedLayoutSet.layoutFor(foldableKey).settings.grid.dimensions,
+        )
+        assertEquals(foldableKey, savedLayoutSet.activeKey)
+        assertEquals(GridDimensions(columns = 5, rows = 6), viewModel.state.value.homeLayout.settings.grid.dimensions)
+        assertEquals(HomeLayoutDeviceClass.PHONE, viewModel.state.value.settingsLayoutDeviceClass)
+    }
+
+    @Test
     fun deviceClassSwitchPreservesNotificationCounters() {
         val camera = app(label = "Camera")
         val repository = FakeHomeLayoutRepository(savedLayout = HomeLayoutDefaults.standard())

@@ -56,7 +56,10 @@ private fun JSONArray.toHomeLayoutEntries(): List<Pair<HomeLayoutKey, HomeLayout
 
 private fun JSONObject.toHomeLayoutEntry(): Pair<HomeLayoutKey, HomeLayout> {
     val key = getJSONObject("key").toLayoutKey()
-    val layout = getJSONObject("layout").toHomeLayout().copy(viewMode = key.viewMode)
+    val layout =
+        getJSONObject("layout")
+            .toHomeLayout(defaults = HomeLayoutDefaults.standard(key.deviceClass))
+            .copy(viewMode = key.viewMode)
 
     return key to layout
 }

@@ -30,9 +30,8 @@ internal fun encodeHomeLayoutObject(layout: HomeLayout): JSONObject =
         .put("pages", JSONArray(layout.pages.map(::encodePage)))
         .put("dock", encodeDock(layout.dock))
 
-internal fun JSONObject.toHomeLayout(): HomeLayout =
+internal fun JSONObject.toHomeLayout(defaults: HomeLayout = HomeLayoutDefaults.standard()): HomeLayout =
     let { json ->
-        val defaults = HomeLayoutDefaults.standard()
         val settings = json.optJSONObject("settings")?.toSettings(defaults.settings) ?: defaults.settings
         val pages =
             json.getJSONArray("pages")
