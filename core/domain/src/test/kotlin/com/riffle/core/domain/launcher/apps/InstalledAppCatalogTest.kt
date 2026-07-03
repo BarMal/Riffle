@@ -131,6 +131,29 @@ class InstalledAppCatalogTest {
     }
 
     @Test
+    fun searchMatchesMultipleQueryTokensAcrossAppIdentityFields() {
+        val apps =
+            listOf(
+                app(label = "Maps", packageName = "com.google.android.apps.maps", profile = AppProfile.personal()),
+                app(label = "Docs", packageName = "com.google.android.apps.docs", profile = AppProfile.work()),
+                app(label = "Calendar", packageName = "com.android.calendar", profile = AppProfile.work()),
+            )
+
+        assertEquals(
+            listOf("Maps"),
+            catalog.searchApps(apps = apps, query = "google maps").map { app -> app.label },
+        )
+        assertEquals(
+            listOf("Docs"),
+            catalog.searchApps(apps = apps, query = "google work").map { app -> app.label },
+        )
+        assertEquals(
+            listOf("Calendar"),
+            catalog.searchApps(apps = apps, query = "calendar work").map { app -> app.label },
+        )
+    }
+
+    @Test
     fun searchMatchesShortcutLabelsAndIds() {
         val camera = app(label = "Camera")
         val browser = app(label = "Browser")
