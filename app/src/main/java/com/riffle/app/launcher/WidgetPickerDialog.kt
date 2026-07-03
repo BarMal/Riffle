@@ -138,19 +138,6 @@ internal fun InstalledWidgetProvider.widgetPickerSummary(): String =
         "${dimensions.minWidthDp}x${dimensions.minHeightDp}dp",
     ).joinToString(" - ")
 
-internal fun List<InstalledWidgetProvider>.filteredWidgetProviders(query: String): List<InstalledWidgetProvider> =
-    query
-        .trim()
-        .takeIf(String::isNotEmpty)
-        ?.let { trimmedQuery ->
-            filter { provider -> provider.matchesWidgetQuery(trimmedQuery) }
-        }
-        ?: this
-
-private fun InstalledWidgetProvider.matchesWidgetQuery(query: String): Boolean =
-    listOfNotNull(label, identity.packageName.value, identity.className.value, identity.profile.drawerProfilePrefix())
-        .any { value -> value.contains(query, ignoreCase = true) }
-
 private val InstalledWidgetProvider.widgetPickerKey: String
     get() = "${identity.profile.id.value}:${identity.packageName.value}/${identity.className.value}"
 

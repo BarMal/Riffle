@@ -70,6 +70,38 @@ class WidgetPickerDialogTest {
     }
 
     @Test
+    fun filtersWidgetProvidersByMultipleTokensAndDimensions() {
+        val weather =
+            widgetProvider(
+                label = "Weather",
+                packageName = "com.example.weather",
+                className = ".WeatherWidget",
+            )
+        val clock = widgetProvider(label = "Clock", packageName = "com.example.clock", className = ".ClockWidget")
+
+        assertEquals(listOf(weather), listOf(weather, clock).filteredWidgetProviders("weather 120x80"))
+    }
+
+    @Test
+    fun filtersWidgetProvidersByLabelAcronym() {
+        val weather =
+            widgetProvider(
+                label = "Google Weather",
+                packageName = "com.example.weather",
+                className = ".WeatherWidget",
+            )
+        val clock =
+            widgetProvider(
+                label = "Google Clock",
+                packageName = "com.example.clock",
+                className = ".ClockWidget",
+            )
+
+        assertEquals(listOf(weather), listOf(weather, clock).filteredWidgetProviders("gw"))
+        assertEquals(listOf(clock), listOf(weather, clock).filteredWidgetProviders("gc"))
+    }
+
+    @Test
     fun filtersWidgetProvidersByProfileLabel() {
         val personal = widgetProvider(label = "Weather", packageName = "com.example.weather", className = ".Weather")
         val work =
