@@ -18,6 +18,9 @@ required; keep its path in `local.properties` or `ANDROID_HOME`, never in source
 For a cloud development environment with Codex CLI, see
 [`docs/development/codespaces-codex.md`](docs/development/codespaces-codex.md).
 
+Pull requests should follow the project
+[`Definition of Done`](docs/development/definition-of-done.md).
+
 ## Release Signing
 
 Alpha release signing is automated through GitHub Actions. Required secrets are documented in
