@@ -28,6 +28,14 @@ class LauncherActivityRouteTest {
     }
 
     @Test
+    fun routesOpenDefaultHome() {
+        assertEquals(
+            LauncherActivityRoute.OpenDefaultHome,
+            LauncherShellAction.OpenDefaultHome.launcherActivityRoute(),
+        )
+    }
+
+    @Test
     fun routesNavigationActions() {
         val actions =
             mapOf(

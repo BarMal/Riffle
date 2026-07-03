@@ -133,6 +133,22 @@ class LauncherShellViewModelTest {
     }
 
     @Test
+    fun openDefaultHomeSelectsFirstHomePageAndExitsPageOverview() {
+        val viewModel = LauncherShellViewModel(firstRunRepository = FakeFirstRunRepository())
+
+        viewModel.onHomePageEdited(LauncherShellAction.AddHomePage)
+        viewModel.onHomePageEdited(LauncherShellAction.EnterHomePageOverview)
+        viewModel.onNavigationActionSelected(ShellNavigationAction.OpenSettings)
+
+        viewModel.onHomePageEdited(LauncherShellAction.OpenDefaultHome)
+        viewModel.onNavigationActionSelected(ShellNavigationAction.OpenHome)
+
+        assertEquals(ShellDestination.HOME, viewModel.state.value.destination)
+        assertEquals(LauncherPageId("home"), viewModel.state.value.homeLayout.selectedPageId)
+        assertEquals(HomeEditMode.Browsing, viewModel.state.value.homeLayout.editMode)
+    }
+
+    @Test
     fun refreshLoadsVisibleInstalledApps() {
         val viewModel =
             LauncherShellViewModel(

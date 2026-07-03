@@ -20,6 +20,12 @@ internal class LauncherActivityActionHandler(
                 true
             }
 
+            LauncherActivityRoute.OpenDefaultHome -> {
+                editHomePage(action)
+                navigate(ShellNavigationAction.OpenHome)
+                true
+            }
+
             is LauncherActivityRoute.Navigation -> {
                 navigate(route.action)
                 true

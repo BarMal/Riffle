@@ -35,6 +35,26 @@ class LauncherActivityActionHandlerTest {
     }
 
     @Test
+    fun handlesOpenDefaultHomeByEditingThenNavigatingHome() {
+        val calls = mutableListOf<String>()
+        val handler =
+            handler(
+                editHomePage = { action -> calls += "edit:$action" },
+                navigate = { action -> calls += "navigate:$action" },
+            )
+
+        assertTrue(handler.handle(LauncherShellAction.OpenDefaultHome))
+
+        assertEquals(
+            listOf(
+                "edit:OpenDefaultHome",
+                "navigate:OpenHome",
+            ),
+            calls,
+        )
+    }
+
+    @Test
     fun deletesHostedWidgetBeforeRemovingShortcut() {
         val editedActions = mutableListOf<LauncherShellAction>()
         val deletedWidgets = mutableListOf<HostedWidgetId>()

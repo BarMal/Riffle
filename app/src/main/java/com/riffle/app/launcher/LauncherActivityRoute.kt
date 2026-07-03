@@ -5,6 +5,8 @@ import com.riffle.core.domain.launcher.ShellNavigationAction
 internal sealed interface LauncherActivityRoute {
     data object RequestDefaultHome : LauncherActivityRoute
 
+    data object OpenDefaultHome : LauncherActivityRoute
+
     data class Navigation(
         val action: ShellNavigationAction,
     ) : LauncherActivityRoute
@@ -19,6 +21,7 @@ internal sealed interface LauncherActivityRoute {
 internal fun LauncherShellAction.launcherActivityRoute(): LauncherActivityRoute? =
     when {
         this == LauncherShellAction.RequestDefaultHome -> LauncherActivityRoute.RequestDefaultHome
+        this == LauncherShellAction.OpenDefaultHome -> LauncherActivityRoute.OpenDefaultHome
         navigationAction() != null -> LauncherActivityRoute.Navigation(checkNotNull(navigationAction()))
         isHomePageEditAction() -> LauncherActivityRoute.HomePageEdit
         isHomeShortcutEditAction() -> LauncherActivityRoute.HomeShortcutEdit
