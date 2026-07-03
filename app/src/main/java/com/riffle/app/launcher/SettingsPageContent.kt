@@ -3,10 +3,8 @@ package com.riffle.app.launcher
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.home.WallpaperSource
@@ -32,6 +30,7 @@ internal fun SettingsPageContent(
                 )
 
             SettingsPage.LAYOUT -> SettingsLayoutPageContent(state = state, onAction = onAction)
+            SettingsPage.DOCK -> SettingsDockPageContent(state = state, onAction = onAction)
             SettingsPage.APPEARANCE -> SettingsAppearancePageContent(state = state, onAction = onAction)
             SettingsPage.FLOATING_DOCK -> SettingsFloatingDockPageContent(state = state, onAction = onAction)
             SettingsPage.GESTURES -> SettingsGesturesPageContent(state = state, onAction = onAction)
@@ -55,12 +54,17 @@ private fun SettingsMainPageContent(
         status = state.homeRoleStatus,
         onAction = onAction,
     )
-    SettingsSection(title = "Settings") {
-        settingsMainPageEntries().forEach { entry ->
-            SettingsPageEntryRow(
-                entry = entry,
-                onPageSelected = onPageSelected,
-            )
+    val entries = settingsMainPageEntries()
+    settingsMainPageGroups().forEach { group ->
+        SettingsSection(title = group.title) {
+            entries
+                .filter { entry -> entry.group == group }
+                .forEach { entry ->
+                    SettingsPageEntryRow(
+                        entry = entry,
+                        onPageSelected = onPageSelected,
+                    )
+                }
         }
     }
 }
@@ -70,23 +74,15 @@ private fun SettingsPageEntryRow(
     entry: SettingsPageEntry,
     onPageSelected: (SettingsPage) -> Unit,
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        SettingsTextColumn(
-            modifier = Modifier.weight(1f),
-            title = entry.label,
-        )
-        TextButton(onClick = { onPageSelected(entry.page) }) {
-            SettingsButtonText(text = "Open")
-        }
-    }
+    SettingsClickableRow(
+        title = entry.label,
+        subtitle = entry.subtitle,
+        onClick = { onPageSelected(entry.page) },
+    )
 }
 
 @Composable
-private fun SettingsLayoutPageContent(
+private fun SettingsDeviceConfigurationTabs(
     state: SettingsSurfaceState,
     onAction: (LauncherShellAction) -> Unit,
 ) {
@@ -95,6 +91,14 @@ private fun SettingsLayoutPageContent(
         availableDeviceClasses = state.availableLayoutDeviceClasses,
         onAction = onAction,
     )
+}
+
+@Composable
+private fun SettingsLayoutPageContent(
+    state: SettingsSurfaceState,
+    onAction: (LauncherShellAction) -> Unit,
+) {
+    SettingsDeviceConfigurationTabs(state = state, onAction = onAction)
     SettingsSection(title = "Home layout") {
         HomeViewModeSetting(
             viewMode = state.homeLayout.viewMode,
@@ -112,6 +116,14 @@ private fun SettingsLayoutPageContent(
             onAction = onAction,
         )
     }
+}
+
+@Composable
+private fun SettingsDockPageContent(
+    state: SettingsSurfaceState,
+    onAction: (LauncherShellAction) -> Unit,
+) {
+    SettingsDeviceConfigurationTabs(state = state, onAction = onAction)
     SettingsSection(title = "Dock") {
         DockSetting(
             dock = state.homeLayout.dock,
@@ -164,28 +176,23 @@ private fun WallpaperSourceSetting(
     selectedSource: WallpaperSource,
     onAction: (LauncherShellAction) -> Unit,
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        SettingsTextColumn(
-            modifier = Modifier.weight(1f),
-            title = "Wallpaper",
-        )
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            TextButton(
-                enabled = WallpaperSource.SYSTEM != selectedSource,
-                onClick = { onAction(LauncherShellAction.SelectWallpaperSource(WallpaperSource.SYSTEM)) },
-            ) {
-                SettingsButtonText(text = "System")
+    SettingsListRow(
+        title = "Wallpaper",
+        trailingContent = {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                TextButton(
+                    enabled = WallpaperSource.SYSTEM != selectedSource,
+                    onClick = { onAction(LauncherShellAction.SelectWallpaperSource(WallpaperSource.SYSTEM)) },
+                ) {
+                    SettingsButtonText(text = "System")
+                }
+                TextButton(
+                    enabled = WallpaperSource.SOLID_COLOR != selectedSource,
+                    onClick = { onAction(LauncherShellAction.SelectWallpaperSource(WallpaperSource.SOLID_COLOR)) },
+                ) {
+                    SettingsButtonText(text = "Solid")
+                }
             }
-            TextButton(
-                enabled = WallpaperSource.SOLID_COLOR != selectedSource,
-                onClick = { onAction(LauncherShellAction.SelectWallpaperSource(WallpaperSource.SOLID_COLOR)) },
-            ) {
-                SettingsButtonText(text = "Solid")
-            }
-        }
-    }
+        },
+    )
 }

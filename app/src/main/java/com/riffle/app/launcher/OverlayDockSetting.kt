@@ -4,7 +4,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material3.Switch
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -77,21 +76,12 @@ private fun OverlayDockEnabledSetting(
     settings: OverlayDockSettings,
     onAction: (LauncherShellAction) -> Unit,
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        SettingsTextColumn(
-            modifier = Modifier.weight(1f),
-            title = "Floating dock",
-            subtitle = if (settings.enabled) "Edge handle visible over apps" else "Only use the home dock",
-        )
-        Switch(
-            checked = settings.enabled,
-            onCheckedChange = { value -> onAction(LauncherShellAction.SelectOverlayDockEnabled(value)) },
-        )
-    }
+    SettingsSwitchRow(
+        title = "Floating dock",
+        subtitle = if (settings.enabled) "Edge handle visible over apps" else "Only use the home dock",
+        checked = settings.enabled,
+        onCheckedChange = { value -> onAction(LauncherShellAction.SelectOverlayDockEnabled(value)) },
+    )
 }
 
 @Composable
@@ -227,21 +217,12 @@ private fun OverlayDockLabelSetting(
     showLabels: Boolean,
     onAction: (LauncherShellAction) -> Unit,
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        SettingsTextColumn(
-            modifier = Modifier.weight(1f),
-            title = "Expanded labels",
-            subtitle = if (showLabels) "Show app names" else "Icons only",
-        )
-        Switch(
-            checked = showLabels,
-            onCheckedChange = { value -> onAction(LauncherShellAction.SelectOverlayDockShowLabels(value)) },
-        )
-    }
+    SettingsSwitchRow(
+        title = "Expanded labels",
+        subtitle = if (showLabels) "Show app names" else "Icons only",
+        checked = showLabels,
+        onCheckedChange = { value -> onAction(LauncherShellAction.SelectOverlayDockShowLabels(value)) },
+    )
 }
 
 @Composable

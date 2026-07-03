@@ -80,11 +80,21 @@ internal fun LauncherShellState.withSelectedHomeLayoutDeviceClass(
         }
 }
 
-internal fun LauncherShellState.withSettingsLayoutDeviceClass(deviceClass: HomeLayoutDeviceClass): LauncherShellState =
-    when (deviceClass) {
-        in availableLayoutDeviceClasses -> copy(settingsLayoutDeviceClass = deviceClass)
-        else -> this
+internal fun LauncherShellState.withSettingsLayoutDeviceClass(deviceClass: HomeLayoutDeviceClass): LauncherShellState {
+    val supportsSettingsDeviceClass =
+        deviceClass in availableLayoutDeviceClasses ||
+            deviceClass == HomeLayoutDeviceClass.PHONE ||
+            deviceClass == HomeLayoutDeviceClass.FOLDABLE
+
+    return if (supportsSettingsDeviceClass) {
+        copy(
+            settingsLayoutDeviceClass = deviceClass,
+            availableLayoutDeviceClasses = availableLayoutDeviceClasses + deviceClass,
+        )
+    } else {
+        this
     }
+}
 
 internal fun LauncherShellState.withSettingsTargetLayout(
     layout: HomeLayout,

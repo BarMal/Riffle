@@ -156,20 +156,14 @@ private fun HiddenAppRow(
     app: InstalledApp,
     onAction: (LauncherShellAction) -> Unit,
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        SettingsTextColumn(
-            modifier = Modifier.weight(1f),
-            title = app.label,
-            subtitle = app.drawerSubtitle(),
-        )
-        TextButton(onClick = { onAction(LauncherShellAction.UnhideApp(app.identity)) }) {
+    SettingsClickableRow(
+        title = app.label,
+        subtitle = app.drawerSubtitle(),
+        onClick = { onAction(LauncherShellAction.UnhideApp(app.identity)) },
+        trailingContent = {
             SettingsButtonText(text = "Unhide")
-        }
-    }
+        },
+    )
 }
 
 private val HapticFeedbackStrength.label: String

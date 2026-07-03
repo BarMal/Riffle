@@ -4,7 +4,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material3.Switch
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -101,26 +100,17 @@ private fun LibraryPageCompactionSetting(
     enabled: Boolean,
     onAction: (LauncherShellAction) -> Unit,
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        SettingsTextColumn(
-            modifier = Modifier.weight(1f),
-            title = "Compact library pages",
-            subtitle =
-                if (enabled) {
-                    "Reflow generated apps to fill earlier pages"
-                } else {
-                    "Keep incomplete pages when the grid changes"
-                },
-        )
-        Switch(
-            checked = enabled,
-            onCheckedChange = { value -> onAction(LauncherShellAction.SelectLibraryPageCompaction(value)) },
-        )
-    }
+    SettingsSwitchRow(
+        title = "Compact library pages",
+        subtitle =
+            if (enabled) {
+                "Reflow generated apps to fill earlier pages"
+            } else {
+                "Keep incomplete pages when the grid changes"
+            },
+        checked = enabled,
+        onCheckedChange = { value -> onAction(LauncherShellAction.SelectLibraryPageCompaction(value)) },
+    )
 }
 
 private const val MIN_GRID_DIMENSION = 1

@@ -6,21 +6,34 @@ import org.junit.Test
 
 class SettingsPagesTest {
     @Test
-    fun mainSettingsPageIncludesLayoutEntry() {
+    fun mainSettingsPageUsesLauncherStyleGroups() {
         assertEquals(
             listOf(
-                SettingsPageEntry(label = "Layout", page = SettingsPage.LAYOUT),
-                SettingsPageEntry(label = "Appearance", page = SettingsPage.APPEARANCE),
-                SettingsPageEntry(label = "Floating dock", page = SettingsPage.FLOATING_DOCK),
-                SettingsPageEntry(label = "Gestures", page = SettingsPage.GESTURES),
-                SettingsPageEntry(label = "Haptics", page = SettingsPage.HAPTICS),
-                SettingsPageEntry(label = "Permissions", page = SettingsPage.PERMISSIONS),
-                SettingsPageEntry(label = "Apps", page = SettingsPage.APPS),
-                SettingsPageEntry(label = "Backup", page = SettingsPage.BACKUP),
-                SettingsPageEntry(label = "Hidden apps", page = SettingsPage.HIDDEN_APPS),
-                SettingsPageEntry(label = "Version", page = SettingsPage.VERSION),
+                "Layout" to SettingsPage.LAYOUT,
+                "Dock" to SettingsPage.DOCK,
+                "Appearance" to SettingsPage.APPEARANCE,
+                "Floating dock" to SettingsPage.FLOATING_DOCK,
+                "Gestures" to SettingsPage.GESTURES,
+                "Haptics" to SettingsPage.HAPTICS,
+                "App drawer" to SettingsPage.APPS,
+                "Hidden apps" to SettingsPage.HIDDEN_APPS,
+                "Permissions" to SettingsPage.PERMISSIONS,
+                "Backup" to SettingsPage.BACKUP,
+                "About" to SettingsPage.VERSION,
             ),
-            settingsMainPageEntries(),
+            settingsMainPageEntries().map { entry ->
+                entry.label to entry.page
+            },
+        )
+
+        assertEquals(
+            listOf(
+                SettingsPageGroup.HOME,
+                SettingsPageGroup.INTERACTION,
+                SettingsPageGroup.APPS,
+                SettingsPageGroup.SYSTEM,
+            ),
+            settingsMainPageGroups(),
         )
     }
 
@@ -39,10 +52,10 @@ class SettingsPagesTest {
     }
 
     @Test
-    fun layoutPageOmitsTabsForSingleLayoutDevices() {
+    fun layoutPageShowsFoldedAndUnfoldedTabsForSingleLayoutDevices() {
         assertEquals(
-            emptyList<SettingsLayoutDeviceTab>(),
-            settingsLayoutPageTabs(setOf(HomeLayoutDeviceClass.PHONE)),
+            listOf("Folded", "Unfolded"),
+            settingsLayoutPageTabs(setOf(HomeLayoutDeviceClass.PHONE)).map { tab -> tab.label },
         )
     }
 }
