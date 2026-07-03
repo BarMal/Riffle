@@ -75,6 +75,113 @@ class LauncherShellActiveLayoutGridTest {
         assertEquals(HomeLayoutDeviceClass.FOLDABLE, viewModel.state.value.settingsLayoutDeviceClass)
     }
 
+    @Test
+    fun openingSettingsSelectsActiveFoldedLayoutTab() {
+        val phoneGrid = GridDimensions(columns = 3, rows = 4)
+        val foldableGrid = GridDimensions(columns = 6, rows = 7)
+        val phoneKey =
+            HomeLayoutKey(
+                viewMode = LauncherViewMode.STANDARD_APP_DRAWER,
+                deviceClass = HomeLayoutDeviceClass.PHONE,
+            )
+        val foldableKey =
+            HomeLayoutKey(
+                viewMode = LauncherViewMode.STANDARD_APP_DRAWER,
+                deviceClass = HomeLayoutDeviceClass.FOLDABLE,
+            )
+        val repository =
+            FakeHomeLayoutRepository(
+                layoutSet =
+                    HomeLayoutSet(
+                        activeKey = phoneKey,
+                        layouts =
+                            mapOf(
+                                phoneKey to
+                                    HomeLayoutDefaults
+                                        .standard(HomeLayoutDeviceClass.PHONE)
+                                        .withGrid(phoneGrid),
+                                foldableKey to
+                                    HomeLayoutDefaults
+                                        .standard(HomeLayoutDeviceClass.FOLDABLE)
+                                        .withGrid(foldableGrid),
+                            ),
+                    ),
+            )
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                homeLayoutRepository = repository,
+            )
+
+        viewModel.onNavigationActionSelected(ShellNavigationAction.OpenSettings)
+        viewModel.onLauncherSettingsActionSelected(
+            LauncherShellAction.SelectSettingsLayoutDeviceClass(HomeLayoutDeviceClass.FOLDABLE),
+        )
+        viewModel.onNavigationActionSelected(ShellNavigationAction.OpenHome)
+        viewModel.onNavigationActionSelected(ShellNavigationAction.OpenSettings)
+
+        assertEquals(phoneGrid, viewModel.state.value.homeLayout.settings.grid.dimensions)
+        assertEquals(HomeLayoutDeviceClass.PHONE, viewModel.state.value.settingsLayoutDeviceClass)
+        assertEquals(
+            phoneGrid,
+            viewModel.state.value.homeLayoutSet
+                .layoutFor(phoneKey)
+                .settings.grid.dimensions,
+        )
+        assertEquals(
+            foldableGrid,
+            viewModel.state.value.homeLayoutSet
+                .layoutFor(foldableKey)
+                .settings.grid.dimensions,
+        )
+    }
+
+    @Test
+    fun deviceSelectionOutsideSettingsClearsStaleSettingsLayoutTab() {
+        val phoneKey =
+            HomeLayoutKey(
+                viewMode = LauncherViewMode.STANDARD_APP_DRAWER,
+                deviceClass = HomeLayoutDeviceClass.PHONE,
+            )
+        val foldableKey =
+            HomeLayoutKey(
+                viewMode = LauncherViewMode.STANDARD_APP_DRAWER,
+                deviceClass = HomeLayoutDeviceClass.FOLDABLE,
+            )
+        val repository =
+            FakeHomeLayoutRepository(
+                layoutSet =
+                    HomeLayoutSet(
+                        activeKey = phoneKey,
+                        layouts =
+                            mapOf(
+                                phoneKey to HomeLayoutDefaults.standard(HomeLayoutDeviceClass.PHONE),
+                                foldableKey to HomeLayoutDefaults.standard(HomeLayoutDeviceClass.FOLDABLE),
+                            ),
+                    ),
+            )
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                homeLayoutRepository = repository,
+            )
+
+        viewModel.onNavigationActionSelected(ShellNavigationAction.OpenSettings)
+        viewModel.onLauncherSettingsActionSelected(
+            LauncherShellAction.SelectSettingsLayoutDeviceClass(HomeLayoutDeviceClass.FOLDABLE),
+        )
+        viewModel.onNavigationActionSelected(ShellNavigationAction.OpenHome)
+        viewModel.onHomePageEdited(
+            LauncherShellAction.SelectHomeLayoutDeviceClass(
+                deviceClass = HomeLayoutDeviceClass.PHONE,
+                availableDeviceClasses = setOf(HomeLayoutDeviceClass.PHONE, HomeLayoutDeviceClass.FOLDABLE),
+            ),
+        )
+
+        assertEquals(HomeLayoutDeviceClass.PHONE, viewModel.state.value.homeLayoutSet.activeKey.deviceClass)
+        assertEquals(HomeLayoutDeviceClass.PHONE, viewModel.state.value.settingsLayoutDeviceClass)
+    }
+
     private class FakeFirstRunRepository : FirstRunRepository {
         override fun isFirstRunComplete(): Boolean = false
 
