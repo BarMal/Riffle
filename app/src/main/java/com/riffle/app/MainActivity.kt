@@ -3,6 +3,7 @@ package com.riffle.app
 import android.app.Activity
 import android.content.res.Configuration
 import android.os.Bundle
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -14,6 +15,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.riffle.app.launcher.DefaultLauncherNotificationActionHandler
 import com.riffle.app.launcher.DefaultLauncherSettingsActionHandler
+import com.riffle.app.launcher.HomeLayoutDeviceClassEvent
 import com.riffle.app.launcher.LauncherActionRouter
 import com.riffle.app.launcher.LauncherActivityActionHandler
 import com.riffle.app.launcher.LauncherAppActionCallbacks
@@ -231,7 +233,7 @@ class MainActivity : ComponentActivity() {
         activeNotificationRefreshCoordinator.start()
         lifecycle.addObserver(packageChangeObserver)
         lifecycle.addObserver(widgetHostGateway)
-        refreshHomeLayoutDeviceClass()
+        refreshHomeLayoutDeviceClass(source = "onCreate")
         observeHomeLayoutDeviceClass()
 
         setContent {
@@ -251,13 +253,13 @@ class MainActivity : ComponentActivity() {
         shellViewModel.refreshInstalledApps()
         shellViewModel.refreshNotifications()
         shellViewModel.refreshWidgetProviders()
-        refreshHomeLayoutDeviceClass()
+        refreshHomeLayoutDeviceClass(source = "onResume")
         refreshPlatformStatuses()
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
-        refreshHomeLayoutDeviceClass()
+        refreshHomeLayoutDeviceClass(source = "onConfigurationChanged")
     }
 
     private fun refreshPlatformStatuses() {
@@ -276,33 +278,30 @@ class MainActivity : ComponentActivity() {
         )
     }
 
-    private fun refreshHomeLayoutDeviceClass() {
-        homeLayoutDeviceClassObserver.currentDeviceClassSelection()?.let { layoutDeviceClassSelection ->
-            shellViewModel.onHomePageEdited(
-                LauncherShellAction.SelectHomeLayoutDeviceClass(
-                    deviceClass = layoutDeviceClassSelection.activeDeviceClass,
-                    availableDeviceClasses = layoutDeviceClassSelection.availableDeviceClasses,
-                ),
-            )
-        }
+    private fun refreshHomeLayoutDeviceClass(source: String) {
+        homeLayoutDeviceClassObserver.currentDeviceClassEvent(source)?.let(::applyHomeLayoutDeviceClassEvent)
     }
 
     private fun observeHomeLayoutDeviceClass() {
         lifecycleScope.launch {
             lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                homeLayoutDeviceClassObserver.deviceClassSelections()
-                    .collect { selection ->
-                        selection?.let { layoutDeviceClassSelection ->
-                            shellViewModel.onHomePageEdited(
-                                LauncherShellAction.SelectHomeLayoutDeviceClass(
-                                    deviceClass = layoutDeviceClassSelection.activeDeviceClass,
-                                    availableDeviceClasses = layoutDeviceClassSelection.availableDeviceClasses,
-                                ),
-                            )
-                        }
+                homeLayoutDeviceClassObserver.deviceClassEvents()
+                    .collect { event ->
+                        event?.let(::applyHomeLayoutDeviceClassEvent)
                     }
             }
         }
+    }
+
+    private fun applyHomeLayoutDeviceClassEvent(event: HomeLayoutDeviceClassEvent) {
+        Log.i(FOLDABLE_LAYOUT_LOG_TAG, event.logText)
+        Toast.makeText(this, event.toastText, Toast.LENGTH_SHORT).show()
+        shellViewModel.onHomePageEdited(
+            LauncherShellAction.SelectHomeLayoutDeviceClass(
+                deviceClass = event.selection.activeDeviceClass,
+                availableDeviceClasses = event.selection.availableDeviceClasses,
+            ),
+        )
     }
 
     private fun handleWidgetAddRequest(action: LauncherShellAction.RequestAddWidget) {
@@ -323,6 +322,7 @@ class MainActivity : ComponentActivity() {
 
 private const val BACKUP_DOCUMENT_MIME_TYPE = "application/json"
 private const val BACKUP_DOCUMENT_NAME = "riffle-backup.json"
+private const val FOLDABLE_LAYOUT_LOG_TAG = "RiffleFoldableLayout"
 
 private fun String.launcherBuildTypeLabel(): String =
     when {
