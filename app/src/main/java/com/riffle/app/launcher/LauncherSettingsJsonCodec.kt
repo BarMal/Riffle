@@ -14,6 +14,7 @@ import org.json.JSONObject
 
 fun encodeLauncherSettings(settings: LauncherSettings): String =
     JSONObject()
+        .put("version", LAUNCHER_SETTINGS_JSON_VERSION)
         .put("appearance", encodeAppearance(settings.appearance))
         .put("gestures", encodeGestures(settings.gestures))
         .put("haptics", encodeHaptics(settings.haptics))
@@ -93,3 +94,5 @@ private fun JSONObject.toOverlayDock(defaults: OverlayDockSettings): OverlayDock
                 .getOrDefault(defaults.expandedOrientation),
         showLabels = optBoolean("showLabels", defaults.showLabels),
     )
+
+internal const val LAUNCHER_SETTINGS_JSON_VERSION = 1

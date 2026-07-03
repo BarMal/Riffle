@@ -17,10 +17,36 @@ import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.OverlayDockEdge
 import com.riffle.core.domain.launcher.settings.OverlayDockExpandedOrientation
 import com.riffle.core.domain.launcher.settings.OverlayDockSettings
+import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class LauncherSettingsJsonCodecTest {
+    @Test
+    fun encodesSettingsVersion() {
+        val encodedSettings = JSONObject(encodeLauncherSettings(LauncherSettings()))
+
+        assertEquals(LAUNCHER_SETTINGS_JSON_VERSION, encodedSettings.getInt("version"))
+    }
+
+    @Test
+    fun decodesSettingsWithoutVersionForBackwardCompatibility() {
+        val decodedSettings =
+            decodeLauncherSettings(
+                """
+                {
+                  "appearance": {
+                    "wallpaper": {
+                      "source": "SOLID_COLOR"
+                    }
+                  }
+                }
+                """.trimIndent(),
+            )
+
+        assertEquals(WallpaperSource.SOLID_COLOR, decodedSettings.appearance.wallpaper.source)
+    }
+
     @Test
     fun roundTripsWallpaperSource() {
         val settings =
