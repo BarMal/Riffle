@@ -38,6 +38,22 @@ class SettingsPagesTest {
     }
 
     @Test
+    fun filtersMainSettingsEntriesByMultipleTokens() {
+        assertEquals(
+            listOf(SettingsPage.LAYOUT),
+            settingsMainPageEntriesMatching("home grid").map { entry -> entry.page },
+        )
+        assertEquals(
+            listOf(SettingsPage.FLOATING_DOCK),
+            settingsMainPageEntriesMatching("overlay shortcuts").map { entry -> entry.page },
+        )
+        assertEquals(
+            listOf(SettingsPage.BACKUP),
+            settingsMainPageEntriesMatching("system export").map { entry -> entry.page },
+        )
+    }
+
+    @Test
     fun layoutPageUsesFoldedAndUnfoldedTabsForFoldableDevices() {
         assertEquals(
             listOf("Folded", "Unfolded"),

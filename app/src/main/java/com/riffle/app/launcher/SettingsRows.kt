@@ -4,6 +4,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.Switch
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -85,12 +86,14 @@ private fun SettingsListItem(
     if (subtitle == null) {
         ListItem(
             modifier = modifier,
+            colors = ListItemDefaults.colors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
             headlineContent = { SettingsPrimaryText(text = title) },
             trailingContent = trailingContent,
         )
     } else {
         ListItem(
             modifier = modifier,
+            colors = ListItemDefaults.colors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
             headlineContent = { SettingsPrimaryText(text = title) },
             supportingContent = { SettingsSecondaryText(text = subtitle) },
             trailingContent = trailingContent,
