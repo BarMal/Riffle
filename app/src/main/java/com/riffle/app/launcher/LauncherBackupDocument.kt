@@ -8,12 +8,14 @@ import org.json.JSONTokener
 data class LauncherBackupDocument(
     val homeLayoutSet: HomeLayoutSet,
     val launcherSettings: LauncherSettings,
+    val exportedAtEpochMillis: Long? = null,
 )
 
 fun encodeLauncherBackupDocument(document: LauncherBackupDocument): String =
     JSONObject()
         .put("type", LAUNCHER_BACKUP_DOCUMENT_TYPE)
         .put("version", LAUNCHER_BACKUP_DOCUMENT_VERSION)
+        .put("exportedAtEpochMillis", document.exportedAtEpochMillis)
         .put("homeLayouts", JSONObject(encodeHomeLayoutSet(document.homeLayoutSet)))
         .put("settings", JSONObject(encodeLauncherSettings(document.launcherSettings)))
         .toString()
@@ -37,12 +39,20 @@ fun decodeLauncherBackupDocument(value: String): LauncherBackupDocument =
         LauncherBackupDocument(
             homeLayoutSet = decodeHomeLayoutSet(json.getJSONObject("homeLayouts").toString()),
             launcherSettings = decodeLauncherSettings(json.getJSONObject("settings").toString()),
+            exportedAtEpochMillis = json.optLongOrNull("exportedAtEpochMillis"),
         )
     }.getOrElse { error ->
         when (error) {
             is IllegalArgumentException -> throw error
             else -> throw IllegalArgumentException("Invalid launcher backup document", error)
         }
+    }
+
+private fun JSONObject.optLongOrNull(name: String): Long? =
+    when {
+        isNull(name) -> null
+        has(name) -> optLong(name)
+        else -> null
     }
 
 private const val LAUNCHER_BACKUP_DOCUMENT_TYPE = "riffleLauncherBackup"

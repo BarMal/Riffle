@@ -11,12 +11,14 @@ fun launcherBackupDocument(
     storedLayoutSet: HomeLayoutSet?,
     activeLayout: HomeLayout,
     launcherSettings: LauncherSettings,
+    exportedAtEpochMillis: Long? = null,
 ): LauncherBackupDocument =
     LauncherBackupDocument(
         homeLayoutSet =
             (storedLayoutSet ?: HomeLayoutSet.fromLayout(activeLayout))
                 .withActiveLayout(activeLayout),
         launcherSettings = launcherSettings,
+        exportedAtEpochMillis = exportedAtEpochMillis,
     )
 
 fun LauncherShellState.withImportedBackup(

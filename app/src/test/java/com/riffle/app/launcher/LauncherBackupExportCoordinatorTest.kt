@@ -38,6 +38,7 @@ class LauncherBackupExportCoordinatorTest {
             LauncherBackupExportCoordinator(
                 homeLayoutRepository = FakeHomeLayoutRepository(layoutSet = storedLayoutSet),
                 currentState = { LauncherShellState(homeLayout = storedLayoutSet.activeLayout) },
+                epochMillisProvider = FixedEpochMillisProvider,
             )
 
         val document = coordinator.currentBackupDocument()
@@ -77,12 +78,28 @@ class LauncherBackupExportCoordinatorTest {
                             launcherSettings = currentSettings,
                         )
                     },
+                epochMillisProvider = FixedEpochMillisProvider,
             )
 
         val document = coordinator.currentBackupDocument()
 
         assertEquals(currentLayout, document.homeLayoutSet.activeLayout)
         assertEquals(currentSettings, document.launcherSettings)
+    }
+
+    @Test
+    fun includesExportTimestamp() {
+        val coordinator =
+            LauncherBackupExportCoordinator(
+                homeLayoutRepository =
+                    FakeHomeLayoutRepository(layoutSet = HomeLayoutSet.fromLayout(HomeLayoutDefaults.standard())),
+                currentState = { LauncherShellState() },
+                epochMillisProvider = FixedEpochMillisProvider,
+            )
+
+        val document = coordinator.currentBackupDocument()
+
+        assertEquals(123_456L, document.exportedAtEpochMillis)
     }
 
     private class FakeHomeLayoutRepository(
@@ -93,5 +110,9 @@ class LauncherBackupExportCoordinatorTest {
         override fun saveHomeLayout(layout: HomeLayout) = Unit
 
         override fun loadHomeLayoutSet(): HomeLayoutSet? = layoutSet
+    }
+
+    private object FixedEpochMillisProvider : EpochMillisProvider {
+        override fun nowEpochMillis(): Long = 123_456L
     }
 }

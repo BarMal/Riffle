@@ -68,6 +68,7 @@ class LauncherBackupDocumentHandlerTest {
                 LauncherBackupExportCoordinator(
                     homeLayoutRepository = FakeHomeLayoutRepository(document.homeLayoutSet),
                     currentState = { LauncherShellState(homeLayout = document.homeLayoutSet.activeLayout) },
+                    epochMillisProvider = FixedEpochMillisProvider,
                 ),
             importCoordinator = LauncherBackupImportCoordinator(),
             documentGateway = LauncherBackupDocumentGateway(),
@@ -87,5 +88,10 @@ class LauncherBackupDocumentHandlerTest {
         LauncherBackupDocument(
             homeLayoutSet = HomeLayoutSet.fromLayout(HomeLayoutDefaults.standard()),
             launcherSettings = LauncherSettings(),
+            exportedAtEpochMillis = 123_456L,
         )
+
+    private object FixedEpochMillisProvider : EpochMillisProvider {
+        override fun nowEpochMillis(): Long = 123_456L
+    }
 }
