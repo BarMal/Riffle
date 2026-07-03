@@ -191,6 +191,42 @@ class InstalledAppCatalogTest {
     }
 
     @Test
+    fun searchMatchesShortcutAcronyms() {
+        val maps = app(label = "Maps")
+        val camera = app(label = "Camera")
+        val shortcutsByApp =
+            mapOf(
+                maps.identity to
+                    listOf(
+                        AppShortcut(
+                            id = AppShortcutId("route-home"),
+                            appIdentity = maps.identity,
+                            shortLabel = "Route Home",
+                        ),
+                    ),
+                camera.identity to
+                    listOf(
+                        AppShortcut(
+                            id = AppShortcutId("take-selfie"),
+                            appIdentity = camera.identity,
+                            shortLabel = "Selfie",
+                        ),
+                    ),
+            )
+
+        assertEquals(
+            listOf("Maps"),
+            catalog.searchApps(apps = listOf(maps, camera), query = "rh", shortcutsByApp = shortcutsByApp)
+                .map { app -> app.label },
+        )
+        assertEquals(
+            listOf("Camera"),
+            catalog.searchApps(apps = listOf(maps, camera), query = "ts", shortcutsByApp = shortcutsByApp)
+                .map { app -> app.label },
+        )
+    }
+
+    @Test
     fun searchRanksAppLabelMatchesBeforeShortcutAndIdentityMatches() {
         val shortcutMatch = app(label = "Alpha")
         val labelMatch = app(label = "Camera")

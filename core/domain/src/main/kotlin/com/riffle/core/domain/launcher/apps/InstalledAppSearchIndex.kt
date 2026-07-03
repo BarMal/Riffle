@@ -67,8 +67,13 @@ class InstalledAppSearchIndex(
             id.value,
         )
             .map { token -> token.lowercase() }
-            .takeIf { tokens -> tokens.matchesAll(queryTokens) }
-            ?.let { 2 }
+            .let { tokens ->
+                when {
+                    tokens.matchesAll(queryTokens) -> 2
+                    tokens.map(String::acronym).matchesAll(queryTokens) -> 2
+                    else -> null
+                }
+            }
 }
 
 private fun String.normalizedSearchTokens(): List<String> =
