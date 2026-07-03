@@ -233,6 +233,35 @@ class InstalledAppCatalogTest {
         )
     }
 
+    @Test
+    fun searchMatchesAppLabelAcronyms() {
+        val apps =
+            listOf(
+                app(label = "Google Maps"),
+                app(label = "Google Messages"),
+                app(label = "Maps"),
+            )
+
+        assertEquals(
+            listOf("Google Maps", "Google Messages"),
+            catalog.searchApps(apps = apps, query = "gm").map { app -> app.label },
+        )
+    }
+
+    @Test
+    fun searchRanksLabelPrefixMatchesBeforeAcronymMatches() {
+        val apps =
+            listOf(
+                app(label = "Google Maps"),
+                app(label = "Gmail"),
+            )
+
+        assertEquals(
+            listOf("Gmail", "Google Maps"),
+            catalog.searchApps(apps = apps, query = "gm").map { app -> app.label },
+        )
+    }
+
     private fun app(
         label: String,
         packageName: String = "com.android.${label.lowercase().replace(" ", ".")}",
