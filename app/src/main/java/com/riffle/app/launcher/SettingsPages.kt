@@ -113,5 +113,27 @@ internal fun settingsMainPageGroups(): List<SettingsPageGroup> =
         SettingsPageGroup.SYSTEM,
     )
 
+internal fun settingsMainPageEntriesMatching(query: String): List<SettingsPageEntry> {
+    val tokens =
+        query
+            .trim()
+            .lowercase()
+            .split(Regex("\\s+"))
+            .filter(String::isNotBlank)
+    if (tokens.isEmpty()) return settingsMainPageEntries()
+
+    return settingsMainPageEntries()
+        .filter { entry ->
+            val searchableText =
+                listOf(
+                    entry.label,
+                    entry.subtitle,
+                    entry.group.title,
+                    entry.page.title,
+                ).joinToString(separator = " ").lowercase()
+            tokens.all { token -> searchableText.contains(token) }
+        }
+}
+
 internal fun settingsLayoutPageTabs(availableDeviceClasses: Set<HomeLayoutDeviceClass>): List<SettingsLayoutDeviceTab> =
     settingsLayoutDeviceTabs(availableDeviceClasses)

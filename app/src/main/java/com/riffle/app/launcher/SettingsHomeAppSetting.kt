@@ -1,6 +1,12 @@
 package com.riffle.app.launcher
 
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.HomeRoleStatus
 
 @Composable
@@ -8,7 +14,22 @@ internal fun SettingsLauncherSection(
     status: HomeRoleStatus,
     onAction: (LauncherShellAction) -> Unit,
 ) {
-    SettingsSection(title = "Launcher") {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        color =
+            if (status == HomeRoleStatus.DEFAULT_HOME) {
+                MaterialTheme.colorScheme.surfaceContainerLow
+            } else {
+                MaterialTheme.colorScheme.primaryContainer
+            },
+        contentColor =
+            if (status == HomeRoleStatus.DEFAULT_HOME) {
+                MaterialTheme.colorScheme.onSurface
+            } else {
+                MaterialTheme.colorScheme.onPrimaryContainer
+            },
+    ) {
         HomeAppSetting(
             status = status,
             onAction = onAction,
@@ -29,7 +50,7 @@ private fun HomeAppSetting(
             SettingsButtonText(
                 text =
                     if (status == HomeRoleStatus.DEFAULT_HOME) {
-                        "Set"
+                        "Default"
                     } else {
                         "Set home"
                     },
