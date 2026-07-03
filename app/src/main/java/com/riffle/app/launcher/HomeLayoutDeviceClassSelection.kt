@@ -8,6 +8,23 @@ internal data class HomeLayoutDeviceClassSelection(
     val availableDeviceClasses: Set<HomeLayoutDeviceClass>,
 )
 
+internal enum class HomeLayoutFoldablePosture {
+    NONE,
+    FOLDED,
+    UNFOLDED,
+}
+
+internal fun homeLayoutFoldablePosture(
+    hasFoldableHardware: Boolean,
+    hasFoldingFeature: Boolean,
+    hasUnfoldedFoldingFeature: Boolean,
+): HomeLayoutFoldablePosture =
+    when {
+        hasUnfoldedFoldingFeature -> HomeLayoutFoldablePosture.UNFOLDED
+        hasFoldingFeature || hasFoldableHardware -> HomeLayoutFoldablePosture.FOLDED
+        else -> HomeLayoutFoldablePosture.NONE
+    }
+
 internal fun homeLayoutDeviceClassFromConfiguration(
     screenWidthDp: Int,
     screenHeightDp: Int,
@@ -22,18 +39,18 @@ internal fun homeLayoutDeviceClassFromConfiguration(
     }
 
 internal fun homeLayoutDeviceClassFromWindowLayout(
-    hasFoldingFeature: Boolean,
+    foldablePosture: HomeLayoutFoldablePosture,
     screenWidthDp: Int,
     screenHeightDp: Int,
 ): HomeLayoutDeviceClass? =
     homeLayoutDeviceClassSelectionFromWindowLayout(
-        hasFoldingFeature = hasFoldingFeature,
+        foldablePosture = foldablePosture,
         screenWidthDp = screenWidthDp,
         screenHeightDp = screenHeightDp,
     )?.activeDeviceClass
 
 internal fun homeLayoutDeviceClassSelectionFromWindowLayout(
-    hasFoldingFeature: Boolean,
+    foldablePosture: HomeLayoutFoldablePosture,
     screenWidthDp: Int,
     screenHeightDp: Int,
 ): HomeLayoutDeviceClassSelection? {
@@ -44,14 +61,18 @@ internal fun homeLayoutDeviceClassSelectionFromWindowLayout(
         ) ?: return null
 
     val activeDeviceClass =
-        when {
-            hasFoldingFeature && configurationClass != HomeLayoutDeviceClass.PHONE -> HomeLayoutDeviceClass.FOLDABLE
-            else -> configurationClass
+        when (foldablePosture) {
+            HomeLayoutFoldablePosture.FOLDED -> HomeLayoutDeviceClass.PHONE
+            HomeLayoutFoldablePosture.UNFOLDED -> HomeLayoutDeviceClass.FOLDABLE
+            HomeLayoutFoldablePosture.NONE -> configurationClass
         }
     val availableDeviceClasses =
-        when {
-            hasFoldingFeature -> setOf(HomeLayoutDeviceClass.PHONE, HomeLayoutDeviceClass.FOLDABLE)
-            else -> setOf(activeDeviceClass)
+        when (foldablePosture) {
+            HomeLayoutFoldablePosture.FOLDED,
+            HomeLayoutFoldablePosture.UNFOLDED,
+            -> setOf(HomeLayoutDeviceClass.PHONE, HomeLayoutDeviceClass.FOLDABLE)
+
+            HomeLayoutFoldablePosture.NONE -> setOf(activeDeviceClass)
         }
 
     return HomeLayoutDeviceClassSelection(
