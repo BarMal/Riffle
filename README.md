@@ -20,6 +20,8 @@ For a cloud development environment with Codex CLI, see
 
 Pull requests should follow the project
 [`Definition of Done`](docs/development/definition-of-done.md).
+Performance-sensitive changes should also reference the
+[`Performance Budgets`](docs/development/performance-budgets.md).
 
 ## Release Signing
 

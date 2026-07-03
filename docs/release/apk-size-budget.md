@@ -1,5 +1,8 @@
 # APK Size Budget
 
+This release budget is part of the broader
+[`Performance Budgets`](../development/performance-budgets.md).
+
 Riffle tracks signed release APK size to catch dependency and asset growth early.
 
 ## Current Budget
