@@ -1,6 +1,9 @@
 package com.riffle.app.launcher
 
+import com.riffle.core.domain.launcher.HomeRoleStatus
+import com.riffle.core.domain.launcher.OverlayDockPermissionStatus
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
+import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -56,6 +59,44 @@ class SettingsPagesTest {
     @Test
     fun returnsNoMainSettingsEntriesForUnknownSearch() {
         assertEquals(emptyList<SettingsPageEntry>(), settingsMainPageEntriesMatching("missing setting"))
+    }
+
+    @Test
+    fun mainSettingsEntriesExposeLiveStatusSummaries() {
+        val entries =
+            settingsMainPageEntries(
+                SettingsOverviewStatus(
+                    homeRoleStatus = HomeRoleStatus.DEFAULT_HOME,
+                    notificationAccessStatus = NotificationAccessStatus.GRANTED,
+                    overlayDockPermissionStatus = OverlayDockPermissionStatus.NOT_GRANTED,
+                    hiddenAppCount = 2,
+                ),
+            )
+
+        assertEquals("2 hidden apps", entries.single { entry -> entry.page == SettingsPage.HIDDEN_APPS }.subtitle)
+        assertEquals(
+            "Home set, notifications allowed, overlay not allowed",
+            entries.single { entry -> entry.page == SettingsPage.PERMISSIONS }.subtitle,
+        )
+    }
+
+    @Test
+    fun filtersMainSettingsEntriesByLiveStatusSummaries() {
+        val status =
+            SettingsOverviewStatus(
+                notificationAccessStatus = NotificationAccessStatus.GRANTED,
+                overlayDockPermissionStatus = OverlayDockPermissionStatus.NOT_GRANTED,
+                hiddenAppCount = 3,
+            )
+
+        assertEquals(
+            listOf(SettingsPage.HIDDEN_APPS),
+            settingsMainPageEntriesMatching(query = "3 hidden", status = status).map { entry -> entry.page },
+        )
+        assertEquals(
+            listOf(SettingsPage.PERMISSIONS),
+            settingsMainPageEntriesMatching(query = "overlay not allowed", status = status).map { entry -> entry.page },
+        )
     }
 
     @Test

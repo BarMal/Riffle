@@ -1,6 +1,9 @@
 package com.riffle.app.launcher
 
+import com.riffle.core.domain.launcher.HomeRoleStatus
+import com.riffle.core.domain.launcher.OverlayDockPermissionStatus
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
+import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 
 internal enum class SettingsPage(
     val title: String,
@@ -35,7 +38,22 @@ internal data class SettingsPageEntry(
     val group: SettingsPageGroup,
 )
 
-internal fun settingsMainPageEntries(): List<SettingsPageEntry> =
+internal data class SettingsOverviewStatus(
+    val homeRoleStatus: HomeRoleStatus = HomeRoleStatus.UNKNOWN,
+    val notificationAccessStatus: NotificationAccessStatus = NotificationAccessStatus.UNKNOWN,
+    val overlayDockPermissionStatus: OverlayDockPermissionStatus = OverlayDockPermissionStatus.UNKNOWN,
+    val hiddenAppCount: Int = 0,
+)
+
+internal fun SettingsSurfaceState.settingsOverviewStatus(): SettingsOverviewStatus =
+    SettingsOverviewStatus(
+        homeRoleStatus = homeRoleStatus,
+        notificationAccessStatus = notificationAccessStatus,
+        overlayDockPermissionStatus = overlayDockPermissionStatus,
+        hiddenAppCount = hiddenApps.size,
+    )
+
+internal fun settingsMainPageEntries(status: SettingsOverviewStatus = SettingsOverviewStatus()) =
     listOf(
         SettingsPageEntry(
             label = "Layout",
@@ -81,13 +99,13 @@ internal fun settingsMainPageEntries(): List<SettingsPageEntry> =
         ),
         SettingsPageEntry(
             label = "Hidden apps",
-            subtitle = "Apps removed from drawer and search",
+            subtitle = status.hiddenAppsSummary(),
             page = SettingsPage.HIDDEN_APPS,
             group = SettingsPageGroup.APPS,
         ),
         SettingsPageEntry(
             label = "Permissions",
-            subtitle = "Home, notifications, and overlays",
+            subtitle = status.permissionsSummary(),
             page = SettingsPage.PERMISSIONS,
             group = SettingsPageGroup.SYSTEM,
         ),
@@ -113,16 +131,19 @@ internal fun settingsMainPageGroups(): List<SettingsPageGroup> =
         SettingsPageGroup.SYSTEM,
     )
 
-internal fun settingsMainPageEntriesMatching(query: String): List<SettingsPageEntry> {
+internal fun settingsMainPageEntriesMatching(
+    query: String,
+    status: SettingsOverviewStatus = SettingsOverviewStatus(),
+): List<SettingsPageEntry> {
     val tokens =
         query
             .trim()
             .lowercase()
             .split(Regex("\\s+"))
             .filter(String::isNotBlank)
-    if (tokens.isEmpty()) return settingsMainPageEntries()
+    if (tokens.isEmpty()) return settingsMainPageEntries(status)
 
-    return settingsMainPageEntries()
+    return settingsMainPageEntries(status)
         .filter { entry ->
             val searchableText =
                 listOf(
@@ -137,3 +158,24 @@ internal fun settingsMainPageEntriesMatching(query: String): List<SettingsPageEn
 
 internal fun settingsLayoutPageTabs(availableDeviceClasses: Set<HomeLayoutDeviceClass>): List<SettingsLayoutDeviceTab> =
     settingsLayoutDeviceTabs(availableDeviceClasses)
+
+private fun SettingsOverviewStatus.hiddenAppsSummary(): String =
+    when (hiddenAppCount) {
+        0 -> "No hidden apps"
+        1 -> "1 hidden app"
+        else -> "$hiddenAppCount hidden apps"
+    }
+
+private fun SettingsOverviewStatus.permissionsSummary(): String =
+    listOf(
+        homeRoleStatus.settingsOverviewLabel(),
+        "notifications ${notificationAccessStatus.settingsNotificationAccessLabel().lowercase()}",
+        "overlay ${overlayDockPermissionStatus.settingsOverlayDockPermissionLabel().lowercase()}",
+    ).joinToString(separator = ", ")
+
+private fun HomeRoleStatus.settingsOverviewLabel(): String =
+    when (this) {
+        HomeRoleStatus.DEFAULT_HOME -> "Home set"
+        HomeRoleStatus.NOT_DEFAULT_HOME -> "Home not set"
+        HomeRoleStatus.UNKNOWN -> "Home unknown"
+    }

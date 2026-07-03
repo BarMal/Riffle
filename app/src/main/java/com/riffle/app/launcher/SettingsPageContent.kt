@@ -68,7 +68,11 @@ private fun SettingsMainPageContent(
         onQueryChanged = { query -> settingsQuery.value = query },
         label = "Search settings",
     )
-    val entries = settingsMainPageEntriesMatching(settingsQuery.value)
+    val entries =
+        settingsMainPageEntriesMatching(
+            query = settingsQuery.value,
+            status = state.settingsOverviewStatus(),
+        )
     if (entries.isEmpty()) {
         Text(
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 24.dp),
