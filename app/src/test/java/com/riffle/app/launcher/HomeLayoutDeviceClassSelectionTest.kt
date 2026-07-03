@@ -7,6 +7,30 @@ import org.junit.Test
 
 class HomeLayoutDeviceClassSelectionTest {
     @Test
+    fun treatsFoldableHardwareWithoutCurrentFoldingFeatureAsFolded() {
+        assertEquals(
+            HomeLayoutFoldablePosture.FOLDED,
+            homeLayoutFoldablePosture(
+                hasFoldableHardware = true,
+                hasFoldingFeature = false,
+                hasUnfoldedFoldingFeature = false,
+            ),
+        )
+    }
+
+    @Test
+    fun treatsFlatOrSeparatingFoldingFeatureAsUnfolded() {
+        assertEquals(
+            HomeLayoutFoldablePosture.UNFOLDED,
+            homeLayoutFoldablePosture(
+                hasFoldableHardware = true,
+                hasFoldingFeature = true,
+                hasUnfoldedFoldingFeature = true,
+            ),
+        )
+    }
+
+    @Test
     fun ignoresUnavailableConfigurationDimensions() {
         assertNull(homeLayoutDeviceClassFromConfiguration(screenWidthDp = 0, screenHeightDp = 900))
         assertNull(homeLayoutDeviceClassFromConfiguration(screenWidthDp = 700, screenHeightDp = 0))
@@ -38,11 +62,11 @@ class HomeLayoutDeviceClassSelectionTest {
     }
 
     @Test
-    fun classifiesWindowWithFoldingFeatureAsFoldableEvenWhenConfigurationIsTabletSized() {
+    fun classifiesUnfoldedWindowAsFoldableEvenWhenConfigurationIsTabletSized() {
         assertEquals(
             HomeLayoutDeviceClass.FOLDABLE,
             homeLayoutDeviceClassFromWindowLayout(
-                hasFoldingFeature = true,
+                foldablePosture = HomeLayoutFoldablePosture.UNFOLDED,
                 screenWidthDp = 900,
                 screenHeightDp = 1200,
             ),
@@ -50,13 +74,13 @@ class HomeLayoutDeviceClassSelectionTest {
     }
 
     @Test
-    fun classifiesPhoneSizedWindowWithFoldingFeatureAsPhone() {
+    fun classifiesFoldedWindowAsPhoneEvenWhenConfigurationIsLarge() {
         assertEquals(
             HomeLayoutDeviceClass.PHONE,
             homeLayoutDeviceClassFromWindowLayout(
-                hasFoldingFeature = true,
-                screenWidthDp = 412,
-                screenHeightDp = 915,
+                foldablePosture = HomeLayoutFoldablePosture.FOLDED,
+                screenWidthDp = 720,
+                screenHeightDp = 840,
             ),
         )
     }
@@ -66,7 +90,7 @@ class HomeLayoutDeviceClassSelectionTest {
         assertEquals(
             setOf(HomeLayoutDeviceClass.PHONE, HomeLayoutDeviceClass.FOLDABLE),
             homeLayoutDeviceClassSelectionFromWindowLayout(
-                hasFoldingFeature = true,
+                foldablePosture = HomeLayoutFoldablePosture.FOLDED,
                 screenWidthDp = 412,
                 screenHeightDp = 915,
             )?.availableDeviceClasses,
@@ -78,7 +102,7 @@ class HomeLayoutDeviceClassSelectionTest {
         assertEquals(
             setOf(HomeLayoutDeviceClass.TABLET),
             homeLayoutDeviceClassSelectionFromWindowLayout(
-                hasFoldingFeature = false,
+                foldablePosture = HomeLayoutFoldablePosture.NONE,
                 screenWidthDp = 900,
                 screenHeightDp = 1200,
             )?.availableDeviceClasses,
@@ -90,7 +114,7 @@ class HomeLayoutDeviceClassSelectionTest {
         assertEquals(
             HomeLayoutDeviceClass.TABLET,
             homeLayoutDeviceClassFromWindowLayout(
-                hasFoldingFeature = false,
+                foldablePosture = HomeLayoutFoldablePosture.NONE,
                 screenWidthDp = 900,
                 screenHeightDp = 1200,
             ),
