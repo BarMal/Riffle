@@ -4,6 +4,9 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
@@ -66,20 +69,29 @@ private fun SettingsMainPageContent(
         label = "Search settings",
     )
     val entries = settingsMainPageEntriesMatching(settingsQuery.value)
-    settingsMainPageGroups().forEach { group ->
-        entries
-            .filter { entry -> entry.group == group }
-            .takeIf { groupEntries -> groupEntries.isNotEmpty() }
-            ?.let { groupEntries ->
-                SettingsSection(title = group.title) {
-                    groupEntries.forEach { entry ->
-                        SettingsPageEntryRow(
-                            entry = entry,
-                            onPageSelected = onPageSelected,
-                        )
+    if (entries.isEmpty()) {
+        Text(
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 24.dp),
+            text = "No settings found",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    } else {
+        settingsMainPageGroups().forEach { group ->
+            entries
+                .filter { entry -> entry.group == group }
+                .takeIf { groupEntries -> groupEntries.isNotEmpty() }
+                ?.let { groupEntries ->
+                    SettingsSection(title = group.title) {
+                        groupEntries.forEach { entry ->
+                            SettingsPageEntryRow(
+                                entry = entry,
+                                onPageSelected = onPageSelected,
+                            )
+                        }
                     }
                 }
-            }
+        }
     }
 }
 
