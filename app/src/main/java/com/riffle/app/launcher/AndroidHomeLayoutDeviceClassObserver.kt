@@ -14,52 +14,71 @@ internal class AndroidHomeLayoutDeviceClassObserver(
     private val activity: Activity,
     private val windowMetricsCalculator: WindowMetricsCalculator = WindowMetricsCalculator.getOrCreate(),
 ) {
-    fun currentDeviceClassSelection(): HomeLayoutDeviceClassSelection? {
+    fun currentDeviceClassEvent(source: String): HomeLayoutDeviceClassEvent? =
+        deviceClassEvent(
+            source = source,
+            foldingFeatures = emptyList(),
+        )
+
+    fun currentDeviceClassSelection(): HomeLayoutDeviceClassSelection? = currentDeviceClassEvent("current")?.selection
+
+    fun deviceClassEvents(): Flow<HomeLayoutDeviceClassEvent?> =
+        WindowInfoTracker
+            .getOrCreate(activity)
+            .windowLayoutInfo(activity)
+            .map { layoutInfo ->
+                deviceClassEvent(
+                    source = "window-info",
+                    foldingFeatures = layoutInfo.displayFeatures.filterIsInstance<FoldingFeature>(),
+                )
+            }
+            .distinctUntilChanged()
+
+    fun deviceClassSelections(): Flow<HomeLayoutDeviceClassSelection?> =
+        deviceClassEvents()
+            .map { event -> event?.selection }
+            .distinctUntilChanged()
+
+    private fun deviceClassEvent(
+        source: String,
+        foldingFeatures: List<FoldingFeature>,
+    ): HomeLayoutDeviceClassEvent? {
         val windowSize = currentWindowSize()
         val configurationClass =
             homeLayoutDeviceClassFromConfiguration(
                 screenWidthDp = windowSize.screenWidthDp,
                 screenHeightDp = windowSize.screenHeightDp,
             )
+        val hasFoldableHardware = activity.hasFoldableHardware()
+        val foldablePosture =
+            foldingFeatures.foldablePosture(
+                hasFoldableHardware = hasFoldableHardware,
+                configurationClass = configurationClass,
+            )
+        val selection =
+            homeLayoutDeviceClassSelectionFromWindowLayout(
+                foldablePosture = foldablePosture,
+                screenWidthDp = windowSize.screenWidthDp,
+                screenHeightDp = windowSize.screenHeightDp,
+            ) ?: return null
 
-        return homeLayoutDeviceClassSelectionFromWindowLayout(
-            foldablePosture =
-                emptyList<FoldingFeature>().foldablePosture(
-                    hasFoldableHardware = activity.hasFoldableHardware(),
-                    configurationClass = configurationClass,
-                ),
-            screenWidthDp = windowSize.screenWidthDp,
-            screenHeightDp = windowSize.screenHeightDp,
+        return HomeLayoutDeviceClassEvent(
+            source = source,
+            selection = selection,
+            windowSize = windowSize,
+            hasFoldableHardware = hasFoldableHardware,
+            configurationClass = configurationClass,
+            foldablePosture = foldablePosture,
+            foldingFeatures =
+                foldingFeatures.map { feature ->
+                    HomeLayoutFoldingFeatureDebug(
+                        state = feature.state.toString(),
+                        orientation = feature.orientation.toString(),
+                        isSeparating = feature.isSeparating,
+                    )
+                },
         )
     }
-
-    fun deviceClassSelections(): Flow<HomeLayoutDeviceClassSelection?> =
-        WindowInfoTracker
-            .getOrCreate(activity)
-            .windowLayoutInfo(activity)
-            .map { layoutInfo ->
-                val windowSize = currentWindowSize()
-                val screenWidthDp = windowSize.screenWidthDp
-                val screenHeightDp = windowSize.screenHeightDp
-                val configurationClass =
-                    homeLayoutDeviceClassFromConfiguration(
-                        screenWidthDp = screenWidthDp,
-                        screenHeightDp = screenHeightDp,
-                    )
-
-                homeLayoutDeviceClassSelectionFromWindowLayout(
-                    foldablePosture =
-                        layoutInfo.displayFeatures
-                            .filterIsInstance<FoldingFeature>()
-                            .foldablePosture(
-                                hasFoldableHardware = activity.hasFoldableHardware(),
-                                configurationClass = configurationClass,
-                            ),
-                    screenWidthDp = screenWidthDp,
-                    screenHeightDp = screenHeightDp,
-                )
-            }
-            .distinctUntilChanged()
 
     private fun currentWindowSize(): HomeLayoutWindowSize {
         val bounds = windowMetricsCalculator.computeCurrentWindowMetrics(activity).bounds
@@ -70,6 +89,38 @@ internal class AndroidHomeLayoutDeviceClassObserver(
         )
     }
 }
+
+internal data class HomeLayoutDeviceClassEvent(
+    val source: String,
+    val selection: HomeLayoutDeviceClassSelection,
+    val windowSize: HomeLayoutWindowSize,
+    val hasFoldableHardware: Boolean,
+    val configurationClass: HomeLayoutDeviceClass?,
+    val foldablePosture: HomeLayoutFoldablePosture,
+    val foldingFeatures: List<HomeLayoutFoldingFeatureDebug>,
+) {
+    val toastText: String
+        get() =
+            "Fold $source: ${selection.activeDeviceClass} " +
+                "${windowSize.screenWidthDp}x${windowSize.screenHeightDp}dp $foldablePosture"
+
+    val logText: String
+        get() =
+            "source=$source " +
+                "active=${selection.activeDeviceClass} " +
+                "available=${selection.availableDeviceClasses.sorted()} " +
+                "window=${windowSize.screenWidthDp}x${windowSize.screenHeightDp}dp " +
+                "posture=$foldablePosture " +
+                "configurationClass=$configurationClass " +
+                "hasFoldableHardware=$hasFoldableHardware " +
+                "foldingFeatures=$foldingFeatures"
+}
+
+internal data class HomeLayoutFoldingFeatureDebug(
+    val state: String,
+    val orientation: String,
+    val isSeparating: Boolean,
+)
 
 internal data class HomeLayoutWindowSize(
     val screenWidthDp: Int,

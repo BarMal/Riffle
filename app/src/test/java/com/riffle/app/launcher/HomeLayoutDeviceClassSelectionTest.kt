@@ -7,6 +7,44 @@ import org.junit.Test
 
 class HomeLayoutDeviceClassSelectionTest {
     @Test
+    fun foldableDiagnosticsSummarizeSelectionAndSignals() {
+        val event =
+            HomeLayoutDeviceClassEvent(
+                source = "window-info",
+                selection =
+                    HomeLayoutDeviceClassSelection(
+                        activeDeviceClass = HomeLayoutDeviceClass.FOLDABLE,
+                        availableDeviceClasses = setOf(HomeLayoutDeviceClass.PHONE, HomeLayoutDeviceClass.FOLDABLE),
+                    ),
+                windowSize = HomeLayoutWindowSize(screenWidthDp = 720, screenHeightDp = 840),
+                hasFoldableHardware = true,
+                configurationClass = HomeLayoutDeviceClass.FOLDABLE,
+                foldablePosture = HomeLayoutFoldablePosture.UNFOLDED,
+                foldingFeatures =
+                    listOf(
+                        HomeLayoutFoldingFeatureDebug(
+                            state = "FLAT",
+                            orientation = "VERTICAL",
+                            isSeparating = true,
+                        ),
+                    ),
+            )
+
+        assertEquals("Fold window-info: FOLDABLE 720x840dp UNFOLDED", event.toastText)
+        assertEquals(
+            "source=window-info " +
+                "active=FOLDABLE " +
+                "available=[PHONE, FOLDABLE] " +
+                "window=720x840dp " +
+                "posture=UNFOLDED " +
+                "configurationClass=FOLDABLE " +
+                "hasFoldableHardware=true " +
+                "foldingFeatures=[HomeLayoutFoldingFeatureDebug(state=FLAT, orientation=VERTICAL, isSeparating=true)]",
+            event.logText,
+        )
+    }
+
+    @Test
     fun convertsWindowPixelsToDpForLayoutClassification() {
         assertEquals(
             HomeLayoutWindowSize(screenWidthDp = 720, screenHeightDp = 840),
