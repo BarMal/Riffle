@@ -54,11 +54,11 @@ fun AppDrawer(
                 modifier = Modifier.weight(1f),
                 apps = apps,
                 emptyText =
-                    if (query.isBlank()) {
-                        "No launchable apps found"
-                    } else {
-                        "No matching apps"
-                    },
+                    appListEmptyText(
+                        surface = AppListSurface.DRAWER,
+                        query = query,
+                        profileFilter = profileFilter,
+                    ),
                 context = appListContext,
                 showSections = true,
             )
@@ -93,7 +93,12 @@ fun SearchSurface(
             AppList(
                 modifier = Modifier.weight(1f),
                 apps = results,
-                emptyText = "No matching apps",
+                emptyText =
+                    appListEmptyText(
+                        surface = AppListSurface.SEARCH,
+                        query = query,
+                        profileFilter = profileFilter,
+                    ),
                 context = appListContext,
                 showInlineActions = false,
             )
