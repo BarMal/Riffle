@@ -84,4 +84,26 @@ class ActiveNotificationJsonCodecTest {
 
         assertEquals(false, notifications.single().canDismiss)
     }
+
+    @Test
+    fun skipsMalformedNotificationEntries() {
+        val notifications =
+            decodeActiveNotifications(
+                """
+                [
+                    {
+                        "key": "valid",
+                        "packageName": "com.riffle.valid",
+                        "postedAtEpochMillis": 1000
+                    },
+                    {
+                        "key": "missing-package"
+                    },
+                    "not an object"
+                ]
+                """.trimIndent(),
+            )
+
+        assertEquals(listOf(LauncherNotificationKey("valid")), notifications.map { notification -> notification.key })
+    }
 }

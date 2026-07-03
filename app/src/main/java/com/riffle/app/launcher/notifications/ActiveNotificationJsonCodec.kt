@@ -14,8 +14,7 @@ fun encodeActiveNotifications(notifications: List<LauncherNotification>): String
 fun decodeActiveNotifications(value: String): List<LauncherNotification> =
     JSONArray(value).let { json ->
         (0 until json.length())
-            .map { index -> json.getJSONObject(index) }
-            .map { notification -> notification.toNotification() }
+            .mapNotNull { index -> json.optJSONObject(index)?.toNotificationOrNull() }
     }
 
 private fun encodeNotification(notification: LauncherNotification): JSONObject =
@@ -27,15 +26,17 @@ private fun encodeNotification(notification: LauncherNotification): JSONObject =
         .put("canDismiss", notification.canDismiss)
         .put("postedAtEpochMillis", notification.postedAtEpochMillis)
 
-private fun JSONObject.toNotification(): LauncherNotification =
-    LauncherNotification(
-        key = LauncherNotificationKey(getString("key")),
-        packageName = AppPackageName(getString("packageName")),
-        category = optNotificationCategory(),
-        priority = optNotificationPriority(),
-        canDismiss = optBoolean("canDismiss", false),
-        postedAtEpochMillis = optLong("postedAtEpochMillis", 0L),
-    )
+private fun JSONObject.toNotificationOrNull(): LauncherNotification? =
+    runCatching {
+        LauncherNotification(
+            key = LauncherNotificationKey(getString("key")),
+            packageName = AppPackageName(getString("packageName")),
+            category = optNotificationCategory(),
+            priority = optNotificationPriority(),
+            canDismiss = optBoolean("canDismiss", false),
+            postedAtEpochMillis = optLong("postedAtEpochMillis", 0L),
+        )
+    }.getOrNull()
 
 private fun JSONObject.optNotificationCategory(): NotificationCategory =
     optString("category")
