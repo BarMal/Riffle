@@ -1,5 +1,6 @@
 package com.riffle.app.launcher
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -33,6 +34,10 @@ fun SettingsSurface(
     onAction: (LauncherShellAction) -> Unit,
 ) {
     val selectedPage = remember { mutableStateOf(SettingsPage.MAIN) }
+
+    BackHandler(enabled = selectedPage.value != SettingsPage.MAIN) {
+        selectedPage.value = SettingsPage.MAIN
+    }
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -104,7 +109,7 @@ private fun ColumnScope.SettingsPageHeader(
                     SettingsButtonText(text = "Back")
                 }
             }
-            TextButton(onClick = { onAction(LauncherShellAction.OpenHome) }) {
+            TextButton(onClick = { onAction(LauncherShellAction.OpenDefaultHome) }) {
                 SettingsButtonText(text = "Home")
             }
         }

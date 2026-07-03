@@ -10,7 +10,9 @@ fun HomePageEngine.applyEdit(
     layout: HomeLayout,
 ): HomePageEditResult =
     when (action) {
-        LauncherShellAction.EnterHomeEditMode ->
+        LauncherShellAction.OpenDefaultHome,
+        LauncherShellAction.EnterHomeEditMode,
+        ->
             applyModeEdit(action = action, layout = layout)
 
         LauncherShellAction.ExitHomeEditMode ->
@@ -62,6 +64,12 @@ private fun HomePageEngine.applyModeEdit(
     layout: HomeLayout,
 ): HomePageEditResult =
     when (action) {
+        LauncherShellAction.OpenDefaultHome ->
+            when (val selected = selectPage(layout = layout, pageId = layout.pages.first().id)) {
+                is HomePageEditResult.Updated -> exitEditMode(layout = selected.layout)
+                is HomePageEditResult.Rejected -> selected
+            }
+
         LauncherShellAction.EnterHomeEditMode ->
             enterPageEditMode(
                 layout = layout,

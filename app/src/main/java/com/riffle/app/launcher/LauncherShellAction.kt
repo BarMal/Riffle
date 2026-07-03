@@ -31,6 +31,8 @@ sealed interface LauncherShellAction {
 
     data object OpenHome : LauncherShellAction
 
+    data object OpenDefaultHome : LauncherShellAction
+
     data object OpenAppDrawer : LauncherShellAction
 
     data object OpenSearch : LauncherShellAction
