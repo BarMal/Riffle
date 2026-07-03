@@ -54,6 +54,11 @@ class SettingsPagesTest {
     }
 
     @Test
+    fun returnsNoMainSettingsEntriesForUnknownSearch() {
+        assertEquals(emptyList<SettingsPageEntry>(), settingsMainPageEntriesMatching("missing setting"))
+    }
+
+    @Test
     fun layoutPageUsesFoldedAndUnfoldedTabsForFoldableDevices() {
         assertEquals(
             listOf("Folded", "Unfolded"),
