@@ -18,10 +18,13 @@ internal fun homeLayoutFoldablePosture(
     hasFoldableHardware: Boolean,
     hasFoldingFeature: Boolean,
     hasUnfoldedFoldingFeature: Boolean,
+    configurationClass: HomeLayoutDeviceClass?,
 ): HomeLayoutFoldablePosture =
     when {
         hasUnfoldedFoldingFeature -> HomeLayoutFoldablePosture.UNFOLDED
-        hasFoldingFeature || hasFoldableHardware -> HomeLayoutFoldablePosture.FOLDED
+        hasFoldingFeature -> HomeLayoutFoldablePosture.FOLDED
+        hasFoldableHardware && configurationClass != HomeLayoutDeviceClass.PHONE -> HomeLayoutFoldablePosture.UNFOLDED
+        hasFoldableHardware -> HomeLayoutFoldablePosture.FOLDED
         else -> HomeLayoutFoldablePosture.NONE
     }
 

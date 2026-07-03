@@ -7,13 +7,27 @@ import org.junit.Test
 
 class HomeLayoutDeviceClassSelectionTest {
     @Test
-    fun treatsFoldableHardwareWithoutCurrentFoldingFeatureAsFolded() {
+    fun treatsPhoneSizedFoldableHardwareWithoutCurrentFoldingFeatureAsFolded() {
         assertEquals(
             HomeLayoutFoldablePosture.FOLDED,
             homeLayoutFoldablePosture(
                 hasFoldableHardware = true,
                 hasFoldingFeature = false,
                 hasUnfoldedFoldingFeature = false,
+                configurationClass = HomeLayoutDeviceClass.PHONE,
+            ),
+        )
+    }
+
+    @Test
+    fun treatsLargeFoldableHardwareWithoutCurrentFoldingFeatureAsUnfolded() {
+        assertEquals(
+            HomeLayoutFoldablePosture.UNFOLDED,
+            homeLayoutFoldablePosture(
+                hasFoldableHardware = true,
+                hasFoldingFeature = false,
+                hasUnfoldedFoldingFeature = false,
+                configurationClass = HomeLayoutDeviceClass.FOLDABLE,
             ),
         )
     }
@@ -26,6 +40,7 @@ class HomeLayoutDeviceClassSelectionTest {
                 hasFoldableHardware = true,
                 hasFoldingFeature = true,
                 hasUnfoldedFoldingFeature = true,
+                configurationClass = HomeLayoutDeviceClass.PHONE,
             ),
         )
     }

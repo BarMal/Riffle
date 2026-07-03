@@ -137,6 +137,62 @@ class LauncherShellActiveLayoutGridTest {
     }
 
     @Test
+    fun settingsGridsStayIndependentAfterLeavingSettingsAndUnfolding() {
+        val phoneGrid = GridDimensions(columns = 4, rows = 6)
+        val foldableGrid = GridDimensions(columns = 6, rows = 5)
+        val phoneKey =
+            HomeLayoutKey(
+                viewMode = LauncherViewMode.STANDARD_APP_DRAWER,
+                deviceClass = HomeLayoutDeviceClass.PHONE,
+            )
+        val foldableKey =
+            HomeLayoutKey(
+                viewMode = LauncherViewMode.STANDARD_APP_DRAWER,
+                deviceClass = HomeLayoutDeviceClass.FOLDABLE,
+            )
+        val repository =
+            FakeHomeLayoutRepository(
+                layoutSet =
+                    HomeLayoutSet(
+                        activeKey = phoneKey,
+                        layouts =
+                            mapOf(
+                                phoneKey to HomeLayoutDefaults.standard(HomeLayoutDeviceClass.PHONE),
+                                foldableKey to HomeLayoutDefaults.standard(HomeLayoutDeviceClass.FOLDABLE),
+                            ),
+                    ),
+            )
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                homeLayoutRepository = repository,
+            )
+
+        viewModel.onNavigationActionSelected(ShellNavigationAction.OpenSettings)
+        viewModel.onHomePageEdited(LauncherShellAction.SelectHomeGridDimensions(phoneGrid))
+        viewModel.onLauncherSettingsActionSelected(
+            LauncherShellAction.SelectSettingsLayoutDeviceClass(HomeLayoutDeviceClass.FOLDABLE),
+        )
+        viewModel.onHomePageEdited(LauncherShellAction.SelectHomeGridDimensions(foldableGrid))
+        viewModel.onHomePageEdited(LauncherShellAction.OpenDefaultHome)
+        viewModel.onNavigationActionSelected(ShellNavigationAction.OpenHome)
+        viewModel.onHomePageEdited(
+            LauncherShellAction.SelectHomeLayoutDeviceClass(
+                deviceClass = HomeLayoutDeviceClass.FOLDABLE,
+                availableDeviceClasses = setOf(HomeLayoutDeviceClass.PHONE, HomeLayoutDeviceClass.FOLDABLE),
+            ),
+        )
+
+        assertEquals(phoneGrid, viewModel.state.value.homeLayoutSet.layoutFor(phoneKey).settings.grid.dimensions)
+        assertEquals(foldableGrid, viewModel.state.value.homeLayoutSet.layoutFor(foldableKey).settings.grid.dimensions)
+        assertEquals(foldableGrid, viewModel.state.value.homeLayout.settings.grid.dimensions)
+        assertEquals(
+            listOf(foldableGrid),
+            viewModel.state.value.homeLayout.pages.map { page -> page.grid }.distinct(),
+        )
+    }
+
+    @Test
     fun deviceSelectionOutsideSettingsClearsStaleSettingsLayoutTab() {
         val phoneKey =
             HomeLayoutKey(
