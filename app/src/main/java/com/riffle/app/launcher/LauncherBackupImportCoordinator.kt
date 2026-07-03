@@ -4,9 +4,14 @@ class LauncherBackupImportCoordinator {
     fun handleImportResult(result: LauncherBackupImportResult): LauncherBackupImportOutcome =
         when (result) {
             is LauncherBackupImportResult.Imported ->
-                LauncherBackupImportOutcome.Imported(
-                    action = LauncherShellAction.ImportLauncherBackup(result.document),
-                )
+                when {
+                    result.document.isImportableBackup() ->
+                        LauncherBackupImportOutcome.Imported(
+                            action = LauncherShellAction.ImportLauncherBackup(result.document),
+                        )
+
+                    else -> LauncherBackupImportOutcome.Failure
+                }
 
             LauncherBackupImportResult.Failure -> LauncherBackupImportOutcome.Failure
         }
