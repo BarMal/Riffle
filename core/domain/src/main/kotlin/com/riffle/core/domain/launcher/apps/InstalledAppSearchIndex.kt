@@ -5,13 +5,13 @@ class InstalledAppSearchIndex(
     private val shortcutsByApp: AppShortcutsByApp = emptyMap(),
 ) {
     fun search(query: String): List<InstalledApp> =
-        query.trim().lowercase().let { normalizedQuery ->
+        query.normalizedSearchTokens().let { queryTokens ->
             when {
-                normalizedQuery.isBlank() -> apps
+                queryTokens.isEmpty() -> apps
                 else ->
                     apps
                         .mapIndexedNotNull { index, app ->
-                            app.searchRank(normalizedQuery)?.let { rank ->
+                            app.searchRank(queryTokens)?.let { rank ->
                                 InstalledAppSearchHit(
                                     app = app,
                                     rank = rank,
@@ -27,28 +27,28 @@ class InstalledAppSearchIndex(
             }
         }
 
-    private fun InstalledApp.searchRank(query: String): Int? =
+    private fun InstalledApp.searchRank(queryTokens: List<String>): Int? =
         listOfNotNull(
-            labelRank(query),
-            shortcutRank(query),
-            identityRank(query),
+            labelRank(queryTokens),
+            shortcutRank(queryTokens),
+            identityRank(queryTokens),
         ).minOrNull()
 
-    private fun InstalledApp.labelRank(query: String): Int? =
+    private fun InstalledApp.labelRank(queryTokens: List<String>): Int? =
         label.lowercase().let { label ->
             when {
-                label.startsWith(query) -> 0
-                label.contains(query) -> 1
+                label.matchesAll(queryTokens) && label.startsWith(queryTokens.first()) -> 0
+                label.matchesAll(queryTokens) -> 1
                 else -> null
             }
         }
 
-    private fun InstalledApp.shortcutRank(query: String): Int? =
+    private fun InstalledApp.shortcutRank(queryTokens: List<String>): Int? =
         shortcutsByApp[identity].orEmpty()
-            .mapNotNull { shortcut -> shortcut.searchRank(query) }
+            .mapNotNull { shortcut -> shortcut.searchRank(queryTokens) }
             .minOrNull()
 
-    private fun InstalledApp.identityRank(query: String): Int? =
+    private fun InstalledApp.identityRank(queryTokens: List<String>): Int? =
         listOf(
             identity.packageName.value,
             identity.activityName.value,
@@ -56,19 +56,32 @@ class InstalledAppSearchIndex(
             identity.profile.type.name,
         )
             .map { token -> token.lowercase() }
-            .takeIf { tokens -> tokens.any { token -> token.contains(query) } }
+            .takeIf { tokens -> tokens.matchesAll(queryTokens) }
             ?.let { 3 }
 
-    private fun AppShortcut.searchRank(query: String): Int? =
+    private fun AppShortcut.searchRank(queryTokens: List<String>): Int? =
         listOf(
             shortLabel,
             longLabel.orEmpty(),
             id.value,
         )
             .map { token -> token.lowercase() }
-            .takeIf { tokens -> tokens.any { token -> token.contains(query) } }
+            .takeIf { tokens -> tokens.matchesAll(queryTokens) }
             ?.let { 2 }
 }
+
+private fun String.normalizedSearchTokens(): List<String> =
+    trim()
+        .lowercase()
+        .split(Regex("\\s+"))
+        .filter(String::isNotBlank)
+
+private fun String.matchesAll(queryTokens: List<String>): Boolean {
+    return queryTokens.all { queryToken -> contains(queryToken) }
+}
+
+private fun List<String>.matchesAll(queryTokens: List<String>): Boolean =
+    queryTokens.all { queryToken -> any { token -> token.contains(queryToken) } }
 
 private data class InstalledAppSearchHit(
     val app: InstalledApp,
