@@ -19,23 +19,18 @@ class SettingsLayoutDeviceTabsTest {
     }
 
     @Test
-    fun doesNotIncludeTabletTabUnlessTabletClassIsAvailable() {
+    fun alwaysOffersFoldedAndUnfoldedConfigurationsForPhoneClass() {
         assertEquals(
             listOf(HomeLayoutDeviceClass.PHONE, HomeLayoutDeviceClass.FOLDABLE),
-            settingsLayoutDeviceTabs(
-                setOf(
-                    HomeLayoutDeviceClass.PHONE,
-                    HomeLayoutDeviceClass.FOLDABLE,
-                ),
-            ).map { tab -> tab.deviceClass },
+            settingsLayoutDeviceTabs(setOf(HomeLayoutDeviceClass.PHONE)).map { tab -> tab.deviceClass },
         )
     }
 
     @Test
-    fun labelsSinglePhoneClassAsPhone() {
+    fun keepsTabletOnlyConfigurationAvailableWhenNoFoldableClassExists() {
         assertEquals(
-            listOf("Phone"),
-            settingsLayoutDeviceTabs(setOf(HomeLayoutDeviceClass.PHONE)).map { tab -> tab.label },
+            listOf("Tablet"),
+            settingsLayoutDeviceTabs(setOf(HomeLayoutDeviceClass.TABLET)).map { tab -> tab.label },
         )
     }
 }

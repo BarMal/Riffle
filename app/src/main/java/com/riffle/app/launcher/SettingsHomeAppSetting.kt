@@ -1,12 +1,6 @@
 package com.riffle.app.launcher
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
 import com.riffle.core.domain.launcher.HomeRoleStatus
 
 @Composable
@@ -27,23 +21,21 @@ private fun HomeAppSetting(
     status: HomeRoleStatus,
     onAction: (LauncherShellAction) -> Unit,
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        SettingsTextColumn(
-            modifier = Modifier.weight(1f),
-            title = "Default home app",
-            subtitle = status.settingsHomeAppStatusLabel(),
-        )
-        TextButton(
-            enabled = status != HomeRoleStatus.DEFAULT_HOME,
-            onClick = { onAction(LauncherShellAction.RequestDefaultHome) },
-        ) {
-            SettingsButtonText(text = "Set home")
-        }
-    }
+    SettingsClickableRow(
+        title = "Default home app",
+        subtitle = status.settingsHomeAppStatusLabel(),
+        onClick = { onAction(LauncherShellAction.RequestDefaultHome) },
+        trailingContent = {
+            SettingsButtonText(
+                text =
+                    if (status == HomeRoleStatus.DEFAULT_HOME) {
+                        "Set"
+                    } else {
+                        "Set home"
+                    },
+            )
+        },
+    )
 }
 
 internal fun HomeRoleStatus.settingsHomeAppStatusLabel(): String =

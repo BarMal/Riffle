@@ -7,37 +7,111 @@ internal enum class SettingsPage(
 ) {
     MAIN("Settings"),
     LAYOUT("Layout"),
+    DOCK("Dock"),
     APPEARANCE("Appearance"),
     FLOATING_DOCK("Floating dock"),
     GESTURES("Gestures"),
     HAPTICS("Haptics"),
     PERMISSIONS("Permissions"),
-    APPS("Apps"),
+    APPS("App drawer"),
     BACKUP("Backup"),
     HIDDEN_APPS("Hidden apps"),
-    VERSION("Version"),
+    VERSION("About"),
+}
+
+internal enum class SettingsPageGroup(
+    val title: String,
+) {
+    HOME("Home screen"),
+    INTERACTION("Interaction"),
+    APPS("Apps"),
+    SYSTEM("System"),
 }
 
 internal data class SettingsPageEntry(
     val label: String,
+    val subtitle: String,
     val page: SettingsPage,
+    val group: SettingsPageGroup,
 )
 
 internal fun settingsMainPageEntries(): List<SettingsPageEntry> =
     listOf(
-        SettingsPageEntry(label = "Layout", page = SettingsPage.LAYOUT),
-        SettingsPageEntry(label = "Appearance", page = SettingsPage.APPEARANCE),
-        SettingsPageEntry(label = "Floating dock", page = SettingsPage.FLOATING_DOCK),
-        SettingsPageEntry(label = "Gestures", page = SettingsPage.GESTURES),
-        SettingsPageEntry(label = "Haptics", page = SettingsPage.HAPTICS),
-        SettingsPageEntry(label = "Permissions", page = SettingsPage.PERMISSIONS),
-        SettingsPageEntry(label = "Apps", page = SettingsPage.APPS),
-        SettingsPageEntry(label = "Backup", page = SettingsPage.BACKUP),
-        SettingsPageEntry(label = "Hidden apps", page = SettingsPage.HIDDEN_APPS),
-        SettingsPageEntry(label = "Version", page = SettingsPage.VERSION),
+        SettingsPageEntry(
+            label = "Layout",
+            subtitle = "Home mode, grid, and labels",
+            page = SettingsPage.LAYOUT,
+            group = SettingsPageGroup.HOME,
+        ),
+        SettingsPageEntry(
+            label = "Dock",
+            subtitle = "Home dock visibility, slots, and sizing",
+            page = SettingsPage.DOCK,
+            group = SettingsPageGroup.HOME,
+        ),
+        SettingsPageEntry(
+            label = "Appearance",
+            subtitle = "Wallpaper source",
+            page = SettingsPage.APPEARANCE,
+            group = SettingsPageGroup.HOME,
+        ),
+        SettingsPageEntry(
+            label = "Floating dock",
+            subtitle = "Overlay handle and floating shortcuts",
+            page = SettingsPage.FLOATING_DOCK,
+            group = SettingsPageGroup.HOME,
+        ),
+        SettingsPageEntry(
+            label = "Gestures",
+            subtitle = "Home swipe actions",
+            page = SettingsPage.GESTURES,
+            group = SettingsPageGroup.INTERACTION,
+        ),
+        SettingsPageEntry(
+            label = "Haptics",
+            subtitle = "Feedback strength",
+            page = SettingsPage.HAPTICS,
+            group = SettingsPageGroup.INTERACTION,
+        ),
+        SettingsPageEntry(
+            label = "App drawer",
+            subtitle = "Refresh installed apps",
+            page = SettingsPage.APPS,
+            group = SettingsPageGroup.APPS,
+        ),
+        SettingsPageEntry(
+            label = "Hidden apps",
+            subtitle = "Apps removed from drawer and search",
+            page = SettingsPage.HIDDEN_APPS,
+            group = SettingsPageGroup.APPS,
+        ),
+        SettingsPageEntry(
+            label = "Permissions",
+            subtitle = "Home, notifications, and overlays",
+            page = SettingsPage.PERMISSIONS,
+            group = SettingsPageGroup.SYSTEM,
+        ),
+        SettingsPageEntry(
+            label = "Backup",
+            subtitle = "Import and export launcher data",
+            page = SettingsPage.BACKUP,
+            group = SettingsPageGroup.SYSTEM,
+        ),
+        SettingsPageEntry(
+            label = "About",
+            subtitle = "Version and build information",
+            page = SettingsPage.VERSION,
+            group = SettingsPageGroup.SYSTEM,
+        ),
+    )
+
+internal fun settingsMainPageGroups(): List<SettingsPageGroup> =
+    listOf(
+        SettingsPageGroup.HOME,
+        SettingsPageGroup.INTERACTION,
+        SettingsPageGroup.APPS,
+        SettingsPageGroup.SYSTEM,
     )
 
 internal fun settingsLayoutPageTabs(availableDeviceClasses: Set<HomeLayoutDeviceClass>): List<SettingsLayoutDeviceTab> =
     settingsLayoutDeviceTabs(availableDeviceClasses)
-        .takeIf { tabs -> tabs.size > 1 }
-        .orEmpty()
