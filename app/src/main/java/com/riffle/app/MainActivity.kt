@@ -1,6 +1,7 @@
 package com.riffle.app
 
 import android.app.Activity
+import android.content.res.Configuration
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -230,6 +231,7 @@ class MainActivity : ComponentActivity() {
         activeNotificationRefreshCoordinator.start()
         lifecycle.addObserver(packageChangeObserver)
         lifecycle.addObserver(widgetHostGateway)
+        refreshHomeLayoutDeviceClass()
         observeHomeLayoutDeviceClass()
 
         setContent {
@@ -249,7 +251,13 @@ class MainActivity : ComponentActivity() {
         shellViewModel.refreshInstalledApps()
         shellViewModel.refreshNotifications()
         shellViewModel.refreshWidgetProviders()
+        refreshHomeLayoutDeviceClass()
         refreshPlatformStatuses()
+    }
+
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        refreshHomeLayoutDeviceClass()
     }
 
     private fun refreshPlatformStatuses() {
@@ -266,6 +274,17 @@ class MainActivity : ComponentActivity() {
             settings = shellViewModel.state.value.launcherSettings,
             permissionStatus = shellViewModel.state.value.overlayDockPermissionStatus,
         )
+    }
+
+    private fun refreshHomeLayoutDeviceClass() {
+        homeLayoutDeviceClassObserver.currentDeviceClassSelection()?.let { layoutDeviceClassSelection ->
+            shellViewModel.onHomePageEdited(
+                LauncherShellAction.SelectHomeLayoutDeviceClass(
+                    deviceClass = layoutDeviceClassSelection.activeDeviceClass,
+                    availableDeviceClasses = layoutDeviceClassSelection.availableDeviceClasses,
+                ),
+            )
+        }
     }
 
     private fun observeHomeLayoutDeviceClass() {

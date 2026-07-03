@@ -7,6 +7,30 @@ import org.junit.Test
 
 class HomeLayoutDeviceClassSelectionTest {
     @Test
+    fun convertsWindowPixelsToDpForLayoutClassification() {
+        assertEquals(
+            HomeLayoutWindowSize(screenWidthDp = 720, screenHeightDp = 840),
+            homeLayoutWindowSizeFromPixels(
+                widthPx = 1800,
+                heightPx = 2100,
+                density = 2.5f,
+            ),
+        )
+    }
+
+    @Test
+    fun convertsWindowPixelsWithSafeDensityFallback() {
+        assertEquals(
+            HomeLayoutWindowSize(screenWidthDp = 412, screenHeightDp = 915),
+            homeLayoutWindowSizeFromPixels(
+                widthPx = 412,
+                heightPx = 915,
+                density = 0f,
+            ),
+        )
+    }
+
+    @Test
     fun treatsPhoneSizedFoldableHardwareWithoutCurrentFoldingFeatureAsFolded() {
         assertEquals(
             HomeLayoutFoldablePosture.FOLDED,

@@ -18,6 +18,7 @@
         android:theme="@style/Theme.Riffle">
         <activity
             android:name=".MainActivity"
+            android:configChanges="orientation|screenLayout|screenSize|smallestScreenSize"
             android:exported="true"
             android:theme="@style/Theme.Riffle">
             <intent-filter>
