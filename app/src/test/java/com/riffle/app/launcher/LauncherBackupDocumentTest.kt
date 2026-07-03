@@ -69,4 +69,43 @@ class LauncherBackupDocumentTest {
             decodeLauncherBackupDocument(value)
         }
     }
+
+    @Test
+    fun rejectsMalformedBackupJson() {
+        assertThrows(IllegalArgumentException::class.java) {
+            decodeLauncherBackupDocument("not json")
+        }
+    }
+
+    @Test
+    fun rejectsBackupWithoutHomeLayouts() {
+        val value =
+            """
+            {
+              "type": "riffleLauncherBackup",
+              "version": 1,
+              "settings": {}
+            }
+            """.trimIndent()
+
+        assertThrows(IllegalArgumentException::class.java) {
+            decodeLauncherBackupDocument(value)
+        }
+    }
+
+    @Test
+    fun rejectsBackupWithoutSettings() {
+        val value =
+            """
+            {
+              "type": "riffleLauncherBackup",
+              "version": 1,
+              "homeLayouts": {}
+            }
+            """.trimIndent()
+
+        assertThrows(IllegalArgumentException::class.java) {
+            decodeLauncherBackupDocument(value)
+        }
+    }
 }
