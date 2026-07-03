@@ -21,19 +21,19 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.riffle.core.domain.launcher.apps.InstalledApp
-import com.riffle.core.domain.launcher.home.WallpaperSource
-import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
 
 @Composable
 fun SettingsSurface(
     state: SettingsSurfaceState,
     onAction: (LauncherShellAction) -> Unit,
 ) {
+    val selectedPage = remember { mutableStateOf(SettingsPage.MAIN) }
+
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background,
@@ -46,7 +46,10 @@ fun SettingsSurface(
                     .padding(horizontal = 20.dp, vertical = 16.dp),
         ) {
             SettingsPageHeader(
+                title = selectedPage.value.title,
                 appVersionLabel = state.appVersionLabel,
+                showBack = selectedPage.value != SettingsPage.MAIN,
+                onBack = { selectedPage.value = SettingsPage.MAIN },
                 onAction = onAction,
             )
             Spacer(modifier = Modifier.height(24.dp))
@@ -59,6 +62,8 @@ fun SettingsSurface(
                         .align(Alignment.CenterHorizontally)
                         .verticalScroll(rememberScrollState()),
                 state = state,
+                page = selectedPage.value,
+                onPageSelected = { page -> selectedPage.value = page },
                 onAction = onAction,
             )
         }
@@ -67,7 +72,10 @@ fun SettingsSurface(
 
 @Composable
 private fun ColumnScope.SettingsPageHeader(
+    title: String,
     appVersionLabel: String,
+    showBack: Boolean,
+    onBack: () -> Unit,
     onAction: (LauncherShellAction) -> Unit,
 ) {
     Row(
@@ -81,7 +89,7 @@ private fun ColumnScope.SettingsPageHeader(
     ) {
         Column {
             Text(
-                text = "Settings",
+                text = title,
                 style = MaterialTheme.typography.headlineMedium,
             )
             Text(
@@ -90,156 +98,14 @@ private fun ColumnScope.SettingsPageHeader(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        TextButton(onClick = { onAction(LauncherShellAction.OpenHome) }) {
-            SettingsButtonText(text = "Home")
-        }
-    }
-}
-
-@Composable
-private fun SettingsPageContent(
-    modifier: Modifier,
-    state: SettingsSurfaceState,
-    onAction: (LauncherShellAction) -> Unit,
-) {
-    Column(
-        modifier = modifier,
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-    ) {
-        SettingsLayoutDeviceTabs(
-            selectedDeviceClass = state.selectedLayoutDeviceClass,
-            availableDeviceClasses = state.availableLayoutDeviceClasses,
-            onAction = onAction,
-        )
-        SettingsLauncherSection(
-            status = state.homeRoleStatus,
-            onAction = onAction,
-        )
-        SettingsSection(title = "Appearance") {
-            WallpaperSourceSetting(
-                selectedSource = state.settings.appearance.wallpaper.source,
-                onAction = onAction,
-            )
-            HomeLabelSetting(
-                settings = state.homeLayout.settings.labels,
-                onAction = onAction,
-            )
-        }
-        SettingsSection(title = "Home layout") {
-            HomeViewModeSetting(
-                viewMode = state.homeLayout.viewMode,
-                onAction = onAction,
-            )
-            HomeGridSetting(
-                grid = state.homeLayout.settings.grid,
-                viewMode = state.homeLayout.viewMode,
-                onAction = onAction,
-            )
-        }
-        SettingsDockSections(state = state, onAction = onAction)
-        SettingsSection(title = "Gestures") {
-            HomeSwipeGestureSetting(
-                settings = state.settings.gestures.homeSwipe,
-                onAction = onAction,
-            )
-        }
-        SettingsSection(title = "Haptics") {
-            HapticStrengthSetting(
-                selectedStrength = state.settings.haptics.feedbackStrength,
-                onAction = onAction,
-            )
-        }
-        SettingsPermissionsSection(
-            notificationAccessStatus = state.notificationAccessStatus,
-            overlayDockPermissionStatus = state.overlayDockPermissionStatus,
-            onAction = onAction,
-        )
-        SettingsSection(title = "Apps") {
-            AppRefreshSetting(onAction = onAction)
-        }
-        SettingsSection(title = "Backup") {
-            BackupSetting(onAction = onAction)
-        }
-        SettingsSection(title = "Hidden apps") {
-            HiddenAppsSetting(
-                apps = state.hiddenApps,
-                onAction = onAction,
-            )
-        }
-        SettingsSection(title = "Version") {
-            VersionInformationSetting(
-                appVersionLabel = state.appVersionLabel,
-                appBuildIdentityLabel = state.appBuildIdentityLabel,
-            )
-        }
-    }
-}
-
-@Composable
-private fun SettingsDockSections(
-    state: SettingsSurfaceState,
-    onAction: (LauncherShellAction) -> Unit,
-) {
-    SettingsSection(title = "Dock") {
-        DockSetting(
-            dock = state.homeLayout.dock,
-            onAction = onAction,
-        )
-    }
-    SettingsSection(title = "Floating dock") {
-        OverlayDockSetting(
-            settings = state.settings.overlayDock,
-            onAction = onAction,
-        )
-    }
-}
-
-@Composable
-private fun VersionInformationSetting(
-    appVersionLabel: String,
-    appBuildIdentityLabel: String,
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        SettingsTextColumn(
-            title = "Version",
-            subtitle = appVersionLabel,
-        )
-        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            SettingsPrimaryText(text = "Build")
-            Text(
-                text = appBuildIdentityLabel,
-                maxLines = 3,
-                overflow = TextOverflow.Ellipsis,
-                softWrap = true,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
-}
-
-@Composable
-private fun HapticStrengthSetting(
-    selectedStrength: HapticFeedbackStrength,
-    onAction: (LauncherShellAction) -> Unit,
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        SettingsTextColumn(
-            modifier = Modifier.weight(1f),
-            title = "Feedback strength",
-        )
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            HapticFeedbackStrength.entries.forEach { strength ->
-                TextButton(
-                    enabled = strength != selectedStrength,
-                    onClick = { onAction(LauncherShellAction.SelectHapticFeedbackStrength(strength)) },
-                ) {
-                    SettingsButtonText(text = strength.label)
+            if (showBack) {
+                TextButton(onClick = onBack) {
+                    SettingsButtonText(text = "Back")
                 }
+            }
+            TextButton(onClick = { onAction(LauncherShellAction.OpenHome) }) {
+                SettingsButtonText(text = "Home")
             }
         }
     }
@@ -267,89 +133,5 @@ internal fun SettingsSection(
         }
     }
 }
-
-@Composable
-private fun WallpaperSourceSetting(
-    selectedSource: WallpaperSource,
-    onAction: (LauncherShellAction) -> Unit,
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        SettingsTextColumn(
-            modifier = Modifier.weight(1f),
-            title = "Wallpaper",
-        )
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            TextButton(
-                enabled = WallpaperSource.SYSTEM != selectedSource,
-                onClick = { onAction(LauncherShellAction.SelectWallpaperSource(WallpaperSource.SYSTEM)) },
-            ) {
-                SettingsButtonText(text = "System")
-            }
-            TextButton(
-                enabled = WallpaperSource.SOLID_COLOR != selectedSource,
-                onClick = { onAction(LauncherShellAction.SelectWallpaperSource(WallpaperSource.SOLID_COLOR)) },
-            ) {
-                SettingsButtonText(text = "Solid")
-            }
-        }
-    }
-}
-
-@Composable
-private fun HiddenAppsSetting(
-    apps: List<InstalledApp>,
-    onAction: (LauncherShellAction) -> Unit,
-) {
-    if (apps.isEmpty()) {
-        Text(
-            text = "No hidden apps",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    } else {
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            apps.forEach { app ->
-                HiddenAppRow(
-                    app = app,
-                    onAction = onAction,
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun HiddenAppRow(
-    app: InstalledApp,
-    onAction: (LauncherShellAction) -> Unit,
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        SettingsTextColumn(
-            modifier = Modifier.weight(1f),
-            title = app.label,
-            subtitle = app.drawerSubtitle(),
-        )
-        TextButton(onClick = { onAction(LauncherShellAction.UnhideApp(app.identity)) }) {
-            SettingsButtonText(text = "Unhide")
-        }
-    }
-}
-
-private val HapticFeedbackStrength.label: String
-    get() =
-        when (this) {
-            HapticFeedbackStrength.OFF -> "Off"
-            HapticFeedbackStrength.LIGHT -> "Light"
-            HapticFeedbackStrength.MEDIUM -> "Medium"
-            HapticFeedbackStrength.STRONG -> "Strong"
-        }
 
 private const val SETTINGS_PAGE_MAX_WIDTH_DP = 840
