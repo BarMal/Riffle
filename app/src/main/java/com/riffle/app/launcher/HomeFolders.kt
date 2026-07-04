@@ -163,6 +163,14 @@ fun FolderDialog(
                     onFilterSelected = { filter -> addAppProfileFilter.value = filter },
                     apps = addableApps,
                 )
+                FolderAddClearFiltersButton(
+                    query = addAppQuery.value,
+                    profileFilter = addAppProfileFilter.value,
+                    onClick = {
+                        addAppQuery.value = ""
+                        addAppProfileFilter.value = AppDrawerProfileFilter.ALL
+                    },
+                )
                 FolderContentRows(
                     folder = folder,
                     addableApps = visibleAddableApps,
@@ -192,6 +200,19 @@ fun FolderDialog(
             }
         },
     )
+}
+
+@Composable
+private fun FolderAddClearFiltersButton(
+    query: String,
+    profileFilter: AppDrawerProfileFilter,
+    onClick: () -> Unit,
+) {
+    if (!shouldShowFolderAddClearFilters(query = query, profileFilter = profileFilter)) return
+
+    TextButton(onClick = onClick) {
+        Text(text = "Clear filters")
+    }
 }
 
 @Composable
