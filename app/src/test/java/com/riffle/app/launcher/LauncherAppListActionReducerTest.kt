@@ -105,6 +105,24 @@ class LauncherAppListActionReducerTest {
     }
 
     @Test
+    fun filteredAppsCoercesUnavailableProfileFiltersToAll() {
+        val camera = app(label = "Camera", profile = AppProfile.personal())
+        val state =
+            LauncherShellState(
+                installedApps = listOf(camera),
+                appDrawerProfileFilter = AppDrawerProfileFilter.WORK,
+                searchProfileFilter = AppDrawerProfileFilter.PRIVATE,
+            )
+
+        val updated = state.withFilteredApps(InstalledAppCatalog())
+
+        assertEquals(AppDrawerProfileFilter.ALL, updated.appDrawerProfileFilter)
+        assertEquals(AppDrawerProfileFilter.ALL, updated.searchProfileFilter)
+        assertEquals(listOf(camera), updated.appDrawerApps)
+        assertEquals(listOf(camera), updated.searchResults)
+    }
+
+    @Test
     fun ignoresNonAppListActions() {
         assertNull(reducer.reduce(LauncherShellState(), LauncherShellAction.OpenSettings))
     }

@@ -68,22 +68,28 @@ internal class LauncherAppListActionReducer(
 }
 
 internal fun LauncherShellState.withFilteredApps(appCatalog: InstalledAppCatalog): LauncherShellState =
-    copy(
-        appDrawerApps =
-            appCatalog.drawerApps(
-                apps = installedApps,
-                query = appDrawerQuery,
-                profileFilter = appDrawerProfileFilter,
-                appShortcutsByApp = appShortcutsByApp,
-            ),
-        searchResults =
-            appCatalog.filteredApps(
-                apps = installedApps,
-                query = searchQuery,
-                profileFilter = searchProfileFilter,
-                appShortcutsByApp = appShortcutsByApp,
-            ),
-    )
+    appDrawerProfileFilter.coerceAvailableFor(installedApps).let { availableDrawerFilter ->
+        searchProfileFilter.coerceAvailableFor(installedApps).let { availableSearchFilter ->
+            copy(
+                appDrawerProfileFilter = availableDrawerFilter,
+                searchProfileFilter = availableSearchFilter,
+                appDrawerApps =
+                    appCatalog.drawerApps(
+                        apps = installedApps,
+                        query = appDrawerQuery,
+                        profileFilter = availableDrawerFilter,
+                        appShortcutsByApp = appShortcutsByApp,
+                    ),
+                searchResults =
+                    appCatalog.filteredApps(
+                        apps = installedApps,
+                        query = searchQuery,
+                        profileFilter = availableSearchFilter,
+                        appShortcutsByApp = appShortcutsByApp,
+                    ),
+            )
+        }
+    }
 
 internal fun InstalledAppCatalog.drawerApps(
     apps: List<InstalledApp>,

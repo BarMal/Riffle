@@ -36,7 +36,13 @@ fun AppDrawer(
     onAction: (LauncherShellAction) -> Unit,
 ) {
     LauncherPanel(
-        title = "Apps",
+        title =
+            appPanelTitle(
+                baseTitle = "Apps",
+                resultCount = apps.size,
+                query = query,
+                profileFilter = profileFilter,
+            ),
         onAction = onAction,
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -90,7 +96,13 @@ fun SearchSurface(
     onAction: (LauncherShellAction) -> Unit,
 ) {
     LauncherPanel(
-        title = "Search",
+        title =
+            appPanelTitle(
+                baseTitle = "Search",
+                resultCount = results.size,
+                query = query,
+                profileFilter = profileFilter,
+            ),
         onAction = onAction,
     ) {
         Column(modifier = Modifier.fillMaxSize()) {

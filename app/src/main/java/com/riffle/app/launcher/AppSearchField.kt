@@ -24,7 +24,7 @@ fun AppSearchField(
         trailingIcon = {
             if (query.isNotEmpty()) {
                 IconButton(
-                    modifier = Modifier.semantics { contentDescription = "Clear app search" },
+                    modifier = Modifier.semantics { contentDescription = searchClearContentDescription(label) },
                     onClick = { onQueryChanged("") },
                 ) {
                     Text(text = "X")
@@ -33,3 +33,5 @@ fun AppSearchField(
         },
     )
 }
+
+internal fun searchClearContentDescription(label: String): String = "Clear ${label.lowercase()}"

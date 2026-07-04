@@ -33,7 +33,7 @@ class AppListEmptyStateTest {
     fun describesEmptyAppListWhenQueryHidesMatches() {
         AppListSurface.entries.forEach { surface ->
             assertEquals(
-                "No matching apps",
+                "No apps matching \"camera\"",
                 appListEmptyText(
                     surface = surface,
                     query = "camera",
@@ -47,7 +47,7 @@ class AppListEmptyStateTest {
     fun describesEmptyAppListWhenProfileFilterHidesMatches() {
         AppListSurface.entries.forEach { surface ->
             assertEquals(
-                "No matching apps",
+                "No work apps found",
                 appListEmptyText(
                     surface = surface,
                     query = "",
@@ -73,12 +73,34 @@ class AppListEmptyStateTest {
     @Test
     fun summarizesFilteredAppListCounts() {
         assertEquals(
-            "1 app matching, 3 apps total",
+            "1 app matching in work, 3 apps total",
             appListSummaryText(
                 totalAppCount = 3,
                 resultCount = 1,
                 query = "camera",
                 profileFilter = AppDrawerProfileFilter.WORK,
+            ),
+        )
+    }
+
+    @Test
+    fun titlesFilteredPanelsWithResultCounts() {
+        assertEquals(
+            "Search (1 app)",
+            appPanelTitle(
+                baseTitle = "Search",
+                resultCount = 1,
+                query = "camera",
+                profileFilter = AppDrawerProfileFilter.ALL,
+            ),
+        )
+        assertEquals(
+            "Apps",
+            appPanelTitle(
+                baseTitle = "Apps",
+                resultCount = 3,
+                query = "",
+                profileFilter = AppDrawerProfileFilter.ALL,
             ),
         )
     }
