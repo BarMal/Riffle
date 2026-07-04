@@ -34,7 +34,7 @@ internal fun SearchFilterChips(
             )
         }
 
-        val profileOptions = searchProfileFilterOptionsFor(apps = installedApps, filters = filters)
+        val profileOptions = searchProfileFilterOptionsFor(apps = installedApps)
         if (profileOptions.isNotEmpty()) {
             profileOptions.forEach { option ->
                 FilterChip(
@@ -54,17 +54,8 @@ internal data class SearchProfileFilterOption(
     val label: String = "${profileType.label} ($count)"
 }
 
-internal fun searchProfileFilterOptionsFor(
-    apps: List<InstalledApp>,
-    filters: AppSearchFilters,
-): List<SearchProfileFilterOption> {
-    val availableProfileTypes = apps.map { app -> app.identity.profile.type }.toSet()
-    val profileTypes =
-        AppProfileType.entries.filter { profileType ->
-            profileType in availableProfileTypes || profileType in filters.profiles
-        }
-
-    return profileTypes.map { profileType ->
+internal fun searchProfileFilterOptionsFor(apps: List<InstalledApp>): List<SearchProfileFilterOption> {
+    return AppProfileType.entries.map { profileType ->
         SearchProfileFilterOption(
             profileType = profileType,
             count = apps.count { app -> app.identity.profile.type == profileType },
