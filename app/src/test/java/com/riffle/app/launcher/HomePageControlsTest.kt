@@ -1,7 +1,20 @@
 package com.riffle.app.launcher
 
+import com.riffle.core.domain.launcher.apps.AppActivityName
+import com.riffle.core.domain.launcher.apps.AppIdentity
+import com.riffle.core.domain.launcher.apps.AppPackageName
+import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.GeneratedLauncherPageKind
+import com.riffle.core.domain.launcher.home.GridCell
+import com.riffle.core.domain.launcher.home.GridDimensions
+import com.riffle.core.domain.launcher.home.GridPlacement
+import com.riffle.core.domain.launcher.home.GridSpan
+import com.riffle.core.domain.launcher.home.HostedWidgetId
+import com.riffle.core.domain.launcher.home.LauncherItemId
+import com.riffle.core.domain.launcher.home.LauncherPage
+import com.riffle.core.domain.launcher.home.LauncherPageId
 import com.riffle.core.domain.launcher.home.LauncherPageType
+import com.riffle.core.domain.launcher.home.WidgetItem
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -118,4 +131,78 @@ class HomePageControlsTest {
             LauncherPageType.Generated(GeneratedLauncherPageKind.TODAY).pageOverviewTypeLabel,
         )
     }
+
+    @Test
+    fun pagePreviewCellsRepresentPlacedItemsAndWidgetSpans() {
+        val page =
+            LauncherPage(
+                id = LauncherPageId("home"),
+                grid = GridDimensions(columns = 3, rows = 3),
+                items =
+                    listOf(
+                        AppShortcutItem(
+                            id = LauncherItemId("app:camera"),
+                            appIdentity = appIdentity("camera"),
+                            label = "Camera",
+                            placement = GridPlacement(cell = GridCell(column = 0, row = 0)),
+                        ),
+                        WidgetItem(
+                            id = LauncherItemId("widget:weather"),
+                            appWidgetId = HostedWidgetId(42),
+                            label = "Weather",
+                            placement =
+                                GridPlacement(
+                                    cell = GridCell(column = 1, row = 1),
+                                    span = GridSpan(columns = 2, rows = 2),
+                                ),
+                        ),
+                    ),
+            )
+
+        assertEquals(
+            listOf(
+                PagePreviewCell(GridCell(column = 0, row = 0), PagePreviewCellKind.APP),
+                PagePreviewCell(GridCell(column = 1, row = 1), PagePreviewCellKind.WIDGET),
+                PagePreviewCell(GridCell(column = 2, row = 1), PagePreviewCellKind.WIDGET),
+                PagePreviewCell(GridCell(column = 1, row = 2), PagePreviewCellKind.WIDGET),
+                PagePreviewCell(GridCell(column = 2, row = 2), PagePreviewCellKind.WIDGET),
+            ),
+            page.previewCells(),
+        )
+    }
+
+    @Test
+    fun pagePreviewCellsClipItemsToGridBounds() {
+        val page =
+            LauncherPage(
+                id = LauncherPageId("home"),
+                grid = GridDimensions(columns = 2, rows = 2),
+                items =
+                    listOf(
+                        WidgetItem(
+                            id = LauncherItemId("widget:weather"),
+                            appWidgetId = HostedWidgetId(42),
+                            label = "Weather",
+                            placement =
+                                GridPlacement(
+                                    cell = GridCell(column = 1, row = 1),
+                                    span = GridSpan(columns = 2, rows = 2),
+                                ),
+                        ),
+                    ),
+            )
+
+        assertEquals(
+            listOf(
+                PagePreviewCell(GridCell(column = 1, row = 1), PagePreviewCellKind.WIDGET),
+            ),
+            page.previewCells(),
+        )
+    }
+
+    private fun appIdentity(label: String): AppIdentity =
+        AppIdentity(
+            packageName = AppPackageName("com.riffle.$label"),
+            activityName = AppActivityName(".MainActivity"),
+        )
 }
