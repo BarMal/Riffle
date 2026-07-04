@@ -67,6 +67,12 @@ internal class LauncherAppListActionReducer(
                     appCatalog = appCatalog,
                 )
 
+            LauncherShellAction.ResetSearchFilters ->
+                state.withSearchFilters(
+                    filters = AppSearchFilters(),
+                    appCatalog = appCatalog,
+                )
+
             else -> null
         }
 }

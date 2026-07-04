@@ -26,6 +26,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
@@ -84,6 +85,7 @@ fun SearchSurface(
             onProfileFilterToggled = { profileType ->
                 onAction(LauncherShellAction.ToggleSearchProfileFilter(profileType))
             },
+            onResetFilters = { onAction(LauncherShellAction.ResetSearchFilters) },
         )
         Spacer(modifier = Modifier.height(14.dp))
         SearchIconGrid(
@@ -116,6 +118,7 @@ private fun SearchTopControls(
     onQueryChanged: (String) -> Unit,
     onContentFilterToggled: (AppSearchContentFilter) -> Unit,
     onProfileFilterToggled: (AppProfileType) -> Unit,
+    onResetFilters: () -> Unit,
 ) {
     Surface(
         modifier =
@@ -156,6 +159,11 @@ private fun SearchTopControls(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            if (shouldShowSearchFilterReset(state.filters)) {
+                TextButton(onClick = onResetFilters) {
+                    Text(text = "Reset filters")
+                }
+            }
         }
     }
 }
@@ -276,6 +284,8 @@ internal fun searchEmptyText(
         query.isBlank() -> "No apps match the selected filters"
         else -> "No apps found for \"$query\""
     }
+
+internal fun shouldShowSearchFilterReset(filters: AppSearchFilters): Boolean = filters != AppSearchFilters()
 
 private fun String.pluralized(count: Int): String = if (count == 1) this else "${this}s"
 

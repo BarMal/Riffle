@@ -205,6 +205,29 @@ class LauncherAppListActionReducerTest {
     }
 
     @Test
+    fun resetsSearchFiltersForCurrentQuery() {
+        val personalCalendar = app(label = "Calendar", profile = AppProfile.personal())
+        val workCalendar = app(label = "Calendar", profile = AppProfile.work())
+        val state =
+            LauncherShellState(
+                installedApps = listOf(personalCalendar, workCalendar),
+                searchQuery = "cal",
+                searchFilters =
+                    AppSearchFilters(
+                        content = setOf(AppSearchContentFilter.APPS, AppSearchContentFilter.SHORTCUTS),
+                        profiles = setOf(AppProfileType.WORK),
+                    ),
+            )
+
+        val updated = reducer.reduce(state, LauncherShellAction.ResetSearchFilters)
+
+        assertEquals(AppSearchFilters(), updated?.searchFilters)
+        assertEquals("cal", updated?.searchQuery)
+        assertEquals(listOf(personalCalendar.identity), updated?.searchResults?.map { app -> app.identity })
+        assertEquals(emptyList<AppShortcut>(), updated?.searchShortcutResults)
+    }
+
+    @Test
     fun filteredAppsKeepsUnavailableDrawerProfileFilterSelected() {
         val camera = app(label = "Camera", profile = AppProfile.personal())
         val state =

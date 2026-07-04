@@ -74,6 +74,7 @@ class LauncherAppActionRouteTest {
             LauncherShellAction.SearchProfileFilterSelected(AppDrawerProfileFilter.PERSONAL),
             LauncherShellAction.ToggleSearchContentFilter(AppSearchContentFilter.SHORTCUTS),
             LauncherShellAction.ToggleSearchProfileFilter(AppProfileType.WORK),
+            LauncherShellAction.ResetSearchFilters,
         ).forEach { action ->
             assertEquals(LauncherAppActionRoute.AppListState(action), action.launcherAppActionRoute())
         }
