@@ -295,7 +295,6 @@ class MainActivity : ComponentActivity() {
 
     private fun applyHomeLayoutDeviceClassEvent(event: HomeLayoutDeviceClassEvent) {
         Log.i(FOLDABLE_LAYOUT_LOG_TAG, event.logText)
-        Toast.makeText(this, event.toastText, Toast.LENGTH_SHORT).show()
         shellViewModel.onHomePageEdited(
             LauncherShellAction.SelectHomeLayoutDeviceClass(
                 deviceClass = event.selection.activeDeviceClass,
