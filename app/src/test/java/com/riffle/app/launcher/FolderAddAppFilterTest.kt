@@ -88,6 +88,18 @@ class FolderAddAppFilterTest {
     }
 
     @Test
+    fun filtersAppsByMultipleQueryTokensAcrossFields() {
+        val personalMaps = app(label = "Maps", packageName = "com.google.maps", profile = AppProfile.personal())
+        val workDocs = app(label = "Docs", packageName = "com.google.docs", profile = AppProfile.work())
+        val workCalendar = app(label = "Calendar", packageName = "com.android.calendar", profile = AppProfile.work())
+        val apps = listOf(personalMaps, workDocs, workCalendar)
+
+        assertEquals(listOf(workDocs), apps.filterFolderAddCandidates("google work"))
+        assertEquals(listOf(workCalendar), apps.filterFolderAddCandidates("calendar work"))
+        assertEquals(emptyList<InstalledApp>(), apps.filterFolderAddCandidates("maps work"))
+    }
+
+    @Test
     fun returnsAllAppsForAllProfileFilter() {
         val apps =
             listOf(

@@ -14,11 +14,10 @@ fun List<InstalledApp>.filterFolderAddCandidates(profileFilter: AppDrawerProfile
 
 fun List<InstalledApp>.filterFolderAddCandidates(query: String): List<InstalledApp> =
     query
-        .trim()
-        .lowercase()
-        .takeIf { trimmedQuery -> trimmedQuery.isNotEmpty() }
-        ?.let { trimmedQuery ->
-            filter { app -> app.matchesFolderAddQuery(trimmedQuery) }
+        .normalizedFolderAddSearchTokens()
+        .takeIf { tokens -> tokens.isNotEmpty() }
+        ?.let { tokens ->
+            filter { app -> app.matchesFolderAddQuery(tokens) }
         }
         ?: this
 
@@ -40,12 +39,24 @@ fun shouldShowFolderAddClearFilters(
 fun InstalledApp.folderAddCandidateKey(): String =
     "${identity.profile.id.value}:${identity.packageName.value}/${identity.activityName.value}"
 
-private fun InstalledApp.matchesFolderAddQuery(query: String): Boolean =
-    label.lowercase().contains(query) ||
-        identity.packageName.value.lowercase().contains(query) ||
-        identity.activityName.value.lowercase().contains(query) ||
-        identity.profile.id.value.lowercase().contains(query) ||
-        identity.profile.type.name.lowercase().contains(query)
+private fun InstalledApp.matchesFolderAddQuery(queryTokens: List<String>): Boolean {
+    val searchableValues =
+        listOf(
+            label,
+            identity.packageName.value,
+            identity.activityName.value,
+            identity.profile.id.value,
+            identity.profile.type.name,
+        ).map { value -> value.lowercase() }
+
+    return queryTokens.all { token -> searchableValues.any { value -> value.contains(token) } }
+}
+
+private fun String.normalizedFolderAddSearchTokens(): List<String> =
+    trim()
+        .lowercase()
+        .split(Regex("\\s+"))
+        .filter(String::isNotBlank)
 
 private fun InstalledApp.matchesFolderAddProfile(profileFilter: AppDrawerProfileFilter): Boolean =
     when (profileFilter) {
