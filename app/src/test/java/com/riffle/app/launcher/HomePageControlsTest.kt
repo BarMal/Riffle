@@ -68,6 +68,8 @@ class HomePageControlsTest {
                 ),
                 ShortcutContextMenuItem("Widgets", LauncherShellAction.OpenWidgetPicker),
                 ShortcutContextMenuItem("Settings", LauncherShellAction.OpenSettings),
+                ShortcutContextMenuItem("Edit page", LauncherShellAction.EnterHomeEditMode),
+                ShortcutContextMenuItem("Manage pages", LauncherShellAction.EnterHomePageOverview),
                 ShortcutContextMenuItem(
                     label = "Previous page",
                     action = LauncherShellAction.SelectPreviousHomePage,

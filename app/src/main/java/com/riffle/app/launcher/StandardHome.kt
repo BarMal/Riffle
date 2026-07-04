@@ -40,6 +40,7 @@ import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.home.FolderItem
 import com.riffle.core.domain.launcher.home.GridCell
 import com.riffle.core.domain.launcher.home.GridDimensions
+import com.riffle.core.domain.launcher.home.HomeEditMode
 import com.riffle.core.domain.launcher.home.HomeLabelSettings
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.LauncherItem
@@ -121,7 +122,7 @@ private fun StandardHomeColumn(
             pagerState = pagerState,
             gridState =
                 HomeGridState(
-                    isEditing = false,
+                    isEditing = state.visibleLayout.editMode is HomeEditMode.EditingPage,
                     pageCount = state.visibleLayout.pages.size,
                     selectedPageIndex = state.visibleLayout.selectedPageIndex,
                     dragSession = state.dragSession,
@@ -135,13 +136,13 @@ private fun StandardHomeColumn(
                     .fillMaxWidth(),
         )
         Spacer(modifier = Modifier.height(HOME_BOTTOM_CONTROLS_TOP_SPACING_DP.dp))
-        HomeBottomSearchArea(
-            pageCount = state.visibleLayout.pages.size,
+        HomeBottomControls(
+            layout = state.visibleLayout,
             selectedPageIndex = pagerState.visualSelectedPageIndex,
             showPageIndicator = pagerState.rememberPageIndicatorVisible(),
             onAction = actions.onAction,
         )
-        if (state.visibleLayout.shouldShowDock()) {
+        if (state.visibleLayout.editMode == HomeEditMode.Browsing && state.visibleLayout.shouldShowDock()) {
             Spacer(modifier = Modifier.height(HOME_DOCK_TOP_SPACING_DP.dp))
             Dock(
                 dock = state.visibleLayout.dock,
@@ -153,6 +154,37 @@ private fun StandardHomeColumn(
                 onAction = actions.onAction,
             )
         }
+    }
+}
+
+@Composable
+private fun HomeBottomControls(
+    layout: HomeLayout,
+    selectedPageIndex: Int,
+    showPageIndicator: Boolean,
+    onAction: (LauncherShellAction) -> Unit,
+) {
+    when (layout.editMode) {
+        HomeEditMode.Browsing ->
+            HomeBottomSearchArea(
+                pageCount = layout.pages.size,
+                selectedPageIndex = selectedPageIndex,
+                showPageIndicator = showPageIndicator,
+                onAction = onAction,
+            )
+
+        is HomeEditMode.EditingPage ->
+            PageEditControls(
+                pageCount = layout.pages.size,
+                selectedPageIndex = layout.selectedPageIndex,
+                onAction = onAction,
+            )
+
+        HomeEditMode.ManagingPages ->
+            PageOverviewControls(
+                layout = layout,
+                onAction = onAction,
+            )
     }
 }
 

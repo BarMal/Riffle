@@ -68,6 +68,14 @@ internal fun homeWorkspaceContextMenuItems(
             action = LauncherShellAction.OpenSettings,
         ),
         ShortcutContextMenuItem(
+            label = "Edit page",
+            action = LauncherShellAction.EnterHomeEditMode,
+        ),
+        ShortcutContextMenuItem(
+            label = "Manage pages",
+            action = LauncherShellAction.EnterHomePageOverview,
+        ),
+        ShortcutContextMenuItem(
             label = "Previous page",
             action = LauncherShellAction.SelectPreviousHomePage,
             enabled = selectedPageIndex > 0,
