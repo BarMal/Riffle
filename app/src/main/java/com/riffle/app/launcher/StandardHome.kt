@@ -140,6 +140,8 @@ private fun StandardHomeColumn(
             layout = state.visibleLayout,
             selectedPageIndex = pagerState.visualSelectedPageIndex,
             showPageIndicator = pagerState.rememberPageIndicatorVisible(),
+            appIconLoader = appIconLoader,
+            widgetViewFactory = state.presentation.widgetViewFactory,
             onAction = actions.onAction,
         )
         if (state.visibleLayout.editMode == HomeEditMode.Browsing && state.visibleLayout.shouldShowDock()) {
@@ -162,6 +164,8 @@ private fun HomeBottomControls(
     layout: HomeLayout,
     selectedPageIndex: Int,
     showPageIndicator: Boolean,
+    appIconLoader: AppIconLoader,
+    widgetViewFactory: HomeWidgetViewFactory,
     onAction: (LauncherShellAction) -> Unit,
 ) {
     when (layout.editMode) {
@@ -183,6 +187,8 @@ private fun HomeBottomControls(
         HomeEditMode.ManagingPages ->
             PageOverviewControls(
                 layout = layout,
+                appIconLoader = appIconLoader,
+                widgetViewFactory = widgetViewFactory,
                 onAction = onAction,
             )
     }

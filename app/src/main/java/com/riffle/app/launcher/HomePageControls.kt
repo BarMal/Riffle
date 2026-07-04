@@ -10,8 +10,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -33,8 +31,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
+import com.riffle.app.launcher.widgets.HomeWidgetViewFactory
 import com.riffle.core.domain.launcher.home.GeneratedLauncherPageKind
-import com.riffle.core.domain.launcher.home.GridCell
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.LauncherPage
 import com.riffle.core.domain.launcher.home.LauncherPageType
@@ -89,6 +87,8 @@ fun PageEditControls(
 @Composable
 fun PageOverviewControls(
     layout: HomeLayout,
+    appIconLoader: AppIconLoader,
+    widgetViewFactory: HomeWidgetViewFactory,
     onAction: (LauncherShellAction) -> Unit,
 ) {
     val isPageMenuExpanded = remember { mutableStateOf(false) }
@@ -112,6 +112,8 @@ fun PageOverviewControls(
                     index = index,
                     page = page,
                     isSelected = page.id == layout.selectedPageId,
+                    appIconLoader = appIconLoader,
+                    widgetViewFactory = widgetViewFactory,
                     onClick = { onAction(LauncherShellAction.SelectHomePage(page.id)) },
                 )
             }
@@ -163,6 +165,8 @@ private fun PageOverviewCard(
     index: Int,
     page: LauncherPage,
     isSelected: Boolean,
+    appIconLoader: AppIconLoader,
+    widgetViewFactory: HomeWidgetViewFactory,
     onClick: () -> Unit,
 ) {
     Surface(
@@ -204,61 +208,11 @@ private fun PageOverviewCard(
                 text = page.type.pageOverviewTypeLabel,
                 style = MaterialTheme.typography.labelMedium,
             )
-            PageOverviewPreview(page = page)
-        }
-    }
-}
-
-@Composable
-private fun PageOverviewPreview(page: LauncherPage) {
-    val previewCells = page.previewCells().associateBy { cell -> cell.cell }
-
-    Surface(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .height(PAGE_OVERVIEW_PREVIEW_HEIGHT_DP.dp)
-                .clip(RoundedCornerShape(PAGE_OVERVIEW_PREVIEW_CORNER_RADIUS_DP.dp)),
-        shape = RoundedCornerShape(PAGE_OVERVIEW_PREVIEW_CORNER_RADIUS_DP.dp),
-        color = MaterialTheme.colorScheme.surface.copy(alpha = PAGE_OVERVIEW_PREVIEW_SURFACE_ALPHA),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.72f)),
-    ) {
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .padding(PAGE_OVERVIEW_PREVIEW_PADDING_DP.dp),
-            verticalArrangement = Arrangement.spacedBy(PAGE_OVERVIEW_PREVIEW_CELL_GAP_DP.dp),
-        ) {
-            repeat(page.grid.rows.coerceAtLeast(1)) { row ->
-                Row(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .weight(1f),
-                    horizontalArrangement = Arrangement.spacedBy(PAGE_OVERVIEW_PREVIEW_CELL_GAP_DP.dp),
-                ) {
-                    repeat(page.grid.columns.coerceAtLeast(1)) { column ->
-                        val kind = previewCells[GridCell(column = column, row = row)]?.kind
-                        val cellColor =
-                            when (kind) {
-                                PagePreviewCellKind.APP -> MaterialTheme.colorScheme.primary.copy(alpha = 0.78f)
-                                PagePreviewCellKind.FOLDER -> MaterialTheme.colorScheme.secondary.copy(alpha = 0.78f)
-                                PagePreviewCellKind.WIDGET -> MaterialTheme.colorScheme.tertiary.copy(alpha = 0.72f)
-                                null -> MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.38f)
-                            }
-                        Box(
-                            modifier =
-                                Modifier
-                                    .weight(1f)
-                                    .fillMaxSize()
-                                    .aspectRatio(1f, matchHeightConstraintsFirst = true)
-                                    .clip(RoundedCornerShape(PAGE_OVERVIEW_PREVIEW_CELL_CORNER_RADIUS_DP.dp))
-                                    .background(cellColor),
-                        )
-                    }
-                }
-            }
+            PageOverviewPreview(
+                page = page,
+                appIconLoader = appIconLoader,
+                widgetViewFactory = widgetViewFactory,
+            )
         }
     }
 }
@@ -423,9 +377,3 @@ private val GeneratedLauncherPageKind.pageOverviewTypeLabel: String
 
 private const val PAGE_OVERVIEW_CARD_WIDTH_DP = 148
 private const val PAGE_OVERVIEW_CARD_CORNER_RADIUS_DP = 20
-private const val PAGE_OVERVIEW_PREVIEW_HEIGHT_DP = 118
-private const val PAGE_OVERVIEW_PREVIEW_CORNER_RADIUS_DP = 14
-private const val PAGE_OVERVIEW_PREVIEW_PADDING_DP = 8
-private const val PAGE_OVERVIEW_PREVIEW_CELL_GAP_DP = 3
-private const val PAGE_OVERVIEW_PREVIEW_CELL_CORNER_RADIUS_DP = 3
-private const val PAGE_OVERVIEW_PREVIEW_SURFACE_ALPHA = 0.68f
