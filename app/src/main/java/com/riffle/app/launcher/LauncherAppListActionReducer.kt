@@ -3,6 +3,7 @@ package com.riffle.app.launcher
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.apps.AppDrawerProfileFilter
 import com.riffle.core.domain.launcher.apps.AppProfileType
+import com.riffle.core.domain.launcher.apps.AppSearchScope
 import com.riffle.core.domain.launcher.apps.AppShortcutsByApp
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.apps.InstalledAppCatalog
@@ -47,7 +48,7 @@ internal class LauncherAppListActionReducer(
                             apps = state.installedApps,
                             query = action.query,
                             profileFilter = state.searchProfileFilter,
-                            appShortcutsByApp = state.appShortcutsByApp,
+                            appShortcutsByApp = state.searchShortcutsByApp(),
                         ),
                 )
 
@@ -59,7 +60,19 @@ internal class LauncherAppListActionReducer(
                             apps = state.installedApps,
                             query = state.searchQuery,
                             profileFilter = action.filter,
-                            appShortcutsByApp = state.appShortcutsByApp,
+                            appShortcutsByApp = state.searchShortcutsByApp(),
+                        ),
+                )
+
+            is LauncherShellAction.SearchScopeSelected ->
+                state.copy(
+                    searchScope = action.scope,
+                    searchResults =
+                        appCatalog.filteredApps(
+                            apps = state.installedApps,
+                            query = state.searchQuery,
+                            profileFilter = state.searchProfileFilter,
+                            appShortcutsByApp = state.searchShortcutsByApp(action.scope),
                         ),
                 )
 
@@ -85,7 +98,7 @@ internal fun LauncherShellState.withFilteredApps(appCatalog: InstalledAppCatalog
                         apps = installedApps,
                         query = searchQuery,
                         profileFilter = availableSearchFilter,
-                        appShortcutsByApp = appShortcutsByApp,
+                        appShortcutsByApp = searchShortcutsByApp(),
                     ),
             )
         }
@@ -123,4 +136,10 @@ private fun InstalledApp.matches(profileFilter: AppDrawerProfileFilter): Boolean
         AppDrawerProfileFilter.PERSONAL -> identity.profile.type == AppProfileType.PERSONAL
         AppDrawerProfileFilter.WORK -> identity.profile.type == AppProfileType.WORK
         AppDrawerProfileFilter.PRIVATE -> identity.profile.type == AppProfileType.PRIVATE
+    }
+
+private fun LauncherShellState.searchShortcutsByApp(scope: AppSearchScope = searchScope): AppShortcutsByApp =
+    when (scope) {
+        AppSearchScope.APPS -> emptyMap()
+        AppSearchScope.APPS_AND_SHORTCUTS -> appShortcutsByApp
     }

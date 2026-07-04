@@ -4,6 +4,7 @@ import com.riffle.core.domain.launcher.apps.AppActivityName
 import com.riffle.core.domain.launcher.apps.AppDrawerProfileFilter
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
+import com.riffle.core.domain.launcher.apps.AppSearchScope
 import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.apps.AppShortcutId
 import com.riffle.core.domain.launcher.apps.InstalledApp
@@ -70,6 +71,7 @@ class LauncherAppActionRouteTest {
             LauncherShellAction.AppDrawerProfileFilterSelected(AppDrawerProfileFilter.WORK),
             LauncherShellAction.SearchQueryChanged("camera"),
             LauncherShellAction.SearchProfileFilterSelected(AppDrawerProfileFilter.PERSONAL),
+            LauncherShellAction.SearchScopeSelected(AppSearchScope.APPS),
         ).forEach { action ->
             assertEquals(LauncherAppActionRoute.AppListState(action), action.launcherAppActionRoute())
         }

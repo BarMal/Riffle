@@ -8,6 +8,7 @@ import com.riffle.core.domain.launcher.LauncherShellStateReducer
 import com.riffle.core.domain.launcher.OverlayDockPermissionStatus
 import com.riffle.core.domain.launcher.ShellNavigationAction
 import com.riffle.core.domain.launcher.apps.AppIdentity
+import com.riffle.core.domain.launcher.apps.AppSearchScope
 import com.riffle.core.domain.launcher.apps.AppShortcutRepository
 import com.riffle.core.domain.launcher.apps.AppShortcutsByApp
 import com.riffle.core.domain.launcher.apps.AppVisibilityRepository
@@ -159,6 +160,7 @@ class LauncherShellViewModel(
                 is LauncherShellAction.AppDrawerProfileFilterSelected,
                 is LauncherShellAction.SearchQueryChanged,
                 is LauncherShellAction.SearchProfileFilterSelected,
+                is LauncherShellAction.SearchScopeSelected,
                 -> appListActionReducer.reduce(mutableState.value, action) ?: mutableState.value
 
                 is LauncherShellAction.HideApp,
@@ -491,7 +493,11 @@ internal fun LauncherShellState.withInstalledApps(
                         apps = state.installedApps,
                         query = state.searchQuery,
                         profileFilter = state.searchProfileFilter,
-                        appShortcutsByApp = state.appShortcutsByApp,
+                        appShortcutsByApp =
+                            when (state.searchScope) {
+                                AppSearchScope.APPS -> emptyMap()
+                                AppSearchScope.APPS_AND_SHORTCUTS -> state.appShortcutsByApp
+                            },
                     ),
             )
         }

@@ -87,66 +87,6 @@ fun AppDrawer(
 }
 
 @Composable
-fun SearchSurface(
-    query: String,
-    profileFilter: AppDrawerProfileFilter,
-    installedApps: List<InstalledApp>,
-    results: List<InstalledApp>,
-    appListContext: AppListContext,
-    onAction: (LauncherShellAction) -> Unit,
-) {
-    LauncherPanel(
-        title =
-            appPanelTitle(
-                baseTitle = "Search",
-                resultCount = results.size,
-                query = query,
-                profileFilter = profileFilter,
-            ),
-        onAction = onAction,
-    ) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            AppSearchField(
-                modifier = Modifier.fillMaxWidth(),
-                query = query,
-                onQueryChanged = { value -> onAction(LauncherShellAction.SearchQueryChanged(value)) },
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-            AppProfileFilterChips(
-                selectedFilter = profileFilter,
-                onFilterSelected = { filter -> onAction(LauncherShellAction.SearchProfileFilterSelected(filter)) },
-                apps = installedApps,
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text =
-                    appListSummaryText(
-                        totalAppCount = installedApps.size,
-                        resultCount = results.size,
-                        query = query,
-                        profileFilter = profileFilter,
-                    ),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-            AppList(
-                modifier = Modifier.weight(1f),
-                apps = results,
-                emptyText =
-                    appListEmptyText(
-                        surface = AppListSurface.SEARCH,
-                        query = query,
-                        profileFilter = profileFilter,
-                    ),
-                context = appListContext,
-                showInlineActions = false,
-            )
-        }
-    }
-}
-
-@Composable
 fun LauncherPanel(
     title: String,
     onAction: (LauncherShellAction) -> Unit,
