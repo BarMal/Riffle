@@ -62,6 +62,13 @@ class SettingsPagesTest {
     }
 
     @Test
+    fun summarizesSettingsSearchResultsOnlyWhenSearching() {
+        assertEquals(null, settingsSearchSummaryText(query = "", resultCount = 11))
+        assertEquals("1 setting matching \"dock\"", settingsSearchSummaryText(query = " dock ", resultCount = 1))
+        assertEquals("2 settings matching \"home\"", settingsSearchSummaryText(query = "home", resultCount = 2))
+    }
+
+    @Test
     fun mainSettingsEntriesExposeLiveStatusSummaries() {
         val entries =
             settingsMainPageEntries(

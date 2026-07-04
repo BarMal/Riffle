@@ -5,7 +5,9 @@ import com.riffle.core.domain.launcher.apps.InstalledApp
 data class AppDrawerSection(
     val title: String,
     val apps: List<InstalledApp>,
-)
+) {
+    val displayTitle: String = "$title (${apps.size})"
+}
 
 object AppDrawerSections {
     fun from(apps: List<InstalledApp>): List<AppDrawerSection> =

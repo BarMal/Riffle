@@ -156,8 +156,23 @@ internal fun settingsMainPageEntriesMatching(
         }
 }
 
+internal fun settingsSearchSummaryText(
+    query: String,
+    resultCount: Int,
+): String? =
+    query
+        .trim()
+        .takeIf(String::isNotEmpty)
+        ?.let { trimmedQuery -> "${resultCount.settingsResultCountLabel()} matching \"$trimmedQuery\"" }
+
 internal fun settingsLayoutPageTabs(availableDeviceClasses: Set<HomeLayoutDeviceClass>): List<SettingsLayoutDeviceTab> =
     settingsLayoutDeviceTabs(availableDeviceClasses)
+
+private fun Int.settingsResultCountLabel(): String =
+    when (this) {
+        1 -> "1 setting"
+        else -> "$this settings"
+    }
 
 private fun SettingsOverviewStatus.hiddenAppsSummary(): String =
     when (hiddenAppCount) {

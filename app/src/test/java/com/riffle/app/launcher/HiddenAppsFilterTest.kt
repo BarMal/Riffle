@@ -72,6 +72,15 @@ class HiddenAppsFilterTest {
                 profileFilter = AppDrawerProfileFilter.ALL,
             ),
         )
+        assertEquals(
+            "1 app matching in work, 2 apps hidden",
+            hiddenAppsSummaryText(
+                totalHiddenAppCount = 2,
+                resultCount = 1,
+                query = "",
+                profileFilter = AppDrawerProfileFilter.WORK,
+            ),
+        )
     }
 
     private fun app(

@@ -61,7 +61,7 @@ fun AppList(
             if (showSections) {
                 AppDrawerSections.from(apps).forEach { section ->
                     item(key = "section:${section.title}") {
-                        AppDrawerSectionHeader(title = section.title)
+                        AppDrawerSectionHeader(title = section.displayTitle)
                     }
                     appRows(
                         apps = section.apps,

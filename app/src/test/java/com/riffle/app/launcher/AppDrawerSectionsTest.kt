@@ -24,6 +24,7 @@ class AppDrawerSectionsTest {
             )
 
         assertEquals(listOf("B", "C"), sections.map { section -> section.title })
+        assertEquals(listOf("B (1)", "C (3)"), sections.map { section -> section.displayTitle })
         assertEquals(listOf("Browser"), sections[0].apps.map { app -> app.label })
         assertEquals(listOf("Calculator", "Calendar", "Camera"), sections[1].apps.map { app -> app.label })
     }

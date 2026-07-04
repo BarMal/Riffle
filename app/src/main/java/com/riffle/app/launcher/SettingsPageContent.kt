@@ -78,6 +78,17 @@ private fun SettingsMainPageContent(
             query = settingsQuery.value,
             status = state.settingsOverviewStatus(),
         )
+    settingsSearchSummaryText(
+        query = settingsQuery.value,
+        resultCount = entries.size,
+    )?.let { summary ->
+        Text(
+            modifier = Modifier.padding(horizontal = 8.dp),
+            text = summary,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
     if (entries.isEmpty()) {
         Text(
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 24.dp),

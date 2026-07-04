@@ -34,7 +34,8 @@ internal fun hiddenAppsSummaryText(
 ): String =
     when {
         query.isNotBlank() || profileFilter != AppDrawerProfileFilter.ALL ->
-            "${resultCount.appCountLabel()} matching, ${totalHiddenAppCount.appCountLabel()} hidden"
+            "${resultCount.appCountLabel()} matching${profileFilter.matchingProfileSuffix()}, " +
+                "${totalHiddenAppCount.appCountLabel()} hidden"
 
         else -> "${totalHiddenAppCount.appCountLabel()} hidden"
     }

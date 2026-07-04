@@ -18,22 +18,48 @@ fun AppProfileFilterChips(
     onFilterSelected: (AppDrawerProfileFilter) -> Unit,
     apps: List<InstalledApp> = emptyList(),
 ) {
+    val options =
+        appProfileFilterOptionsFor(
+            apps = apps,
+            selectedFilter = selectedFilter,
+        )
+
+    if (options.size <= 1) return
+
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        appProfileFiltersFor(
-            apps = apps,
-            selectedFilter = selectedFilter,
-        ).forEach { filter ->
+        options.forEach { option ->
             FilterChip(
-                selected = filter == selectedFilter,
-                onClick = { onFilterSelected(filter) },
-                label = { Text(text = filter.label) },
+                selected = option.filter == selectedFilter,
+                onClick = { onFilterSelected(option.filter) },
+                label = { Text(text = option.label) },
             )
         }
     }
 }
+
+internal data class AppProfileFilterOption(
+    val filter: AppDrawerProfileFilter,
+    val count: Int,
+) {
+    val label: String = "${filter.label} ($count)"
+}
+
+internal fun appProfileFilterOptionsFor(
+    apps: List<InstalledApp>,
+    selectedFilter: AppDrawerProfileFilter = AppDrawerProfileFilter.ALL,
+): List<AppProfileFilterOption> =
+    appProfileFiltersFor(
+        apps = apps,
+        selectedFilter = selectedFilter,
+    ).map { filter ->
+        AppProfileFilterOption(
+            filter = filter,
+            count = apps.countForProfileFilter(filter),
+        )
+    }
 
 internal fun appProfileFiltersFor(
     apps: List<InstalledApp>,
@@ -52,6 +78,12 @@ internal fun appProfileFiltersFor(
     return (availableFilters + selectedFilter).distinct()
 }
 
+internal fun AppDrawerProfileFilter.availableFor(apps: List<InstalledApp>): Boolean =
+    this == AppDrawerProfileFilter.ALL || apps.any { app -> app.matchesProfileFilter(this) }
+
+internal fun AppDrawerProfileFilter.coerceAvailableFor(apps: List<InstalledApp>): AppDrawerProfileFilter =
+    takeIf { filter -> filter.availableFor(apps) } ?: AppDrawerProfileFilter.ALL
+
 internal val AppDrawerProfileFilter.label: String
     get() =
         when (this) {
@@ -60,6 +92,17 @@ internal val AppDrawerProfileFilter.label: String
             AppDrawerProfileFilter.WORK -> "Work"
             AppDrawerProfileFilter.PRIVATE -> "Private"
         }
+
+private fun List<InstalledApp>.countForProfileFilter(filter: AppDrawerProfileFilter): Int =
+    count { app -> app.matchesProfileFilter(filter) }
+
+private fun InstalledApp.matchesProfileFilter(filter: AppDrawerProfileFilter): Boolean =
+    when (filter) {
+        AppDrawerProfileFilter.ALL -> true
+        AppDrawerProfileFilter.PERSONAL -> identity.profile.type == AppProfileType.PERSONAL
+        AppDrawerProfileFilter.WORK -> identity.profile.type == AppProfileType.WORK
+        AppDrawerProfileFilter.PRIVATE -> identity.profile.type == AppProfileType.PRIVATE
+    }
 
 private val AppDrawerProfileFilter.profileType: AppProfileType?
     get() =
