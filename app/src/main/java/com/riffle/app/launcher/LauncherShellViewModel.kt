@@ -493,7 +493,11 @@ internal fun LauncherShellState.withInstalledApps(
                         apps = state.installedApps,
                         query = state.searchQuery,
                         filters = state.searchFilters,
-                        appShortcutsByApp = state.appShortcutsByApp,
+                    ),
+                searchShortcutResults =
+                    state.searchShortcutResults(
+                        query = state.searchQuery,
+                        filters = state.searchFilters,
                     ),
             )
         }
