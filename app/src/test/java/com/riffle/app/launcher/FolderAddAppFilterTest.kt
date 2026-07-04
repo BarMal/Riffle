@@ -16,6 +16,8 @@ import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.LauncherItem
 import com.riffle.core.domain.launcher.home.LauncherItemId
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class FolderAddAppFilterTest {
@@ -140,6 +142,28 @@ class FolderAddAppFilterTest {
 
         assertEquals("personal:com.riffle.camera/.MainActivity", personalCamera.folderAddCandidateKey())
         assertEquals("work:com.riffle.camera/.MainActivity", workCamera.folderAddCandidateKey())
+    }
+
+    @Test
+    fun showsClearFiltersWhenFolderAddQueryOrProfileFilterIsActive() {
+        assertFalse(
+            shouldShowFolderAddClearFilters(
+                query = "",
+                profileFilter = AppDrawerProfileFilter.ALL,
+            ),
+        )
+        assertTrue(
+            shouldShowFolderAddClearFilters(
+                query = "camera",
+                profileFilter = AppDrawerProfileFilter.ALL,
+            ),
+        )
+        assertTrue(
+            shouldShowFolderAddClearFilters(
+                query = "",
+                profileFilter = AppDrawerProfileFilter.WORK,
+            ),
+        )
     }
 
     private fun app(
