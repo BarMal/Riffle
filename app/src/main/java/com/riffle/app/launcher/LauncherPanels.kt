@@ -69,6 +69,16 @@ fun AppDrawer(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            if (shouldShowAppDrawerClearFilters(query = query, profileFilter = profileFilter)) {
+                TextButton(
+                    onClick = {
+                        onAction(LauncherShellAction.AppDrawerQueryChanged(""))
+                        onAction(LauncherShellAction.AppDrawerProfileFilterSelected(AppDrawerProfileFilter.ALL))
+                    },
+                ) {
+                    Text(text = "Clear filters")
+                }
+            }
             Spacer(modifier = Modifier.height(12.dp))
             AppList(
                 modifier = Modifier.weight(1f),
@@ -85,6 +95,11 @@ fun AppDrawer(
         }
     }
 }
+
+internal fun shouldShowAppDrawerClearFilters(
+    query: String,
+    profileFilter: AppDrawerProfileFilter,
+): Boolean = query.isNotBlank() || profileFilter != AppDrawerProfileFilter.ALL
 
 @Composable
 fun LauncherPanel(
