@@ -8,6 +8,8 @@ import com.riffle.core.domain.launcher.apps.AppProfile
 import com.riffle.core.domain.launcher.apps.AppVisibility
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class HiddenAppsFilterTest {
@@ -79,6 +81,28 @@ class HiddenAppsFilterTest {
                 resultCount = 1,
                 query = "",
                 profileFilter = AppDrawerProfileFilter.WORK,
+            ),
+        )
+    }
+
+    @Test
+    fun showsClearFiltersWhenQueryOrProfileFilterIsActive() {
+        assertFalse(
+            shouldShowHiddenAppsClearFilters(
+                query = "",
+                profileFilter = AppDrawerProfileFilter.ALL,
+            ),
+        )
+        assertTrue(
+            shouldShowHiddenAppsClearFilters(
+                query = "camera",
+                profileFilter = AppDrawerProfileFilter.ALL,
+            ),
+        )
+        assertTrue(
+            shouldShowHiddenAppsClearFilters(
+                query = "",
+                profileFilter = AppDrawerProfileFilter.PRIVATE,
             ),
         )
     }

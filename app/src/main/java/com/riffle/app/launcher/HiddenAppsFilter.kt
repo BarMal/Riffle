@@ -40,6 +40,11 @@ internal fun hiddenAppsSummaryText(
         else -> "${totalHiddenAppCount.appCountLabel()} hidden"
     }
 
+internal fun shouldShowHiddenAppsClearFilters(
+    query: String,
+    profileFilter: AppDrawerProfileFilter,
+): Boolean = query.isNotBlank() || profileFilter != AppDrawerProfileFilter.ALL
+
 private fun InstalledApp.matchesHiddenAppProfileFilter(profileFilter: AppDrawerProfileFilter): Boolean =
     when (profileFilter) {
         AppDrawerProfileFilter.ALL -> true
