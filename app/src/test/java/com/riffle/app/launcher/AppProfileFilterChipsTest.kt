@@ -11,23 +11,22 @@ import org.junit.Test
 
 class AppProfileFilterChipsTest {
     @Test
-    fun showsOnlyProfilesPresentInApps() {
+    fun showsEveryProfileFilter() {
         assertEquals(
-            listOf(AppDrawerProfileFilter.ALL, AppDrawerProfileFilter.PERSONAL, AppDrawerProfileFilter.WORK),
-            appProfileFiltersFor(
-                apps =
-                    listOf(
-                        app("Camera", profile = AppProfile.personal()),
-                        app("Docs", profile = AppProfile.work()),
-                    ),
+            listOf(
+                AppDrawerProfileFilter.ALL,
+                AppDrawerProfileFilter.PERSONAL,
+                AppDrawerProfileFilter.WORK,
+                AppDrawerProfileFilter.PRIVATE,
             ),
+            appProfileFiltersFor(),
         )
     }
 
     @Test
     fun labelsProfileFiltersWithCounts() {
         assertEquals(
-            listOf("All (3)", "Personal (1)", "Work (2)"),
+            listOf("All (3)", "Personal (1)", "Work (2)", "Private (0)"),
             appProfileFilterOptionsFor(
                 apps =
                     listOf(
@@ -50,9 +49,13 @@ class AppProfileFilterChipsTest {
     @Test
     fun keepsSelectedFilterWhenProfileDisappears() {
         assertEquals(
-            listOf(AppDrawerProfileFilter.ALL, AppDrawerProfileFilter.PERSONAL, AppDrawerProfileFilter.PRIVATE),
+            listOf(
+                AppDrawerProfileFilter.ALL,
+                AppDrawerProfileFilter.PERSONAL,
+                AppDrawerProfileFilter.WORK,
+                AppDrawerProfileFilter.PRIVATE,
+            ),
             appProfileFiltersFor(
-                apps = listOf(app("Camera", profile = AppProfile.personal())),
                 selectedFilter = AppDrawerProfileFilter.PRIVATE,
             ),
         )
@@ -61,13 +64,22 @@ class AppProfileFilterChipsTest {
     @Test
     fun emptyAppsShowOnlyAllAndSelectedFilter() {
         assertEquals(
-            listOf(AppDrawerProfileFilter.ALL),
-            appProfileFiltersFor(apps = emptyList()),
+            listOf(
+                AppDrawerProfileFilter.ALL,
+                AppDrawerProfileFilter.PERSONAL,
+                AppDrawerProfileFilter.WORK,
+                AppDrawerProfileFilter.PRIVATE,
+            ),
+            appProfileFiltersFor(),
         )
         assertEquals(
-            listOf(AppDrawerProfileFilter.ALL, AppDrawerProfileFilter.WORK),
+            listOf(
+                AppDrawerProfileFilter.ALL,
+                AppDrawerProfileFilter.PERSONAL,
+                AppDrawerProfileFilter.WORK,
+                AppDrawerProfileFilter.PRIVATE,
+            ),
             appProfileFiltersFor(
-                apps = emptyList(),
                 selectedFilter = AppDrawerProfileFilter.WORK,
             ),
         )

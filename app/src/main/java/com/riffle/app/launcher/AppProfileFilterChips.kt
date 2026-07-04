@@ -52,7 +52,6 @@ internal fun appProfileFilterOptionsFor(
     selectedFilter: AppDrawerProfileFilter = AppDrawerProfileFilter.ALL,
 ): List<AppProfileFilterOption> =
     appProfileFiltersFor(
-        apps = apps,
         selectedFilter = selectedFilter,
     ).map { filter ->
         AppProfileFilterOption(
@@ -61,21 +60,12 @@ internal fun appProfileFilterOptionsFor(
         )
     }
 
-internal fun appProfileFiltersFor(
-    apps: List<InstalledApp>,
-    selectedFilter: AppDrawerProfileFilter = AppDrawerProfileFilter.ALL,
-): List<AppDrawerProfileFilter> {
-    if (apps.isEmpty()) {
-        return listOf(AppDrawerProfileFilter.ALL, selectedFilter).distinct()
-    }
+internal fun appProfileFiltersFor(selectedFilter: AppDrawerProfileFilter): List<AppDrawerProfileFilter> {
+    return (AppDrawerProfileFilter.entries + selectedFilter).distinct()
+}
 
-    val availableProfileTypes = apps.map { app -> app.identity.profile.type }.toSet()
-    val availableFilters =
-        AppDrawerProfileFilter.entries.filter { filter ->
-            filter == AppDrawerProfileFilter.ALL || filter.profileType in availableProfileTypes
-        }
-
-    return (availableFilters + selectedFilter).distinct()
+internal fun appProfileFiltersFor(): List<AppDrawerProfileFilter> {
+    return appProfileFiltersFor(selectedFilter = AppDrawerProfileFilter.ALL)
 }
 
 internal fun AppDrawerProfileFilter.availableFor(apps: List<InstalledApp>): Boolean =
@@ -103,12 +93,3 @@ private fun InstalledApp.matchesProfileFilter(filter: AppDrawerProfileFilter): B
         AppDrawerProfileFilter.WORK -> identity.profile.type == AppProfileType.WORK
         AppDrawerProfileFilter.PRIVATE -> identity.profile.type == AppProfileType.PRIVATE
     }
-
-private val AppDrawerProfileFilter.profileType: AppProfileType?
-    get() =
-        when (this) {
-            AppDrawerProfileFilter.ALL -> null
-            AppDrawerProfileFilter.PERSONAL -> AppProfileType.PERSONAL
-            AppDrawerProfileFilter.WORK -> AppProfileType.WORK
-            AppDrawerProfileFilter.PRIVATE -> AppProfileType.PRIVATE
-        }
