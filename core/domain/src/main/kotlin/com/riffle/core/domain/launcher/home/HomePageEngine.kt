@@ -108,6 +108,30 @@ class HomePageEngine {
                 )
         }
 
+    fun updatePageType(
+        layout: HomeLayout,
+        pageId: LauncherPageId,
+        type: LauncherPageType,
+    ): HomePageEditResult =
+        when {
+            layout.pages.none { page -> page.id == pageId } ->
+                HomePageEditResult.Rejected(HomePageEditRejectionReason.PAGE_NOT_FOUND)
+
+            else ->
+                HomePageEditResult.Updated(
+                    layout.copy(
+                        pages =
+                            layout.pages.map { page ->
+                                if (page.id == pageId) {
+                                    page.copy(type = type)
+                                } else {
+                                    page
+                                }
+                            },
+                    ),
+                )
+        }
+
     fun enterPageEditMode(
         layout: HomeLayout,
         pageId: LauncherPageId,

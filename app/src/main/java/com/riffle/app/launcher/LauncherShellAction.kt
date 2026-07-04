@@ -16,6 +16,7 @@ import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.HostedWidgetId
 import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.home.LauncherPageId
+import com.riffle.core.domain.launcher.home.LauncherPageType
 import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.home.WallpaperSource
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
@@ -74,6 +75,8 @@ sealed interface LauncherShellAction {
     data object MoveSelectedHomePageRight : LauncherShellAction
 
     data object DeleteSelectedHomePage : LauncherShellAction
+
+    data class SelectSelectedHomePageType(val type: LauncherPageType) : LauncherShellAction
 
     data class SelectHomeGridDimensions(val dimensions: GridDimensions) : LauncherShellAction
 

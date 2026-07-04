@@ -5,6 +5,7 @@ import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
 import com.riffle.core.domain.launcher.home.LauncherPageId
+import com.riffle.core.domain.launcher.home.LauncherPageType
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -43,6 +44,22 @@ class LauncherShellPageOverviewViewModelTest {
             HomeEditMode.EditingPage(pageId = LauncherPageId("home")),
             viewModel.state.value.homeLayout.editMode,
         )
+        assertEquals(viewModel.state.value.homeLayout, repository.savedLayout)
+    }
+
+    @Test
+    fun updatesSelectedPageTypeFromOverview() {
+        val repository = FakeHomeLayoutRepository(savedLayout = HomeLayoutDefaults.standard())
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                homeLayoutRepository = repository,
+            )
+        viewModel.onHomePageEdited(LauncherShellAction.EnterHomePageOverview)
+
+        viewModel.onHomePageEdited(LauncherShellAction.SelectSelectedHomePageType(LauncherPageType.AllApps))
+
+        assertEquals(LauncherPageType.AllApps, viewModel.state.value.homeLayout.selectedPage.type)
         assertEquals(viewModel.state.value.homeLayout, repository.savedLayout)
     }
 

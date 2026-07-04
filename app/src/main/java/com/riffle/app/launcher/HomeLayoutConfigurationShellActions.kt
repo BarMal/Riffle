@@ -20,6 +20,13 @@ internal fun HomePageEngine.applyHomeLayoutConfigurationEdit(
     layout: HomeLayout,
 ): HomePageEditResult =
     when (action) {
+        is LauncherShellAction.SelectSelectedHomePageType ->
+            updatePageType(
+                layout = layout,
+                pageId = layout.selectedPageId,
+                type = action.type,
+            )
+
         is LauncherShellAction.SelectHomeGridDimensions ->
             updateGridDimensions(
                 layout = layout.layoutForGridDimensionUpdate(),
