@@ -14,6 +14,8 @@ enum class HomeLayoutDeviceClass {
 data class HomeLayoutSet(
     val activeKey: HomeLayoutKey,
     val layouts: Map<HomeLayoutKey, HomeLayout>,
+    val preferredModesByDeviceClass: Map<HomeLayoutDeviceClass, LauncherViewMode> =
+        mapOf(activeKey.deviceClass to activeKey.viewMode),
 ) {
     val activeLayout: HomeLayout = layoutFor(activeKey)
 
@@ -27,13 +29,32 @@ data class HomeLayoutSet(
         layout: HomeLayout,
     ): HomeLayoutSet = copy(layouts = layouts + (key to layout.copy(viewMode = key.viewMode)))
 
+    fun withPreferredMode(
+        deviceClass: HomeLayoutDeviceClass,
+        mode: LauncherViewMode,
+    ): HomeLayoutSet = copy(preferredModesByDeviceClass = preferredModesByDeviceClass + (deviceClass to mode))
+
     fun selectMode(mode: LauncherViewMode): HomeLayoutSet =
         activeKey.copy(viewMode = mode)
-            .let { key -> copy(activeKey = key, layouts = layouts + (key to layoutFor(key))) }
+            .let { key ->
+                copy(
+                    activeKey = key,
+                    layouts = layouts + (key to layoutFor(key)),
+                    preferredModesByDeviceClass = preferredModesByDeviceClass + (key.deviceClass to mode),
+                )
+            }
 
     fun selectDeviceClass(deviceClass: HomeLayoutDeviceClass): HomeLayoutSet =
-        activeKey.copy(deviceClass = deviceClass)
-            .let { key -> copy(activeKey = key, layouts = layouts + (key to layoutFor(key))) }
+        HomeLayoutKey(
+            viewMode = preferredModesByDeviceClass[deviceClass] ?: activeKey.viewMode,
+            deviceClass = deviceClass,
+        ).let { key ->
+            copy(
+                activeKey = key,
+                layouts = layouts + (key to layoutFor(key)),
+                preferredModesByDeviceClass = preferredModesByDeviceClass + (key.deviceClass to key.viewMode),
+            )
+        }
 
     companion object {
         fun standard(): HomeLayoutSet = fromLayout(HomeLayoutDefaults.standard())
