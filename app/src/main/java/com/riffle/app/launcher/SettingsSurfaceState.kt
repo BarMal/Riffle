@@ -16,6 +16,7 @@ data class SettingsSurfaceState(
     val homeRoleStatus: HomeRoleStatus,
     val overlayDockPermissionStatus: OverlayDockPermissionStatus,
     val notificationAccessStatus: NotificationAccessStatus,
+    val installedApps: List<InstalledApp>,
     val hiddenApps: List<InstalledApp>,
     val appVersionLabel: String,
     val appBuildIdentityLabel: String,

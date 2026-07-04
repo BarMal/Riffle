@@ -3,6 +3,8 @@ package com.riffle.app.launcher
 import com.riffle.core.domain.launcher.apps.AppActivityName
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
+import com.riffle.core.domain.launcher.apps.AppShortcut
+import com.riffle.core.domain.launcher.apps.AppShortcutId
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.HomeLayout
@@ -101,6 +103,42 @@ class LauncherShellOverlayDockSettingsTest {
         assertEquals(app.identity, overlayDock.items.single().appIdentity)
         assertEquals(app.label, overlayDock.items.single().label)
         assertEquals("floating-dock:personal:com.example.app/.MainActivity:1", overlayDock.items.single().id.value)
+        assertEquals(viewModel.state.value.launcherSettings, launcherSettingsRepository.savedSettings)
+        assertEquals(0, homeLayoutRepository.saveLayoutSetCount)
+    }
+
+    @Test
+    fun addsFloatingDockAppShortcutGloballyWithoutRewritingLayout() {
+        val homeLayoutRepository = FakeHomeLayoutRepository()
+        val launcherSettingsRepository = FakeLauncherSettingsRepository()
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                homeLayoutRepository = homeLayoutRepository,
+                launcherSettingsRepository = launcherSettingsRepository,
+            )
+        val shortcut =
+            AppShortcut(
+                id = AppShortcutId("compose"),
+                appIdentity = appIdentity,
+                shortLabel = "Compose",
+                longLabel = "Compose message",
+            )
+
+        viewModel.onLauncherSettingsActionSelected(
+            LauncherShellAction.AddAppShortcutToFloatingDock(shortcut),
+        )
+        viewModel.onLauncherSettingsActionSelected(
+            LauncherShellAction.AddAppShortcutToFloatingDock(shortcut),
+        )
+
+        val overlayDock = viewModel.state.value.launcherSettings.overlayDock
+        val item = overlayDock.items.single()
+        assertEquals(true, overlayDock.enabled)
+        assertEquals(shortcut.appIdentity, item.appIdentity)
+        assertEquals(shortcut.id, item.appShortcutId)
+        assertEquals("Compose message", item.label)
+        assertEquals("floating-dock:personal:com.example.app/.MainActivity:compose:1", item.id.value)
         assertEquals(viewModel.state.value.launcherSettings, launcherSettingsRepository.savedSettings)
         assertEquals(0, homeLayoutRepository.saveLayoutSetCount)
     }

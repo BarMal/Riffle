@@ -17,3 +17,22 @@ internal fun appListEmptyText(
         surface == AppListSurface.DRAWER -> "No launchable apps found"
         else -> "No apps found"
     }
+
+internal fun appListSummaryText(
+    totalAppCount: Int,
+    resultCount: Int,
+    query: String,
+    profileFilter: AppDrawerProfileFilter,
+): String =
+    when {
+        query.isNotBlank() || profileFilter != AppDrawerProfileFilter.ALL ->
+            "${resultCount.appCountLabel()} matching, ${totalAppCount.appCountLabel()} total"
+
+        else -> "${totalAppCount.appCountLabel()} available"
+    }
+
+internal fun Int.appCountLabel(): String =
+    when (this) {
+        1 -> "1 app"
+        else -> "$this apps"
+    }

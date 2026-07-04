@@ -8,10 +8,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.riffle.core.domain.launcher.apps.AppDrawerProfileFilter
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
 
@@ -41,8 +44,21 @@ internal fun SettingsPermissionsPageContent(
 }
 
 @Composable
-internal fun SettingsAppsPageContent(onAction: (LauncherShellAction) -> Unit) {
+internal fun SettingsAppsPageContent(
+    state: SettingsSurfaceState,
+    onPageSelected: (SettingsPage) -> Unit,
+    onAction: (LauncherShellAction) -> Unit,
+) {
     SettingsSection(title = "Apps") {
+        SettingsListRow(
+            title = "Launchable apps",
+            subtitle = "${state.installedApps.size.appCountLabel()} available",
+        )
+        SettingsClickableRow(
+            title = "Hidden apps",
+            subtitle = "${state.hiddenApps.size.appCountLabel()} hidden",
+            onClick = { onPageSelected(SettingsPage.HIDDEN_APPS) },
+        )
         AppRefreshSetting(onAction = onAction)
     }
 }
@@ -133,20 +149,55 @@ private fun HiddenAppsSetting(
     apps: List<InstalledApp>,
     onAction: (LauncherShellAction) -> Unit,
 ) {
-    if (apps.isEmpty()) {
+    val query = remember { mutableStateOf("") }
+    val profileFilter = remember { mutableStateOf(AppDrawerProfileFilter.ALL) }
+    val filteredApps =
+        apps.filteredHiddenApps(
+            query = query.value,
+            profileFilter = profileFilter.value,
+        )
+
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        AppSearchField(
+            modifier = Modifier.fillMaxWidth(),
+            query = query.value,
+            onQueryChanged = { value -> query.value = value },
+            label = "Search hidden apps",
+        )
+        AppProfileFilterChips(
+            selectedFilter = profileFilter.value,
+            onFilterSelected = { filter -> profileFilter.value = filter },
+            apps = apps,
+        )
         Text(
-            text = "No hidden apps",
-            style = MaterialTheme.typography.bodyMedium,
+            text =
+                hiddenAppsSummaryText(
+                    totalHiddenAppCount = apps.size,
+                    resultCount = filteredApps.size,
+                    query = query.value,
+                    profileFilter = profileFilter.value,
+                ),
+            style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-    } else {
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            apps.forEach { app ->
-                HiddenAppRow(
-                    app = app,
-                    onAction = onAction,
-                )
-            }
+        if (filteredApps.isEmpty()) {
+            Text(
+                text =
+                    hiddenAppsEmptyText(
+                        totalHiddenAppCount = apps.size,
+                        query = query.value,
+                        profileFilter = profileFilter.value,
+                    ),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            return@Column
+        }
+        filteredApps.forEach { app ->
+            HiddenAppRow(
+                app = app,
+                onAction = onAction,
+            )
         }
     }
 }

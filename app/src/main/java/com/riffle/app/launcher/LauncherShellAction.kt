@@ -118,6 +118,8 @@ sealed interface LauncherShellAction {
 
     data class AddAppToFloatingDock(val app: InstalledApp) : LauncherShellAction
 
+    data class AddAppShortcutToFloatingDock(val shortcut: AppShortcut) : LauncherShellAction
+
     data class RemoveFloatingDockShortcut(val itemId: LauncherItemId) : LauncherShellAction
 
     data class MoveFloatingDockShortcut(

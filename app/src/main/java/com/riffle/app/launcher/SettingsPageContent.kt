@@ -42,7 +42,12 @@ internal fun SettingsPageContent(
             SettingsPage.GESTURES -> SettingsGesturesPageContent(state = state, onAction = onAction)
             SettingsPage.HAPTICS -> SettingsHapticsPageContent(state = state, onAction = onAction)
             SettingsPage.PERMISSIONS -> SettingsPermissionsPageContent(state = state, onAction = onAction)
-            SettingsPage.APPS -> SettingsAppsPageContent(onAction = onAction)
+            SettingsPage.APPS ->
+                SettingsAppsPageContent(
+                    state = state,
+                    onPageSelected = onPageSelected,
+                    onAction = onAction,
+                )
             SettingsPage.BACKUP -> SettingsBackupPageContent(onAction = onAction)
             SettingsPage.HIDDEN_APPS -> SettingsHiddenAppsPageContent(state = state, onAction = onAction)
             SettingsPage.VERSION -> SettingsVersionPageContent(state = state)

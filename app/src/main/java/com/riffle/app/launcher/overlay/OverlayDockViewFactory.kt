@@ -16,6 +16,7 @@ import android.widget.ScrollView
 import android.widget.TextView
 import androidx.core.view.setPadding
 import com.riffle.app.launcher.apps.AndroidAppLauncher
+import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.settings.OverlayDockExpandedOrientation
 import com.riffle.core.domain.launcher.settings.OverlayDockSettings
@@ -121,7 +122,17 @@ internal class OverlayDockViewFactory(
                 setPadding(context.dp(8))
                 layoutParams = LinearLayout.LayoutParams(context.dp(iconSizeDp), context.dp(iconSizeDp))
                 setOnClickListener {
-                    appLauncher.launch(shortcut.appIdentity)
+                    shortcut.appShortcutId
+                        ?.let { shortcutId ->
+                            appLauncher.launchShortcut(
+                                AppShortcut(
+                                    id = shortcutId,
+                                    appIdentity = shortcut.appIdentity,
+                                    shortLabel = shortcut.label,
+                                ),
+                            )
+                        }
+                        ?: appLauncher.launch(shortcut.appIdentity)
                     onLaunch()
                 }
             }

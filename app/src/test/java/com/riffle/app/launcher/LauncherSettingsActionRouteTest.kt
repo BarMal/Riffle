@@ -3,6 +3,8 @@ package com.riffle.app.launcher
 import com.riffle.core.domain.launcher.apps.AppActivityName
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
+import com.riffle.core.domain.launcher.apps.AppShortcut
+import com.riffle.core.domain.launcher.apps.AppShortcutId
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
@@ -38,6 +40,7 @@ class LauncherSettingsActionRouteTest {
                 LauncherShellAction.SelectOverlayDockExpandedOrientation(OverlayDockExpandedOrientation.TALL),
                 LauncherShellAction.SelectOverlayDockShowLabels(showLabels = true),
                 LauncherShellAction.AddAppToFloatingDock(installedApp),
+                LauncherShellAction.AddAppShortcutToFloatingDock(appShortcut),
                 LauncherShellAction.RemoveFloatingDockShortcut(LauncherItemId("floating-dock:example")),
                 LauncherShellAction.MoveFloatingDockShortcut(
                     itemId = LauncherItemId("floating-dock:example"),
@@ -87,5 +90,11 @@ class LauncherSettingsActionRouteTest {
                 activityName = AppActivityName(".MainActivity"),
             )
         val installedApp = InstalledApp(identity = appIdentity, label = "Example")
+        val appShortcut =
+            AppShortcut(
+                id = AppShortcutId("compose"),
+                appIdentity = appIdentity,
+                shortLabel = "Compose",
+            )
     }
 }
