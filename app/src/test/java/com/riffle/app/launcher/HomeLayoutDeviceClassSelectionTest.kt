@@ -30,7 +30,6 @@ class HomeLayoutDeviceClassSelectionTest {
                     ),
             )
 
-        assertEquals("Fold window-info: FOLDABLE 720x840dp UNFOLDED", event.toastText)
         assertEquals(
             "source=window-info " +
                 "active=FOLDABLE " +

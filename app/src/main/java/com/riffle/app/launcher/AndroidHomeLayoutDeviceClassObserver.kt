@@ -99,11 +99,6 @@ internal data class HomeLayoutDeviceClassEvent(
     val foldablePosture: HomeLayoutFoldablePosture,
     val foldingFeatures: List<HomeLayoutFoldingFeatureDebug>,
 ) {
-    val toastText: String
-        get() =
-            "Fold $source: ${selection.activeDeviceClass} " +
-                "${windowSize.screenWidthDp}x${windowSize.screenHeightDp}dp $foldablePosture"
-
     val logText: String
         get() =
             "source=$source " +
