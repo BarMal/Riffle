@@ -10,7 +10,7 @@ import androidx.compose.ui.unit.dp
 internal fun BackupSetting(onAction: (LauncherShellAction) -> Unit) {
     SettingsListRow(
         title = "Launcher backup",
-        subtitle = "Layouts and settings",
+        subtitle = "Layouts, settings, and hidden apps",
         trailingContent = {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 TextButton(onClick = { onAction(LauncherShellAction.RequestImportLauncherBackup) }) {

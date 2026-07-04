@@ -1,6 +1,8 @@
 package com.riffle.app.launcher
 
 import com.riffle.core.domain.launcher.LauncherShellState
+import com.riffle.core.domain.launcher.apps.AppIdentity
+import com.riffle.core.domain.launcher.apps.AppVisibilityRepository
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
@@ -67,6 +69,8 @@ class LauncherBackupDocumentHandlerTest {
             exportCoordinator =
                 LauncherBackupExportCoordinator(
                     homeLayoutRepository = FakeHomeLayoutRepository(document.homeLayoutSet),
+                    appVisibilityRepository =
+                        FakeAppVisibilityRepository(hiddenApps = document.hiddenAppIdentities),
                     currentState = { LauncherShellState(homeLayout = document.homeLayoutSet.activeLayout) },
                     epochMillisProvider = FixedEpochMillisProvider,
                 ),
@@ -90,6 +94,16 @@ class LauncherBackupDocumentHandlerTest {
             launcherSettings = LauncherSettings(),
             exportedAtEpochMillis = 123_456L,
         )
+
+    private class FakeAppVisibilityRepository(
+        private val hiddenApps: Set<AppIdentity>,
+    ) : AppVisibilityRepository {
+        override fun hiddenAppIdentities(): Set<AppIdentity> = hiddenApps
+
+        override fun hideApp(identity: AppIdentity) = Unit
+
+        override fun showApp(identity: AppIdentity) = Unit
+    }
 
     private object FixedEpochMillisProvider : EpochMillisProvider {
         override fun nowEpochMillis(): Long = 123_456L

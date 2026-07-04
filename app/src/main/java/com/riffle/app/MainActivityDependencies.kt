@@ -87,6 +87,7 @@ internal class MainActivityDependencies(
             exportCoordinator =
                 LauncherBackupExportCoordinator(
                     homeLayoutRepository = homeLayoutRepository,
+                    appVisibilityRepository = appVisibilityRepository,
                     currentState = currentState,
                 ),
             importCoordinator = LauncherBackupImportCoordinator(),

@@ -1,5 +1,9 @@
 package com.riffle.app.launcher
 
+import com.riffle.core.domain.launcher.apps.AppActivityName
+import com.riffle.core.domain.launcher.apps.AppIdentity
+import com.riffle.core.domain.launcher.apps.AppPackageName
+import com.riffle.core.domain.launcher.apps.AppProfile
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.HomeLayoutSet
 import com.riffle.core.domain.launcher.home.WallpaperSettings
@@ -29,6 +33,7 @@ class LauncherBackupDocumentTest {
             LauncherBackupDocument(
                 homeLayoutSet = layoutSet,
                 launcherSettings = settings,
+                hiddenAppIdentities = setOf(cameraIdentity),
                 exportedAtEpochMillis = 123_456L,
             )
 
@@ -36,11 +41,12 @@ class LauncherBackupDocumentTest {
 
         assertEquals(layoutSet, decodedDocument.homeLayoutSet)
         assertEquals(settings, decodedDocument.launcherSettings)
+        assertEquals(setOf(cameraIdentity), decodedDocument.hiddenAppIdentities)
         assertEquals(123_456L, decodedDocument.exportedAtEpochMillis)
     }
 
     @Test
-    fun decodesBackupWithoutExportTimestamp() {
+    fun decodesBackupWithoutOptionalMetadata() {
         val value =
             JSONObject(
                 encodeLauncherBackupDocument(
@@ -51,11 +57,13 @@ class LauncherBackupDocumentTest {
                 ),
             )
                 .apply { remove("exportedAtEpochMillis") }
+                .apply { remove("hiddenApps") }
                 .toString()
 
         val decodedDocument = decodeLauncherBackupDocument(value)
 
         assertEquals(null, decodedDocument.exportedAtEpochMillis)
+        assertEquals(emptySet<AppIdentity>(), decodedDocument.hiddenAppIdentities)
     }
 
     @Test
@@ -129,5 +137,14 @@ class LauncherBackupDocumentTest {
         assertThrows(IllegalArgumentException::class.java) {
             decodeLauncherBackupDocument(value)
         }
+    }
+
+    private companion object {
+        val cameraIdentity =
+            AppIdentity(
+                packageName = AppPackageName("com.riffle.camera"),
+                activityName = AppActivityName(".MainActivity"),
+                profile = AppProfile.personal(),
+            )
     }
 }
