@@ -225,6 +225,8 @@ sealed interface LauncherShellAction {
         val profileType: AppProfileType,
     ) : LauncherShellAction
 
+    data object ResetSearchFilters : LauncherShellAction
+
     data class SelectWallpaperSource(val source: WallpaperSource) : LauncherShellAction
 
     data class SelectHomeSwipeGestureAction(

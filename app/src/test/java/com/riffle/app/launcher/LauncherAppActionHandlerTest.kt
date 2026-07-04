@@ -98,6 +98,7 @@ class LauncherAppActionHandlerTest {
                 LauncherShellAction.SearchProfileFilterSelected(AppDrawerProfileFilter.PERSONAL),
                 LauncherShellAction.ToggleSearchContentFilter(AppSearchContentFilter.SHORTCUTS),
                 LauncherShellAction.ToggleSearchProfileFilter(AppProfileType.WORK),
+                LauncherShellAction.ResetSearchFilters,
                 LauncherShellAction.OpenWidgetPicker,
                 LauncherShellAction.CloseWidgetPicker,
             )
