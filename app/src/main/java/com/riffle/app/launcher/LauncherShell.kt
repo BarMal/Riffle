@@ -180,8 +180,7 @@ private fun LauncherDestination(
                 state =
                     SearchSurfaceState(
                         query = state.searchQuery,
-                        profileFilter = state.searchProfileFilter,
-                        searchScope = state.searchScope,
+                        filters = state.searchFilters,
                         installedApps = state.installedApps,
                         results = state.searchResults,
                         homeLayout = state.homeLayout,

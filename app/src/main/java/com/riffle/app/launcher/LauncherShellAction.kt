@@ -2,7 +2,8 @@ package com.riffle.app.launcher
 
 import com.riffle.core.domain.launcher.apps.AppDrawerProfileFilter
 import com.riffle.core.domain.launcher.apps.AppIdentity
-import com.riffle.core.domain.launcher.apps.AppSearchScope
+import com.riffle.core.domain.launcher.apps.AppProfileType
+import com.riffle.core.domain.launcher.apps.AppSearchContentFilter
 import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.home.DockBackgroundSizing
@@ -213,8 +214,12 @@ sealed interface LauncherShellAction {
         val filter: AppDrawerProfileFilter,
     ) : LauncherShellAction
 
-    data class SearchScopeSelected(
-        val scope: AppSearchScope,
+    data class ToggleSearchContentFilter(
+        val filter: AppSearchContentFilter,
+    ) : LauncherShellAction
+
+    data class ToggleSearchProfileFilter(
+        val profileType: AppProfileType,
     ) : LauncherShellAction
 
     data class SelectWallpaperSource(val source: WallpaperSource) : LauncherShellAction

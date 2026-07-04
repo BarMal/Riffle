@@ -1,5 +1,6 @@
 package com.riffle.app.launcher
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -12,9 +13,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -24,7 +26,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
@@ -32,11 +33,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.unit.dp
-import com.riffle.core.domain.launcher.apps.AppDrawerProfileFilter
 import com.riffle.core.domain.launcher.apps.AppIdentity
-import com.riffle.core.domain.launcher.apps.AppSearchScope
+import com.riffle.core.domain.launcher.apps.AppProfileType
+import com.riffle.core.domain.launcher.apps.AppSearchContentFilter
+import com.riffle.core.domain.launcher.apps.AppSearchFilters
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.home.HomeLabelSettings
 import com.riffle.core.domain.launcher.home.HomeLayout
@@ -49,28 +52,38 @@ fun SearchSurface(
 ) {
     val focusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
+    val density = LocalDensity.current
+    val isKeyboardVisible = WindowInsets.ime.getBottom(density) > 0
 
     LaunchedEffect(Unit) {
         focusRequester.requestFocus()
         keyboardController?.show()
     }
 
+    BackHandler {
+        if (isKeyboardVisible) {
+            keyboardController?.hide()
+        } else {
+            onAction(LauncherShellAction.OpenHome)
+        }
+    }
+
     Column(
         modifier =
             Modifier
                 .fillMaxSize()
-                .windowInsetsPadding(WindowInsets.safeDrawing)
+                .windowInsetsPadding(WindowInsets.systemBars)
                 .padding(horizontal = 12.dp, vertical = 12.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         SearchTopControls(
-            query = state.query,
-            profileFilter = state.profileFilter,
-            searchScope = state.searchScope,
-            installedApps = state.installedApps,
-            resultCount = state.results.size,
+            state = state,
             focusRequester = focusRequester,
-            onAction = onAction,
+            onQueryChanged = { value -> onAction(LauncherShellAction.SearchQueryChanged(value)) },
+            onContentFilterToggled = { filter -> onAction(LauncherShellAction.ToggleSearchContentFilter(filter)) },
+            onProfileFilterToggled = { profileType ->
+                onAction(LauncherShellAction.ToggleSearchProfileFilter(profileType))
+            },
         )
         Spacer(modifier = Modifier.height(14.dp))
         SearchIconGrid(
@@ -78,10 +91,9 @@ fun SearchSurface(
             homeLayout = state.homeLayout,
             appListContext = appListContext,
             emptyText =
-                appListEmptyText(
-                    surface = AppListSurface.SEARCH,
+                searchEmptyText(
                     query = state.query,
-                    profileFilter = state.profileFilter,
+                    filters = state.filters,
                 ),
             modifier = Modifier.weight(1f),
         )
@@ -90,8 +102,7 @@ fun SearchSurface(
 
 data class SearchSurfaceState(
     val query: String,
-    val profileFilter: AppDrawerProfileFilter,
-    val searchScope: AppSearchScope,
+    val filters: AppSearchFilters,
     val installedApps: List<InstalledApp>,
     val results: List<InstalledApp>,
     val homeLayout: HomeLayout,
@@ -99,13 +110,11 @@ data class SearchSurfaceState(
 
 @Composable
 private fun SearchTopControls(
-    query: String,
-    profileFilter: AppDrawerProfileFilter,
-    searchScope: AppSearchScope,
-    installedApps: List<InstalledApp>,
-    resultCount: Int,
+    state: SearchSurfaceState,
     focusRequester: FocusRequester,
-    onAction: (LauncherShellAction) -> Unit,
+    onQueryChanged: (String) -> Unit,
+    onContentFilterToggled: (AppSearchContentFilter) -> Unit,
+    onProfileFilterToggled: (AppProfileType) -> Unit,
 ) {
     Surface(
         modifier =
@@ -128,33 +137,21 @@ private fun SearchTopControls(
                 AppSearchField(
                     modifier =
                         Modifier
-                            .weight(1f)
+                            .fillMaxWidth()
                             .focusRequester(focusRequester),
-                    query = query,
-                    onQueryChanged = { value -> onAction(LauncherShellAction.SearchQueryChanged(value)) },
+                    query = state.query,
+                    onQueryChanged = onQueryChanged,
                 )
-                TextButton(onClick = { onAction(LauncherShellAction.OpenHome) }) {
-                    Text(text = "Home")
-                }
             }
             SearchFilterChips(
-                searchScope = searchScope,
-                profileFilter = profileFilter,
-                installedApps = installedApps,
-                onScopeSelected = { scope -> onAction(LauncherShellAction.SearchScopeSelected(scope)) },
-                onProfileFilterSelected = { filter ->
-                    onAction(LauncherShellAction.SearchProfileFilterSelected(filter))
-                },
+                filters = state.filters,
+                installedApps = state.installedApps,
+                onContentFilterToggled = onContentFilterToggled,
+                onProfileFilterToggled = onProfileFilterToggled,
                 modifier = Modifier.fillMaxWidth(),
             )
             Text(
-                text =
-                    appListSummaryText(
-                        totalAppCount = installedApps.size,
-                        resultCount = resultCount,
-                        query = query,
-                        profileFilter = profileFilter,
-                    ),
+                text = searchFilterSummaryText(state),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -252,6 +249,36 @@ private fun SearchIconGridItem(
 
 private val AppIdentity.stableSearchGridKey: String
     get() = "${packageName.value}/${activityName.value}/${profile.id.value}"
+
+internal fun searchFilterSummaryText(state: SearchSurfaceState): String {
+    val profileLabel =
+        when {
+            state.filters.profiles.isEmpty() -> "no profiles"
+            state.filters.profiles.size == 1 -> state.filters.profiles.single().label.lowercase()
+            else -> "selected profiles"
+        }
+    val contentLabel =
+        when {
+            state.filters.content.isEmpty() -> "no result types"
+            state.filters.content.size == 1 -> state.filters.content.single().label.lowercase()
+            else -> "apps and shortcuts"
+        }
+
+    return "${state.results.size} ${"app".pluralized(state.results.size)} in $profileLabel $contentLabel"
+}
+
+internal fun searchEmptyText(
+    query: String,
+    filters: AppSearchFilters,
+): String =
+    when {
+        filters.content.isEmpty() -> "Enable apps or shortcuts to search"
+        filters.profiles.isEmpty() -> "Enable a profile to search"
+        query.isBlank() -> "No apps match the selected filters"
+        else -> "No apps found for \"$query\""
+    }
+
+private fun String.pluralized(count: Int): String = if (count == 1) this else "${this}s"
 
 private const val SEARCH_CONTROLS_MAX_WIDTH_DP = 840
 private const val SEARCH_CONTROLS_CORNER_DP = 28

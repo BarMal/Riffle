@@ -6,7 +6,9 @@ import com.riffle.core.domain.launcher.apps.AppDrawerProfileFilter
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppProfile
-import com.riffle.core.domain.launcher.apps.AppSearchScope
+import com.riffle.core.domain.launcher.apps.AppProfileType
+import com.riffle.core.domain.launcher.apps.AppSearchContentFilter
+import com.riffle.core.domain.launcher.apps.AppSearchFilters
 import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.apps.AppShortcutId
 import com.riffle.core.domain.launcher.apps.InstalledApp
@@ -62,7 +64,22 @@ class LauncherAppListActionReducerTest {
     }
 
     @Test
-    fun updatesSearchResultsByShortcutLabel() {
+    fun defaultSearchUsesPersonalAppsOnly() {
+        val personalCamera = app(label = "Camera", profile = AppProfile.personal())
+        val workCamera = app(label = "Camera", profile = AppProfile.work())
+        val state =
+            LauncherShellState(
+                installedApps = listOf(personalCamera, workCamera),
+            )
+
+        val updated = reducer.reduce(state, LauncherShellAction.SearchQueryChanged("cam"))
+
+        assertEquals("cam", updated?.searchQuery)
+        assertEquals(listOf(personalCamera.identity), updated?.searchResults?.map { app -> app.identity })
+    }
+
+    @Test
+    fun defaultSearchExcludesShortcutLabels() {
         val camera = app(label = "Camera")
         val browser = app(label = "Browser")
         val state =
@@ -78,11 +95,11 @@ class LauncherAppListActionReducerTest {
         val updated = reducer.reduce(state, LauncherShellAction.SearchQueryChanged("new tab"))
 
         assertEquals("new tab", updated?.searchQuery)
-        assertEquals(listOf("Browser"), updated?.searchResults?.map { app -> app.label })
+        assertEquals(emptyList<String>(), updated?.searchResults?.map { app -> app.label })
     }
 
     @Test
-    fun searchScopeCanExcludeShortcutLabels() {
+    fun togglingShortcutFilterIncludesShortcutLabels() {
         val browser = app(label = "Browser")
         val state =
             LauncherShellState(
@@ -95,20 +112,31 @@ class LauncherAppListActionReducerTest {
                 searchResults = listOf(browser),
             )
 
-        val updated = reducer.reduce(state, LauncherShellAction.SearchScopeSelected(AppSearchScope.APPS))
+        val updated =
+            reducer.reduce(
+                state,
+                LauncherShellAction.ToggleSearchContentFilter(AppSearchContentFilter.SHORTCUTS),
+            )
 
-        assertEquals(AppSearchScope.APPS, updated?.searchScope)
-        assertEquals(emptyList<String>(), updated?.searchResults?.map { app -> app.label })
+        assertEquals(
+            setOf(AppSearchContentFilter.APPS, AppSearchContentFilter.SHORTCUTS),
+            updated?.searchFilters?.content,
+        )
+        assertEquals(listOf("Browser"), updated?.searchResults?.map { app -> app.label })
     }
 
     @Test
-    fun searchScopeCanIncludeShortcutLabelsAgain() {
+    fun togglingAppsFilterCanSearchShortcutsOnly() {
         val browser = app(label = "Browser")
+        val camera = app(label = "Camera")
         val state =
             LauncherShellState(
-                installedApps = listOf(browser),
+                installedApps = listOf(browser, camera),
                 searchQuery = "new tab",
-                searchScope = AppSearchScope.APPS,
+                searchFilters =
+                    AppSearchFilters(
+                        content = setOf(AppSearchContentFilter.APPS, AppSearchContentFilter.SHORTCUTS),
+                    ),
                 appShortcutsByApp =
                     mapOf(
                         browser.identity to listOf(shortcut(app = browser, label = "New tab")),
@@ -118,10 +146,10 @@ class LauncherAppListActionReducerTest {
         val updated =
             reducer.reduce(
                 state,
-                LauncherShellAction.SearchScopeSelected(AppSearchScope.APPS_AND_SHORTCUTS),
+                LauncherShellAction.ToggleSearchContentFilter(AppSearchContentFilter.APPS),
             )
 
-        assertEquals(AppSearchScope.APPS_AND_SHORTCUTS, updated?.searchScope)
+        assertEquals(setOf(AppSearchContentFilter.SHORTCUTS), updated?.searchFilters?.content)
         assertEquals(listOf("Browser"), updated?.searchResults?.map { app -> app.label })
     }
 
@@ -145,8 +173,32 @@ class LauncherAppListActionReducerTest {
             )
 
         assertEquals(AppDrawerProfileFilter.WORK, updated?.searchProfileFilter)
+        assertEquals(setOf(AppProfileType.WORK), updated?.searchFilters?.profiles)
         assertEquals(listOf("Calendar"), updated?.searchResults?.map { app -> app.label })
         assertEquals(listOf(AppProfile.work()), updated?.searchResults?.map { app -> app.identity.profile })
+    }
+
+    @Test
+    fun togglesSearchProfileFilters() {
+        val personalCalendar = app(label = "Calendar", profile = AppProfile.personal())
+        val workCalendar = app(label = "Calendar", profile = AppProfile.work())
+        val state =
+            LauncherShellState(
+                installedApps = listOf(personalCalendar, workCalendar),
+                searchQuery = "cal",
+                searchResults = listOf(personalCalendar),
+            )
+
+        val updated = reducer.reduce(state, LauncherShellAction.ToggleSearchProfileFilter(AppProfileType.WORK))
+
+        assertEquals(
+            setOf(AppProfileType.PERSONAL, AppProfileType.WORK),
+            updated?.searchFilters?.profiles,
+        )
+        assertEquals(
+            listOf(personalCalendar.identity, workCalendar.identity),
+            updated?.searchResults?.map { app -> app.identity },
+        )
     }
 
     @Test

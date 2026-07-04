@@ -1,11 +1,11 @@
 package com.riffle.app.launcher
 
 import com.riffle.core.domain.launcher.apps.AppActivityName
-import com.riffle.core.domain.launcher.apps.AppDrawerProfileFilter
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppProfile
-import com.riffle.core.domain.launcher.apps.AppSearchScope
+import com.riffle.core.domain.launcher.apps.AppProfileType
+import com.riffle.core.domain.launcher.apps.AppSearchContentFilter
 import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.apps.AppShortcutId
 import com.riffle.core.domain.launcher.apps.AppShortcutRepository
@@ -18,7 +18,7 @@ import org.junit.Test
 
 class LauncherShellSearchViewModelTest {
     @Test
-    fun filtersSearchResultsByShortcutLabels() {
+    fun defaultSearchExcludesShortcutLabels() {
         val camera = app(label = "Camera")
         val browser = app(label = "Browser")
         val viewModel =
@@ -38,11 +38,11 @@ class LauncherShellSearchViewModelTest {
         runBlocking { viewModel.refreshInstalledApps().join() }
         viewModel.onAppActionSelected(LauncherShellAction.SearchQueryChanged("new tab"))
 
-        assertEquals(listOf("Browser"), viewModel.state.value.searchResults.map { app -> app.label })
+        assertEquals(emptyList<String>(), viewModel.state.value.searchResults.map { app -> app.label })
     }
 
     @Test
-    fun searchScopeControlsShortcutLabelMatching() {
+    fun shortcutFilterControlsShortcutLabelMatching() {
         val browser = app(label = "Browser")
         val viewModel =
             LauncherShellViewModel(
@@ -59,14 +59,19 @@ class LauncherShellSearchViewModelTest {
 
         runBlocking { viewModel.refreshInstalledApps().join() }
         viewModel.onAppActionSelected(LauncherShellAction.SearchQueryChanged("new tab"))
-        viewModel.onAppActionSelected(LauncherShellAction.SearchScopeSelected(AppSearchScope.APPS))
+        viewModel.onAppActionSelected(
+            LauncherShellAction.ToggleSearchContentFilter(AppSearchContentFilter.SHORTCUTS),
+        )
 
-        assertEquals(AppSearchScope.APPS, viewModel.state.value.searchScope)
-        assertEquals(emptyList<String>(), viewModel.state.value.searchResults.map { app -> app.label })
+        assertEquals(
+            setOf(AppSearchContentFilter.APPS, AppSearchContentFilter.SHORTCUTS),
+            viewModel.state.value.searchFilters.content,
+        )
+        assertEquals(listOf("Browser"), viewModel.state.value.searchResults.map { app -> app.label })
     }
 
     @Test
-    fun filtersSearchResultsBySelectedProfile() {
+    fun defaultsSearchResultsToPersonalApps() {
         val viewModel =
             LauncherShellViewModel(
                 firstRunRepository = FakeFirstRunRepository(),
@@ -82,12 +87,9 @@ class LauncherShellSearchViewModelTest {
             )
 
         runBlocking { viewModel.refreshInstalledApps().join() }
-        viewModel.onAppActionSelected(
-            LauncherShellAction.SearchProfileFilterSelected(AppDrawerProfileFilter.WORK),
-        )
 
-        assertEquals(AppDrawerProfileFilter.WORK, viewModel.state.value.searchProfileFilter)
-        assertEquals(listOf("Docs", "Sheets"), viewModel.state.value.searchResults.map { app -> app.label })
+        assertEquals(setOf(AppProfileType.PERSONAL), viewModel.state.value.searchFilters.profiles)
+        assertEquals(listOf("Camera"), viewModel.state.value.searchResults.map { app -> app.label })
     }
 
     @Test
@@ -109,11 +111,14 @@ class LauncherShellSearchViewModelTest {
         runBlocking { viewModel.refreshInstalledApps().join() }
         viewModel.onAppActionSelected(LauncherShellAction.SearchQueryChanged("cal"))
         viewModel.onAppActionSelected(
-            LauncherShellAction.SearchProfileFilterSelected(AppDrawerProfileFilter.WORK),
+            LauncherShellAction.ToggleSearchProfileFilter(AppProfileType.PERSONAL),
+        )
+        viewModel.onAppActionSelected(
+            LauncherShellAction.ToggleSearchProfileFilter(AppProfileType.WORK),
         )
 
         assertEquals("cal", viewModel.state.value.searchQuery)
-        assertEquals(AppDrawerProfileFilter.WORK, viewModel.state.value.searchProfileFilter)
+        assertEquals(setOf(AppProfileType.WORK), viewModel.state.value.searchFilters.profiles)
         assertEquals(listOf("Calendar"), viewModel.state.value.searchResults.map { app -> app.label })
         assertEquals(listOf(AppProfile.work()), viewModel.state.value.searchResults.map { app -> app.identity.profile })
     }
@@ -130,7 +135,10 @@ class LauncherShellSearchViewModelTest {
                 installedAppRepository = repository,
             )
         viewModel.onAppActionSelected(
-            LauncherShellAction.SearchProfileFilterSelected(AppDrawerProfileFilter.WORK),
+            LauncherShellAction.ToggleSearchProfileFilter(AppProfileType.PERSONAL),
+        )
+        viewModel.onAppActionSelected(
+            LauncherShellAction.ToggleSearchProfileFilter(AppProfileType.WORK),
         )
 
         repository.apps =
@@ -140,7 +148,7 @@ class LauncherShellSearchViewModelTest {
             )
         runBlocking { viewModel.refreshInstalledApps().join() }
 
-        assertEquals(AppDrawerProfileFilter.WORK, viewModel.state.value.searchProfileFilter)
+        assertEquals(setOf(AppProfileType.WORK), viewModel.state.value.searchFilters.profiles)
         assertEquals(listOf("Sheets"), viewModel.state.value.searchResults.map { app -> app.label })
     }
 
