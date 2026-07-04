@@ -180,6 +180,16 @@ private fun HiddenAppsSetting(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+        if (shouldShowHiddenAppsClearFilters(query = query.value, profileFilter = profileFilter.value)) {
+            TextButton(
+                onClick = {
+                    query.value = ""
+                    profileFilter.value = AppDrawerProfileFilter.ALL
+                },
+            ) {
+                Text(text = "Clear filters")
+            }
+        }
         if (filteredApps.isEmpty()) {
             Text(
                 text =
