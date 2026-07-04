@@ -1,5 +1,6 @@
 package com.riffle.app.launcher
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -93,8 +94,13 @@ private fun WidgetProviderRow(
     provider: InstalledWidgetProvider,
     onAction: (LauncherShellAction) -> Unit,
 ) {
+    val requestAddWidgetAction = provider.requestAddWidgetAction()
+
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable { onAction(requestAddWidgetAction) },
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -116,7 +122,7 @@ private fun WidgetProviderRow(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        TextButton(onClick = { onAction(provider.requestAddWidgetAction()) }) {
+        TextButton(onClick = { onAction(requestAddWidgetAction) }) {
             Text(text = "Add")
         }
     }
