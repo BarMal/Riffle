@@ -45,6 +45,26 @@ class HomeLayoutSetTest {
     }
 
     @Test
+    fun selectingDeviceClassUsesPreferredModeForThatClass() {
+        val layoutSet =
+            HomeLayoutSet.standard()
+                .withPreferredMode(
+                    deviceClass = HomeLayoutDeviceClass.FOLDABLE,
+                    mode = LauncherViewMode.HOME_SCREEN_LIBRARY,
+                )
+                .selectDeviceClass(HomeLayoutDeviceClass.FOLDABLE)
+
+        assertEquals(
+            HomeLayoutKey(
+                viewMode = LauncherViewMode.HOME_SCREEN_LIBRARY,
+                deviceClass = HomeLayoutDeviceClass.FOLDABLE,
+            ),
+            layoutSet.activeKey,
+        )
+        assertEquals(LauncherViewMode.HOME_SCREEN_LIBRARY, layoutSet.activeLayout.viewMode)
+    }
+
+    @Test
     fun updatingActiveLayoutDoesNotMutateOtherModeLayouts() {
         val libraryPage =
             HomeLayoutDefaults.standard()

@@ -39,6 +39,7 @@ internal fun LauncherShellAction.isHomeLayoutConfigurationAction(): Boolean =
         is LauncherShellAction.SelectHomeLabelMaxWidth,
         is LauncherShellAction.SelectHomeLabelMaxLines,
         is LauncherShellAction.SelectHomeLabelSizing,
+        is LauncherShellAction.SelectLauncherViewMode,
         -> true
 
         else -> false

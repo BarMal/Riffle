@@ -274,6 +274,13 @@ class LauncherShellViewModel(
     fun onHomePageEdited(action: LauncherShellAction) {
         mutableState.value =
             when {
+                mutableState.value.shouldEditSettingsTargetLayout(action) ->
+                    mutableState.value.withSettingsHomePageEdit(
+                        action = action,
+                        homePageEngine = homePageEngine,
+                        homeLayoutRepository = homeLayoutRepository,
+                    )
+
                 action is LauncherShellAction.SelectLauncherViewMode ->
                     mutableState.value
                         .withSelectedHomeLayoutMode(action.mode, homeLayoutRepository)
@@ -287,13 +294,6 @@ class LauncherShellViewModel(
                             homeLayoutRepository = homeLayoutRepository,
                         )
                         .withHomeScreenLibraryApps(homeLayoutRepository)
-
-                mutableState.value.shouldEditSettingsTargetLayout(action) ->
-                    mutableState.value.withSettingsHomePageEdit(
-                        action = action,
-                        homePageEngine = homePageEngine,
-                        homeLayoutRepository = homeLayoutRepository,
-                    )
 
                 else ->
                     when (

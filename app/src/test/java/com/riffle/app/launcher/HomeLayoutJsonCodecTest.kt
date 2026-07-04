@@ -17,6 +17,7 @@ import com.riffle.core.domain.launcher.home.GridSpan
 import com.riffle.core.domain.launcher.home.HomeLabelSettings
 import com.riffle.core.domain.launcher.home.HomeLabelSizing
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
+import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.HomeLayoutKey
 import com.riffle.core.domain.launcher.home.HomeLayoutSet
 import com.riffle.core.domain.launcher.home.HostedWidgetId
@@ -354,6 +355,10 @@ class HomeLayoutJsonCodecTest {
                         HomeLayoutKey(LauncherViewMode.STANDARD_APP_DRAWER) to standard,
                         HomeLayoutKey(LauncherViewMode.CARD_INTERFACE) to cards,
                     ),
+                preferredModesByDeviceClass =
+                    mapOf(
+                        HomeLayoutDeviceClass.PHONE to LauncherViewMode.CARD_INTERFACE,
+                    ),
             )
 
         val decodedLayoutSet = decodeHomeLayoutSet(encodeHomeLayoutSet(layoutSet))
@@ -361,6 +366,10 @@ class HomeLayoutJsonCodecTest {
         assertEquals(HomeLayoutKey(LauncherViewMode.CARD_INTERFACE), decodedLayoutSet.activeKey)
         assertEquals(4, decodedLayoutSet.activeLayout.dock.capacity)
         assertEquals(5, decodedLayoutSet.layoutFor(HomeLayoutKey(LauncherViewMode.STANDARD_APP_DRAWER)).dock.capacity)
+        assertEquals(
+            mapOf(HomeLayoutDeviceClass.PHONE to LauncherViewMode.CARD_INTERFACE),
+            decodedLayoutSet.preferredModesByDeviceClass,
+        )
     }
 
     @Test
