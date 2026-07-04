@@ -161,6 +161,7 @@ fun FolderDialog(
                 AppProfileFilterChips(
                     selectedFilter = addAppProfileFilter.value,
                     onFilterSelected = { filter -> addAppProfileFilter.value = filter },
+                    apps = addableApps,
                 )
                 FolderContentRows(
                     folder = folder,

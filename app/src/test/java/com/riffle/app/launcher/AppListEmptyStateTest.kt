@@ -56,4 +56,30 @@ class AppListEmptyStateTest {
             )
         }
     }
+
+    @Test
+    fun summarizesFullAppListCounts() {
+        assertEquals(
+            "3 apps available",
+            appListSummaryText(
+                totalAppCount = 3,
+                resultCount = 3,
+                query = "",
+                profileFilter = AppDrawerProfileFilter.ALL,
+            ),
+        )
+    }
+
+    @Test
+    fun summarizesFilteredAppListCounts() {
+        assertEquals(
+            "1 app matching, 3 apps total",
+            appListSummaryText(
+                totalAppCount = 3,
+                resultCount = 1,
+                query = "camera",
+                profileFilter = AppDrawerProfileFilter.WORK,
+            ),
+        )
+    }
 }

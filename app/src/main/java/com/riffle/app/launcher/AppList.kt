@@ -100,6 +100,12 @@ private fun LazyListScope.appRows(
                                 identity = shortcut.appIdentity,
                                 shortcutId = shortcut.id,
                             ),
+                        floatingDockItemId =
+                            context.overlayDock.items
+                                .firstOrNull { item ->
+                                    item.appIdentity == shortcut.appIdentity && item.appShortcutId == shortcut.id
+                                }
+                                ?.id,
                     )
                 }
         AppDrawerRow(
@@ -311,16 +317,9 @@ private fun AppDrawerRowOverflowMenu(
                 onExpandedChange = onExpandedChange,
             )
             state.shortcutItems.forEach { item ->
-                AppDrawerRowMenuItem(
-                    text = item.shortcut.menuLabel,
-                    enabled = item.shortcut.enabled,
-                    onClick = { onAction(LauncherShellAction.LaunchAppShortcut(item.shortcut)) },
-                    onExpandedChange = onExpandedChange,
-                )
-                AppDrawerRowMenuItem(
-                    text = item.addLabel,
-                    enabled = item.shortcut.enabled && !item.isOnHome,
-                    onClick = { onAction(LauncherShellAction.AddAppShortcutToHome(item.shortcut)) },
+                AppDrawerShortcutMenuItems(
+                    item = item,
+                    onAction = onAction,
                     onExpandedChange = onExpandedChange,
                 )
             }
@@ -341,6 +340,37 @@ private fun AppDrawerRowOverflowMenu(
             )
         }
     }
+}
+
+@Composable
+private fun AppDrawerShortcutMenuItems(
+    item: AppDrawerShortcutMenuItem,
+    onAction: (LauncherShellAction) -> Unit,
+    onExpandedChange: (Boolean) -> Unit,
+) {
+    AppDrawerRowMenuItem(
+        text = item.shortcut.menuLabel,
+        enabled = item.shortcut.enabled,
+        onClick = { onAction(LauncherShellAction.LaunchAppShortcut(item.shortcut)) },
+        onExpandedChange = onExpandedChange,
+    )
+    AppDrawerRowMenuItem(
+        text = item.addLabel,
+        enabled = item.shortcut.enabled && !item.isOnHome,
+        onClick = { onAction(LauncherShellAction.AddAppShortcutToHome(item.shortcut)) },
+        onExpandedChange = onExpandedChange,
+    )
+    AppDrawerRowMenuItem(
+        text = item.floatingDockLabel,
+        enabled = item.shortcut.enabled,
+        onClick = {
+            when (item.floatingDockItemId) {
+                null -> onAction(LauncherShellAction.AddAppShortcutToFloatingDock(item.shortcut))
+                else -> onAction(LauncherShellAction.RemoveFloatingDockShortcut(item.floatingDockItemId))
+            }
+        },
+        onExpandedChange = onExpandedChange,
+    )
 }
 
 @Composable
@@ -369,9 +399,18 @@ private val AppShortcut.menuLabel: String
 private data class AppDrawerShortcutMenuItem(
     val shortcut: AppShortcut,
     val isOnHome: Boolean,
+    val floatingDockItemId: LauncherItemId?,
 ) {
     val addLabel: String
         get() = if (isOnHome) "Added ${shortcut.menuLabel}" else "Add ${shortcut.menuLabel}"
+
+    val floatingDockLabel: String
+        get() =
+            if (floatingDockItemId == null) {
+                "Float ${shortcut.menuLabel}"
+            } else {
+                "Unfloat ${shortcut.menuLabel}"
+            }
 }
 
 private data class AppDrawerRowState(

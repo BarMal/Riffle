@@ -160,6 +160,7 @@ private fun LauncherDestination(
             AppDrawer(
                 query = state.appDrawerQuery,
                 profileFilter = state.appDrawerProfileFilter,
+                installedApps = state.installedApps,
                 apps = state.appDrawerApps,
                 appListContext =
                     AppListContext(
@@ -178,6 +179,7 @@ private fun LauncherDestination(
             SearchSurface(
                 query = state.searchQuery,
                 profileFilter = state.searchProfileFilter,
+                installedApps = state.installedApps,
                 results = state.searchResults,
                 appListContext =
                     AppListContext(
@@ -212,6 +214,7 @@ private fun LauncherDestination(
                         homeRoleStatus = state.homeRoleStatus,
                         overlayDockPermissionStatus = state.overlayDockPermissionStatus,
                         notificationAccessStatus = state.notificationAccessStatus,
+                        installedApps = state.installedApps,
                         hiddenApps = state.hiddenApps,
                         appVersionLabel = appVersionLabel,
                         appBuildIdentityLabel = appBuildIdentityLabel,

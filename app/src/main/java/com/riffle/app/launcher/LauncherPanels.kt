@@ -30,6 +30,7 @@ import com.riffle.core.domain.launcher.apps.InstalledApp
 fun AppDrawer(
     query: String,
     profileFilter: AppDrawerProfileFilter,
+    installedApps: List<InstalledApp>,
     apps: List<InstalledApp>,
     appListContext: AppListContext,
     onAction: (LauncherShellAction) -> Unit,
@@ -48,8 +49,21 @@ fun AppDrawer(
             AppProfileFilterChips(
                 selectedFilter = profileFilter,
                 onFilterSelected = { filter -> onAction(LauncherShellAction.AppDrawerProfileFilterSelected(filter)) },
+                apps = installedApps,
             )
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text =
+                    appListSummaryText(
+                        totalAppCount = installedApps.size,
+                        resultCount = apps.size,
+                        query = query,
+                        profileFilter = profileFilter,
+                    ),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(modifier = Modifier.height(12.dp))
             AppList(
                 modifier = Modifier.weight(1f),
                 apps = apps,
@@ -70,6 +84,7 @@ fun AppDrawer(
 fun SearchSurface(
     query: String,
     profileFilter: AppDrawerProfileFilter,
+    installedApps: List<InstalledApp>,
     results: List<InstalledApp>,
     appListContext: AppListContext,
     onAction: (LauncherShellAction) -> Unit,
@@ -88,8 +103,21 @@ fun SearchSurface(
             AppProfileFilterChips(
                 selectedFilter = profileFilter,
                 onFilterSelected = { filter -> onAction(LauncherShellAction.SearchProfileFilterSelected(filter)) },
+                apps = installedApps,
             )
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text =
+                    appListSummaryText(
+                        totalAppCount = installedApps.size,
+                        resultCount = results.size,
+                        query = query,
+                        profileFilter = profileFilter,
+                    ),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(modifier = Modifier.height(12.dp))
             AppList(
                 modifier = Modifier.weight(1f),
                 apps = results,
