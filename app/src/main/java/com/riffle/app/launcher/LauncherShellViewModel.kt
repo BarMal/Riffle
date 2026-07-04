@@ -394,6 +394,7 @@ class LauncherShellViewModel(
                             document = action.document,
                             homeLayoutRepository = homeLayoutRepository,
                             launcherSettingsRepository = launcherSettingsRepository,
+                            appVisibilityRepository = appVisibilityRepository,
                         )
                         .withoutUnavailableApps(homeLayoutRepository)
                         .withHomeScreenLibraryApps(homeLayoutRepository)

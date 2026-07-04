@@ -1,13 +1,16 @@
 package com.riffle.app.launcher
 
+import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.home.HomeLayoutSet
 import com.riffle.core.domain.launcher.settings.LauncherSettings
+import org.json.JSONArray
 import org.json.JSONObject
 import org.json.JSONTokener
 
 data class LauncherBackupDocument(
     val homeLayoutSet: HomeLayoutSet,
     val launcherSettings: LauncherSettings,
+    val hiddenAppIdentities: Set<AppIdentity> = emptySet(),
     val exportedAtEpochMillis: Long? = null,
 )
 
@@ -18,6 +21,7 @@ fun encodeLauncherBackupDocument(document: LauncherBackupDocument): String =
         .put("exportedAtEpochMillis", document.exportedAtEpochMillis)
         .put("homeLayouts", JSONObject(encodeHomeLayoutSet(document.homeLayoutSet)))
         .put("settings", JSONObject(encodeLauncherSettings(document.launcherSettings)))
+        .put("hiddenApps", JSONArray(encodeHiddenAppIdentities(document.hiddenAppIdentities)))
         .toString()
 
 fun decodeLauncherBackupDocument(value: String): LauncherBackupDocument =
@@ -39,6 +43,7 @@ fun decodeLauncherBackupDocument(value: String): LauncherBackupDocument =
         LauncherBackupDocument(
             homeLayoutSet = decodeHomeLayoutSet(json.getJSONObject("homeLayouts").toString()),
             launcherSettings = decodeLauncherSettings(json.getJSONObject("settings").toString()),
+            hiddenAppIdentities = json.optHiddenAppIdentities(),
             exportedAtEpochMillis = json.optLongOrNull("exportedAtEpochMillis"),
         )
     }.getOrElse { error ->
@@ -53,6 +58,12 @@ private fun JSONObject.optLongOrNull(name: String): Long? =
         isNull(name) -> null
         has(name) -> optLong(name)
         else -> null
+    }
+
+private fun JSONObject.optHiddenAppIdentities(): Set<AppIdentity> =
+    when {
+        has("hiddenApps") && !isNull("hiddenApps") -> decodeHiddenAppIdentities(getJSONArray("hiddenApps").toString())
+        else -> emptySet()
     }
 
 private const val LAUNCHER_BACKUP_DOCUMENT_TYPE = "riffleLauncherBackup"

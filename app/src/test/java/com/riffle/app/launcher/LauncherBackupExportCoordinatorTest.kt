@@ -1,6 +1,11 @@
 package com.riffle.app.launcher
 
 import com.riffle.core.domain.launcher.LauncherShellState
+import com.riffle.core.domain.launcher.apps.AppActivityName
+import com.riffle.core.domain.launcher.apps.AppIdentity
+import com.riffle.core.domain.launcher.apps.AppPackageName
+import com.riffle.core.domain.launcher.apps.AppProfile
+import com.riffle.core.domain.launcher.apps.AppVisibilityRepository
 import com.riffle.core.domain.launcher.home.GridDimensions
 import com.riffle.core.domain.launcher.home.GridSettings
 import com.riffle.core.domain.launcher.home.HomeLayout
@@ -37,6 +42,7 @@ class LauncherBackupExportCoordinatorTest {
         val coordinator =
             LauncherBackupExportCoordinator(
                 homeLayoutRepository = FakeHomeLayoutRepository(layoutSet = storedLayoutSet),
+                appVisibilityRepository = FakeAppVisibilityRepository(),
                 currentState = { LauncherShellState(homeLayout = storedLayoutSet.activeLayout) },
                 epochMillisProvider = FixedEpochMillisProvider,
             )
@@ -71,6 +77,7 @@ class LauncherBackupExportCoordinatorTest {
             LauncherBackupExportCoordinator(
                 homeLayoutRepository =
                     FakeHomeLayoutRepository(layoutSet = HomeLayoutSet.fromLayout(storedLayout)),
+                appVisibilityRepository = FakeAppVisibilityRepository(hiddenApps = setOf(cameraIdentity)),
                 currentState =
                     {
                         LauncherShellState(
@@ -85,6 +92,7 @@ class LauncherBackupExportCoordinatorTest {
 
         assertEquals(currentLayout, document.homeLayoutSet.activeLayout)
         assertEquals(currentSettings, document.launcherSettings)
+        assertEquals(setOf(cameraIdentity), document.hiddenAppIdentities)
     }
 
     @Test
@@ -93,6 +101,7 @@ class LauncherBackupExportCoordinatorTest {
             LauncherBackupExportCoordinator(
                 homeLayoutRepository =
                     FakeHomeLayoutRepository(layoutSet = HomeLayoutSet.fromLayout(HomeLayoutDefaults.standard())),
+                appVisibilityRepository = FakeAppVisibilityRepository(),
                 currentState = { LauncherShellState() },
                 epochMillisProvider = FixedEpochMillisProvider,
             )
@@ -114,5 +123,24 @@ class LauncherBackupExportCoordinatorTest {
 
     private object FixedEpochMillisProvider : EpochMillisProvider {
         override fun nowEpochMillis(): Long = 123_456L
+    }
+
+    private class FakeAppVisibilityRepository(
+        private val hiddenApps: Set<AppIdentity> = emptySet(),
+    ) : AppVisibilityRepository {
+        override fun hiddenAppIdentities(): Set<AppIdentity> = hiddenApps
+
+        override fun hideApp(identity: AppIdentity) = Unit
+
+        override fun showApp(identity: AppIdentity) = Unit
+    }
+
+    private companion object {
+        val cameraIdentity =
+            AppIdentity(
+                packageName = AppPackageName("com.riffle.camera"),
+                activityName = AppActivityName(".MainActivity"),
+                profile = AppProfile.personal(),
+            )
     }
 }

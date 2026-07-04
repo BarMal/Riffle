@@ -5,6 +5,7 @@ import com.riffle.core.domain.launcher.ShellNavigationAction
 import com.riffle.core.domain.launcher.apps.AppActivityName
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
+import com.riffle.core.domain.launcher.apps.AppVisibilityRepository
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.apps.InstalledAppRepository
 import com.riffle.core.domain.launcher.home.AppShortcutItem
@@ -53,11 +54,14 @@ class LauncherShellViewModeViewModelTest {
             )
         val homeLayoutRepository = FakeHomeLayoutRepository(savedLayout = HomeLayoutDefaults.standard())
         val launcherSettingsRepository = FakeLauncherSettingsRepository()
+        val appVisibilityRepository = FakeAppVisibilityRepository(hiddenApps = setOf(appIdentity("stale")))
+        val hiddenIdentity = appIdentity("hidden")
         val viewModel =
             LauncherShellViewModel(
                 firstRunRepository = FakeFirstRunRepository(),
                 homeLayoutRepository = homeLayoutRepository,
                 launcherSettingsRepository = launcherSettingsRepository,
+                appVisibilityRepository = appVisibilityRepository,
             )
 
         viewModel.onLauncherSettingsActionSelected(
@@ -65,12 +69,14 @@ class LauncherShellViewModeViewModelTest {
                 LauncherBackupDocument(
                     homeLayoutSet = layoutSet,
                     launcherSettings = settings,
+                    hiddenAppIdentities = setOf(hiddenIdentity),
                 ),
             ),
         )
 
         assertEquals(layoutSet, homeLayoutRepository.savedLayoutSet)
         assertEquals(settings, launcherSettingsRepository.savedSettings)
+        assertEquals(setOf(hiddenIdentity), appVisibilityRepository.hiddenApps)
         assertEquals(layoutSet.activeLayout, viewModel.state.value.homeLayout)
         assertEquals(settings, viewModel.state.value.launcherSettings)
     }
@@ -682,6 +688,20 @@ class LauncherShellViewModeViewModelTest {
         }
     }
 
+    private class FakeAppVisibilityRepository(
+        var hiddenApps: Set<AppIdentity> = emptySet(),
+    ) : AppVisibilityRepository {
+        override fun hiddenAppIdentities(): Set<AppIdentity> = hiddenApps
+
+        override fun hideApp(identity: AppIdentity) {
+            hiddenApps = hiddenApps + identity
+        }
+
+        override fun showApp(identity: AppIdentity) {
+            hiddenApps = hiddenApps - identity
+        }
+    }
+
     private class FakeInstalledAppRepository(
         var apps: List<InstalledApp>,
     ) : InstalledAppRepository {
@@ -697,11 +717,14 @@ class LauncherShellViewModeViewModelTest {
     private fun app(label: String): InstalledApp =
         InstalledApp(
             identity =
-                AppIdentity(
-                    packageName = AppPackageName("com.riffle.${label.lowercase()}"),
-                    activityName = AppActivityName(".MainActivity"),
-                ),
+                appIdentity(label.lowercase()),
             label = label,
+        )
+
+    private fun appIdentity(name: String): AppIdentity =
+        AppIdentity(
+            packageName = AppPackageName("com.riffle.$name"),
+            activityName = AppActivityName(".MainActivity"),
         )
 
     private fun notification(
