@@ -74,4 +74,36 @@ class HomeSwipeGestureInterpreterTest {
 
         assertNull(actionMapper.actionFor(HomeSwipeGesture.UP, settings))
     }
+
+    @Test
+    fun mapsConfiguredSwipeUpDragToAppDrawerAction() {
+        val settings = HomeSwipeGestureSettings(up = LauncherGestureAction.OPEN_APP_DRAWER)
+
+        assertEquals(
+            LauncherShellAction.OpenAppDrawer,
+            homeSwipeActionForDrag(
+                horizontalDragPx = 0f,
+                verticalDragPx = -120f,
+                settings = settings,
+                interpreter = interpreter,
+                actionMapper = actionMapper,
+            ),
+        )
+    }
+
+    @Test
+    fun dominantHorizontalDragIsNotAVerticalHomeSwipe() {
+        val settings = HomeSwipeGestureSettings(up = LauncherGestureAction.OPEN_APP_DRAWER)
+
+        assertEquals(
+            LauncherShellAction.SelectNextHomePage,
+            homeSwipeActionForDrag(
+                horizontalDragPx = -120f,
+                verticalDragPx = -90f,
+                settings = settings,
+                interpreter = interpreter,
+                actionMapper = actionMapper,
+            ),
+        )
+    }
 }

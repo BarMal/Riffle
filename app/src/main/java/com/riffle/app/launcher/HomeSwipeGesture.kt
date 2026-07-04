@@ -62,3 +62,15 @@ class HomeSwipeGestureActionMapper {
             LauncherGestureAction.SELECT_PREVIOUS_HOME_PAGE -> LauncherShellAction.SelectPreviousHomePage
         }
 }
+
+fun homeSwipeActionForDrag(
+    horizontalDragPx: Float,
+    verticalDragPx: Float,
+    settings: HomeSwipeGestureSettings = HomeSwipeGestureSettings(),
+    interpreter: HomeSwipeGestureInterpreter,
+    actionMapper: HomeSwipeGestureActionMapper = HomeSwipeGestureActionMapper(),
+): LauncherShellAction? =
+    interpreter.gestureFor(
+        horizontalDragPx = horizontalDragPx,
+        verticalDragPx = verticalDragPx,
+    )?.let { gesture -> actionMapper.actionFor(gesture = gesture, settings = settings) }
