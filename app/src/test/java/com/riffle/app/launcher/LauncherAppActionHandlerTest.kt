@@ -4,6 +4,7 @@ import com.riffle.core.domain.launcher.apps.AppActivityName
 import com.riffle.core.domain.launcher.apps.AppDrawerProfileFilter
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
+import com.riffle.core.domain.launcher.apps.AppSearchScope
 import com.riffle.core.domain.launcher.widgets.WidgetProviderClassName
 import com.riffle.core.domain.launcher.widgets.WidgetProviderDimensions
 import com.riffle.core.domain.launcher.widgets.WidgetProviderIdentity
@@ -94,6 +95,7 @@ class LauncherAppActionHandlerTest {
                 LauncherShellAction.AppDrawerProfileFilterSelected(AppDrawerProfileFilter.WORK),
                 LauncherShellAction.SearchQueryChanged("camera"),
                 LauncherShellAction.SearchProfileFilterSelected(AppDrawerProfileFilter.PERSONAL),
+                LauncherShellAction.SearchScopeSelected(AppSearchScope.APPS),
                 LauncherShellAction.OpenWidgetPicker,
                 LauncherShellAction.CloseWidgetPicker,
             )

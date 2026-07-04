@@ -6,6 +6,7 @@ import com.riffle.core.domain.launcher.apps.AppDrawerProfileFilter
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppProfile
+import com.riffle.core.domain.launcher.apps.AppSearchScope
 import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.apps.AppShortcutId
 import com.riffle.core.domain.launcher.apps.InstalledApp
@@ -77,6 +78,50 @@ class LauncherAppListActionReducerTest {
         val updated = reducer.reduce(state, LauncherShellAction.SearchQueryChanged("new tab"))
 
         assertEquals("new tab", updated?.searchQuery)
+        assertEquals(listOf("Browser"), updated?.searchResults?.map { app -> app.label })
+    }
+
+    @Test
+    fun searchScopeCanExcludeShortcutLabels() {
+        val browser = app(label = "Browser")
+        val state =
+            LauncherShellState(
+                installedApps = listOf(browser),
+                searchQuery = "new tab",
+                appShortcutsByApp =
+                    mapOf(
+                        browser.identity to listOf(shortcut(app = browser, label = "New tab")),
+                    ),
+                searchResults = listOf(browser),
+            )
+
+        val updated = reducer.reduce(state, LauncherShellAction.SearchScopeSelected(AppSearchScope.APPS))
+
+        assertEquals(AppSearchScope.APPS, updated?.searchScope)
+        assertEquals(emptyList<String>(), updated?.searchResults?.map { app -> app.label })
+    }
+
+    @Test
+    fun searchScopeCanIncludeShortcutLabelsAgain() {
+        val browser = app(label = "Browser")
+        val state =
+            LauncherShellState(
+                installedApps = listOf(browser),
+                searchQuery = "new tab",
+                searchScope = AppSearchScope.APPS,
+                appShortcutsByApp =
+                    mapOf(
+                        browser.identity to listOf(shortcut(app = browser, label = "New tab")),
+                    ),
+            )
+
+        val updated =
+            reducer.reduce(
+                state,
+                LauncherShellAction.SearchScopeSelected(AppSearchScope.APPS_AND_SHORTCUTS),
+            )
+
+        assertEquals(AppSearchScope.APPS_AND_SHORTCUTS, updated?.searchScope)
         assertEquals(listOf("Browser"), updated?.searchResults?.map { app -> app.label })
     }
 

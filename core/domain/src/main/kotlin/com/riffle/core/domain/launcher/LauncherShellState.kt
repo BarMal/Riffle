@@ -2,6 +2,7 @@ package com.riffle.core.domain.launcher
 
 import com.riffle.core.domain.launcher.apps.AppDrawerProfileFilter
 import com.riffle.core.domain.launcher.apps.AppPackageName
+import com.riffle.core.domain.launcher.apps.AppSearchScope
 import com.riffle.core.domain.launcher.apps.AppShortcutsByApp
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.home.HomeLayout
@@ -36,6 +37,7 @@ data class LauncherShellState(
     val appDrawerApps: List<InstalledApp> = emptyList(),
     val searchQuery: String = "",
     val searchProfileFilter: AppDrawerProfileFilter = AppDrawerProfileFilter.ALL,
+    val searchScope: AppSearchScope = AppSearchScope.APPS_AND_SHORTCUTS,
     val searchResults: List<InstalledApp> = emptyList(),
     val installedWidgetProviders: List<InstalledWidgetProvider> = emptyList(),
     val isWidgetPickerOpen: Boolean = false,

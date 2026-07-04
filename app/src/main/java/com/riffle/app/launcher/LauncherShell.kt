@@ -177,10 +177,15 @@ private fun LauncherDestination(
 
         ShellDestination.SEARCH ->
             SearchSurface(
-                query = state.searchQuery,
-                profileFilter = state.searchProfileFilter,
-                installedApps = state.installedApps,
-                results = state.searchResults,
+                state =
+                    SearchSurfaceState(
+                        query = state.searchQuery,
+                        profileFilter = state.searchProfileFilter,
+                        searchScope = state.searchScope,
+                        installedApps = state.installedApps,
+                        results = state.searchResults,
+                        homeLayout = state.homeLayout,
+                    ),
                 appListContext =
                     AppListContext(
                         homeLayout = state.homeLayout,

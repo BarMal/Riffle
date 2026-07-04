@@ -57,6 +57,7 @@ internal fun LauncherShellAction.launcherAppActionRoute(): LauncherAppActionRout
         is LauncherShellAction.AppDrawerProfileFilterSelected,
         is LauncherShellAction.SearchQueryChanged,
         is LauncherShellAction.SearchProfileFilterSelected,
+        is LauncherShellAction.SearchScopeSelected,
         -> LauncherAppActionRoute.AppListState(this)
 
         LauncherShellAction.OpenWidgetPicker,

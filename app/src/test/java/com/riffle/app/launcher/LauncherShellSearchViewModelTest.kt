@@ -5,6 +5,7 @@ import com.riffle.core.domain.launcher.apps.AppDrawerProfileFilter
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppProfile
+import com.riffle.core.domain.launcher.apps.AppSearchScope
 import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.apps.AppShortcutId
 import com.riffle.core.domain.launcher.apps.AppShortcutRepository
@@ -38,6 +39,30 @@ class LauncherShellSearchViewModelTest {
         viewModel.onAppActionSelected(LauncherShellAction.SearchQueryChanged("new tab"))
 
         assertEquals(listOf("Browser"), viewModel.state.value.searchResults.map { app -> app.label })
+    }
+
+    @Test
+    fun searchScopeControlsShortcutLabelMatching() {
+        val browser = app(label = "Browser")
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                installedAppRepository =
+                    FakeInstalledAppRepository(
+                        apps = listOf(browser),
+                        shortcuts =
+                            mapOf(
+                                browser.identity to listOf(shortcut(app = browser, label = "New tab")),
+                            ),
+                    ),
+            )
+
+        runBlocking { viewModel.refreshInstalledApps().join() }
+        viewModel.onAppActionSelected(LauncherShellAction.SearchQueryChanged("new tab"))
+        viewModel.onAppActionSelected(LauncherShellAction.SearchScopeSelected(AppSearchScope.APPS))
+
+        assertEquals(AppSearchScope.APPS, viewModel.state.value.searchScope)
+        assertEquals(emptyList<String>(), viewModel.state.value.searchResults.map { app -> app.label })
     }
 
     @Test
