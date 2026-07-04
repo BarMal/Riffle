@@ -9,41 +9,37 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.riffle.core.domain.launcher.apps.AppDrawerProfileFilter
-import com.riffle.core.domain.launcher.apps.AppSearchScope
+import com.riffle.core.domain.launcher.apps.AppProfileType
+import com.riffle.core.domain.launcher.apps.AppSearchContentFilter
+import com.riffle.core.domain.launcher.apps.AppSearchFilters
 import com.riffle.core.domain.launcher.apps.InstalledApp
 
 @Composable
 internal fun SearchFilterChips(
-    searchScope: AppSearchScope,
-    profileFilter: AppDrawerProfileFilter,
+    filters: AppSearchFilters,
     installedApps: List<InstalledApp>,
-    onScopeSelected: (AppSearchScope) -> Unit,
-    onProfileFilterSelected: (AppDrawerProfileFilter) -> Unit,
+    onContentFilterToggled: (AppSearchContentFilter) -> Unit,
+    onProfileFilterToggled: (AppProfileType) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Row(
         modifier = modifier.horizontalScroll(rememberScrollState()),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        AppSearchScope.entries.forEach { scope ->
+        AppSearchContentFilter.entries.forEach { filter ->
             FilterChip(
-                selected = scope == searchScope,
-                onClick = { onScopeSelected(scope) },
-                label = { Text(text = scope.label) },
+                selected = filter in filters.content,
+                onClick = { onContentFilterToggled(filter) },
+                label = { Text(text = filter.label) },
             )
         }
 
-        val profileOptions =
-            appProfileFilterOptionsFor(
-                apps = installedApps,
-                selectedFilter = profileFilter,
-            )
-        if (profileOptions.size > 1) {
+        val profileOptions = searchProfileFilterOptionsFor(apps = installedApps, filters = filters)
+        if (profileOptions.isNotEmpty()) {
             profileOptions.forEach { option ->
                 FilterChip(
-                    selected = option.filter == profileFilter,
-                    onClick = { onProfileFilterSelected(option.filter) },
+                    selected = option.profileType in filters.profiles,
+                    onClick = { onProfileFilterToggled(option.profileType) },
                     label = { Text(text = option.label) },
                 )
             }
@@ -51,9 +47,42 @@ internal fun SearchFilterChips(
     }
 }
 
-internal val AppSearchScope.label: String
+internal data class SearchProfileFilterOption(
+    val profileType: AppProfileType,
+    val count: Int,
+) {
+    val label: String = "${profileType.label} ($count)"
+}
+
+internal fun searchProfileFilterOptionsFor(
+    apps: List<InstalledApp>,
+    filters: AppSearchFilters,
+): List<SearchProfileFilterOption> {
+    val availableProfileTypes = apps.map { app -> app.identity.profile.type }.toSet()
+    val profileTypes =
+        AppProfileType.entries.filter { profileType ->
+            profileType in availableProfileTypes || profileType in filters.profiles
+        }
+
+    return profileTypes.map { profileType ->
+        SearchProfileFilterOption(
+            profileType = profileType,
+            count = apps.count { app -> app.identity.profile.type == profileType },
+        )
+    }
+}
+
+internal val AppSearchContentFilter.label: String
     get() =
         when (this) {
-            AppSearchScope.APPS -> "Apps"
-            AppSearchScope.APPS_AND_SHORTCUTS -> "Apps + shortcuts"
+            AppSearchContentFilter.APPS -> "Apps"
+            AppSearchContentFilter.SHORTCUTS -> "Shortcuts"
+        }
+
+internal val AppProfileType.label: String
+    get() =
+        when (this) {
+            AppProfileType.PERSONAL -> "Personal"
+            AppProfileType.WORK -> "Work"
+            AppProfileType.PRIVATE -> "Private"
         }

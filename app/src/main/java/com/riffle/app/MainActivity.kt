@@ -1,6 +1,7 @@
 package com.riffle.app
 
 import android.app.Activity
+import android.content.Intent
 import android.content.res.Configuration
 import android.os.Bundle
 import android.util.Log
@@ -29,6 +30,7 @@ import com.riffle.app.launcher.LauncherShellViewModel
 import com.riffle.app.launcher.LauncherShellViewModelFactory
 import com.riffle.app.launcher.LauncherWidgetAddHandlingResult
 import com.riffle.app.launcher.completeWidgetAdd
+import com.riffle.app.launcher.isLauncherHomeIntent
 import com.riffle.app.launcher.notifications.AndroidNotificationDismissalGateway
 import com.riffle.app.launcher.refreshInstalledApps
 import com.riffle.app.launcher.refreshNotifications
@@ -255,6 +257,14 @@ class MainActivity : ComponentActivity() {
         shellViewModel.refreshWidgetProviders()
         refreshHomeLayoutDeviceClass(source = "onResume")
         refreshPlatformStatuses()
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        if (intent.isLauncherHomeIntent()) {
+            launcherActionRouter.handle(LauncherShellAction.OpenDefaultHome)
+        }
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {
