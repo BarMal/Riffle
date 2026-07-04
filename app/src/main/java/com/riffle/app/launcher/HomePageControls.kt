@@ -2,7 +2,9 @@ package com.riffle.app.launcher
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -10,10 +12,16 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -23,7 +31,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
+import com.riffle.core.domain.launcher.home.GeneratedLauncherPageKind
 import com.riffle.core.domain.launcher.home.HomeLayout
+import com.riffle.core.domain.launcher.home.LauncherPage
+import com.riffle.core.domain.launcher.home.LauncherPageType
 
 @Composable
 fun PageEditControls(
@@ -75,10 +86,11 @@ fun PageOverviewControls(
     onAction: (LauncherShellAction) -> Unit,
 ) {
     val isPageMenuExpanded = remember { mutableStateOf(false) }
+    val selectedPage = layout.selectedPage
 
     Column(
         modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Row(
@@ -90,26 +102,37 @@ fun PageOverviewControls(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             layout.pages.forEachIndexed { index, page ->
-                TextButton(
+                PageOverviewCard(
+                    index = index,
+                    page = page,
+                    isSelected = page.id == layout.selectedPageId,
                     onClick = { onAction(LauncherShellAction.SelectHomePage(page.id)) },
-                ) {
-                    Text(text = pageOverviewLabel(index = index, isSelected = page.id == layout.selectedPageId))
-                }
+                )
             }
         }
+        PageTypeControls(
+            selectedType = selectedPage.type,
+            onAction = onAction,
+        )
         Row(
             modifier =
                 Modifier
                     .fillMaxWidth()
                     .horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.Center,
+            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            TextButton(onClick = { onAction(LauncherShellAction.EnterHomeEditMode) }) {
+            FilledTonalButton(onClick = { onAction(LauncherShellAction.EnterHomeEditMode) }) {
                 Text(text = "Edit page")
             }
+            OutlinedButton(onClick = { onAction(LauncherShellAction.AddHomePage) }) {
+                Text(text = "Add")
+            }
+            OutlinedButton(onClick = { onAction(LauncherShellAction.DuplicateSelectedHomePage) }) {
+                Text(text = "Duplicate")
+            }
             TextButton(onClick = { isPageMenuExpanded.value = true }) {
-                Text(text = "Page menu")
+                Text(text = "More")
             }
             ShortcutContextMenu(
                 expanded = isPageMenuExpanded.value,
@@ -122,6 +145,95 @@ fun PageOverviewControls(
                 onDismissRequest = { isPageMenuExpanded.value = false },
                 onAction = onAction,
             )
+        }
+    }
+}
+
+@Composable
+private fun PageOverviewCard(
+    index: Int,
+    page: LauncherPage,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+) {
+    Surface(
+        modifier =
+            Modifier
+                .width(PAGE_OVERVIEW_CARD_WIDTH_DP.dp)
+                .clip(RoundedCornerShape(PAGE_OVERVIEW_CARD_CORNER_RADIUS_DP.dp))
+                .clickable(onClick = onClick),
+        shape = RoundedCornerShape(PAGE_OVERVIEW_CARD_CORNER_RADIUS_DP.dp),
+        color =
+            if (isSelected) {
+                MaterialTheme.colorScheme.primaryContainer
+            } else {
+                MaterialTheme.colorScheme.surfaceVariant
+            },
+        contentColor =
+            if (isSelected) {
+                MaterialTheme.colorScheme.onPrimaryContainer
+            } else {
+                MaterialTheme.colorScheme.onSurfaceVariant
+            },
+        tonalElevation = if (isSelected) 4.dp else 1.dp,
+        border =
+            if (isSelected) {
+                BorderStroke(1.dp, MaterialTheme.colorScheme.primary)
+            } else {
+                BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+            },
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Text(
+                text = pageOverviewLabel(index = index),
+                style = MaterialTheme.typography.titleSmall,
+            )
+            Text(
+                text = page.type.pageOverviewTypeLabel,
+                style = MaterialTheme.typography.labelMedium,
+            )
+            Text(
+                text = page.pageOverviewDetails,
+                style = MaterialTheme.typography.bodySmall,
+            )
+        }
+    }
+}
+
+@Composable
+private fun PageTypeControls(
+    selectedType: LauncherPageType,
+    onAction: (LauncherShellAction) -> Unit,
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Text(
+            text = "Page type",
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Row(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            pageTypeOptions.forEach { option ->
+                FilterChip(
+                    selected = option.type == selectedType,
+                    onClick = {
+                        onAction(LauncherShellAction.SelectSelectedHomePageType(option.type))
+                    },
+                    label = { Text(text = option.label) },
+                )
+            }
         }
     }
 }
@@ -207,12 +319,50 @@ private fun pageIndicatorColor(isSelected: Boolean) =
         MaterialTheme.colorScheme.onSurface.copy(alpha = 0.28f)
     }
 
-private fun pageOverviewLabel(
-    index: Int,
-    isSelected: Boolean,
-): String =
-    if (isSelected) {
-        "Page ${index + 1} *"
-    } else {
-        "Page ${index + 1}"
-    }
+private fun pageOverviewLabel(index: Int): String = "Page ${index + 1}"
+
+internal data class PageTypeOption(
+    val label: String,
+    val type: LauncherPageType,
+)
+
+internal val pageTypeOptions: List<PageTypeOption> =
+    listOf(
+        PageTypeOption("Classic", LauncherPageType.Home),
+        PageTypeOption("All apps", LauncherPageType.AllApps),
+        PageTypeOption("Today", LauncherPageType.Generated(GeneratedLauncherPageKind.TODAY)),
+        PageTypeOption("Category", LauncherPageType.Generated(GeneratedLauncherPageKind.CATEGORY)),
+        PageTypeOption("App", LauncherPageType.Generated(GeneratedLauncherPageKind.APP)),
+        PageTypeOption("Work", LauncherPageType.Generated(GeneratedLauncherPageKind.WORK)),
+        PageTypeOption("Personal", LauncherPageType.Generated(GeneratedLauncherPageKind.PERSONAL)),
+        PageTypeOption("Favourites", LauncherPageType.Generated(GeneratedLauncherPageKind.FAVOURITES)),
+        PageTypeOption("Frequent", LauncherPageType.Generated(GeneratedLauncherPageKind.FREQUENTLY_USED)),
+        PageTypeOption("Cards", LauncherPageType.Generated(GeneratedLauncherPageKind.NOTIFICATION_CARDS)),
+    )
+
+internal val LauncherPageType.pageOverviewTypeLabel: String
+    get() =
+        when (this) {
+            LauncherPageType.Home -> "Classic"
+            LauncherPageType.AllApps -> "All apps"
+            is LauncherPageType.Generated -> kind.pageOverviewTypeLabel
+        }
+
+private val GeneratedLauncherPageKind.pageOverviewTypeLabel: String
+    get() =
+        when (this) {
+            GeneratedLauncherPageKind.APP -> "App"
+            GeneratedLauncherPageKind.CATEGORY -> "Category"
+            GeneratedLauncherPageKind.TODAY -> "Today"
+            GeneratedLauncherPageKind.WORK -> "Work"
+            GeneratedLauncherPageKind.PERSONAL -> "Personal"
+            GeneratedLauncherPageKind.FAVOURITES -> "Favourites"
+            GeneratedLauncherPageKind.FREQUENTLY_USED -> "Frequent"
+            GeneratedLauncherPageKind.NOTIFICATION_CARDS -> "Cards"
+        }
+
+private val LauncherPage.pageOverviewDetails: String
+    get() = "${grid.columns} x ${grid.rows} grid, ${items.size} items"
+
+private const val PAGE_OVERVIEW_CARD_WIDTH_DP = 148
+private const val PAGE_OVERVIEW_CARD_CORNER_RADIUS_DP = 20

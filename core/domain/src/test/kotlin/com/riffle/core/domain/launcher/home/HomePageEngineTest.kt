@@ -280,6 +280,40 @@ class HomePageEngineTest {
     }
 
     @Test
+    fun updatesPageTypeWithoutChangingSelection() {
+        val layoutWithPages =
+            layout.copy(
+                pages = listOf(page(id = "home"), page(id = "today")),
+                selectedPageId = pageId("today"),
+            )
+
+        val result =
+            engine.updatePageType(
+                layout = layoutWithPages,
+                pageId = pageId("home"),
+                type = LauncherPageType.Generated(GeneratedLauncherPageKind.TODAY),
+            )
+
+        val updated = assertIs<HomePageEditResult.Updated>(result)
+        assertEquals(LauncherPageType.Generated(GeneratedLauncherPageKind.TODAY), updated.layout.pages[0].type)
+        assertEquals(LauncherPageType.Home, updated.layout.pages[1].type)
+        assertEquals(pageId("today"), updated.layout.selectedPageId)
+    }
+
+    @Test
+    fun rejectsPageTypeUpdateForMissingPage() {
+        val result =
+            engine.updatePageType(
+                layout = layout,
+                pageId = pageId("missing"),
+                type = LauncherPageType.AllApps,
+            )
+
+        val rejected = assertIs<HomePageEditResult.Rejected>(result)
+        assertEquals(HomePageEditRejectionReason.PAGE_NOT_FOUND, rejected.reason)
+    }
+
+    @Test
     fun entersPageEditModeForExistingPage() {
         val layoutWithPages =
             layout.copy(
