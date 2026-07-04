@@ -77,6 +77,9 @@ fun PageEditControls(
         ) {
             Text(text = ">")
         }
+        TextButton(onClick = { onAction(LauncherShellAction.ExitHomeEditMode) }) {
+            Text(text = "Done")
+        }
     }
 }
 
@@ -133,6 +136,9 @@ fun PageOverviewControls(
             }
             TextButton(onClick = { isPageMenuExpanded.value = true }) {
                 Text(text = "More")
+            }
+            TextButton(onClick = { onAction(LauncherShellAction.ExitHomeEditMode) }) {
+                Text(text = "Done")
             }
             ShortcutContextMenu(
                 expanded = isPageMenuExpanded.value,
