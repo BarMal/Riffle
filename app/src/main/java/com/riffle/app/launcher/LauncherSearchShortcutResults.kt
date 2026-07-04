@@ -40,7 +40,12 @@ private fun AppShortcut.matchesSearchQuery(query: String): Boolean {
         shortLabel,
         longLabel.orEmpty(),
         id.value,
-    ).any { candidate -> candidate.lowercase().matchesAll(queryTokens) }
+    )
+        .flatMap { candidate ->
+            val normalizedCandidate = candidate.lowercase()
+            listOf(normalizedCandidate, normalizedCandidate.acronym())
+        }
+        .any { candidate -> candidate.matchesAll(queryTokens) }
 }
 
 private fun String.normalizedSearchTokens(): List<String> =
@@ -52,3 +57,8 @@ private fun String.normalizedSearchTokens(): List<String> =
 private fun String.matchesAll(queryTokens: List<String>): Boolean {
     return queryTokens.all { queryToken -> contains(queryToken) }
 }
+
+private fun String.acronym(): String =
+    split(Regex("[^a-z0-9]+"))
+        .filter(String::isNotBlank)
+        .joinToString(separator = "") { token -> token.first().toString() }
