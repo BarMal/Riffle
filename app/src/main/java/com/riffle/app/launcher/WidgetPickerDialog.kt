@@ -10,7 +10,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -37,12 +36,11 @@ fun WidgetPickerDialog(
         title = { Text(text = "Widgets") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedTextField(
+                AppSearchField(
                     modifier = Modifier.fillMaxWidth(),
-                    value = query,
-                    onValueChange = { value -> query = value },
-                    singleLine = true,
-                    label = { Text(text = "Search widgets") },
+                    query = query,
+                    onQueryChanged = { value -> query = value },
+                    label = "Search widgets",
                 )
                 when {
                     providers.isEmpty() ->
