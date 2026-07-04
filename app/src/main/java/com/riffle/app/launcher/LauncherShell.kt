@@ -183,6 +183,7 @@ private fun LauncherDestination(
                         filters = state.searchFilters,
                         installedApps = state.installedApps,
                         results = state.searchResults,
+                        shortcutResults = state.searchShortcutResults,
                         homeLayout = state.homeLayout,
                     ),
                 appListContext =

@@ -96,6 +96,7 @@ class LauncherAppListActionReducerTest {
 
         assertEquals("new tab", updated?.searchQuery)
         assertEquals(emptyList<String>(), updated?.searchResults?.map { app -> app.label })
+        assertEquals(emptyList<String>(), updated?.searchShortcutResults?.map { shortcut -> shortcut.shortLabel })
     }
 
     @Test
@@ -122,7 +123,8 @@ class LauncherAppListActionReducerTest {
             setOf(AppSearchContentFilter.APPS, AppSearchContentFilter.SHORTCUTS),
             updated?.searchFilters?.content,
         )
-        assertEquals(listOf("Browser"), updated?.searchResults?.map { app -> app.label })
+        assertEquals(emptyList<String>(), updated?.searchResults?.map { app -> app.label })
+        assertEquals(listOf("New tab"), updated?.searchShortcutResults?.map { shortcut -> shortcut.shortLabel })
     }
 
     @Test
@@ -150,7 +152,8 @@ class LauncherAppListActionReducerTest {
             )
 
         assertEquals(setOf(AppSearchContentFilter.SHORTCUTS), updated?.searchFilters?.content)
-        assertEquals(listOf("Browser"), updated?.searchResults?.map { app -> app.label })
+        assertEquals(emptyList<String>(), updated?.searchResults?.map { app -> app.label })
+        assertEquals(listOf("New tab"), updated?.searchShortcutResults?.map { shortcut -> shortcut.shortLabel })
     }
 
     @Test

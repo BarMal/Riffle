@@ -67,7 +67,11 @@ class LauncherShellSearchViewModelTest {
             setOf(AppSearchContentFilter.APPS, AppSearchContentFilter.SHORTCUTS),
             viewModel.state.value.searchFilters.content,
         )
-        assertEquals(listOf("Browser"), viewModel.state.value.searchResults.map { app -> app.label })
+        assertEquals(emptyList<String>(), viewModel.state.value.searchResults.map { app -> app.label })
+        assertEquals(
+            listOf("New tab"),
+            viewModel.state.value.searchShortcutResults.map { shortcut -> shortcut.shortLabel },
+        )
     }
 
     @Test

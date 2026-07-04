@@ -36,10 +36,10 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.unit.dp
-import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppProfileType
 import com.riffle.core.domain.launcher.apps.AppSearchContentFilter
 import com.riffle.core.domain.launcher.apps.AppSearchFilters
+import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.home.HomeLabelSettings
 import com.riffle.core.domain.launcher.home.HomeLayout
@@ -87,7 +87,7 @@ fun SearchSurface(
         )
         Spacer(modifier = Modifier.height(14.dp))
         SearchIconGrid(
-            apps = searchGridApps(state.results),
+            results = searchGridResults(apps = state.results, shortcuts = state.shortcutResults),
             homeLayout = state.homeLayout,
             appListContext = appListContext,
             emptyText =
@@ -105,6 +105,7 @@ data class SearchSurfaceState(
     val filters: AppSearchFilters,
     val installedApps: List<InstalledApp>,
     val results: List<InstalledApp>,
+    val shortcutResults: List<AppShortcut> = emptyList(),
     val homeLayout: HomeLayout,
 )
 
@@ -161,13 +162,13 @@ private fun SearchTopControls(
 
 @Composable
 private fun SearchIconGrid(
-    apps: List<InstalledApp>,
+    results: List<SearchGridResult>,
     homeLayout: HomeLayout,
     appListContext: AppListContext,
     emptyText: String,
     modifier: Modifier = Modifier,
 ) {
-    if (apps.isEmpty()) {
+    if (results.isEmpty()) {
         Box(
             modifier = modifier.fillMaxWidth(),
             contentAlignment = Alignment.Center,
@@ -198,11 +199,11 @@ private fun SearchIconGrid(
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         items(
-            items = apps,
-            key = { app -> app.identity.stableSearchGridKey },
-        ) { app ->
+            items = results,
+            key = { result -> result.key },
+        ) { result ->
             SearchIconGridItem(
-                app = app,
+                result = result,
                 labelSettings = homeLayout.settings.labels,
                 appListContext = appListContext,
             )
@@ -212,7 +213,7 @@ private fun SearchIconGrid(
 
 @Composable
 private fun SearchIconGridItem(
-    app: InstalledApp,
+    result: SearchGridResult,
     labelSettings: HomeLabelSettings,
     appListContext: AppListContext,
 ) {
@@ -223,34 +224,32 @@ private fun SearchIconGridItem(
             Modifier
                 .fillMaxWidth()
                 .heightIn(min = metrics.homeItemContentHeightDp(labelSettings).dp)
-                .clickable { appListContext.onAction(LauncherShellAction.LaunchApp(app.identity)) }
+                .clickable { appListContext.onAction(result.action) }
                 .padding(vertical = 4.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         Box(modifier = Modifier.size(HOME_ICON_SIZE_DP.dp)) {
             LauncherAppIcon(
-                identity = app.identity,
-                label = app.label,
+                identity = result.appIdentity,
+                label = result.label,
                 iconLoader = appListContext.appIconLoader,
                 modifier = Modifier.size(HOME_ICON_SIZE_DP.dp),
             )
             NotificationCountBadge(
-                count = appListContext.notificationCountsByPackage[app.identity.packageName] ?: 0,
+                count = appListContext.notificationCountsByPackage[result.appIdentity.packageName] ?: 0,
                 modifier = Modifier.align(Alignment.TopEnd),
             )
         }
         WallpaperReadableLabel(
-            text = app.label,
+            text = result.label,
             settings = labelSettings,
         )
     }
 }
 
-private val AppIdentity.stableSearchGridKey: String
-    get() = "${packageName.value}/${activityName.value}/${profile.id.value}"
-
 internal fun searchFilterSummaryText(state: SearchSurfaceState): String {
+    val resultCount = state.results.size + state.shortcutResults.size
     val profileLabel =
         when {
             state.filters.profiles.isEmpty() -> "no profiles"
@@ -264,7 +263,7 @@ internal fun searchFilterSummaryText(state: SearchSurfaceState): String {
             else -> "apps and shortcuts"
         }
 
-    return "${state.results.size} ${"app".pluralized(state.results.size)} in $profileLabel $contentLabel"
+    return "$resultCount ${"result".pluralized(resultCount)} in $profileLabel $contentLabel"
 }
 
 internal fun searchEmptyText(
