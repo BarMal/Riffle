@@ -23,8 +23,6 @@ import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
 import com.riffle.core.domain.launcher.home.HomeLayoutSet
-import com.riffle.core.domain.launcher.home.HomePageEditResult
-import com.riffle.core.domain.launcher.home.HomePageEngine
 import com.riffle.core.domain.launcher.home.HomeShortcutEngine
 import com.riffle.core.domain.launcher.home.HomeShortcutResult
 import com.riffle.core.domain.launcher.home.PlacementRejectionReason
@@ -93,7 +91,10 @@ class LauncherShellViewModel(
                 ),
         )
     private val shortcutEngine = HomeShortcutEngine()
-    private val homePageEngine = HomePageEngine()
+    private val homePageEditReducer =
+        LauncherHomePageEditReducer(
+            homeLayoutRepository = homeLayoutRepository,
+        )
     private val dockEngine = DockEngine()
     private val dockEditReducer =
         LauncherDockEditReducer(
@@ -269,45 +270,7 @@ class LauncherShellViewModel(
     }
 
     fun onHomePageEdited(action: LauncherShellAction) {
-        mutableState.value =
-            when {
-                mutableState.value.shouldEditSettingsTargetLayout(action) ->
-                    mutableState.value.withSettingsHomePageEdit(
-                        action = action,
-                        homePageEngine = homePageEngine,
-                        homeLayoutRepository = homeLayoutRepository,
-                    )
-
-                action is LauncherShellAction.SelectLauncherViewMode ->
-                    mutableState.value
-                        .withSelectedHomeLayoutMode(action.mode, homeLayoutRepository)
-                        .withHomeScreenLibraryApps(homeLayoutRepository)
-
-                action is LauncherShellAction.SelectHomeLayoutDeviceClass ->
-                    mutableState.value
-                        .withSelectedHomeLayoutDeviceClass(
-                            deviceClass = action.deviceClass,
-                            availableDeviceClasses = action.availableDeviceClasses,
-                            homeLayoutRepository = homeLayoutRepository,
-                        )
-                        .withHomeScreenLibraryApps(homeLayoutRepository)
-
-                else ->
-                    when (
-                        val result =
-                            homePageEngine.applyEdit(
-                                action = action,
-                                layout = mutableState.value.homeLayout,
-                            )
-                    ) {
-                        is HomePageEditResult.Updated ->
-                            mutableState.value
-                                .withHomeLayout(result.layout, homeLayoutRepository)
-                                .withHomeScreenLibraryApps(homeLayoutRepository)
-
-                        is HomePageEditResult.Rejected -> mutableState.value
-                    }
-            }
+        mutableState.value = homePageEditReducer.reduce(mutableState.value, action)
     }
 
     fun onDockEdited(action: LauncherShellAction) {
