@@ -1,6 +1,8 @@
 package com.riffle.app.launcher.notifications
 
 import com.riffle.core.domain.launcher.apps.AppPackageName
+import com.riffle.core.domain.launcher.apps.AppProfile
+import com.riffle.core.domain.launcher.apps.AppProfileId
 import com.riffle.core.domain.launcher.notifications.LauncherNotification
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
 import com.riffle.core.domain.launcher.notifications.NotificationCategory
@@ -21,6 +23,7 @@ private fun encodeNotification(notification: LauncherNotification): JSONObject =
     JSONObject()
         .put("key", notification.key.value)
         .put("packageName", notification.packageName.value)
+        .put("profileId", notification.profileId.value)
         .put("category", notification.category.name)
         .put("priority", notification.priority.name)
         .put("canDismiss", notification.canDismiss)
@@ -31,12 +34,19 @@ private fun JSONObject.toNotificationOrNull(): LauncherNotification? =
         LauncherNotification(
             key = LauncherNotificationKey(getString("key")),
             packageName = AppPackageName(getString("packageName")),
+            profileId = optProfileId(),
             category = optNotificationCategory(),
             priority = optNotificationPriority(),
             canDismiss = optBoolean("canDismiss", false),
             postedAtEpochMillis = optLong("postedAtEpochMillis", 0L),
         )
     }.getOrNull()
+
+private fun JSONObject.optProfileId(): AppProfileId =
+    optString("profileId")
+        .takeIf(String::isNotBlank)
+        ?.let(::AppProfileId)
+        ?: AppProfile.personal().id
 
 private fun JSONObject.optNotificationCategory(): NotificationCategory =
     optString("category")
