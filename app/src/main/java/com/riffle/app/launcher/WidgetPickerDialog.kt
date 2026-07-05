@@ -188,7 +188,7 @@ private fun WidgetProviderPreview(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .aspectRatio(WIDGET_PREVIEW_ASPECT_RATIO),
+                        .aspectRatio(provider.widgetPickerPreviewAspectRatio()),
             )
         } else {
             WidgetProviderPreviewFallback(provider = provider)
@@ -222,7 +222,7 @@ private fun WidgetProviderPreviewFallback(provider: InstalledWidgetProvider) {
         modifier =
             Modifier
                 .fillMaxWidth()
-                .aspectRatio(WIDGET_PREVIEW_ASPECT_RATIO)
+                .aspectRatio(provider.widgetPickerPreviewAspectRatio())
                 .clip(RoundedCornerShape(12.dp))
                 .background(MaterialTheme.colorScheme.secondaryContainer),
         contentAlignment = Alignment.Center,
@@ -272,4 +272,3 @@ private val InstalledWidgetProvider.widgetPickerKey: String
 
 private const val WIDGET_PICKER_MAX_HEIGHT_DP = 420
 private const val WIDGET_PREVIEW_WIDTH_DP = 112
-private const val WIDGET_PREVIEW_ASPECT_RATIO = 16f / 9f
