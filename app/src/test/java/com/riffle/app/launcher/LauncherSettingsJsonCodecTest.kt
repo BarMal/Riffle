@@ -64,10 +64,26 @@ class LauncherSettingsJsonCodecTest {
     }
 
     @Test
+    fun roundTripsFullscreenHome() {
+        val settings =
+            LauncherSettings(
+                appearance =
+                    AppearanceSettings(
+                        fullscreenHome = true,
+                    ),
+            )
+
+        val decodedSettings = decodeLauncherSettings(encodeLauncherSettings(settings))
+
+        assertEquals(true, decodedSettings.appearance.fullscreenHome)
+    }
+
+    @Test
     fun defaultsMissingAppearanceSettings() {
         val decodedSettings = decodeLauncherSettings("{}")
 
         assertEquals(WallpaperSettings.system(), decodedSettings.appearance.wallpaper)
+        assertEquals(false, decodedSettings.appearance.fullscreenHome)
     }
 
     @Test

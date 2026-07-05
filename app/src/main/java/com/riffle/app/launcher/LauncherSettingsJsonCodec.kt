@@ -36,10 +36,12 @@ fun decodeLauncherSettings(value: String): LauncherSettings =
 private fun encodeAppearance(settings: AppearanceSettings): JSONObject =
     JSONObject()
         .put("wallpaper", encodeWallpaper(settings.wallpaper))
+        .put("fullscreenHome", settings.fullscreenHome)
 
 private fun JSONObject.toAppearance(defaults: AppearanceSettings): AppearanceSettings =
     defaults.copy(
         wallpaper = optJSONObject("wallpaper")?.toWallpaper(defaults.wallpaper) ?: defaults.wallpaper,
+        fullscreenHome = optBoolean("fullscreenHome", defaults.fullscreenHome),
     )
 
 private fun encodeWallpaper(settings: WallpaperSettings): JSONObject =

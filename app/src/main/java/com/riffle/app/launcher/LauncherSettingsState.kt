@@ -54,6 +54,38 @@ fun LauncherShellState.withDefaultHomeSwipes(repo: LauncherSettingsRepository): 
         launcherSettingsRepository = repo,
     )
 
+internal fun LauncherShellState.withAppearanceSettingsAction(
+    action: LauncherShellAction,
+    launcherSettingsRepository: LauncherSettingsRepository,
+): LauncherShellState =
+    when (action) {
+        is LauncherShellAction.SelectWallpaperSource ->
+            withLauncherSettings(
+                settings =
+                    launcherSettings.copy(
+                        appearance =
+                            launcherSettings.appearance.copy(
+                                wallpaper = com.riffle.core.domain.launcher.home.WallpaperSettings(action.source),
+                            ),
+                    ),
+                launcherSettingsRepository = launcherSettingsRepository,
+            )
+
+        is LauncherShellAction.SelectFullscreenHomeEnabled ->
+            withLauncherSettings(
+                settings =
+                    launcherSettings.copy(
+                        appearance =
+                            launcherSettings.appearance.copy(
+                                fullscreenHome = action.enabled,
+                            ),
+                    ),
+                launcherSettingsRepository = launcherSettingsRepository,
+            )
+
+        else -> this
+    }
+
 internal fun LauncherShellState.withOverlayDockSettingsAction(
     action: LauncherShellAction,
     launcherSettingsRepository: LauncherSettingsRepository,

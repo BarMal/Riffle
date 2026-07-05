@@ -69,7 +69,7 @@ internal fun settingsMainPageEntries(status: SettingsOverviewStatus = SettingsOv
         ),
         SettingsPageEntry(
             label = "Appearance",
-            subtitle = "Wallpaper source",
+            subtitle = "Wallpaper and system bars",
             page = SettingsPage.APPEARANCE,
             group = SettingsPageGroup.HOME,
         ),

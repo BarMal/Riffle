@@ -53,6 +53,7 @@ class LauncherActionDomainTest {
             listOf(
                 LauncherShellAction.RequestImportLauncherBackup,
                 LauncherShellAction.RequestNotificationAccess,
+                LauncherShellAction.SelectFullscreenHomeEnabled(enabled = true),
                 LauncherShellAction.ResetHomeSwipeGestureActions,
             )
 
