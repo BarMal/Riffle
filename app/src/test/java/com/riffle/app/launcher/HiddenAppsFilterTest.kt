@@ -48,6 +48,46 @@ class HiddenAppsFilterTest {
     }
 
     @Test
+    fun filtersHiddenAppsByLabelAcronym() {
+        val googleMaps = app(label = "Google Maps")
+        val googleMessages = app(label = "Google Messages")
+        val maps = app(label = "Maps")
+
+        assertEquals(
+            listOf(googleMaps, googleMessages),
+            listOf(googleMaps, googleMessages, maps).filteredHiddenApps(
+                query = "gm",
+                profileFilter = AppDrawerProfileFilter.ALL,
+            ),
+        )
+    }
+
+    @Test
+    fun filtersHiddenAppsByLabelAcronymAndAdditionalTokens() {
+        val personalMaps = app(label = "Google Maps", profile = AppProfile.personal())
+        val workMaps =
+            app(
+                label = "Google Maps",
+                packageName = "com.company.maps",
+                profile = AppProfile.work(),
+            )
+        val workMessages =
+            app(
+                label = "Google Messages",
+                packageName = "com.company.messages",
+                profile = AppProfile.work(),
+            )
+
+        assertEquals(
+            listOf(workMaps),
+            listOf(personalMaps, workMaps, workMessages).filteredHiddenApps(
+                query = "gm maps work",
+                profileFilter = AppDrawerProfileFilter.ALL,
+            ),
+        )
+    }
+
+    @Test
     fun describesHiddenAppEmptyStates() {
         assertEquals(
             "No hidden apps",
@@ -109,8 +149,8 @@ class HiddenAppsFilterTest {
 
     private fun app(
         label: String,
-        packageName: String,
-        activityName: String,
+        packageName: String = "com.android.${label.lowercase().replace(" ", ".")}",
+        activityName: String = ".MainActivity",
         profile: AppProfile = AppProfile.personal(),
     ): InstalledApp =
         InstalledApp(
