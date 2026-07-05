@@ -16,7 +16,7 @@ class WidgetPickerSectionsTest {
         val work = widgetProvider(label = "Calendar", profile = AppProfile.work())
         val private = widgetProvider(label = "Vault", profile = AppProfile.private())
 
-        val sections = widgetPickerSectionsFor(listOf(personal, work, private))
+        val sections = widgetPickerSectionsFor(listOf(work, personal, private))
 
         assertEquals(
             listOf("Personal", "Work", "Private"),
