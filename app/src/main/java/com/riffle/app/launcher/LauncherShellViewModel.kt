@@ -54,6 +54,16 @@ class LauncherShellViewModel(
     private val appCatalog = InstalledAppCatalog()
     private val appListActionReducer = LauncherAppListActionReducer(appCatalog)
     private val widgetPickerActionReducer = LauncherWidgetPickerActionReducer()
+    private val appStateActionCoordinator =
+        LauncherAppStateActionCoordinator(
+            appVisibilityRepository = appVisibilityRepository,
+            appListActionReducer = appListActionReducer,
+            widgetPickerActionReducer = widgetPickerActionReducer,
+            currentState = { mutableState.value },
+            updateState = { state -> mutableState.value = state },
+            refreshInstalledApps = { beforeRefresh -> refreshActions.refreshInstalledApps(beforeRefresh) },
+            refreshWidgetProviders = { refreshWidgetProviders() },
+        )
     private val settingsStateReducer =
         LauncherSettingsStateReducer(
             homeLayoutRepository = homeLayoutRepository,
@@ -165,46 +175,7 @@ class LauncherShellViewModel(
     }
 
     fun onAppActionSelected(action: LauncherShellAction): Job? {
-        var launchedRefresh: Job? = null
-
-        mutableState.value =
-            when (action) {
-                LauncherShellAction.RefreshInstalledApps -> {
-                    launchedRefresh = refreshInstalledApps()
-                    mutableState.value
-                }
-
-                is LauncherShellAction.AppDrawerQueryChanged,
-                is LauncherShellAction.AppDrawerProfileFilterSelected,
-                is LauncherShellAction.SearchQueryChanged,
-                is LauncherShellAction.SearchProfileFilterSelected,
-                is LauncherShellAction.ToggleSearchContentFilter,
-                is LauncherShellAction.ToggleSearchProfileFilter,
-                -> appListActionReducer.reduce(mutableState.value, action) ?: mutableState.value
-
-                is LauncherShellAction.HideApp,
-                is LauncherShellAction.UnhideApp,
-                -> {
-                    launchedRefresh =
-                        refreshActions.refreshInstalledApps {
-                            action.applyAppVisibilityAction(appVisibilityRepository)
-                        }
-                    mutableState.value
-                }
-
-                LauncherShellAction.OpenWidgetPicker,
-                LauncherShellAction.CloseWidgetPicker,
-                -> {
-                    if (action == LauncherShellAction.OpenWidgetPicker) {
-                        launchedRefresh = refreshWidgetProviders()
-                    }
-                    widgetPickerActionReducer.reduce(mutableState.value, action) ?: mutableState.value
-                }
-
-                else -> mutableState.value
-            }
-
-        return launchedRefresh
+        return appStateActionCoordinator.handle(action)
     }
 
     fun onAddAppToHome(app: InstalledApp) {
