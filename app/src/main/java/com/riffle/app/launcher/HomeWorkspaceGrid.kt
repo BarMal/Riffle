@@ -119,8 +119,6 @@ private fun RowScope.HomeGridCell(
         val visibleItem = activeDragSource ?: state.previewItems.itemAt(cell = state.cell)
 
         HomeBackgroundContextMenu(
-            pageCount = state.gridState.pageCount,
-            selectedPageIndex = state.gridState.selectedPageIndex,
             haptics = actions.haptics,
             onAction = actions.onAction,
             modifier = Modifier.fillMaxSize(),
