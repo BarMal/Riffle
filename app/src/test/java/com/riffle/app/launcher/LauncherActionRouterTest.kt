@@ -29,10 +29,14 @@ class LauncherActionRouterTest {
     }
 
     @Test
-    fun fallsThroughToNotificationSettingsThenAppActions() {
+    fun dispatchesAppActionsDirectlyToAppRouter() {
         val calls = mutableListOf<String>()
         val router =
             router(
+                activityActionHandler =
+                    activityHandler(
+                        navigate = { calls += "activity" },
+                    ),
                 notificationActionHandler =
                     LauncherNotificationActionHandler {
                         calls += "notification"
@@ -51,12 +55,63 @@ class LauncherActionRouterTest {
 
         assertTrue(router.handle(LauncherShellAction.RefreshInstalledApps))
 
-        assertEquals(listOf("notification", "settings", "app"), calls)
+        assertEquals(listOf("app"), calls)
     }
 
     @Test
-    fun returnsFalseWhenNoHandlerAcceptsAction() {
-        val router = router()
+    fun dispatchesSettingsActionsDirectlyToSettingsRouter() {
+        val calls = mutableListOf<String>()
+        val router =
+            router(
+                notificationActionHandler =
+                    LauncherNotificationActionHandler {
+                        calls += "notification"
+                        false
+                    },
+                settingsActionHandler =
+                    LauncherSettingsActionHandler {
+                        calls += "settings"
+                        true
+                    },
+                appActionHandler =
+                    appHandler(
+                        applyAppState = { calls += "app" },
+                    ),
+            )
+
+        assertTrue(router.handle(LauncherShellAction.RequestImportLauncherBackup))
+
+        assertEquals(listOf("settings"), calls)
+    }
+
+    @Test
+    fun dispatchesNotificationActionsDirectlyToNotificationRouter() {
+        val calls = mutableListOf<String>()
+        val router =
+            router(
+                notificationActionHandler =
+                    LauncherNotificationActionHandler {
+                        calls += "notification"
+                        true
+                    },
+                settingsActionHandler =
+                    LauncherSettingsActionHandler {
+                        calls += "settings"
+                        true
+                    },
+            )
+
+        assertTrue(router.handle(LauncherShellAction.DismissNotifications(emptyList())))
+
+        assertEquals(listOf("notification"), calls)
+    }
+
+    @Test
+    fun returnsFalseWhenDomainHandlerRejectsAction() {
+        val router =
+            router(
+                settingsActionHandler = LauncherSettingsActionHandler { false },
+            )
 
         assertFalse(router.handle(LauncherShellAction.ExportLauncherBackup))
     }

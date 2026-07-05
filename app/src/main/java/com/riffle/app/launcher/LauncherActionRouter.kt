@@ -7,8 +7,11 @@ internal class LauncherActionRouter(
     private val appActionHandler: LauncherAppActionHandler,
 ) {
     fun handle(action: LauncherShellAction): Boolean =
-        activityActionHandler.handle(action) ||
-            notificationActionHandler.handle(action) ||
-            settingsActionHandler.handle(action) ||
-            appActionHandler.handle(action)
+        when (action.launcherActionDomain()) {
+            LauncherActionDomain.ACTIVITY -> activityActionHandler.handle(action)
+            LauncherActionDomain.NOTIFICATION -> notificationActionHandler.handle(action)
+            LauncherActionDomain.SETTINGS -> settingsActionHandler.handle(action)
+            LauncherActionDomain.APP -> appActionHandler.handle(action)
+            null -> false
+        }
 }

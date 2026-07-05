@@ -10,6 +10,7 @@ This checklist applies to every Riffle pull request. A PR can skip an item only 
 - Add or update tests for changed domain logic, persistence, settings defaults, migrations, placement rules, and user-visible behaviour.
 - Document manual validation steps for Android platform behaviour that cannot be fully covered locally.
 - Keep platform APIs behind app-layer gateways or interfaces where practical.
+- Add or update an Architecture Decision Record for significant architecture decisions, or state why none is needed.
 - Avoid committing generated APKs, AABs, keystores, signing files, `local.properties`, logs, or credentials.
 
 ## Product Review
@@ -22,6 +23,7 @@ This checklist applies to every Riffle pull request. A PR can skip an item only 
 ## Engineering Review
 
 - Domain models stay independent from Compose UI and Android framework types where practical.
+- Major architecture changes reference an ADR from `docs/architecture/adr/`.
 - Persisted models are versioned or have a migration plan before release.
 - Performance risks are noted for startup, search, notification refresh, widget hosting, layout editing, and animations.
 - New abstractions reduce coupling or match an established local pattern.
