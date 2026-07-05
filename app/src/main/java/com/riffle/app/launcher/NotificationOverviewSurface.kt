@@ -35,7 +35,7 @@ fun NotificationOverviewSurface(
     title: String = "Notifications",
 ) {
     LauncherPanel(
-        title = title,
+        title = notificationOverviewTitle(baseTitle = title, groups = groups),
         onAction = onAction,
     ) {
         if (groups.isEmpty()) {
@@ -61,6 +61,18 @@ fun NotificationOverviewSurface(
                 }
             }
         }
+    }
+}
+
+internal fun notificationOverviewTitle(
+    baseTitle: String,
+    groups: List<AppNotificationGroup>,
+): String {
+    val notificationCount = groups.sumOf { group -> group.count }
+    return if (notificationCount > 0) {
+        "$baseTitle ($notificationCount)"
+    } else {
+        baseTitle
     }
 }
 
