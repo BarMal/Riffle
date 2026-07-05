@@ -228,4 +228,48 @@ class HomeDockMetricsTest {
             ),
         )
     }
+
+    @Test
+    fun dockOverflowAffordanceHidesWhenContentDoesNotScroll() {
+        assertEquals(
+            DockOverflowAffordance(showStart = false, showEnd = false),
+            DockOverflowAffordance(
+                scrollOffsetPx = 0,
+                maxScrollOffsetPx = 0,
+            ),
+        )
+    }
+
+    @Test
+    fun dockOverflowAffordanceShowsEndAtScrollStart() {
+        assertEquals(
+            DockOverflowAffordance(showStart = false, showEnd = true),
+            DockOverflowAffordance(
+                scrollOffsetPx = 0,
+                maxScrollOffsetPx = 72,
+            ),
+        )
+    }
+
+    @Test
+    fun dockOverflowAffordanceShowsBothEdgesWhenScrolledBetweenEnds() {
+        assertEquals(
+            DockOverflowAffordance(showStart = true, showEnd = true),
+            DockOverflowAffordance(
+                scrollOffsetPx = 36,
+                maxScrollOffsetPx = 72,
+            ),
+        )
+    }
+
+    @Test
+    fun dockOverflowAffordanceShowsStartAtScrollEnd() {
+        assertEquals(
+            DockOverflowAffordance(showStart = true, showEnd = false),
+            DockOverflowAffordance(
+                scrollOffsetPx = 72,
+                maxScrollOffsetPx = 72,
+            ),
+        )
+    }
 }
