@@ -76,4 +76,9 @@ class SearchSurfaceTextTest {
             ),
         )
     }
+
+    @Test
+    fun resetFilterAffordanceUsesSearchResetAction() {
+        assertEquals(LauncherShellAction.ResetSearchFilters, searchFilterResetAction())
+    }
 }

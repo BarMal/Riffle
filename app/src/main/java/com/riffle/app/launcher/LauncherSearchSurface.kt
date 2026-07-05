@@ -85,7 +85,7 @@ fun SearchSurface(
             onProfileFilterToggled = { profileType ->
                 onAction(LauncherShellAction.ToggleSearchProfileFilter(profileType))
             },
-            onResetFilters = { onAction(LauncherShellAction.ResetSearchFilters) },
+            onResetFilters = onAction,
         )
         Spacer(modifier = Modifier.height(14.dp))
         SearchIconGrid(
@@ -118,7 +118,7 @@ private fun SearchTopControls(
     onQueryChanged: (String) -> Unit,
     onContentFilterToggled: (AppSearchContentFilter) -> Unit,
     onProfileFilterToggled: (AppProfileType) -> Unit,
-    onResetFilters: () -> Unit,
+    onResetFilters: (LauncherShellAction) -> Unit,
 ) {
     Surface(
         modifier =
@@ -160,7 +160,7 @@ private fun SearchTopControls(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             if (shouldShowSearchFilterReset(state.filters)) {
-                TextButton(onClick = onResetFilters) {
+                TextButton(onClick = { onResetFilters(searchFilterResetAction()) }) {
                     Text(text = "Reset filters")
                 }
             }
@@ -286,6 +286,8 @@ internal fun searchEmptyText(
     }
 
 internal fun shouldShowSearchFilterReset(filters: AppSearchFilters): Boolean = filters != AppSearchFilters()
+
+internal fun searchFilterResetAction(): LauncherShellAction = LauncherShellAction.ResetSearchFilters
 
 private fun AppSearchFilters.searchResultTypeNoun(): String =
     when (content) {
