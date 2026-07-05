@@ -46,6 +46,7 @@ fun WidgetPickerDialog(
 ) {
     var query by rememberSaveable { mutableStateOf("") }
     val filteredProviders = providers.filteredWidgetProviders(query)
+    val providerSections = widgetPickerSectionsFor(filteredProviders)
 
     AlertDialog(
         onDismissRequest = { onAction(LauncherShellAction.CloseWidgetPicker) },
@@ -83,15 +84,22 @@ fun WidgetPickerDialog(
                                     .heightIn(max = WIDGET_PICKER_MAX_HEIGHT_DP.dp),
                             verticalArrangement = Arrangement.spacedBy(10.dp),
                         ) {
-                            items(
-                                items = filteredProviders,
-                                key = { provider -> provider.widgetPickerKey },
-                            ) { provider ->
-                                WidgetProviderRow(
-                                    provider = provider,
-                                    previewImageLoader = previewImageLoader,
-                                    onAction = onAction,
-                                )
+                            providerSections.forEach { section ->
+                                if (providerSections.size > 1) {
+                                    item(key = "section:${section.title}") {
+                                        WidgetPickerSectionHeader(title = section.displayTitle)
+                                    }
+                                }
+                                items(
+                                    items = section.providers,
+                                    key = { provider -> provider.widgetPickerKey },
+                                ) { provider ->
+                                    WidgetProviderRow(
+                                        provider = provider,
+                                        previewImageLoader = previewImageLoader,
+                                        onAction = onAction,
+                                    )
+                                }
                             }
                         }
                 }
