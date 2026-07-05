@@ -2,8 +2,10 @@ package com.riffle.app.launcher
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationSpec
+import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Box
@@ -61,19 +63,18 @@ internal fun rememberImmediateHomePagerState(
 
         if (shouldApplyExternalPageSelection) {
             isSettling.value = true
-            settlePagePosition.snapTo(dragPagePosition.floatValue)
-            if (reducedMotion) {
-                settlePagePosition.snapTo(selectedPageIndex.toFloat())
-            } else {
+            try {
+                settlePagePosition.snapTo(dragPagePosition.floatValue)
                 settlePagePosition.animateTo(
                     targetValue = selectedPageIndex.toFloat(),
-                    animationSpec = homePageSettleAnimation(),
+                    animationSpec = homePageSettleAnimation(homePageSettleMotionPolicy(reducedMotion)),
                 ) {
                     dragPagePosition.floatValue = value
                 }
+                dragPagePosition.floatValue = selectedPageIndex.toFloat()
+            } finally {
+                isSettling.value = false
             }
-            dragPagePosition.floatValue = selectedPageIndex.toFloat()
-            isSettling.value = false
         }
     }
 
@@ -148,16 +149,12 @@ internal class ImmediateHomePagerState(
         isSettling.value = true
         try {
             settlePagePosition.snapTo(pagePositionState.floatValue)
-            if (reducedMotion) {
-                settlePagePosition.snapTo(targetPagePosition)
-            } else {
-                settlePagePosition.animateTo(
-                    targetValue = targetPagePosition,
-                    animationSpec = homePageSettleAnimation(),
-                    initialVelocity = initialVelocity,
-                ) {
-                    pagePositionState.floatValue = value
-                }
+            settlePagePosition.animateTo(
+                targetValue = targetPagePosition,
+                animationSpec = homePageSettleAnimation(homePageSettleMotionPolicy(reducedMotion)),
+                initialVelocity = initialVelocity,
+            ) {
+                pagePositionState.floatValue = value
             }
             pagePositionState.floatValue = targetPagePosition
         } finally {
@@ -348,15 +345,38 @@ internal fun shouldApplyExternalHomePageSelection(
         pageCount > 0 &&
         currentPagePosition.roundToInt() != selectedPageIndex
 
-private fun homePageSettleAnimation(): AnimationSpec<Float> =
-    spring<Float>(
-        dampingRatio = Spring.DampingRatioNoBouncy,
-        stiffness = Spring.StiffnessMediumLow,
-        visibilityThreshold = 0.001f,
-    )
+internal fun homePageSettleMotionPolicy(reducedMotion: Boolean): HomePageSettleMotionPolicy =
+    if (reducedMotion) {
+        HomePageSettleMotionPolicy.ReducedShortTween
+    } else {
+        HomePageSettleMotionPolicy.StandardSpring
+    }
+
+private fun homePageSettleAnimation(policy: HomePageSettleMotionPolicy): AnimationSpec<Float> =
+    when (policy) {
+        HomePageSettleMotionPolicy.ReducedShortTween ->
+            tween(
+                durationMillis = REDUCED_MOTION_PAGE_SETTLE_DURATION_MILLIS,
+                easing = LinearOutSlowInEasing,
+            )
+
+        HomePageSettleMotionPolicy.StandardSpring ->
+            spring(
+                dampingRatio = Spring.DampingRatioNoBouncy,
+                stiffness = Spring.StiffnessMediumLow,
+                visibilityThreshold = 0.001f,
+            )
+    }
 
 private val HomeLayout.lastPageIndex: Int
     get() = pages.lastIndex.coerceAtLeast(0)
+
+internal enum class HomePageSettleMotionPolicy {
+    StandardSpring,
+    ReducedShortTween,
+}
+
+internal const val REDUCED_MOTION_PAGE_SETTLE_DURATION_MILLIS = 80
 
 private const val PAGE_WIDTH_FRACTION = 1f
 private const val HORIZONTAL_DRAG_INTENT_PX = 18f

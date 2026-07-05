@@ -1,5 +1,6 @@
 package com.riffle.app.launcher
 
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -45,5 +46,50 @@ class ImmediateHomePagerTest {
                 selectedPageIndex = 1,
             ),
         )
+    }
+
+    @Test
+    fun doesNotApplyExternalHomePageSelectionWhileDragging() {
+        assertFalse(
+            shouldApplyExternalHomePageSelection(
+                isDragging = true,
+                isSettling = false,
+                hasPendingGestureTarget = false,
+                pageCount = 2,
+                currentPagePosition = 0f,
+                selectedPageIndex = 1,
+            ),
+        )
+    }
+
+    @Test
+    fun doesNotApplyExternalHomePageSelectionWhileSettling() {
+        assertFalse(
+            shouldApplyExternalHomePageSelection(
+                isDragging = false,
+                isSettling = true,
+                hasPendingGestureTarget = false,
+                pageCount = 2,
+                currentPagePosition = 0f,
+                selectedPageIndex = 1,
+            ),
+        )
+    }
+
+    @Test
+    fun selectsStandardSpringPageSettlePolicyWhenReducedMotionIsOff() {
+        assertEquals(
+            HomePageSettleMotionPolicy.StandardSpring,
+            homePageSettleMotionPolicy(reducedMotion = false),
+        )
+    }
+
+    @Test
+    fun selectsShortTweenPageSettlePolicyWhenReducedMotionIsOn() {
+        assertEquals(
+            HomePageSettleMotionPolicy.ReducedShortTween,
+            homePageSettleMotionPolicy(reducedMotion = true),
+        )
+        assertEquals(80, REDUCED_MOTION_PAGE_SETTLE_DURATION_MILLIS)
     }
 }
