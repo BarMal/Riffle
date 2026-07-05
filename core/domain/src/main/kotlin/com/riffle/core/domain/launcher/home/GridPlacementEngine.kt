@@ -22,12 +22,17 @@ class GridPlacementEngine {
         page: LauncherPage,
         item: LauncherItem,
         span: GridSpan = GridSpan(),
-    ): PlaceLauncherItemResult =
-        page.grid.cells
+    ): PlaceLauncherItemResult {
+        if (!span.hasPositiveDimensions) {
+            return PlaceLauncherItemResult.Rejected(PlacementRejectionReason.OUT_OF_BOUNDS)
+        }
+
+        return page.grid.cells
             .map { cell -> item.withPlacement(GridPlacement(cell = cell, span = span)) }
             .map { candidate -> placeItem(page = page, item = candidate) }
             .firstOrNull { result -> result is PlaceLauncherItemResult.Placed }
             ?: PlaceLauncherItemResult.Rejected(PlacementRejectionReason.NO_AVAILABLE_CELL)
+    }
 
     fun moveItem(
         page: LauncherPage,
@@ -109,10 +114,14 @@ class GridPlacementEngine {
             }
 
     private fun GridDimensions.contains(placement: GridPlacement): Boolean =
-        placement.cell.column >= 0 &&
+        placement.span.hasPositiveDimensions &&
+            placement.cell.column >= 0 &&
             placement.cell.row >= 0 &&
             placement.cell.column + placement.span.columns <= columns &&
             placement.cell.row + placement.span.rows <= rows
+
+    private val GridSpan.hasPositiveDimensions: Boolean
+        get() = columns > 0 && rows > 0
 
     private val GridDimensions.cells: List<GridCell>
         get() =
