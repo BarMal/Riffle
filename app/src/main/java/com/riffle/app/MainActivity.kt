@@ -29,6 +29,7 @@ import com.riffle.app.launcher.LauncherShellAction
 import com.riffle.app.launcher.LauncherShellViewModel
 import com.riffle.app.launcher.LauncherShellViewModelFactory
 import com.riffle.app.launcher.LauncherWidgetAddHandlingResult
+import com.riffle.app.launcher.LauncherWidgetRenderers
 import com.riffle.app.launcher.completeWidgetAdd
 import com.riffle.app.launcher.isLauncherHomeIntent
 import com.riffle.app.launcher.notifications.AndroidNotificationDismissalGateway
@@ -244,7 +245,11 @@ class MainActivity : ComponentActivity() {
                 appVersionLabel = appVersionLabel,
                 appBuildIdentityLabel = appBuildIdentityLabel,
                 appIconLoader = appIconLoader,
-                widgetViewFactory = widgetHostGateway,
+                widgetRenderers =
+                    LauncherWidgetRenderers(
+                        viewFactory = widgetHostGateway,
+                        previewImageLoader = dependencies.widgetPreviewImageLoader,
+                    ),
                 onAction = launcherActionRouter::handle,
             )
         }

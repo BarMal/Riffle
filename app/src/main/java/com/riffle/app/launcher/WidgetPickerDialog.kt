@@ -1,32 +1,47 @@
 package com.riffle.app.launcher
 
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.widgets.InstalledWidgetProvider
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @Composable
 fun WidgetPickerDialog(
     providers: List<InstalledWidgetProvider>,
+    previewImageLoader: WidgetPreviewImageLoader = EmptyWidgetPreviewImageLoader,
     onAction: (LauncherShellAction) -> Unit,
 ) {
     var query by rememberSaveable { mutableStateOf("") }
@@ -64,6 +79,7 @@ fun WidgetPickerDialog(
                             ) { provider ->
                                 WidgetProviderRow(
                                     provider = provider,
+                                    previewImageLoader = previewImageLoader,
                                     onAction = onAction,
                                 )
                             }
@@ -92,6 +108,7 @@ private fun WidgetPickerEmptyMessage(text: String) {
 @Composable
 private fun WidgetProviderRow(
     provider: InstalledWidgetProvider,
+    previewImageLoader: WidgetPreviewImageLoader,
     onAction: (LauncherShellAction) -> Unit,
 ) {
     val requestAddWidgetAction = provider.requestAddWidgetAction()
@@ -104,6 +121,10 @@ private fun WidgetProviderRow(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        WidgetProviderPreview(
+            provider = provider,
+            previewImageLoader = previewImageLoader,
+        )
         Column(
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(2.dp),
@@ -128,6 +149,74 @@ private fun WidgetProviderRow(
     }
 }
 
+@Composable
+private fun WidgetProviderPreview(
+    provider: InstalledWidgetProvider,
+    previewImageLoader: WidgetPreviewImageLoader,
+) {
+    val preview = rememberWidgetPreview(provider = provider, previewImageLoader = previewImageLoader)
+
+    Surface(
+        modifier = Modifier.width(WIDGET_PREVIEW_WIDTH_DP.dp),
+        shape = RoundedCornerShape(12.dp),
+        tonalElevation = 2.dp,
+        color = MaterialTheme.colorScheme.surfaceVariant,
+    ) {
+        if (preview != null) {
+            Image(
+                bitmap = preview,
+                contentDescription = "${provider.label} widget preview",
+                contentScale = ContentScale.Crop,
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(WIDGET_PREVIEW_ASPECT_RATIO),
+            )
+        } else {
+            WidgetProviderPreviewFallback(provider = provider)
+        }
+    }
+}
+
+@Composable
+private fun rememberWidgetPreview(
+    provider: InstalledWidgetProvider,
+    previewImageLoader: WidgetPreviewImageLoader,
+): ImageBitmap? {
+    var preview by remember(provider.identity, previewImageLoader) {
+        mutableStateOf(previewImageLoader.cachedPreviewFor(provider.identity))
+    }
+
+    LaunchedEffect(provider.identity, previewImageLoader) {
+        val cachedPreview = previewImageLoader.cachedPreviewFor(provider.identity)
+        preview =
+            cachedPreview ?: withContext(Dispatchers.Default) {
+                previewImageLoader.previewFor(provider.identity)
+            }
+    }
+
+    return preview
+}
+
+@Composable
+private fun WidgetProviderPreviewFallback(provider: InstalledWidgetProvider) {
+    Box(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .aspectRatio(WIDGET_PREVIEW_ASPECT_RATIO)
+                .clip(RoundedCornerShape(12.dp))
+                .background(MaterialTheme.colorScheme.secondaryContainer),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = provider.widgetPickerPreviewLabel(),
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSecondaryContainer,
+        )
+    }
+}
+
 internal fun InstalledWidgetProvider.requestAddWidgetAction(): LauncherShellAction.RequestAddWidget =
     LauncherShellAction.RequestAddWidget(
         provider = identity,
@@ -142,7 +231,18 @@ internal fun InstalledWidgetProvider.widgetPickerSummary(): String =
         "${dimensions.minWidthDp}x${dimensions.minHeightDp}dp",
     ).joinToString(" - ")
 
+internal fun InstalledWidgetProvider.widgetPickerPreviewLabel(): String =
+    listOfNotNull(
+        dimensions.targetCellWidth,
+        dimensions.targetCellHeight,
+    )
+        .takeIf { cells -> cells.size == 2 }
+        ?.joinToString(separator = " x ")
+        ?: "${dimensions.minWidthDp} x ${dimensions.minHeightDp}"
+
 private val InstalledWidgetProvider.widgetPickerKey: String
     get() = "${identity.profile.id.value}:${identity.packageName.value}/${identity.className.value}"
 
 private const val WIDGET_PICKER_MAX_HEIGHT_DP = 420
+private const val WIDGET_PREVIEW_WIDTH_DP = 112
+private const val WIDGET_PREVIEW_ASPECT_RATIO = 16f / 9f

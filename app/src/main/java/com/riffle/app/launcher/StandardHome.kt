@@ -60,6 +60,7 @@ internal fun StandardHome(
     interactions: StandardHomeInteractions,
     presentation: StandardHomePresentation,
     appIconLoader: AppIconLoader,
+    widgetPreviewImageLoader: WidgetPreviewImageLoader = EmptyWidgetPreviewImageLoader,
     onAction: (LauncherShellAction) -> Unit,
 ) {
     val visibleLayout = layout.visibleTo(installedApps)
@@ -87,6 +88,7 @@ internal fun StandardHome(
     if (presentation.widgetPicker.isOpen) {
         WidgetPickerDialog(
             providers = presentation.widgetPicker.providers,
+            previewImageLoader = widgetPreviewImageLoader,
             onAction = onAction,
         )
     }
