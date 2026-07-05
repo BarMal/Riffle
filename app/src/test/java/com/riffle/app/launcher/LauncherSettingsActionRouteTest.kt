@@ -17,12 +17,19 @@ import org.junit.Test
 class LauncherSettingsActionRouteTest {
     @Test
     fun routesSettingsStateActions() {
-        val action = LauncherShellAction.SelectReducedMotionEnabled(enabled = true)
+        val actions =
+            listOf(
+                LauncherShellAction.SelectReducedMotionEnabled(enabled = true),
+                LauncherShellAction.SelectHomeStatusBarHidden(hidden = true),
+                LauncherShellAction.SelectHomeNavigationBarHidden(hidden = true),
+            )
 
-        assertEquals(
-            LauncherSettingsActionRoute.SettingsState(action),
-            action.launcherSettingsActionRoute(),
-        )
+        actions.forEach { action ->
+            assertEquals(
+                LauncherSettingsActionRoute.SettingsState(action),
+                action.launcherSettingsActionRoute(),
+            )
+        }
     }
 
     @Test

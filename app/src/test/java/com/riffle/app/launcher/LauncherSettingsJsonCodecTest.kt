@@ -71,12 +71,52 @@ class LauncherSettingsJsonCodecTest {
                 appearance =
                     AppearanceSettings(
                         fullscreenHome = true,
+                        hideStatusBarOnHome = true,
+                        hideNavigationBarOnHome = true,
                     ),
             )
 
         val decodedSettings = decodeLauncherSettings(encodeLauncherSettings(settings))
 
         assertEquals(true, decodedSettings.appearance.fullscreenHome)
+        assertEquals(true, decodedSettings.appearance.hideStatusBarOnHome)
+        assertEquals(true, decodedSettings.appearance.hideNavigationBarOnHome)
+    }
+
+    @Test
+    fun roundTripsIndependentHomeSystemBarSettings() {
+        val settings =
+            LauncherSettings(
+                appearance =
+                    AppearanceSettings(
+                        hideStatusBarOnHome = true,
+                        hideNavigationBarOnHome = false,
+                    ),
+            )
+
+        val decodedSettings = decodeLauncherSettings(encodeLauncherSettings(settings))
+
+        assertEquals(false, decodedSettings.appearance.fullscreenHome)
+        assertEquals(true, decodedSettings.appearance.hideStatusBarOnHome)
+        assertEquals(false, decodedSettings.appearance.hideNavigationBarOnHome)
+    }
+
+    @Test
+    fun decodesLegacyFullscreenHomeIntoIndependentSystemBarSettings() {
+        val decodedSettings =
+            decodeLauncherSettings(
+                """
+                {
+                  "appearance": {
+                    "fullscreenHome": true
+                  }
+                }
+                """.trimIndent(),
+            )
+
+        assertEquals(true, decodedSettings.appearance.fullscreenHome)
+        assertEquals(true, decodedSettings.appearance.hideStatusBarOnHome)
+        assertEquals(true, decodedSettings.appearance.hideNavigationBarOnHome)
     }
 
     @Test
@@ -85,6 +125,8 @@ class LauncherSettingsJsonCodecTest {
 
         assertEquals(WallpaperSettings.system(), decodedSettings.appearance.wallpaper)
         assertEquals(false, decodedSettings.appearance.fullscreenHome)
+        assertEquals(false, decodedSettings.appearance.hideStatusBarOnHome)
+        assertEquals(false, decodedSettings.appearance.hideNavigationBarOnHome)
     }
 
     @Test

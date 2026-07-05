@@ -250,6 +250,10 @@ sealed interface LauncherShellAction {
 
     data class SelectFullscreenHomeEnabled(val enabled: Boolean) : LauncherShellAction
 
+    data class SelectHomeStatusBarHidden(val hidden: Boolean) : LauncherShellAction
+
+    data class SelectHomeNavigationBarHidden(val hidden: Boolean) : LauncherShellAction
+
     data class SelectHomeSwipeGestureAction(
         val direction: HomeSwipeGestureDirection,
         val action: LauncherGestureAction,

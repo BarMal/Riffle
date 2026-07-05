@@ -39,12 +39,18 @@ private fun encodeAppearance(settings: AppearanceSettings): JSONObject =
     JSONObject()
         .put("wallpaper", encodeWallpaper(settings.wallpaper))
         .put("fullscreenHome", settings.fullscreenHome)
+        .put("hideStatusBarOnHome", settings.hideStatusBarOnHome)
+        .put("hideNavigationBarOnHome", settings.hideNavigationBarOnHome)
 
-private fun JSONObject.toAppearance(defaults: AppearanceSettings): AppearanceSettings =
-    defaults.copy(
+private fun JSONObject.toAppearance(defaults: AppearanceSettings): AppearanceSettings {
+    val fullscreenHome = optBoolean("fullscreenHome", defaults.fullscreenHome)
+    return defaults.copy(
         wallpaper = optJSONObject("wallpaper")?.toWallpaper(defaults.wallpaper) ?: defaults.wallpaper,
-        fullscreenHome = optBoolean("fullscreenHome", defaults.fullscreenHome),
+        fullscreenHome = fullscreenHome,
+        hideStatusBarOnHome = optBoolean("hideStatusBarOnHome", fullscreenHome),
+        hideNavigationBarOnHome = optBoolean("hideNavigationBarOnHome", fullscreenHome),
     )
+}
 
 private fun encodeWallpaper(settings: WallpaperSettings): JSONObject =
     JSONObject()

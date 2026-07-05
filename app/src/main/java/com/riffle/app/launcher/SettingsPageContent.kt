@@ -193,10 +193,26 @@ private fun SettingsAppearancePageContent(
     SettingsSection(title = "System UI") {
         SettingsSwitchRow(
             title = "Fullscreen home",
-            subtitle = "Hide system bars on the home screen",
+            subtitle = "Hide status and navigation bars on home",
             checked = state.settings.appearance.fullscreenHome,
             onCheckedChange = { enabled ->
                 onAction(LauncherShellAction.SelectFullscreenHomeEnabled(enabled))
+            },
+        )
+        SettingsSwitchRow(
+            title = "Hide status bar",
+            subtitle = "Hide the top system bar on home",
+            checked = state.settings.appearance.fullscreenHome || state.settings.appearance.hideStatusBarOnHome,
+            onCheckedChange = { hidden ->
+                onAction(LauncherShellAction.SelectHomeStatusBarHidden(hidden))
+            },
+        )
+        SettingsSwitchRow(
+            title = "Hide navigation bar",
+            subtitle = "Hide the bottom system bar on home",
+            checked = state.settings.appearance.fullscreenHome || state.settings.appearance.hideNavigationBarOnHome,
+            onCheckedChange = { hidden ->
+                onAction(LauncherShellAction.SelectHomeNavigationBarHidden(hidden))
             },
         )
     }

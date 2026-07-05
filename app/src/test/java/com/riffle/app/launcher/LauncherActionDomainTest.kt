@@ -54,6 +54,8 @@ class LauncherActionDomainTest {
                 LauncherShellAction.RequestImportLauncherBackup,
                 LauncherShellAction.RequestNotificationAccess,
                 LauncherShellAction.SelectFullscreenHomeEnabled(enabled = true),
+                LauncherShellAction.SelectHomeStatusBarHidden(hidden = true),
+                LauncherShellAction.SelectHomeNavigationBarHidden(hidden = true),
                 LauncherShellAction.SelectReducedMotionEnabled(enabled = true),
                 LauncherShellAction.ResetHomeSwipeGestureActions,
             )
