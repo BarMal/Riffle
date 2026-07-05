@@ -44,6 +44,20 @@ class PackageManagerInstalledAppMapperTest {
     }
 
     @Test
+    fun normalizesPlatformLabelWhitespace() {
+        val app =
+            mapper.map(
+                LaunchableActivity(
+                    packageName = "com.android.camera",
+                    activityName = ".CameraActivity",
+                    label = "  Camera\n\tLens  ",
+                ),
+            )
+
+        assertEquals("Camera Lens", app.label)
+    }
+
+    @Test
     fun usesStablePackageAndActivityIconKey() {
         val app =
             mapper.map(
