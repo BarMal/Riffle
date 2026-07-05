@@ -36,6 +36,46 @@ class WidgetPickerDialogTest {
     }
 
     @Test
+    fun providerSummaryIncludesResizeCapabilities() {
+        assertEquals(
+            "com.example.weather - 120x80dp - Resizable",
+            widgetProvider(
+                label = "Weather",
+                packageName = "com.example.weather",
+                className = ".WeatherWidget",
+                supportsHorizontalResize = true,
+                supportsVerticalResize = true,
+            ).widgetPickerSummary(),
+        )
+        assertEquals(
+            "Horizontal resize",
+            widgetProvider(
+                label = "Weather",
+                packageName = "com.example.weather",
+                className = ".WeatherWidget",
+                supportsHorizontalResize = true,
+            ).widgetPickerResizeLabel(),
+        )
+        assertEquals(
+            "Vertical resize",
+            widgetProvider(
+                label = "Weather",
+                packageName = "com.example.weather",
+                className = ".WeatherWidget",
+                supportsVerticalResize = true,
+            ).widgetPickerResizeLabel(),
+        )
+        assertEquals(
+            null,
+            widgetProvider(
+                label = "Weather",
+                packageName = "com.example.weather",
+                className = ".WeatherWidget",
+            ).widgetPickerResizeLabel(),
+        )
+    }
+
+    @Test
     fun resultSummaryShowsAvailableWidgetCount() {
         assertEquals(
             "2 widgets available",
@@ -163,6 +203,8 @@ class WidgetPickerDialogTest {
         packageName: String,
         className: String,
         profile: AppProfile = AppProfile.personal(),
+        supportsHorizontalResize: Boolean = false,
+        supportsVerticalResize: Boolean = false,
     ): InstalledWidgetProvider =
         InstalledWidgetProvider(
             identity =
@@ -173,5 +215,7 @@ class WidgetPickerDialogTest {
                 ),
             label = label,
             dimensions = WidgetProviderDimensions(minWidthDp = 120, minHeightDp = 80),
+            supportsHorizontalResize = supportsHorizontalResize,
+            supportsVerticalResize = supportsVerticalResize,
         )
 }
