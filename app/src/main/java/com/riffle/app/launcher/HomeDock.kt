@@ -6,13 +6,13 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
@@ -67,52 +67,85 @@ fun Dock(
         return
     }
 
-    Box(
-        modifier =
-            Modifier
-                .widthIn(max = DOCK_MAX_WIDTH_DP.dp)
-                .then(if (dock.backgroundSizing == DockBackgroundSizing.FIXED) Modifier.fillMaxWidth() else Modifier)
-                .height(dockHeightDp(dock.iconSizeDp).dp)
-                .clip(RoundedCornerShape(28.dp))
-                .background(
-                    MaterialTheme.colorScheme.surfaceVariant.copy(
-                        alpha = dock.backgroundAlphaPercent / 100f,
-                    ),
-                )
-                .padding(horizontal = DOCK_HORIZONTAL_PADDING_DP.dp, vertical = DOCK_VERTICAL_PADDING_DP.dp),
+    BoxWithConstraints(
+        modifier = Modifier.fillMaxWidth(),
         contentAlignment = Alignment.Center,
     ) {
-        if (renderedSlotCount > 0) {
-            Row(
-                modifier =
-                    Modifier
-                        .width(
-                            dockContentViewportWidthDp(
-                                slotCount = renderedSlotCount,
-                                iconSizeDp = dock.iconSizeDp,
-                                itemSpacingDp = dock.itemSpacingDp,
-                            ).dp,
-                        )
-                        .horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(dock.itemSpacingDp.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                repeat(renderedSlotCount) { index ->
-                    DockSlot(
-                        modifier = Modifier.requiredSize(dock.iconSizeDp.dp),
-                        state =
-                            DockSlotState(
-                                shortcut = dock.items.getOrNull(index) as? AppShortcutItem,
-                                shortcutIndex = index,
-                                shortcutCount = dock.items.size,
-                                iconSizeDp = dock.iconSizeDp,
-                                isEditing = isEditing,
-                            ),
-                        presentation = presentation,
-                        appIconLoader = appIconLoader,
+        val dockWidthDp =
+            dockContainerWidthDp(
+                availableWidthDp = maxWidth.value.toInt(),
+                slotCount = renderedSlotCount,
+                iconSizeDp = dock.iconSizeDp,
+                itemSpacingDp = dock.itemSpacingDp,
+                backgroundSizing = dock.backgroundSizing,
+            )
+        val contentViewportWidthDp =
+            dockContentViewportWidthDp(
+                slotCount = renderedSlotCount,
+                iconSizeDp = dock.iconSizeDp,
+                itemSpacingDp = dock.itemSpacingDp,
+                availableDockWidthDp = dockWidthDp,
+            )
+
+        Box(
+            modifier =
+                Modifier
+                    .width(dockWidthDp.dp)
+                    .height(dockHeightDp(dock.iconSizeDp).dp)
+                    .clip(RoundedCornerShape(28.dp))
+                    .background(
+                        MaterialTheme.colorScheme.surfaceVariant.copy(
+                            alpha = dock.backgroundAlphaPercent / 100f,
+                        ),
                     )
-                }
+                    .padding(horizontal = DOCK_HORIZONTAL_PADDING_DP.dp, vertical = DOCK_VERTICAL_PADDING_DP.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            if (renderedSlotCount > 0 && contentViewportWidthDp > 0) {
+                DockSlotsRow(
+                    dock = dock,
+                    renderedSlotCount = renderedSlotCount,
+                    contentViewportWidthDp = contentViewportWidthDp,
+                    isEditing = isEditing,
+                    presentation = presentation,
+                    appIconLoader = appIconLoader,
+                )
             }
+        }
+    }
+}
+
+@Composable
+private fun DockSlotsRow(
+    dock: DockModel,
+    renderedSlotCount: Int,
+    contentViewportWidthDp: Int,
+    isEditing: Boolean,
+    presentation: DockPresentation,
+    appIconLoader: AppIconLoader,
+) {
+    Row(
+        modifier =
+            Modifier
+                .width(contentViewportWidthDp.dp)
+                .horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(dock.itemSpacingDp.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        repeat(renderedSlotCount) { index ->
+            DockSlot(
+                modifier = Modifier.requiredSize(dock.iconSizeDp.dp),
+                state =
+                    DockSlotState(
+                        shortcut = dock.items.getOrNull(index) as? AppShortcutItem,
+                        shortcutIndex = index,
+                        shortcutCount = dock.items.size,
+                        iconSizeDp = dock.iconSizeDp,
+                        isEditing = isEditing,
+                    ),
+                presentation = presentation,
+                appIconLoader = appIconLoader,
+            )
         }
     }
 }
@@ -128,13 +161,36 @@ internal fun dockContentViewportWidthDp(
     slotCount: Int,
     iconSizeDp: Int,
     itemSpacingDp: Int,
+    availableDockWidthDp: Int = DOCK_MAX_WIDTH_DP,
 ): Int {
     if (slotCount <= 0) {
         return 0
     }
     val contentWidth = (slotCount * iconSizeDp) + ((slotCount - 1) * itemSpacingDp)
-    val maxContentWidth = (DOCK_MAX_WIDTH_DP - (DOCK_HORIZONTAL_PADDING_DP * 2)).coerceAtLeast(0)
+    val maxDockWidth = min(availableDockWidthDp, DOCK_MAX_WIDTH_DP)
+    val maxContentWidth = (maxDockWidth - (DOCK_HORIZONTAL_PADDING_DP * 2)).coerceAtLeast(0)
     return min(contentWidth, maxContentWidth)
+}
+
+internal fun dockContainerWidthDp(
+    availableWidthDp: Int,
+    slotCount: Int,
+    iconSizeDp: Int,
+    itemSpacingDp: Int,
+    backgroundSizing: DockBackgroundSizing,
+): Int {
+    val maxDockWidth = min(availableWidthDp, DOCK_MAX_WIDTH_DP).coerceAtLeast(0)
+    if (backgroundSizing == DockBackgroundSizing.FIXED) {
+        return maxDockWidth
+    }
+    val contentViewportWidth =
+        dockContentViewportWidthDp(
+            slotCount = slotCount,
+            iconSizeDp = iconSizeDp,
+            itemSpacingDp = itemSpacingDp,
+            availableDockWidthDp = maxDockWidth,
+        )
+    return min(maxDockWidth, contentViewportWidth + (DOCK_HORIZONTAL_PADDING_DP * 2))
 }
 
 internal fun dockRenderedSlotCount(

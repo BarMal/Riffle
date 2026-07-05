@@ -40,6 +40,61 @@ class HomeDockMetricsTest {
     }
 
     @Test
+    fun dockContentViewportCapsAtAvailableInteriorWidth() {
+        assertEquals(
+            292,
+            dockContentViewportWidthDp(
+                slotCount = 5,
+                iconSizeDp = 56,
+                itemSpacingDp = 24,
+                availableDockWidthDp = 320,
+            ),
+        )
+    }
+
+    @Test
+    fun dynamicDockContainerCapsAtAvailableWidthWhenContentOverflows() {
+        assertEquals(
+            320,
+            dockContainerWidthDp(
+                availableWidthDp = 320,
+                slotCount = 5,
+                iconSizeDp = 56,
+                itemSpacingDp = 24,
+                backgroundSizing = DockBackgroundSizing.DYNAMIC,
+            ),
+        )
+    }
+
+    @Test
+    fun dynamicDockContainerWrapsContentWhenContentFits() {
+        assertEquals(
+            240,
+            dockContainerWidthDp(
+                availableWidthDp = 320,
+                slotCount = 4,
+                iconSizeDp = 44,
+                itemSpacingDp = 12,
+                backgroundSizing = DockBackgroundSizing.DYNAMIC,
+            ),
+        )
+    }
+
+    @Test
+    fun fixedDockContainerCapsAtAvailableWidth() {
+        assertEquals(
+            320,
+            dockContainerWidthDp(
+                availableWidthDp = 320,
+                slotCount = 5,
+                iconSizeDp = 56,
+                itemSpacingDp = 24,
+                backgroundSizing = DockBackgroundSizing.FIXED,
+            ),
+        )
+    }
+
+    @Test
     fun emptyDockHasNoContentViewport() {
         assertEquals(
             0,
