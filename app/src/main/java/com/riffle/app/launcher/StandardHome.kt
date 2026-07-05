@@ -9,13 +9,16 @@ import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.exclude
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -45,6 +48,7 @@ import com.riffle.core.domain.launcher.home.HomeLabelSettings
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.LauncherItem
 import com.riffle.core.domain.launcher.home.LauncherItemId
+import com.riffle.core.domain.launcher.settings.AppearanceSettings
 import com.riffle.core.domain.launcher.settings.HomeGestureSettings
 import com.riffle.core.domain.launcher.widgets.InstalledWidgetProvider
 import kotlinx.coroutines.delay
@@ -122,7 +126,7 @@ private fun StandardHomeColumn(
                     settings = state.presentation.homeGestures,
                     onAction = actions.onAction,
                 )
-                .windowInsetsPadding(WindowInsets.safeDrawing)
+                .windowInsetsPadding(state.presentation.homeInsetPolicy.safeDrawingInsets())
                 .padding(
                     horizontal = HOME_SURFACE_HORIZONTAL_PADDING_DP.dp,
                     vertical = HOME_SURFACE_VERTICAL_PADDING_DP.dp,
@@ -339,12 +343,36 @@ internal data class StandardHomePresentation(
     val reducedMotion: Boolean = false,
     val widgetViewFactory: HomeWidgetViewFactory = EmptyHomeWidgetViewFactory,
     val widgetPicker: StandardHomeWidgetPickerState = StandardHomeWidgetPickerState(),
+    val homeInsetPolicy: HomeInsetPolicy = HomeInsetPolicy(),
 )
 
 internal data class StandardHomeWidgetPickerState(
     val providers: List<InstalledWidgetProvider> = emptyList(),
     val isOpen: Boolean = false,
 )
+
+internal data class HomeInsetPolicy(
+    val reserveStatusBar: Boolean = true,
+    val reserveNavigationBar: Boolean = true,
+)
+
+internal fun homeInsetPolicy(appearance: AppearanceSettings): HomeInsetPolicy =
+    HomeInsetPolicy(
+        reserveStatusBar = !(appearance.fullscreenHome || appearance.hideStatusBarOnHome),
+        reserveNavigationBar = !(appearance.fullscreenHome || appearance.hideNavigationBarOnHome),
+    )
+
+@Composable
+private fun HomeInsetPolicy.safeDrawingInsets(): WindowInsets {
+    var insets = WindowInsets.safeDrawing
+    if (!reserveStatusBar) {
+        insets = insets.exclude(WindowInsets.statusBars)
+    }
+    if (!reserveNavigationBar) {
+        insets = insets.exclude(WindowInsets.navigationBars)
+    }
+    return insets
+}
 
 internal data class HomeGridPresentation(
     val notificationCountsByPackage: Map<AppPackageName, Int>,

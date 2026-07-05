@@ -42,6 +42,7 @@ fun HomeDestination(
                                 providers = state.installedWidgetProviders,
                                 isOpen = state.isWidgetPickerOpen,
                             ),
+                        homeInsetPolicy = homeInsetPolicy(state.launcherSettings.appearance),
                     ),
                 appIconLoader = appIconLoader,
                 widgetPreviewImageLoader = widgetRenderers.previewImageLoader,
