@@ -146,10 +146,15 @@ class LauncherShellViewModel(
                     else -> state
                 }
             }.let { state ->
-                if (previousDestination == ShellDestination.SEARCH && state.destination != ShellDestination.SEARCH) {
-                    appListActionReducer.reduce(state, LauncherShellAction.SearchQueryChanged("")) ?: state
-                } else {
-                    state
+                when {
+                    previousDestination == ShellDestination.SEARCH && state.destination != ShellDestination.SEARCH ->
+                        appListActionReducer.reduce(state, LauncherShellAction.SearchQueryChanged("")) ?: state
+
+                    previousDestination == ShellDestination.APP_DRAWER &&
+                        state.destination != ShellDestination.APP_DRAWER ->
+                        appListActionReducer.reduce(state, LauncherShellAction.AppDrawerQueryChanged("")) ?: state
+
+                    else -> state
                 }
             }
     }
