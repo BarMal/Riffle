@@ -15,6 +15,7 @@ import com.riffle.core.domain.launcher.settings.HomeGesture
 import com.riffle.core.domain.launcher.settings.HomeGestureSettings
 import com.riffle.core.domain.launcher.settings.LauncherGestureAction
 import com.riffle.core.domain.launcher.settings.LauncherSettings
+import com.riffle.core.domain.launcher.settings.MotionSettings
 import com.riffle.core.domain.launcher.settings.OverlayDockEdge
 import com.riffle.core.domain.launcher.settings.OverlayDockExpandedOrientation
 import com.riffle.core.domain.launcher.settings.OverlayDockSettings
@@ -177,6 +178,25 @@ class LauncherSettingsJsonCodecTest {
         val decodedSettings = decodeLauncherSettings("{}")
 
         assertEquals(HapticFeedbackStrength.MEDIUM, decodedSettings.haptics.feedbackStrength)
+    }
+
+    @Test
+    fun roundTripsMotionSettings() {
+        val settings =
+            LauncherSettings(
+                motion = MotionSettings(reducedMotion = true),
+            )
+
+        val decodedSettings = decodeLauncherSettings(encodeLauncherSettings(settings))
+
+        assertEquals(true, decodedSettings.motion.reducedMotion)
+    }
+
+    @Test
+    fun defaultsMissingMotionSettings() {
+        val decodedSettings = decodeLauncherSettings("{}")
+
+        assertEquals(false, decodedSettings.motion.reducedMotion)
     }
 
     @Test

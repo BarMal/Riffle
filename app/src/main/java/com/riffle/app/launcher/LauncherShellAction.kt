@@ -266,6 +266,8 @@ sealed interface LauncherShellAction {
         val strength: HapticFeedbackStrength,
     ) : LauncherShellAction
 
+    data class SelectReducedMotionEnabled(val enabled: Boolean) : LauncherShellAction
+
     data class SelectOverlayDockEnabled(val enabled: Boolean) : LauncherShellAction
 
     data class SelectOverlayDockEdge(val edge: OverlayDockEdge) : LauncherShellAction

@@ -18,6 +18,7 @@ fun encodeLauncherSettings(settings: LauncherSettings): String =
         .put("appearance", encodeAppearance(settings.appearance))
         .put("gestures", encodeGestures(settings.gestures))
         .put("haptics", encodeHaptics(settings.haptics))
+        .put("motion", encodeMotionSettings(settings.motion))
         .put("overlayDock", encodeOverlayDock(settings.overlayDock))
         .toString()
 
@@ -28,6 +29,7 @@ fun decodeLauncherSettings(value: String): LauncherSettings =
             appearance = json.optJSONObject("appearance")?.toAppearance(defaults.appearance) ?: defaults.appearance,
             gestures = json.optJSONObject("gestures")?.toGestures(defaults.gestures) ?: defaults.gestures,
             haptics = json.optJSONObject("haptics")?.toHaptics(defaults.haptics) ?: defaults.haptics,
+            motion = json.optJSONObject("motion")?.toMotionSettings(defaults.motion) ?: defaults.motion,
             overlayDock =
                 json.optJSONObject("overlayDock")?.toOverlayDock(defaults.overlayDock) ?: defaults.overlayDock,
         )

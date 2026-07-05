@@ -35,6 +35,7 @@ fun HomeDestination(
                         notificationCountsByPackage = state.notificationCountsByPackage,
                         appShortcutsByApp = state.appShortcutsByApp,
                         homeGestures = state.launcherSettings.gestures.homeGestures,
+                        reducedMotion = state.launcherSettings.motion.reducedMotion,
                         widgetViewFactory = widgetRenderers.viewFactory,
                         widgetPicker =
                             StandardHomeWidgetPickerState(

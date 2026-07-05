@@ -14,6 +14,7 @@ internal enum class SettingsPage(
     APPEARANCE("Appearance"),
     FLOATING_DOCK("Floating dock"),
     GESTURES("Gestures"),
+    MOTION("Motion"),
     HAPTICS("Haptics"),
     PERMISSIONS("Permissions"),
     APPS("App drawer"),
@@ -83,6 +84,12 @@ internal fun settingsMainPageEntries(status: SettingsOverviewStatus = SettingsOv
             label = "Gestures",
             subtitle = "Home swipe actions",
             page = SettingsPage.GESTURES,
+            group = SettingsPageGroup.INTERACTION,
+        ),
+        SettingsPageEntry(
+            label = "Motion",
+            subtitle = "Reduced motion",
+            page = SettingsPage.MOTION,
             group = SettingsPageGroup.INTERACTION,
         ),
         SettingsPageEntry(

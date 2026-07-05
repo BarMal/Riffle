@@ -7,6 +7,7 @@ data class LauncherSettings(
     val appearance: AppearanceSettings = AppearanceSettings(),
     val gestures: GestureSettings = GestureSettings(),
     val haptics: HapticSettings = HapticSettings(),
+    val motion: MotionSettings = MotionSettings(),
     val overlayDock: OverlayDockSettings = OverlayDockSettings(),
 )
 
@@ -89,6 +90,10 @@ fun HomeGestureSettings.toHomeSwipeGestureSettings(): HomeSwipeGestureSettings =
 
 data class HapticSettings(
     val feedbackStrength: HapticFeedbackStrength = HapticFeedbackStrength.MEDIUM,
+)
+
+data class MotionSettings(
+    val reducedMotion: Boolean = false,
 )
 
 data class OverlayDockSettings(

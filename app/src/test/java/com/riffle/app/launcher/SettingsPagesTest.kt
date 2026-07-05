@@ -17,6 +17,7 @@ class SettingsPagesTest {
                 "Appearance" to SettingsPage.APPEARANCE,
                 "Floating dock" to SettingsPage.FLOATING_DOCK,
                 "Gestures" to SettingsPage.GESTURES,
+                "Motion" to SettingsPage.MOTION,
                 "Haptics" to SettingsPage.HAPTICS,
                 "App drawer" to SettingsPage.APPS,
                 "Hidden apps" to SettingsPage.HIDDEN_APPS,
@@ -63,7 +64,7 @@ class SettingsPagesTest {
 
     @Test
     fun summarizesSettingsSearchResultsOnlyWhenSearching() {
-        assertEquals(null, settingsSearchSummaryText(query = "", resultCount = 11))
+        assertEquals(null, settingsSearchSummaryText(query = "", resultCount = 12))
         assertEquals("1 setting matching \"dock\"", settingsSearchSummaryText(query = " dock ", resultCount = 1))
         assertEquals("2 settings matching \"home\"", settingsSearchSummaryText(query = "home", resultCount = 2))
     }
