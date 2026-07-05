@@ -19,6 +19,10 @@ object AppDrawerSections {
                     apps = sectionApps,
                 )
             }
+            .sortedWith(
+                compareBy<AppDrawerSection> { section -> section.title.profileSectionSortPrefix() }
+                    .thenBy { section -> section.title.letterSectionSortKey() },
+            )
 
     private val InstalledApp.sectionTitle: String
         get() {
@@ -37,4 +41,12 @@ object AppDrawerSections {
         }
 }
 
+private fun String.profileSectionSortPrefix(): String = substringBefore(delimiter = " - ", missingDelimiterValue = "")
+
+private fun String.letterSectionSortKey(): String =
+    substringAfter(delimiter = " - ", missingDelimiterValue = this)
+        .takeUnless { section -> section == OTHER_SECTION_TITLE }
+        ?: OTHER_SECTION_SORT_TITLE
+
 private const val OTHER_SECTION_TITLE = "#"
+private const val OTHER_SECTION_SORT_TITLE = "{"
