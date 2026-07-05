@@ -36,6 +36,26 @@ class WidgetPickerDialogTest {
     }
 
     @Test
+    fun resultSummaryShowsAvailableWidgetCount() {
+        assertEquals(
+            "2 widgets available",
+            widgetPickerResultSummaryText(totalProviderCount = 2, resultCount = 2, query = ""),
+        )
+        assertEquals(
+            "1 widget available",
+            widgetPickerResultSummaryText(totalProviderCount = 1, resultCount = 1, query = " "),
+        )
+    }
+
+    @Test
+    fun resultSummaryShowsFilteredWidgetCount() {
+        assertEquals(
+            "1 widget matching, 3 widgets total",
+            widgetPickerResultSummaryText(totalProviderCount = 3, resultCount = 1, query = "clock"),
+        )
+    }
+
+    @Test
     fun requestAddWidgetActionUsesProviderIdentityAndLabel() {
         val provider = widgetProvider(label = "Clock", packageName = "com.example.clock", className = ".ClockWidget")
 

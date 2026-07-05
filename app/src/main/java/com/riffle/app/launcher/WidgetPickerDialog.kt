@@ -58,6 +58,16 @@ fun WidgetPickerDialog(
                     onQueryChanged = { value -> query = value },
                     label = "Search widgets",
                 )
+                Text(
+                    text =
+                        widgetPickerResultSummaryText(
+                            totalProviderCount = providers.size,
+                            resultCount = filteredProviders.size,
+                            query = query,
+                        ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
                 when {
                     providers.isEmpty() ->
                         WidgetPickerEmptyMessage(text = "No widgets available")
