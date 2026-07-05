@@ -5,6 +5,7 @@ import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppVisibilityRepository
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
+import com.riffle.core.domain.launcher.settings.AppearanceSettings
 import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettingsRepository
@@ -26,6 +27,76 @@ class LauncherSettingsStateReducerTest {
             )
 
         assertEquals(HapticFeedbackStrength.STRONG, updatedState.launcherSettings.haptics.feedbackStrength)
+        assertEquals(updatedState.launcherSettings, repository.savedSettings)
+    }
+
+    @Test
+    fun fullscreenHomeSelectionUpdatesBothSystemBarSettings() {
+        val repository = FakeLauncherSettingsRepository()
+        val reducer = reducer(launcherSettingsRepository = repository)
+
+        val updatedState =
+            reducer.reduce(
+                state = LauncherShellState(),
+                action = LauncherShellAction.SelectFullscreenHomeEnabled(enabled = true),
+            )
+
+        assertEquals(true, updatedState.launcherSettings.appearance.fullscreenHome)
+        assertEquals(true, updatedState.launcherSettings.appearance.hideStatusBarOnHome)
+        assertEquals(true, updatedState.launcherSettings.appearance.hideNavigationBarOnHome)
+        assertEquals(updatedState.launcherSettings, repository.savedSettings)
+    }
+
+    @Test
+    fun independentSystemBarSelectionUpdatesFullscreenHomeWhenBothAreHidden() {
+        val repository = FakeLauncherSettingsRepository()
+        val reducer = reducer(launcherSettingsRepository = repository)
+        val state =
+            LauncherShellState(
+                launcherSettings =
+                    LauncherSettings(
+                        appearance = AppearanceSettings(hideNavigationBarOnHome = true),
+                    ),
+            )
+
+        val updatedState =
+            reducer.reduce(
+                state = state,
+                action = LauncherShellAction.SelectHomeStatusBarHidden(hidden = true),
+            )
+
+        assertEquals(true, updatedState.launcherSettings.appearance.fullscreenHome)
+        assertEquals(true, updatedState.launcherSettings.appearance.hideStatusBarOnHome)
+        assertEquals(true, updatedState.launcherSettings.appearance.hideNavigationBarOnHome)
+        assertEquals(updatedState.launcherSettings, repository.savedSettings)
+    }
+
+    @Test
+    fun independentSystemBarSelectionClearsFullscreenHomeWhenOneBarIsVisible() {
+        val repository = FakeLauncherSettingsRepository()
+        val reducer = reducer(launcherSettingsRepository = repository)
+        val state =
+            LauncherShellState(
+                launcherSettings =
+                    LauncherSettings(
+                        appearance =
+                            AppearanceSettings(
+                                fullscreenHome = true,
+                                hideStatusBarOnHome = true,
+                                hideNavigationBarOnHome = true,
+                            ),
+                    ),
+            )
+
+        val updatedState =
+            reducer.reduce(
+                state = state,
+                action = LauncherShellAction.SelectHomeNavigationBarHidden(hidden = false),
+            )
+
+        assertEquals(false, updatedState.launcherSettings.appearance.fullscreenHome)
+        assertEquals(true, updatedState.launcherSettings.appearance.hideStatusBarOnHome)
+        assertEquals(false, updatedState.launcherSettings.appearance.hideNavigationBarOnHome)
         assertEquals(updatedState.launcherSettings, repository.savedSettings)
     }
 

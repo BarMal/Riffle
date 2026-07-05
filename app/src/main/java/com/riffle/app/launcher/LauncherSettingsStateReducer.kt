@@ -26,6 +26,8 @@ internal class LauncherSettingsStateReducer(
         when (action) {
             is LauncherShellAction.SelectWallpaperSource,
             is LauncherShellAction.SelectFullscreenHomeEnabled,
+            is LauncherShellAction.SelectHomeStatusBarHidden,
+            is LauncherShellAction.SelectHomeNavigationBarHidden,
             ->
                 state.withAppearanceSettingsAction(
                     action = action,
