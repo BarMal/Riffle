@@ -43,6 +43,69 @@ class AppNotificationGrouperTest {
     }
 
     @Test
+    fun ordersGroupsByHighestPriorityBeforeRecency() {
+        val groups =
+            grouper.groupByApp(
+                listOf(
+                    notification(
+                        key = "newer-routine",
+                        packageName = "com.riffle.calendar",
+                        priority = NotificationPriority.DEFAULT,
+                        postedAtEpochMillis = 2_000L,
+                    ),
+                    notification(
+                        key = "older-urgent",
+                        packageName = "com.riffle.mail",
+                        priority = NotificationPriority.HIGH,
+                        postedAtEpochMillis = 1_000L,
+                    ),
+                ),
+                nowEpochMillis = nowEpochMillis,
+            )
+
+        assertEquals(AppPackageName("com.riffle.mail"), groups[0].packageName)
+        assertEquals(AppPackageName("com.riffle.calendar"), groups[1].packageName)
+    }
+
+    @Test
+    fun ordersEqualPriorityGroupsByTimestampThenAppIdentity() {
+        val groups =
+            grouper.groupByApp(
+                listOf(
+                    notification(
+                        key = "mail-newer",
+                        packageName = "com.riffle.mail",
+                        priority = NotificationPriority.DEFAULT,
+                        postedAtEpochMillis = 2_000L,
+                    ),
+                    notification(
+                        key = "calendar-same-time",
+                        packageName = "com.riffle.calendar",
+                        priority = NotificationPriority.DEFAULT,
+                        postedAtEpochMillis = 1_000L,
+                    ),
+                    notification(
+                        key = "mail-work-same-time",
+                        packageName = "com.riffle.mail",
+                        profileId = AppProfile.work().id,
+                        priority = NotificationPriority.DEFAULT,
+                        postedAtEpochMillis = 1_000L,
+                    ),
+                ),
+                nowEpochMillis = nowEpochMillis,
+            )
+
+        assertEquals(
+            listOf(
+                AppNotificationGroupKey(AppPackageName("com.riffle.mail"), AppProfile.personal().id),
+                AppNotificationGroupKey(AppPackageName("com.riffle.calendar"), AppProfile.personal().id),
+                AppNotificationGroupKey(AppPackageName("com.riffle.mail"), AppProfile.work().id),
+            ),
+            groups.map { group -> AppNotificationGroupKey(group.packageName, group.profileId) },
+        )
+    }
+
+    @Test
     fun ordersNotificationsWithinGroupByMostRecentFirst() {
         val group =
             grouper
@@ -61,6 +124,72 @@ class AppNotificationGrouperTest {
     }
 
     @Test
+    fun ordersNotificationsWithinGroupByPriorityBeforeRecency() {
+        val group =
+            grouper
+                .groupByApp(
+                    listOf(
+                        notification(
+                            key = "newer-routine",
+                            packageName = "com.riffle.mail",
+                            priority = NotificationPriority.DEFAULT,
+                            postedAtEpochMillis = 2_000L,
+                        ),
+                        notification(
+                            key = "older-urgent",
+                            packageName = "com.riffle.mail",
+                            priority = NotificationPriority.HIGH,
+                            postedAtEpochMillis = 1_000L,
+                        ),
+                    ),
+                    nowEpochMillis = nowEpochMillis,
+                ).single()
+
+        assertEquals(
+            listOf(LauncherNotificationKey("older-urgent"), LauncherNotificationKey("newer-routine")),
+            group.notifications.map { notification -> notification.key },
+        )
+    }
+
+    @Test
+    fun ordersEqualPriorityNotificationsByTimestampThenKey() {
+        val group =
+            grouper
+                .groupByApp(
+                    listOf(
+                        notification(
+                            key = "same-time-b",
+                            packageName = "com.riffle.mail",
+                            priority = NotificationPriority.DEFAULT,
+                            postedAtEpochMillis = 1_000L,
+                        ),
+                        notification(
+                            key = "newer",
+                            packageName = "com.riffle.mail",
+                            priority = NotificationPriority.DEFAULT,
+                            postedAtEpochMillis = 2_000L,
+                        ),
+                        notification(
+                            key = "same-time-a",
+                            packageName = "com.riffle.mail",
+                            priority = NotificationPriority.DEFAULT,
+                            postedAtEpochMillis = 1_000L,
+                        ),
+                    ),
+                    nowEpochMillis = nowEpochMillis,
+                ).single()
+
+        assertEquals(
+            listOf(
+                LauncherNotificationKey("newer"),
+                LauncherNotificationKey("same-time-a"),
+                LauncherNotificationKey("same-time-b"),
+            ),
+            group.notifications.map { notification -> notification.key },
+        )
+    }
+
+    @Test
     fun assignsGroupAgeFromMostRecentNotification() {
         val group =
             grouper
@@ -70,6 +199,31 @@ class AppNotificationGrouperTest {
                         notification(
                             key = "newer",
                             packageName = "com.riffle.mail",
+                            postedAtEpochMillis = 9 * 60 * 1_000L,
+                        ),
+                    ),
+                    nowEpochMillis = nowEpochMillis,
+                ).single()
+
+        assertEquals(NotificationAgeBucket.NOW, group.latestAgeBucket)
+    }
+
+    @Test
+    fun assignsGroupAgeFromMostRecentNotificationWhenHigherPriorityNotificationIsOlder() {
+        val group =
+            grouper
+                .groupByApp(
+                    listOf(
+                        notification(
+                            key = "older-urgent",
+                            packageName = "com.riffle.mail",
+                            priority = NotificationPriority.HIGH,
+                            postedAtEpochMillis = 1_000L,
+                        ),
+                        notification(
+                            key = "newer-routine",
+                            packageName = "com.riffle.mail",
+                            priority = NotificationPriority.DEFAULT,
                             postedAtEpochMillis = 9 * 60 * 1_000L,
                         ),
                     ),
@@ -95,6 +249,33 @@ class AppNotificationGrouperTest {
                             key = "newer",
                             packageName = "com.riffle.mail",
                             category = NotificationCategory.MESSAGE,
+                            postedAtEpochMillis = 2_000L,
+                        ),
+                    ),
+                    nowEpochMillis = nowEpochMillis,
+                ).single()
+
+        assertEquals(NotificationCategory.MESSAGE, group.latestCategory)
+    }
+
+    @Test
+    fun assignsGroupCategoryFromMostRecentNotificationWhenHigherPriorityNotificationIsOlder() {
+        val group =
+            grouper
+                .groupByApp(
+                    listOf(
+                        notification(
+                            key = "older-urgent",
+                            packageName = "com.riffle.mail",
+                            category = NotificationCategory.EMAIL,
+                            priority = NotificationPriority.HIGH,
+                            postedAtEpochMillis = 1_000L,
+                        ),
+                        notification(
+                            key = "newer-routine",
+                            packageName = "com.riffle.mail",
+                            category = NotificationCategory.MESSAGE,
+                            priority = NotificationPriority.DEFAULT,
                             postedAtEpochMillis = 2_000L,
                         ),
                     ),
