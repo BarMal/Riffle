@@ -56,6 +56,53 @@ class WidgetPreferredSpanTest {
     }
 
     @Test
+    fun clampsDegenerateGridBoundsToOneCellSpan() {
+        val span =
+            WidgetProviderDimensions(
+                minWidthDp = 240,
+                minHeightDp = 160,
+                targetCellWidth = 0,
+                targetCellHeight = -2,
+            ).preferredGridSpan(
+                grid = GridDimensions(columns = 0, rows = -3),
+                availableWidthDp = 0,
+                availableHeightDp = -10,
+            )
+
+        assertEquals(GridSpan(columns = 1, rows = 1), span)
+    }
+
+    @Test
+    fun keepsSpanValidWhenAvailableBoundsAreDegenerate() {
+        val span =
+            WidgetProviderDimensions(
+                minWidthDp = 240,
+                minHeightDp = 160,
+            ).preferredGridSpan(
+                grid = GridDimensions(columns = 4, rows = 5),
+                availableWidthDp = 0,
+                availableHeightDp = -10,
+            )
+
+        assertEquals(GridSpan(columns = 4, rows = 5), span)
+    }
+
+    @Test
+    fun keepsSpanValidWhenProviderMinimumsAreDegenerate() {
+        val span =
+            WidgetProviderDimensions(
+                minWidthDp = -20,
+                minHeightDp = 0,
+            ).preferredGridSpan(
+                grid = GridDimensions(columns = 4, rows = 5),
+                availableWidthDp = 400,
+                availableHeightDp = 500,
+            )
+
+        assertEquals(GridSpan(columns = 1, rows = 1), span)
+    }
+
+    @Test
     fun reportsWhenWidgetWasShrunkFromIdealSpan() {
         assertEquals(
             "Weather ideal size is 3x2; added as 2x2",
