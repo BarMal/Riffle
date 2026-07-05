@@ -9,17 +9,21 @@ fun WidgetProviderDimensions.preferredGridSpan(
     grid: GridDimensions,
     availableWidthDp: Int,
     availableHeightDp: Int,
-): GridSpan =
-    GridSpan(
+): GridSpan {
+    val gridColumns = grid.columns.validGridCells()
+    val gridRows = grid.rows.validGridCells()
+
+    return GridSpan(
         columns =
             targetCellWidth
-                ?.coerceIn(1, grid.columns)
-                ?: minWidthDp.spanCells(availableDp = availableWidthDp, gridCells = grid.columns),
+                ?.coerceIn(1, gridColumns)
+                ?: minWidthDp.spanCells(availableDp = availableWidthDp, gridCells = gridColumns),
         rows =
             targetCellHeight
-                ?.coerceIn(1, grid.rows)
-                ?: minHeightDp.spanCells(availableDp = availableHeightDp, gridCells = grid.rows),
+                ?.coerceIn(1, gridRows)
+                ?: minHeightDp.spanCells(availableDp = availableHeightDp, gridCells = gridRows),
     )
+}
 
 fun widgetSpanAdjustmentToast(
     label: String,
@@ -37,9 +41,13 @@ private fun Int.spanCells(
     availableDp: Int,
     gridCells: Int,
 ): Int {
-    val cellDp = availableDp.toFloat() / gridCells.toFloat()
+    val boundedGridCells = gridCells.validGridCells()
+    val boundedAvailableDp = availableDp.coerceAtLeast(1)
+    val cellDp = boundedAvailableDp.toFloat() / boundedGridCells.toFloat()
 
-    return ceil(this / cellDp)
+    return ceil(coerceAtLeast(0) / cellDp)
         .toInt()
-        .coerceIn(1, gridCells)
+        .coerceIn(1, boundedGridCells)
 }
+
+private fun Int.validGridCells(): Int = coerceAtLeast(1)
