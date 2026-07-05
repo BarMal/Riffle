@@ -96,6 +96,22 @@ class WidgetPickerDialogTest {
     }
 
     @Test
+    fun emptyMessageDistinguishesUnavailableWidgetsFromFilteredResults() {
+        assertEquals(
+            "No widgets available",
+            widgetPickerEmptyMessageText(totalProviderCount = 0, query = ""),
+        )
+        assertEquals(
+            "No widgets found for \"clock\"",
+            widgetPickerEmptyMessageText(totalProviderCount = 3, query = " clock "),
+        )
+        assertEquals(
+            "No matching widgets",
+            widgetPickerEmptyMessageText(totalProviderCount = 3, query = ""),
+        )
+    }
+
+    @Test
     fun requestAddWidgetActionUsesProviderIdentityAndLabel() {
         val provider = widgetProvider(label = "Clock", packageName = "com.example.clock", className = ".ClockWidget")
 

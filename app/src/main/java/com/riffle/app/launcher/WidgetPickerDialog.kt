@@ -71,10 +71,10 @@ fun WidgetPickerDialog(
                 )
                 when {
                     providers.isEmpty() ->
-                        WidgetPickerEmptyMessage(text = "No widgets available")
+                        WidgetPickerEmptyMessage(text = widgetPickerEmptyMessageText(providers.size, query))
 
                     filteredProviders.isEmpty() ->
-                        WidgetPickerEmptyMessage(text = "No matching widgets")
+                        WidgetPickerEmptyMessage(text = widgetPickerEmptyMessageText(providers.size, query))
 
                     else ->
                         LazyColumn(
