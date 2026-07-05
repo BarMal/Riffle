@@ -40,8 +40,23 @@ class AppDrawerSectionsTest {
                 ),
             )
 
-        assertEquals(listOf("#", "A"), sections.map { section -> section.title })
-        assertEquals(listOf("  1Password", "- Debug"), sections[0].apps.map { app -> app.label })
+        assertEquals(listOf("A", "#"), sections.map { section -> section.title })
+        assertEquals(listOf("  1Password", "- Debug"), sections[1].apps.map { app -> app.label })
+    }
+
+    @Test
+    fun sectionsPlaceOtherBucketLastWithinProfilePrefixes() {
+        val sections =
+            AppDrawerSections.from(
+                listOf(
+                    app("  1Password", profile = AppProfile.work()),
+                    app("Calendar"),
+                    app("Alpha", profile = AppProfile.work()),
+                    app("- Debug"),
+                ),
+            )
+
+        assertEquals(listOf("C", "#", "Work - A", "Work - #"), sections.map { section -> section.title })
     }
 
     @Test
