@@ -93,7 +93,7 @@ internal fun StandardHome(
         )
     }
     visibleLayout.openedFolder(openedFolderId.value)?.let { folder ->
-        FolderDialog(
+        FolderSurface(
             folder = folder,
             layout = visibleLayout,
             installedApps = installedApps,

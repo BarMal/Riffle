@@ -7,19 +7,22 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -119,7 +122,7 @@ internal fun HomeFolder(
 }
 
 @Composable
-fun FolderDialog(
+fun FolderSurface(
     folder: FolderItem,
     layout: HomeLayout,
     installedApps: List<InstalledApp>,
@@ -142,12 +145,33 @@ fun FolderDialog(
             profileFilter = addAppProfileFilter.value,
         )
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(text = folder.label) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    Surface(
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .windowInsetsPadding(WindowInsets.safeDrawing),
+        color = MaterialTheme.colorScheme.surface,
+        contentColor = MaterialTheme.colorScheme.onSurface,
+    ) {
+        Column(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(FOLDER_SURFACE_PADDING_DP.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            FolderSurfaceHeader(
+                folder = folder,
+                trimmedFolderName = trimmedFolderName,
+                onDismiss = onDismiss,
+                onAction = onAction,
+            )
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
                 OutlinedTextField(
+                    modifier = Modifier.fillMaxWidth(),
                     value = folderName.value,
                     onValueChange = { value -> folderName.value = value },
                     singleLine = true,
@@ -165,17 +189,37 @@ fun FolderDialog(
                         addAppProfileFilter.value = AppDrawerProfileFilter.ALL
                     },
                 )
-                FolderContentRows(
-                    folder = folder,
-                    addableApps = visibleAddableApps,
-                    addableAppsEmptyText = addableAppsEmptyText,
-                    appIconLoader = appIconLoader,
-                    onDismiss = onDismiss,
-                    onAction = onAction,
-                )
             }
-        },
-        confirmButton = {
+            FolderContentRows(
+                modifier = Modifier.weight(1f),
+                folder = folder,
+                addableApps = visibleAddableApps,
+                addableAppsEmptyText = addableAppsEmptyText,
+                appIconLoader = appIconLoader,
+                onDismiss = onDismiss,
+                onAction = onAction,
+            )
+        }
+    }
+}
+
+@Composable
+private fun FolderSurfaceHeader(
+    folder: FolderItem,
+    trimmedFolderName: String,
+    onDismiss: () -> Unit,
+    onAction: (LauncherShellAction) -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = folder.label,
+            style = MaterialTheme.typography.headlineMedium,
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             TextButton(onClick = onDismiss) {
                 Text(text = "Close")
             }
@@ -192,8 +236,8 @@ fun FolderDialog(
             ) {
                 Text(text = "Save")
             }
-        },
-    )
+        }
+    }
 }
 
 @Composable
@@ -276,6 +320,7 @@ private fun FolderAppRow(
 
 @Composable
 private fun FolderContentRows(
+    modifier: Modifier = Modifier,
     folder: FolderItem,
     addableApps: List<InstalledApp>,
     addableAppsEmptyText: String,
@@ -285,9 +330,8 @@ private fun FolderContentRows(
 ) {
     LazyColumn(
         modifier =
-            Modifier
-                .fillMaxWidth()
-                .heightIn(max = FOLDER_CONTENT_MAX_HEIGHT_DP.dp),
+            modifier
+                .fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         items(
@@ -380,7 +424,7 @@ private fun FolderAddAppRow(
     }
 }
 
-private const val FOLDER_CONTENT_MAX_HEIGHT_DP = 360
+private const val FOLDER_SURFACE_PADDING_DP = 20
 private const val DEFAULT_FOLDER_LABEL = "Folder"
 
 internal fun folderShortcutContextMenuItems(
