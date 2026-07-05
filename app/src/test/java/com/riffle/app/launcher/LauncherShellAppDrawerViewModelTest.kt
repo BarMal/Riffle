@@ -1,5 +1,7 @@
 package com.riffle.app.launcher
 
+import com.riffle.core.domain.launcher.ShellDestination
+import com.riffle.core.domain.launcher.ShellNavigationAction
 import com.riffle.core.domain.launcher.apps.AppActivityName
 import com.riffle.core.domain.launcher.apps.AppDrawerProfileFilter
 import com.riffle.core.domain.launcher.apps.AppIdentity
@@ -101,6 +103,32 @@ class LauncherShellAppDrawerViewModelTest {
 
         assertEquals("cal", viewModel.state.value.appDrawerQuery)
         assertEquals(listOf("Calendar"), viewModel.state.value.appDrawerApps.map { app -> app.label })
+    }
+
+    @Test
+    fun clearsAppDrawerQueryWhenLeavingDrawer() {
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                installedAppRepository =
+                    FakeInstalledAppRepository(
+                        apps =
+                            listOf(
+                                app(label = "Browser"),
+                                app(label = "Camera"),
+                            ),
+                    ),
+            )
+
+        runBlocking { viewModel.refreshInstalledApps().join() }
+        viewModel.onNavigationActionSelected(ShellNavigationAction.OpenAppDrawer)
+        viewModel.onAppActionSelected(LauncherShellAction.AppDrawerQueryChanged("cam"))
+
+        viewModel.onNavigationActionSelected(ShellNavigationAction.OpenHome)
+
+        assertEquals(ShellDestination.HOME, viewModel.state.value.destination)
+        assertEquals("", viewModel.state.value.appDrawerQuery)
+        assertEquals(listOf("Browser", "Camera"), viewModel.state.value.appDrawerApps.map { app -> app.label })
     }
 
     @Test
