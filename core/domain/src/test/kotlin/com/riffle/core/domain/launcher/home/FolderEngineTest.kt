@@ -43,6 +43,57 @@ class FolderEngineTest {
     }
 
     @Test
+    fun trimsFolderNameWhenCreatingFolder() {
+        val camera =
+            appShortcut(
+                id = "camera",
+                placement = GridPlacement(cell = GridCell(column = 0, row = 0)),
+            )
+        val calendar =
+            appShortcut(
+                id = "calendar",
+                placement = GridPlacement(cell = GridCell(column = 1, row = 0)),
+            )
+
+        val result =
+            engine.createFolderOnSelectedPage(
+                layout = layoutWith(camera, calendar),
+                folderId = LauncherItemId("folder:tools"),
+                label = " Tools ",
+                itemIds = listOf(camera.id, calendar.id),
+            )
+
+        val updated = assertIs<FolderEditResult.Updated>(result)
+        val folder = assertIs<FolderItem>(updated.layout.selectedPage.items.single())
+        assertEquals("Tools", folder.label)
+    }
+
+    @Test
+    fun rejectsBlankFolderNameWhenCreatingFolder() {
+        val camera =
+            appShortcut(
+                id = "camera",
+                placement = GridPlacement(cell = GridCell(column = 0, row = 0)),
+            )
+        val calendar =
+            appShortcut(
+                id = "calendar",
+                placement = GridPlacement(cell = GridCell(column = 1, row = 0)),
+            )
+
+        val result =
+            engine.createFolderOnSelectedPage(
+                layout = layoutWith(camera, calendar),
+                folderId = LauncherItemId("folder:tools"),
+                label = " ",
+                itemIds = listOf(camera.id, calendar.id),
+            )
+
+        val rejected = assertIs<FolderEditResult.Rejected>(result)
+        assertEquals(FolderEditRejectionReason.INVALID_LABEL, rejected.reason)
+    }
+
+    @Test
     fun rejectsFolderWithFewerThanTwoDistinctItems() {
         val camera = appShortcut(id = "camera", placement = GridPlacement(cell = GridCell(column = 0, row = 0)))
         val result =

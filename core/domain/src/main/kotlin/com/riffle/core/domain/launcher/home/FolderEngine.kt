@@ -9,32 +9,35 @@ class FolderEngine(
         label: String,
         itemIds: List<LauncherItemId>,
     ): FolderEditResult =
-        when (
-            val selection =
-                selectFolderShortcuts(
-                    page = layout.selectedPage,
-                    itemIds = itemIds,
-                )
-        ) {
-            is FolderShortcutSelection.Selected ->
-                createFolderFromShortcuts(
-                    layout = layout,
-                    folderId = folderId,
-                    label = label,
-                    itemIds = itemIds,
-                    shortcuts = selection.shortcuts,
-                )
+        label.sanitizedFolderLabel()
+            ?.let { trimmedLabel ->
+                when (
+                    val selection =
+                        selectFolderShortcuts(
+                            page = layout.selectedPage,
+                            itemIds = itemIds,
+                        )
+                ) {
+                    is FolderShortcutSelection.Selected ->
+                        createFolderFromShortcuts(
+                            layout = layout,
+                            folderId = folderId,
+                            label = trimmedLabel,
+                            itemIds = itemIds,
+                            shortcuts = selection.shortcuts,
+                        )
 
-            is FolderShortcutSelection.Rejected -> FolderEditResult.Rejected(selection.reason)
-        }
+                    is FolderShortcutSelection.Rejected -> FolderEditResult.Rejected(selection.reason)
+                }
+            }
+            ?: FolderEditResult.Rejected(FolderEditRejectionReason.INVALID_LABEL)
 
     fun renameFolderOnSelectedPage(
         layout: HomeLayout,
         itemId: LauncherItemId,
         label: String,
     ): FolderEditResult =
-        label.trim()
-            .takeIf { trimmedLabel -> trimmedLabel.isNotEmpty() }
+        label.sanitizedFolderLabel()
             ?.let { trimmedLabel ->
                 layout.selectedPage.items.firstOrNull { item -> item.id == itemId }
                     ?.let { item ->
@@ -219,6 +222,10 @@ private fun LauncherPage.replaceFolder(folder: FolderItem): LauncherPage =
                 }
             },
     )
+
+private fun String.sanitizedFolderLabel(): String? =
+    trim()
+        .takeIf { trimmedLabel -> trimmedLabel.isNotEmpty() }
 
 sealed interface FolderEditResult {
     data class Updated(val layout: HomeLayout) : FolderEditResult
