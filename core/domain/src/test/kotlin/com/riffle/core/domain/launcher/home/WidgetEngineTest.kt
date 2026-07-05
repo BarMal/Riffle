@@ -80,6 +80,48 @@ class WidgetEngineTest {
     }
 
     @Test
+    fun addsWidgetToRequestedCellWhenTargetIsAvailable() {
+        val result =
+            engine.addWidgetToSelectedPage(
+                layout = HomeLayoutDefaults.standard(),
+                hostedWidgetId = HostedWidgetId(42),
+                label = "Weather",
+                preferredSpan = GridSpan(columns = 2, rows = 2),
+                targetCell = GridCell(column = 1, row = 2),
+            )
+
+        val updated = assertIs<WidgetEditResult.Updated>(result)
+        assertEquals(
+            GridPlacement(
+                cell = GridCell(column = 1, row = 2),
+                span = GridSpan(columns = 2, rows = 2),
+            ),
+            updated.layout.selectedPage.items.single().placement,
+        )
+    }
+
+    @Test
+    fun fallsBackToSmallerSpanAtRequestedCellWhenPreferredSpanDoesNotFit() {
+        val result =
+            engine.addWidgetToSelectedPage(
+                layout = HomeLayoutDefaults.standard(),
+                hostedWidgetId = HostedWidgetId(42),
+                label = "Weather",
+                preferredSpan = GridSpan(columns = 3, rows = 3),
+                targetCell = GridCell(column = 3, row = 4),
+            )
+
+        val updated = assertIs<WidgetEditResult.Updated>(result)
+        assertEquals(
+            GridPlacement(
+                cell = GridCell(column = 3, row = 4),
+                span = GridSpan(columns = 1, rows = 1),
+            ),
+            updated.layout.selectedPage.items.single().placement,
+        )
+    }
+
+    @Test
     fun rejectsWidgetWhenSelectedPageIsFull() {
         val defaultGrid = HomeLayoutDefaults.standard().settings.grid.dimensions
         val fullPage =

@@ -7,20 +7,43 @@ import com.riffle.core.domain.launcher.settings.LauncherGestureAction
 class HomeSwipeGestureInterpreter(
     private val thresholdPx: Float,
     private val pinchThreshold: Float = 0.18f,
+    private val axisDominanceRatio: Float = 1.2f,
 ) {
     fun gestureFor(
         pointerCount: Int = 1,
         horizontalDragPx: Float,
         verticalDragPx: Float,
         scaleDelta: Float = 0f,
-    ): HomeGesture? =
-        if (pointerCount >= 2 && kotlin.math.abs(scaleDelta) >= pinchThreshold) {
-            pinchGestureFor(scaleDelta)
-        } else if (kotlin.math.abs(horizontalDragPx) > kotlin.math.abs(verticalDragPx)) {
-            horizontalGestureFor(pointerCount = pointerCount, horizontalDragPx = horizontalDragPx)
-        } else {
-            verticalGestureFor(pointerCount = pointerCount, verticalDragPx = verticalDragPx)
+    ): HomeGesture? {
+        val dragAxis = dominantAxis(horizontalDragPx = horizontalDragPx, verticalDragPx = verticalDragPx)
+
+        return when {
+            pointerCount >= 2 && kotlin.math.abs(scaleDelta) >= pinchThreshold ->
+                pinchGestureFor(scaleDelta)
+
+            dragAxis == GestureAxis.HORIZONTAL ->
+                horizontalGestureFor(pointerCount = pointerCount, horizontalDragPx = horizontalDragPx)
+
+            dragAxis == GestureAxis.VERTICAL ->
+                verticalGestureFor(pointerCount = pointerCount, verticalDragPx = verticalDragPx)
+
+            else -> null
         }
+    }
+
+    private fun dominantAxis(
+        horizontalDragPx: Float,
+        verticalDragPx: Float,
+    ): GestureAxis? {
+        val horizontal = kotlin.math.abs(horizontalDragPx)
+        val vertical = kotlin.math.abs(verticalDragPx)
+
+        return when {
+            horizontal >= vertical * axisDominanceRatio -> GestureAxis.HORIZONTAL
+            vertical >= horizontal * axisDominanceRatio -> GestureAxis.VERTICAL
+            else -> null
+        }
+    }
 
     private fun verticalGestureFor(
         pointerCount: Int,
@@ -72,6 +95,11 @@ class HomeSwipeGestureInterpreter(
         } else {
             HomeGesture.PINCH_OUT
         }
+}
+
+private enum class GestureAxis {
+    HORIZONTAL,
+    VERTICAL,
 }
 
 class HomeSwipeGestureActionMapper {

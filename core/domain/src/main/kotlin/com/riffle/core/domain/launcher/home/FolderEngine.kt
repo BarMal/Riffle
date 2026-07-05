@@ -226,6 +226,11 @@ sealed interface FolderEditResult {
     data class Rejected(val reason: FolderEditRejectionReason) : FolderEditResult
 }
 
+enum class FolderItemMoveDirection {
+    UP,
+    DOWN,
+}
+
 enum class FolderEditRejectionReason {
     NOT_ENOUGH_ITEMS,
     ITEM_NOT_FOUND,

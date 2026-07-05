@@ -224,6 +224,34 @@ class LauncherShellWidgetViewModelTest {
         assertEquals(viewModel.state.value.homeLayout, repository.savedLayout)
     }
 
+    @Test
+    fun addsHostedWidgetToTargetCellAndSavesLayout() {
+        val repository = FakeHomeLayoutRepository()
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                homeLayoutRepository = repository,
+            )
+
+        viewModel.onHomeShortcutEdited(
+            LauncherShellAction.AddHostedWidgetToHome(
+                hostedWidgetId = HostedWidgetId(42),
+                label = "Weather",
+                preferredSpan = GridSpan(columns = 2, rows = 2),
+                targetCell = GridCell(column = 1, row = 2),
+            ),
+        )
+
+        assertEquals(
+            GridPlacement(
+                cell = GridCell(column = 1, row = 2),
+                span = GridSpan(columns = 2, rows = 2),
+            ),
+            viewModel.state.value.homeLayout.selectedPage.items.single().placement,
+        )
+        assertEquals(viewModel.state.value.homeLayout, repository.savedLayout)
+    }
+
     private class FakeFirstRunRepository : FirstRunRepository {
         override fun isFirstRunComplete(): Boolean = false
 

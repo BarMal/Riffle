@@ -9,6 +9,7 @@ import com.riffle.core.domain.launcher.apps.AppShortcutId
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.home.DockBackgroundSizing
 import com.riffle.core.domain.launcher.home.DockItemMoveDirection
+import com.riffle.core.domain.launcher.home.FolderItemMoveDirection
 import com.riffle.core.domain.launcher.home.GridCell
 import com.riffle.core.domain.launcher.home.GridDimensions
 import com.riffle.core.domain.launcher.home.GridSpan
@@ -82,6 +83,15 @@ class LauncherActivityRouteTest {
                     app = installedApp,
                 ),
                 LauncherShellAction.RemoveAppFromFolder(
+                    folderId = LauncherItemId("folder"),
+                    itemId = LauncherItemId("shortcut"),
+                ),
+                LauncherShellAction.MoveAppInFolder(
+                    folderId = LauncherItemId("folder"),
+                    itemId = LauncherItemId("shortcut"),
+                    direction = FolderItemMoveDirection.DOWN,
+                ),
+                LauncherShellAction.MoveAppOutOfFolder(
                     folderId = LauncherItemId("folder"),
                     itemId = LauncherItemId("shortcut"),
                 ),

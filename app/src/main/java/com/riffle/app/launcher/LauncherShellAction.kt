@@ -8,6 +8,7 @@ import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.home.DockBackgroundSizing
 import com.riffle.core.domain.launcher.home.DockItemMoveDirection
+import com.riffle.core.domain.launcher.home.FolderItemMoveDirection
 import com.riffle.core.domain.launcher.home.GridCell
 import com.riffle.core.domain.launcher.home.GridDimensions
 import com.riffle.core.domain.launcher.home.GridSpan
@@ -184,6 +185,17 @@ sealed interface LauncherShellAction {
         val itemId: LauncherItemId,
     ) : LauncherShellAction
 
+    data class MoveAppInFolder(
+        val folderId: LauncherItemId,
+        val itemId: LauncherItemId,
+        val direction: FolderItemMoveDirection,
+    ) : LauncherShellAction
+
+    data class MoveAppOutOfFolder(
+        val folderId: LauncherItemId,
+        val itemId: LauncherItemId,
+    ) : LauncherShellAction
+
     data class RemoveDockShortcut(val itemId: LauncherItemId) : LauncherShellAction
 
     data class MoveDockShortcut(
@@ -215,6 +227,7 @@ sealed interface LauncherShellAction {
         val hostedWidgetId: HostedWidgetId,
         val label: String,
         val preferredSpan: GridSpan = GridSpan(),
+        val targetCell: GridCell? = null,
     ) : LauncherShellAction
 
     data class SearchQueryChanged(val query: String) : LauncherShellAction

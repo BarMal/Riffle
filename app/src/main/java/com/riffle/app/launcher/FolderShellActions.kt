@@ -7,6 +7,7 @@ import com.riffle.core.domain.launcher.home.FolderEditRejectionReason
 import com.riffle.core.domain.launcher.home.FolderEditResult
 import com.riffle.core.domain.launcher.home.FolderEngine
 import com.riffle.core.domain.launcher.home.FolderItem
+import com.riffle.core.domain.launcher.home.FolderMoveEngine
 import com.riffle.core.domain.launcher.home.GridPlacementEngine
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.LauncherItemId
@@ -49,6 +50,21 @@ fun FolderEngine.applyEdit(
 
         is LauncherShellAction.RemoveAppFromFolder ->
             removeShortcutFromFolderOnSelectedPage(
+                layout = layout,
+                folderId = action.folderId,
+                shortcutId = action.itemId,
+            )
+
+        is LauncherShellAction.MoveAppInFolder ->
+            FolderMoveEngine().moveShortcutInFolderOnSelectedPage(
+                layout = layout,
+                folderId = action.folderId,
+                shortcutId = action.itemId,
+                direction = action.direction,
+            )
+
+        is LauncherShellAction.MoveAppOutOfFolder ->
+            FolderMoveEngine().moveShortcutOutOfFolderToSelectedPage(
                 layout = layout,
                 folderId = action.folderId,
                 shortcutId = action.itemId,
