@@ -54,6 +54,12 @@ class LauncherShellViewModel(
     private val appCatalog = InstalledAppCatalog()
     private val appListActionReducer = LauncherAppListActionReducer(appCatalog)
     private val widgetPickerActionReducer = LauncherWidgetPickerActionReducer()
+    private val settingsStateReducer =
+        LauncherSettingsStateReducer(
+            homeLayoutRepository = homeLayoutRepository,
+            launcherSettingsRepository = launcherSettingsRepository,
+            appVisibilityRepository = appVisibilityRepository,
+        )
     private val appShortcutRepository =
         installedAppRepository as? AppShortcutRepository ?: NoopAppShortcutRepository
     private val installedAppRefreshDependencies =
@@ -346,92 +352,7 @@ class LauncherShellViewModel(
     }
 
     fun onLauncherSettingsActionSelected(action: LauncherShellAction) {
-        mutableState.value =
-            when (action) {
-                is LauncherShellAction.SelectWallpaperSource ->
-                    mutableState.value.withAppearanceSettingsAction(
-                        action = action,
-                        launcherSettingsRepository = launcherSettingsRepository,
-                    )
-
-                is LauncherShellAction.SelectFullscreenHomeEnabled ->
-                    mutableState.value.withAppearanceSettingsAction(
-                        action = action,
-                        launcherSettingsRepository = launcherSettingsRepository,
-                    )
-
-                is LauncherShellAction.SelectHomeSwipeGestureAction ->
-                    mutableState.value.withHomeSwipeGestureAction(
-                        direction = action.direction,
-                        action = action.action,
-                        launcherSettingsRepository = launcherSettingsRepository,
-                    )
-
-                is LauncherShellAction.SelectHomeGestureAction ->
-                    mutableState.value.withHomeGestureAction(
-                        gesture = action.gesture,
-                        action = action.action,
-                        launcherSettingsRepository = launcherSettingsRepository,
-                    )
-
-                LauncherShellAction.ResetHomeSwipeGestureActions ->
-                    mutableState.value.withDefaultHomeSwipes(
-                        repo = launcherSettingsRepository,
-                    )
-
-                is LauncherShellAction.SelectHapticFeedbackStrength ->
-                    mutableState.value.withLauncherSettings(
-                        settings =
-                            mutableState.value.launcherSettings.copy(
-                                haptics =
-                                    mutableState.value.launcherSettings.haptics.copy(
-                                        feedbackStrength = action.strength,
-                                    ),
-                            ),
-                        launcherSettingsRepository = launcherSettingsRepository,
-                    )
-
-                is LauncherShellAction.SelectReducedMotionEnabled ->
-                    mutableState.value.withMotionSettingsAction(
-                        action = action,
-                        launcherSettingsRepository = launcherSettingsRepository,
-                    )
-
-                is LauncherShellAction.SelectOverlayDockEnabled,
-                is LauncherShellAction.SelectOverlayDockEdge,
-                is LauncherShellAction.SelectOverlayDockHandleThickness,
-                is LauncherShellAction.SelectOverlayDockHandleHeight,
-                is LauncherShellAction.SelectOverlayDockVerticalOffset,
-                is LauncherShellAction.SelectOverlayDockHandleAlpha,
-                is LauncherShellAction.SelectOverlayDockExpandedIconSize,
-                is LauncherShellAction.SelectOverlayDockExpandedOrientation,
-                is LauncherShellAction.SelectOverlayDockShowLabels,
-                is LauncherShellAction.AddAppToFloatingDock,
-                is LauncherShellAction.AddAppShortcutToFloatingDock,
-                is LauncherShellAction.RemoveFloatingDockShortcut,
-                is LauncherShellAction.MoveFloatingDockShortcut,
-                ->
-                    mutableState.value.withOverlayDockSettingsAction(
-                        action = action,
-                        launcherSettingsRepository = launcherSettingsRepository,
-                    )
-
-                is LauncherShellAction.SelectSettingsLayoutDeviceClass ->
-                    mutableState.value.withSettingsLayoutDeviceClass(action.deviceClass)
-
-                is LauncherShellAction.ImportLauncherBackup ->
-                    mutableState.value
-                        .withImportedBackup(
-                            document = action.document,
-                            homeLayoutRepository = homeLayoutRepository,
-                            launcherSettingsRepository = launcherSettingsRepository,
-                            appVisibilityRepository = appVisibilityRepository,
-                        )
-                        .withoutUnavailableApps(homeLayoutRepository)
-                        .withHomeScreenLibraryApps(homeLayoutRepository)
-
-                else -> mutableState.value
-            }
+        mutableState.value = settingsStateReducer.reduce(mutableState.value, action)
     }
 
     private object NoopHomeLayoutRepository : HomeLayoutRepository {
