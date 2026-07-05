@@ -6,6 +6,10 @@ Closes #
 
 -
 
+## Architecture Decision Records
+
+- ADR: N/A
+
 ## Verification
 
 - [ ] `./gradlew verify`
