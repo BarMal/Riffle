@@ -1,5 +1,7 @@
 package com.riffle.app.launcher
 
+import com.riffle.core.domain.launcher.ShellDestination
+import com.riffle.core.domain.launcher.ShellNavigationAction
 import com.riffle.core.domain.launcher.apps.AppActivityName
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
@@ -154,6 +156,32 @@ class LauncherShellSearchViewModelTest {
 
         assertEquals(setOf(AppProfileType.WORK), viewModel.state.value.searchFilters.profiles)
         assertEquals(listOf("Sheets"), viewModel.state.value.searchResults.map { app -> app.label })
+    }
+
+    @Test
+    fun clearsSearchQueryWhenLeavingSearch() {
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                installedAppRepository =
+                    FakeInstalledAppRepository(
+                        apps =
+                            listOf(
+                                app(label = "Camera"),
+                                app(label = "Calendar"),
+                            ),
+                    ),
+            )
+
+        runBlocking { viewModel.refreshInstalledApps().join() }
+        viewModel.onNavigationActionSelected(ShellNavigationAction.OpenSearch)
+        viewModel.onAppActionSelected(LauncherShellAction.SearchQueryChanged("cam"))
+
+        viewModel.onNavigationActionSelected(ShellNavigationAction.OpenHome)
+
+        assertEquals(ShellDestination.HOME, viewModel.state.value.destination)
+        assertEquals("", viewModel.state.value.searchQuery)
+        assertEquals(listOf("Calendar", "Camera"), viewModel.state.value.searchResults.map { app -> app.label })
     }
 
     private class FakeFirstRunRepository : FirstRunRepository {
