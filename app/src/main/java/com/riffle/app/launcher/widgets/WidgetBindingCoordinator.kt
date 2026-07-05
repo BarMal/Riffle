@@ -26,13 +26,16 @@ class WidgetBindingCoordinator(
             )
 
         return when (widgetHostGateway.bindHostedWidget(hostedWidgetId, action.provider)) {
-            WidgetBindingResult.Bound ->
+            WidgetBindingResult.Bound -> {
+                pendingBind?.let { pending -> widgetHostGateway.deleteHostedWidgetId(pending.hostedWidgetId) }
+                pendingBind = null
                 WidgetAddRequestResult.Bound(
                     action.addHostedWidgetAction(
                         hostedWidgetId = hostedWidgetId,
                         preferredSpan = preferredSpan,
                     ),
                 )
+            }
 
             WidgetBindingResult.RequiresPermission -> {
                 pendingBind?.let { pending -> widgetHostGateway.deleteHostedWidgetId(pending.hostedWidgetId) }
