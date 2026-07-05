@@ -211,7 +211,7 @@ private fun SettingsGesturesPageContent(
 ) {
     SettingsSection(title = "Gestures") {
         HomeSwipeGestureSetting(
-            settings = state.settings.gestures.homeSwipe,
+            settings = state.settings.gestures.homeGestures,
             onAction = onAction,
         )
     }

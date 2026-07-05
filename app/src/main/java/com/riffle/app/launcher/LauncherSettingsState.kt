@@ -1,8 +1,9 @@
 package com.riffle.app.launcher
 
 import com.riffle.core.domain.launcher.LauncherShellState
+import com.riffle.core.domain.launcher.settings.HomeGesture
+import com.riffle.core.domain.launcher.settings.HomeGestureSettings
 import com.riffle.core.domain.launcher.settings.HomeSwipeGestureDirection
-import com.riffle.core.domain.launcher.settings.HomeSwipeGestureSettings
 import com.riffle.core.domain.launcher.settings.LauncherGestureAction
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettingsRepository
@@ -19,12 +20,23 @@ fun LauncherShellState.withHomeSwipeGestureAction(
     action: LauncherGestureAction,
     launcherSettingsRepository: LauncherSettingsRepository,
 ): LauncherShellState =
+    withHomeGestureAction(
+        gesture = direction.homeGesture,
+        action = action,
+        launcherSettingsRepository = launcherSettingsRepository,
+    )
+
+fun LauncherShellState.withHomeGestureAction(
+    gesture: HomeGesture,
+    action: LauncherGestureAction,
+    launcherSettingsRepository: LauncherSettingsRepository,
+): LauncherShellState =
     withLauncherSettings(
         settings =
             launcherSettings.copy(
                 gestures =
                     launcherSettings.gestures.copy(
-                        homeSwipe = launcherSettings.gestures.homeSwipe.withAction(direction, action),
+                        homeGestures = launcherSettings.gestures.homeGestures.withAction(gesture, action),
                     ),
             ),
         launcherSettingsRepository = launcherSettingsRepository,
@@ -36,7 +48,7 @@ fun LauncherShellState.withDefaultHomeSwipes(repo: LauncherSettingsRepository): 
             launcherSettings.copy(
                 gestures =
                     launcherSettings.gestures.copy(
-                        homeSwipe = defaultHomeSwipeGestureSettings,
+                        homeGestures = defaultHomeGestureSettings,
                     ),
             ),
         launcherSettingsRepository = repo,
@@ -55,15 +67,13 @@ internal fun LauncherShellState.withOverlayDockSettingsAction(
         launcherSettingsRepository = launcherSettingsRepository,
     )
 
-private val defaultHomeSwipeGestureSettings = HomeSwipeGestureSettings()
+private val defaultHomeGestureSettings = HomeGestureSettings()
 
-private fun HomeSwipeGestureSettings.withAction(
-    direction: HomeSwipeGestureDirection,
-    action: LauncherGestureAction,
-): HomeSwipeGestureSettings =
-    when (direction) {
-        HomeSwipeGestureDirection.UP -> copy(up = action)
-        HomeSwipeGestureDirection.DOWN -> copy(down = action)
-        HomeSwipeGestureDirection.LEFT -> copy(left = action)
-        HomeSwipeGestureDirection.RIGHT -> copy(right = action)
-    }
+private val HomeSwipeGestureDirection.homeGesture: HomeGesture
+    get() =
+        when (this) {
+            HomeSwipeGestureDirection.UP -> HomeGesture.ONE_FINGER_UP
+            HomeSwipeGestureDirection.DOWN -> HomeGesture.ONE_FINGER_DOWN
+            HomeSwipeGestureDirection.LEFT -> HomeGesture.ONE_FINGER_LEFT
+            HomeSwipeGestureDirection.RIGHT -> HomeGesture.ONE_FINGER_RIGHT
+        }

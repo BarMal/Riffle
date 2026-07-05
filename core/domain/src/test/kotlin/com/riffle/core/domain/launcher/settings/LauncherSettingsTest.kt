@@ -21,6 +21,18 @@ class LauncherSettingsTest {
         assertEquals(LauncherGestureAction.OPEN_NOTIFICATIONS, settings.gestures.homeSwipe.down)
         assertEquals(LauncherGestureAction.SELECT_NEXT_HOME_PAGE, settings.gestures.homeSwipe.left)
         assertEquals(LauncherGestureAction.SELECT_PREVIOUS_HOME_PAGE, settings.gestures.homeSwipe.right)
+        assertEquals(
+            LauncherGestureAction.OPEN_SEARCH,
+            settings.gestures.homeGestures.actionFor(HomeGesture.TWO_FINGER_UP),
+        )
+        assertEquals(
+            LauncherGestureAction.OPEN_SETTINGS,
+            settings.gestures.homeGestures.actionFor(HomeGesture.TWO_FINGER_DOWN),
+        )
+        assertEquals(
+            LauncherGestureAction.ENTER_HOME_EDIT_MODE,
+            settings.gestures.homeGestures.actionFor(HomeGesture.PINCH_IN),
+        )
     }
 
     @Test

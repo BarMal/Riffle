@@ -64,6 +64,7 @@ internal fun LauncherShellAction.launcherSettingsActionRoute(): LauncherSettings
     when (this) {
         is LauncherShellAction.SelectWallpaperSource,
         is LauncherShellAction.SelectHomeSwipeGestureAction,
+        is LauncherShellAction.SelectHomeGestureAction,
         LauncherShellAction.ResetHomeSwipeGestureActions,
         is LauncherShellAction.SelectHapticFeedbackStrength,
         is LauncherShellAction.SelectOverlayDockEnabled,

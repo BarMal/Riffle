@@ -1,6 +1,7 @@
 package com.riffle.app.launcher
 
-import com.riffle.core.domain.launcher.settings.HomeSwipeGestureSettings
+import com.riffle.core.domain.launcher.settings.HomeGesture
+import com.riffle.core.domain.launcher.settings.HomeGestureSettings
 import com.riffle.core.domain.launcher.settings.LauncherGestureAction
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -12,28 +13,68 @@ class HomeSwipeGestureInterpreterTest {
 
     @Test
     fun interpretsSwipeUpPastThreshold() {
-        assertEquals(HomeSwipeGesture.UP, interpreter.gestureFor(horizontalDragPx = 0f, verticalDragPx = -80f))
+        assertEquals(HomeGesture.ONE_FINGER_UP, interpreter.gestureFor(horizontalDragPx = 0f, verticalDragPx = -80f))
     }
 
     @Test
     fun interpretsSwipeDownPastThreshold() {
-        assertEquals(HomeSwipeGesture.DOWN, interpreter.gestureFor(horizontalDragPx = 0f, verticalDragPx = 80f))
+        assertEquals(HomeGesture.ONE_FINGER_DOWN, interpreter.gestureFor(horizontalDragPx = 0f, verticalDragPx = 80f))
     }
 
     @Test
     fun interpretsSwipeLeftPastThreshold() {
-        assertEquals(HomeSwipeGesture.LEFT, interpreter.gestureFor(horizontalDragPx = -80f, verticalDragPx = 0f))
+        assertEquals(HomeGesture.ONE_FINGER_LEFT, interpreter.gestureFor(horizontalDragPx = -80f, verticalDragPx = 0f))
     }
 
     @Test
     fun interpretsSwipeRightPastThreshold() {
-        assertEquals(HomeSwipeGesture.RIGHT, interpreter.gestureFor(horizontalDragPx = 80f, verticalDragPx = 0f))
+        assertEquals(HomeGesture.ONE_FINGER_RIGHT, interpreter.gestureFor(horizontalDragPx = 80f, verticalDragPx = 0f))
+    }
+
+    @Test
+    fun interpretsTwoFingerSwipes() {
+        assertEquals(
+            HomeGesture.TWO_FINGER_UP,
+            interpreter.gestureFor(pointerCount = 2, horizontalDragPx = 0f, verticalDragPx = -100f),
+        )
+        assertEquals(
+            HomeGesture.TWO_FINGER_RIGHT,
+            interpreter.gestureFor(pointerCount = 2, horizontalDragPx = 100f, verticalDragPx = 0f),
+        )
+    }
+
+    @Test
+    fun interpretsPinchesBeforeTwoFingerSwipes() {
+        assertEquals(
+            HomeGesture.PINCH_IN,
+            interpreter.gestureFor(
+                pointerCount = 2,
+                horizontalDragPx = 120f,
+                verticalDragPx = 0f,
+                scaleDelta = -0.2f,
+            ),
+        )
+        assertEquals(
+            HomeGesture.PINCH_OUT,
+            interpreter.gestureFor(
+                pointerCount = 2,
+                horizontalDragPx = 0f,
+                verticalDragPx = -120f,
+                scaleDelta = 0.2f,
+            ),
+        )
     }
 
     @Test
     fun usesDominantDragAxis() {
-        assertEquals(HomeSwipeGesture.LEFT, interpreter.gestureFor(horizontalDragPx = -120f, verticalDragPx = 90f))
-        assertEquals(HomeSwipeGesture.DOWN, interpreter.gestureFor(horizontalDragPx = -90f, verticalDragPx = 120f))
+        assertEquals(
+            HomeGesture.ONE_FINGER_LEFT,
+            interpreter.gestureFor(horizontalDragPx = -120f, verticalDragPx = 90f),
+        )
+        assertEquals(
+            HomeGesture.ONE_FINGER_DOWN,
+            interpreter.gestureFor(horizontalDragPx = -90f, verticalDragPx = 120f),
+        )
     }
 
     @Test
@@ -46,38 +87,50 @@ class HomeSwipeGestureInterpreterTest {
 
     @Test
     fun mapsSwipeGesturesToDefaultHomeActions() {
-        assertEquals(LauncherShellAction.OpenAppDrawer, actionMapper.actionFor(HomeSwipeGesture.UP))
-        assertEquals(LauncherShellAction.OpenNotifications, actionMapper.actionFor(HomeSwipeGesture.DOWN))
-        assertEquals(LauncherShellAction.SelectNextHomePage, actionMapper.actionFor(HomeSwipeGesture.LEFT))
-        assertEquals(LauncherShellAction.SelectPreviousHomePage, actionMapper.actionFor(HomeSwipeGesture.RIGHT))
+        assertEquals(LauncherShellAction.OpenAppDrawer, actionMapper.actionFor(HomeGesture.ONE_FINGER_UP))
+        assertEquals(LauncherShellAction.OpenNotifications, actionMapper.actionFor(HomeGesture.ONE_FINGER_DOWN))
+        assertEquals(LauncherShellAction.SelectNextHomePage, actionMapper.actionFor(HomeGesture.ONE_FINGER_LEFT))
+        assertEquals(LauncherShellAction.SelectPreviousHomePage, actionMapper.actionFor(HomeGesture.ONE_FINGER_RIGHT))
+        assertEquals(LauncherShellAction.OpenSearch, actionMapper.actionFor(HomeGesture.TWO_FINGER_UP))
+        assertEquals(LauncherShellAction.OpenSettings, actionMapper.actionFor(HomeGesture.TWO_FINGER_DOWN))
+        assertEquals(LauncherShellAction.EnterHomeEditMode, actionMapper.actionFor(HomeGesture.PINCH_IN))
     }
 
     @Test
     fun mapsSwipeGesturesToConfiguredActions() {
         val settings =
-            HomeSwipeGestureSettings(
-                up = LauncherGestureAction.OPEN_SEARCH,
-                down = LauncherGestureAction.OPEN_SETTINGS,
-                left = LauncherGestureAction.ENTER_HOME_EDIT_MODE,
-                right = LauncherGestureAction.OPEN_APP_DRAWER,
+            HomeGestureSettings(
+                actions =
+                    mapOf(
+                        HomeGesture.ONE_FINGER_UP to LauncherGestureAction.OPEN_SEARCH,
+                        HomeGesture.ONE_FINGER_DOWN to LauncherGestureAction.OPEN_SETTINGS,
+                        HomeGesture.ONE_FINGER_LEFT to LauncherGestureAction.ENTER_HOME_EDIT_MODE,
+                        HomeGesture.ONE_FINGER_RIGHT to LauncherGestureAction.OPEN_APP_DRAWER,
+                        HomeGesture.PINCH_OUT to LauncherGestureAction.OPEN_NOTIFICATIONS,
+                    ),
             )
 
-        assertEquals(LauncherShellAction.OpenSearch, actionMapper.actionFor(HomeSwipeGesture.UP, settings))
-        assertEquals(LauncherShellAction.OpenSettings, actionMapper.actionFor(HomeSwipeGesture.DOWN, settings))
-        assertEquals(LauncherShellAction.EnterHomeEditMode, actionMapper.actionFor(HomeSwipeGesture.LEFT, settings))
-        assertEquals(LauncherShellAction.OpenAppDrawer, actionMapper.actionFor(HomeSwipeGesture.RIGHT, settings))
+        assertEquals(LauncherShellAction.OpenSearch, actionMapper.actionFor(HomeGesture.ONE_FINGER_UP, settings))
+        assertEquals(LauncherShellAction.OpenSettings, actionMapper.actionFor(HomeGesture.ONE_FINGER_DOWN, settings))
+        assertEquals(
+            LauncherShellAction.EnterHomeEditMode,
+            actionMapper.actionFor(HomeGesture.ONE_FINGER_LEFT, settings),
+        )
+        assertEquals(LauncherShellAction.OpenAppDrawer, actionMapper.actionFor(HomeGesture.ONE_FINGER_RIGHT, settings))
+        assertEquals(LauncherShellAction.OpenNotifications, actionMapper.actionFor(HomeGesture.PINCH_OUT, settings))
     }
 
     @Test
     fun mapsDisabledGestureToNoAction() {
-        val settings = HomeSwipeGestureSettings(up = LauncherGestureAction.NONE)
+        val settings = HomeGestureSettings(actions = mapOf(HomeGesture.ONE_FINGER_UP to LauncherGestureAction.NONE))
 
-        assertNull(actionMapper.actionFor(HomeSwipeGesture.UP, settings))
+        assertNull(actionMapper.actionFor(HomeGesture.ONE_FINGER_UP, settings))
     }
 
     @Test
     fun mapsConfiguredSwipeUpDragToAppDrawerAction() {
-        val settings = HomeSwipeGestureSettings(up = LauncherGestureAction.OPEN_APP_DRAWER)
+        val settings =
+            HomeGestureSettings(actions = mapOf(HomeGesture.ONE_FINGER_UP to LauncherGestureAction.OPEN_APP_DRAWER))
 
         assertEquals(
             LauncherShellAction.OpenAppDrawer,
@@ -93,13 +146,31 @@ class HomeSwipeGestureInterpreterTest {
 
     @Test
     fun dominantHorizontalDragIsNotAVerticalHomeSwipe() {
-        val settings = HomeSwipeGestureSettings(up = LauncherGestureAction.OPEN_APP_DRAWER)
+        val settings = HomeGestureSettings()
 
         assertEquals(
             LauncherShellAction.SelectNextHomePage,
             homeSwipeActionForDrag(
                 horizontalDragPx = -120f,
                 verticalDragPx = -90f,
+                settings = settings,
+                interpreter = interpreter,
+                actionMapper = actionMapper,
+            ),
+        )
+    }
+
+    @Test
+    fun mapsPinchDragToConfiguredAction() {
+        val settings = HomeGestureSettings(actions = mapOf(HomeGesture.PINCH_OUT to LauncherGestureAction.OPEN_SEARCH))
+
+        assertEquals(
+            LauncherShellAction.OpenSearch,
+            homeSwipeActionForDrag(
+                pointerCount = 2,
+                horizontalDragPx = 0f,
+                verticalDragPx = 0f,
+                scaleDelta = 0.22f,
                 settings = settings,
                 interpreter = interpreter,
                 actionMapper = actionMapper,
