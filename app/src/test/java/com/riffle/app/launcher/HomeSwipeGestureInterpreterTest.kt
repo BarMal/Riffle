@@ -78,6 +78,12 @@ class HomeSwipeGestureInterpreterTest {
     }
 
     @Test
+    fun ignoresAmbiguousDiagonalDrags() {
+        assertNull(interpreter.gestureFor(horizontalDragPx = 100f, verticalDragPx = 95f))
+        assertNull(interpreter.gestureFor(horizontalDragPx = -95f, verticalDragPx = -100f))
+    }
+
+    @Test
     fun ignoresDragBelowThreshold() {
         assertNull(interpreter.gestureFor(horizontalDragPx = 0f, verticalDragPx = 79f))
         assertNull(interpreter.gestureFor(horizontalDragPx = 0f, verticalDragPx = -79f))

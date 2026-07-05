@@ -20,6 +20,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
@@ -28,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.riffle.app.launcher.widgets.EmptyHomeWidgetViewFactory
 import com.riffle.app.launcher.widgets.HomeWidgetViewFactory
+import com.riffle.core.domain.launcher.home.GridDimensions
 import com.riffle.core.domain.launcher.home.GridSpan
 import com.riffle.core.domain.launcher.home.WidgetItem
 
@@ -82,6 +84,7 @@ internal fun HomeWidgetPlaceholder(
         if (isEditing) {
             WidgetEditHandles(
                 widget = widget,
+                grid = dragState?.grid,
                 onAction = onAction,
             )
         }
@@ -133,8 +136,21 @@ private fun BoxScope.WidgetGestureLayer(
 @Composable
 private fun BoxScope.WidgetEditHandles(
     widget: WidgetItem,
+    grid: GridDimensions?,
     onAction: (LauncherShellAction) -> Unit,
 ) {
+    val currentPlacement = widget.placement
+    val canGrowColumns =
+        currentPlacement != null &&
+            grid != null &&
+            currentPlacement.cell.column + currentPlacement.span.columns < grid.columns
+    val canGrowRows =
+        currentPlacement != null &&
+            grid != null &&
+            currentPlacement.cell.row + currentPlacement.span.rows < grid.rows
+    val canShrinkColumns = (currentPlacement?.span?.columns ?: 1) > 1
+    val canShrinkRows = (currentPlacement?.span?.rows ?: 1) > 1
+
     RemoveShortcutButton(
         label = widget.label,
         onClick = { onAction(LauncherShellAction.RemoveHomeShortcut(widget.id)) },
@@ -143,24 +159,28 @@ private fun BoxScope.WidgetEditHandles(
         modifier = Modifier.align(Alignment.CenterEnd),
         label = "+",
         contentDescription = "Make ${widget.label} wider",
+        enabled = canGrowColumns,
         onClick = { onAction(widget.resizeAction(columnsDelta = 1, rowsDelta = 0)) },
     )
     WidgetResizeHandle(
         modifier = Modifier.align(Alignment.CenterStart),
         label = "-",
         contentDescription = "Make ${widget.label} narrower",
+        enabled = canShrinkColumns,
         onClick = { onAction(widget.resizeAction(columnsDelta = -1, rowsDelta = 0)) },
     )
     WidgetResizeHandle(
         modifier = Modifier.align(Alignment.BottomCenter),
         label = "+",
         contentDescription = "Make ${widget.label} taller",
+        enabled = canGrowRows,
         onClick = { onAction(widget.resizeAction(columnsDelta = 0, rowsDelta = 1)) },
     )
     WidgetResizeHandle(
         modifier = Modifier.align(Alignment.TopCenter),
         label = "-",
         contentDescription = "Make ${widget.label} shorter",
+        enabled = canShrinkRows,
         onClick = { onAction(widget.resizeAction(columnsDelta = 0, rowsDelta = -1)) },
     )
 }
@@ -170,15 +190,17 @@ private fun WidgetResizeHandle(
     modifier: Modifier,
     label: String,
     contentDescription: String,
+    enabled: Boolean,
     onClick: () -> Unit,
 ) {
     Box(
         modifier =
             modifier
                 .size(WIDGET_RESIZE_HANDLE_SIZE_DP.dp)
+                .alpha(if (enabled) 1f else WIDGET_RESIZE_HANDLE_DISABLED_ALPHA)
                 .clip(CircleShape)
                 .background(MaterialTheme.colorScheme.primaryContainer)
-                .clickable(onClick = onClick)
+                .clickable(enabled = enabled, onClick = onClick)
                 .semantics { this.contentDescription = contentDescription },
         contentAlignment = Alignment.Center,
     ) {
@@ -229,3 +251,4 @@ private fun WidgetItem.resizeAction(
 }
 
 private const val WIDGET_RESIZE_HANDLE_SIZE_DP = 28
+private const val WIDGET_RESIZE_HANDLE_DISABLED_ALPHA = 0.38f

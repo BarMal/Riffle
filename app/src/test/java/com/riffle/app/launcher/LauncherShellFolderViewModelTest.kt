@@ -8,6 +8,7 @@ import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.apps.InstalledAppRepository
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.FolderItem
+import com.riffle.core.domain.launcher.home.FolderItemMoveDirection
 import com.riffle.core.domain.launcher.home.GridCell
 import com.riffle.core.domain.launcher.home.GridDimensions
 import com.riffle.core.domain.launcher.home.GridPlacement
@@ -263,6 +264,63 @@ class LauncherShellFolderViewModelTest {
 
         val updatedFolder = viewModel.state.value.homeLayout.selectedPage.items.single() as FolderItem
         assertEquals(listOf(calendar.identity), updatedFolder.items.map { item -> item.appIdentity })
+        assertEquals(viewModel.state.value.homeLayout, repository.savedLayout)
+    }
+
+    @Test
+    fun movesAppWithinHomeFolderAndSavesLayout() {
+        val camera = app(label = "Camera")
+        val calendar = app(label = "Calendar")
+        val repository = FakeHomeLayoutRepository()
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                installedAppRepository = FakeInstalledAppRepository(apps = listOf(camera, calendar)),
+                homeLayoutRepository = repository,
+            )
+        val folder = viewModel.createFolder(camera, calendar)
+        val calendarShortcut = folder.items.first { item -> item.appIdentity == calendar.identity }
+
+        viewModel.onHomeShortcutEdited(
+            LauncherShellAction.MoveAppInFolder(
+                folderId = folder.id,
+                itemId = calendarShortcut.id,
+                direction = FolderItemMoveDirection.UP,
+            ),
+        )
+
+        val updatedFolder = viewModel.state.value.homeLayout.selectedPage.items.single() as FolderItem
+        assertEquals(listOf(calendar.identity, camera.identity), updatedFolder.items.map { item -> item.appIdentity })
+        assertEquals(viewModel.state.value.homeLayout, repository.savedLayout)
+    }
+
+    @Test
+    fun movesAppOutOfHomeFolderAndSavesLayout() {
+        val camera = app(label = "Camera")
+        val calendar = app(label = "Calendar")
+        val repository = FakeHomeLayoutRepository()
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                installedAppRepository = FakeInstalledAppRepository(apps = listOf(camera, calendar)),
+                homeLayoutRepository = repository,
+            )
+        val folder = viewModel.createFolder(camera, calendar)
+        val calendarShortcut = folder.items.first { item -> item.appIdentity == calendar.identity }
+
+        viewModel.onHomeShortcutEdited(
+            LauncherShellAction.MoveAppOutOfFolder(
+                folderId = folder.id,
+                itemId = calendarShortcut.id,
+            ),
+        )
+
+        val items = viewModel.state.value.homeLayout.selectedPage.items
+        val updatedFolder = items.filterIsInstance<FolderItem>().single()
+        val movedShortcut = items.filterIsInstance<AppShortcutItem>().single()
+        assertEquals(listOf(camera.identity), updatedFolder.items.map { item -> item.appIdentity })
+        assertEquals(calendar.identity, movedShortcut.appIdentity)
+        assertEquals(GridPlacement(cell = GridCell(column = 1, row = 0)), movedShortcut.placement)
         assertEquals(viewModel.state.value.homeLayout, repository.savedLayout)
     }
 

@@ -36,6 +36,7 @@ import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.FolderItem
+import com.riffle.core.domain.launcher.home.FolderItemMoveDirection
 import com.riffle.core.domain.launcher.home.HomeLabelSettings
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.LauncherItem
@@ -430,11 +431,41 @@ private const val DEFAULT_FOLDER_LABEL = "Folder"
 internal fun folderShortcutContextMenuItems(
     folder: FolderItem,
     shortcut: AppShortcutItem,
-): List<ShortcutContextMenuItem> =
-    listOf(
+): List<ShortcutContextMenuItem> {
+    val shortcutIndex = folder.items.indexOfFirst { item -> item.id == shortcut.id }
+
+    return listOf(
         ShortcutContextMenuItem(
             label = "App info",
             action = shortcut.openAppInfoAction(),
+        ),
+        ShortcutContextMenuItem(
+            label = "Move up",
+            action =
+                LauncherShellAction.MoveAppInFolder(
+                    folderId = folder.id,
+                    itemId = shortcut.id,
+                    direction = FolderItemMoveDirection.UP,
+                ),
+            enabled = shortcutIndex > 0,
+        ),
+        ShortcutContextMenuItem(
+            label = "Move down",
+            action =
+                LauncherShellAction.MoveAppInFolder(
+                    folderId = folder.id,
+                    itemId = shortcut.id,
+                    direction = FolderItemMoveDirection.DOWN,
+                ),
+            enabled = shortcutIndex in 0 until folder.items.lastIndex,
+        ),
+        ShortcutContextMenuItem(
+            label = "Move to home",
+            action =
+                LauncherShellAction.MoveAppOutOfFolder(
+                    folderId = folder.id,
+                    itemId = shortcut.id,
+                ),
         ),
         ShortcutContextMenuItem(
             label = "Remove from folder",
@@ -445,3 +476,4 @@ internal fun folderShortcutContextMenuItems(
                 ),
         ),
     )
+}

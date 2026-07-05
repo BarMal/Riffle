@@ -9,6 +9,7 @@ import kotlin.test.assertIs
 
 class FolderEngineTest {
     private val engine = FolderEngine()
+    private val moveEngine = FolderMoveEngine()
 
     @Test
     fun createsFolderFromSelectedPageShortcuts() {
@@ -250,6 +251,94 @@ class FolderEngineTest {
         val updated = assertIs<FolderEditResult.Updated>(result)
         val updatedFolder = assertIs<FolderItem>(updated.layout.selectedPage.items.single())
         assertEquals(listOf(calendar.appIdentity), updatedFolder.items.map { item -> item.appIdentity })
+    }
+
+    @Test
+    fun movesShortcutUpWithinFolder() {
+        val camera =
+            appShortcut(id = "camera", placement = GridPlacement(cell = GridCell(column = 0, row = 0)))
+                .copy(placement = null)
+        val calendar =
+            appShortcut(id = "calendar", placement = GridPlacement(cell = GridCell(column = 1, row = 0)))
+                .copy(placement = null)
+        val folder =
+            FolderItem(
+                id = LauncherItemId("folder:tools"),
+                label = "Tools",
+                items = listOf(camera, calendar),
+                placement = GridPlacement(cell = GridCell(column = 0, row = 0)),
+            )
+
+        val result =
+            moveEngine.moveShortcutInFolderOnSelectedPage(
+                layout = layoutWith(folder),
+                folderId = folder.id,
+                shortcutId = calendar.id,
+                direction = FolderItemMoveDirection.UP,
+            )
+
+        val updated = assertIs<FolderEditResult.Updated>(result)
+        val updatedFolder = assertIs<FolderItem>(updated.layout.selectedPage.items.single())
+        assertEquals(
+            listOf(calendar.appIdentity, camera.appIdentity),
+            updatedFolder.items.map { item -> item.appIdentity },
+        )
+    }
+
+    @Test
+    fun rejectsMovingFolderShortcutPastBounds() {
+        val camera =
+            appShortcut(id = "camera", placement = GridPlacement(cell = GridCell(column = 0, row = 0)))
+                .copy(placement = null)
+        val folder =
+            FolderItem(
+                id = LauncherItemId("folder:tools"),
+                label = "Tools",
+                items = listOf(camera),
+                placement = GridPlacement(cell = GridCell(column = 0, row = 0)),
+            )
+
+        val result =
+            moveEngine.moveShortcutInFolderOnSelectedPage(
+                layout = layoutWith(folder),
+                folderId = folder.id,
+                shortcutId = camera.id,
+                direction = FolderItemMoveDirection.UP,
+            )
+
+        val rejected = assertIs<FolderEditResult.Rejected>(result)
+        assertEquals(FolderEditRejectionReason.OUT_OF_BOUNDS, rejected.reason)
+    }
+
+    @Test
+    fun movesShortcutOutOfFolderToFirstAvailableHomeCell() {
+        val camera =
+            appShortcut(id = "camera", placement = GridPlacement(cell = GridCell(column = 0, row = 0)))
+                .copy(placement = null)
+        val calendar =
+            appShortcut(id = "calendar", placement = GridPlacement(cell = GridCell(column = 1, row = 0)))
+                .copy(placement = null)
+        val folder =
+            FolderItem(
+                id = LauncherItemId("folder:tools"),
+                label = "Tools",
+                items = listOf(camera, calendar),
+                placement = GridPlacement(cell = GridCell(column = 0, row = 0)),
+            )
+
+        val result =
+            moveEngine.moveShortcutOutOfFolderToSelectedPage(
+                layout = layoutWith(folder),
+                folderId = folder.id,
+                shortcutId = calendar.id,
+            )
+
+        val updated = assertIs<FolderEditResult.Updated>(result)
+        val updatedFolder = assertIs<FolderItem>(updated.layout.selectedPage.items.first())
+        val movedShortcut = assertIs<AppShortcutItem>(updated.layout.selectedPage.items.last())
+        assertEquals(listOf(camera.appIdentity), updatedFolder.items.map { item -> item.appIdentity })
+        assertEquals(calendar.appIdentity, movedShortcut.appIdentity)
+        assertEquals(GridPlacement(cell = GridCell(column = 1, row = 0)), movedShortcut.placement)
     }
 
     private fun layoutWith(vararg items: LauncherItem): HomeLayout =

@@ -220,6 +220,8 @@ class LauncherShellViewModel(
                 is LauncherShellAction.RenameHomeFolder,
                 is LauncherShellAction.AddAppToFolder,
                 is LauncherShellAction.RemoveAppFromFolder,
+                is LauncherShellAction.MoveAppInFolder,
+                is LauncherShellAction.MoveAppOutOfFolder,
                 ->
                     when (
                         val result =
@@ -242,6 +244,7 @@ class LauncherShellViewModel(
                                 hostedWidgetId = action.hostedWidgetId,
                                 label = action.label,
                                 preferredSpan = action.preferredSpan,
+                                targetCell = action.targetCell,
                             )
                     ) {
                         is WidgetEditResult.Updated ->

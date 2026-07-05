@@ -8,6 +8,7 @@ class WidgetEngine(
         hostedWidgetId: HostedWidgetId,
         label: String,
         preferredSpan: GridSpan = GridSpan(),
+        targetCell: GridCell? = null,
     ): WidgetEditResult =
         WidgetItem(
             id = LauncherItemId("widget:${hostedWidgetId.value}"),
@@ -18,11 +19,18 @@ class WidgetEngine(
                 .placementCandidates()
                 .map { span ->
                     span to
-                        gridPlacementEngine.placeItemInFirstAvailableCell(
-                            page = layout.selectedPage,
-                            item = widget,
-                            span = span,
-                        )
+                        if (targetCell == null) {
+                            gridPlacementEngine.placeItemInFirstAvailableCell(
+                                page = layout.selectedPage,
+                                item = widget,
+                                span = span,
+                            )
+                        } else {
+                            gridPlacementEngine.placeItem(
+                                page = layout.selectedPage,
+                                item = widget.withPlacement(GridPlacement(cell = targetCell, span = span)),
+                            )
+                        }
                 }
                 .firstOrNull { (_, result) -> result is PlaceLauncherItemResult.Placed }
                 ?.let { (span, result) ->
