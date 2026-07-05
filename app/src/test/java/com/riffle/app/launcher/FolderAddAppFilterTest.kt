@@ -148,6 +148,37 @@ class FolderAddAppFilterTest {
     }
 
     @Test
+    fun resultSummaryDescribesFolderAddCandidateCounts() {
+        assertEquals(
+            "2 apps left to add",
+            folderAddResultSummaryText(
+                totalCandidateCount = 2,
+                resultCount = 2,
+                query = "",
+                profileFilter = AppDrawerProfileFilter.ALL,
+            ),
+        )
+        assertEquals(
+            "1 app matching, 3 apps left to add",
+            folderAddResultSummaryText(
+                totalCandidateCount = 3,
+                resultCount = 1,
+                query = "camera",
+                profileFilter = AppDrawerProfileFilter.ALL,
+            ),
+        )
+        assertEquals(
+            "0 apps matching, 3 apps left to add",
+            folderAddResultSummaryText(
+                totalCandidateCount = 3,
+                resultCount = 0,
+                query = "",
+                profileFilter = AppDrawerProfileFilter.WORK,
+            ),
+        )
+    }
+
+    @Test
     fun candidateKeysIncludeProfileId() {
         val personalCamera = app(label = "Camera", profile = AppProfile.personal())
         val workCamera = app(label = "Camera", profile = AppProfile.work())

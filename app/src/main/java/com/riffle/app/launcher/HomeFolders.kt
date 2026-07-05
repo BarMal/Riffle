@@ -153,20 +153,14 @@ fun FolderDialog(
                     singleLine = true,
                     label = { Text(text = "Name") },
                 )
-                AppSearchField(
+                FolderAddControls(
                     query = addAppQuery.value,
                     onQueryChanged = { value -> addAppQuery.value = value },
-                    label = "Add app",
-                )
-                AppProfileFilterChips(
-                    selectedFilter = addAppProfileFilter.value,
-                    onFilterSelected = { filter -> addAppProfileFilter.value = filter },
-                    apps = addableApps,
-                )
-                FolderAddClearFiltersButton(
-                    query = addAppQuery.value,
-                    profileFilter = addAppProfileFilter.value,
-                    onClick = {
+                    selectedProfileFilter = addAppProfileFilter.value,
+                    onProfileFilterSelected = { filter -> addAppProfileFilter.value = filter },
+                    addableApps = addableApps,
+                    resultCount = visibleAddableApps.size,
+                    onClearFilters = {
                         addAppQuery.value = ""
                         addAppProfileFilter.value = AppDrawerProfileFilter.ALL
                     },
@@ -200,19 +194,6 @@ fun FolderDialog(
             }
         },
     )
-}
-
-@Composable
-private fun FolderAddClearFiltersButton(
-    query: String,
-    profileFilter: AppDrawerProfileFilter,
-    onClick: () -> Unit,
-) {
-    if (!shouldShowFolderAddClearFilters(query = query, profileFilter = profileFilter)) return
-
-    TextButton(onClick = onClick) {
-        Text(text = "Clear filters")
-    }
 }
 
 @Composable
@@ -369,7 +350,10 @@ private fun FolderAddAppRow(
     onClick: () -> Unit,
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onClick),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {

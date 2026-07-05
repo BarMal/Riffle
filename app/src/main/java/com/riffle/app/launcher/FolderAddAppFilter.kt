@@ -31,6 +31,19 @@ fun List<InstalledApp>.folderAddEmptyText(
         else -> "No apps left to add"
     }
 
+fun folderAddResultSummaryText(
+    totalCandidateCount: Int,
+    resultCount: Int,
+    query: String,
+    profileFilter: AppDrawerProfileFilter,
+): String =
+    when {
+        query.isNotBlank() || profileFilter != AppDrawerProfileFilter.ALL ->
+            "${resultCount.appCountLabel()} matching, ${totalCandidateCount.appCountLabel()} left to add"
+
+        else -> "${totalCandidateCount.appCountLabel()} left to add"
+    }
+
 fun shouldShowFolderAddClearFilters(
     query: String,
     profileFilter: AppDrawerProfileFilter,
