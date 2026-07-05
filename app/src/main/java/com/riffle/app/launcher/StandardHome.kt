@@ -86,7 +86,7 @@ internal fun StandardHome(
         actions = actions,
     )
     if (presentation.widgetPicker.isOpen) {
-        WidgetPickerDialog(
+        WidgetPickerSurface(
             providers = presentation.widgetPicker.providers,
             previewImageLoader = widgetPreviewImageLoader,
             onAction = onAction,
