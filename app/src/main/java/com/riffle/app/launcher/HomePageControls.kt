@@ -34,7 +34,6 @@ import androidx.compose.ui.unit.dp
 import com.riffle.app.launcher.widgets.HomeWidgetViewFactory
 import com.riffle.core.domain.launcher.home.GeneratedLauncherPageKind
 import com.riffle.core.domain.launcher.home.HomeLayout
-import com.riffle.core.domain.launcher.home.LauncherPage
 import com.riffle.core.domain.launcher.home.LauncherPageType
 
 @Composable
@@ -99,25 +98,12 @@ fun PageOverviewControls(
         verticalArrangement = Arrangement.spacedBy(12.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Row(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            layout.pages.forEachIndexed { index, page ->
-                PageOverviewCard(
-                    index = index,
-                    page = page,
-                    isSelected = page.id == layout.selectedPageId,
-                    appIconLoader = appIconLoader,
-                    widgetViewFactory = widgetViewFactory,
-                    onClick = { onAction(LauncherShellAction.SelectHomePage(page.id)) },
-                )
-            }
-        }
+        PageOverviewStrip(
+            layout = layout,
+            appIconLoader = appIconLoader,
+            widgetViewFactory = widgetViewFactory,
+            onAction = onAction,
+        )
         PageTypeControls(
             selectedType = selectedPage.type,
             onAction = onAction,
@@ -161,36 +147,71 @@ fun PageOverviewControls(
 }
 
 @Composable
+private fun PageOverviewStrip(
+    layout: HomeLayout,
+    appIconLoader: AppIconLoader,
+    widgetViewFactory: HomeWidgetViewFactory,
+    onAction: (LauncherShellAction) -> Unit,
+) {
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(PAGE_OVERVIEW_CARD_SPACING_DP.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        layout.pages.forEachIndexed { index, page ->
+            PageOverviewCard(
+                state =
+                    PageOverviewCardState(
+                        index = index,
+                        pageCount = layout.pages.size,
+                        page = page,
+                        isSelected = page.id == layout.selectedPageId,
+                    ),
+                appIconLoader = appIconLoader,
+                widgetViewFactory = widgetViewFactory,
+                onClick = { onAction(LauncherShellAction.SelectHomePage(page.id)) },
+                onMoveToIndex = { targetIndex ->
+                    onAction(LauncherShellAction.MoveHomePage(pageId = page.id, targetIndex = targetIndex))
+                },
+            )
+        }
+    }
+}
+
+@Composable
 private fun PageOverviewCard(
-    index: Int,
-    page: LauncherPage,
-    isSelected: Boolean,
+    state: PageOverviewCardState,
     appIconLoader: AppIconLoader,
     widgetViewFactory: HomeWidgetViewFactory,
     onClick: () -> Unit,
+    onMoveToIndex: (Int) -> Unit,
 ) {
     Surface(
         modifier =
             Modifier
                 .width(PAGE_OVERVIEW_CARD_WIDTH_DP.dp)
+                .pageOverviewReorderDrag(state = state, onMoveToIndex = onMoveToIndex)
                 .clip(RoundedCornerShape(PAGE_OVERVIEW_CARD_CORNER_RADIUS_DP.dp))
                 .clickable(onClick = onClick),
         shape = RoundedCornerShape(PAGE_OVERVIEW_CARD_CORNER_RADIUS_DP.dp),
         color =
-            if (isSelected) {
+            if (state.isSelected) {
                 MaterialTheme.colorScheme.primaryContainer
             } else {
                 MaterialTheme.colorScheme.surfaceVariant
             },
         contentColor =
-            if (isSelected) {
+            if (state.isSelected) {
                 MaterialTheme.colorScheme.onPrimaryContainer
             } else {
                 MaterialTheme.colorScheme.onSurfaceVariant
             },
-        tonalElevation = if (isSelected) 4.dp else 1.dp,
+        tonalElevation = if (state.isSelected) 4.dp else 1.dp,
         border =
-            if (isSelected) {
+            if (state.isSelected) {
                 BorderStroke(1.dp, MaterialTheme.colorScheme.primary)
             } else {
                 BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
@@ -201,15 +222,15 @@ private fun PageOverviewCard(
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             Text(
-                text = pageOverviewLabel(index = index),
+                text = pageOverviewLabel(index = state.index),
                 style = MaterialTheme.typography.titleSmall,
             )
             Text(
-                text = page.type.pageOverviewTypeLabel,
+                text = state.page.type.pageOverviewTypeLabel,
                 style = MaterialTheme.typography.labelMedium,
             )
             PageOverviewPreview(
-                page = page,
+                page = state.page,
                 appIconLoader = appIconLoader,
                 widgetViewFactory = widgetViewFactory,
             )
@@ -375,5 +396,6 @@ private val GeneratedLauncherPageKind.pageOverviewTypeLabel: String
             GeneratedLauncherPageKind.NOTIFICATION_CARDS -> "Cards"
         }
 
-private const val PAGE_OVERVIEW_CARD_WIDTH_DP = 148
+internal const val PAGE_OVERVIEW_CARD_WIDTH_DP = 148
+internal const val PAGE_OVERVIEW_CARD_SPACING_DP = 8
 private const val PAGE_OVERVIEW_CARD_CORNER_RADIUS_DP = 20

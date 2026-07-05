@@ -29,6 +29,7 @@ class LauncherShellHomePageActionRoutingTest {
                 LauncherShellAction.SelectHomePage(LauncherPageId("home")),
                 LauncherShellAction.MoveSelectedHomePageLeft,
                 LauncherShellAction.MoveSelectedHomePageRight,
+                LauncherShellAction.MoveHomePage(LauncherPageId("home"), targetIndex = 0),
                 LauncherShellAction.DeleteSelectedHomePage,
                 LauncherShellAction.SelectSelectedHomePageType(
                     LauncherPageType.Generated(GeneratedLauncherPageKind.TODAY),

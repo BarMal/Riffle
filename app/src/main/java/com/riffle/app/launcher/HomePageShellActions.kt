@@ -36,10 +36,10 @@ fun HomePageEngine.applyEdit(
         is LauncherShellAction.SelectHomePage ->
             applyPageSelectionEdit(action = action, layout = layout)
 
-        LauncherShellAction.MoveSelectedHomePageLeft ->
-            applyPageMoveEdit(action = action, layout = layout)
-
-        LauncherShellAction.MoveSelectedHomePageRight ->
+        LauncherShellAction.MoveSelectedHomePageLeft,
+        LauncherShellAction.MoveSelectedHomePageRight,
+        is LauncherShellAction.MoveHomePage,
+        ->
             applyPageMoveEdit(action = action, layout = layout)
 
         LauncherShellAction.DeleteSelectedHomePage ->
@@ -110,6 +110,8 @@ private fun HomePageEngine.applyPageMoveEdit(
     when (action) {
         LauncherShellAction.MoveSelectedHomePageLeft -> moveSelectedPageByOffset(layout = layout, offset = -1)
         LauncherShellAction.MoveSelectedHomePageRight -> moveSelectedPageByOffset(layout = layout, offset = 1)
+        is LauncherShellAction.MoveHomePage ->
+            movePage(layout = layout, pageId = action.pageId, targetIndex = action.targetIndex)
         else -> HomePageEditResult.Rejected(HomePageEditRejectionReason.PAGE_NOT_FOUND)
     }
 

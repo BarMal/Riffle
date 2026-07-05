@@ -74,6 +74,11 @@ sealed interface LauncherShellAction {
 
     data object MoveSelectedHomePageRight : LauncherShellAction
 
+    data class MoveHomePage(
+        val pageId: LauncherPageId,
+        val targetIndex: Int,
+    ) : LauncherShellAction
+
     data object DeleteSelectedHomePage : LauncherShellAction
 
     data class SelectSelectedHomePageType(val type: LauncherPageType) : LauncherShellAction
