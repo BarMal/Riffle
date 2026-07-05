@@ -15,8 +15,76 @@ data class AppearanceSettings(
 )
 
 data class GestureSettings(
-    val homeSwipe: HomeSwipeGestureSettings = HomeSwipeGestureSettings(),
-)
+    val homeGestures: HomeGestureSettings = HomeGestureSettings(),
+) {
+    val homeSwipe: HomeSwipeGestureSettings
+        get() =
+            HomeSwipeGestureSettings(
+                up = homeGestures.actionFor(HomeGesture.ONE_FINGER_UP),
+                down = homeGestures.actionFor(HomeGesture.ONE_FINGER_DOWN),
+                left = homeGestures.actionFor(HomeGesture.ONE_FINGER_LEFT),
+                right = homeGestures.actionFor(HomeGesture.ONE_FINGER_RIGHT),
+            )
+}
+
+data class HomeGestureSettings(
+    val actions: Map<HomeGesture, LauncherGestureAction> = defaultHomeGestureActions,
+) {
+    fun actionFor(gesture: HomeGesture): LauncherGestureAction =
+        actions[gesture] ?: defaultHomeGestureActions[gesture] ?: LauncherGestureAction.NONE
+
+    fun withAction(
+        gesture: HomeGesture,
+        action: LauncherGestureAction,
+    ): HomeGestureSettings = copy(actions = actions + (gesture to action))
+}
+
+enum class HomeGesture {
+    ONE_FINGER_UP,
+    ONE_FINGER_DOWN,
+    ONE_FINGER_LEFT,
+    ONE_FINGER_RIGHT,
+    TWO_FINGER_UP,
+    TWO_FINGER_DOWN,
+    TWO_FINGER_LEFT,
+    TWO_FINGER_RIGHT,
+    PINCH_IN,
+    PINCH_OUT,
+}
+
+val defaultHomeGestureActions: Map<HomeGesture, LauncherGestureAction> =
+    mapOf(
+        HomeGesture.ONE_FINGER_UP to LauncherGestureAction.OPEN_APP_DRAWER,
+        HomeGesture.ONE_FINGER_DOWN to LauncherGestureAction.OPEN_NOTIFICATIONS,
+        HomeGesture.ONE_FINGER_LEFT to LauncherGestureAction.SELECT_NEXT_HOME_PAGE,
+        HomeGesture.ONE_FINGER_RIGHT to LauncherGestureAction.SELECT_PREVIOUS_HOME_PAGE,
+        HomeGesture.TWO_FINGER_UP to LauncherGestureAction.OPEN_SEARCH,
+        HomeGesture.TWO_FINGER_DOWN to LauncherGestureAction.OPEN_SETTINGS,
+        HomeGesture.TWO_FINGER_LEFT to LauncherGestureAction.NONE,
+        HomeGesture.TWO_FINGER_RIGHT to LauncherGestureAction.NONE,
+        HomeGesture.PINCH_IN to LauncherGestureAction.ENTER_HOME_EDIT_MODE,
+        HomeGesture.PINCH_OUT to LauncherGestureAction.OPEN_APP_DRAWER,
+    )
+
+fun HomeSwipeGestureSettings.toHomeGestureSettings(): HomeGestureSettings =
+    HomeGestureSettings(
+        actions =
+            defaultHomeGestureActions +
+                mapOf(
+                    HomeGesture.ONE_FINGER_UP to up,
+                    HomeGesture.ONE_FINGER_DOWN to down,
+                    HomeGesture.ONE_FINGER_LEFT to left,
+                    HomeGesture.ONE_FINGER_RIGHT to right,
+                ),
+    )
+
+fun HomeGestureSettings.toHomeSwipeGestureSettings(): HomeSwipeGestureSettings =
+    HomeSwipeGestureSettings(
+        up = actionFor(HomeGesture.ONE_FINGER_UP),
+        down = actionFor(HomeGesture.ONE_FINGER_DOWN),
+        left = actionFor(HomeGesture.ONE_FINGER_LEFT),
+        right = actionFor(HomeGesture.ONE_FINGER_RIGHT),
+    )
 
 data class HapticSettings(
     val feedbackStrength: HapticFeedbackStrength = HapticFeedbackStrength.MEDIUM,

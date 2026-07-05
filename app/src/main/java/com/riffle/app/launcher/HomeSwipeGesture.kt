@@ -1,54 +1,84 @@
 package com.riffle.app.launcher
 
-import com.riffle.core.domain.launcher.settings.HomeSwipeGestureSettings
+import com.riffle.core.domain.launcher.settings.HomeGesture
+import com.riffle.core.domain.launcher.settings.HomeGestureSettings
 import com.riffle.core.domain.launcher.settings.LauncherGestureAction
-
-enum class HomeSwipeGesture {
-    UP,
-    DOWN,
-    LEFT,
-    RIGHT,
-}
 
 class HomeSwipeGestureInterpreter(
     private val thresholdPx: Float,
+    private val pinchThreshold: Float = 0.18f,
 ) {
     fun gestureFor(
+        pointerCount: Int = 1,
         horizontalDragPx: Float,
         verticalDragPx: Float,
-    ): HomeSwipeGesture? =
-        if (kotlin.math.abs(horizontalDragPx) > kotlin.math.abs(verticalDragPx)) {
-            horizontalGestureFor(horizontalDragPx)
+        scaleDelta: Float = 0f,
+    ): HomeGesture? =
+        if (pointerCount >= 2 && kotlin.math.abs(scaleDelta) >= pinchThreshold) {
+            pinchGestureFor(scaleDelta)
+        } else if (kotlin.math.abs(horizontalDragPx) > kotlin.math.abs(verticalDragPx)) {
+            horizontalGestureFor(pointerCount = pointerCount, horizontalDragPx = horizontalDragPx)
         } else {
-            verticalGestureFor(verticalDragPx)
+            verticalGestureFor(pointerCount = pointerCount, verticalDragPx = verticalDragPx)
         }
 
-    private fun verticalGestureFor(verticalDragPx: Float): HomeSwipeGesture? =
+    private fun verticalGestureFor(
+        pointerCount: Int,
+        verticalDragPx: Float,
+    ): HomeGesture? =
         when {
-            verticalDragPx <= -thresholdPx -> HomeSwipeGesture.UP
-            verticalDragPx >= thresholdPx -> HomeSwipeGesture.DOWN
+            verticalDragPx <= -thresholdPx ->
+                if (pointerCount >= 2) {
+                    HomeGesture.TWO_FINGER_UP
+                } else {
+                    HomeGesture.ONE_FINGER_UP
+                }
+
+            verticalDragPx >= thresholdPx ->
+                if (pointerCount >= 2) {
+                    HomeGesture.TWO_FINGER_DOWN
+                } else {
+                    HomeGesture.ONE_FINGER_DOWN
+                }
+
             else -> null
         }
 
-    private fun horizontalGestureFor(horizontalDragPx: Float): HomeSwipeGesture? =
+    private fun horizontalGestureFor(
+        pointerCount: Int,
+        horizontalDragPx: Float,
+    ): HomeGesture? =
         when {
-            horizontalDragPx <= -thresholdPx -> HomeSwipeGesture.LEFT
-            horizontalDragPx >= thresholdPx -> HomeSwipeGesture.RIGHT
+            horizontalDragPx <= -thresholdPx ->
+                if (pointerCount >= 2) {
+                    HomeGesture.TWO_FINGER_LEFT
+                } else {
+                    HomeGesture.ONE_FINGER_LEFT
+                }
+
+            horizontalDragPx >= thresholdPx ->
+                if (pointerCount >= 2) {
+                    HomeGesture.TWO_FINGER_RIGHT
+                } else {
+                    HomeGesture.ONE_FINGER_RIGHT
+                }
+
             else -> null
+        }
+
+    private fun pinchGestureFor(scaleDelta: Float): HomeGesture =
+        if (scaleDelta < 0f) {
+            HomeGesture.PINCH_IN
+        } else {
+            HomeGesture.PINCH_OUT
         }
 }
 
 class HomeSwipeGestureActionMapper {
     fun actionFor(
-        gesture: HomeSwipeGesture,
-        settings: HomeSwipeGestureSettings = HomeSwipeGestureSettings(),
-    ): LauncherShellAction? =
-        when (gesture) {
-            HomeSwipeGesture.UP -> settings.up
-            HomeSwipeGesture.DOWN -> settings.down
-            HomeSwipeGesture.LEFT -> settings.left
-            HomeSwipeGesture.RIGHT -> settings.right
-        }.toShellAction()
+        gesture: HomeGesture,
+        settings: HomeGestureSettings = HomeGestureSettings(),
+    ): LauncherShellAction? = settings.actionFor(gesture).toShellAction()
 
     private fun LauncherGestureAction.toShellAction(): LauncherShellAction? =
         when (this) {
@@ -64,13 +94,17 @@ class HomeSwipeGestureActionMapper {
 }
 
 fun homeSwipeActionForDrag(
+    pointerCount: Int = 1,
     horizontalDragPx: Float,
     verticalDragPx: Float,
-    settings: HomeSwipeGestureSettings = HomeSwipeGestureSettings(),
+    scaleDelta: Float = 0f,
+    settings: HomeGestureSettings = HomeGestureSettings(),
     interpreter: HomeSwipeGestureInterpreter,
     actionMapper: HomeSwipeGestureActionMapper = HomeSwipeGestureActionMapper(),
 ): LauncherShellAction? =
     interpreter.gestureFor(
+        pointerCount = pointerCount,
         horizontalDragPx = horizontalDragPx,
         verticalDragPx = verticalDragPx,
+        scaleDelta = scaleDelta,
     )?.let { gesture -> actionMapper.actionFor(gesture = gesture, settings = settings) }

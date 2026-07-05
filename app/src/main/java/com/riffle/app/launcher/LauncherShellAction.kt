@@ -21,6 +21,7 @@ import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.home.WallpaperSource
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
 import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
+import com.riffle.core.domain.launcher.settings.HomeGesture
 import com.riffle.core.domain.launcher.settings.HomeSwipeGestureDirection
 import com.riffle.core.domain.launcher.settings.LauncherGestureAction
 import com.riffle.core.domain.launcher.settings.OverlayDockEdge
@@ -236,6 +237,11 @@ sealed interface LauncherShellAction {
 
     data class SelectHomeSwipeGestureAction(
         val direction: HomeSwipeGestureDirection,
+        val action: LauncherGestureAction,
+    ) : LauncherShellAction
+
+    data class SelectHomeGestureAction(
+        val gesture: HomeGesture,
         val action: LauncherGestureAction,
     ) : LauncherShellAction
 

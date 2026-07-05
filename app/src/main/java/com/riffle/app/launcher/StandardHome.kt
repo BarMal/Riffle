@@ -3,8 +3,6 @@ package com.riffle.app.launcher
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.awaitEachGesture
-import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -31,8 +29,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.input.pointer.PointerEventPass
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
@@ -49,7 +45,7 @@ import com.riffle.core.domain.launcher.home.HomeLabelSettings
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.LauncherItem
 import com.riffle.core.domain.launcher.home.LauncherItemId
-import com.riffle.core.domain.launcher.settings.HomeSwipeGestureSettings
+import com.riffle.core.domain.launcher.settings.HomeGestureSettings
 import com.riffle.core.domain.launcher.widgets.InstalledWidgetProvider
 import kotlinx.coroutines.delay
 
@@ -116,9 +112,9 @@ private fun StandardHomeColumn(
         modifier =
             Modifier
                 .fillMaxSize()
-                .homeSwipeGestureInput(
+                .homeGestureInput(
                     enabled = state.visibleLayout.editMode == HomeEditMode.Browsing,
-                    settings = state.presentation.homeSwipeGestures,
+                    settings = state.presentation.homeGestures,
                     onAction = actions.onAction,
                 )
                 .windowInsetsPadding(WindowInsets.safeDrawing)
@@ -318,53 +314,6 @@ private fun HomeLayout.shouldShowDock(): Boolean =
             backgroundSizing = dock.backgroundSizing,
         )
 
-private fun Modifier.homeSwipeGestureInput(
-    enabled: Boolean,
-    settings: HomeSwipeGestureSettings,
-    onAction: (LauncherShellAction) -> Unit,
-): Modifier =
-    if (!enabled) {
-        this
-    } else {
-        pointerInput(settings) {
-            val interpreter = HomeSwipeGestureInterpreter(thresholdPx = HOME_SWIPE_GESTURE_THRESHOLD_PX)
-            awaitEachGesture {
-                val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Final)
-                val startPosition = down.position
-                var pointerIsDown = true
-                var handled = false
-
-                while (pointerIsDown && !handled) {
-                    val event = awaitPointerEvent(PointerEventPass.Final)
-                    val change = event.changes.firstOrNull { pointer -> pointer.id == down.id }
-                    if (change == null || !change.pressed) {
-                        pointerIsDown = false
-                    } else {
-                        val drag = change.position - startPosition
-                        val isVerticalIntent = kotlin.math.abs(drag.y) > kotlin.math.abs(drag.x)
-                        val action =
-                            if (isVerticalIntent) {
-                                homeSwipeActionForDrag(
-                                    horizontalDragPx = drag.x,
-                                    verticalDragPx = drag.y,
-                                    settings = settings,
-                                    interpreter = interpreter,
-                                )
-                            } else {
-                                null
-                            }
-
-                        if (action != null) {
-                            handled = true
-                            change.consume()
-                            onAction(action)
-                        }
-                    }
-                }
-            }
-        }
-    }
-
 internal data class HomeDragSession(
     val item: LauncherItem,
     val originCell: GridCell,
@@ -380,7 +329,7 @@ internal data class StandardHomeInteractions(
 internal data class StandardHomePresentation(
     val notificationCountsByPackage: Map<AppPackageName, Int>,
     val appShortcutsByApp: AppShortcutsByApp,
-    val homeSwipeGestures: HomeSwipeGestureSettings = HomeSwipeGestureSettings(),
+    val homeGestures: HomeGestureSettings = HomeGestureSettings(),
     val widgetViewFactory: HomeWidgetViewFactory = EmptyHomeWidgetViewFactory,
     val widgetPicker: StandardHomeWidgetPickerState = StandardHomeWidgetPickerState(),
 )
@@ -420,4 +369,3 @@ private const val HOME_SEARCH_SURFACE_ALPHA = 0.82f
 private const val HOME_SEARCH_BORDER_ALPHA = 0.38f
 private const val HOME_DOCK_TOP_SPACING_DP = 10
 private const val PAGE_INDICATOR_SETTLED_VISIBLE_MS = 1200L
-private const val HOME_SWIPE_GESTURE_THRESHOLD_PX = 80f

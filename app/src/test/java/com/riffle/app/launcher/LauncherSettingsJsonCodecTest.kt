@@ -11,7 +11,8 @@ import com.riffle.core.domain.launcher.settings.AppearanceSettings
 import com.riffle.core.domain.launcher.settings.GestureSettings
 import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
 import com.riffle.core.domain.launcher.settings.HapticSettings
-import com.riffle.core.domain.launcher.settings.HomeSwipeGestureSettings
+import com.riffle.core.domain.launcher.settings.HomeGesture
+import com.riffle.core.domain.launcher.settings.HomeGestureSettings
 import com.riffle.core.domain.launcher.settings.LauncherGestureAction
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.OverlayDockEdge
@@ -75,17 +76,54 @@ class LauncherSettingsJsonCodecTest {
             LauncherSettings(
                 gestures =
                     GestureSettings(
-                        homeSwipe =
-                            HomeSwipeGestureSettings(
-                                up = LauncherGestureAction.OPEN_SEARCH,
-                                down = LauncherGestureAction.NONE,
-                                left = LauncherGestureAction.OPEN_SETTINGS,
-                                right = LauncherGestureAction.ENTER_HOME_EDIT_MODE,
+                        homeGestures =
+                            HomeGestureSettings(
+                                actions =
+                                    mapOf(
+                                        HomeGesture.ONE_FINGER_UP to LauncherGestureAction.OPEN_SEARCH,
+                                        HomeGesture.ONE_FINGER_DOWN to LauncherGestureAction.NONE,
+                                        HomeGesture.ONE_FINGER_LEFT to LauncherGestureAction.OPEN_SETTINGS,
+                                        HomeGesture.ONE_FINGER_RIGHT to LauncherGestureAction.ENTER_HOME_EDIT_MODE,
+                                        HomeGesture.TWO_FINGER_UP to LauncherGestureAction.OPEN_NOTIFICATIONS,
+                                        HomeGesture.PINCH_OUT to LauncherGestureAction.OPEN_APP_DRAWER,
+                                    ),
                             ),
                     ),
             )
 
         val decodedSettings = decodeLauncherSettings(encodeLauncherSettings(settings))
+
+        assertEquals(LauncherGestureAction.OPEN_SEARCH, decodedSettings.gestures.homeSwipe.up)
+        assertEquals(LauncherGestureAction.NONE, decodedSettings.gestures.homeSwipe.down)
+        assertEquals(LauncherGestureAction.OPEN_SETTINGS, decodedSettings.gestures.homeSwipe.left)
+        assertEquals(LauncherGestureAction.ENTER_HOME_EDIT_MODE, decodedSettings.gestures.homeSwipe.right)
+        assertEquals(
+            LauncherGestureAction.OPEN_NOTIFICATIONS,
+            decodedSettings.gestures.homeGestures.actionFor(HomeGesture.TWO_FINGER_UP),
+        )
+        assertEquals(
+            LauncherGestureAction.OPEN_APP_DRAWER,
+            decodedSettings.gestures.homeGestures.actionFor(HomeGesture.PINCH_OUT),
+        )
+    }
+
+    @Test
+    fun decodesLegacyHomeSwipeGestureActions() {
+        val decodedSettings =
+            decodeLauncherSettings(
+                """
+                {
+                  "gestures": {
+                    "homeSwipe": {
+                      "up": "OPEN_SEARCH",
+                      "down": "NONE",
+                      "left": "OPEN_SETTINGS",
+                      "right": "ENTER_HOME_EDIT_MODE"
+                    }
+                  }
+                }
+                """.trimIndent(),
+            )
 
         assertEquals(LauncherGestureAction.OPEN_SEARCH, decodedSettings.gestures.homeSwipe.up)
         assertEquals(LauncherGestureAction.NONE, decodedSettings.gestures.homeSwipe.down)
