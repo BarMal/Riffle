@@ -25,12 +25,15 @@ Riffle should stay responsive on mainstream Android devices, not only current fl
 
 ## Benchmark Roadmap
 
+The CI smoke benchmark suite currently covers:
+
+- app drawer search against a synthetic 250-app catalog;
+- notification grouping against a synthetic 500-notification active set.
+
 The first benchmark suite should cover:
 
 - cold launch to first drawn home surface;
-- app drawer search with a synthetic catalog;
-- notification grouping with a synthetic notification set;
 - page switching on phone, unfolded, and tablet layouts;
 - backup import validation for representative documents.
 
-Until that suite exists, reviewers should treat this document as the baseline performance contract and ask for focused tests around pure logic that can be measured locally.
+Until Android device benchmarks exist, reviewers should treat this document and the smoke tests as the baseline performance contract and ask for focused tests around pure logic that can be measured locally.
