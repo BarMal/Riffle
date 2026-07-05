@@ -72,8 +72,7 @@ fun AppDrawer(
             if (shouldShowAppDrawerClearFilters(query = query, profileFilter = profileFilter)) {
                 TextButton(
                     onClick = {
-                        onAction(LauncherShellAction.AppDrawerQueryChanged(""))
-                        onAction(LauncherShellAction.AppDrawerProfileFilterSelected(AppDrawerProfileFilter.ALL))
+                        appDrawerClearFilterActions().forEach(onAction)
                     },
                 ) {
                     Text(text = "Clear filters")
@@ -100,6 +99,12 @@ internal fun shouldShowAppDrawerClearFilters(
     query: String,
     profileFilter: AppDrawerProfileFilter,
 ): Boolean = query.isNotBlank() || profileFilter != AppDrawerProfileFilter.ALL
+
+internal fun appDrawerClearFilterActions(): List<LauncherShellAction> =
+    listOf(
+        LauncherShellAction.AppDrawerQueryChanged(""),
+        LauncherShellAction.AppDrawerProfileFilterSelected(AppDrawerProfileFilter.ALL),
+    )
 
 @Composable
 fun LauncherPanel(

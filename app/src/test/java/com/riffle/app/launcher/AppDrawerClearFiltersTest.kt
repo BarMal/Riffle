@@ -1,6 +1,7 @@
 package com.riffle.app.launcher
 
 import com.riffle.core.domain.launcher.apps.AppDrawerProfileFilter
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -25,6 +26,17 @@ class AppDrawerClearFiltersTest {
                 query = "",
                 profileFilter = AppDrawerProfileFilter.WORK,
             ),
+        )
+    }
+
+    @Test
+    fun clearFiltersResetsDrawerQueryAndProfileFilter() {
+        assertEquals(
+            listOf(
+                LauncherShellAction.AppDrawerQueryChanged(""),
+                LauncherShellAction.AppDrawerProfileFilterSelected(AppDrawerProfileFilter.ALL),
+            ),
+            appDrawerClearFilterActions(),
         )
     }
 }
