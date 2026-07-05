@@ -70,8 +70,8 @@ class HomePageControlsTest {
     }
 
     @Test
-    fun emptyHomeCellMenuExposesHomeManagementActionsWithoutOverviewMode() {
-        val items = homeWorkspaceContextMenuItems(pageCount = 2, selectedPageIndex = 0)
+    fun emptyHomeCellMenuOnlyExposesEntryPointToPageManagement() {
+        val items = homeWorkspaceContextMenuItems()
 
         assertEquals(
             listOf(
@@ -83,21 +83,6 @@ class HomePageControlsTest {
                 ShortcutContextMenuItem("Settings", LauncherShellAction.OpenSettings),
                 ShortcutContextMenuItem("Edit page", LauncherShellAction.EnterHomeEditMode),
                 ShortcutContextMenuItem("Manage pages", LauncherShellAction.EnterHomePageOverview),
-                ShortcutContextMenuItem(
-                    label = "Previous page",
-                    action = LauncherShellAction.SelectPreviousHomePage,
-                    enabled = false,
-                ),
-                ShortcutContextMenuItem("Next page", LauncherShellAction.SelectNextHomePage),
-                ShortcutContextMenuItem("Add page", LauncherShellAction.AddHomePage),
-                ShortcutContextMenuItem("Duplicate page", LauncherShellAction.DuplicateSelectedHomePage),
-                ShortcutContextMenuItem(
-                    label = "Move page left",
-                    action = LauncherShellAction.MoveSelectedHomePageLeft,
-                    enabled = false,
-                ),
-                ShortcutContextMenuItem("Move page right", LauncherShellAction.MoveSelectedHomePageRight),
-                ShortcutContextMenuItem("Delete page", LauncherShellAction.DeleteSelectedHomePage),
             ),
             items,
         )

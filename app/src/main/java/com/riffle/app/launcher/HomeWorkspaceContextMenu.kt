@@ -13,8 +13,6 @@ import androidx.compose.ui.Modifier
 @Composable
 @OptIn(ExperimentalFoundationApi::class)
 internal fun HomeBackgroundContextMenu(
-    pageCount: Int,
-    selectedPageIndex: Int,
     haptics: LauncherHaptics,
     onAction: (LauncherShellAction) -> Unit,
     modifier: Modifier = Modifier,
@@ -39,21 +37,14 @@ internal fun HomeBackgroundContextMenu(
     ) {
         ShortcutContextMenu(
             expanded = isMenuExpanded.value,
-            items =
-                homeWorkspaceContextMenuItems(
-                    pageCount = pageCount,
-                    selectedPageIndex = selectedPageIndex,
-                ),
+            items = homeWorkspaceContextMenuItems(),
             onDismissRequest = { isMenuExpanded.value = false },
             onAction = onAction,
         )
     }
 }
 
-internal fun homeWorkspaceContextMenuItems(
-    pageCount: Int,
-    selectedPageIndex: Int,
-): List<ShortcutContextMenuItem> =
+internal fun homeWorkspaceContextMenuItems(): List<ShortcutContextMenuItem> =
     listOf(
         ShortcutContextMenuItem(
             label = "Create folder",
@@ -75,19 +66,4 @@ internal fun homeWorkspaceContextMenuItems(
             label = "Manage pages",
             action = LauncherShellAction.EnterHomePageOverview,
         ),
-        ShortcutContextMenuItem(
-            label = "Previous page",
-            action = LauncherShellAction.SelectPreviousHomePage,
-            enabled = selectedPageIndex > 0,
-        ),
-        ShortcutContextMenuItem(
-            label = "Next page",
-            action = LauncherShellAction.SelectNextHomePage,
-            enabled = selectedPageIndex < pageCount - 1,
-        ),
-    ) +
-        pageManagementMenuItems(
-            pageCount = pageCount,
-            selectedPageIndex = selectedPageIndex,
-            includeOverview = false,
-        )
+    )
