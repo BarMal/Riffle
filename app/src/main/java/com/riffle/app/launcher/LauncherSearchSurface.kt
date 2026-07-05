@@ -281,11 +281,18 @@ internal fun searchEmptyText(
     when {
         filters.content.isEmpty() -> "Enable apps or shortcuts to search"
         filters.profiles.isEmpty() -> "Enable a profile to search"
-        query.isBlank() -> "No apps match the selected filters"
-        else -> "No apps found for \"$query\""
+        query.isBlank() -> "No ${filters.searchResultTypeNoun()} match the selected filters"
+        else -> "No ${filters.searchResultTypeNoun()} found for \"${query.trim()}\""
     }
 
 internal fun shouldShowSearchFilterReset(filters: AppSearchFilters): Boolean = filters != AppSearchFilters()
+
+private fun AppSearchFilters.searchResultTypeNoun(): String =
+    when (content) {
+        setOf(AppSearchContentFilter.APPS) -> "apps"
+        setOf(AppSearchContentFilter.SHORTCUTS) -> "shortcuts"
+        else -> "results"
+    }
 
 private fun String.pluralized(count: Int): String = if (count == 1) this else "${this}s"
 
