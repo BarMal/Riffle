@@ -7,7 +7,9 @@ import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
 import com.riffle.core.domain.launcher.home.HomeLayoutSet
+import com.riffle.core.domain.launcher.settings.AppearanceSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettings
+import com.riffle.core.domain.launcher.settings.MotionSettings
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.io.ByteArrayInputStream
@@ -71,7 +73,13 @@ class LauncherBackupDocumentHandlerTest {
                     homeLayoutRepository = FakeHomeLayoutRepository(document.homeLayoutSet),
                     appVisibilityRepository =
                         FakeAppVisibilityRepository(hiddenApps = document.hiddenAppIdentities),
-                    currentState = { LauncherShellState(homeLayout = document.homeLayoutSet.activeLayout) },
+                    currentState =
+                        {
+                            LauncherShellState(
+                                homeLayout = document.homeLayoutSet.activeLayout,
+                                launcherSettings = document.launcherSettings,
+                            )
+                        },
                     epochMillisProvider = FixedEpochMillisProvider,
                 ),
             importCoordinator = LauncherBackupImportCoordinator(),
@@ -91,7 +99,16 @@ class LauncherBackupDocumentHandlerTest {
     private fun backupDocument(): LauncherBackupDocument =
         LauncherBackupDocument(
             homeLayoutSet = HomeLayoutSet.fromLayout(HomeLayoutDefaults.standard()),
-            launcherSettings = LauncherSettings(),
+            launcherSettings =
+                LauncherSettings(
+                    appearance =
+                        AppearanceSettings(
+                            fullscreenHome = true,
+                            hideStatusBarOnHome = true,
+                            hideNavigationBarOnHome = true,
+                        ),
+                    motion = MotionSettings(reducedMotion = true),
+                ),
             exportedAtEpochMillis = 123_456L,
         )
 

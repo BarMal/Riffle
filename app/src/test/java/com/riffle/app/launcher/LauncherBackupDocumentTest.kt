@@ -12,6 +12,7 @@ import com.riffle.core.domain.launcher.settings.AppearanceSettings
 import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
 import com.riffle.core.domain.launcher.settings.HapticSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettings
+import com.riffle.core.domain.launcher.settings.MotionSettings
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
@@ -26,8 +27,11 @@ class LauncherBackupDocumentTest {
                 appearance =
                     AppearanceSettings(
                         wallpaper = WallpaperSettings(source = WallpaperSource.SOLID_COLOR),
+                        hideStatusBarOnHome = true,
+                        hideNavigationBarOnHome = false,
                     ),
                 haptics = HapticSettings(feedbackStrength = HapticFeedbackStrength.STRONG),
+                motion = MotionSettings(reducedMotion = true),
             )
         val document =
             LauncherBackupDocument(
@@ -43,6 +47,70 @@ class LauncherBackupDocumentTest {
         assertEquals(settings, decodedDocument.launcherSettings)
         assertEquals(setOf(cameraIdentity), decodedDocument.hiddenAppIdentities)
         assertEquals(123_456L, decodedDocument.exportedAtEpochMillis)
+    }
+
+    @Test
+    fun encodesHomeSystemBarAndMotionSettings() {
+        val document =
+            LauncherBackupDocument(
+                homeLayoutSet = HomeLayoutSet.fromLayout(HomeLayoutDefaults.standard()),
+                launcherSettings =
+                    LauncherSettings(
+                        appearance =
+                            AppearanceSettings(
+                                fullscreenHome = false,
+                                hideStatusBarOnHome = true,
+                                hideNavigationBarOnHome = false,
+                            ),
+                        motion = MotionSettings(reducedMotion = true),
+                    ),
+            )
+
+        val settings = JSONObject(encodeLauncherBackupDocument(document)).getJSONObject("settings")
+        val appearance = settings.getJSONObject("appearance")
+        val motion = settings.getJSONObject("motion")
+
+        assertEquals(false, appearance.getBoolean("fullscreenHome"))
+        assertEquals(true, appearance.getBoolean("hideStatusBarOnHome"))
+        assertEquals(false, appearance.getBoolean("hideNavigationBarOnHome"))
+        assertEquals(true, motion.getBoolean("reducedMotion"))
+    }
+
+    @Test
+    fun decodesLegacyFullscreenHomeBackupIntoIndependentSystemBarSettings() {
+        val value =
+            JSONObject(
+                encodeLauncherBackupDocument(
+                    LauncherBackupDocument(
+                        homeLayoutSet = HomeLayoutSet.fromLayout(HomeLayoutDefaults.standard()),
+                        launcherSettings =
+                            LauncherSettings(
+                                appearance =
+                                    AppearanceSettings(
+                                        fullscreenHome = true,
+                                        hideStatusBarOnHome = true,
+                                        hideNavigationBarOnHome = true,
+                                    ),
+                            ),
+                    ),
+                ),
+            )
+                .also { document ->
+                    document
+                        .getJSONObject("settings")
+                        .getJSONObject("appearance")
+                        .apply {
+                            remove("hideStatusBarOnHome")
+                            remove("hideNavigationBarOnHome")
+                        }
+                }
+                .toString()
+
+        val decodedSettings = decodeLauncherBackupDocument(value).launcherSettings
+
+        assertEquals(true, decodedSettings.appearance.fullscreenHome)
+        assertEquals(true, decodedSettings.appearance.hideStatusBarOnHome)
+        assertEquals(true, decodedSettings.appearance.hideNavigationBarOnHome)
     }
 
     @Test

@@ -2,7 +2,9 @@ package com.riffle.app.launcher
 
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.HomeLayoutSet
+import com.riffle.core.domain.launcher.settings.AppearanceSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettings
+import com.riffle.core.domain.launcher.settings.MotionSettings
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.io.ByteArrayInputStream
@@ -63,6 +65,15 @@ class LauncherBackupDocumentGatewayTest {
     private fun backupDocument(): LauncherBackupDocument =
         LauncherBackupDocument(
             homeLayoutSet = HomeLayoutSet.fromLayout(HomeLayoutDefaults.standard()),
-            launcherSettings = LauncherSettings(),
+            launcherSettings =
+                LauncherSettings(
+                    appearance =
+                        AppearanceSettings(
+                            fullscreenHome = false,
+                            hideStatusBarOnHome = true,
+                            hideNavigationBarOnHome = false,
+                        ),
+                    motion = MotionSettings(reducedMotion = true),
+                ),
         )
 }

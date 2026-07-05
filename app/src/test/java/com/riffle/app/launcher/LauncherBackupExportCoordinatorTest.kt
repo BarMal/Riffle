@@ -20,6 +20,7 @@ import com.riffle.core.domain.launcher.settings.AppearanceSettings
 import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
 import com.riffle.core.domain.launcher.settings.HapticSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettings
+import com.riffle.core.domain.launcher.settings.MotionSettings
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -70,8 +71,12 @@ class LauncherBackupExportCoordinatorTest {
                 appearance =
                     AppearanceSettings(
                         wallpaper = WallpaperSettings(source = WallpaperSource.SOLID_COLOR),
+                        fullscreenHome = false,
+                        hideStatusBarOnHome = true,
+                        hideNavigationBarOnHome = false,
                     ),
                 haptics = HapticSettings(feedbackStrength = HapticFeedbackStrength.STRONG),
+                motion = MotionSettings(reducedMotion = true),
             )
         val coordinator =
             LauncherBackupExportCoordinator(
