@@ -239,7 +239,16 @@ internal fun InstalledWidgetProvider.widgetPickerSummary(): String =
         identity.profile.drawerProfilePrefix(),
         identity.packageName.value,
         "${dimensions.minWidthDp}x${dimensions.minHeightDp}dp",
+        widgetPickerResizeLabel(),
     ).joinToString(" - ")
+
+internal fun InstalledWidgetProvider.widgetPickerResizeLabel(): String? =
+    when {
+        supportsHorizontalResize && supportsVerticalResize -> "Resizable"
+        supportsHorizontalResize -> "Horizontal resize"
+        supportsVerticalResize -> "Vertical resize"
+        else -> null
+    }
 
 internal fun InstalledWidgetProvider.widgetPickerPreviewLabel(): String =
     listOfNotNull(
