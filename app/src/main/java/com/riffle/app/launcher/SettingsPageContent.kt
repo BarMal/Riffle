@@ -189,6 +189,16 @@ private fun SettingsAppearancePageContent(
             onAction = onAction,
         )
     }
+    SettingsSection(title = "System UI") {
+        SettingsSwitchRow(
+            title = "Fullscreen home",
+            subtitle = "Hide system bars on the home screen",
+            checked = state.settings.appearance.fullscreenHome,
+            onCheckedChange = { enabled ->
+                onAction(LauncherShellAction.SelectFullscreenHomeEnabled(enabled))
+            },
+        )
+    }
 }
 
 @Composable

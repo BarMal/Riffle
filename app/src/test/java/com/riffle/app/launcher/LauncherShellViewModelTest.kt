@@ -371,6 +371,23 @@ class LauncherShellViewModelTest {
     }
 
     @Test
+    fun savesFullscreenHomeSelection() {
+        val repository = FakeLauncherSettingsRepository()
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                launcherSettingsRepository = repository,
+            )
+
+        viewModel.onLauncherSettingsActionSelected(
+            LauncherShellAction.SelectFullscreenHomeEnabled(enabled = true),
+        )
+
+        assertTrue(viewModel.state.value.launcherSettings.appearance.fullscreenHome)
+        assertEquals(viewModel.state.value.launcherSettings, repository.savedSettings)
+    }
+
+    @Test
     fun savesHomeLayoutAfterAddingAppShortcut() {
         val camera = app(label = "Camera")
         val repository = FakeHomeLayoutRepository()

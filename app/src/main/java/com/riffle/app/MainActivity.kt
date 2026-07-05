@@ -37,6 +37,7 @@ import com.riffle.app.launcher.refreshInstalledApps
 import com.riffle.app.launcher.refreshNotifications
 import com.riffle.app.launcher.refreshWidgetProviders
 import com.riffle.app.launcher.selectedPageHostedWidgetIdForItem
+import com.riffle.app.launcher.startSystemUiSync
 import com.riffle.app.launcher.widgets.WidgetBindPermissionResult
 import kotlinx.coroutines.launch
 
@@ -238,6 +239,7 @@ class MainActivity : ComponentActivity() {
         lifecycle.addObserver(widgetHostGateway)
         refreshHomeLayoutDeviceClass(source = "onCreate")
         observeHomeLayoutDeviceClass()
+        startSystemUiSync(shellViewModel.state)
 
         setContent {
             LauncherShell(

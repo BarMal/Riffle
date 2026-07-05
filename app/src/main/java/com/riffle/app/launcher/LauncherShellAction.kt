@@ -248,6 +248,8 @@ sealed interface LauncherShellAction {
 
     data class SelectWallpaperSource(val source: WallpaperSource) : LauncherShellAction
 
+    data class SelectFullscreenHomeEnabled(val enabled: Boolean) : LauncherShellAction
+
     data class SelectHomeSwipeGestureAction(
         val direction: HomeSwipeGestureDirection,
         val action: LauncherGestureAction,

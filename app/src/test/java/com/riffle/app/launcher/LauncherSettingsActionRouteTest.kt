@@ -7,7 +7,6 @@ import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.apps.AppShortcutId
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.home.LauncherItemId
-import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
 import com.riffle.core.domain.launcher.settings.OverlayDockEdge
 import com.riffle.core.domain.launcher.settings.OverlayDockExpandedOrientation
 import com.riffle.core.domain.launcher.settings.OverlayDockItemMoveDirection
@@ -18,7 +17,7 @@ import org.junit.Test
 class LauncherSettingsActionRouteTest {
     @Test
     fun routesSettingsStateActions() {
-        val action = LauncherShellAction.SelectHapticFeedbackStrength(HapticFeedbackStrength.STRONG)
+        val action = LauncherShellAction.SelectFullscreenHomeEnabled(enabled = true)
 
         assertEquals(
             LauncherSettingsActionRoute.SettingsState(action),

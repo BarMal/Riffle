@@ -29,7 +29,6 @@ import com.riffle.core.domain.launcher.home.HomePageEngine
 import com.riffle.core.domain.launcher.home.HomeShortcutEngine
 import com.riffle.core.domain.launcher.home.HomeShortcutResult
 import com.riffle.core.domain.launcher.home.PlacementRejectionReason
-import com.riffle.core.domain.launcher.home.WallpaperSettings
 import com.riffle.core.domain.launcher.home.WidgetEditResult
 import com.riffle.core.domain.launcher.home.WidgetEngine
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
@@ -350,14 +349,14 @@ class LauncherShellViewModel(
         mutableState.value =
             when (action) {
                 is LauncherShellAction.SelectWallpaperSource ->
-                    mutableState.value.withLauncherSettings(
-                        settings =
-                            mutableState.value.launcherSettings.copy(
-                                appearance =
-                                    mutableState.value.launcherSettings.appearance.copy(
-                                        wallpaper = WallpaperSettings(source = action.source),
-                                    ),
-                            ),
+                    mutableState.value.withAppearanceSettingsAction(
+                        action = action,
+                        launcherSettingsRepository = launcherSettingsRepository,
+                    )
+
+                is LauncherShellAction.SelectFullscreenHomeEnabled ->
+                    mutableState.value.withAppearanceSettingsAction(
+                        action = action,
                         launcherSettingsRepository = launcherSettingsRepository,
                     )
 
