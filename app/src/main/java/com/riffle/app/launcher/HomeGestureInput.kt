@@ -28,7 +28,13 @@ internal fun Modifier.homeGestureInput(
                 while (!handled) {
                     val event = awaitPointerEvent(PointerEventPass.Final)
                     val activeChanges = event.changes.filter { change -> change.pressed }
-                    if (activeChanges.isEmpty()) {
+                    // Child gesture layers, such as the home pager, own events they have already consumed.
+                    if (
+                        shouldCancelHomeGestureRecognition(
+                            activePointerCount = activeChanges.size,
+                            hasConsumedActivePointer = activeChanges.any { change -> change.isConsumed },
+                        )
+                    ) {
                         return@awaitEachGesture
                     }
                     if (activeChanges.size != start.pointerCount) {
@@ -55,6 +61,11 @@ internal fun Modifier.homeGestureInput(
             }
         }
     }
+
+internal fun shouldCancelHomeGestureRecognition(
+    activePointerCount: Int,
+    hasConsumedActivePointer: Boolean,
+): Boolean = activePointerCount == 0 || hasConsumedActivePointer
 
 private data class HomeGestureStart(
     val pointerCount: Int,
