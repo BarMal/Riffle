@@ -9,6 +9,7 @@ import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.OverlayDockEdge
 import com.riffle.core.domain.launcher.settings.OverlayDockExpandedOrientation
 import com.riffle.core.domain.launcher.settings.OverlayDockSettings
+import com.riffle.core.domain.launcher.settings.coerceOverlayDockSettings
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -103,6 +104,6 @@ private fun JSONObject.toOverlayDock(defaults: OverlayDockSettings): OverlayDock
             runCatching { OverlayDockExpandedOrientation.valueOf(optString("expandedOrientation")) }
                 .getOrDefault(defaults.expandedOrientation),
         showLabels = optBoolean("showLabels", defaults.showLabels),
-    )
+    ).coerceOverlayDockSettings()
 
 internal const val LAUNCHER_SETTINGS_JSON_VERSION = 1

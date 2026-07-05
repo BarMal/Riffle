@@ -15,6 +15,16 @@ import com.riffle.core.domain.launcher.settings.HomeGesture
 import com.riffle.core.domain.launcher.settings.HomeGestureSettings
 import com.riffle.core.domain.launcher.settings.LauncherGestureAction
 import com.riffle.core.domain.launcher.settings.LauncherSettings
+import com.riffle.core.domain.launcher.settings.MAX_OVERLAY_DOCK_EXPANDED_ICON_SIZE_DP
+import com.riffle.core.domain.launcher.settings.MAX_OVERLAY_DOCK_HANDLE_ALPHA_PERCENT
+import com.riffle.core.domain.launcher.settings.MAX_OVERLAY_DOCK_HANDLE_HEIGHT_DP
+import com.riffle.core.domain.launcher.settings.MAX_OVERLAY_DOCK_HANDLE_THICKNESS_DP
+import com.riffle.core.domain.launcher.settings.MAX_OVERLAY_DOCK_VERTICAL_OFFSET_DP
+import com.riffle.core.domain.launcher.settings.MIN_OVERLAY_DOCK_EXPANDED_ICON_SIZE_DP
+import com.riffle.core.domain.launcher.settings.MIN_OVERLAY_DOCK_HANDLE_ALPHA_PERCENT
+import com.riffle.core.domain.launcher.settings.MIN_OVERLAY_DOCK_HANDLE_HEIGHT_DP
+import com.riffle.core.domain.launcher.settings.MIN_OVERLAY_DOCK_HANDLE_THICKNESS_DP
+import com.riffle.core.domain.launcher.settings.MIN_OVERLAY_DOCK_VERTICAL_OFFSET_DP
 import com.riffle.core.domain.launcher.settings.MotionSettings
 import com.riffle.core.domain.launcher.settings.OverlayDockEdge
 import com.riffle.core.domain.launcher.settings.OverlayDockExpandedOrientation
@@ -286,6 +296,69 @@ class LauncherSettingsJsonCodecTest {
         val decodedSettings = decodeLauncherSettings("{}")
 
         assertEquals(OverlayDockSettings(), decodedSettings.overlayDock)
+    }
+
+    @Test
+    fun clampsDecodedOverlayDockNumericSettings() {
+        val lowSettings =
+            decodeLauncherSettings(
+                """
+                {
+                  "overlayDock": {
+                    "handleThicknessDp": -1,
+                    "handleHeightDp": -1,
+                    "verticalOffsetDp": -999,
+                    "handleAlphaPercent": -1,
+                    "expandedIconSizeDp": -1
+                  }
+                }
+                """.trimIndent(),
+            ).overlayDock
+
+        assertEquals(MIN_OVERLAY_DOCK_HANDLE_THICKNESS_DP, lowSettings.handleThicknessDp)
+        assertEquals(MIN_OVERLAY_DOCK_HANDLE_HEIGHT_DP, lowSettings.handleHeightDp)
+        assertEquals(MIN_OVERLAY_DOCK_VERTICAL_OFFSET_DP, lowSettings.verticalOffsetDp)
+        assertEquals(MIN_OVERLAY_DOCK_HANDLE_ALPHA_PERCENT, lowSettings.handleAlphaPercent)
+        assertEquals(MIN_OVERLAY_DOCK_EXPANDED_ICON_SIZE_DP, lowSettings.expandedIconSizeDp)
+
+        val highSettings =
+            decodeLauncherSettings(
+                """
+                {
+                  "overlayDock": {
+                    "handleThicknessDp": 999,
+                    "handleHeightDp": 999,
+                    "verticalOffsetDp": 999,
+                    "handleAlphaPercent": 999,
+                    "expandedIconSizeDp": 999
+                  }
+                }
+                """.trimIndent(),
+            ).overlayDock
+
+        assertEquals(MAX_OVERLAY_DOCK_HANDLE_THICKNESS_DP, highSettings.handleThicknessDp)
+        assertEquals(MAX_OVERLAY_DOCK_HANDLE_HEIGHT_DP, highSettings.handleHeightDp)
+        assertEquals(MAX_OVERLAY_DOCK_VERTICAL_OFFSET_DP, highSettings.verticalOffsetDp)
+        assertEquals(MAX_OVERLAY_DOCK_HANDLE_ALPHA_PERCENT, highSettings.handleAlphaPercent)
+        assertEquals(MAX_OVERLAY_DOCK_EXPANDED_ICON_SIZE_DP, highSettings.expandedIconSizeDp)
+    }
+
+    @Test
+    fun defaultsUnknownOverlayDockEnums() {
+        val decodedSettings =
+            decodeLauncherSettings(
+                """
+                {
+                  "overlayDock": {
+                    "edge": "UNKNOWN",
+                    "expandedOrientation": "UNKNOWN"
+                  }
+                }
+                """.trimIndent(),
+            )
+
+        assertEquals(OverlayDockEdge.END, decodedSettings.overlayDock.edge)
+        assertEquals(OverlayDockExpandedOrientation.WIDE, decodedSettings.overlayDock.expandedOrientation)
     }
 
     @Test
