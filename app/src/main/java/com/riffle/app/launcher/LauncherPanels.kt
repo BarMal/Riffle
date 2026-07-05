@@ -147,9 +147,6 @@ fun LauncherPanel(
                                 Text(text = "Settings")
                             }
                         }
-                        TextButton(onClick = { onAction(LauncherShellAction.OpenHome) }) {
-                            Text(text = "Home")
-                        }
                     }
                 }
                 Spacer(modifier = Modifier.height(24.dp))
