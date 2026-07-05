@@ -59,6 +59,25 @@ class AndroidAppShortcutMapperTest {
     }
 
     @Test
+    fun normalizesShortcutLabelWhitespace() {
+        val shortcut =
+            mapper.map(
+                identity = identity,
+                shortcut =
+                    AndroidAppShortcut(
+                        id = "scan",
+                        shortLabel = "  Scan\nNow  ",
+                        longLabel = "\tScan   a\ndocument ",
+                        enabled = true,
+                        disabledMessage = null,
+                    ),
+            )
+
+        assertEquals("Scan Now", shortcut.shortLabel)
+        assertEquals("Scan a document", shortcut.longLabel)
+    }
+
+    @Test
     fun preservesDisabledStateAndMessage() {
         val shortcut =
             mapper.map(

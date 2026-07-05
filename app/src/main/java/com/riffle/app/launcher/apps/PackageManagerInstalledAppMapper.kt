@@ -16,7 +16,7 @@ class PackageManagerInstalledAppMapper {
                     activityName = AppActivityName(activity.activityName),
                     profile = activity.profile,
                 ),
-            label = activity.label.ifBlank { activity.packageName },
+            label = activity.label.normalizedPlatformLabel(fallback = activity.packageName),
             iconKey = AppIconKey("${activity.packageName}/${activity.activityName}"),
             enabled = activity.enabled,
         )

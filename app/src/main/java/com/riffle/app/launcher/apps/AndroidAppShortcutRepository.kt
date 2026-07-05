@@ -65,8 +65,8 @@ internal class AndroidAppShortcutMapper {
         AppShortcut(
             id = AppShortcutId(shortcut.id),
             appIdentity = identity,
-            shortLabel = shortcut.shortLabel.ifBlank { shortcut.id },
-            longLabel = shortcut.longLabel?.takeIf { label -> label.isNotBlank() },
+            shortLabel = shortcut.shortLabel.normalizedPlatformLabel(fallback = shortcut.id),
+            longLabel = shortcut.longLabel.normalizedOptionalPlatformLabel(),
             enabled = shortcut.enabled,
             disabledMessage = shortcut.disabledMessage?.takeIf { message -> message.isNotBlank() },
         )
