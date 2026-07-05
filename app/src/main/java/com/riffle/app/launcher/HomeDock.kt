@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -22,6 +23,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppShortcut
@@ -124,27 +126,72 @@ private fun DockSlotsRow(
     presentation: DockPresentation,
     appIconLoader: AppIconLoader,
 ) {
-    Row(
-        modifier =
-            Modifier
-                .width(contentViewportWidthDp.dp)
-                .horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(dock.itemSpacingDp.dp),
-        verticalAlignment = Alignment.CenterVertically,
+    val scrollState = rememberScrollState()
+    val overflowAffordance =
+        DockOverflowAffordance(
+            scrollOffsetPx = scrollState.value,
+            maxScrollOffsetPx = scrollState.maxValue,
+        )
+    val fadeColor =
+        MaterialTheme.colorScheme.surfaceVariant.copy(
+            alpha = dock.backgroundAlphaPercent / 100f,
+        )
+
+    Box(
+        modifier = Modifier.width(contentViewportWidthDp.dp),
+        contentAlignment = Alignment.Center,
     ) {
-        repeat(renderedSlotCount) { index ->
-            DockSlot(
-                modifier = Modifier.requiredSize(dock.iconSizeDp.dp),
-                state =
-                    DockSlotState(
-                        shortcut = dock.items.getOrNull(index) as? AppShortcutItem,
-                        shortcutIndex = index,
-                        shortcutCount = dock.items.size,
-                        iconSizeDp = dock.iconSizeDp,
-                        isEditing = isEditing,
-                    ),
-                presentation = presentation,
-                appIconLoader = appIconLoader,
+        Row(
+            modifier =
+                Modifier
+                    .width(contentViewportWidthDp.dp)
+                    .horizontalScroll(scrollState),
+            horizontalArrangement = Arrangement.spacedBy(dock.itemSpacingDp.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            repeat(renderedSlotCount) { index ->
+                DockSlot(
+                    modifier = Modifier.requiredSize(dock.iconSizeDp.dp),
+                    state =
+                        DockSlotState(
+                            shortcut = dock.items.getOrNull(index) as? AppShortcutItem,
+                            shortcutIndex = index,
+                            shortcutCount = dock.items.size,
+                            iconSizeDp = dock.iconSizeDp,
+                            isEditing = isEditing,
+                        ),
+                    presentation = presentation,
+                    appIconLoader = appIconLoader,
+                )
+            }
+        }
+
+        if (overflowAffordance.showStart) {
+            Box(
+                modifier =
+                    Modifier
+                        .align(Alignment.CenterStart)
+                        .width(DOCK_OVERFLOW_FADE_WIDTH_DP.dp)
+                        .fillMaxHeight()
+                        .background(
+                            Brush.horizontalGradient(
+                                colors = listOf(fadeColor, fadeColor.copy(alpha = 0f)),
+                            ),
+                        ),
+            )
+        }
+        if (overflowAffordance.showEnd) {
+            Box(
+                modifier =
+                    Modifier
+                        .align(Alignment.CenterEnd)
+                        .width(DOCK_OVERFLOW_FADE_WIDTH_DP.dp)
+                        .fillMaxHeight()
+                        .background(
+                            Brush.horizontalGradient(
+                                colors = listOf(fadeColor.copy(alpha = 0f), fadeColor),
+                            ),
+                        ),
             )
         }
     }
@@ -154,6 +201,7 @@ private const val DOCK_MAX_WIDTH_DP = 560
 private const val DOCK_VERTICAL_CHROME_DP = 32
 private const val DOCK_HORIZONTAL_PADDING_DP = 14
 private const val DOCK_VERTICAL_PADDING_DP = 10
+private const val DOCK_OVERFLOW_FADE_WIDTH_DP = 20
 
 internal fun dockHeightDp(iconSizeDp: Int): Int = iconSizeDp + DOCK_VERTICAL_CHROME_DP
 
@@ -216,6 +264,19 @@ internal fun dockBackgroundVisible(
         isEditing -> true
         else -> itemCount > 0
     }
+
+internal data class DockOverflowAffordance(
+    val showStart: Boolean,
+    val showEnd: Boolean,
+) {
+    constructor(
+        scrollOffsetPx: Int,
+        maxScrollOffsetPx: Int,
+    ) : this(
+        showStart = maxScrollOffsetPx > 0 && scrollOffsetPx > 0,
+        showEnd = maxScrollOffsetPx > 0 && scrollOffsetPx < maxScrollOffsetPx,
+    )
+}
 
 private data class DockPresentation(
     val notificationCountsByPackage: Map<AppPackageName, Int>,
