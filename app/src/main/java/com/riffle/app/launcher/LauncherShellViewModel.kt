@@ -16,7 +16,6 @@ import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.apps.InstalledAppCatalog
 import com.riffle.core.domain.launcher.apps.InstalledAppRepository
 import com.riffle.core.domain.launcher.apps.withHiddenApps
-import com.riffle.core.domain.launcher.home.DockEditResult
 import com.riffle.core.domain.launcher.home.DockEngine
 import com.riffle.core.domain.launcher.home.FolderEditResult
 import com.riffle.core.domain.launcher.home.FolderEngine
@@ -96,6 +95,11 @@ class LauncherShellViewModel(
     private val shortcutEngine = HomeShortcutEngine()
     private val homePageEngine = HomePageEngine()
     private val dockEngine = DockEngine()
+    private val dockEditReducer =
+        LauncherDockEditReducer(
+            dockEngine = dockEngine,
+            homeLayoutRepository = homeLayoutRepository,
+        )
     private val folderEngine = FolderEngine()
     private val widgetEngine = WidgetEngine()
 
@@ -307,19 +311,7 @@ class LauncherShellViewModel(
     }
 
     fun onDockEdited(action: LauncherShellAction) {
-        mutableState.value =
-            if (mutableState.value.shouldEditSettingsTargetDock(action)) {
-                mutableState.value.withSettingsDockEdit(
-                    action = action,
-                    dockEngine = dockEngine,
-                    homeLayoutRepository = homeLayoutRepository,
-                )
-            } else {
-                when (val result = dockEngine.applyEdit(action = action, layout = mutableState.value.homeLayout)) {
-                    is DockEditResult.Updated -> mutableState.value.withHomeLayout(result.layout, homeLayoutRepository)
-                    is DockEditResult.Rejected -> mutableState.value
-                }
-            }
+        mutableState.value = dockEditReducer.reduce(mutableState.value, action)
     }
 
     fun onLauncherSettingsActionSelected(action: LauncherShellAction) {
