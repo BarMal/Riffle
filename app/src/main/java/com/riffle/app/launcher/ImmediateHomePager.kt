@@ -1,6 +1,7 @@
 package com.riffle.app.launcher
 
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.AnimationSpec
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.gestures.awaitEachGesture
@@ -33,6 +34,7 @@ import kotlin.math.roundToInt
 @Composable
 internal fun rememberImmediateHomePagerState(
     layout: HomeLayout,
+    reducedMotion: Boolean = false,
     actions: HomeWorkspaceActions,
 ): ImmediateHomePagerState {
     val selectedPageIndex = layout.selectedPageIndex.coerceIn(0, layout.lastPageIndex)
@@ -47,21 +49,28 @@ internal fun rememberImmediateHomePagerState(
             pendingGestureTargetPageIndex.value = null
         }
 
-        val shouldAnimateExternalPageSelection =
-            !isDragging.value &&
-                !isSettling.value &&
-                pendingGestureTargetPageIndex.value == null &&
-                layout.pages.isNotEmpty() &&
-                dragPagePosition.floatValue.roundToInt() != selectedPageIndex
+        val shouldApplyExternalPageSelection =
+            shouldApplyExternalHomePageSelection(
+                isDragging = isDragging.value,
+                isSettling = isSettling.value,
+                hasPendingGestureTarget = pendingGestureTargetPageIndex.value != null,
+                pageCount = layout.pages.size,
+                currentPagePosition = dragPagePosition.floatValue,
+                selectedPageIndex = selectedPageIndex,
+            )
 
-        if (shouldAnimateExternalPageSelection) {
+        if (shouldApplyExternalPageSelection) {
             isSettling.value = true
             settlePagePosition.snapTo(dragPagePosition.floatValue)
-            settlePagePosition.animateTo(
-                targetValue = selectedPageIndex.toFloat(),
-                animationSpec = homePageSettleAnimation(),
-            ) {
-                dragPagePosition.floatValue = value
+            if (reducedMotion) {
+                settlePagePosition.snapTo(selectedPageIndex.toFloat())
+            } else {
+                settlePagePosition.animateTo(
+                    targetValue = selectedPageIndex.toFloat(),
+                    animationSpec = homePageSettleAnimation(),
+                ) {
+                    dragPagePosition.floatValue = value
+                }
             }
             dragPagePosition.floatValue = selectedPageIndex.toFloat()
             isSettling.value = false
@@ -134,16 +143,21 @@ internal class ImmediateHomePagerState(
     suspend fun animateToPage(
         targetPagePosition: Float,
         initialVelocity: Float,
+        reducedMotion: Boolean,
     ) {
         isSettling.value = true
         try {
             settlePagePosition.snapTo(pagePositionState.floatValue)
-            settlePagePosition.animateTo(
-                targetValue = targetPagePosition,
-                animationSpec = homePageSettleAnimation(),
-                initialVelocity = initialVelocity,
-            ) {
-                pagePositionState.floatValue = value
+            if (reducedMotion) {
+                settlePagePosition.snapTo(targetPagePosition)
+            } else {
+                settlePagePosition.animateTo(
+                    targetValue = targetPagePosition,
+                    animationSpec = homePageSettleAnimation(),
+                    initialVelocity = initialVelocity,
+                ) {
+                    pagePositionState.floatValue = value
+                }
             }
             pagePositionState.floatValue = targetPagePosition
         } finally {
@@ -180,6 +194,7 @@ internal fun ImmediateWorkspacePager(
                         pageWidthPx = pageWidthPx,
                         layout = layout,
                         pagerState = pagerState,
+                        reducedMotion = presentation.reducedMotion,
                         launchPageMotion = { action ->
                             coroutineScope.launch(start = CoroutineStart.UNDISPATCHED) { action() }
                         },
@@ -211,6 +226,7 @@ private fun Modifier.immediateHomePageDrag(
     pageWidthPx: Float,
     layout: HomeLayout,
     pagerState: ImmediateHomePagerState,
+    reducedMotion: Boolean,
     launchPageMotion: (suspend () -> Unit) -> Unit,
 ): Modifier =
     if (!enabled) {
@@ -279,6 +295,7 @@ private fun Modifier.immediateHomePageDrag(
                         pagerState.animateToPage(
                             targetPagePosition = targetIndex.toFloat(),
                             initialVelocity = -velocity / pageWidthPx.coerceAtLeast(1f),
+                            reducedMotion = reducedMotion,
                         )
                         pagerState.onDragStopped(targetIndex)
                     }
@@ -317,7 +334,21 @@ private fun pageSettleTargetIndex(
     }.coerceIn(0, (pageCount - 1).coerceAtLeast(0))
 }
 
-private fun homePageSettleAnimation() =
+internal fun shouldApplyExternalHomePageSelection(
+    isDragging: Boolean,
+    isSettling: Boolean,
+    hasPendingGestureTarget: Boolean,
+    pageCount: Int,
+    currentPagePosition: Float,
+    selectedPageIndex: Int,
+): Boolean =
+    !isDragging &&
+        !isSettling &&
+        !hasPendingGestureTarget &&
+        pageCount > 0 &&
+        currentPagePosition.roundToInt() != selectedPageIndex
+
+private fun homePageSettleAnimation(): AnimationSpec<Float> =
     spring<Float>(
         dampingRatio = Spring.DampingRatioNoBouncy,
         stiffness = Spring.StiffnessMediumLow,

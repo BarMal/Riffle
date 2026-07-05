@@ -17,7 +17,7 @@ import org.junit.Test
 class LauncherSettingsActionRouteTest {
     @Test
     fun routesSettingsStateActions() {
-        val action = LauncherShellAction.SelectFullscreenHomeEnabled(enabled = true)
+        val action = LauncherShellAction.SelectReducedMotionEnabled(enabled = true)
 
         assertEquals(
             LauncherSettingsActionRoute.SettingsState(action),

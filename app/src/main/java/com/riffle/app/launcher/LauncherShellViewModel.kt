@@ -391,6 +391,12 @@ class LauncherShellViewModel(
                         launcherSettingsRepository = launcherSettingsRepository,
                     )
 
+                is LauncherShellAction.SelectReducedMotionEnabled ->
+                    mutableState.value.withMotionSettingsAction(
+                        action = action,
+                        launcherSettingsRepository = launcherSettingsRepository,
+                    )
+
                 is LauncherShellAction.SelectOverlayDockEnabled,
                 is LauncherShellAction.SelectOverlayDockEdge,
                 is LauncherShellAction.SelectOverlayDockHandleThickness,

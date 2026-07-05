@@ -106,7 +106,12 @@ private fun StandardHomeColumn(
     appIconLoader: AppIconLoader,
     actions: HomeWorkspaceActions,
 ) {
-    val pagerState = rememberImmediateHomePagerState(layout = state.visibleLayout, actions = actions)
+    val pagerState =
+        rememberImmediateHomePagerState(
+            layout = state.visibleLayout,
+            reducedMotion = state.presentation.reducedMotion,
+            actions = actions,
+        )
 
     Column(
         modifier =
@@ -302,6 +307,7 @@ private fun StandardHomeContentState.homeGridPresentation(): HomeGridPresentatio
         notificationCountsByPackage = presentation.notificationCountsByPackage,
         appShortcutsByApp = presentation.appShortcutsByApp,
         labelSettings = layout.settings.labels,
+        reducedMotion = presentation.reducedMotion,
         widgetViewFactory = presentation.widgetViewFactory,
     )
 
@@ -330,6 +336,7 @@ internal data class StandardHomePresentation(
     val notificationCountsByPackage: Map<AppPackageName, Int>,
     val appShortcutsByApp: AppShortcutsByApp,
     val homeGestures: HomeGestureSettings = HomeGestureSettings(),
+    val reducedMotion: Boolean = false,
     val widgetViewFactory: HomeWidgetViewFactory = EmptyHomeWidgetViewFactory,
     val widgetPicker: StandardHomeWidgetPickerState = StandardHomeWidgetPickerState(),
 )
@@ -343,6 +350,7 @@ internal data class HomeGridPresentation(
     val notificationCountsByPackage: Map<AppPackageName, Int>,
     val appShortcutsByApp: AppShortcutsByApp,
     val labelSettings: HomeLabelSettings,
+    val reducedMotion: Boolean = false,
     val widgetViewFactory: HomeWidgetViewFactory,
 )
 

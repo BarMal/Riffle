@@ -43,6 +43,13 @@ class LauncherSettingsTest {
     }
 
     @Test
+    fun defaultsReducedMotionToOff() {
+        val settings = LauncherSettings()
+
+        assertEquals(false, settings.motion.reducedMotion)
+    }
+
+    @Test
     fun defaultsOverlayDockToDisabled() {
         val settings = LauncherSettings()
 

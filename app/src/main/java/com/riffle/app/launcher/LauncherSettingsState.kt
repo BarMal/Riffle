@@ -54,6 +54,26 @@ fun LauncherShellState.withDefaultHomeSwipes(repo: LauncherSettingsRepository): 
         launcherSettingsRepository = repo,
     )
 
+internal fun LauncherShellState.withMotionSettingsAction(
+    action: LauncherShellAction,
+    launcherSettingsRepository: LauncherSettingsRepository,
+): LauncherShellState =
+    when (action) {
+        is LauncherShellAction.SelectReducedMotionEnabled ->
+            withLauncherSettings(
+                settings =
+                    launcherSettings.copy(
+                        motion =
+                            launcherSettings.motion.copy(
+                                reducedMotion = action.enabled,
+                            ),
+                    ),
+                launcherSettingsRepository = launcherSettingsRepository,
+            )
+
+        else -> this
+    }
+
 internal fun LauncherShellState.withAppearanceSettingsAction(
     action: LauncherShellAction,
     launcherSettingsRepository: LauncherSettingsRepository,
