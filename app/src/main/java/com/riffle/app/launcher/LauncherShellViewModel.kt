@@ -6,6 +6,7 @@ import com.riffle.core.domain.launcher.HomeRoleStatus
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.LauncherShellStateReducer
 import com.riffle.core.domain.launcher.OverlayDockPermissionStatus
+import com.riffle.core.domain.launcher.ShellDestination
 import com.riffle.core.domain.launcher.ShellNavigationAction
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppShortcutRepository
@@ -131,6 +132,8 @@ class LauncherShellViewModel(
     }
 
     fun onNavigationActionSelected(action: ShellNavigationAction) {
+        val previousDestination = mutableState.value.destination
+
         mutableState.value =
             reducer.navigationActionSelected(
                 currentState = mutableState.value,
@@ -141,6 +144,12 @@ class LauncherShellViewModel(
                         state.copy(settingsLayoutDeviceClass = state.homeLayoutSet.activeKey.deviceClass)
 
                     else -> state
+                }
+            }.let { state ->
+                if (previousDestination == ShellDestination.SEARCH && state.destination != ShellDestination.SEARCH) {
+                    appListActionReducer.reduce(state, LauncherShellAction.SearchQueryChanged("")) ?: state
+                } else {
+                    state
                 }
             }
     }
