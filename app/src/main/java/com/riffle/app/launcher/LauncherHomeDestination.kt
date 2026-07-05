@@ -1,15 +1,13 @@
 package com.riffle.app.launcher
 
 import androidx.compose.runtime.Composable
-import com.riffle.app.launcher.widgets.EmptyHomeWidgetViewFactory
-import com.riffle.app.launcher.widgets.HomeWidgetViewFactory
 import com.riffle.core.domain.launcher.LauncherShellState
 
 @Composable
 fun HomeDestination(
     state: LauncherShellState,
     appIconLoader: AppIconLoader,
-    widgetViewFactory: HomeWidgetViewFactory = EmptyHomeWidgetViewFactory,
+    widgetRenderers: LauncherWidgetRenderers = LauncherWidgetRenderers(),
     haptics: LauncherHaptics = NoopLauncherHaptics,
     onAction: (LauncherShellAction) -> Unit,
 ) {
@@ -37,7 +35,7 @@ fun HomeDestination(
                         notificationCountsByPackage = state.notificationCountsByPackage,
                         appShortcutsByApp = state.appShortcutsByApp,
                         homeSwipeGestures = state.launcherSettings.gestures.homeSwipe,
-                        widgetViewFactory = widgetViewFactory,
+                        widgetViewFactory = widgetRenderers.viewFactory,
                         widgetPicker =
                             StandardHomeWidgetPickerState(
                                 providers = state.installedWidgetProviders,
@@ -45,6 +43,7 @@ fun HomeDestination(
                             ),
                     ),
                 appIconLoader = appIconLoader,
+                widgetPreviewImageLoader = widgetRenderers.previewImageLoader,
                 onAction = onAction,
             )
     }

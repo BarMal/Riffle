@@ -29,6 +29,7 @@ import com.riffle.app.launcher.overlay.AndroidOverlayDockPermissionGateway
 import com.riffle.app.launcher.overlay.AndroidOverlayDockServiceController
 import com.riffle.app.launcher.widgets.AndroidInstalledWidgetProviderRepository
 import com.riffle.app.launcher.widgets.AndroidWidgetHostGateway
+import com.riffle.app.launcher.widgets.AndroidWidgetPreviewImageLoader
 import com.riffle.app.launcher.widgets.WidgetBindingCoordinator
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.home.GridDimensions
@@ -58,6 +59,7 @@ internal class MainActivityDependencies(
     val widgetHostGateway by lazy { AndroidWidgetHostGateway(activity) }
     val widgetBindingCoordinator by lazy { WidgetBindingCoordinator(widgetHostGateway) }
     val widgetAddWindowSizeProvider by lazy { AndroidWidgetAddWindowSizeProvider(activity) }
+    val widgetPreviewImageLoader by lazy { AndroidWidgetPreviewImageLoader(activity) }
 
     fun platformDependencies(): LauncherShellPlatformDependencies =
         LauncherShellPlatformDependencies(

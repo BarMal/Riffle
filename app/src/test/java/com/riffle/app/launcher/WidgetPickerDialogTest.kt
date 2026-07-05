@@ -50,6 +50,29 @@ class WidgetPickerDialogTest {
     }
 
     @Test
+    fun previewLabelPrefersTargetCellSizeWhenAvailable() {
+        val provider =
+            widgetProvider(label = "Clock", packageName = "com.example.clock", className = ".ClockWidget").copy(
+                dimensions =
+                    WidgetProviderDimensions(
+                        minWidthDp = 120,
+                        minHeightDp = 80,
+                        targetCellWidth = 3,
+                        targetCellHeight = 2,
+                    ),
+            )
+
+        assertEquals("3 x 2", provider.widgetPickerPreviewLabel())
+    }
+
+    @Test
+    fun previewLabelFallsBackToMinimumDimensions() {
+        val provider = widgetProvider(label = "Clock", packageName = "com.example.clock", className = ".ClockWidget")
+
+        assertEquals("120 x 80", provider.widgetPickerPreviewLabel())
+    }
+
+    @Test
     fun filtersWidgetProvidersByLabelPackageAndClassName() {
         val weather =
             widgetProvider(

@@ -22,8 +22,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.riffle.app.launcher.widgets.EmptyHomeWidgetViewFactory
-import com.riffle.app.launcher.widgets.HomeWidgetViewFactory
 import com.riffle.core.domain.RiffleProduct
 import com.riffle.core.domain.launcher.FirstRunStatus
 import com.riffle.core.domain.launcher.HomeRoleStatus
@@ -41,7 +39,7 @@ fun LauncherShell(
     appVersionLabel: String,
     appBuildIdentityLabel: String,
     appIconLoader: AppIconLoader = EmptyAppIconLoader,
-    widgetViewFactory: HomeWidgetViewFactory = EmptyHomeWidgetViewFactory,
+    widgetRenderers: LauncherWidgetRenderers = LauncherWidgetRenderers(),
     onAction: (LauncherShellAction) -> Unit,
 ) {
     val state by viewModel.state.collectAsState()
@@ -52,7 +50,7 @@ fun LauncherShell(
             appVersionLabel = appVersionLabel,
             appBuildIdentityLabel = appBuildIdentityLabel,
             appIconLoader = appIconLoader,
-            widgetViewFactory = widgetViewFactory,
+            widgetRenderers = widgetRenderers,
             onAction = onAction,
         )
     }
@@ -64,7 +62,7 @@ fun LauncherShellContent(
     appVersionLabel: String = "",
     appBuildIdentityLabel: String = "",
     appIconLoader: AppIconLoader = EmptyAppIconLoader,
-    widgetViewFactory: HomeWidgetViewFactory = EmptyHomeWidgetViewFactory,
+    widgetRenderers: LauncherWidgetRenderers = LauncherWidgetRenderers(),
     onAction: (LauncherShellAction) -> Unit,
 ) {
     val haptics = rememberLauncherHaptics(state.launcherSettings.haptics.feedbackStrength)
@@ -100,7 +98,7 @@ fun LauncherShellContent(
                     appVersionLabel = appVersionLabel,
                     appBuildIdentityLabel = appBuildIdentityLabel,
                     appIconLoader = appIconLoader,
-                    widgetViewFactory = widgetViewFactory,
+                    widgetRenderers = widgetRenderers,
                     haptics = haptics,
                     onAction = onAction,
                 )
@@ -142,7 +140,7 @@ private fun LauncherDestination(
     appVersionLabel: String,
     appBuildIdentityLabel: String,
     appIconLoader: AppIconLoader,
-    widgetViewFactory: HomeWidgetViewFactory,
+    widgetRenderers: LauncherWidgetRenderers,
     haptics: LauncherHaptics,
     onAction: (LauncherShellAction) -> Unit,
 ) {
@@ -151,7 +149,7 @@ private fun LauncherDestination(
             HomeDestination(
                 state = state,
                 appIconLoader = appIconLoader,
-                widgetViewFactory = widgetViewFactory,
+                widgetRenderers = widgetRenderers,
                 haptics = haptics,
                 onAction = onAction,
             )
