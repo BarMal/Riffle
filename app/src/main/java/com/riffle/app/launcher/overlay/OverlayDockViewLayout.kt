@@ -59,9 +59,20 @@ internal fun LinearLayout.LayoutParams.withItemMargin(
 internal fun Context.tallExpandedDockHeightDp(
     shortcuts: List<AppShortcutItem>,
     settings: OverlayDockSettings,
+): Int =
+    tallExpandedDockHeightDp(
+        shortcutCount = shortcuts.size,
+        settings = settings,
+        availableHeightDp = resources.configuration.screenHeightDp,
+    )
+
+internal fun tallExpandedDockHeightDp(
+    shortcutCount: Int,
+    settings: OverlayDockSettings,
+    availableHeightDp: Int,
 ): Int {
     val itemHeightDp =
-        settings.expandedIconSizeDp +
+        settings.expandedIconSizeDp.coerceAtLeast(0) +
             if (settings.showLabels) {
                 EXPANDED_LABEL_HEIGHT_DP
             } else {
@@ -69,12 +80,18 @@ internal fun Context.tallExpandedDockHeightDp(
             } +
             EXPANDED_ITEM_SPACING_DP
     val desiredHeightDp =
-        (shortcuts.size.coerceAtLeast(1) * itemHeightDp) +
-            EXPANDED_CLOSE_BUTTON_HEIGHT_DP
+        (
+            (shortcutCount.coerceAtLeast(1).toLong() * itemHeightDp.toLong()) +
+                EXPANDED_CLOSE_BUTTON_HEIGHT_DP.toLong()
+        )
+            .coerceAtMost(Int.MAX_VALUE.toLong())
+            .toInt()
     val maxHeightDp =
-        (resources.configuration.screenHeightDp * MAX_TALL_EXPANDED_DOCK_SCREEN_FRACTION).toInt()
+        (availableHeightDp.coerceAtLeast(0) * MAX_TALL_EXPANDED_DOCK_SCREEN_FRACTION)
+            .toInt()
+            .coerceAtLeast(0)
 
-    return desiredHeightDp.coerceAtMost(maxHeightDp.coerceAtLeast(itemHeightDp))
+    return desiredHeightDp.coerceAtMost(maxHeightDp)
 }
 
 internal fun Context.dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
