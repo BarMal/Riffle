@@ -41,7 +41,14 @@ class SharedPreferencesAppVisibilityRepository(context: Context) : AppVisibility
 
 fun encodeHiddenAppIdentities(identities: Set<AppIdentity>): String {
     return JSONArray(
-        identities.map { identity -> identity.toJson() },
+        identities
+            .sortedWith(
+                compareBy<AppIdentity> { identity -> identity.packageName.value }
+                    .thenBy { identity -> identity.activityName.value }
+                    .thenBy { identity -> identity.profile.type.name }
+                    .thenBy { identity -> identity.profile.id.value },
+            )
+            .map { identity -> identity.toJson() },
     ).toString()
 }
 
@@ -49,7 +56,9 @@ fun decodeHiddenAppIdentities(value: String): Set<AppIdentity> =
     JSONArray(value)
         .let { array ->
             (0 until array.length())
-                .map { index -> array.getJSONObject(index).toAppIdentity() }
+                .mapNotNull { index ->
+                    runCatching { array.getJSONObject(index).toAppIdentity() }.getOrNull()
+                }
                 .toSet()
         }
 
@@ -64,9 +73,15 @@ private fun JSONObject.toAppIdentity(): AppIdentity =
     AppIdentity(
         packageName = AppPackageName(getString("packageName")),
         activityName = AppActivityName(getString("activityName")),
-        profile =
+        profile = toAppProfile(),
+    )
+
+private fun JSONObject.toAppProfile(): AppProfile =
+    when {
+        has("profileId") || has("profileType") ->
             AppProfile(
                 id = AppProfileId(getString("profileId")),
                 type = AppProfileType.valueOf(getString("profileType")),
-            ),
-    )
+            )
+        else -> AppProfile.personal()
+    }
