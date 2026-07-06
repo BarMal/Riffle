@@ -122,6 +122,42 @@ class WidgetBindingCoordinatorTest {
     }
 
     @Test
+    fun immediateBindAfterPendingPermissionDeletesPendingHostedWidgetIdAndIgnoresLaterPermissionResult() {
+        val gateway = FakeWidgetHostGateway(bindingResult = WidgetBindingResult.RequiresPermission)
+        val coordinator = WidgetBindingCoordinator(gateway)
+        coordinator.requestAddWidget(
+            action = requestAddWidget(label = "Calendar"),
+            grid = GridDimensions(columns = 4, rows = 5),
+            availableWidthDp = 400,
+            availableHeightDp = 1000,
+        )
+        gateway.bindingResult = WidgetBindingResult.Bound
+
+        val result =
+            coordinator.requestAddWidget(
+                action = requestAddWidget(label = "Weather"),
+                grid = GridDimensions(columns = 4, rows = 5),
+                availableWidthDp = 400,
+                availableHeightDp = 1000,
+            )
+
+        assertEquals(listOf(HostedWidgetId(1), HostedWidgetId(2)), gateway.boundHostedWidgetIds)
+        assertEquals(listOf(HostedWidgetId(1)), gateway.deletedHostedWidgetIds)
+        assertEquals(
+            WidgetAddRequestResult.Bound(
+                LauncherShellAction.AddHostedWidgetToHome(
+                    hostedWidgetId = HostedWidgetId(2),
+                    label = "Weather",
+                    preferredSpan = GridSpan(columns = 2, rows = 1),
+                ),
+            ),
+            result,
+        )
+        assertEquals(WidgetBindPermissionResult.Ignored, coordinator.onPermissionResult(granted = true))
+        assertEquals(listOf(HostedWidgetId(1)), gateway.deletedHostedWidgetIds)
+    }
+
+    @Test
     fun permissionResultWithoutPendingRequestIsIgnored() {
         val coordinator = WidgetBindingCoordinator(FakeWidgetHostGateway())
 
