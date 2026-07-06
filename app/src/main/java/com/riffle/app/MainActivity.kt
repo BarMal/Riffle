@@ -17,6 +17,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import com.riffle.app.launcher.DefaultLauncherNotificationActionHandler
 import com.riffle.app.launcher.DefaultLauncherSettingsActionHandler
 import com.riffle.app.launcher.HomeLayoutDeviceClassEvent
+import com.riffle.app.launcher.HostedWidgetAddCompletionResult
 import com.riffle.app.launcher.LauncherActionRouter
 import com.riffle.app.launcher.LauncherActivityActionHandler
 import com.riffle.app.launcher.LauncherAppActionCallbacks
@@ -32,6 +33,7 @@ import com.riffle.app.launcher.LauncherWidgetAddHandlingResult
 import com.riffle.app.launcher.LauncherWidgetRenderers
 import com.riffle.app.launcher.WallpaperPickerLaunchResult
 import com.riffle.app.launcher.completeWidgetAdd
+import com.riffle.app.launcher.deleteHostedWidgetIdWhenRejected
 import com.riffle.app.launcher.failureMessage
 import com.riffle.app.launcher.fallbackWallpaperSourceAction
 import com.riffle.app.launcher.isLauncherHomeIntent
@@ -124,8 +126,21 @@ class MainActivity : ComponentActivity() {
                 widgetBindingCoordinator.onPermissionResult(result.resultCode == Activity.RESULT_OK)
             when (permissionResult) {
                 is WidgetBindPermissionResult.Bound ->
-                    shellViewModel.completeWidgetAdd(permissionResult.action)
-                        ?.let { message -> Toast.makeText(this, message, Toast.LENGTH_SHORT).show() }
+                    when (
+                        val completion =
+                            shellViewModel.completeWidgetAdd(permissionResult.action)
+                                .deleteHostedWidgetIdWhenRejected(
+                                    permissionResult.action,
+                                    widgetHostGateway::deleteHostedWidgetId,
+                                )
+                    ) {
+                        is HostedWidgetAddCompletionResult.Placed ->
+                            completion.message?.let { message ->
+                                Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+                            }
+
+                        HostedWidgetAddCompletionResult.Rejected -> Unit
+                    }
 
                 WidgetBindPermissionResult.Cancelled,
                 WidgetBindPermissionResult.Ignored,

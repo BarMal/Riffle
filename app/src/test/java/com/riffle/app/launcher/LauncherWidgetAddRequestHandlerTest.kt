@@ -24,8 +24,9 @@ class LauncherWidgetAddRequestHandlerTest {
                 windowSize = { LauncherWidgetAddWindowSize(availableWidthDp = 400, availableHeightDp = 1000) },
                 completeWidgetAdd = { action ->
                     completedActions += action
-                    "Weather ideal size is 2x1; added as 1x1"
+                    HostedWidgetAddCompletionResult.Placed("Weather ideal size is 2x1; added as 1x1")
                 },
+                deleteHostedWidgetId = gatewayDeleteShouldNotRun,
             )
 
         val result = handler.handle(requestAddWidget(label = "Weather"))
@@ -55,6 +56,7 @@ class LauncherWidgetAddRequestHandlerTest {
                 selectedGrid = { GridDimensions(columns = 4, rows = 5) },
                 windowSize = { LauncherWidgetAddWindowSize(availableWidthDp = 400, availableHeightDp = 1000) },
                 completeWidgetAdd = { error("Widget completion waits for permission result") },
+                deleteHostedWidgetId = gateway::deleteHostedWidgetId,
             )
 
         val result = handler.handle(requestAddWidget(label = "Calendar"))
@@ -87,8 +89,9 @@ class LauncherWidgetAddRequestHandlerTest {
                 windowSize = { LauncherWidgetAddWindowSize(availableWidthDp = 400, availableHeightDp = 1000) },
                 completeWidgetAdd = { action ->
                     completedActions += action
-                    "${action.label} added"
+                    HostedWidgetAddCompletionResult.Placed("${action.label} added")
                 },
+                deleteHostedWidgetId = gateway::deleteHostedWidgetId,
             )
 
         val pendingResult = handler.handle(requestAddWidget(label = "Calendar"))
@@ -113,6 +116,24 @@ class LauncherWidgetAddRequestHandlerTest {
             ),
             completedActions,
         )
+    }
+
+    @Test
+    fun deletesBoundWidgetIdWhenImmediatePlacementIsRejected() {
+        val gateway = FakeWidgetHostGateway()
+        val handler =
+            LauncherWidgetAddRequestHandler(
+                widgetBindingCoordinator = WidgetBindingCoordinator(gateway),
+                selectedGrid = { GridDimensions(columns = 4, rows = 5) },
+                windowSize = { LauncherWidgetAddWindowSize(availableWidthDp = 400, availableHeightDp = 1000) },
+                completeWidgetAdd = { HostedWidgetAddCompletionResult.Rejected },
+                deleteHostedWidgetId = gateway::deleteHostedWidgetId,
+            )
+
+        val result = handler.handle(requestAddWidget(label = "Weather"))
+
+        assertEquals(LauncherWidgetAddHandlingResult.Completed(message = null), result)
+        assertEquals(listOf(HostedWidgetId(1)), gateway.deletedHostedWidgetIds)
     }
 
     private class FakeWidgetHostGateway(
@@ -162,5 +183,9 @@ class LauncherWidgetAddRequestHandlerTest {
                         minHeightDp = 100,
                     ),
             )
+
+        val gatewayDeleteShouldNotRun: (HostedWidgetId) -> Unit = {
+            error("Placed widgets should not be deleted")
+        }
     }
 }

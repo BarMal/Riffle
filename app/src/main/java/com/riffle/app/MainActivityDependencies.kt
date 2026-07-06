@@ -8,6 +8,7 @@ import com.riffle.app.launcher.AndroidWallpaperPickerGateway
 import com.riffle.app.launcher.AndroidWidgetAddWindowSizeProvider
 import com.riffle.app.launcher.DataStoreHomeLayoutRepository
 import com.riffle.app.launcher.DataStoreLauncherSettingsRepository
+import com.riffle.app.launcher.HostedWidgetAddCompletionResult
 import com.riffle.app.launcher.LauncherBackupDocumentGateway
 import com.riffle.app.launcher.LauncherBackupDocumentHandler
 import com.riffle.app.launcher.LauncherBackupExportCoordinator
@@ -100,12 +101,13 @@ internal class MainActivityDependencies(
 
     fun widgetAddRequestHandler(
         selectedGrid: () -> GridDimensions,
-        completeWidgetAdd: (LauncherShellAction.AddHostedWidgetToHome) -> String?,
+        completeWidgetAdd: (LauncherShellAction.AddHostedWidgetToHome) -> HostedWidgetAddCompletionResult,
     ): LauncherWidgetAddRequestHandler =
         LauncherWidgetAddRequestHandler(
             widgetBindingCoordinator = widgetBindingCoordinator,
             selectedGrid = selectedGrid,
             windowSize = widgetAddWindowSizeProvider::windowSize,
             completeWidgetAdd = completeWidgetAdd,
+            deleteHostedWidgetId = widgetHostGateway::deleteHostedWidgetId,
         )
 }
