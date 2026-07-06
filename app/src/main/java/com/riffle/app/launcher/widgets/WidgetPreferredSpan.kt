@@ -10,20 +10,21 @@ fun WidgetProviderDimensions.preferredGridSpan(
     availableWidthDp: Int,
     availableHeightDp: Int,
 ): GridSpan {
-    val gridColumns = grid.columns.validGridCells()
-    val gridRows = grid.rows.validGridCells()
-
     return GridSpan(
         columns =
             targetCellWidth
-                ?.coerceIn(1, gridColumns)
-                ?: minWidthDp.spanCells(availableDp = availableWidthDp, gridCells = gridColumns),
+                ?: minWidthDp.spanCells(availableDp = availableWidthDp, gridCells = grid.columns),
         rows =
             targetCellHeight
-                ?.coerceIn(1, gridRows)
-                ?: minHeightDp.spanCells(availableDp = availableHeightDp, gridCells = gridRows),
-    )
+                ?: minHeightDp.spanCells(availableDp = availableHeightDp, gridCells = grid.rows),
+    ).fitWidgetPreferredSpan(grid)
 }
+
+fun GridSpan.fitWidgetPreferredSpan(grid: GridDimensions): GridSpan =
+    GridSpan(
+        columns = columns.coerceIn(1, grid.columns.validGridCells()),
+        rows = rows.coerceIn(1, grid.rows.validGridCells()),
+    )
 
 fun widgetSpanAdjustmentToast(
     label: String,
