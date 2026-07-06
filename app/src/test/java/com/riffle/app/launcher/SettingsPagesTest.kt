@@ -4,6 +4,8 @@ import com.riffle.core.domain.launcher.HomeRoleStatus
 import com.riffle.core.domain.launcher.OverlayDockPermissionStatus
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
+import com.riffle.core.domain.launcher.search.LauncherSearchProvider
+import com.riffle.core.domain.launcher.search.LauncherSearchResultType
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -138,6 +140,33 @@ class SettingsPagesTest {
             listOf(SettingsPage.PERMISSIONS),
             settingsMainPageEntriesMatching(query = "overlay not allowed", status = status).map { entry -> entry.page },
         )
+    }
+
+    @Test
+    fun projectsMainSettingsEntriesForLauncherSearch() {
+        val entries =
+            settingsLauncherSearchEntries(
+                SettingsOverviewStatus(
+                    hiddenAppCount = 2,
+                ),
+            )
+
+        val hiddenApps = entries.single { entry -> entry.id.value == "hidden_apps" }
+        val permissions = entries.single { entry -> entry.id.value == "permissions" }
+        val results =
+            LauncherSearchProvider()
+                .search(
+                    query = "default home",
+                    apps = emptyList(),
+                    settingsEntries = entries,
+                )
+
+        assertEquals("Hidden apps", hiddenApps.title)
+        assertEquals("2 hidden apps", hiddenApps.subtitle)
+        assertEquals("Apps", hiddenApps.section)
+        assertEquals(listOf("default home", "home app", "Permissions"), permissions.searchAliases)
+        assertEquals(listOf(LauncherSearchResultType.SETTING), results.map { result -> result.type })
+        assertEquals(listOf("Permissions"), results.map { result -> result.title })
     }
 
     @Test
