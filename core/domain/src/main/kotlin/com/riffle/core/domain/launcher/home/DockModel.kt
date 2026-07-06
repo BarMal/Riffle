@@ -9,7 +9,7 @@ data class DockModel(
     val backgroundSizing: DockBackgroundSizing = DockBackgroundSizing.DYNAMIC,
     val itemSpacingDp: Int = DEFAULT_DOCK_ITEM_SPACING_DP,
 ) {
-    val availableSlots: Int = capacity - items.size
+    val availableSlots: Int = (capacity - items.size).coerceAtLeast(0)
 }
 
 enum class DockBackgroundSizing {
