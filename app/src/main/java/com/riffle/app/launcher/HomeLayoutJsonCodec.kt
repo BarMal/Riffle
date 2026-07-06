@@ -47,7 +47,7 @@ internal fun JSONObject.toHomeLayout(defaults: HomeLayout = HomeLayoutDefaults.s
             viewMode = json.optViewMode(defaults.viewMode),
             pages = pages.ifEmpty { defaults.pages },
             selectedPageId = safeSelectedPageId,
-            dock = json.optJSONObject("dock")?.toDock() ?: defaults.dock,
+            dock = json.optJSONObject("dock")?.toDock(defaults.dock) ?: defaults.dock,
             settings = settings,
         )
     }
@@ -68,22 +68,22 @@ private fun encodeDock(dock: DockModel): JSONObject =
         .put("capacity", dock.capacity)
         .put("items", JSONArray(dock.items.map(::encodeLauncherItem)))
 
-private fun JSONObject.toDock(): DockModel =
+private fun JSONObject.toDock(defaults: DockModel): DockModel =
     DockModel(
-        isEnabled = optBoolean("isEnabled", HomeLayoutDefaults.standard().dock.isEnabled),
-        iconSizeDp = optInt("iconSizeDp", HomeLayoutDefaults.standard().dock.iconSizeDp),
+        isEnabled = optBoolean("isEnabled", defaults.isEnabled),
+        iconSizeDp = optInt("iconSizeDp", defaults.iconSizeDp),
         backgroundAlphaPercent =
             optInt(
                 "backgroundAlphaPercent",
-                HomeLayoutDefaults.standard().dock.backgroundAlphaPercent,
+                defaults.backgroundAlphaPercent,
             ),
         backgroundSizing =
             optString("backgroundSizing", "")
                 .takeIf(String::isNotBlank)
                 ?.let { value -> runCatching { DockBackgroundSizing.valueOf(value) }.getOrNull() }
-                ?: HomeLayoutDefaults.standard().dock.backgroundSizing,
-        itemSpacingDp = optInt("itemSpacingDp", HomeLayoutDefaults.standard().dock.itemSpacingDp),
-        capacity = optInt("capacity", HomeLayoutDefaults.standard().dock.capacity),
+                ?: defaults.backgroundSizing,
+        itemSpacingDp = optInt("itemSpacingDp", defaults.itemSpacingDp),
+        capacity = optInt("capacity", defaults.capacity),
         items = optJSONArray("items")?.toLauncherItems().orEmpty(),
     )
 
