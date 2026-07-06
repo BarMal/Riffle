@@ -3,6 +3,7 @@ package com.riffle.app.launcher
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppVisibilityRepository
+import com.riffle.core.domain.launcher.home.GridDimensions
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
@@ -66,6 +67,33 @@ class LauncherBackupDocumentHandlerTest {
         )
     }
 
+    @Test
+    fun reportsImportFailureMessageForMalformedJson() {
+        val input = ByteArrayInputStream("""{"type":""".toByteArray(Charsets.UTF_8))
+        val handler = handler(document = backupDocument())
+
+        val result = handler.importBackup { input }
+
+        assertEquals(
+            LauncherBackupImportHandlingResult.Failure(LauncherBackupMessage.IMPORT_FAILED),
+            result,
+        )
+    }
+
+    @Test
+    fun reportsImportFailureMessageForDecodedBackupWithInvalidLayout() {
+        val document = backupDocumentWithInvalidLayout()
+        val input = ByteArrayInputStream(encodeLauncherBackupDocument(document).toByteArray(Charsets.UTF_8))
+        val handler = handler(document = backupDocument())
+
+        val result = handler.importBackup { input }
+
+        assertEquals(
+            LauncherBackupImportHandlingResult.Failure(LauncherBackupMessage.IMPORT_FAILED),
+            result,
+        )
+    }
+
     private fun handler(document: LauncherBackupDocument): LauncherBackupDocumentHandler =
         LauncherBackupDocumentHandler(
             exportCoordinator =
@@ -111,6 +139,25 @@ class LauncherBackupDocumentHandlerTest {
                 ),
             exportedAtEpochMillis = 123_456L,
         )
+
+    private fun backupDocumentWithInvalidLayout(): LauncherBackupDocument {
+        val defaultLayout = HomeLayoutDefaults.standard()
+        val invalidGrid = GridDimensions(columns = 0, rows = 5)
+        val layout =
+            defaultLayout.copy(
+                pages =
+                    listOf(
+                        defaultLayout.selectedPage.copy(
+                            grid = invalidGrid,
+                        ),
+                    ),
+                settings =
+                    defaultLayout.settings.copy(
+                        grid = defaultLayout.settings.grid.copy(dimensions = invalidGrid),
+                    ),
+            )
+        return backupDocument().copy(homeLayoutSet = HomeLayoutSet.fromLayout(layout))
+    }
 
     private class FakeAppVisibilityRepository(
         private val hiddenApps: Set<AppIdentity>,

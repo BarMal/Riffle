@@ -1,5 +1,6 @@
 package com.riffle.app.launcher
 
+import com.riffle.core.domain.launcher.home.GridDimensions
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.HomeLayoutSet
 import com.riffle.core.domain.launcher.settings.AppearanceSettings
@@ -62,6 +63,27 @@ class LauncherBackupDocumentGatewayTest {
         assertEquals(LauncherBackupImportResult.Failure, result)
     }
 
+    @Test
+    fun importDocumentFailsWhenSourceIsMalformedJson() {
+        val input = ByteArrayInputStream("""{"type":""".toByteArray(Charsets.UTF_8))
+        val gateway = LauncherBackupDocumentGateway()
+
+        val result = gateway.importDocument { input }
+
+        assertEquals(LauncherBackupImportResult.Failure, result)
+    }
+
+    @Test
+    fun importDocumentReturnsDecodedBackupDocumentWhenLayoutIsInvalid() {
+        val document = backupDocumentWithInvalidLayout()
+        val input = ByteArrayInputStream(encodeLauncherBackupDocument(document).toByteArray(Charsets.UTF_8))
+        val gateway = LauncherBackupDocumentGateway()
+
+        val result = gateway.importDocument { input }
+
+        assertEquals(LauncherBackupImportResult.Imported(document), result)
+    }
+
     private fun backupDocument(): LauncherBackupDocument =
         LauncherBackupDocument(
             homeLayoutSet = HomeLayoutSet.fromLayout(HomeLayoutDefaults.standard()),
@@ -76,4 +98,23 @@ class LauncherBackupDocumentGatewayTest {
                     motion = MotionSettings(reducedMotion = true),
                 ),
         )
+
+    private fun backupDocumentWithInvalidLayout(): LauncherBackupDocument {
+        val defaultLayout = HomeLayoutDefaults.standard()
+        val invalidGrid = GridDimensions(columns = 0, rows = 5)
+        val layout =
+            defaultLayout.copy(
+                pages =
+                    listOf(
+                        defaultLayout.selectedPage.copy(
+                            grid = invalidGrid,
+                        ),
+                    ),
+                settings =
+                    defaultLayout.settings.copy(
+                        grid = defaultLayout.settings.grid.copy(dimensions = invalidGrid),
+                    ),
+            )
+        return backupDocument().copy(homeLayoutSet = HomeLayoutSet.fromLayout(layout))
+    }
 }
