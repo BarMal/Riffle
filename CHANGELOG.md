@@ -1,5 +1,26 @@
 # Changelog
 
+## Alpha 178
+
+Release notes for the next alpha after Alpha 177.
+
+### Changed
+
+- Launcher search now has a domain-owned provider and extensible result model for mixed global app and settings results.
+- Settings page entries can now be projected into launcher search results, including dynamic status text such as hidden-app counts.
+- Over-capacity dock layouts now render enough slots for all persisted dock items when capacity is positive, so existing items stay reachable through dock scrolling instead of disappearing.
+
+### Verification
+
+- Full GitHub CI `Verify` passed for PRs #533 and #534.
+- Local verification included targeted tests for mixed app/settings search ranking, settings search projection, hidden app exclusion, blank global searches, dock over-capacity slot rendering, and full `./gradlew verify`.
+
+### Known Limitations
+
+- The new global search provider is not yet wired into the Compose search UI; app drawer and existing search surfaces keep their current presentation for this alpha.
+- Dock folders, widgets/static items, explicit paging controls, and future card dock modes remain open under #6.
+- Wallpaper picker integration remains open under #7.
+
 ## Alpha 177
 
 Release notes for the next alpha after Alpha 176.
