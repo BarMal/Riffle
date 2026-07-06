@@ -10,8 +10,11 @@ import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.DockEngine
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
+import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
+import com.riffle.core.domain.launcher.home.HomeLayoutKey
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
 import com.riffle.core.domain.launcher.home.HomeLayoutSet
+import com.riffle.core.domain.launcher.home.LauncherViewMode
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertSame
 import org.junit.Test
@@ -67,6 +70,44 @@ class LauncherDockEditReducerTest {
 
         assertEquals(7, updatedState.homeLayout.dock.capacity)
         assertEquals(7, repository.savedLayoutSet?.activeLayout?.dock?.capacity)
+    }
+
+    @Test
+    fun appliesDockConfigurationToSelectedSettingsDeviceClass() {
+        val phoneKey = HomeLayoutKey(LauncherViewMode.STANDARD_APP_DRAWER, HomeLayoutDeviceClass.PHONE)
+        val foldableKey = HomeLayoutKey(LauncherViewMode.STANDARD_APP_DRAWER, HomeLayoutDeviceClass.FOLDABLE)
+        val phoneLayout = HomeLayoutDefaults.standard(HomeLayoutDeviceClass.PHONE)
+        val foldableLayout = HomeLayoutDefaults.standard(HomeLayoutDeviceClass.FOLDABLE)
+        val layoutSet =
+            HomeLayoutSet(
+                activeKey = phoneKey,
+                layouts =
+                    mapOf(
+                        phoneKey to phoneLayout,
+                        foldableKey to foldableLayout,
+                    ),
+            )
+        val repository = FakeHomeLayoutRepository(savedLayoutSet = layoutSet)
+        val state =
+            LauncherShellState(
+                destination = ShellDestination.SETTINGS,
+                homeLayout = phoneLayout,
+                homeLayoutSet = layoutSet,
+                settingsLayoutDeviceClass = HomeLayoutDeviceClass.FOLDABLE,
+                availableLayoutDeviceClasses = setOf(HomeLayoutDeviceClass.PHONE, HomeLayoutDeviceClass.FOLDABLE),
+            )
+
+        val updatedState =
+            reducer(repository).reduce(
+                state = state,
+                action = LauncherShellAction.SelectDockIconSize(sizeDp = 40),
+            )
+
+        val savedLayoutSet = checkNotNull(repository.savedLayoutSet)
+        assertEquals(44, savedLayoutSet.layoutFor(phoneKey).dock.iconSizeDp)
+        assertEquals(40, savedLayoutSet.layoutFor(foldableKey).dock.iconSizeDp)
+        assertEquals(phoneKey, savedLayoutSet.activeKey)
+        assertEquals(44, updatedState.homeLayout.dock.iconSizeDp)
     }
 
     private fun reducer(repository: HomeLayoutRepository): LauncherDockEditReducer =

@@ -76,6 +76,8 @@ class HomeLayoutDefaultsTest {
         val layout = HomeLayoutDefaults.standard()
 
         assertEquals(5, layout.dock.capacity)
+        assertEquals(44, layout.dock.iconSizeDp)
+        assertEquals(8, layout.dock.itemSpacingDp)
         assertEquals(5, layout.dock.availableSlots)
         assertTrue(layout.dock.items.isEmpty())
     }
@@ -87,6 +89,8 @@ class HomeLayoutDefaultsTest {
         assertEquals(GridDimensions(columns = 5, rows = 6), layout.selectedPage.grid)
         assertEquals(GridDimensions(columns = 5, rows = 6), layout.settings.grid.dimensions)
         assertEquals(6, layout.dock.capacity)
+        assertEquals(48, layout.dock.iconSizeDp)
+        assertEquals(10, layout.dock.itemSpacingDp)
     }
 
     @Test
@@ -96,5 +100,7 @@ class HomeLayoutDefaultsTest {
         assertEquals(GridDimensions(columns = 6, rows = 6), layout.selectedPage.grid)
         assertEquals(GridDimensions(columns = 6, rows = 6), layout.settings.grid.dimensions)
         assertEquals(7, layout.dock.capacity)
+        assertEquals(52, layout.dock.iconSizeDp)
+        assertEquals(12, layout.dock.itemSpacingDp)
     }
 }
