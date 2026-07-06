@@ -1,5 +1,24 @@
 # Changelog
 
+## Alpha 181
+
+Release notes for the next alpha after Alpha 180.
+
+### Changed
+
+- Launcher search now presents web search as a dedicated full-width Google search panel instead of mixing it into the app icon grid as a square pseudo-icon.
+- Web search now shows compact local preview refinements for images, news, and videos, each delegating to the existing Android web search flow.
+- Launcher search result counts now reflect local launcher results only: apps, shortcuts, and settings.
+
+### Verification
+
+- Full GitHub CI `Verify` passed for PR #547.
+- Local verification included targeted search grid and search surface text tests plus full `./gradlew verify`.
+
+### Known Limitations
+
+- Web previews are local delegated Google searches, not network-fetched result snippets. Real online provider prefetch remains a separate provider/privacy/loading-state slice under #20.
+
 ## Alpha 180
 
 Release notes for the next alpha after Alpha 179.
