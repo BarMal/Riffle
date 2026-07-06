@@ -113,9 +113,9 @@ class ImmediateHomePagerTest {
     }
 
     @Test
-    fun selectsImmediateExternalPageSelectionSettlePolicyWhenReducedMotionIsOn() {
+    fun selectsAnimatedExternalPageSelectionSettlePolicyWhenReducedMotionIsOn() {
         assertEquals(
-            HomePageExternalSelectionSettlePolicy.ImmediateSnap,
+            HomePageExternalSelectionSettlePolicy.AnimatedSettle,
             homePageExternalSelectionSettlePolicy(reducedMotion = true),
         )
     }

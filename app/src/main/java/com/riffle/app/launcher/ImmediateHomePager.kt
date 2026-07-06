@@ -356,10 +356,10 @@ internal fun shouldApplyExternalHomePageSelection(
         currentPagePosition != selectedPageIndex.toFloat()
 
 internal fun homePageExternalSelectionSettlePolicy(reducedMotion: Boolean): HomePageExternalSelectionSettlePolicy =
-    if (reducedMotion) {
-        HomePageExternalSelectionSettlePolicy.ImmediateSnap
-    } else {
-        HomePageExternalSelectionSettlePolicy.AnimatedSettle
+    when (homePageSettleMotionPolicy(reducedMotion)) {
+        HomePageSettleMotionPolicy.StandardSpring,
+        HomePageSettleMotionPolicy.ReducedShortTween,
+        -> HomePageExternalSelectionSettlePolicy.AnimatedSettle
     }
 
 internal fun homePageSettleMotionPolicy(reducedMotion: Boolean): HomePageSettleMotionPolicy =
