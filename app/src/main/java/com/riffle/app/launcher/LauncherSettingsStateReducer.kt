@@ -23,93 +23,103 @@ internal class LauncherSettingsStateReducer(
         state: LauncherShellState,
         action: LauncherShellAction,
     ): LauncherShellState =
-        when (action) {
+        if (action.isAppearanceSettingsAction) {
+            state.withAppearanceSettingsAction(
+                action = action,
+                launcherSettingsRepository = launcherSettingsRepository,
+            )
+        } else {
+            when (action) {
+                is LauncherShellAction.SelectHomeSwipeGestureAction ->
+                    state.withHomeSwipeGestureAction(
+                        direction = action.direction,
+                        action = action.action,
+                        launcherSettingsRepository = launcherSettingsRepository,
+                    )
+
+                is LauncherShellAction.SelectHomeGestureAction ->
+                    state.withHomeGestureAction(
+                        gesture = action.gesture,
+                        action = action.action,
+                        launcherSettingsRepository = launcherSettingsRepository,
+                    )
+
+                LauncherShellAction.ResetHomeSwipeGestureActions ->
+                    state.withDefaultHomeSwipes(
+                        repo = launcherSettingsRepository,
+                    )
+
+                is LauncherShellAction.SelectHapticFeedbackStrength ->
+                    state.withLauncherSettings(
+                        settings =
+                            state.launcherSettings.copy(
+                                haptics =
+                                    state.launcherSettings.haptics.copy(
+                                        feedbackStrength = action.strength,
+                                    ),
+                            ),
+                        launcherSettingsRepository = launcherSettingsRepository,
+                    )
+
+                is LauncherShellAction.SelectReducedMotionEnabled ->
+                    state.withMotionSettingsAction(
+                        action = action,
+                        launcherSettingsRepository = launcherSettingsRepository,
+                    )
+
+                is LauncherShellAction.SelectContextualEnabled ->
+                    state.withContextualSettingsAction(
+                        action = action,
+                        launcherSettingsRepository = launcherSettingsRepository,
+                    )
+
+                is LauncherShellAction.SelectOverlayDockEnabled,
+                is LauncherShellAction.SelectOverlayDockEdge,
+                is LauncherShellAction.SelectOverlayDockHandleThickness,
+                is LauncherShellAction.SelectOverlayDockHandleHeight,
+                is LauncherShellAction.SelectOverlayDockVerticalOffset,
+                is LauncherShellAction.SelectOverlayDockHandleAlpha,
+                is LauncherShellAction.SelectOverlayDockExpandedIconSize,
+                is LauncherShellAction.SelectOverlayDockExpandedOrientation,
+                is LauncherShellAction.SelectOverlayDockShowLabels,
+                is LauncherShellAction.AddAppToFloatingDock,
+                is LauncherShellAction.AddAppShortcutToFloatingDock,
+                is LauncherShellAction.RemoveFloatingDockShortcut,
+                is LauncherShellAction.MoveFloatingDockShortcut,
+                ->
+                    state.withOverlayDockSettingsAction(
+                        action = action,
+                        launcherSettingsRepository = launcherSettingsRepository,
+                    )
+
+                is LauncherShellAction.SelectSettingsLayoutDeviceClass ->
+                    state.withSettingsLayoutDeviceClass(action.deviceClass)
+
+                is LauncherShellAction.ImportLauncherBackup ->
+                    state
+                        .withImportedBackup(
+                            document = action.document,
+                            homeLayoutRepository = homeLayoutRepository,
+                            launcherSettingsRepository = launcherSettingsRepository,
+                            appVisibilityRepository = appVisibilityRepository,
+                        )
+                        .withoutUnavailableApps(homeLayoutRepository)
+                        .withHomeScreenLibraryApps(homeLayoutRepository)
+
+                else -> state
+            }
+        }
+}
+
+private val LauncherShellAction.isAppearanceSettingsAction: Boolean
+    get() =
+        when (this) {
             is LauncherShellAction.SelectWallpaperSource,
+            is LauncherShellAction.SelectWallpaperScrollMode,
             is LauncherShellAction.SelectFullscreenHomeEnabled,
             is LauncherShellAction.SelectHomeStatusBarHidden,
             is LauncherShellAction.SelectHomeNavigationBarHidden,
-            ->
-                state.withAppearanceSettingsAction(
-                    action = action,
-                    launcherSettingsRepository = launcherSettingsRepository,
-                )
+            -> true
 
-            is LauncherShellAction.SelectHomeSwipeGestureAction ->
-                state.withHomeSwipeGestureAction(
-                    direction = action.direction,
-                    action = action.action,
-                    launcherSettingsRepository = launcherSettingsRepository,
-                )
-
-            is LauncherShellAction.SelectHomeGestureAction ->
-                state.withHomeGestureAction(
-                    gesture = action.gesture,
-                    action = action.action,
-                    launcherSettingsRepository = launcherSettingsRepository,
-                )
-
-            LauncherShellAction.ResetHomeSwipeGestureActions ->
-                state.withDefaultHomeSwipes(
-                    repo = launcherSettingsRepository,
-                )
-
-            is LauncherShellAction.SelectHapticFeedbackStrength ->
-                state.withLauncherSettings(
-                    settings =
-                        state.launcherSettings.copy(
-                            haptics =
-                                state.launcherSettings.haptics.copy(
-                                    feedbackStrength = action.strength,
-                                ),
-                        ),
-                    launcherSettingsRepository = launcherSettingsRepository,
-                )
-
-            is LauncherShellAction.SelectReducedMotionEnabled ->
-                state.withMotionSettingsAction(
-                    action = action,
-                    launcherSettingsRepository = launcherSettingsRepository,
-                )
-
-            is LauncherShellAction.SelectContextualEnabled ->
-                state.withContextualSettingsAction(
-                    action = action,
-                    launcherSettingsRepository = launcherSettingsRepository,
-                )
-
-            is LauncherShellAction.SelectOverlayDockEnabled,
-            is LauncherShellAction.SelectOverlayDockEdge,
-            is LauncherShellAction.SelectOverlayDockHandleThickness,
-            is LauncherShellAction.SelectOverlayDockHandleHeight,
-            is LauncherShellAction.SelectOverlayDockVerticalOffset,
-            is LauncherShellAction.SelectOverlayDockHandleAlpha,
-            is LauncherShellAction.SelectOverlayDockExpandedIconSize,
-            is LauncherShellAction.SelectOverlayDockExpandedOrientation,
-            is LauncherShellAction.SelectOverlayDockShowLabels,
-            is LauncherShellAction.AddAppToFloatingDock,
-            is LauncherShellAction.AddAppShortcutToFloatingDock,
-            is LauncherShellAction.RemoveFloatingDockShortcut,
-            is LauncherShellAction.MoveFloatingDockShortcut,
-            ->
-                state.withOverlayDockSettingsAction(
-                    action = action,
-                    launcherSettingsRepository = launcherSettingsRepository,
-                )
-
-            is LauncherShellAction.SelectSettingsLayoutDeviceClass ->
-                state.withSettingsLayoutDeviceClass(action.deviceClass)
-
-            is LauncherShellAction.ImportLauncherBackup ->
-                state
-                    .withImportedBackup(
-                        document = action.document,
-                        homeLayoutRepository = homeLayoutRepository,
-                        launcherSettingsRepository = launcherSettingsRepository,
-                        appVisibilityRepository = appVisibilityRepository,
-                    )
-                    .withoutUnavailableApps(homeLayoutRepository)
-                    .withHomeScreenLibraryApps(homeLayoutRepository)
-
-            else -> state
+            else -> false
         }
-}

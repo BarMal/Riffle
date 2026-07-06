@@ -26,6 +26,7 @@ import com.riffle.core.domain.launcher.home.LauncherPage
 import com.riffle.core.domain.launcher.home.LauncherPageId
 import com.riffle.core.domain.launcher.home.LauncherPageType
 import com.riffle.core.domain.launcher.home.LauncherViewMode
+import com.riffle.core.domain.launcher.home.WallpaperScrollMode
 import com.riffle.core.domain.launcher.home.WallpaperSettings
 import com.riffle.core.domain.launcher.home.WallpaperSource
 import com.riffle.core.domain.launcher.home.WidgetItem
@@ -168,6 +169,7 @@ class HomeLayoutJsonCodecTest {
         val decodedLayout = decodeHomeLayout(encodeHomeLayout(layout))
 
         assertEquals(WallpaperSource.SOLID_COLOR, decodedLayout.settings.wallpaper.source)
+        assertEquals(WallpaperScrollMode.STATIC, decodedLayout.settings.wallpaper.scrollMode)
     }
 
     @Test

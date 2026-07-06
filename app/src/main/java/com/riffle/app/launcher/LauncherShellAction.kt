@@ -19,6 +19,7 @@ import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.home.LauncherPageId
 import com.riffle.core.domain.launcher.home.LauncherPageType
 import com.riffle.core.domain.launcher.home.LauncherViewMode
+import com.riffle.core.domain.launcher.home.WallpaperScrollMode
 import com.riffle.core.domain.launcher.home.WallpaperSource
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
 import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
@@ -253,6 +254,8 @@ sealed interface LauncherShellAction {
     data object ResetSearchFilters : LauncherShellAction
 
     data class SelectWallpaperSource(val source: WallpaperSource) : LauncherShellAction
+
+    data class SelectWallpaperScrollMode(val mode: WallpaperScrollMode) : LauncherShellAction
 
     data object ChangeWallpaper : LauncherShellAction
 

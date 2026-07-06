@@ -1,13 +1,17 @@
 package com.riffle.app.launcher
 
+import android.app.WallpaperManager
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.view.Window
 import android.view.WindowManager
+import com.riffle.core.domain.launcher.home.WallpaperScrollMode
 import com.riffle.core.domain.launcher.home.WallpaperSource
 
 interface LauncherWallpaperController {
     fun applySource(source: WallpaperSource): LauncherWallpaperApplyResult
+
+    fun applyOffset(command: LauncherWallpaperOffsetCommand)
 }
 
 sealed interface LauncherWallpaperApplyResult {
@@ -35,11 +39,22 @@ class AndroidLauncherWallpaperController internal constructor(
             onSuccess = { LauncherWallpaperApplyResult.Applied(source) },
             onFailure = { source.fallbackResultAfterApplyFailure(wallpaperWindow) },
         )
+
+    override fun applyOffset(command: LauncherWallpaperOffsetCommand) {
+        runCatching { wallpaperWindow.applyOffset(command) }
+    }
 }
 
 object NoopLauncherWallpaperController : LauncherWallpaperController {
     override fun applySource(source: WallpaperSource) = LauncherWallpaperApplyResult.Applied(source)
+
+    override fun applyOffset(command: LauncherWallpaperOffsetCommand) = Unit
 }
+
+data class LauncherWallpaperOffsetCommand(
+    val xOffset: Float,
+    val xOffsetStep: Float,
+)
 
 internal enum class LauncherWallpaperWindowCommand {
     ShowSystemWallpaper,
@@ -48,6 +63,8 @@ internal enum class LauncherWallpaperWindowCommand {
 
 internal interface LauncherWallpaperWindow {
     fun apply(command: LauncherWallpaperWindowCommand)
+
+    fun applyOffset(command: LauncherWallpaperOffsetCommand)
 }
 
 private class AndroidLauncherWallpaperWindow(
@@ -69,7 +86,35 @@ private class AndroidLauncherWallpaperWindow(
             }
         }
     }
+
+    override fun applyOffset(command: LauncherWallpaperOffsetCommand) {
+        val token = window.decorView.windowToken ?: return
+        WallpaperManager.getInstance(window.context).setWallpaperOffsetSteps(command.xOffsetStep, 1f)
+        WallpaperManager.getInstance(window.context).setWallpaperOffsets(token, command.xOffset, 0f)
+    }
 }
+
+internal fun wallpaperOffsetCommand(
+    scrollMode: WallpaperScrollMode,
+    selectedPageIndex: Int,
+    pageCount: Int,
+): LauncherWallpaperOffsetCommand =
+    when {
+        scrollMode == WallpaperScrollMode.STATIC || pageCount <= 1 ->
+            LauncherWallpaperOffsetCommand(
+                xOffset = STATIC_WALLPAPER_X_OFFSET,
+                xOffsetStep = 1f,
+            )
+
+        else -> {
+            val lastPageIndex = pageCount - 1
+            val safeSelectedPageIndex = selectedPageIndex.coerceIn(0, lastPageIndex)
+            LauncherWallpaperOffsetCommand(
+                xOffset = safeSelectedPageIndex.toFloat() / lastPageIndex.toFloat(),
+                xOffsetStep = 1f / lastPageIndex.toFloat(),
+            )
+        }
+    }
 
 internal fun WallpaperSource.launcherWallpaperWindowCommand(): LauncherWallpaperWindowCommand =
     when (this) {
@@ -114,3 +159,5 @@ private fun WallpaperSource.fallbackResultAfterApplyFailure(
         fallbackSource = fallbackSource,
     )
 }
+
+private const val STATIC_WALLPAPER_X_OFFSET = 0.5f

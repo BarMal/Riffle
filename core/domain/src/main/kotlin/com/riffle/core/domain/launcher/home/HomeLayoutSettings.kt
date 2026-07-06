@@ -56,6 +56,7 @@ enum class HomeLabelSizing {
 
 data class WallpaperSettings(
     val source: WallpaperSource,
+    val scrollMode: WallpaperScrollMode = WallpaperScrollMode.STATIC,
 ) {
     companion object {
         fun system(): WallpaperSettings = WallpaperSettings(source = WallpaperSource.SYSTEM)
@@ -65,6 +66,11 @@ data class WallpaperSettings(
 enum class WallpaperSource {
     SYSTEM,
     SOLID_COLOR,
+}
+
+enum class WallpaperScrollMode {
+    STATIC,
+    SCROLLING,
 }
 
 data class GridSettings(

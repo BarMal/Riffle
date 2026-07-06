@@ -1,5 +1,6 @@
 package com.riffle.app.launcher
 
+import com.riffle.core.domain.launcher.home.WallpaperScrollMode
 import com.riffle.core.domain.launcher.home.WallpaperSettings
 import com.riffle.core.domain.launcher.home.WallpaperSource
 import com.riffle.core.domain.launcher.settings.AppearanceSettings
@@ -58,12 +59,16 @@ private fun JSONObject.toAppearance(defaults: AppearanceSettings): AppearanceSet
 private fun encodeWallpaper(settings: WallpaperSettings): JSONObject =
     JSONObject()
         .put("source", settings.source.name)
+        .put("scrollMode", settings.scrollMode.name)
 
 private fun JSONObject.toWallpaper(defaults: WallpaperSettings): WallpaperSettings =
     WallpaperSettings(
         source =
             runCatching { WallpaperSource.valueOf(optString("source")) }
                 .getOrDefault(defaults.source),
+        scrollMode =
+            runCatching { WallpaperScrollMode.valueOf(optString("scrollMode")) }
+                .getOrDefault(defaults.scrollMode),
     )
 
 private fun encodeHaptics(settings: HapticSettings): JSONObject =

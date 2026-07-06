@@ -5,6 +5,7 @@ import com.riffle.core.domain.launcher.home.GridInsets
 import com.riffle.core.domain.launcher.home.GridSettings
 import com.riffle.core.domain.launcher.home.GridSpacing
 import com.riffle.core.domain.launcher.home.HomeLayoutSettings
+import com.riffle.core.domain.launcher.home.WallpaperScrollMode
 import com.riffle.core.domain.launcher.home.WallpaperSettings
 import com.riffle.core.domain.launcher.home.WallpaperSource
 import org.json.JSONObject
@@ -73,10 +74,14 @@ private fun JSONObject.toSpacing(defaults: GridSpacing): GridSpacing =
 private fun encodeWallpaper(settings: WallpaperSettings): JSONObject =
     JSONObject()
         .put("source", settings.source.name)
+        .put("scrollMode", settings.scrollMode.name)
 
 private fun JSONObject.toWallpaperSettings(defaults: WallpaperSettings): WallpaperSettings =
     WallpaperSettings(
         source =
             runCatching { WallpaperSource.valueOf(optString("source")) }
                 .getOrDefault(defaults.source),
+        scrollMode =
+            runCatching { WallpaperScrollMode.valueOf(optString("scrollMode")) }
+                .getOrDefault(defaults.scrollMode),
     )
