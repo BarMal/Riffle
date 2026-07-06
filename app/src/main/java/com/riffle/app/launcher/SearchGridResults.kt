@@ -17,26 +17,48 @@ internal fun searchGridResults(
     apps: List<InstalledApp>,
     shortcuts: List<AppShortcut>,
     settings: List<LauncherSearchResult.Setting> = emptyList(),
-    webQuery: String = "",
 ): List<SearchGridResult> =
     (
         apps.map { app -> SearchGridResult.App(app) } +
             shortcuts.map { shortcut -> SearchGridResult.Shortcut(shortcut) } +
-            settings.map { setting -> SearchGridResult.Setting(setting) } +
-            searchWebGridResult(webQuery)
+            settings.map { setting -> SearchGridResult.Setting(setting) }
     ).sortedWith(
         compareBy<SearchGridResult> { result -> result.label.lowercase() }
             .thenBy { result -> result.sortKey }
             .thenBy { result -> result.key },
     )
 
-internal fun searchWebGridResult(query: String): List<SearchGridResult.Web> {
+internal fun searchWebPreview(query: String): SearchWebPreview? {
     val trimmedQuery = query.trim()
     return if (trimmedQuery.isEmpty()) {
-        emptyList()
+        null
     } else {
-        listOf(SearchGridResult.Web(trimmedQuery))
+        SearchWebPreview(
+            query = trimmedQuery,
+            examples =
+                listOf(
+                    SearchWebExampleResult("Images", "$trimmedQuery images"),
+                    SearchWebExampleResult("News", "$trimmedQuery news"),
+                    SearchWebExampleResult("Videos", "$trimmedQuery videos"),
+                ),
+        )
     }
+}
+
+internal data class SearchWebPreview(
+    val query: String,
+    val examples: List<SearchWebExampleResult>,
+) {
+    val title: String = "Search Google"
+    val subtitle: String = query
+    val action: LauncherShellAction = LauncherShellAction.SearchWeb(query)
+}
+
+internal data class SearchWebExampleResult(
+    val title: String,
+    val query: String,
+) {
+    val action: LauncherShellAction = LauncherShellAction.SearchWeb(query)
 }
 
 internal sealed interface SearchGridResult {
@@ -61,15 +83,6 @@ internal sealed interface SearchGridResult {
         override val label: String = shortcut.shortLabel
         override val action: LauncherShellAction = LauncherShellAction.LaunchAppShortcut(shortcut)
         override val sortKey: String = shortcut.appIdentity.packageName.value
-    }
-
-    data class Web(
-        val query: String,
-    ) : SearchGridResult {
-        override val key: String = "web:$query"
-        override val label: String = "Search Google for $query"
-        override val action: LauncherShellAction = LauncherShellAction.SearchWeb(query)
-        override val sortKey: String = query
     }
 
     data class Setting(

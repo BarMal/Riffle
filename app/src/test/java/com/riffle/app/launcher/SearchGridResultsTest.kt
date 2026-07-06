@@ -64,19 +64,37 @@ class SearchGridResultsTest {
     }
 
     @Test
-    fun searchGridResultsIncludeWebSearchForNonBlankQuery() {
-        val results = searchGridResults(apps = emptyList(), shortcuts = emptyList(), webQuery = "  weather today  ")
+    fun searchGridResultsDoNotMixWebSearchWithLauncherResults() {
+        val results = searchGridResults(apps = emptyList(), shortcuts = emptyList())
 
-        assertEquals(listOf("Search Google for weather today"), results.map { result -> result.label })
-        assertEquals(listOf(LauncherShellAction.SearchWeb("weather today")), results.map { result -> result.action })
-        assertEquals("web:weather today", results.single().key)
+        assertEquals(emptyList<SearchGridResult>(), results)
     }
 
     @Test
-    fun searchGridResultsSkipWebSearchForBlankQuery() {
-        val results = searchGridResults(apps = emptyList(), shortcuts = emptyList(), webQuery = "   ")
+    fun searchWebPreviewUsesTrimmedQueryAndExampleSearches() {
+        val preview = searchWebPreview("  weather today  ")
 
-        assertEquals(emptyList<SearchGridResult>(), results)
+        requireNotNull(preview)
+        assertEquals("Search Google", preview.title)
+        assertEquals("weather today", preview.subtitle)
+        assertEquals(LauncherShellAction.SearchWeb("weather today"), preview.action)
+        assertEquals(
+            listOf("weather today images", "weather today news", "weather today videos"),
+            preview.examples.map { result -> result.query },
+        )
+        assertEquals(
+            listOf(
+                LauncherShellAction.SearchWeb("weather today images"),
+                LauncherShellAction.SearchWeb("weather today news"),
+                LauncherShellAction.SearchWeb("weather today videos"),
+            ),
+            preview.examples.map { result -> result.action },
+        )
+    }
+
+    @Test
+    fun searchWebPreviewSkipsBlankQuery() {
+        assertEquals(null, searchWebPreview("   "))
     }
 
     private fun app(label: String): InstalledApp =

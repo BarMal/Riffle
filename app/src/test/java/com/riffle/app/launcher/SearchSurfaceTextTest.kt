@@ -3,12 +3,29 @@ package com.riffle.app.launcher
 import com.riffle.core.domain.launcher.apps.AppProfileType
 import com.riffle.core.domain.launcher.apps.AppSearchContentFilter
 import com.riffle.core.domain.launcher.apps.AppSearchFilters
+import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class SearchSurfaceTextTest {
+    @Test
+    fun summaryCountsLauncherResultsOnly() {
+        assertEquals(
+            "0 results in personal apps",
+            searchFilterSummaryText(
+                SearchSurfaceState(
+                    query = "weather",
+                    filters = AppSearchFilters(),
+                    installedApps = emptyList(),
+                    results = emptyList(),
+                    homeLayout = HomeLayoutDefaults.standard(),
+                ),
+            ),
+        )
+    }
+
     @Test
     fun emptySearchTextReflectsContentFilters() {
         assertEquals(
