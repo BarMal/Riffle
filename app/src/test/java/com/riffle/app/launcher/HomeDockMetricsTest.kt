@@ -75,7 +75,7 @@ class HomeDockMetricsTest {
     }
 
     @Test
-    fun dockSlotRenderMetricsPreservesConfiguredSpacingForFiveSlotsOnNarrowWidth() {
+    fun dockSlotRenderMetricsCompactsSpacingForFiveSlotsOnNarrowWidth() {
         val metrics =
             dockSlotRenderMetrics(
                 slotCount = 5,
@@ -87,16 +87,16 @@ class HomeDockMetricsTest {
         assertEquals(
             DockSlotRenderMetrics(
                 iconSizeDp = 48,
-                itemSpacingDp = 10,
+                itemSpacingDp = 3,
                 overflowMode = DockOverflowMode.FitByCompaction,
             ),
             metrics,
         )
-        assertEquals(280, dockSlotContentWidthDp(slotCount = 5, metrics = metrics))
+        assertEquals(252, dockSlotContentWidthDp(slotCount = 5, metrics = metrics))
     }
 
     @Test
-    fun dockSlotRenderMetricsPreservesConfiguredIconSizeForFiveSlotsOnFoldedWidth() {
+    fun dockSlotRenderMetricsCompactsIconSizeForFiveSlotsOnFoldedWidth() {
         val metrics =
             dockSlotRenderMetrics(
                 slotCount = 5,
@@ -107,13 +107,13 @@ class HomeDockMetricsTest {
 
         assertEquals(
             DockSlotRenderMetrics(
-                iconSizeDp = 56,
-                itemSpacingDp = 24,
+                iconSizeDp = 50,
+                itemSpacingDp = 0,
                 overflowMode = DockOverflowMode.FitByCompaction,
             ),
             metrics,
         )
-        assertEquals(376, dockSlotContentWidthDp(slotCount = 5, metrics = metrics))
+        assertEquals(250, dockSlotContentWidthDp(slotCount = 5, metrics = metrics))
     }
 
     @Test
