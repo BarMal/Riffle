@@ -15,6 +15,7 @@ internal fun LauncherShellAction.isHomePageEditAction(): Boolean =
         is LauncherShellAction.MoveHomePage,
         LauncherShellAction.DeleteSelectedHomePage,
         is LauncherShellAction.SelectSelectedHomePageType,
+        is LauncherShellAction.SelectSelectedHomePageGridDimensions,
         is LauncherShellAction.SelectHomeGridDimensions,
         is LauncherShellAction.SelectLibraryPageCompaction,
         is LauncherShellAction.SelectHomeLabelBackgroundAlpha,
@@ -32,6 +33,7 @@ internal fun LauncherShellAction.isHomePageEditAction(): Boolean =
 
 internal fun LauncherShellAction.isHomeLayoutConfigurationAction(): Boolean =
     when (this) {
+        is LauncherShellAction.SelectSelectedHomePageGridDimensions,
         is LauncherShellAction.SelectHomeGridDimensions,
         is LauncherShellAction.SelectLibraryPageCompaction,
         is LauncherShellAction.SelectHomeLabelBackgroundAlpha,

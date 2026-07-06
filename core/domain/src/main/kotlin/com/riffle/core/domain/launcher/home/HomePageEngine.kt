@@ -1,5 +1,6 @@
 package com.riffle.core.domain.launcher.home
 
+@Suppress("TooManyFunctions")
 class HomePageEngine {
     fun addPage(
         layout: HomeLayout,
@@ -137,6 +138,35 @@ class HomePageEngine {
                     ),
                 )
         }
+
+    fun updatePageGridDimensions(
+        layout: HomeLayout,
+        pageId: LauncherPageId,
+        dimensions: GridDimensions,
+    ): HomePageEditResult {
+        val page = layout.pages.firstOrNull { existingPage -> existingPage.id == pageId }
+
+        return when {
+            page == null -> HomePageEditResult.Rejected(HomePageEditRejectionReason.PAGE_NOT_FOUND)
+            !dimensions.isValid -> HomePageEditResult.Rejected(HomePageEditRejectionReason.INVALID_GRID_DIMENSIONS)
+            page.items.any { item -> !dimensions.contains(item.placement) } ->
+                HomePageEditResult.Rejected(HomePageEditRejectionReason.GRID_ITEMS_OUT_OF_BOUNDS)
+
+            else ->
+                HomePageEditResult.Updated(
+                    layout.copy(
+                        pages =
+                            layout.pages.map { existingPage ->
+                                if (existingPage.id == pageId) {
+                                    existingPage.copy(grid = dimensions)
+                                } else {
+                                    existingPage
+                                }
+                            },
+                    ),
+                )
+        }
+    }
 
     fun enterPageEditMode(
         layout: HomeLayout,

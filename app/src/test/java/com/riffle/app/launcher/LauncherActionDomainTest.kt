@@ -164,6 +164,10 @@ class LauncherActionDomainTest {
                     LauncherShellAction.SelectSelectedHomePageType(LauncherPageType.AllApps),
                 ),
                 activity(
+                    "SelectSelectedHomePageGridDimensions",
+                    LauncherShellAction.SelectSelectedHomePageGridDimensions(GridDimensions(4, 6)),
+                ),
+                activity(
                     "SelectHomeGridDimensions",
                     LauncherShellAction.SelectHomeGridDimensions(GridDimensions(4, 6)),
                 ),

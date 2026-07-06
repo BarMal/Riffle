@@ -59,7 +59,7 @@ class LauncherActivityRouteTest {
     fun routesHomePageEditActions() {
         assertEquals(
             LauncherActivityRoute.HomePageEdit,
-            LauncherShellAction.SelectHomeGridDimensions(GridDimensions(columns = 5, rows = 6))
+            LauncherShellAction.SelectSelectedHomePageGridDimensions(GridDimensions(columns = 5, rows = 6))
                 .launcherActivityRoute(),
         )
     }

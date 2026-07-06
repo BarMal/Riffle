@@ -1,3 +1,5 @@
+@file:Suppress("TooManyFunctions")
+
 package com.riffle.app.launcher
 
 import androidx.compose.animation.animateColorAsState
@@ -33,6 +35,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import com.riffle.app.launcher.widgets.HomeWidgetViewFactory
 import com.riffle.core.domain.launcher.home.GeneratedLauncherPageKind
+import com.riffle.core.domain.launcher.home.GridDimensions
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.LauncherPageType
 
@@ -106,6 +109,10 @@ fun PageOverviewControls(
         )
         PageTypeControls(
             selectedType = selectedPage.type,
+            onAction = onAction,
+        )
+        PageGridControls(
+            selectedGrid = selectedPage.grid,
             onAction = onAction,
         )
         Row(
@@ -239,6 +246,41 @@ private fun PageOverviewCard(
 }
 
 @Composable
+private fun PageGridControls(
+    selectedGrid: GridDimensions,
+    onAction: (LauncherShellAction) -> Unit,
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Text(
+            text = "Page grid",
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Row(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            pageGridDimensionOptions(selectedGrid).forEach { option ->
+                FilterChip(
+                    selected = option.dimensions == selectedGrid,
+                    onClick = {
+                        onAction(LauncherShellAction.SelectSelectedHomePageGridDimensions(option.dimensions))
+                    },
+                    label = { Text(text = option.label) },
+                )
+            }
+        }
+    }
+}
+
+@Composable
 private fun PageTypeControls(
     selectedType: LauncherPageType,
     onAction: (LauncherShellAction) -> Unit,
@@ -360,6 +402,34 @@ internal data class PageTypeOption(
     val label: String,
     val type: LauncherPageType,
 )
+
+internal data class PageGridDimensionOption(
+    val label: String,
+    val dimensions: GridDimensions,
+)
+
+internal fun pageGridDimensionOptions(selectedGrid: GridDimensions): List<PageGridDimensionOption> =
+    listOf(
+        PageGridDimensionOption("${selectedGrid.columns} x ${selectedGrid.rows}", selectedGrid),
+        PageGridDimensionOption(
+            "${selectedGrid.columns - 1} x ${selectedGrid.rows}",
+            selectedGrid.copy(columns = selectedGrid.columns - 1),
+        ),
+        PageGridDimensionOption(
+            "${selectedGrid.columns + 1} x ${selectedGrid.rows}",
+            selectedGrid.copy(columns = selectedGrid.columns + 1),
+        ),
+        PageGridDimensionOption(
+            "${selectedGrid.columns} x ${selectedGrid.rows - 1}",
+            selectedGrid.copy(rows = selectedGrid.rows - 1),
+        ),
+        PageGridDimensionOption(
+            "${selectedGrid.columns} x ${selectedGrid.rows + 1}",
+            selectedGrid.copy(rows = selectedGrid.rows + 1),
+        ),
+    )
+        .filter { option -> option.dimensions.columns >= 1 && option.dimensions.rows >= 1 }
+        .distinctBy { option -> option.dimensions }
 
 internal val pageTypeOptions: List<PageTypeOption> =
     listOf(

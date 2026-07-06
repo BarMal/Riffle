@@ -118,6 +118,20 @@ class HomePageControlsTest {
     }
 
     @Test
+    fun pageGridDimensionOptionsAreCenteredOnSelectedPageGrid() {
+        assertEquals(
+            listOf(
+                PageGridDimensionOption("4 x 5", GridDimensions(columns = 4, rows = 5)),
+                PageGridDimensionOption("3 x 5", GridDimensions(columns = 3, rows = 5)),
+                PageGridDimensionOption("5 x 5", GridDimensions(columns = 5, rows = 5)),
+                PageGridDimensionOption("4 x 4", GridDimensions(columns = 4, rows = 4)),
+                PageGridDimensionOption("4 x 6", GridDimensions(columns = 4, rows = 6)),
+            ),
+            pageGridDimensionOptions(GridDimensions(columns = 4, rows = 5)),
+        )
+    }
+
+    @Test
     fun pagePreviewCellsRepresentPlacedItemsAndWidgetSpans() {
         val page =
             LauncherPage(
