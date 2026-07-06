@@ -17,6 +17,7 @@ class SettingsPagesTest {
                 "Appearance" to SettingsPage.APPEARANCE,
                 "Floating dock" to SettingsPage.FLOATING_DOCK,
                 "Gestures" to SettingsPage.GESTURES,
+                "Contextual" to SettingsPage.CONTEXTUAL,
                 "Motion" to SettingsPage.MOTION,
                 "Haptics" to SettingsPage.HAPTICS,
                 "App drawer" to SettingsPage.APPS,
@@ -54,6 +55,10 @@ class SettingsPagesTest {
         assertEquals(
             listOf(SettingsPage.BACKUP),
             settingsMainPageEntriesMatching("system export").map { entry -> entry.page },
+        )
+        assertEquals(
+            listOf(SettingsPage.CONTEXTUAL),
+            settingsMainPageEntriesMatching("dynamic actions").map { entry -> entry.page },
         )
     }
 

@@ -71,6 +71,12 @@ internal class LauncherSettingsStateReducer(
                     launcherSettingsRepository = launcherSettingsRepository,
                 )
 
+            is LauncherShellAction.SelectContextualEnabled ->
+                state.withContextualSettingsAction(
+                    action = action,
+                    launcherSettingsRepository = launcherSettingsRepository,
+                )
+
             is LauncherShellAction.SelectOverlayDockEnabled,
             is LauncherShellAction.SelectOverlayDockEdge,
             is LauncherShellAction.SelectOverlayDockHandleThickness,

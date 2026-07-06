@@ -20,6 +20,7 @@ class LauncherSettingsActionRouteTest {
         val actions =
             listOf(
                 LauncherShellAction.SelectReducedMotionEnabled(enabled = true),
+                LauncherShellAction.SelectContextualEnabled(enabled = true),
                 LauncherShellAction.SelectHomeStatusBarHidden(hidden = true),
                 LauncherShellAction.SelectHomeNavigationBarHidden(hidden = true),
             )

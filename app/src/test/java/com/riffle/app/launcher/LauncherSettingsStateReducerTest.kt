@@ -3,6 +3,7 @@ package com.riffle.app.launcher
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppVisibilityRepository
+import com.riffle.core.domain.launcher.contextual.ContextualSettings
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
 import com.riffle.core.domain.launcher.settings.AppearanceSettings
@@ -27,6 +28,50 @@ class LauncherSettingsStateReducerTest {
             )
 
         assertEquals(HapticFeedbackStrength.STRONG, updatedState.launcherSettings.haptics.feedbackStrength)
+        assertEquals(updatedState.launcherSettings, repository.savedSettings)
+    }
+
+    @Test
+    fun contextualSettingsDefaultOff() {
+        val state = LauncherShellState()
+
+        assertEquals(false, state.launcherSettings.contextual.enabled)
+    }
+
+    @Test
+    fun enablesContextualSettingsAndPersistsSelection() {
+        val repository = FakeLauncherSettingsRepository()
+        val reducer = reducer(launcherSettingsRepository = repository)
+
+        val updatedState =
+            reducer.reduce(
+                state = LauncherShellState(),
+                action = LauncherShellAction.SelectContextualEnabled(enabled = true),
+            )
+
+        assertEquals(true, updatedState.launcherSettings.contextual.enabled)
+        assertEquals(updatedState.launcherSettings, repository.savedSettings)
+    }
+
+    @Test
+    fun disablesContextualSettingsAndPersistsSelection() {
+        val repository = FakeLauncherSettingsRepository()
+        val reducer = reducer(launcherSettingsRepository = repository)
+        val enabledState =
+            LauncherShellState(
+                launcherSettings =
+                    LauncherSettings(
+                        contextual = ContextualSettings(enabled = true),
+                    ),
+            )
+
+        val updatedState =
+            reducer.reduce(
+                state = enabledState,
+                action = LauncherShellAction.SelectContextualEnabled(enabled = false),
+            )
+
+        assertEquals(false, updatedState.launcherSettings.contextual.enabled)
         assertEquals(updatedState.launcherSettings, repository.savedSettings)
     }
 

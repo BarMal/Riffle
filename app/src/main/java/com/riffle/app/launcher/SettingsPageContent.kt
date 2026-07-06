@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.home.WallpaperSource
 
 @Composable
+@Suppress("CyclomaticComplexMethod")
 internal fun SettingsPageContent(
     modifier: Modifier,
     state: SettingsSurfaceState,
@@ -40,6 +41,7 @@ internal fun SettingsPageContent(
             SettingsPage.APPEARANCE -> SettingsAppearancePageContent(state = state, onAction = onAction)
             SettingsPage.FLOATING_DOCK -> SettingsFloatingDockPageContent(state = state, onAction = onAction)
             SettingsPage.GESTURES -> SettingsGesturesPageContent(state = state, onAction = onAction)
+            SettingsPage.CONTEXTUAL -> SettingsContextualPageContent(state = state, onAction = onAction)
             SettingsPage.MOTION -> SettingsMotionPageContent(state = state, onAction = onAction)
             SettingsPage.HAPTICS -> SettingsHapticsPageContent(state = state, onAction = onAction)
             SettingsPage.PERMISSIONS -> SettingsPermissionsPageContent(state = state, onAction = onAction)
