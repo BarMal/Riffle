@@ -14,11 +14,13 @@ import com.riffle.core.domain.launcher.home.GridDimensions
 import com.riffle.core.domain.launcher.home.GridPlacement
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
+import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
 import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.home.LauncherPage
 import com.riffle.core.domain.launcher.home.LauncherPageId
 import com.riffle.core.domain.launcher.home.LauncherViewMode
+import com.riffle.core.domain.launcher.home.LauncherViewModeAvailability
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -34,6 +36,8 @@ class LauncherShellFolderViewModelTest {
                 firstRunRepository = FakeFirstRunRepository(),
                 installedAppRepository = FakeInstalledAppRepository(apps = listOf(camera, calendar)),
                 homeLayoutRepository = repository,
+                platformDependencies =
+                    LauncherShellPlatformDependencies(viewModeAvailability = libraryViewModeAvailability),
             )
         viewModel.onAddAppToHome(camera)
         viewModel.onAddAppToHome(calendar)
@@ -89,6 +93,8 @@ class LauncherShellFolderViewModelTest {
                 firstRunRepository = FakeFirstRunRepository(),
                 installedAppRepository = FakeInstalledAppRepository(apps = listOf(camera, calendar)),
                 homeLayoutRepository = repository,
+                platformDependencies =
+                    LauncherShellPlatformDependencies(viewModeAvailability = libraryViewModeAvailability),
             )
         runBlocking { viewModel.refreshInstalledApps().join() }
         viewModel.onHomePageEdited(LauncherShellAction.SelectLauncherViewMode(LauncherViewMode.HOME_SCREEN_LIBRARY))
@@ -157,6 +163,8 @@ class LauncherShellFolderViewModelTest {
                 firstRunRepository = FakeFirstRunRepository(),
                 installedAppRepository = FakeInstalledAppRepository(apps = listOf(camera, calendar)),
                 homeLayoutRepository = repository,
+                platformDependencies =
+                    LauncherShellPlatformDependencies(viewModeAvailability = libraryViewModeAvailability),
             )
         runBlocking { viewModel.refreshInstalledApps().join() }
         viewModel.onHomePageEdited(LauncherShellAction.SelectLauncherViewMode(LauncherViewMode.HOME_SCREEN_LIBRARY))
@@ -376,4 +384,10 @@ class LauncherShellFolderViewModelTest {
 
         return state.value.homeLayout.selectedPage.items.single() as FolderItem
     }
+
+    private val libraryViewModeAvailability =
+        LauncherViewModeAvailability(
+            enabledExperimentalModesByDeviceClass =
+                mapOf(HomeLayoutDeviceClass.PHONE to setOf(LauncherViewMode.HOME_SCREEN_LIBRARY)),
+        )
 }

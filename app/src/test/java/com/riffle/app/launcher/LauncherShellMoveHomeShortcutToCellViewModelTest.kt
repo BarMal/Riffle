@@ -13,9 +13,11 @@ import com.riffle.core.domain.launcher.home.GridPlacement
 import com.riffle.core.domain.launcher.home.GridSettings
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
+import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
 import com.riffle.core.domain.launcher.home.LauncherPageId
 import com.riffle.core.domain.launcher.home.LauncherViewMode
+import com.riffle.core.domain.launcher.home.LauncherViewModeAvailability
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -69,6 +71,8 @@ class LauncherShellMoveHomeShortcutToCellViewModelTest {
                 firstRunRepository = FakeFirstRunRepository(),
                 installedAppRepository = FakeInstalledAppRepository(apps = apps),
                 homeLayoutRepository = repository,
+                platformDependencies =
+                    LauncherShellPlatformDependencies(viewModeAvailability = libraryViewModeAvailability),
             )
         val docs = viewModel.state.value.homeLayout.selectedPage.items.single() as AppShortcutItem
 
@@ -150,5 +154,11 @@ class LauncherShellMoveHomeShortcutToCellViewModelTest {
                     activityName = AppActivityName(".MainActivity"),
                 ),
             label = label,
+        )
+
+    private val libraryViewModeAvailability =
+        LauncherViewModeAvailability(
+            enabledExperimentalModesByDeviceClass =
+                mapOf(HomeLayoutDeviceClass.PHONE to setOf(LauncherViewMode.HOME_SCREEN_LIBRARY)),
         )
 }

@@ -8,6 +8,7 @@ import com.riffle.core.domain.launcher.home.HomeLayoutKey
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
 import com.riffle.core.domain.launcher.home.HomeLayoutSet
 import com.riffle.core.domain.launcher.home.LauncherViewMode
+import com.riffle.core.domain.launcher.home.LauncherViewModeAvailability
 
 internal fun LauncherShellState.withHomeLayout(
     layout: HomeLayout,
@@ -26,10 +27,11 @@ internal fun LauncherShellState.withHomeLayout(
 internal fun LauncherShellState.withSelectedHomeLayoutMode(
     mode: LauncherViewMode,
     homeLayoutRepository: HomeLayoutRepository,
+    viewModeAvailability: LauncherViewModeAvailability,
 ): LauncherShellState =
     currentLayoutSet(homeLayoutRepository)
         .withActiveLayout(homeLayout)
-        .selectMode(mode)
+        .selectMode(mode, viewModeAvailability)
         .also(homeLayoutRepository::saveHomeLayoutSet)
         .let { layoutSet ->
             copy(
@@ -43,6 +45,7 @@ internal fun LauncherShellState.withSelectedHomeLayoutDeviceClass(
     deviceClass: HomeLayoutDeviceClass,
     availableDeviceClasses: Set<HomeLayoutDeviceClass> = setOf(deviceClass),
     homeLayoutRepository: HomeLayoutRepository,
+    viewModeAvailability: LauncherViewModeAvailability,
 ): LauncherShellState {
     val layoutSet = currentLayoutSet(homeLayoutRepository)
     val updatedAvailableDeviceClasses = availableLayoutDeviceClasses + availableDeviceClasses + deviceClass
@@ -60,7 +63,7 @@ internal fun LauncherShellState.withSelectedHomeLayoutDeviceClass(
 
     return layoutSet
         .withActiveLayout(homeLayout)
-        .selectDeviceClass(deviceClass)
+        .selectDeviceClass(deviceClass, viewModeAvailability)
         .also(homeLayoutRepository::saveHomeLayoutSet)
         .let { updatedLayoutSet ->
             copy(

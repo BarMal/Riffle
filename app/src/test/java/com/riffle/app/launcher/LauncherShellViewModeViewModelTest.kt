@@ -19,6 +19,7 @@ import com.riffle.core.domain.launcher.home.HomeLayoutRepository
 import com.riffle.core.domain.launcher.home.HomeLayoutSet
 import com.riffle.core.domain.launcher.home.LauncherPageId
 import com.riffle.core.domain.launcher.home.LauncherViewMode
+import com.riffle.core.domain.launcher.home.LauncherViewModeAvailability
 import com.riffle.core.domain.launcher.home.WallpaperSettings
 import com.riffle.core.domain.launcher.home.WallpaperSource
 import com.riffle.core.domain.launcher.notifications.LauncherNotification
@@ -31,6 +32,7 @@ import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
+@Suppress("LargeClass")
 class LauncherShellViewModeViewModelTest {
     @Test
     fun importsBackupDocumentIntoStateAndRepositories() {
@@ -122,6 +124,7 @@ class LauncherShellViewModeViewModelTest {
                 firstRunRepository = FakeFirstRunRepository(),
                 installedAppRepository = FakeInstalledAppRepository(apps = listOf(camera)),
                 homeLayoutRepository = repository,
+                platformDependencies = libraryViewModePlatformDependencies,
             )
 
         runBlocking { viewModel.refreshInstalledApps().join() }
@@ -151,6 +154,7 @@ class LauncherShellViewModeViewModelTest {
                 firstRunRepository = FakeFirstRunRepository(),
                 installedAppRepository = installedAppRepository,
                 homeLayoutRepository = repository,
+                platformDependencies = libraryViewModePlatformDependencies,
             )
 
         installedAppRepository.apps = listOf(camera, calendar)
@@ -174,6 +178,7 @@ class LauncherShellViewModeViewModelTest {
                 firstRunRepository = FakeFirstRunRepository(),
                 installedAppRepository = FakeInstalledAppRepository(apps = listOf(camera)),
                 homeLayoutRepository = repository,
+                platformDependencies = libraryViewModePlatformDependencies,
             )
 
         runBlocking { viewModel.refreshInstalledApps().join() }
@@ -198,6 +203,7 @@ class LauncherShellViewModeViewModelTest {
                 firstRunRepository = FakeFirstRunRepository(),
                 installedAppRepository = FakeInstalledAppRepository(apps = listOf(camera)),
                 homeLayoutRepository = repository,
+                platformDependencies = libraryViewModePlatformDependencies,
             )
 
         runBlocking { viewModel.refreshInstalledApps().join() }
@@ -234,6 +240,7 @@ class LauncherShellViewModeViewModelTest {
                 firstRunRepository = FakeFirstRunRepository(),
                 installedAppRepository = FakeInstalledAppRepository(apps = listOf(camera)),
                 homeLayoutRepository = repository,
+                platformDependencies = phoneAndFoldableLibraryViewModePlatformDependencies,
             )
 
         runBlocking { viewModel.refreshInstalledApps().join() }
@@ -746,3 +753,24 @@ class LauncherShellViewModeViewModelTest {
 
     private fun List<Any>.singleAppShortcut(): AppShortcutItem = single() as AppShortcutItem
 }
+
+private val libraryViewModeAvailability =
+    LauncherViewModeAvailability(
+        enabledExperimentalModesByDeviceClass =
+            HomeLayoutDeviceClass.entries.associateWith { setOf(LauncherViewMode.HOME_SCREEN_LIBRARY) },
+    )
+
+private val libraryViewModePlatformDependencies =
+    LauncherShellPlatformDependencies(viewModeAvailability = libraryViewModeAvailability)
+
+private val phoneAndFoldableLibraryViewModePlatformDependencies =
+    LauncherShellPlatformDependencies(
+        viewModeAvailability =
+            LauncherViewModeAvailability(
+                enabledExperimentalModesByDeviceClass =
+                    mapOf(
+                        HomeLayoutDeviceClass.PHONE to setOf(LauncherViewMode.HOME_SCREEN_LIBRARY),
+                        HomeLayoutDeviceClass.FOLDABLE to setOf(LauncherViewMode.HOME_SCREEN_LIBRARY),
+                    ),
+            ),
+    )

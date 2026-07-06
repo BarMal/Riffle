@@ -17,6 +17,7 @@ import com.riffle.core.domain.launcher.home.HomeLayoutRepository
 import com.riffle.core.domain.launcher.home.HomeLayoutSet
 import com.riffle.core.domain.launcher.home.LauncherPageId
 import com.riffle.core.domain.launcher.home.LauncherViewMode
+import com.riffle.core.domain.launcher.home.LauncherViewModeAvailability
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -38,7 +39,15 @@ class LauncherHomePageEditReducerTest {
     fun launcherViewModeSelectionReflowsHomeScreenLibraryApps() {
         val camera = app(label = "Camera")
         val repository = FakeHomeLayoutRepository(HomeLayoutDefaults.standard())
-        val reducer = LauncherHomePageEditReducer(homeLayoutRepository = repository)
+        val reducer =
+            LauncherHomePageEditReducer(
+                homeLayoutRepository = repository,
+                viewModeAvailability =
+                    LauncherViewModeAvailability(
+                        enabledExperimentalModesByDeviceClass =
+                            mapOf(HomeLayoutDeviceClass.PHONE to setOf(LauncherViewMode.HOME_SCREEN_LIBRARY)),
+                    ),
+            )
         val state = launcherState(repository.savedLayoutSet).copy(installedApps = listOf(camera))
 
         val updated =
@@ -50,6 +59,30 @@ class LauncherHomePageEditReducerTest {
         assertEquals(LauncherViewMode.HOME_SCREEN_LIBRARY, updated.homeLayout.viewMode)
         assertEquals(camera.identity, updated.homeLayout.selectedPage.items.singleAppShortcut().appIdentity)
         assertEquals(updated.homeLayout, repository.savedLayoutSet?.activeLayout)
+    }
+
+    @Test
+    fun unavailableLauncherViewModeSelectionFallsBackToStandardWithoutMutatingStoredLayout() {
+        val cardKey = HomeLayoutKey(LauncherViewMode.CARD_INTERFACE)
+        val cardLayout =
+            HomeLayoutDefaults.standard()
+                .copy(viewMode = LauncherViewMode.CARD_INTERFACE)
+        val layoutSet =
+            HomeLayoutSet.standard()
+                .withLayout(cardKey, cardLayout)
+        val repository = FakeHomeLayoutRepository(layoutSet)
+        val reducer = LauncherHomePageEditReducer(homeLayoutRepository = repository)
+        val state = launcherState(layoutSet)
+
+        val updated =
+            reducer.reduce(
+                state,
+                LauncherShellAction.SelectLauncherViewMode(LauncherViewMode.CARD_INTERFACE),
+            )
+
+        assertEquals(LauncherViewMode.STANDARD_APP_DRAWER, updated.homeLayout.viewMode)
+        assertEquals(HomeLayoutKey(LauncherViewMode.STANDARD_APP_DRAWER), repository.savedLayoutSet?.activeKey)
+        assertEquals(cardLayout, repository.savedLayoutSet?.layoutFor(cardKey))
     }
 
     @Test
@@ -89,6 +122,58 @@ class LauncherHomePageEditReducerTest {
         assertEquals(foldableKey, updated.homeLayoutSet.activeKey)
         assertEquals(LauncherPageId("foldable-home"), updated.homeLayout.selectedPageId)
         assertEquals(foldableKey, repository.savedLayoutSet?.activeKey)
+    }
+
+    @Test
+    fun deviceClassSelectionFallsBackWhenPreferredModeIsUnavailable() {
+        val phoneKey = HomeLayoutKey(LauncherViewMode.STANDARD_APP_DRAWER, HomeLayoutDeviceClass.PHONE)
+        val tabletStandardKey =
+            HomeLayoutKey(
+                viewMode = LauncherViewMode.STANDARD_APP_DRAWER,
+                deviceClass = HomeLayoutDeviceClass.TABLET,
+            )
+        val tabletCardKey =
+            HomeLayoutKey(
+                viewMode = LauncherViewMode.CARD_INTERFACE,
+                deviceClass = HomeLayoutDeviceClass.TABLET,
+            )
+        val tabletCardLayout =
+            HomeLayoutDefaults.standard(HomeLayoutDeviceClass.TABLET)
+                .copy(viewMode = LauncherViewMode.CARD_INTERFACE)
+        val layoutSet =
+            HomeLayoutSet(
+                activeKey = phoneKey,
+                layouts =
+                    mapOf(
+                        phoneKey to HomeLayoutDefaults.standard(HomeLayoutDeviceClass.PHONE),
+                        tabletCardKey to tabletCardLayout,
+                    ),
+                preferredModesByDeviceClass =
+                    mapOf(
+                        HomeLayoutDeviceClass.PHONE to LauncherViewMode.STANDARD_APP_DRAWER,
+                        HomeLayoutDeviceClass.TABLET to LauncherViewMode.CARD_INTERFACE,
+                    ),
+            )
+        val repository = FakeHomeLayoutRepository(layoutSet)
+        val reducer = LauncherHomePageEditReducer(homeLayoutRepository = repository)
+        val state = launcherState(layoutSet)
+
+        val updated =
+            reducer.reduce(
+                state,
+                LauncherShellAction.SelectHomeLayoutDeviceClass(
+                    deviceClass = HomeLayoutDeviceClass.TABLET,
+                    availableDeviceClasses = setOf(HomeLayoutDeviceClass.PHONE, HomeLayoutDeviceClass.TABLET),
+                ),
+            )
+
+        assertEquals(tabletStandardKey, updated.homeLayoutSet.activeKey)
+        assertEquals(tabletStandardKey, repository.savedLayoutSet?.activeKey)
+        assertEquals(tabletCardLayout, repository.savedLayoutSet?.layoutFor(tabletCardKey))
+        assertEquals(
+            LauncherViewMode.CARD_INTERFACE,
+            repository.savedLayoutSet?.preferredModesByDeviceClass?.get(HomeLayoutDeviceClass.TABLET),
+        )
     }
 
     @Test

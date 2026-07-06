@@ -30,7 +30,7 @@ data class LauncherViewModeAvailability(
             viewMode =
                 availableModeOrStandard(
                     deviceClass = deviceClass,
-                    preferredMode = layoutSet.preferredModesByDeviceClass[deviceClass],
+                    preferredMode = layoutSet.preferredModesByDeviceClass[deviceClass] ?: layoutSet.activeKey.viewMode,
                 ),
             deviceClass = deviceClass,
         )

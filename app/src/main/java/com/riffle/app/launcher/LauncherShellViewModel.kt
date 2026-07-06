@@ -24,6 +24,7 @@ import com.riffle.core.domain.launcher.home.HomeLayoutRepository
 import com.riffle.core.domain.launcher.home.HomeLayoutSet
 import com.riffle.core.domain.launcher.home.HomeShortcutEngine
 import com.riffle.core.domain.launcher.home.HomeShortcutResult
+import com.riffle.core.domain.launcher.home.LauncherViewModeAvailability
 import com.riffle.core.domain.launcher.home.PlacementRejectionReason
 import com.riffle.core.domain.launcher.home.WidgetEditResult
 import com.riffle.core.domain.launcher.home.WidgetEngine
@@ -93,6 +94,7 @@ class LauncherShellViewModel(
     private val homePageEditReducer =
         LauncherHomePageEditReducer(
             homeLayoutRepository = homeLayoutRepository,
+            viewModeAvailability = platformDependencies.viewModeAvailability,
         )
     private val dockEngine = DockEngine()
     private val dockEditReducer =
@@ -116,6 +118,7 @@ class LauncherShellViewModel(
                 firstRunRepository = firstRunRepository,
                 reducer = reducer,
                 platformDependencies = platformDependencies,
+                viewModeAvailability = platformDependencies.viewModeAvailability,
             ),
         )
     val state: StateFlow<LauncherShellState> = mutableState.asStateFlow()
@@ -305,13 +308,15 @@ private fun createInitialState(
     firstRunRepository: FirstRunRepository,
     reducer: LauncherShellStateReducer,
     platformDependencies: LauncherShellPlatformDependencies,
+    viewModeAvailability: LauncherViewModeAvailability,
 ): LauncherShellState {
     val storedLayoutSet = homeLayoutRepository.loadHomeLayoutSet()
     val initialLayoutSet =
         storedLayoutSet?.let { layoutSet ->
-            platformDependencies.initialHomeLayoutDeviceClass
-                ?.let(layoutSet::selectDeviceClass)
-                ?: layoutSet
+            layoutSet.selectDeviceClass(
+                deviceClass = platformDependencies.initialHomeLayoutDeviceClass ?: layoutSet.activeKey.deviceClass,
+                availability = viewModeAvailability,
+            )
         }
 
     if (initialLayoutSet != null && initialLayoutSet.activeKey != storedLayoutSet?.activeKey) {
