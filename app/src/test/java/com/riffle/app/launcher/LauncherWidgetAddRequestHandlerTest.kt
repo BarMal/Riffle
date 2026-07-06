@@ -69,10 +69,58 @@ class LauncherWidgetAddRequestHandlerTest {
         assertEquals(emptyList<HostedWidgetId>(), gateway.deletedHostedWidgetIds)
     }
 
+    @Test
+    fun completedBindAfterPendingPermissionCompletesOnlyReplacementAndDeletesPendingWidgetId() {
+        val completedActions = mutableListOf<LauncherShellAction.AddHostedWidgetToHome>()
+        val gateway =
+            FakeWidgetHostGateway(
+                bindingResults =
+                    listOf(
+                        WidgetBindingResult.RequiresPermission,
+                        WidgetBindingResult.Bound,
+                    ),
+            )
+        val handler =
+            LauncherWidgetAddRequestHandler(
+                widgetBindingCoordinator = WidgetBindingCoordinator(gateway),
+                selectedGrid = { GridDimensions(columns = 4, rows = 5) },
+                windowSize = { LauncherWidgetAddWindowSize(availableWidthDp = 400, availableHeightDp = 1000) },
+                completeWidgetAdd = { action ->
+                    completedActions += action
+                    "${action.label} added"
+                },
+            )
+
+        val pendingResult = handler.handle(requestAddWidget(label = "Calendar"))
+        val replacementResult = handler.handle(requestAddWidget(label = "Weather"))
+
+        assertEquals(
+            LauncherWidgetAddHandlingResult.RequiresPermission(
+                hostedWidgetId = HostedWidgetId(1),
+                provider = providerIdentity,
+            ),
+            pendingResult,
+        )
+        assertEquals(LauncherWidgetAddHandlingResult.Completed("Weather added"), replacementResult)
+        assertEquals(listOf(HostedWidgetId(1)), gateway.deletedHostedWidgetIds)
+        assertEquals(
+            listOf(
+                LauncherShellAction.AddHostedWidgetToHome(
+                    hostedWidgetId = HostedWidgetId(2),
+                    label = "Weather",
+                    preferredSpan = GridSpan(columns = 2, rows = 1),
+                ),
+            ),
+            completedActions,
+        )
+    }
+
     private class FakeWidgetHostGateway(
-        private val bindingResult: WidgetBindingResult = WidgetBindingResult.Bound,
+        bindingResult: WidgetBindingResult = WidgetBindingResult.Bound,
+        private val bindingResults: List<WidgetBindingResult> = listOf(bindingResult),
     ) : WidgetHostGateway {
         private var nextHostedWidgetId = 1
+        private var nextBindingResultIndex = 0
         val deletedHostedWidgetIds = mutableListOf<HostedWidgetId>()
 
         override fun allocateHostedWidgetId(): HostedWidgetId = HostedWidgetId(nextHostedWidgetId++)
@@ -82,7 +130,9 @@ class LauncherWidgetAddRequestHandlerTest {
             provider: WidgetProviderIdentity,
         ): WidgetBindingResult {
             assertEquals(providerIdentity, provider)
-            return bindingResult
+            val result = bindingResults.getOrElse(nextBindingResultIndex) { bindingResults.last() }
+            nextBindingResultIndex += 1
+            return result
         }
 
         override fun createBindHostedWidgetIntent(
