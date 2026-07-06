@@ -246,6 +246,38 @@ class LauncherAppListActionReducerTest {
     }
 
     @Test
+    fun filteredAppsCoercesUnavailableSearchProfileFilters() {
+        val camera = app(label = "Camera", profile = AppProfile.personal())
+        val state =
+            LauncherShellState(
+                installedApps = listOf(camera),
+                searchQuery = "cam",
+                searchFilters = AppSearchFilters(profiles = setOf(AppProfileType.WORK)),
+            )
+
+        val updated = state.withFilteredApps(InstalledAppCatalog())
+
+        assertEquals(setOf(AppProfileType.PERSONAL), updated.searchFilters.profiles)
+        assertEquals(listOf(camera.identity), updated.searchResults.map { app -> app.identity })
+    }
+
+    @Test
+    fun filteredAppsFallsBackToAvailableSearchProfilesWhenPersonalIsUnavailable() {
+        val vault = app(label = "Vault", profile = AppProfile.private())
+        val state =
+            LauncherShellState(
+                installedApps = listOf(vault),
+                searchQuery = "vault",
+                searchFilters = AppSearchFilters(profiles = setOf(AppProfileType.WORK)),
+            )
+
+        val updated = state.withFilteredApps(InstalledAppCatalog())
+
+        assertEquals(setOf(AppProfileType.PRIVATE), updated.searchFilters.profiles)
+        assertEquals(listOf(vault.identity), updated.searchResults.map { app -> app.identity })
+    }
+
+    @Test
     fun ignoresNonAppListActions() {
         assertNull(reducer.reduce(LauncherShellState(), LauncherShellAction.OpenSettings))
     }

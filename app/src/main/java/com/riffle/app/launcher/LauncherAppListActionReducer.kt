@@ -80,9 +80,11 @@ internal class LauncherAppListActionReducer(
 internal fun LauncherShellState.withFilteredApps(appCatalog: InstalledAppCatalog): LauncherShellState =
     appDrawerProfileFilter.let { drawerFilter ->
         searchProfileFilter.coerceAvailableFor(installedApps).let { availableSearchFilter ->
+            val availableSearchFilters = searchFilters.coerceProfilesAvailableFor(installedApps)
             copy(
                 appDrawerProfileFilter = drawerFilter,
                 searchProfileFilter = availableSearchFilter,
+                searchFilters = availableSearchFilters,
                 appDrawerApps =
                     appCatalog.drawerApps(
                         apps = installedApps,
@@ -94,12 +96,12 @@ internal fun LauncherShellState.withFilteredApps(appCatalog: InstalledAppCatalog
                     appCatalog.filteredApps(
                         apps = installedApps,
                         query = searchQuery,
-                        filters = searchFilters,
+                        filters = availableSearchFilters,
                     ),
                 searchShortcutResults =
                     searchShortcutResults(
                         query = searchQuery,
-                        filters = searchFilters,
+                        filters = availableSearchFilters,
                     ),
             )
         }
@@ -207,3 +209,16 @@ private fun AppSearchFilters.withProfileFilter(filter: AppDrawerProfileFilter): 
         AppDrawerProfileFilter.WORK -> copy(profiles = setOf(AppProfileType.WORK))
         AppDrawerProfileFilter.PRIVATE -> copy(profiles = setOf(AppProfileType.PRIVATE))
     }
+
+private fun AppSearchFilters.coerceProfilesAvailableFor(apps: List<InstalledApp>): AppSearchFilters {
+    val availableProfiles = apps.map { app -> app.identity.profile.type }.toSet()
+    val selectedAvailableProfiles = profiles.intersect(availableProfiles)
+    val coercedProfiles =
+        when {
+            selectedAvailableProfiles.isNotEmpty() -> selectedAvailableProfiles
+            AppProfileType.PERSONAL in availableProfiles -> setOf(AppProfileType.PERSONAL)
+            else -> availableProfiles
+        }
+
+    return copy(profiles = coercedProfiles)
+}
