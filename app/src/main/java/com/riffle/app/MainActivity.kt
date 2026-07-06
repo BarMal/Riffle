@@ -159,6 +159,9 @@ class MainActivity : ComponentActivity() {
                         LauncherSettingsActionCallbacks(
                             applySettingsState = { action ->
                                 shellViewModel.onLauncherSettingsActionSelected(action)
+                                wallpaperController.applySource(
+                                    shellViewModel.state.value.launcherSettings.appearance.wallpaper.source,
+                                )
                                 syncOverlayDockService()
                             },
                             requestNotificationAccess = {
@@ -221,8 +224,12 @@ class MainActivity : ComponentActivity() {
                     }
 
                 when (result) {
-                    is LauncherBackupImportHandlingResult.Imported ->
+                    is LauncherBackupImportHandlingResult.Imported -> {
                         shellViewModel.onLauncherSettingsActionSelected(result.action)
+                        wallpaperController.applySource(
+                            shellViewModel.state.value.launcherSettings.appearance.wallpaper.source,
+                        )
+                    }
 
                     is LauncherBackupImportHandlingResult.Failure -> Unit
                 }
@@ -233,7 +240,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
-        wallpaperController.showSystemWallpaper()
+        wallpaperController.applySource(shellViewModel.state.value.launcherSettings.appearance.wallpaper.source)
         activeNotificationRefreshCoordinator.start()
         lifecycle.addObserver(packageChangeObserver)
         lifecycle.addObserver(widgetHostGateway)
