@@ -28,6 +28,11 @@ internal sealed interface DockSlotItemState {
         override val label: String = shortcut.label
     }
 
+    data class Folder(val folder: FolderItem) : DockSlotItemState {
+        override val id: LauncherItemId = folder.id
+        override val label: String = folder.label
+    }
+
     data class Placeholder(
         override val id: LauncherItemId,
         override val label: String,
@@ -46,12 +51,7 @@ internal fun dockSlotItemState(item: LauncherItem?): DockSlotItemState? =
     when (item) {
         null -> null
         is AppShortcutItem -> DockSlotItemState.Shortcut(item)
-        is FolderItem ->
-            DockSlotItemState.Placeholder(
-                id = item.id,
-                label = item.label,
-                kind = DockSlotPlaceholderKind.FOLDER,
-            )
+        is FolderItem -> DockSlotItemState.Folder(item)
         is WidgetItem ->
             DockSlotItemState.Placeholder(
                 id = item.id,
@@ -64,10 +64,11 @@ internal fun dockSlotItemState(item: LauncherItem?): DockSlotItemState? =
 internal fun DockItemPlaceholder(
     item: DockSlotItemState.Placeholder,
     iconSizeDp: Int,
+    modifier: Modifier = Modifier,
 ) {
     Box(
         modifier =
-            Modifier
+            modifier
                 .requiredSize(iconSizeDp.dp)
                 .clip(RoundedCornerShape(18.dp))
                 .background(MaterialTheme.colorScheme.secondaryContainer)

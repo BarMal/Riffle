@@ -169,8 +169,12 @@ private fun StandardHomeColumn(
                 notificationCountsByPackage = state.presentation.notificationCountsByPackage,
                 appShortcutsByApp = state.presentation.appShortcutsByApp,
                 appIconLoader = appIconLoader,
-                haptics = actions.haptics,
-                onAction = actions.onAction,
+                interactions =
+                    DockInteractions(
+                        haptics = actions.haptics,
+                        onFolderOpen = actions.onFolderOpen,
+                        onAction = actions.onAction,
+                    ),
             )
         }
     }

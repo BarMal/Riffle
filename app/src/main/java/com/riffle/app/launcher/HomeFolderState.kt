@@ -6,7 +6,7 @@ import com.riffle.core.domain.launcher.home.LauncherItemId
 
 fun HomeLayout.openedFolder(folderId: LauncherItemId?): FolderItem? =
     folderId?.let { selectedId ->
-        selectedPage.items
+        (selectedPage.items + dock.items)
             .filterIsInstance<FolderItem>()
             .firstOrNull { folder -> folder.id == selectedId }
     }
