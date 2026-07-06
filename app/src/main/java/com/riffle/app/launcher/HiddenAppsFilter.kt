@@ -59,6 +59,7 @@ private fun InstalledApp.matchesHiddenAppSearch(tokens: List<String>): Boolean {
     val searchableValues =
         listOfNotNull(
             label,
+            label.hiddenAppSearchAcronym(),
             identity.packageName.value,
             identity.activityName.value,
             identity.profile.id.value,
@@ -74,3 +75,9 @@ private fun String.normalizedHiddenAppSearchTokens(): List<String> =
         .lowercase()
         .split(Regex("\\s+"))
         .filter(String::isNotBlank)
+
+private fun String.hiddenAppSearchAcronym(): String =
+    lowercase()
+        .split(Regex("[^a-z0-9]+"))
+        .filter(String::isNotBlank)
+        .joinToString(separator = "") { token -> token.first().toString() }
