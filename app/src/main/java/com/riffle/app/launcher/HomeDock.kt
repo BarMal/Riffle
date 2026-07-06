@@ -157,7 +157,7 @@ private fun DockSlotsRow(
         Row(
             modifier =
                 Modifier
-                    .width(contentViewportWidthDp.dp)
+                    .width(dockSlotContentWidthDp(renderedSlotCount, slotMetrics).dp)
                     .horizontalScroll(scrollState),
             horizontalArrangement = Arrangement.spacedBy(slotMetrics.itemSpacingDp.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -261,8 +261,8 @@ internal fun dockRenderedSlotCount(
 ): Int =
     when {
         capacity <= 0 -> 0
-        isEditing -> capacity
-        else -> min(itemCount, capacity)
+        itemCount <= 0 && !isEditing -> 0
+        else -> capacity
     }
 
 internal fun dockBackgroundVisible(
