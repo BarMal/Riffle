@@ -173,17 +173,6 @@ class FolderEngine(
             ?.let { shortcuts -> FolderShortcutSelection.Selected(shortcuts) }
             ?: FolderShortcutSelection.Rejected(FolderEditRejectionReason.UNSUPPORTED_ITEM)
 
-    private fun HomeLayout.withUpdatedSelectedPage(page: LauncherPage): HomeLayout =
-        copy(
-            pages =
-                pages.map { existingPage ->
-                    when (existingPage.id) {
-                        page.id -> page
-                        else -> existingPage
-                    }
-                },
-        )
-
     private fun PlacementRejectionReason.toFolderRejectionReason(): FolderEditRejectionReason =
         when (this) {
             PlacementRejectionReason.MISSING_PLACEMENT -> FolderEditRejectionReason.MISSING_PLACEMENT

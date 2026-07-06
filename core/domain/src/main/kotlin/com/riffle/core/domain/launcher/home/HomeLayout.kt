@@ -15,6 +15,17 @@ data class HomeLayout(
         pages.indexOfFirst { page -> page.id == selectedPageId }
 }
 
+internal fun HomeLayout.withUpdatedSelectedPage(page: LauncherPage): HomeLayout =
+    copy(
+        pages =
+            pages.map { existingPage ->
+                when (existingPage.id) {
+                    page.id -> page
+                    else -> existingPage
+                }
+            },
+    )
+
 object HomeLayoutDefaults {
     fun standard(deviceClass: HomeLayoutDeviceClass = HomeLayoutDeviceClass.PHONE): HomeLayout =
         HomeLayoutSettings.standard(deviceClass).let { settings ->
