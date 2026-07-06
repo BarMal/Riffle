@@ -167,7 +167,7 @@ private fun DockSlotsRow(
                     modifier = Modifier.requiredSize(slotMetrics.iconSizeDp.dp),
                     state =
                         DockSlotState(
-                            shortcut = dock.items.getOrNull(index) as? AppShortcutItem,
+                            item = dockSlotItemState(dock.items.getOrNull(index)),
                             shortcutIndex = index,
                             shortcutCount = dock.items.size,
                             iconSizeDp = slotMetrics.iconSizeDp,
@@ -299,7 +299,7 @@ private data class DockPresentation(
 )
 
 private data class DockSlotState(
-    val shortcut: AppShortcutItem?,
+    val item: DockSlotItemState?,
     val shortcutIndex: Int,
     val shortcutCount: Int,
     val iconSizeDp: Int,
@@ -331,22 +331,29 @@ private fun DockSlot(
                 .then(if (state.isEditing) Modifier.background(editingSlotColor) else Modifier),
         contentAlignment = Alignment.Center,
     ) {
-        if (state.shortcut != null) {
-            DockShortcut(
-                shortcut = state.shortcut,
-                state =
-                    DockShortcutState(
-                        iconSizeDp = state.iconSizeDp,
-                        shortcutIndex = state.shortcutIndex,
-                        shortcutCount = state.shortcutCount,
-                        isEditing = state.isEditing,
-                        notificationCount =
-                            presentation.notificationCountsByPackage[state.shortcut.appIdentity.packageName] ?: 0,
-                        appShortcuts = presentation.appShortcutsByApp[state.shortcut.appIdentity].orEmpty(),
-                    ),
-                presentation = presentation,
-                appIconLoader = appIconLoader,
-            )
+        when (val item = state.item) {
+            null -> Unit
+            is DockSlotItemState.Shortcut ->
+                DockShortcut(
+                    shortcut = item.shortcut,
+                    state =
+                        DockShortcutState(
+                            iconSizeDp = state.iconSizeDp,
+                            shortcutIndex = state.shortcutIndex,
+                            shortcutCount = state.shortcutCount,
+                            isEditing = state.isEditing,
+                            notificationCount =
+                                presentation.notificationCountsByPackage[item.shortcut.appIdentity.packageName] ?: 0,
+                            appShortcuts = presentation.appShortcutsByApp[item.shortcut.appIdentity].orEmpty(),
+                        ),
+                    presentation = presentation,
+                    appIconLoader = appIconLoader,
+                )
+            is DockSlotItemState.Placeholder ->
+                DockItemPlaceholder(
+                    item = item,
+                    iconSizeDp = state.iconSizeDp,
+                )
         }
     }
 }
