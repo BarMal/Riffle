@@ -33,6 +33,7 @@ class LauncherSettingsActionHandlerTest {
                     callbacks(
                         requestNotificationAccess = { calls += "notifications" },
                         requestOverlayDockPermission = { calls += "overlay" },
+                        changeWallpaper = { calls += "wallpaper" },
                         exportBackup = { calls += "export" },
                         importBackup = { calls += "import" },
                     ),
@@ -40,10 +41,11 @@ class LauncherSettingsActionHandlerTest {
 
         assertTrue(handler.handle(LauncherShellAction.RequestNotificationAccess))
         assertTrue(handler.handle(LauncherShellAction.RequestOverlayDockPermission))
+        assertTrue(handler.handle(LauncherShellAction.ChangeWallpaper))
         assertTrue(handler.handle(LauncherShellAction.ExportLauncherBackup))
         assertTrue(handler.handle(LauncherShellAction.RequestImportLauncherBackup))
 
-        assertEquals(listOf("notifications", "overlay", "export", "import"), calls)
+        assertEquals(listOf("notifications", "overlay", "wallpaper", "export", "import"), calls)
     }
 
     @Test
@@ -60,6 +62,7 @@ class LauncherSettingsActionHandlerTest {
         applySettingsState: (LauncherShellAction) -> Unit = {},
         requestNotificationAccess: () -> Unit = {},
         requestOverlayDockPermission: () -> Unit = {},
+        changeWallpaper: () -> Unit = {},
         exportBackup: () -> Unit = {},
         importBackup: () -> Unit = {},
     ): LauncherSettingsActionCallbacks =
@@ -67,6 +70,7 @@ class LauncherSettingsActionHandlerTest {
             applySettingsState = applySettingsState,
             requestNotificationAccess = requestNotificationAccess,
             requestOverlayDockPermission = requestOverlayDockPermission,
+            changeWallpaper = changeWallpaper,
             exportBackup = exportBackup,
             importBackup = importBackup,
         )

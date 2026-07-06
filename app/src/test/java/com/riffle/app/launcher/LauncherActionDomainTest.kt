@@ -144,6 +144,7 @@ class LauncherActionDomainTest {
                 activity("OpenSettings", LauncherShellAction.OpenSettings),
                 settings("RequestNotificationAccess", LauncherShellAction.RequestNotificationAccess),
                 settings("RequestOverlayDockPermission", LauncherShellAction.RequestOverlayDockPermission),
+                settings("ChangeWallpaper", LauncherShellAction.ChangeWallpaper),
                 settings("ExportLauncherBackup", LauncherShellAction.ExportLauncherBackup),
                 settings("RequestImportLauncherBackup", LauncherShellAction.RequestImportLauncherBackup),
                 settings("ImportLauncherBackup", LauncherShellAction.ImportLauncherBackup(backupDocument)),

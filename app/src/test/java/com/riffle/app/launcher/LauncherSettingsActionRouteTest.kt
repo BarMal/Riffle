@@ -74,6 +74,10 @@ class LauncherSettingsActionRouteTest {
             LauncherShellAction.RequestOverlayDockPermission.launcherSettingsActionRoute(),
         )
         assertEquals(
+            LauncherSettingsActionRoute.ChangeWallpaper,
+            LauncherShellAction.ChangeWallpaper.launcherSettingsActionRoute(),
+        )
+        assertEquals(
             LauncherSettingsActionRoute.ExportBackup,
             LauncherShellAction.ExportLauncherBackup.launcherSettingsActionRoute(),
         )

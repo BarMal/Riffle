@@ -24,6 +24,11 @@ internal class DefaultLauncherSettingsActionHandler(
                 true
             }
 
+            LauncherSettingsActionRoute.ChangeWallpaper -> {
+                callbacks.changeWallpaper()
+                true
+            }
+
             LauncherSettingsActionRoute.ExportBackup -> {
                 callbacks.exportBackup()
                 true
@@ -42,6 +47,7 @@ internal data class LauncherSettingsActionCallbacks(
     val applySettingsState: (LauncherShellAction) -> Unit,
     val requestNotificationAccess: () -> Unit,
     val requestOverlayDockPermission: () -> Unit,
+    val changeWallpaper: () -> Unit,
     val exportBackup: () -> Unit,
     val importBackup: () -> Unit,
 )
@@ -54,6 +60,8 @@ internal sealed interface LauncherSettingsActionRoute {
     data object RequestNotificationAccess : LauncherSettingsActionRoute
 
     data object RequestOverlayDockPermission : LauncherSettingsActionRoute
+
+    data object ChangeWallpaper : LauncherSettingsActionRoute
 
     data object ExportBackup : LauncherSettingsActionRoute
 
@@ -91,6 +99,7 @@ internal fun LauncherShellAction.launcherSettingsActionRoute(): LauncherSettings
 
         LauncherShellAction.RequestNotificationAccess -> LauncherSettingsActionRoute.RequestNotificationAccess
         LauncherShellAction.RequestOverlayDockPermission -> LauncherSettingsActionRoute.RequestOverlayDockPermission
+        LauncherShellAction.ChangeWallpaper -> LauncherSettingsActionRoute.ChangeWallpaper
         LauncherShellAction.ExportLauncherBackup -> LauncherSettingsActionRoute.ExportBackup
         LauncherShellAction.RequestImportLauncherBackup -> LauncherSettingsActionRoute.RequestImportBackup
         else -> null

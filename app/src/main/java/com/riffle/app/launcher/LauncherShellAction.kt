@@ -248,6 +248,8 @@ sealed interface LauncherShellAction {
 
     data class SelectWallpaperSource(val source: WallpaperSource) : LauncherShellAction
 
+    data object ChangeWallpaper : LauncherShellAction
+
     data class SelectFullscreenHomeEnabled(val enabled: Boolean) : LauncherShellAction
 
     data class SelectHomeStatusBarHidden(val hidden: Boolean) : LauncherShellAction

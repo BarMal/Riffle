@@ -191,6 +191,11 @@ private fun SettingsAppearancePageContent(
             selectedSource = state.settings.appearance.wallpaper.source,
             onAction = onAction,
         )
+        SettingsClickableRow(
+            title = "Change wallpaper",
+            subtitle = "Open Android wallpaper picker",
+            onClick = { onAction(LauncherShellAction.ChangeWallpaper) },
+        )
     }
     SettingsSection(title = "System UI") {
         SettingsSwitchRow(

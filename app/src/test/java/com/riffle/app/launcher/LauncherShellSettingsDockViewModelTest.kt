@@ -101,6 +101,7 @@ class LauncherShellSettingsDockViewModelTest {
                             applySettingsState = viewModel::onLauncherSettingsActionSelected,
                             requestNotificationAccess = {},
                             requestOverlayDockPermission = {},
+                            changeWallpaper = {},
                             exportBackup = {},
                             importBackup = {},
                         ),
