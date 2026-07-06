@@ -144,6 +144,69 @@ class LauncherShellOverlayDockSettingsTest {
     }
 
     @Test
+    fun scopesFloatingDockMainAppOrdinalToMainAppEntries() {
+        val launcherSettingsRepository = FakeLauncherSettingsRepository()
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                launcherSettingsRepository = launcherSettingsRepository,
+            )
+        val app = InstalledApp(identity = appIdentity, label = "Example")
+        val shortcut = appShortcut(id = "compose", shortLabel = "Compose")
+
+        viewModel.onLauncherSettingsActionSelected(
+            LauncherShellAction.AddAppShortcutToFloatingDock(shortcut),
+        )
+        viewModel.onLauncherSettingsActionSelected(
+            LauncherShellAction.AddAppToFloatingDock(app),
+        )
+
+        val itemIds = viewModel.state.value.launcherSettings.overlayDock.items.map { item -> item.id.value }
+        assertEquals(
+            listOf(
+                "floating-dock:personal:com.example.app/.MainActivity:compose:1",
+                "floating-dock:personal:com.example.app/.MainActivity:1",
+            ),
+            itemIds,
+        )
+        assertEquals(viewModel.state.value.launcherSettings, launcherSettingsRepository.savedSettings)
+    }
+
+    @Test
+    fun scopesFloatingDockShortcutOrdinalToSameDeepShortcutId() {
+        val launcherSettingsRepository = FakeLauncherSettingsRepository()
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                launcherSettingsRepository = launcherSettingsRepository,
+            )
+        val app = InstalledApp(identity = appIdentity, label = "Example")
+        val composeShortcut = appShortcut(id = "compose", shortLabel = "Compose")
+        val cameraShortcut = appShortcut(id = "camera", shortLabel = "Camera")
+
+        viewModel.onLauncherSettingsActionSelected(
+            LauncherShellAction.AddAppToFloatingDock(app),
+        )
+        viewModel.onLauncherSettingsActionSelected(
+            LauncherShellAction.AddAppShortcutToFloatingDock(composeShortcut),
+        )
+        viewModel.onLauncherSettingsActionSelected(
+            LauncherShellAction.AddAppShortcutToFloatingDock(cameraShortcut),
+        )
+
+        val itemIds = viewModel.state.value.launcherSettings.overlayDock.items.map { item -> item.id.value }
+        assertEquals(
+            listOf(
+                "floating-dock:personal:com.example.app/.MainActivity:1",
+                "floating-dock:personal:com.example.app/.MainActivity:compose:1",
+                "floating-dock:personal:com.example.app/.MainActivity:camera:1",
+            ),
+            itemIds,
+        )
+        assertEquals(viewModel.state.value.launcherSettings, launcherSettingsRepository.savedSettings)
+    }
+
+    @Test
     fun removesFloatingDockShortcutGloballyWithoutRewritingLayout() {
         val homeLayoutRepository = FakeHomeLayoutRepository()
         val camera = shortcut(id = "camera", label = "Camera")
@@ -339,6 +402,17 @@ class LauncherShellOverlayDockSettingsTest {
                     activityName = AppActivityName(".MainActivity"),
                 ),
             label = label,
+        )
+
+    private fun appShortcut(
+        id: String,
+        shortLabel: String,
+    ): AppShortcut =
+        AppShortcut(
+            id = AppShortcutId(id),
+            appIdentity = appIdentity,
+            shortLabel = shortLabel,
+            longLabel = null,
         )
 
     private companion object {
