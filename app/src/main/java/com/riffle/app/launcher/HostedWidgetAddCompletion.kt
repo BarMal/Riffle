@@ -1,6 +1,7 @@
 package com.riffle.app.launcher
 
 import com.riffle.app.launcher.LauncherShellAction.AddHostedWidgetToHome
+import com.riffle.app.launcher.widgets.fitWidgetPreferredSpan
 import com.riffle.app.launcher.widgets.widgetSpanAdjustmentToast
 import com.riffle.core.domain.launcher.home.GridSpan
 import com.riffle.core.domain.launcher.home.HomeLayout
@@ -8,7 +9,14 @@ import com.riffle.core.domain.launcher.home.HostedWidgetId
 import com.riffle.core.domain.launcher.home.WidgetItem
 
 internal fun LauncherShellViewModel.completeWidgetAdd(action: AddHostedWidgetToHome): String? {
-    onHomeShortcutEdited(action)
+    val fittedAction =
+        action.copy(
+            preferredSpan =
+                action.preferredSpan.fitWidgetPreferredSpan(
+                    state.value.homeLayout.selectedPage.grid,
+                ),
+        )
+    onHomeShortcutEdited(fittedAction)
     val adjustmentMessage =
         state.value.homeLayout.hostedWidgetSpanAdjustmentMessage(
             label = action.label,

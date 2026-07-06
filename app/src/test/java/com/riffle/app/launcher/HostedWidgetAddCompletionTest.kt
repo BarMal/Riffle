@@ -49,6 +49,24 @@ class HostedWidgetAddCompletionTest {
         assertEquals("Calendar ideal size is 6x1; added as 4x1", message)
     }
 
+    @Test
+    fun fitsOversizedPreferredSpanToSelectedGridBeforeCompletingAdd() {
+        val viewModel = LauncherShellViewModel(firstRunRepository = FakeFirstRunRepository())
+
+        val message =
+            viewModel.completeWidgetAdd(
+                LauncherShellAction.AddHostedWidgetToHome(
+                    hostedWidgetId = HostedWidgetId(10),
+                    label = "Agenda",
+                    preferredSpan = GridSpan(columns = 9, rows = 8),
+                ),
+            )
+
+        val widget = viewModel.state.value.homeLayout.selectedPage.items.single() as WidgetItem
+        assertEquals(GridSpan(columns = 4, rows = 5), widget.placement?.span)
+        assertEquals("Agenda ideal size is 9x8; added as 4x5", message)
+    }
+
     private class FakeFirstRunRepository : FirstRunRepository {
         override fun isFirstRunComplete(): Boolean = false
 

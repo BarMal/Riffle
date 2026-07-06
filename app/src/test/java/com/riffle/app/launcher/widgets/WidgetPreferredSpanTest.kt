@@ -56,6 +56,39 @@ class WidgetPreferredSpanTest {
     }
 
     @Test
+    fun keepsTinyWindowCellEstimateAtOneCellSpan() {
+        val span =
+            WidgetProviderDimensions(
+                minWidthDp = 1,
+                minHeightDp = 1,
+            ).preferredGridSpan(
+                grid = GridDimensions(columns = 4, rows = 5),
+                availableWidthDp = 10000,
+                availableHeightDp = 10000,
+            )
+
+        assertEquals(GridSpan(columns = 1, rows = 1), span)
+    }
+
+    @Test
+    fun fitsPreferredSpanToSelectedGridBounds() {
+        val span =
+            GridSpan(columns = 8, rows = 7)
+                .fitWidgetPreferredSpan(GridDimensions(columns = 4, rows = 5))
+
+        assertEquals(GridSpan(columns = 4, rows = 5), span)
+    }
+
+    @Test
+    fun keepsFittingPreferredSpanUnchanged() {
+        val span =
+            GridSpan(columns = 3, rows = 2)
+                .fitWidgetPreferredSpan(GridDimensions(columns = 4, rows = 5))
+
+        assertEquals(GridSpan(columns = 3, rows = 2), span)
+    }
+
+    @Test
     fun clampsDegenerateGridBoundsToOneCellSpan() {
         val span =
             WidgetProviderDimensions(
