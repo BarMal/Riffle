@@ -1,11 +1,19 @@
 package com.riffle.app.launcher.notifications
 
+import android.content.pm.LauncherApps
+import android.os.UserManager
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
 
 class RiffleNotificationListenerService : NotificationListenerService() {
     private val repository by lazy { DataStoreActiveNotificationRepository(this) }
+    private val notificationMapper by lazy {
+        StatusBarNotificationMapper(
+            userManager = getSystemService(UserManager::class.java),
+            launcherApps = getSystemService(LauncherApps::class.java),
+        )
+    }
 
     override fun onListenerConnected() {
         RiffleNotificationListenerConnection.connect(this)
@@ -33,7 +41,7 @@ class RiffleNotificationListenerService : NotificationListenerService() {
     private fun saveActiveNotifications() {
         repository.saveActiveNotifications(
             activeNotifications
-                ?.map { notification -> notification.toLauncherNotification() }
+                ?.map(notificationMapper::map)
                 .orEmpty(),
         )
     }
