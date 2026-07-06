@@ -1,5 +1,7 @@
 package com.riffle.app.launcher
 
+import com.riffle.core.domain.launcher.apps.AppProfile
+import com.riffle.core.domain.launcher.apps.AppProfileType
 import com.riffle.core.domain.launcher.apps.InstalledApp
 
 data class AppDrawerSection(
@@ -20,7 +22,7 @@ object AppDrawerSections {
                 )
             }
             .sortedWith(
-                compareBy<AppDrawerSection> { section -> section.title.profileSectionSortPrefix() }
+                compareBy<AppDrawerSection> { section -> section.profileBucketSortKey() }
                     .thenBy { section -> section.title.letterSectionSortKey() },
             )
 
@@ -41,7 +43,17 @@ object AppDrawerSections {
         }
 }
 
-private fun String.profileSectionSortPrefix(): String = substringBefore(delimiter = " - ", missingDelimiterValue = "")
+private fun AppDrawerSection.profileBucketSortKey(): Int {
+    val profile = apps.firstOrNull()?.identity?.profile ?: AppProfile.personal()
+
+    return when {
+        profile.type == AppProfileType.PERSONAL && profile.id == AppProfile.personal().id -> 0
+        profile.type == AppProfileType.PERSONAL -> 1
+        profile.type == AppProfileType.WORK -> 2
+        profile.type == AppProfileType.PRIVATE -> 3
+        else -> 4
+    }
+}
 
 private fun String.letterSectionSortKey(): String =
     substringAfter(delimiter = " - ", missingDelimiterValue = this)
