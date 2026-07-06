@@ -49,6 +49,34 @@ class ImmediateHomePagerTest {
     }
 
     @Test
+    fun appliesExternalHomePageSelectionWhenFractionalPositionRoundsToSelectedPage() {
+        assertTrue(
+            shouldApplyExternalHomePageSelection(
+                isDragging = false,
+                isSettling = false,
+                hasPendingGestureTarget = false,
+                pageCount = 2,
+                currentPagePosition = 0.6f,
+                selectedPageIndex = 1,
+            ),
+        )
+    }
+
+    @Test
+    fun doesNotApplyExternalHomePageSelectionWhenThereAreNoPages() {
+        assertFalse(
+            shouldApplyExternalHomePageSelection(
+                isDragging = false,
+                isSettling = false,
+                hasPendingGestureTarget = false,
+                pageCount = 0,
+                currentPagePosition = 0f,
+                selectedPageIndex = 1,
+            ),
+        )
+    }
+
+    @Test
     fun doesNotApplyExternalHomePageSelectionWhileDragging() {
         assertFalse(
             shouldApplyExternalHomePageSelection(
@@ -73,6 +101,22 @@ class ImmediateHomePagerTest {
                 currentPagePosition = 0f,
                 selectedPageIndex = 1,
             ),
+        )
+    }
+
+    @Test
+    fun selectsAnimatedExternalPageSelectionSettlePolicyWhenReducedMotionIsOff() {
+        assertEquals(
+            HomePageExternalSelectionSettlePolicy.AnimatedSettle,
+            homePageExternalSelectionSettlePolicy(reducedMotion = false),
+        )
+    }
+
+    @Test
+    fun selectsImmediateExternalPageSelectionSettlePolicyWhenReducedMotionIsOn() {
+        assertEquals(
+            HomePageExternalSelectionSettlePolicy.ImmediateSnap,
+            homePageExternalSelectionSettlePolicy(reducedMotion = true),
         )
     }
 
