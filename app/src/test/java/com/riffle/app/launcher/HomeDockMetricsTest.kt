@@ -1,6 +1,7 @@
 package com.riffle.app.launcher
 
 import com.riffle.core.domain.launcher.home.DockBackgroundSizing
+import com.riffle.core.domain.launcher.home.DockOverflowMode
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -62,7 +63,14 @@ class HomeDockMetricsTest {
                 availableContentWidthDp = 280,
             )
 
-        assertEquals(DockSlotRenderMetrics(iconSizeDp = 48, itemSpacingDp = 10), metrics)
+        assertEquals(
+            DockSlotRenderMetrics(
+                iconSizeDp = 48,
+                itemSpacingDp = 10,
+                overflowMode = DockOverflowMode.Fits,
+            ),
+            metrics,
+        )
         assertEquals(280, (5 * metrics.iconSizeDp) + (4 * metrics.itemSpacingDp))
     }
 
@@ -76,7 +84,14 @@ class HomeDockMetricsTest {
                 availableContentWidthDp = 252,
             )
 
-        assertEquals(DockSlotRenderMetrics(iconSizeDp = 48, itemSpacingDp = 3), metrics)
+        assertEquals(
+            DockSlotRenderMetrics(
+                iconSizeDp = 48,
+                itemSpacingDp = 3,
+                overflowMode = DockOverflowMode.FitByCompaction,
+            ),
+            metrics,
+        )
         assertEquals(252, (5 * metrics.iconSizeDp) + (4 * metrics.itemSpacingDp))
     }
 
@@ -90,8 +105,36 @@ class HomeDockMetricsTest {
                 availableContentWidthDp = 252,
             )
 
-        assertEquals(DockSlotRenderMetrics(iconSizeDp = 50, itemSpacingDp = 0), metrics)
+        assertEquals(
+            DockSlotRenderMetrics(
+                iconSizeDp = 50,
+                itemSpacingDp = 0,
+                overflowMode = DockOverflowMode.FitByCompaction,
+            ),
+            metrics,
+        )
         assertEquals(250, (5 * metrics.iconSizeDp) + (4 * metrics.itemSpacingDp))
+    }
+
+    @Test
+    fun dockSlotRenderMetricsReportsOverflowNavigationWhenHardMinimumCannotFit() {
+        val metrics =
+            dockSlotRenderMetrics(
+                slotCount = 5,
+                iconSizeDp = 48,
+                itemSpacingDp = 10,
+                availableContentWidthDp = 159,
+            )
+
+        assertEquals(
+            DockSlotRenderMetrics(
+                iconSizeDp = 32,
+                itemSpacingDp = 0,
+                overflowMode = DockOverflowMode.RequiresOverflowNavigation,
+            ),
+            metrics,
+        )
+        assertEquals(160, (5 * metrics.iconSizeDp) + (4 * metrics.itemSpacingDp))
     }
 
     @Test
