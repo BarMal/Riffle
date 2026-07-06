@@ -1,5 +1,28 @@
 # Changelog
 
+## Alpha 173
+
+Release notes for the next alpha after Alpha 172.
+
+### Changed
+
+- Reduced-motion home page selection now snaps directly to the selected page instead of running the external settle animation, avoiding intermediate page indicator drift.
+- Settings now includes a Contextual page with a persisted default-off toggle for contextual launcher behaviour.
+- Built-in launcher template catalog defaults now provide stable domain templates for standard app-drawer and conservative generated-page layouts.
+- Generated page content plans can now be applied to generated page descriptors with defensive rejection for unavailable or mismatched plans.
+- Dock overflow handling gained a domain policy that classifies fitted, compacted, and overflow-navigation cases for future dock scrolling or paging work.
+
+### Verification
+
+- Full GitHub CI `Verify` passed for PRs #509, #510, #511, #512, and #513.
+- Local worker verification included targeted tests for the reduced-motion pager policy, template catalog defaults, generated page plan application, dock overflow policy, and contextual settings reducer/UI routes.
+
+### Known Limitations
+
+- Reduced-motion pager polish has unit coverage but no device visual pass yet.
+- Contextual behaviour remains opt-in and does not yet run platform observers, contextual signals, generated-page behaviour, or model/action execution.
+- Template catalog, generated page application, and dock overflow policy are domain scaffolding; UI wiring and overflow navigation controls remain future work.
+
 ## Alpha 172
 
 Release notes for the next alpha after Alpha 171.
