@@ -53,6 +53,48 @@ class HomeDockMetricsTest {
     }
 
     @Test
+    fun dockSlotRenderMetricsPreservesConfiguredSpacingWhenFiveSlotsFit() {
+        val metrics =
+            dockSlotRenderMetrics(
+                slotCount = 5,
+                iconSizeDp = 48,
+                itemSpacingDp = 10,
+                availableContentWidthDp = 280,
+            )
+
+        assertEquals(DockSlotRenderMetrics(iconSizeDp = 48, itemSpacingDp = 10), metrics)
+        assertEquals(280, (5 * metrics.iconSizeDp) + (4 * metrics.itemSpacingDp))
+    }
+
+    @Test
+    fun dockSlotRenderMetricsReducesSpacingForFiveSlotsOnNarrowWidth() {
+        val metrics =
+            dockSlotRenderMetrics(
+                slotCount = 5,
+                iconSizeDp = 48,
+                itemSpacingDp = 10,
+                availableContentWidthDp = 252,
+            )
+
+        assertEquals(DockSlotRenderMetrics(iconSizeDp = 48, itemSpacingDp = 3), metrics)
+        assertEquals(252, (5 * metrics.iconSizeDp) + (4 * metrics.itemSpacingDp))
+    }
+
+    @Test
+    fun dockSlotRenderMetricsReducesIconSizeAfterSpacingForFiveSlotsOnFoldedWidth() {
+        val metrics =
+            dockSlotRenderMetrics(
+                slotCount = 5,
+                iconSizeDp = 56,
+                itemSpacingDp = 24,
+                availableContentWidthDp = 252,
+            )
+
+        assertEquals(DockSlotRenderMetrics(iconSizeDp = 50, itemSpacingDp = 0), metrics)
+        assertEquals(250, (5 * metrics.iconSizeDp) + (4 * metrics.itemSpacingDp))
+    }
+
+    @Test
     fun dynamicDockContainerCapsAtAvailableWidthWhenContentOverflows() {
         assertEquals(
             320,
