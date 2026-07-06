@@ -1,6 +1,7 @@
 package com.riffle.app.launcher
 
 import com.riffle.core.domain.launcher.widgets.InstalledWidgetProvider
+import com.riffle.core.domain.launcher.widgets.WidgetProviderDimensions
 
 internal fun List<InstalledWidgetProvider>.filteredWidgetProviders(query: String): List<InstalledWidgetProvider> =
     query.normalizedWidgetSearchTokens()
@@ -22,7 +23,13 @@ private fun InstalledWidgetProvider.widgetSearchableValues(): List<String> =
         identity.className.value,
         identity.profile.drawerProfilePrefix(),
         "${dimensions.minWidthDp}x${dimensions.minHeightDp}",
+        dimensions.targetCellSizeSearchToken(),
     ).map { value -> value.lowercase() }
+
+private fun WidgetProviderDimensions.targetCellSizeSearchToken(): String? =
+    listOfNotNull(targetCellWidth, targetCellHeight)
+        .takeIf { cells -> cells.size == 2 }
+        ?.joinToString(separator = "x")
 
 private fun String.normalizedWidgetSearchTokens(): List<String> =
     trim()

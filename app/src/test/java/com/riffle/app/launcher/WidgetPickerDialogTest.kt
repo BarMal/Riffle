@@ -182,6 +182,53 @@ class WidgetPickerDialogTest {
     }
 
     @Test
+    fun filtersWidgetProvidersByTargetCellSize() {
+        val weather =
+            widgetProvider(
+                label = "Weather",
+                packageName = "com.example.weather",
+                className = ".WeatherWidget",
+                dimensions = widgetDimensions(targetCellWidth = 3, targetCellHeight = 2),
+            )
+        val clock =
+            widgetProvider(
+                label = "Clock",
+                packageName = "com.example.clock",
+                className = ".ClockWidget",
+                dimensions = widgetDimensions(targetCellWidth = 2, targetCellHeight = 2),
+            )
+
+        assertEquals(listOf(weather), listOf(weather, clock).filteredWidgetProviders("3x2"))
+    }
+
+    @Test
+    fun filtersWidgetProvidersByMultipleTokensAndTargetCellSize() {
+        val weather =
+            widgetProvider(
+                label = "Weather",
+                packageName = "com.example.weather",
+                className = ".WeatherWidget",
+                dimensions = widgetDimensions(targetCellWidth = 3, targetCellHeight = 2),
+            )
+        val clock =
+            widgetProvider(
+                label = "Clock",
+                packageName = "com.example.clock",
+                className = ".ClockWidget",
+                dimensions = widgetDimensions(targetCellWidth = 3, targetCellHeight = 2),
+            )
+        val agenda =
+            widgetProvider(
+                label = "Agenda",
+                packageName = "com.example.calendar",
+                className = ".MonthWidget",
+                dimensions = widgetDimensions(targetCellWidth = 4, targetCellHeight = 2),
+            )
+
+        assertEquals(listOf(weather), listOf(weather, clock, agenda).filteredWidgetProviders("weather 3x2"))
+    }
+
+    @Test
     fun filtersWidgetProvidersByLabelAcronym() {
         val weather =
             widgetProvider(
@@ -219,6 +266,7 @@ class WidgetPickerDialogTest {
         packageName: String,
         className: String,
         profile: AppProfile = AppProfile.personal(),
+        dimensions: WidgetProviderDimensions = WidgetProviderDimensions(minWidthDp = 120, minHeightDp = 80),
         supportsHorizontalResize: Boolean = false,
         supportsVerticalResize: Boolean = false,
     ): InstalledWidgetProvider =
@@ -230,8 +278,21 @@ class WidgetPickerDialogTest {
                     profile = profile,
                 ),
             label = label,
-            dimensions = WidgetProviderDimensions(minWidthDp = 120, minHeightDp = 80),
+            dimensions = dimensions,
             supportsHorizontalResize = supportsHorizontalResize,
             supportsVerticalResize = supportsVerticalResize,
+        )
+
+    private fun widgetDimensions(
+        minWidthDp: Int = 120,
+        minHeightDp: Int = 80,
+        targetCellWidth: Int? = null,
+        targetCellHeight: Int? = null,
+    ): WidgetProviderDimensions =
+        WidgetProviderDimensions(
+            minWidthDp = minWidthDp,
+            minHeightDp = minHeightDp,
+            targetCellWidth = targetCellWidth,
+            targetCellHeight = targetCellHeight,
         )
 }
