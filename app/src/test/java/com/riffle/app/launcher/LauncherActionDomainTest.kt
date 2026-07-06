@@ -299,6 +299,7 @@ class LauncherActionDomainTest {
                     LauncherShellAction.SelectHapticFeedbackStrength(HapticFeedbackStrength.LIGHT),
                 ),
                 settings("SelectReducedMotionEnabled", LauncherShellAction.SelectReducedMotionEnabled(enabled = true)),
+                settings("SelectContextualEnabled", LauncherShellAction.SelectContextualEnabled(enabled = true)),
                 settings("SelectOverlayDockEnabled", LauncherShellAction.SelectOverlayDockEnabled(enabled = true)),
                 settings("SelectOverlayDockEdge", LauncherShellAction.SelectOverlayDockEdge(OverlayDockEdge.START)),
                 settings(

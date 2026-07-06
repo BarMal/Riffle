@@ -77,6 +77,26 @@ internal fun LauncherShellState.withMotionSettingsAction(
         else -> this
     }
 
+internal fun LauncherShellState.withContextualSettingsAction(
+    action: LauncherShellAction,
+    launcherSettingsRepository: LauncherSettingsRepository,
+): LauncherShellState =
+    when (action) {
+        is LauncherShellAction.SelectContextualEnabled ->
+            withLauncherSettings(
+                settings =
+                    launcherSettings.copy(
+                        contextual =
+                            launcherSettings.contextual.copy(
+                                enabled = action.enabled,
+                            ),
+                    ),
+                launcherSettingsRepository = launcherSettingsRepository,
+            )
+
+        else -> this
+    }
+
 internal fun LauncherShellState.withAppearanceSettingsAction(
     action: LauncherShellAction,
     launcherSettingsRepository: LauncherSettingsRepository,

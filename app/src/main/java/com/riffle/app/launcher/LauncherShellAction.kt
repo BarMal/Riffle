@@ -272,6 +272,8 @@ sealed interface LauncherShellAction {
 
     data class SelectReducedMotionEnabled(val enabled: Boolean) : LauncherShellAction
 
+    data class SelectContextualEnabled(val enabled: Boolean) : LauncherShellAction
+
     data class SelectOverlayDockEnabled(val enabled: Boolean) : LauncherShellAction
 
     data class SelectOverlayDockEdge(val edge: OverlayDockEdge) : LauncherShellAction
