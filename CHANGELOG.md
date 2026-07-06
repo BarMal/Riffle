@@ -1,5 +1,28 @@
 # Changelog
 
+## Alpha 175
+
+Release notes for the next alpha after Alpha 174.
+
+### Changed
+
+- Main branch quality gates now run CI `Verify` on pushes to `main`, and root `./gradlew verify` explicitly includes app debug assembly.
+- Startup home layout selection now preserves saved single-layout home pages when the current device class does not yet have its own stored layout.
+- Folded, unfolded, and tablet home layouts now start with distinct dock icon sizes and spacing, and dock settings edits target the selected settings device class without mutating the active layout.
+- The initial launcher shell has JVM coverage for a completed first run with no installed app data, closing the initial app-shell epic.
+- Wallpaper validation evidence now documents current support, manual device checks, and remaining picker/scrolling/failure-state gaps.
+
+### Verification
+
+- Full GitHub CI `Verify` passed for PRs #521, #522, #523, #524, and #525.
+- Local verification included targeted tests for startup device-class layout restoration, dock settings target selection, device-specific dock defaults, launcher empty-state evidence, wallpaper/settings support, and root `./gradlew verify`.
+
+### Known Limitations
+
+- Dock paging and explicit overflow navigation remain future work; current behaviour still relies on compaction and scrolling guards when users configure too many dock items.
+- Wallpaper picker integration, static/scrolling wallpaper controls, and explicit wallpaper API/policy failure messages remain open under #7.
+- Reduced-motion pager polish remains a known follow-up; this alpha focuses on layout loading, dock settings, and epic closure evidence.
+
 ## Alpha 174
 
 Release notes for the next alpha after Alpha 173.
