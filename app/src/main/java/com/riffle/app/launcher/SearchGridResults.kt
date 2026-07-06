@@ -35,11 +35,12 @@ internal fun searchWebPreview(query: String): SearchWebPreview? {
     } else {
         SearchWebPreview(
             query = trimmedQuery,
+            actionLabel = "Search web",
             examples =
                 listOf(
-                    SearchWebExampleResult("Images", "$trimmedQuery images"),
-                    SearchWebExampleResult("News", "$trimmedQuery news"),
-                    SearchWebExampleResult("Videos", "$trimmedQuery videos"),
+                    SearchWebExampleResult("Images", "Search image results", "$trimmedQuery images"),
+                    SearchWebExampleResult("News", "Search news results", "$trimmedQuery news"),
+                    SearchWebExampleResult("Videos", "Search video results", "$trimmedQuery videos"),
                 ),
         )
     }
@@ -47,15 +48,17 @@ internal fun searchWebPreview(query: String): SearchWebPreview? {
 
 internal data class SearchWebPreview(
     val query: String,
+    val actionLabel: String,
     val examples: List<SearchWebExampleResult>,
 ) {
-    val title: String = "Search Google"
+    val title: String = "Search the web"
     val subtitle: String = query
     val action: LauncherShellAction = LauncherShellAction.SearchWeb(query)
 }
 
 internal data class SearchWebExampleResult(
     val title: String,
+    val subtitle: String,
     val query: String,
 ) {
     val action: LauncherShellAction = LauncherShellAction.SearchWeb(query)
