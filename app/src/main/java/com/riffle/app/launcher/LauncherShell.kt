@@ -145,6 +145,8 @@ private fun LauncherDestination(
     haptics: LauncherHaptics,
     onAction: (LauncherShellAction) -> Unit,
 ) {
+    val settingsPageActionRouter = rememberSettingsPageActionRouter(onAction)
+
     when (state.destination) {
         ShellDestination.HOME ->
             HomeDestination(
@@ -152,7 +154,7 @@ private fun LauncherDestination(
                 appIconLoader = appIconLoader,
                 widgetRenderers = widgetRenderers,
                 haptics = haptics,
-                onAction = onAction,
+                onAction = settingsPageActionRouter.onAction,
             )
 
         ShellDestination.APP_DRAWER ->
@@ -169,9 +171,9 @@ private fun LauncherDestination(
                         appShortcutsByApp = state.appShortcutsByApp,
                         appIconLoader = appIconLoader,
                         haptics = haptics,
-                        onAction = onAction,
+                        onAction = settingsPageActionRouter.onAction,
                     ),
-                onAction = onAction,
+                onAction = settingsPageActionRouter.onAction,
             )
 
         ShellDestination.SEARCH ->
@@ -194,9 +196,9 @@ private fun LauncherDestination(
                         appShortcutsByApp = state.appShortcutsByApp,
                         appIconLoader = appIconLoader,
                         haptics = haptics,
-                        onAction = onAction,
+                        onAction = settingsPageActionRouter.onAction,
                     ),
-                onAction = onAction,
+                onAction = settingsPageActionRouter.onAction,
             )
 
         ShellDestination.NOTIFICATIONS ->
@@ -205,7 +207,7 @@ private fun LauncherDestination(
                 categoryCounts = state.notificationCountsByCategory,
                 apps = state.installedApps,
                 appIconLoader = appIconLoader,
-                onAction = onAction,
+                onAction = settingsPageActionRouter.onAction,
             )
 
         ShellDestination.SETTINGS ->
@@ -215,7 +217,8 @@ private fun LauncherDestination(
                         appVersionLabel = appVersionLabel,
                         appBuildIdentityLabel = appBuildIdentityLabel,
                     ),
-                onAction = onAction,
+                initialPage = settingsPageActionRouter.initialSettingsPage,
+                onAction = settingsPageActionRouter.onAction,
             )
     }
 }

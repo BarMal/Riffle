@@ -31,9 +31,10 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun SettingsSurface(
     state: SettingsSurfaceState,
+    initialPage: SettingsPage = SettingsPage.MAIN,
     onAction: (LauncherShellAction) -> Unit,
 ) {
-    val selectedPage = remember { mutableStateOf(SettingsPage.MAIN) }
+    val selectedPage = remember(initialPage) { mutableStateOf(initialPage) }
 
     BackHandler(enabled = selectedPage.value != SettingsPage.MAIN) {
         selectedPage.value = SettingsPage.MAIN

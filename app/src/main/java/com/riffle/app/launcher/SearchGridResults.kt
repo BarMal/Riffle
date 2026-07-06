@@ -90,7 +90,10 @@ internal sealed interface SearchGridResult {
     ) : SearchGridResult {
         override val key: String = setting.key
         override val label: String = setting.title
-        override val action: LauncherShellAction = LauncherShellAction.OpenSettings
+        override val action: LauncherShellAction =
+            setting.entry.id.settingsPage()
+                ?.let { page -> LauncherShellAction.OpenSettingsPage(page) }
+                ?: LauncherShellAction.OpenSettings
         override val sortKey: String = setting.entry.id.value
     }
 }

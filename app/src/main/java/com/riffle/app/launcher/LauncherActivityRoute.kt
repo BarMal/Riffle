@@ -36,6 +36,7 @@ private fun LauncherShellAction.navigationAction(): ShellNavigationAction? =
         LauncherShellAction.OpenSearch -> ShellNavigationAction.OpenSearch
         LauncherShellAction.OpenNotifications -> ShellNavigationAction.OpenNotifications
         LauncherShellAction.OpenSettings -> ShellNavigationAction.OpenSettings
+        is LauncherShellAction.OpenSettingsPage -> ShellNavigationAction.OpenSettings
         else -> null
     }
 

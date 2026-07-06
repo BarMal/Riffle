@@ -45,6 +45,7 @@ class LauncherActivityRouteTest {
                 LauncherShellAction.OpenSearch to ShellNavigationAction.OpenSearch,
                 LauncherShellAction.OpenNotifications to ShellNavigationAction.OpenNotifications,
                 LauncherShellAction.OpenSettings to ShellNavigationAction.OpenSettings,
+                LauncherShellAction.OpenSettingsPage(SettingsPage.APPEARANCE) to ShellNavigationAction.OpenSettings,
             )
 
         actions.forEach { (action, navigationAction) ->
