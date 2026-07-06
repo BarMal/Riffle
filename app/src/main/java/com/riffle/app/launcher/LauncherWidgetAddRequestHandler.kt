@@ -10,7 +10,8 @@ class LauncherWidgetAddRequestHandler(
     private val widgetBindingCoordinator: WidgetBindingCoordinator,
     private val selectedGrid: () -> GridDimensions,
     private val windowSize: () -> LauncherWidgetAddWindowSize,
-    private val completeWidgetAdd: (LauncherShellAction.AddHostedWidgetToHome) -> String?,
+    private val completeWidgetAdd: (LauncherShellAction.AddHostedWidgetToHome) -> HostedWidgetAddCompletionResult,
+    private val deleteHostedWidgetId: (HostedWidgetId) -> Unit,
 ) {
     fun handle(action: LauncherShellAction.RequestAddWidget): LauncherWidgetAddHandlingResult {
         val size = windowSize()
@@ -24,9 +25,13 @@ class LauncherWidgetAddRequestHandler(
                 )
         ) {
             is WidgetAddRequestResult.Bound ->
-                LauncherWidgetAddHandlingResult.Completed(
-                    message = completeWidgetAdd(requestResult.action),
-                )
+                completeWidgetAdd(requestResult.action)
+                    .deleteHostedWidgetIdWhenRejected(requestResult.action, deleteHostedWidgetId)
+                    .let { result ->
+                        LauncherWidgetAddHandlingResult.Completed(
+                            message = result.messageOrNull(),
+                        )
+                    }
 
             is WidgetAddRequestResult.RequiresPermission ->
                 LauncherWidgetAddHandlingResult.RequiresPermission(
