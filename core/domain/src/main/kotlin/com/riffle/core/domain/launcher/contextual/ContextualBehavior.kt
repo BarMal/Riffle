@@ -7,6 +7,21 @@ data class ContextualSettings(
     val enabled: Boolean = false,
 )
 
+data class ContextualSignalPlanInput(
+    val personalInstalledAppCount: Int = 0,
+    val workInstalledAppCount: Int = 0,
+    val notificationGroupCount: Int = 0,
+    val notificationCount: Int = 0,
+    val isDayStart: Boolean = false,
+) {
+    init {
+        require(personalInstalledAppCount >= 0) { "Personal installed app count must not be negative." }
+        require(workInstalledAppCount >= 0) { "Work installed app count must not be negative." }
+        require(notificationGroupCount >= 0) { "Notification group count must not be negative." }
+        require(notificationCount >= 0) { "Notification count must not be negative." }
+    }
+}
+
 enum class ContextualSignal(
     internal val pageKind: GeneratedLauncherPageKind?,
     internal val cardKind: LauncherCardKind?,
@@ -38,6 +53,13 @@ data class ContextualSelection(
     val cardKinds: List<LauncherCardKind> = emptyList(),
 )
 
+object ContextualSignalPlanner {
+    fun plan(input: ContextualSignalPlanInput = ContextualSignalPlanInput()): Set<ContextualSignal> =
+        ContextualSignal.entries
+            .filter { signal -> signal.matches(input) }
+            .toSet()
+}
+
 object ContextualBehaviorSelector {
     fun select(
         settings: ContextualSettings,
@@ -61,3 +83,12 @@ private fun <T> Set<ContextualSignal>.mapInStableSignalOrder(transform: (Context
         .mapNotNull(transform)
         .distinct()
         .toList()
+
+private fun ContextualSignal.matches(input: ContextualSignalPlanInput): Boolean =
+    when (this) {
+        ContextualSignal.DAY_START -> input.isDayStart
+        ContextualSignal.WORK_PROFILE_ACTIVE -> input.workInstalledAppCount > 0
+        ContextualSignal.PERSONAL_PROFILE_ACTIVE -> input.personalInstalledAppCount > 0
+        ContextualSignal.APP_ACTIVITY -> false
+        ContextualSignal.NOTIFICATION_ACTIVITY -> input.notificationGroupCount > 0 || input.notificationCount > 0
+    }
