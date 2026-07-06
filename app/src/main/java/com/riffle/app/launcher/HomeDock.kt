@@ -262,7 +262,7 @@ internal fun dockRenderedSlotCount(
     when {
         capacity <= 0 -> 0
         itemCount <= 0 && !isEditing -> 0
-        else -> capacity
+        else -> capacity.coerceAtLeast(itemCount)
     }
 
 internal fun dockBackgroundVisible(
