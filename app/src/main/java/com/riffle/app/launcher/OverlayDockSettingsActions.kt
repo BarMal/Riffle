@@ -118,7 +118,7 @@ private fun AppShortcut.floatingDockShortcut(existingShortcuts: List<AppShortcut
 }
 
 private fun InstalledApp.nextFloatingDockShortcutOrdinal(existingShortcuts: List<AppShortcutItem>): Int =
-    existingShortcuts.count { item -> item.appIdentity == identity } + 1
+    existingShortcuts.count { item -> item.appIdentity == identity && item.appShortcutId == null } + 1
 
 private fun AppShortcut.nextFloatingDockShortcutOrdinal(existingShortcuts: List<AppShortcutItem>): Int =
     existingShortcuts.count { item -> item.appIdentity == appIdentity && item.appShortcutId == id } + 1
