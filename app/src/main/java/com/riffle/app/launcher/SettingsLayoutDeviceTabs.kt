@@ -55,10 +55,15 @@ internal fun settingsLayoutDeviceTabs(classes: Set<HomeLayoutDeviceClass>): List
             ),
         )
     }
-    return listOf(
-        HomeLayoutDeviceClass.PHONE,
-        HomeLayoutDeviceClass.FOLDABLE,
-    )
+    val deviceClasses =
+        buildList {
+            add(HomeLayoutDeviceClass.PHONE)
+            add(HomeLayoutDeviceClass.FOLDABLE)
+            if (HomeLayoutDeviceClass.TABLET in classes) {
+                add(HomeLayoutDeviceClass.TABLET)
+            }
+        }
+    return deviceClasses
         .map { deviceClass ->
             SettingsLayoutDeviceTab(
                 label = deviceClass.settingsLabel(),

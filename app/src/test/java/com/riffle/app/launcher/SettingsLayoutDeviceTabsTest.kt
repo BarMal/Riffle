@@ -33,4 +33,18 @@ class SettingsLayoutDeviceTabsTest {
             settingsLayoutDeviceTabs(setOf(HomeLayoutDeviceClass.TABLET)).map { tab -> tab.label },
         )
     }
+
+    @Test
+    fun includesTabletAfterFoldedAndUnfoldedForMixedAdaptiveClasses() {
+        assertEquals(
+            listOf("Folded", "Unfolded", "Tablet"),
+            settingsLayoutDeviceTabs(
+                setOf(
+                    HomeLayoutDeviceClass.TABLET,
+                    HomeLayoutDeviceClass.FOLDABLE,
+                    HomeLayoutDeviceClass.PHONE,
+                ),
+            ).map { tab -> tab.label },
+        )
+    }
 }
