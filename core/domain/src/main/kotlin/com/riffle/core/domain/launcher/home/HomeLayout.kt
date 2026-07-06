@@ -37,17 +37,34 @@ object HomeLayoutDefaults {
                     viewMode = LauncherViewMode.STANDARD_APP_DRAWER,
                     pages = listOf(firstPage),
                     selectedPageId = firstPage.id,
-                    dock = DockModel(capacity = deviceClass.standardDockCapacity),
+                    dock = deviceClass.standardDock,
                     settings = settings,
                 )
             }
         }
 }
 
-private val HomeLayoutDeviceClass.standardDockCapacity: Int
+private val HomeLayoutDeviceClass.standardDock: DockModel
     get() =
         when (this) {
-            HomeLayoutDeviceClass.PHONE -> 5
-            HomeLayoutDeviceClass.FOLDABLE -> 6
-            HomeLayoutDeviceClass.TABLET -> 7
+            HomeLayoutDeviceClass.PHONE ->
+                DockModel(
+                    capacity = 5,
+                    iconSizeDp = 44,
+                    itemSpacingDp = 8,
+                )
+
+            HomeLayoutDeviceClass.FOLDABLE ->
+                DockModel(
+                    capacity = 6,
+                    iconSizeDp = 48,
+                    itemSpacingDp = 10,
+                )
+
+            HomeLayoutDeviceClass.TABLET ->
+                DockModel(
+                    capacity = 7,
+                    iconSizeDp = 52,
+                    itemSpacingDp = 12,
+                )
         }
