@@ -355,6 +355,84 @@ class HomePageEngineTest {
     }
 
     @Test
+    fun updatesPageGridDimensionsOnlyForSelectedPage() {
+        val settingsGrid = GridDimensions(columns = 4, rows = 5)
+        val widgetsGrid = GridDimensions(columns = 6, rows = 7)
+        val layoutWithPages =
+            layout.copy(
+                pages =
+                    listOf(
+                        page(id = "home").copy(grid = settingsGrid),
+                        page(id = "widgets").copy(grid = widgetsGrid),
+                    ),
+                selectedPageId = pageId("widgets"),
+            )
+
+        val result =
+            engine.updatePageGridDimensions(
+                layout = layoutWithPages,
+                pageId = pageId("widgets"),
+                dimensions = GridDimensions(columns = 5, rows = 6),
+            )
+
+        val updated = assertIs<HomePageEditResult.Updated>(result)
+        assertEquals(settingsGrid, updated.layout.pages[0].grid)
+        assertEquals(GridDimensions(columns = 5, rows = 6), updated.layout.pages[1].grid)
+        assertEquals(settingsGrid, updated.layout.settings.grid.dimensions)
+    }
+
+    @Test
+    fun rejectsPageGridDimensionsForMissingPage() {
+        val result =
+            engine.updatePageGridDimensions(
+                layout = layout,
+                pageId = pageId("missing"),
+                dimensions = GridDimensions(columns = 5, rows = 6),
+            )
+
+        val rejected = assertIs<HomePageEditResult.Rejected>(result)
+        assertEquals(HomePageEditRejectionReason.PAGE_NOT_FOUND, rejected.reason)
+    }
+
+    @Test
+    fun rejectsPageGridDimensionsSmallerThanOneCell() {
+        val result =
+            engine.updatePageGridDimensions(
+                layout = layout,
+                pageId = pageId("home"),
+                dimensions = GridDimensions(columns = 0, rows = 5),
+            )
+
+        val rejected = assertIs<HomePageEditResult.Rejected>(result)
+        assertEquals(HomePageEditRejectionReason.INVALID_GRID_DIMENSIONS, rejected.reason)
+    }
+
+    @Test
+    fun rejectsPageGridDimensionsThatWouldClipPlacedItemsOnThatPage() {
+        val camera =
+            AppShortcutItem(
+                id = itemId("camera"),
+                appIdentity = appIdentity("camera"),
+                label = "Camera",
+                placement = GridPlacement(cell = GridCell(column = 3, row = 4)),
+            )
+        val layoutWithShortcut =
+            layout.copy(
+                pages = listOf(layout.selectedPage.copy(items = listOf(camera))),
+            )
+
+        val result =
+            engine.updatePageGridDimensions(
+                layout = layoutWithShortcut,
+                pageId = pageId("home"),
+                dimensions = GridDimensions(columns = 3, rows = 5),
+            )
+
+        val rejected = assertIs<HomePageEditResult.Rejected>(result)
+        assertEquals(HomePageEditRejectionReason.GRID_ITEMS_OUT_OF_BOUNDS, rejected.reason)
+    }
+
+    @Test
     fun entersPageEditModeForExistingPage() {
         val layoutWithPages =
             layout.copy(

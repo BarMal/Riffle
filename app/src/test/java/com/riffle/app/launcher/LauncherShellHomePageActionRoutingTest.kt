@@ -34,6 +34,7 @@ class LauncherShellHomePageActionRoutingTest {
                 LauncherShellAction.SelectSelectedHomePageType(
                     LauncherPageType.Generated(GeneratedLauncherPageKind.TODAY),
                 ),
+                LauncherShellAction.SelectSelectedHomePageGridDimensions(GridDimensions(columns = 5, rows = 6)),
                 LauncherShellAction.SelectHomeGridDimensions(GridDimensions(columns = 5, rows = 6)),
                 LauncherShellAction.SelectLibraryPageCompaction(enabled = true),
                 LauncherShellAction.SelectHomeLabelBackgroundAlpha(alphaPercent = 75),

@@ -46,6 +46,7 @@ fun HomePageEngine.applyEdit(
             applyPageDeletionEdit(layout = layout)
 
         is LauncherShellAction.SelectSelectedHomePageType,
+        is LauncherShellAction.SelectSelectedHomePageGridDimensions,
         is LauncherShellAction.SelectHomeGridDimensions,
         is LauncherShellAction.SelectLibraryPageCompaction,
         is LauncherShellAction.SelectHomeLabelBackgroundAlpha,
