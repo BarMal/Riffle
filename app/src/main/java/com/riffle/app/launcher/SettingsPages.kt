@@ -37,6 +37,7 @@ internal data class SettingsPageEntry(
     val subtitle: String,
     val page: SettingsPage,
     val group: SettingsPageGroup,
+    val searchAliases: List<String> = emptyList(),
 )
 
 internal data class SettingsOverviewStatus(
@@ -73,6 +74,7 @@ internal fun settingsMainPageEntries(status: SettingsOverviewStatus = SettingsOv
             subtitle = "Wallpaper and system bars",
             page = SettingsPage.APPEARANCE,
             group = SettingsPageGroup.HOME,
+            searchAliases = listOf("status bar", "navigation bar", "fullscreen"),
         ),
         SettingsPageEntry(
             label = "Floating dock",
@@ -115,12 +117,14 @@ internal fun settingsMainPageEntries(status: SettingsOverviewStatus = SettingsOv
             subtitle = status.permissionsSummary(),
             page = SettingsPage.PERMISSIONS,
             group = SettingsPageGroup.SYSTEM,
+            searchAliases = listOf("default home", "home app"),
         ),
         SettingsPageEntry(
             label = "Backup",
             subtitle = "Import and export launcher data",
             page = SettingsPage.BACKUP,
             group = SettingsPageGroup.SYSTEM,
+            searchAliases = listOf("restore"),
         ),
         SettingsPageEntry(
             label = "About",
@@ -158,6 +162,7 @@ internal fun settingsMainPageEntriesMatching(
                     entry.subtitle,
                     entry.group.title,
                     entry.page.title,
+                    entry.searchAliases.joinToString(separator = " "),
                 ).joinToString(separator = " ").lowercase()
             tokens.all { token -> searchableText.contains(token) }
         }
