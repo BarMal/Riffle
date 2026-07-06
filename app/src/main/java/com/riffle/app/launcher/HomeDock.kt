@@ -2,6 +2,7 @@ package com.riffle.app.launcher
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -33,24 +34,23 @@ import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.DockBackgroundSizing
 import com.riffle.core.domain.launcher.home.DockItemMoveDirection
 import com.riffle.core.domain.launcher.home.DockModel
+import com.riffle.core.domain.launcher.home.FolderItem
 import kotlin.math.min
 
 @Composable
-fun Dock(
+internal fun Dock(
     dock: DockModel,
     isEditing: Boolean,
     notificationCountsByPackage: Map<AppPackageName, Int>,
     appShortcutsByApp: AppShortcutsByApp,
     appIconLoader: AppIconLoader,
-    haptics: LauncherHaptics = NoopLauncherHaptics,
-    onAction: (LauncherShellAction) -> Unit,
+    interactions: DockInteractions,
 ) {
     val presentation =
         DockPresentation(
             notificationCountsByPackage = notificationCountsByPackage,
             appShortcutsByApp = appShortcutsByApp,
-            haptics = haptics,
-            onAction = onAction,
+            interactions = interactions,
         )
     val renderedSlotCount =
         dockRenderedSlotCount(
@@ -294,7 +294,12 @@ internal data class DockOverflowAffordance(
 private data class DockPresentation(
     val notificationCountsByPackage: Map<AppPackageName, Int>,
     val appShortcutsByApp: AppShortcutsByApp,
-    val haptics: LauncherHaptics,
+    val interactions: DockInteractions,
+)
+
+internal data class DockInteractions(
+    val haptics: LauncherHaptics = NoopLauncherHaptics,
+    val onFolderOpen: (FolderItem) -> Unit = {},
     val onAction: (LauncherShellAction) -> Unit,
 )
 
@@ -349,6 +354,22 @@ private fun DockSlot(
                     presentation = presentation,
                     appIconLoader = appIconLoader,
                 )
+            is DockSlotItemState.Folder ->
+                DockItemPlaceholder(
+                    item =
+                        DockSlotItemState.Placeholder(
+                            id = item.id,
+                            label = item.label,
+                            kind = DockSlotPlaceholderKind.FOLDER,
+                        ),
+                    iconSizeDp = state.iconSizeDp,
+                    modifier =
+                        if (state.isEditing) {
+                            Modifier
+                        } else {
+                            Modifier.clickable(onClick = { presentation.interactions.onFolderOpen(item.folder) })
+                        },
+                )
             is DockSlotItemState.Placeholder ->
                 DockItemPlaceholder(
                     item = item,
@@ -385,11 +406,11 @@ private fun DockShortcut(
                             if (state.isEditing) {
                                 isContextMenuExpanded.value = true
                             } else {
-                                presentation.onAction(shortcut.launchAction())
+                                presentation.interactions.onAction(shortcut.launchAction())
                             }
                         },
                         onLongClick = {
-                            presentation.haptics.longPress()
+                            presentation.interactions.haptics.longPress()
                             isContextMenuExpanded.value = true
                         },
                         onLongClickLabel = "Show ${shortcut.label} actions",
@@ -413,7 +434,7 @@ private fun DockShortcut(
                     shortcutCount = state.shortcutCount,
                 ),
             onDismissRequest = { isContextMenuExpanded.value = false },
-            onAction = presentation.onAction,
+            onAction = presentation.interactions.onAction,
         )
     }
 }

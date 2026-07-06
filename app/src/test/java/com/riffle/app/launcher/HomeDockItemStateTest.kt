@@ -30,7 +30,7 @@ class HomeDockItemStateTest {
     }
 
     @Test
-    fun folderDockSlotRendersPlaceholderInsteadOfDisappearing() {
+    fun folderDockSlotRendersActionableFolderState() {
         val folder =
             FolderItem(
                 id = LauncherItemId("folder:tools"),
@@ -38,11 +38,11 @@ class HomeDockItemStateTest {
                 items = listOf(shortcut()),
             )
 
-        val state = dockSlotItemState(folder) as DockSlotItemState.Placeholder
+        val state = dockSlotItemState(folder) as DockSlotItemState.Folder
 
+        assertEquals(folder, state.folder)
         assertEquals(folder.id, state.id)
         assertEquals("Tools", state.label)
-        assertEquals(DockSlotPlaceholderKind.FOLDER, state.kind)
     }
 
     @Test

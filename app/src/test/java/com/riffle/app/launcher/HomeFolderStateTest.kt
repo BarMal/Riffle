@@ -32,6 +32,22 @@ class HomeFolderStateTest {
     }
 
     @Test
+    fun resolvesOpenedFolderFromDockItems() {
+        val folder =
+            folder(
+                id = "folder:dock-tools",
+                label = "Dock tools",
+                items = listOf(shortcut(id = "camera", label = "Camera")),
+            )
+        val layout =
+            HomeLayoutDefaults.standard().let { defaults ->
+                defaults.copy(dock = defaults.dock.copy(items = listOf(folder)))
+            }
+
+        assertEquals(folder, layout.openedFolder(folder.id))
+    }
+
+    @Test
     fun returnsNullWhenOpenedFolderNoLongerExists() {
         val layout = layoutWith(shortcut(id = "camera", label = "Camera"))
 
