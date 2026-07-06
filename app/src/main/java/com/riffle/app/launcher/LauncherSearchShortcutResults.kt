@@ -4,6 +4,9 @@ import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.apps.AppSearchContentFilter
 import com.riffle.core.domain.launcher.apps.AppSearchFilters
 import com.riffle.core.domain.launcher.apps.AppShortcut
+import com.riffle.core.domain.launcher.search.containsAllSearchTokens
+import com.riffle.core.domain.launcher.search.normalizedSearchTokens
+import com.riffle.core.domain.launcher.search.searchAcronym
 
 internal fun LauncherShellState.searchShortcutResults(
     query: String,
@@ -31,7 +34,7 @@ internal fun LauncherShellState.searchShortcutResults(
 }
 
 private fun AppShortcut.matchesSearchQuery(query: String): Boolean {
-    val queryTokens = query.normalizedSearchTokens()
+    val queryTokens = normalizedSearchTokens(query)
     if (queryTokens.isEmpty()) {
         return false
     }
@@ -43,22 +46,7 @@ private fun AppShortcut.matchesSearchQuery(query: String): Boolean {
     )
         .flatMap { candidate ->
             val normalizedCandidate = candidate.lowercase()
-            listOf(normalizedCandidate, normalizedCandidate.acronym())
+            listOf(normalizedCandidate, normalizedCandidate.searchAcronym())
         }
-        .any { candidate -> candidate.matchesAll(queryTokens) }
+        .any { candidate -> candidate.containsAllSearchTokens(queryTokens) }
 }
-
-private fun String.normalizedSearchTokens(): List<String> =
-    trim()
-        .lowercase()
-        .split(Regex("\\s+"))
-        .filter(String::isNotBlank)
-
-private fun String.matchesAll(queryTokens: List<String>): Boolean {
-    return queryTokens.all { queryToken -> contains(queryToken) }
-}
-
-private fun String.acronym(): String =
-    split(Regex("[^a-z0-9]+"))
-        .filter(String::isNotBlank)
-        .joinToString(separator = "") { token -> token.first().toString() }

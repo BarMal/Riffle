@@ -63,6 +63,20 @@ class HiddenAppsFilterTest {
     }
 
     @Test
+    fun normalizesHiddenAppSearchWhitespaceAndCase() {
+        val googleMaps = app(label = "Google Maps")
+        val googleMessages = app(label = "Google Messages")
+
+        assertEquals(
+            listOf(googleMaps),
+            listOf(googleMaps, googleMessages).filteredHiddenApps(
+                query = "  GOOGLE   maps ",
+                profileFilter = AppDrawerProfileFilter.ALL,
+            ),
+        )
+    }
+
+    @Test
     fun filtersHiddenAppsByLabelAcronymAndAdditionalTokens() {
         val personalMaps = app(label = "Google Maps", profile = AppProfile.personal())
         val workMaps =

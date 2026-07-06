@@ -58,6 +58,15 @@ class FolderAddAppFilterTest {
     }
 
     @Test
+    fun normalizesFolderAddSearchWhitespaceAndCase() {
+        val googleMaps = app(label = "Google Maps")
+        val googleMessages = app(label = "Google Messages")
+        val apps = listOf(googleMaps, googleMessages)
+
+        assertEquals(listOf(googleMaps), apps.filterFolderAddCandidates("  GOOGLE   maps "))
+    }
+
+    @Test
     fun filtersAppsByPackageName() {
         val camera = app(label = "Camera", packageName = "com.android.camera")
         val calendar = app(label = "Calendar", packageName = "com.google.calendar")

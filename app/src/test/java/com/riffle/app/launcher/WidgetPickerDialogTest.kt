@@ -182,6 +182,27 @@ class WidgetPickerDialogTest {
     }
 
     @Test
+    fun normalizesWidgetSearchWhitespaceAndCase() {
+        val googleWeather =
+            widgetProvider(
+                label = "Google Weather",
+                packageName = "com.example.weather",
+                className = ".WeatherWidget",
+            )
+        val googleClock =
+            widgetProvider(
+                label = "Google Clock",
+                packageName = "com.example.clock",
+                className = ".ClockWidget",
+            )
+
+        assertEquals(
+            listOf(googleWeather),
+            listOf(googleWeather, googleClock).filteredWidgetProviders("  GOOGLE   weather "),
+        )
+    }
+
+    @Test
     fun filtersWidgetProvidersByTargetCellSize() {
         val weather =
             widgetProvider(
