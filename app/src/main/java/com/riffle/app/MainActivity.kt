@@ -30,6 +30,7 @@ import com.riffle.app.launcher.LauncherShellViewModel
 import com.riffle.app.launcher.LauncherShellViewModelFactory
 import com.riffle.app.launcher.LauncherWidgetAddHandlingResult
 import com.riffle.app.launcher.LauncherWidgetRenderers
+import com.riffle.app.launcher.WallpaperPickerLaunchResult
 import com.riffle.app.launcher.completeWidgetAdd
 import com.riffle.app.launcher.failureMessage
 import com.riffle.app.launcher.fallbackWallpaperSourceAction
@@ -81,6 +82,7 @@ class MainActivity : ComponentActivity() {
         dependencies.packageChangeObserver { shellViewModel.refreshInstalledApps() }
     }
     private val wallpaperController get() = dependencies.wallpaperController
+    private val wallpaperPickerGateway get() = dependencies.wallpaperPickerGateway
     private val notificationAccessGateway get() = dependencies.notificationAccessGateway
     private val overlayDockPermissionGateway get() = dependencies.overlayDockPermissionGateway
     private val overlayDockServiceController get() = dependencies.overlayDockServiceController
@@ -184,6 +186,24 @@ class MainActivity : ComponentActivity() {
                                 requestOverlayDockPermission.launch(
                                     overlayDockPermissionGateway.createOverlayPermissionSettingsIntent(),
                                 )
+                            },
+                            changeWallpaper = {
+                                when (wallpaperPickerGateway.launchWallpaperPicker()) {
+                                    WallpaperPickerLaunchResult.Launched -> Unit
+                                    WallpaperPickerLaunchResult.Unavailable ->
+                                        Toast.makeText(
+                                            this,
+                                            "No wallpaper picker is available on this device.",
+                                            Toast.LENGTH_SHORT,
+                                        ).show()
+
+                                    WallpaperPickerLaunchResult.Failed ->
+                                        Toast.makeText(
+                                            this,
+                                            "Wallpaper picker could not be opened.",
+                                            Toast.LENGTH_SHORT,
+                                        ).show()
+                                }
                             },
                             exportBackup = { createBackupDocument.launch(BACKUP_DOCUMENT_NAME) },
                             importBackup = { openBackupDocument.launch(BACKUP_DOCUMENT_OPEN_MIME_TYPES) },
