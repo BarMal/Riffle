@@ -204,9 +204,9 @@ class HomeDockMetricsTest {
     }
 
     @Test
-    fun normalDockDoesNotRenderMoreSlotsThanCapacity() {
+    fun normalDockRendersPersistedItemSlotsAboveCapacity() {
         assertEquals(
-            5,
+            6,
             dockRenderedSlotCount(
                 capacity = 5,
                 itemCount = 6,
@@ -234,6 +234,18 @@ class HomeDockMetricsTest {
             dockRenderedSlotCount(
                 capacity = 8,
                 itemCount = 8,
+                isEditing = true,
+            ),
+        )
+    }
+
+    @Test
+    fun editingDockRendersPersistedItemSlotsAboveCapacity() {
+        assertEquals(
+            7,
+            dockRenderedSlotCount(
+                capacity = 5,
+                itemCount = 7,
                 isEditing = true,
             ),
         )
