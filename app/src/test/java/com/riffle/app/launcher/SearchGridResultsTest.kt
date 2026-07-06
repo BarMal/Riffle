@@ -63,6 +63,22 @@ class SearchGridResultsTest {
         assertEquals("setting:appearance", results.first().key)
     }
 
+    @Test
+    fun searchGridResultsIncludeWebSearchForNonBlankQuery() {
+        val results = searchGridResults(apps = emptyList(), shortcuts = emptyList(), webQuery = "  weather today  ")
+
+        assertEquals(listOf("Search Google for weather today"), results.map { result -> result.label })
+        assertEquals(listOf(LauncherShellAction.SearchWeb("weather today")), results.map { result -> result.action })
+        assertEquals("web:weather today", results.single().key)
+    }
+
+    @Test
+    fun searchGridResultsSkipWebSearchForBlankQuery() {
+        val results = searchGridResults(apps = emptyList(), shortcuts = emptyList(), webQuery = "   ")
+
+        assertEquals(emptyList<SearchGridResult>(), results)
+    }
+
     private fun app(label: String): InstalledApp =
         InstalledApp(
             identity =

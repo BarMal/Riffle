@@ -36,6 +36,26 @@ class LauncherAppActionHandlerTest {
     }
 
     @Test
+    fun handlesWebSearchActions() {
+        val calls = mutableListOf<LauncherShellAction.SearchWeb>()
+        val handler =
+            handler(
+                callbacks =
+                    callbacks(
+                        launch =
+                            launchCallbacks(
+                                searchWeb = calls::add,
+                            ),
+                    ),
+            )
+        val action = LauncherShellAction.SearchWeb("weather")
+
+        assertTrue(handler.handle(action))
+
+        assertEquals(listOf(action), calls)
+    }
+
+    @Test
     fun handlesWidgetRequests() {
         val calls = mutableListOf<LauncherShellAction.RequestAddWidget>()
         val handler =
@@ -137,12 +157,14 @@ class LauncherAppActionHandlerTest {
     private fun launchCallbacks(
         launchApp: (LauncherShellAction.LaunchApp) -> Unit = {},
         launchAppShortcut: (LauncherShellAction.LaunchAppShortcut) -> Unit = {},
+        searchWeb: (LauncherShellAction.SearchWeb) -> Unit = {},
         openAppInfo: (LauncherShellAction.OpenAppInfo) -> Unit = {},
         uninstallApp: (LauncherShellAction.UninstallApp) -> Unit = {},
     ): LauncherAppLaunchCallbacks =
         LauncherAppLaunchCallbacks(
             launchApp = launchApp,
             launchAppShortcut = launchAppShortcut,
+            searchWeb = searchWeb,
             openAppInfo = openAppInfo,
             uninstallApp = uninstallApp,
         )

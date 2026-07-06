@@ -152,6 +152,7 @@ class LauncherActionRouterTest {
                         LauncherAppLaunchCallbacks(
                             launchApp = {},
                             launchAppShortcut = {},
+                            searchWeb = {},
                             openAppInfo = {},
                             uninstallApp = {},
                         ),

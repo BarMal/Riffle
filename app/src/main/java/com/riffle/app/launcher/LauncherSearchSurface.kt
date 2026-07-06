@@ -95,6 +95,7 @@ fun SearchSurface(
                     apps = state.results,
                     shortcuts = state.shortcutResults,
                     settings = state.settingsResults,
+                    webQuery = state.query,
                 ),
             homeLayout = state.homeLayout,
             appListContext = appListContext,
@@ -240,12 +241,21 @@ private fun SearchIconGridItem(
         )
         return
     }
+    if (result is SearchGridResult.Web) {
+        SearchWebGridItem(
+            result = result,
+            labelSettings = labelSettings,
+            onAction = appListContext.onAction,
+        )
+        return
+    }
 
     val appIdentity =
         when (result) {
             is SearchGridResult.App -> result.app.identity
             is SearchGridResult.Shortcut -> result.shortcut.appIdentity
             is SearchGridResult.Setting -> error("Settings results are handled above")
+            is SearchGridResult.Web -> error("Web results are handled above")
         }
     val metrics = HomeGridLayoutMetrics()
 
@@ -279,7 +289,11 @@ private fun SearchIconGridItem(
 }
 
 internal fun searchFilterSummaryText(state: SearchSurfaceState): String {
-    val resultCount = state.results.size + state.shortcutResults.size + state.settingsResults.size
+    val resultCount =
+        state.results.size +
+            state.shortcutResults.size +
+            state.settingsResults.size +
+            searchWebGridResult(state.query).size
     val profileLabel =
         when {
             state.filters.profiles.isEmpty() -> "no profiles"

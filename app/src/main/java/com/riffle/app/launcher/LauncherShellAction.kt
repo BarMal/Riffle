@@ -116,6 +116,8 @@ sealed interface LauncherShellAction {
 
     data class LaunchAppShortcut(val shortcut: AppShortcut) : LauncherShellAction
 
+    data class SearchWeb(val query: String) : LauncherShellAction
+
     data class OpenAppInfo(val identity: AppIdentity) : LauncherShellAction
 
     data class UninstallApp(val identity: AppIdentity) : LauncherShellAction

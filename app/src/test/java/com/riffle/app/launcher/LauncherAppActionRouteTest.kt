@@ -21,11 +21,13 @@ class LauncherAppActionRouteTest {
     fun routesPlatformAppActions() {
         val launchApp = LauncherShellAction.LaunchApp(appIdentity)
         val launchShortcut = LauncherShellAction.LaunchAppShortcut(appShortcut)
+        val searchWeb = LauncherShellAction.SearchWeb("weather")
         val openInfo = LauncherShellAction.OpenAppInfo(appIdentity)
         val uninstall = LauncherShellAction.UninstallApp(appIdentity)
 
         assertEquals(LauncherAppActionRoute.LaunchApp(launchApp), launchApp.launcherAppActionRoute())
         assertEquals(LauncherAppActionRoute.LaunchAppShortcut(launchShortcut), launchShortcut.launcherAppActionRoute())
+        assertEquals(LauncherAppActionRoute.SearchWeb(searchWeb), searchWeb.launcherAppActionRoute())
         assertEquals(LauncherAppActionRoute.OpenAppInfo(openInfo), openInfo.launcherAppActionRoute())
         assertEquals(LauncherAppActionRoute.UninstallApp(uninstall), uninstall.launcherAppActionRoute())
     }
