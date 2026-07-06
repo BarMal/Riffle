@@ -43,17 +43,24 @@ class AppNotificationGrouper(
                 .thenBy { notification -> notification.packageName.value }
                 .thenBy { notification -> notification.profileId.value }
                 .thenBy { notification -> notification.key.value }
+                .thenBy { notification -> notification.category.name }
+                .thenBy { notification -> notification.canDismissRank }
 
         val latestNotificationOrder: Comparator<LauncherNotification> =
             compareByDescending<LauncherNotification> { notification -> notification.postedAtEpochMillis }
                 .thenBy { notification -> notification.packageName.value }
                 .thenBy { notification -> notification.profileId.value }
                 .thenBy { notification -> notification.key.value }
+                .thenBy { notification -> notification.category.name }
+                .thenBy { notification -> notification.canDismissRank }
 
         val displayOrder: Comparator<AppNotificationGroup> =
             compareByDescending<AppNotificationGroup> { group -> group.highestPriority.rank }
                 .thenByDescending { group -> group.latestPostedAtEpochMillis }
                 .thenBy { group -> group.packageName.value }
                 .thenBy { group -> group.profileId.value }
+
+        val LauncherNotification.canDismissRank: Int
+            get() = if (canDismiss) 1 else 0
     }
 }
