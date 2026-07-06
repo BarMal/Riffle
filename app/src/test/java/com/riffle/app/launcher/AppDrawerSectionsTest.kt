@@ -92,6 +92,53 @@ class AppDrawerSectionsTest {
         assertEquals(listOf("B", "Personal - B"), sections.map { section -> section.title })
     }
 
+    @Test
+    fun sectionsSortProfileBucketsInStableLauncherOrder() {
+        val secondaryPersonal = AppProfile(AppProfileId("secondary"), AppProfileType.PERSONAL)
+
+        val sections =
+            AppDrawerSections.from(
+                listOf(
+                    app("Vault", profile = AppProfile.private()),
+                    app("Docs", profile = AppProfile.work()),
+                    app("Browser"),
+                    app("Alpha", profile = secondaryPersonal),
+                    app("Notes"),
+                    app("Calendar", profile = AppProfile.work()),
+                    app("Bank", profile = AppProfile.private()),
+                ),
+            )
+
+        assertEquals(
+            listOf("B", "N", "Personal - A", "Work - C", "Work - D", "Private - B", "Private - V"),
+            sections.map { section -> section.title },
+        )
+    }
+
+    @Test
+    fun sectionsPlaceOtherBucketLastWithinEachProfileBucket() {
+        val secondaryPersonal = AppProfile(AppProfileId("secondary"), AppProfileType.PERSONAL)
+
+        val sections =
+            AppDrawerSections.from(
+                listOf(
+                    app("  1Private", profile = AppProfile.private()),
+                    app("  1Work", profile = AppProfile.work()),
+                    app("  1Secondary", profile = secondaryPersonal),
+                    app("  1Personal"),
+                    app("Delta", profile = AppProfile.private()),
+                    app("Charlie", profile = AppProfile.work()),
+                    app("Beta", profile = secondaryPersonal),
+                    app("Alpha"),
+                ),
+            )
+
+        assertEquals(
+            listOf("A", "#", "Personal - B", "Personal - #", "Work - C", "Work - #", "Private - D", "Private - #"),
+            sections.map { section -> section.title },
+        )
+    }
+
     private fun app(
         label: String,
         profile: AppProfile = AppProfile.personal(),
