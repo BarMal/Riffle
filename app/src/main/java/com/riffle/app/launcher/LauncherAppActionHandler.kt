@@ -15,6 +15,11 @@ internal class LauncherAppActionHandler(
                 true
             }
 
+            is LauncherAppActionRoute.SearchWeb -> {
+                callbacks.launch.searchWeb(route.action)
+                true
+            }
+
             is LauncherAppActionRoute.OpenAppInfo -> {
                 callbacks.launch.openAppInfo(route.action)
                 true
@@ -71,6 +76,7 @@ internal data class LauncherAppActionCallbacks(
 internal data class LauncherAppLaunchCallbacks(
     val launchApp: (LauncherShellAction.LaunchApp) -> Unit,
     val launchAppShortcut: (LauncherShellAction.LaunchAppShortcut) -> Unit,
+    val searchWeb: (LauncherShellAction.SearchWeb) -> Unit,
     val openAppInfo: (LauncherShellAction.OpenAppInfo) -> Unit,
     val uninstallApp: (LauncherShellAction.UninstallApp) -> Unit,
 )

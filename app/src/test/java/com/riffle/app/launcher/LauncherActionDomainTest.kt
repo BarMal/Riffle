@@ -199,6 +199,7 @@ class LauncherActionDomainTest {
                 ),
                 app("LaunchApp", LauncherShellAction.LaunchApp(appIdentity)),
                 app("LaunchAppShortcut", LauncherShellAction.LaunchAppShortcut(appShortcut)),
+                app("SearchWeb", LauncherShellAction.SearchWeb("weather")),
                 app("OpenAppInfo", LauncherShellAction.OpenAppInfo(appIdentity)),
                 app("UninstallApp", LauncherShellAction.UninstallApp(appIdentity)),
                 app("HideApp", LauncherShellAction.HideApp(appIdentity)),

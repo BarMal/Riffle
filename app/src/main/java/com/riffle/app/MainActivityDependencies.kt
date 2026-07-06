@@ -5,6 +5,7 @@ import com.riffle.app.launcher.AndroidHomeLayoutDeviceClassObserver
 import com.riffle.app.launcher.AndroidHomeRoleGateway
 import com.riffle.app.launcher.AndroidLauncherWallpaperController
 import com.riffle.app.launcher.AndroidWallpaperPickerGateway
+import com.riffle.app.launcher.AndroidWebSearchLauncher
 import com.riffle.app.launcher.AndroidWidgetAddWindowSizeProvider
 import com.riffle.app.launcher.DataStoreHomeLayoutRepository
 import com.riffle.app.launcher.DataStoreLauncherSettingsRepository
@@ -51,6 +52,7 @@ internal class MainActivityDependencies(
     val appVisibilityRepository by lazy { SharedPreferencesAppVisibilityRepository(activity) }
     val homeRoleGateway by lazy { AndroidHomeRoleGateway(activity) }
     val appLauncher by lazy { AndroidAppLauncher(activity) }
+    val webSearchLauncher by lazy { AndroidWebSearchLauncher(activity) }
     val appIconLoader by lazy { PackageManagerAppIconLoader(activity.packageManager) }
     val wallpaperController by lazy { AndroidLauncherWallpaperController(activity.window) }
     val wallpaperPickerGateway by lazy { AndroidWallpaperPickerGateway(activity) }

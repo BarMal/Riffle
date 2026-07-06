@@ -114,6 +114,7 @@ class LauncherShellSettingsDockViewModelTest {
                                 LauncherAppLaunchCallbacks(
                                     launchApp = {},
                                     launchAppShortcut = {},
+                                    searchWeb = {},
                                     openAppInfo = {},
                                     uninstallApp = {},
                                 ),

@@ -62,6 +62,7 @@ class MainActivity : ComponentActivity() {
     }
     private val homeRoleGateway get() = dependencies.homeRoleGateway
     private val appLauncher get() = dependencies.appLauncher
+    private val webSearchLauncher get() = dependencies.webSearchLauncher
     private val appVersionLabel by lazy {
         packageManager
             .getPackageInfo(packageName, 0)
@@ -232,6 +233,7 @@ class MainActivity : ComponentActivity() {
                                 LauncherAppLaunchCallbacks(
                                     launchApp = { action -> appLauncher.launch(action.identity) },
                                     launchAppShortcut = { action -> appLauncher.launchShortcut(action.shortcut) },
+                                    searchWeb = { action -> webSearchLauncher.launch(action.query) },
                                     openAppInfo = { action -> appLauncher.openAppInfo(action.identity) },
                                     uninstallApp = { action -> appLauncher.uninstall(action.identity) },
                                 ),
