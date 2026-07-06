@@ -6,11 +6,41 @@ import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.HomeLayoutKey
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
 import com.riffle.core.domain.launcher.home.HomeLayoutSet
+import com.riffle.core.domain.launcher.home.LauncherPageId
 import com.riffle.core.domain.launcher.home.LauncherViewMode
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class LauncherShellViewModeAvailabilityViewModelTest {
+    @Test
+    fun startsWithStoredLibraryLayoutWhenAppDefaultAllowsLibraryMode() {
+        val libraryPage = HomeLayoutDefaults.standard().selectedPage.copy(id = LauncherPageId("library-home"))
+        val libraryKey = HomeLayoutKey(LauncherViewMode.HOME_SCREEN_LIBRARY)
+        val libraryLayout =
+            HomeLayoutDefaults.standard()
+                .copy(
+                    viewMode = LauncherViewMode.HOME_SCREEN_LIBRARY,
+                    pages = listOf(libraryPage),
+                    selectedPageId = libraryPage.id,
+                )
+        val layoutSet =
+            HomeLayoutSet(
+                activeKey = libraryKey,
+                layouts = mapOf(libraryKey to libraryLayout),
+            )
+        val repository = FakeHomeLayoutRepository(layoutSet)
+
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                homeLayoutRepository = repository,
+            )
+
+        assertEquals(libraryKey, viewModel.state.value.homeLayoutSet.activeKey)
+        assertEquals(LauncherViewMode.HOME_SCREEN_LIBRARY, viewModel.state.value.homeLayout.viewMode)
+        assertEquals(libraryPage.id, viewModel.state.value.homeLayout.selectedPageId)
+    }
+
     @Test
     fun startsWithStandardWhenStoredActiveViewModeIsUnavailable() {
         val standardKey = HomeLayoutKey(LauncherViewMode.STANDARD_APP_DRAWER)
