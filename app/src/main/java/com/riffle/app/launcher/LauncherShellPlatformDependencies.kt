@@ -1,6 +1,7 @@
 package com.riffle.app.launcher
 
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
+import com.riffle.core.domain.launcher.home.LauncherViewModeAvailability
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationRepository
 import com.riffle.core.domain.launcher.widgets.InstalledWidgetProvider
 import com.riffle.core.domain.launcher.widgets.InstalledWidgetProviderRepository
@@ -12,6 +13,7 @@ data class LauncherShellPlatformDependencies(
     val epochMillisProvider: EpochMillisProvider = SystemEpochMillisProvider,
     val loadInitialPlatformState: Boolean = false,
     val initialHomeLayoutDeviceClass: HomeLayoutDeviceClass? = null,
+    val viewModeAvailability: LauncherViewModeAvailability = LauncherViewModeAvailability(),
 ) {
     fun installedWidgetProviders(catalog: WidgetProviderCatalog): List<InstalledWidgetProvider> =
         catalog.sortedProviders(widgetProviderRepository.installedWidgetProviders())

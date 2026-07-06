@@ -4,10 +4,12 @@ import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
 import com.riffle.core.domain.launcher.home.HomePageEditResult
 import com.riffle.core.domain.launcher.home.HomePageEngine
+import com.riffle.core.domain.launcher.home.LauncherViewModeAvailability
 
 internal class LauncherHomePageEditReducer(
     private val homePageEngine: HomePageEngine = HomePageEngine(),
     private val homeLayoutRepository: HomeLayoutRepository,
+    private val viewModeAvailability: LauncherViewModeAvailability = LauncherViewModeAvailability(),
 ) {
     fun reduce(
         state: LauncherShellState,
@@ -23,7 +25,11 @@ internal class LauncherHomePageEditReducer(
 
             action is LauncherShellAction.SelectLauncherViewMode ->
                 state
-                    .withSelectedHomeLayoutMode(action.mode, homeLayoutRepository)
+                    .withSelectedHomeLayoutMode(
+                        mode = action.mode,
+                        homeLayoutRepository = homeLayoutRepository,
+                        viewModeAvailability = viewModeAvailability,
+                    )
                     .withHomeScreenLibraryApps(homeLayoutRepository)
 
             action is LauncherShellAction.SelectHomeLayoutDeviceClass ->
@@ -32,6 +38,7 @@ internal class LauncherHomePageEditReducer(
                         deviceClass = action.deviceClass,
                         availableDeviceClasses = action.availableDeviceClasses,
                         homeLayoutRepository = homeLayoutRepository,
+                        viewModeAvailability = viewModeAvailability,
                     )
                     .withHomeScreenLibraryApps(homeLayoutRepository)
 

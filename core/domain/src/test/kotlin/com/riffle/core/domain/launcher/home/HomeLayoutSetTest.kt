@@ -26,6 +26,45 @@ class HomeLayoutSetTest {
     }
 
     @Test
+    fun selectingUnavailableModeFallsBackToStandardWithoutMutatingExperimentalLayout() {
+        val cardKey = HomeLayoutKey(LauncherViewMode.CARD_INTERFACE)
+        val cardLayout =
+            HomeLayoutDefaults.standard()
+                .copy(viewMode = LauncherViewMode.CARD_INTERFACE)
+        val layoutSet =
+            HomeLayoutSet.standard()
+                .withLayout(cardKey, cardLayout)
+                .selectMode(
+                    mode = LauncherViewMode.CARD_INTERFACE,
+                    availability = LauncherViewModeAvailability(),
+                )
+
+        assertEquals(standardKey, layoutSet.activeKey)
+        assertEquals(LauncherViewMode.STANDARD_APP_DRAWER, layoutSet.activeLayout.viewMode)
+        assertEquals(cardLayout, layoutSet.layoutFor(cardKey))
+    }
+
+    @Test
+    fun selectingEnabledExperimentalModeUsesThatMode() {
+        val layoutSet =
+            HomeLayoutSet.standard()
+                .selectMode(
+                    mode = LauncherViewMode.HOME_SCREEN_LIBRARY,
+                    availability =
+                        LauncherViewModeAvailability(
+                            enabledExperimentalModesByDeviceClass =
+                                mapOf(HomeLayoutDeviceClass.PHONE to setOf(LauncherViewMode.HOME_SCREEN_LIBRARY)),
+                        ),
+                )
+
+        assertEquals(HomeLayoutKey(LauncherViewMode.HOME_SCREEN_LIBRARY), layoutSet.activeKey)
+        assertEquals(
+            LauncherViewMode.HOME_SCREEN_LIBRARY,
+            layoutSet.preferredModesByDeviceClass[HomeLayoutDeviceClass.PHONE],
+        )
+    }
+
+    @Test
     fun selectingDeviceClassUsesSeparateLayoutForThatClass() {
         val layoutSet =
             HomeLayoutSet.standard()
@@ -62,6 +101,68 @@ class HomeLayoutSetTest {
             layoutSet.activeKey,
         )
         assertEquals(LauncherViewMode.HOME_SCREEN_LIBRARY, layoutSet.activeLayout.viewMode)
+    }
+
+    @Test
+    fun selectingDeviceClassWithUnavailablePreferredModeFallsBackWithoutMutatingExperimentalLayout() {
+        val cardKey =
+            HomeLayoutKey(
+                viewMode = LauncherViewMode.CARD_INTERFACE,
+                deviceClass = HomeLayoutDeviceClass.TABLET,
+            )
+        val cardLayout =
+            HomeLayoutDefaults.standard(HomeLayoutDeviceClass.TABLET)
+                .copy(viewMode = LauncherViewMode.CARD_INTERFACE)
+        val layoutSet =
+            HomeLayoutSet.standard()
+                .withPreferredMode(
+                    deviceClass = HomeLayoutDeviceClass.TABLET,
+                    mode = LauncherViewMode.CARD_INTERFACE,
+                )
+                .withLayout(cardKey, cardLayout)
+                .selectDeviceClass(
+                    deviceClass = HomeLayoutDeviceClass.TABLET,
+                    availability = LauncherViewModeAvailability(),
+                )
+
+        assertEquals(
+            HomeLayoutKey(
+                viewMode = LauncherViewMode.STANDARD_APP_DRAWER,
+                deviceClass = HomeLayoutDeviceClass.TABLET,
+            ),
+            layoutSet.activeKey,
+        )
+        assertEquals(
+            LauncherViewMode.CARD_INTERFACE,
+            layoutSet.preferredModesByDeviceClass[HomeLayoutDeviceClass.TABLET],
+        )
+        assertEquals(cardLayout, layoutSet.layoutFor(cardKey))
+    }
+
+    @Test
+    fun selectingDeviceClassWithEnabledPreferredModeUsesThatMode() {
+        val layoutSet =
+            HomeLayoutSet.standard()
+                .withPreferredMode(
+                    deviceClass = HomeLayoutDeviceClass.TABLET,
+                    mode = LauncherViewMode.CARD_INTERFACE,
+                )
+                .selectDeviceClass(
+                    deviceClass = HomeLayoutDeviceClass.TABLET,
+                    availability =
+                        LauncherViewModeAvailability(
+                            enabledExperimentalModesByDeviceClass =
+                                mapOf(HomeLayoutDeviceClass.TABLET to setOf(LauncherViewMode.CARD_INTERFACE)),
+                        ),
+                )
+
+        assertEquals(
+            HomeLayoutKey(
+                viewMode = LauncherViewMode.CARD_INTERFACE,
+                deviceClass = HomeLayoutDeviceClass.TABLET,
+            ),
+            layoutSet.activeKey,
+        )
     }
 
     @Test

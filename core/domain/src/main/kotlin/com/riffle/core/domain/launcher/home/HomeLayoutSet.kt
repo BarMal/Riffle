@@ -44,6 +44,11 @@ data class HomeLayoutSet(
                 )
             }
 
+    fun selectMode(
+        mode: LauncherViewMode,
+        availability: LauncherViewModeAvailability,
+    ): HomeLayoutSet = selectMode(availability.availableModeOrStandard(activeKey.deviceClass, mode))
+
     fun selectDeviceClass(deviceClass: HomeLayoutDeviceClass): HomeLayoutSet =
         HomeLayoutKey(
             viewMode = preferredModesByDeviceClass[deviceClass] ?: activeKey.viewMode,
@@ -55,6 +60,30 @@ data class HomeLayoutSet(
                 preferredModesByDeviceClass = preferredModesByDeviceClass + (key.deviceClass to key.viewMode),
             )
         }
+
+    fun selectDeviceClass(
+        deviceClass: HomeLayoutDeviceClass,
+        availability: LauncherViewModeAvailability,
+    ): HomeLayoutSet {
+        val preferredMode = preferredModesByDeviceClass[deviceClass] ?: activeKey.viewMode
+        val key =
+            HomeLayoutKey(
+                viewMode = availability.availableModeOrStandard(deviceClass, preferredMode),
+                deviceClass = deviceClass,
+            )
+        val preferredModes =
+            if (key.viewMode == preferredMode) {
+                preferredModesByDeviceClass + (key.deviceClass to key.viewMode)
+            } else {
+                preferredModesByDeviceClass
+            }
+
+        return copy(
+            activeKey = key,
+            layouts = layouts + (key to layoutFor(key)),
+            preferredModesByDeviceClass = preferredModes,
+        )
+    }
 
     companion object {
         fun standard(): HomeLayoutSet = fromLayout(HomeLayoutDefaults.standard())

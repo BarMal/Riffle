@@ -99,4 +99,24 @@ class LauncherViewModeAvailabilityTest {
         )
         assertEquals(LauncherViewMode.CARD_INTERFACE, layoutSet.layoutFor(cardKey).viewMode)
     }
+
+    @Test
+    fun availableKeyUsesActiveModeWhenDeviceClassHasNoStoredPreference() {
+        val policy =
+            LauncherViewModeAvailability(
+                enabledExperimentalModesByDeviceClass =
+                    mapOf(HomeLayoutDeviceClass.FOLDABLE to setOf(LauncherViewMode.HOME_SCREEN_LIBRARY)),
+            )
+        val layoutSet =
+            HomeLayoutSet.standard()
+                .selectMode(LauncherViewMode.HOME_SCREEN_LIBRARY)
+
+        assertEquals(
+            HomeLayoutKey(
+                viewMode = LauncherViewMode.HOME_SCREEN_LIBRARY,
+                deviceClass = HomeLayoutDeviceClass.FOLDABLE,
+            ),
+            policy.availableKeyFor(layoutSet, HomeLayoutDeviceClass.FOLDABLE),
+        )
+    }
 }

@@ -8,6 +8,7 @@ import com.riffle.core.domain.launcher.home.HomeLayoutKey
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
 import com.riffle.core.domain.launcher.home.HomeLayoutSet
 import com.riffle.core.domain.launcher.home.LauncherViewMode
+import com.riffle.core.domain.launcher.home.LauncherViewModeAvailability
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -32,6 +33,17 @@ class LauncherShellDeviceViewModeViewModelTest {
             LauncherShellViewModel(
                 firstRunRepository = FakeFirstRunRepository(),
                 homeLayoutRepository = repository,
+                platformDependencies =
+                    LauncherShellPlatformDependencies(
+                        viewModeAvailability =
+                            LauncherViewModeAvailability(
+                                enabledExperimentalModesByDeviceClass =
+                                    mapOf(
+                                        HomeLayoutDeviceClass.FOLDABLE to
+                                            setOf(LauncherViewMode.HOME_SCREEN_LIBRARY),
+                                    ),
+                            ),
+                    ),
             )
 
         viewModel.onHomePageEdited(
