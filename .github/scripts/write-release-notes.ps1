@@ -12,7 +12,11 @@ param(
     [string] $AabPath,
 
     [Parameter(Mandatory = $true)]
-    [string] $NotesPath
+    [string] $NotesPath,
+
+    [string] $ChangelogPath = "",
+
+    [string] $ReleaseTitle = ""
 )
 
 $apk = Get-Item -LiteralPath $ApkPath
@@ -22,8 +26,56 @@ function Format-Mib([long] $Bytes) {
     return "{0:N2}" -f ($Bytes / 1MB)
 }
 
+function Get-ChangelogSection([string] $Path, [string] $Title) {
+    if ([string]::IsNullOrWhiteSpace($Path) -or [string]::IsNullOrWhiteSpace($Title)) {
+        return $null
+    }
+
+    if (-not (Test-Path -LiteralPath $Path)) {
+        return $null
+    }
+
+    $lines = Get-Content -LiteralPath $Path
+    $headingPattern = "^\s*##\s+$([regex]::Escape($Title))\s*$"
+    $nextHeadingPattern = "^\s*##\s+"
+    $startIndex = -1
+
+    for ($index = 0; $index -lt $lines.Count; $index++) {
+        if ($lines[$index] -match $headingPattern) {
+            $startIndex = $index + 1
+            break
+        }
+    }
+
+    if ($startIndex -lt 0) {
+        return $null
+    }
+
+    $section = [System.Collections.Generic.List[string]]::new()
+    for ($index = $startIndex; $index -lt $lines.Count; $index++) {
+        if ($lines[$index] -match $nextHeadingPattern) {
+            break
+        }
+        $section.Add($lines[$index])
+    }
+
+    return ($section -join [Environment]::NewLine).Trim()
+}
+
+$changelogSection = Get-ChangelogSection -Path $ChangelogPath -Title $ReleaseTitle
+$releaseNotesSection = ""
+if (-not [string]::IsNullOrWhiteSpace($changelogSection)) {
+    $releaseNotesSection = @"
+
+## Release notes
+
+$changelogSection
+"@
+}
+
 $notes = @"
 Signed $ReleaseChannel build from commit $CommitSha.
+$releaseNotesSection
 
 ## Artifact sizes
 

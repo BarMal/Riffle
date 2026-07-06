@@ -76,7 +76,9 @@ jobs:
             -CommitSha "$GITHUB_SHA" \
             -ApkPath "$RUNNER_TEMP/release/riffle-alpha.apk" \
             -AabPath "$RUNNER_TEMP/release/riffle-alpha.aab" \
-            -NotesPath "$RUNNER_TEMP/release-notes.md"
+            -NotesPath "$RUNNER_TEMP/release-notes.md" \
+            -ChangelogPath CHANGELOG.md \
+            -ReleaseTitle "Alpha ${{ github.run_number }}"
 
           gh release create "$RELEASE_TAG" \
             "$RUNNER_TEMP/release/riffle-alpha.apk" \
