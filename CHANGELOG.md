@@ -1,5 +1,27 @@
 # Changelog
 
+## Alpha 183
+
+Release notes for the next alpha after Alpha 182.
+
+### Changed
+
+- Settings > Appearance now includes a Wallpaper motion control with Static and Scroll modes.
+- System wallpapers can now follow the selected home page using Android wallpaper offset APIs when Wallpaper motion is set to Scroll.
+- Launcher search web results now use a distinct "Search web" button and show clearer generated example searches for images, news, and videos.
+- Dock render metrics now apply the existing compaction policy on narrow widths, so five-icon folded-mode docks shrink spacing and icon size before falling back to overflow navigation.
+
+### Verification
+
+- Full GitHub CI `Verify` passed for PRs #551, #552, and #553.
+- Local verification included targeted wallpaper controller, search grid/web launcher, dock metrics, detekt, and full `./gradlew verify` runs.
+
+### Known Limitations
+
+- Wallpaper scroll support depends on the active wallpaper and OEM honoring Android wallpaper offset APIs, and it updates settled page offsets rather than drag-frame parallax.
+- Web search examples are generated delegated searches, not live-fetched online result snippets.
+- Dock folded-width behavior still needs manual validation on physical foldable hardware.
+
 ## Alpha 182
 
 Release notes for the next alpha after Alpha 181.
