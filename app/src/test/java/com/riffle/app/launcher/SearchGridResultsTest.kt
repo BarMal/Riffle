@@ -55,12 +55,24 @@ class SearchGridResultsTest {
         assertEquals(listOf("Appearance", "Camera"), results.map { result -> result.label })
         assertEquals(
             listOf(
-                LauncherShellAction.OpenSettings,
+                LauncherShellAction.OpenSettingsPage(SettingsPage.APPEARANCE),
                 LauncherShellAction.LaunchApp(camera.identity),
             ),
             results.map { result -> result.action },
         )
         assertEquals("setting:appearance", results.first().key)
+    }
+
+    @Test
+    fun searchGridResultsFallbackToMainSettingsForUnknownSettingsEntryIds() {
+        val results =
+            searchGridResults(
+                apps = emptyList(),
+                shortcuts = emptyList(),
+                settings = listOf(setting(id = "unknown", title = "Unknown")),
+            )
+
+        assertEquals(listOf(LauncherShellAction.OpenSettings), results.map { result -> result.action })
     }
 
     @Test
@@ -117,10 +129,13 @@ class SearchGridResultsTest {
             shortLabel = label,
         )
 
-    private fun setting(title: String): LauncherSearchResult.Setting =
+    private fun setting(
+        title: String,
+        id: String = title.lowercase(),
+    ): LauncherSearchResult.Setting =
         LauncherSearchResult.Setting(
             LauncherSearchSettingsEntry(
-                id = LauncherSearchSettingsEntryId(title.lowercase()),
+                id = LauncherSearchSettingsEntryId(id),
                 title = title,
                 subtitle = "Launcher settings",
                 section = "Settings",

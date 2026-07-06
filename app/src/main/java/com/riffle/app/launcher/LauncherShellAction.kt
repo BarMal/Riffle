@@ -46,6 +46,8 @@ sealed interface LauncherShellAction {
 
     data object OpenSettings : LauncherShellAction
 
+    data class OpenSettingsPage(val page: SettingsPage) : LauncherShellAction
+
     data object RequestNotificationAccess : LauncherShellAction
 
     data object RequestOverlayDockPermission : LauncherShellAction

@@ -142,6 +142,7 @@ class LauncherActionDomainTest {
                 activity("OpenSearch", LauncherShellAction.OpenSearch),
                 activity("OpenNotifications", LauncherShellAction.OpenNotifications),
                 activity("OpenSettings", LauncherShellAction.OpenSettings),
+                activity("OpenSettingsPage", LauncherShellAction.OpenSettingsPage(SettingsPage.APPEARANCE)),
                 settings("RequestNotificationAccess", LauncherShellAction.RequestNotificationAccess),
                 settings("RequestOverlayDockPermission", LauncherShellAction.RequestOverlayDockPermission),
                 settings("ChangeWallpaper", LauncherShellAction.ChangeWallpaper),

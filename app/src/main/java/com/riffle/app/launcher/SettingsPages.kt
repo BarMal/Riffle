@@ -5,7 +5,7 @@ import com.riffle.core.domain.launcher.OverlayDockPermissionStatus
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 
-internal enum class SettingsPage(
+enum class SettingsPage(
     val title: String,
 ) {
     MAIN("Settings"),

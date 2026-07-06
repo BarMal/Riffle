@@ -170,6 +170,16 @@ class SettingsPagesTest {
     }
 
     @Test
+    fun launcherSearchSettingsEntriesResolveBackToSettingsPages() {
+        val entries = settingsLauncherSearchEntries()
+
+        assertEquals(
+            settingsMainPageEntries().map { entry -> entry.page },
+            entries.map { entry -> entry.id.settingsPage() },
+        )
+    }
+
+    @Test
     fun layoutPageUsesFoldedAndUnfoldedTabsForFoldableDevices() {
         assertEquals(
             listOf("Folded", "Unfolded"),
