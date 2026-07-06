@@ -327,6 +327,36 @@ class LauncherShellViewModeViewModelTest {
     }
 
     @Test
+    fun startsWithSavedSingleLayoutForCurrentDeviceClass() {
+        val savedPage = HomeLayoutDefaults.standard().selectedPage.copy(id = LauncherPageId("saved-home"))
+        val savedLayout =
+            HomeLayoutDefaults.standard().copy(
+                pages = listOf(savedPage),
+                selectedPageId = savedPage.id,
+            )
+        val repository = FakeHomeLayoutRepository(savedLayout = savedLayout)
+
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                homeLayoutRepository = repository,
+                platformDependencies =
+                    LauncherShellPlatformDependencies(
+                        initialHomeLayoutDeviceClass = HomeLayoutDeviceClass.FOLDABLE,
+                    ),
+            )
+
+        val foldableKey =
+            HomeLayoutKey(
+                viewMode = LauncherViewMode.STANDARD_APP_DRAWER,
+                deviceClass = HomeLayoutDeviceClass.FOLDABLE,
+            )
+        assertEquals(savedPage.id, viewModel.state.value.homeLayout.selectedPageId)
+        assertEquals(foldableKey, repository.savedLayoutSet?.activeKey)
+        assertEquals(savedPage.id, repository.savedLayoutSet?.layoutFor(foldableKey)?.selectedPageId)
+    }
+
+    @Test
     fun editsAfterInitialDeviceSelectionDoNotOverwritePreviousDeviceLayout() {
         val phonePage = HomeLayoutDefaults.standard().selectedPage.copy(id = LauncherPageId("phone-home"))
         val foldablePage = HomeLayoutDefaults.standard().selectedPage.copy(id = LauncherPageId("foldable-home"))

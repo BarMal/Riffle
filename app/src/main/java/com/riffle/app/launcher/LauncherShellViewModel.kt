@@ -20,6 +20,7 @@ import com.riffle.core.domain.launcher.home.DockEngine
 import com.riffle.core.domain.launcher.home.FolderEngine
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
+import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
 import com.riffle.core.domain.launcher.home.HomeLayoutSet
 import com.riffle.core.domain.launcher.home.HomeShortcutEngine
@@ -313,7 +314,7 @@ private fun createInitialState(
     val storedLayoutSet = homeLayoutRepository.loadHomeLayoutSet()
     val initialLayoutSet =
         storedLayoutSet?.let { layoutSet ->
-            layoutSet.selectDeviceClass(
+            layoutSet.selectInitialDeviceClass(
                 deviceClass = platformDependencies.initialHomeLayoutDeviceClass ?: layoutSet.activeKey.deviceClass,
                 availability = viewModeAvailability,
             )
@@ -337,6 +338,26 @@ private fun createInitialState(
         } else {
             initialState
         }
+    }
+}
+
+private fun HomeLayoutSet.selectInitialDeviceClass(
+    deviceClass: HomeLayoutDeviceClass,
+    availability: LauncherViewModeAvailability,
+): HomeLayoutSet {
+    val key = availability.availableKeyFor(layoutSet = this, deviceClass = deviceClass)
+    if (key in layouts) {
+        return selectDeviceClass(deviceClass = deviceClass, availability = availability)
+    }
+
+    return if (layouts.size == 1) {
+        copy(
+            activeKey = key,
+            layouts = layouts + (key to activeLayout.copy(viewMode = key.viewMode)),
+            preferredModesByDeviceClass = preferredModesByDeviceClass + (key.deviceClass to key.viewMode),
+        )
+    } else {
+        selectDeviceClass(deviceClass = deviceClass, availability = availability)
     }
 }
 
