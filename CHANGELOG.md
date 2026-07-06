@@ -1,5 +1,26 @@
 # Changelog
 
+## Alpha 177
+
+Release notes for the next alpha after Alpha 176.
+
+### Changed
+
+- Reduced-motion home page changes now use the same short animated settle path for external page selections instead of snapping abruptly, reducing visual stutter between the pager and page indicator.
+- Wallpaper source application now returns explicit success/failure results behind the platform controller boundary.
+- Direct Settings > Appearance wallpaper source changes now show fallback feedback when system wallpaper cannot be applied.
+- If system wallpaper application fails and Riffle falls back to the solid background mode, launcher settings are synced to that fallback source so persisted state and rendered background stay aligned.
+
+### Verification
+
+- Full GitHub CI `Verify` passed for PRs #530 and #531.
+- Local verification included targeted tests for reduced-motion home pager policy, wallpaper apply/fallback behavior, fallback user-facing copy, and full `./gradlew verify`.
+
+### Known Limitations
+
+- Wallpaper picking/setting APIs and OEM-specific wallpaper device validation remain open under #7.
+- Reduced-motion polish is still page-pager specific; the broader shared motion system remains open under #24.
+
 ## Alpha 176
 
 Release notes for the next alpha after Alpha 175.
