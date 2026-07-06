@@ -58,6 +58,34 @@ class SettingsPagesTest {
     }
 
     @Test
+    fun filtersMainSettingsEntriesByAliasOnlyTerms() {
+        assertEquals(
+            listOf(SettingsPage.BACKUP),
+            settingsMainPageEntriesMatching("restore").map { entry -> entry.page },
+        )
+        assertEquals(
+            listOf(SettingsPage.APPEARANCE),
+            settingsMainPageEntriesMatching("fullscreen").map { entry -> entry.page },
+        )
+    }
+
+    @Test
+    fun filtersMainSettingsEntriesByMultiTokenAliases() {
+        assertEquals(
+            listOf(SettingsPage.APPEARANCE),
+            settingsMainPageEntriesMatching("status bar").map { entry -> entry.page },
+        )
+        assertEquals(
+            listOf(SettingsPage.APPEARANCE),
+            settingsMainPageEntriesMatching("navigation bar").map { entry -> entry.page },
+        )
+        assertEquals(
+            listOf(SettingsPage.PERMISSIONS),
+            settingsMainPageEntriesMatching("default home").map { entry -> entry.page },
+        )
+    }
+
+    @Test
     fun returnsNoMainSettingsEntriesForUnknownSearch() {
         assertEquals(emptyList<SettingsPageEntry>(), settingsMainPageEntriesMatching("missing setting"))
     }
