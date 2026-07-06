@@ -50,6 +50,13 @@ class LauncherSettingsTest {
     }
 
     @Test
+    fun defaultsContextualSettingsToDisabled() {
+        val settings = LauncherSettings()
+
+        assertEquals(false, settings.contextual.enabled)
+    }
+
+    @Test
     fun defaultsOverlayDockToDisabled() {
         val settings = LauncherSettings()
 
