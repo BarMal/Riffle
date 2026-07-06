@@ -348,6 +348,173 @@ class GridPlacementEngineTest {
     }
 
     @Test
+    fun shiftsAnchorsBackwardWhenMovingToLaterOccupiedCell() {
+        val camera =
+            appItem(
+                id = "camera",
+                placement = GridPlacement(cell = GridCell(column = 0, row = 0)),
+            )
+        val calendar =
+            appItem(
+                id = "calendar",
+                placement = GridPlacement(cell = GridCell(column = 1, row = 0)),
+            )
+        val occupiedPage = page.copy(items = listOf(camera, calendar))
+
+        val result =
+            engine.moveItemShiftingAnchors(
+                page = occupiedPage,
+                itemId = camera.id,
+                cell = GridCell(column = 1, row = 0),
+            )
+
+        val placed = assertIs<PlaceLauncherItemResult.Placed>(result)
+        assertEquals(
+            GridPlacement(cell = GridCell(column = 1, row = 0)),
+            placed.page.items.single { item -> item.id == camera.id }.placement,
+        )
+        assertEquals(
+            GridPlacement(cell = GridCell(column = 0, row = 0)),
+            placed.page.items.single { item -> item.id == calendar.id }.placement,
+        )
+    }
+
+    @Test
+    fun shiftsAnchorsForwardWhenMovingToEarlierOccupiedCell() {
+        val camera =
+            appItem(
+                id = "camera",
+                placement = GridPlacement(cell = GridCell(column = 2, row = 0)),
+            )
+        val calendar =
+            appItem(
+                id = "calendar",
+                placement = GridPlacement(cell = GridCell(column = 1, row = 0)),
+            )
+        val occupiedPage = page.copy(items = listOf(camera, calendar))
+
+        val result =
+            engine.moveItemShiftingAnchors(
+                page = occupiedPage,
+                itemId = camera.id,
+                cell = GridCell(column = 1, row = 0),
+            )
+
+        val placed = assertIs<PlaceLauncherItemResult.Placed>(result)
+        assertEquals(
+            GridPlacement(cell = GridCell(column = 1, row = 0)),
+            placed.page.items.single { item -> item.id == camera.id }.placement,
+        )
+        assertEquals(
+            GridPlacement(cell = GridCell(column = 2, row = 0)),
+            placed.page.items.single { item -> item.id == calendar.id }.placement,
+        )
+    }
+
+    @Test
+    fun rejectsAnchorShiftForSpannedSourceItem() {
+        val widget =
+            widgetItem(
+                id = "clock",
+                placement =
+                    GridPlacement(
+                        cell = GridCell(column = 0, row = 0),
+                        span = GridSpan(columns = 2, rows = 1),
+                    ),
+            )
+        val calendar =
+            appItem(
+                id = "calendar",
+                placement = GridPlacement(cell = GridCell(column = 2, row = 0)),
+            )
+        val occupiedPage = page.copy(items = listOf(widget, calendar))
+
+        val result =
+            engine.moveItemShiftingAnchors(
+                page = occupiedPage,
+                itemId = widget.id,
+                cell = GridCell(column = 2, row = 0),
+            )
+
+        val rejected = assertIs<PlaceLauncherItemResult.Rejected>(result)
+        assertEquals(PlacementRejectionReason.COLLISION, rejected.reason)
+        assertEquals(listOf(widget, calendar), occupiedPage.items)
+    }
+
+    @Test
+    fun rejectsAnchorShiftWhenTargetCollisionIsSpannedWidget() {
+        val camera =
+            appItem(
+                id = "camera",
+                placement = GridPlacement(cell = GridCell(column = 0, row = 0)),
+            )
+        val widget =
+            widgetItem(
+                id = "clock",
+                placement =
+                    GridPlacement(
+                        cell = GridCell(column = 1, row = 1),
+                        span = GridSpan(columns = 2, rows = 2),
+                    ),
+            )
+        val occupiedPage = page.copy(items = listOf(camera, widget))
+
+        val result =
+            engine.moveItemShiftingAnchors(
+                page = occupiedPage,
+                itemId = camera.id,
+                cell = GridCell(column = 2, row = 2),
+            )
+
+        val rejected = assertIs<PlaceLauncherItemResult.Rejected>(result)
+        assertEquals(PlacementRejectionReason.COLLISION, rejected.reason)
+        assertEquals(listOf(camera, widget), occupiedPage.items)
+    }
+
+    @Test
+    fun rejectsAnchorShiftWhenSourcePlacementIsMissing() {
+        val camera = appItem(id = "camera")
+        val calendar =
+            appItem(
+                id = "calendar",
+                placement = GridPlacement(cell = GridCell(column = 1, row = 0)),
+            )
+        val occupiedPage = page.copy(items = listOf(camera, calendar))
+
+        val result =
+            engine.moveItemShiftingAnchors(
+                page = occupiedPage,
+                itemId = camera.id,
+                cell = GridCell(column = 1, row = 0),
+            )
+
+        val rejected = assertIs<PlaceLauncherItemResult.Rejected>(result)
+        assertEquals(PlacementRejectionReason.MISSING_PLACEMENT, rejected.reason)
+        assertEquals(listOf(camera, calendar), occupiedPage.items)
+    }
+
+    @Test
+    fun rejectsAnchorShiftWhenTargetCellIsOutOfBounds() {
+        val camera =
+            appItem(
+                id = "camera",
+                placement = GridPlacement(cell = GridCell(column = 0, row = 0)),
+            )
+        val occupiedPage = page.copy(items = listOf(camera))
+
+        val result =
+            engine.moveItemShiftingAnchors(
+                page = occupiedPage,
+                itemId = camera.id,
+                cell = GridCell(column = 4, row = 0),
+            )
+
+        val rejected = assertIs<PlaceLauncherItemResult.Rejected>(result)
+        assertEquals(PlacementRejectionReason.OUT_OF_BOUNDS, rejected.reason)
+        assertEquals(listOf(camera), occupiedPage.items)
+    }
+
+    @Test
     fun rejectsMoveWithZeroOrNegativeSpanDimensions() {
         val item =
             appItem(
@@ -510,6 +677,17 @@ class GridPlacementEngineTest {
                     packageName = AppPackageName("com.riffle.$id"),
                     activityName = AppActivityName(".MainActivity"),
                 ),
+            label = id,
+            placement = placement,
+        )
+
+    private fun widgetItem(
+        id: String,
+        placement: GridPlacement,
+    ): WidgetItem =
+        WidgetItem(
+            id = LauncherItemId(id),
+            appWidgetId = HostedWidgetId(42),
             label = id,
             placement = placement,
         )
