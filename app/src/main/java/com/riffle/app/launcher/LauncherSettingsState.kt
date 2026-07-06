@@ -1,13 +1,15 @@
 package com.riffle.app.launcher
 
 import com.riffle.core.domain.launcher.LauncherShellState
-import com.riffle.core.domain.launcher.settings.AppearanceSettings
 import com.riffle.core.domain.launcher.settings.HomeGesture
 import com.riffle.core.domain.launcher.settings.HomeGestureSettings
 import com.riffle.core.domain.launcher.settings.HomeSwipeGestureDirection
 import com.riffle.core.domain.launcher.settings.LauncherGestureAction
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettingsRepository
+import com.riffle.core.domain.launcher.settings.withFullscreenHome
+import com.riffle.core.domain.launcher.settings.withHomeNavigationBarHidden
+import com.riffle.core.domain.launcher.settings.withHomeStatusBarHidden
 
 fun LauncherShellState.withLauncherSettings(
     settings: LauncherSettings,
@@ -139,31 +141,6 @@ internal fun LauncherShellState.withOverlayDockSettingsAction(
     )
 
 private val defaultHomeGestureSettings = HomeGestureSettings()
-
-private fun AppearanceSettings.withFullscreenHome(enabled: Boolean): AppearanceSettings =
-    copy(
-        fullscreenHome = enabled,
-        hideStatusBarOnHome = enabled,
-        hideNavigationBarOnHome = enabled,
-    )
-
-private fun AppearanceSettings.withHomeStatusBarHidden(hidden: Boolean): AppearanceSettings {
-    val effectiveNavigationBarHidden = fullscreenHome || hideNavigationBarOnHome
-    return copy(
-        fullscreenHome = hidden && effectiveNavigationBarHidden,
-        hideStatusBarOnHome = hidden,
-        hideNavigationBarOnHome = effectiveNavigationBarHidden,
-    )
-}
-
-private fun AppearanceSettings.withHomeNavigationBarHidden(hidden: Boolean): AppearanceSettings {
-    val effectiveStatusBarHidden = fullscreenHome || hideStatusBarOnHome
-    return copy(
-        fullscreenHome = effectiveStatusBarHidden && hidden,
-        hideStatusBarOnHome = effectiveStatusBarHidden,
-        hideNavigationBarOnHome = hidden,
-    )
-}
 
 private val HomeSwipeGestureDirection.homeGesture: HomeGesture
     get() =
