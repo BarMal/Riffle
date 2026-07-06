@@ -101,6 +101,21 @@ class GridPlacementEngineTest {
     }
 
     @Test
+    fun rejectsFirstAvailablePlacementWithZeroOrNegativeSpanDimensions() {
+        invalidSpans.forEach { span ->
+            val result =
+                engine.placeItemInFirstAvailableCell(
+                    page = page,
+                    item = appItem(id = "camera-${span.columns}-${span.rows}"),
+                    span = span,
+                )
+
+            val rejected = assertIs<PlaceLauncherItemResult.Rejected>(result)
+            assertEquals(PlacementRejectionReason.OUT_OF_BOUNDS, rejected.reason, "span=$span")
+        }
+    }
+
+    @Test
     fun rejectsFirstAvailablePlacementWhenNoCellsFit() {
         val fullPage =
             LauncherPage(
@@ -148,6 +163,54 @@ class GridPlacementEngineTest {
             )
 
         val result = engine.placeItem(page = page, item = item)
+
+        val rejected = assertIs<PlaceLauncherItemResult.Rejected>(result)
+        assertEquals(PlacementRejectionReason.OUT_OF_BOUNDS, rejected.reason)
+    }
+
+    @Test
+    fun rejectsPlacementWithZeroOrNegativeSpanDimensions() {
+        invalidSpans.forEach { span ->
+            val item =
+                appItem(
+                    id = "camera-${span.columns}-${span.rows}",
+                    placement =
+                        GridPlacement(
+                            cell = GridCell(column = 0, row = 0),
+                            span = span,
+                        ),
+                )
+
+            val result = engine.placeItem(page = page, item = item)
+
+            val rejected = assertIs<PlaceLauncherItemResult.Rejected>(result)
+            assertEquals(PlacementRejectionReason.OUT_OF_BOUNDS, rejected.reason, "span=$span")
+        }
+    }
+
+    @Test
+    fun rejectsInvalidSpanBeforeTreatingItAsNonColliding() {
+        val occupiedPage =
+            page.copy(
+                items =
+                    listOf(
+                        appItem(
+                            id = "calendar",
+                            placement = GridPlacement(cell = GridCell(column = 0, row = 0)),
+                        ),
+                    ),
+            )
+        val candidate =
+            appItem(
+                id = "camera",
+                placement =
+                    GridPlacement(
+                        cell = GridCell(column = 0, row = 0),
+                        span = GridSpan(columns = 0, rows = 1),
+                    ),
+            )
+
+        val result = engine.placeItem(page = occupiedPage, item = candidate)
 
         val rejected = assertIs<PlaceLauncherItemResult.Rejected>(result)
         assertEquals(PlacementRejectionReason.OUT_OF_BOUNDS, rejected.reason)
@@ -285,6 +348,32 @@ class GridPlacementEngineTest {
     }
 
     @Test
+    fun rejectsMoveWithZeroOrNegativeSpanDimensions() {
+        val item =
+            appItem(
+                id = "camera",
+                placement = GridPlacement(cell = GridCell(column = 0, row = 0)),
+            )
+        val occupiedPage = page.copy(items = listOf(item))
+
+        invalidSpans.forEach { span ->
+            val result =
+                engine.moveItem(
+                    page = occupiedPage,
+                    itemId = item.id,
+                    placement =
+                        GridPlacement(
+                            cell = GridCell(column = 1, row = 1),
+                            span = span,
+                        ),
+                )
+
+            val rejected = assertIs<PlaceLauncherItemResult.Rejected>(result)
+            assertEquals(PlacementRejectionReason.OUT_OF_BOUNDS, rejected.reason, "span=$span")
+        }
+    }
+
+    @Test
     fun resizesItemAtExistingCell() {
         val item =
             appItem(
@@ -352,6 +441,28 @@ class GridPlacementEngineTest {
     }
 
     @Test
+    fun rejectsResizeWithZeroOrNegativeSpanDimensions() {
+        val item =
+            appItem(
+                id = "calendar",
+                placement = GridPlacement(cell = GridCell(column = 1, row = 1)),
+            )
+        val occupiedPage = page.copy(items = listOf(item))
+
+        invalidSpans.forEach { span ->
+            val result =
+                engine.resizeItem(
+                    page = occupiedPage,
+                    itemId = item.id,
+                    span = span,
+                )
+
+            val rejected = assertIs<PlaceLauncherItemResult.Rejected>(result)
+            assertEquals(PlacementRejectionReason.OUT_OF_BOUNDS, rejected.reason, "span=$span")
+        }
+    }
+
+    @Test
     fun rejectsResizeWhenItemIsMissing() {
         val result =
             engine.resizeItem(
@@ -379,6 +490,14 @@ class GridPlacementEngineTest {
         val rejected = assertIs<PlaceLauncherItemResult.Rejected>(result)
         assertEquals(PlacementRejectionReason.MISSING_PLACEMENT, rejected.reason)
     }
+
+    private val invalidSpans =
+        listOf(
+            GridSpan(columns = 0, rows = 1),
+            GridSpan(columns = 1, rows = 0),
+            GridSpan(columns = -1, rows = 1),
+            GridSpan(columns = 1, rows = -1),
+        )
 
     private fun appItem(
         id: String,
