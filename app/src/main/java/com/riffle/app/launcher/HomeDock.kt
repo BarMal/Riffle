@@ -23,6 +23,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.apps.AppPackageName
@@ -88,12 +89,19 @@ fun Dock(
                 itemSpacingDp = dock.itemSpacingDp,
                 availableDockWidthDp = dockWidthDp,
             )
+        val slotMetrics =
+            dockSlotRenderMetrics(
+                slotCount = renderedSlotCount,
+                iconSizeDp = dock.iconSizeDp,
+                itemSpacingDp = dock.itemSpacingDp,
+                availableContentWidthDp = contentViewportWidthDp,
+            )
 
         Box(
             modifier =
                 Modifier
                     .width(dockWidthDp.dp)
-                    .height(dockHeightDp(dock.iconSizeDp).dp)
+                    .height(dockHeightDp(slotMetrics.iconSizeDp).dp)
                     .clip(RoundedCornerShape(28.dp))
                     .background(
                         MaterialTheme.colorScheme.surfaceVariant.copy(
@@ -108,6 +116,7 @@ fun Dock(
                     dock = dock,
                     renderedSlotCount = renderedSlotCount,
                     contentViewportWidthDp = contentViewportWidthDp,
+                    slotMetrics = slotMetrics,
                     isEditing = isEditing,
                     presentation = presentation,
                     appIconLoader = appIconLoader,
@@ -122,6 +131,7 @@ private fun DockSlotsRow(
     dock: DockModel,
     renderedSlotCount: Int,
     contentViewportWidthDp: Int,
+    slotMetrics: DockSlotRenderMetrics,
     isEditing: Boolean,
     presentation: DockPresentation,
     appIconLoader: AppIconLoader,
@@ -138,7 +148,10 @@ private fun DockSlotsRow(
         )
 
     Box(
-        modifier = Modifier.width(contentViewportWidthDp.dp),
+        modifier =
+            Modifier
+                .width(contentViewportWidthDp.dp)
+                .clipToBounds(),
         contentAlignment = Alignment.Center,
     ) {
         Row(
@@ -146,18 +159,18 @@ private fun DockSlotsRow(
                 Modifier
                     .width(contentViewportWidthDp.dp)
                     .horizontalScroll(scrollState),
-            horizontalArrangement = Arrangement.spacedBy(dock.itemSpacingDp.dp),
+            horizontalArrangement = Arrangement.spacedBy(slotMetrics.itemSpacingDp.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             repeat(renderedSlotCount) { index ->
                 DockSlot(
-                    modifier = Modifier.requiredSize(dock.iconSizeDp.dp),
+                    modifier = Modifier.requiredSize(slotMetrics.iconSizeDp.dp),
                     state =
                         DockSlotState(
                             shortcut = dock.items.getOrNull(index) as? AppShortcutItem,
                             shortcutIndex = index,
                             shortcutCount = dock.items.size,
-                            iconSizeDp = dock.iconSizeDp,
+                            iconSizeDp = slotMetrics.iconSizeDp,
                             isEditing = isEditing,
                         ),
                     presentation = presentation,
