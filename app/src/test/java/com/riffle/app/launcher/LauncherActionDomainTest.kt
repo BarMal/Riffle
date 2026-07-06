@@ -23,6 +23,7 @@ import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.home.LauncherPageId
 import com.riffle.core.domain.launcher.home.LauncherPageType
 import com.riffle.core.domain.launcher.home.LauncherViewMode
+import com.riffle.core.domain.launcher.home.WallpaperScrollMode
 import com.riffle.core.domain.launcher.home.WallpaperSource
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
 import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
@@ -276,6 +277,10 @@ class LauncherActionDomainTest {
                 settings(
                     "SelectWallpaperSource",
                     LauncherShellAction.SelectWallpaperSource(WallpaperSource.SOLID_COLOR),
+                ),
+                settings(
+                    "SelectWallpaperScrollMode",
+                    LauncherShellAction.SelectWallpaperScrollMode(WallpaperScrollMode.SCROLLING),
                 ),
                 settings(
                     "SelectFullscreenHomeEnabled",

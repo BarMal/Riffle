@@ -43,6 +43,7 @@ import com.riffle.app.launcher.refreshNotifications
 import com.riffle.app.launcher.refreshWidgetProviders
 import com.riffle.app.launcher.selectedPageHostedWidgetIdForItem
 import com.riffle.app.launcher.startSystemUiSync
+import com.riffle.app.launcher.startWallpaperOffsetSync
 import com.riffle.app.launcher.widgets.WidgetBindPermissionResult
 import kotlinx.coroutines.launch
 
@@ -295,6 +296,10 @@ class MainActivity : ComponentActivity() {
         refreshHomeLayoutDeviceClass(source = "onCreate")
         observeHomeLayoutDeviceClass()
         startSystemUiSync(shellViewModel.state)
+        startWallpaperOffsetSync(
+            state = shellViewModel.state,
+            wallpaperController = wallpaperController,
+        )
 
         setContent {
             LauncherShell(

@@ -7,6 +7,7 @@ import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.apps.AppShortcutId
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.home.LauncherItemId
+import com.riffle.core.domain.launcher.home.WallpaperScrollMode
 import com.riffle.core.domain.launcher.settings.OverlayDockEdge
 import com.riffle.core.domain.launcher.settings.OverlayDockExpandedOrientation
 import com.riffle.core.domain.launcher.settings.OverlayDockItemMoveDirection
@@ -21,6 +22,7 @@ class LauncherSettingsActionRouteTest {
             listOf(
                 LauncherShellAction.SelectReducedMotionEnabled(enabled = true),
                 LauncherShellAction.SelectContextualEnabled(enabled = true),
+                LauncherShellAction.SelectWallpaperScrollMode(WallpaperScrollMode.SCROLLING),
                 LauncherShellAction.SelectHomeStatusBarHidden(hidden = true),
                 LauncherShellAction.SelectHomeNavigationBarHidden(hidden = true),
             )

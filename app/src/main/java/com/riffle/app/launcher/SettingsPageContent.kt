@@ -191,6 +191,10 @@ private fun SettingsAppearancePageContent(
             selectedSource = state.settings.appearance.wallpaper.source,
             onAction = onAction,
         )
+        WallpaperScrollModeSetting(
+            selectedMode = state.settings.appearance.wallpaper.scrollMode,
+            onAction = onAction,
+        )
         SettingsClickableRow(
             title = "Change wallpaper",
             subtitle = "Open Android wallpaper picker",

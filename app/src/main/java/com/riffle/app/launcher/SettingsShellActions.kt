@@ -71,6 +71,7 @@ internal sealed interface LauncherSettingsActionRoute {
 internal fun LauncherShellAction.launcherSettingsActionRoute(): LauncherSettingsActionRoute? =
     when (this) {
         is LauncherShellAction.SelectWallpaperSource,
+        is LauncherShellAction.SelectWallpaperScrollMode,
         is LauncherShellAction.SelectFullscreenHomeEnabled,
         is LauncherShellAction.SelectHomeStatusBarHidden,
         is LauncherShellAction.SelectHomeNavigationBarHidden,

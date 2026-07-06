@@ -6,6 +6,7 @@ import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.contextual.ContextualSettings
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.LauncherItemId
+import com.riffle.core.domain.launcher.home.WallpaperScrollMode
 import com.riffle.core.domain.launcher.home.WallpaperSettings
 import com.riffle.core.domain.launcher.home.WallpaperSource
 import com.riffle.core.domain.launcher.settings.AppearanceSettings
@@ -73,6 +74,26 @@ class LauncherSettingsJsonCodecTest {
         val decodedSettings = decodeLauncherSettings(encodeLauncherSettings(settings))
 
         assertEquals(WallpaperSource.SOLID_COLOR, decodedSettings.appearance.wallpaper.source)
+        assertEquals(WallpaperScrollMode.STATIC, decodedSettings.appearance.wallpaper.scrollMode)
+    }
+
+    @Test
+    fun roundTripsWallpaperScrollMode() {
+        val settings =
+            LauncherSettings(
+                appearance =
+                    AppearanceSettings(
+                        wallpaper =
+                            WallpaperSettings(
+                                source = WallpaperSource.SYSTEM,
+                                scrollMode = WallpaperScrollMode.SCROLLING,
+                            ),
+                    ),
+            )
+
+        val decodedSettings = decodeLauncherSettings(encodeLauncherSettings(settings))
+
+        assertEquals(WallpaperScrollMode.SCROLLING, decodedSettings.appearance.wallpaper.scrollMode)
     }
 
     @Test
@@ -390,6 +411,25 @@ class LauncherSettingsJsonCodecTest {
                   "appearance": {
                     "wallpaper": {
                       "source": "UNKNOWN"
+                    }
+                  }
+                }
+                """.trimIndent(),
+            )
+
+        assertEquals(WallpaperSettings.system(), decodedSettings.appearance.wallpaper)
+    }
+
+    @Test
+    fun defaultsUnknownWallpaperScrollMode() {
+        val decodedSettings =
+            decodeLauncherSettings(
+                """
+                {
+                  "appearance": {
+                    "wallpaper": {
+                      "source": "SYSTEM",
+                      "scrollMode": "UNKNOWN"
                     }
                   }
                 }

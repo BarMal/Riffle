@@ -108,7 +108,19 @@ internal fun LauncherShellState.withAppearanceSettingsAction(
                     launcherSettings.copy(
                         appearance =
                             launcherSettings.appearance.copy(
-                                wallpaper = com.riffle.core.domain.launcher.home.WallpaperSettings(action.source),
+                                wallpaper = launcherSettings.appearance.wallpaper.copy(source = action.source),
+                            ),
+                    ),
+                launcherSettingsRepository = launcherSettingsRepository,
+            )
+
+        is LauncherShellAction.SelectWallpaperScrollMode ->
+            withLauncherSettings(
+                settings =
+                    launcherSettings.copy(
+                        appearance =
+                            launcherSettings.appearance.copy(
+                                wallpaper = launcherSettings.appearance.wallpaper.copy(scrollMode = action.mode),
                             ),
                     ),
                 launcherSettingsRepository = launcherSettingsRepository,
