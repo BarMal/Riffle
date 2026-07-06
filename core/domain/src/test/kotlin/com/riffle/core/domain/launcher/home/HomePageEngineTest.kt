@@ -195,6 +195,11 @@ class HomePageEngineTest {
                             appIdentity = appIdentity("camera"),
                             label = "Camera",
                         ),
+                        AppShortcutItem(
+                            id = itemId("clock"),
+                            appIdentity = appIdentity("clock"),
+                            label = "Clock",
+                        ),
                     ),
             )
         val layoutWithFolder =
@@ -213,8 +218,44 @@ class HomePageEngineTest {
         val updated = assertIs<HomePageEditResult.Updated>(result)
         val duplicatedFolder = updated.layout.selectedPage.items.single() as FolderItem
         assertEquals(itemId("copy-1"), duplicatedFolder.id)
-        assertEquals(itemId("copy-2"), duplicatedFolder.items.single().id)
-        assertEquals(folder.items.single().appIdentity, duplicatedFolder.items.single().appIdentity)
+        assertEquals(
+            listOf(itemId("copy-2"), itemId("copy-3")),
+            duplicatedFolder.items.map { item -> item.id },
+        )
+        assertEquals(
+            folder.items.map { item -> item.appIdentity },
+            duplicatedFolder.items.map { item -> item.appIdentity },
+        )
+    }
+
+    @Test
+    fun rejectsDuplicatingPageWithWidgets() {
+        val widget =
+            WidgetItem(
+                id = itemId("weather"),
+                appWidgetId = HostedWidgetId(42),
+                label = "Weather",
+                placement =
+                    GridPlacement(
+                        cell = GridCell(column = 0, row = 0),
+                        span = GridSpan(columns = 2, rows = 2),
+                    ),
+            )
+        val layoutWithWidget =
+            layout.copy(
+                pages = listOf(layout.selectedPage.copy(items = listOf(widget))),
+            )
+
+        val result =
+            engine.duplicatePage(
+                layout = layoutWithWidget,
+                pageId = pageId("home"),
+                duplicatedPageId = pageId("home-copy"),
+                itemIdProvider = { error("Widget page duplication must reject before copying items.") },
+            )
+
+        val rejected = assertIs<HomePageEditResult.Rejected>(result)
+        assertEquals(HomePageEditRejectionReason.CANNOT_DUPLICATE_PAGE_WITH_WIDGETS, rejected.reason)
     }
 
     @Test
