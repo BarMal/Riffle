@@ -1,5 +1,32 @@
 # Changelog
 
+## Alpha 179
+
+Release notes for the next alpha after Alpha 178.
+
+### Changed
+
+- Settings > Appearance now includes a Change wallpaper action that opens Android's wallpaper picker and reports unavailable or failed launches.
+- Launcher search now shows matching Settings results alongside app and shortcut results, with settings results opening the Settings destination.
+- Home gesture settings now have a domain conflict detector for duplicate non-disabled gesture actions.
+- Dock rendering now handles non-app dock items explicitly; folders and widgets render as placeholder dock items instead of disappearing.
+- Page overview now supports selected-page grid dimension changes without changing sibling pages or the layout default grid.
+- Hosted widget IDs are now deleted when a widget bind succeeds but placement into the selected page is rejected.
+
+### Verification
+
+- Full GitHub CI `Verify` passed for PRs #536, #537, #538, #539, #540, and #541.
+- Local verification included targeted tests for wallpaper picker routing/gateway behavior, settings search state and grid rendering, gesture conflict detection, non-app dock item state and JSON round trips, selected-page grid edits, widget placement rejection cleanup, and full `./gradlew verify`.
+
+### Known Limitations
+
+- Wallpaper selection is delegated to Android; Riffle does not receive or persist picker results, and manual OEM/API validation remains pending under #7.
+- Settings search results open Settings generally; deep-linking to the matched settings page remains follow-up work under #20.
+- Dock folders/widgets are placeholder-only in this alpha; opening/hosting/add flows from the dock remain open under #6.
+- Page overview grid controls are compact one-step chips; richer numeric controls and deeper page customisation remain open under #17.
+- Gesture conflict detection is domain-only; conflict UI and broader gesture types remain open under #14.
+- Widget configuration flows, host size option updates, provider-aware resize behavior, and dock widgets remain open under #5.
+
 ## Alpha 178
 
 Release notes for the next alpha after Alpha 177.
