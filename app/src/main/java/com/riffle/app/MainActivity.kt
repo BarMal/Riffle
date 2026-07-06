@@ -32,6 +32,7 @@ import com.riffle.app.launcher.LauncherWidgetAddHandlingResult
 import com.riffle.app.launcher.LauncherWidgetRenderers
 import com.riffle.app.launcher.completeWidgetAdd
 import com.riffle.app.launcher.failureMessage
+import com.riffle.app.launcher.fallbackWallpaperSourceAction
 import com.riffle.app.launcher.isLauncherHomeIntent
 import com.riffle.app.launcher.notifications.AndroidNotificationDismissalGateway
 import com.riffle.app.launcher.refreshInstalledApps
@@ -165,6 +166,9 @@ class MainActivity : ComponentActivity() {
                                         shellViewModel.state.value.launcherSettings.appearance.wallpaper.source,
                                     )
                                 if (action is LauncherShellAction.SelectWallpaperSource) {
+                                    wallpaperResult.fallbackWallpaperSourceAction()?.let { fallbackAction ->
+                                        shellViewModel.onLauncherSettingsActionSelected(fallbackAction)
+                                    }
                                     wallpaperResult.failureMessage()?.let { message ->
                                         Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
                                     }

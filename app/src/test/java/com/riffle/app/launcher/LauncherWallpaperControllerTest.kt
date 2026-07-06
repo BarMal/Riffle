@@ -95,6 +95,24 @@ class LauncherWallpaperControllerTest {
         )
     }
 
+    @Test
+    fun createsFallbackSettingsActionWhenFallbackSourceDiffersFromRequestedSource() {
+        assertNull(LauncherWallpaperApplyResult.Applied(WallpaperSource.SYSTEM).fallbackWallpaperSourceAction())
+        assertNull(
+            LauncherWallpaperApplyResult.Failed(
+                requestedSource = WallpaperSource.SOLID_COLOR,
+                fallbackSource = null,
+            ).fallbackWallpaperSourceAction(),
+        )
+        assertEquals(
+            LauncherShellAction.SelectWallpaperSource(WallpaperSource.SOLID_COLOR),
+            LauncherWallpaperApplyResult.Failed(
+                requestedSource = WallpaperSource.SYSTEM,
+                fallbackSource = WallpaperSource.SOLID_COLOR,
+            ).fallbackWallpaperSourceAction(),
+        )
+    }
+
     private class FakeLauncherWallpaperWindow(
         private val failingCommands: Set<LauncherWallpaperWindowCommand> = emptySet(),
     ) : LauncherWallpaperWindow {

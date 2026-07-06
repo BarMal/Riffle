@@ -88,6 +88,15 @@ internal fun LauncherWallpaperApplyResult.failureMessage(): String? =
             }
     }
 
+internal fun LauncherWallpaperApplyResult.fallbackWallpaperSourceAction(): LauncherShellAction.SelectWallpaperSource? =
+    when (this) {
+        is LauncherWallpaperApplyResult.Applied -> null
+        is LauncherWallpaperApplyResult.Failed ->
+            fallbackSource
+                ?.takeIf { source -> source != requestedSource }
+                ?.let { source -> LauncherShellAction.SelectWallpaperSource(source) }
+    }
+
 private fun WallpaperSource.fallbackResultAfterApplyFailure(
     wallpaperWindow: LauncherWallpaperWindow,
 ): LauncherWallpaperApplyResult.Failed {
