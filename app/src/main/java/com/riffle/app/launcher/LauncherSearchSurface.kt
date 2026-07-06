@@ -88,14 +88,24 @@ fun SearchSurface(
             },
             onResetFilters = onAction,
         )
-        Spacer(modifier = Modifier.height(14.dp))
+        Spacer(modifier = Modifier.height(10.dp))
+        searchWebPreview(state.query)?.let { preview ->
+            SearchWebPanel(
+                preview = preview,
+                onAction = onAction,
+                modifier =
+                    Modifier
+                        .widthIn(max = SEARCH_GRID_MAX_WIDTH_DP.dp)
+                        .fillMaxWidth(),
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+        }
         SearchIconGrid(
             results =
                 searchGridResults(
                     apps = state.results,
                     shortcuts = state.shortcutResults,
                     settings = state.settingsResults,
-                    webQuery = state.query,
                 ),
             homeLayout = state.homeLayout,
             appListContext = appListContext,
@@ -241,21 +251,12 @@ private fun SearchIconGridItem(
         )
         return
     }
-    if (result is SearchGridResult.Web) {
-        SearchWebGridItem(
-            result = result,
-            labelSettings = labelSettings,
-            onAction = appListContext.onAction,
-        )
-        return
-    }
 
     val appIdentity =
         when (result) {
             is SearchGridResult.App -> result.app.identity
             is SearchGridResult.Shortcut -> result.shortcut.appIdentity
             is SearchGridResult.Setting -> error("Settings results are handled above")
-            is SearchGridResult.Web -> error("Web results are handled above")
         }
     val metrics = HomeGridLayoutMetrics()
 
@@ -292,8 +293,7 @@ internal fun searchFilterSummaryText(state: SearchSurfaceState): String {
     val resultCount =
         state.results.size +
             state.shortcutResults.size +
-            state.settingsResults.size +
-            searchWebGridResult(state.query).size
+            state.settingsResults.size
     val profileLabel =
         when {
             state.filters.profiles.isEmpty() -> "no profiles"
