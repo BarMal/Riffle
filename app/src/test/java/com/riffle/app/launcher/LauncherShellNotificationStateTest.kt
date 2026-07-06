@@ -4,6 +4,7 @@ import com.riffle.core.domain.launcher.apps.AppActivityName
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppProfile
+import com.riffle.core.domain.launcher.apps.AppProfileId
 import com.riffle.core.domain.launcher.apps.AppVisibilityRepository
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.apps.InstalledAppRepository
@@ -259,6 +260,50 @@ class LauncherShellNotificationStateTest {
         assertEquals(null, viewModel.state.value.notificationCountsByPackage[docs.identity.packageName])
     }
 
+    @Test
+    fun hiddenWorkAppDoesNotHidePersonalSamePackageNotifications() {
+        val packageName = "com.riffle.docs"
+        val personalDocs = app(label = "Docs", packageName = packageName)
+        val workDocs = app(label = "Docs", packageName = packageName, profile = AppProfile.work())
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                installedAppRepository = FakeInstalledAppRepository(apps = listOf(personalDocs, workDocs)),
+                appVisibilityRepository = FakeAppVisibilityRepository(hiddenApps = setOf(workDocs.identity)),
+                platformDependencies =
+                    LauncherShellPlatformDependencies(
+                        notificationRepository =
+                            FakeNotificationRepository(
+                                notifications =
+                                    listOf(
+                                        notification(
+                                            key = "personal-docs",
+                                            packageName = packageName,
+                                            profileId = personalDocs.identity.profile.id,
+                                        ),
+                                        notification(
+                                            key = "work-docs",
+                                            packageName = packageName,
+                                            profileId = workDocs.identity.profile.id,
+                                        ),
+                                    ),
+                            ),
+                    ),
+            )
+
+        runBlocking {
+            viewModel.refreshInstalledApps().join()
+            viewModel.refreshNotifications().join()
+        }
+
+        val group = viewModel.state.value.notificationGroupsByApp.single()
+
+        assertEquals(personalDocs.identity.packageName, group.packageName)
+        assertEquals(personalDocs.identity.profile.id, group.profileId)
+        assertEquals(1, group.count)
+        assertEquals(1, viewModel.state.value.notificationCountsByPackage[personalDocs.identity.packageName])
+    }
+
     private class FakeFirstRunRepository : FirstRunRepository {
         override fun isFirstRunComplete(): Boolean = false
 
@@ -322,6 +367,7 @@ class LauncherShellNotificationStateTest {
     private fun notification(
         key: String,
         packageName: String,
+        profileId: AppProfileId = AppProfile.personal().id,
         category: NotificationCategory = NotificationCategory.UNKNOWN,
         canDismiss: Boolean = false,
         postedAtEpochMillis: Long = 1_000L,
@@ -329,6 +375,7 @@ class LauncherShellNotificationStateTest {
         LauncherNotification(
             key = LauncherNotificationKey(key),
             packageName = AppPackageName(packageName),
+            profileId = profileId,
             category = category,
             canDismiss = canDismiss,
             postedAtEpochMillis = postedAtEpochMillis,
@@ -336,12 +383,13 @@ class LauncherShellNotificationStateTest {
 
     private fun app(
         label: String,
+        packageName: String = "com.riffle.${label.lowercase()}",
         profile: AppProfile = AppProfile.personal(),
     ): InstalledApp =
         InstalledApp(
             identity =
                 AppIdentity(
-                    packageName = AppPackageName("com.riffle.${label.lowercase()}"),
+                    packageName = AppPackageName(packageName),
                     activityName = AppActivityName(".MainActivity"),
                     profile = profile,
                 ),
