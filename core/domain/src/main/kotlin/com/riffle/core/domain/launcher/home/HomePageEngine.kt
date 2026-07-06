@@ -60,20 +60,25 @@ class HomePageEngine {
         pageId: LauncherPageId,
         duplicatedPageId: LauncherPageId,
         itemIdProvider: () -> LauncherItemId,
-    ): HomePageEditResult =
-        when {
-            layout.pages.none { page -> page.id == pageId } ->
+    ): HomePageEditResult {
+        val sourcePage = layout.pages.firstOrNull { page -> page.id == pageId }
+
+        return when {
+            sourcePage == null ->
                 HomePageEditResult.Rejected(HomePageEditRejectionReason.PAGE_NOT_FOUND)
 
             layout.pages.any { page -> page.id == duplicatedPageId } ->
                 HomePageEditResult.Rejected(HomePageEditRejectionReason.DUPLICATE_PAGE_ID)
 
+            sourcePage.items.any { item -> item is WidgetItem } ->
+                HomePageEditResult.Rejected(HomePageEditRejectionReason.CANNOT_DUPLICATE_PAGE_WITH_WIDGETS)
+
             else -> {
                 val sourceIndex = layout.pages.indexOfFirst { page -> page.id == pageId }
                 val duplicatedPage =
-                    layout.pages[sourceIndex].copy(
+                    sourcePage.copy(
                         id = duplicatedPageId,
-                        items = layout.pages[sourceIndex].items.map { item -> item.duplicate(itemIdProvider) },
+                        items = sourcePage.items.map { item -> item.duplicate(itemIdProvider) },
                     )
 
                 HomePageEditResult.Updated(
@@ -89,6 +94,7 @@ class HomePageEngine {
                 )
             }
         }
+    }
 
     fun movePage(
         layout: HomeLayout,
@@ -187,7 +193,7 @@ private fun LauncherItem.duplicate(itemIdProvider: () -> LauncherItemId): Launch
                 id = itemIdProvider(),
                 items = items.map { shortcut -> shortcut.copy(id = itemIdProvider()) },
             )
-        is WidgetItem -> copy(id = itemIdProvider())
+        is WidgetItem -> error("Widget items cannot be duplicated with page copies.")
     }
 
 private fun List<LauncherPage>.withPageInsertedAt(
@@ -251,6 +257,7 @@ enum class HomePageEditRejectionReason {
     INDEX_OUT_OF_BOUNDS,
     INVALID_GRID_DIMENSIONS,
     GRID_ITEMS_OUT_OF_BOUNDS,
+    CANNOT_DUPLICATE_PAGE_WITH_WIDGETS,
     INVALID_LABEL_SETTING,
 }
 
