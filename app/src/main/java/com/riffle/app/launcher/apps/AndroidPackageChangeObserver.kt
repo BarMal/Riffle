@@ -131,13 +131,22 @@ internal class AndroidPackageChangeObserver(
 
 internal fun profileChangeIntentFilter(): IntentFilter =
     IntentFilter().apply {
-        profileChangeActions().forEach(::addAction)
+        profileChangeFilterActions().forEach(::addAction)
     }
+
+internal fun profileChangeFilterActions(): List<String> = profileChangeActions().toList()
 
 internal fun profileChangeActions(): Set<String> =
     setOf(
-        Intent.ACTION_PROFILE_AVAILABLE,
-        Intent.ACTION_PROFILE_UNAVAILABLE,
         Intent.ACTION_MANAGED_PROFILE_ADDED,
+        Intent.ACTION_MANAGED_PROFILE_AVAILABLE,
         Intent.ACTION_MANAGED_PROFILE_REMOVED,
+        Intent.ACTION_MANAGED_PROFILE_UNAVAILABLE,
+        Intent.ACTION_MANAGED_PROFILE_UNLOCKED,
+        Intent.ACTION_PROFILE_ACCESSIBLE,
+        Intent.ACTION_PROFILE_ADDED,
+        Intent.ACTION_PROFILE_AVAILABLE,
+        Intent.ACTION_PROFILE_INACCESSIBLE,
+        Intent.ACTION_PROFILE_REMOVED,
+        Intent.ACTION_PROFILE_UNAVAILABLE,
     )
