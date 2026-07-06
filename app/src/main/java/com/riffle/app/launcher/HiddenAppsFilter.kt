@@ -3,12 +3,15 @@ package com.riffle.app.launcher
 import com.riffle.core.domain.launcher.apps.AppDrawerProfileFilter
 import com.riffle.core.domain.launcher.apps.AppProfileType
 import com.riffle.core.domain.launcher.apps.InstalledApp
+import com.riffle.core.domain.launcher.search.containsAllSearchTokens
+import com.riffle.core.domain.launcher.search.normalizedSearchTokens
+import com.riffle.core.domain.launcher.search.searchAcronym
 
 internal fun List<InstalledApp>.filteredHiddenApps(
     query: String,
     profileFilter: AppDrawerProfileFilter,
 ): List<InstalledApp> {
-    val tokens = query.normalizedHiddenAppSearchTokens()
+    val tokens = normalizedSearchTokens(query)
 
     return filter { app ->
         app.matchesHiddenAppProfileFilter(profileFilter) && app.matchesHiddenAppSearch(tokens)
@@ -59,7 +62,7 @@ private fun InstalledApp.matchesHiddenAppSearch(tokens: List<String>): Boolean {
     val searchableValues =
         listOfNotNull(
             label,
-            label.hiddenAppSearchAcronym(),
+            label.searchAcronym(),
             identity.packageName.value,
             identity.activityName.value,
             identity.profile.id.value,
@@ -67,17 +70,5 @@ private fun InstalledApp.matchesHiddenAppSearch(tokens: List<String>): Boolean {
             identity.profile.drawerProfilePrefix(),
         ).map { value -> value.lowercase() }
 
-    return tokens.all { token -> searchableValues.any { value -> value.contains(token) } }
+    return searchableValues.containsAllSearchTokens(tokens)
 }
-
-private fun String.normalizedHiddenAppSearchTokens(): List<String> =
-    trim()
-        .lowercase()
-        .split(Regex("\\s+"))
-        .filter(String::isNotBlank)
-
-private fun String.hiddenAppSearchAcronym(): String =
-    lowercase()
-        .split(Regex("[^a-z0-9]+"))
-        .filter(String::isNotBlank)
-        .joinToString(separator = "") { token -> token.first().toString() }

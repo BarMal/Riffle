@@ -108,6 +108,20 @@ class InstalledAppCatalogTest {
     }
 
     @Test
+    fun searchNormalizesWhitespaceAndCase() {
+        val apps =
+            listOf(
+                app(label = "Google Maps"),
+                app(label = "Google Messages"),
+            )
+
+        assertEquals(
+            listOf("Google Maps"),
+            catalog.searchApps(apps = apps, query = "  GOOGLE   maps ").map { app -> app.label },
+        )
+    }
+
+    @Test
     fun searchMatchesProfileTypeAndId() {
         val apps =
             listOf(

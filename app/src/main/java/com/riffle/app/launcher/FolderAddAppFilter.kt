@@ -5,6 +5,8 @@ import com.riffle.core.domain.launcher.apps.AppProfileType
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.containsHomeApp
+import com.riffle.core.domain.launcher.search.containsAllSearchTokens
+import com.riffle.core.domain.launcher.search.normalizedSearchTokens
 
 fun List<InstalledApp>.filterFolderAddCandidates(layout: HomeLayout): List<InstalledApp> =
     filterNot { app -> layout.containsHomeApp(app.identity) }
@@ -13,8 +15,7 @@ fun List<InstalledApp>.filterFolderAddCandidates(profileFilter: AppDrawerProfile
     filter { app -> app.matchesFolderAddProfile(profileFilter) }
 
 fun List<InstalledApp>.filterFolderAddCandidates(query: String): List<InstalledApp> =
-    query
-        .normalizedFolderAddSearchTokens()
+    normalizedSearchTokens(query)
         .takeIf { tokens -> tokens.isNotEmpty() }
         ?.let { tokens ->
             filter { app -> app.matchesFolderAddQuery(tokens) }
@@ -62,14 +63,8 @@ private fun InstalledApp.matchesFolderAddQuery(queryTokens: List<String>): Boole
             identity.profile.type.name,
         ).map { value -> value.lowercase() }
 
-    return queryTokens.all { token -> searchableValues.any { value -> value.contains(token) } }
+    return searchableValues.containsAllSearchTokens(queryTokens)
 }
-
-private fun String.normalizedFolderAddSearchTokens(): List<String> =
-    trim()
-        .lowercase()
-        .split(Regex("\\s+"))
-        .filter(String::isNotBlank)
 
 private fun InstalledApp.matchesFolderAddProfile(profileFilter: AppDrawerProfileFilter): Boolean =
     when (profileFilter) {

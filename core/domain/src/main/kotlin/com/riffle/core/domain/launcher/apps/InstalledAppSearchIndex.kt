@@ -1,11 +1,15 @@
 package com.riffle.core.domain.launcher.apps
 
+import com.riffle.core.domain.launcher.search.containsAllSearchTokens
+import com.riffle.core.domain.launcher.search.normalizedSearchTokens
+import com.riffle.core.domain.launcher.search.searchAcronym
+
 class InstalledAppSearchIndex(
     private val apps: List<InstalledApp>,
     private val shortcutsByApp: AppShortcutsByApp = emptyMap(),
 ) {
     fun search(query: String): List<InstalledApp> =
-        query.normalizedSearchTokens().let { queryTokens ->
+        normalizedSearchTokens(query).let { queryTokens ->
             when {
                 queryTokens.isEmpty() -> apps
                 else ->
@@ -37,9 +41,9 @@ class InstalledAppSearchIndex(
     private fun InstalledApp.labelRank(queryTokens: List<String>): Int? =
         label.lowercase().let { label ->
             when {
-                label.matchesAll(queryTokens) && label.startsWith(queryTokens.first()) -> 0
-                label.matchesAll(queryTokens) -> 1
-                label.acronym().matchesAll(queryTokens) -> 1
+                label.containsAllSearchTokens(queryTokens) && label.startsWith(queryTokens.first()) -> 0
+                label.containsAllSearchTokens(queryTokens) -> 1
+                label.searchAcronym().containsAllSearchTokens(queryTokens) -> 1
                 else -> null
             }
         }
@@ -57,7 +61,7 @@ class InstalledAppSearchIndex(
             identity.profile.type.name,
         )
             .map { token -> token.lowercase() }
-            .takeIf { tokens -> tokens.matchesAll(queryTokens) }
+            .takeIf { tokens -> tokens.containsAllSearchTokens(queryTokens) }
             ?.let { 3 }
 
     private fun AppShortcut.searchRank(queryTokens: List<String>): Int? =
@@ -69,30 +73,12 @@ class InstalledAppSearchIndex(
             .map { token -> token.lowercase() }
             .let { tokens ->
                 when {
-                    tokens.matchesAll(queryTokens) -> 2
-                    tokens.map(String::acronym).matchesAll(queryTokens) -> 2
+                    tokens.containsAllSearchTokens(queryTokens) -> 2
+                    tokens.map(String::searchAcronym).containsAllSearchTokens(queryTokens) -> 2
                     else -> null
                 }
             }
 }
-
-private fun String.normalizedSearchTokens(): List<String> =
-    trim()
-        .lowercase()
-        .split(Regex("\\s+"))
-        .filter(String::isNotBlank)
-
-private fun String.matchesAll(queryTokens: List<String>): Boolean {
-    return queryTokens.all { queryToken -> contains(queryToken) }
-}
-
-private fun String.acronym(): String =
-    split(Regex("[^a-z0-9]+"))
-        .filter(String::isNotBlank)
-        .joinToString(separator = "") { token -> token.first().toString() }
-
-private fun List<String>.matchesAll(queryTokens: List<String>): Boolean =
-    queryTokens.all { queryToken -> any { token -> token.contains(queryToken) } }
 
 private data class InstalledAppSearchHit(
     val app: InstalledApp,
