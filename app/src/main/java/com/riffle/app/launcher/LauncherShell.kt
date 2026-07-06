@@ -32,6 +32,7 @@ import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.home.WallpaperSource
+import com.riffle.core.domain.launcher.search.LauncherSearchResult
 
 @Composable
 fun LauncherShell(
@@ -182,6 +183,7 @@ private fun LauncherDestination(
                         installedApps = state.installedApps,
                         results = state.searchResults,
                         shortcutResults = state.searchShortcutResults,
+                        settingsResults = state.searchSettingsResults,
                         homeLayout = state.homeLayout,
                     ),
                 appListContext =
@@ -261,6 +263,10 @@ private fun SearchPreview() {
                 destination = ShellDestination.SEARCH,
                 searchQuery = "ca",
                 searchResults = samplePreviewApps().take(2),
+                searchSettingsResults =
+                    settingsLauncherSearchEntries()
+                        .filter { entry -> entry.title == "Appearance" }
+                        .map { entry -> LauncherSearchResult.Setting(entry) },
             ),
         onAction = {},
     )

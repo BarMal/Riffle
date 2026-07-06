@@ -13,6 +13,7 @@ import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.apps.AppShortcutId
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.apps.InstalledAppCatalog
+import com.riffle.core.domain.launcher.search.LauncherSearchResult
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -76,6 +77,37 @@ class LauncherAppListActionReducerTest {
 
         assertEquals("cam", updated?.searchQuery)
         assertEquals(listOf(personalCamera.identity), updated?.searchResults?.map { app -> app.identity })
+    }
+
+    @Test
+    fun searchQueryIncludesMatchingSettingsResults() {
+        val appDrawer = app(label = "App drawer")
+        val state =
+            LauncherShellState(
+                installedApps = listOf(appDrawer),
+            )
+
+        val updated = reducer.reduce(state, LauncherShellAction.SearchQueryChanged("drawer"))
+
+        assertEquals("drawer", updated?.searchQuery)
+        assertEquals(listOf("App drawer"), updated?.searchResults?.map { app -> app.label })
+        assertEquals(listOf("App drawer"), updated?.searchSettingsResults?.map { result -> result.title })
+    }
+
+    @Test
+    fun blankSearchQueryClearsSettingsResults() {
+        val state =
+            LauncherShellState(
+                searchQuery = "app",
+                searchSettingsResults =
+                    settingsLauncherSearchEntries()
+                        .map { entry -> LauncherSearchResult.Setting(entry) },
+            )
+
+        val updated = reducer.reduce(state, LauncherShellAction.SearchQueryChanged(""))
+
+        assertEquals("", updated?.searchQuery)
+        assertEquals(emptyList<String>(), updated?.searchSettingsResults?.map { result -> result.title })
     }
 
     @Test

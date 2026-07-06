@@ -13,6 +13,7 @@ import com.riffle.core.domain.launcher.home.HomeLayoutSet
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.notifications.NotificationCategory
+import com.riffle.core.domain.launcher.search.LauncherSearchResult
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.widgets.InstalledWidgetProvider
 
@@ -41,6 +42,7 @@ data class LauncherShellState(
     val searchFilters: AppSearchFilters = AppSearchFilters(),
     val searchResults: List<InstalledApp> = emptyList(),
     val searchShortcutResults: List<AppShortcut> = emptyList(),
+    val searchSettingsResults: List<LauncherSearchResult.Setting> = emptyList(),
     val installedWidgetProviders: List<InstalledWidgetProvider> = emptyList(),
     val isWidgetPickerOpen: Boolean = false,
 ) {
