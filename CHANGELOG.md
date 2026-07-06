@@ -1,5 +1,27 @@
 # Changelog
 
+## Alpha 176
+
+Release notes for the next alpha after Alpha 175.
+
+### Changed
+
+- Saved Home Screen Library layouts now remain available at cold start, so the launcher does not fall back to Standard until the user toggles layout mode away and back again.
+- Settings > Dock now projects the selected folded/unfolded device-class layout through a testable state helper, keeping dock edits independent across device tabs.
+- Missing dock fields in stored layout JSON now inherit the layout entry's device-class defaults instead of always borrowing phone dock sizing.
+- Visible home docks now preserve configured capacity, icon size, and spacing; overflowing dock content scrolls inside the capped dock instead of compacting away the selected settings or hanging off-screen.
+
+### Verification
+
+- Full GitHub CI `Verify` passed for PRs #527 and #528.
+- Local verification included targeted tests for launcher view-mode startup restoration, device-specific dock settings projection, dock JSON defaults, dock render metrics, and full `./gradlew verify`.
+
+### Known Limitations
+
+- Manual foldable device/emulator validation is still needed for exact folded/unfolded dock feel.
+- Dock paging and explicit overflow controls remain future work; this alpha uses horizontal scrolling for overflow.
+- Reduced-motion pager polish remains a known follow-up outside this urgent regression release.
+
 ## Alpha 175
 
 Release notes for the next alpha after Alpha 174.
