@@ -159,6 +159,36 @@ class LauncherShellSearchViewModelTest {
     }
 
     @Test
+    fun refreshCoercesSearchProfileFiltersWhenWorkAppsDisappear() {
+        val repository =
+            FakeInstalledAppRepository(
+                apps =
+                    listOf(
+                        app(label = "Camera", profile = AppProfile.personal()),
+                        app(label = "Docs", profile = AppProfile.work()),
+                    ),
+            )
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                installedAppRepository = repository,
+            )
+        runBlocking { viewModel.refreshInstalledApps().join() }
+        viewModel.onAppActionSelected(
+            LauncherShellAction.ToggleSearchProfileFilter(AppProfileType.PERSONAL),
+        )
+        viewModel.onAppActionSelected(
+            LauncherShellAction.ToggleSearchProfileFilter(AppProfileType.WORK),
+        )
+
+        repository.apps = listOf(app(label = "Camera", profile = AppProfile.personal()))
+        runBlocking { viewModel.refreshInstalledApps().join() }
+
+        assertEquals(setOf(AppProfileType.PERSONAL), viewModel.state.value.searchFilters.profiles)
+        assertEquals(listOf("Camera"), viewModel.state.value.searchResults.map { app -> app.label })
+    }
+
+    @Test
     fun clearsSearchQueryWhenLeavingSearch() {
         val viewModel =
             LauncherShellViewModel(
