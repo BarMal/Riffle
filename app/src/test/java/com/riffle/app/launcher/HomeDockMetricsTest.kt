@@ -75,7 +75,7 @@ class HomeDockMetricsTest {
     }
 
     @Test
-    fun dockSlotRenderMetricsReducesSpacingForFiveSlotsOnNarrowWidth() {
+    fun dockSlotRenderMetricsPreservesConfiguredSpacingForFiveSlotsOnNarrowWidth() {
         val metrics =
             dockSlotRenderMetrics(
                 slotCount = 5,
@@ -87,16 +87,16 @@ class HomeDockMetricsTest {
         assertEquals(
             DockSlotRenderMetrics(
                 iconSizeDp = 48,
-                itemSpacingDp = 3,
+                itemSpacingDp = 10,
                 overflowMode = DockOverflowMode.FitByCompaction,
             ),
             metrics,
         )
-        assertEquals(252, (5 * metrics.iconSizeDp) + (4 * metrics.itemSpacingDp))
+        assertEquals(280, dockSlotContentWidthDp(slotCount = 5, metrics = metrics))
     }
 
     @Test
-    fun dockSlotRenderMetricsReducesIconSizeAfterSpacingForFiveSlotsOnFoldedWidth() {
+    fun dockSlotRenderMetricsPreservesConfiguredIconSizeForFiveSlotsOnFoldedWidth() {
         val metrics =
             dockSlotRenderMetrics(
                 slotCount = 5,
@@ -107,17 +107,17 @@ class HomeDockMetricsTest {
 
         assertEquals(
             DockSlotRenderMetrics(
-                iconSizeDp = 50,
-                itemSpacingDp = 0,
+                iconSizeDp = 56,
+                itemSpacingDp = 24,
                 overflowMode = DockOverflowMode.FitByCompaction,
             ),
             metrics,
         )
-        assertEquals(250, (5 * metrics.iconSizeDp) + (4 * metrics.itemSpacingDp))
+        assertEquals(376, dockSlotContentWidthDp(slotCount = 5, metrics = metrics))
     }
 
     @Test
-    fun dockSlotRenderMetricsReportsOverflowNavigationWhenHardMinimumCannotFit() {
+    fun dockSlotRenderMetricsPreservesConfiguredMetricsWhenHardMinimumCannotFit() {
         val metrics =
             dockSlotRenderMetrics(
                 slotCount = 5,
@@ -128,13 +128,13 @@ class HomeDockMetricsTest {
 
         assertEquals(
             DockSlotRenderMetrics(
-                iconSizeDp = 32,
-                itemSpacingDp = 0,
+                iconSizeDp = 48,
+                itemSpacingDp = 10,
                 overflowMode = DockOverflowMode.RequiresOverflowNavigation,
             ),
             metrics,
         )
-        assertEquals(160, (5 * metrics.iconSizeDp) + (4 * metrics.itemSpacingDp))
+        assertEquals(280, dockSlotContentWidthDp(slotCount = 5, metrics = metrics))
     }
 
     @Test
@@ -192,9 +192,9 @@ class HomeDockMetricsTest {
     }
 
     @Test
-    fun normalDockRendersOccupiedSlotsSoIconsFillTheDock() {
+    fun normalDockRendersConfiguredCapacitySoDockSettingsAffectWidth() {
         assertEquals(
-            4,
+            5,
             dockRenderedSlotCount(
                 capacity = 5,
                 itemCount = 4,
@@ -252,9 +252,9 @@ class HomeDockMetricsTest {
     }
 
     @Test
-    fun fixedDockOnlyRendersOccupiedSlotsWhenNotEditing() {
+    fun fixedDockRendersConfiguredCapacityWhenNotEditing() {
         assertEquals(
-            2,
+            5,
             dockRenderedSlotCount(
                 capacity = 5,
                 itemCount = 2,

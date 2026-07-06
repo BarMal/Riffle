@@ -29,6 +29,7 @@ import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.home.WallpaperSettings
 import com.riffle.core.domain.launcher.home.WallpaperSource
 import com.riffle.core.domain.launcher.home.WidgetItem
+import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -577,6 +578,34 @@ class HomeLayoutJsonCodecTest {
             )
 
         assertEquals(HomeLayoutDefaults.standard().dock.iconSizeDp, decodedLayout.dock.iconSizeDp)
+    }
+
+    @Test
+    fun defaultsMissingDockFieldsFromTargetDeviceClassDefaults() {
+        val foldableDefaults = HomeLayoutDefaults.standard(HomeLayoutDeviceClass.FOLDABLE)
+        val decodedLayout =
+            JSONObject(
+                """
+                {
+                  "selectedPageId": "home",
+                  "pages": [
+                    {
+                      "id": "home",
+                      "columns": 6,
+                      "rows": 6,
+                      "items": []
+                    }
+                  ],
+                  "dock": {
+                    "capacity": 6,
+                    "items": []
+                  }
+                }
+                """.trimIndent(),
+            ).toHomeLayout(defaults = foldableDefaults)
+
+        assertEquals(foldableDefaults.dock.iconSizeDp, decodedLayout.dock.iconSizeDp)
+        assertEquals(foldableDefaults.dock.itemSpacingDp, decodedLayout.dock.itemSpacingDp)
     }
 
     @Test
