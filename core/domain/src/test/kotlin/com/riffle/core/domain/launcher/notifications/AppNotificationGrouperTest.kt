@@ -28,6 +28,32 @@ class AppNotificationGrouperTest {
     }
 
     @Test
+    fun keepsSamePackageNotificationsSeparateAcrossProfiles() {
+        val groups =
+            grouper.groupByApp(
+                listOf(
+                    notification(
+                        key = "private-1",
+                        packageName = "com.riffle.mail",
+                        profileId = AppProfile.private().id,
+                    ),
+                    notification(key = "personal-1", packageName = "com.riffle.mail"),
+                    notification(
+                        key = "work-1",
+                        packageName = "com.riffle.mail",
+                        profileId = AppProfile.work().id,
+                    ),
+                ),
+                nowEpochMillis = nowEpochMillis,
+            )
+
+        assertEquals(3, groups.size)
+        assertEquals(1, groups.group("com.riffle.mail", AppProfile.personal().id).count)
+        assertEquals(1, groups.group("com.riffle.mail", AppProfile.private().id).count)
+        assertEquals(1, groups.group("com.riffle.mail", AppProfile.work().id).count)
+    }
+
+    @Test
     fun ordersGroupsByMostRecentNotification() {
         val groups =
             grouper.groupByApp(
@@ -99,6 +125,45 @@ class AppNotificationGrouperTest {
             listOf(
                 AppNotificationGroupKey(AppPackageName("com.riffle.mail"), AppProfile.personal().id),
                 AppNotificationGroupKey(AppPackageName("com.riffle.calendar"), AppProfile.personal().id),
+                AppNotificationGroupKey(AppPackageName("com.riffle.mail"), AppProfile.work().id),
+            ),
+            groups.map { group -> AppNotificationGroupKey(group.packageName, group.profileId) },
+        )
+    }
+
+    @Test
+    fun ordersSamePackageGroupsWithMatchingTimestampsByProfileId() {
+        val groups =
+            grouper.groupByApp(
+                listOf(
+                    notification(
+                        key = "work",
+                        packageName = "com.riffle.mail",
+                        profileId = AppProfile.work().id,
+                        priority = NotificationPriority.DEFAULT,
+                        postedAtEpochMillis = 1_000L,
+                    ),
+                    notification(
+                        key = "private",
+                        packageName = "com.riffle.mail",
+                        profileId = AppProfile.private().id,
+                        priority = NotificationPriority.DEFAULT,
+                        postedAtEpochMillis = 1_000L,
+                    ),
+                    notification(
+                        key = "personal",
+                        packageName = "com.riffle.mail",
+                        priority = NotificationPriority.DEFAULT,
+                        postedAtEpochMillis = 1_000L,
+                    ),
+                ),
+                nowEpochMillis = nowEpochMillis,
+            )
+
+        assertEquals(
+            listOf(
+                AppNotificationGroupKey(AppPackageName("com.riffle.mail"), AppProfile.personal().id),
+                AppNotificationGroupKey(AppPackageName("com.riffle.mail"), AppProfile.private().id),
                 AppNotificationGroupKey(AppPackageName("com.riffle.mail"), AppProfile.work().id),
             ),
             groups.map { group -> AppNotificationGroupKey(group.packageName, group.profileId) },
@@ -186,6 +251,50 @@ class AppNotificationGrouperTest {
                 LauncherNotificationKey("same-time-b"),
             ),
             group.notifications.map { notification -> notification.key },
+        )
+    }
+
+    @Test
+    fun ordersDuplicateKeyNotificationsByCategoryThenDismissibility() {
+        val group =
+            grouper
+                .groupByApp(
+                    listOf(
+                        notification(
+                            key = "same-key",
+                            packageName = "com.riffle.mail",
+                            category = NotificationCategory.EMAIL,
+                            priority = NotificationPriority.DEFAULT,
+                            canDismiss = false,
+                            postedAtEpochMillis = 1_000L,
+                        ),
+                        notification(
+                            key = "same-key",
+                            packageName = "com.riffle.mail",
+                            category = NotificationCategory.CALL,
+                            priority = NotificationPriority.DEFAULT,
+                            canDismiss = true,
+                            postedAtEpochMillis = 1_000L,
+                        ),
+                        notification(
+                            key = "same-key",
+                            packageName = "com.riffle.mail",
+                            category = NotificationCategory.CALL,
+                            priority = NotificationPriority.DEFAULT,
+                            canDismiss = false,
+                            postedAtEpochMillis = 1_000L,
+                        ),
+                    ),
+                    nowEpochMillis = nowEpochMillis,
+                ).single()
+
+        assertEquals(
+            listOf(
+                NotificationCategory.CALL to false,
+                NotificationCategory.CALL to true,
+                NotificationCategory.EMAIL to false,
+            ),
+            group.notifications.map { notification -> notification.category to notification.canDismiss },
         )
     }
 
