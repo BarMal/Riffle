@@ -116,14 +116,7 @@ class LauncherBackupDocumentTest {
     @Test
     fun decodesBackupWithoutOptionalMetadata() {
         val value =
-            JSONObject(
-                encodeLauncherBackupDocument(
-                    LauncherBackupDocument(
-                        homeLayoutSet = HomeLayoutSet.fromLayout(HomeLayoutDefaults.standard()),
-                        launcherSettings = LauncherSettings(),
-                    ),
-                ),
-            )
+            backupDocumentJson()
                 .apply { remove("exportedAtEpochMillis") }
                 .apply { remove("hiddenApps") }
                 .toString()
@@ -132,6 +125,66 @@ class LauncherBackupDocumentTest {
 
         assertEquals(null, decodedDocument.exportedAtEpochMillis)
         assertEquals(emptySet<AppIdentity>(), decodedDocument.hiddenAppIdentities)
+    }
+
+    @Test
+    fun decodesBackupWithMissingExportedAtEpochMillis() {
+        val value =
+            backupDocumentJson()
+                .apply { remove("exportedAtEpochMillis") }
+                .toString()
+
+        val decodedDocument = decodeLauncherBackupDocument(value)
+
+        assertEquals(null, decodedDocument.exportedAtEpochMillis)
+    }
+
+    @Test
+    fun decodesBackupWithNullExportedAtEpochMillis() {
+        val value =
+            backupDocumentJson()
+                .put("exportedAtEpochMillis", JSONObject.NULL)
+                .toString()
+
+        val decodedDocument = decodeLauncherBackupDocument(value)
+
+        assertEquals(null, decodedDocument.exportedAtEpochMillis)
+    }
+
+    @Test
+    fun decodesBackupWithNumericExportedAtEpochMillis() {
+        val value =
+            backupDocumentJson()
+                .put("exportedAtEpochMillis", 987_654L)
+                .toString()
+
+        val decodedDocument = decodeLauncherBackupDocument(value)
+
+        assertEquals(987_654L, decodedDocument.exportedAtEpochMillis)
+    }
+
+    @Test
+    fun rejectsBackupWithStringExportedAtEpochMillis() {
+        val value =
+            backupDocumentJson()
+                .put("exportedAtEpochMillis", "987654")
+                .toString()
+
+        assertThrows(IllegalArgumentException::class.java) {
+            decodeLauncherBackupDocument(value)
+        }
+    }
+
+    @Test
+    fun rejectsBackupWithObjectExportedAtEpochMillis() {
+        val value =
+            backupDocumentJson()
+                .put("exportedAtEpochMillis", JSONObject().put("value", 987_654L))
+                .toString()
+
+        assertThrows(IllegalArgumentException::class.java) {
+            decodeLauncherBackupDocument(value)
+        }
     }
 
     @Test
@@ -213,6 +266,16 @@ class LauncherBackupDocumentTest {
                 packageName = AppPackageName("com.riffle.camera"),
                 activityName = AppActivityName(".MainActivity"),
                 profile = AppProfile.personal(),
+            )
+
+        fun backupDocumentJson(): JSONObject =
+            JSONObject(
+                encodeLauncherBackupDocument(
+                    LauncherBackupDocument(
+                        homeLayoutSet = HomeLayoutSet.fromLayout(HomeLayoutDefaults.standard()),
+                        launcherSettings = LauncherSettings(),
+                    ),
+                ),
             )
     }
 }

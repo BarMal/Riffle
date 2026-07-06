@@ -55,9 +55,9 @@ fun decodeLauncherBackupDocument(value: String): LauncherBackupDocument =
 
 private fun JSONObject.optLongOrNull(name: String): Long? =
     when {
-        isNull(name) -> null
-        has(name) -> optLong(name)
-        else -> null
+        !has(name) || isNull(name) -> null
+        get(name) is Number -> getLong(name)
+        else -> throw IllegalArgumentException("Launcher backup $name must be numeric")
     }
 
 private fun JSONObject.optHiddenAppIdentities(): Set<AppIdentity> =
