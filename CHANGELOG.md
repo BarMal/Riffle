@@ -1,5 +1,23 @@
 # Changelog
 
+## Alpha 182
+
+Release notes for the next alpha after Alpha 181.
+
+### Changed
+
+- Launcher search settings results now open Settings directly on the matched top-level settings page instead of always opening the Settings index.
+- Generic Settings entry points still open the main Settings page, and unknown settings search IDs fall back to the main Settings page.
+
+### Verification
+
+- Full GitHub CI `Verify` passed for PR #549.
+- Local verification included targeted search result, settings page mapping, action routing, and settings page navigation tests plus full `./gradlew verify`.
+
+### Known Limitations
+
+- Settings search deep links target top-level settings pages only; row-level highlighting or automatic scrolling within a settings page remains future work under #20.
+
 ## Alpha 181
 
 Release notes for the next alpha after Alpha 180.
