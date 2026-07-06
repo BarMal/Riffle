@@ -1,5 +1,28 @@
 # Changelog
 
+## Alpha 174
+
+Release notes for the next alpha after Alpha 173.
+
+### Changed
+
+- Contextual behaviour gained a domain signal planner for personal/work profile presence, notification activity, and day-start inputs.
+- Generated-page content plans can now materialize app content into deterministic home shortcut items while safely skipping unsupported notification-group content.
+- Dock render metrics now expose the domain overflow mode classification while preserving the existing compact/scroll visual behaviour.
+- Widget add completion now fits oversized preferred widget spans to the selected grid before adding the widget to home.
+- App, hidden-app, folder-add, widget-picker, and shortcut search paths now share a common search-token normalizer.
+
+### Verification
+
+- Full GitHub CI `Verify` passed for PRs #515, #516, #517, #518, and #519.
+- Local worker verification included targeted tests for contextual signals, generated-page item materialization, dock render metrics, widget span fitting, and search token normalization.
+
+### Known Limitations
+
+- Contextual signal planning is domain-only and is not yet wired to platform observers or model/action execution.
+- Generated notification-group content is still intentionally skipped until card-backed generated content is implemented.
+- Dock overflow navigation remains reporting/scaffolding only; paging or explicit overflow controls are future work.
+
 ## Alpha 173
 
 Release notes for the next alpha after Alpha 172.
