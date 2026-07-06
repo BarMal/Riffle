@@ -17,7 +17,6 @@ import com.riffle.core.domain.launcher.apps.InstalledAppCatalog
 import com.riffle.core.domain.launcher.apps.InstalledAppRepository
 import com.riffle.core.domain.launcher.apps.withHiddenApps
 import com.riffle.core.domain.launcher.home.DockEngine
-import com.riffle.core.domain.launcher.home.FolderEditResult
 import com.riffle.core.domain.launcher.home.FolderEngine
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
@@ -102,6 +101,11 @@ class LauncherShellViewModel(
             homeLayoutRepository = homeLayoutRepository,
         )
     private val folderEngine = FolderEngine()
+    private val folderEditReducer =
+        LauncherFolderEditReducer(
+            folderEngine = folderEngine,
+            homeLayoutRepository = homeLayoutRepository,
+        )
     private val widgetEngine = WidgetEngine()
 
     private val mutableState =
@@ -204,18 +208,7 @@ class LauncherShellViewModel(
                 is LauncherShellAction.MoveAppInFolder,
                 is LauncherShellAction.MoveAppOutOfFolder,
                 ->
-                    when (
-                        val result =
-                            folderEngine.applyEdit(
-                                action = action,
-                                layout = mutableState.value.folderEditLayout(action),
-                            )
-                    ) {
-                        is FolderEditResult.Updated ->
-                            mutableState.value.withHomeLayout(result.layout, homeLayoutRepository)
-
-                        is FolderEditResult.Rejected -> mutableState.value
-                    }
+                    folderEditReducer.reduce(mutableState.value, action)
 
                 is LauncherShellAction.AddHostedWidgetToHome ->
                     when (
@@ -428,12 +421,4 @@ internal fun HomeShortcutEngine.applyEdit(
             )
 
         else -> HomeShortcutResult.Rejected(PlacementRejectionReason.ITEM_NOT_FOUND)
-    }
-
-private fun LauncherShellState.folderEditLayout(action: LauncherShellAction): HomeLayout =
-    when (action) {
-        is LauncherShellAction.CreateEmptyHomeFolder,
-        is LauncherShellAction.CreateHomeFolder,
-        -> homeLayout.withHomeScreenLibraryApps(installedApps)
-        else -> homeLayout
     }
