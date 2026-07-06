@@ -62,18 +62,28 @@ internal fun rememberImmediateHomePagerState(
             )
 
         if (shouldApplyExternalPageSelection) {
-            isSettling.value = true
-            try {
-                settlePagePosition.snapTo(dragPagePosition.floatValue)
-                settlePagePosition.animateTo(
-                    targetValue = selectedPageIndex.toFloat(),
-                    animationSpec = homePageSettleAnimation(homePageSettleMotionPolicy(reducedMotion)),
-                ) {
-                    dragPagePosition.floatValue = value
+            when (homePageExternalSelectionSettlePolicy(reducedMotion)) {
+                HomePageExternalSelectionSettlePolicy.ImmediateSnap -> {
+                    val targetPagePosition = selectedPageIndex.toFloat()
+                    dragPagePosition.floatValue = targetPagePosition
+                    settlePagePosition.snapTo(targetPagePosition)
                 }
-                dragPagePosition.floatValue = selectedPageIndex.toFloat()
-            } finally {
-                isSettling.value = false
+
+                HomePageExternalSelectionSettlePolicy.AnimatedSettle -> {
+                    isSettling.value = true
+                    try {
+                        settlePagePosition.snapTo(dragPagePosition.floatValue)
+                        settlePagePosition.animateTo(
+                            targetValue = selectedPageIndex.toFloat(),
+                            animationSpec = homePageSettleAnimation(homePageSettleMotionPolicy(reducedMotion)),
+                        ) {
+                            dragPagePosition.floatValue = value
+                        }
+                        dragPagePosition.floatValue = selectedPageIndex.toFloat()
+                    } finally {
+                        isSettling.value = false
+                    }
+                }
             }
         }
     }
@@ -343,7 +353,14 @@ internal fun shouldApplyExternalHomePageSelection(
         !isSettling &&
         !hasPendingGestureTarget &&
         pageCount > 0 &&
-        currentPagePosition.roundToInt() != selectedPageIndex
+        currentPagePosition != selectedPageIndex.toFloat()
+
+internal fun homePageExternalSelectionSettlePolicy(reducedMotion: Boolean): HomePageExternalSelectionSettlePolicy =
+    if (reducedMotion) {
+        HomePageExternalSelectionSettlePolicy.ImmediateSnap
+    } else {
+        HomePageExternalSelectionSettlePolicy.AnimatedSettle
+    }
 
 internal fun homePageSettleMotionPolicy(reducedMotion: Boolean): HomePageSettleMotionPolicy =
     if (reducedMotion) {
@@ -374,6 +391,11 @@ private val HomeLayout.lastPageIndex: Int
 internal enum class HomePageSettleMotionPolicy {
     StandardSpring,
     ReducedShortTween,
+}
+
+internal enum class HomePageExternalSelectionSettlePolicy {
+    AnimatedSettle,
+    ImmediateSnap,
 }
 
 internal const val REDUCED_MOTION_PAGE_SETTLE_DURATION_MILLIS = 80
