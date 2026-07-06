@@ -85,17 +85,6 @@ private fun LauncherPage.replaceFolder(folder: FolderItem): LauncherPage =
             },
     )
 
-private fun HomeLayout.withUpdatedSelectedPage(page: LauncherPage): HomeLayout =
-    copy(
-        pages =
-            pages.map { existingPage ->
-                when (existingPage.id) {
-                    page.id -> page
-                    else -> existingPage
-                }
-            },
-    )
-
 private fun <T> List<T>.moved(
     fromIndex: Int,
     toIndex: Int,

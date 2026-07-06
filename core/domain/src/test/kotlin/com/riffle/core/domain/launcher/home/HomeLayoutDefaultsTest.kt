@@ -1,5 +1,8 @@
 package com.riffle.core.domain.launcher.home
 
+import com.riffle.core.domain.launcher.apps.AppActivityName
+import com.riffle.core.domain.launcher.apps.AppIdentity
+import com.riffle.core.domain.launcher.apps.AppPackageName
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertSame
@@ -23,6 +26,40 @@ class HomeLayoutDefaultsTest {
         assertEquals(LauncherPageType.Home, layout.selectedPage.type)
         assertEquals(HomeEditMode.Browsing, layout.editMode)
         assertTrue(layout.selectedPage.items.isEmpty())
+    }
+
+    @Test
+    fun updatesSelectedPageWithoutChangingSelectionOrOtherPages() {
+        val defaultLayout = HomeLayoutDefaults.standard()
+        val homePage = defaultLayout.selectedPage
+        val widgetPage = homePage.copy(id = LauncherPageId("widgets"))
+        val layout =
+            defaultLayout.copy(
+                pages = listOf(homePage, widgetPage),
+                selectedPageId = widgetPage.id,
+            )
+        val updatedWidgetPage =
+            widgetPage.copy(
+                items =
+                    listOf(
+                        AppShortcutItem(
+                            id = LauncherItemId("camera"),
+                            appIdentity =
+                                AppIdentity(
+                                    packageName = AppPackageName("camera"),
+                                    activityName = AppActivityName("MainActivity"),
+                                ),
+                            label = "Camera",
+                        ),
+                    ),
+            )
+
+        val updated = layout.withUpdatedSelectedPage(updatedWidgetPage)
+
+        assertEquals(widgetPage.id, updated.selectedPageId)
+        assertSame(homePage, updated.pages.first())
+        assertEquals(updatedWidgetPage, updated.pages.last())
+        assertEquals(updatedWidgetPage, updated.selectedPage)
     }
 
     @Test

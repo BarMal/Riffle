@@ -149,17 +149,6 @@ class HomeShortcutEngine(
             .filterIsInstance<AppShortcutItem>()
             .count { item -> item.appIdentity == shortcut.appIdentity && item.appShortcutId == shortcut.id } + 1
 
-    private fun HomeLayout.withUpdatedSelectedPage(page: LauncherPage): HomeLayout =
-        copy(
-            pages =
-                pages.map { existingPage ->
-                    when (existingPage.id) {
-                        page.id -> page
-                        else -> existingPage
-                    }
-                },
-        )
-
     private val AppIdentity.shortcutKey: String
         get() = "${profile.id.value}:${packageName.value}/${activityName.value}"
 }
