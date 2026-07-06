@@ -15,6 +15,85 @@ class ContextualBehaviorTest {
     }
 
     @Test
+    fun plannerDerivesPersonalProfileSignalWhenPersonalAppsArePresent() {
+        val signals =
+            ContextualSignalPlanner.plan(
+                ContextualSignalPlanInput(personalInstalledAppCount = 2),
+            )
+
+        assertEquals(setOf(ContextualSignal.PERSONAL_PROFILE_ACTIVE), signals)
+    }
+
+    @Test
+    fun plannerDerivesWorkProfileSignalWhenWorkAppsArePresent() {
+        val signals =
+            ContextualSignalPlanner.plan(
+                ContextualSignalPlanInput(workInstalledAppCount = 1),
+            )
+
+        assertEquals(setOf(ContextualSignal.WORK_PROFILE_ACTIVE), signals)
+    }
+
+    @Test
+    fun plannerDerivesNotificationActivityFromGroupsOrNotificationCount() {
+        assertEquals(
+            setOf(ContextualSignal.NOTIFICATION_ACTIVITY),
+            ContextualSignalPlanner.plan(
+                ContextualSignalPlanInput(notificationGroupCount = 1),
+            ),
+        )
+        assertEquals(
+            setOf(ContextualSignal.NOTIFICATION_ACTIVITY),
+            ContextualSignalPlanner.plan(
+                ContextualSignalPlanInput(notificationCount = 4),
+            ),
+        )
+    }
+
+    @Test
+    fun plannerDerivesDayStartSignalWhenFlagged() {
+        val signals =
+            ContextualSignalPlanner.plan(
+                ContextualSignalPlanInput(isDayStart = true),
+            )
+
+        assertEquals(setOf(ContextualSignal.DAY_START), signals)
+    }
+
+    @Test
+    fun plannerReturnsNoSignalsForEmptyInput() {
+        val signals = ContextualSignalPlanner.plan()
+
+        assertEquals(emptySet(), signals)
+    }
+
+    @Test
+    fun plannerReturnsCombinedSignalsInStableSignalOrder() {
+        val signals =
+            ContextualSignalPlanner
+                .plan(
+                    ContextualSignalPlanInput(
+                        personalInstalledAppCount = 7,
+                        workInstalledAppCount = 3,
+                        notificationGroupCount = 2,
+                        notificationCount = 9,
+                        isDayStart = true,
+                    ),
+                )
+                .toList()
+
+        assertEquals(
+            listOf(
+                ContextualSignal.DAY_START,
+                ContextualSignal.WORK_PROFILE_ACTIVE,
+                ContextualSignal.PERSONAL_PROFILE_ACTIVE,
+                ContextualSignal.NOTIFICATION_ACTIVITY,
+            ),
+            signals,
+        )
+    }
+
+    @Test
     fun selectorReturnsNoContextualPagesOrCardsWhenDisabled() {
         val selection =
             ContextualBehaviorSelector.select(
