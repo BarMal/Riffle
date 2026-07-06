@@ -1,5 +1,26 @@
 # Changelog
 
+## Alpha 180
+
+Release notes for the next alpha after Alpha 179.
+
+### Changed
+
+- Settings > Appearance now launches the Android wallpaper picker through a standard chooser titled "Change wallpaper" while still checking the base wallpaper intent for availability.
+- Launcher search now includes a web result for non-blank queries, labeled as a Google search, and delegates to Android web search with a Google URL fallback.
+- Dock folder items are now actionable: tapping a dock folder opens the existing folder surface instead of leaving the placeholder inert.
+
+### Verification
+
+- Full GitHub CI `Verify` passed for PRs #543, #544, and #545.
+- Local verification included targeted tests for wallpaper picker chooser behavior, web search intent fallback and action routing, launcher search grid results, dock folder item state, dock folder resolution, and full `./gradlew verify`.
+
+### Known Limitations
+
+- Web search has no provider settings UI yet; the fallback URL is Google-specific, and on-device validation of installed search/browser handling is still useful.
+- Riffle still delegates wallpaper selection to Android and does not receive or persist picker results.
+- Dock widget items remain placeholders; dock widget hosting and extra dock folder edit/context affordances remain open under #6.
+
 ## Alpha 179
 
 Release notes for the next alpha after Alpha 178.
