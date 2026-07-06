@@ -3,6 +3,7 @@ package com.riffle.app.launcher
 import com.riffle.core.domain.launcher.apps.AppActivityName
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
+import com.riffle.core.domain.launcher.contextual.ContextualSettings
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.home.WallpaperSettings
@@ -249,6 +250,25 @@ class LauncherSettingsJsonCodecTest {
         val decodedSettings = decodeLauncherSettings("{}")
 
         assertEquals(false, decodedSettings.motion.reducedMotion)
+    }
+
+    @Test
+    fun roundTripsContextualSettings() {
+        val settings =
+            LauncherSettings(
+                contextual = ContextualSettings(enabled = true),
+            )
+
+        val decodedSettings = decodeLauncherSettings(encodeLauncherSettings(settings))
+
+        assertEquals(true, decodedSettings.contextual.enabled)
+    }
+
+    @Test
+    fun defaultsMissingContextualSettings() {
+        val decodedSettings = decodeLauncherSettings("{}")
+
+        assertEquals(false, decodedSettings.contextual.enabled)
     }
 
     @Test

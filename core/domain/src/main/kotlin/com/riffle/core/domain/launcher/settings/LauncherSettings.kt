@@ -1,10 +1,12 @@
 package com.riffle.core.domain.launcher.settings
 
+import com.riffle.core.domain.launcher.contextual.ContextualSettings
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.WallpaperSettings
 
 data class LauncherSettings(
     val appearance: AppearanceSettings = AppearanceSettings(),
+    val contextual: ContextualSettings = ContextualSettings(),
     val gestures: GestureSettings = GestureSettings(),
     val haptics: HapticSettings = HapticSettings(),
     val motion: MotionSettings = MotionSettings(),
