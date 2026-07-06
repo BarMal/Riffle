@@ -124,6 +124,31 @@ class DockEngineTest {
     }
 
     @Test
+    fun movesNonAppDockItem() {
+        val phone = appShortcut(id = "phone")
+        val widget =
+            WidgetItem(
+                id = LauncherItemId("widget:weather"),
+                appWidgetId = HostedWidgetId(42),
+                label = "Weather",
+            )
+        val layout =
+            HomeLayoutDefaults.standard().copy(
+                dock = DockModel(capacity = 5, items = listOf(phone, widget)),
+            )
+
+        val result =
+            engine.moveDockItem(
+                layout = layout,
+                itemId = widget.id,
+                direction = DockItemMoveDirection.LEFT,
+            )
+
+        val updated = assertIs<DockEditResult.Updated>(result)
+        assertEquals(listOf(widget.id, phone.id), updated.layout.dock.items.map { item -> item.id })
+    }
+
+    @Test
     fun rejectsDockItemMoveOutsideBounds() {
         val phone = appShortcut(id = "phone")
         val layout = layoutWithDockItems(phone)
