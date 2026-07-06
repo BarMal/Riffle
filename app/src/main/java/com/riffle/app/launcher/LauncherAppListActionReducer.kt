@@ -103,6 +103,7 @@ internal fun LauncherShellState.withFilteredApps(appCatalog: InstalledAppCatalog
                         query = searchQuery,
                         filters = availableSearchFilters,
                     ),
+                searchSettingsResults = searchSettingsResults(searchQuery),
             )
         }
     }
@@ -200,6 +201,7 @@ private fun LauncherShellState.withSearchResults(
                 query = query,
                 filters = filters,
             ),
+        searchSettingsResults = searchSettingsResults(query),
     )
 
 private fun AppSearchFilters.withProfileFilter(filter: AppDrawerProfileFilter): AppSearchFilters =

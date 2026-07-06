@@ -6,6 +6,9 @@ import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.apps.AppShortcutId
 import com.riffle.core.domain.launcher.apps.InstalledApp
+import com.riffle.core.domain.launcher.search.LauncherSearchResult
+import com.riffle.core.domain.launcher.search.LauncherSearchSettingsEntry
+import com.riffle.core.domain.launcher.search.LauncherSearchSettingsEntryId
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -42,6 +45,24 @@ class SearchGridResultsTest {
         )
     }
 
+    @Test
+    fun searchGridResultsIncludeDistinguishableSettingsResults() {
+        val camera = app("Camera")
+        val setting = setting("Appearance")
+
+        val results = searchGridResults(apps = listOf(camera), shortcuts = emptyList(), settings = listOf(setting))
+
+        assertEquals(listOf("Appearance", "Camera"), results.map { result -> result.label })
+        assertEquals(
+            listOf(
+                LauncherShellAction.OpenSettings,
+                LauncherShellAction.LaunchApp(camera.identity),
+            ),
+            results.map { result -> result.action },
+        )
+        assertEquals("setting:appearance", results.first().key)
+    }
+
     private fun app(label: String): InstalledApp =
         InstalledApp(
             identity =
@@ -60,5 +81,15 @@ class SearchGridResultsTest {
             id = AppShortcutId("${app.identity.packageName.value}:$label"),
             appIdentity = app.identity,
             shortLabel = label,
+        )
+
+    private fun setting(title: String): LauncherSearchResult.Setting =
+        LauncherSearchResult.Setting(
+            LauncherSearchSettingsEntry(
+                id = LauncherSearchSettingsEntryId(title.lowercase()),
+                title = title,
+                subtitle = "Launcher settings",
+                section = "Settings",
+            ),
         )
 }

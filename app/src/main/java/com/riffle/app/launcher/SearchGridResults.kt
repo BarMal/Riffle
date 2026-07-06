@@ -3,6 +3,7 @@ package com.riffle.app.launcher
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.apps.InstalledApp
+import com.riffle.core.domain.launcher.search.LauncherSearchResult
 
 internal fun searchGridApps(apps: List<InstalledApp>): List<InstalledApp> =
     apps.sortedWith(
@@ -15,29 +16,31 @@ internal fun searchGridApps(apps: List<InstalledApp>): List<InstalledApp> =
 internal fun searchGridResults(
     apps: List<InstalledApp>,
     shortcuts: List<AppShortcut>,
+    settings: List<LauncherSearchResult.Setting> = emptyList(),
 ): List<SearchGridResult> =
     (
         apps.map { app -> SearchGridResult.App(app) } +
-            shortcuts.map { shortcut -> SearchGridResult.Shortcut(shortcut) }
+            shortcuts.map { shortcut -> SearchGridResult.Shortcut(shortcut) } +
+            settings.map { setting -> SearchGridResult.Setting(setting) }
     ).sortedWith(
         compareBy<SearchGridResult> { result -> result.label.lowercase() }
-            .thenBy { result -> result.appIdentity.packageName.value }
+            .thenBy { result -> result.sortKey }
             .thenBy { result -> result.key },
     )
 
 internal sealed interface SearchGridResult {
     val key: String
     val label: String
-    val appIdentity: AppIdentity
     val action: LauncherShellAction
+    val sortKey: String
 
     data class App(
         val app: InstalledApp,
     ) : SearchGridResult {
         override val key: String = "app:${app.identity.stableSearchKey}"
         override val label: String = app.label
-        override val appIdentity: AppIdentity = app.identity
         override val action: LauncherShellAction = LauncherShellAction.LaunchApp(app.identity)
+        override val sortKey: String = app.identity.packageName.value
     }
 
     data class Shortcut(
@@ -45,8 +48,17 @@ internal sealed interface SearchGridResult {
     ) : SearchGridResult {
         override val key: String = "shortcut:${shortcut.appIdentity.stableSearchKey}:${shortcut.id.value}"
         override val label: String = shortcut.shortLabel
-        override val appIdentity: AppIdentity = shortcut.appIdentity
         override val action: LauncherShellAction = LauncherShellAction.LaunchAppShortcut(shortcut)
+        override val sortKey: String = shortcut.appIdentity.packageName.value
+    }
+
+    data class Setting(
+        val setting: LauncherSearchResult.Setting,
+    ) : SearchGridResult {
+        override val key: String = setting.key
+        override val label: String = setting.title
+        override val action: LauncherShellAction = LauncherShellAction.OpenSettings
+        override val sortKey: String = setting.entry.id.value
     }
 }
 

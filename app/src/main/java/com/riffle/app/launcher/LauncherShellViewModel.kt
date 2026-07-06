@@ -394,6 +394,7 @@ internal fun LauncherShellState.withInstalledApps(
                         query = state.searchQuery,
                         filters = state.searchFilters,
                     ),
+                searchSettingsResults = state.searchSettingsResults(state.searchQuery),
             )
         }
 

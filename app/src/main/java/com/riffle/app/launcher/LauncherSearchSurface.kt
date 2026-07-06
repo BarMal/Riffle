@@ -44,6 +44,7 @@ import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.home.HomeLabelSettings
 import com.riffle.core.domain.launcher.home.HomeLayout
+import com.riffle.core.domain.launcher.search.LauncherSearchResult
 
 @Composable
 fun SearchSurface(
@@ -89,7 +90,12 @@ fun SearchSurface(
         )
         Spacer(modifier = Modifier.height(14.dp))
         SearchIconGrid(
-            results = searchGridResults(apps = state.results, shortcuts = state.shortcutResults),
+            results =
+                searchGridResults(
+                    apps = state.results,
+                    shortcuts = state.shortcutResults,
+                    settings = state.settingsResults,
+                ),
             homeLayout = state.homeLayout,
             appListContext = appListContext,
             emptyText =
@@ -108,6 +114,7 @@ data class SearchSurfaceState(
     val installedApps: List<InstalledApp>,
     val results: List<InstalledApp>,
     val shortcutResults: List<AppShortcut> = emptyList(),
+    val settingsResults: List<LauncherSearchResult.Setting> = emptyList(),
     val homeLayout: HomeLayout,
 )
 
@@ -225,6 +232,21 @@ private fun SearchIconGridItem(
     labelSettings: HomeLabelSettings,
     appListContext: AppListContext,
 ) {
+    if (result is SearchGridResult.Setting) {
+        SearchSettingGridItem(
+            result = result,
+            labelSettings = labelSettings,
+            onAction = appListContext.onAction,
+        )
+        return
+    }
+
+    val appIdentity =
+        when (result) {
+            is SearchGridResult.App -> result.app.identity
+            is SearchGridResult.Shortcut -> result.shortcut.appIdentity
+            is SearchGridResult.Setting -> error("Settings results are handled above")
+        }
     val metrics = HomeGridLayoutMetrics()
 
     Column(
@@ -239,13 +261,13 @@ private fun SearchIconGridItem(
     ) {
         Box(modifier = Modifier.size(HOME_ICON_SIZE_DP.dp)) {
             LauncherAppIcon(
-                identity = result.appIdentity,
+                identity = appIdentity,
                 label = result.label,
                 iconLoader = appListContext.appIconLoader,
                 modifier = Modifier.size(HOME_ICON_SIZE_DP.dp),
             )
             NotificationCountBadge(
-                count = appListContext.notificationCountsByPackage[result.appIdentity.packageName] ?: 0,
+                count = appListContext.notificationCountsByPackage[appIdentity.packageName] ?: 0,
                 modifier = Modifier.align(Alignment.TopEnd),
             )
         }
@@ -257,7 +279,7 @@ private fun SearchIconGridItem(
 }
 
 internal fun searchFilterSummaryText(state: SearchSurfaceState): String {
-    val resultCount = state.results.size + state.shortcutResults.size
+    val resultCount = state.results.size + state.shortcutResults.size + state.settingsResults.size
     val profileLabel =
         when {
             state.filters.profiles.isEmpty() -> "no profiles"
