@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -27,10 +28,7 @@ internal fun SearchWebPanel(
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Surface(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .clickable { onAction(preview.action) },
+            modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(22.dp),
             color = MaterialTheme.colorScheme.primaryContainer,
         ) {
@@ -53,11 +51,9 @@ internal fun SearchWebPanel(
                         overflow = TextOverflow.Ellipsis,
                     )
                 }
-                Text(
-                    text = "Open",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                )
+                Button(onClick = { onAction(preview.action) }) {
+                    Text(text = preview.actionLabel)
+                }
             }
         }
         Row(
@@ -88,14 +84,20 @@ private fun SearchWebExampleButton(
         shape = RoundedCornerShape(14.dp),
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.72f),
     ) {
-        Row(
+        Column(
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 9.dp),
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically,
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
                 text = result.title,
                 style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = result.subtitle,
+                style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,

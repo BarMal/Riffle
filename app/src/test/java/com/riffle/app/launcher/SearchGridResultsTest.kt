@@ -87,12 +87,17 @@ class SearchGridResultsTest {
         val preview = searchWebPreview("  weather today  ")
 
         requireNotNull(preview)
-        assertEquals("Search Google", preview.title)
+        assertEquals("Search the web", preview.title)
         assertEquals("weather today", preview.subtitle)
+        assertEquals("Search web", preview.actionLabel)
         assertEquals(LauncherShellAction.SearchWeb("weather today"), preview.action)
         assertEquals(
             listOf("weather today images", "weather today news", "weather today videos"),
             preview.examples.map { result -> result.query },
+        )
+        assertEquals(
+            listOf("Search image results", "Search news results", "Search video results"),
+            preview.examples.map { result -> result.subtitle },
         )
         assertEquals(
             listOf(
