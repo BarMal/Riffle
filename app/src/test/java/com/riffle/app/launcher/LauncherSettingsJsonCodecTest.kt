@@ -177,6 +177,7 @@ class LauncherSettingsJsonCodecTest {
                                         HomeGesture.ONE_FINGER_RIGHT to LauncherGestureAction.ENTER_HOME_EDIT_MODE,
                                         HomeGesture.TWO_FINGER_UP to LauncherGestureAction.OPEN_NOTIFICATIONS,
                                         HomeGesture.PINCH_OUT to LauncherGestureAction.ENTER_HOME_PAGE_OVERVIEW,
+                                        HomeGesture.TWO_FINGER_RIGHT to LauncherGestureAction.ENTER_FULLSCREEN_HOME,
                                     ),
                             ),
                     ),
@@ -195,6 +196,10 @@ class LauncherSettingsJsonCodecTest {
         assertEquals(
             LauncherGestureAction.ENTER_HOME_PAGE_OVERVIEW,
             decodedSettings.gestures.homeGestures.actionFor(HomeGesture.PINCH_OUT),
+        )
+        assertEquals(
+            LauncherGestureAction.ENTER_FULLSCREEN_HOME,
+            decodedSettings.gestures.homeGestures.actionFor(HomeGesture.TWO_FINGER_RIGHT),
         )
     }
 
