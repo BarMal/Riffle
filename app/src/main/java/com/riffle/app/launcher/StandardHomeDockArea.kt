@@ -23,6 +23,12 @@ internal fun StandardHomeDockArea(
 
     val hasDockOverflow = dockHasOverflow(capacity = layout.dock.capacity, itemCount = layout.dock.items.size)
     val showDockShelf = isDockShelfExpanded && hasDockOverflow
+    val notificationShelfState =
+        dockNotificationShelfState(
+            groups = presentation.notificationGroupsByApp,
+            notificationAccessStatus = presentation.notificationAccessStatus,
+            apps = presentation.installedApps,
+        )
     val dockInteractions =
         DockInteractions(
             haptics = actions.haptics,
@@ -33,6 +39,14 @@ internal fun StandardHomeDockArea(
         )
 
     if (showDockShelf) {
+        DockNotificationShelf(
+            state = notificationShelfState,
+            appIconLoader = appIconLoader,
+            interactions = dockInteractions,
+        )
+        if (notificationShelfState != DockNotificationShelfState.Hidden) {
+            Spacer(modifier = Modifier.height(HOME_DOCK_SHELF_SPACING_DP.dp))
+        }
         Dock(
             dock = layout.dock.overflowShelfDock(),
             isEditing = false,

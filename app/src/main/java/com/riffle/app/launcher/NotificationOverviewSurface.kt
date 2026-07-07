@@ -263,7 +263,7 @@ private fun NotificationGroupRow(
     }
 }
 
-private fun InstalledApp.matches(group: AppNotificationGroup): Boolean =
+internal fun InstalledApp.matches(group: AppNotificationGroup): Boolean =
     identity.packageName == group.packageName && identity.profile.id == group.profileId
 
 private val AppNotificationGroup.metadataLabel: String
@@ -281,7 +281,7 @@ private val Map<NotificationCategory, Int>.summaryLabel: String
 
 private const val MAX_CATEGORY_SUMMARY_ITEMS = 4
 
-private val NotificationAgeBucket.label: String
+internal val NotificationAgeBucket.label: String
     get() =
         when (this) {
             NotificationAgeBucket.NOW -> "Now"
@@ -290,7 +290,7 @@ private val NotificationAgeBucket.label: String
             NotificationAgeBucket.OLDER -> "Older"
         }
 
-private val NotificationCategory.label: String
+internal val NotificationCategory.label: String
     get() =
         when (this) {
             NotificationCategory.UNKNOWN -> "Unknown"

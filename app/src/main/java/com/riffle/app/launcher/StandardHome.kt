@@ -48,6 +48,8 @@ import com.riffle.core.domain.launcher.home.HomeLabelSettings
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.LauncherItem
 import com.riffle.core.domain.launcher.home.LauncherItemId
+import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
+import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.settings.AppearanceSettings
 import com.riffle.core.domain.launcher.settings.HomeGestureSettings
 import com.riffle.core.domain.launcher.widgets.InstalledWidgetProvider
@@ -342,6 +344,9 @@ internal data class StandardHomeInteractions(
 
 internal data class StandardHomePresentation(
     val notificationCountsByPackage: Map<AppPackageName, Int>,
+    val notificationGroupsByApp: List<AppNotificationGroup> = emptyList(),
+    val notificationAccessStatus: NotificationAccessStatus = NotificationAccessStatus.UNKNOWN,
+    val installedApps: List<InstalledApp> = emptyList(),
     val appShortcutsByApp: AppShortcutsByApp,
     val homeGestures: HomeGestureSettings = HomeGestureSettings(),
     val reducedMotion: Boolean = false,
