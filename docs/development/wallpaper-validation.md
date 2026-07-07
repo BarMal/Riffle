@@ -8,7 +8,7 @@ This checklist tracks closure evidence for GitHub issue #7. It covers the curren
 | --- | --- | --- |
 | Show current system wallpaper behind launcher surfaces | `WallpaperSource.SYSTEM` applies `FLAG_SHOW_WALLPAPER` and a transparent window background through `AndroidLauncherWallpaperController`. `LauncherShellContent` leaves the root background transparent for the system source. | Supported |
 | Support wallpaper selection/setting where Android APIs allow | Settings > Appearance exposes System and Solid source choices plus Change wallpaper, which delegates to Android's wallpaper picker and shows fallback feedback when unavailable or failing. The source choice is saved in `LauncherSettings.appearance.wallpaper`. | Partial: Riffle delegates wallpaper selection to Android and does not process picker results itself. |
-| Support scrolling/static wallpaper behaviour | Riffle delegates display to Android's wallpaper window flag and does not manage wallpaper offsets. | Gap |
+| Support scrolling/static wallpaper behaviour | Settings > Appearance exposes Static and Scroll wallpaper motion. `startWallpaperOffsetSync` sends native `WallpaperManager` offset updates for system wallpaper and skips offsets for Solid. | Supported, pending device validation because some live wallpaper apps may ignore offsets. |
 | Ensure cards, pages, dock, and settings respect wallpaper/theme contrast | Home labels and Material surfaces use existing theme colors and label backgrounds over wallpaper. | Needs device validation across high-contrast, low-contrast, light, and dark wallpapers. |
 | Wallpaper access behind platform interfaces | `LauncherWallpaperController` isolates window wallpaper behavior from shell state and Compose UI. `WallpaperPickerGateway` isolates Android wallpaper picker launch behavior. | Supported |
 | Wallpaper settings represented in central settings model | `AppearanceSettings.wallpaper` is part of `LauncherSettings`. | Supported |
@@ -28,16 +28,19 @@ Run these checks on at least one API 29-30 device or emulator and one API 31+ de
 7. Switch Wallpaper back to System.
 8. Confirm the current Android system wallpaper appears again without restarting the app.
 9. Tap Change wallpaper, choose a new wallpaper in Android's picker, then return to Riffle and confirm Riffle shows the new wallpaper.
-10. Rotate the device and confirm home content, dock content, folders, app drawer, search, and settings remain readable over the wallpaper.
-11. Toggle Settings > Appearance > Fullscreen home, Hide status bar, and Hide navigation bar while System wallpaper is selected.
-12. Confirm system bars hide only on Home and reappear on app drawer, search, notifications, and settings.
-13. Repeat with Solid selected and confirm system bar behavior does not depend on wallpaper source.
-14. On API 31+, repeat System and Solid checks in both system light and dark theme modes to validate Material dynamic color contrast.
-15. If a foldable or tablet emulator is available, repeat rotation and readability checks with each available layout device class.
+10. Set Wallpaper motion to Static, move between home pages, and confirm the wallpaper stays centered.
+11. Set Wallpaper motion to Scroll, move between home pages, and confirm the wallpaper offset changes with the selected page when the active wallpaper supports offsets.
+12. Switch Wallpaper to Solid and confirm page movement no longer sends visible wallpaper motion.
+13. Rotate the device and confirm home content, dock content, folders, app drawer, search, and settings remain readable over the wallpaper.
+14. Toggle Settings > Appearance > Fullscreen home, Hide status bar, and Hide navigation bar while System wallpaper is selected.
+15. Confirm system bars hide only on Home and reappear on app drawer, search, notifications, and settings.
+16. Repeat with Solid selected and confirm system bar behavior does not depend on wallpaper source.
+17. On API 31+, repeat System and Solid checks in both system light and dark theme modes to validate Material dynamic color contrast.
+18. If a foldable or tablet emulator is available, repeat rotation and readability checks with each available layout device class.
 
 ## Known Limitations
 
 - Riffle delegates wallpaper picking to Android and does not receive or validate the selected image itself.
-- Riffle does not expose static versus scrolling wallpaper controls or manage wallpaper offsets.
+- Static versus scrolling wallpaper motion uses native `WallpaperManager` offsets; Android wallpaper apps may ignore those offsets.
 - Riffle currently offers only the system wallpaper and a solid Material fallback; it does not offer custom colors, gradients, or per-page wallpaper choices.
 - Wallpaper picker failure UX is limited to a toast when Android reports no picker or launch fails.
