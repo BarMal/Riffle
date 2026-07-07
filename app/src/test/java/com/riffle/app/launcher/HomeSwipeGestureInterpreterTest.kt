@@ -142,6 +142,37 @@ class HomeSwipeGestureInterpreterTest {
     }
 
     @Test
+    fun summarizesHomeGestureConflictsForSettings() {
+        val settings =
+            HomeGestureSettings(
+                actions =
+                    mapOf(
+                        HomeGesture.ONE_FINGER_UP to LauncherGestureAction.OPEN_SEARCH,
+                        HomeGesture.PINCH_OUT to LauncherGestureAction.OPEN_SEARCH,
+                    ),
+            )
+
+        assertEquals(
+            "Conflicting gestures: Search: Swipe up, Pinch out",
+            homeGestureConflictSummary(settings),
+        )
+    }
+
+    @Test
+    fun omitsHomeGestureConflictSummaryWhenActionsAreUnique() {
+        val settings =
+            HomeGestureSettings(
+                actions =
+                    mapOf(
+                        HomeGesture.ONE_FINGER_UP to LauncherGestureAction.OPEN_APP_DRAWER,
+                        HomeGesture.PINCH_OUT to LauncherGestureAction.OPEN_SEARCH,
+                    ),
+            )
+
+        assertNull(homeGestureConflictSummary(settings))
+    }
+
+    @Test
     fun mapsConfiguredSwipeUpDragToAppDrawerAction() {
         val settings =
             HomeGestureSettings(actions = mapOf(HomeGesture.ONE_FINGER_UP to LauncherGestureAction.OPEN_APP_DRAWER))
