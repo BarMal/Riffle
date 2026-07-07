@@ -7,7 +7,12 @@ import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
 import com.riffle.core.domain.launcher.home.LauncherPageId
 import com.riffle.core.domain.launcher.home.LauncherPageType
+import com.riffle.core.domain.launcher.settings.HomeGesture
+import com.riffle.core.domain.launcher.settings.HomeGestureSettings
+import com.riffle.core.domain.launcher.settings.LauncherGestureAction
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class LauncherShellPageOverviewViewModelTest {
@@ -45,6 +50,44 @@ class LauncherShellPageOverviewViewModelTest {
             HomeEditMode.EditingPage(pageId = LauncherPageId("home")),
             viewModel.state.value.homeLayout.editMode,
         )
+        assertEquals(viewModel.state.value.homeLayout, repository.savedLayout)
+    }
+
+    @Test
+    fun configuredGestureEntryRoutesToPageOverview() {
+        val repository = FakeHomeLayoutRepository(savedLayout = HomeLayoutDefaults.standard())
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                homeLayoutRepository = repository,
+            )
+        val handler =
+            LauncherActivityActionHandler(
+                requestDefaultHome = {},
+                navigate = {},
+                editHomePage = viewModel::onHomePageEdited,
+                editHomeShortcut = {},
+                editDock = {},
+                hostedWidgetIdForRemovedShortcut = { null },
+                deleteHostedWidget = {},
+            )
+
+        val action =
+            homeSwipeActionForDrag(
+                pointerCount = 2,
+                horizontalDragPx = 0f,
+                verticalDragPx = 0f,
+                scaleDelta = 0.2f,
+                settings =
+                    HomeGestureSettings(
+                        actions = mapOf(HomeGesture.PINCH_OUT to LauncherGestureAction.ENTER_HOME_PAGE_OVERVIEW),
+                    ),
+                interpreter = HomeSwipeGestureInterpreter(thresholdPx = 80f),
+            )
+
+        assertNotNull(action)
+        assertTrue(handler.handle(checkNotNull(action)))
+        assertEquals(HomeEditMode.ManagingPages, viewModel.state.value.homeLayout.editMode)
         assertEquals(viewModel.state.value.homeLayout, repository.savedLayout)
     }
 
