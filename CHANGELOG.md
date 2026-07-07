@@ -1,5 +1,24 @@
 # Changelog
 
+## Alpha 184
+
+Release notes for the next alpha after Alpha 183.
+
+### Changed
+
+- Notification overview now includes category filter chips so active notification groups can be narrowed by their latest category.
+- Category filter chips show the current total count and category counts from existing notification grouping data.
+
+### Verification
+
+- Full GitHub CI `Verify` passed for PR #555.
+- Local verification included focused notification overview tests, ktlint, detekt, and full `./gradlew verify`.
+
+### Known Limitations
+
+- Notification category filters are local to the notification overview UI and are not persisted.
+- Filtering uses each app group's latest notification category instead of splitting a single app into multiple category-specific rows.
+
 ## Alpha 183
 
 Release notes for the next alpha after Alpha 182.
