@@ -2,6 +2,7 @@ package com.riffle.app.launcher.apps
 
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ApplicationInfo
 import android.content.pm.LauncherActivityInfo
 import android.content.pm.LauncherApps
 import android.content.pm.PackageManager
@@ -66,6 +67,7 @@ class PackageManagerInstalledAppRepository(
                     userManager = userManager,
                     launcherApps = launcherApps,
                 ),
+            category = applicationInfo.launcherCategoryLabel(),
             enabled = true,
         )
 
@@ -87,6 +89,7 @@ class PackageManagerInstalledAppRepository(
                 packageName = info.packageName,
                 activityName = info.name,
                 label = loadLabel(packageManager)?.toString().orEmpty(),
+                category = info.applicationInfo?.launcherCategoryLabel(),
                 enabled = info.enabled,
             )
         }
@@ -107,3 +110,20 @@ class PackageManagerInstalledAppRepository(
         ).type == AppProfileType.PRIVATE &&
             runCatching { userManager?.isQuietModeEnabled(this) == true }.getOrDefault(false)
 }
+
+private fun ApplicationInfo.launcherCategoryLabel(): String? =
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        when (category) {
+            ApplicationInfo.CATEGORY_GAME -> "Game"
+            ApplicationInfo.CATEGORY_AUDIO -> "Audio"
+            ApplicationInfo.CATEGORY_VIDEO -> "Video"
+            ApplicationInfo.CATEGORY_IMAGE -> "Image"
+            ApplicationInfo.CATEGORY_SOCIAL -> "Social"
+            ApplicationInfo.CATEGORY_NEWS -> "News"
+            ApplicationInfo.CATEGORY_MAPS -> "Maps"
+            ApplicationInfo.CATEGORY_PRODUCTIVITY -> "Productivity"
+            else -> null
+        }
+    } else {
+        null
+    }

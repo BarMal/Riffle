@@ -59,6 +59,7 @@ class InstalledAppSearchIndex(
             identity.activityName.value,
             identity.profile.id.value,
             identity.profile.type.name,
+            category.orEmpty(),
         )
             .map { token -> token.lowercase() }
             .takeIf { tokens -> tokens.containsAllSearchTokens(queryTokens) }

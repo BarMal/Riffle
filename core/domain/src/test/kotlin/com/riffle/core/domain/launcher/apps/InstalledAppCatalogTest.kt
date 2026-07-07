@@ -145,6 +145,20 @@ class InstalledAppCatalogTest {
     }
 
     @Test
+    fun searchMatchesAppCategory() {
+        val apps =
+            listOf(
+                app(label = "Recorder", category = "Audio"),
+                app(label = "Maps", category = "Maps"),
+            )
+
+        assertEquals(
+            listOf("Recorder"),
+            catalog.searchApps(apps = apps, query = "audio").map { app -> app.label },
+        )
+    }
+
+    @Test
     fun searchMatchesMultipleQueryTokensAcrossAppIdentityFields() {
         val apps =
             listOf(
@@ -317,6 +331,7 @@ class InstalledAppCatalogTest {
         packageName: String = "com.android.${label.lowercase().replace(" ", ".")}",
         activityName: String = ".MainActivity",
         profile: AppProfile = AppProfile.personal(),
+        category: String? = null,
         enabled: Boolean = true,
         visibility: AppVisibility = AppVisibility.VISIBLE,
     ): InstalledApp =
@@ -328,6 +343,7 @@ class InstalledAppCatalogTest {
                     profile = profile,
                 ),
             label = label,
+            category = category,
             enabled = enabled,
             visibility = visibility,
         )

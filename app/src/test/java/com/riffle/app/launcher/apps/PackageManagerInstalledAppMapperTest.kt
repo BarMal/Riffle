@@ -85,4 +85,19 @@ class PackageManagerInstalledAppMapperTest {
 
         assertFalse(app.enabled)
     }
+
+    @Test
+    fun preservesCategoryLabel() {
+        val app =
+            mapper.map(
+                LaunchableActivity(
+                    packageName = "com.android.music",
+                    activityName = ".MusicActivity",
+                    label = "Music",
+                    category = "Audio",
+                ),
+            )
+
+        assertEquals("Audio", app.category)
+    }
 }
