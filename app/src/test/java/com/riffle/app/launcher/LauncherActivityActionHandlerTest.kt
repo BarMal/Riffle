@@ -60,7 +60,7 @@ class LauncherActivityActionHandlerTest {
         val deletedWidgets = mutableListOf<HostedWidgetId>()
         val handler =
             handler(
-                hostedWidgetIdForRemovedShortcut = { itemId ->
+                hostedWidgetIdForRemovedItem = { itemId ->
                     HostedWidgetId(42).takeIf { itemId == LauncherItemId("widget:42") }
                 },
                 deleteHostedWidget = deletedWidgets::add,
@@ -71,6 +71,26 @@ class LauncherActivityActionHandlerTest {
         assertTrue(handler.handle(action))
 
         assertEquals(listOf(HostedWidgetId(42)), deletedWidgets)
+        assertEquals(listOf(action), editedActions)
+    }
+
+    @Test
+    fun deletesHostedWidgetBeforeRemovingDockShortcut() {
+        val editedActions = mutableListOf<LauncherShellAction>()
+        val deletedWidgets = mutableListOf<HostedWidgetId>()
+        val handler =
+            handler(
+                hostedWidgetIdForRemovedItem = { itemId ->
+                    HostedWidgetId(43).takeIf { itemId == LauncherItemId("dock-widget:43") }
+                },
+                deleteHostedWidget = deletedWidgets::add,
+                editDock = editedActions::add,
+            )
+        val action = LauncherShellAction.RemoveDockShortcut(LauncherItemId("dock-widget:43"))
+
+        assertTrue(handler.handle(action))
+
+        assertEquals(listOf(HostedWidgetId(43)), deletedWidgets)
         assertEquals(listOf(action), editedActions)
     }
 
@@ -115,7 +135,7 @@ class LauncherActivityActionHandlerTest {
         editHomePage: (LauncherShellAction) -> Unit = {},
         editHomeShortcut: (LauncherShellAction) -> Unit = {},
         editDock: (LauncherShellAction) -> Unit = {},
-        hostedWidgetIdForRemovedShortcut: (LauncherItemId) -> HostedWidgetId? = { null },
+        hostedWidgetIdForRemovedItem: (LauncherItemId) -> HostedWidgetId? = { null },
         deleteHostedWidget: (HostedWidgetId) -> Unit = {},
     ): LauncherActivityActionHandler =
         LauncherActivityActionHandler(
@@ -124,7 +144,7 @@ class LauncherActivityActionHandlerTest {
             editHomePage = editHomePage,
             editHomeShortcut = editHomeShortcut,
             editDock = editDock,
-            hostedWidgetIdForRemovedShortcut = hostedWidgetIdForRemovedShortcut,
+            hostedWidgetIdForRemovedItem = hostedWidgetIdForRemovedItem,
             deleteHostedWidget = deleteHostedWidget,
         )
 

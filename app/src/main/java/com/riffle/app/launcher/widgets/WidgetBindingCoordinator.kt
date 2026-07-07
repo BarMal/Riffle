@@ -1,6 +1,8 @@
 package com.riffle.app.launcher.widgets
 
+import com.riffle.app.launcher.HostedWidgetAddAction
 import com.riffle.app.launcher.LauncherShellAction
+import com.riffle.app.launcher.WidgetAddTarget
 import com.riffle.core.domain.launcher.home.GridDimensions
 import com.riffle.core.domain.launcher.home.GridSpan
 import com.riffle.core.domain.launcher.home.HostedWidgetId
@@ -33,6 +35,7 @@ class WidgetBindingCoordinator(
                         hostedWidgetId = hostedWidgetId,
                         label = action.label,
                         preferredSpan = preferredSpan,
+                        target = action.target,
                     )
                 when (widgetHostGateway.hostedWidgetRequiresConfiguration(hostedWidgetId)) {
                     true -> {
@@ -54,6 +57,7 @@ class WidgetBindingCoordinator(
                         hostedWidgetId = hostedWidgetId,
                         label = action.label,
                         preferredSpan = preferredSpan,
+                        target = action.target,
                     )
                 WidgetAddRequestResult.RequiresPermission(
                     hostedWidgetId = hostedWidgetId,
@@ -97,17 +101,26 @@ class WidgetBindingCoordinator(
         }
     }
 
-    private fun PendingWidgetAdd.addHostedWidgetAction(): LauncherShellAction.AddHostedWidgetToHome =
-        LauncherShellAction.AddHostedWidgetToHome(
-            hostedWidgetId = hostedWidgetId,
-            label = label,
-            preferredSpan = preferredSpan,
-        )
+    private fun PendingWidgetAdd.addHostedWidgetAction(): HostedWidgetAddAction =
+        when (target) {
+            WidgetAddTarget.HOME ->
+                LauncherShellAction.AddHostedWidgetToHome(
+                    hostedWidgetId = hostedWidgetId,
+                    label = label,
+                    preferredSpan = preferredSpan,
+                )
+
+            WidgetAddTarget.DOCK ->
+                LauncherShellAction.AddHostedWidgetToDock(
+                    hostedWidgetId = hostedWidgetId,
+                    label = label,
+                )
+        }
 }
 
 sealed interface WidgetAddRequestResult {
     data class Bound(
-        val action: LauncherShellAction.AddHostedWidgetToHome,
+        val action: HostedWidgetAddAction,
     ) : WidgetAddRequestResult
 
     data class RequiresPermission(
@@ -130,7 +143,7 @@ sealed interface WidgetBindPermissionResult {
     ) : WidgetBindPermissionResult
 
     data class Bound(
-        val action: LauncherShellAction.AddHostedWidgetToHome,
+        val action: HostedWidgetAddAction,
     ) : WidgetBindPermissionResult
 }
 
@@ -140,7 +153,7 @@ sealed interface WidgetConfigurationResult {
     data object Cancelled : WidgetConfigurationResult
 
     data class Bound(
-        val action: LauncherShellAction.AddHostedWidgetToHome,
+        val action: HostedWidgetAddAction,
     ) : WidgetConfigurationResult
 }
 
@@ -148,4 +161,5 @@ private data class PendingWidgetAdd(
     val hostedWidgetId: HostedWidgetId,
     val label: String,
     val preferredSpan: GridSpan,
+    val target: WidgetAddTarget,
 )

@@ -10,7 +10,7 @@ internal class LauncherActivityActionHandler(
     private val editHomePage: (LauncherShellAction) -> Unit,
     private val editHomeShortcut: (LauncherShellAction) -> Unit,
     private val editDock: (LauncherShellAction) -> Unit,
-    private val hostedWidgetIdForRemovedShortcut: (LauncherItemId) -> HostedWidgetId?,
+    private val hostedWidgetIdForRemovedItem: (LauncherItemId) -> HostedWidgetId?,
     private val deleteHostedWidget: (HostedWidgetId) -> Unit,
 ) {
     fun handle(action: LauncherShellAction): Boolean =
@@ -38,13 +38,16 @@ internal class LauncherActivityActionHandler(
 
             LauncherActivityRoute.HomeShortcutEdit -> {
                 if (action is LauncherShellAction.RemoveHomeShortcut) {
-                    hostedWidgetIdForRemovedShortcut(action.itemId)?.let(deleteHostedWidget)
+                    hostedWidgetIdForRemovedItem(action.itemId)?.let(deleteHostedWidget)
                 }
                 editHomeShortcut(action)
                 true
             }
 
             LauncherActivityRoute.DockEdit -> {
+                if (action is LauncherShellAction.RemoveDockShortcut) {
+                    hostedWidgetIdForRemovedItem(action.itemId)?.let(deleteHostedWidget)
+                }
                 editDock(action)
                 true
             }

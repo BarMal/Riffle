@@ -121,6 +121,10 @@ class LauncherActivityRouteTest {
         val actions =
             listOf(
                 LauncherShellAction.AddAppToDock(installedApp),
+                LauncherShellAction.AddHostedWidgetToDock(
+                    hostedWidgetId = HostedWidgetId(42),
+                    label = "Weather",
+                ),
                 LauncherShellAction.SelectDockEnabled(enabled = true),
                 LauncherShellAction.SelectDockCapacity(capacity = 6),
                 LauncherShellAction.SelectDockIconSize(sizeDp = 52),

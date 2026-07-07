@@ -7,6 +7,7 @@ import com.riffle.core.domain.launcher.home.GridSpan
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
+import com.riffle.core.domain.launcher.home.HomeLayoutSet
 import com.riffle.core.domain.launcher.home.HostedWidgetId
 import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.home.WidgetItem
@@ -108,6 +109,47 @@ class HostedWidgetAddCompletionTest {
     }
 
     @Test
+    fun completesHostedWidgetAddToDockAndClosesWidgetPicker() {
+        val viewModel = LauncherShellViewModel(firstRunRepository = FakeFirstRunRepository())
+        runBlocking {
+            viewModel.onAppActionSelected(LauncherShellAction.OpenWidgetPicker)?.join()
+        }
+
+        val result =
+            viewModel.completeWidgetAdd(
+                LauncherShellAction.AddHostedWidgetToDock(
+                    hostedWidgetId = HostedWidgetId(14),
+                    label = "Weather",
+                ),
+            )
+
+        val widget = viewModel.state.value.homeLayout.dock.items.single() as WidgetItem
+        assertEquals(HostedWidgetId(14), widget.appWidgetId)
+        assertFalse(viewModel.state.value.isWidgetPickerOpen)
+        assertEquals(HostedWidgetAddCompletionResult.Placed(message = null), result)
+    }
+
+    @Test
+    fun completingHostedWidgetAddToDockSavesLayout() {
+        val repository = RecordingHomeLayoutRepository()
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                homeLayoutRepository = repository,
+            )
+
+        viewModel.completeWidgetAdd(
+            LauncherShellAction.AddHostedWidgetToDock(
+                hostedWidgetId = HostedWidgetId(16),
+                label = "Weather",
+            ),
+        )
+
+        val widget = repository.savedLayoutSet?.activeLayout?.dock?.items?.single() as WidgetItem
+        assertEquals(HostedWidgetId(16), widget.appWidgetId)
+    }
+
+    @Test
     fun rejectedCompletionDeletesHostedWidgetId() {
         val deletedHostedWidgetIds = mutableListOf<HostedWidgetId>()
         val action =
@@ -126,6 +168,25 @@ class HostedWidgetAddCompletionTest {
         assertEquals(listOf(HostedWidgetId(13)), deletedHostedWidgetIds)
     }
 
+    @Test
+    fun rejectedDockCompletionDeletesHostedWidgetId() {
+        val deletedHostedWidgetIds = mutableListOf<HostedWidgetId>()
+        val action =
+            LauncherShellAction.AddHostedWidgetToDock(
+                hostedWidgetId = HostedWidgetId(15),
+                label = "Weather",
+            )
+
+        val result =
+            HostedWidgetAddCompletionResult.Rejected.deleteHostedWidgetIdWhenRejected(
+                action,
+                deletedHostedWidgetIds::add,
+            )
+
+        assertEquals(HostedWidgetAddCompletionResult.Rejected, result)
+        assertEquals(listOf(HostedWidgetId(15)), deletedHostedWidgetIds)
+    }
+
     private class FakeFirstRunRepository : FirstRunRepository {
         override fun isFirstRunComplete(): Boolean = false
 
@@ -138,6 +199,18 @@ class HostedWidgetAddCompletionTest {
         override fun loadHomeLayout(): HomeLayout = layout
 
         override fun saveHomeLayout(layout: HomeLayout) = Unit
+    }
+
+    private class RecordingHomeLayoutRepository : HomeLayoutRepository {
+        var savedLayoutSet: HomeLayoutSet? = null
+
+        override fun loadHomeLayout(): HomeLayout? = null
+
+        override fun saveHomeLayout(layout: HomeLayout) = Unit
+
+        override fun saveHomeLayoutSet(layoutSet: HomeLayoutSet) {
+            savedLayoutSet = layoutSet
+        }
     }
 
     private companion object {

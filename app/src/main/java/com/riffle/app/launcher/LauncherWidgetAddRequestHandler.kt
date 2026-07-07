@@ -10,7 +10,7 @@ class LauncherWidgetAddRequestHandler(
     private val widgetBindingCoordinator: WidgetBindingCoordinator,
     private val selectedGrid: () -> GridDimensions,
     private val windowSize: () -> LauncherWidgetAddWindowSize,
-    private val completeWidgetAdd: (LauncherShellAction.AddHostedWidgetToHome) -> HostedWidgetAddCompletionResult,
+    private val completeWidgetAdd: (HostedWidgetAddAction) -> HostedWidgetAddCompletionResult,
     private val deleteHostedWidgetId: (HostedWidgetId) -> Unit,
 ) {
     fun handle(action: LauncherShellAction.RequestAddWidget): LauncherWidgetAddHandlingResult {

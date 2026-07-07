@@ -136,7 +136,7 @@ class LauncherActionRouterTest {
             editHomePage = {},
             editHomeShortcut = {},
             editDock = {},
-            hostedWidgetIdForRemovedShortcut = { null },
+            hostedWidgetIdForRemovedItem = { null },
             deleteHostedWidget = {},
         )
 

@@ -25,6 +25,34 @@ class DockEngine {
                 )
         }
 
+    fun addWidgetToDock(
+        layout: HomeLayout,
+        hostedWidgetId: HostedWidgetId,
+        label: String,
+    ): DockEditResult =
+        when {
+            layout.dock.containsHostedWidget(hostedWidgetId) ->
+                DockEditResult.Rejected(DockEditRejectionReason.DUPLICATE_WIDGET)
+
+            else ->
+                DockEditResult.Updated(
+                    layout.copy(
+                        dock =
+                            layout.dock.copy(
+                                capacity = layout.dock.capacity.coerceAtLeast(layout.dock.items.size + 1),
+                                isEnabled = true,
+                                items =
+                                    layout.dock.items +
+                                        WidgetItem(
+                                            id = LauncherItemId("dock-widget:${hostedWidgetId.value}"),
+                                            appWidgetId = hostedWidgetId,
+                                            label = label.ifBlank { DEFAULT_WIDGET_LABEL },
+                                        ),
+                            ),
+                    ),
+                )
+        }
+
     fun removeDockItem(
         layout: HomeLayout,
         itemId: LauncherItemId,
@@ -106,7 +134,14 @@ class DockEngine {
                 .apply { add(targetIndex, movingItem) }
                 .toList()
         }
+
+    private fun DockModel.containsHostedWidget(hostedWidgetId: HostedWidgetId): Boolean =
+        items
+            .filterIsInstance<WidgetItem>()
+            .any { widget -> widget.appWidgetId == hostedWidgetId }
 }
+
+private const val DEFAULT_WIDGET_LABEL = "Widget"
 
 sealed interface DockEditResult {
     data class Updated(val layout: HomeLayout) : DockEditResult
@@ -117,6 +152,7 @@ sealed interface DockEditResult {
 enum class DockEditRejectionReason {
     NO_AVAILABLE_SLOT,
     DUPLICATE_APP,
+    DUPLICATE_WIDGET,
     ITEM_NOT_FOUND,
     INDEX_OUT_OF_BOUNDS,
     INVALID_CAPACITY,

@@ -17,6 +17,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import com.riffle.app.launcher.DefaultLauncherNotificationActionHandler
 import com.riffle.app.launcher.DefaultLauncherSettingsActionHandler
 import com.riffle.app.launcher.HomeLayoutDeviceClassEvent
+import com.riffle.app.launcher.HostedWidgetAddAction
 import com.riffle.app.launcher.HostedWidgetAddCompletionResult
 import com.riffle.app.launcher.LauncherActionRouter
 import com.riffle.app.launcher.LauncherActivityActionHandler
@@ -36,12 +37,12 @@ import com.riffle.app.launcher.completeWidgetAdd
 import com.riffle.app.launcher.deleteHostedWidgetIdWhenRejected
 import com.riffle.app.launcher.failureMessage
 import com.riffle.app.launcher.fallbackWallpaperSourceAction
+import com.riffle.app.launcher.hostedWidgetIdForItem
 import com.riffle.app.launcher.isLauncherHomeIntent
 import com.riffle.app.launcher.notifications.AndroidNotificationDismissalGateway
 import com.riffle.app.launcher.refreshInstalledApps
 import com.riffle.app.launcher.refreshNotifications
 import com.riffle.app.launcher.refreshWidgetProviders
-import com.riffle.app.launcher.selectedPageHostedWidgetIdForItem
 import com.riffle.app.launcher.startSystemUiSync
 import com.riffle.app.launcher.startWallpaperOffsetSync
 import com.riffle.app.launcher.widgets.WidgetBindPermissionResult
@@ -142,7 +143,7 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-    private val completeConfiguredWidgetAdd: (LauncherShellAction.AddHostedWidgetToHome) -> Unit = { action ->
+    private val completeConfiguredWidgetAdd: (HostedWidgetAddAction) -> Unit = { action ->
         when (
             val completion =
                 shellViewModel.completeWidgetAdd(action)
@@ -184,8 +185,8 @@ class MainActivity : ComponentActivity() {
             editHomePage = shellViewModel::onHomePageEdited,
             editHomeShortcut = shellViewModel::onHomeShortcutEdited,
             editDock = shellViewModel::onDockEdited,
-            hostedWidgetIdForRemovedShortcut = { itemId ->
-                shellViewModel.state.value.homeLayout.selectedPageHostedWidgetIdForItem(itemId)
+            hostedWidgetIdForRemovedItem = { itemId ->
+                shellViewModel.state.value.homeLayout.hostedWidgetIdForItem(itemId)
             },
             deleteHostedWidget = widgetHostGateway::deleteHostedWidgetId,
         )
