@@ -75,6 +75,24 @@ class LauncherSearchProviderTest {
     }
 
     @Test
+    fun searchUsesConcreteAliasAsSettingSubtitleWhenAliasMatches() {
+        val settings =
+            listOf(
+                settingsEntry(
+                    id = "dock",
+                    title = "Dock",
+                    subtitle = "Home dock visibility",
+                    aliases = listOf("dock slots"),
+                ),
+            )
+
+        val results = provider.search(query = "dock slots", apps = emptyList(), settingsEntries = settings)
+
+        assertEquals(listOf("Dock"), results.map { result -> result.title })
+        assertEquals(listOf("dock slots"), results.map { result -> result.subtitle })
+    }
+
+    @Test
     fun searchExcludesHiddenAppsFromGlobalResults() {
         val visible = app(label = "Camera")
         val hidden = app(label = "Camera Vault", visibility = AppVisibility.HIDDEN)

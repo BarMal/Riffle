@@ -61,6 +61,7 @@ class SearchGridResultsTest {
             results.map { result -> result.action },
         )
         assertEquals("setting:appearance", results.first().key)
+        assertEquals("Launcher settings", (results.first() as SearchGridResult.Setting).subtitle)
     }
 
     @Test

@@ -54,7 +54,7 @@ internal fun SearchSettingGridItem(
             settings = labelSettings,
         )
         Text(
-            text = "Setting",
+            text = result.subtitle,
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
