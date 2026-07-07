@@ -9,7 +9,7 @@ import com.riffle.core.domain.launcher.widgets.WidgetProviderIdentity
 class WidgetBindingCoordinator(
     private val widgetHostGateway: WidgetHostGateway,
 ) {
-    private var pendingBind: PendingWidgetBind? = null
+    private var pendingAdd: PendingWidgetAdd? = null
 
     fun requestAddWidget(
         action: LauncherShellAction.RequestAddWidget,
@@ -27,20 +27,30 @@ class WidgetBindingCoordinator(
 
         return when (widgetHostGateway.bindHostedWidget(hostedWidgetId, action.provider)) {
             WidgetBindingResult.Bound -> {
-                pendingBind?.let { pending -> widgetHostGateway.deleteHostedWidgetId(pending.hostedWidgetId) }
-                pendingBind = null
-                WidgetAddRequestResult.Bound(
-                    action.addHostedWidgetAction(
+                pendingAdd?.let { pending -> widgetHostGateway.deleteHostedWidgetId(pending.hostedWidgetId) }
+                val pending =
+                    PendingWidgetAdd(
                         hostedWidgetId = hostedWidgetId,
+                        label = action.label,
                         preferredSpan = preferredSpan,
-                    ),
-                )
+                    )
+                when (widgetHostGateway.hostedWidgetRequiresConfiguration(hostedWidgetId)) {
+                    true -> {
+                        pendingAdd = pending
+                        WidgetAddRequestResult.RequiresConfiguration(hostedWidgetId)
+                    }
+
+                    false -> {
+                        pendingAdd = null
+                        WidgetAddRequestResult.Bound(pending.addHostedWidgetAction())
+                    }
+                }
             }
 
             WidgetBindingResult.RequiresPermission -> {
-                pendingBind?.let { pending -> widgetHostGateway.deleteHostedWidgetId(pending.hostedWidgetId) }
-                pendingBind =
-                    PendingWidgetBind(
+                pendingAdd?.let { pending -> widgetHostGateway.deleteHostedWidgetId(pending.hostedWidgetId) }
+                pendingAdd =
+                    PendingWidgetAdd(
                         hostedWidgetId = hostedWidgetId,
                         label = action.label,
                         preferredSpan = preferredSpan,
@@ -54,30 +64,40 @@ class WidgetBindingCoordinator(
     }
 
     fun onPermissionResult(granted: Boolean): WidgetBindPermissionResult {
-        val pending = pendingBind ?: return WidgetBindPermissionResult.Ignored
-        pendingBind = null
+        val pending = pendingAdd ?: return WidgetBindPermissionResult.Ignored
 
         return when (granted) {
             true ->
-                WidgetBindPermissionResult.Bound(
-                    LauncherShellAction.AddHostedWidgetToHome(
-                        hostedWidgetId = pending.hostedWidgetId,
-                        label = pending.label,
-                        preferredSpan = pending.preferredSpan,
-                    ),
-                )
+                when (widgetHostGateway.hostedWidgetRequiresConfiguration(pending.hostedWidgetId)) {
+                    true -> WidgetBindPermissionResult.RequiresConfiguration(pending.hostedWidgetId)
+                    false -> {
+                        pendingAdd = null
+                        WidgetBindPermissionResult.Bound(pending.addHostedWidgetAction())
+                    }
+                }
 
             false -> {
+                pendingAdd = null
                 widgetHostGateway.deleteHostedWidgetId(pending.hostedWidgetId)
                 WidgetBindPermissionResult.Cancelled
             }
         }
     }
 
-    private fun LauncherShellAction.RequestAddWidget.addHostedWidgetAction(
-        hostedWidgetId: HostedWidgetId,
-        preferredSpan: GridSpan,
-    ): LauncherShellAction.AddHostedWidgetToHome =
+    fun onConfigurationResult(configured: Boolean): WidgetConfigurationResult {
+        val pending = pendingAdd ?: return WidgetConfigurationResult.Ignored
+        pendingAdd = null
+
+        return when (configured) {
+            true -> WidgetConfigurationResult.Bound(pending.addHostedWidgetAction())
+            false -> {
+                widgetHostGateway.deleteHostedWidgetId(pending.hostedWidgetId)
+                WidgetConfigurationResult.Cancelled
+            }
+        }
+    }
+
+    private fun PendingWidgetAdd.addHostedWidgetAction(): LauncherShellAction.AddHostedWidgetToHome =
         LauncherShellAction.AddHostedWidgetToHome(
             hostedWidgetId = hostedWidgetId,
             label = label,
@@ -94,6 +114,10 @@ sealed interface WidgetAddRequestResult {
         val hostedWidgetId: HostedWidgetId,
         val provider: WidgetProviderIdentity,
     ) : WidgetAddRequestResult
+
+    data class RequiresConfiguration(
+        val hostedWidgetId: HostedWidgetId,
+    ) : WidgetAddRequestResult
 }
 
 sealed interface WidgetBindPermissionResult {
@@ -101,12 +125,26 @@ sealed interface WidgetBindPermissionResult {
 
     data object Cancelled : WidgetBindPermissionResult
 
+    data class RequiresConfiguration(
+        val hostedWidgetId: HostedWidgetId,
+    ) : WidgetBindPermissionResult
+
     data class Bound(
         val action: LauncherShellAction.AddHostedWidgetToHome,
     ) : WidgetBindPermissionResult
 }
 
-private data class PendingWidgetBind(
+sealed interface WidgetConfigurationResult {
+    data object Ignored : WidgetConfigurationResult
+
+    data object Cancelled : WidgetConfigurationResult
+
+    data class Bound(
+        val action: LauncherShellAction.AddHostedWidgetToHome,
+    ) : WidgetConfigurationResult
+}
+
+private data class PendingWidgetAdd(
     val hostedWidgetId: HostedWidgetId,
     val label: String,
     val preferredSpan: GridSpan,

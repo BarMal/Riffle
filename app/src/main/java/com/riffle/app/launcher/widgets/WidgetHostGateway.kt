@@ -17,6 +17,10 @@ interface WidgetHostGateway {
         provider: WidgetProviderIdentity,
     ): Intent
 
+    fun hostedWidgetRequiresConfiguration(hostedWidgetId: HostedWidgetId): Boolean
+
+    fun createConfigureHostedWidgetIntent(hostedWidgetId: HostedWidgetId): Intent
+
     fun deleteHostedWidgetId(hostedWidgetId: HostedWidgetId)
 }
 
