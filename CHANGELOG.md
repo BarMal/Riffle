@@ -1,5 +1,28 @@
 # Changelog
 
+## Alpha 189
+
+Release notes for the next alpha after Alpha 188.
+
+### Changed
+
+- Home gestures can now be configured to enter Fullscreen home using the existing fullscreen appearance setting.
+- Hosted home widgets now expose context-menu resize actions for one-cell width and height changes.
+- Persisted dock widgets with hosted widget IDs now render through the existing Android widget host factory instead of only showing a placeholder.
+- Notification overview empty states now explain notification access status and offer a notification access shortcut when needed.
+- Search app and shortcut results now prefix Work and Private profile labels when needed.
+
+### Verification
+
+- Full GitHub CI `Verify` passed for PRs #571, #572, #573, #574, and #575.
+- Local verification included focused gesture/settings tests and full `./gradlew verify`.
+
+### Known Limitations
+
+- Fullscreen gesture support enters fullscreen home; it does not add a separate exit or toggle gesture.
+- Widget resizing is context-menu based and still relies on existing grid collision rejection.
+- Dock widget add/reorder/resizing flows remain future dock work.
+
 ## Alpha 188
 
 Release notes for the next alpha after Alpha 187.
