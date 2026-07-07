@@ -1,5 +1,24 @@
 # Changelog
 
+## Alpha 185
+
+Release notes for the next alpha after Alpha 184.
+
+### Changed
+
+- Empty bottom home areas now expose the launcher context menu on long press, including the area around the dock and the search/indicator strip.
+- Page indicators now open launcher search when tapped.
+- The page indicator returns to the search pill sooner after paging settles.
+
+### Verification
+
+- Full GitHub CI `Verify` passed for PR #557.
+- Local verification included focused app compile, app unit tests, ktlint, detekt, and full `./gradlew verify`.
+
+### Known Limitations
+
+- Long-press and tap target behaviour still needs manual validation on device because the app module does not currently include a Compose UI gesture test harness.
+
 ## Alpha 184
 
 Release notes for the next alpha after Alpha 183.
