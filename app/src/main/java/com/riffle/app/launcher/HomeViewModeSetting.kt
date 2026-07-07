@@ -13,6 +13,7 @@ import com.riffle.core.domain.launcher.home.LauncherViewMode
 @Composable
 internal fun HomeViewModeSetting(
     viewMode: LauncherViewMode,
+    availableViewModes: List<LauncherViewMode>,
     onAction: (LauncherShellAction) -> Unit,
 ) {
     Row(
@@ -26,7 +27,7 @@ internal fun HomeViewModeSetting(
             subtitle = viewMode.label,
         )
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            LauncherViewMode.entries.forEach { mode ->
+            availableViewModes.forEach { mode ->
                 TextButton(
                     enabled = mode != viewMode,
                     onClick = { onAction(LauncherShellAction.SelectLauncherViewMode(mode)) },

@@ -151,6 +151,7 @@ private fun SettingsLayoutPageContent(
     SettingsSection(title = "Home layout") {
         HomeViewModeSetting(
             viewMode = state.homeLayout.viewMode,
+            availableViewModes = state.availableLauncherViewModes,
             onAction = onAction,
         )
         HomeGridSetting(
