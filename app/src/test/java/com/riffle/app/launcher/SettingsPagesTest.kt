@@ -93,6 +93,26 @@ class SettingsPagesTest {
     }
 
     @Test
+    fun filtersMainSettingsEntriesByConcreteOptionAliases() {
+        assertEquals(
+            listOf(SettingsPage.DOCK),
+            settingsMainPageEntriesMatching("dock item spacing").map { entry -> entry.page },
+        )
+        assertEquals(
+            listOf(SettingsPage.LAYOUT),
+            settingsMainPageEntriesMatching("label text size").map { entry -> entry.page },
+        )
+        assertEquals(
+            listOf(SettingsPage.FLOATING_DOCK),
+            settingsMainPageEntriesMatching("handle opacity").map { entry -> entry.page },
+        )
+        assertEquals(
+            listOf(SettingsPage.APPS),
+            settingsMainPageEntriesMatching("refresh apps").map { entry -> entry.page },
+        )
+    }
+
+    @Test
     fun returnsNoMainSettingsEntriesForUnknownSearch() {
         assertEquals(emptyList<SettingsPageEntry>(), settingsMainPageEntriesMatching("missing setting"))
     }
@@ -164,9 +184,37 @@ class SettingsPagesTest {
         assertEquals("Hidden apps", hiddenApps.title)
         assertEquals("2 hidden apps", hiddenApps.subtitle)
         assertEquals("Apps", hiddenApps.section)
-        assertEquals(listOf("default home", "home app", "Permissions"), permissions.searchAliases)
+        assertEquals(
+            listOf(
+                "default home",
+                "home app",
+                "notifications",
+                "notification access",
+                "overlay permission",
+                "Permissions",
+            ),
+            permissions.searchAliases,
+        )
         assertEquals(listOf(LauncherSearchResultType.SETTING), results.map { result -> result.type })
         assertEquals(listOf("Permissions"), results.map { result -> result.title })
+    }
+
+    @Test
+    fun projectsConcreteSettingOptionAliasesForLauncherSearch() {
+        val entries = settingsLauncherSearchEntries()
+
+        assertEquals(
+            listOf("Dock"),
+            LauncherSearchProvider()
+                .search(query = "dock slots", apps = emptyList(), settingsEntries = entries)
+                .map { result -> result.title },
+        )
+        assertEquals(
+            listOf("Permissions"),
+            LauncherSearchProvider()
+                .search(query = "notification access", apps = emptyList(), settingsEntries = entries)
+                .map { result -> result.title },
+        )
     }
 
     @Test
