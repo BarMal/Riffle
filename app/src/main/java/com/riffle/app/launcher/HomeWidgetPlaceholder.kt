@@ -90,7 +90,7 @@ internal fun HomeWidgetPlaceholder(
         }
         ShortcutContextMenu(
             expanded = isContextMenuExpanded.value,
-            items = widgetPlaceholderContextMenuItems(widget),
+            items = widgetPlaceholderContextMenuItems(widget, dragState?.grid),
             onDismissRequest = { isContextMenuExpanded.value = false },
             onAction = onAction,
         )
@@ -226,13 +226,44 @@ private fun View.removeFromParent() {
     (parent as? ViewGroup)?.removeView(this)
 }
 
-internal fun widgetPlaceholderContextMenuItems(widget: WidgetItem): List<ShortcutContextMenuItem> =
-    listOf(
+internal fun widgetPlaceholderContextMenuItems(
+    widget: WidgetItem,
+    grid: GridDimensions? = null,
+): List<ShortcutContextMenuItem> {
+    val currentPlacement = widget.placement
+    val currentSpan = currentPlacement?.span ?: GridSpan()
+
+    return listOf(
+        ShortcutContextMenuItem(
+            label = "Make wider",
+            action = widget.resizeAction(columnsDelta = 1, rowsDelta = 0),
+            enabled =
+                currentPlacement != null &&
+                    (grid == null || currentPlacement.cell.column + currentSpan.columns < grid.columns),
+        ),
+        ShortcutContextMenuItem(
+            label = "Make narrower",
+            action = widget.resizeAction(columnsDelta = -1, rowsDelta = 0),
+            enabled = currentSpan.columns > 1,
+        ),
+        ShortcutContextMenuItem(
+            label = "Make taller",
+            action = widget.resizeAction(columnsDelta = 0, rowsDelta = 1),
+            enabled =
+                currentPlacement != null &&
+                    (grid == null || currentPlacement.cell.row + currentSpan.rows < grid.rows),
+        ),
+        ShortcutContextMenuItem(
+            label = "Make shorter",
+            action = widget.resizeAction(columnsDelta = 0, rowsDelta = -1),
+            enabled = currentSpan.rows > 1,
+        ),
         ShortcutContextMenuItem(
             label = "Remove from home",
             action = LauncherShellAction.RemoveHomeShortcut(widget.id),
         ),
     )
+}
 
 private fun WidgetItem.resizeAction(
     columnsDelta: Int,

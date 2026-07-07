@@ -156,6 +156,66 @@ class WidgetEngineTest {
         assertEquals(PlacementRejectionReason.NO_AVAILABLE_CELL, rejected.reason)
     }
 
+    @Test
+    fun resizesWidgetOnSelectedPage() {
+        val widget =
+            WidgetItem(
+                id = LauncherItemId("widget:42"),
+                appWidgetId = HostedWidgetId(42),
+                label = "Weather",
+                placement = GridPlacement(cell = GridCell(column = 0, row = 0)),
+            )
+        val layout = HomeLayoutDefaults.standard().withSelectedPageItems(widget)
+
+        val result =
+            engine.resizeWidgetOnSelectedPage(
+                layout = layout,
+                itemId = widget.id,
+                span = GridSpan(columns = 2, rows = 2),
+            )
+
+        val updated = assertIs<WidgetEditResult.Updated>(result)
+        assertEquals(
+            GridPlacement(
+                cell = GridCell(column = 0, row = 0),
+                span = GridSpan(columns = 2, rows = 2),
+            ),
+            updated.layout.selectedPage.items.single().placement,
+        )
+    }
+
+    @Test
+    fun rejectsWidgetResizeIntoOccupiedCells() {
+        val widget =
+            WidgetItem(
+                id = LauncherItemId("widget:42"),
+                appWidgetId = HostedWidgetId(42),
+                label = "Weather",
+                placement = GridPlacement(cell = GridCell(column = 0, row = 0)),
+            )
+        val blocker =
+            WidgetItem(
+                id = LauncherItemId("widget:7"),
+                appWidgetId = HostedWidgetId(7),
+                label = "Clock",
+                placement = GridPlacement(cell = GridCell(column = 1, row = 1)),
+            )
+        val layout = HomeLayoutDefaults.standard().withSelectedPageItems(widget, blocker)
+
+        val result =
+            engine.resizeWidgetOnSelectedPage(
+                layout = layout,
+                itemId = widget.id,
+                span = GridSpan(columns = 2, rows = 2),
+            )
+
+        val rejected = assertIs<WidgetEditResult.Rejected>(result)
+        assertEquals(PlacementRejectionReason.COLLISION, rejected.reason)
+    }
+
+    private fun HomeLayout.withSelectedPageItems(vararg items: WidgetItem): HomeLayout =
+        copy(pages = listOf(selectedPage.copy(items = items.toList())))
+
     private companion object {
         private const val DEFAULT_GRID_CELL_COUNT = 20
     }
