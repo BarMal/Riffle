@@ -34,6 +34,29 @@ class HomeWidgetRemovalTest {
             HostedWidgetId(42),
             layout.selectedPageHostedWidgetIdForItem(LauncherItemId("widget:42")),
         )
+        assertEquals(
+            HostedWidgetId(42),
+            layout.hostedWidgetIdForItem(LauncherItemId("widget:42")),
+        )
+    }
+
+    @Test
+    fun findsHostedWidgetIdForDockWidget() {
+        val widget =
+            WidgetItem(
+                id = LauncherItemId("dock-widget:43"),
+                appWidgetId = HostedWidgetId(43),
+                label = "Weather",
+            )
+        val layout =
+            HomeLayoutDefaults.standard().let { defaultLayout ->
+                defaultLayout.copy(dock = defaultLayout.dock.copy(items = listOf(widget)))
+            }
+
+        assertEquals(
+            HostedWidgetId(43),
+            layout.hostedWidgetIdForItem(LauncherItemId("dock-widget:43")),
+        )
     }
 
     @Test
@@ -41,5 +64,6 @@ class HomeWidgetRemovalTest {
         val layout = HomeLayoutDefaults.standard()
 
         assertNull(layout.selectedPageHostedWidgetIdForItem(LauncherItemId("missing")))
+        assertNull(layout.hostedWidgetIdForItem(LauncherItemId("missing")))
     }
 }

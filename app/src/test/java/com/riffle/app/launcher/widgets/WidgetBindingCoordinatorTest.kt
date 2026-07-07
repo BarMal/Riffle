@@ -2,6 +2,7 @@ package com.riffle.app.launcher.widgets
 
 import android.content.Intent
 import com.riffle.app.launcher.LauncherShellAction
+import com.riffle.app.launcher.WidgetAddTarget
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.home.GridDimensions
 import com.riffle.core.domain.launcher.home.GridSpan
@@ -41,6 +42,30 @@ class WidgetBindingCoordinatorTest {
     }
 
     @Test
+    fun boundDockWidgetReturnsAddHostedWidgetToDockAction() {
+        val gateway = FakeWidgetHostGateway(bindingResult = WidgetBindingResult.Bound)
+        val coordinator = WidgetBindingCoordinator(gateway)
+
+        val result =
+            coordinator.requestAddWidget(
+                action = requestAddWidget(label = "Weather", target = WidgetAddTarget.DOCK),
+                grid = GridDimensions(columns = 4, rows = 5),
+                availableWidthDp = 400,
+                availableHeightDp = 1000,
+            )
+
+        assertEquals(
+            WidgetAddRequestResult.Bound(
+                LauncherShellAction.AddHostedWidgetToDock(
+                    hostedWidgetId = HostedWidgetId(1),
+                    label = "Weather",
+                ),
+            ),
+            result,
+        )
+    }
+
+    @Test
     fun permissionSuccessReturnsPendingAddHostedWidgetAction() {
         val gateway = FakeWidgetHostGateway(bindingResult = WidgetBindingResult.RequiresPermission)
         val coordinator = WidgetBindingCoordinator(gateway)
@@ -64,6 +89,30 @@ class WidgetBindingCoordinatorTest {
             result,
         )
         assertEquals(emptyList<HostedWidgetId>(), gateway.deletedHostedWidgetIds)
+    }
+
+    @Test
+    fun permissionSuccessPreservesDockTarget() {
+        val gateway = FakeWidgetHostGateway(bindingResult = WidgetBindingResult.RequiresPermission)
+        val coordinator = WidgetBindingCoordinator(gateway)
+        coordinator.requestAddWidget(
+            action = requestAddWidget(label = "Calendar", target = WidgetAddTarget.DOCK),
+            grid = GridDimensions(columns = 4, rows = 5),
+            availableWidthDp = 400,
+            availableHeightDp = 1000,
+        )
+
+        val result = coordinator.onPermissionResult(granted = true)
+
+        assertEquals(
+            WidgetBindPermissionResult.Bound(
+                LauncherShellAction.AddHostedWidgetToDock(
+                    hostedWidgetId = HostedWidgetId(1),
+                    label = "Calendar",
+                ),
+            ),
+            result,
+        )
     }
 
     @Test
@@ -98,6 +147,35 @@ class WidgetBindingCoordinatorTest {
     }
 
     @Test
+    fun boundWidgetRequiringConfigurationPreservesDockTarget() {
+        val gateway =
+            FakeWidgetHostGateway(
+                bindingResult = WidgetBindingResult.Bound,
+                configuredWidgetIds = setOf(HostedWidgetId(1)),
+            )
+        val coordinator = WidgetBindingCoordinator(gateway)
+
+        val result =
+            coordinator.requestAddWidget(
+                action = requestAddWidget(label = "Weather", target = WidgetAddTarget.DOCK),
+                grid = GridDimensions(columns = 4, rows = 5),
+                availableWidthDp = 400,
+                availableHeightDp = 1000,
+            )
+
+        assertEquals(WidgetAddRequestResult.RequiresConfiguration(HostedWidgetId(1)), result)
+        assertEquals(
+            WidgetConfigurationResult.Bound(
+                LauncherShellAction.AddHostedWidgetToDock(
+                    hostedWidgetId = HostedWidgetId(1),
+                    label = "Weather",
+                ),
+            ),
+            coordinator.onConfigurationResult(configured = true),
+        )
+    }
+
+    @Test
     fun permissionSuccessForWidgetRequiringConfigurationWaitsForConfigurationResult() {
         val gateway =
             FakeWidgetHostGateway(
@@ -127,6 +205,36 @@ class WidgetBindingCoordinatorTest {
             coordinator.onConfigurationResult(configured = true),
         )
         assertEquals(emptyList<HostedWidgetId>(), gateway.deletedHostedWidgetIds)
+    }
+
+    @Test
+    fun permissionThenConfigurationPreservesDockTarget() {
+        val gateway =
+            FakeWidgetHostGateway(
+                bindingResult = WidgetBindingResult.RequiresPermission,
+                configuredWidgetIds = setOf(HostedWidgetId(1)),
+            )
+        val coordinator = WidgetBindingCoordinator(gateway)
+        coordinator.requestAddWidget(
+            action = requestAddWidget(label = "Calendar", target = WidgetAddTarget.DOCK),
+            grid = GridDimensions(columns = 4, rows = 5),
+            availableWidthDp = 400,
+            availableHeightDp = 1000,
+        )
+
+        assertEquals(
+            WidgetBindPermissionResult.RequiresConfiguration(HostedWidgetId(1)),
+            coordinator.onPermissionResult(granted = true),
+        )
+        assertEquals(
+            WidgetConfigurationResult.Bound(
+                LauncherShellAction.AddHostedWidgetToDock(
+                    hostedWidgetId = HostedWidgetId(1),
+                    label = "Calendar",
+                ),
+            ),
+            coordinator.onConfigurationResult(configured = true),
+        )
     }
 
     @Test
@@ -337,15 +445,18 @@ class WidgetBindingCoordinatorTest {
                 className = WidgetProviderClassName(".ExampleWidget"),
             )
 
-        fun requestAddWidget(label: String) =
-            LauncherShellAction.RequestAddWidget(
-                provider = providerIdentity,
-                label = label,
-                dimensions =
-                    WidgetProviderDimensions(
-                        minWidthDp = 200,
-                        minHeightDp = 100,
-                    ),
-            )
+        fun requestAddWidget(
+            label: String,
+            target: WidgetAddTarget = WidgetAddTarget.HOME,
+        ) = LauncherShellAction.RequestAddWidget(
+            provider = providerIdentity,
+            label = label,
+            dimensions =
+                WidgetProviderDimensions(
+                    minWidthDp = 200,
+                    minHeightDp = 100,
+                ),
+            target = target,
+        )
     }
 }

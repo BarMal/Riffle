@@ -9,12 +9,12 @@ import com.riffle.app.launcher.AndroidWebSearchLauncher
 import com.riffle.app.launcher.AndroidWidgetAddWindowSizeProvider
 import com.riffle.app.launcher.DataStoreHomeLayoutRepository
 import com.riffle.app.launcher.DataStoreLauncherSettingsRepository
+import com.riffle.app.launcher.HostedWidgetAddAction
 import com.riffle.app.launcher.HostedWidgetAddCompletionResult
 import com.riffle.app.launcher.LauncherBackupDocumentGateway
 import com.riffle.app.launcher.LauncherBackupDocumentHandler
 import com.riffle.app.launcher.LauncherBackupExportCoordinator
 import com.riffle.app.launcher.LauncherBackupImportCoordinator
-import com.riffle.app.launcher.LauncherShellAction
 import com.riffle.app.launcher.LauncherShellPlatformDependencies
 import com.riffle.app.launcher.LauncherWidgetAddRequestHandler
 import com.riffle.app.launcher.SharedPreferencesAppVisibilityRepository
@@ -103,7 +103,7 @@ internal class MainActivityDependencies(
 
     fun widgetAddRequestHandler(
         selectedGrid: () -> GridDimensions,
-        completeWidgetAdd: (LauncherShellAction.AddHostedWidgetToHome) -> HostedWidgetAddCompletionResult,
+        completeWidgetAdd: (HostedWidgetAddAction) -> HostedWidgetAddCompletionResult,
     ): LauncherWidgetAddRequestHandler =
         LauncherWidgetAddRequestHandler(
             widgetBindingCoordinator = widgetBindingCoordinator,

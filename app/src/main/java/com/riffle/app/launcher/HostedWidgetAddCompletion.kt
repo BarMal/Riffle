@@ -1,6 +1,5 @@
 package com.riffle.app.launcher
 
-import com.riffle.app.launcher.LauncherShellAction.AddHostedWidgetToHome
 import com.riffle.app.launcher.widgets.fitWidgetPreferredSpan
 import com.riffle.app.launcher.widgets.widgetSpanAdjustmentToast
 import com.riffle.core.domain.launcher.home.GridSpan
@@ -8,7 +7,15 @@ import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HostedWidgetId
 import com.riffle.core.domain.launcher.home.WidgetItem
 
-internal fun LauncherShellViewModel.completeWidgetAdd(action: AddHostedWidgetToHome): HostedWidgetAddCompletionResult {
+internal fun LauncherShellViewModel.completeWidgetAdd(action: HostedWidgetAddAction): HostedWidgetAddCompletionResult =
+    when (action) {
+        is LauncherShellAction.AddHostedWidgetToHome -> completeHomeWidgetAdd(action)
+        is LauncherShellAction.AddHostedWidgetToDock -> completeDockWidgetAdd(action)
+    }
+
+private fun LauncherShellViewModel.completeHomeWidgetAdd(
+    action: LauncherShellAction.AddHostedWidgetToHome,
+): HostedWidgetAddCompletionResult {
     val fittedAction =
         action.copy(
             preferredSpan =
@@ -32,6 +39,19 @@ internal fun LauncherShellViewModel.completeWidgetAdd(action: AddHostedWidgetToH
     }
 }
 
+private fun LauncherShellViewModel.completeDockWidgetAdd(
+    action: LauncherShellAction.AddHostedWidgetToDock,
+): HostedWidgetAddCompletionResult {
+    onDockEdited(action)
+    val wasPlaced = state.value.homeLayout.dock.hasHostedWidget(action.hostedWidgetId)
+    onAppActionSelected(LauncherShellAction.CloseWidgetPicker)
+    return if (wasPlaced) {
+        HostedWidgetAddCompletionResult.Placed(message = null)
+    } else {
+        HostedWidgetAddCompletionResult.Rejected
+    }
+}
+
 sealed interface HostedWidgetAddCompletionResult {
     data class Placed(
         val message: String?,
@@ -47,7 +67,7 @@ internal fun HostedWidgetAddCompletionResult.messageOrNull(): String? =
     }
 
 internal fun HostedWidgetAddCompletionResult.deleteHostedWidgetIdWhenRejected(
-    action: AddHostedWidgetToHome,
+    action: HostedWidgetAddAction,
     deleteHostedWidgetId: (HostedWidgetId) -> Unit,
 ): HostedWidgetAddCompletionResult =
     also { result ->
@@ -78,5 +98,10 @@ private fun HomeLayout.hostedWidgetSpanAdjustmentMessage(
 private fun HomeLayout.hasHostedWidget(hostedWidgetId: HostedWidgetId): Boolean =
     pages
         .flatMap { page -> page.items }
+        .filterIsInstance<WidgetItem>()
+        .any { widget -> widget.appWidgetId == hostedWidgetId }
+
+private fun com.riffle.core.domain.launcher.home.DockModel.hasHostedWidget(hostedWidgetId: HostedWidgetId): Boolean =
+    items
         .filterIsInstance<WidgetItem>()
         .any { widget -> widget.appWidgetId == hostedWidgetId }

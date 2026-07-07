@@ -190,6 +190,17 @@ private fun WidgetProviderTile(
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            TextButton(onClick = { onAction(provider.requestAddWidgetAction(WidgetAddTarget.HOME)) }) {
+                Text(text = "Home")
+            }
+            TextButton(onClick = { onAction(provider.requestAddWidgetAction(WidgetAddTarget.DOCK)) }) {
+                Text(text = "Dock")
+            }
+        }
     }
 }
 
@@ -261,11 +272,14 @@ private fun WidgetProviderPreviewFallback(provider: InstalledWidgetProvider) {
     }
 }
 
-internal fun InstalledWidgetProvider.requestAddWidgetAction(): LauncherShellAction.RequestAddWidget =
+internal fun InstalledWidgetProvider.requestAddWidgetAction(
+    target: WidgetAddTarget = WidgetAddTarget.HOME,
+): LauncherShellAction.RequestAddWidget =
     LauncherShellAction.RequestAddWidget(
         provider = identity,
         label = label,
         dimensions = dimensions,
+        target = target,
     )
 
 private const val WIDGET_PICKER_SCREEN_PADDING_DP = 20

@@ -66,6 +66,48 @@ class DockEngineTest {
     }
 
     @Test
+    fun addsWidgetToDock() {
+        val layout = HomeLayoutDefaults.standard().copy(dock = DockModel(capacity = 0, isEnabled = false))
+
+        val result =
+            engine.addWidgetToDock(
+                layout = layout,
+                hostedWidgetId = HostedWidgetId(7),
+                label = "Weather",
+            )
+
+        val updated = assertIs<DockEditResult.Updated>(result)
+        val widget = updated.layout.dock.items.single() as WidgetItem
+        assertEquals(LauncherItemId("dock-widget:7"), widget.id)
+        assertEquals(HostedWidgetId(7), widget.appWidgetId)
+        assertEquals("Weather", widget.label)
+        assertEquals(true, updated.layout.dock.isEnabled)
+        assertEquals(1, updated.layout.dock.capacity)
+    }
+
+    @Test
+    fun rejectsDuplicateDockWidget() {
+        val layout =
+            assertIs<DockEditResult.Updated>(
+                engine.addWidgetToDock(
+                    layout = HomeLayoutDefaults.standard(),
+                    hostedWidgetId = HostedWidgetId(7),
+                    label = "Weather",
+                ),
+            ).layout
+
+        val result =
+            engine.addWidgetToDock(
+                layout = layout,
+                hostedWidgetId = HostedWidgetId(7),
+                label = "Weather",
+            )
+
+        val rejected = assertIs<DockEditResult.Rejected>(result)
+        assertEquals(DockEditRejectionReason.DUPLICATE_WIDGET, rejected.reason)
+    }
+
+    @Test
     fun removesDockItem() {
         val shortcut = appShortcut(id = "phone")
         val layout = HomeLayoutDefaults.standard().copy(dock = DockModel(capacity = 5, items = listOf(shortcut)))

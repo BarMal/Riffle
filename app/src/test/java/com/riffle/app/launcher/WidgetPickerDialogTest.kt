@@ -126,6 +126,21 @@ class WidgetPickerDialogTest {
     }
 
     @Test
+    fun requestAddWidgetActionCanTargetDock() {
+        val provider = widgetProvider(label = "Clock", packageName = "com.example.clock", className = ".ClockWidget")
+
+        assertEquals(
+            LauncherShellAction.RequestAddWidget(
+                provider = provider.identity,
+                label = "Clock",
+                dimensions = provider.dimensions,
+                target = WidgetAddTarget.DOCK,
+            ),
+            provider.requestAddWidgetAction(WidgetAddTarget.DOCK),
+        )
+    }
+
+    @Test
     fun previewLabelPrefersTargetCellSizeWhenAvailable() {
         val provider =
             widgetProvider(label = "Clock", packageName = "com.example.clock", className = ".ClockWidget").copy(

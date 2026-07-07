@@ -228,14 +228,22 @@ sealed interface LauncherShellAction {
         val provider: WidgetProviderIdentity,
         val label: String,
         val dimensions: WidgetProviderDimensions,
+        val target: WidgetAddTarget = WidgetAddTarget.HOME,
     ) : LauncherShellAction
 
     data class AddHostedWidgetToHome(
-        val hostedWidgetId: HostedWidgetId,
-        val label: String,
+        override val hostedWidgetId: HostedWidgetId,
+        override val label: String,
         val preferredSpan: GridSpan = GridSpan(),
         val targetCell: GridCell? = null,
-    ) : LauncherShellAction
+    ) : LauncherShellAction,
+        HostedWidgetAddAction
+
+    data class AddHostedWidgetToDock(
+        override val hostedWidgetId: HostedWidgetId,
+        override val label: String,
+    ) : LauncherShellAction,
+        HostedWidgetAddAction
 
     data class SearchQueryChanged(val query: String) : LauncherShellAction
 
@@ -306,4 +314,14 @@ sealed interface LauncherShellAction {
     data class SelectOverlayDockShowLabels(val showLabels: Boolean) : LauncherShellAction
 
     data class DismissNotifications(val keys: List<LauncherNotificationKey>) : LauncherShellAction
+}
+
+enum class WidgetAddTarget {
+    HOME,
+    DOCK,
+}
+
+sealed interface HostedWidgetAddAction {
+    val hostedWidgetId: HostedWidgetId
+    val label: String
 }

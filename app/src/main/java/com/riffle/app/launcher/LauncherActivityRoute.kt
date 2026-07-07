@@ -62,6 +62,7 @@ private fun LauncherShellAction.isHomeShortcutEditAction(): Boolean =
 private fun LauncherShellAction.isDockEditAction(): Boolean =
     when (this) {
         is LauncherShellAction.AddAppToDock,
+        is LauncherShellAction.AddHostedWidgetToDock,
         is LauncherShellAction.SelectDockEnabled,
         is LauncherShellAction.SelectDockCapacity,
         is LauncherShellAction.SelectDockIconSize,

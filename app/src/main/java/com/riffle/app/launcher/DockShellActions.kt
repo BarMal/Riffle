@@ -14,6 +14,13 @@ fun DockEngine.applyEdit(
         is LauncherShellAction.AddAppToDock ->
             addAppToDock(layout = layout, app = action.app)
 
+        is LauncherShellAction.AddHostedWidgetToDock ->
+            addWidgetToDock(
+                layout = layout,
+                hostedWidgetId = action.hostedWidgetId,
+                label = action.label,
+            )
+
         is LauncherShellAction.SelectDockEnabled ->
             DockConfigurationEngine().setDockEnabled(layout = layout, enabled = action.enabled)
 

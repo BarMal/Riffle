@@ -260,6 +260,10 @@ class LauncherActionDomainTest {
                     "AddHostedWidgetToHome",
                     LauncherShellAction.AddHostedWidgetToHome(HostedWidgetId(42), label = "Weather"),
                 ),
+                activity(
+                    "AddHostedWidgetToDock",
+                    LauncherShellAction.AddHostedWidgetToDock(HostedWidgetId(42), label = "Weather"),
+                ),
                 app("SearchQueryChanged", LauncherShellAction.SearchQueryChanged("query")),
                 app(
                     "SearchProfileFilterSelected",

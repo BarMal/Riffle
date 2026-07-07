@@ -68,7 +68,7 @@ class LauncherShellPageOverviewViewModelTest {
                 editHomePage = viewModel::onHomePageEdited,
                 editHomeShortcut = {},
                 editDock = {},
-                hostedWidgetIdForRemovedShortcut = { null },
+                hostedWidgetIdForRemovedItem = { null },
                 deleteHostedWidget = {},
             )
 
