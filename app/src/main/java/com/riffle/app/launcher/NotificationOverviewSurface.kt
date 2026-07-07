@@ -10,12 +10,18 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -34,6 +40,12 @@ fun NotificationOverviewSurface(
     onAction: (LauncherShellAction) -> Unit,
     title: String = "Notifications",
 ) {
+    var selectedCategory by remember { mutableStateOf<NotificationCategory?>(null) }
+    val categoryOptions = notificationCategoryFilterOptions(groups)
+    val effectiveSelectedCategory =
+        selectedCategory.takeIf { category -> categoryOptions.any { option -> option.category == category } }
+    val visibleGroups = notificationGroupsMatchingCategory(groups, effectiveSelectedCategory)
+
     LauncherPanel(
         title = notificationOverviewTitle(baseTitle = title, groups = groups),
         onAction = onAction,
@@ -46,10 +58,17 @@ fun NotificationOverviewSurface(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 item {
-                    NotificationCategorySummary(categoryCounts = categoryCounts)
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        NotificationCategorySummary(categoryCounts = categoryCounts)
+                        NotificationCategoryFilter(
+                            options = categoryOptions,
+                            selectedCategory = effectiveSelectedCategory,
+                            onCategorySelected = { category -> selectedCategory = category },
+                        )
+                    }
                 }
                 items(
-                    items = groups,
+                    items = visibleGroups,
                     key = { group -> "${group.profileId.value}:${group.packageName.value}" },
                 ) { group ->
                     NotificationGroupRow(
@@ -62,6 +81,39 @@ fun NotificationOverviewSurface(
             }
         }
     }
+}
+
+internal fun notificationGroupsMatchingCategory(
+    groups: List<AppNotificationGroup>,
+    category: NotificationCategory?,
+): List<AppNotificationGroup> =
+    when (category) {
+        null -> groups
+        else -> groups.filter { group -> group.latestCategory == category }
+    }
+
+internal data class NotificationCategoryOption(
+    val category: NotificationCategory?,
+    val label: String,
+)
+
+internal fun notificationCategoryFilterOptions(groups: List<AppNotificationGroup>): List<NotificationCategoryOption> {
+    val totalCount = groups.sumOf { group -> group.count }
+    if (totalCount == 0) return emptyList()
+
+    val categoryOptions =
+        groups
+            .groupBy { group -> group.latestCategory }
+            .map { (category, categoryGroups) -> category to categoryGroups.sumOf { group -> group.count } }
+            .sortedWith(
+                compareByDescending<Pair<NotificationCategory, Int>> { pair -> pair.second }
+                    .thenBy { pair -> pair.first.label },
+            )
+            .map { (category, count) ->
+                NotificationCategoryOption(category = category, label = category.countLabel(count))
+            }
+
+    return listOf(NotificationCategoryOption(category = null, label = "All $totalCount")) + categoryOptions
 }
 
 internal fun notificationOverviewTitle(
@@ -84,6 +136,26 @@ private fun NotificationCategorySummary(categoryCounts: Map<NotificationCategory
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.padding(horizontal = 2.dp, vertical = 4.dp),
     )
+}
+
+@Composable
+private fun NotificationCategoryFilter(
+    options: List<NotificationCategoryOption>,
+    selectedCategory: NotificationCategory?,
+    onCategorySelected: (NotificationCategory?) -> Unit,
+) {
+    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        items(
+            items = options,
+            key = { option -> option.category?.name ?: "all" },
+        ) { option ->
+            FilterChip(
+                selected = option.category == selectedCategory,
+                onClick = { onCategorySelected(option.category) },
+                label = { Text(text = option.label) },
+            )
+        }
+    }
 }
 
 @Composable
@@ -211,6 +283,8 @@ private val NotificationCategory.label: String
             NotificationCategory.STOPWATCH -> "Stopwatch"
             NotificationCategory.WORKOUT -> "Workout"
         }
+
+private fun NotificationCategory.countLabel(count: Int): String = "$label $count"
 
 private val AppNotificationGroup.clearableLabel: String
     get() =
