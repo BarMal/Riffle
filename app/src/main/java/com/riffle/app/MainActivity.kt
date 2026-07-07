@@ -45,6 +45,7 @@ import com.riffle.app.launcher.selectedPageHostedWidgetIdForItem
 import com.riffle.app.launcher.startSystemUiSync
 import com.riffle.app.launcher.startWallpaperOffsetSync
 import com.riffle.app.launcher.widgets.WidgetBindPermissionResult
+import com.riffle.app.launcher.widgets.WidgetConfigurationResult
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -128,24 +129,47 @@ class MainActivity : ComponentActivity() {
                 widgetBindingCoordinator.onPermissionResult(result.resultCode == Activity.RESULT_OK)
             when (permissionResult) {
                 is WidgetBindPermissionResult.Bound ->
-                    when (
-                        val completion =
-                            shellViewModel.completeWidgetAdd(permissionResult.action)
-                                .deleteHostedWidgetIdWhenRejected(
-                                    permissionResult.action,
-                                    widgetHostGateway::deleteHostedWidgetId,
-                                )
-                    ) {
-                        is HostedWidgetAddCompletionResult.Placed ->
-                            completion.message?.let { message ->
-                                Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
-                            }
+                    completeConfiguredWidgetAdd(permissionResult.action)
 
-                        HostedWidgetAddCompletionResult.Rejected -> Unit
-                    }
+                is WidgetBindPermissionResult.RequiresConfiguration ->
+                    requestWidgetConfiguration.launch(
+                        widgetHostGateway.createConfigureHostedWidgetIntent(permissionResult.hostedWidgetId),
+                    )
 
                 WidgetBindPermissionResult.Cancelled,
                 WidgetBindPermissionResult.Ignored,
+                -> Unit
+            }
+        }
+
+    private val completeConfiguredWidgetAdd: (LauncherShellAction.AddHostedWidgetToHome) -> Unit = { action ->
+        when (
+            val completion =
+                shellViewModel.completeWidgetAdd(action)
+                    .deleteHostedWidgetIdWhenRejected(
+                        action,
+                        widgetHostGateway::deleteHostedWidgetId,
+                    )
+        ) {
+            is HostedWidgetAddCompletionResult.Placed ->
+                completion.message?.let { message ->
+                    Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+                }
+
+            HostedWidgetAddCompletionResult.Rejected -> Unit
+        }
+    }
+
+    private val requestWidgetConfiguration =
+        registerForActivityResult(
+            ActivityResultContracts.StartActivityForResult(),
+        ) { result ->
+            val configurationResult =
+                widgetBindingCoordinator.onConfigurationResult(result.resultCode == Activity.RESULT_OK)
+            when (configurationResult) {
+                is WidgetConfigurationResult.Bound -> completeConfiguredWidgetAdd(configurationResult.action)
+                WidgetConfigurationResult.Cancelled,
+                WidgetConfigurationResult.Ignored,
                 -> Unit
             }
         }
@@ -391,6 +415,11 @@ class MainActivity : ComponentActivity() {
                         result.hostedWidgetId,
                         result.provider,
                     ),
+                )
+
+            is LauncherWidgetAddHandlingResult.RequiresConfiguration ->
+                requestWidgetConfiguration.launch(
+                    widgetHostGateway.createConfigureHostedWidgetIntent(result.hostedWidgetId),
                 )
         }
     }

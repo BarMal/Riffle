@@ -38,6 +38,11 @@ class LauncherWidgetAddRequestHandler(
                     hostedWidgetId = requestResult.hostedWidgetId,
                     provider = requestResult.provider,
                 )
+
+            is WidgetAddRequestResult.RequiresConfiguration ->
+                LauncherWidgetAddHandlingResult.RequiresConfiguration(
+                    hostedWidgetId = requestResult.hostedWidgetId,
+                )
         }
     }
 }
@@ -55,5 +60,9 @@ sealed interface LauncherWidgetAddHandlingResult {
     data class RequiresPermission(
         val hostedWidgetId: HostedWidgetId,
         val provider: WidgetProviderIdentity,
+    ) : LauncherWidgetAddHandlingResult
+
+    data class RequiresConfiguration(
+        val hostedWidgetId: HostedWidgetId,
     ) : LauncherWidgetAddHandlingResult
 }

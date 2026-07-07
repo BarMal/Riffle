@@ -1,5 +1,6 @@
 package com.riffle.app.launcher.widgets
 
+import android.content.Intent
 import com.riffle.app.launcher.LauncherShellAction
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.home.GridDimensions
@@ -63,6 +64,127 @@ class WidgetBindingCoordinatorTest {
             result,
         )
         assertEquals(emptyList<HostedWidgetId>(), gateway.deletedHostedWidgetIds)
+    }
+
+    @Test
+    fun boundWidgetRequiringConfigurationWaitsForConfigurationResult() {
+        val gateway =
+            FakeWidgetHostGateway(
+                bindingResult = WidgetBindingResult.Bound,
+                configuredWidgetIds = setOf(HostedWidgetId(1)),
+            )
+        val coordinator = WidgetBindingCoordinator(gateway)
+
+        val result =
+            coordinator.requestAddWidget(
+                action = requestAddWidget(label = "Weather"),
+                grid = GridDimensions(columns = 4, rows = 5),
+                availableWidthDp = 400,
+                availableHeightDp = 1000,
+            )
+
+        assertEquals(WidgetAddRequestResult.RequiresConfiguration(HostedWidgetId(1)), result)
+        assertEquals(
+            WidgetConfigurationResult.Bound(
+                LauncherShellAction.AddHostedWidgetToHome(
+                    hostedWidgetId = HostedWidgetId(1),
+                    label = "Weather",
+                    preferredSpan = GridSpan(columns = 2, rows = 1),
+                ),
+            ),
+            coordinator.onConfigurationResult(configured = true),
+        )
+        assertEquals(emptyList<HostedWidgetId>(), gateway.deletedHostedWidgetIds)
+    }
+
+    @Test
+    fun permissionSuccessForWidgetRequiringConfigurationWaitsForConfigurationResult() {
+        val gateway =
+            FakeWidgetHostGateway(
+                bindingResult = WidgetBindingResult.RequiresPermission,
+                configuredWidgetIds = setOf(HostedWidgetId(1)),
+            )
+        val coordinator = WidgetBindingCoordinator(gateway)
+        coordinator.requestAddWidget(
+            action = requestAddWidget(label = "Calendar"),
+            grid = GridDimensions(columns = 4, rows = 5),
+            availableWidthDp = 400,
+            availableHeightDp = 1000,
+        )
+
+        assertEquals(
+            WidgetBindPermissionResult.RequiresConfiguration(HostedWidgetId(1)),
+            coordinator.onPermissionResult(granted = true),
+        )
+        assertEquals(
+            WidgetConfigurationResult.Bound(
+                LauncherShellAction.AddHostedWidgetToHome(
+                    hostedWidgetId = HostedWidgetId(1),
+                    label = "Calendar",
+                    preferredSpan = GridSpan(columns = 2, rows = 1),
+                ),
+            ),
+            coordinator.onConfigurationResult(configured = true),
+        )
+        assertEquals(emptyList<HostedWidgetId>(), gateway.deletedHostedWidgetIds)
+    }
+
+    @Test
+    fun configurationCancellationDeletesPendingHostedWidgetId() {
+        val gateway =
+            FakeWidgetHostGateway(
+                bindingResult = WidgetBindingResult.Bound,
+                configuredWidgetIds = setOf(HostedWidgetId(1)),
+            )
+        val coordinator = WidgetBindingCoordinator(gateway)
+        coordinator.requestAddWidget(
+            action = requestAddWidget(label = "Clock"),
+            grid = GridDimensions(columns = 4, rows = 5),
+            availableWidthDp = 400,
+            availableHeightDp = 1000,
+        )
+
+        val result = coordinator.onConfigurationResult(configured = false)
+
+        assertEquals(WidgetConfigurationResult.Cancelled, result)
+        assertEquals(listOf(HostedWidgetId(1)), gateway.deletedHostedWidgetIds)
+    }
+
+    @Test
+    fun replacementConfigurationRequestDeletesPreviousPendingHostedWidgetId() {
+        val gateway =
+            FakeWidgetHostGateway(
+                bindingResult = WidgetBindingResult.Bound,
+                configuredWidgetIds = setOf(HostedWidgetId(1), HostedWidgetId(2)),
+            )
+        val coordinator = WidgetBindingCoordinator(gateway)
+        coordinator.requestAddWidget(
+            action = requestAddWidget(label = "Calendar"),
+            grid = GridDimensions(columns = 4, rows = 5),
+            availableWidthDp = 400,
+            availableHeightDp = 1000,
+        )
+
+        val result =
+            coordinator.requestAddWidget(
+                action = requestAddWidget(label = "Weather"),
+                grid = GridDimensions(columns = 4, rows = 5),
+                availableWidthDp = 400,
+                availableHeightDp = 1000,
+            )
+
+        assertEquals(listOf(HostedWidgetId(1)), gateway.deletedHostedWidgetIds)
+        assertEquals(WidgetAddRequestResult.RequiresConfiguration(HostedWidgetId(2)), result)
+        assertEquals(
+            WidgetConfigurationResult.Bound(
+                LauncherShellAction.AddHostedWidgetToHome(
+                    hostedWidgetId = HostedWidgetId(2),
+                    label = "Weather",
+                    preferredSpan = GridSpan(columns = 2, rows = 1),
+                ),
+            ),
+            coordinator.onConfigurationResult(configured = true),
+        )
     }
 
     @Test
@@ -164,8 +286,16 @@ class WidgetBindingCoordinatorTest {
         assertEquals(WidgetBindPermissionResult.Ignored, coordinator.onPermissionResult(granted = true))
     }
 
+    @Test
+    fun configurationResultWithoutPendingRequestIsIgnored() {
+        val coordinator = WidgetBindingCoordinator(FakeWidgetHostGateway())
+
+        assertEquals(WidgetConfigurationResult.Ignored, coordinator.onConfigurationResult(configured = true))
+    }
+
     private class FakeWidgetHostGateway(
         var bindingResult: WidgetBindingResult = WidgetBindingResult.Bound,
+        private val configuredWidgetIds: Set<HostedWidgetId> = emptySet(),
     ) : WidgetHostGateway {
         private var nextHostedWidgetId = 1
         val boundHostedWidgetIds = mutableListOf<HostedWidgetId>()
@@ -186,6 +316,14 @@ class WidgetBindingCoordinatorTest {
             hostedWidgetId: HostedWidgetId,
             provider: WidgetProviderIdentity,
         ) = error("Intent creation stays in MainActivity")
+
+        override fun hostedWidgetRequiresConfiguration(hostedWidgetId: HostedWidgetId): Boolean {
+            return hostedWidgetId in configuredWidgetIds
+        }
+
+        override fun createConfigureHostedWidgetIntent(hostedWidgetId: HostedWidgetId): Intent {
+            error("Intent creation stays in MainActivity")
+        }
 
         override fun deleteHostedWidgetId(hostedWidgetId: HostedWidgetId) {
             deletedHostedWidgetIds += hostedWidgetId

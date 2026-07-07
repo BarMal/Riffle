@@ -54,6 +54,14 @@ class AndroidWidgetHostGateway(
                 provider.androidBindingTarget().toComponentName(),
             )
 
+    override fun hostedWidgetRequiresConfiguration(hostedWidgetId: HostedWidgetId): Boolean =
+        appWidgetManager.getAppWidgetInfo(hostedWidgetId.value)?.configure != null
+
+    override fun createConfigureHostedWidgetIntent(hostedWidgetId: HostedWidgetId): Intent =
+        Intent(AppWidgetManager.ACTION_APPWIDGET_CONFIGURE)
+            .setComponent(appWidgetManager.getAppWidgetInfo(hostedWidgetId.value)?.configure)
+            .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, hostedWidgetId.value)
+
     override fun createHostedWidgetView(
         context: Context,
         widget: WidgetItem,

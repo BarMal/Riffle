@@ -1,5 +1,6 @@
 package com.riffle.app.launcher
 
+import android.content.Intent
 import com.riffle.app.launcher.widgets.WidgetBindingCoordinator
 import com.riffle.app.launcher.widgets.WidgetBindingResult
 import com.riffle.app.launcher.widgets.WidgetHostGateway
@@ -66,6 +67,31 @@ class LauncherWidgetAddRequestHandlerTest {
                 hostedWidgetId = HostedWidgetId(1),
                 provider = providerIdentity,
             ),
+            result,
+        )
+        assertEquals(emptyList<HostedWidgetId>(), gateway.deletedHostedWidgetIds)
+    }
+
+    @Test
+    fun returnsConfigurationRequestWhenBoundWidgetRequiresConfiguration() {
+        val gateway =
+            FakeWidgetHostGateway(
+                bindingResult = WidgetBindingResult.Bound,
+                configuredWidgetIds = setOf(HostedWidgetId(1)),
+            )
+        val handler =
+            LauncherWidgetAddRequestHandler(
+                widgetBindingCoordinator = WidgetBindingCoordinator(gateway),
+                selectedGrid = { GridDimensions(columns = 4, rows = 5) },
+                windowSize = { LauncherWidgetAddWindowSize(availableWidthDp = 400, availableHeightDp = 1000) },
+                completeWidgetAdd = { error("Widget completion waits for configuration result") },
+                deleteHostedWidgetId = gateway::deleteHostedWidgetId,
+            )
+
+        val result = handler.handle(requestAddWidget(label = "Weather"))
+
+        assertEquals(
+            LauncherWidgetAddHandlingResult.RequiresConfiguration(HostedWidgetId(1)),
             result,
         )
         assertEquals(emptyList<HostedWidgetId>(), gateway.deletedHostedWidgetIds)
@@ -139,6 +165,7 @@ class LauncherWidgetAddRequestHandlerTest {
     private class FakeWidgetHostGateway(
         bindingResult: WidgetBindingResult = WidgetBindingResult.Bound,
         private val bindingResults: List<WidgetBindingResult> = listOf(bindingResult),
+        private val configuredWidgetIds: Set<HostedWidgetId> = emptySet(),
     ) : WidgetHostGateway {
         private var nextHostedWidgetId = 1
         private var nextBindingResultIndex = 0
@@ -160,6 +187,14 @@ class LauncherWidgetAddRequestHandlerTest {
             hostedWidgetId: HostedWidgetId,
             provider: WidgetProviderIdentity,
         ) = error("Intent creation stays in MainActivity")
+
+        override fun hostedWidgetRequiresConfiguration(hostedWidgetId: HostedWidgetId): Boolean {
+            return hostedWidgetId in configuredWidgetIds
+        }
+
+        override fun createConfigureHostedWidgetIntent(hostedWidgetId: HostedWidgetId): Intent {
+            error("Intent creation stays in MainActivity")
+        }
 
         override fun deleteHostedWidgetId(hostedWidgetId: HostedWidgetId) {
             deletedHostedWidgetIds += hostedWidgetId
