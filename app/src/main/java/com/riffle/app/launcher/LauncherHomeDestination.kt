@@ -17,6 +17,7 @@ fun HomeDestination(
                 title = "Cards",
                 groups = state.notificationGroupsByApp,
                 categoryCounts = state.notificationCountsByCategory,
+                notificationAccessStatus = state.notificationAccessStatus,
                 apps = state.installedApps,
                 appIconLoader = appIconLoader,
                 onAction = onAction,
