@@ -1,5 +1,24 @@
 # Changelog
 
+## Alpha 186
+
+Release notes for the next alpha after Alpha 185.
+
+### Changed
+
+- Settings > Gestures can now bind a launcher gesture to Manage pages, opening the home page overview directly.
+- App search now matches Android app categories such as Game, Audio, Video, Image, Social, News, Maps, and Productivity when the system provides category metadata.
+
+### Verification
+
+- Full GitHub CI `Verify` passed for PRs #559 and #560.
+- Local verification included focused gesture action, app category search, package-manager mapping tests, and full `./gradlew verify`.
+
+### Known Limitations
+
+- Category search depends on Android app category metadata and does not add category chips or grouping yet.
+- The Manage pages gesture action is configurable, but defaults are unchanged.
+
 ## Alpha 185
 
 Release notes for the next alpha after Alpha 184.
