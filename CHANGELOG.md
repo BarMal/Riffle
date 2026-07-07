@@ -1,5 +1,26 @@
 # Changelog
 
+## Alpha 190
+
+Release notes for the next alpha after Alpha 189.
+
+### Changed
+
+- Widget picker tiles now offer explicit Home and Dock targets.
+- Dock widgets now use the existing Android widget bind, permission, and configuration flow before being persisted.
+- Dock widget removals and rejected dock placements now clean up hosted widget IDs.
+- Duplicate dock widget completion actions are rejected to avoid duplicate dock item IDs.
+
+### Verification
+
+- Full GitHub CI `Verify` passed for PR #577.
+- Local verification included focused widget binding, dock editing, hosted-widget cleanup, picker action, route ownership, and full `./gradlew verify`.
+
+### Known Limitations
+
+- Dock widget sizing still relies on the existing dock renderer and settings.
+- OEM widget bind/config activities still need physical-device validation.
+
 ## Alpha 189
 
 Release notes for the next alpha after Alpha 188.
