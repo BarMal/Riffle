@@ -3,6 +3,7 @@ package com.riffle.app.launcher
 import com.riffle.core.domain.launcher.apps.AppActivityName
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
+import com.riffle.core.domain.launcher.apps.AppProfile
 import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.apps.AppShortcutId
 import com.riffle.core.domain.launcher.apps.InstalledApp
@@ -65,6 +66,17 @@ class SearchGridResultsTest {
     }
 
     @Test
+    fun searchGridResultsPrefixNonDefaultProfileLabels() {
+        val workCalendar = app("Calendar", profile = AppProfile.work())
+        val privateVault = app("Vault", profile = AppProfile.private())
+        val shortcut = shortcut(app = privateVault, label = "Lock")
+
+        val results = searchGridResults(apps = listOf(workCalendar), shortcuts = listOf(shortcut))
+
+        assertEquals(listOf("Private - Lock", "Work - Calendar"), results.map { result -> result.label })
+    }
+
+    @Test
     fun searchGridResultsFallbackToMainSettingsForUnknownSettingsEntryIds() {
         val results =
             searchGridResults(
@@ -115,12 +127,16 @@ class SearchGridResultsTest {
         assertEquals(null, searchWebPreview("   "))
     }
 
-    private fun app(label: String): InstalledApp =
+    private fun app(
+        label: String,
+        profile: AppProfile = AppProfile.personal(),
+    ): InstalledApp =
         InstalledApp(
             identity =
                 AppIdentity(
                     packageName = AppPackageName("com.example.${label.lowercase()}"),
                     activityName = AppActivityName(".MainActivity"),
+                    profile = profile,
                 ),
             label = label,
         )

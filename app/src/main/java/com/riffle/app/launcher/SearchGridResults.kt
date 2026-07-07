@@ -74,7 +74,7 @@ internal sealed interface SearchGridResult {
         val app: InstalledApp,
     ) : SearchGridResult {
         override val key: String = "app:${app.identity.stableSearchKey}"
-        override val label: String = app.label
+        override val label: String = app.identity.profile.profileDisplayLabel(app.label)
         override val action: LauncherShellAction = LauncherShellAction.LaunchApp(app.identity)
         override val sortKey: String = app.identity.packageName.value
     }
@@ -83,7 +83,7 @@ internal sealed interface SearchGridResult {
         val shortcut: AppShortcut,
     ) : SearchGridResult {
         override val key: String = "shortcut:${shortcut.appIdentity.stableSearchKey}:${shortcut.id.value}"
-        override val label: String = shortcut.shortLabel
+        override val label: String = shortcut.appIdentity.profile.profileDisplayLabel(shortcut.shortLabel)
         override val action: LauncherShellAction = LauncherShellAction.LaunchAppShortcut(shortcut)
         override val sortKey: String = shortcut.appIdentity.packageName.value
     }
