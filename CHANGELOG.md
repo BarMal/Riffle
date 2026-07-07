@@ -1,5 +1,24 @@
 # Changelog
 
+## Alpha 187
+
+Release notes for the next alpha after Alpha 186.
+
+### Changed
+
+- Launcher search now matches more concrete Settings options, including dock spacing, label sizing, wallpaper motion, floating dock handle controls, gesture actions, permissions, and backup actions.
+- Android widgets that require provider configuration now launch the standard widget configuration flow before being added to the home layout.
+
+### Verification
+
+- Full GitHub CI `Verify` passed for PRs #562 and #563.
+- Local verification included the release-notes `./gradlew verify`; worker verification covered settings search and widget coordinator/request-handler tests.
+
+### Known Limitations
+
+- Settings search still opens the owning Settings page rather than scrolling to a specific row.
+- Widget configuration was covered by unit tests and platform intent wiring, but still needs physical-device validation with real configurable widget providers.
+
 ## Alpha 186
 
 Release notes for the next alpha after Alpha 185.
