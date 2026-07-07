@@ -111,7 +111,7 @@ class HomeSwipeGestureInterpreterTest {
                         HomeGesture.ONE_FINGER_UP to LauncherGestureAction.OPEN_SEARCH,
                         HomeGesture.ONE_FINGER_DOWN to LauncherGestureAction.OPEN_SETTINGS,
                         HomeGesture.ONE_FINGER_LEFT to LauncherGestureAction.ENTER_HOME_EDIT_MODE,
-                        HomeGesture.ONE_FINGER_RIGHT to LauncherGestureAction.OPEN_APP_DRAWER,
+                        HomeGesture.ONE_FINGER_RIGHT to LauncherGestureAction.ENTER_HOME_PAGE_OVERVIEW,
                         HomeGesture.PINCH_OUT to LauncherGestureAction.OPEN_NOTIFICATIONS,
                     ),
             )
@@ -122,7 +122,10 @@ class HomeSwipeGestureInterpreterTest {
             LauncherShellAction.EnterHomeEditMode,
             actionMapper.actionFor(HomeGesture.ONE_FINGER_LEFT, settings),
         )
-        assertEquals(LauncherShellAction.OpenAppDrawer, actionMapper.actionFor(HomeGesture.ONE_FINGER_RIGHT, settings))
+        assertEquals(
+            LauncherShellAction.EnterHomePageOverview,
+            actionMapper.actionFor(HomeGesture.ONE_FINGER_RIGHT, settings),
+        )
         assertEquals(LauncherShellAction.OpenNotifications, actionMapper.actionFor(HomeGesture.PINCH_OUT, settings))
     }
 
@@ -131,6 +134,11 @@ class HomeSwipeGestureInterpreterTest {
         val settings = HomeGestureSettings(actions = mapOf(HomeGesture.ONE_FINGER_UP to LauncherGestureAction.NONE))
 
         assertNull(actionMapper.actionFor(HomeGesture.ONE_FINGER_UP, settings))
+    }
+
+    @Test
+    fun labelsPageOverviewGestureActionForSettings() {
+        assertEquals("Manage pages", LauncherGestureAction.ENTER_HOME_PAGE_OVERVIEW.label)
     }
 
     @Test
