@@ -1,7 +1,11 @@
 package com.riffle.app.launcher
 
 import com.riffle.core.domain.launcher.home.DockBackgroundSizing
+import com.riffle.core.domain.launcher.home.DockModel
 import com.riffle.core.domain.launcher.home.DockOverflowMode
+import com.riffle.core.domain.launcher.home.HostedWidgetId
+import com.riffle.core.domain.launcher.home.LauncherItemId
+import com.riffle.core.domain.launcher.home.WidgetItem
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -369,4 +373,59 @@ class HomeDockMetricsTest {
             ),
         )
     }
+
+    @Test
+    fun dockOverflowRequiresMoreItemsThanCapacity() {
+        assertEquals(true, dockHasOverflow(capacity = 5, itemCount = 6))
+        assertEquals(false, dockHasOverflow(capacity = 5, itemCount = 5))
+        assertEquals(false, dockHasOverflow(capacity = 0, itemCount = 1))
+    }
+
+    @Test
+    fun expandedDockSplitsPrimaryAndOverflowShelfItems() {
+        val items = (1..7).map { index -> widget("widget:$index", index) }
+        val dock = DockModel(capacity = 5, items = items)
+
+        assertEquals(items.take(5), dock.primaryDock(showShelf = true).items)
+        assertEquals(items.drop(5), dock.overflowShelfDock().items)
+        assertEquals(2, dock.overflowShelfDock().capacity)
+    }
+
+    @Test
+    fun collapsedPrimaryDockKeepsAllItemsScrollable() {
+        val items = (1..7).map { index -> widget("widget:$index", index) }
+        val dock = DockModel(capacity = 5, items = items)
+
+        assertEquals(items, dock.primaryDock(showShelf = false).items)
+    }
+
+    @Test
+    fun dockShelfGestureExpandsOnDominantSwipeUpAndCollapsesOnDominantSwipeDown() {
+        assertEquals(
+            true,
+            dockShelfGestureExpandedState(isExpanded = false, horizontalDragPx = 10f, verticalDragPx = -90f),
+        )
+        assertEquals(
+            false,
+            dockShelfGestureExpandedState(isExpanded = true, horizontalDragPx = 10f, verticalDragPx = 90f),
+        )
+        assertEquals(
+            null,
+            dockShelfGestureExpandedState(isExpanded = false, horizontalDragPx = 90f, verticalDragPx = -90f),
+        )
+        assertEquals(
+            null,
+            dockShelfGestureExpandedState(isExpanded = true, horizontalDragPx = 0f, verticalDragPx = -90f),
+        )
+    }
+
+    private fun widget(
+        id: String,
+        hostedWidgetId: Int,
+    ): WidgetItem =
+        WidgetItem(
+            id = LauncherItemId(id),
+            appWidgetId = HostedWidgetId(hostedWidgetId),
+            label = id,
+        )
 }

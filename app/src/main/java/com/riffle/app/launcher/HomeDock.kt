@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredSize
@@ -69,7 +68,7 @@ internal fun Dock(
     }
 
     BoxWithConstraints(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.dockShelfGestureInput(interactions),
         contentAlignment = Alignment.Center,
     ) {
         HomeBackgroundContextMenu(
@@ -304,6 +303,8 @@ private data class DockPresentation(
 internal data class DockInteractions(
     val haptics: LauncherHaptics = NoopLauncherHaptics,
     val onFolderOpen: (FolderItem) -> Unit = {},
+    val isShelfExpanded: Boolean = false,
+    val onShelfExpandedChange: ((Boolean) -> Unit)? = null,
     val onAction: (LauncherShellAction) -> Unit,
 )
 

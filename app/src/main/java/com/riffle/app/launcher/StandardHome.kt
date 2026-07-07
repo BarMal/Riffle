@@ -116,6 +116,7 @@ private fun StandardHomeColumn(
             reducedMotion = state.presentation.reducedMotion,
             actions = actions,
         )
+    val isDockShelfExpanded = remember { mutableStateOf(false) }
 
     Column(
         modifier =
@@ -162,23 +163,14 @@ private fun StandardHomeColumn(
             haptics = actions.haptics,
             onAction = actions.onAction,
         )
-        if (state.visibleLayout.editMode == HomeEditMode.Browsing && state.visibleLayout.shouldShowDock()) {
-            Spacer(modifier = Modifier.height(HOME_DOCK_TOP_SPACING_DP.dp))
-            Dock(
-                dock = state.visibleLayout.dock,
-                isEditing = false,
-                notificationCountsByPackage = state.presentation.notificationCountsByPackage,
-                appShortcutsByApp = state.presentation.appShortcutsByApp,
-                appIconLoader = appIconLoader,
-                widgetViewFactory = state.presentation.widgetViewFactory,
-                interactions =
-                    DockInteractions(
-                        haptics = actions.haptics,
-                        onFolderOpen = actions.onFolderOpen,
-                        onAction = actions.onAction,
-                    ),
-            )
-        }
+        StandardHomeDockArea(
+            layout = state.visibleLayout,
+            presentation = state.presentation,
+            isDockShelfExpanded = isDockShelfExpanded.value,
+            onDockShelfExpandedChange = { expanded -> isDockShelfExpanded.value = expanded },
+            appIconLoader = appIconLoader,
+            actions = actions,
+        )
     }
 }
 
@@ -336,15 +328,6 @@ private fun StandardHomeContentState.homeGridPresentation(): HomeGridPresentatio
         widgetViewFactory = presentation.widgetViewFactory,
     )
 
-private fun HomeLayout.shouldShowDock(): Boolean =
-    dock.isEnabled &&
-        dockBackgroundVisible(
-            capacity = dock.capacity,
-            itemCount = dock.items.size,
-            isEditing = false,
-            backgroundSizing = dock.backgroundSizing,
-        )
-
 internal data class HomeDragSession(
     val item: LauncherItem,
     val originCell: GridCell,
@@ -424,5 +407,4 @@ private const val HOME_SEARCH_PILL_HEIGHT_DP = 30
 private const val HOME_SEARCH_HORIZONTAL_PADDING_DP = 14
 private const val HOME_SEARCH_SURFACE_ALPHA = 0.82f
 private const val HOME_SEARCH_BORDER_ALPHA = 0.38f
-private const val HOME_DOCK_TOP_SPACING_DP = 10
 private const val PAGE_INDICATOR_SETTLED_VISIBLE_MS = 250L
