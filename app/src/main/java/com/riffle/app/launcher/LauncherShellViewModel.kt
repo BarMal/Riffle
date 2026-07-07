@@ -48,6 +48,8 @@ class LauncherShellViewModel(
     private val platformDependencies: LauncherShellPlatformDependencies = LauncherShellPlatformDependencies(),
     private val refreshDispatcher: CoroutineDispatcher = Dispatchers.Default,
 ) : ViewModel() {
+    internal val viewModeAvailability: LauncherViewModeAvailability = platformDependencies.viewModeAvailability
+
     private val reducer = LauncherShellStateReducer()
     private val appCatalog = InstalledAppCatalog()
     private val appListActionReducer = LauncherAppListActionReducer(appCatalog)

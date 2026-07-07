@@ -8,6 +8,7 @@ import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.HomeLayoutKey
 import com.riffle.core.domain.launcher.home.HomeLayoutSet
 import com.riffle.core.domain.launcher.home.LauncherViewMode
+import com.riffle.core.domain.launcher.home.LauncherViewModeAvailability
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Test
@@ -113,5 +114,47 @@ class SettingsSurfaceStateProjectionTest {
 
         assertEquals(HomeLayoutDefaults.standard(HomeLayoutDeviceClass.FOLDABLE).dock, surfaceDock)
         assertNotEquals(HomeLayoutDefaults.standard(HomeLayoutDeviceClass.PHONE).dock, surfaceDock)
+    }
+
+    @Test
+    fun projectionHidesUnavailableViewModesAndUsesAvailableSettingsLayout() {
+        val standardKey = HomeLayoutKey(LauncherViewMode.STANDARD_APP_DRAWER, HomeLayoutDeviceClass.PHONE)
+        val cardKey = HomeLayoutKey(LauncherViewMode.CARD_INTERFACE, HomeLayoutDeviceClass.PHONE)
+        val cardLayout =
+            HomeLayoutDefaults.standard(HomeLayoutDeviceClass.PHONE)
+                .copy(viewMode = LauncherViewMode.CARD_INTERFACE)
+        val layoutSet =
+            HomeLayoutSet(
+                activeKey = standardKey,
+                layouts =
+                    mapOf(
+                        standardKey to HomeLayoutDefaults.standard(HomeLayoutDeviceClass.PHONE),
+                        cardKey to cardLayout,
+                    ),
+                preferredModesByDeviceClass =
+                    mapOf(HomeLayoutDeviceClass.PHONE to LauncherViewMode.CARD_INTERFACE),
+            )
+        val state =
+            LauncherShellState(
+                destination = ShellDestination.SETTINGS,
+                homeLayout = layoutSet.activeLayout,
+                homeLayoutSet = layoutSet,
+                settingsLayoutDeviceClass = HomeLayoutDeviceClass.PHONE,
+            )
+
+        val surfaceState =
+            state.settingsSurfaceState(
+                viewModeAvailability =
+                    LauncherViewModeAvailability(
+                        enabledExperimentalModesByDeviceClass =
+                            mapOf(HomeLayoutDeviceClass.PHONE to setOf(LauncherViewMode.HOME_SCREEN_LIBRARY)),
+                    ),
+            )
+
+        assertEquals(
+            listOf(LauncherViewMode.STANDARD_APP_DRAWER, LauncherViewMode.HOME_SCREEN_LIBRARY),
+            surfaceState.availableLauncherViewModes,
+        )
+        assertEquals(LauncherViewMode.STANDARD_APP_DRAWER, surfaceState.homeLayout.viewMode)
     }
 }

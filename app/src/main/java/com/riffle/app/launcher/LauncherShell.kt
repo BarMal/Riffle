@@ -31,6 +31,7 @@ import com.riffle.core.domain.launcher.apps.AppActivityName
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.InstalledApp
+import com.riffle.core.domain.launcher.home.LauncherViewModeAvailability
 import com.riffle.core.domain.launcher.home.WallpaperSource
 import com.riffle.core.domain.launcher.search.LauncherSearchResult
 
@@ -48,6 +49,7 @@ fun LauncherShell(
     Box(modifier = Modifier.fillMaxSize()) {
         LauncherShellContent(
             state = state,
+            viewModeAvailability = viewModel.viewModeAvailability,
             appVersionLabel = appVersionLabel,
             appBuildIdentityLabel = appBuildIdentityLabel,
             appIconLoader = appIconLoader,
@@ -60,6 +62,7 @@ fun LauncherShell(
 @Composable
 fun LauncherShellContent(
     state: LauncherShellState,
+    viewModeAvailability: LauncherViewModeAvailability = defaultLauncherViewModeAvailability(),
     appVersionLabel: String = "",
     appBuildIdentityLabel: String = "",
     appIconLoader: AppIconLoader = EmptyAppIconLoader,
@@ -96,8 +99,12 @@ fun LauncherShellContent(
             } else {
                 LauncherDestination(
                     state = state,
-                    appVersionLabel = appVersionLabel,
-                    appBuildIdentityLabel = appBuildIdentityLabel,
+                    settingsState =
+                        state.settingsSurfaceState(
+                            appVersionLabel = appVersionLabel,
+                            appBuildIdentityLabel = appBuildIdentityLabel,
+                            viewModeAvailability = viewModeAvailability,
+                        ),
                     appIconLoader = appIconLoader,
                     widgetRenderers = widgetRenderers,
                     haptics = haptics,
@@ -138,8 +145,7 @@ private fun DefaultHomePrompt(onAction: (LauncherShellAction) -> Unit) {
 @Composable
 private fun LauncherDestination(
     state: LauncherShellState,
-    appVersionLabel: String,
-    appBuildIdentityLabel: String,
+    settingsState: SettingsSurfaceState,
     appIconLoader: AppIconLoader,
     widgetRenderers: LauncherWidgetRenderers,
     haptics: LauncherHaptics,
@@ -212,11 +218,7 @@ private fun LauncherDestination(
 
         ShellDestination.SETTINGS ->
             SettingsSurface(
-                state =
-                    state.settingsSurfaceState(
-                        appVersionLabel = appVersionLabel,
-                        appBuildIdentityLabel = appBuildIdentityLabel,
-                    ),
+                state = settingsState,
                 initialPage = settingsPageActionRouter.initialSettingsPage,
                 onAction = settingsPageActionRouter.onAction,
             )
