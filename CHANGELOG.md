@@ -1,5 +1,28 @@
 # Changelog
 
+## Alpha 188
+
+Release notes for the next alpha after Alpha 187.
+
+### Changed
+
+- Settings > Gestures now surfaces conflicting home gesture assignments using the existing gesture conflict detector.
+- Page overview now has regression coverage for configured gesture entry into Manage pages.
+- Wallpaper support documentation now includes Static and Scroll motion validation steps and current native wallpaper offset limitations.
+- Settings > Layout now hides unavailable launcher view modes for the selected device class and falls back to an available mode for previewing settings.
+- Search setting results now show the matched concrete setting alias as their subtitle instead of a generic setting label.
+
+### Verification
+
+- Full GitHub CI `Verify` passed for PRs #565, #566, #567, #568, and #569.
+- Local verification included focused gesture tests and full `./gradlew verify`.
+
+### Known Limitations
+
+- Gesture conflicts are surfaced but not blocked.
+- Wallpaper issue #7 still needs physical-device validation before closure.
+- Card interface mode remains unavailable until its availability policy opts it in.
+
 ## Alpha 187
 
 Release notes for the next alpha after Alpha 186.
