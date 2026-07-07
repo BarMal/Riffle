@@ -113,6 +113,7 @@ class HomeSwipeGestureInterpreterTest {
                         HomeGesture.ONE_FINGER_LEFT to LauncherGestureAction.ENTER_HOME_EDIT_MODE,
                         HomeGesture.ONE_FINGER_RIGHT to LauncherGestureAction.ENTER_HOME_PAGE_OVERVIEW,
                         HomeGesture.PINCH_OUT to LauncherGestureAction.OPEN_NOTIFICATIONS,
+                        HomeGesture.TWO_FINGER_RIGHT to LauncherGestureAction.ENTER_FULLSCREEN_HOME,
                     ),
             )
 
@@ -127,6 +128,10 @@ class HomeSwipeGestureInterpreterTest {
             actionMapper.actionFor(HomeGesture.ONE_FINGER_RIGHT, settings),
         )
         assertEquals(LauncherShellAction.OpenNotifications, actionMapper.actionFor(HomeGesture.PINCH_OUT, settings))
+        assertEquals(
+            LauncherShellAction.SelectFullscreenHomeEnabled(true),
+            actionMapper.actionFor(HomeGesture.TWO_FINGER_RIGHT, settings),
+        )
     }
 
     @Test
@@ -139,6 +144,11 @@ class HomeSwipeGestureInterpreterTest {
     @Test
     fun labelsPageOverviewGestureActionForSettings() {
         assertEquals("Manage pages", LauncherGestureAction.ENTER_HOME_PAGE_OVERVIEW.label)
+    }
+
+    @Test
+    fun labelsFullscreenGestureActionForSettings() {
+        assertEquals("Fullscreen home", LauncherGestureAction.ENTER_FULLSCREEN_HOME.label)
     }
 
     @Test
