@@ -34,20 +34,75 @@ class NotificationOverviewSurfaceTest {
         )
     }
 
+    @Test
+    fun categoryFilterOptionsUseLatestGroupCategories() {
+        val options =
+            notificationCategoryFilterOptions(
+                listOf(
+                    notificationGroup(
+                        packageName = "com.example.mail",
+                        count = 2,
+                        latestCategory = NotificationCategory.EMAIL,
+                    ),
+                    notificationGroup(
+                        packageName = "com.example.chat",
+                        count = 3,
+                        latestCategory = NotificationCategory.MESSAGE,
+                    ),
+                ),
+            )
+
+        assertEquals(
+            listOf(
+                NotificationCategoryOption(category = null, label = "All 5"),
+                NotificationCategoryOption(category = NotificationCategory.MESSAGE, label = "Message 3"),
+                NotificationCategoryOption(category = NotificationCategory.EMAIL, label = "Email 2"),
+            ),
+            options,
+        )
+    }
+
+    @Test
+    fun categoryFilterKeepsMatchingGroupsOnly() {
+        val mail =
+            notificationGroup(
+                packageName = "com.example.mail",
+                count = 1,
+                latestCategory = NotificationCategory.EMAIL,
+            )
+        val chat =
+            notificationGroup(
+                packageName = "com.example.chat",
+                count = 1,
+                latestCategory = NotificationCategory.MESSAGE,
+            )
+
+        assertEquals(
+            listOf(mail, chat),
+            notificationGroupsMatchingCategory(listOf(mail, chat), category = null),
+        )
+        assertEquals(
+            listOf(mail),
+            notificationGroupsMatchingCategory(listOf(mail, chat), category = NotificationCategory.EMAIL),
+        )
+    }
+
     private fun notificationGroup(
         packageName: String,
         count: Int,
+        latestCategory: NotificationCategory = NotificationCategory.MESSAGE,
     ): AppNotificationGroup =
         AppNotificationGroup(
             packageName = AppPackageName(packageName),
             profileId = AppProfile.personal().id,
-            latestCategory = NotificationCategory.MESSAGE,
+            latestCategory = latestCategory,
             latestAgeBucket = NotificationAgeBucket.RECENT,
             notifications =
                 (1..count).map { index ->
                     LauncherNotification(
                         key = LauncherNotificationKey("$packageName:$index"),
                         packageName = AppPackageName(packageName),
+                        category = latestCategory,
                         postedAtEpochMillis = index.toLong(),
                     )
                 },
