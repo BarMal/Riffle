@@ -27,6 +27,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.unit.dp
+import com.riffle.app.launcher.widgets.EmptyHomeWidgetViewFactory
+import com.riffle.app.launcher.widgets.HomeWidgetViewFactory
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.apps.AppShortcutsByApp
@@ -44,9 +46,10 @@ internal fun Dock(
     notificationCountsByPackage: Map<AppPackageName, Int>,
     appShortcutsByApp: AppShortcutsByApp,
     appIconLoader: AppIconLoader,
+    widgetViewFactory: HomeWidgetViewFactory = EmptyHomeWidgetViewFactory,
     interactions: DockInteractions,
 ) {
-    val presentation = DockPresentation(notificationCountsByPackage, appShortcutsByApp, interactions)
+    val presentation = DockPresentation(notificationCountsByPackage, appShortcutsByApp, widgetViewFactory, interactions)
     val renderedSlotCount =
         dockRenderedSlotCount(
             capacity = dock.capacity,
@@ -294,6 +297,7 @@ internal data class DockOverflowAffordance(
 private data class DockPresentation(
     val notificationCountsByPackage: Map<AppPackageName, Int>,
     val appShortcutsByApp: AppShortcutsByApp,
+    val widgetViewFactory: HomeWidgetViewFactory,
     val interactions: DockInteractions,
 )
 
@@ -369,6 +373,12 @@ private fun DockSlot(
                         } else {
                             Modifier.clickable(onClick = { presentation.interactions.onFolderOpen(item.folder) })
                         },
+                )
+            is DockSlotItemState.Widget ->
+                DockWidget(
+                    widget = item.widget,
+                    widgetViewFactory = presentation.widgetViewFactory,
+                    iconSizeDp = state.iconSizeDp,
                 )
             is DockSlotItemState.Placeholder ->
                 DockItemPlaceholder(

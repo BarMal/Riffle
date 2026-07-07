@@ -170,6 +170,7 @@ private fun StandardHomeColumn(
                 notificationCountsByPackage = state.presentation.notificationCountsByPackage,
                 appShortcutsByApp = state.presentation.appShortcutsByApp,
                 appIconLoader = appIconLoader,
+                widgetViewFactory = state.presentation.widgetViewFactory,
                 interactions =
                     DockInteractions(
                         haptics = actions.haptics,
