@@ -211,6 +211,7 @@ private fun LauncherDestination(
             NotificationOverviewSurface(
                 groups = state.notificationGroupsByApp,
                 categoryCounts = state.notificationCountsByCategory,
+                notificationAccessStatus = state.notificationAccessStatus,
                 apps = state.installedApps,
                 appIconLoader = appIconLoader,
                 onAction = settingsPageActionRouter.onAction,

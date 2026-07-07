@@ -5,6 +5,7 @@ import com.riffle.core.domain.launcher.apps.AppProfile
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
 import com.riffle.core.domain.launcher.notifications.LauncherNotification
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
+import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.notifications.NotificationAgeBucket
 import com.riffle.core.domain.launcher.notifications.NotificationCategory
 import org.junit.Assert.assertEquals
@@ -31,6 +32,35 @@ class NotificationOverviewSurfaceTest {
         assertEquals(
             "Notifications",
             notificationOverviewTitle(baseTitle = "Notifications", groups = emptyList()),
+        )
+    }
+
+    @Test
+    fun emptyStateLabelsNotificationAccessStatus() {
+        assertEquals(
+            "No active notifications",
+            NotificationAccessStatus.GRANTED.emptyNotificationOverviewLabel,
+        )
+        assertEquals(
+            "Notification access is not allowed",
+            NotificationAccessStatus.NOT_GRANTED.emptyNotificationOverviewLabel,
+        )
+        assertEquals(
+            "Notification access has not been checked",
+            NotificationAccessStatus.UNKNOWN.emptyNotificationOverviewLabel,
+        )
+    }
+
+    @Test
+    fun emptyStateShowsAccessActionWhenStatusIsNotGranted() {
+        assertEquals(null, NotificationAccessStatus.GRANTED.emptyNotificationOverviewActionLabel)
+        assertEquals(
+            "Open notification access",
+            NotificationAccessStatus.NOT_GRANTED.emptyNotificationOverviewActionLabel,
+        )
+        assertEquals(
+            "Open notification access",
+            NotificationAccessStatus.UNKNOWN.emptyNotificationOverviewActionLabel,
         )
     }
 

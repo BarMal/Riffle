@@ -2,7 +2,6 @@ package com.riffle.app.launcher
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.defaultMinSize
@@ -27,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
+import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.notifications.NotificationAgeBucket
 import com.riffle.core.domain.launcher.notifications.NotificationCategory
 import com.riffle.core.domain.launcher.notifications.NotificationPriority
@@ -35,6 +35,7 @@ import com.riffle.core.domain.launcher.notifications.NotificationPriority
 fun NotificationOverviewSurface(
     groups: List<AppNotificationGroup>,
     categoryCounts: Map<NotificationCategory, Int>,
+    notificationAccessStatus: NotificationAccessStatus,
     apps: List<InstalledApp>,
     appIconLoader: AppIconLoader,
     onAction: (LauncherShellAction) -> Unit,
@@ -51,7 +52,10 @@ fun NotificationOverviewSurface(
         onAction = onAction,
     ) {
         if (groups.isEmpty()) {
-            EmptyNotifications()
+            EmptyNotifications(
+                notificationAccessStatus = notificationAccessStatus,
+                onAction = onAction,
+            )
         } else {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
@@ -159,17 +163,45 @@ private fun NotificationCategoryFilter(
 }
 
 @Composable
-private fun EmptyNotifications() {
-    Box(
+private fun EmptyNotifications(
+    notificationAccessStatus: NotificationAccessStatus,
+    onAction: (LauncherShellAction) -> Unit,
+) {
+    val actionLabel = notificationAccessStatus.emptyNotificationOverviewActionLabel
+
+    Column(
         modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center,
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(
-            text = "No active notifications",
+            text = notificationAccessStatus.emptyNotificationOverviewLabel,
             style = MaterialTheme.typography.bodyLarge,
         )
+        if (actionLabel != null) {
+            TextButton(onClick = { onAction(LauncherShellAction.RequestNotificationAccess) }) {
+                Text(text = actionLabel)
+            }
+        }
     }
 }
+
+internal val NotificationAccessStatus.emptyNotificationOverviewLabel: String
+    get() =
+        when (this) {
+            NotificationAccessStatus.GRANTED -> "No active notifications"
+            NotificationAccessStatus.NOT_GRANTED -> "Notification access is not allowed"
+            NotificationAccessStatus.UNKNOWN -> "Notification access has not been checked"
+        }
+
+internal val NotificationAccessStatus.emptyNotificationOverviewActionLabel: String?
+    get() =
+        when (this) {
+            NotificationAccessStatus.GRANTED -> null
+            NotificationAccessStatus.NOT_GRANTED,
+            NotificationAccessStatus.UNKNOWN,
+            -> "Open notification access"
+        }
 
 @Composable
 private fun NotificationGroupRow(
