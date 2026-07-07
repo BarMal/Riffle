@@ -15,6 +15,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.settings.HomeGesture
+import com.riffle.core.domain.launcher.settings.HomeGestureConflictDetector
 import com.riffle.core.domain.launcher.settings.HomeGestureSettings
 import com.riffle.core.domain.launcher.settings.LauncherGestureAction
 
@@ -28,6 +29,13 @@ fun HomeSwipeGestureSetting(
             text = "Home gestures",
             style = MaterialTheme.typography.bodyLarge,
         )
+        homeGestureConflictSummary(settings)?.let { summary ->
+            Text(
+                text = summary,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+            )
+        }
         GestureGroup(
             title = "One finger",
             rows =
@@ -149,6 +157,28 @@ internal val LauncherGestureAction.label: String
             LauncherGestureAction.ENTER_HOME_PAGE_OVERVIEW -> "Manage pages"
             LauncherGestureAction.SELECT_NEXT_HOME_PAGE -> "Next page"
             LauncherGestureAction.SELECT_PREVIOUS_HOME_PAGE -> "Previous page"
+        }
+
+internal val HomeGesture.label: String
+    get() =
+        when (this) {
+            HomeGesture.ONE_FINGER_UP -> "Swipe up"
+            HomeGesture.ONE_FINGER_DOWN -> "Swipe down"
+            HomeGesture.ONE_FINGER_LEFT -> "Swipe left"
+            HomeGesture.ONE_FINGER_RIGHT -> "Swipe right"
+            HomeGesture.TWO_FINGER_UP -> "Two-finger swipe up"
+            HomeGesture.TWO_FINGER_DOWN -> "Two-finger swipe down"
+            HomeGesture.TWO_FINGER_LEFT -> "Two-finger swipe left"
+            HomeGesture.TWO_FINGER_RIGHT -> "Two-finger swipe right"
+            HomeGesture.PINCH_IN -> "Pinch in"
+            HomeGesture.PINCH_OUT -> "Pinch out"
+        }
+
+internal fun homeGestureConflictSummary(settings: HomeGestureSettings): String? =
+    HomeGestureConflictDetector.conflictsIn(settings)
+        .takeIf { conflicts -> conflicts.isNotEmpty() }
+        ?.joinToString(separator = "\n", prefix = "Conflicting gestures: ") { conflict ->
+            "${conflict.action.label}: ${conflict.gestures.joinToString { gesture -> gesture.label }}"
         }
 
 private data class GestureRowState(
