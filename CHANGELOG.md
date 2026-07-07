@@ -1,5 +1,26 @@
 # Changelog
 
+## Alpha 191
+
+Release notes for the next alpha after Alpha 190.
+
+### Changed
+
+- Overflowing docks can now be swiped up to reveal an expanded shelf with the additional dock items.
+- Collapsed docks keep the existing horizontal overflow scrolling behavior.
+- The expanded shelf splits primary dock items from overflow items without changing persisted dock data.
+
+### Verification
+
+- Full GitHub CI `Verify` passed for PR #580.
+- Local verification included focused dock overflow shelf tests, ktlint/detekt checks, and full `./gradlew verify`.
+
+### Known Limitations
+
+- Expanded shelf state is local UI state and is not persisted.
+- Card-style and notification-backed dock items remain future #579 slices.
+- Manual validation is still needed on physical devices with gesture navigation and foldable widths.
+
 ## Alpha 190
 
 Release notes for the next alpha after Alpha 189.
