@@ -33,7 +33,13 @@ class LauncherSearchProvider {
             settingsEntries.mapIndexedNotNull { index, entry ->
                 entry.searchRank(queryTokens)?.let { rank ->
                     LauncherSearchHit(
-                        result = LauncherSearchResult.Setting(entry),
+                        result =
+                            LauncherSearchResult.Setting(
+                                entry = entry,
+                                matchedAlias =
+                                    entry.matchedSearchAlias(queryTokens)
+                                        .takeIf { rank == SETTING_SECONDARY_RANK },
+                            ),
                         rank = rank,
                         sourceIndex = index,
                     )
@@ -60,15 +66,24 @@ class LauncherSearchProvider {
         val normalizedSecondaryValues = secondaryValues.map { value -> value.lowercase() }
 
         return when {
-            title.containsAllSearchTokens(queryTokens) && title.startsWith(queryTokens.first()) -> SETTING_TITLE_RANK
+            title.containsAllSearchTokens(queryTokens) && title.startsWith(queryTokens.first()) ->
+                SETTING_TITLE_RANK
             title.containsAllSearchTokens(queryTokens) -> SETTING_TITLE_RANK
             title.searchAcronym().containsAllSearchTokens(queryTokens) -> SETTING_TITLE_RANK
-            normalizedSecondaryValues.containsAllSearchTokens(queryTokens) -> SETTING_SECONDARY_RANK
+            normalizedSecondaryValues.containsAllSearchTokens(queryTokens) ->
+                SETTING_SECONDARY_RANK
             normalizedSecondaryValues.map(String::searchAcronym).containsAllSearchTokens(queryTokens) ->
                 SETTING_SECONDARY_RANK
             else -> null
         }
     }
+
+    private fun LauncherSearchSettingsEntry.matchedSearchAlias(queryTokens: List<String>): String? =
+        searchAliases.firstOrNull { alias ->
+            val normalizedAlias = alias.lowercase()
+            normalizedAlias.containsAllSearchTokens(queryTokens) ||
+                normalizedAlias.searchAcronym().containsAllSearchTokens(queryTokens)
+        }
 }
 
 sealed interface LauncherSearchResult {
@@ -88,10 +103,11 @@ sealed interface LauncherSearchResult {
 
     data class Setting(
         val entry: LauncherSearchSettingsEntry,
+        val matchedAlias: String? = null,
     ) : LauncherSearchResult {
         override val key: String = "setting:${entry.id.value}"
         override val title: String = entry.title
-        override val subtitle: String = entry.subtitle
+        override val subtitle: String = matchedAlias ?: entry.subtitle
         override val type: LauncherSearchResultType = LauncherSearchResultType.SETTING
     }
 }
