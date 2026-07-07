@@ -159,6 +159,7 @@ private fun StandardHomeColumn(
             showPageIndicator = pagerState.rememberPageIndicatorVisible(),
             appIconLoader = appIconLoader,
             widgetViewFactory = state.presentation.widgetViewFactory,
+            haptics = actions.haptics,
             onAction = actions.onAction,
         )
         if (state.visibleLayout.editMode == HomeEditMode.Browsing && state.visibleLayout.shouldShowDock()) {
@@ -187,6 +188,7 @@ private fun HomeBottomControls(
     showPageIndicator: Boolean,
     appIconLoader: AppIconLoader,
     widgetViewFactory: HomeWidgetViewFactory,
+    haptics: LauncherHaptics,
     onAction: (LauncherShellAction) -> Unit,
 ) {
     when (layout.editMode) {
@@ -195,6 +197,7 @@ private fun HomeBottomControls(
                 pageCount = layout.pages.size,
                 selectedPageIndex = selectedPageIndex,
                 showPageIndicator = showPageIndicator,
+                haptics = haptics,
                 onAction = onAction,
             )
 
@@ -220,6 +223,7 @@ private fun HomeBottomSearchArea(
     pageCount: Int,
     selectedPageIndex: Int,
     showPageIndicator: Boolean,
+    haptics: LauncherHaptics,
     onAction: (LauncherShellAction) -> Unit,
 ) {
     Box(
@@ -229,10 +233,22 @@ private fun HomeBottomSearchArea(
                 .height(HOME_SEARCH_AREA_HEIGHT_DP.dp),
         contentAlignment = Alignment.Center,
     ) {
+        HomeBackgroundContextMenu(
+            haptics = haptics,
+            onAction = onAction,
+            modifier = Modifier.matchParentSize(),
+        )
         if (showPageIndicator) {
             PageIndicator(
                 pageCount = pageCount,
                 selectedPageIndex = selectedPageIndex,
+                modifier =
+                    Modifier
+                        .height(HOME_SEARCH_PILL_HEIGHT_DP.dp)
+                        .clip(RoundedCornerShape(HOME_SEARCH_PILL_HEIGHT_DP.dp))
+                        .semantics { contentDescription = "Search" }
+                        .clickable(onClick = { onAction(LauncherShellAction.OpenSearch) })
+                        .padding(horizontal = HOME_SEARCH_HORIZONTAL_PADDING_DP.dp),
             )
         } else {
             Surface(
@@ -408,4 +424,4 @@ private const val HOME_SEARCH_HORIZONTAL_PADDING_DP = 14
 private const val HOME_SEARCH_SURFACE_ALPHA = 0.82f
 private const val HOME_SEARCH_BORDER_ALPHA = 0.38f
 private const val HOME_DOCK_TOP_SPACING_DP = 10
-private const val PAGE_INDICATOR_SETTLED_VISIBLE_MS = 1200L
+private const val PAGE_INDICATOR_SETTLED_VISIBLE_MS = 250L

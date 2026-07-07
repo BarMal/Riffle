@@ -46,12 +46,7 @@ internal fun Dock(
     appIconLoader: AppIconLoader,
     interactions: DockInteractions,
 ) {
-    val presentation =
-        DockPresentation(
-            notificationCountsByPackage = notificationCountsByPackage,
-            appShortcutsByApp = appShortcutsByApp,
-            interactions = interactions,
-        )
+    val presentation = DockPresentation(notificationCountsByPackage, appShortcutsByApp, interactions)
     val renderedSlotCount =
         dockRenderedSlotCount(
             capacity = dock.capacity,
@@ -74,6 +69,11 @@ internal fun Dock(
         modifier = Modifier.fillMaxWidth(),
         contentAlignment = Alignment.Center,
     ) {
+        HomeBackgroundContextMenu(
+            haptics = interactions.haptics,
+            onAction = interactions.onAction,
+            modifier = Modifier.matchParentSize(),
+        )
         val dockWidthDp =
             dockContainerWidthDp(
                 availableWidthDp = maxWidth.value.toInt(),

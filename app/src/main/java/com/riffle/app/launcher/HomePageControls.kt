@@ -361,8 +361,13 @@ private fun overviewMenuItem(includeOverview: Boolean): ShortcutContextMenuItem?
 fun PageIndicator(
     pageCount: Int,
     selectedPageIndex: Int,
+    modifier: Modifier = Modifier,
 ) {
-    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+    Row(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
         repeat(pageCount) { index ->
             val isSelected = index == selectedPageIndex
             val width =
