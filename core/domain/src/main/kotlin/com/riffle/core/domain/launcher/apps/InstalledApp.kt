@@ -6,6 +6,7 @@ data class InstalledApp(
     val iconKey: AppIconKey? = null,
     val enabled: Boolean = true,
     val visibility: AppVisibility = AppVisibility.VISIBLE,
+    val category: String? = null,
 )
 
 data class AppIdentity(

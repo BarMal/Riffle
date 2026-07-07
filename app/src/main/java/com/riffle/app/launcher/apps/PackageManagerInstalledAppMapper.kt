@@ -18,6 +18,7 @@ class PackageManagerInstalledAppMapper {
                 ),
             label = activity.label.normalizedPlatformLabel(fallback = activity.packageName),
             iconKey = AppIconKey("${activity.packageName}/${activity.activityName}"),
+            category = activity.category,
             enabled = activity.enabled,
         )
 }
@@ -27,5 +28,6 @@ internal data class LaunchableActivity(
     val activityName: String,
     val label: String,
     val profile: AppProfile = AppProfile.personal(),
+    val category: String? = null,
     val enabled: Boolean = true,
 )
