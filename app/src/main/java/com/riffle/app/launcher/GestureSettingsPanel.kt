@@ -146,6 +146,7 @@ internal val LauncherGestureAction.label: String
             LauncherGestureAction.OPEN_SEARCH -> "Search"
             LauncherGestureAction.OPEN_SETTINGS -> "Settings"
             LauncherGestureAction.ENTER_HOME_EDIT_MODE -> "Edit home"
+            LauncherGestureAction.ENTER_HOME_PAGE_OVERVIEW -> "Manage pages"
             LauncherGestureAction.SELECT_NEXT_HOME_PAGE -> "Next page"
             LauncherGestureAction.SELECT_PREVIOUS_HOME_PAGE -> "Previous page"
         }

@@ -116,6 +116,7 @@ class HomeSwipeGestureActionMapper {
             LauncherGestureAction.OPEN_SEARCH -> LauncherShellAction.OpenSearch
             LauncherGestureAction.OPEN_SETTINGS -> LauncherShellAction.OpenSettings
             LauncherGestureAction.ENTER_HOME_EDIT_MODE -> LauncherShellAction.EnterHomeEditMode
+            LauncherGestureAction.ENTER_HOME_PAGE_OVERVIEW -> LauncherShellAction.EnterHomePageOverview
             LauncherGestureAction.SELECT_NEXT_HOME_PAGE -> LauncherShellAction.SelectNextHomePage
             LauncherGestureAction.SELECT_PREVIOUS_HOME_PAGE -> LauncherShellAction.SelectPreviousHomePage
         }
