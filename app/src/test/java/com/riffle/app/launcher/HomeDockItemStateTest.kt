@@ -46,7 +46,7 @@ class HomeDockItemStateTest {
     }
 
     @Test
-    fun widgetDockSlotRendersPlaceholderInsteadOfDisappearing() {
+    fun widgetDockSlotKeepsWidgetStateForHostedRendering() {
         val widget =
             WidgetItem(
                 id = LauncherItemId("widget:weather"),
@@ -54,11 +54,11 @@ class HomeDockItemStateTest {
                 label = "Weather",
             )
 
-        val state = dockSlotItemState(widget) as DockSlotItemState.Placeholder
+        val state = dockSlotItemState(widget) as DockSlotItemState.Widget
 
+        assertEquals(widget, state.widget)
         assertEquals(widget.id, state.id)
         assertEquals("Weather", state.label)
-        assertEquals(DockSlotPlaceholderKind.WIDGET, state.kind)
     }
 
     private fun shortcut(): AppShortcutItem =
