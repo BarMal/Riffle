@@ -1,5 +1,25 @@
 # Changelog
 
+## Alpha 192
+
+Release notes for the next alpha after Alpha 191.
+
+### Changed
+
+- Expanded dock shelves can now show up to three compact notification-backed cards above the overflow dock row.
+- Shelf cards reuse the existing notification overview grouping and launch the matching app when tapped.
+- When notification access is unavailable, the expanded shelf now degrades to a compact permission prompt card instead of showing stale or empty notification content.
+
+### Verification
+
+- Full GitHub CI `Verify` passed for PR #582.
+- Local verification included focused dock notification card tests and full `./gradlew verify`.
+
+### Known Limitations
+
+- Notification cards only appear when the dock already has overflow and the expanded shelf is open.
+- Shelf cards are fixed for now: no configuration, no inline dismiss action, and no main-dock card presentation yet.
+
 ## Alpha 191
 
 Release notes for the next alpha after Alpha 190.
