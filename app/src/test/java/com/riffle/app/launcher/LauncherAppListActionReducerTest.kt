@@ -189,6 +189,34 @@ class LauncherAppListActionReducerTest {
     }
 
     @Test
+    fun searchShortcutResultsRespectProfileFilters() {
+        val personalDocs = app(label = "Docs", profile = AppProfile.personal())
+        val workDocs = app(label = "Docs", profile = AppProfile.work())
+        val state =
+            LauncherShellState(
+                installedApps = listOf(personalDocs, workDocs),
+                searchQuery = "scan",
+                searchFilters =
+                    AppSearchFilters(
+                        content = setOf(AppSearchContentFilter.APPS, AppSearchContentFilter.SHORTCUTS),
+                        profiles = setOf(AppProfileType.WORK),
+                    ),
+                appShortcutsByApp =
+                    mapOf(
+                        personalDocs.identity to listOf(shortcut(app = personalDocs, label = "Scan")),
+                        workDocs.identity to listOf(shortcut(app = workDocs, label = "Scan")),
+                    ),
+            )
+
+        val updated = reducer.reduce(state, LauncherShellAction.SearchQueryChanged("scan"))
+
+        assertEquals(
+            listOf(workDocs.identity),
+            updated?.searchShortcutResults?.map { shortcut -> shortcut.appIdentity },
+        )
+    }
+
+    @Test
     fun updatesSearchProfileFilterForCurrentQuery() {
         val state =
             LauncherShellState(

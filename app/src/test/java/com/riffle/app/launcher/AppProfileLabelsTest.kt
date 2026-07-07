@@ -33,6 +33,13 @@ class AppProfileLabelsTest {
         assertEquals("Personal - com.riffle.camera", app(profile = profile).drawerSubtitle())
     }
 
+    @Test
+    fun searchResultLabelsUseProfilePrefixWhenNeeded() {
+        assertEquals("Camera", AppProfile.personal().profileDisplayLabel("Camera"))
+        assertEquals("Work - Camera", AppProfile.work().profileDisplayLabel("Camera"))
+        assertEquals("Private - Camera", AppProfile.private().profileDisplayLabel("Camera"))
+    }
+
     private fun app(profile: AppProfile): InstalledApp =
         InstalledApp(
             identity =

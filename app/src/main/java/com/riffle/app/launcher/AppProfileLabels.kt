@@ -9,6 +9,11 @@ fun InstalledApp.drawerSubtitle(): String =
         ?.let { prefix -> "$prefix - ${identity.packageName.value}" }
         ?: identity.packageName.value
 
+fun AppProfile.profileDisplayLabel(label: String): String =
+    drawerProfilePrefix()
+        ?.let { prefix -> "$prefix - $label" }
+        ?: label
+
 fun AppProfile.drawerProfilePrefix(): String? =
     when {
         type == AppProfileType.PRIVATE -> "Private"
