@@ -46,17 +46,20 @@ internal fun StandardHomeDockArea(
         modifier = Modifier.dockShelfMotion(dockShelfMotionPolicy(presentation.reducedMotion)),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
+        Spacer(modifier = Modifier.height(HOME_DOCK_TOP_SPACING_DP.dp))
         if (showDockShelf) {
-            DockNotificationShelf(
-                state = notificationShelfState,
+            ExpandedDockSurface(
+                dock = layout.dock,
+                notificationShelfState = notificationShelfState,
+                notificationCountsByPackage = presentation.notificationCountsByPackage,
+                appShortcutsByApp = presentation.appShortcutsByApp,
                 appIconLoader = appIconLoader,
+                widgetViewFactory = presentation.widgetViewFactory,
                 interactions = dockInteractions,
             )
-            if (notificationShelfState != DockNotificationShelfState.Hidden) {
-                Spacer(modifier = Modifier.height(HOME_DOCK_SHELF_SPACING_DP.dp))
-            }
+        } else {
             Dock(
-                dock = layout.dock.overflowShelfDock(),
+                dock = layout.dock.primaryDock(showShelf = false),
                 isEditing = false,
                 notificationCountsByPackage = presentation.notificationCountsByPackage,
                 appShortcutsByApp = presentation.appShortcutsByApp,
@@ -64,18 +67,7 @@ internal fun StandardHomeDockArea(
                 widgetViewFactory = presentation.widgetViewFactory,
                 interactions = dockInteractions,
             )
-            Spacer(modifier = Modifier.height(HOME_DOCK_SHELF_SPACING_DP.dp))
         }
-        Spacer(modifier = Modifier.height(HOME_DOCK_TOP_SPACING_DP.dp))
-        Dock(
-            dock = layout.dock.primaryDock(showShelf = showDockShelf),
-            isEditing = false,
-            notificationCountsByPackage = presentation.notificationCountsByPackage,
-            appShortcutsByApp = presentation.appShortcutsByApp,
-            appIconLoader = appIconLoader,
-            widgetViewFactory = presentation.widgetViewFactory,
-            interactions = dockInteractions,
-        )
     }
 }
 
@@ -89,4 +81,3 @@ private fun HomeLayout.shouldShowDock(): Boolean =
         )
 
 private const val HOME_DOCK_TOP_SPACING_DP = 10
-private const val HOME_DOCK_SHELF_SPACING_DP = 6

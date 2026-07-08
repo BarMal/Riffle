@@ -417,6 +417,76 @@ class HomeDockMetricsTest {
     }
 
     @Test
+    fun expandedDockRowsShareSurfaceMetricsForGridAlignment() {
+        val items = (1..7).map { index -> widget("widget:$index", index) }
+        val dock = DockModel(capacity = 5, items = items)
+        val primaryDock = dock.primaryDock(showShelf = true)
+        val overflowDock = dock.overflowShelfDock()
+        val primaryRenderedSlotCount =
+            dockRenderedSlotCount(
+                capacity = primaryDock.capacity,
+                itemCount = primaryDock.items.size,
+                isEditing = false,
+            )
+        val overflowRenderedSlotCount =
+            dockRenderedSlotCount(
+                capacity = overflowDock.capacity,
+                itemCount = overflowDock.items.size,
+                isEditing = false,
+            )
+
+        assertEquals(primaryRenderedSlotCount, overflowRenderedSlotCount)
+
+        val primaryWidth =
+            dockContainerWidthDp(
+                availableWidthDp = 320,
+                slotCount = primaryRenderedSlotCount,
+                iconSizeDp = primaryDock.iconSizeDp,
+                itemSpacingDp = primaryDock.itemSpacingDp,
+                backgroundSizing = primaryDock.backgroundSizing,
+            )
+        val overflowWidth =
+            dockContainerWidthDp(
+                availableWidthDp = 320,
+                slotCount = overflowRenderedSlotCount,
+                iconSizeDp = overflowDock.iconSizeDp,
+                itemSpacingDp = overflowDock.itemSpacingDp,
+                backgroundSizing = overflowDock.backgroundSizing,
+            )
+        val primaryViewportWidth =
+            dockContentViewportWidthDp(
+                slotCount = primaryRenderedSlotCount,
+                iconSizeDp = primaryDock.iconSizeDp,
+                itemSpacingDp = primaryDock.itemSpacingDp,
+                availableDockWidthDp = primaryWidth,
+            )
+        val overflowViewportWidth =
+            dockContentViewportWidthDp(
+                slotCount = overflowRenderedSlotCount,
+                iconSizeDp = overflowDock.iconSizeDp,
+                itemSpacingDp = overflowDock.itemSpacingDp,
+                availableDockWidthDp = overflowWidth,
+            )
+
+        assertEquals(primaryWidth, overflowWidth)
+        assertEquals(primaryViewportWidth, overflowViewportWidth)
+        assertEquals(
+            dockSlotRenderMetrics(
+                slotCount = primaryRenderedSlotCount,
+                iconSizeDp = primaryDock.iconSizeDp,
+                itemSpacingDp = primaryDock.itemSpacingDp,
+                availableContentWidthDp = primaryViewportWidth,
+            ),
+            dockSlotRenderMetrics(
+                slotCount = overflowRenderedSlotCount,
+                iconSizeDp = overflowDock.iconSizeDp,
+                itemSpacingDp = overflowDock.itemSpacingDp,
+                availableContentWidthDp = overflowViewportWidth,
+            ),
+        )
+    }
+
+    @Test
     fun dockShelfGestureExpandsOnDominantSwipeUpAndCollapsesOnDominantSwipeDown() {
         assertEquals(
             true,
