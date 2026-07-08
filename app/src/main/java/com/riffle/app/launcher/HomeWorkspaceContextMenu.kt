@@ -16,6 +16,7 @@ internal fun HomeBackgroundContextMenu(
     haptics: LauncherHaptics,
     onAction: (LauncherShellAction) -> Unit,
     modifier: Modifier = Modifier,
+    onClick: () -> Unit = {},
 ) {
     val isMenuExpanded = remember { mutableStateOf(false) }
     val interactionSource = remember { MutableInteractionSource() }
@@ -27,7 +28,7 @@ internal fun HomeBackgroundContextMenu(
                 .combinedClickable(
                     interactionSource = interactionSource,
                     indication = null,
-                    onClick = { Unit },
+                    onClick = onClick,
                     onLongClick = {
                         haptics.longPress()
                         isMenuExpanded.value = true

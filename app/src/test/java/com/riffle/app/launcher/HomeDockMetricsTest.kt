@@ -436,6 +436,28 @@ class HomeDockMetricsTest {
         )
     }
 
+    @Test
+    fun dockShelfBackgroundTapDismissesExpandedShelfOnly() {
+        assertEquals(false, dockShelfExpandedStateAfterBackgroundTap(isExpanded = true))
+        assertEquals(false, dockShelfExpandedStateAfterBackgroundTap(isExpanded = false))
+    }
+
+    @Test
+    fun dockShelfCollapsesWhenDockNoLongerOverflows() {
+        assertEquals(
+            true,
+            dockShelfExpandedStateForOverflow(isExpanded = true, hasOverflow = true),
+        )
+        assertEquals(
+            false,
+            dockShelfExpandedStateForOverflow(isExpanded = true, hasOverflow = false),
+        )
+        assertEquals(
+            false,
+            dockShelfExpandedStateForOverflow(isExpanded = false, hasOverflow = true),
+        )
+    }
+
     private fun widget(
         id: String,
         hostedWidgetId: Int,
