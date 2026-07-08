@@ -1,6 +1,5 @@
 package com.riffle.app.launcher
 
-import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -103,7 +102,7 @@ internal fun Dock(
         Box(
             modifier =
                 Modifier
-                    .animateContentSize()
+                    .dockShelfPolicies(interactions)
                     .width(dockWidthDp.dp)
                     .height(dockHeightDp(slotMetrics.iconSizeDp).dp)
                     .clip(RoundedCornerShape(28.dp))
@@ -307,6 +306,8 @@ internal data class DockInteractions(
     val onFolderOpen: (FolderItem) -> Unit = {},
     val isShelfExpanded: Boolean = false,
     val onShelfExpandedChange: ((Boolean) -> Unit)? = null,
+    val reducedMotion: Boolean = false,
+    val homeInsetPolicy: HomeInsetPolicy = HomeInsetPolicy(),
     val onAction: (LauncherShellAction) -> Unit,
 )
 
