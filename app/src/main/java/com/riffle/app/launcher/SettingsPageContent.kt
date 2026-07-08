@@ -193,6 +193,7 @@ private fun SettingsAppearancePageContent(
             onAction = onAction,
         )
         WallpaperScrollModeSetting(
+            selectedSource = state.settings.appearance.wallpaper.source,
             selectedMode = state.settings.appearance.wallpaper.scrollMode,
             onAction = onAction,
         )
