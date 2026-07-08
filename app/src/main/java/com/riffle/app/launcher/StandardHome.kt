@@ -73,6 +73,7 @@ internal fun StandardHome(
             onFolderOpen = { folder -> openedFolderId.value = folder.id },
             onDragSessionChanged = { session -> homeDragSession.value = session },
             haptics = interactions.haptics,
+            onBackgroundClick = {},
             onAction = onAction,
         )
 
@@ -118,7 +119,11 @@ private fun StandardHomeColumn(
             reducedMotion = state.presentation.reducedMotion,
             actions = actions,
         )
-    val isDockShelfExpanded = remember { mutableStateOf(false) }
+    val dockShelf = rememberDockShelfController(state.visibleLayout)
+    val homeActions =
+        actions.copy(
+            onBackgroundClick = dockShelf.dismiss,
+        )
 
     Column(
         modifier =
@@ -149,7 +154,7 @@ private fun StandardHomeColumn(
                 ),
             presentation = state.homeGridPresentation(),
             appIconLoader = appIconLoader,
-            actions = actions,
+            actions = homeActions,
             modifier =
                 Modifier
                     .weight(1f)
@@ -162,18 +167,40 @@ private fun StandardHomeColumn(
             showPageIndicator = pagerState.rememberPageIndicatorVisible(),
             appIconLoader = appIconLoader,
             widgetViewFactory = state.presentation.widgetViewFactory,
-            haptics = actions.haptics,
-            onAction = actions.onAction,
+            actions = homeActions,
         )
         StandardHomeDockArea(
             layout = state.visibleLayout,
             presentation = state.presentation,
-            isDockShelfExpanded = isDockShelfExpanded.value,
-            onDockShelfExpandedChange = { expanded -> isDockShelfExpanded.value = expanded },
+            isDockShelfExpanded = dockShelf.isExpanded,
+            onDockShelfExpandedChange = dockShelf.onExpandedChange,
             appIconLoader = appIconLoader,
             actions = actions,
         )
     }
+}
+
+@Composable
+private fun rememberDockShelfController(layout: HomeLayout): DockShelfController {
+    val isExpanded = remember { mutableStateOf(false) }
+    val hasOverflow = dockHasOverflow(capacity = layout.dock.capacity, itemCount = layout.dock.items.size)
+
+    LaunchedEffect(hasOverflow) {
+        isExpanded.value =
+            dockShelfExpandedStateForOverflow(
+                isExpanded = isExpanded.value,
+                hasOverflow = hasOverflow,
+            )
+    }
+
+    return DockShelfController(
+        isExpanded = isExpanded.value,
+        dismiss = {
+            isExpanded.value =
+                dockShelfExpandedStateAfterBackgroundTap(isExpanded = isExpanded.value)
+        },
+        onExpandedChange = { expanded -> isExpanded.value = expanded },
+    )
 }
 
 @Composable
@@ -183,8 +210,7 @@ private fun HomeBottomControls(
     showPageIndicator: Boolean,
     appIconLoader: AppIconLoader,
     widgetViewFactory: HomeWidgetViewFactory,
-    haptics: LauncherHaptics,
-    onAction: (LauncherShellAction) -> Unit,
+    actions: HomeWorkspaceActions,
 ) {
     when (layout.editMode) {
         HomeEditMode.Browsing ->
@@ -192,15 +218,14 @@ private fun HomeBottomControls(
                 pageCount = layout.pages.size,
                 selectedPageIndex = selectedPageIndex,
                 showPageIndicator = showPageIndicator,
-                haptics = haptics,
-                onAction = onAction,
+                actions = actions,
             )
 
         is HomeEditMode.EditingPage ->
             PageEditControls(
                 pageCount = layout.pages.size,
                 selectedPageIndex = layout.selectedPageIndex,
-                onAction = onAction,
+                onAction = actions.onAction,
             )
 
         HomeEditMode.ManagingPages ->
@@ -208,7 +233,7 @@ private fun HomeBottomControls(
                 layout = layout,
                 appIconLoader = appIconLoader,
                 widgetViewFactory = widgetViewFactory,
-                onAction = onAction,
+                onAction = actions.onAction,
             )
     }
 }
@@ -218,8 +243,7 @@ private fun HomeBottomSearchArea(
     pageCount: Int,
     selectedPageIndex: Int,
     showPageIndicator: Boolean,
-    haptics: LauncherHaptics,
-    onAction: (LauncherShellAction) -> Unit,
+    actions: HomeWorkspaceActions,
 ) {
     Box(
         modifier =
@@ -229,9 +253,10 @@ private fun HomeBottomSearchArea(
         contentAlignment = Alignment.Center,
     ) {
         HomeBackgroundContextMenu(
-            haptics = haptics,
-            onAction = onAction,
+            haptics = actions.haptics,
+            onAction = actions.onAction,
             modifier = Modifier.matchParentSize(),
+            onClick = actions.onBackgroundClick,
         )
         if (showPageIndicator) {
             PageIndicator(
@@ -242,7 +267,7 @@ private fun HomeBottomSearchArea(
                         .height(HOME_SEARCH_PILL_HEIGHT_DP.dp)
                         .clip(RoundedCornerShape(HOME_SEARCH_PILL_HEIGHT_DP.dp))
                         .semantics { contentDescription = "Search" }
-                        .clickable(onClick = { onAction(LauncherShellAction.OpenSearch) })
+                        .clickable(onClick = { actions.onAction(LauncherShellAction.OpenSearch) })
                         .padding(horizontal = HOME_SEARCH_HORIZONTAL_PADDING_DP.dp),
             )
         } else {
@@ -251,7 +276,7 @@ private fun HomeBottomSearchArea(
                     Modifier
                         .height(HOME_SEARCH_PILL_HEIGHT_DP.dp)
                         .clip(RoundedCornerShape(HOME_SEARCH_PILL_HEIGHT_DP.dp))
-                        .clickable(onClick = { onAction(LauncherShellAction.OpenSearch) }),
+                        .clickable(onClick = { actions.onAction(LauncherShellAction.OpenSearch) }),
                 shape = RoundedCornerShape(HOME_SEARCH_PILL_HEIGHT_DP.dp),
                 color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = HOME_SEARCH_SURFACE_ALPHA),
                 contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -319,6 +344,12 @@ private data class StandardHomeContentState(
     val visibleLayout: HomeLayout,
     val dragSession: HomeDragSession?,
     val presentation: StandardHomePresentation,
+)
+
+private data class DockShelfController(
+    val isExpanded: Boolean,
+    val dismiss: () -> Unit,
+    val onExpandedChange: (Boolean) -> Unit,
 )
 
 private fun StandardHomeContentState.homeGridPresentation(): HomeGridPresentation =
@@ -401,6 +432,7 @@ internal data class HomeWorkspaceActions(
     val onFolderOpen: (FolderItem) -> Unit,
     val onDragSessionChanged: (HomeDragSession?) -> Unit,
     val haptics: LauncherHaptics,
+    val onBackgroundClick: () -> Unit = {},
     val onAction: (LauncherShellAction) -> Unit,
 )
 

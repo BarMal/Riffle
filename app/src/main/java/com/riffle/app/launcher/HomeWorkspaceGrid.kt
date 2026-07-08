@@ -122,6 +122,7 @@ private fun RowScope.HomeGridCell(
             haptics = actions.haptics,
             onAction = actions.onAction,
             modifier = Modifier.fillMaxSize(),
+            onClick = actions.onBackgroundClick,
         )
         Box(
             modifier =
