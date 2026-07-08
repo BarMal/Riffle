@@ -382,13 +382,13 @@ class HomeDockMetricsTest {
     }
 
     @Test
-    fun expandedDockSplitsPrimaryAndOverflowShelfItems() {
+    fun expandedDockSplitsPrimaryAndOverflowShelfItemsOnTheMainDockGrid() {
         val items = (1..7).map { index -> widget("widget:$index", index) }
         val dock = DockModel(capacity = 5, items = items)
 
         assertEquals(items.take(5), dock.primaryDock(showShelf = true).items)
         assertEquals(items.drop(5), dock.overflowShelfDock().items)
-        assertEquals(2, dock.overflowShelfDock().capacity)
+        assertEquals(5, dock.overflowShelfDock().capacity)
     }
 
     @Test

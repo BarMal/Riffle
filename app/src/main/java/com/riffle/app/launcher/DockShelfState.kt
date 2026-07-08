@@ -11,6 +11,6 @@ internal fun DockModel.primaryDock(showShelf: Boolean): DockModel =
 
 internal fun DockModel.overflowShelfDock(): DockModel =
     copy(
-        capacity = (items.size - capacity).coerceAtLeast(0),
+        capacity = capacity,
         items = items.drop(capacity),
     )

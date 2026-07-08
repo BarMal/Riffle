@@ -1,8 +1,11 @@
 package com.riffle.app.launcher
 
+import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.home.HomeEditMode
@@ -38,17 +41,33 @@ internal fun StandardHomeDockArea(
             onAction = actions.onAction,
         )
 
-    if (showDockShelf) {
-        DockNotificationShelf(
-            state = notificationShelfState,
-            appIconLoader = appIconLoader,
-            interactions = dockInteractions,
-        )
-        if (notificationShelfState != DockNotificationShelfState.Hidden) {
+    Column(
+        modifier = Modifier.animateContentSize(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        if (showDockShelf) {
+            DockNotificationShelf(
+                state = notificationShelfState,
+                appIconLoader = appIconLoader,
+                interactions = dockInteractions,
+            )
+            if (notificationShelfState != DockNotificationShelfState.Hidden) {
+                Spacer(modifier = Modifier.height(HOME_DOCK_SHELF_SPACING_DP.dp))
+            }
+            Dock(
+                dock = layout.dock.overflowShelfDock(),
+                isEditing = false,
+                notificationCountsByPackage = presentation.notificationCountsByPackage,
+                appShortcutsByApp = presentation.appShortcutsByApp,
+                appIconLoader = appIconLoader,
+                widgetViewFactory = presentation.widgetViewFactory,
+                interactions = dockInteractions,
+            )
             Spacer(modifier = Modifier.height(HOME_DOCK_SHELF_SPACING_DP.dp))
         }
+        Spacer(modifier = Modifier.height(HOME_DOCK_TOP_SPACING_DP.dp))
         Dock(
-            dock = layout.dock.overflowShelfDock(),
+            dock = layout.dock.primaryDock(showShelf = showDockShelf),
             isEditing = false,
             notificationCountsByPackage = presentation.notificationCountsByPackage,
             appShortcutsByApp = presentation.appShortcutsByApp,
@@ -56,18 +75,7 @@ internal fun StandardHomeDockArea(
             widgetViewFactory = presentation.widgetViewFactory,
             interactions = dockInteractions,
         )
-        Spacer(modifier = Modifier.height(HOME_DOCK_SHELF_SPACING_DP.dp))
     }
-    Spacer(modifier = Modifier.height(HOME_DOCK_TOP_SPACING_DP.dp))
-    Dock(
-        dock = layout.dock.primaryDock(showShelf = showDockShelf),
-        isEditing = false,
-        notificationCountsByPackage = presentation.notificationCountsByPackage,
-        appShortcutsByApp = presentation.appShortcutsByApp,
-        appIconLoader = appIconLoader,
-        widgetViewFactory = presentation.widgetViewFactory,
-        interactions = dockInteractions,
-    )
 }
 
 private fun HomeLayout.shouldShowDock(): Boolean =
