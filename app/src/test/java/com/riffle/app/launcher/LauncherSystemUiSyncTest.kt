@@ -80,4 +80,33 @@ class LauncherSystemUiSyncTest {
 
         assertEquals(false, statusOnly == navigationOnly)
     }
+
+    @Test
+    fun fullscreenHomeProducesSameModeForLegacyAndPreservedBarSelections() {
+        val preservedPreferenceMode =
+            launcherSystemUiMode(
+                LauncherShellState(
+                    launcherSettings =
+                        LauncherSettings(
+                            appearance = AppearanceSettings(fullscreenHome = true),
+                        ),
+                ),
+            )
+        val legacyMode =
+            launcherSystemUiMode(
+                LauncherShellState(
+                    launcherSettings =
+                        LauncherSettings(
+                            appearance =
+                                AppearanceSettings(
+                                    fullscreenHome = true,
+                                    hideStatusBarOnHome = true,
+                                    hideNavigationBarOnHome = true,
+                                ),
+                        ),
+                ),
+            )
+
+        assertEquals(legacyMode, preservedPreferenceMode)
+    }
 }
