@@ -7,8 +7,9 @@ import org.junit.Test
 
 class WallpaperPickerGatewayTest {
     @Test
-    fun wallpaperPickerIntentUsesAndroidSetWallpaperAction() {
+    fun wallpaperPickerUsesAndroidWallpaperPickerAndLiveWallpaperChooserFallbackActions() {
         assertEquals(Intent.ACTION_SET_WALLPAPER, WALLPAPER_PICKER_ACTION)
+        assertEquals("android.service.wallpaper.LIVE_WALLPAPER_CHOOSER", FALLBACK_WALLPAPER_PICKER_ACTION)
     }
 
     @Test
@@ -40,13 +41,45 @@ class WallpaperPickerGatewayTest {
 
     @Test
     fun reportsUnavailableWhenNoWallpaperPickerCanHandleIntent() {
+        val preferredIntent = Intent()
+        val fallbackIntent = Intent()
+        val checkedIntents = mutableListOf<Intent>()
+
         val result =
             launchWallpaperPicker(
-                isAvailable = { false },
+                isAvailable = { intent ->
+                    checkedIntents += intent
+                    false
+                },
                 launch = { error("Should not launch") },
+                candidateIntents = listOf(preferredIntent, fallbackIntent),
             )
 
         assertEquals(WallpaperPickerLaunchResult.Unavailable, result)
+        assertEquals(listOf(preferredIntent, fallbackIntent), checkedIntents)
+    }
+
+    @Test
+    fun launchesFallbackWallpaperPickerWhenStandardPickerIsUnavailable() {
+        val preferredIntent = Intent()
+        val fallbackIntent = Intent()
+        val checkedIntents = mutableListOf<Intent>()
+        val launchedIntents = mutableListOf<Intent>()
+
+        val result =
+            launchWallpaperPicker(
+                isAvailable = { intent ->
+                    checkedIntents += intent
+                    intent === fallbackIntent
+                },
+                launch = launchedIntents::add,
+                createChooser = { intent -> intent },
+                candidateIntents = listOf(preferredIntent, fallbackIntent),
+            )
+
+        assertEquals(WallpaperPickerLaunchResult.Launched, result)
+        assertEquals(listOf(preferredIntent, fallbackIntent), checkedIntents)
+        assertEquals(listOf(fallbackIntent), launchedIntents)
     }
 
     @Test
