@@ -326,10 +326,13 @@ private fun DockSlot(
                         },
                 )
             is DockSlotItemState.Widget ->
-                DockWidget(
+                DockWidgetSlot(
                     widget = item.widget,
-                    widgetViewFactory = presentation.widgetViewFactory,
                     iconSizeDp = state.iconSizeDp,
+                    isEditing = state.isEditing,
+                    shortcutIndex = state.shortcutIndex,
+                    shortcutCount = state.shortcutCount,
+                    presentation = presentation,
                 )
             is DockSlotItemState.Placeholder ->
                 DockItemPlaceholder(

@@ -5,7 +5,9 @@ import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.DockItemMoveDirection
+import com.riffle.core.domain.launcher.home.HostedWidgetId
 import com.riffle.core.domain.launcher.home.LauncherItemId
+import com.riffle.core.domain.launcher.home.WidgetItem
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -74,6 +76,57 @@ class HomeDockContextMenuTest {
         assertEquals(false, lastItems.first { it.label == "Move right" }.enabled)
     }
 
+    @Test
+    fun widgetDockMenuRemovesWidgetFromDock() {
+        val widget = widget()
+
+        assertEquals(
+            listOf(
+                ShortcutContextMenuItem(
+                    label = "Remove from dock",
+                    action = LauncherShellAction.RemoveDockShortcut(widget.id),
+                ),
+            ),
+            dockWidgetContextMenuItems(widget),
+        )
+    }
+
+    @Test
+    fun editWidgetDockMenuAddsMoveActions() {
+        val widget = widget()
+
+        assertEquals(
+            listOf(
+                ShortcutContextMenuItem(
+                    label = "Move left",
+                    action =
+                        LauncherShellAction.MoveDockShortcut(
+                            itemId = widget.id,
+                            direction = DockItemMoveDirection.LEFT,
+                        ),
+                ),
+                ShortcutContextMenuItem(
+                    label = "Move right",
+                    action =
+                        LauncherShellAction.MoveDockShortcut(
+                            itemId = widget.id,
+                            direction = DockItemMoveDirection.RIGHT,
+                        ),
+                ),
+                ShortcutContextMenuItem(
+                    label = "Remove from dock",
+                    action = LauncherShellAction.RemoveDockShortcut(widget.id),
+                ),
+            ),
+            dockWidgetContextMenuItems(
+                widget = widget,
+                isEditing = true,
+                shortcutIndex = 1,
+                shortcutCount = 3,
+            ),
+        )
+    }
+
     private fun shortcut(): AppShortcutItem =
         AppShortcutItem(
             id = LauncherItemId("camera"),
@@ -83,5 +136,12 @@ class HomeDockContextMenuTest {
                     activityName = AppActivityName(".CameraActivity"),
                 ),
             label = "Camera",
+        )
+
+    private fun widget(): WidgetItem =
+        WidgetItem(
+            id = LauncherItemId("dock-widget:42"),
+            appWidgetId = HostedWidgetId(42),
+            label = "Weather",
         )
 }

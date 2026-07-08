@@ -2,7 +2,9 @@ package com.riffle.app.launcher
 
 import android.view.View
 import android.view.ViewGroup
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.requiredSize
@@ -94,10 +96,12 @@ internal fun DockItemPlaceholder(
 }
 
 @Composable
+@OptIn(ExperimentalFoundationApi::class)
 internal fun DockWidget(
     widget: WidgetItem,
     widgetViewFactory: HomeWidgetViewFactory,
     iconSizeDp: Int,
+    onLongClick: (() -> Unit)? = null,
 ) {
     val context = LocalContext.current
     val hostedWidgetView =
@@ -105,8 +109,17 @@ internal fun DockWidget(
             widgetViewFactory.createHostedWidgetView(context, widget)
         }
 
-    DisposableEffect(hostedWidgetView) {
+    DisposableEffect(hostedWidgetView, onLongClick) {
+        hostedWidgetView?.setOnLongClickListener(
+            onLongClick?.let { longClick ->
+                View.OnLongClickListener {
+                    longClick()
+                    true
+                }
+            },
+        )
         onDispose {
+            hostedWidgetView?.setOnLongClickListener(null)
             hostedWidgetView?.removeFromParent()
         }
     }
@@ -128,6 +141,16 @@ internal fun DockWidget(
                         kind = DockSlotPlaceholderKind.WIDGET,
                     ),
                 iconSizeDp = iconSizeDp,
+                modifier =
+                    if (onLongClick == null) {
+                        Modifier
+                    } else {
+                        Modifier.combinedClickable(
+                            onClick = { Unit },
+                            onLongClick = onLongClick,
+                            onLongClickLabel = "Show ${widget.label} actions",
+                        )
+                    },
             )
         } else {
             AndroidView(
