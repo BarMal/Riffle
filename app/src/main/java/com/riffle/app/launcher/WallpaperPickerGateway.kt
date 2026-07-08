@@ -28,11 +28,12 @@ internal fun launchWallpaperPicker(
     isAvailable: (Intent) -> Boolean,
     launch: (Intent) -> Unit,
     createChooser: (Intent) -> Intent = ::wallpaperPickerChooserIntent,
+    candidateIntents: List<Intent> = wallpaperPickerIntents(),
 ): WallpaperPickerLaunchResult {
-    val intent = wallpaperPickerIntent()
-    if (!isAvailable(intent)) {
-        return WallpaperPickerLaunchResult.Unavailable
-    }
+    val intent =
+        candidateIntents
+            .firstOrNull(isAvailable)
+            ?: return WallpaperPickerLaunchResult.Unavailable
     return runCatching { launch(createChooser(intent)) }
         .fold(
             onSuccess = { WallpaperPickerLaunchResult.Launched },
@@ -42,7 +43,15 @@ internal fun launchWallpaperPicker(
 
 internal fun wallpaperPickerIntent(): Intent = Intent(WALLPAPER_PICKER_ACTION)
 
+internal fun wallpaperPickerIntents(): List<Intent> =
+    listOf(
+        wallpaperPickerIntent(),
+        Intent(FALLBACK_WALLPAPER_PICKER_ACTION),
+    )
+
 internal const val WALLPAPER_PICKER_ACTION: String = Intent.ACTION_SET_WALLPAPER
+internal const val FALLBACK_WALLPAPER_PICKER_ACTION: String =
+    "android.service.wallpaper.LIVE_WALLPAPER_CHOOSER"
 internal const val WALLPAPER_PICKER_CHOOSER_TITLE: String = "Change wallpaper"
 
 internal fun wallpaperPickerChooserIntent(intent: Intent): Intent {
