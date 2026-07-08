@@ -10,8 +10,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -49,88 +47,37 @@ internal fun Dock(
     interactions: DockInteractions,
 ) {
     val presentation = DockPresentation(notificationCountsByPackage, appShortcutsByApp, widgetViewFactory, interactions)
-    val renderedSlotCount =
-        dockRenderedSlotCount(
-            capacity = dock.capacity,
-            itemCount = dock.items.size,
-            isEditing = isEditing,
-        )
-    val isBackgroundVisible =
-        dockBackgroundVisible(
-            capacity = dock.capacity,
-            itemCount = dock.items.size,
-            isEditing = isEditing,
-            backgroundSizing = dock.backgroundSizing,
-        )
-
-    if (!isBackgroundVisible) {
-        return
-    }
 
     BoxWithConstraints(
         modifier = Modifier.dockShelfGestureInput(interactions),
         contentAlignment = Alignment.Center,
     ) {
+        val surfaceMetrics =
+            dockSurfaceMetrics(
+                dock = dock,
+                isEditing = isEditing,
+                availableWidthDp = maxWidth.value.toInt(),
+            ) ?: return@BoxWithConstraints
         HomeBackgroundContextMenu(
             haptics = interactions.haptics,
             onAction = interactions.onAction,
             modifier = Modifier.matchParentSize(),
         )
-        val dockWidthDp =
-            dockContainerWidthDp(
-                availableWidthDp = maxWidth.value.toInt(),
-                slotCount = renderedSlotCount,
-                iconSizeDp = dock.iconSizeDp,
-                itemSpacingDp = dock.itemSpacingDp,
-                backgroundSizing = dock.backgroundSizing,
-            )
-        val contentViewportWidthDp =
-            dockContentViewportWidthDp(
-                slotCount = renderedSlotCount,
-                iconSizeDp = dock.iconSizeDp,
-                itemSpacingDp = dock.itemSpacingDp,
-                availableDockWidthDp = dockWidthDp,
-            )
-        val slotMetrics =
-            dockSlotRenderMetrics(
-                slotCount = renderedSlotCount,
-                iconSizeDp = dock.iconSizeDp,
-                itemSpacingDp = dock.itemSpacingDp,
-                availableContentWidthDp = contentViewportWidthDp,
-            )
-
-        Box(
+        DockSurfaceRow(
             modifier =
                 Modifier
-                    .dockShelfPolicies(interactions)
-                    .width(dockWidthDp.dp)
-                    .height(dockHeightDp(slotMetrics.iconSizeDp).dp)
-                    .clip(RoundedCornerShape(28.dp))
-                    .background(
-                        MaterialTheme.colorScheme.surfaceVariant.copy(
-                            alpha = dock.backgroundAlphaPercent / 100f,
-                        ),
-                    )
-                    .padding(horizontal = DOCK_HORIZONTAL_PADDING_DP.dp, vertical = DOCK_VERTICAL_PADDING_DP.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            if (renderedSlotCount > 0 && contentViewportWidthDp > 0) {
-                DockSlotsRow(
-                    dock = dock,
-                    renderedSlotCount = renderedSlotCount,
-                    contentViewportWidthDp = contentViewportWidthDp,
-                    slotMetrics = slotMetrics,
-                    isEditing = isEditing,
-                    presentation = presentation,
-                    appIconLoader = appIconLoader,
-                )
-            }
-        }
+                    .dockShelfPolicies(interactions),
+            dock = dock,
+            surfaceMetrics = surfaceMetrics,
+            isEditing = isEditing,
+            presentation = presentation,
+            appIconLoader = appIconLoader,
+        )
     }
 }
 
 @Composable
-private fun DockSlotsRow(
+internal fun DockSlotsRow(
     dock: DockModel,
     renderedSlotCount: Int,
     contentViewportWidthDp: Int,
@@ -214,9 +161,9 @@ private fun DockSlotsRow(
 }
 
 private const val DOCK_MAX_WIDTH_DP = 560
-private const val DOCK_VERTICAL_CHROME_DP = 32
-private const val DOCK_HORIZONTAL_PADDING_DP = 14
-private const val DOCK_VERTICAL_PADDING_DP = 10
+internal const val DOCK_VERTICAL_CHROME_DP = 32
+internal const val DOCK_HORIZONTAL_PADDING_DP = 14
+internal const val DOCK_VERTICAL_PADDING_DP = 10
 private const val DOCK_OVERFLOW_FADE_WIDTH_DP = 20
 
 internal fun dockHeightDp(iconSizeDp: Int): Int = iconSizeDp + DOCK_VERTICAL_CHROME_DP
@@ -294,7 +241,7 @@ internal data class DockOverflowAffordance(
     )
 }
 
-private data class DockPresentation(
+internal data class DockPresentation(
     val notificationCountsByPackage: Map<AppPackageName, Int>,
     val appShortcutsByApp: AppShortcutsByApp,
     val widgetViewFactory: HomeWidgetViewFactory,
