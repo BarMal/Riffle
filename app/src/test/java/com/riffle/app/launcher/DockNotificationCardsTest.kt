@@ -94,6 +94,60 @@ class DockNotificationCardsTest {
         )
     }
 
+    @Test
+    fun clearableCardsExposeDismissNotificationsAction() {
+        val group =
+            notificationGroup(
+                packageName = "com.example.chat",
+                notifications =
+                    listOf(
+                        notification(packageName = "com.example.chat", key = "chat:1", canDismiss = true),
+                        notification(packageName = "com.example.chat", key = "chat:2", canDismiss = false),
+                        notification(packageName = "com.example.chat", key = "chat:3", canDismiss = true),
+                    ),
+            )
+
+        assertEquals(
+            LauncherShellAction.DismissNotifications(
+                listOf(
+                    LauncherNotificationKey("chat:1"),
+                    LauncherNotificationKey("chat:3"),
+                ),
+            ),
+            DockNotificationCardState(app = null, group = group).clearAction,
+        )
+    }
+
+    @Test
+    fun pinnedCardsDoNotExposeClearAction() {
+        val group =
+            notificationGroup(
+                packageName = "com.example.chat",
+                notifications =
+                    listOf(
+                        notification(packageName = "com.example.chat", key = "chat:1", canDismiss = false),
+                    ),
+            )
+
+        assertEquals(null, DockNotificationCardState(app = null, group = group).clearAction)
+    }
+
+    @Test
+    fun summaryMatchesNewInlineClearAction() {
+        assertEquals(
+            "Tap to open or clear",
+            dockNotificationCardSummary(
+                notificationGroup(
+                    packageName = "com.example.chat",
+                    notifications =
+                        listOf(
+                            notification(packageName = "com.example.chat", key = "chat:1", canDismiss = true),
+                        ),
+                ),
+            ),
+        )
+    }
+
     private fun installedApp(
         label: String,
         packageName: String,
@@ -109,22 +163,36 @@ class DockNotificationCardsTest {
 
     private fun notificationGroup(
         packageName: String,
-        count: Int,
+        count: Int = 1,
         latestCategory: NotificationCategory = NotificationCategory.MESSAGE,
+        notifications: List<LauncherNotification> =
+            (1..count).map { index ->
+                notification(
+                    packageName = packageName,
+                    key = "$packageName:$index",
+                    category = latestCategory,
+                )
+            },
     ): AppNotificationGroup =
         AppNotificationGroup(
             packageName = AppPackageName(packageName),
             profileId = AppProfile.personal().id,
             latestCategory = latestCategory,
             latestAgeBucket = NotificationAgeBucket.RECENT,
-            notifications =
-                (1..count).map { index ->
-                    LauncherNotification(
-                        key = LauncherNotificationKey("$packageName:$index"),
-                        packageName = AppPackageName(packageName),
-                        category = latestCategory,
-                        postedAtEpochMillis = index.toLong(),
-                    )
-                },
+            notifications = notifications,
+        )
+
+    private fun notification(
+        packageName: String,
+        key: String,
+        category: NotificationCategory = NotificationCategory.MESSAGE,
+        canDismiss: Boolean = false,
+    ): LauncherNotification =
+        LauncherNotification(
+            key = LauncherNotificationKey(key),
+            packageName = AppPackageName(packageName),
+            category = category,
+            canDismiss = canDismiss,
+            postedAtEpochMillis = 1L,
         )
 }

@@ -17,6 +17,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -43,7 +44,13 @@ internal sealed interface DockNotificationShelfState {
 internal data class DockNotificationCardState(
     val app: InstalledApp?,
     val group: AppNotificationGroup,
-)
+) {
+    val clearAction: LauncherShellAction.DismissNotifications?
+        get() =
+            group.dismissibleNotificationKeys
+                .takeIf { keys -> keys.isNotEmpty() }
+                ?.let { keys -> LauncherShellAction.DismissNotifications(keys) }
+}
 
 internal fun dockNotificationShelfState(
     groups: List<AppNotificationGroup>,
@@ -216,6 +223,16 @@ private fun DockNotificationCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 2,
             )
+            card.clearAction?.let { clearAction ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                ) {
+                    TextButton(onClick = { onAction(clearAction) }) {
+                        Text(text = "Clear")
+                    }
+                }
+            }
         }
     }
 }
@@ -253,10 +270,10 @@ private fun DockNotificationIcon(
     }
 }
 
-private fun dockNotificationCardSummary(group: AppNotificationGroup): String =
+internal fun dockNotificationCardSummary(group: AppNotificationGroup): String =
     when {
         group.clearableCount == 0 -> "Pinned notifications"
-        group.clearableCount == group.count -> "Tap to open or clear from the notifications page"
+        group.clearableCount == group.count -> "Tap to open or clear"
         else -> "${group.clearableCount} clearable of ${group.count}"
     }
 
