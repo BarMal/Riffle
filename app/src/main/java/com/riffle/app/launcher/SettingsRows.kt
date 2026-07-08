@@ -39,19 +39,21 @@ internal fun SettingsSwitchRow(
     subtitle: String,
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
+    enabled: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
     SettingsListItem(
         modifier =
             modifier
                 .settingsRowModifier()
-                .clickable(role = Role.Switch) { onCheckedChange(!checked) },
+                .clickable(enabled = enabled, role = Role.Switch) { onCheckedChange(!checked) },
         title = title,
         subtitle = subtitle,
         trailingContent = {
             Switch(
                 checked = checked,
                 onCheckedChange = onCheckedChange,
+                enabled = enabled,
             )
         },
     )

@@ -14,6 +14,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.home.WallpaperSource
+import com.riffle.core.domain.launcher.settings.homeNavigationBarHidden
+import com.riffle.core.domain.launcher.settings.homeStatusBarHidden
 
 @Composable
 @Suppress("CyclomaticComplexMethod")
@@ -187,14 +189,28 @@ private fun SettingsAppearancePageContent(
     state: SettingsSurfaceState,
     onAction: (LauncherShellAction) -> Unit,
 ) {
+    val appearance = state.settings.appearance
+    val statusBarSetting =
+        dependentSystemBarSettingState(
+            fullscreenHome = appearance.fullscreenHome,
+            hidden = appearance.homeStatusBarHidden,
+            enabledSubtitle = "Hide the top system bar on home",
+        )
+    val navigationBarSetting =
+        dependentSystemBarSettingState(
+            fullscreenHome = appearance.fullscreenHome,
+            hidden = appearance.homeNavigationBarHidden,
+            enabledSubtitle = "Hide the bottom system bar on home",
+        )
+
     SettingsSection(title = "Wallpaper") {
         WallpaperSourceSetting(
-            selectedSource = state.settings.appearance.wallpaper.source,
+            selectedSource = appearance.wallpaper.source,
             onAction = onAction,
         )
         WallpaperScrollModeSetting(
-            selectedSource = state.settings.appearance.wallpaper.source,
-            selectedMode = state.settings.appearance.wallpaper.scrollMode,
+            selectedSource = appearance.wallpaper.source,
+            selectedMode = appearance.wallpaper.scrollMode,
             onAction = onAction,
         )
         SettingsClickableRow(
@@ -207,23 +223,25 @@ private fun SettingsAppearancePageContent(
         SettingsSwitchRow(
             title = "Fullscreen home",
             subtitle = "Hide status and navigation bars on home",
-            checked = state.settings.appearance.fullscreenHome,
+            checked = appearance.fullscreenHome,
             onCheckedChange = { enabled ->
                 onAction(LauncherShellAction.SelectFullscreenHomeEnabled(enabled))
             },
         )
         SettingsSwitchRow(
             title = "Hide status bar",
-            subtitle = "Hide the top system bar on home",
-            checked = state.settings.appearance.fullscreenHome || state.settings.appearance.hideStatusBarOnHome,
+            subtitle = statusBarSetting.subtitle,
+            checked = statusBarSetting.checked,
+            enabled = statusBarSetting.enabled,
             onCheckedChange = { hidden ->
                 onAction(LauncherShellAction.SelectHomeStatusBarHidden(hidden))
             },
         )
         SettingsSwitchRow(
             title = "Hide navigation bar",
-            subtitle = "Hide the bottom system bar on home",
-            checked = state.settings.appearance.fullscreenHome || state.settings.appearance.hideNavigationBarOnHome,
+            subtitle = navigationBarSetting.subtitle,
+            checked = navigationBarSetting.checked,
+            enabled = navigationBarSetting.enabled,
             onCheckedChange = { hidden ->
                 onAction(LauncherShellAction.SelectHomeNavigationBarHidden(hidden))
             },

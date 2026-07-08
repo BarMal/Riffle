@@ -5,12 +5,14 @@ import kotlin.test.assertEquals
 
 class AppearanceSettingsPolicyTest {
     @Test
-    fun fullscreenHomeSelectionUpdatesBothSystemBarSettings() {
-        val appearance = AppearanceSettings().withFullscreenHome(enabled = true)
+    fun fullscreenHomeSelectionPreservesIndependentSystemBarSettings() {
+        val appearance =
+            AppearanceSettings(hideStatusBarOnHome = true)
+                .withFullscreenHome(enabled = true)
 
         assertEquals(true, appearance.fullscreenHome)
         assertEquals(true, appearance.hideStatusBarOnHome)
-        assertEquals(true, appearance.hideNavigationBarOnHome)
+        assertEquals(false, appearance.hideNavigationBarOnHome)
         assertEquals(true, appearance.homeStatusBarHidden)
         assertEquals(true, appearance.homeNavigationBarHidden)
     }
@@ -28,6 +30,22 @@ class AppearanceSettingsPolicyTest {
         assertEquals(false, appearance.hideStatusBarOnHome)
         assertEquals(false, appearance.hideNavigationBarOnHome)
         assertEquals(false, appearance.homeStatusBarHidden)
+        assertEquals(false, appearance.homeNavigationBarHidden)
+    }
+
+    @Test
+    fun fullscreenHomeClearingRestoresIndependentSystemBarSelection() {
+        val appearance =
+            AppearanceSettings(
+                fullscreenHome = true,
+                hideStatusBarOnHome = true,
+                hideNavigationBarOnHome = false,
+            ).withFullscreenHome(enabled = false)
+
+        assertEquals(false, appearance.fullscreenHome)
+        assertEquals(true, appearance.hideStatusBarOnHome)
+        assertEquals(false, appearance.hideNavigationBarOnHome)
+        assertEquals(true, appearance.homeStatusBarHidden)
         assertEquals(false, appearance.homeNavigationBarHidden)
     }
 
