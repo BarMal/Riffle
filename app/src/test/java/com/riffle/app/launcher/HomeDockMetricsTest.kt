@@ -375,6 +375,23 @@ class HomeDockMetricsTest {
     }
 
     @Test
+    fun dockShelfUsesStandardSpringMotionWhenReducedMotionIsOff() {
+        assertEquals(
+            DockShelfMotionPolicy.StandardSpring,
+            dockShelfMotionPolicy(reducedMotion = false),
+        )
+    }
+
+    @Test
+    fun dockShelfUsesShortTweenMotionWhenReducedMotionIsOn() {
+        assertEquals(
+            DockShelfMotionPolicy.ReducedShortTween,
+            dockShelfMotionPolicy(reducedMotion = true),
+        )
+        assertEquals(80, REDUCED_MOTION_DOCK_SHELF_DURATION_MILLIS)
+    }
+
+    @Test
     fun dockOverflowRequiresMoreItemsThanCapacity() {
         assertEquals(true, dockHasOverflow(capacity = 5, itemCount = 6))
         assertEquals(false, dockHasOverflow(capacity = 5, itemCount = 5))

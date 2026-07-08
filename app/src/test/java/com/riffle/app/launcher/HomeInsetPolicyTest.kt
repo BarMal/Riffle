@@ -48,4 +48,46 @@ class HomeInsetPolicyTest {
             homeInsetPolicy(AppearanceSettings(hideNavigationBarOnHome = true)),
         )
     }
+
+    @Test
+    fun dockShelfGestureDoesNotReserveBottomSystemGestureZoneWhenNavigationBarIsReserved() {
+        assertEquals(
+            DockShelfGesturePolicy(
+                enabled = true,
+                bottomSystemGestureExclusionDp = 0,
+            ),
+            dockShelfGesturePolicy(
+                isDockVisible = true,
+                homeInsetPolicy = HomeInsetPolicy(reserveNavigationBar = true),
+            ),
+        )
+    }
+
+    @Test
+    fun dockShelfGestureReservesBottomSystemGestureZoneWhenNavigationBarIsNotReserved() {
+        assertEquals(
+            DockShelfGesturePolicy(
+                enabled = true,
+                bottomSystemGestureExclusionDp = 24,
+            ),
+            dockShelfGesturePolicy(
+                isDockVisible = true,
+                homeInsetPolicy = HomeInsetPolicy(reserveNavigationBar = false),
+            ),
+        )
+    }
+
+    @Test
+    fun dockShelfGestureDisablesWhenDockIsHidden() {
+        assertEquals(
+            DockShelfGesturePolicy(
+                enabled = false,
+                bottomSystemGestureExclusionDp = 24,
+            ),
+            dockShelfGesturePolicy(
+                isDockVisible = false,
+                homeInsetPolicy = HomeInsetPolicy(reserveNavigationBar = false),
+            ),
+        )
+    }
 }

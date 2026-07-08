@@ -1,6 +1,5 @@
 package com.riffle.app.launcher
 
-import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
@@ -38,11 +37,13 @@ internal fun StandardHomeDockArea(
             onFolderOpen = actions.onFolderOpen,
             isShelfExpanded = showDockShelf,
             onShelfExpandedChange = onDockShelfExpandedChange.takeIf { hasDockOverflow },
+            reducedMotion = presentation.reducedMotion,
+            homeInsetPolicy = presentation.homeInsetPolicy,
             onAction = actions.onAction,
         )
 
     Column(
-        modifier = Modifier.animateContentSize(),
+        modifier = Modifier.dockShelfMotion(dockShelfMotionPolicy(presentation.reducedMotion)),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         if (showDockShelf) {
