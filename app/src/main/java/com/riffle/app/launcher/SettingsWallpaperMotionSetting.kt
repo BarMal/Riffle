@@ -6,25 +6,29 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.home.WallpaperScrollMode
+import com.riffle.core.domain.launcher.home.WallpaperSource
 
 @Composable
 internal fun WallpaperScrollModeSetting(
+    selectedSource: WallpaperSource,
     selectedMode: WallpaperScrollMode,
     onAction: (LauncherShellAction) -> Unit,
 ) {
+    val state = wallpaperScrollModeSettingState(selectedSource)
+
     SettingsListRow(
         title = "Wallpaper motion",
-        subtitle = "Move wallpaper between home pages",
+        subtitle = state.subtitle,
         trailingContent = {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 TextButton(
-                    enabled = WallpaperScrollMode.STATIC != selectedMode,
+                    enabled = state.enabled && WallpaperScrollMode.STATIC != selectedMode,
                     onClick = { onAction(LauncherShellAction.SelectWallpaperScrollMode(WallpaperScrollMode.STATIC)) },
                 ) {
                     SettingsButtonText(text = "Static")
                 }
                 TextButton(
-                    enabled = WallpaperScrollMode.SCROLLING != selectedMode,
+                    enabled = state.enabled && WallpaperScrollMode.SCROLLING != selectedMode,
                     onClick = {
                         onAction(LauncherShellAction.SelectWallpaperScrollMode(WallpaperScrollMode.SCROLLING))
                     },
@@ -35,3 +39,21 @@ internal fun WallpaperScrollModeSetting(
         },
     )
 }
+
+internal fun wallpaperScrollModeSettingState(source: WallpaperSource): WallpaperScrollModeSettingState =
+    if (source == WallpaperSource.SYSTEM) {
+        WallpaperScrollModeSettingState(
+            enabled = true,
+            subtitle = "Move system wallpaper between home pages",
+        )
+    } else {
+        WallpaperScrollModeSettingState(
+            enabled = false,
+            subtitle = "Available when using system wallpaper",
+        )
+    }
+
+internal data class WallpaperScrollModeSettingState(
+    val enabled: Boolean,
+    val subtitle: String,
+)
