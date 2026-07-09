@@ -1,6 +1,8 @@
 package com.riffle.app.launcher
 
 import com.riffle.core.domain.launcher.settings.AppearanceSettings
+import com.riffle.core.domain.launcher.settings.HomeSystemBars
+import com.riffle.core.domain.launcher.settings.withHomeSystemBars
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -46,6 +48,23 @@ class HomeInsetPolicyTest {
                 reserveNavigationBar = false,
             ),
             homeInsetPolicy(AppearanceSettings(hideNavigationBarOnHome = true)),
+        )
+    }
+
+    @Test
+    fun typedHomeSystemBarsDriveInsetReservation() {
+        assertEquals(
+            HomeInsetPolicy(
+                reserveStatusBar = false,
+                reserveNavigationBar = true,
+            ),
+            homeInsetPolicy(
+                AppearanceSettings().withHomeSystemBars(
+                    HomeSystemBars(
+                        hideStatusBarOnHome = true,
+                    ),
+                ),
+            ),
         )
     }
 

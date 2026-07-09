@@ -52,6 +52,7 @@ import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.settings.AppearanceSettings
 import com.riffle.core.domain.launcher.settings.HomeGestureSettings
+import com.riffle.core.domain.launcher.settings.homeSystemBars
 import com.riffle.core.domain.launcher.widgets.InstalledWidgetProvider
 import kotlinx.coroutines.delay
 
@@ -398,8 +399,8 @@ internal data class HomeInsetPolicy(
 
 internal fun homeInsetPolicy(appearance: AppearanceSettings): HomeInsetPolicy =
     HomeInsetPolicy(
-        reserveStatusBar = !(appearance.fullscreenHome || appearance.hideStatusBarOnHome),
-        reserveNavigationBar = !(appearance.fullscreenHome || appearance.hideNavigationBarOnHome),
+        reserveStatusBar = !appearance.homeSystemBars.statusBarHidden,
+        reserveNavigationBar = !appearance.homeSystemBars.navigationBarHidden,
     )
 
 @Composable
