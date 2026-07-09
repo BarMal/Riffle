@@ -46,6 +46,10 @@ class NotificationOverviewSurfaceTest {
             NotificationAccessStatus.NOT_GRANTED.emptyNotificationOverviewLabel,
         )
         assertEquals(
+            "Notification access was revoked",
+            NotificationAccessStatus.REVOKED.emptyNotificationOverviewLabel,
+        )
+        assertEquals(
             "Notification access has not been checked",
             NotificationAccessStatus.UNKNOWN.emptyNotificationOverviewLabel,
         )
@@ -57,6 +61,10 @@ class NotificationOverviewSurfaceTest {
         assertEquals(
             "Open notification access",
             NotificationAccessStatus.NOT_GRANTED.emptyNotificationOverviewActionLabel,
+        )
+        assertEquals(
+            "Open notification access",
+            NotificationAccessStatus.REVOKED.emptyNotificationOverviewActionLabel,
         )
         assertEquals(
             "Open notification access",
