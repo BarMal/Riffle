@@ -1,5 +1,6 @@
 package com.riffle.app.launcher
 
+import com.riffle.core.domain.launcher.settings.GestureSettings
 import com.riffle.core.domain.launcher.settings.HomeGesture
 import com.riffle.core.domain.launcher.settings.HomeGestureSettings
 import com.riffle.core.domain.launcher.settings.LauncherGestureAction
@@ -163,8 +164,8 @@ class HomeSwipeGestureInterpreterTest {
             )
 
         assertEquals(
-            "Conflicting gestures: Search: Swipe up, Pinch out",
-            homeGestureConflictSummary(settings),
+            "Conflicting gestures: Search: Swipe up, Two-finger swipe up, Pinch out",
+            homeGestureConflictSummary(GestureSettings(homeGestures = settings)),
         )
     }
 
@@ -175,11 +176,12 @@ class HomeSwipeGestureInterpreterTest {
                 actions =
                     mapOf(
                         HomeGesture.ONE_FINGER_UP to LauncherGestureAction.OPEN_APP_DRAWER,
+                        HomeGesture.TWO_FINGER_UP to LauncherGestureAction.NONE,
                         HomeGesture.PINCH_OUT to LauncherGestureAction.OPEN_SEARCH,
                     ),
             )
 
-        assertNull(homeGestureConflictSummary(settings))
+        assertNull(homeGestureConflictSummary(GestureSettings(homeGestures = settings)))
     }
 
     @Test
