@@ -5,6 +5,8 @@ import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
 object RiffleNotificationListenerConnection {
     private var listener: RiffleNotificationListenerService? = null
 
+    fun isConnected(): Boolean = listener != null
+
     fun connect(listener: RiffleNotificationListenerService) {
         this.listener = listener
     }

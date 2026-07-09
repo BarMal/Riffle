@@ -12,11 +12,14 @@ class AndroidHomeRoleGateway(
     private val context: Context,
 ) {
     fun getHomeRoleStatus(): HomeRoleStatus =
-        homeRoleStatusFromRoleManager()
-            ?: homeRoleStatusFromResolvedDefaultHome(
-                appPackageName = context.packageName,
-                resolvedDefaultHomePackageName = resolveDefaultHomePackageName(),
-            )
+        homeRoleStatus(
+            roleManagerStatus = homeRoleStatusFromRoleManager(),
+            resolvedDefaultHomeStatus =
+                homeRoleStatusFromResolvedDefaultHome(
+                    appPackageName = context.packageName,
+                    resolvedDefaultHomePackageName = resolveDefaultHomePackageName(),
+                ),
+        )
 
     fun createHomeRoleRequestIntent(): Intent =
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -69,4 +72,15 @@ internal fun homeRoleStatusFromResolvedDefaultHome(
         appPackageName -> HomeRoleStatus.DEFAULT_HOME
         null -> HomeRoleStatus.UNKNOWN
         else -> HomeRoleStatus.NOT_DEFAULT_HOME
+    }
+
+internal fun homeRoleStatus(
+    roleManagerStatus: HomeRoleStatus?,
+    resolvedDefaultHomeStatus: HomeRoleStatus,
+): HomeRoleStatus =
+    when {
+        roleManagerStatus == HomeRoleStatus.DEFAULT_HOME -> HomeRoleStatus.DEFAULT_HOME
+        resolvedDefaultHomeStatus == HomeRoleStatus.DEFAULT_HOME -> HomeRoleStatus.DEFAULT_HOME
+        roleManagerStatus != null -> roleManagerStatus
+        else -> resolvedDefaultHomeStatus
     }

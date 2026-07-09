@@ -9,9 +9,10 @@ class AndroidNotificationAccessGatewayTest {
     fun reportsGrantedWhenAppPackageHasEnabledListener() {
         assertEquals(
             NotificationAccessStatus.GRANTED,
-            notificationAccessStatusFromEnabledListenerPackages(
+            notificationAccessStatus(
                 appPackageName = "com.riffle",
                 enabledListenerPackages = setOf("com.riffle"),
+                isListenerConnected = false,
             ),
         )
     }
@@ -20,9 +21,34 @@ class AndroidNotificationAccessGatewayTest {
     fun reportsNotGrantedWhenAppPackageDoesNotHaveEnabledListener() {
         assertEquals(
             NotificationAccessStatus.NOT_GRANTED,
-            notificationAccessStatusFromEnabledListenerPackages(
+            notificationAccessStatus(
                 appPackageName = "com.riffle",
                 enabledListenerPackages = setOf("com.other"),
+                isListenerConnected = false,
+            ),
+        )
+    }
+
+    @Test
+    fun reportsGrantedWhenListenerServiceIsConnected() {
+        assertEquals(
+            NotificationAccessStatus.GRANTED,
+            notificationAccessStatus(
+                appPackageName = "com.riffle",
+                enabledListenerPackages = emptySet(),
+                isListenerConnected = true,
+            ),
+        )
+    }
+
+    @Test
+    fun prefersConnectedListenerOverMissingPackageEntry() {
+        assertEquals(
+            NotificationAccessStatus.GRANTED,
+            notificationAccessStatus(
+                appPackageName = "com.riffle",
+                enabledListenerPackages = setOf("com.other"),
+                isListenerConnected = true,
             ),
         )
     }

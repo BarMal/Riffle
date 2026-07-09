@@ -70,4 +70,26 @@ class AndroidHomeRoleGatewayTest {
             ),
         )
     }
+
+    @Test
+    fun prefersResolvedDefaultHomeWhenRoleManagerReportsNotHeld() {
+        assertEquals(
+            HomeRoleStatus.DEFAULT_HOME,
+            homeRoleStatus(
+                roleManagerStatus = HomeRoleStatus.NOT_DEFAULT_HOME,
+                resolvedDefaultHomeStatus = HomeRoleStatus.DEFAULT_HOME,
+            ),
+        )
+    }
+
+    @Test
+    fun fallsBackToResolvedHomeStatusWhenRoleManagerIsUnavailable() {
+        assertEquals(
+            HomeRoleStatus.NOT_DEFAULT_HOME,
+            homeRoleStatus(
+                roleManagerStatus = null,
+                resolvedDefaultHomeStatus = HomeRoleStatus.NOT_DEFAULT_HOME,
+            ),
+        )
+    }
 }

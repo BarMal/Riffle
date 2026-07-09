@@ -37,6 +37,7 @@ internal fun SettingsPermissionsPageContent(
     onAction: (LauncherShellAction) -> Unit,
 ) {
     SettingsPermissionsSection(
+        homeRoleStatus = state.homeRoleStatus,
         notificationAccessStatus = state.notificationAccessStatus,
         overlayDockPermissionStatus = state.overlayDockPermissionStatus,
         onAction = onAction,

@@ -30,7 +30,7 @@ internal fun SettingsLauncherSection(
                 MaterialTheme.colorScheme.onPrimaryContainer
             },
     ) {
-        HomeAppSetting(
+        SettingsHomeAppSetting(
             status = status,
             onAction = onAction,
         )
@@ -38,7 +38,7 @@ internal fun SettingsLauncherSection(
 }
 
 @Composable
-private fun HomeAppSetting(
+internal fun SettingsHomeAppSetting(
     status: HomeRoleStatus,
     onAction: (LauncherShellAction) -> Unit,
 ) {

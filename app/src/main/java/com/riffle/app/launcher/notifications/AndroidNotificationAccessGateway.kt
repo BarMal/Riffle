@@ -10,19 +10,22 @@ class AndroidNotificationAccessGateway(
     private val context: Context,
 ) {
     fun getNotificationAccessStatus(): NotificationAccessStatus =
-        notificationAccessStatusFromEnabledListenerPackages(
+        notificationAccessStatus(
             appPackageName = context.packageName,
             enabledListenerPackages = NotificationManagerCompat.getEnabledListenerPackages(context),
+            isListenerConnected = RiffleNotificationListenerConnection.isConnected(),
         )
 
     fun createNotificationListenerSettingsIntent(): Intent = Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
 }
 
-internal fun notificationAccessStatusFromEnabledListenerPackages(
+internal fun notificationAccessStatus(
     appPackageName: String,
     enabledListenerPackages: Set<String>,
+    isListenerConnected: Boolean,
 ): NotificationAccessStatus =
     when {
+        isListenerConnected -> NotificationAccessStatus.GRANTED
         appPackageName in enabledListenerPackages -> NotificationAccessStatus.GRANTED
         else -> NotificationAccessStatus.NOT_GRANTED
     }
