@@ -11,6 +11,8 @@ import com.riffle.core.domain.launcher.settings.OverlayDockEdge
 import com.riffle.core.domain.launcher.settings.OverlayDockExpandedOrientation
 import com.riffle.core.domain.launcher.settings.OverlayDockSettings
 import com.riffle.core.domain.launcher.settings.coerceOverlayDockSettings
+import com.riffle.core.domain.launcher.settings.homeSystemBars
+import com.riffle.core.domain.launcher.settings.withHomeSystemBars
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -41,19 +43,23 @@ fun decodeLauncherSettings(value: String): LauncherSettings =
 
 private fun encodeAppearance(settings: AppearanceSettings): JSONObject =
     JSONObject()
+        .put("fullscreenHome", settings.homeSystemBars.fullscreenHome)
+        .put("hideStatusBarOnHome", settings.homeSystemBars.hideStatusBarOnHome)
+        .put("hideNavigationBarOnHome", settings.homeSystemBars.hideNavigationBarOnHome)
         .put("wallpaper", encodeWallpaper(settings.wallpaper))
-        .put("fullscreenHome", settings.fullscreenHome)
-        .put("hideStatusBarOnHome", settings.hideStatusBarOnHome)
-        .put("hideNavigationBarOnHome", settings.hideNavigationBarOnHome)
 
 private fun JSONObject.toAppearance(defaults: AppearanceSettings): AppearanceSettings {
-    val fullscreenHome = optBoolean("fullscreenHome", defaults.fullscreenHome)
-    return defaults.copy(
-        wallpaper = optJSONObject("wallpaper")?.toWallpaper(defaults.wallpaper) ?: defaults.wallpaper,
-        fullscreenHome = fullscreenHome,
-        hideStatusBarOnHome = optBoolean("hideStatusBarOnHome", fullscreenHome),
-        hideNavigationBarOnHome = optBoolean("hideNavigationBarOnHome", fullscreenHome),
-    )
+    val fullscreenHome = optBoolean("fullscreenHome", defaults.homeSystemBars.fullscreenHome)
+    val homeSystemBars =
+        defaults.homeSystemBars.copy(
+            fullscreenHome = fullscreenHome,
+            hideStatusBarOnHome = optBoolean("hideStatusBarOnHome", fullscreenHome),
+            hideNavigationBarOnHome = optBoolean("hideNavigationBarOnHome", fullscreenHome),
+        )
+    return defaults
+        .copy(
+            wallpaper = optJSONObject("wallpaper")?.toWallpaper(defaults.wallpaper) ?: defaults.wallpaper,
+        ).withHomeSystemBars(homeSystemBars)
 }
 
 private fun encodeWallpaper(settings: WallpaperSettings): JSONObject =

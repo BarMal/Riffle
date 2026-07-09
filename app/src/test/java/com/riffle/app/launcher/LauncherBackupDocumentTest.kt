@@ -11,8 +11,11 @@ import com.riffle.core.domain.launcher.home.WallpaperSource
 import com.riffle.core.domain.launcher.settings.AppearanceSettings
 import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
 import com.riffle.core.domain.launcher.settings.HapticSettings
+import com.riffle.core.domain.launcher.settings.HomeSystemBars
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.MotionSettings
+import com.riffle.core.domain.launcher.settings.homeSystemBars
+import com.riffle.core.domain.launcher.settings.withHomeSystemBars
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
@@ -51,17 +54,17 @@ class LauncherBackupDocumentTest {
 
     @Test
     fun encodesHomeSystemBarAndMotionSettings() {
+        val homeSystemBars =
+            HomeSystemBars(
+                hideStatusBarOnHome = true,
+                hideNavigationBarOnHome = false,
+            )
         val document =
             LauncherBackupDocument(
                 homeLayoutSet = HomeLayoutSet.fromLayout(HomeLayoutDefaults.standard()),
                 launcherSettings =
                     LauncherSettings(
-                        appearance =
-                            AppearanceSettings(
-                                fullscreenHome = false,
-                                hideStatusBarOnHome = true,
-                                hideNavigationBarOnHome = false,
-                            ),
+                        appearance = AppearanceSettings().withHomeSystemBars(homeSystemBars),
                         motion = MotionSettings(reducedMotion = true),
                     ),
             )
@@ -74,6 +77,7 @@ class LauncherBackupDocumentTest {
         assertEquals(true, appearance.getBoolean("hideStatusBarOnHome"))
         assertEquals(false, appearance.getBoolean("hideNavigationBarOnHome"))
         assertEquals(true, motion.getBoolean("reducedMotion"))
+        assertEquals(homeSystemBars, document.launcherSettings.appearance.homeSystemBars)
     }
 
     @Test
@@ -108,9 +112,14 @@ class LauncherBackupDocumentTest {
 
         val decodedSettings = decodeLauncherBackupDocument(value).launcherSettings
 
-        assertEquals(true, decodedSettings.appearance.fullscreenHome)
-        assertEquals(true, decodedSettings.appearance.hideStatusBarOnHome)
-        assertEquals(true, decodedSettings.appearance.hideNavigationBarOnHome)
+        assertEquals(
+            HomeSystemBars(
+                fullscreenHome = true,
+                hideStatusBarOnHome = true,
+                hideNavigationBarOnHome = true,
+            ),
+            decodedSettings.appearance.homeSystemBars,
+        )
     }
 
     @Test
