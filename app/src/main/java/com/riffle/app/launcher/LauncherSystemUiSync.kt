@@ -8,8 +8,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.ShellDestination
-import com.riffle.core.domain.launcher.settings.homeNavigationBarHidden
-import com.riffle.core.domain.launcher.settings.homeStatusBarHidden
+import com.riffle.core.domain.launcher.settings.homeSystemBars
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
@@ -45,11 +44,13 @@ private fun ComponentActivity.applyLauncherSystemUiMode(mode: LauncherSystemUiMo
 }
 
 internal fun launcherSystemUiMode(shellState: LauncherShellState): LauncherSystemUiMode =
-    LauncherSystemUiMode(
-        hideStatusBarOnHome = shellState.launcherSettings.appearance.homeStatusBarHidden,
-        hideNavigationBarOnHome = shellState.launcherSettings.appearance.homeNavigationBarHidden,
-        destination = shellState.destination,
-    )
+    shellState.launcherSettings.appearance.homeSystemBars.let { homeSystemBars ->
+        LauncherSystemUiMode(
+            hideStatusBarOnHome = homeSystemBars.statusBarHidden,
+            hideNavigationBarOnHome = homeSystemBars.navigationBarHidden,
+            destination = shellState.destination,
+        )
+    }
 
 internal data class LauncherSystemUiMode(
     val hideStatusBarOnHome: Boolean,

@@ -3,7 +3,9 @@ package com.riffle.app.launcher
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.ShellDestination
 import com.riffle.core.domain.launcher.settings.AppearanceSettings
+import com.riffle.core.domain.launcher.settings.HomeSystemBars
 import com.riffle.core.domain.launcher.settings.LauncherSettings
+import com.riffle.core.domain.launcher.settings.withHomeSystemBars
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -108,5 +110,28 @@ class LauncherSystemUiSyncTest {
             )
 
         assertEquals(legacyMode, preservedPreferenceMode)
+    }
+
+    @Test
+    fun typedHomeSystemBarsProduceEffectiveSystemUiMode() {
+        val appearance =
+            AppearanceSettings().withHomeSystemBars(
+                HomeSystemBars(
+                    hideStatusBarOnHome = true,
+                    hideNavigationBarOnHome = false,
+                ),
+            )
+        val mode =
+            launcherSystemUiMode(
+                LauncherShellState(
+                    launcherSettings =
+                        LauncherSettings(
+                            appearance = appearance,
+                        ),
+                ),
+            )
+
+        assertTrue(mode.shouldHideStatusBars)
+        assertFalse(mode.shouldHideNavigationBars)
     }
 }

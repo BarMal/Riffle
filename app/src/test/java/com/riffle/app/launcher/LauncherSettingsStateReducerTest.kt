@@ -8,8 +8,10 @@ import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
 import com.riffle.core.domain.launcher.settings.AppearanceSettings
 import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
+import com.riffle.core.domain.launcher.settings.HomeSystemBars
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettingsRepository
+import com.riffle.core.domain.launcher.settings.homeSystemBars
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertSame
 import org.junit.Test
@@ -96,6 +98,14 @@ class LauncherSettingsStateReducerTest {
         assertEquals(true, updatedState.launcherSettings.appearance.fullscreenHome)
         assertEquals(true, updatedState.launcherSettings.appearance.hideStatusBarOnHome)
         assertEquals(false, updatedState.launcherSettings.appearance.hideNavigationBarOnHome)
+        assertEquals(
+            HomeSystemBars(
+                fullscreenHome = true,
+                hideStatusBarOnHome = true,
+                hideNavigationBarOnHome = false,
+            ),
+            updatedState.launcherSettings.appearance.homeSystemBars,
+        )
         assertEquals(updatedState.launcherSettings, repository.savedSettings)
     }
 
@@ -124,6 +134,14 @@ class LauncherSettingsStateReducerTest {
         assertEquals(false, updatedState.launcherSettings.appearance.fullscreenHome)
         assertEquals(true, updatedState.launcherSettings.appearance.hideStatusBarOnHome)
         assertEquals(false, updatedState.launcherSettings.appearance.hideNavigationBarOnHome)
+        assertEquals(
+            HomeSystemBars(
+                fullscreenHome = false,
+                hideStatusBarOnHome = true,
+                hideNavigationBarOnHome = false,
+            ),
+            updatedState.launcherSettings.appearance.homeSystemBars,
+        )
         assertEquals(updatedState.launcherSettings, repository.savedSettings)
     }
 
