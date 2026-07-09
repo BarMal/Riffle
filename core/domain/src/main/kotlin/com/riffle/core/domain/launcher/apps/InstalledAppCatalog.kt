@@ -16,6 +16,11 @@ class InstalledAppCatalog {
         profile: AppProfile,
     ): List<InstalledApp> = visibleApps(apps).filter { app -> app.identity.profile == profile }
 
+    fun appsForProfiles(
+        apps: List<InstalledApp>,
+        selection: AppProfileSelection,
+    ): List<InstalledApp> = visibleApps(apps).filterByProfile(selection)
+
     fun searchApps(
         apps: List<InstalledApp>,
         query: String,

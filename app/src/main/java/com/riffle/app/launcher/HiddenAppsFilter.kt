@@ -1,8 +1,8 @@
 package com.riffle.app.launcher
 
 import com.riffle.core.domain.launcher.apps.AppDrawerProfileFilter
-import com.riffle.core.domain.launcher.apps.AppProfileType
 import com.riffle.core.domain.launcher.apps.InstalledApp
+import com.riffle.core.domain.launcher.apps.matches
 import com.riffle.core.domain.launcher.search.containsAllSearchTokens
 import com.riffle.core.domain.launcher.search.normalizedSearchTokens
 import com.riffle.core.domain.launcher.search.searchAcronym
@@ -14,7 +14,7 @@ internal fun List<InstalledApp>.filteredHiddenApps(
     val tokens = normalizedSearchTokens(query)
 
     return filter { app ->
-        app.matchesHiddenAppProfileFilter(profileFilter) && app.matchesHiddenAppSearch(tokens)
+        profileFilter.matches(app) && app.matchesHiddenAppSearch(tokens)
     }
 }
 
@@ -47,14 +47,6 @@ internal fun shouldShowHiddenAppsClearFilters(
     query: String,
     profileFilter: AppDrawerProfileFilter,
 ): Boolean = query.isNotBlank() || profileFilter != AppDrawerProfileFilter.ALL
-
-private fun InstalledApp.matchesHiddenAppProfileFilter(profileFilter: AppDrawerProfileFilter): Boolean =
-    when (profileFilter) {
-        AppDrawerProfileFilter.ALL -> true
-        AppDrawerProfileFilter.PERSONAL -> identity.profile.type == AppProfileType.PERSONAL
-        AppDrawerProfileFilter.WORK -> identity.profile.type == AppProfileType.WORK
-        AppDrawerProfileFilter.PRIVATE -> identity.profile.type == AppProfileType.PRIVATE
-    }
 
 private fun InstalledApp.matchesHiddenAppSearch(tokens: List<String>): Boolean {
     if (tokens.isEmpty()) return true

@@ -1,8 +1,8 @@
 package com.riffle.app.launcher
 
 import com.riffle.core.domain.launcher.apps.AppDrawerProfileFilter
-import com.riffle.core.domain.launcher.apps.AppProfileType
 import com.riffle.core.domain.launcher.apps.InstalledApp
+import com.riffle.core.domain.launcher.apps.matches
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.containsHomeApp
 import com.riffle.core.domain.launcher.search.containsAllSearchTokens
@@ -12,7 +12,7 @@ fun List<InstalledApp>.filterFolderAddCandidates(layout: HomeLayout): List<Insta
     filterNot { app -> layout.containsHomeApp(app.identity) }
 
 fun List<InstalledApp>.filterFolderAddCandidates(profileFilter: AppDrawerProfileFilter): List<InstalledApp> =
-    filter { app -> app.matchesFolderAddProfile(profileFilter) }
+    filter { app -> profileFilter.matches(app) }
 
 fun List<InstalledApp>.filterFolderAddCandidates(query: String): List<InstalledApp> =
     normalizedSearchTokens(query)
@@ -65,11 +65,3 @@ private fun InstalledApp.matchesFolderAddQuery(queryTokens: List<String>): Boole
 
     return searchableValues.containsAllSearchTokens(queryTokens)
 }
-
-private fun InstalledApp.matchesFolderAddProfile(profileFilter: AppDrawerProfileFilter): Boolean =
-    when (profileFilter) {
-        AppDrawerProfileFilter.ALL -> true
-        AppDrawerProfileFilter.PERSONAL -> identity.profile.type == AppProfileType.PERSONAL
-        AppDrawerProfileFilter.WORK -> identity.profile.type == AppProfileType.WORK
-        AppDrawerProfileFilter.PRIVATE -> identity.profile.type == AppProfileType.PRIVATE
-    }

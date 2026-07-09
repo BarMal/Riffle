@@ -1,8 +1,9 @@
 package com.riffle.core.domain.launcher.home
 
 import com.riffle.core.domain.launcher.apps.AppIdentity
-import com.riffle.core.domain.launcher.apps.AppProfileType
+import com.riffle.core.domain.launcher.apps.AppProfileSelection
 import com.riffle.core.domain.launcher.apps.InstalledApp
+import com.riffle.core.domain.launcher.apps.filterByProfile
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroupKey
 
 data class GeneratedLauncherPageContentPlanInput(
@@ -89,8 +90,8 @@ private fun GeneratedLauncherPageContentPlanInput.contentItemsFor(
         GeneratedLauncherPageKind.TODAY,
         -> visibleAppItems()
 
-        GeneratedLauncherPageKind.WORK -> visibleAppItems(profileType = AppProfileType.WORK)
-        GeneratedLauncherPageKind.PERSONAL -> visibleAppItems(profileType = AppProfileType.PERSONAL)
+        GeneratedLauncherPageKind.WORK -> visibleAppItems(profileSelection = AppProfileSelection.work())
+        GeneratedLauncherPageKind.PERSONAL -> visibleAppItems(profileSelection = AppProfileSelection.personal())
         GeneratedLauncherPageKind.NOTIFICATION_CARDS -> notificationGroupItems()
 
         GeneratedLauncherPageKind.CATEGORY,
@@ -100,11 +101,11 @@ private fun GeneratedLauncherPageContentPlanInput.contentItemsFor(
     }
 
 private fun GeneratedLauncherPageContentPlanInput.visibleAppItems(
-    profileType: AppProfileType? = null,
+    profileSelection: AppProfileSelection = AppProfileSelection.all(),
 ): List<GeneratedLauncherPageContentItem.App> =
     generatedPageData.visibleInstalledApps
         .asSequence()
-        .filter { app -> profileType == null || app.identity.profile.type == profileType }
+        .filterByProfile(profileSelection)
         .sortedWith(installedAppContentOrder)
         .distinctBy { app -> app.identity }
         .map { app -> GeneratedLauncherPageContentItem.App(identity = app.identity) }
