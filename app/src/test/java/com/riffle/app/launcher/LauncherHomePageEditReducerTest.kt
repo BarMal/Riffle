@@ -7,17 +7,23 @@ import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.home.AppShortcutItem
+import com.riffle.core.domain.launcher.home.GridCell
 import com.riffle.core.domain.launcher.home.GridDimensions
+import com.riffle.core.domain.launcher.home.GridPlacement
 import com.riffle.core.domain.launcher.home.GridSettings
+import com.riffle.core.domain.launcher.home.GridSpan
+import com.riffle.core.domain.launcher.home.HomeEditMode
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.HomeLayoutKey
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
 import com.riffle.core.domain.launcher.home.HomeLayoutSet
+import com.riffle.core.domain.launcher.home.HostedWidgetId
 import com.riffle.core.domain.launcher.home.LauncherPageId
 import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.home.LauncherViewModeAvailability
+import com.riffle.core.domain.launcher.home.WidgetItem
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -33,6 +39,74 @@ class LauncherHomePageEditReducerTest {
         assertEquals(listOf(LauncherPageId("home"), LauncherPageId("home-2")), updated.homeLayout.pageIds)
         assertEquals(LauncherPageId("home-2"), updated.homeLayout.selectedPageId)
         assertEquals(updated.homeLayout, repository.savedLayoutSet?.activeLayout)
+    }
+
+    @Test
+    fun persistsReorderedPageOverviewLayout() {
+        val repository = FakeHomeLayoutRepository(HomeLayoutDefaults.standard())
+        val reducer = LauncherHomePageEditReducer(homeLayoutRepository = repository)
+        var state = launcherState(repository.savedLayoutSet)
+
+        state = reducer.reduce(state, LauncherShellAction.AddHomePage)
+        state = reducer.reduce(state, LauncherShellAction.AddHomePage)
+        val updated =
+            reducer.reduce(
+                state,
+                LauncherShellAction.MoveHomePage(
+                    pageId = LauncherPageId("home-3"),
+                    targetIndex = 0,
+                ),
+            )
+
+        assertEquals(
+            listOf(LauncherPageId("home-3"), LauncherPageId("home"), LauncherPageId("home-2")),
+            updated.homeLayout.pageIds,
+        )
+        assertEquals(updated.homeLayout, repository.savedLayoutSet?.activeLayout)
+    }
+
+    @Test
+    fun rejectedPageDeleteLeavesStateAndStoredLayoutUntouched() {
+        val repository = FakeHomeLayoutRepository(HomeLayoutDefaults.standard())
+        val reducer = LauncherHomePageEditReducer(homeLayoutRepository = repository)
+        val state = launcherState(repository.savedLayoutSet)
+        val savedBefore = checkNotNull(repository.savedLayoutSet)
+
+        val updated = reducer.reduce(state, LauncherShellAction.DeleteSelectedHomePage)
+
+        assertEquals(state, updated)
+        assertEquals(savedBefore, repository.savedLayoutSet)
+    }
+
+    @Test
+    fun rejectedPageDuplicationLeavesStateAndStoredLayoutUntouched() {
+        val widget =
+            WidgetItem(
+                id = com.riffle.core.domain.launcher.home.LauncherItemId("weather"),
+                appWidgetId = HostedWidgetId(42),
+                label = "Weather",
+                placement = GridPlacement(cell = GridCell(column = 0, row = 0), span = GridSpan(columns = 2, rows = 2)),
+            )
+        val initialLayout =
+            HomeLayoutDefaults.standard()
+                .copy(
+                    pages =
+                        listOf(
+                            HomeLayoutDefaults.standard()
+                                .selectedPage
+                                .copy(items = listOf(widget)),
+                        ),
+                    editMode = HomeEditMode.ManagingPages,
+                )
+        val repository = FakeHomeLayoutRepository(initialLayout)
+        val reducer = LauncherHomePageEditReducer(homeLayoutRepository = repository)
+        val state = launcherState(repository.savedLayoutSet)
+        val savedBefore = checkNotNull(repository.savedLayoutSet)
+
+        val updated = reducer.reduce(state, LauncherShellAction.DuplicateSelectedHomePage)
+
+        assertEquals(state, updated)
+        assertEquals(savedBefore, repository.savedLayoutSet)
     }
 
     @Test
