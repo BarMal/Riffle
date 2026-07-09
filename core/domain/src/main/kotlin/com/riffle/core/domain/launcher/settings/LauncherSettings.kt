@@ -26,6 +26,9 @@ data class GestureSettings(
     val mappings: LauncherGestureMappings
         get() = homeGestures.toLauncherGestureMappings()
 
+    val conflicts: List<LauncherGestureConflict>
+        get() = LauncherGestureConflictDetector.conflictsIn(mappings)
+
     val homeSwipe: HomeSwipeGestureSettings
         get() =
             HomeSwipeGestureSettings(

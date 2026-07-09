@@ -36,6 +36,34 @@ class LauncherSettingsTest {
     }
 
     @Test
+    fun surfacesSharedGestureConflictsThroughGestureSettings() {
+        val settings =
+            LauncherSettings(
+                gestures =
+                    GestureSettings(
+                        homeGestures =
+                            HomeGestureSettings(
+                                actions =
+                                    mapOf(
+                                        HomeGesture.TWO_FINGER_LEFT to LauncherGestureAction.NONE,
+                                    ),
+                            ),
+                    ),
+            )
+
+        assertEquals(
+            listOf(
+                LauncherGestureConflict(
+                    surface = LauncherGestureSurface.HOME_PAGE,
+                    action = LauncherGestureAction.OPEN_APP_DRAWER,
+                    gestures = listOf(LauncherGesture.ONE_FINGER_UP, LauncherGesture.PINCH_OUT),
+                ),
+            ),
+            settings.gestures.conflicts.filter { it.action == LauncherGestureAction.OPEN_APP_DRAWER },
+        )
+    }
+
+    @Test
     fun defaultsHapticFeedbackStrengthToMedium() {
         val settings = LauncherSettings()
 
