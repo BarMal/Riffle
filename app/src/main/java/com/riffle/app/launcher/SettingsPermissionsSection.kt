@@ -5,16 +5,22 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.dp
+import com.riffle.core.domain.launcher.HomeRoleStatus
 import com.riffle.core.domain.launcher.OverlayDockPermissionStatus
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 
 @Composable
 internal fun SettingsPermissionsSection(
+    homeRoleStatus: HomeRoleStatus,
     notificationAccessStatus: NotificationAccessStatus,
     overlayDockPermissionStatus: OverlayDockPermissionStatus,
     onAction: (LauncherShellAction) -> Unit,
 ) {
     SettingsSection(title = "Permissions") {
+        SettingsHomeAppSetting(
+            status = homeRoleStatus,
+            onAction = onAction,
+        )
         NotificationAccessSetting(
             status = notificationAccessStatus,
             onAction = onAction,
