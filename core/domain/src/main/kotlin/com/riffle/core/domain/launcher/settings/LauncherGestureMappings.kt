@@ -62,11 +62,11 @@ object LauncherGestureConflictDetector {
 }
 
 fun HomeGestureSettings.toLauncherGestureMappings(): LauncherGestureMappings =
-    actions.entries.fold(LauncherGestureMappings()) { mappings, (gesture, action) ->
+    HomeGesture.entries.fold(LauncherGestureMappings()) { mappings, gesture ->
         mappings.withAction(
             surface = LauncherGestureSurface.HOME_PAGE,
             gesture = gesture.toLauncherGesture(),
-            action = action,
+            action = actionFor(gesture),
         )
     }
 

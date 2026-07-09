@@ -86,4 +86,36 @@ class LauncherGestureMappingsTest {
             LauncherGestureConflictDetector.conflictsIn(mappings).isNotEmpty(),
         )
     }
+
+    @Test
+    fun homeGestureSettingsExportIncludesDefaultActionsForUnspecifiedGestures() {
+        val mappings =
+            HomeGestureSettings(
+                actions =
+                    mapOf(
+                        HomeGesture.TWO_FINGER_LEFT to LauncherGestureAction.NONE,
+                    ),
+            ).toLauncherGestureMappings()
+
+        assertEquals(
+            LauncherGestureAction.OPEN_APP_DRAWER,
+            mappings.actionFor(LauncherGestureSurface.HOME_PAGE, LauncherGesture.ONE_FINGER_UP),
+        )
+        assertEquals(
+            LauncherGestureAction.NONE,
+            mappings.actionFor(LauncherGestureSurface.HOME_PAGE, LauncherGesture.TWO_FINGER_LEFT),
+        )
+        assertEquals(
+            listOf(
+                LauncherGestureConflict(
+                    surface = LauncherGestureSurface.HOME_PAGE,
+                    action = LauncherGestureAction.OPEN_APP_DRAWER,
+                    gestures = listOf(LauncherGesture.ONE_FINGER_UP, LauncherGesture.PINCH_OUT),
+                ),
+            ),
+            LauncherGestureConflictDetector.conflictsIn(mappings).filter {
+                it.action == LauncherGestureAction.OPEN_APP_DRAWER
+            },
+        )
+    }
 }
