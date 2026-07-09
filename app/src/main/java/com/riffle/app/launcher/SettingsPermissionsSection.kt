@@ -74,6 +74,7 @@ internal fun NotificationAccessStatus.settingsNotificationAccessLabel(): String 
         NotificationAccessStatus.UNKNOWN -> "Unknown"
         NotificationAccessStatus.GRANTED -> "Allowed"
         NotificationAccessStatus.NOT_GRANTED -> "Not allowed"
+        NotificationAccessStatus.REVOKED -> "Revoked"
     }
 
 internal fun OverlayDockPermissionStatus.settingsOverlayDockPermissionLabel(): String =
