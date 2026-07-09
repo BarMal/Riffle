@@ -14,6 +14,7 @@ class HomeGestureConflictDetectorTest {
                         HomeGesture.ONE_FINGER_UP to LauncherGestureAction.OPEN_APP_DRAWER,
                         HomeGesture.ONE_FINGER_DOWN to LauncherGestureAction.OPEN_NOTIFICATIONS,
                         HomeGesture.TWO_FINGER_UP to LauncherGestureAction.OPEN_SEARCH,
+                        HomeGesture.PINCH_OUT to LauncherGestureAction.NONE,
                     ),
             )
 
@@ -60,6 +61,26 @@ class HomeGestureConflictDetectorTest {
     fun defaultSettingsReportCurrentOpenAppDrawerConflict() {
         val conflict =
             HomeGestureConflictDetector.conflictsIn(HomeGestureSettings()).single {
+                it.action == LauncherGestureAction.OPEN_APP_DRAWER
+            }
+
+        assertEquals(
+            listOf(HomeGesture.ONE_FINGER_UP, HomeGesture.PINCH_OUT),
+            conflict.gestures,
+        )
+    }
+
+    @Test
+    fun partialSettingsStillIncludeDefaultConflictsForUnspecifiedGestures() {
+        val conflict =
+            HomeGestureConflictDetector.conflictsIn(
+                HomeGestureSettings(
+                    actions =
+                        mapOf(
+                            HomeGesture.TWO_FINGER_LEFT to LauncherGestureAction.NONE,
+                        ),
+                ),
+            ).single {
                 it.action == LauncherGestureAction.OPEN_APP_DRAWER
             }
 

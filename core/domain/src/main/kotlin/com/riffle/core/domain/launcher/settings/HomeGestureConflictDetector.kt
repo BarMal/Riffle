@@ -7,9 +7,13 @@ data class HomeGestureConflict(
 
 object HomeGestureConflictDetector {
     fun conflictsIn(settings: HomeGestureSettings): List<HomeGestureConflict> =
-        settings.actions.entries
-            .filter { (_, action) -> action != LauncherGestureAction.NONE }
-            .groupBy(keySelector = { it.value }, valueTransform = { it.key })
-            .filterValues { gestures -> gestures.size > 1 }
-            .map { (action, gestures) -> HomeGestureConflict(action = action, gestures = gestures) }
+        LauncherGestureConflictDetector
+            .conflictsIn(settings.toLauncherGestureMappings())
+            .filter { it.surface == LauncherGestureSurface.HOME_PAGE }
+            .map { conflict ->
+                HomeGestureConflict(
+                    action = conflict.action,
+                    gestures = conflict.gestures.map(LauncherGesture::toHomeGesture),
+                )
+            }
 }

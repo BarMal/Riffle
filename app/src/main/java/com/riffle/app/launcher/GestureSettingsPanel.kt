@@ -14,16 +14,20 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.riffle.core.domain.launcher.settings.GestureSettings
 import com.riffle.core.domain.launcher.settings.HomeGesture
-import com.riffle.core.domain.launcher.settings.HomeGestureConflictDetector
 import com.riffle.core.domain.launcher.settings.HomeGestureSettings
 import com.riffle.core.domain.launcher.settings.LauncherGestureAction
+import com.riffle.core.domain.launcher.settings.LauncherGestureSurface
+import com.riffle.core.domain.launcher.settings.toHomeGesture
 
 @Composable
 fun HomeSwipeGestureSetting(
-    settings: HomeGestureSettings,
+    settings: GestureSettings,
     onAction: (LauncherShellAction) -> Unit,
 ) {
+    val homeGestures = settings.homeGestures
+
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(
             text = "Home gestures",
@@ -45,7 +49,7 @@ fun HomeSwipeGestureSetting(
                     GestureRowState("Swipe left", HomeGesture.ONE_FINGER_LEFT),
                     GestureRowState("Swipe right", HomeGesture.ONE_FINGER_RIGHT),
                 ),
-            settings = settings,
+            settings = homeGestures,
             onAction = onAction,
         )
         GestureGroup(
@@ -57,7 +61,7 @@ fun HomeSwipeGestureSetting(
                     GestureRowState("Swipe left", HomeGesture.TWO_FINGER_LEFT),
                     GestureRowState("Swipe right", HomeGesture.TWO_FINGER_RIGHT),
                 ),
-            settings = settings,
+            settings = homeGestures,
             onAction = onAction,
         )
         GestureGroup(
@@ -67,7 +71,7 @@ fun HomeSwipeGestureSetting(
                     GestureRowState("Pinch in", HomeGesture.PINCH_IN),
                     GestureRowState("Pinch out", HomeGesture.PINCH_OUT),
                 ),
-            settings = settings,
+            settings = homeGestures,
             onAction = onAction,
         )
         TextButton(onClick = { onAction(LauncherShellAction.ResetHomeSwipeGestureActions) }) {
@@ -175,11 +179,12 @@ internal val HomeGesture.label: String
             HomeGesture.PINCH_OUT -> "Pinch out"
         }
 
-internal fun homeGestureConflictSummary(settings: HomeGestureSettings): String? =
-    HomeGestureConflictDetector.conflictsIn(settings)
+internal fun homeGestureConflictSummary(settings: GestureSettings): String? =
+    settings.conflicts
+        .filter { conflict -> conflict.surface == LauncherGestureSurface.HOME_PAGE }
         .takeIf { conflicts -> conflicts.isNotEmpty() }
         ?.joinToString(separator = "\n", prefix = "Conflicting gestures: ") { conflict ->
-            "${conflict.action.label}: ${conflict.gestures.joinToString { gesture -> gesture.label }}"
+            "${conflict.action.label}: ${conflict.gestures.joinToString { gesture -> gesture.toHomeGesture().label }}"
         }
 
 private data class GestureRowState(

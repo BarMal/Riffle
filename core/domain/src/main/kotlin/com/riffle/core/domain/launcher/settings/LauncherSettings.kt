@@ -23,6 +23,12 @@ data class AppearanceSettings(
 data class GestureSettings(
     val homeGestures: HomeGestureSettings = HomeGestureSettings(),
 ) {
+    val mappings: LauncherGestureMappings
+        get() = homeGestures.toLauncherGestureMappings()
+
+    val conflicts: List<LauncherGestureConflict>
+        get() = LauncherGestureConflictDetector.conflictsIn(mappings)
+
     val homeSwipe: HomeSwipeGestureSettings
         get() =
             HomeSwipeGestureSettings(
