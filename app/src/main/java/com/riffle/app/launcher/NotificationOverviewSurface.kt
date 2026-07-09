@@ -191,6 +191,7 @@ internal val NotificationAccessStatus.emptyNotificationOverviewLabel: String
         when (this) {
             NotificationAccessStatus.GRANTED -> "No active notifications"
             NotificationAccessStatus.NOT_GRANTED -> "Notification access is not allowed"
+            NotificationAccessStatus.REVOKED -> "Notification access was revoked"
             NotificationAccessStatus.UNKNOWN -> "Notification access has not been checked"
         }
 
@@ -199,6 +200,7 @@ internal val NotificationAccessStatus.emptyNotificationOverviewActionLabel: Stri
         when (this) {
             NotificationAccessStatus.GRANTED -> null
             NotificationAccessStatus.NOT_GRANTED,
+            NotificationAccessStatus.REVOKED,
             NotificationAccessStatus.UNKNOWN,
             -> "Open notification access"
         }
