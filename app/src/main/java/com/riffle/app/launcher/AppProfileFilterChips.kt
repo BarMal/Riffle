@@ -11,8 +11,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.apps.AppDrawerProfileFilter
-import com.riffle.core.domain.launcher.apps.AppProfileType
 import com.riffle.core.domain.launcher.apps.InstalledApp
+import com.riffle.core.domain.launcher.apps.matches
 
 @Composable
 fun AppProfileFilterChips(
@@ -74,7 +74,7 @@ internal fun appProfileFiltersFor(): List<AppDrawerProfileFilter> {
 }
 
 internal fun AppDrawerProfileFilter.availableFor(apps: List<InstalledApp>): Boolean =
-    this == AppDrawerProfileFilter.ALL || apps.any { app -> app.matchesProfileFilter(this) }
+    this == AppDrawerProfileFilter.ALL || apps.any { app -> matches(app) }
 
 internal fun AppDrawerProfileFilter.coerceAvailableFor(apps: List<InstalledApp>): AppDrawerProfileFilter =
     takeIf { filter -> filter.availableFor(apps) } ?: AppDrawerProfileFilter.ALL
@@ -88,13 +88,6 @@ internal val AppDrawerProfileFilter.label: String
             AppDrawerProfileFilter.PRIVATE -> "Private"
         }
 
-private fun List<InstalledApp>.countForProfileFilter(filter: AppDrawerProfileFilter): Int =
-    count { app -> app.matchesProfileFilter(filter) }
-
-private fun InstalledApp.matchesProfileFilter(filter: AppDrawerProfileFilter): Boolean =
-    when (filter) {
-        AppDrawerProfileFilter.ALL -> true
-        AppDrawerProfileFilter.PERSONAL -> identity.profile.type == AppProfileType.PERSONAL
-        AppDrawerProfileFilter.WORK -> identity.profile.type == AppProfileType.WORK
-        AppDrawerProfileFilter.PRIVATE -> identity.profile.type == AppProfileType.PRIVATE
-    }
+private fun List<InstalledApp>.countForProfileFilter(filter: AppDrawerProfileFilter): Int {
+    return count { app -> filter.matches(app) }
+}

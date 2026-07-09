@@ -2,12 +2,16 @@ package com.riffle.app.launcher
 
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.apps.AppDrawerProfileFilter
+import com.riffle.core.domain.launcher.apps.AppProfileSelection
 import com.riffle.core.domain.launcher.apps.AppProfileType
 import com.riffle.core.domain.launcher.apps.AppSearchContentFilter
 import com.riffle.core.domain.launcher.apps.AppSearchFilters
 import com.riffle.core.domain.launcher.apps.AppShortcutsByApp
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.apps.InstalledAppCatalog
+import com.riffle.core.domain.launcher.apps.filterByProfile
+import com.riffle.core.domain.launcher.apps.matches
+import com.riffle.core.domain.launcher.apps.toProfileSelection
 
 internal class LauncherAppListActionReducer(
     private val appCatalog: InstalledAppCatalog,
@@ -132,22 +136,14 @@ internal fun InstalledAppCatalog.filteredApps(
         query = query,
         shortcutsByApp = appShortcutsByApp,
     )
-        .filter { app -> app.matches(profileFilter) }
-
-private fun InstalledApp.matches(profileFilter: AppDrawerProfileFilter): Boolean =
-    when (profileFilter) {
-        AppDrawerProfileFilter.ALL -> true
-        AppDrawerProfileFilter.PERSONAL -> identity.profile.type == AppProfileType.PERSONAL
-        AppDrawerProfileFilter.WORK -> identity.profile.type == AppProfileType.WORK
-        AppDrawerProfileFilter.PRIVATE -> identity.profile.type == AppProfileType.PRIVATE
-    }
+        .filter { app -> profileFilter.matches(app) }
 
 internal fun InstalledAppCatalog.filteredApps(
     apps: List<InstalledApp>,
     query: String,
     filters: AppSearchFilters,
 ): List<InstalledApp> {
-    val profileApps = apps.filter { app -> app.identity.profile.type in filters.profiles }
+    val profileApps = apps.filterByProfile(filters.toProfileSelection())
     val appMatches =
         if (AppSearchContentFilter.APPS in filters.content) {
             searchApps(
@@ -205,12 +201,9 @@ private fun LauncherShellState.withSearchResults(
     )
 
 private fun AppSearchFilters.withProfileFilter(filter: AppDrawerProfileFilter): AppSearchFilters =
-    when (filter) {
-        AppDrawerProfileFilter.ALL -> copy(profiles = AppProfileType.entries.toSet())
-        AppDrawerProfileFilter.PERSONAL -> copy(profiles = setOf(AppProfileType.PERSONAL))
-        AppDrawerProfileFilter.WORK -> copy(profiles = setOf(AppProfileType.WORK))
-        AppDrawerProfileFilter.PRIVATE -> copy(profiles = setOf(AppProfileType.PRIVATE))
-    }
+    copy(profiles = filter.toProfileSelection().types)
+
+private fun AppSearchFilters.toProfileSelection() = AppProfileSelection(types = profiles)
 
 private fun AppSearchFilters.coerceProfilesAvailableFor(apps: List<InstalledApp>): AppSearchFilters {
     val availableProfiles = apps.map { app -> app.identity.profile.type }.toSet()

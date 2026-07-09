@@ -1,8 +1,9 @@
 package com.riffle.core.domain.launcher.home
 
-import com.riffle.core.domain.launcher.apps.AppProfileType
+import com.riffle.core.domain.launcher.apps.AppProfileSelection
 import com.riffle.core.domain.launcher.apps.AppVisibility
 import com.riffle.core.domain.launcher.apps.InstalledApp
+import com.riffle.core.domain.launcher.apps.filterByProfile
 
 data class GeneratedLauncherPageSpec(
     val kind: GeneratedLauncherPageKind,
@@ -19,8 +20,8 @@ data class GeneratedLauncherPageSpec(
             GeneratedLauncherPageKind.APP -> data.hasVisibleInstalledApps
             GeneratedLauncherPageKind.CATEGORY -> data.hasVisibleInstalledApps && data.appCategoriesAvailable
             GeneratedLauncherPageKind.TODAY -> data.hasVisibleInstalledApps
-            GeneratedLauncherPageKind.WORK -> data.hasVisibleAppsFor(AppProfileType.WORK)
-            GeneratedLauncherPageKind.PERSONAL -> data.hasVisibleAppsFor(AppProfileType.PERSONAL)
+            GeneratedLauncherPageKind.WORK -> data.hasVisibleAppsFor(AppProfileSelection.work())
+            GeneratedLauncherPageKind.PERSONAL -> data.hasVisibleAppsFor(AppProfileSelection.personal())
             GeneratedLauncherPageKind.FAVOURITES -> data.hasVisibleInstalledApps && data.favouriteAppsAvailable
             GeneratedLauncherPageKind.FREQUENTLY_USED -> data.hasVisibleInstalledApps && data.usageStatsAvailable
             GeneratedLauncherPageKind.NOTIFICATION_CARDS -> data.notificationCardsAvailable
@@ -40,8 +41,9 @@ data class GeneratedLauncherPageData(
     internal val hasVisibleInstalledApps: Boolean
         get() = visibleInstalledApps.isNotEmpty()
 
-    internal fun hasVisibleAppsFor(profileType: AppProfileType): Boolean =
-        visibleInstalledApps.any { app -> app.identity.profile.type == profileType }
+    internal fun hasVisibleAppsFor(selection: AppProfileSelection): Boolean {
+        return visibleInstalledApps.filterByProfile(selection).isNotEmpty()
+    }
 }
 
 enum class GeneratedLauncherPageDataSource {

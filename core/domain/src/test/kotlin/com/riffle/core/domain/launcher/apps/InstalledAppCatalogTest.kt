@@ -71,6 +71,42 @@ class InstalledAppCatalogTest {
     }
 
     @Test
+    fun appsForProfilesReturnsVisibleAppsForSelectedProfileTypes() {
+        val companyWorkProfile = AppProfile(AppProfileId("company"), AppProfileType.WORK)
+        val apps =
+            listOf(
+                app(label = "Personal Camera", profile = AppProfile.personal()),
+                app(label = "Work Docs", profile = AppProfile.work()),
+                app(label = "Company Sheets", profile = companyWorkProfile),
+                app(label = "Private Vault", profile = AppProfile.private()),
+                app(label = "Hidden Work Camera", profile = AppProfile.work(), visibility = AppVisibility.HIDDEN),
+            )
+
+        val workApps = catalog.appsForProfiles(apps = apps, selection = AppProfileSelection.work())
+        val mixedApps =
+            catalog.appsForProfiles(
+                apps = apps,
+                selection = AppProfileSelection.of(AppProfileType.PERSONAL, AppProfileType.PRIVATE),
+            )
+
+        assertEquals(listOf("Company Sheets", "Work Docs"), workApps.map { app -> app.label })
+        assertEquals(listOf("Personal Camera", "Private Vault"), mixedApps.map { app -> app.label })
+    }
+
+    @Test
+    fun emptyProfileSelectionMatchesNoApps() {
+        val apps =
+            listOf(
+                app(label = "Personal Camera", profile = AppProfile.personal()),
+                app(label = "Work Docs", profile = AppProfile.work()),
+            )
+
+        val selectedApps = catalog.appsForProfiles(apps = apps, selection = AppProfileSelection(emptySet()))
+
+        assertEquals(emptyList(), selectedApps)
+    }
+
+    @Test
     fun blankSearchReturnsVisibleApps() {
         val apps =
             listOf(
