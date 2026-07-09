@@ -15,6 +15,7 @@ import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
 import com.riffle.core.domain.launcher.settings.HapticSettings
 import com.riffle.core.domain.launcher.settings.HomeGesture
 import com.riffle.core.domain.launcher.settings.HomeGestureSettings
+import com.riffle.core.domain.launcher.settings.HomeSystemBars
 import com.riffle.core.domain.launcher.settings.LauncherGestureAction
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.MAX_OVERLAY_DOCK_EXPANDED_ICON_SIZE_DP
@@ -31,6 +32,8 @@ import com.riffle.core.domain.launcher.settings.MotionSettings
 import com.riffle.core.domain.launcher.settings.OverlayDockEdge
 import com.riffle.core.domain.launcher.settings.OverlayDockExpandedOrientation
 import com.riffle.core.domain.launcher.settings.OverlayDockSettings
+import com.riffle.core.domain.launcher.settings.homeSystemBars
+import com.riffle.core.domain.launcher.settings.withHomeSystemBars
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -117,20 +120,19 @@ class LauncherSettingsJsonCodecTest {
 
     @Test
     fun roundTripsIndependentHomeSystemBarSettings() {
+        val homeSystemBars =
+            HomeSystemBars(
+                hideStatusBarOnHome = true,
+                hideNavigationBarOnHome = false,
+            )
         val settings =
             LauncherSettings(
-                appearance =
-                    AppearanceSettings(
-                        hideStatusBarOnHome = true,
-                        hideNavigationBarOnHome = false,
-                    ),
+                appearance = AppearanceSettings().withHomeSystemBars(homeSystemBars),
             )
 
         val decodedSettings = decodeLauncherSettings(encodeLauncherSettings(settings))
 
-        assertEquals(false, decodedSettings.appearance.fullscreenHome)
-        assertEquals(true, decodedSettings.appearance.hideStatusBarOnHome)
-        assertEquals(false, decodedSettings.appearance.hideNavigationBarOnHome)
+        assertEquals(homeSystemBars, decodedSettings.appearance.homeSystemBars)
     }
 
     @Test
@@ -146,9 +148,14 @@ class LauncherSettingsJsonCodecTest {
                 """.trimIndent(),
             )
 
-        assertEquals(true, decodedSettings.appearance.fullscreenHome)
-        assertEquals(true, decodedSettings.appearance.hideStatusBarOnHome)
-        assertEquals(true, decodedSettings.appearance.hideNavigationBarOnHome)
+        assertEquals(
+            HomeSystemBars(
+                fullscreenHome = true,
+                hideStatusBarOnHome = true,
+                hideNavigationBarOnHome = true,
+            ),
+            decodedSettings.appearance.homeSystemBars,
+        )
     }
 
     @Test
@@ -156,9 +163,7 @@ class LauncherSettingsJsonCodecTest {
         val decodedSettings = decodeLauncherSettings("{}")
 
         assertEquals(WallpaperSettings.system(), decodedSettings.appearance.wallpaper)
-        assertEquals(false, decodedSettings.appearance.fullscreenHome)
-        assertEquals(false, decodedSettings.appearance.hideStatusBarOnHome)
-        assertEquals(false, decodedSettings.appearance.hideNavigationBarOnHome)
+        assertEquals(HomeSystemBars(), decodedSettings.appearance.homeSystemBars)
     }
 
     @Test

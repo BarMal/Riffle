@@ -5,6 +5,34 @@ import kotlin.test.assertEquals
 
 class AppearanceSettingsPolicyTest {
     @Test
+    fun fullscreenHomeDisablesIndependentSystemBarSettings() {
+        val homeSystemBars = HomeSystemBars(fullscreenHome = true)
+
+        assertEquals(
+            HomeSystemBarSetting(checked = true, enabled = false),
+            homeSystemBars.setting(HomeSystemBar.STATUS),
+        )
+        assertEquals(
+            HomeSystemBarSetting(checked = true, enabled = false),
+            homeSystemBars.setting(HomeSystemBar.NAVIGATION),
+        )
+    }
+
+    @Test
+    fun independentSystemBarSettingStaysConfigurableOutsideFullscreenHome() {
+        val homeSystemBars = HomeSystemBars(hideStatusBarOnHome = true)
+
+        assertEquals(
+            HomeSystemBarSetting(checked = true, enabled = true),
+            homeSystemBars.setting(HomeSystemBar.STATUS),
+        )
+        assertEquals(
+            HomeSystemBarSetting(checked = false, enabled = true),
+            homeSystemBars.setting(HomeSystemBar.NAVIGATION),
+        )
+    }
+
+    @Test
     fun fullscreenHomeSelectionPreservesIndependentSystemBarSettings() {
         val appearance =
             AppearanceSettings(hideStatusBarOnHome = true)
@@ -84,5 +112,24 @@ class AppearanceSettingsPolicyTest {
 
         assertEquals(true, appearance.homeStatusBarHidden)
         assertEquals(true, appearance.homeNavigationBarHidden)
+    }
+
+    @Test
+    fun appearanceExposesTypedHomeSystemBars() {
+        val appearance =
+            AppearanceSettings(
+                fullscreenHome = true,
+                hideStatusBarOnHome = true,
+                hideNavigationBarOnHome = false,
+            )
+
+        assertEquals(
+            HomeSystemBars(
+                fullscreenHome = true,
+                hideStatusBarOnHome = true,
+                hideNavigationBarOnHome = false,
+            ),
+            appearance.homeSystemBars,
+        )
     }
 }

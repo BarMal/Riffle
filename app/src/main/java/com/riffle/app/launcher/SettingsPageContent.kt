@@ -14,8 +14,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.home.WallpaperSource
-import com.riffle.core.domain.launcher.settings.homeNavigationBarHidden
-import com.riffle.core.domain.launcher.settings.homeStatusBarHidden
+import com.riffle.core.domain.launcher.settings.HomeSystemBar
+import com.riffle.core.domain.launcher.settings.homeSystemBars
 
 @Composable
 @Suppress("CyclomaticComplexMethod")
@@ -190,18 +190,9 @@ private fun SettingsAppearancePageContent(
     onAction: (LauncherShellAction) -> Unit,
 ) {
     val appearance = state.settings.appearance
-    val statusBarSetting =
-        dependentSystemBarSettingState(
-            fullscreenHome = appearance.fullscreenHome,
-            hidden = appearance.homeStatusBarHidden,
-            enabledSubtitle = "Hide the top system bar on home",
-        )
-    val navigationBarSetting =
-        dependentSystemBarSettingState(
-            fullscreenHome = appearance.fullscreenHome,
-            hidden = appearance.homeNavigationBarHidden,
-            enabledSubtitle = "Hide the bottom system bar on home",
-        )
+    val homeSystemBars = appearance.homeSystemBars
+    val statusBarSetting = homeSystemBars.setting(HomeSystemBar.STATUS)
+    val navigationBarSetting = homeSystemBars.setting(HomeSystemBar.NAVIGATION)
 
     SettingsSection(title = "Wallpaper") {
         WallpaperSourceSetting(
@@ -230,7 +221,12 @@ private fun SettingsAppearancePageContent(
         )
         SettingsSwitchRow(
             title = "Hide status bar",
-            subtitle = statusBarSetting.subtitle,
+            subtitle =
+                if (statusBarSetting.enabled) {
+                    "Hide the top system bar on home"
+                } else {
+                    "Turn off Fullscreen home to choose bars separately"
+                },
             checked = statusBarSetting.checked,
             enabled = statusBarSetting.enabled,
             onCheckedChange = { hidden ->
@@ -239,7 +235,12 @@ private fun SettingsAppearancePageContent(
         )
         SettingsSwitchRow(
             title = "Hide navigation bar",
-            subtitle = navigationBarSetting.subtitle,
+            subtitle =
+                if (navigationBarSetting.enabled) {
+                    "Hide the bottom system bar on home"
+                } else {
+                    "Turn off Fullscreen home to choose bars separately"
+                },
             checked = navigationBarSetting.checked,
             enabled = navigationBarSetting.enabled,
             onCheckedChange = { hidden ->
