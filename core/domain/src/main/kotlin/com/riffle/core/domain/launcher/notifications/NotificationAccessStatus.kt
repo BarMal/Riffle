@@ -4,4 +4,5 @@ enum class NotificationAccessStatus {
     UNKNOWN,
     GRANTED,
     NOT_GRANTED,
+    REVOKED,
 }

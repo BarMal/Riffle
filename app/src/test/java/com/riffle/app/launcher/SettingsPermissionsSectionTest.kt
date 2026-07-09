@@ -10,6 +10,7 @@ class SettingsPermissionsSectionTest {
     fun labelsNotificationAccessStatus() {
         assertEquals("Allowed", NotificationAccessStatus.GRANTED.settingsNotificationAccessLabel())
         assertEquals("Not allowed", NotificationAccessStatus.NOT_GRANTED.settingsNotificationAccessLabel())
+        assertEquals("Revoked", NotificationAccessStatus.REVOKED.settingsNotificationAccessLabel())
         assertEquals("Unknown", NotificationAccessStatus.UNKNOWN.settingsNotificationAccessLabel())
     }
 
