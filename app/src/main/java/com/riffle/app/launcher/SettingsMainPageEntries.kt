@@ -31,12 +31,15 @@ private fun homeSettingsPageEntries(): List<SettingsPageEntry> =
         ),
         SettingsPageEntry(
             label = "Dock",
-            subtitle = "Home dock visibility, slots, and sizing",
+            subtitle = "Home dock visibility, cards, slots, and sizing",
             page = SettingsPage.DOCK,
             group = SettingsPageGroup.HOME,
             searchAliases =
                 listOf(
                     "show dock",
+                    "notification cards",
+                    "dock cards",
+                    "notification shelf",
                     "dock slots",
                     "dock icon size",
                     "dock background",
