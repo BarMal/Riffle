@@ -35,7 +35,7 @@ internal fun JSONObject.toHomeLayout(defaults: HomeLayout = HomeLayoutDefaults.s
         val settings = json.optJSONObject("settings")?.toSettings(defaults.settings) ?: defaults.settings
         val pages =
             json.optJSONArray("pages")
-                ?.toPages()
+                ?.toPages(defaultGrid = settings.grid.dimensions)
                 .orEmpty()
                 .map { page -> page.copy(grid = settings.grid.dimensions) }
         val selectedPageId = LauncherPageId(json.optString("selectedPageId", defaults.selectedPageId.value))
@@ -104,22 +104,22 @@ private fun encodePage(page: LauncherPage): JSONObject =
         .put("rows", page.grid.rows)
         .put("items", JSONArray(page.items.map(::encodeLauncherItem)))
 
-private fun JSONArray.toPages(): List<LauncherPage> =
+private fun JSONArray.toPages(defaultGrid: GridDimensions): List<LauncherPage> =
     (0 until length())
         .mapNotNull { index ->
             optJSONObject(index)?.let { page ->
-                runCatching { page.toPage() }.getOrNull()
+                runCatching { page.toPage(defaultGrid = defaultGrid) }.getOrNull()
             }
         }
 
-private fun JSONObject.toPage(): LauncherPage =
+private fun JSONObject.toPage(defaultGrid: GridDimensions): LauncherPage =
     LauncherPage(
         id = LauncherPageId(getString("id")),
         type = optPageType(),
         grid =
             GridDimensions(
-                columns = getInt("columns"),
-                rows = getInt("rows"),
+                columns = optInt("columns", defaultGrid.columns),
+                rows = optInt("rows", defaultGrid.rows),
             ),
         items = optJSONArray("items")?.toLauncherItems().orEmpty(),
     )
