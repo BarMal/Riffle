@@ -32,6 +32,97 @@ class HomePageEngineTest {
     }
 
     @Test
+    fun rejectsPagesWithInvalidGridDimensions() {
+        val result =
+            engine.addPage(
+                layout = layout,
+                page = page(id = "widgets").copy(grid = GridDimensions(columns = 0, rows = 5)),
+            )
+
+        val rejected = assertIs<HomePageEditResult.Rejected>(result)
+        assertEquals(HomePageEditRejectionReason.INVALID_GRID_DIMENSIONS, rejected.reason)
+    }
+
+    @Test
+    fun rejectsPagesWithItemsOutsideTheirGrid() {
+        val shortcut =
+            AppShortcutItem(
+                id = itemId("camera"),
+                appIdentity = appIdentity("camera"),
+                label = "Camera",
+                placement = GridPlacement(cell = GridCell(column = 4, row = 0)),
+            )
+
+        val result =
+            engine.addPage(
+                layout = layout,
+                page = page(id = "widgets").copy(items = listOf(shortcut)),
+            )
+
+        val rejected = assertIs<HomePageEditResult.Rejected>(result)
+        assertEquals(HomePageEditRejectionReason.GRID_ITEMS_OUT_OF_BOUNDS, rejected.reason)
+    }
+
+    @Test
+    fun rejectsPagesWithDuplicateItemIds() {
+        val duplicateId = itemId("camera")
+        val result =
+            engine.addPage(
+                layout = layout,
+                page =
+                    page(id = "widgets").copy(
+                        items =
+                            listOf(
+                                AppShortcutItem(
+                                    id = duplicateId,
+                                    appIdentity = appIdentity("camera"),
+                                    label = "Camera",
+                                    placement = GridPlacement(cell = GridCell(column = 0, row = 0)),
+                                ),
+                                AppShortcutItem(
+                                    id = duplicateId,
+                                    appIdentity = appIdentity("clock"),
+                                    label = "Clock",
+                                    placement = GridPlacement(cell = GridCell(column = 1, row = 0)),
+                                ),
+                            ),
+                    ),
+            )
+
+        val rejected = assertIs<HomePageEditResult.Rejected>(result)
+        assertEquals(HomePageEditRejectionReason.INVALID_PAGE_ITEMS, rejected.reason)
+    }
+
+    @Test
+    fun rejectsPagesWithCollidingItems() {
+        val result =
+            engine.addPage(
+                layout = layout,
+                page =
+                    page(id = "widgets").copy(
+                        items =
+                            listOf(
+                                AppShortcutItem(
+                                    id = itemId("camera"),
+                                    appIdentity = appIdentity("camera"),
+                                    label = "Camera",
+                                    placement = GridPlacement(cell = GridCell(column = 0, row = 0)),
+                                ),
+                                AppShortcutItem(
+                                    id = itemId("clock"),
+                                    appIdentity = appIdentity("clock"),
+                                    label = "Clock",
+                                    placement = GridPlacement(cell = GridCell(column = 0, row = 0)),
+                                ),
+                            ),
+                    ),
+            )
+
+        val rejected = assertIs<HomePageEditResult.Rejected>(result)
+        assertEquals(HomePageEditRejectionReason.INVALID_PAGE_ITEMS, rejected.reason)
+    }
+
+    @Test
     fun selectsExistingPage() {
         val layoutWithPages = layout.copy(pages = layout.pages + page(id = "widgets"))
 
