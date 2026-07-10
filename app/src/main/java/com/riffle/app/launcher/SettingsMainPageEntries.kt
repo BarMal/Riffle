@@ -31,7 +31,7 @@ private fun homeSettingsPageEntries(): List<SettingsPageEntry> =
         ),
         SettingsPageEntry(
             label = "Dock",
-            subtitle = "Home dock visibility, cards, slots, and sizing",
+            subtitle = "Home dock visibility, expanded cards, slots, and sizing",
             page = SettingsPage.DOCK,
             group = SettingsPageGroup.HOME,
             searchAliases =
@@ -39,6 +39,7 @@ private fun homeSettingsPageEntries(): List<SettingsPageEntry> =
                     "show dock",
                     "notification cards",
                     "dock cards",
+                    "expanded dock cards",
                     "notification shelf",
                     "dock slots",
                     "dock icon size",
