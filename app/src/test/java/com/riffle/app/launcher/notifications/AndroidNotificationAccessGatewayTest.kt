@@ -18,6 +18,30 @@ class AndroidNotificationAccessGatewayTest {
     }
 
     @Test
+    fun debugBuildAcceptsReleasePackageAsEnabledListener() {
+        assertEquals(
+            NotificationAccessStatus.GRANTED,
+            notificationAccessStatus(
+                appPackageName = "com.riffle.debug",
+                enabledListenerPackages = setOf("com.riffle"),
+                isListenerConnected = false,
+            ),
+        )
+    }
+
+    @Test
+    fun releaseBuildDoesNotAcceptDebugPackageAsEnabledListener() {
+        assertEquals(
+            NotificationAccessStatus.NOT_GRANTED,
+            notificationAccessStatus(
+                appPackageName = "com.riffle",
+                enabledListenerPackages = setOf("com.riffle.debug"),
+                isListenerConnected = false,
+            ),
+        )
+    }
+
+    @Test
     fun reportsNotGrantedWhenAppPackageDoesNotHaveEnabledListener() {
         assertEquals(
             NotificationAccessStatus.NOT_GRANTED,

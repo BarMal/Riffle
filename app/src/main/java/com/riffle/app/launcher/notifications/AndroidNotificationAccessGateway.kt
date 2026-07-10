@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.provider.Settings
 import androidx.core.app.NotificationManagerCompat
+import com.riffle.app.launcher.systemPermissionPackageCandidates
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 
 class AndroidNotificationAccessGateway(
@@ -26,6 +27,7 @@ internal fun notificationAccessStatus(
 ): NotificationAccessStatus =
     when {
         isListenerConnected -> NotificationAccessStatus.GRANTED
-        appPackageName in enabledListenerPackages -> NotificationAccessStatus.GRANTED
+        enabledListenerPackages.any(systemPermissionPackageCandidates(appPackageName)::contains) ->
+            NotificationAccessStatus.GRANTED
         else -> NotificationAccessStatus.NOT_GRANTED
     }

@@ -50,6 +50,28 @@ class AndroidHomeRoleGatewayTest {
     }
 
     @Test
+    fun debugBuildAcceptsReleasePackageAsResolvedDefaultHome() {
+        assertEquals(
+            HomeRoleStatus.DEFAULT_HOME,
+            homeRoleStatusFromResolvedDefaultHome(
+                appPackageName = "com.riffle.debug",
+                resolvedDefaultHomePackageName = "com.riffle",
+            ),
+        )
+    }
+
+    @Test
+    fun releaseBuildDoesNotAcceptDebugPackageAsResolvedDefaultHome() {
+        assertEquals(
+            HomeRoleStatus.NOT_DEFAULT_HOME,
+            homeRoleStatusFromResolvedDefaultHome(
+                appPackageName = "com.riffle",
+                resolvedDefaultHomePackageName = "com.riffle.debug",
+            ),
+        )
+    }
+
+    @Test
     fun reportsNotDefaultHomeFromDifferentResolvedLauncherPackage() {
         assertEquals(
             HomeRoleStatus.NOT_DEFAULT_HOME,
