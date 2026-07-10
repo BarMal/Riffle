@@ -25,7 +25,7 @@ private fun InstalledWidgetProvider.widgetSearchableValues(): List<String> =
         label,
         identity.packageName.value,
         identity.className.value,
-        identity.profile.drawerProfilePrefix(),
+        widgetPickerSectionTitle(),
         "${dimensions.minWidthDp}x${dimensions.minHeightDp}",
         "${dimensions.minWidthDp}x${dimensions.minHeightDp}dp",
         dimensions.targetCellSizeSearchToken(),
