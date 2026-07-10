@@ -69,10 +69,12 @@ fun NotificationOverviewSurface(
             )
         } else if (selectedGroup != null) {
             NotificationGroupPrototype(
-                group = selectedGroup,
-                app = selectedApp,
+                groups = visibleGroups,
+                selectedGroupKey = selectedGroup.key,
+                apps = apps,
                 appIconLoader = appIconLoader,
                 onBack = { selectedGroupKey = null },
+                onGroupChanged = { groupKey -> selectedGroupKey = groupKey },
                 onAction = onAction,
             )
         } else {

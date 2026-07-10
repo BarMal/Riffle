@@ -3,6 +3,7 @@ package com.riffle.app.launcher
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppProfile
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
+import com.riffle.core.domain.launcher.notifications.AppNotificationGroupKey
 import com.riffle.core.domain.launcher.notifications.LauncherNotification
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
@@ -199,18 +200,29 @@ class NotificationOverviewSurfaceTest {
     }
 
     @Test
-    fun notificationCardTextFallsBackWhenPlatformContentIsBlank() {
-        val notification = notification(key = "chat-1", title = "", text = "")
+    fun selectedGroupIndexUsesMatchingGroupOrFallsBackToFirst() {
+        val groups =
+            listOf(
+                notificationGroup(packageName = "com.example.chat", count = 1),
+                notificationGroup(packageName = "com.example.mail", count = 1),
+            )
 
         assertEquals(
-            "Chat",
-            notificationOverviewNotificationTitle(notification = notification, fallbackLabel = "Chat"),
+            1,
+            notificationOverviewSelectedGroupIndex(
+                groups = groups,
+                selectedGroupKey = groups[1].key,
+            ),
         )
         assertEquals(
-            "Message - Recent",
-            notificationOverviewNotificationBody(
-                notification = notification,
-                fallbackMetadata = "Message - Recent",
+            0,
+            notificationOverviewSelectedGroupIndex(
+                groups = groups,
+                selectedGroupKey =
+                    AppNotificationGroupKey(
+                        packageName = AppPackageName("com.example.unknown"),
+                        profileId = AppProfile.personal().id,
+                    ),
             ),
         )
     }
