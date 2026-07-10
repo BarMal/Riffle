@@ -125,6 +125,29 @@ class NotificationOverviewSurfaceTest {
         )
     }
 
+    @Test
+    fun overviewFallbackLabelUsesReadablePackageTail() {
+        assertEquals(
+            "Chat Service",
+            notificationOverviewGroupLabel(
+                app = null,
+                group = notificationGroup(packageName = "com.example.chat_service", count = 1),
+            ),
+        )
+    }
+
+    @Test
+    fun overviewMetadataUsesReadableFallbackLabel() {
+        val group = notificationGroup(packageName = "com.example.chat", count = 1)
+
+        assertEquals(
+            "Chat - Message - Priority unknown - Pinned",
+            group.notificationOverviewMetadataLabel(
+                label = notificationOverviewGroupLabel(app = null, group = group),
+            ),
+        )
+    }
+
     private fun notificationGroup(
         packageName: String,
         count: Int,
