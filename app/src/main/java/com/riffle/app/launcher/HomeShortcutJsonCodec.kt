@@ -73,7 +73,7 @@ private fun JSONObject.toLauncherItem(): LauncherItem =
 private fun JSONObject.toFolder(): FolderItem =
     FolderItem(
         id = LauncherItemId(getString("id")),
-        label = getString("label"),
+        label = optString("label", ""),
         items = optJSONArray("items")?.toShortcuts().orEmpty(),
         placement = toPlacementOrNull(),
     )
