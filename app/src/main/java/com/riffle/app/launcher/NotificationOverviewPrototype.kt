@@ -19,12 +19,15 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -43,69 +46,101 @@ import com.riffle.core.domain.launcher.notifications.LauncherNotification
 
 @Composable
 internal fun NotificationGroupPrototype(
-    group: AppNotificationGroup,
-    app: InstalledApp?,
+    groups: List<AppNotificationGroup>,
+    selectedGroupKey: AppNotificationGroupKey,
+    apps: List<InstalledApp>,
     appIconLoader: AppIconLoader,
     onBack: () -> Unit,
+    onGroupChanged: (AppNotificationGroupKey) -> Unit,
     onAction: (LauncherShellAction) -> Unit,
 ) {
-    val listState = rememberLazyListState()
-    val focusedNotification =
-        notificationOverviewFocusedNotification(
-            notifications = group.notifications,
-            firstVisibleItemIndex = listState.firstVisibleItemIndex,
-        ) ?: return
-    val upcomingNotification =
-        group.notifications.getOrNull(listState.firstVisibleItemIndex.coerceAtLeast(0) + 1)
-    val swipeProgress =
-        notificationOverviewScrollProgress(
-            firstVisibleItemScrollOffset = listState.firstVisibleItemScrollOffset,
-            firstVisibleItemSize = listState.visibleItemSize(),
+    val selectedGroupIndex = notificationOverviewSelectedGroupIndex(groups, selectedGroupKey)
+    val pagerState =
+        rememberPagerState(
+            initialPage = selectedGroupIndex,
+            pageCount = { groups.size },
         )
-    val label = notificationOverviewGroupLabel(app = app, group = group)
 
-    Column(
+    LaunchedEffect(groups, pagerState.currentPage) {
+        groups.getOrNull(pagerState.currentPage)?.let { group ->
+            onGroupChanged(group.key)
+        }
+    }
+
+    HorizontalPager(
+        state = pagerState,
         modifier = Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-    ) {
-        NotificationPrototypeActions(
-            group = group,
-            app = app,
-            onBack = onBack,
-            onAction = onAction,
-        )
-        NotificationPrototypeHero(
-            notification = focusedNotification,
-            upcomingNotification = upcomingNotification,
-            swipeProgress = swipeProgress,
-            group = group,
-            app = app,
-            appIconLoader = appIconLoader,
-            modifier = Modifier.weight(1f),
-        )
-        LazyColumn(
-            state = listState,
-            modifier =
-                Modifier
-                    .weight(1f)
-                    .fillMaxWidth(),
-            contentPadding = PaddingValues(vertical = 4.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
+        pageSpacing = 16.dp,
+        key = { page -> groups[page].key },
+    ) { page ->
+        val group = groups[page]
+        val app = apps.firstOrNull { installedApp -> installedApp.matches(group) }
+        val listState = rememberLazyListState()
+        val focusedNotification =
+            notificationOverviewFocusedNotification(
+                notifications = group.notifications,
+                firstVisibleItemIndex = listState.firstVisibleItemIndex,
+            ) ?: return@HorizontalPager
+        val upcomingNotification =
+            group.notifications.getOrNull(listState.firstVisibleItemIndex.coerceAtLeast(0) + 1)
+        val swipeProgress =
+            notificationOverviewScrollProgress(
+                firstVisibleItemScrollOffset = listState.firstVisibleItemScrollOffset,
+                firstVisibleItemSize = listState.visibleItemSize(),
+            )
+        val label = notificationOverviewGroupLabel(app = app, group = group)
+
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            items(
-                items = group.notifications,
-                key = { notification -> notification.key.value },
-            ) { notification ->
-                NotificationPrototypeCard(
-                    notification = notification,
-                    label = label,
-                    onAction = onAction,
-                )
+            NotificationPrototypeActions(
+                group = group,
+                app = app,
+                onBack = onBack,
+                onAction = onAction,
+            )
+            NotificationPrototypeHero(
+                notification = focusedNotification,
+                upcomingNotification = upcomingNotification,
+                swipeProgress = swipeProgress,
+                group = group,
+                app = app,
+                appIconLoader = appIconLoader,
+                modifier = Modifier.weight(1f),
+            )
+            LazyColumn(
+                state = listState,
+                modifier =
+                    Modifier
+                        .weight(1f)
+                        .fillMaxWidth(),
+                contentPadding = PaddingValues(vertical = 4.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                items(
+                    items = group.notifications,
+                    key = { notification -> notification.key.value },
+                ) { notification ->
+                    NotificationPrototypeCard(
+                        notification = notification,
+                        label = label,
+                        onAction = onAction,
+                    )
+                }
             }
         }
     }
 }
+
+internal fun notificationOverviewSelectedGroupIndex(
+    groups: List<AppNotificationGroup>,
+    selectedGroupKey: AppNotificationGroupKey,
+): Int =
+    groups.indexOfFirst { group -> group.key == selectedGroupKey }
+        .takeIf { index -> index >= 0 }
+        ?: 0
 
 @Composable
 private fun NotificationPrototypeActions(
@@ -220,11 +255,7 @@ private fun NotificationPrototypeHero(
                     overflow = TextOverflow.Ellipsis,
                 )
                 Text(
-                    text =
-                        notificationOverviewNotificationBody(
-                            notification = notification,
-                            fallbackMetadata = group.notificationOverviewMetadataLabel(label),
-                        ),
+                    text = notification.text.ifBlank { group.notificationOverviewMetadataLabel(label) },
                     style = MaterialTheme.typography.bodyMedium,
                     maxLines = 4,
                     overflow = TextOverflow.Ellipsis,
@@ -316,11 +347,7 @@ private fun NotificationPrototypeCard(
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
-                text =
-                    notificationOverviewNotificationBody(
-                        notification = notification,
-                        fallbackMetadata = notification.priority.label,
-                    ),
+                text = notification.text.ifBlank { notification.priority.label },
                 style = MaterialTheme.typography.bodyMedium,
                 maxLines = 4,
                 overflow = TextOverflow.Ellipsis,
@@ -368,11 +395,6 @@ internal fun notificationOverviewNotificationTitle(
     notification: LauncherNotification,
     fallbackLabel: String,
 ): String = notification.title.ifBlank { fallbackLabel }
-
-internal fun notificationOverviewNotificationBody(
-    notification: LauncherNotification,
-    fallbackMetadata: String,
-): String = notification.text.ifBlank { fallbackMetadata }
 
 internal val AppNotificationGroup.key: AppNotificationGroupKey
     get() = AppNotificationGroupKey(packageName = packageName, profileId = profileId)
