@@ -355,7 +355,7 @@ private data class DockShelfController(
 
 private fun StandardHomeContentState.homeGridPresentation(): HomeGridPresentation =
     HomeGridPresentation(
-        notificationCountsByPackage = presentation.notificationCountsByPackage,
+        notificationGroupsByApp = presentation.notificationGroupsByApp,
         appShortcutsByApp = presentation.appShortcutsByApp,
         labelSettings = layout.settings.labels,
         reducedMotion = presentation.reducedMotion,
@@ -416,7 +416,7 @@ private fun HomeInsetPolicy.safeDrawingInsets(): WindowInsets {
 }
 
 internal data class HomeGridPresentation(
-    val notificationCountsByPackage: Map<AppPackageName, Int>,
+    val notificationGroupsByApp: List<AppNotificationGroup>,
     val appShortcutsByApp: AppShortcutsByApp,
     val labelSettings: HomeLabelSettings,
     val reducedMotion: Boolean = false,

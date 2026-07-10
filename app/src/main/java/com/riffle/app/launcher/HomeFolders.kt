@@ -32,7 +32,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.apps.AppDrawerProfileFilter
-import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.FolderItem
@@ -41,6 +40,8 @@ import com.riffle.core.domain.launcher.home.HomeLabelSettings
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.LauncherItem
 import com.riffle.core.domain.launcher.home.WidgetItem
+import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
+import com.riffle.core.domain.launcher.notifications.AppNotificationGroupKey
 
 @Composable
 @OptIn(ExperimentalFoundationApi::class)
@@ -267,12 +268,23 @@ fun HomeFolderEditControls(onAction: (LauncherShellAction) -> Unit) {
     }
 }
 
-fun Map<AppPackageName, Int>.notificationCountFor(item: LauncherItem): Int =
+internal fun List<AppNotificationGroup>.notificationCountFor(item: LauncherItem): Int =
     when (item) {
-        is AppShortcutItem -> this[item.appIdentity.packageName] ?: 0
+        is AppShortcutItem ->
+            firstOrNull { group ->
+                AppNotificationGroupKey(
+                    packageName = item.appIdentity.packageName,
+                    profileId = item.appIdentity.profile.id,
+                ) == AppNotificationGroupKey(group.packageName, group.profileId)
+            }?.count ?: 0
         is FolderItem ->
             item.items.sumOf { shortcut ->
-                this[shortcut.appIdentity.packageName] ?: 0
+                firstOrNull { group ->
+                    AppNotificationGroupKey(
+                        packageName = shortcut.appIdentity.packageName,
+                        profileId = shortcut.appIdentity.profile.id,
+                    ) == AppNotificationGroupKey(group.packageName, group.profileId)
+                }?.count ?: 0
             }
         is WidgetItem -> 0
     }

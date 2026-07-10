@@ -51,7 +51,7 @@ internal fun StandardHomeDockArea(
             ExpandedDockSurface(
                 dock = layout.dock,
                 notificationShelfState = notificationShelfState,
-                notificationCountsByPackage = presentation.notificationCountsByPackage,
+                notificationGroupsByApp = presentation.notificationGroupsByApp,
                 appShortcutsByApp = presentation.appShortcutsByApp,
                 appIconLoader = appIconLoader,
                 widgetViewFactory = presentation.widgetViewFactory,
@@ -61,7 +61,7 @@ internal fun StandardHomeDockArea(
             Dock(
                 dock = layout.dock.primaryDock(showShelf = false),
                 isEditing = false,
-                notificationCountsByPackage = presentation.notificationCountsByPackage,
+                notificationGroupsByApp = presentation.notificationGroupsByApp,
                 appShortcutsByApp = presentation.appShortcutsByApp,
                 appIconLoader = appIconLoader,
                 widgetViewFactory = presentation.widgetViewFactory,

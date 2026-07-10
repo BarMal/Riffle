@@ -26,7 +26,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.unit.dp
 import com.riffle.app.launcher.widgets.EmptyHomeWidgetViewFactory
 import com.riffle.app.launcher.widgets.HomeWidgetViewFactory
-import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.apps.AppShortcutsByApp
 import com.riffle.core.domain.launcher.home.AppShortcutItem
@@ -34,19 +33,20 @@ import com.riffle.core.domain.launcher.home.DockBackgroundSizing
 import com.riffle.core.domain.launcher.home.DockItemMoveDirection
 import com.riffle.core.domain.launcher.home.DockModel
 import com.riffle.core.domain.launcher.home.FolderItem
+import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
 import kotlin.math.min
 
 @Composable
 internal fun Dock(
     dock: DockModel,
     isEditing: Boolean,
-    notificationCountsByPackage: Map<AppPackageName, Int>,
+    notificationGroupsByApp: List<AppNotificationGroup>,
     appShortcutsByApp: AppShortcutsByApp,
     appIconLoader: AppIconLoader,
     widgetViewFactory: HomeWidgetViewFactory = EmptyHomeWidgetViewFactory,
     interactions: DockInteractions,
 ) {
-    val presentation = DockPresentation(notificationCountsByPackage, appShortcutsByApp, widgetViewFactory, interactions)
+    val presentation = DockPresentation(notificationGroupsByApp, appShortcutsByApp, widgetViewFactory, interactions)
 
     BoxWithConstraints(
         modifier = Modifier.dockShelfGestureInput(interactions),
@@ -242,7 +242,7 @@ internal data class DockOverflowAffordance(
 }
 
 internal data class DockPresentation(
-    val notificationCountsByPackage: Map<AppPackageName, Int>,
+    val notificationGroupsByApp: List<AppNotificationGroup>,
     val appShortcutsByApp: AppShortcutsByApp,
     val widgetViewFactory: HomeWidgetViewFactory,
     val interactions: DockInteractions,
@@ -303,7 +303,9 @@ private fun DockSlot(
                             shortcutCount = state.shortcutCount,
                             isEditing = state.isEditing,
                             notificationCount =
-                                presentation.notificationCountsByPackage[item.shortcut.appIdentity.packageName] ?: 0,
+                                presentation.notificationGroupsByApp.notificationCountFor(
+                                    item.shortcut,
+                                ),
                             appShortcuts = presentation.appShortcutsByApp[item.shortcut.appIdentity].orEmpty(),
                         ),
                     presentation = presentation,

@@ -18,9 +18,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import com.riffle.app.launcher.widgets.EmptyHomeWidgetViewFactory
 import com.riffle.app.launcher.widgets.HomeWidgetViewFactory
-import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppShortcutsByApp
 import com.riffle.core.domain.launcher.home.DockModel
+import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
 
 private const val DOCK_SHELF_CONTENT_SPACING_DP = 6
 
@@ -87,7 +87,7 @@ internal fun dockSurfaceMetrics(
 internal fun ExpandedDockSurface(
     dock: DockModel,
     notificationShelfState: DockNotificationShelfState,
-    notificationCountsByPackage: Map<AppPackageName, Int>,
+    notificationGroupsByApp: List<AppNotificationGroup>,
     appShortcutsByApp: AppShortcutsByApp,
     appIconLoader: AppIconLoader,
     widgetViewFactory: HomeWidgetViewFactory = EmptyHomeWidgetViewFactory,
@@ -97,7 +97,7 @@ internal fun ExpandedDockSurface(
     val overflowDock = dock.overflowShelfDock()
     val presentation =
         DockPresentation(
-            notificationCountsByPackage = notificationCountsByPackage,
+            notificationGroupsByApp = notificationGroupsByApp,
             appShortcutsByApp = appShortcutsByApp,
             widgetViewFactory = widgetViewFactory,
             interactions = interactions,
