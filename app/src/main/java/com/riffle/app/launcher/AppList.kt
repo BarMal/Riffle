@@ -118,7 +118,7 @@ private fun LazyListScope.appRows(
                         context.overlayDock.items
                             .firstOrNull { item -> item.appIdentity == app.identity && item.appShortcutId == null }
                             ?.id,
-                    notificationCount = context.notificationCountsByPackage[app.identity.packageName] ?: 0,
+                    notificationCount = context.notificationCountFor(app.identity),
                     shortcutItems = shortcutItems,
                     showInlineActions = showInlineActions,
                     haptics = context.haptics,

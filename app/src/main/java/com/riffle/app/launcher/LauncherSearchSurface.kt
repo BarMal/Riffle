@@ -278,7 +278,7 @@ private fun SearchIconGridItem(
                 modifier = Modifier.size(HOME_ICON_SIZE_DP.dp),
             )
             NotificationCountBadge(
-                count = appListContext.notificationCountsByPackage[appIdentity.packageName] ?: 0,
+                count = appListContext.notificationCountFor(appIdentity),
                 modifier = Modifier.align(Alignment.TopEnd),
             )
         }

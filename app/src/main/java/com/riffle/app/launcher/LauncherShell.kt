@@ -173,7 +173,7 @@ private fun LauncherDestination(
                     AppListContext(
                         homeLayout = state.homeLayout,
                         overlayDock = state.launcherSettings.overlayDock,
-                        notificationCountsByPackage = state.notificationCountsByPackage,
+                        notificationGroupsByApp = state.notificationGroupsByApp,
                         appShortcutsByApp = state.appShortcutsByApp,
                         appIconLoader = appIconLoader,
                         haptics = haptics,
@@ -198,7 +198,7 @@ private fun LauncherDestination(
                     AppListContext(
                         homeLayout = state.homeLayout,
                         overlayDock = state.launcherSettings.overlayDock,
-                        notificationCountsByPackage = state.notificationCountsByPackage,
+                        notificationGroupsByApp = state.notificationGroupsByApp,
                         appShortcutsByApp = state.appShortcutsByApp,
                         appIconLoader = appIconLoader,
                         haptics = haptics,

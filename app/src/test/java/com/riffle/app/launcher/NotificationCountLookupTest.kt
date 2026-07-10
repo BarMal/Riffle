@@ -29,6 +29,18 @@ class NotificationCountLookupTest {
     }
 
     @Test
+    fun notificationCountForIdentityMatchesProfile() {
+        val groups =
+            listOf(
+                notificationGroup(profile = AppProfile.personal(), count = 2),
+                notificationGroup(profile = AppProfile.work(), count = 1),
+            )
+
+        assertEquals(2, groups.notificationCountFor(shortcut(profile = AppProfile.personal()).appIdentity))
+        assertEquals(1, groups.notificationCountFor(shortcut(profile = AppProfile.work()).appIdentity))
+    }
+
+    @Test
     fun notificationCountForFolderSumsMatchingProfiles() {
         val personalShortcut = shortcut(id = "personal", profile = AppProfile.personal())
         val workShortcut = shortcut(id = "work", profile = AppProfile.work())
