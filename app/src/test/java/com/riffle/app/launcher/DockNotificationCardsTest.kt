@@ -206,7 +206,7 @@ class DockNotificationCardsTest {
     @Test
     fun summaryDoesNotPromiseOpenWhenAppIsUnavailable() {
         assertEquals(
-            "Notification can be cleared",
+            "App unavailable. Notification can be cleared",
             dockNotificationCardSummary(
                 group =
                     notificationGroup(
@@ -224,7 +224,7 @@ class DockNotificationCardsTest {
     @Test
     fun summaryUsesSingularPinnedCopyWhenAppIsUnavailable() {
         assertEquals(
-            "Pinned notification",
+            "App unavailable. Pinned notification",
             dockNotificationCardSummary(
                 group =
                     notificationGroup(
@@ -242,7 +242,7 @@ class DockNotificationCardsTest {
     @Test
     fun summaryExplainsPartialClearabilityWithoutLaunchAction() {
         assertEquals(
-            "1 clearable of 2 notifications",
+            "App unavailable. 1 clearable of 2 notifications",
             dockNotificationCardSummary(
                 group =
                     notificationGroup(
@@ -273,6 +273,32 @@ class DockNotificationCardsTest {
                             ),
                     ),
                 canLaunchApp = true,
+            ),
+        )
+    }
+
+    @Test
+    fun cardContentDescriptionExplainsUnavailableApps() {
+        assertEquals(
+            "com.example.chat. 1 notification. Message, Recent. App unavailable. Notification can be cleared",
+            dockNotificationCardContentDescription(
+                card =
+                    DockNotificationCardState(
+                        app = null,
+                        group =
+                            notificationGroup(
+                                packageName = "com.example.chat",
+                                notifications =
+                                    listOf(
+                                        notification(
+                                            packageName = "com.example.chat",
+                                            key = "chat:1",
+                                            canDismiss = true,
+                                        ),
+                                    ),
+                            ),
+                    ),
+                label = "com.example.chat",
             ),
         )
     }
