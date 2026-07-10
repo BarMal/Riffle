@@ -157,6 +157,35 @@ class WidgetEngineTest {
     }
 
     @Test
+    fun rejectsWidgetWhenHostedWidgetIdAlreadyExistsOnAnotherPage() {
+        val existingWidget =
+            WidgetItem(
+                id = LauncherItemId("widget:42"),
+                appWidgetId = HostedWidgetId(42),
+                label = "Existing",
+                placement = GridPlacement(cell = GridCell(column = 0, row = 0)),
+            )
+        val existingPage = HomeLayoutDefaults.standard().selectedPage.copy(items = listOf(existingWidget))
+        val targetPage = HomeLayoutDefaults.standard().selectedPage.copy(id = LauncherPageId("widgets"))
+        val layout =
+            HomeLayoutDefaults.standard().copy(
+                pages = listOf(existingPage, targetPage),
+                selectedPageId = targetPage.id,
+            )
+
+        val result =
+            engine.addWidgetToSelectedPage(
+                layout = layout,
+                hostedWidgetId = HostedWidgetId(42),
+                label = "Weather",
+            )
+
+        val rejected = assertIs<WidgetEditResult.Rejected>(result)
+        assertEquals(PlacementRejectionReason.DUPLICATE_ITEM_ID, rejected.reason)
+        assertEquals(emptyList<WidgetItem>(), layout.selectedPage.items.filterIsInstance<WidgetItem>())
+    }
+
+    @Test
     fun resizesWidgetOnSelectedPage() {
         val widget =
             WidgetItem(
