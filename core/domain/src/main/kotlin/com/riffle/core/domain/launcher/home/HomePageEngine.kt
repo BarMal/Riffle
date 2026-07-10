@@ -10,6 +10,15 @@ class HomePageEngine {
             layout.pages.any { existingPage -> existingPage.id == page.id } ->
                 HomePageEditResult.Rejected(HomePageEditRejectionReason.DUPLICATE_PAGE_ID)
 
+            !page.grid.isValid ->
+                HomePageEditResult.Rejected(HomePageEditRejectionReason.INVALID_GRID_DIMENSIONS)
+
+            page.hasItemsOutsideGrid() ->
+                HomePageEditResult.Rejected(HomePageEditRejectionReason.GRID_ITEMS_OUT_OF_BOUNDS)
+
+            page.hasInvalidItemIdsOrCollisions() ->
+                HomePageEditResult.Rejected(HomePageEditRejectionReason.INVALID_PAGE_ITEMS)
+
             else ->
                 HomePageEditResult.Updated(layout.copy(pages = layout.pages + page))
         }
@@ -287,6 +296,7 @@ enum class HomePageEditRejectionReason {
     INDEX_OUT_OF_BOUNDS,
     INVALID_GRID_DIMENSIONS,
     GRID_ITEMS_OUT_OF_BOUNDS,
+    INVALID_PAGE_ITEMS,
     CANNOT_DUPLICATE_PAGE_WITH_WIDGETS,
     INVALID_LABEL_SETTING,
 }
@@ -294,12 +304,34 @@ enum class HomePageEditRejectionReason {
 private val GridDimensions.isValid: Boolean
     get() = columns >= MIN_GRID_DIMENSION && rows >= MIN_GRID_DIMENSION
 
+private fun LauncherPage.hasItemsOutsideGrid(): Boolean = items.any { item -> !grid.contains(item.placement) }
+
+private fun LauncherPage.hasInvalidItemIdsOrCollisions(): Boolean =
+    items.map { item -> item.id }.toSet().size != items.size ||
+        items.indices.any { index ->
+            val item = items[index]
+            items.drop(index + 1).any { otherItem -> item.collidesWith(otherItem) }
+        }
+
 private fun GridDimensions.contains(placement: GridPlacement?): Boolean =
     placement?.let { existingPlacement ->
         existingPlacement.cell.column >= 0 &&
             existingPlacement.cell.row >= 0 &&
             existingPlacement.cell.column + existingPlacement.span.columns <= columns &&
             existingPlacement.cell.row + existingPlacement.span.rows <= rows
-    } ?: true
+    } ?: false
+
+private fun LauncherItem.collidesWith(other: LauncherItem): Boolean =
+    placement?.occupiedCells.orEmpty().intersect(other.placement?.occupiedCells.orEmpty()).isNotEmpty()
+
+private val GridPlacement.occupiedCells: Set<GridCell>
+    get() =
+        (cell.column until cell.column + span.columns)
+            .flatMap { column ->
+                (cell.row until cell.row + span.rows).map { row ->
+                    GridCell(column = column, row = row)
+                }
+            }
+            .toSet()
 
 private const val MIN_GRID_DIMENSION = 1
