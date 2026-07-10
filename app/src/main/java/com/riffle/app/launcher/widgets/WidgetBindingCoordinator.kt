@@ -36,6 +36,7 @@ class WidgetBindingCoordinator(
                         label = action.label,
                         preferredSpan = preferredSpan,
                         target = action.target,
+                        pendingStep = PendingWidgetAddStep.CONFIGURATION,
                     )
                 when (widgetHostGateway.hostedWidgetRequiresConfiguration(hostedWidgetId)) {
                     true -> {
@@ -58,6 +59,7 @@ class WidgetBindingCoordinator(
                         label = action.label,
                         preferredSpan = preferredSpan,
                         target = action.target,
+                        pendingStep = PendingWidgetAddStep.PERMISSION,
                     )
                 WidgetAddRequestResult.RequiresPermission(
                     hostedWidgetId = hostedWidgetId,
@@ -67,39 +69,55 @@ class WidgetBindingCoordinator(
         }
     }
 
-    fun onPermissionResult(granted: Boolean): WidgetBindPermissionResult {
-        val pending = pendingAdd ?: return WidgetBindPermissionResult.Ignored
+    fun onPermissionResult(granted: Boolean): WidgetBindPermissionResult =
+        when (val pending = pendingAdd) {
+            null -> WidgetBindPermissionResult.Ignored
+            else ->
+                when (pending.pendingStep) {
+                    PendingWidgetAddStep.CONFIGURATION -> WidgetBindPermissionResult.Ignored
+                    PendingWidgetAddStep.PERMISSION ->
+                        when (granted) {
+                            true -> grantedPermissionResult(pending)
+                            false -> {
+                                pendingAdd = null
+                                widgetHostGateway.deleteHostedWidgetId(pending.hostedWidgetId)
+                                WidgetBindPermissionResult.Cancelled
+                            }
+                        }
+                }
+        }
 
-        return when (granted) {
-            true ->
-                when (widgetHostGateway.hostedWidgetRequiresConfiguration(pending.hostedWidgetId)) {
-                    true -> WidgetBindPermissionResult.RequiresConfiguration(pending.hostedWidgetId)
-                    false -> {
+    fun onConfigurationResult(configured: Boolean): WidgetConfigurationResult =
+        when (val pending = pendingAdd) {
+            null -> WidgetConfigurationResult.Ignored
+            else ->
+                when (pending.pendingStep) {
+                    PendingWidgetAddStep.PERMISSION -> WidgetConfigurationResult.Ignored
+                    PendingWidgetAddStep.CONFIGURATION -> {
                         pendingAdd = null
-                        WidgetBindPermissionResult.Bound(pending.addHostedWidgetAction())
+                        when (configured) {
+                            true -> WidgetConfigurationResult.Bound(pending.addHostedWidgetAction())
+                            false -> {
+                                widgetHostGateway.deleteHostedWidgetId(pending.hostedWidgetId)
+                                WidgetConfigurationResult.Cancelled
+                            }
+                        }
                     }
                 }
+        }
+
+    private fun grantedPermissionResult(pending: PendingWidgetAdd): WidgetBindPermissionResult =
+        when (widgetHostGateway.hostedWidgetRequiresConfiguration(pending.hostedWidgetId)) {
+            true -> {
+                pendingAdd = pending.copy(pendingStep = PendingWidgetAddStep.CONFIGURATION)
+                WidgetBindPermissionResult.RequiresConfiguration(pending.hostedWidgetId)
+            }
 
             false -> {
                 pendingAdd = null
-                widgetHostGateway.deleteHostedWidgetId(pending.hostedWidgetId)
-                WidgetBindPermissionResult.Cancelled
+                WidgetBindPermissionResult.Bound(pending.addHostedWidgetAction())
             }
         }
-    }
-
-    fun onConfigurationResult(configured: Boolean): WidgetConfigurationResult {
-        val pending = pendingAdd ?: return WidgetConfigurationResult.Ignored
-        pendingAdd = null
-
-        return when (configured) {
-            true -> WidgetConfigurationResult.Bound(pending.addHostedWidgetAction())
-            false -> {
-                widgetHostGateway.deleteHostedWidgetId(pending.hostedWidgetId)
-                WidgetConfigurationResult.Cancelled
-            }
-        }
-    }
 
     private fun PendingWidgetAdd.addHostedWidgetAction(): HostedWidgetAddAction =
         when (target) {
@@ -162,4 +180,10 @@ private data class PendingWidgetAdd(
     val label: String,
     val preferredSpan: GridSpan,
     val target: WidgetAddTarget,
+    val pendingStep: PendingWidgetAddStep,
 )
+
+private enum class PendingWidgetAddStep {
+    PERMISSION,
+    CONFIGURATION,
+}

@@ -259,6 +259,27 @@ class WidgetBindingCoordinatorTest {
     }
 
     @Test
+    fun permissionResultIsIgnoredWhenConfigurationIsAlreadyPending() {
+        val gateway =
+            FakeWidgetHostGateway(
+                bindingResult = WidgetBindingResult.Bound,
+                configuredWidgetIds = setOf(HostedWidgetId(1)),
+            )
+        val coordinator = WidgetBindingCoordinator(gateway)
+        coordinator.requestAddWidget(
+            action = requestAddWidget(label = "Clock"),
+            grid = GridDimensions(columns = 4, rows = 5),
+            availableWidthDp = 400,
+            availableHeightDp = 1000,
+        )
+
+        val result = coordinator.onPermissionResult(granted = false)
+
+        assertEquals(WidgetBindPermissionResult.Ignored, result)
+        assertEquals(emptyList<HostedWidgetId>(), gateway.deletedHostedWidgetIds)
+    }
+
+    @Test
     fun replacementConfigurationRequestDeletesPreviousPendingHostedWidgetId() {
         val gateway =
             FakeWidgetHostGateway(
@@ -310,6 +331,23 @@ class WidgetBindingCoordinatorTest {
 
         assertEquals(WidgetBindPermissionResult.Cancelled, result)
         assertEquals(listOf(HostedWidgetId(1)), gateway.deletedHostedWidgetIds)
+    }
+
+    @Test
+    fun configurationResultIsIgnoredWhilePermissionIsStillPending() {
+        val gateway = FakeWidgetHostGateway(bindingResult = WidgetBindingResult.RequiresPermission)
+        val coordinator = WidgetBindingCoordinator(gateway)
+        coordinator.requestAddWidget(
+            action = requestAddWidget(label = "Calendar"),
+            grid = GridDimensions(columns = 4, rows = 5),
+            availableWidthDp = 400,
+            availableHeightDp = 1000,
+        )
+
+        val result = coordinator.onConfigurationResult(configured = false)
+
+        assertEquals(WidgetConfigurationResult.Ignored, result)
+        assertEquals(emptyList<HostedWidgetId>(), gateway.deletedHostedWidgetIds)
     }
 
     @Test
