@@ -29,6 +29,7 @@ private fun InstalledWidgetProvider.widgetSearchableValues(): List<String> =
         "${dimensions.minWidthDp}x${dimensions.minHeightDp}",
         "${dimensions.minWidthDp}x${dimensions.minHeightDp}dp",
         dimensions.targetCellSizeSearchToken(),
+        dimensions.targetCellSizeDisplaySearchToken(),
         widgetPickerResizeLabel(),
     ).map { value -> value.lowercase() }
 
@@ -36,3 +37,8 @@ private fun WidgetProviderDimensions.targetCellSizeSearchToken(): String? =
     listOfNotNull(targetCellWidth, targetCellHeight)
         .takeIf { cells -> cells.size == 2 }
         ?.joinToString(separator = "x")
+
+private fun WidgetProviderDimensions.targetCellSizeDisplaySearchToken(): String? =
+    listOfNotNull(targetCellWidth, targetCellHeight)
+        .takeIf { cells -> cells.size == 2 }
+        ?.joinToString(separator = " x ")
