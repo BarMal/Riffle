@@ -76,6 +76,104 @@ class LauncherShellHostedWidgetCleanupTest {
         assertEquals(layout, viewModel.state.value.homeLayout)
     }
 
+    @Test
+    fun removingSelectedPageWidgetDeletesHostedWidgetAfterSuccessfulRemoval() {
+        val deletedHostedWidgetIds = mutableListOf<HostedWidgetId>()
+        val layout =
+            HomeLayoutDefaults.standard().copy(
+                pages =
+                    listOf(
+                        HomeLayoutDefaults.standard().selectedPage.copy(
+                            items = listOf(widget(id = "widget:42", hostedWidgetId = 42)),
+                        ),
+                    ),
+            )
+        val repository = FakeHomeLayoutRepository(savedLayout = layout)
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                homeLayoutRepository = repository,
+                platformDependencies =
+                    LauncherShellPlatformDependencies(
+                        deleteHostedWidgetId = deletedHostedWidgetIds::add,
+                    ),
+            )
+
+        viewModel.onHomeShortcutEdited(LauncherShellAction.RemoveHomeShortcut(LauncherItemId("widget:42")))
+
+        assertEquals(listOf(HostedWidgetId(42)), deletedHostedWidgetIds)
+        assertTrue(viewModel.state.value.homeLayout.selectedPage.items.isEmpty())
+    }
+
+    @Test
+    fun rejectedSelectedPageWidgetRemovalDoesNotDeleteHostedWidget() {
+        val deletedHostedWidgetIds = mutableListOf<HostedWidgetId>()
+        val layout = HomeLayoutDefaults.standard()
+        val repository = FakeHomeLayoutRepository(savedLayout = layout)
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                homeLayoutRepository = repository,
+                platformDependencies =
+                    LauncherShellPlatformDependencies(
+                        deleteHostedWidgetId = deletedHostedWidgetIds::add,
+                    ),
+            )
+
+        viewModel.onHomeShortcutEdited(LauncherShellAction.RemoveHomeShortcut(LauncherItemId("widget:42")))
+
+        assertTrue(deletedHostedWidgetIds.isEmpty())
+        assertEquals(layout, viewModel.state.value.homeLayout)
+    }
+
+    @Test
+    fun removingDockWidgetDeletesHostedWidgetAfterSuccessfulRemoval() {
+        val deletedHostedWidgetIds = mutableListOf<HostedWidgetId>()
+        val layout =
+            HomeLayoutDefaults.standard().copy(
+                dock =
+                    HomeLayoutDefaults.standard().dock.copy(
+                        items = listOf(widget(id = "dock-widget:43", hostedWidgetId = 43)),
+                    ),
+            )
+        val repository = FakeHomeLayoutRepository(savedLayout = layout)
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                homeLayoutRepository = repository,
+                platformDependencies =
+                    LauncherShellPlatformDependencies(
+                        deleteHostedWidgetId = deletedHostedWidgetIds::add,
+                    ),
+            )
+
+        viewModel.onDockEdited(LauncherShellAction.RemoveDockShortcut(LauncherItemId("dock-widget:43")))
+
+        assertEquals(listOf(HostedWidgetId(43)), deletedHostedWidgetIds)
+        assertTrue(viewModel.state.value.homeLayout.dock.items.isEmpty())
+    }
+
+    @Test
+    fun rejectedDockWidgetRemovalDoesNotDeleteHostedWidget() {
+        val deletedHostedWidgetIds = mutableListOf<HostedWidgetId>()
+        val layout = HomeLayoutDefaults.standard()
+        val repository = FakeHomeLayoutRepository(savedLayout = layout)
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                homeLayoutRepository = repository,
+                platformDependencies =
+                    LauncherShellPlatformDependencies(
+                        deleteHostedWidgetId = deletedHostedWidgetIds::add,
+                    ),
+            )
+
+        viewModel.onDockEdited(LauncherShellAction.RemoveDockShortcut(LauncherItemId("dock-widget:43")))
+
+        assertTrue(deletedHostedWidgetIds.isEmpty())
+        assertEquals(layout, viewModel.state.value.homeLayout)
+    }
+
     private fun widget(
         id: String,
         hostedWidgetId: Int,

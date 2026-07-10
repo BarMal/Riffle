@@ -90,8 +90,6 @@ class LauncherShellSettingsDockViewModelTest {
                     editHomePage = viewModel::onHomePageEdited,
                     editHomeShortcut = viewModel::onHomeShortcutEdited,
                     editDock = viewModel::onDockEdited,
-                    hostedWidgetIdForRemovedItem = { null },
-                    deleteHostedWidget = {},
                 ),
             notificationActionHandler = LauncherNotificationActionHandler { false },
             settingsActionHandler =

@@ -136,8 +136,6 @@ class LauncherActionRouterTest {
             editHomePage = {},
             editHomeShortcut = {},
             editDock = {},
-            hostedWidgetIdForRemovedItem = { null },
-            deleteHostedWidget = {},
         )
 
     private fun notificationHandler(): LauncherNotificationActionHandler = LauncherNotificationActionHandler { false }

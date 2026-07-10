@@ -25,6 +25,7 @@ import com.riffle.core.domain.launcher.home.HomeLayoutRepository
 import com.riffle.core.domain.launcher.home.HomeLayoutSet
 import com.riffle.core.domain.launcher.home.HomeShortcutEngine
 import com.riffle.core.domain.launcher.home.HomeShortcutResult
+import com.riffle.core.domain.launcher.home.HostedWidgetId
 import com.riffle.core.domain.launcher.home.LauncherViewModeAvailability
 import com.riffle.core.domain.launcher.home.PlacementRejectionReason
 import com.riffle.core.domain.launcher.home.WidgetEditResult
@@ -204,68 +205,27 @@ class LauncherShellViewModel(
     }
 
     fun onHomeShortcutEdited(action: LauncherShellAction) {
+        val previousState = mutableState.value
+        val removedHostedWidgetId = previousState.removedHomeHostedWidgetId(action)
+
         mutableState.value =
-            when (action) {
-                is LauncherShellAction.CreateEmptyHomeFolder,
-                is LauncherShellAction.CreateHomeFolder,
-                is LauncherShellAction.RenameHomeFolder,
-                is LauncherShellAction.AddAppToFolder,
-                is LauncherShellAction.RemoveAppFromFolder,
-                is LauncherShellAction.MoveAppInFolder,
-                is LauncherShellAction.MoveAppOutOfFolder,
-                ->
-                    folderEditReducer.reduce(mutableState.value, action)
+            reduceHomeShortcutEdit(
+                previousState = previousState,
+                action = action,
+                folderEditReducer = folderEditReducer,
+                widgetEngine = widgetEngine,
+                homeLayoutRepository = homeLayoutRepository,
+                shortcutEngine = shortcutEngine,
+                folderEngine = folderEngine,
+            )
 
-                is LauncherShellAction.AddHostedWidgetToHome ->
-                    when (
-                        val result =
-                            widgetEngine.addWidgetToSelectedPage(
-                                layout = mutableState.value.homeLayout,
-                                hostedWidgetId = action.hostedWidgetId,
-                                label = action.label,
-                                preferredSpan = action.preferredSpan,
-                                targetCell = action.targetCell,
-                            )
-                    ) {
-                        is WidgetEditResult.Updated ->
-                            mutableState.value.withHomeLayout(result.layout, homeLayoutRepository)
-
-                        is WidgetEditResult.Rejected -> mutableState.value
-                    }
-
-                is LauncherShellAction.ResizeHomeWidget ->
-                    when (
-                        val result =
-                            widgetEngine.resizeWidgetOnSelectedPage(
-                                layout = mutableState.value.homeLayout,
-                                itemId = action.itemId,
-                                span = action.span,
-                            )
-                    ) {
-                        is WidgetEditResult.Updated ->
-                            mutableState.value.withHomeLayout(result.layout, homeLayoutRepository)
-
-                        is WidgetEditResult.Rejected -> mutableState.value
-                    }
-
-                else ->
-                    when (
-                        val result =
-                            applyShortcutOrFolderDropEdit(
-                                action = action,
-                                layout = mutableState.value.homeLayout,
-                                shortcutEngine = shortcutEngine,
-                                folderEngine = folderEngine,
-                            )
-                    ) {
-                        is ShortcutOrFolderDropEditResult.Updated ->
-                            mutableState.value
-                                .withHomeLayout(result.layout, homeLayoutRepository)
-                                .withLibraryReflowAfterShortcutMove(action, homeLayoutRepository)
-
-                        ShortcutOrFolderDropEditResult.Rejected -> mutableState.value
-                    }
-            }
+        deleteRemovedHomeHostedWidget(
+            action = action,
+            previousState = previousState,
+            currentState = mutableState.value,
+            removedHostedWidgetId = removedHostedWidgetId,
+            deleteHostedWidgetId = platformDependencies.deleteHostedWidgetId,
+        )
     }
 
     fun onHomePageEdited(action: LauncherShellAction) {
@@ -284,7 +244,14 @@ class LauncherShellViewModel(
     }
 
     fun onDockEdited(action: LauncherShellAction) {
-        mutableState.value = dockEditReducer.reduce(mutableState.value, action)
+        val previousState = mutableState.value
+        val removedHostedWidgetId = previousState.removedDockHostedWidgetId(action)
+
+        mutableState.value = dockEditReducer.reduce(previousState, action)
+
+        if (action is LauncherShellAction.RemoveDockShortcut && mutableState.value != previousState) {
+            removedHostedWidgetId?.let(platformDependencies.deleteHostedWidgetId)
+        }
     }
 
     fun onLauncherSettingsActionSelected(action: LauncherShellAction) {
@@ -315,6 +282,103 @@ class LauncherShellViewModel(
         override fun shortcutsFor(apps: List<InstalledApp>): AppShortcutsByApp = emptyMap()
     }
 }
+
+private fun reduceHomeShortcutEdit(
+    previousState: LauncherShellState,
+    action: LauncherShellAction,
+    folderEditReducer: LauncherFolderEditReducer,
+    widgetEngine: WidgetEngine,
+    homeLayoutRepository: HomeLayoutRepository,
+    shortcutEngine: HomeShortcutEngine,
+    folderEngine: FolderEngine,
+): LauncherShellState =
+    when (action) {
+        is LauncherShellAction.CreateEmptyHomeFolder,
+        is LauncherShellAction.CreateHomeFolder,
+        is LauncherShellAction.RenameHomeFolder,
+        is LauncherShellAction.AddAppToFolder,
+        is LauncherShellAction.RemoveAppFromFolder,
+        is LauncherShellAction.MoveAppInFolder,
+        is LauncherShellAction.MoveAppOutOfFolder,
+        ->
+            folderEditReducer.reduce(previousState, action)
+
+        is LauncherShellAction.AddHostedWidgetToHome ->
+            when (
+                val result =
+                    widgetEngine.addWidgetToSelectedPage(
+                        layout = previousState.homeLayout,
+                        hostedWidgetId = action.hostedWidgetId,
+                        label = action.label,
+                        preferredSpan = action.preferredSpan,
+                        targetCell = action.targetCell,
+                    )
+            ) {
+                is WidgetEditResult.Updated ->
+                    previousState.withHomeLayout(result.layout, homeLayoutRepository)
+
+                is WidgetEditResult.Rejected -> previousState
+            }
+
+        is LauncherShellAction.ResizeHomeWidget ->
+            when (
+                val result =
+                    widgetEngine.resizeWidgetOnSelectedPage(
+                        layout = previousState.homeLayout,
+                        itemId = action.itemId,
+                        span = action.span,
+                    )
+            ) {
+                is WidgetEditResult.Updated ->
+                    previousState.withHomeLayout(result.layout, homeLayoutRepository)
+
+                is WidgetEditResult.Rejected -> previousState
+            }
+
+        else ->
+            when (
+                val result =
+                    applyShortcutOrFolderDropEdit(
+                        action = action,
+                        layout = previousState.homeLayout,
+                        shortcutEngine = shortcutEngine,
+                        folderEngine = folderEngine,
+                    )
+            ) {
+                is ShortcutOrFolderDropEditResult.Updated ->
+                    previousState
+                        .withHomeLayout(result.layout, homeLayoutRepository)
+                        .withLibraryReflowAfterShortcutMove(action, homeLayoutRepository)
+
+                ShortcutOrFolderDropEditResult.Rejected -> previousState
+            }
+    }
+
+private fun deleteRemovedHomeHostedWidget(
+    action: LauncherShellAction,
+    previousState: LauncherShellState,
+    currentState: LauncherShellState,
+    removedHostedWidgetId: HostedWidgetId?,
+    deleteHostedWidgetId: (HostedWidgetId) -> Unit,
+) {
+    if (action is LauncherShellAction.RemoveHomeShortcut && currentState != previousState) {
+        removedHostedWidgetId?.let(deleteHostedWidgetId)
+    }
+}
+
+private fun LauncherShellState.removedHomeHostedWidgetId(action: LauncherShellAction) =
+    when (action) {
+        is LauncherShellAction.RemoveHomeShortcut ->
+            homeLayout.selectedPageHostedWidgetIdForItem(action.itemId)
+        else -> null
+    }
+
+private fun LauncherShellState.removedDockHostedWidgetId(action: LauncherShellAction) =
+    when (action) {
+        is LauncherShellAction.RemoveDockShortcut ->
+            homeLayout.dockHostedWidgetIdForItem(action.itemId)
+        else -> null
+    }
 
 private fun createInitialState(
     homeLayoutRepository: HomeLayoutRepository,

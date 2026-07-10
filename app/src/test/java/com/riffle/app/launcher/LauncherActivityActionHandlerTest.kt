@@ -6,7 +6,6 @@ import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.home.DockBackgroundSizing
-import com.riffle.core.domain.launcher.home.HostedWidgetId
 import com.riffle.core.domain.launcher.home.LauncherItemId
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -55,42 +54,30 @@ class LauncherActivityActionHandlerTest {
     }
 
     @Test
-    fun deletesHostedWidgetBeforeRemovingShortcut() {
+    fun routesHomeShortcutRemovalToShortcutEdits() {
         val editedActions = mutableListOf<LauncherShellAction>()
-        val deletedWidgets = mutableListOf<HostedWidgetId>()
         val handler =
             handler(
-                hostedWidgetIdForRemovedItem = { itemId ->
-                    HostedWidgetId(42).takeIf { itemId == LauncherItemId("widget:42") }
-                },
-                deleteHostedWidget = deletedWidgets::add,
                 editHomeShortcut = editedActions::add,
             )
         val action = LauncherShellAction.RemoveHomeShortcut(LauncherItemId("widget:42"))
 
         assertTrue(handler.handle(action))
 
-        assertEquals(listOf(HostedWidgetId(42)), deletedWidgets)
         assertEquals(listOf(action), editedActions)
     }
 
     @Test
-    fun deletesHostedWidgetBeforeRemovingDockShortcut() {
+    fun routesDockShortcutRemovalToDockEdits() {
         val editedActions = mutableListOf<LauncherShellAction>()
-        val deletedWidgets = mutableListOf<HostedWidgetId>()
         val handler =
             handler(
-                hostedWidgetIdForRemovedItem = { itemId ->
-                    HostedWidgetId(43).takeIf { itemId == LauncherItemId("dock-widget:43") }
-                },
-                deleteHostedWidget = deletedWidgets::add,
                 editDock = editedActions::add,
             )
         val action = LauncherShellAction.RemoveDockShortcut(LauncherItemId("dock-widget:43"))
 
         assertTrue(handler.handle(action))
 
-        assertEquals(listOf(HostedWidgetId(43)), deletedWidgets)
         assertEquals(listOf(action), editedActions)
     }
 
@@ -135,8 +122,6 @@ class LauncherActivityActionHandlerTest {
         editHomePage: (LauncherShellAction) -> Unit = {},
         editHomeShortcut: (LauncherShellAction) -> Unit = {},
         editDock: (LauncherShellAction) -> Unit = {},
-        hostedWidgetIdForRemovedItem: (LauncherItemId) -> HostedWidgetId? = { null },
-        deleteHostedWidget: (HostedWidgetId) -> Unit = {},
     ): LauncherActivityActionHandler =
         LauncherActivityActionHandler(
             requestDefaultHome = requestDefaultHome,
@@ -144,8 +129,6 @@ class LauncherActivityActionHandlerTest {
             editHomePage = editHomePage,
             editHomeShortcut = editHomeShortcut,
             editDock = editDock,
-            hostedWidgetIdForRemovedItem = hostedWidgetIdForRemovedItem,
-            deleteHostedWidget = deleteHostedWidget,
         )
 
     private companion object {

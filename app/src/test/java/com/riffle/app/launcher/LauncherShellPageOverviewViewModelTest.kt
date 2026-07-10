@@ -68,8 +68,6 @@ class LauncherShellPageOverviewViewModelTest {
                 editHomePage = viewModel::onHomePageEdited,
                 editHomeShortcut = {},
                 editDock = {},
-                hostedWidgetIdForRemovedItem = { null },
-                deleteHostedWidget = {},
             )
 
         val action =
