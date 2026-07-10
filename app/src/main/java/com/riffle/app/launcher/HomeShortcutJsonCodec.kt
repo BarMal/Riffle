@@ -72,7 +72,7 @@ private fun JSONObject.toFolder(): FolderItem =
         placement = toPlacementOrNull(),
     )
 
-private fun JSONObject.toShortcut(): AppShortcutItem =
+internal fun JSONObject.toShortcut(): AppShortcutItem =
     AppShortcutItem(
         id = LauncherItemId(getString("id")),
         appIdentity =

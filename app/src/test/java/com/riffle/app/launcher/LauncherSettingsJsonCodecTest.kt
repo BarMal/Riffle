@@ -413,6 +413,46 @@ class LauncherSettingsJsonCodecTest {
     }
 
     @Test
+    fun ignoresMalformedOverlayDockItems() {
+        val decodedSettings =
+            decodeLauncherSettings(
+                """
+                {
+                  "overlayDock": {
+                    "enabled": true,
+                    "items": [
+                      {
+                        "type": "shortcut",
+                        "id": "floating-dock:camera:1",
+                        "label": "Camera",
+                        "packageName": "com.example.camera",
+                        "activityName": ".CameraActivity"
+                      },
+                      {
+                        "type": "shortcut",
+                        "id": "floating-dock:broken:2",
+                        "label": "Broken"
+                      },
+                      "not-an-object"
+                    ]
+                  }
+                }
+                """.trimIndent(),
+            )
+
+        assertEquals(
+            listOf(
+                AppShortcutItem(
+                    id = LauncherItemId("floating-dock:camera:1"),
+                    appIdentity = appIdentity,
+                    label = "Camera",
+                ),
+            ),
+            decodedSettings.overlayDock.items,
+        )
+    }
+
+    @Test
     fun defaultsUnknownWallpaperSource() {
         val decodedSettings =
             decodeLauncherSettings(

@@ -104,7 +104,14 @@ private fun encodeOverlayDock(settings: OverlayDockSettings): JSONObject =
 private fun JSONObject.toOverlayDock(defaults: OverlayDockSettings): OverlayDockSettings =
     defaults.copy(
         enabled = optBoolean("enabled", defaults.enabled),
-        items = optJSONArray("items")?.toShortcuts() ?: defaults.items,
+        items =
+            optJSONArray("items")?.let { items ->
+                (0 until items.length()).mapNotNull { index ->
+                    items.optJSONObject(index)?.let { shortcut ->
+                        runCatching { shortcut.toShortcut() }.getOrNull()
+                    }
+                }
+            } ?: defaults.items,
         edge =
             runCatching { OverlayDockEdge.valueOf(optString("edge")) }
                 .getOrDefault(defaults.edge),
