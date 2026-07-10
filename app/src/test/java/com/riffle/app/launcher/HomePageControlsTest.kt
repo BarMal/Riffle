@@ -70,6 +70,26 @@ class HomePageControlsTest {
     }
 
     @Test
+    fun pageOverviewCardMenuReflectsCardPosition() {
+        val items = pageOverviewCardMenuItems(index = 0, pageCount = 3)
+
+        assertEquals(
+            listOf(
+                ShortcutContextMenuItem("Add page", LauncherShellAction.AddHomePage),
+                ShortcutContextMenuItem("Duplicate page", LauncherShellAction.DuplicateSelectedHomePage),
+                ShortcutContextMenuItem(
+                    label = "Move page left",
+                    action = LauncherShellAction.MoveSelectedHomePageLeft,
+                    enabled = false,
+                ),
+                ShortcutContextMenuItem("Move page right", LauncherShellAction.MoveSelectedHomePageRight),
+                ShortcutContextMenuItem("Delete page", LauncherShellAction.DeleteSelectedHomePage),
+            ),
+            items,
+        )
+    }
+
+    @Test
     fun emptyHomeCellMenuOnlyExposesEntryPointToPageManagement() {
         val items = homeWorkspaceContextMenuItems()
 

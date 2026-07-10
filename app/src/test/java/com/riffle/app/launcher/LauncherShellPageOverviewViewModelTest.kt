@@ -129,6 +129,46 @@ class LauncherShellPageOverviewViewModelTest {
         assertEquals(viewModel.state.value.homeLayout, repository.savedLayout)
     }
 
+    @Test
+    fun duplicatesSelectedPageWhileStayingInOverview() {
+        val repository = FakeHomeLayoutRepository(savedLayout = HomeLayoutDefaults.standard())
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                homeLayoutRepository = repository,
+            )
+        viewModel.onHomePageEdited(LauncherShellAction.AddHomePage)
+        viewModel.onHomePageEdited(LauncherShellAction.EnterHomePageOverview)
+        viewModel.onHomePageEdited(LauncherShellAction.SelectHomePage(LauncherPageId("home-2")))
+
+        viewModel.onHomePageEdited(LauncherShellAction.DuplicateSelectedHomePage)
+
+        assertEquals(HomeEditMode.ManagingPages, viewModel.state.value.homeLayout.editMode)
+        assertEquals(3, viewModel.state.value.homeLayout.pages.size)
+        assertEquals(LauncherPageId("home-3"), viewModel.state.value.homeLayout.selectedPageId)
+        assertEquals(viewModel.state.value.homeLayout, repository.savedLayout)
+    }
+
+    @Test
+    fun deletesSelectedPageWhileStayingInOverview() {
+        val repository = FakeHomeLayoutRepository(savedLayout = HomeLayoutDefaults.standard())
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                homeLayoutRepository = repository,
+            )
+        viewModel.onHomePageEdited(LauncherShellAction.AddHomePage)
+        viewModel.onHomePageEdited(LauncherShellAction.EnterHomePageOverview)
+        viewModel.onHomePageEdited(LauncherShellAction.SelectHomePage(LauncherPageId("home-2")))
+
+        viewModel.onHomePageEdited(LauncherShellAction.DeleteSelectedHomePage)
+
+        assertEquals(HomeEditMode.ManagingPages, viewModel.state.value.homeLayout.editMode)
+        assertEquals(listOf(LauncherPageId("home")), viewModel.state.value.homeLayout.pages.map { page -> page.id })
+        assertEquals(LauncherPageId("home"), viewModel.state.value.homeLayout.selectedPageId)
+        assertEquals(viewModel.state.value.homeLayout, repository.savedLayout)
+    }
+
     private class FakeFirstRunRepository : FirstRunRepository {
         override fun isFirstRunComplete(): Boolean = false
 

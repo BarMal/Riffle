@@ -180,6 +180,7 @@ private fun PageOverviewStrip(
                 appIconLoader = appIconLoader,
                 widgetViewFactory = widgetViewFactory,
                 onClick = { onAction(LauncherShellAction.SelectHomePage(page.id)) },
+                onAction = onAction,
                 onMoveToIndex = { targetIndex ->
                     onAction(LauncherShellAction.MoveHomePage(pageId = page.id, targetIndex = targetIndex))
                 },
@@ -194,8 +195,11 @@ private fun PageOverviewCard(
     appIconLoader: AppIconLoader,
     widgetViewFactory: HomeWidgetViewFactory,
     onClick: () -> Unit,
+    onAction: (LauncherShellAction) -> Unit,
     onMoveToIndex: (Int) -> Unit,
 ) {
+    val isMenuExpanded = remember(state.page.id) { mutableStateOf(false) }
+
     Surface(
         modifier =
             Modifier
@@ -228,10 +232,24 @@ private fun PageOverviewCard(
             modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            Text(
-                text = pageOverviewLabel(index = state.index),
-                style = MaterialTheme.typography.titleSmall,
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = pageOverviewLabel(index = state.index),
+                    style = MaterialTheme.typography.titleSmall,
+                )
+                TextButton(
+                    onClick = {
+                        onAction(LauncherShellAction.SelectHomePage(state.page.id))
+                        isMenuExpanded.value = true
+                    },
+                ) {
+                    Text(text = "More")
+                }
+            }
             Text(
                 text = state.page.type.pageOverviewTypeLabel,
                 style = MaterialTheme.typography.labelMedium,
@@ -240,6 +258,12 @@ private fun PageOverviewCard(
                 page = state.page,
                 appIconLoader = appIconLoader,
                 widgetViewFactory = widgetViewFactory,
+            )
+            ShortcutContextMenu(
+                expanded = isMenuExpanded.value,
+                items = pageOverviewCardMenuItems(index = state.index, pageCount = state.pageCount),
+                onDismissRequest = { isMenuExpanded.value = false },
+                onAction = onAction,
             )
         }
     }
@@ -356,6 +380,16 @@ private fun overviewMenuItem(includeOverview: Boolean): ShortcutContextMenuItem?
     } else {
         null
     }
+
+internal fun pageOverviewCardMenuItems(
+    index: Int,
+    pageCount: Int,
+): List<ShortcutContextMenuItem> =
+    pageManagementMenuItems(
+        pageCount = pageCount,
+        selectedPageIndex = index,
+        includeOverview = false,
+    )
 
 @Composable
 fun PageIndicator(
