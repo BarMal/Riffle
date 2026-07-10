@@ -33,7 +33,6 @@ fun HomeDestination(
                     ),
                 presentation =
                     StandardHomePresentation(
-                        notificationCountsByPackage = state.notificationCountsByPackage,
                         notificationGroupsByApp = state.notificationGroupsByApp,
                         notificationAccessStatus = state.notificationAccessStatus,
                         installedApps = state.installedApps,

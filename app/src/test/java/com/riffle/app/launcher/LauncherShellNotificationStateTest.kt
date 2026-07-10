@@ -256,8 +256,7 @@ class LauncherShellNotificationStateTest {
             listOf(camera.identity.packageName),
             viewModel.state.value.notificationGroupsByApp.map { group -> group.packageName },
         )
-        assertEquals(1, viewModel.state.value.notificationCountsByPackage[camera.identity.packageName])
-        assertEquals(null, viewModel.state.value.notificationCountsByPackage[docs.identity.packageName])
+        assertEquals(1, viewModel.state.value.notificationGroupsByApp.single().count)
     }
 
     @Test
@@ -301,7 +300,6 @@ class LauncherShellNotificationStateTest {
         assertEquals(personalDocs.identity.packageName, group.packageName)
         assertEquals(personalDocs.identity.profile.id, group.profileId)
         assertEquals(1, group.count)
-        assertEquals(1, viewModel.state.value.notificationCountsByPackage[personalDocs.identity.packageName])
     }
 
     private class FakeFirstRunRepository : FirstRunRepository {
