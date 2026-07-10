@@ -213,10 +213,68 @@ class WidgetEngineTest {
         assertEquals(PlacementRejectionReason.COLLISION, rejected.reason)
     }
 
+    @Test
+    fun rejectsResizingShortcutThroughWidgetPath() {
+        val shortcut =
+            AppShortcutItem(
+                id = LauncherItemId("app:camera:1"),
+                appIdentity = appIdentity("camera"),
+                label = "Camera",
+                placement = GridPlacement(cell = GridCell(column = 0, row = 0)),
+            )
+        val layout =
+            HomeLayoutDefaults.standard().copy(
+                pages = listOf(HomeLayoutDefaults.standard().selectedPage.copy(items = listOf(shortcut))),
+            )
+
+        val result =
+            engine.resizeWidgetOnSelectedPage(
+                layout = layout,
+                itemId = shortcut.id,
+                span = GridSpan(columns = 2, rows = 2),
+            )
+
+        val rejected = assertIs<WidgetEditResult.Rejected>(result)
+        assertEquals(PlacementRejectionReason.ITEM_NOT_FOUND, rejected.reason)
+        assertEquals(GridPlacement(cell = GridCell(column = 0, row = 0)), layout.selectedPage.items.single().placement)
+    }
+
+    @Test
+    fun rejectsResizingFolderThroughWidgetPath() {
+        val folder =
+            FolderItem(
+                id = LauncherItemId("folder:tools"),
+                label = "Tools",
+                items = emptyList(),
+                placement = GridPlacement(cell = GridCell(column = 0, row = 0)),
+            )
+        val layout =
+            HomeLayoutDefaults.standard().copy(
+                pages = listOf(HomeLayoutDefaults.standard().selectedPage.copy(items = listOf(folder))),
+            )
+
+        val result =
+            engine.resizeWidgetOnSelectedPage(
+                layout = layout,
+                itemId = folder.id,
+                span = GridSpan(columns = 2, rows = 2),
+            )
+
+        val rejected = assertIs<WidgetEditResult.Rejected>(result)
+        assertEquals(PlacementRejectionReason.ITEM_NOT_FOUND, rejected.reason)
+        assertEquals(GridPlacement(cell = GridCell(column = 0, row = 0)), layout.selectedPage.items.single().placement)
+    }
+
     private fun HomeLayout.withSelectedPageItems(vararg items: WidgetItem): HomeLayout =
         copy(pages = listOf(selectedPage.copy(items = items.toList())))
 
     private companion object {
         private const val DEFAULT_GRID_CELL_COUNT = 20
+
+        private fun appIdentity(value: String) =
+            com.riffle.core.domain.launcher.apps.AppIdentity(
+                packageName = com.riffle.core.domain.launcher.apps.AppPackageName("com.riffle.$value"),
+                activityName = com.riffle.core.domain.launcher.apps.AppActivityName(".MainActivity"),
+            )
     }
 }

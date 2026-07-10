@@ -1,10 +1,12 @@
 package com.riffle.app.launcher
 
 import com.riffle.core.domain.launcher.apps.AppPackageName
+import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.GridCell
 import com.riffle.core.domain.launcher.home.GridPlacement
 import com.riffle.core.domain.launcher.home.GridSpan
 import com.riffle.core.domain.launcher.home.HomeLayout
+import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
 import com.riffle.core.domain.launcher.home.HostedWidgetId
 import com.riffle.core.domain.launcher.home.LauncherItemId
@@ -225,6 +227,36 @@ class LauncherShellWidgetViewModelTest {
     }
 
     @Test
+    fun rejectingNonWidgetResizeLeavesLayoutAndSavedStateUnchanged() {
+        val shortcut =
+            shortcutItem(
+                id = "app:camera:1",
+                label = "Camera",
+                cell = GridCell(column = 0, row = 0),
+            )
+        val initialLayout =
+            HomeLayoutDefaults.standard().copy(
+                pages = listOf(HomeLayoutDefaults.standard().selectedPage.copy(items = listOf(shortcut))),
+            )
+        val repository = FakeHomeLayoutRepository(savedLayout = initialLayout)
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                homeLayoutRepository = repository,
+            )
+
+        viewModel.onHomeShortcutEdited(
+            LauncherShellAction.ResizeHomeWidget(
+                itemId = shortcut.id,
+                span = GridSpan(columns = 2, rows = 2),
+            ),
+        )
+
+        assertEquals(initialLayout, viewModel.state.value.homeLayout)
+        assertEquals(initialLayout, repository.savedLayout)
+    }
+
+    @Test
     fun addsHostedWidgetToTargetCellAndSavesLayout() {
         val repository = FakeHomeLayoutRepository()
         val viewModel =
@@ -312,5 +344,21 @@ class LauncherShellWidgetViewModelTest {
                 ),
             label = label,
             dimensions = WidgetProviderDimensions(minWidthDp = 100, minHeightDp = 50),
+        )
+
+    private fun shortcutItem(
+        id: String,
+        label: String,
+        cell: GridCell,
+    ): AppShortcutItem =
+        AppShortcutItem(
+            id = LauncherItemId(id),
+            appIdentity =
+                com.riffle.core.domain.launcher.apps.AppIdentity(
+                    packageName = AppPackageName("com.example.${label.lowercase()}"),
+                    activityName = com.riffle.core.domain.launcher.apps.AppActivityName(".MainActivity"),
+                ),
+            label = label,
+            placement = GridPlacement(cell = cell),
         )
 }
