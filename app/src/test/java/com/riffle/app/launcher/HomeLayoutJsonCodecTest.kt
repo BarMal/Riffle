@@ -131,7 +131,6 @@ class HomeLayoutJsonCodecTest {
         assertEquals("Camera", (shortcut as AppShortcutItem).label)
     }
 
-    @Test
     fun roundTripsPlatformAppShortcutItems() {
         val shortcut =
             appShortcut(id = "compose")

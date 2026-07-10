@@ -38,6 +38,54 @@ class HomeDockJsonCodecTest {
         assertEquals(listOf(folder, widget), decodedLayout.dock.items)
     }
 
+    @Test
+    fun ignoresMalformedDockItems() {
+        val decodedLayout =
+            decodeHomeLayout(
+                """
+                {
+                  "selectedPageId": "home",
+                  "pages": [
+                    {
+                      "id": "home",
+                      "columns": 4,
+                      "rows": 5,
+                      "items": []
+                    }
+                  ],
+                  "dock": {
+                    "capacity": 5,
+                    "items": [
+                      {
+                        "type": "widget",
+                        "id": "widget:weather",
+                        "appWidgetId": 42,
+                        "label": "Weather"
+                      },
+                      {
+                        "type": "shortcut",
+                        "id": "app:broken:2",
+                        "label": "Broken"
+                      },
+                      1
+                    ]
+                  }
+                }
+                """.trimIndent(),
+            )
+
+        assertEquals(
+            listOf(
+                WidgetItem(
+                    id = LauncherItemId("widget:weather"),
+                    appWidgetId = HostedWidgetId(42),
+                    label = "Weather",
+                ),
+            ),
+            decodedLayout.dock.items,
+        )
+    }
+
     private fun appShortcut(id: String): AppShortcutItem =
         AppShortcutItem(
             id = LauncherItemId("app:$id:1"),
