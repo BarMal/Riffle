@@ -10,6 +10,9 @@ class GridPlacementEngine {
                 !page.grid.contains(placement) ->
                     PlaceLauncherItemResult.Rejected(PlacementRejectionReason.OUT_OF_BOUNDS)
 
+                page.items.any { existingItem -> existingItem.id == item.id } ->
+                    PlaceLauncherItemResult.Rejected(PlacementRejectionReason.DUPLICATE_ITEM_ID)
+
                 page.items.any { existingItem -> existingItem.collidesWith(item) } ->
                     PlaceLauncherItemResult.Rejected(PlacementRejectionReason.COLLISION)
 
@@ -22,17 +25,21 @@ class GridPlacementEngine {
         page: LauncherPage,
         item: LauncherItem,
         span: GridSpan = GridSpan(),
-    ): PlaceLauncherItemResult {
-        if (!span.hasPositiveDimensions) {
-            return PlaceLauncherItemResult.Rejected(PlacementRejectionReason.OUT_OF_BOUNDS)
-        }
+    ): PlaceLauncherItemResult =
+        when {
+            !span.hasPositiveDimensions ->
+                PlaceLauncherItemResult.Rejected(PlacementRejectionReason.OUT_OF_BOUNDS)
 
-        return page.grid.cells
-            .map { cell -> item.withPlacement(GridPlacement(cell = cell, span = span)) }
-            .map { candidate -> placeItem(page = page, item = candidate) }
-            .firstOrNull { result -> result is PlaceLauncherItemResult.Placed }
-            ?: PlaceLauncherItemResult.Rejected(PlacementRejectionReason.NO_AVAILABLE_CELL)
-    }
+            page.items.any { existingItem -> existingItem.id == item.id } ->
+                PlaceLauncherItemResult.Rejected(PlacementRejectionReason.DUPLICATE_ITEM_ID)
+
+            else ->
+                page.grid.cells
+                    .map { cell -> item.withPlacement(GridPlacement(cell = cell, span = span)) }
+                    .map { candidate -> placeItem(page = page, item = candidate) }
+                    .firstOrNull { result -> result is PlaceLauncherItemResult.Placed }
+                    ?: PlaceLauncherItemResult.Rejected(PlacementRejectionReason.NO_AVAILABLE_CELL)
+        }
 
     fun moveItem(
         page: LauncherPage,
@@ -154,6 +161,7 @@ sealed interface PlaceLauncherItemResult {
 enum class PlacementRejectionReason {
     MISSING_PLACEMENT,
     ITEM_NOT_FOUND,
+    DUPLICATE_ITEM_ID,
     DUPLICATE_APP,
     DUPLICATE_APP_SHORTCUT,
     OUT_OF_BOUNDS,
