@@ -34,6 +34,24 @@ class DockNotificationCardsTest {
     }
 
     @Test
+    fun revokedAccessShowsRevokedPermissionPrompt() {
+        val state =
+            dockNotificationShelfState(
+                groups = listOf(notificationGroup(packageName = "com.example.chat", count = 2)),
+                notificationAccessStatus = NotificationAccessStatus.REVOKED,
+                apps = emptyList(),
+            )
+
+        assertEquals(
+            DockNotificationShelfState.PermissionPrompt(
+                label = "Notification access was revoked",
+                actionLabel = "Open notification access",
+            ),
+            state,
+        )
+    }
+
+    @Test
     fun grantedAccessWithoutNotificationsHidesShelfCards() {
         assertEquals(
             DockNotificationShelfState.Hidden,
