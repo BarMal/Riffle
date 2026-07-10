@@ -315,8 +315,10 @@ private fun DockNotificationIcon(
 internal fun dockNotificationCardSummary(
     group: AppNotificationGroup,
     canLaunchApp: Boolean,
-): String =
-    when {
+): String {
+    val unavailablePrefix = "App unavailable. "
+
+    return when {
         canLaunchApp && group.clearableCount == 0 -> "Tap to open"
         canLaunchApp && group.clearableCount == group.count -> {
             val clearabilitySummary =
@@ -337,16 +339,19 @@ internal fun dockNotificationCardSummary(
                 }
             }"
 
-        group.clearableCount == 0 -> "Pinned ${if (group.count == 1) "notification" else "notifications"}"
+        group.clearableCount == 0 ->
+            "$unavailablePrefix${if (group.count == 1) "Pinned notification" else "Pinned notifications"}"
         group.clearableCount == group.count ->
-            if (group.count == 1) {
-                "Notification can be cleared"
-            } else {
-                "All notifications can be cleared"
-            }
+            "$unavailablePrefix${
+                if (group.count == 1) {
+                    "Notification can be cleared"
+                } else {
+                    "All notifications can be cleared"
+                }
+            }"
 
         else ->
-            "${group.clearableCount} clearable of ${group.count} ${
+            "$unavailablePrefix${group.clearableCount} clearable of ${group.count} ${
                 if (group.count == 1) {
                     "notification"
                 } else {
@@ -354,6 +359,7 @@ internal fun dockNotificationCardSummary(
                 }
             }"
     }
+}
 
 internal fun dockNotificationCardContentDescription(
     card: DockNotificationCardState,
