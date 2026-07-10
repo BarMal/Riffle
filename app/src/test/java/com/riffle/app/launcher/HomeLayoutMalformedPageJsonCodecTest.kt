@@ -15,7 +15,7 @@ class HomeLayoutMalformedPageJsonCodecTest {
                     {
                       "id": "broken",
                       "columns": 4,
-                      "rows": 5
+                      "items": []
                     },
                     {
                       "id": "valid",
