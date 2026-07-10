@@ -1,0 +1,391 @@
+package com.riffle.app.launcher
+
+import android.graphics.BitmapFactory
+import android.util.Base64
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import com.riffle.core.domain.launcher.apps.InstalledApp
+import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
+import com.riffle.core.domain.launcher.notifications.AppNotificationGroupKey
+import com.riffle.core.domain.launcher.notifications.LauncherNotification
+
+@Composable
+internal fun NotificationGroupPrototype(
+    group: AppNotificationGroup,
+    app: InstalledApp?,
+    appIconLoader: AppIconLoader,
+    onBack: () -> Unit,
+    onAction: (LauncherShellAction) -> Unit,
+) {
+    val listState = rememberLazyListState()
+    val focusedNotification =
+        notificationOverviewFocusedNotification(
+            notifications = group.notifications,
+            firstVisibleItemIndex = listState.firstVisibleItemIndex,
+        ) ?: return
+    val upcomingNotification =
+        group.notifications.getOrNull(listState.firstVisibleItemIndex.coerceAtLeast(0) + 1)
+    val swipeProgress =
+        notificationOverviewScrollProgress(
+            firstVisibleItemScrollOffset = listState.firstVisibleItemScrollOffset,
+            firstVisibleItemSize = listState.visibleItemSize(),
+        )
+    val label = notificationOverviewGroupLabel(app = app, group = group)
+
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        NotificationPrototypeActions(
+            group = group,
+            app = app,
+            onBack = onBack,
+            onAction = onAction,
+        )
+        NotificationPrototypeHero(
+            notification = focusedNotification,
+            upcomingNotification = upcomingNotification,
+            swipeProgress = swipeProgress,
+            group = group,
+            app = app,
+            appIconLoader = appIconLoader,
+            modifier = Modifier.weight(1f),
+        )
+        LazyColumn(
+            state = listState,
+            modifier =
+                Modifier
+                    .weight(1f)
+                    .fillMaxWidth(),
+            contentPadding = PaddingValues(vertical = 4.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            items(
+                items = group.notifications,
+                key = { notification -> notification.key.value },
+            ) { notification ->
+                NotificationPrototypeCard(
+                    notification = notification,
+                    label = label,
+                    onAction = onAction,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun NotificationPrototypeActions(
+    group: AppNotificationGroup,
+    app: InstalledApp?,
+    onBack: () -> Unit,
+    onAction: (LauncherShellAction) -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        TextButton(onClick = onBack) {
+            Text(text = "All apps")
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            app?.let { installedApp ->
+                TextButton(
+                    onClick = { onAction(LauncherShellAction.LaunchApp(installedApp.identity)) },
+                ) {
+                    Text(text = "Open app")
+                }
+            }
+            if (group.dismissibleNotificationKeys.isNotEmpty()) {
+                TextButton(
+                    onClick = {
+                        onAction(
+                            LauncherShellAction.DismissNotifications(
+                                group.dismissibleNotificationKeys,
+                            ),
+                        )
+                    },
+                ) {
+                    Text(text = "Clear all")
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun NotificationPrototypeHero(
+    notification: LauncherNotification,
+    upcomingNotification: LauncherNotification?,
+    swipeProgress: Float,
+    group: AppNotificationGroup,
+    app: InstalledApp?,
+    appIconLoader: AppIconLoader,
+    modifier: Modifier = Modifier,
+) {
+    val label = notificationOverviewGroupLabel(app = app, group = group)
+
+    Box(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(32.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant),
+    ) {
+        NotificationPrototypeHeroArt(
+            notification = notification,
+            label = label,
+            app = app,
+            appIconLoader = appIconLoader,
+            modifier = Modifier.fillMaxSize().alpha(1f - swipeProgress),
+        )
+        upcomingNotification?.let { next ->
+            NotificationPrototypeHeroArt(
+                notification = next,
+                label = label,
+                app = app,
+                appIconLoader = appIconLoader,
+                modifier = Modifier.fillMaxSize().alpha(swipeProgress),
+            )
+        }
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(
+                            colors =
+                                listOf(
+                                    MaterialTheme.colorScheme.surface.copy(alpha = 0f),
+                                    MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
+                                ),
+                        ),
+                    ),
+        )
+        Surface(
+            modifier =
+                Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(20.dp)
+                    .widthIn(max = 420.dp),
+            shape = RoundedCornerShape(24.dp),
+            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.84f),
+        ) {
+            Column(
+                modifier = Modifier.padding(horizontal = 18.dp, vertical = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                Text(
+                    text =
+                        notificationOverviewNotificationTitle(
+                            notification = notification,
+                            fallbackLabel = label,
+                        ),
+                    style = MaterialTheme.typography.headlineSmall,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    text =
+                        notificationOverviewNotificationBody(
+                            notification = notification,
+                            fallbackMetadata = group.notificationOverviewMetadataLabel(label),
+                        ),
+                    style = MaterialTheme.typography.bodyMedium,
+                    maxLines = 4,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun NotificationPrototypeHeroArt(
+    notification: LauncherNotification,
+    label: String,
+    app: InstalledApp?,
+    appIconLoader: AppIconLoader,
+    modifier: Modifier = Modifier,
+) {
+    val largeIcon =
+        remember(notification.largeIconPngBase64) {
+            notification.largeIconPngBase64?.decodeNotificationArtwork()
+        }
+
+    when {
+        largeIcon != null ->
+            Image(
+                bitmap = largeIcon,
+                contentDescription = "$label notification image",
+                contentScale = ContentScale.Crop,
+                modifier = modifier,
+            )
+
+        app != null ->
+            Box(
+                modifier = modifier,
+                contentAlignment = Alignment.Center,
+            ) {
+                LauncherAppIcon(
+                    identity = app.identity,
+                    label = app.label,
+                    iconLoader = appIconLoader,
+                    modifier =
+                        Modifier
+                            .widthIn(min = 112.dp)
+                            .defaultMinSize(minWidth = 112.dp, minHeight = 112.dp),
+                    shape = RoundedCornerShape(28.dp),
+                )
+            }
+
+        else ->
+            Box(
+                modifier = modifier,
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.headlineMedium,
+                )
+            }
+    }
+}
+
+@Composable
+private fun NotificationPrototypeCard(
+    notification: LauncherNotification,
+    label: String,
+    onAction: (LauncherShellAction) -> Unit,
+) {
+    Surface(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .widthIn(max = 520.dp)
+                .heightIn(min = 132.dp),
+        shape = RoundedCornerShape(28.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.72f),
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 20.dp, vertical = 18.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Text(
+                text =
+                    notificationOverviewNotificationTitle(
+                        notification = notification,
+                        fallbackLabel = label,
+                    ),
+                style = MaterialTheme.typography.titleMedium,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text =
+                    notificationOverviewNotificationBody(
+                        notification = notification,
+                        fallbackMetadata = notification.priority.label,
+                    ),
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = 4,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = "${notification.category.label} - ${notification.priority.label}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                if (notification.canDismiss) {
+                    TextButton(
+                        onClick = {
+                            onAction(
+                                LauncherShellAction.DismissNotifications(
+                                    listOf(notification.key),
+                                ),
+                            )
+                        },
+                    ) {
+                        Text(text = "Clear")
+                    }
+                }
+            }
+        }
+    }
+}
+
+internal fun notificationOverviewScrollProgress(
+    firstVisibleItemScrollOffset: Int,
+    firstVisibleItemSize: Int,
+): Float =
+    if (firstVisibleItemSize <= 0) {
+        0f
+    } else {
+        (firstVisibleItemScrollOffset.toFloat() / firstVisibleItemSize)
+            .coerceIn(0f, 1f)
+    }
+
+internal fun notificationOverviewNotificationTitle(
+    notification: LauncherNotification,
+    fallbackLabel: String,
+): String = notification.title.ifBlank { fallbackLabel }
+
+internal fun notificationOverviewNotificationBody(
+    notification: LauncherNotification,
+    fallbackMetadata: String,
+): String = notification.text.ifBlank { fallbackMetadata }
+
+internal val AppNotificationGroup.key: AppNotificationGroupKey
+    get() = AppNotificationGroupKey(packageName = packageName, profileId = profileId)
+
+private fun LazyListState.visibleItemSize(): Int =
+    layoutInfo.visibleItemsInfo
+        .firstOrNull { item -> item.index == firstVisibleItemIndex }
+        ?.size
+        ?: 0
+
+private fun String.decodeNotificationArtwork(): ImageBitmap? =
+    runCatching {
+        Base64.decode(this, Base64.DEFAULT)
+            .let { bytes -> BitmapFactory.decodeByteArray(bytes, 0, bytes.size) }
+            ?.asImageBitmap()
+    }.getOrNull()

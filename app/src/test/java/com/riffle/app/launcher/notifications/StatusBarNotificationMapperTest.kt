@@ -26,6 +26,9 @@ class StatusBarNotificationMapperTest {
                     category = Notification.CATEGORY_EMAIL,
                     priority = Notification.PRIORITY_HIGH,
                     canDismiss = true,
+                    title = "Work mail",
+                    text = "Inbox zero is gone",
+                    largeIconPngBase64 = "png-data",
                     postedAtEpochMillis = 42L,
                 ),
             )
@@ -37,6 +40,9 @@ class StatusBarNotificationMapperTest {
         assertEquals(NotificationCategory.EMAIL, notification.category)
         assertEquals(NotificationPriority.HIGH, notification.priority)
         assertEquals(true, notification.canDismiss)
+        assertEquals("Work mail", notification.title)
+        assertEquals("Inbox zero is gone", notification.text)
+        assertEquals("png-data", notification.largeIconPngBase64)
         assertEquals(42L, notification.postedAtEpochMillis)
     }
 

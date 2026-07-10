@@ -148,6 +148,73 @@ class NotificationOverviewSurfaceTest {
         )
     }
 
+    @Test
+    fun focusedNotificationUsesFirstVisibleNotification() {
+        val notifications =
+            listOf(
+                notification(key = "chat-1", title = "First"),
+                notification(key = "chat-2", title = "Second"),
+                notification(key = "chat-3", title = "Third"),
+            )
+
+        assertEquals(
+            LauncherNotificationKey("chat-2"),
+            notificationOverviewFocusedNotification(
+                notifications = notifications,
+                firstVisibleItemIndex = 1,
+            )?.key,
+        )
+    }
+
+    @Test
+    fun scrollProgressClampsToVisibleItemBounds() {
+        assertEquals(
+            0f,
+            notificationOverviewScrollProgress(
+                firstVisibleItemScrollOffset = 0,
+                firstVisibleItemSize = 200,
+            ),
+        )
+        assertEquals(
+            0.5f,
+            notificationOverviewScrollProgress(
+                firstVisibleItemScrollOffset = 100,
+                firstVisibleItemSize = 200,
+            ),
+        )
+        assertEquals(
+            1f,
+            notificationOverviewScrollProgress(
+                firstVisibleItemScrollOffset = 300,
+                firstVisibleItemSize = 200,
+            ),
+        )
+        assertEquals(
+            0f,
+            notificationOverviewScrollProgress(
+                firstVisibleItemScrollOffset = 10,
+                firstVisibleItemSize = 0,
+            ),
+        )
+    }
+
+    @Test
+    fun notificationCardTextFallsBackWhenPlatformContentIsBlank() {
+        val notification = notification(key = "chat-1", title = "", text = "")
+
+        assertEquals(
+            "Chat",
+            notificationOverviewNotificationTitle(notification = notification, fallbackLabel = "Chat"),
+        )
+        assertEquals(
+            "Message - Recent",
+            notificationOverviewNotificationBody(
+                notification = notification,
+                fallbackMetadata = "Message - Recent",
+            ),
+        )
+    }
+
     private fun notificationGroup(
         packageName: String,
         count: Int,
@@ -160,12 +227,29 @@ class NotificationOverviewSurfaceTest {
             latestAgeBucket = NotificationAgeBucket.RECENT,
             notifications =
                 (1..count).map { index ->
-                    LauncherNotification(
-                        key = LauncherNotificationKey("$packageName:$index"),
-                        packageName = AppPackageName(packageName),
+                    notification(
+                        key = "$packageName:$index",
+                        packageName = packageName,
                         category = latestCategory,
                         postedAtEpochMillis = index.toLong(),
                     )
                 },
+        )
+
+    private fun notification(
+        key: String,
+        packageName: String = "com.example.chat",
+        category: NotificationCategory = NotificationCategory.MESSAGE,
+        postedAtEpochMillis: Long = 1L,
+        title: String = "Message",
+        text: String = "Body",
+    ): LauncherNotification =
+        LauncherNotification(
+            key = LauncherNotificationKey(key),
+            packageName = AppPackageName(packageName),
+            category = category,
+            title = title,
+            text = text,
+            postedAtEpochMillis = postedAtEpochMillis,
         )
 }

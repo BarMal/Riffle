@@ -26,6 +26,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
+import com.riffle.core.domain.launcher.notifications.AppNotificationGroupKey
+import com.riffle.core.domain.launcher.notifications.LauncherNotification
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.notifications.NotificationAgeBucket
 import com.riffle.core.domain.launcher.notifications.NotificationCategory
@@ -41,18 +43,36 @@ fun NotificationOverviewSurface(
     title: String = "Notifications",
 ) {
     var selectedCategory by remember { mutableStateOf<NotificationCategory?>(null) }
+    var selectedGroupKey by remember { mutableStateOf<AppNotificationGroupKey?>(null) }
     val categoryOptions = notificationCategoryFilterOptions(groups)
     val effectiveSelectedCategory =
         selectedCategory.takeIf { category -> categoryOptions.any { option -> option.category == category } }
     val visibleGroups = notificationGroupsMatchingCategory(groups, effectiveSelectedCategory)
+    val selectedGroup =
+        selectedGroupKey?.let { key ->
+            visibleGroups.firstOrNull { group -> group.key == key }
+        }
+    val selectedApp = selectedGroup?.let { group -> apps.firstOrNull { app -> app.matches(group) } }
+    val panelTitle =
+        selectedGroup?.let { group ->
+            "${notificationOverviewGroupLabel(app = selectedApp, group = group)} (${group.count})"
+        } ?: notificationOverviewTitle(baseTitle = title, groups = groups)
 
     LauncherPanel(
-        title = notificationOverviewTitle(baseTitle = title, groups = groups),
+        title = panelTitle,
         onAction = onAction,
     ) {
         if (groups.isEmpty()) {
             EmptyNotifications(
                 notificationAccessStatus = notificationAccessStatus,
+                onAction = onAction,
+            )
+        } else if (selectedGroup != null) {
+            NotificationGroupPrototype(
+                group = selectedGroup,
+                app = selectedApp,
+                appIconLoader = appIconLoader,
+                onBack = { selectedGroupKey = null },
                 onAction = onAction,
             )
         } else {
@@ -78,6 +98,7 @@ fun NotificationOverviewSurface(
                         group = group,
                         app = apps.firstOrNull { app -> app.matches(group) },
                         appIconLoader = appIconLoader,
+                        onOpenGroup = { selectedGroupKey = group.key },
                         onAction = onAction,
                     )
                 }
@@ -113,7 +134,10 @@ internal fun notificationCategoryFilterOptions(groups: List<AppNotificationGroup
                     .thenBy { pair -> pair.first.label },
             )
             .map { (category, count) ->
-                NotificationCategoryOption(category = category, label = category.countLabel(count))
+                NotificationCategoryOption(
+                    category = category,
+                    label = "${category.label} $count",
+                )
             }
 
     return listOf(NotificationCategoryOption(category = null, label = "All $totalCount")) + categoryOptions
@@ -209,6 +233,7 @@ private fun NotificationGroupRow(
     group: AppNotificationGroup,
     app: InstalledApp?,
     appIconLoader: AppIconLoader,
+    onOpenGroup: () -> Unit,
     onAction: (LauncherShellAction) -> Unit,
 ) {
     Row(
@@ -252,6 +277,9 @@ private fun NotificationGroupRow(
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+        TextButton(onClick = onOpenGroup) {
+            Text(text = "View")
+        }
         if (group.dismissibleNotificationKeys.isNotEmpty()) {
             TextButton(
                 onClick = {
@@ -315,4 +343,9 @@ internal val NotificationCategory.label: String
             NotificationCategory.WORKOUT -> "Workout"
         }
 
-private fun NotificationCategory.countLabel(count: Int): String = "$label $count"
+internal fun notificationOverviewFocusedNotification(
+    notifications: List<LauncherNotification>,
+    firstVisibleItemIndex: Int,
+): LauncherNotification? =
+    notifications.getOrNull(firstVisibleItemIndex.coerceAtLeast(0))
+        ?: notifications.lastOrNull()

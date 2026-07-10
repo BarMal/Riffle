@@ -23,6 +23,9 @@ class ActiveNotificationJsonCodecTest {
                     category = NotificationCategory.MESSAGE,
                     priority = NotificationPriority.HIGH,
                     canDismiss = true,
+                    title = "Camera",
+                    text = "Rendering complete",
+                    largeIconPngBase64 = "png-data",
                     postedAtEpochMillis = 1_000L,
                 ),
             )
@@ -122,6 +125,26 @@ class ActiveNotificationJsonCodecTest {
             )
 
         assertEquals(false, notifications.single().canDismiss)
+    }
+
+    @Test
+    fun decodesMissingContentFieldsAsBlankOrNull() {
+        val notification =
+            decodeActiveNotifications(
+                """
+                [
+                    {
+                        "key": "legacy",
+                        "packageName": "com.riffle.legacy",
+                        "postedAtEpochMillis": 1000
+                    }
+                ]
+                """.trimIndent(),
+            ).single()
+
+        assertEquals("", notification.title)
+        assertEquals("", notification.text)
+        assertEquals(null, notification.largeIconPngBase64)
     }
 
     @Test
