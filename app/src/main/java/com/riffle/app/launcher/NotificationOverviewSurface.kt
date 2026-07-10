@@ -29,7 +29,6 @@ import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.notifications.NotificationAgeBucket
 import com.riffle.core.domain.launcher.notifications.NotificationCategory
-import com.riffle.core.domain.launcher.notifications.NotificationPriority
 
 @Composable
 fun NotificationOverviewSurface(
@@ -237,12 +236,13 @@ private fun NotificationGroupRow(
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.Center,
         ) {
+            val label = notificationOverviewGroupLabel(app = app, group = group)
             Text(
-                text = app?.label ?: group.packageName.value,
+                text = label,
                 style = MaterialTheme.typography.bodyLarge,
             )
             Text(
-                text = group.metadataLabel,
+                text = group.notificationOverviewMetadataLabel(label),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -267,9 +267,6 @@ private fun NotificationGroupRow(
 
 internal fun InstalledApp.matches(group: AppNotificationGroup): Boolean =
     identity.packageName == group.packageName && identity.profile.id == group.profileId
-
-private val AppNotificationGroup.metadataLabel: String
-    get() = "${packageName.value} - ${latestCategory.label} - ${highestPriority.label} - $clearableLabel"
 
 private val Map<NotificationCategory, Int>.summaryLabel: String
     get() =
@@ -319,24 +316,3 @@ internal val NotificationCategory.label: String
         }
 
 private fun NotificationCategory.countLabel(count: Int): String = "$label $count"
-
-private val AppNotificationGroup.clearableLabel: String
-    get() =
-        clearableCount.let { clearable ->
-            when {
-                clearable == 0 -> "Pinned"
-                clearable == count -> "Clearable $count/$count"
-                else -> "Clearable $clearable/$count"
-            }
-        }
-
-private val NotificationPriority.label: String
-    get() =
-        when (this) {
-            NotificationPriority.UNKNOWN -> "Priority unknown"
-            NotificationPriority.MIN -> "Min priority"
-            NotificationPriority.LOW -> "Low priority"
-            NotificationPriority.DEFAULT -> "Default priority"
-            NotificationPriority.HIGH -> "High priority"
-            NotificationPriority.MAX -> "Max priority"
-        }
