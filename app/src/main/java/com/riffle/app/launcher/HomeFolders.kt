@@ -38,10 +38,6 @@ import com.riffle.core.domain.launcher.home.FolderItem
 import com.riffle.core.domain.launcher.home.FolderItemMoveDirection
 import com.riffle.core.domain.launcher.home.HomeLabelSettings
 import com.riffle.core.domain.launcher.home.HomeLayout
-import com.riffle.core.domain.launcher.home.LauncherItem
-import com.riffle.core.domain.launcher.home.WidgetItem
-import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
-import com.riffle.core.domain.launcher.notifications.AppNotificationGroupKey
 
 @Composable
 @OptIn(ExperimentalFoundationApi::class)
@@ -267,27 +263,6 @@ fun HomeFolderEditControls(onAction: (LauncherShellAction) -> Unit) {
         }
     }
 }
-
-internal fun List<AppNotificationGroup>.notificationCountFor(item: LauncherItem): Int =
-    when (item) {
-        is AppShortcutItem ->
-            firstOrNull { group ->
-                AppNotificationGroupKey(
-                    packageName = item.appIdentity.packageName,
-                    profileId = item.appIdentity.profile.id,
-                ) == AppNotificationGroupKey(group.packageName, group.profileId)
-            }?.count ?: 0
-        is FolderItem ->
-            item.items.sumOf { shortcut ->
-                firstOrNull { group ->
-                    AppNotificationGroupKey(
-                        packageName = shortcut.appIdentity.packageName,
-                        profileId = shortcut.appIdentity.profile.id,
-                    ) == AppNotificationGroupKey(group.packageName, group.profileId)
-                }?.count ?: 0
-            }
-        is WidgetItem -> 0
-    }
 
 @Composable
 private fun FolderAppRow(
