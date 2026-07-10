@@ -155,7 +155,9 @@ class LauncherShellViewModel(
             ).copy(
                 notificationAccessStatus = notificationAccessStatus,
                 overlayDockPermissionStatus = overlayDockPermissionStatus,
-            ).also { state -> persistCompletedFirstRun(state, firstRunRepository) }
+            ).let { state ->
+                state.copy(searchSettingsResults = state.searchSettingsResults(state.searchQuery))
+            }.also { state -> persistCompletedFirstRun(state, firstRunRepository) }
     }
 
     fun onDefaultHomeRequestStarted() {
