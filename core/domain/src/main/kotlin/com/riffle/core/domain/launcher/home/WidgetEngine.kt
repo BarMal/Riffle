@@ -10,36 +10,48 @@ class WidgetEngine(
         preferredSpan: GridSpan = GridSpan(),
         targetCell: GridCell? = null,
     ): WidgetEditResult =
-        WidgetItem(
-            id = LauncherItemId("widget:${hostedWidgetId.value}"),
-            appWidgetId = hostedWidgetId,
-            label = label.ifBlank { DEFAULT_WIDGET_LABEL },
-        ).let { widget ->
-            preferredSpan
-                .placementCandidates()
-                .map { span ->
-                    span to
-                        if (targetCell == null) {
-                            gridPlacementEngine.placeItemInFirstAvailableCell(
-                                page = layout.selectedPage,
-                                item = widget,
-                                span = span,
-                            )
-                        } else {
-                            gridPlacementEngine.placeItem(
-                                page = layout.selectedPage,
-                                item = widget.withPlacement(GridPlacement(cell = targetCell, span = span)),
+        when {
+            layout.hasHostedWidget(hostedWidgetId) ->
+                WidgetEditResult.Rejected(PlacementRejectionReason.DUPLICATE_ITEM_ID)
+
+            else ->
+                WidgetItem(
+                    id = LauncherItemId("widget:${hostedWidgetId.value}"),
+                    appWidgetId = hostedWidgetId,
+                    label = label.ifBlank { DEFAULT_WIDGET_LABEL },
+                ).let { widget ->
+                    preferredSpan
+                        .placementCandidates()
+                        .map { span ->
+                            span to
+                                if (targetCell == null) {
+                                    gridPlacementEngine.placeItemInFirstAvailableCell(
+                                        page = layout.selectedPage,
+                                        item = widget,
+                                        span = span,
+                                    )
+                                } else {
+                                    gridPlacementEngine.placeItem(
+                                        page = layout.selectedPage,
+                                        item =
+                                            widget.withPlacement(
+                                                GridPlacement(cell = targetCell, span = span),
+                                            ),
+                                    )
+                                }
+                        }
+                        .firstOrNull { (_, result) -> result is PlaceLauncherItemResult.Placed }
+                        ?.let { (span, result) ->
+                            WidgetEditResult.Updated(
+                                layout =
+                                    layout.withUpdatedSelectedPage(
+                                        (result as PlaceLauncherItemResult.Placed).page,
+                                    ),
+                                placedSpan = span,
                             )
                         }
+                        ?: WidgetEditResult.Rejected(PlacementRejectionReason.NO_AVAILABLE_CELL)
                 }
-                .firstOrNull { (_, result) -> result is PlaceLauncherItemResult.Placed }
-                ?.let { (span, result) ->
-                    WidgetEditResult.Updated(
-                        layout = layout.withUpdatedSelectedPage((result as PlaceLauncherItemResult.Placed).page),
-                        placedSpan = span,
-                    )
-                }
-                ?: WidgetEditResult.Rejected(PlacementRejectionReason.NO_AVAILABLE_CELL)
         }
 
     fun resizeWidgetOnSelectedPage(
@@ -84,6 +96,12 @@ private fun GridSpan.coerceAtLeastOneCell(): GridSpan =
         columns = columns.coerceAtLeast(1),
         rows = rows.coerceAtLeast(1),
     )
+
+private fun HomeLayout.hasHostedWidget(hostedWidgetId: HostedWidgetId): Boolean =
+    pages
+        .flatMap { page -> page.items }
+        .filterIsInstance<WidgetItem>()
+        .any { widget -> widget.appWidgetId == hostedWidgetId }
 
 private fun GridSpan.placementCandidates(): List<GridSpan> =
     coerceAtLeastOneCell().let { preferredSpan ->

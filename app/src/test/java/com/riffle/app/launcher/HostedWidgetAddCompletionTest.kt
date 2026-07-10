@@ -109,6 +109,43 @@ class HostedWidgetAddCompletionTest {
     }
 
     @Test
+    fun reportsRejectionWhenHostedWidgetAlreadyExistsOnAnotherPage() {
+        val existingWidget =
+            WidgetItem(
+                id = LauncherItemId("widget:12"),
+                appWidgetId = HostedWidgetId(12),
+                label = "Existing",
+                placement = GridPlacement(GridCell(column = 0, row = 0)),
+            )
+        val existingPage = HomeLayoutDefaults.standard().selectedPage.copy(items = listOf(existingWidget))
+        val targetPage =
+            HomeLayoutDefaults.standard().selectedPage.copy(
+                id = com.riffle.core.domain.launcher.home.LauncherPageId("widgets"),
+            )
+        val initialLayout =
+            HomeLayoutDefaults.standard().copy(
+                pages = listOf(existingPage, targetPage),
+                selectedPageId = targetPage.id,
+            )
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                homeLayoutRepository = FakeHomeLayoutRepository(initialLayout),
+            )
+
+        val result =
+            viewModel.completeWidgetAdd(
+                LauncherShellAction.AddHostedWidgetToHome(
+                    hostedWidgetId = HostedWidgetId(12),
+                    label = "Weather",
+                ),
+            )
+
+        assertEquals(HostedWidgetAddCompletionResult.Rejected, result)
+        assertEquals(initialLayout, viewModel.state.value.homeLayout)
+    }
+
+    @Test
     fun completesHostedWidgetAddToDockAndClosesWidgetPicker() {
         val viewModel = LauncherShellViewModel(firstRunRepository = FakeFirstRunRepository())
         runBlocking {

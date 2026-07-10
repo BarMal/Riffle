@@ -16,6 +16,7 @@ internal fun LauncherShellViewModel.completeWidgetAdd(action: HostedWidgetAddAct
 private fun LauncherShellViewModel.completeHomeWidgetAdd(
     action: LauncherShellAction.AddHostedWidgetToHome,
 ): HostedWidgetAddCompletionResult {
+    val hadHostedWidgetBeforeAdd = state.value.homeLayout.hasHostedWidget(action.hostedWidgetId)
     val fittedAction =
         action.copy(
             preferredSpan =
@@ -24,7 +25,9 @@ private fun LauncherShellViewModel.completeHomeWidgetAdd(
                 ),
         )
     onHomeShortcutEdited(fittedAction)
-    val wasPlaced = state.value.homeLayout.hasHostedWidget(action.hostedWidgetId)
+    val wasPlaced =
+        !hadHostedWidgetBeforeAdd &&
+            state.value.homeLayout.selectedPageHasHostedWidget(action.hostedWidgetId)
     val adjustmentMessage =
         state.value.homeLayout.hostedWidgetSpanAdjustmentMessage(
             label = action.label,
@@ -98,6 +101,11 @@ private fun HomeLayout.hostedWidgetSpanAdjustmentMessage(
 private fun HomeLayout.hasHostedWidget(hostedWidgetId: HostedWidgetId): Boolean =
     pages
         .flatMap { page -> page.items }
+        .filterIsInstance<WidgetItem>()
+        .any { widget -> widget.appWidgetId == hostedWidgetId }
+
+private fun HomeLayout.selectedPageHasHostedWidget(hostedWidgetId: HostedWidgetId): Boolean =
+    selectedPage.items
         .filterIsInstance<WidgetItem>()
         .any { widget -> widget.appWidgetId == hostedWidgetId }
 
