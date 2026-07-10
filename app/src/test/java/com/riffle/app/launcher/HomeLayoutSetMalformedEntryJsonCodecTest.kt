@@ -45,10 +45,7 @@ class HomeLayoutSetMalformedEntryJsonCodecTest {
                         "viewMode": "CARD_INTERFACE",
                         "deviceClass": "PHONE"
                       },
-                      "layout": {
-                        "viewMode": "CARD_INTERFACE",
-                        "selectedPageId": "cards"
-                      }
+                      "layout": 1
                     }
                   ]
                 }

@@ -34,8 +34,9 @@ internal fun JSONObject.toHomeLayout(defaults: HomeLayout = HomeLayoutDefaults.s
     let { json ->
         val settings = json.optJSONObject("settings")?.toSettings(defaults.settings) ?: defaults.settings
         val pages =
-            json.getJSONArray("pages")
-                .toPages()
+            json.optJSONArray("pages")
+                ?.toPages()
+                .orEmpty()
                 .map { page -> page.copy(grid = settings.grid.dimensions) }
         val selectedPageId = LauncherPageId(json.optString("selectedPageId", defaults.selectedPageId.value))
         val safeSelectedPageId =
