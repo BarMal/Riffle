@@ -121,5 +121,5 @@ private fun JSONObject.toPage(): LauncherPage =
                 columns = getInt("columns"),
                 rows = getInt("rows"),
             ),
-        items = getJSONArray("items").toLauncherItems(),
+        items = optJSONArray("items")?.toLauncherItems().orEmpty(),
     )
