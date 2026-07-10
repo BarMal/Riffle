@@ -45,8 +45,11 @@ private fun LauncherShellViewModel.completeHomeWidgetAdd(
 private fun LauncherShellViewModel.completeDockWidgetAdd(
     action: LauncherShellAction.AddHostedWidgetToDock,
 ): HostedWidgetAddCompletionResult {
+    val hadHostedWidgetBeforeAdd = state.value.homeLayout.hasHostedWidget(action.hostedWidgetId)
     onDockEdited(action)
-    val wasPlaced = state.value.homeLayout.dock.hasHostedWidget(action.hostedWidgetId)
+    val wasPlaced =
+        !hadHostedWidgetBeforeAdd &&
+            state.value.homeLayout.dock.hasHostedWidget(action.hostedWidgetId)
     onAppActionSelected(LauncherShellAction.CloseWidgetPicker)
     return if (wasPlaced) {
         HostedWidgetAddCompletionResult.Placed(message = null)
@@ -99,8 +102,10 @@ private fun HomeLayout.hostedWidgetSpanAdjustmentMessage(
         }
 
 private fun HomeLayout.hasHostedWidget(hostedWidgetId: HostedWidgetId): Boolean =
-    pages
-        .flatMap { page -> page.items }
+    (
+        pages
+            .flatMap { page -> page.items } + dock.items
+    )
         .filterIsInstance<WidgetItem>()
         .any { widget -> widget.appWidgetId == hostedWidgetId }
 
