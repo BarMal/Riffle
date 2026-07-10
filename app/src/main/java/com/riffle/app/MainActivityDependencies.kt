@@ -75,6 +75,7 @@ internal class MainActivityDependencies(
                     screenWidthDp = activity.resources.configuration.screenWidthDp,
                     screenHeightDp = activity.resources.configuration.screenHeightDp,
                 ),
+            deleteHostedWidgetId = widgetHostGateway::deleteHostedWidgetId,
         )
 
     fun packageChangeObserver(refreshInstalledApps: () -> Unit): AndroidPackageChangeObserver =

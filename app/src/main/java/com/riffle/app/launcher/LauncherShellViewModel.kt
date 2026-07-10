@@ -269,7 +269,18 @@ class LauncherShellViewModel(
     }
 
     fun onHomePageEdited(action: LauncherShellAction) {
-        mutableState.value = homePageEditReducer.reduce(mutableState.value, action)
+        val previousState = mutableState.value
+        val removedHostedWidgetIds =
+            when (action) {
+                LauncherShellAction.DeleteSelectedHomePage -> previousState.homeLayout.selectedPageHostedWidgetIds()
+                else -> emptyList()
+            }
+
+        mutableState.value = homePageEditReducer.reduce(previousState, action)
+
+        if (action == LauncherShellAction.DeleteSelectedHomePage && mutableState.value != previousState) {
+            removedHostedWidgetIds.forEach(platformDependencies.deleteHostedWidgetId)
+        }
     }
 
     fun onDockEdited(action: LauncherShellAction) {
