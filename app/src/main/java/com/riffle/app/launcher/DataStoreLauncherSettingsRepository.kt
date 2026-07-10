@@ -22,8 +22,7 @@ class DataStoreLauncherSettingsRepository(context: Context) : LauncherSettingsRe
     private val dataStore = context.launcherSettingsDataStore
 
     override fun loadLauncherSettings(): LauncherSettings? =
-        readString(LauncherSettingsDataStoreKeys.launcherSettings)
-            ?.let { value -> runCatching { decodeLauncherSettings(value) }.getOrNull() }
+        decodeStoredLauncherSettings(readString(LauncherSettingsDataStoreKeys.launcherSettings))
 
     override fun saveLauncherSettings(settings: LauncherSettings) {
         writeString(
@@ -50,3 +49,6 @@ private object LauncherSettingsDataStoreKeys {
     const val PREFERENCES_NAME = "riffle_launcher_settings"
     val launcherSettings = stringPreferencesKey("launcher_settings")
 }
+
+internal fun decodeStoredLauncherSettings(value: String?): LauncherSettings? =
+    value?.let { encoded -> runCatching { decodeLauncherSettings(encoded) }.getOrNull() }
