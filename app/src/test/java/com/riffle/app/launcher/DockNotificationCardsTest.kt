@@ -155,13 +155,89 @@ class DockNotificationCardsTest {
         assertEquals(
             "Tap to open or clear",
             dockNotificationCardSummary(
-                notificationGroup(
-                    packageName = "com.example.chat",
-                    notifications =
-                        listOf(
-                            notification(packageName = "com.example.chat", key = "chat:1", canDismiss = true),
-                        ),
-                ),
+                group =
+                    notificationGroup(
+                        packageName = "com.example.chat",
+                        notifications =
+                            listOf(
+                                notification(packageName = "com.example.chat", key = "chat:1", canDismiss = true),
+                            ),
+                    ),
+                canLaunchApp = true,
+            ),
+        )
+    }
+
+    @Test
+    fun summaryUsesOpenCopyForPinnedLaunchableCards() {
+        assertEquals(
+            "Tap to open",
+            dockNotificationCardSummary(
+                group =
+                    notificationGroup(
+                        packageName = "com.example.chat",
+                        notifications =
+                            listOf(
+                                notification(packageName = "com.example.chat", key = "chat:1", canDismiss = false),
+                            ),
+                    ),
+                canLaunchApp = true,
+            ),
+        )
+    }
+
+    @Test
+    fun summaryDoesNotPromiseOpenWhenAppIsUnavailable() {
+        assertEquals(
+            "Clear notifications",
+            dockNotificationCardSummary(
+                group =
+                    notificationGroup(
+                        packageName = "com.example.chat",
+                        notifications =
+                            listOf(
+                                notification(packageName = "com.example.chat", key = "chat:1", canDismiss = true),
+                            ),
+                    ),
+                canLaunchApp = false,
+            ),
+        )
+    }
+
+    @Test
+    fun summaryExplainsPartialClearabilityWithoutLaunchAction() {
+        assertEquals(
+            "1 clearable of 2",
+            dockNotificationCardSummary(
+                group =
+                    notificationGroup(
+                        packageName = "com.example.chat",
+                        notifications =
+                            listOf(
+                                notification(packageName = "com.example.chat", key = "chat:1", canDismiss = true),
+                                notification(packageName = "com.example.chat", key = "chat:2", canDismiss = false),
+                            ),
+                    ),
+                canLaunchApp = false,
+            ),
+        )
+    }
+
+    @Test
+    fun summaryExplainsPartialClearabilityWithLaunchAction() {
+        assertEquals(
+            "Tap to open - 1 clearable of 2",
+            dockNotificationCardSummary(
+                group =
+                    notificationGroup(
+                        packageName = "com.example.chat",
+                        notifications =
+                            listOf(
+                                notification(packageName = "com.example.chat", key = "chat:1", canDismiss = true),
+                                notification(packageName = "com.example.chat", key = "chat:2", canDismiss = false),
+                            ),
+                    ),
+                canLaunchApp = true,
             ),
         )
     }

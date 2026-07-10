@@ -238,7 +238,11 @@ private fun DockNotificationCard(
                 NotificationCountBadge(count = card.group.count)
             }
             Text(
-                text = dockNotificationCardSummary(card.group),
+                text =
+                    dockNotificationCardSummary(
+                        group = card.group,
+                        canLaunchApp = identity != null,
+                    ),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 2,
@@ -290,10 +294,16 @@ private fun DockNotificationIcon(
     }
 }
 
-internal fun dockNotificationCardSummary(group: AppNotificationGroup): String =
+internal fun dockNotificationCardSummary(
+    group: AppNotificationGroup,
+    canLaunchApp: Boolean,
+): String =
     when {
+        canLaunchApp && group.clearableCount == 0 -> "Tap to open"
+        canLaunchApp && group.clearableCount == group.count -> "Tap to open or clear"
+        canLaunchApp -> "Tap to open - ${group.clearableCount} clearable of ${group.count}"
         group.clearableCount == 0 -> "Pinned notifications"
-        group.clearableCount == group.count -> "Tap to open or clear"
+        group.clearableCount == group.count -> "Clear notifications"
         else -> "${group.clearableCount} clearable of ${group.count}"
     }
 
