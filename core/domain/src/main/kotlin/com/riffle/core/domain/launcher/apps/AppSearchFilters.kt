@@ -2,7 +2,7 @@ package com.riffle.core.domain.launcher.apps
 
 data class AppSearchFilters(
     val content: Set<AppSearchContentFilter> = setOf(AppSearchContentFilter.APPS),
-    val profiles: Set<AppProfileType> = setOf(AppProfileType.PERSONAL),
+    val profiles: Set<AppProfileType> = AppProfileType.entries.toSet(),
 ) {
     fun withToggledContent(filter: AppSearchContentFilter): AppSearchFilters {
         return copy(content = content.toggled(filter))
