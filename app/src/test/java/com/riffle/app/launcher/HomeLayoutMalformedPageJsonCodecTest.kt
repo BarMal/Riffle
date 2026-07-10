@@ -13,8 +13,8 @@ class HomeLayoutMalformedPageJsonCodecTest {
                   "selectedPageId": "valid",
                   "pages": [
                     {
-                      "id": "broken",
                       "columns": 4,
+                      "rows": 5,
                       "items": []
                     },
                     {
