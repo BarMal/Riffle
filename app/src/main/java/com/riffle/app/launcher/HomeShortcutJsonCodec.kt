@@ -38,13 +38,19 @@ fun encodeShortcut(shortcut: AppShortcutItem): JSONObject =
 
 fun JSONArray.toLauncherItems(): List<LauncherItem> =
     (0 until length())
-        .map { index -> getJSONObject(index) }
-        .map { item -> item.toLauncherItem() }
+        .mapNotNull { index ->
+            optJSONObject(index)?.let { item ->
+                runCatching { item.toLauncherItem() }.getOrNull()
+            }
+        }
 
 fun JSONArray.toShortcuts(): List<AppShortcutItem> =
     (0 until length())
-        .map { index -> getJSONObject(index) }
-        .map { shortcut -> shortcut.toShortcut() }
+        .mapNotNull { index ->
+            optJSONObject(index)?.let { shortcut ->
+                runCatching { shortcut.toShortcut() }.getOrNull()
+            }
+        }
 
 private fun encodeFolder(folder: FolderItem): JSONObject =
     JSONObject()
