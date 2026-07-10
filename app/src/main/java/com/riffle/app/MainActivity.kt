@@ -37,7 +37,6 @@ import com.riffle.app.launcher.completeWidgetAdd
 import com.riffle.app.launcher.deleteHostedWidgetIdWhenRejected
 import com.riffle.app.launcher.failureMessage
 import com.riffle.app.launcher.fallbackWallpaperSourceAction
-import com.riffle.app.launcher.hostedWidgetIdForItem
 import com.riffle.app.launcher.isLauncherHomeIntent
 import com.riffle.app.launcher.notifications.AndroidNotificationDismissalGateway
 import com.riffle.app.launcher.refreshInstalledApps
@@ -185,10 +184,6 @@ class MainActivity : ComponentActivity() {
             editHomePage = shellViewModel::onHomePageEdited,
             editHomeShortcut = shellViewModel::onHomeShortcutEdited,
             editDock = shellViewModel::onDockEdited,
-            hostedWidgetIdForRemovedItem = { itemId ->
-                shellViewModel.state.value.homeLayout.hostedWidgetIdForItem(itemId)
-            },
-            deleteHostedWidget = widgetHostGateway::deleteHostedWidgetId,
         )
     }
     private val launcherActionRouter by lazy {

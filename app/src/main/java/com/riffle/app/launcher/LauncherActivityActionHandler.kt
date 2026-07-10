@@ -1,8 +1,6 @@
 package com.riffle.app.launcher
 
 import com.riffle.core.domain.launcher.ShellNavigationAction
-import com.riffle.core.domain.launcher.home.HostedWidgetId
-import com.riffle.core.domain.launcher.home.LauncherItemId
 
 internal class LauncherActivityActionHandler(
     private val requestDefaultHome: () -> Unit,
@@ -10,8 +8,6 @@ internal class LauncherActivityActionHandler(
     private val editHomePage: (LauncherShellAction) -> Unit,
     private val editHomeShortcut: (LauncherShellAction) -> Unit,
     private val editDock: (LauncherShellAction) -> Unit,
-    private val hostedWidgetIdForRemovedItem: (LauncherItemId) -> HostedWidgetId?,
-    private val deleteHostedWidget: (HostedWidgetId) -> Unit,
 ) {
     fun handle(action: LauncherShellAction): Boolean =
         when (val route = action.launcherActivityRoute()) {
@@ -37,17 +33,11 @@ internal class LauncherActivityActionHandler(
             }
 
             LauncherActivityRoute.HomeShortcutEdit -> {
-                if (action is LauncherShellAction.RemoveHomeShortcut) {
-                    hostedWidgetIdForRemovedItem(action.itemId)?.let(deleteHostedWidget)
-                }
                 editHomeShortcut(action)
                 true
             }
 
             LauncherActivityRoute.DockEdit -> {
-                if (action is LauncherShellAction.RemoveDockShortcut) {
-                    hostedWidgetIdForRemovedItem(action.itemId)?.let(deleteHostedWidget)
-                }
                 editDock(action)
                 true
             }

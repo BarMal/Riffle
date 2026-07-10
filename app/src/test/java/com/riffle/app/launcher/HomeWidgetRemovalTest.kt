@@ -55,6 +55,10 @@ class HomeWidgetRemovalTest {
 
         assertEquals(
             HostedWidgetId(43),
+            layout.dockHostedWidgetIdForItem(LauncherItemId("dock-widget:43")),
+        )
+        assertEquals(
+            HostedWidgetId(43),
             layout.hostedWidgetIdForItem(LauncherItemId("dock-widget:43")),
         )
     }

@@ -11,6 +11,12 @@ internal fun HomeLayout.selectedPageHostedWidgetIdForItem(itemId: LauncherItemId
         .firstOrNull { widget -> widget.id == itemId }
         ?.appWidgetId
 
+internal fun HomeLayout.dockHostedWidgetIdForItem(itemId: LauncherItemId): HostedWidgetId? =
+    dock.items
+        .filterIsInstance<WidgetItem>()
+        .firstOrNull { widget -> widget.id == itemId }
+        ?.appWidgetId
+
 internal fun HomeLayout.selectedPageHostedWidgetIds(): List<HostedWidgetId> =
     selectedPage.items
         .filterIsInstance<WidgetItem>()
@@ -18,7 +24,4 @@ internal fun HomeLayout.selectedPageHostedWidgetIds(): List<HostedWidgetId> =
 
 internal fun HomeLayout.hostedWidgetIdForItem(itemId: LauncherItemId): HostedWidgetId? =
     selectedPageHostedWidgetIdForItem(itemId)
-        ?: dock.items
-            .filterIsInstance<WidgetItem>()
-            .firstOrNull { widget -> widget.id == itemId }
-            ?.appWidgetId
+        ?: dockHostedWidgetIdForItem(itemId)
