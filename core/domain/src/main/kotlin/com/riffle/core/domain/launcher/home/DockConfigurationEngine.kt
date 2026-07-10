@@ -11,6 +11,16 @@ class DockConfigurationEngine {
             ),
         )
 
+    fun setDockNotificationCardsEnabled(
+        layout: HomeLayout,
+        enabled: Boolean,
+    ): DockEditResult =
+        DockEditResult.Updated(
+            layout.copy(
+                dock = layout.dock.copy(showNotificationCards = enabled),
+            ),
+        )
+
     fun setDockCapacity(
         layout: HomeLayout,
         capacity: Int,

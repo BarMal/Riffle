@@ -27,6 +27,7 @@ internal fun StandardHomeDockArea(
     val showDockShelf = isDockShelfExpanded && hasDockOverflow
     val notificationShelfState =
         dockNotificationShelfState(
+            showNotificationCards = layout.dock.showNotificationCards,
             groups = presentation.notificationGroupsByApp,
             notificationAccessStatus = presentation.notificationAccessStatus,
             apps = presentation.installedApps,

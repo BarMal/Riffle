@@ -61,6 +61,7 @@ private fun JSONObject.optViewMode(default: LauncherViewMode): LauncherViewMode 
 private fun encodeDock(dock: DockModel): JSONObject =
     JSONObject()
         .put("isEnabled", dock.isEnabled)
+        .put("showNotificationCards", dock.showNotificationCards)
         .put("iconSizeDp", dock.iconSizeDp)
         .put("backgroundAlphaPercent", dock.backgroundAlphaPercent)
         .put("backgroundSizing", dock.backgroundSizing.name)
@@ -71,6 +72,7 @@ private fun encodeDock(dock: DockModel): JSONObject =
 private fun JSONObject.toDock(defaults: DockModel): DockModel =
     DockModel(
         isEnabled = optBoolean("isEnabled", defaults.isEnabled),
+        showNotificationCards = optBoolean("showNotificationCards", defaults.showNotificationCards),
         iconSizeDp = optInt("iconSizeDp", defaults.iconSizeDp),
         backgroundAlphaPercent =
             optInt(

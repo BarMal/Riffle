@@ -126,6 +126,7 @@ class LauncherActivityRouteTest {
                     label = "Weather",
                 ),
                 LauncherShellAction.SelectDockEnabled(enabled = true),
+                LauncherShellAction.SelectDockNotificationCardsEnabled(enabled = false),
                 LauncherShellAction.SelectDockCapacity(capacity = 6),
                 LauncherShellAction.SelectDockIconSize(sizeDp = 52),
                 LauncherShellAction.SelectDockBackgroundAlpha(alphaPercent = 80),

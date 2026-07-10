@@ -31,6 +31,21 @@ class LauncherShellDockViewModelTest {
     }
 
     @Test
+    fun updatesDockNotificationCardsVisibilityAndSavesLayout() {
+        val repository = FakeHomeLayoutRepository()
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                homeLayoutRepository = repository,
+            )
+
+        viewModel.onDockEdited(LauncherShellAction.SelectDockNotificationCardsEnabled(enabled = false))
+
+        assertEquals(false, viewModel.state.value.homeLayout.dock.showNotificationCards)
+        assertEquals(viewModel.state.value.homeLayout, repository.savedLayout)
+    }
+
+    @Test
     fun updatesDockCapacityAndSavesLayout() {
         val repository = FakeHomeLayoutRepository()
         val viewModel =

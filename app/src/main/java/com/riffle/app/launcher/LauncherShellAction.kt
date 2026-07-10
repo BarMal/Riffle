@@ -148,6 +148,8 @@ sealed interface LauncherShellAction {
 
     data class SelectDockEnabled(val enabled: Boolean) : LauncherShellAction
 
+    data class SelectDockNotificationCardsEnabled(val enabled: Boolean) : LauncherShellAction
+
     data class SelectDockCapacity(val capacity: Int) : LauncherShellAction
 
     data class SelectDockIconSize(val sizeDp: Int) : LauncherShellAction
