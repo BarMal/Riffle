@@ -318,11 +318,18 @@ internal fun dockNotificationCardSummary(
 ): String =
     when {
         canLaunchApp && group.clearableCount == 0 -> "Tap to open"
-        canLaunchApp && group.clearableCount == group.count ->
-            "Tap to open or clear ${if (group.count == 1) "notification" else "notifications"}"
+        canLaunchApp && group.clearableCount == group.count -> {
+            val clearabilitySummary =
+                if (group.count == 1) {
+                    "Notification can be cleared"
+                } else {
+                    "All notifications can be cleared"
+                }
+            "Tap to open. $clearabilitySummary"
+        }
 
         canLaunchApp ->
-            "Tap to open - ${group.clearableCount} clearable of ${group.count} ${
+            "Tap to open. ${group.clearableCount} clearable of ${group.count} ${
                 if (group.count == 1) {
                     "notification"
                 } else {
@@ -332,7 +339,11 @@ internal fun dockNotificationCardSummary(
 
         group.clearableCount == 0 -> "Pinned ${if (group.count == 1) "notification" else "notifications"}"
         group.clearableCount == group.count ->
-            "Clear ${if (group.count == 1) "notification" else "notifications"}"
+            if (group.count == 1) {
+                "Notification can be cleared"
+            } else {
+                "All notifications can be cleared"
+            }
 
         else ->
             "${group.clearableCount} clearable of ${group.count} ${
