@@ -99,6 +99,7 @@ private fun PlacementRejectionReason.toFolderRejectionReason(): FolderEditReject
     when (this) {
         PlacementRejectionReason.MISSING_PLACEMENT -> FolderEditRejectionReason.MISSING_PLACEMENT
         PlacementRejectionReason.ITEM_NOT_FOUND -> FolderEditRejectionReason.ITEM_NOT_FOUND
+        PlacementRejectionReason.DUPLICATE_ITEM_ID -> FolderEditRejectionReason.DUPLICATE_ITEM
         PlacementRejectionReason.DUPLICATE_APP -> FolderEditRejectionReason.DUPLICATE_ITEM
         PlacementRejectionReason.DUPLICATE_APP_SHORTCUT -> FolderEditRejectionReason.DUPLICATE_ITEM
         PlacementRejectionReason.OUT_OF_BOUNDS -> FolderEditRejectionReason.OUT_OF_BOUNDS
