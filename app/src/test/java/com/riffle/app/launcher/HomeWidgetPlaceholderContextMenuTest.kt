@@ -89,4 +89,58 @@ class HomeWidgetPlaceholderContextMenuTest {
         assertEquals(false, items.single { item -> item.label == "Make taller" }.enabled)
         assertEquals(true, items.single { item -> item.label == "Make shorter" }.enabled)
     }
+
+    @Test
+    fun widgetPlaceholderMenuDisablesHorizontalResizeWhenAnotherItemWouldCollide() {
+        val widget =
+            WidgetItem(
+                id = LauncherItemId("widget"),
+                appWidgetId = HostedWidgetId(42),
+                label = "Calendar",
+                placement = GridPlacement(cell = GridCell(column = 0, row = 0)),
+            )
+        val blocker =
+            WidgetItem(
+                id = LauncherItemId("widget-2"),
+                appWidgetId = HostedWidgetId(43),
+                label = "Weather",
+                placement = GridPlacement(cell = GridCell(column = 1, row = 0)),
+            )
+
+        val items =
+            widgetPlaceholderContextMenuItems(
+                widget = widget,
+                grid = GridDimensions(columns = 3, rows = 3),
+                pageItems = listOf(widget, blocker),
+            )
+
+        assertEquals(false, items.single { item -> item.label == "Make wider" }.enabled)
+    }
+
+    @Test
+    fun widgetPlaceholderMenuDisablesVerticalResizeWhenAnotherItemWouldCollide() {
+        val widget =
+            WidgetItem(
+                id = LauncherItemId("widget"),
+                appWidgetId = HostedWidgetId(42),
+                label = "Calendar",
+                placement = GridPlacement(cell = GridCell(column = 0, row = 0)),
+            )
+        val blocker =
+            WidgetItem(
+                id = LauncherItemId("widget-2"),
+                appWidgetId = HostedWidgetId(43),
+                label = "Weather",
+                placement = GridPlacement(cell = GridCell(column = 0, row = 1)),
+            )
+
+        val items =
+            widgetPlaceholderContextMenuItems(
+                widget = widget,
+                grid = GridDimensions(columns = 3, rows = 3),
+                pageItems = listOf(widget, blocker),
+            )
+
+        assertEquals(false, items.single { item -> item.label == "Make taller" }.enabled)
+    }
 }
