@@ -30,7 +30,12 @@ import androidx.compose.ui.viewinterop.AndroidView
 import com.riffle.app.launcher.widgets.EmptyHomeWidgetViewFactory
 import com.riffle.app.launcher.widgets.HomeWidgetViewFactory
 import com.riffle.core.domain.launcher.home.GridDimensions
+import com.riffle.core.domain.launcher.home.GridPlacementEngine
 import com.riffle.core.domain.launcher.home.GridSpan
+import com.riffle.core.domain.launcher.home.LauncherItem
+import com.riffle.core.domain.launcher.home.LauncherPage
+import com.riffle.core.domain.launcher.home.LauncherPageId
+import com.riffle.core.domain.launcher.home.PlaceLauncherItemResult
 import com.riffle.core.domain.launcher.home.WidgetItem
 
 @Composable
@@ -85,12 +90,13 @@ internal fun HomeWidgetPlaceholder(
             WidgetEditHandles(
                 widget = widget,
                 grid = dragState?.grid,
+                pageItems = dragState?.pageItems ?: listOf(widget),
                 onAction = onAction,
             )
         }
         ShortcutContextMenu(
             expanded = isContextMenuExpanded.value,
-            items = widgetPlaceholderContextMenuItems(widget, dragState?.grid),
+            items = widgetPlaceholderContextMenuItems(widget, dragState?.grid, dragState?.pageItems ?: listOf(widget)),
             onDismissRequest = { isContextMenuExpanded.value = false },
             onAction = onAction,
         )
@@ -137,20 +143,9 @@ private fun BoxScope.WidgetGestureLayer(
 private fun BoxScope.WidgetEditHandles(
     widget: WidgetItem,
     grid: GridDimensions?,
+    pageItems: List<LauncherItem>,
     onAction: (LauncherShellAction) -> Unit,
 ) {
-    val currentPlacement = widget.placement
-    val canGrowColumns =
-        currentPlacement != null &&
-            grid != null &&
-            currentPlacement.cell.column + currentPlacement.span.columns < grid.columns
-    val canGrowRows =
-        currentPlacement != null &&
-            grid != null &&
-            currentPlacement.cell.row + currentPlacement.span.rows < grid.rows
-    val canShrinkColumns = (currentPlacement?.span?.columns ?: 1) > 1
-    val canShrinkRows = (currentPlacement?.span?.rows ?: 1) > 1
-
     RemoveShortcutButton(
         label = widget.label,
         onClick = { onAction(LauncherShellAction.RemoveHomeShortcut(widget.id)) },
@@ -159,28 +154,28 @@ private fun BoxScope.WidgetEditHandles(
         modifier = Modifier.align(Alignment.CenterEnd),
         label = "+",
         contentDescription = "Make ${widget.label} wider",
-        enabled = canGrowColumns,
+        enabled = widget.canResize(columnsDelta = 1, rowsDelta = 0, grid = grid, pageItems = pageItems),
         onClick = { onAction(widget.resizeAction(columnsDelta = 1, rowsDelta = 0)) },
     )
     WidgetResizeHandle(
         modifier = Modifier.align(Alignment.CenterStart),
         label = "-",
         contentDescription = "Make ${widget.label} narrower",
-        enabled = canShrinkColumns,
+        enabled = widget.canResize(columnsDelta = -1, rowsDelta = 0, grid = grid, pageItems = pageItems),
         onClick = { onAction(widget.resizeAction(columnsDelta = -1, rowsDelta = 0)) },
     )
     WidgetResizeHandle(
         modifier = Modifier.align(Alignment.BottomCenter),
         label = "+",
         contentDescription = "Make ${widget.label} taller",
-        enabled = canGrowRows,
+        enabled = widget.canResize(columnsDelta = 0, rowsDelta = 1, grid = grid, pageItems = pageItems),
         onClick = { onAction(widget.resizeAction(columnsDelta = 0, rowsDelta = 1)) },
     )
     WidgetResizeHandle(
         modifier = Modifier.align(Alignment.TopCenter),
         label = "-",
         contentDescription = "Make ${widget.label} shorter",
-        enabled = canShrinkRows,
+        enabled = widget.canResize(columnsDelta = 0, rowsDelta = -1, grid = grid, pageItems = pageItems),
         onClick = { onAction(widget.resizeAction(columnsDelta = 0, rowsDelta = -1)) },
     )
 }
@@ -229,34 +224,28 @@ private fun View.removeFromParent() {
 internal fun widgetPlaceholderContextMenuItems(
     widget: WidgetItem,
     grid: GridDimensions? = null,
+    pageItems: List<LauncherItem> = listOf(widget),
 ): List<ShortcutContextMenuItem> {
-    val currentPlacement = widget.placement
-    val currentSpan = currentPlacement?.span ?: GridSpan()
-
     return listOf(
         ShortcutContextMenuItem(
             label = "Make wider",
             action = widget.resizeAction(columnsDelta = 1, rowsDelta = 0),
-            enabled =
-                currentPlacement != null &&
-                    (grid == null || currentPlacement.cell.column + currentSpan.columns < grid.columns),
+            enabled = widget.canResize(columnsDelta = 1, rowsDelta = 0, grid = grid, pageItems = pageItems),
         ),
         ShortcutContextMenuItem(
             label = "Make narrower",
             action = widget.resizeAction(columnsDelta = -1, rowsDelta = 0),
-            enabled = currentSpan.columns > 1,
+            enabled = widget.canResize(columnsDelta = -1, rowsDelta = 0, grid = grid, pageItems = pageItems),
         ),
         ShortcutContextMenuItem(
             label = "Make taller",
             action = widget.resizeAction(columnsDelta = 0, rowsDelta = 1),
-            enabled =
-                currentPlacement != null &&
-                    (grid == null || currentPlacement.cell.row + currentSpan.rows < grid.rows),
+            enabled = widget.canResize(columnsDelta = 0, rowsDelta = 1, grid = grid, pageItems = pageItems),
         ),
         ShortcutContextMenuItem(
             label = "Make shorter",
             action = widget.resizeAction(columnsDelta = 0, rowsDelta = -1),
-            enabled = currentSpan.rows > 1,
+            enabled = widget.canResize(columnsDelta = 0, rowsDelta = -1, grid = grid, pageItems = pageItems),
         ),
         ShortcutContextMenuItem(
             label = "Remove from home",
@@ -281,5 +270,38 @@ private fun WidgetItem.resizeAction(
     )
 }
 
+private fun WidgetItem.canResize(
+    columnsDelta: Int,
+    rowsDelta: Int,
+    grid: GridDimensions?,
+    pageItems: List<LauncherItem>,
+): Boolean {
+    val placement = placement
+    val resizedSpan =
+        placement?.let { currentPlacement ->
+            GridSpan(
+                columns = currentPlacement.span.columns + columnsDelta,
+                rows = currentPlacement.span.rows + rowsDelta,
+            )
+        }
+
+    return when {
+        placement == null || resizedSpan == null -> false
+        grid == null -> resizedSpan.columns >= 1 && resizedSpan.rows >= 1
+        else ->
+            GridPlacementEngine().resizeItem(
+                page =
+                    LauncherPage(
+                        id = WIDGET_RESIZE_PREVIEW_PAGE_ID,
+                        grid = grid,
+                        items = pageItems,
+                    ),
+                itemId = id,
+                span = resizedSpan,
+            ) is PlaceLauncherItemResult.Placed
+    }
+}
+
 private const val WIDGET_RESIZE_HANDLE_SIZE_DP = 28
 private const val WIDGET_RESIZE_HANDLE_DISABLED_ALPHA = 0.38f
+private val WIDGET_RESIZE_PREVIEW_PAGE_ID = LauncherPageId("widget-resize-preview")

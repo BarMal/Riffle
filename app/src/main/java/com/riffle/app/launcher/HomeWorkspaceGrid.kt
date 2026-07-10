@@ -152,6 +152,7 @@ private fun RowScope.HomeGridCell(
                                 cellSize = state.cellSize,
                                 cellSizePx = state.cellSizePx,
                                 grid = state.page.grid,
+                                pageItems = state.page.items,
                                 isEditing = state.gridState.isEditing,
                                 activeDragSession = activeDragSession?.takeIf { session -> session.item.id == item.id },
                             ),
@@ -188,7 +189,13 @@ private fun HomeGridItem(
         is AppShortcutItem ->
             HomeShortcut(
                 shortcut = item,
-                dragState = HomeItemDragState(cell = state.cell, cellSizePx = state.cellSizePx, grid = state.grid),
+                dragState =
+                    HomeItemDragState(
+                        cell = state.cell,
+                        cellSizePx = state.cellSizePx,
+                        grid = state.grid,
+                        pageItems = state.pageItems,
+                    ),
                 isEditing = state.isEditing,
                 modifier = state.dragSourceModifier,
                 presentation =
@@ -205,7 +212,13 @@ private fun HomeGridItem(
             Box(modifier = state.dragSourceModifier.fillMaxSize()) {
                 HomeFolder(
                     folder = item,
-                    dragState = HomeItemDragState(cell = state.cell, cellSizePx = state.cellSizePx, grid = state.grid),
+                    dragState =
+                        HomeItemDragState(
+                            cell = state.cell,
+                            cellSizePx = state.cellSizePx,
+                            grid = state.grid,
+                            pageItems = state.pageItems,
+                        ),
                     isEditing = state.isEditing,
                     notificationCount = presentation.notificationGroupsByApp.notificationCountFor(item),
                     labelSettings = presentation.labelSettings,
@@ -231,7 +244,13 @@ private fun HomeGridItem(
                     widget = item,
                     isEditing = state.isEditing,
                     widgetViewFactory = presentation.widgetViewFactory,
-                    dragState = HomeItemDragState(cell = state.cell, cellSizePx = state.cellSizePx, grid = state.grid),
+                    dragState =
+                        HomeItemDragState(
+                            cell = state.cell,
+                            cellSizePx = state.cellSizePx,
+                            grid = state.grid,
+                            pageItems = state.pageItems,
+                        ),
                     workspaceActions = actions,
                     onAction = actions.onAction,
                 )
@@ -332,6 +351,7 @@ internal data class HomeGridItemState(
     val cellSize: Dp,
     val cellSizePx: Float,
     val grid: GridDimensions,
+    val pageItems: List<LauncherItem>,
     val isEditing: Boolean,
     val activeDragSession: HomeDragSession?,
 ) {

@@ -425,6 +425,7 @@ internal data class HomeItemDragState(
     val cell: GridCell,
     val cellSizePx: Float,
     val grid: GridDimensions,
+    val pageItems: List<LauncherItem>,
 )
 
 internal data class HomeWorkspaceActions(
