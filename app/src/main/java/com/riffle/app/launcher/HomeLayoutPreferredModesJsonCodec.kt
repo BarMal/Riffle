@@ -21,8 +21,9 @@ internal fun JSONObject.optPreferredModes(): Map<HomeLayoutDeviceClass, Launcher
 
 private fun JSONArray.toPreferredModes(): Map<HomeLayoutDeviceClass, LauncherViewMode> =
     (0 until length())
-        .map { index -> getJSONObject(index) }
-        .mapNotNull { entry -> entry.toPreferredModeEntry() }
+        .mapNotNull { index ->
+            optJSONObject(index)?.toPreferredModeEntry()
+        }
         .toMap()
 
 private fun JSONObject.toPreferredModeEntry(): Pair<HomeLayoutDeviceClass, LauncherViewMode>? {
