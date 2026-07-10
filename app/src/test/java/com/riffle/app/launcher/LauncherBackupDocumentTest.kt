@@ -173,27 +173,27 @@ class LauncherBackupDocumentTest {
     }
 
     @Test
-    fun rejectsBackupWithStringExportedAtEpochMillis() {
+    fun ignoresStringExportedAtEpochMillis() {
         val value =
             backupDocumentJson()
                 .put("exportedAtEpochMillis", "987654")
                 .toString()
 
-        assertThrows(IllegalArgumentException::class.java) {
-            decodeLauncherBackupDocument(value)
-        }
+        val decodedDocument = decodeLauncherBackupDocument(value)
+
+        assertEquals(null, decodedDocument.exportedAtEpochMillis)
     }
 
     @Test
-    fun rejectsBackupWithObjectExportedAtEpochMillis() {
+    fun ignoresObjectExportedAtEpochMillis() {
         val value =
             backupDocumentJson()
                 .put("exportedAtEpochMillis", JSONObject().put("value", 987_654L))
                 .toString()
 
-        assertThrows(IllegalArgumentException::class.java) {
-            decodeLauncherBackupDocument(value)
-        }
+        val decodedDocument = decodeLauncherBackupDocument(value)
+
+        assertEquals(null, decodedDocument.exportedAtEpochMillis)
     }
 
     @Test

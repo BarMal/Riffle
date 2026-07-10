@@ -57,7 +57,7 @@ private fun JSONObject.optLongOrNull(name: String): Long? =
     when {
         !has(name) || isNull(name) -> null
         get(name) is Number -> getLong(name)
-        else -> throw IllegalArgumentException("Launcher backup $name must be numeric")
+        else -> null
     }
 
 private fun JSONObject.optHiddenAppIdentities(): Set<AppIdentity> =
