@@ -167,6 +167,67 @@ class HostedWidgetAddCompletionTest {
     }
 
     @Test
+    fun reportsRejectionWhenHostedWidgetAlreadyExistsInDock() {
+        val existingWidget =
+            WidgetItem(
+                id = LauncherItemId("dock-widget:14"),
+                appWidgetId = HostedWidgetId(14),
+                label = "Existing",
+            )
+        val initialLayout =
+            HomeLayoutDefaults.standard().copy(
+                dock = HomeLayoutDefaults.standard().dock.copy(items = listOf(existingWidget)),
+            )
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                homeLayoutRepository = FakeHomeLayoutRepository(initialLayout),
+            )
+
+        val result =
+            viewModel.completeWidgetAdd(
+                LauncherShellAction.AddHostedWidgetToDock(
+                    hostedWidgetId = HostedWidgetId(14),
+                    label = "Weather",
+                ),
+            )
+
+        assertEquals(HostedWidgetAddCompletionResult.Rejected, result)
+        assertEquals(initialLayout, viewModel.state.value.homeLayout)
+    }
+
+    @Test
+    fun reportsRejectionWhenDockHostedWidgetIdAlreadyExistsOnHomePage() {
+        val existingWidget =
+            WidgetItem(
+                id = LauncherItemId("widget:16"),
+                appWidgetId = HostedWidgetId(16),
+                label = "Existing",
+                placement = GridPlacement(GridCell(column = 0, row = 0)),
+            )
+        val initialLayout =
+            HomeLayoutDefaults.standard().copy(
+                pages = listOf(HomeLayoutDefaults.standard().selectedPage.copy(items = listOf(existingWidget))),
+            )
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                homeLayoutRepository = FakeHomeLayoutRepository(initialLayout),
+            )
+
+        val result =
+            viewModel.completeWidgetAdd(
+                LauncherShellAction.AddHostedWidgetToDock(
+                    hostedWidgetId = HostedWidgetId(16),
+                    label = "Weather",
+                ),
+            )
+
+        assertEquals(HostedWidgetAddCompletionResult.Rejected, result)
+        assertEquals(initialLayout, viewModel.state.value.homeLayout)
+    }
+
+    @Test
     fun completingHostedWidgetAddToDockSavesLayout() {
         val repository = RecordingHomeLayoutRepository()
         val viewModel =

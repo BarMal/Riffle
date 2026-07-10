@@ -186,6 +186,36 @@ class WidgetEngineTest {
     }
 
     @Test
+    fun rejectsWidgetWhenHostedWidgetIdAlreadyExistsInDock() {
+        val layout =
+            HomeLayoutDefaults.standard().copy(
+                dock =
+                    DockModel(
+                        capacity = 1,
+                        items =
+                            listOf(
+                                WidgetItem(
+                                    id = LauncherItemId("dock-widget:42"),
+                                    appWidgetId = HostedWidgetId(42),
+                                    label = "Existing",
+                                ),
+                            ),
+                    ),
+            )
+
+        val result =
+            engine.addWidgetToSelectedPage(
+                layout = layout,
+                hostedWidgetId = HostedWidgetId(42),
+                label = "Weather",
+            )
+
+        val rejected = assertIs<WidgetEditResult.Rejected>(result)
+        assertEquals(PlacementRejectionReason.DUPLICATE_ITEM_ID, rejected.reason)
+        assertEquals(emptyList<WidgetItem>(), layout.selectedPage.items.filterIsInstance<WidgetItem>())
+    }
+
+    @Test
     fun resizesWidgetOnSelectedPage() {
         val widget =
             WidgetItem(

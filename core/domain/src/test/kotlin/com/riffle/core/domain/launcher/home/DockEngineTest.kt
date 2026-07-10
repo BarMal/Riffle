@@ -108,6 +108,31 @@ class DockEngineTest {
     }
 
     @Test
+    fun rejectsDockWidgetWhenHostedWidgetIdAlreadyExistsOnHomePage() {
+        val existingWidget =
+            WidgetItem(
+                id = LauncherItemId("widget:7"),
+                appWidgetId = HostedWidgetId(7),
+                label = "Existing",
+                placement = GridPlacement(cell = GridCell(column = 0, row = 0)),
+            )
+        val layout =
+            HomeLayoutDefaults.standard().copy(
+                pages = listOf(HomeLayoutDefaults.standard().selectedPage.copy(items = listOf(existingWidget))),
+            )
+
+        val result =
+            engine.addWidgetToDock(
+                layout = layout,
+                hostedWidgetId = HostedWidgetId(7),
+                label = "Weather",
+            )
+
+        val rejected = assertIs<DockEditResult.Rejected>(result)
+        assertEquals(DockEditRejectionReason.DUPLICATE_WIDGET, rejected.reason)
+    }
+
+    @Test
     fun removesDockItem() {
         val shortcut = appShortcut(id = "phone")
         val layout = HomeLayoutDefaults.standard().copy(dock = DockModel(capacity = 5, items = listOf(shortcut)))

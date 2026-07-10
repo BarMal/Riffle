@@ -98,8 +98,10 @@ private fun GridSpan.coerceAtLeastOneCell(): GridSpan =
     )
 
 private fun HomeLayout.hasHostedWidget(hostedWidgetId: HostedWidgetId): Boolean =
-    pages
-        .flatMap { page -> page.items }
+    (
+        pages
+            .flatMap { page -> page.items } + dock.items
+    )
         .filterIsInstance<WidgetItem>()
         .any { widget -> widget.appWidgetId == hostedWidgetId }
 

@@ -31,7 +31,7 @@ class DockEngine {
         label: String,
     ): DockEditResult =
         when {
-            layout.dock.containsHostedWidget(hostedWidgetId) ->
+            layout.containsHostedWidget(hostedWidgetId) ->
                 DockEditResult.Rejected(DockEditRejectionReason.DUPLICATE_WIDGET)
 
             else ->
@@ -135,8 +135,11 @@ class DockEngine {
                 .toList()
         }
 
-    private fun DockModel.containsHostedWidget(hostedWidgetId: HostedWidgetId): Boolean =
-        items
+    private fun HomeLayout.containsHostedWidget(hostedWidgetId: HostedWidgetId): Boolean =
+        (
+            pages
+                .flatMap { page -> page.items } + dock.items
+        )
             .filterIsInstance<WidgetItem>()
             .any { widget -> widget.appWidgetId == hostedWidgetId }
 }
