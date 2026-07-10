@@ -153,7 +153,7 @@ class DockNotificationCardsTest {
     @Test
     fun summaryMatchesNewInlineClearAction() {
         assertEquals(
-            "Tap to open or clear",
+            "Tap to open or clear notification",
             dockNotificationCardSummary(
                 group =
                     notificationGroup(
@@ -189,7 +189,7 @@ class DockNotificationCardsTest {
     @Test
     fun summaryDoesNotPromiseOpenWhenAppIsUnavailable() {
         assertEquals(
-            "Clear notifications",
+            "Clear notification",
             dockNotificationCardSummary(
                 group =
                     notificationGroup(
@@ -205,9 +205,27 @@ class DockNotificationCardsTest {
     }
 
     @Test
+    fun summaryUsesSingularPinnedCopyWhenAppIsUnavailable() {
+        assertEquals(
+            "Pinned notification",
+            dockNotificationCardSummary(
+                group =
+                    notificationGroup(
+                        packageName = "com.example.chat",
+                        notifications =
+                            listOf(
+                                notification(packageName = "com.example.chat", key = "chat:1", canDismiss = false),
+                            ),
+                    ),
+                canLaunchApp = false,
+            ),
+        )
+    }
+
+    @Test
     fun summaryExplainsPartialClearabilityWithoutLaunchAction() {
         assertEquals(
-            "1 clearable of 2",
+            "1 clearable of 2 notifications",
             dockNotificationCardSummary(
                 group =
                     notificationGroup(
@@ -226,7 +244,7 @@ class DockNotificationCardsTest {
     @Test
     fun summaryExplainsPartialClearabilityWithLaunchAction() {
         assertEquals(
-            "Tap to open - 1 clearable of 2",
+            "Tap to open - 1 clearable of 2 notifications",
             dockNotificationCardSummary(
                 group =
                     notificationGroup(
@@ -245,7 +263,7 @@ class DockNotificationCardsTest {
     @Test
     fun cardContentDescriptionIncludesCountStateAndActionHint() {
         assertEquals(
-            "Chat. 2 notifications. Message, Recent. Tap to open - 1 clearable of 2",
+            "Chat. 2 notifications. Message, Recent. Tap to open - 1 clearable of 2 notifications",
             dockNotificationCardContentDescription(
                 card =
                     DockNotificationCardState(
@@ -264,6 +282,32 @@ class DockNotificationCardsTest {
                                             packageName = "com.example.chat",
                                             key = "chat:2",
                                             canDismiss = false,
+                                        ),
+                                    ),
+                            ),
+                    ),
+                label = "Chat",
+            ),
+        )
+    }
+
+    @Test
+    fun cardContentDescriptionUsesSingularNotificationCount() {
+        assertEquals(
+            "Chat. 1 notification. Message, Recent. Tap to open or clear notification",
+            dockNotificationCardContentDescription(
+                card =
+                    DockNotificationCardState(
+                        app = installedApp(label = "Chat", packageName = "com.example.chat"),
+                        group =
+                            notificationGroup(
+                                packageName = "com.example.chat",
+                                notifications =
+                                    listOf(
+                                        notification(
+                                            packageName = "com.example.chat",
+                                            key = "chat:1",
+                                            canDismiss = true,
                                         ),
                                     ),
                             ),
