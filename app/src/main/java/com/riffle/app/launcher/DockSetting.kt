@@ -17,10 +17,12 @@ import com.riffle.core.domain.launcher.home.MAX_DOCK_ITEM_SPACING_DP
 import com.riffle.core.domain.launcher.home.MIN_DOCK_BACKGROUND_ALPHA_PERCENT
 import com.riffle.core.domain.launcher.home.MIN_DOCK_ICON_SIZE_DP
 import com.riffle.core.domain.launcher.home.MIN_DOCK_ITEM_SPACING_DP
+import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 
 @Composable
 internal fun DockSetting(
     dock: DockModel,
+    notificationAccessStatus: NotificationAccessStatus,
     onAction: (LauncherShellAction) -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -30,6 +32,7 @@ internal fun DockSetting(
         )
         DockNotificationCardsSetting(
             enabled = dock.showNotificationCards,
+            notificationAccessStatus = notificationAccessStatus,
             onAction = onAction,
         )
         DockCapacitySetting(
@@ -250,17 +253,29 @@ private fun DockCapacitySetting(
 @Composable
 private fun DockNotificationCardsSetting(
     enabled: Boolean,
+    notificationAccessStatus: NotificationAccessStatus,
     onAction: (LauncherShellAction) -> Unit,
 ) {
     SettingsSwitchRow(
         title = "Expanded dock cards",
-        subtitle =
-            if (enabled) {
-                "Expanded dock can show notification cards"
-            } else {
-                "Expanded dock only shows shortcuts and widgets"
-            },
+        subtitle = dockNotificationCardsSettingSubtitle(enabled, notificationAccessStatus),
         checked = enabled,
         onCheckedChange = { value -> onAction(LauncherShellAction.SelectDockNotificationCardsEnabled(value)) },
     )
+}
+
+internal fun dockNotificationCardsSettingSubtitle(
+    enabled: Boolean,
+    notificationAccessStatus: NotificationAccessStatus,
+): String {
+    if (!enabled) {
+        return "Expanded dock only shows shortcuts and widgets"
+    }
+
+    return when (notificationAccessStatus) {
+        NotificationAccessStatus.GRANTED -> "Expanded dock can show notification cards"
+        NotificationAccessStatus.NOT_GRANTED -> "Notification cards are on, but access is not allowed"
+        NotificationAccessStatus.REVOKED -> "Notification cards are on, but access was revoked"
+        NotificationAccessStatus.UNKNOWN -> "Notification cards are on, but access has not been checked"
+    }
 }
