@@ -194,6 +194,7 @@ class WidgetPickerDialogTest {
         val clock = widgetProvider(label = "Clock", packageName = "com.example.clock", className = ".ClockWidget")
 
         assertEquals(listOf(weather), listOf(weather, clock).filteredWidgetProviders("weather 120x80"))
+        assertEquals(listOf(weather), listOf(weather, clock).filteredWidgetProviders("weather 120x80dp"))
     }
 
     @Test
