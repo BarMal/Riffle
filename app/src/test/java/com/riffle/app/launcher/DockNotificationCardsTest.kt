@@ -242,6 +242,56 @@ class DockNotificationCardsTest {
         )
     }
 
+    @Test
+    fun cardContentDescriptionIncludesCountStateAndActionHint() {
+        assertEquals(
+            "Chat. 2 notifications. Message, Recent. Tap to open - 1 clearable of 2",
+            dockNotificationCardContentDescription(
+                card =
+                    DockNotificationCardState(
+                        app = installedApp(label = "Chat", packageName = "com.example.chat"),
+                        group =
+                            notificationGroup(
+                                packageName = "com.example.chat",
+                                notifications =
+                                    listOf(
+                                        notification(
+                                            packageName = "com.example.chat",
+                                            key = "chat:1",
+                                            canDismiss = true,
+                                        ),
+                                        notification(
+                                            packageName = "com.example.chat",
+                                            key = "chat:2",
+                                            canDismiss = false,
+                                        ),
+                                    ),
+                            ),
+                    ),
+                label = "Chat",
+            ),
+        )
+    }
+
+    @Test
+    fun permissionPromptContentDescriptionIncludesActionLabel() {
+        assertEquals(
+            "Notifications. Notification access was revoked. Open notification access",
+            dockNotificationPermissionPromptContentDescription(
+                label = "Notification access was revoked",
+                actionLabel = "Open notification access",
+            ),
+        )
+    }
+
+    @Test
+    fun clearButtonContentDescriptionIsSpecificToTheCard() {
+        assertEquals(
+            "Clear Chat notifications",
+            dockNotificationClearContentDescription("Chat"),
+        )
+    }
+
     private fun installedApp(
         label: String,
         packageName: String,
