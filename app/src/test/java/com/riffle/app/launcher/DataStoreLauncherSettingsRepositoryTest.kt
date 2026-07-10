@@ -47,4 +47,35 @@ class DataStoreLauncherSettingsRepositoryTest {
 
         assertEquals(WallpaperSource.SOLID_COLOR, decodedSettings?.appearance?.wallpaper?.source)
     }
+
+    @Test
+    fun decodeStoredLauncherSettingsIgnoresMalformedOverlayDockItems() {
+        val decodedSettings =
+            decodeStoredLauncherSettings(
+                """
+                {
+                  "overlayDock": {
+                    "enabled": true,
+                    "items": [
+                      {
+                        "type": "shortcut",
+                        "id": "floating-dock:camera:1",
+                        "label": "Camera",
+                        "packageName": "com.example.camera",
+                        "activityName": ".CameraActivity"
+                      },
+                      {
+                        "type": "shortcut",
+                        "id": "floating-dock:broken:2",
+                        "label": "Broken"
+                      }
+                    ]
+                  }
+                }
+                """.trimIndent(),
+            )
+
+        assertEquals(1, decodedSettings?.overlayDock?.items?.size)
+        assertEquals("Camera", decodedSettings?.overlayDock?.items?.singleOrNull()?.label)
+    }
 }
