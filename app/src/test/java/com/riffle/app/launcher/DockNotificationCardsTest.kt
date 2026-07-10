@@ -329,10 +329,24 @@ class DockNotificationCardsTest {
     }
 
     @Test
-    fun clearButtonContentDescriptionIsSpecificToTheCard() {
+    fun clearButtonContentDescriptionUsesSingularCopyForSingleClearableNotification() {
+        assertEquals(
+            "Clear Chat notification",
+            dockNotificationClearContentDescription(
+                label = "Chat",
+                clearableCount = 1,
+            ),
+        )
+    }
+
+    @Test
+    fun clearButtonContentDescriptionUsesPluralCopyForMultipleClearableNotifications() {
         assertEquals(
             "Clear Chat notifications",
-            dockNotificationClearContentDescription("Chat"),
+            dockNotificationClearContentDescription(
+                label = "Chat",
+                clearableCount = 2,
+            ),
         )
     }
 
