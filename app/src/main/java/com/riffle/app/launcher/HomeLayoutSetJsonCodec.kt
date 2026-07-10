@@ -55,8 +55,11 @@ internal fun JSONObject.toHomeLayoutSet(): HomeLayoutSet {
 
 private fun JSONArray.toHomeLayoutEntries(): List<Pair<HomeLayoutKey, HomeLayout>> =
     (0 until length())
-        .map { index -> getJSONObject(index) }
-        .map { entry -> entry.toHomeLayoutEntry() }
+        .mapNotNull { index ->
+            optJSONObject(index)?.let { entry ->
+                runCatching { entry.toHomeLayoutEntry() }.getOrNull()
+            }
+        }
 
 private fun JSONObject.toHomeLayoutEntry(): Pair<HomeLayoutKey, HomeLayout> {
     val key = getJSONObject("key").toLayoutKey()

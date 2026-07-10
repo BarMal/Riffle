@@ -105,8 +105,11 @@ private fun encodePage(page: LauncherPage): JSONObject =
 
 private fun JSONArray.toPages(): List<LauncherPage> =
     (0 until length())
-        .map { index -> getJSONObject(index) }
-        .map { page -> page.toPage() }
+        .mapNotNull { index ->
+            optJSONObject(index)?.let { page ->
+                runCatching { page.toPage() }.getOrNull()
+            }
+        }
 
 private fun JSONObject.toPage(): LauncherPage =
     LauncherPage(
