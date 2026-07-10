@@ -20,6 +20,6 @@ fun JSONObject.toWidget(): WidgetItem =
     WidgetItem(
         id = LauncherItemId(getString("id")),
         appWidgetId = HostedWidgetId(getInt("appWidgetId")),
-        label = getString("label"),
+        label = optString("label", ""),
         placement = toPlacementOrNull(),
     )
