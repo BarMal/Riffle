@@ -1,6 +1,7 @@
 package com.riffle.app.launcher
 
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
+import com.riffle.core.domain.launcher.home.HostedWidgetId
 import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.home.LauncherViewModeAvailability
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationRepository
@@ -15,6 +16,7 @@ data class LauncherShellPlatformDependencies(
     val loadInitialPlatformState: Boolean = false,
     val initialHomeLayoutDeviceClass: HomeLayoutDeviceClass? = null,
     val viewModeAvailability: LauncherViewModeAvailability = defaultLauncherViewModeAvailability(),
+    val deleteHostedWidgetId: (HostedWidgetId) -> Unit = {},
 ) {
     fun installedWidgetProviders(catalog: WidgetProviderCatalog): List<InstalledWidgetProvider> =
         catalog.sortedProviders(widgetProviderRepository.installedWidgetProviders())

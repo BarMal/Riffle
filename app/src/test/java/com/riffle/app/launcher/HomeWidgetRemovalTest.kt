@@ -60,6 +60,35 @@ class HomeWidgetRemovalTest {
     }
 
     @Test
+    fun listsHostedWidgetIdsForSelectedPage() {
+        val weather =
+            WidgetItem(
+                id = LauncherItemId("widget:42"),
+                appWidgetId = HostedWidgetId(42),
+                label = "Weather",
+                placement = GridPlacement(GridCell(column = 0, row = 0)),
+            )
+        val calendar =
+            WidgetItem(
+                id = LauncherItemId("widget:43"),
+                appWidgetId = HostedWidgetId(43),
+                label = "Calendar",
+                placement = GridPlacement(GridCell(column = 1, row = 0)),
+            )
+        val layout =
+            HomeLayoutDefaults.standard().let { defaultLayout ->
+                defaultLayout.copy(
+                    pages =
+                        defaultLayout.pages.map { page ->
+                            page.copy(items = listOf(weather, calendar))
+                        },
+                )
+            }
+
+        assertEquals(listOf(HostedWidgetId(42), HostedWidgetId(43)), layout.selectedPageHostedWidgetIds())
+    }
+
+    @Test
     fun ignoresMissingItems() {
         val layout = HomeLayoutDefaults.standard()
 
