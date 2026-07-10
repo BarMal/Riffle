@@ -250,11 +250,7 @@ private fun DockNotificationCard(
                 NotificationCountBadge(count = card.group.count)
             }
             Text(
-                text =
-                    dockNotificationCardSummary(
-                        group = card.group,
-                        canLaunchApp = identity != null,
-                    ),
+                text = dockNotificationCardSummary(group = card.group, canLaunchApp = identity != null),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 2,
@@ -267,7 +263,8 @@ private fun DockNotificationCard(
                     TextButton(
                         modifier =
                             Modifier.semantics {
-                                contentDescription = dockNotificationClearContentDescription(label)
+                                contentDescription =
+                                    dockNotificationClearContentDescription(label, card.group.clearableCount)
                             },
                         onClick = { onAction(clearAction) },
                     ) {
@@ -367,7 +364,10 @@ internal fun dockNotificationPermissionPromptContentDescription(
     actionLabel: String,
 ): String = "Notifications. $label. $actionLabel"
 
-internal fun dockNotificationClearContentDescription(label: String): String = "Clear $label notifications"
+internal fun dockNotificationClearContentDescription(
+    label: String,
+    clearableCount: Int,
+): String = "Clear $label ${if (clearableCount == 1) "notification" else "notifications"}"
 
 private const val DOCK_NOTIFICATION_CARD_ALPHA = 0.78f
 
