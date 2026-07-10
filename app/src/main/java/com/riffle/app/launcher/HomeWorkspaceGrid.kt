@@ -193,7 +193,7 @@ private fun HomeGridItem(
                 modifier = state.dragSourceModifier,
                 presentation =
                     HomeShortcutPresentation(
-                        notificationCount = presentation.notificationCountsByPackage.notificationCountFor(item),
+                        notificationCount = presentation.notificationGroupsByApp.notificationCountFor(item),
                         appShortcuts = presentation.appShortcutsByApp[item.appIdentity].orEmpty(),
                         labelSettings = presentation.labelSettings,
                     ),
@@ -207,7 +207,7 @@ private fun HomeGridItem(
                     folder = item,
                     dragState = HomeItemDragState(cell = state.cell, cellSizePx = state.cellSizePx, grid = state.grid),
                     isEditing = state.isEditing,
-                    notificationCount = presentation.notificationCountsByPackage.notificationCountFor(item),
+                    notificationCount = presentation.notificationGroupsByApp.notificationCountFor(item),
                     labelSettings = presentation.labelSettings,
                     appIconLoader = appIconLoader,
                     actions = actions,
