@@ -22,6 +22,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.InstalledApp
@@ -137,6 +139,13 @@ private fun DockNotificationPermissionCard(
             Modifier
                 .fillMaxWidth()
                 .dockShelfGestureInput(interactions)
+                .semantics {
+                    contentDescription =
+                        dockNotificationPermissionPromptContentDescription(
+                            label = state.label,
+                            actionLabel = state.actionLabel,
+                        )
+                }
                 .clickable(onClick = { interactions.onAction(LauncherShellAction.RequestNotificationAccess) }),
         shape = RoundedCornerShape(24.dp),
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = DOCK_NOTIFICATION_CARD_ALPHA),
@@ -200,6 +209,9 @@ private fun DockNotificationCard(
         modifier =
             Modifier
                 .defaultMinSize(minWidth = 164.dp, minHeight = 84.dp)
+                .semantics {
+                    contentDescription = dockNotificationCardContentDescription(card = card, label = label)
+                }
                 .clickable(enabled = identity != null) {
                     identity?.let { appIdentity -> onAction(LauncherShellAction.LaunchApp(appIdentity)) }
                 },
@@ -252,7 +264,13 @@ private fun DockNotificationCard(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End,
                 ) {
-                    TextButton(onClick = { onAction(clearAction) }) {
+                    TextButton(
+                        modifier =
+                            Modifier.semantics {
+                                contentDescription = dockNotificationClearContentDescription(label)
+                            },
+                        onClick = { onAction(clearAction) },
+                    ) {
                         Text(text = "Clear")
                     }
                 }
@@ -306,6 +324,29 @@ internal fun dockNotificationCardSummary(
         group.clearableCount == group.count -> "Clear notifications"
         else -> "${group.clearableCount} clearable of ${group.count}"
     }
+
+internal fun dockNotificationCardContentDescription(
+    card: DockNotificationCardState,
+    label: String,
+): String =
+    buildList {
+        add(label)
+        add("${card.group.count} notifications")
+        add("${card.group.latestCategory.label}, ${card.group.latestAgeBucket.label}")
+        add(
+            dockNotificationCardSummary(
+                group = card.group,
+                canLaunchApp = card.app != null,
+            ),
+        )
+    }.joinToString(separator = ". ")
+
+internal fun dockNotificationPermissionPromptContentDescription(
+    label: String,
+    actionLabel: String,
+): String = "Notifications. $label. $actionLabel"
+
+internal fun dockNotificationClearContentDescription(label: String): String = "Clear $label notifications"
 
 private const val DOCK_NOTIFICATION_CARD_ALPHA = 0.78f
 
