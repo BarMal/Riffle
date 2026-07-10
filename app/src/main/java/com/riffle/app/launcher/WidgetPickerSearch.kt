@@ -28,6 +28,7 @@ private fun InstalledWidgetProvider.widgetSearchableValues(): List<String> =
         identity.profile.drawerProfilePrefix(),
         "${dimensions.minWidthDp}x${dimensions.minHeightDp}",
         dimensions.targetCellSizeSearchToken(),
+        widgetPickerResizeLabel(),
     ).map { value -> value.lowercase() }
 
 private fun WidgetProviderDimensions.targetCellSizeSearchToken(): String? =

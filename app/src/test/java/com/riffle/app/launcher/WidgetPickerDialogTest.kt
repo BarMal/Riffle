@@ -297,6 +297,42 @@ class WidgetPickerDialogTest {
         assertEquals(listOf(work), listOf(personal, work).filteredWidgetProviders("work"))
     }
 
+    @Test
+    fun filtersWidgetProvidersByResizableLabel() {
+        val weather =
+            widgetProvider(
+                label = "Weather",
+                packageName = "com.example.weather",
+                className = ".Weather",
+                supportsHorizontalResize = true,
+                supportsVerticalResize = true,
+            )
+        val clock = widgetProvider(label = "Clock", packageName = "com.example.clock", className = ".Clock")
+
+        assertEquals(listOf(weather), listOf(weather, clock).filteredWidgetProviders("resizable"))
+    }
+
+    @Test
+    fun filtersWidgetProvidersByDirectionalResizeLabels() {
+        val weather =
+            widgetProvider(
+                label = "Weather",
+                packageName = "com.example.weather",
+                className = ".Weather",
+                supportsHorizontalResize = true,
+            )
+        val agenda =
+            widgetProvider(
+                label = "Agenda",
+                packageName = "com.example.agenda",
+                className = ".Agenda",
+                supportsVerticalResize = true,
+            )
+
+        assertEquals(listOf(weather), listOf(weather, agenda).filteredWidgetProviders("horizontal resize"))
+        assertEquals(listOf(agenda), listOf(weather, agenda).filteredWidgetProviders("vertical resize"))
+    }
+
     private fun widgetProvider(
         label: String,
         packageName: String,
