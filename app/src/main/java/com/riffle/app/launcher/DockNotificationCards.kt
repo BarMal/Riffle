@@ -205,7 +205,7 @@ private fun DockNotificationCard(
     appIconLoader: AppIconLoader,
     onAction: (LauncherShellAction) -> Unit,
 ) {
-    val label = card.app?.label ?: card.group.packageName.value
+    val label = dockNotificationCardLabel(card)
     val identity = card.app?.identity
 
     Surface(

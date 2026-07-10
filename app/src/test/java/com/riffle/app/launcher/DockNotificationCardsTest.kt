@@ -278,9 +278,22 @@ class DockNotificationCardsTest {
     }
 
     @Test
+    fun unavailableCardLabelUsesReadablePackageTail() {
+        assertEquals(
+            "Chat Service",
+            dockNotificationCardLabel(
+                DockNotificationCardState(
+                    app = null,
+                    group = notificationGroup(packageName = "com.example.chat_service"),
+                ),
+            ),
+        )
+    }
+
+    @Test
     fun cardContentDescriptionExplainsUnavailableApps() {
         assertEquals(
-            "com.example.chat. 1 notification. Message, Recent. App unavailable. Notification can be cleared",
+            "Chat. 1 notification. Message, Recent. App unavailable. Notification can be cleared",
             dockNotificationCardContentDescription(
                 card =
                     DockNotificationCardState(
@@ -298,7 +311,24 @@ class DockNotificationCardsTest {
                                     ),
                             ),
                     ),
-                label = "com.example.chat",
+                label =
+                    dockNotificationCardLabel(
+                        DockNotificationCardState(
+                            app = null,
+                            group =
+                                notificationGroup(
+                                    packageName = "com.example.chat",
+                                    notifications =
+                                        listOf(
+                                            notification(
+                                                packageName = "com.example.chat",
+                                                key = "chat:1",
+                                                canDismiss = true,
+                                            ),
+                                        ),
+                                ),
+                        ),
+                    ),
             ),
         )
     }
