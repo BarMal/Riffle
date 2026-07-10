@@ -296,6 +296,7 @@ class WidgetPickerDialogTest {
                 profile = AppProfile.work(),
             )
 
+        assertEquals(listOf(personal), listOf(personal, work).filteredWidgetProviders("personal"))
         assertEquals(listOf(work), listOf(personal, work).filteredWidgetProviders("work"))
     }
 
