@@ -47,19 +47,24 @@ class WidgetEngine(
         itemId: LauncherItemId,
         span: GridSpan,
     ): WidgetEditResult =
-        when (
-            val result =
-                gridPlacementEngine.resizeItem(
-                    page = layout.selectedPage,
-                    itemId = itemId,
-                    span = span.coerceAtLeastOneCell(),
-                )
-        ) {
-            is PlaceLauncherItemResult.Placed ->
-                WidgetEditResult.Updated(layout.withUpdatedSelectedPage(result.page))
+        when (layout.selectedPage.items.firstOrNull { item -> item.id == itemId }) {
+            null, !is WidgetItem -> WidgetEditResult.Rejected(PlacementRejectionReason.ITEM_NOT_FOUND)
 
-            is PlaceLauncherItemResult.Rejected ->
-                WidgetEditResult.Rejected(result.reason)
+            else ->
+                when (
+                    val result =
+                        gridPlacementEngine.resizeItem(
+                            page = layout.selectedPage,
+                            itemId = itemId,
+                            span = span.coerceAtLeastOneCell(),
+                        )
+                ) {
+                    is PlaceLauncherItemResult.Placed ->
+                        WidgetEditResult.Updated(layout.withUpdatedSelectedPage(result.page))
+
+                    is PlaceLauncherItemResult.Rejected ->
+                        WidgetEditResult.Rejected(result.reason)
+                }
         }
 
     private fun HomeLayout.withUpdatedSelectedPage(page: LauncherPage): HomeLayout =
