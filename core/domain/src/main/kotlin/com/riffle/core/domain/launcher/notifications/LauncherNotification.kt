@@ -11,6 +11,9 @@ data class LauncherNotification(
     val category: NotificationCategory = NotificationCategory.UNKNOWN,
     val priority: NotificationPriority = NotificationPriority.UNKNOWN,
     val canDismiss: Boolean = false,
+    val title: String = "",
+    val text: String = "",
+    val largeIconPngBase64: String? = null,
     val postedAtEpochMillis: Long,
 )
 
