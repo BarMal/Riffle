@@ -87,7 +87,7 @@ internal fun JSONObject.toShortcut(): AppShortcutItem =
                 activityName = AppActivityName(getString("activityName")),
                 profile = AppProfile.personal(),
             ),
-        label = getString("label"),
+        label = optString("label", ""),
         appShortcutId = optAppShortcutId(),
         placement = toPlacementOrNull(),
     )
