@@ -23,7 +23,7 @@ class WidgetPickerDialogTest {
     }
 
     @Test
-    fun providerSummaryIncludesWorkProfilePrefix() {
+    fun providerSummaryOmitsRedundantWorkProfilePrefix() {
         val provider =
             widgetProvider(
                 label = "Weather",
@@ -32,7 +32,7 @@ class WidgetPickerDialogTest {
                 profile = AppProfile.work(),
             )
 
-        assertEquals("Work - com.example.weather - 120x80dp", provider.widgetPickerSummary())
+        assertEquals("com.example.weather - 120x80dp", provider.widgetPickerSummary())
     }
 
     @Test
