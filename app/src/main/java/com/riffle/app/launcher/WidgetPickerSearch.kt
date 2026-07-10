@@ -27,6 +27,7 @@ private fun InstalledWidgetProvider.widgetSearchableValues(): List<String> =
         identity.className.value,
         identity.profile.drawerProfilePrefix(),
         "${dimensions.minWidthDp}x${dimensions.minHeightDp}",
+        "${dimensions.minWidthDp}x${dimensions.minHeightDp}dp",
         dimensions.targetCellSizeSearchToken(),
     ).map { value -> value.lowercase() }
 
