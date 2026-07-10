@@ -25,7 +25,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.InstalledApp
+import com.riffle.core.domain.launcher.home.DEFAULT_MAX_DOCK_NOTIFICATION_CARDS
+import com.riffle.core.domain.launcher.home.DockNotificationCardDeckState
+import com.riffle.core.domain.launcher.home.DockNotificationCardPlanner
+import com.riffle.core.domain.launcher.home.DockNotificationPermissionFallbackReason
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
+import com.riffle.core.domain.launcher.notifications.AppNotificationGroupKey
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 
 internal sealed interface DockNotificationShelfState {
@@ -56,30 +61,45 @@ internal fun dockNotificationShelfState(
     groups: List<AppNotificationGroup>,
     notificationAccessStatus: NotificationAccessStatus,
     apps: List<InstalledApp>,
-    maxCards: Int = MAX_DOCK_NOTIFICATION_CARDS,
+    maxCards: Int = DEFAULT_MAX_DOCK_NOTIFICATION_CARDS,
 ): DockNotificationShelfState {
-    val permissionPromptState =
-        notificationAccessStatus.emptyNotificationOverviewActionLabel?.let { actionLabel ->
-            DockNotificationShelfState.PermissionPrompt(
-                label = notificationAccessStatus.emptyNotificationOverviewLabel,
-                actionLabel = actionLabel,
+    val groupsByKey =
+        groups.associateBy { group ->
+            AppNotificationGroupKey(
+                packageName = group.packageName,
+                profileId = group.profileId,
             )
         }
 
-    return when {
-        notificationAccessStatus != NotificationAccessStatus.GRANTED ->
-            permissionPromptState ?: DockNotificationShelfState.Hidden
+    return when (
+        val deckState =
+            DockNotificationCardPlanner().plan(
+                groups = groups,
+                notificationAccessStatus = notificationAccessStatus,
+                maxCards = maxCards,
+            )
+    ) {
+        DockNotificationCardDeckState.Hidden -> DockNotificationShelfState.Hidden
+        is DockNotificationCardDeckState.PermissionFallback ->
+            deckState.reason.notificationAccessStatus
+                .emptyNotificationOverviewActionLabel
+                ?.let { actionLabel ->
+                    DockNotificationShelfState.PermissionPrompt(
+                        label = deckState.reason.notificationAccessStatus.emptyNotificationOverviewLabel,
+                        actionLabel = actionLabel,
+                    )
+                } ?: DockNotificationShelfState.Hidden
 
-        groups.isEmpty() || maxCards <= 0 -> DockNotificationShelfState.Hidden
-
-        else ->
+        is DockNotificationCardDeckState.Content ->
             DockNotificationShelfState.Content(
                 cards =
-                    groups.take(maxCards).map { group ->
-                        DockNotificationCardState(
-                            app = apps.firstOrNull { app -> app.matches(group) },
-                            group = group,
-                        )
+                    deckState.cards.mapNotNull { card ->
+                        groupsByKey[card.key]?.let { group ->
+                            DockNotificationCardState(
+                                app = apps.firstOrNull { app -> app.matches(group) },
+                                group = group,
+                            )
+                        }
                     },
             )
     }
@@ -277,5 +297,12 @@ internal fun dockNotificationCardSummary(group: AppNotificationGroup): String =
         else -> "${group.clearableCount} clearable of ${group.count}"
     }
 
-private const val MAX_DOCK_NOTIFICATION_CARDS = 3
 private const val DOCK_NOTIFICATION_CARD_ALPHA = 0.78f
+
+private val DockNotificationPermissionFallbackReason.notificationAccessStatus: NotificationAccessStatus
+    get() =
+        when (this) {
+            DockNotificationPermissionFallbackReason.NOT_CHECKED -> NotificationAccessStatus.UNKNOWN
+            DockNotificationPermissionFallbackReason.DENIED -> NotificationAccessStatus.NOT_GRANTED
+            DockNotificationPermissionFallbackReason.REVOKED -> NotificationAccessStatus.REVOKED
+        }
