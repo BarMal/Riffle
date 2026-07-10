@@ -236,6 +236,7 @@ class WidgetPickerDialogTest {
             )
 
         assertEquals(listOf(weather), listOf(weather, clock).filteredWidgetProviders("3x2"))
+        assertEquals(listOf(weather), listOf(weather, clock).filteredWidgetProviders("3 x 2"))
     }
 
     @Test
