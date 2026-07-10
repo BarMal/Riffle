@@ -4,7 +4,6 @@ import com.riffle.core.domain.launcher.widgets.InstalledWidgetProvider
 
 internal fun InstalledWidgetProvider.widgetPickerSummary(): String =
     listOfNotNull(
-        identity.profile.drawerProfilePrefix(),
         identity.packageName.value,
         "${dimensions.minWidthDp}x${dimensions.minHeightDp}dp",
         widgetPickerResizeLabel(),
