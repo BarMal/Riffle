@@ -17,6 +17,8 @@ internal fun OverlayDockItemsSetting(
     items: List<AppShortcutItem>,
     onAction: (LauncherShellAction) -> Unit,
 ) {
+    val duplicateLabels = items.overlayDockDuplicateLabels()
+
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         SettingsTextColumn(
             title = "Floating dock apps",
@@ -25,6 +27,7 @@ internal fun OverlayDockItemsSetting(
         items.forEachIndexed { index, item ->
             OverlayDockItemSetting(
                 item = item,
+                subtitle = item.overlayDockItemSubtitle(duplicateLabels),
                 canMoveUp = index > 0,
                 canMoveDown = index < items.lastIndex,
                 onAction = onAction,
@@ -36,6 +39,7 @@ internal fun OverlayDockItemsSetting(
 @Composable
 private fun OverlayDockItemSetting(
     item: AppShortcutItem,
+    subtitle: String?,
     canMoveUp: Boolean,
     canMoveDown: Boolean,
     onAction: (LauncherShellAction) -> Unit,
@@ -48,7 +52,7 @@ private fun OverlayDockItemSetting(
         SettingsTextColumn(
             modifier = Modifier.weight(1f),
             title = item.label,
-            subtitle = item.appIdentity.packageName.value,
+            subtitle = subtitle,
         )
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             FloatingDockMoveButton(
@@ -103,3 +107,14 @@ private fun List<AppShortcutItem>.floatingDockItemCountLabel(): String =
         1 -> "1 app"
         else -> "$size apps"
     }
+
+internal fun List<AppShortcutItem>.overlayDockDuplicateLabels(): Set<String> =
+    groupingBy { item -> item.label }
+        .eachCount()
+        .filterValues { count -> count > 1 }
+        .keys
+
+internal fun AppShortcutItem.overlayDockItemSubtitle(duplicateLabels: Set<String>): String? =
+    label
+        .takeIf { it in duplicateLabels }
+        ?.let { appIdentity.profile.profileDisplayLabel(appIdentity.packageName.value) }
