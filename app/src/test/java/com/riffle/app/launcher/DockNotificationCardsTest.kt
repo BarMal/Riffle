@@ -168,9 +168,9 @@ class DockNotificationCardsTest {
     }
 
     @Test
-    fun summaryMatchesNewInlineClearAction() {
+    fun summarySeparatesOpenAndClearForSingleLaunchableNotification() {
         assertEquals(
-            "Tap to open or clear notification",
+            "Tap to open. Notification can be cleared",
             dockNotificationCardSummary(
                 group =
                     notificationGroup(
@@ -206,7 +206,7 @@ class DockNotificationCardsTest {
     @Test
     fun summaryDoesNotPromiseOpenWhenAppIsUnavailable() {
         assertEquals(
-            "Clear notification",
+            "Notification can be cleared",
             dockNotificationCardSummary(
                 group =
                     notificationGroup(
@@ -261,7 +261,7 @@ class DockNotificationCardsTest {
     @Test
     fun summaryExplainsPartialClearabilityWithLaunchAction() {
         assertEquals(
-            "Tap to open - 1 clearable of 2 notifications",
+            "Tap to open. 1 clearable of 2 notifications",
             dockNotificationCardSummary(
                 group =
                     notificationGroup(
@@ -280,7 +280,7 @@ class DockNotificationCardsTest {
     @Test
     fun cardContentDescriptionIncludesCountStateAndActionHint() {
         assertEquals(
-            "Chat. 2 notifications. Message, Recent. Tap to open - 1 clearable of 2 notifications",
+            "Chat. 2 notifications. Message, Recent. Tap to open. 1 clearable of 2 notifications",
             dockNotificationCardContentDescription(
                 card =
                     DockNotificationCardState(
@@ -311,7 +311,7 @@ class DockNotificationCardsTest {
     @Test
     fun cardContentDescriptionUsesSingularNotificationCount() {
         assertEquals(
-            "Chat. 1 notification. Message, Recent. Tap to open or clear notification",
+            "Chat. 1 notification. Message, Recent. Tap to open. Notification can be cleared",
             dockNotificationCardContentDescription(
                 card =
                     DockNotificationCardState(
