@@ -109,8 +109,8 @@ fun JSONObject.toPlacementOrNull(): GridPlacement? =
                     ),
                 span =
                     GridSpan(
-                        columns = getInt("columns"),
-                        rows = getInt("rows"),
+                        columns = optInt("columns", 1),
+                        rows = optInt("rows", 1),
                     ),
             )
     }
