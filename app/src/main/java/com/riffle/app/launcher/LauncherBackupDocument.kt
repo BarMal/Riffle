@@ -62,7 +62,10 @@ private fun JSONObject.optLongOrNull(name: String): Long? =
 
 private fun JSONObject.optHiddenAppIdentities(): Set<AppIdentity> =
     when {
-        has("hiddenApps") && !isNull("hiddenApps") -> decodeHiddenAppIdentities(getJSONArray("hiddenApps").toString())
+        has("hiddenApps") && !isNull("hiddenApps") ->
+            optJSONArray("hiddenApps")
+                ?.let { array -> decodeHiddenAppIdentities(array.toString()) }
+                .orEmpty()
         else -> emptySet()
     }
 

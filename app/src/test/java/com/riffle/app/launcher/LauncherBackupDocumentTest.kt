@@ -137,6 +137,18 @@ class LauncherBackupDocumentTest {
     }
 
     @Test
+    fun ignoresMalformedHiddenAppsPayload() {
+        val value =
+            backupDocumentJson()
+                .put("hiddenApps", JSONObject().put("broken", true))
+                .toString()
+
+        val decodedDocument = decodeLauncherBackupDocument(value)
+
+        assertEquals(emptySet<AppIdentity>(), decodedDocument.hiddenAppIdentities)
+    }
+
+    @Test
     fun decodesBackupWithMissingExportedAtEpochMillis() {
         val value =
             backupDocumentJson()
