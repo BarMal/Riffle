@@ -15,9 +15,11 @@ import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
+import com.riffle.core.domain.launcher.home.HostedWidgetId
 import com.riffle.core.domain.launcher.home.LauncherPageId
 import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.home.LauncherViewModeAvailability
+import com.riffle.core.domain.launcher.home.WidgetItem
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -124,6 +126,80 @@ class LauncherShellMoveHomeShortcutToCellViewModelTest {
         assertEquals(viewModel.state.value.homeLayout, repository.savedLayout)
     }
 
+    @Test
+    fun movesHomeWidgetToEmptyCellAndSavesLayout() {
+        val widget =
+            WidgetItem(
+                id = com.riffle.core.domain.launcher.home.LauncherItemId("widget:42"),
+                appWidgetId = HostedWidgetId(42),
+                label = "Weather",
+                placement = GridPlacement(cell = GridCell(column = 0, row = 0)),
+            )
+        val repository =
+            FakeHomeLayoutRepository(
+                savedLayout =
+                    HomeLayoutDefaults.standard().copy(
+                        pages = listOf(HomeLayoutDefaults.standard().selectedPage.copy(items = listOf(widget))),
+                    ),
+            )
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                homeLayoutRepository = repository,
+            )
+
+        viewModel.onHomeShortcutEdited(
+            LauncherShellAction.MoveHomeShortcutToCell(
+                itemId = widget.id,
+                cell = GridCell(column = 2, row = 1),
+            ),
+        )
+
+        assertEquals(
+            GridPlacement(cell = GridCell(column = 2, row = 1)),
+            viewModel.state.value.homeLayout.selectedPage.items.single().placement,
+        )
+        assertEquals(viewModel.state.value.homeLayout, repository.savedLayout)
+    }
+
+    @Test
+    fun droppingHomeWidgetOntoShortcutSwapsItemsWithoutCreatingFolder() {
+        val widget =
+            WidgetItem(
+                id = com.riffle.core.domain.launcher.home.LauncherItemId("widget:42"),
+                appWidgetId = HostedWidgetId(42),
+                label = "Weather",
+                placement = GridPlacement(cell = GridCell(column = 0, row = 0)),
+            )
+        val camera = appShortcutItem(label = "Camera", cell = GridCell(column = 1, row = 0))
+        val initialLayout =
+            HomeLayoutDefaults.standard().copy(
+                pages = listOf(HomeLayoutDefaults.standard().selectedPage.copy(items = listOf(widget, camera))),
+            )
+        val repository = FakeHomeLayoutRepository(savedLayout = initialLayout)
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                homeLayoutRepository = repository,
+            )
+
+        viewModel.onHomeShortcutEdited(
+            LauncherShellAction.MoveHomeShortcutToCell(
+                itemId = widget.id,
+                cell = GridCell(column = 1, row = 0),
+            ),
+        )
+
+        val updatedItems = viewModel.state.value.homeLayout.selectedPage.items
+        val movedWidget = updatedItems.filterIsInstance<WidgetItem>().single()
+        val movedShortcut = updatedItems.filterIsInstance<AppShortcutItem>().single()
+
+        assertEquals(GridPlacement(cell = GridCell(column = 1, row = 0)), movedWidget.placement)
+        assertEquals(GridPlacement(cell = GridCell(column = 0, row = 0)), movedShortcut.placement)
+        assertEquals(0, updatedItems.filterIsInstance<FolderItem>().size)
+        assertEquals(viewModel.state.value.homeLayout, repository.savedLayout)
+    }
+
     private class FakeFirstRunRepository : FirstRunRepository {
         override fun isFirstRunComplete(): Boolean = false
 
@@ -154,6 +230,21 @@ class LauncherShellMoveHomeShortcutToCellViewModelTest {
                     activityName = AppActivityName(".MainActivity"),
                 ),
             label = label,
+        )
+
+    private fun appShortcutItem(
+        label: String,
+        cell: GridCell,
+    ): AppShortcutItem =
+        AppShortcutItem(
+            id = com.riffle.core.domain.launcher.home.LauncherItemId("app:${label.lowercase()}"),
+            appIdentity =
+                AppIdentity(
+                    packageName = AppPackageName("com.riffle.${label.lowercase()}"),
+                    activityName = AppActivityName(".MainActivity"),
+                ),
+            label = label,
+            placement = GridPlacement(cell = cell),
         )
 
     private val libraryViewModeAvailability =
