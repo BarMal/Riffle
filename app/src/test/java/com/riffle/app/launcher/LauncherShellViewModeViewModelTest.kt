@@ -681,7 +681,7 @@ class LauncherShellViewModeViewModelTest {
             LauncherShellAction.SelectHomeLayoutDeviceClass(HomeLayoutDeviceClass.PHONE),
         )
 
-        assertEquals(1, viewModel.state.value.notificationCountsByPackage[camera.identity.packageName])
+        assertEquals(1, viewModel.state.value.notificationGroupsByApp.single().count)
     }
 
     private class FakeFirstRunRepository : FirstRunRepository {

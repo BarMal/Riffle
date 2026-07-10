@@ -37,7 +37,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.riffle.app.launcher.widgets.EmptyHomeWidgetViewFactory
 import com.riffle.app.launcher.widgets.HomeWidgetViewFactory
-import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppShortcutsByApp
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.home.FolderItem
@@ -375,7 +374,6 @@ internal data class StandardHomeInteractions(
 )
 
 internal data class StandardHomePresentation(
-    val notificationCountsByPackage: Map<AppPackageName, Int>,
     val notificationGroupsByApp: List<AppNotificationGroup> = emptyList(),
     val notificationAccessStatus: NotificationAccessStatus = NotificationAccessStatus.UNKNOWN,
     val installedApps: List<InstalledApp> = emptyList(),

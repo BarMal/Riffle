@@ -22,7 +22,6 @@ fun LauncherShellState.withNotificationState(
         ).filterNotHidden(hiddenApps = hiddenApps.map { app -> app.identity }.toSet())
 
     return copy(
-        notificationCountsByPackage = appNotificationCounter.countByPackage(activeNotifications),
         notificationCountsByCategory = appNotificationCounter.countByCategory(activeNotifications),
         notificationGroupsByApp =
             appNotificationGrouper.groupByApp(

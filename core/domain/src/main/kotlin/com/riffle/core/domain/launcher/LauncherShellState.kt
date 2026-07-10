@@ -1,7 +1,6 @@
 package com.riffle.core.domain.launcher
 
 import com.riffle.core.domain.launcher.apps.AppDrawerProfileFilter
-import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppSearchFilters
 import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.apps.AppShortcutsByApp
@@ -28,7 +27,6 @@ data class LauncherShellState(
     val availableLayoutDeviceClasses: Set<HomeLayoutDeviceClass> = setOf(homeLayoutSet.activeKey.deviceClass),
     val launcherSettings: LauncherSettings = LauncherSettings(),
     val notificationAccessStatus: NotificationAccessStatus = NotificationAccessStatus.UNKNOWN,
-    val notificationCountsByPackage: Map<AppPackageName, Int> = emptyMap(),
     val notificationCountsByCategory: Map<NotificationCategory, Int> = emptyMap(),
     val notificationGroupsByApp: List<AppNotificationGroup> = emptyList(),
     val installedApps: List<InstalledApp> = emptyList(),
