@@ -74,7 +74,7 @@ private fun JSONObject.toFolder(): FolderItem =
     FolderItem(
         id = LauncherItemId(getString("id")),
         label = getString("label"),
-        items = getJSONArray("items").toShortcuts(),
+        items = optJSONArray("items")?.toShortcuts().orEmpty(),
         placement = toPlacementOrNull(),
     )
 
