@@ -65,7 +65,7 @@ class LauncherAppListActionReducerTest {
     }
 
     @Test
-    fun defaultSearchUsesPersonalAppsOnly() {
+    fun defaultSearchUsesAllAvailableProfiles() {
         val personalCamera = app(label = "Camera", profile = AppProfile.personal())
         val workCamera = app(label = "Camera", profile = AppProfile.work())
         val state =
@@ -76,7 +76,10 @@ class LauncherAppListActionReducerTest {
         val updated = reducer.reduce(state, LauncherShellAction.SearchQueryChanged("cam"))
 
         assertEquals("cam", updated?.searchQuery)
-        assertEquals(listOf(personalCamera.identity), updated?.searchResults?.map { app -> app.identity })
+        assertEquals(
+            listOf(personalCamera.identity, workCamera.identity),
+            updated?.searchResults?.map { app -> app.identity },
+        )
     }
 
     @Test
@@ -255,11 +258,11 @@ class LauncherAppListActionReducerTest {
         val updated = reducer.reduce(state, LauncherShellAction.ToggleSearchProfileFilter(AppProfileType.WORK))
 
         assertEquals(
-            setOf(AppProfileType.PERSONAL, AppProfileType.WORK),
+            setOf(AppProfileType.PERSONAL, AppProfileType.PRIVATE),
             updated?.searchFilters?.profiles,
         )
         assertEquals(
-            listOf(personalCalendar.identity, workCalendar.identity),
+            listOf(personalCalendar.identity),
             updated?.searchResults?.map { app -> app.identity },
         )
     }
@@ -283,7 +286,10 @@ class LauncherAppListActionReducerTest {
 
         assertEquals(AppSearchFilters(), updated?.searchFilters)
         assertEquals("cal", updated?.searchQuery)
-        assertEquals(listOf(personalCalendar.identity), updated?.searchResults?.map { app -> app.identity })
+        assertEquals(
+            listOf(personalCalendar.identity, workCalendar.identity),
+            updated?.searchResults?.map { app -> app.identity },
+        )
         assertEquals(emptyList<AppShortcut>(), updated?.searchShortcutResults)
     }
 

@@ -77,7 +77,7 @@ class LauncherShellSearchViewModelTest {
     }
 
     @Test
-    fun defaultsSearchResultsToPersonalApps() {
+    fun defaultsSearchResultsToAllAvailableProfiles() {
         val viewModel =
             LauncherShellViewModel(
                 firstRunRepository = FakeFirstRunRepository(),
@@ -94,8 +94,11 @@ class LauncherShellSearchViewModelTest {
 
         runBlocking { viewModel.refreshInstalledApps().join() }
 
-        assertEquals(setOf(AppProfileType.PERSONAL), viewModel.state.value.searchFilters.profiles)
-        assertEquals(listOf("Camera"), viewModel.state.value.searchResults.map { app -> app.label })
+        assertEquals(
+            setOf(AppProfileType.PERSONAL, AppProfileType.WORK),
+            viewModel.state.value.searchFilters.profiles,
+        )
+        assertEquals(listOf("Camera", "Docs", "Sheets"), viewModel.state.value.searchResults.map { app -> app.label })
     }
 
     @Test
@@ -119,9 +122,6 @@ class LauncherShellSearchViewModelTest {
         viewModel.onAppActionSelected(
             LauncherShellAction.ToggleSearchProfileFilter(AppProfileType.PERSONAL),
         )
-        viewModel.onAppActionSelected(
-            LauncherShellAction.ToggleSearchProfileFilter(AppProfileType.WORK),
-        )
 
         assertEquals("cal", viewModel.state.value.searchQuery)
         assertEquals(setOf(AppProfileType.WORK), viewModel.state.value.searchFilters.profiles)
@@ -133,18 +133,20 @@ class LauncherShellSearchViewModelTest {
     fun refreshesSearchResultsForCurrentProfileFilter() {
         val repository =
             FakeInstalledAppRepository(
-                apps = listOf(app(label = "Docs", profile = AppProfile.work())),
+                apps =
+                    listOf(
+                        app(label = "Camera", profile = AppProfile.personal()),
+                        app(label = "Docs", profile = AppProfile.work()),
+                    ),
             )
         val viewModel =
             LauncherShellViewModel(
                 firstRunRepository = FakeFirstRunRepository(),
                 installedAppRepository = repository,
             )
+        runBlocking { viewModel.refreshInstalledApps().join() }
         viewModel.onAppActionSelected(
             LauncherShellAction.ToggleSearchProfileFilter(AppProfileType.PERSONAL),
-        )
-        viewModel.onAppActionSelected(
-            LauncherShellAction.ToggleSearchProfileFilter(AppProfileType.WORK),
         )
 
         repository.apps =

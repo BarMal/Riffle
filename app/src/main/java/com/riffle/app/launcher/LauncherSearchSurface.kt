@@ -298,6 +298,7 @@ internal fun searchFilterSummaryText(state: SearchSurfaceState): String {
         when {
             state.filters.profiles.isEmpty() -> "no profiles"
             state.filters.profiles.size == 1 -> state.filters.profiles.single().label.lowercase()
+            state.filters.profiles == AppProfileType.entries.toSet() -> "all profiles"
             else -> "selected profiles"
         }
     val contentLabel =

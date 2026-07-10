@@ -13,7 +13,7 @@ class SearchSurfaceTextTest {
     @Test
     fun summaryCountsLauncherResultsOnly() {
         assertEquals(
-            "0 results in personal apps",
+            "0 results in all profiles apps",
             searchFilterSummaryText(
                 SearchSurfaceState(
                     query = "weather",
