@@ -23,6 +23,18 @@ class DockConfigurationEngineTest {
     }
 
     @Test
+    fun updatesDockNotificationCardVisibilityWithoutChangingItems() {
+        val phone = appShortcut(id = "phone")
+        val layout = layoutWithDockItems(phone)
+
+        val result = engine.setDockNotificationCardsEnabled(layout = layout, enabled = false)
+
+        val updated = assertIs<DockEditResult.Updated>(result)
+        assertEquals(false, updated.layout.dock.showNotificationCards)
+        assertEquals(listOf(phone.id), updated.layout.dock.items.map { item -> item.id })
+    }
+
+    @Test
     fun updatesDockCapacity() {
         val result = engine.setDockCapacity(layout = HomeLayoutDefaults.standard(), capacity = 7)
 

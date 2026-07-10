@@ -217,6 +217,10 @@ class LauncherActionDomainTest {
                     LauncherShellAction.MoveFloatingDockShortcut(itemId, OverlayDockItemMoveDirection.DOWN),
                 ),
                 activity("SelectDockEnabled", LauncherShellAction.SelectDockEnabled(enabled = true)),
+                activity(
+                    "SelectDockNotificationCardsEnabled",
+                    LauncherShellAction.SelectDockNotificationCardsEnabled(enabled = false),
+                ),
                 activity("SelectDockCapacity", LauncherShellAction.SelectDockCapacity(capacity = 6)),
                 activity("SelectDockIconSize", LauncherShellAction.SelectDockIconSize(sizeDp = 52)),
                 activity("SelectDockBackgroundAlpha", LauncherShellAction.SelectDockBackgroundAlpha(alphaPercent = 80)),

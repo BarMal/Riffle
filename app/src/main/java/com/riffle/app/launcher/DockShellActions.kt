@@ -24,6 +24,9 @@ fun DockEngine.applyEdit(
         is LauncherShellAction.SelectDockEnabled ->
             DockConfigurationEngine().setDockEnabled(layout = layout, enabled = action.enabled)
 
+        is LauncherShellAction.SelectDockNotificationCardsEnabled ->
+            DockConfigurationEngine().setDockNotificationCardsEnabled(layout = layout, enabled = action.enabled)
+
         is LauncherShellAction.SelectDockCapacity ->
             DockConfigurationEngine().setDockCapacity(layout = layout, capacity = action.capacity)
 
@@ -55,6 +58,7 @@ fun DockEngine.applyEdit(
 internal fun LauncherShellAction.isDockConfigurationAction(): Boolean =
     when (this) {
         is LauncherShellAction.SelectDockEnabled,
+        is LauncherShellAction.SelectDockNotificationCardsEnabled,
         is LauncherShellAction.SelectDockCapacity,
         is LauncherShellAction.SelectDockIconSize,
         is LauncherShellAction.SelectDockBackgroundAlpha,

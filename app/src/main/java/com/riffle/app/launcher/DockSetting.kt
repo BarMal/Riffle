@@ -28,6 +28,10 @@ internal fun DockSetting(
             enabled = dock.isEnabled,
             onAction = onAction,
         )
+        DockNotificationCardsSetting(
+            enabled = dock.showNotificationCards,
+            onAction = onAction,
+        )
         DockCapacitySetting(
             capacity = dock.capacity,
             onAction = onAction,
@@ -241,4 +245,22 @@ private fun DockCapacitySetting(
             }
         }
     }
+}
+
+@Composable
+private fun DockNotificationCardsSetting(
+    enabled: Boolean,
+    onAction: (LauncherShellAction) -> Unit,
+) {
+    SettingsSwitchRow(
+        title = "Notification cards",
+        subtitle =
+            if (enabled) {
+                "Expanded dock can show notification cards"
+            } else {
+                "Expanded dock only shows shortcuts and widgets"
+            },
+        checked = enabled,
+        onCheckedChange = { value -> onAction(LauncherShellAction.SelectDockNotificationCardsEnabled(value)) },
+    )
 }

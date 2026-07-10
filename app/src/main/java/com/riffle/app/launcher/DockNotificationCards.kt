@@ -60,11 +60,14 @@ internal data class DockNotificationCardState(
 }
 
 internal fun dockNotificationShelfState(
+    showNotificationCards: Boolean,
     groups: List<AppNotificationGroup>,
     notificationAccessStatus: NotificationAccessStatus,
     apps: List<InstalledApp>,
     maxCards: Int = DEFAULT_MAX_DOCK_NOTIFICATION_CARDS,
 ): DockNotificationShelfState {
+    if (!showNotificationCards) return DockNotificationShelfState.Hidden
+
     val groupsByKey =
         groups.associateBy { group ->
             AppNotificationGroupKey(

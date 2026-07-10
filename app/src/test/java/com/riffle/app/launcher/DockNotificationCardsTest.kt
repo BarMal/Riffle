@@ -19,6 +19,7 @@ class DockNotificationCardsTest {
     fun permissionPromptWinsWhenNotificationAccessIsUnavailable() {
         val state =
             dockNotificationShelfState(
+                showNotificationCards = true,
                 groups = listOf(notificationGroup(packageName = "com.example.chat", count = 2)),
                 notificationAccessStatus = NotificationAccessStatus.NOT_GRANTED,
                 apps = emptyList(),
@@ -37,6 +38,7 @@ class DockNotificationCardsTest {
     fun revokedAccessShowsRevokedPermissionPrompt() {
         val state =
             dockNotificationShelfState(
+                showNotificationCards = true,
                 groups = listOf(notificationGroup(packageName = "com.example.chat", count = 2)),
                 notificationAccessStatus = NotificationAccessStatus.REVOKED,
                 apps = emptyList(),
@@ -56,7 +58,21 @@ class DockNotificationCardsTest {
         assertEquals(
             DockNotificationShelfState.Hidden,
             dockNotificationShelfState(
+                showNotificationCards = true,
                 groups = emptyList(),
+                notificationAccessStatus = NotificationAccessStatus.GRANTED,
+                apps = emptyList(),
+            ),
+        )
+    }
+
+    @Test
+    fun hiddenWhenDockNotificationCardsAreDisabled() {
+        assertEquals(
+            DockNotificationShelfState.Hidden,
+            dockNotificationShelfState(
+                showNotificationCards = false,
+                groups = listOf(notificationGroup(packageName = "com.example.chat")),
                 notificationAccessStatus = NotificationAccessStatus.GRANTED,
                 apps = emptyList(),
             ),
@@ -105,6 +121,7 @@ class DockNotificationCardsTest {
                     ),
             ),
             dockNotificationShelfState(
+                showNotificationCards = true,
                 groups = listOf(chat, mail, calendar, maps),
                 notificationAccessStatus = NotificationAccessStatus.GRANTED,
                 apps = apps,
