@@ -99,6 +99,10 @@ class SettingsPagesTest {
             settingsMainPageEntriesMatching("dock item spacing").map { entry -> entry.page },
         )
         assertEquals(
+            listOf(SettingsPage.DOCK),
+            settingsMainPageEntriesMatching("notification cards").map { entry -> entry.page },
+        )
+        assertEquals(
             listOf(SettingsPage.LAYOUT),
             settingsMainPageEntriesMatching("label text size").map { entry -> entry.page },
         )
@@ -203,6 +207,12 @@ class SettingsPagesTest {
     fun projectsConcreteSettingOptionAliasesForLauncherSearch() {
         val entries = settingsLauncherSearchEntries()
 
+        assertEquals(
+            listOf("Dock"),
+            LauncherSearchProvider()
+                .search(query = "notification shelf", apps = emptyList(), settingsEntries = entries)
+                .map { result -> result.title },
+        )
         assertEquals(
             listOf("Dock"),
             LauncherSearchProvider()
