@@ -318,11 +318,30 @@ internal fun dockNotificationCardSummary(
 ): String =
     when {
         canLaunchApp && group.clearableCount == 0 -> "Tap to open"
-        canLaunchApp && group.clearableCount == group.count -> "Tap to open or clear"
-        canLaunchApp -> "Tap to open - ${group.clearableCount} clearable of ${group.count}"
-        group.clearableCount == 0 -> "Pinned notifications"
-        group.clearableCount == group.count -> "Clear notifications"
-        else -> "${group.clearableCount} clearable of ${group.count}"
+        canLaunchApp && group.clearableCount == group.count ->
+            "Tap to open or clear ${if (group.count == 1) "notification" else "notifications"}"
+
+        canLaunchApp ->
+            "Tap to open - ${group.clearableCount} clearable of ${group.count} ${
+                if (group.count == 1) {
+                    "notification"
+                } else {
+                    "notifications"
+                }
+            }"
+
+        group.clearableCount == 0 -> "Pinned ${if (group.count == 1) "notification" else "notifications"}"
+        group.clearableCount == group.count ->
+            "Clear ${if (group.count == 1) "notification" else "notifications"}"
+
+        else ->
+            "${group.clearableCount} clearable of ${group.count} ${
+                if (group.count == 1) {
+                    "notification"
+                } else {
+                    "notifications"
+                }
+            }"
     }
 
 internal fun dockNotificationCardContentDescription(
@@ -331,7 +350,9 @@ internal fun dockNotificationCardContentDescription(
 ): String =
     buildList {
         add(label)
-        add("${card.group.count} notifications")
+        add(
+            "${card.group.count} ${if (card.group.count == 1) "notification" else "notifications"}",
+        )
         add("${card.group.latestCategory.label}, ${card.group.latestAgeBucket.label}")
         add(
             dockNotificationCardSummary(
