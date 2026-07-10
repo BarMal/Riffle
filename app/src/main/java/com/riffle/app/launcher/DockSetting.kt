@@ -253,7 +253,7 @@ private fun DockNotificationCardsSetting(
     onAction: (LauncherShellAction) -> Unit,
 ) {
     SettingsSwitchRow(
-        title = "Notification cards",
+        title = "Expanded dock cards",
         subtitle =
             if (enabled) {
                 "Expanded dock can show notification cards"

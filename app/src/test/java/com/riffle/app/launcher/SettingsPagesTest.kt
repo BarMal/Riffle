@@ -103,6 +103,10 @@ class SettingsPagesTest {
             settingsMainPageEntriesMatching("notification cards").map { entry -> entry.page },
         )
         assertEquals(
+            listOf(SettingsPage.DOCK),
+            settingsMainPageEntriesMatching("expanded dock cards").map { entry -> entry.page },
+        )
+        assertEquals(
             listOf(SettingsPage.LAYOUT),
             settingsMainPageEntriesMatching("label text size").map { entry -> entry.page },
         )
@@ -211,6 +215,12 @@ class SettingsPagesTest {
             listOf("Dock"),
             LauncherSearchProvider()
                 .search(query = "notification shelf", apps = emptyList(), settingsEntries = entries)
+                .map { result -> result.title },
+        )
+        assertEquals(
+            listOf("Dock"),
+            LauncherSearchProvider()
+                .search(query = "expanded dock cards", apps = emptyList(), settingsEntries = entries)
                 .map { result -> result.title },
         )
         assertEquals(
