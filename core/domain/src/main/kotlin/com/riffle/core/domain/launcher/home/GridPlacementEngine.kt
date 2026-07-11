@@ -159,6 +159,7 @@ sealed interface PlaceLauncherItemResult {
 }
 
 enum class PlacementRejectionReason {
+    GENERATED_PAGE,
     MISSING_PLACEMENT,
     ITEM_NOT_FOUND,
     DUPLICATE_ITEM_ID,

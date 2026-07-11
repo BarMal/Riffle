@@ -12,6 +12,9 @@ class HomeShortcutEngine(
         app: InstalledApp,
     ): HomeShortcutResult =
         when {
+            layout.selectedPage.type is LauncherPageType.Generated ->
+                HomeShortcutResult.Rejected(PlacementRejectionReason.GENERATED_PAGE)
+
             layout.containsHomeApp(app.identity) ->
                 HomeShortcutResult.Rejected(PlacementRejectionReason.DUPLICATE_APP)
 
@@ -38,6 +41,9 @@ class HomeShortcutEngine(
         shortcut: AppShortcut,
     ): HomeShortcutResult =
         when {
+            layout.selectedPage.type is LauncherPageType.Generated ->
+                HomeShortcutResult.Rejected(PlacementRejectionReason.GENERATED_PAGE)
+
             layout.containsHomeAppShortcut(identity = shortcut.appIdentity, shortcutId = shortcut.id) ->
                 HomeShortcutResult.Rejected(PlacementRejectionReason.DUPLICATE_APP_SHORTCUT)
 

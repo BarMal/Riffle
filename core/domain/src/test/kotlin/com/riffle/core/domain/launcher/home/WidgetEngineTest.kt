@@ -8,6 +8,28 @@ class WidgetEngineTest {
     private val engine = WidgetEngine()
 
     @Test
+    fun rejectsAddingWidgetToGeneratedPage() {
+        val layout =
+            HomeLayoutDefaults.standard().let { standard ->
+                standard.copy(
+                    pages =
+                        listOf(
+                            standard.selectedPage.copy(
+                                type = LauncherPageType.Generated(GeneratedLauncherPageKind.TODAY),
+                            ),
+                        ),
+                )
+            }
+
+        val result = engine.addWidgetToSelectedPage(layout, HostedWidgetId(42), "Weather")
+
+        assertEquals(
+            PlacementRejectionReason.GENERATED_PAGE,
+            assertIs<WidgetEditResult.Rejected>(result).reason,
+        )
+    }
+
+    @Test
     fun addsWidgetToFirstAvailableCellOnSelectedPage() {
         val result =
             engine.addWidgetToSelectedPage(

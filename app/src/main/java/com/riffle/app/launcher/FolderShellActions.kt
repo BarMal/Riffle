@@ -140,6 +140,7 @@ private fun HomeLayout.withUpdatedSelectedPage(page: LauncherPage): HomeLayout =
 
 private fun PlacementRejectionReason.toFolderRejectionReason(): FolderEditRejectionReason =
     when (this) {
+        PlacementRejectionReason.GENERATED_PAGE -> FolderEditRejectionReason.GENERATED_PAGE
         PlacementRejectionReason.MISSING_PLACEMENT -> FolderEditRejectionReason.MISSING_PLACEMENT
         PlacementRejectionReason.ITEM_NOT_FOUND -> FolderEditRejectionReason.ITEM_NOT_FOUND
         PlacementRejectionReason.DUPLICATE_ITEM_ID -> FolderEditRejectionReason.DUPLICATE_ITEM
