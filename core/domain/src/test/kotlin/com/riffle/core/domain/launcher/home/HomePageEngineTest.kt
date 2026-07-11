@@ -433,6 +433,44 @@ class HomePageEngineTest {
     }
 
     @Test
+    fun rejectsGeneratedPageTypeForPageWithManualItems() {
+        val shortcut =
+            AppShortcutItem(
+                id = itemId("camera"),
+                appIdentity = appIdentity("camera"),
+                label = "Camera",
+            )
+        val layoutWithShortcut = layout.copy(pages = listOf(layout.selectedPage.copy(items = listOf(shortcut))))
+
+        val result =
+            engine.updatePageType(
+                layout = layoutWithShortcut,
+                pageId = pageId("home"),
+                type = LauncherPageType.Generated(GeneratedLauncherPageKind.TODAY),
+            )
+
+        val rejected = assertIs<HomePageEditResult.Rejected>(result)
+        assertEquals(HomePageEditRejectionReason.CANNOT_ASSIGN_GENERATED_PAGE_TYPE_WITH_ITEMS, rejected.reason)
+    }
+
+    @Test
+    fun updatesPopulatedPageBetweenNonGeneratedTypes() {
+        val shortcut =
+            AppShortcutItem(
+                id = itemId("camera"),
+                appIdentity = appIdentity("camera"),
+                label = "Camera",
+            )
+        val layoutWithShortcut = layout.copy(pages = listOf(layout.selectedPage.copy(items = listOf(shortcut))))
+
+        val result = engine.updatePageType(layoutWithShortcut, pageId("home"), LauncherPageType.AllApps)
+
+        val updated = assertIs<HomePageEditResult.Updated>(result)
+        assertEquals(LauncherPageType.AllApps, updated.layout.selectedPage.type)
+        assertEquals(listOf(shortcut), updated.layout.selectedPage.items)
+    }
+
+    @Test
     fun rejectsPageTypeUpdateForMissingPage() {
         val result =
             engine.updatePageType(
