@@ -11,6 +11,9 @@ class WidgetEngine(
         targetCell: GridCell? = null,
     ): WidgetEditResult =
         when {
+            layout.selectedPage.type is LauncherPageType.Generated ->
+                WidgetEditResult.Rejected(PlacementRejectionReason.GENERATED_PAGE)
+
             layout.hasHostedWidget(hostedWidgetId) ->
                 WidgetEditResult.Rejected(PlacementRejectionReason.DUPLICATE_ITEM_ID)
 

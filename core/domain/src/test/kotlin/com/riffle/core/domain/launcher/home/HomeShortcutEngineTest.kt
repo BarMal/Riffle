@@ -14,6 +14,16 @@ class HomeShortcutEngineTest {
     private val engine = HomeShortcutEngine()
 
     @Test
+    fun rejectsAddingAppToGeneratedPage() {
+        val result = engine.addAppToSelectedPage(generatedLayout(), app(label = "Camera"))
+
+        assertEquals(
+            PlacementRejectionReason.GENERATED_PAGE,
+            assertIs<HomeShortcutResult.Rejected>(result).reason,
+        )
+    }
+
+    @Test
     fun addsAppShortcutToSelectedPage() {
         val app = app(label = "Camera")
 
@@ -25,6 +35,16 @@ class HomeShortcutEngineTest {
         assertEquals("Camera", shortcut.label)
         assertEquals(GridPlacement(cell = GridCell(column = 0, row = 0)), shortcut.placement)
     }
+
+    private fun generatedLayout(): HomeLayout =
+        HomeLayoutDefaults.standard().let { layout ->
+            layout.copy(
+                pages =
+                    listOf(
+                        layout.selectedPage.copy(type = LauncherPageType.Generated(GeneratedLauncherPageKind.TODAY)),
+                    ),
+            )
+        }
 
     @Test
     fun rejectsDuplicateAppShortcutOnHomePages() {

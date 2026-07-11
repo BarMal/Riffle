@@ -1,5 +1,6 @@
 package com.riffle.core.domain.launcher.home
 
+@Suppress("TooManyFunctions")
 class FolderEngine(
     private val gridPlacementEngine: GridPlacementEngine = GridPlacementEngine(),
 ) {
@@ -9,28 +10,12 @@ class FolderEngine(
         label: String,
         itemIds: List<LauncherItemId>,
     ): FolderEditResult =
-        label.sanitizedFolderLabel()
-            ?.let { trimmedLabel ->
-                when (
-                    val selection =
-                        selectFolderShortcuts(
-                            page = layout.selectedPage,
-                            itemIds = itemIds,
-                        )
-                ) {
-                    is FolderShortcutSelection.Selected ->
-                        createFolderFromShortcuts(
-                            layout = layout,
-                            folderId = folderId,
-                            label = trimmedLabel,
-                            itemIds = itemIds,
-                            shortcuts = selection.shortcuts,
-                        )
+        when {
+            layout.selectedPage.type is LauncherPageType.Generated ->
+                FolderEditResult.Rejected(FolderEditRejectionReason.GENERATED_PAGE)
 
-                    is FolderShortcutSelection.Rejected -> FolderEditResult.Rejected(selection.reason)
-                }
-            }
-            ?: FolderEditResult.Rejected(FolderEditRejectionReason.INVALID_LABEL)
+            else -> createFolder(layout, folderId, label, itemIds)
+        }
 
     fun renameFolderOnSelectedPage(
         layout: HomeLayout,
@@ -70,26 +55,12 @@ class FolderEngine(
         folderId: LauncherItemId,
         shortcut: AppShortcutItem,
     ): FolderEditResult =
-        layout.selectedPage.folder(folderId)
-            ?.let { folder ->
-                when {
-                    layout.containsHomeApp(shortcut.appIdentity) ->
-                        FolderEditResult.Rejected(FolderEditRejectionReason.DUPLICATE_ITEM)
+        when {
+            layout.selectedPage.type is LauncherPageType.Generated ->
+                FolderEditResult.Rejected(FolderEditRejectionReason.GENERATED_PAGE)
 
-                    folder.items.any { item -> item.appIdentity == shortcut.appIdentity } ->
-                        FolderEditResult.Rejected(FolderEditRejectionReason.DUPLICATE_ITEM)
-
-                    else ->
-                        FolderEditResult.Updated(
-                            layout.withUpdatedSelectedPage(
-                                layout.selectedPage.replaceFolder(
-                                    folder.copy(items = folder.items + shortcut.copy(placement = null)),
-                                ),
-                            ),
-                        )
-                }
-            }
-            ?: FolderEditResult.Rejected(FolderEditRejectionReason.ITEM_NOT_FOUND)
+            else -> addShortcutToFolder(layout, folderId, shortcut)
+        }
 
     fun removeShortcutFromFolderOnSelectedPage(
         layout: HomeLayout,
@@ -107,6 +78,47 @@ class FolderEngine(
                             layout.withUpdatedSelectedPage(
                                 layout.selectedPage.replaceFolder(
                                     folder.copy(items = folder.items.filterNot { item -> item.id == shortcutId }),
+                                ),
+                            ),
+                        )
+                }
+            }
+            ?: FolderEditResult.Rejected(FolderEditRejectionReason.ITEM_NOT_FOUND)
+
+    private fun createFolder(
+        layout: HomeLayout,
+        folderId: LauncherItemId,
+        label: String,
+        itemIds: List<LauncherItemId>,
+    ): FolderEditResult =
+        label.sanitizedFolderLabel()
+            ?.let { trimmedLabel ->
+                when (val selection = selectFolderShortcuts(layout.selectedPage, itemIds)) {
+                    is FolderShortcutSelection.Selected ->
+                        createFolderFromShortcuts(layout, folderId, trimmedLabel, itemIds, selection.shortcuts)
+
+                    is FolderShortcutSelection.Rejected -> FolderEditResult.Rejected(selection.reason)
+                }
+            }
+            ?: FolderEditResult.Rejected(FolderEditRejectionReason.INVALID_LABEL)
+
+    private fun addShortcutToFolder(
+        layout: HomeLayout,
+        folderId: LauncherItemId,
+        shortcut: AppShortcutItem,
+    ): FolderEditResult =
+        layout.selectedPage.folder(folderId)
+            ?.let { folder ->
+                when {
+                    layout.containsHomeApp(shortcut.appIdentity) ||
+                        folder.items.any { item -> item.appIdentity == shortcut.appIdentity } ->
+                        FolderEditResult.Rejected(FolderEditRejectionReason.DUPLICATE_ITEM)
+
+                    else ->
+                        FolderEditResult.Updated(
+                            layout.withUpdatedSelectedPage(
+                                layout.selectedPage.replaceFolder(
+                                    folder.copy(items = folder.items + shortcut.copy(placement = null)),
                                 ),
                             ),
                         )
@@ -176,6 +188,7 @@ class FolderEngine(
     private fun PlacementRejectionReason.toFolderRejectionReason(): FolderEditRejectionReason =
         when (this) {
             PlacementRejectionReason.MISSING_PLACEMENT -> FolderEditRejectionReason.MISSING_PLACEMENT
+            PlacementRejectionReason.GENERATED_PAGE -> FolderEditRejectionReason.GENERATED_PAGE
             PlacementRejectionReason.ITEM_NOT_FOUND -> FolderEditRejectionReason.ITEM_NOT_FOUND
             PlacementRejectionReason.DUPLICATE_ITEM_ID -> FolderEditRejectionReason.DUPLICATE_ITEM
             PlacementRejectionReason.DUPLICATE_APP -> FolderEditRejectionReason.DUPLICATE_ITEM
@@ -229,6 +242,7 @@ enum class FolderItemMoveDirection {
 }
 
 enum class FolderEditRejectionReason {
+    GENERATED_PAGE,
     NOT_ENOUGH_ITEMS,
     ITEM_NOT_FOUND,
     UNSUPPORTED_ITEM,

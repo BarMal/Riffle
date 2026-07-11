@@ -12,6 +12,34 @@ class FolderEngineTest {
     private val moveEngine = FolderMoveEngine()
 
     @Test
+    fun rejectsCreatingFolderOnGeneratedPage() {
+        val layout =
+            HomeLayoutDefaults.standard().let { standard ->
+                standard.copy(
+                    pages =
+                        listOf(
+                            standard.selectedPage.copy(
+                                type = LauncherPageType.Generated(GeneratedLauncherPageKind.TODAY),
+                            ),
+                        ),
+                )
+            }
+
+        val result =
+            engine.createFolderOnSelectedPage(
+                layout = layout,
+                folderId = LauncherItemId("folder:tools"),
+                label = "Tools",
+                itemIds = emptyList(),
+            )
+
+        assertEquals(
+            FolderEditRejectionReason.GENERATED_PAGE,
+            assertIs<FolderEditResult.Rejected>(result).reason,
+        )
+    }
+
+    @Test
     fun createsFolderFromSelectedPageShortcuts() {
         val camera =
             appShortcut(
