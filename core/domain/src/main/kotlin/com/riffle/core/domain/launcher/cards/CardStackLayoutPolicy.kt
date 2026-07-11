@@ -72,6 +72,21 @@ data class CardStackLayoutPolicy(
         }
     }
 
+    fun entries(
+        cards: List<LauncherCard>,
+        activeCardId: LauncherCardId? = cards.firstOrNull()?.id,
+        reducedMotion: Boolean = false,
+    ): List<LauncherCardStackLayoutEntry> {
+        if (cards.isEmpty()) return emptyList()
+        require(cards.map { it.id }.distinct().size == cards.size) { "Card ids must be unique." }
+        val focusedIndex = cards.indexOfFirst { it.id == activeCardId }
+        require(focusedIndex >= 0) { "Active card must be in the stack." }
+
+        return entries(cards.size, focusedIndex, reducedMotion).map { layout ->
+            LauncherCardStackLayoutEntry(card = cards[layout.cardIndex], layout = layout)
+        }
+    }
+
     private fun Int.depthFrom(activeIndex: Int): Int = abs(this - activeIndex)
 
     companion object {
@@ -88,6 +103,11 @@ data class CardStackLayoutEntry(
     val verticalOffset: Float = 0f,
     val rotationDegrees: Float = 0f,
     val alpha: Float,
+)
+
+data class LauncherCardStackLayoutEntry(
+    val card: LauncherCard,
+    val layout: CardStackLayoutEntry,
 )
 
 const val DEFAULT_CARD_STACK_MAX_VISIBLE_DEPTH = 3
