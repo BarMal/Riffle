@@ -7,6 +7,7 @@ class LauncherTemplateSchemaValidator(
         val elementValidation = validateElements(schema)
         return LauncherTemplateSchemaValidationResult(
             validateVersion(schema = schema, supportedVersion = supportedVersion) +
+                validateBlankIds(schema) +
                 validateDuplicateIds(schema) +
                 validateSlotCapacities(schema.slots) +
                 elementValidation.issues +
@@ -34,7 +35,15 @@ sealed interface LauncherTemplateSchemaValidationIssue {
         val slotId: LauncherTemplateSlotId,
     ) : LauncherTemplateSchemaValidationIssue
 
+    data class BlankSlotId(
+        val slotId: LauncherTemplateSlotId,
+    ) : LauncherTemplateSchemaValidationIssue
+
     data class DuplicateElementId(
+        val elementId: LauncherTemplateElementId,
+    ) : LauncherTemplateSchemaValidationIssue
+
+    data class BlankElementId(
         val elementId: LauncherTemplateElementId,
     ) : LauncherTemplateSchemaValidationIssue
 
@@ -105,6 +114,18 @@ private fun validateDuplicateIds(schema: LauncherTemplateSchema): List<LauncherT
             .duplicatesBy { element -> element.id }
             .map<LauncherTemplateElementId, LauncherTemplateSchemaValidationIssue>(
                 LauncherTemplateSchemaValidationIssue::DuplicateElementId,
+            )
+
+private fun validateBlankIds(schema: LauncherTemplateSchema): List<LauncherTemplateSchemaValidationIssue> =
+    schema.slots
+        .filter { slot -> slot.id.value.isBlank() }
+        .map<LauncherTemplateSlot, LauncherTemplateSchemaValidationIssue>(
+            { slot -> LauncherTemplateSchemaValidationIssue.BlankSlotId(slot.id) },
+        ) +
+        schema.elements
+            .filter { element -> element.id.value.isBlank() }
+            .map<LauncherTemplateElement, LauncherTemplateSchemaValidationIssue>(
+                { element -> LauncherTemplateSchemaValidationIssue.BlankElementId(element.id) },
             )
 
 private fun validateSlotCapacities(slots: List<LauncherTemplateSlot>): List<LauncherTemplateSchemaValidationIssue> =

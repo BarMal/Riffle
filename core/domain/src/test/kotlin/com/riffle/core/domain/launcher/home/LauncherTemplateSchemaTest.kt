@@ -147,6 +147,32 @@ class LauncherTemplateSchemaTest {
     }
 
     @Test
+    fun validatorRejectsBlankSlotAndElementIds() {
+        val result =
+            validator.validate(
+                LauncherTemplateSchema(
+                    slots = listOf(slot(" ", setOf(LauncherTemplateSupportedElementType.TEXT))),
+                    elements =
+                        listOf(
+                            element(
+                                id = "",
+                                slotId = " ",
+                                type = SupportedLauncherTemplateElementType(LauncherTemplateSupportedElementType.TEXT),
+                            ),
+                        ),
+                ),
+            )
+
+        assertEquals(
+            listOf(
+                LauncherTemplateSchemaValidationIssue.BlankSlotId(LauncherTemplateSlotId(" ")),
+                LauncherTemplateSchemaValidationIssue.BlankElementId(LauncherTemplateElementId("")),
+            ),
+            result.issues,
+        )
+    }
+
+    @Test
     fun validatorRejectsMissingSlotsUnsupportedElementsAndIncompatibleSlotUsage() {
         val schema =
             LauncherTemplateSchema(
