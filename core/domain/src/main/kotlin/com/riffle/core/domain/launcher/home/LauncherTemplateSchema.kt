@@ -14,6 +14,7 @@ value class LauncherTemplateSlotId(val value: String)
 data class LauncherTemplateSlot(
     val id: LauncherTemplateSlotId,
     val supportedElementTypes: Set<LauncherTemplateSupportedElementType>,
+    val unsupportedElementTypes: Set<String> = emptySet(),
     val minElementCount: Int = 0,
     val maxElementCount: Int? = null,
 )
@@ -85,8 +86,10 @@ fun LauncherTemplateSchema.toDocument(): LauncherTemplateSchemaDocument =
                 LauncherTemplateSlotDocument(
                     id = slot.id.value,
                     supportedElementTypes =
-                        slot.supportedElementTypes
-                            .map { elementType -> elementType.rawValue }
+                        (
+                            slot.supportedElementTypes.map { elementType -> elementType.rawValue } +
+                                slot.unsupportedElementTypes
+                        )
                             .sorted(),
                     minElementCount = slot.minElementCount,
                     maxElementCount = slot.maxElementCount,
@@ -112,6 +115,10 @@ fun LauncherTemplateSchemaDocument.toSchema(): LauncherTemplateSchema =
                     supportedElementTypes =
                         slot.supportedElementTypes
                             .mapNotNull(LauncherTemplateSupportedElementType::fromRawValue)
+                            .toSet(),
+                    unsupportedElementTypes =
+                        slot.supportedElementTypes
+                            .filter { rawValue -> LauncherTemplateSupportedElementType.fromRawValue(rawValue) == null }
                             .toSet(),
                     minElementCount = slot.minElementCount,
                     maxElementCount = slot.maxElementCount,
