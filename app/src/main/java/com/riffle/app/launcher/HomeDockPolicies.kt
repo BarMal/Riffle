@@ -52,13 +52,12 @@ internal fun Modifier.dockShelfMotion(policy: DockShelfMotionPolicy): Modifier =
     animateContentSize(animationSpec = dockShelfSizeAnimation(policy))
 
 internal fun Modifier.dockShelfPolicies(interactions: DockInteractions): Modifier =
-    dockShelfMotion(dockShelfMotionPolicy(interactions.reducedMotion))
-        .dockShelfSystemGestureExclusion(
-            dockShelfGesturePolicy(
-                isDockVisible = true,
-                homeInsetPolicy = interactions.homeInsetPolicy,
-            ),
-        )
+    dockShelfSystemGestureExclusion(
+        dockShelfGesturePolicy(
+            isDockVisible = true,
+            homeInsetPolicy = interactions.homeInsetPolicy,
+        ),
+    )
 
 internal fun Modifier.dockShelfSystemGestureExclusion(policy: DockShelfGesturePolicy): Modifier =
     composed {
