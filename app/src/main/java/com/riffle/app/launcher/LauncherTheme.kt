@@ -2,6 +2,7 @@ package com.riffle.app.launcher
 
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
@@ -9,8 +10,12 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.settings.LauncherThemeMode
 import com.riffle.core.domain.launcher.settings.LauncherThemePreset
 
@@ -38,11 +43,29 @@ fun RiffleLauncherTheme(
             else -> fallbackScheme(darkTheme = darkTheme, themePreset = themePreset)
         }
 
-    MaterialTheme(
-        colorScheme = colorScheme,
-        content = content,
-    )
+    CompositionLocalProvider(LocalLauncherCardShape provides launcherCardShape(themePreset)) {
+        MaterialTheme(
+            colorScheme = colorScheme,
+            content = content,
+        )
+    }
 }
+
+internal val LocalLauncherCardShape = staticCompositionLocalOf<Shape> { RoundedCornerShape(24.dp) }
+
+internal fun launcherCardShape(themePreset: LauncherThemePreset): Shape =
+    RoundedCornerShape(
+        when (themePreset) {
+            LauncherThemePreset.MINIMAL -> 8.dp
+            LauncherThemePreset.VICTORIAN -> 20.dp
+            LauncherThemePreset.RETRO -> 12.dp
+            LauncherThemePreset.GLASS -> 28.dp
+            LauncherThemePreset.TERMINAL -> 0.dp
+            LauncherThemePreset.MATERIAL,
+            LauncherThemePreset.CUSTOM,
+            -> 24.dp
+        },
+    )
 
 internal fun supportsDynamicMaterialColor(sdkInt: Int): Boolean = sdkInt >= Build.VERSION_CODES.S
 
