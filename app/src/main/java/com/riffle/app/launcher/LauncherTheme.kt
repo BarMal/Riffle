@@ -12,10 +12,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import com.riffle.core.domain.launcher.settings.LauncherThemeMode
+import com.riffle.core.domain.launcher.settings.LauncherThemePreset
 
 @Composable
 fun RiffleLauncherTheme(
     themeMode: LauncherThemeMode = LauncherThemeMode.SYSTEM,
+    themePreset: LauncherThemePreset = LauncherThemePreset.MATERIAL,
     content: @Composable () -> Unit,
 ) {
     val darkTheme =
@@ -27,9 +29,13 @@ fun RiffleLauncherTheme(
     val context = LocalContext.current
     val colorScheme =
         when {
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && darkTheme -> dynamicDarkColorScheme(context)
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> dynamicLightColorScheme(context)
-            else -> fallbackScheme(darkTheme = darkTheme)
+            themePreset == LauncherThemePreset.MATERIAL &&
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+                darkTheme -> dynamicDarkColorScheme(context)
+
+            themePreset == LauncherThemePreset.MATERIAL &&
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> dynamicLightColorScheme(context)
+            else -> fallbackScheme(darkTheme = darkTheme, themePreset = themePreset)
         }
 
     MaterialTheme(
@@ -40,7 +46,25 @@ fun RiffleLauncherTheme(
 
 internal fun supportsDynamicMaterialColor(sdkInt: Int): Boolean = sdkInt >= Build.VERSION_CODES.S
 
-internal fun fallbackScheme(darkTheme: Boolean): ColorScheme = if (darkTheme) darkScheme else lightScheme
+internal fun fallbackScheme(
+    darkTheme: Boolean,
+    themePreset: LauncherThemePreset = LauncherThemePreset.MATERIAL,
+): ColorScheme =
+    (if (darkTheme) darkScheme else lightScheme)
+        .withThemePreset(themePreset)
+
+private fun ColorScheme.withThemePreset(preset: LauncherThemePreset): ColorScheme =
+    when (preset) {
+        LauncherThemePreset.MATERIAL,
+        LauncherThemePreset.CUSTOM,
+        -> this
+
+        LauncherThemePreset.MINIMAL -> copy(primary = Color(0xFF5B5F66), secondary = Color(0xFF5B5F66))
+        LauncherThemePreset.VICTORIAN -> copy(primary = Color(0xFF76546F), secondary = Color(0xFF4D5C92))
+        LauncherThemePreset.RETRO -> copy(primary = Color(0xFF875A00), secondary = Color(0xFF006B5F))
+        LauncherThemePreset.GLASS -> copy(primary = Color(0xFF356F8A), secondary = Color(0xFF4D5C92))
+        LauncherThemePreset.TERMINAL -> copy(primary = Color(0xFF1D7A45), secondary = Color(0xFF1D7A45))
+    }
 
 internal val lightScheme =
     lightColorScheme(

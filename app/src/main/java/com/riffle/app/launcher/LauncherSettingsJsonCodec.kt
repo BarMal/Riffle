@@ -8,6 +8,7 @@ import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
 import com.riffle.core.domain.launcher.settings.HapticSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.LauncherThemeMode
+import com.riffle.core.domain.launcher.settings.LauncherThemePreset
 import com.riffle.core.domain.launcher.settings.OverlayDockEdge
 import com.riffle.core.domain.launcher.settings.OverlayDockExpandedOrientation
 import com.riffle.core.domain.launcher.settings.OverlayDockSettings
@@ -48,6 +49,7 @@ private fun encodeAppearance(settings: AppearanceSettings): JSONObject =
         .put("hideStatusBarOnHome", settings.homeSystemBars.hideStatusBarOnHome)
         .put("hideNavigationBarOnHome", settings.homeSystemBars.hideNavigationBarOnHome)
         .put("themeMode", settings.themeMode.name)
+        .put("themePreset", settings.themePreset.name)
         .put("wallpaper", encodeWallpaper(settings.wallpaper))
 
 private fun JSONObject.toAppearance(defaults: AppearanceSettings): AppearanceSettings {
@@ -63,6 +65,9 @@ private fun JSONObject.toAppearance(defaults: AppearanceSettings): AppearanceSet
             themeMode =
                 runCatching { LauncherThemeMode.valueOf(optString("themeMode")) }
                     .getOrDefault(defaults.themeMode),
+            themePreset =
+                runCatching { LauncherThemePreset.valueOf(optString("themePreset")) }
+                    .getOrDefault(defaults.themePreset),
             wallpaper = optJSONObject("wallpaper")?.toWallpaper(defaults.wallpaper) ?: defaults.wallpaper,
         ).withHomeSystemBars(homeSystemBars)
 }

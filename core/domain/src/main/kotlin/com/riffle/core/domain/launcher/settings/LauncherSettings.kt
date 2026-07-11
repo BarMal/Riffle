@@ -16,6 +16,7 @@ data class LauncherSettings(
 data class AppearanceSettings(
     val wallpaper: WallpaperSettings = WallpaperSettings.system(),
     val themeMode: LauncherThemeMode = LauncherThemeMode.SYSTEM,
+    val themePreset: LauncherThemePreset = LauncherThemePreset.MATERIAL,
     val fullscreenHome: Boolean = false,
     val hideStatusBarOnHome: Boolean = false,
     val hideNavigationBarOnHome: Boolean = false,
@@ -25,6 +26,16 @@ enum class LauncherThemeMode {
     SYSTEM,
     LIGHT,
     DARK,
+}
+
+enum class LauncherThemePreset {
+    MATERIAL,
+    MINIMAL,
+    VICTORIAN,
+    RETRO,
+    GLASS,
+    TERMINAL,
+    CUSTOM,
 }
 
 data class GestureSettings(
