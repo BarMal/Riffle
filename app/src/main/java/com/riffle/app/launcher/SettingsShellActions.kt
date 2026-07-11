@@ -72,6 +72,7 @@ internal fun LauncherShellAction.launcherSettingsActionRoute(): LauncherSettings
     when (this) {
         is LauncherShellAction.SelectWallpaperSource,
         is LauncherShellAction.SelectLauncherThemeMode,
+        is LauncherShellAction.SelectLauncherThemePreset,
         is LauncherShellAction.SelectWallpaperScrollMode,
         is LauncherShellAction.SelectFullscreenHomeEnabled,
         is LauncherShellAction.SelectHomeStatusBarHidden,

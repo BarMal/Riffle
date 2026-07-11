@@ -197,6 +197,7 @@ private fun SettingsAppearancePageContent(
 
     SettingsSection(title = "Theme") {
         ThemeModeSetting(selectedMode = appearance.themeMode, onAction = onAction)
+        ThemePresetSetting(selectedPreset = appearance.themePreset, onAction = onAction)
     }
     SettingsSection(title = "Wallpaper") {
         WallpaperSourceSetting(

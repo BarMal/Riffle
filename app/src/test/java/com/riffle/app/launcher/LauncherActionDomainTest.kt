@@ -293,6 +293,12 @@ class LauncherActionDomainTest {
                     ),
                 ),
                 settings(
+                    "SelectLauncherThemePreset",
+                    LauncherShellAction.SelectLauncherThemePreset(
+                        com.riffle.core.domain.launcher.settings.LauncherThemePreset.VICTORIAN,
+                    ),
+                ),
+                settings(
                     "SelectWallpaperScrollMode",
                     LauncherShellAction.SelectWallpaperScrollMode(WallpaperScrollMode.SCROLLING),
                 ),
