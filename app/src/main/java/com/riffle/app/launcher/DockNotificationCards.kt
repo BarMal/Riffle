@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -150,7 +149,7 @@ private fun DockNotificationPermissionCard(
                         )
                 }
                 .clickable(onClick = { interactions.onAction(LauncherShellAction.RequestNotificationAccess) }),
-        shape = RoundedCornerShape(24.dp),
+        shape = LocalLauncherCardShape.current,
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = DOCK_NOTIFICATION_CARD_ALPHA),
     ) {
         Column(
@@ -218,7 +217,7 @@ private fun DockNotificationCard(
                 .clickable(enabled = identity != null) {
                     identity?.let { appIdentity -> onAction(LauncherShellAction.LaunchApp(appIdentity)) }
                 },
-        shape = RoundedCornerShape(24.dp),
+        shape = LocalLauncherCardShape.current,
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = DOCK_NOTIFICATION_CARD_ALPHA),
     ) {
         Column(

@@ -1,6 +1,9 @@
 package com.riffle.app.launcher
 
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.settings.LauncherThemePreset
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertSame
@@ -49,5 +52,12 @@ class LauncherThemeTest {
             lightScheme,
             fallbackScheme(darkTheme = false, themePreset = LauncherThemePreset.CUSTOM),
         )
+    }
+
+    @Test
+    fun cardShapeTokenVariesByPreset() {
+        assertEquals(RoundedCornerShape(0.dp), launcherCardShape(LauncherThemePreset.TERMINAL))
+        assertEquals(RoundedCornerShape(28.dp), launcherCardShape(LauncherThemePreset.GLASS))
+        assertEquals(RoundedCornerShape(24.dp), launcherCardShape(LauncherThemePreset.MATERIAL))
     }
 }
