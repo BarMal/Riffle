@@ -115,6 +115,7 @@ private val LauncherShellAction.isAppearanceSettingsAction: Boolean
     get() =
         when (this) {
             is LauncherShellAction.SelectWallpaperSource,
+            is LauncherShellAction.SelectLauncherThemeMode,
             is LauncherShellAction.SelectWallpaperScrollMode,
             is LauncherShellAction.SelectFullscreenHomeEnabled,
             is LauncherShellAction.SelectHomeStatusBarHidden,

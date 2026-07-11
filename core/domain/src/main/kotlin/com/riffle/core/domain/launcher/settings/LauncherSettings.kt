@@ -15,10 +15,17 @@ data class LauncherSettings(
 
 data class AppearanceSettings(
     val wallpaper: WallpaperSettings = WallpaperSettings.system(),
+    val themeMode: LauncherThemeMode = LauncherThemeMode.SYSTEM,
     val fullscreenHome: Boolean = false,
     val hideStatusBarOnHome: Boolean = false,
     val hideNavigationBarOnHome: Boolean = false,
 )
+
+enum class LauncherThemeMode {
+    SYSTEM,
+    LIGHT,
+    DARK,
+}
 
 data class GestureSettings(
     val homeGestures: HomeGestureSettings = HomeGestureSettings(),

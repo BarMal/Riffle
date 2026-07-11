@@ -11,10 +11,19 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import com.riffle.core.domain.launcher.settings.LauncherThemeMode
 
 @Composable
-fun RiffleLauncherTheme(content: @Composable () -> Unit) {
-    val darkTheme = isSystemInDarkTheme()
+fun RiffleLauncherTheme(
+    themeMode: LauncherThemeMode = LauncherThemeMode.SYSTEM,
+    content: @Composable () -> Unit,
+) {
+    val darkTheme =
+        when (themeMode) {
+            LauncherThemeMode.SYSTEM -> isSystemInDarkTheme()
+            LauncherThemeMode.LIGHT -> false
+            LauncherThemeMode.DARK -> true
+        }
     val context = LocalContext.current
     val colorScheme =
         when {

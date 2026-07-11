@@ -26,6 +26,7 @@ import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
 import com.riffle.core.domain.launcher.settings.HomeGesture
 import com.riffle.core.domain.launcher.settings.HomeSwipeGestureDirection
 import com.riffle.core.domain.launcher.settings.LauncherGestureAction
+import com.riffle.core.domain.launcher.settings.LauncherThemeMode
 import com.riffle.core.domain.launcher.settings.OverlayDockEdge
 import com.riffle.core.domain.launcher.settings.OverlayDockExpandedOrientation
 import com.riffle.core.domain.launcher.settings.OverlayDockItemMoveDirection
@@ -264,6 +265,8 @@ sealed interface LauncherShellAction {
     data object ResetSearchFilters : LauncherShellAction
 
     data class SelectWallpaperSource(val source: WallpaperSource) : LauncherShellAction
+
+    data class SelectLauncherThemeMode(val mode: LauncherThemeMode) : LauncherShellAction
 
     data class SelectWallpaperScrollMode(val mode: WallpaperScrollMode) : LauncherShellAction
 

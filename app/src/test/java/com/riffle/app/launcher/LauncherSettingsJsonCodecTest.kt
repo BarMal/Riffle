@@ -18,6 +18,7 @@ import com.riffle.core.domain.launcher.settings.HomeGestureSettings
 import com.riffle.core.domain.launcher.settings.HomeSystemBars
 import com.riffle.core.domain.launcher.settings.LauncherGestureAction
 import com.riffle.core.domain.launcher.settings.LauncherSettings
+import com.riffle.core.domain.launcher.settings.LauncherThemeMode
 import com.riffle.core.domain.launcher.settings.MAX_OVERLAY_DOCK_EXPANDED_ICON_SIZE_DP
 import com.riffle.core.domain.launcher.settings.MAX_OVERLAY_DOCK_HANDLE_ALPHA_PERCENT
 import com.riffle.core.domain.launcher.settings.MAX_OVERLAY_DOCK_HANDLE_HEIGHT_DP
@@ -78,6 +79,16 @@ class LauncherSettingsJsonCodecTest {
 
         assertEquals(WallpaperSource.SOLID_COLOR, decodedSettings.appearance.wallpaper.source)
         assertEquals(WallpaperScrollMode.STATIC, decodedSettings.appearance.wallpaper.scrollMode)
+    }
+
+    @Test
+    fun roundTripsThemeMode() {
+        val settings = LauncherSettings(appearance = AppearanceSettings(themeMode = LauncherThemeMode.DARK))
+
+        assertEquals(
+            LauncherThemeMode.DARK,
+            decodeLauncherSettings(encodeLauncherSettings(settings)).appearance.themeMode,
+        )
     }
 
     @Test

@@ -114,6 +114,15 @@ internal fun LauncherShellState.withAppearanceSettingsAction(
                 launcherSettingsRepository = launcherSettingsRepository,
             )
 
+        is LauncherShellAction.SelectLauncherThemeMode ->
+            withLauncherSettings(
+                settings =
+                    launcherSettings.copy(
+                        appearance = launcherSettings.appearance.copy(themeMode = action.mode),
+                    ),
+                launcherSettingsRepository = launcherSettingsRepository,
+            )
+
         is LauncherShellAction.SelectWallpaperScrollMode ->
             withLauncherSettings(
                 settings =
