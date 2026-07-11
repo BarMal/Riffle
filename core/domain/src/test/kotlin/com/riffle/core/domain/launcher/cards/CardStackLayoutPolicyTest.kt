@@ -25,6 +25,8 @@ class CardStackLayoutPolicyTest {
                 depth = 0,
                 scale = 1f,
                 offset = 0f,
+                verticalOffset = 0f,
+                rotationDegrees = 0f,
                 alpha = 1f,
             ),
             entries.last(),
@@ -97,6 +99,48 @@ class CardStackLayoutPolicyTest {
             reducedMotionEntries.maxOf { entry -> kotlin.math.abs(entry.offset) } <
                 standardEntries.maxOf { entry -> kotlin.math.abs(entry.offset) },
         )
+    }
+
+    @Test
+    fun profilesExposeNamedDeterministicGeometry() {
+        assertEquals(
+            setOf(
+                CardStackLayoutProfile.DECK,
+                CardStackLayoutProfile.FAN,
+                CardStackLayoutProfile.VICTORIAN,
+                CardStackLayoutProfile.VERTICAL,
+                CardStackLayoutProfile.CAROUSEL,
+                CardStackLayoutProfile.COMPACT,
+            ),
+            CardStackLayoutProfile.entries.toSet(),
+        )
+        assertEquals(
+            listOf(-36f, 36f, 0f),
+            CardStackLayoutPolicy.forProfile(CardStackLayoutProfile.VERTICAL).entries(cardCount = 3, activeIndex = 1)
+                .map { entry -> entry.verticalOffset },
+        )
+        val victorianEntries =
+            CardStackLayoutPolicy.forProfile(CardStackLayoutProfile.VICTORIAN)
+                .entries(cardCount = 5, activeIndex = 2)
+                .associateBy { entry -> entry.cardIndex }
+
+        assertEquals(32f, victorianEntries.getValue(0).verticalOffset)
+        assertEquals(8f, victorianEntries.getValue(1).verticalOffset)
+        assertEquals(0f, victorianEntries.getValue(2).verticalOffset)
+        assertEquals(-6f, victorianEntries.getValue(0).rotationDegrees)
+        assertEquals(6f, victorianEntries.getValue(4).rotationDegrees)
+    }
+
+    @Test
+    fun reducedMotionRemovesProfileRotation() {
+        val entries =
+            CardStackLayoutPolicy.forProfile(CardStackLayoutProfile.VICTORIAN).entries(
+                cardCount = 3,
+                activeIndex = 1,
+                reducedMotion = true,
+            )
+
+        assertEquals(listOf(0f, 0f, 0f), entries.map { entry -> entry.rotationDegrees })
     }
 
     private fun assertFloatListEquals(

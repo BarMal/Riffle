@@ -7,6 +7,9 @@ data class CardStackLayoutPolicy(
     val scaleStep: Float = DEFAULT_CARD_STACK_SCALE_STEP,
     val offsetStep: Float = DEFAULT_CARD_STACK_OFFSET_STEP,
     val alphaStep: Float = DEFAULT_CARD_STACK_ALPHA_STEP,
+    val verticalOffsetStep: Float = DEFAULT_CARD_STACK_VERTICAL_OFFSET_STEP,
+    val curveStep: Float = DEFAULT_CARD_STACK_CURVE_STEP,
+    val rotationStep: Float = DEFAULT_CARD_STACK_ROTATION_STEP,
     val reducedMotionScaleStep: Float = DEFAULT_CARD_STACK_REDUCED_MOTION_SCALE_STEP,
     val reducedMotionOffsetStep: Float = DEFAULT_CARD_STACK_REDUCED_MOTION_OFFSET_STEP,
 ) {
@@ -15,6 +18,8 @@ data class CardStackLayoutPolicy(
         require(scaleStep >= 0f) { "Scale step must not be negative." }
         require(offsetStep >= 0f) { "Offset step must not be negative." }
         require(alphaStep >= 0f) { "Alpha step must not be negative." }
+        require(verticalOffsetStep >= 0f) { "Vertical offset step must not be negative." }
+        require(curveStep >= 0f) { "Curve step must not be negative." }
         require(reducedMotionScaleStep >= 0f) { "Reduced-motion scale step must not be negative." }
         require(reducedMotionOffsetStep >= 0f) { "Reduced-motion offset step must not be negative." }
     }
@@ -60,12 +65,18 @@ data class CardStackLayoutPolicy(
                 depth = depth,
                 scale = (1f - activeScaleStep * depth).coerceAtLeast(0f),
                 offset = activeOffsetStep * signedDistance,
+                verticalOffset = verticalOffsetStep * signedDistance + curveStep * signedDistance * signedDistance,
+                rotationDegrees = if (reducedMotion) 0f else rotationStep * signedDistance,
                 alpha = (1f - alphaStep * depth).coerceIn(0f, 1f),
             )
         }
     }
 
     private fun Int.depthFrom(activeIndex: Int): Int = abs(this - activeIndex)
+
+    companion object {
+        fun forProfile(profile: CardStackLayoutProfile): CardStackLayoutPolicy = profile.policy
+    }
 }
 
 data class CardStackLayoutEntry(
@@ -74,6 +85,8 @@ data class CardStackLayoutEntry(
     val depth: Int,
     val scale: Float,
     val offset: Float,
+    val verticalOffset: Float = 0f,
+    val rotationDegrees: Float = 0f,
     val alpha: Float,
 )
 
@@ -81,5 +94,8 @@ const val DEFAULT_CARD_STACK_MAX_VISIBLE_DEPTH = 3
 const val DEFAULT_CARD_STACK_SCALE_STEP = 0.06f
 const val DEFAULT_CARD_STACK_OFFSET_STEP = 24f
 const val DEFAULT_CARD_STACK_ALPHA_STEP = 0.16f
+const val DEFAULT_CARD_STACK_VERTICAL_OFFSET_STEP = 0f
+const val DEFAULT_CARD_STACK_CURVE_STEP = 0f
+const val DEFAULT_CARD_STACK_ROTATION_STEP = 0f
 const val DEFAULT_CARD_STACK_REDUCED_MOTION_SCALE_STEP = 0.01f
 const val DEFAULT_CARD_STACK_REDUCED_MOTION_OFFSET_STEP = 2f
