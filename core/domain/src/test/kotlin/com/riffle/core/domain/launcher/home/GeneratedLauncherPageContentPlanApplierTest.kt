@@ -8,7 +8,7 @@ class GeneratedLauncherPageContentPlanApplierTest {
     private val applier = GeneratedLauncherPageContentPlanApplier()
 
     @Test
-    fun acceptedGeneratedPageProducesEmptyPageItemsAndPreservesDescriptorShape() {
+    fun rejectsGeneratedPageWithManualItems() {
         val page =
             generatedPage(
                 kind = GeneratedLauncherPageKind.TODAY,
@@ -22,12 +22,13 @@ class GeneratedLauncherPageContentPlanApplierTest {
                     ),
             )
 
-        val applied = appliedPage(plan(kind = GeneratedLauncherPageKind.TODAY), page)
+        val rejected =
+            assertIs<GeneratedLauncherPageContentPlanApplyResult.Rejected>(
+                applier.apply(plan = plan(kind = GeneratedLauncherPageKind.TODAY), page = page),
+            )
 
-        assertEquals(page.id, applied.id)
-        assertEquals(page.type, applied.type)
-        assertEquals(page.grid, applied.grid)
-        assertEquals(emptyList(), applied.items)
+        assertEquals(GeneratedLauncherPageContentPlanApplyRejectionReason.PAGE_HAS_MANUAL_ITEMS, rejected.reason)
+        assertEquals(1, page.items.size)
     }
 
     @Test

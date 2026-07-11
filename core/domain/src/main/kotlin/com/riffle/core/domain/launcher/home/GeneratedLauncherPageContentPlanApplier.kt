@@ -12,15 +12,14 @@ class GeneratedLauncherPageContentPlanApplier {
                 pageType !is LauncherPageType.Generated ->
                     GeneratedLauncherPageContentPlanApplyRejectionReason.NON_GENERATED_PAGE
                 pageType.kind != plan.kind -> GeneratedLauncherPageContentPlanApplyRejectionReason.PAGE_KIND_MISMATCH
+                page.items.isNotEmpty() ->
+                    GeneratedLauncherPageContentPlanApplyRejectionReason.PAGE_HAS_MANUAL_ITEMS
                 else -> null
             }
 
         return if (rejectionReason == null) {
             GeneratedLauncherPageContentPlanApplyResult.Applied(
-                page =
-                    page.copy(
-                        items = emptyList(),
-                    ),
+                page = page,
             )
         } else {
             GeneratedLauncherPageContentPlanApplyResult.Rejected(rejectionReason)
@@ -40,4 +39,5 @@ enum class GeneratedLauncherPageContentPlanApplyRejectionReason {
     UNAVAILABLE_PLAN,
     NON_GENERATED_PAGE,
     PAGE_KIND_MISMATCH,
+    PAGE_HAS_MANUAL_ITEMS,
 }
