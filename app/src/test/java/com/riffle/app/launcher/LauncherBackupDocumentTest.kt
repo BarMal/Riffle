@@ -149,6 +149,17 @@ class LauncherBackupDocumentTest {
     }
 
     @Test
+    fun defaultsMalformedSettingsWhilePreservingHomeLayouts() {
+        val layoutSet = HomeLayoutSet.fromLayout(HomeLayoutDefaults.standard())
+        val value = backupDocumentJson().put("settings", "broken").toString()
+
+        val decodedDocument = decodeLauncherBackupDocument(value)
+
+        assertEquals(layoutSet, decodedDocument.homeLayoutSet)
+        assertEquals(LauncherSettings(), decodedDocument.launcherSettings)
+    }
+
+    @Test
     fun decodesBackupWithMissingExportedAtEpochMillis() {
         val value =
             backupDocumentJson()

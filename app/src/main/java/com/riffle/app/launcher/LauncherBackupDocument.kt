@@ -42,7 +42,9 @@ fun decodeLauncherBackupDocument(value: String): LauncherBackupDocument =
 
         LauncherBackupDocument(
             homeLayoutSet = decodeHomeLayoutSet(json.getJSONObject("homeLayouts").toString()),
-            launcherSettings = decodeLauncherSettings(json.getJSONObject("settings").toString()),
+            launcherSettings =
+                json.optJSONObject("settings")?.let { decodeLauncherSettings(it.toString()) }
+                    ?: LauncherSettings(),
             hiddenAppIdentities = json.optHiddenAppIdentities(),
             exportedAtEpochMillis = json.optLongOrNull("exportedAtEpochMillis"),
         )
