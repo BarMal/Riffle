@@ -19,6 +19,7 @@ import com.riffle.core.domain.launcher.settings.HomeSystemBars
 import com.riffle.core.domain.launcher.settings.LauncherGestureAction
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.LauncherThemeMode
+import com.riffle.core.domain.launcher.settings.LauncherThemePreset
 import com.riffle.core.domain.launcher.settings.MAX_OVERLAY_DOCK_EXPANDED_ICON_SIZE_DP
 import com.riffle.core.domain.launcher.settings.MAX_OVERLAY_DOCK_HANDLE_ALPHA_PERCENT
 import com.riffle.core.domain.launcher.settings.MAX_OVERLAY_DOCK_HANDLE_HEIGHT_DP
@@ -175,6 +176,27 @@ class LauncherSettingsJsonCodecTest {
 
         assertEquals(WallpaperSettings.system(), decodedSettings.appearance.wallpaper)
         assertEquals(HomeSystemBars(), decodedSettings.appearance.homeSystemBars)
+    }
+
+    @Test
+    fun roundTripsThemePreset() {
+        val settings = LauncherSettings(appearance = AppearanceSettings(themePreset = LauncherThemePreset.VICTORIAN))
+
+        val decodedSettings = decodeLauncherSettings(encodeLauncherSettings(settings))
+
+        assertEquals(LauncherThemePreset.VICTORIAN, decodedSettings.appearance.themePreset)
+    }
+
+    @Test
+    fun defaultsMissingOrInvalidThemePreset() {
+        assertEquals(
+            LauncherThemePreset.MATERIAL,
+            decodeLauncherSettings("{\"appearance\": {}}").appearance.themePreset,
+        )
+        assertEquals(
+            LauncherThemePreset.MATERIAL,
+            decodeLauncherSettings("{\"appearance\": {\"themePreset\": \"UNKNOWN\"}}").appearance.themePreset,
+        )
     }
 
     @Test
