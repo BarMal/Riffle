@@ -77,6 +77,30 @@ class GeneratedLauncherPageContentPlanApplierTest {
     }
 
     @Test
+    fun replacesExistingGeneratedContent() {
+        val oldApp =
+            GeneratedLauncherPageContentItem.App(
+                AppIdentity(AppPackageName("com.riffle.old"), AppActivityName(".MainActivity")),
+            )
+        val newApp =
+            GeneratedLauncherPageContentItem.App(
+                AppIdentity(AppPackageName("com.riffle.new"), AppActivityName(".MainActivity")),
+            )
+        val existing =
+            appliedPage(
+                plan(GeneratedLauncherPageKind.APP, items = listOf(oldApp)),
+                generatedPage(kind = GeneratedLauncherPageKind.APP),
+            )
+
+        val refreshed = appliedPage(plan(GeneratedLauncherPageKind.APP, items = listOf(newApp)), existing)
+
+        assertEquals(
+            listOf(newApp.identity),
+            refreshed.items.filterIsInstance<AppShortcutItem>().map { it.appIdentity },
+        )
+    }
+
+    @Test
     fun pageGridIsPreserved() {
         val grid = GridDimensions(columns = 7, rows = 5)
         val page =

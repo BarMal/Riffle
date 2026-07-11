@@ -1,5 +1,7 @@
 package com.riffle.core.domain.launcher.home
 
+internal const val GENERATED_PAGE_LAUNCHER_ITEM_ID_PREFIX = "generated-page:"
+
 class GeneratedLauncherPageContentItemMaterializer {
     fun materialize(
         plan: GeneratedLauncherPageContentPlan,
@@ -72,4 +74,4 @@ enum class GeneratedLauncherPageContentItemMaterializationSkipReason {
 }
 
 private val GeneratedLauncherPageContentItem.generatedPageLauncherItemId: LauncherItemId
-    get() = LauncherItemId("generated-page:${stableId.value}")
+    get() = LauncherItemId("$GENERATED_PAGE_LAUNCHER_ITEM_ID_PREFIX${stableId.value}")

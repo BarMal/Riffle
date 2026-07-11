@@ -13,7 +13,9 @@ class GeneratedLauncherPageContentPlanApplier {
                 pageType !is LauncherPageType.Generated ->
                     GeneratedLauncherPageContentPlanApplyRejectionReason.NON_GENERATED_PAGE
                 pageType.kind != plan.kind -> GeneratedLauncherPageContentPlanApplyRejectionReason.PAGE_KIND_MISMATCH
-                page.items.isNotEmpty() ->
+                page.items.any { item ->
+                    !item.id.value.startsWith(GENERATED_PAGE_LAUNCHER_ITEM_ID_PREFIX)
+                } ->
                     GeneratedLauncherPageContentPlanApplyRejectionReason.PAGE_HAS_MANUAL_ITEMS
                 else -> null
             }
