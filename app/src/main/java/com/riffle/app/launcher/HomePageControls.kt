@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
@@ -205,9 +204,9 @@ private fun PageOverviewCard(
             Modifier
                 .width(PAGE_OVERVIEW_CARD_WIDTH_DP.dp)
                 .pageOverviewReorderDrag(state = state, onMoveToIndex = onMoveToIndex)
-                .clip(RoundedCornerShape(PAGE_OVERVIEW_CARD_CORNER_RADIUS_DP.dp))
+                .clip(LocalLauncherCardShape.current)
                 .clickable(onClick = onClick),
-        shape = RoundedCornerShape(PAGE_OVERVIEW_CARD_CORNER_RADIUS_DP.dp),
+        shape = LocalLauncherCardShape.current,
         color =
             if (state.isSelected) {
                 MaterialTheme.colorScheme.primaryContainer
@@ -507,4 +506,3 @@ private val GeneratedLauncherPageKind.pageOverviewTypeLabel: String
 
 internal const val PAGE_OVERVIEW_CARD_WIDTH_DP = 148
 internal const val PAGE_OVERVIEW_CARD_SPACING_DP = 8
-private const val PAGE_OVERVIEW_CARD_CORNER_RADIUS_DP = 20
