@@ -4,6 +4,7 @@ class GeneratedLauncherPageContentPlanApplier {
     fun apply(
         plan: GeneratedLauncherPageContentPlan,
         page: LauncherPage,
+        appLabelProvider: (GeneratedLauncherPageContentItem.App) -> String,
     ): GeneratedLauncherPageContentPlanApplyResult {
         val pageType = page.type
         val rejectionReason =
@@ -17,12 +18,16 @@ class GeneratedLauncherPageContentPlanApplier {
                 else -> null
             }
 
-        return if (rejectionReason == null) {
+        val materialized =
+            GeneratedLauncherPageContentItemMaterializer().materialize(plan, appLabelProvider)
+        return if (rejectionReason == null && materialized.skippedItems.isEmpty()) {
             GeneratedLauncherPageContentPlanApplyResult.Applied(
-                page = page,
+                page = page.copy(items = materialized.items),
             )
         } else {
-            GeneratedLauncherPageContentPlanApplyResult.Rejected(rejectionReason)
+            GeneratedLauncherPageContentPlanApplyResult.Rejected(
+                rejectionReason ?: GeneratedLauncherPageContentPlanApplyRejectionReason.UNSUPPORTED_CONTENT,
+            )
         }
     }
 }
@@ -40,4 +45,5 @@ enum class GeneratedLauncherPageContentPlanApplyRejectionReason {
     NON_GENERATED_PAGE,
     PAGE_KIND_MISMATCH,
     PAGE_HAS_MANUAL_ITEMS,
+    UNSUPPORTED_CONTENT,
 }
