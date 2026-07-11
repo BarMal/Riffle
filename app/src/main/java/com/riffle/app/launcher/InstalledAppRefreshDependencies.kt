@@ -31,4 +31,5 @@ internal fun LauncherShellState.withRefreshedInstalledApps(deps: InstalledAppRef
     )
         .withoutUnavailableApps(deps.homeLayoutRepository)
         .withHomeScreenLibraryApps(deps.homeLayoutRepository)
+        .withRefreshedGeneratedPages(deps.homeLayoutRepository)
         .withAppShortcuts(deps.appShortcutRepository, deps.appCatalog)
