@@ -208,9 +208,9 @@ class HomeDockMetricsTest {
     }
 
     @Test
-    fun normalDockRendersPersistedItemSlotsAboveCapacity() {
+    fun normalDockRespectsConfiguredCapacityWhenItemsOverflow() {
         assertEquals(
-            6,
+            5,
             dockRenderedSlotCount(
                 capacity = 5,
                 itemCount = 6,
@@ -409,11 +409,12 @@ class HomeDockMetricsTest {
     }
 
     @Test
-    fun collapsedPrimaryDockKeepsAllItemsScrollable() {
+    fun collapsedPrimaryDockKeepsOverflowItemsForTheExpandedShelf() {
         val items = (1..7).map { index -> widget("widget:$index", index) }
         val dock = DockModel(capacity = 5, items = items)
 
         assertEquals(items, dock.primaryDock(showShelf = false).items)
+        assertEquals(5, dockRenderedSlotCount(capacity = dock.capacity, itemCount = dock.items.size, isEditing = false))
     }
 
     @Test
