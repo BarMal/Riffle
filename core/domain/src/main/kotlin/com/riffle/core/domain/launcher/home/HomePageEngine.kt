@@ -133,6 +133,11 @@ class HomePageEngine {
             layout.pages.none { page -> page.id == pageId } ->
                 HomePageEditResult.Rejected(HomePageEditRejectionReason.PAGE_NOT_FOUND)
 
+            layout.pages.any { page ->
+                page.id == pageId && type is LauncherPageType.Generated && page.items.isNotEmpty()
+            } ->
+                HomePageEditResult.Rejected(HomePageEditRejectionReason.CANNOT_ASSIGN_GENERATED_PAGE_TYPE_WITH_ITEMS)
+
             else ->
                 HomePageEditResult.Updated(
                     layout.copy(
@@ -298,6 +303,7 @@ enum class HomePageEditRejectionReason {
     GRID_ITEMS_OUT_OF_BOUNDS,
     INVALID_PAGE_ITEMS,
     CANNOT_DUPLICATE_PAGE_WITH_WIDGETS,
+    CANNOT_ASSIGN_GENERATED_PAGE_TYPE_WITH_ITEMS,
     INVALID_LABEL_SETTING,
 }
 
