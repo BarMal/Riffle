@@ -26,7 +26,7 @@ class LauncherTemplateSchemaTest {
                             id = "cards",
                             supportedElementTypes = setOf(LauncherTemplateSupportedElementType.CARD),
                             maxElementCount = 2,
-                        ),
+                        ).copy(unsupportedElementTypes = setOf("video_embed")),
                     ),
                 elements =
                     listOf(
