@@ -80,7 +80,7 @@ fun LauncherShellContent(
         iconLoader = appIconLoader,
     )
 
-    RiffleLauncherTheme {
+    RiffleLauncherTheme(themeMode = state.launcherSettings.appearance.themeMode) {
         val usesSystemWallpaper = state.launcherSettings.appearance.wallpaper.source == WallpaperSource.SYSTEM
         val rootModifier =
             if (usesSystemWallpaper) {

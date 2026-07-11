@@ -287,6 +287,12 @@ class LauncherActionDomainTest {
                     LauncherShellAction.SelectWallpaperSource(WallpaperSource.SOLID_COLOR),
                 ),
                 settings(
+                    "SelectLauncherThemeMode",
+                    LauncherShellAction.SelectLauncherThemeMode(
+                        com.riffle.core.domain.launcher.settings.LauncherThemeMode.DARK,
+                    ),
+                ),
+                settings(
                     "SelectWallpaperScrollMode",
                     LauncherShellAction.SelectWallpaperScrollMode(WallpaperScrollMode.SCROLLING),
                 ),

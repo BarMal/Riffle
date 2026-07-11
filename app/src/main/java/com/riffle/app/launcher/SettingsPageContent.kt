@@ -195,6 +195,9 @@ private fun SettingsAppearancePageContent(
     val statusBarSetting = homeSystemBars.setting(HomeSystemBar.STATUS)
     val navigationBarSetting = homeSystemBars.setting(HomeSystemBar.NAVIGATION)
 
+    SettingsSection(title = "Theme") {
+        ThemeModeSetting(selectedMode = appearance.themeMode, onAction = onAction)
+    }
     SettingsSection(title = "Wallpaper") {
         WallpaperSourceSetting(
             selectedSource = appearance.wallpaper.source,
