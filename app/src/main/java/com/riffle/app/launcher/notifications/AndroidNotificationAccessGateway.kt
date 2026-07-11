@@ -13,12 +13,24 @@ class AndroidNotificationAccessGateway(
     fun getNotificationAccessStatus(): NotificationAccessStatus =
         notificationAccessStatus(
             appPackageName = context.packageName,
-            enabledListenerPackages = NotificationManagerCompat.getEnabledListenerPackages(context),
+            enabledListenerPackages =
+                NotificationManagerCompat.getEnabledListenerPackages(context) +
+                    enabledNotificationListenerPackages(
+                        Settings.Secure.getString(context.contentResolver, ENABLED_NOTIFICATION_LISTENERS),
+                    ),
             isListenerConnected = RiffleNotificationListenerConnection.isConnected(),
         )
 
     fun createNotificationListenerSettingsIntent(): Intent = Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
 }
+
+internal fun enabledNotificationListenerPackages(enabledListeners: String?): Set<String> =
+    enabledListeners
+        ?.split(':')
+        .orEmpty()
+        .mapNotNull { component ->
+            component.substringBefore('/', missingDelimiterValue = "").takeIf(String::isNotEmpty)
+        }.toSet()
 
 internal fun notificationAccessStatus(
     appPackageName: String,
@@ -31,3 +43,5 @@ internal fun notificationAccessStatus(
             NotificationAccessStatus.GRANTED
         else -> NotificationAccessStatus.NOT_GRANTED
     }
+
+private const val ENABLED_NOTIFICATION_LISTENERS = "enabled_notification_listeners"
