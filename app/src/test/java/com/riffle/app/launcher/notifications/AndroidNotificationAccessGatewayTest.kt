@@ -76,4 +76,15 @@ class AndroidNotificationAccessGatewayTest {
             ),
         )
     }
+
+    @Test
+    fun readsPackagesFromEnabledListenerComponents() {
+        assertEquals(
+            setOf("com.riffle.app", "com.riffle.app.debug"),
+            enabledNotificationListenerPackages(
+                "com.riffle.app/.launcher.notifications.RiffleNotificationListenerService:" +
+                    "com.riffle.app.debug/.launcher.notifications.RiffleNotificationListenerService",
+            ),
+        )
+    }
 }
