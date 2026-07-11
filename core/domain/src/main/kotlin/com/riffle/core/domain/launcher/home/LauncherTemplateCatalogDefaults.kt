@@ -31,6 +31,19 @@ object LauncherTemplateCatalogDefaults {
                     LauncherPageType.Home,
                     LauncherPageType.AllApps,
                 ),
+            schema =
+                LauncherTemplateSchema(
+                    slots =
+                        listOf(
+                            slot(
+                                "home",
+                                LauncherTemplateSupportedElementType.APP_ICON,
+                                LauncherTemplateSupportedElementType.WIDGET,
+                            ),
+                            slot("all-apps", LauncherTemplateSupportedElementType.APP_ICON),
+                        ),
+                    elements = emptyList(),
+                ),
         )
 
     private fun conservativeGeneratedPages(): LauncherTemplate =
@@ -49,6 +62,38 @@ object LauncherTemplateCatalogDefaults {
                     LauncherPageType.Generated(GeneratedLauncherPageKind.APP),
                     LauncherPageType.Generated(GeneratedLauncherPageKind.TODAY),
                 ),
+            schema =
+                LauncherTemplateSchema(
+                    slots =
+                        listOf(
+                            slot(
+                                "home",
+                                LauncherTemplateSupportedElementType.APP_ICON,
+                                LauncherTemplateSupportedElementType.WIDGET,
+                            ),
+                            slot(
+                                "generated-content",
+                                LauncherTemplateSupportedElementType.DYNAMIC_CONTENT,
+                                LauncherTemplateSupportedElementType.CARD,
+                                LauncherTemplateSupportedElementType.TEXT,
+                            ),
+                            slot(
+                                "dock",
+                                LauncherTemplateSupportedElementType.APP_ICON,
+                                LauncherTemplateSupportedElementType.CARD,
+                            ),
+                        ),
+                    elements = emptyList(),
+                ),
+        )
+
+    private fun slot(
+        id: String,
+        vararg supportedElementTypes: LauncherTemplateSupportedElementType,
+    ): LauncherTemplateSlot =
+        LauncherTemplateSlot(
+            id = LauncherTemplateSlotId(id),
+            supportedElementTypes = supportedElementTypes.toSet(),
         )
 
     private fun requireUniqueIds(templates: List<LauncherTemplate>) {

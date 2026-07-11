@@ -4,6 +4,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
 class LauncherTemplateCatalogDefaultsTest {
     private val templates = LauncherTemplateCatalogDefaults.templates
@@ -148,6 +149,17 @@ class LauncherTemplateCatalogDefaultsTest {
             ),
             generated.pages.map { page -> page.id },
         )
+    }
+
+    @Test
+    fun builtInTemplatesHaveVersionedValidSchemas() {
+        val validator = LauncherTemplateSchemaValidator()
+
+        templates.forEach { template ->
+            assertEquals(CURRENT_LAUNCHER_TEMPLATE_SCHEMA_VERSION, template.schema.version)
+            assertEquals(template.schema, template.schema.toDocument().toSchema())
+            assertTrue(validator.validate(template.schema).isValid)
+        }
     }
 
     private fun requireTemplate(id: LauncherTemplateId): LauncherTemplate =

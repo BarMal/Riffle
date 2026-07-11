@@ -146,6 +146,7 @@ class LauncherTemplateSeedApplierTest {
                         supportedViewModes = viewModes,
                         supportedDeviceClasses = deviceClasses,
                         seedPageTypes = seedPageTypes,
+                        schema = LauncherTemplateSchema(slots = emptyList(), elements = emptyList()),
                     ),
                 targetKey = targetKey,
             ),

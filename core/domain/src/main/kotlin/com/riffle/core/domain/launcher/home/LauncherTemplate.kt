@@ -14,6 +14,7 @@ data class LauncherTemplate(
     val supportedViewModes: Set<LauncherViewMode>,
     val supportedDeviceClasses: Set<HomeLayoutDeviceClass>,
     val seedPageTypes: List<LauncherPageType>,
+    val schema: LauncherTemplateSchema,
 ) {
     fun supports(
         viewMode: LauncherViewMode,
