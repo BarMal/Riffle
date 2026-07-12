@@ -44,30 +44,39 @@ internal fun HomePageEngine.applyHomeLayoutConfigurationEdit(
             )
 
         is LauncherShellAction.SelectHomeGridMargin ->
-            when {
-                action.horizontalDp !in MIN_HOME_GRID_MARGIN_DP..MAX_HOME_GRID_MARGIN_DP ||
-                    action.verticalDp !in MIN_HOME_GRID_MARGIN_DP..MAX_HOME_GRID_MARGIN_DP ->
-                    HomePageEditResult.Rejected(HomePageEditRejectionReason.INVALID_GRID_DIMENSIONS)
-
-                else ->
-                    HomePageEditResult.Updated(
-                        layout.copy(
-                            settings =
-                                layout.settings.copy(
-                                    grid =
-                                        layout.settings.grid.copy(
-                                            margin =
-                                                GridInsets(
-                                                    start = action.horizontalDp,
-                                                    top = action.verticalDp,
-                                                    end = action.horizontalDp,
-                                                    bottom = action.verticalDp,
+            HomePageEditResult.Updated(
+                layout.copy(
+                    settings =
+                        layout.settings.copy(
+                            grid =
+                                layout.settings.grid.copy(
+                                    margin =
+                                        GridInsets(
+                                            start =
+                                                action.horizontalDp.coerceIn(
+                                                    MIN_HOME_GRID_MARGIN_DP,
+                                                    MAX_HOME_GRID_MARGIN_DP,
+                                                ),
+                                            top =
+                                                action.verticalDp.coerceIn(
+                                                    MIN_HOME_GRID_MARGIN_DP,
+                                                    MAX_HOME_GRID_MARGIN_DP,
+                                                ),
+                                            end =
+                                                action.horizontalDp.coerceIn(
+                                                    MIN_HOME_GRID_MARGIN_DP,
+                                                    MAX_HOME_GRID_MARGIN_DP,
+                                                ),
+                                            bottom =
+                                                action.verticalDp.coerceIn(
+                                                    MIN_HOME_GRID_MARGIN_DP,
+                                                    MAX_HOME_GRID_MARGIN_DP,
                                                 ),
                                         ),
                                 ),
                         ),
-                    )
-            }
+                ),
+            )
 
         is LauncherShellAction.SelectLibraryPageCompaction ->
             HomePageEditResult.Updated(layout.withLibraryPageCompaction(action.enabled))
