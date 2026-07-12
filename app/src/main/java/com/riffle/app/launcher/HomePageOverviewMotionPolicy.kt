@@ -19,16 +19,15 @@ internal enum class HomePageOverviewMotionPolicy {
     fun contentTransform(
         enteringOverview: Boolean,
         exitingOverview: Boolean,
-    ) =
-        when (this) {
-            NONE ->
-                EnterTransition.None togetherWith ExitTransition.None
+    ) = when (this) {
+        NONE ->
+            EnterTransition.None togetherWith ExitTransition.None
 
-            ZOOM ->
-                when {
-                    enteringOverview -> (fadeIn() + scaleIn(initialScale = 0.92f)) togetherWith fadeOut()
-                    exitingOverview -> fadeIn() togetherWith (fadeOut() + scaleOut(targetScale = 0.92f))
-                    else -> fadeIn() togetherWith fadeOut()
-                }
-        }
+        ZOOM ->
+            when {
+                enteringOverview -> (fadeIn() + scaleIn(initialScale = 0.92f)) togetherWith fadeOut()
+                exitingOverview -> fadeIn() togetherWith (fadeOut() + scaleOut(targetScale = 0.92f))
+                else -> fadeIn() togetherWith fadeOut()
+            }
+    }
 }
