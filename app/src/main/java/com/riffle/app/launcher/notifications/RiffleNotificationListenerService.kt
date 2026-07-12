@@ -39,10 +39,11 @@ class RiffleNotificationListenerService : NotificationListenerService() {
         }.isSuccess
 
     private fun saveActiveNotifications() {
-        activeNotificationSnapshotOrNull(
+        saveActiveNotificationSnapshot(
             activeNotifications = { activeNotifications },
             mapper = notificationMapper::map,
-        )?.let(repository::saveActiveNotifications)
+            saveNotifications = repository::saveActiveNotifications,
+        )
     }
 }
 
@@ -60,3 +61,18 @@ internal fun <Input, Output> activeNotificationSnapshotOrNull(
             ?.map(mapper)
             .orEmpty()
     }.getOrNull()
+
+/**
+ * Notification access can connect the listener while its backing storage is unavailable. Listener
+ * callbacks run in the launcher process, so persistence failures must not escape and crash it.
+ */
+internal fun <Input, Output> saveActiveNotificationSnapshot(
+    activeNotifications: () -> Array<Input>?,
+    mapper: (Input) -> Output,
+    saveNotifications: (List<Output>) -> Unit,
+) {
+    activeNotificationSnapshotOrNull(
+        activeNotifications = activeNotifications,
+        mapper = mapper,
+    )?.let { snapshot -> runCatching { saveNotifications(snapshot) } }
+}
