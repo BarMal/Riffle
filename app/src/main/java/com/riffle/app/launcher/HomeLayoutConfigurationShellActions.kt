@@ -1,15 +1,18 @@
 package com.riffle.app.launcher
 
+import com.riffle.core.domain.launcher.home.GridInsets
 import com.riffle.core.domain.launcher.home.HomeLabelSizing
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomePageEditRejectionReason
 import com.riffle.core.domain.launcher.home.HomePageEditResult
 import com.riffle.core.domain.launcher.home.HomePageEngine
 import com.riffle.core.domain.launcher.home.LauncherViewMode
+import com.riffle.core.domain.launcher.home.MAX_HOME_GRID_MARGIN_DP
 import com.riffle.core.domain.launcher.home.MAX_HOME_LABEL_BACKGROUND_ALPHA_PERCENT
 import com.riffle.core.domain.launcher.home.MAX_HOME_LABEL_MAX_LINES
 import com.riffle.core.domain.launcher.home.MAX_HOME_LABEL_MAX_WIDTH_DP
 import com.riffle.core.domain.launcher.home.MAX_HOME_LABEL_TEXT_SIZE_SP
+import com.riffle.core.domain.launcher.home.MIN_HOME_GRID_MARGIN_DP
 import com.riffle.core.domain.launcher.home.MIN_HOME_LABEL_BACKGROUND_ALPHA_PERCENT
 import com.riffle.core.domain.launcher.home.MIN_HOME_LABEL_MAX_LINES
 import com.riffle.core.domain.launcher.home.MIN_HOME_LABEL_MAX_WIDTH_DP
@@ -38,6 +41,41 @@ internal fun HomePageEngine.applyHomeLayoutConfigurationEdit(
             updateGridDimensions(
                 layout = layout.layoutForGridDimensionUpdate(),
                 dimensions = action.dimensions,
+            )
+
+        is LauncherShellAction.SelectHomeGridMargin ->
+            HomePageEditResult.Updated(
+                layout.copy(
+                    settings =
+                        layout.settings.copy(
+                            grid =
+                                layout.settings.grid.copy(
+                                    margin =
+                                        GridInsets(
+                                            start =
+                                                action.horizontalDp.coerceIn(
+                                                    MIN_HOME_GRID_MARGIN_DP,
+                                                    MAX_HOME_GRID_MARGIN_DP,
+                                                ),
+                                            top =
+                                                action.verticalDp.coerceIn(
+                                                    MIN_HOME_GRID_MARGIN_DP,
+                                                    MAX_HOME_GRID_MARGIN_DP,
+                                                ),
+                                            end =
+                                                action.horizontalDp.coerceIn(
+                                                    MIN_HOME_GRID_MARGIN_DP,
+                                                    MAX_HOME_GRID_MARGIN_DP,
+                                                ),
+                                            bottom =
+                                                action.verticalDp.coerceIn(
+                                                    MIN_HOME_GRID_MARGIN_DP,
+                                                    MAX_HOME_GRID_MARGIN_DP,
+                                                ),
+                                        ),
+                                ),
+                        ),
+                ),
             )
 
         is LauncherShellAction.SelectLibraryPageCompaction ->

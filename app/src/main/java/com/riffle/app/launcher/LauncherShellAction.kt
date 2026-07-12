@@ -96,6 +96,11 @@ sealed interface LauncherShellAction {
 
     data class SelectHomeGridDimensions(val dimensions: GridDimensions) : LauncherShellAction
 
+    data class SelectHomeGridMargin(
+        val horizontalDp: Int,
+        val verticalDp: Int,
+    ) : LauncherShellAction
+
     data class SelectLibraryPageCompaction(val enabled: Boolean) : LauncherShellAction
 
     data class SelectHomeLabelBackgroundAlpha(val alphaPercent: Int) : LauncherShellAction

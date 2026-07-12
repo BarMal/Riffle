@@ -9,7 +9,7 @@ class HomeLayoutSettingsTest {
         val settings = HomeLayoutSettings.standardPhone()
 
         assertEquals(GridDimensions(columns = 4, rows = 5), settings.grid.dimensions)
-        assertEquals(GridInsets(), settings.grid.margin)
+        assertEquals(standardHomeGridMargin, settings.grid.margin)
         assertEquals(GridInsets(), settings.grid.padding)
         assertEquals(GridSpacing(), settings.grid.cellSpacing)
         assertEquals(false, settings.grid.compactLibraryPages)

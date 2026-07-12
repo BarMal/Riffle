@@ -176,6 +176,10 @@ class LauncherActionDomainTest {
                     LauncherShellAction.SelectHomeGridDimensions(GridDimensions(4, 6)),
                 ),
                 activity(
+                    "SelectHomeGridMargin",
+                    LauncherShellAction.SelectHomeGridMargin(horizontalDp = 12, verticalDp = 16),
+                ),
+                activity(
                     "SelectLibraryPageCompaction",
                     LauncherShellAction.SelectLibraryPageCompaction(enabled = true),
                 ),

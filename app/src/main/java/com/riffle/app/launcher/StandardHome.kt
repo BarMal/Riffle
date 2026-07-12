@@ -131,6 +131,7 @@ private fun StandardHomeColumn(
         actions.copy(
             onBackgroundClick = dockShelf.dismiss,
         )
+    val margins = state.visibleLayout.settings.grid.margin
 
     Column(
         modifier =
@@ -143,8 +144,10 @@ private fun StandardHomeColumn(
                 )
                 .windowInsetsPadding(state.presentation.homeInsetPolicy.safeDrawingInsets())
                 .padding(
-                    horizontal = HOME_SURFACE_HORIZONTAL_PADDING_DP.dp,
-                    vertical = HOME_SURFACE_VERTICAL_PADDING_DP.dp,
+                    start = margins.start.coerceAtLeast(0).dp,
+                    top = margins.top.coerceAtLeast(0).dp,
+                    end = margins.end.coerceAtLeast(0).dp,
+                    bottom = margins.bottom.coerceAtLeast(0).dp,
                 ),
         verticalArrangement = Arrangement.Top,
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -451,8 +454,6 @@ internal data class HomeWorkspaceActions(
     val onAction: (LauncherShellAction) -> Unit,
 )
 
-private const val HOME_SURFACE_HORIZONTAL_PADDING_DP = 12
-private const val HOME_SURFACE_VERTICAL_PADDING_DP = 16
 private const val HOME_BOTTOM_CONTROLS_TOP_SPACING_DP = 8
 private const val HOME_SEARCH_AREA_HEIGHT_DP = 36
 private const val HOME_SEARCH_PILL_HEIGHT_DP = 30

@@ -51,6 +51,7 @@ fun HomePageEngine.applyEdit(
         is LauncherShellAction.SelectSelectedHomePageType,
         is LauncherShellAction.SelectSelectedHomePageGridDimensions,
         is LauncherShellAction.SelectHomeGridDimensions,
+        is LauncherShellAction.SelectHomeGridMargin,
         is LauncherShellAction.SelectLibraryPageCompaction,
         is LauncherShellAction.SelectHomeLabelBackgroundAlpha,
         is LauncherShellAction.SelectHomeLabelTextSize,
