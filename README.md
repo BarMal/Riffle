@@ -5,6 +5,8 @@ A first-principles rewrite and re-implementation of the Calm launcher prototype.
 ## Development
 
 Riffle is an Android launcher built with Kotlin, Jetpack Compose, and a modular Gradle setup.
+Its default [standard launcher mode](docs/product/standard-launcher-mode.md) keeps dynamic and
+card features optional.
 
 Run the local verification suite before opening a pull request:
 
