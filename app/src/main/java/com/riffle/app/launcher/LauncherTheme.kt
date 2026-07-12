@@ -5,6 +5,7 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
@@ -15,6 +16,7 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.settings.LauncherThemeMode
 import com.riffle.core.domain.launcher.settings.LauncherThemePreset
@@ -49,6 +51,7 @@ fun RiffleLauncherTheme(
     ) {
         MaterialTheme(
             colorScheme = colorScheme,
+            typography = launcherTypography(themePreset),
             content = content,
         )
     }
@@ -84,6 +87,27 @@ internal fun launcherPanelShape(themePreset: LauncherThemePreset): Shape =
             -> 32.dp
         },
     )
+
+internal fun launcherTypography(themePreset: LauncherThemePreset): Typography =
+    when (themePreset) {
+        LauncherThemePreset.VICTORIAN ->
+            defaultLauncherTypography.copy(
+                headlineLarge = defaultLauncherTypography.headlineLarge.copy(fontFamily = FontFamily.Serif),
+                headlineMedium = defaultLauncherTypography.headlineMedium.copy(fontFamily = FontFamily.Serif),
+                titleLarge = defaultLauncherTypography.titleLarge.copy(fontFamily = FontFamily.Serif),
+            )
+
+        LauncherThemePreset.TERMINAL ->
+            defaultLauncherTypography.copy(
+                bodyLarge = defaultLauncherTypography.bodyLarge.copy(fontFamily = FontFamily.Monospace),
+                bodyMedium = defaultLauncherTypography.bodyMedium.copy(fontFamily = FontFamily.Monospace),
+                labelLarge = defaultLauncherTypography.labelLarge.copy(fontFamily = FontFamily.Monospace),
+            )
+
+        else -> defaultLauncherTypography
+    }
+
+private val defaultLauncherTypography = Typography()
 
 internal fun supportsDynamicMaterialColor(sdkInt: Int): Boolean = sdkInt >= Build.VERSION_CODES.S
 
