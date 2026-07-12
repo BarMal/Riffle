@@ -1,6 +1,7 @@
 package com.riffle.app.launcher
 
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.settings.LauncherThemePreset
 import org.junit.Assert.assertEquals
@@ -66,5 +67,12 @@ class LauncherThemeTest {
         assertEquals(RoundedCornerShape(0.dp), launcherPanelShape(LauncherThemePreset.TERMINAL))
         assertEquals(RoundedCornerShape(36.dp), launcherPanelShape(LauncherThemePreset.GLASS))
         assertEquals(RoundedCornerShape(32.dp), launcherPanelShape(LauncherThemePreset.MATERIAL))
+    }
+
+    @Test
+    fun typographyTokenVariesForVictorianAndTerminal() {
+        assertEquals(FontFamily.Serif, launcherTypography(LauncherThemePreset.VICTORIAN).headlineMedium.fontFamily)
+        assertEquals(FontFamily.Monospace, launcherTypography(LauncherThemePreset.TERMINAL).bodyMedium.fontFamily)
+        assertSame(launcherTypography(LauncherThemePreset.MATERIAL), launcherTypography(LauncherThemePreset.CUSTOM))
     }
 }
