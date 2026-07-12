@@ -22,7 +22,7 @@ class ActiveNotificationSnapshotTest {
             activeNotificationSnapshotOrNull(
                 activeNotifications = { arrayOf(1, 2) },
                 mapper = { value ->
-                    if (value == 2) throw IllegalStateException("Malformed notification")
+                    if (value == 2) error("Malformed notification")
                     value.toString()
                 },
             )
