@@ -11,6 +11,7 @@ internal data class HomeLayoutDeviceClassSelection(
 internal enum class HomeLayoutFoldablePosture {
     NONE,
     FOLDED,
+    HALF_OPEN,
     UNFOLDED,
 }
 
@@ -19,8 +20,10 @@ internal fun homeLayoutFoldablePosture(
     hasFoldingFeature: Boolean,
     hasUnfoldedFoldingFeature: Boolean,
     configurationClass: HomeLayoutDeviceClass?,
+    hasHalfOpenedFoldingFeature: Boolean = false,
 ): HomeLayoutFoldablePosture =
     when {
+        hasHalfOpenedFoldingFeature -> HomeLayoutFoldablePosture.HALF_OPEN
         hasUnfoldedFoldingFeature -> HomeLayoutFoldablePosture.UNFOLDED
         hasFoldingFeature -> HomeLayoutFoldablePosture.FOLDED
         hasFoldableHardware && configurationClass != HomeLayoutDeviceClass.PHONE -> HomeLayoutFoldablePosture.UNFOLDED
@@ -66,13 +69,16 @@ internal fun homeLayoutDeviceClassSelectionFromWindowLayout(
     val activeDeviceClass =
         when (foldablePosture) {
             HomeLayoutFoldablePosture.FOLDED -> HomeLayoutDeviceClass.PHONE
-            HomeLayoutFoldablePosture.UNFOLDED ->
+            HomeLayoutFoldablePosture.HALF_OPEN,
+            HomeLayoutFoldablePosture.UNFOLDED,
+            ->
                 configurationClass.takeIf { it == HomeLayoutDeviceClass.DESKTOP } ?: HomeLayoutDeviceClass.FOLDABLE
             HomeLayoutFoldablePosture.NONE -> configurationClass
         }
     val availableDeviceClasses =
         when (foldablePosture) {
             HomeLayoutFoldablePosture.FOLDED,
+            HomeLayoutFoldablePosture.HALF_OPEN,
             HomeLayoutFoldablePosture.UNFOLDED,
             ->
                 setOf(HomeLayoutDeviceClass.PHONE, HomeLayoutDeviceClass.FOLDABLE) +

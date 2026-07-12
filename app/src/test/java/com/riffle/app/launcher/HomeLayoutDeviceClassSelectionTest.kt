@@ -107,6 +107,20 @@ class HomeLayoutDeviceClassSelectionTest {
     }
 
     @Test
+    fun treatsHalfOpenedFoldingFeatureAsHalfOpen() {
+        assertEquals(
+            HomeLayoutFoldablePosture.HALF_OPEN,
+            homeLayoutFoldablePosture(
+                hasFoldableHardware = true,
+                hasFoldingFeature = true,
+                hasUnfoldedFoldingFeature = false,
+                configurationClass = HomeLayoutDeviceClass.FOLDABLE,
+                hasHalfOpenedFoldingFeature = true,
+            ),
+        )
+    }
+
+    @Test
     fun ignoresUnavailableConfigurationDimensions() {
         assertNull(homeLayoutDeviceClassFromConfiguration(screenWidthDp = 0, screenHeightDp = 900))
         assertNull(homeLayoutDeviceClassFromConfiguration(screenWidthDp = 700, screenHeightDp = 0))
@@ -171,6 +185,18 @@ class HomeLayoutDeviceClassSelectionTest {
                 foldablePosture = HomeLayoutFoldablePosture.UNFOLDED,
                 screenWidthDp = 900,
                 screenHeightDp = 1200,
+            ),
+        )
+    }
+
+    @Test
+    fun classifiesHalfOpenWindowAsFoldable() {
+        assertEquals(
+            HomeLayoutDeviceClass.FOLDABLE,
+            homeLayoutDeviceClassFromWindowLayout(
+                foldablePosture = HomeLayoutFoldablePosture.HALF_OPEN,
+                screenWidthDp = 720,
+                screenHeightDp = 840,
             ),
         )
     }
