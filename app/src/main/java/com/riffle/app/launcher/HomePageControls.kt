@@ -58,7 +58,7 @@ fun PageEditControls(
             enabled = selectedPageIndex > 0,
             onClick = { onAction(LauncherShellAction.SelectPreviousHomePage) },
         ) {
-            Text(text = "<")
+            Text(text = "Previous")
         }
         TextButton(onClick = { isPageMenuExpanded.value = true }) {
             Text(text = "Page ${selectedPageIndex + 1} / $pageCount")
@@ -77,7 +77,7 @@ fun PageEditControls(
             enabled = selectedPageIndex < pageCount - 1,
             onClick = { onAction(LauncherShellAction.SelectNextHomePage) },
         ) {
-            Text(text = ">")
+            Text(text = "Next")
         }
         TextButton(onClick = { onAction(LauncherShellAction.ExitHomeEditMode) }) {
             Text(text = "Done")
@@ -126,10 +126,10 @@ fun PageOverviewControls(
                 Text(text = "Edit page")
             }
             OutlinedButton(onClick = { onAction(LauncherShellAction.AddHomePage) }) {
-                Text(text = "Add")
+                Text(text = "Add page")
             }
             OutlinedButton(onClick = { onAction(LauncherShellAction.DuplicateSelectedHomePage) }) {
-                Text(text = "Duplicate")
+                Text(text = "Duplicate page")
             }
             OutlinedButton(onClick = { onAction(LauncherShellAction.ToggleSelectedHomePagePinned) }) {
                 Text(text = if (selectedPage.isPinned) "Unpin" else "Pin")
@@ -147,6 +147,7 @@ fun PageOverviewControls(
                         pageCount = layout.pages.size,
                         selectedPageIndex = layout.selectedPageIndex,
                         includeOverview = false,
+                        includeCreationActions = false,
                     ),
                 onDismissRequest = { isPageMenuExpanded.value = false },
                 onAction = onAction,
@@ -345,17 +346,26 @@ internal fun pageManagementMenuItems(
     pageCount: Int,
     selectedPageIndex: Int,
     includeOverview: Boolean = true,
+    includeCreationActions: Boolean = true,
 ): List<ShortcutContextMenuItem> =
     listOfNotNull(
-        ShortcutContextMenuItem(
-            label = "Add page",
-            action = LauncherShellAction.AddHomePage,
-        ),
+        if (includeCreationActions) {
+            ShortcutContextMenuItem(
+                label = "Add page",
+                action = LauncherShellAction.AddHomePage,
+            )
+        } else {
+            null
+        },
         overviewMenuItem(includeOverview),
-        ShortcutContextMenuItem(
-            label = "Duplicate page",
-            action = LauncherShellAction.DuplicateSelectedHomePage,
-        ),
+        if (includeCreationActions) {
+            ShortcutContextMenuItem(
+                label = "Duplicate page",
+                action = LauncherShellAction.DuplicateSelectedHomePage,
+            )
+        } else {
+            null
+        },
         ShortcutContextMenuItem(
             label = "Move page left",
             action = LauncherShellAction.MoveSelectedHomePageLeft,

@@ -70,6 +70,26 @@ class HomePageControlsTest {
     }
 
     @Test
+    fun pageOverviewMoreMenuOmitsActionsAlreadyShownAsButtons() {
+        val items =
+            pageManagementMenuItems(
+                pageCount = 3,
+                selectedPageIndex = 1,
+                includeOverview = false,
+                includeCreationActions = false,
+            )
+
+        assertEquals(
+            listOf(
+                ShortcutContextMenuItem("Move page left", LauncherShellAction.MoveSelectedHomePageLeft),
+                ShortcutContextMenuItem("Move page right", LauncherShellAction.MoveSelectedHomePageRight),
+                ShortcutContextMenuItem("Delete page", LauncherShellAction.DeleteSelectedHomePage),
+            ),
+            items,
+        )
+    }
+
+    @Test
     fun pageOverviewCardMenuReflectsCardPosition() {
         val items = pageOverviewCardMenuItems(index = 0, pageCount = 3)
 
