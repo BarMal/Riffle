@@ -67,4 +67,11 @@ private val HomeLayoutDeviceClass.standardDock: DockModel
                     iconSizeDp = 52,
                     itemSpacingDp = 12,
                 )
+
+            HomeLayoutDeviceClass.DESKTOP ->
+                DockModel(
+                    capacity = 8,
+                    iconSizeDp = 52,
+                    itemSpacingDp = 12,
+                )
         }

@@ -35,14 +35,23 @@ class SettingsLayoutDeviceTabsTest {
     }
 
     @Test
+    fun keepsDesktopOnlyConfigurationAvailable() {
+        assertEquals(
+            listOf("Desktop"),
+            settingsLayoutDeviceTabs(setOf(HomeLayoutDeviceClass.DESKTOP)).map { tab -> tab.label },
+        )
+    }
+
+    @Test
     fun includesTabletAfterFoldedAndUnfoldedForMixedAdaptiveClasses() {
         assertEquals(
-            listOf("Folded", "Unfolded", "Tablet"),
+            listOf("Folded", "Unfolded", "Tablet", "Desktop"),
             settingsLayoutDeviceTabs(
                 setOf(
                     HomeLayoutDeviceClass.TABLET,
                     HomeLayoutDeviceClass.FOLDABLE,
                     HomeLayoutDeviceClass.PHONE,
+                    HomeLayoutDeviceClass.DESKTOP,
                 ),
             ).map { tab -> tab.label },
         )

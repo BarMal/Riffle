@@ -9,6 +9,7 @@ enum class HomeLayoutDeviceClass {
     PHONE,
     FOLDABLE,
     TABLET,
+    DESKTOP,
 }
 
 data class HomeLayoutSet(

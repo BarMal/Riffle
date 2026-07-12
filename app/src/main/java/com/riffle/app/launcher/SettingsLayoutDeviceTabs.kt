@@ -47,29 +47,30 @@ internal data class SettingsLayoutDeviceTab(
 
 internal fun settingsLayoutDeviceTabs(classes: Set<HomeLayoutDeviceClass>): List<SettingsLayoutDeviceTab> {
     val hasTabletOnly = classes == setOf(HomeLayoutDeviceClass.TABLET)
-    if (hasTabletOnly) {
-        return listOf(
-            SettingsLayoutDeviceTab(
-                label = "Tablet",
-                deviceClass = HomeLayoutDeviceClass.TABLET,
-            ),
-        )
-    }
-    val deviceClasses =
-        buildList {
-            add(HomeLayoutDeviceClass.PHONE)
-            add(HomeLayoutDeviceClass.FOLDABLE)
-            if (HomeLayoutDeviceClass.TABLET in classes) {
-                add(HomeLayoutDeviceClass.TABLET)
-            }
-        }
-    return deviceClasses
-        .map { deviceClass ->
-            SettingsLayoutDeviceTab(
-                label = deviceClass.settingsLabel(),
-                deviceClass = deviceClass,
+    val hasDesktopOnly = classes == setOf(HomeLayoutDeviceClass.DESKTOP)
+    return when {
+        hasTabletOnly ->
+            listOf(
+                SettingsLayoutDeviceTab(label = "Tablet", deviceClass = HomeLayoutDeviceClass.TABLET),
             )
-        }
+
+        hasDesktopOnly ->
+            listOf(
+                SettingsLayoutDeviceTab(label = "Desktop", deviceClass = HomeLayoutDeviceClass.DESKTOP),
+            )
+        else ->
+            buildList {
+                add(HomeLayoutDeviceClass.PHONE)
+                add(HomeLayoutDeviceClass.FOLDABLE)
+                if (HomeLayoutDeviceClass.TABLET in classes) add(HomeLayoutDeviceClass.TABLET)
+                if (HomeLayoutDeviceClass.DESKTOP in classes) add(HomeLayoutDeviceClass.DESKTOP)
+            }.map { deviceClass ->
+                SettingsLayoutDeviceTab(
+                    label = deviceClass.settingsLabel(),
+                    deviceClass = deviceClass,
+                )
+            }
+    }
 }
 
 private fun HomeLayoutDeviceClass.settingsLabel(): String =
@@ -77,4 +78,5 @@ private fun HomeLayoutDeviceClass.settingsLabel(): String =
         HomeLayoutDeviceClass.PHONE -> "Folded"
         HomeLayoutDeviceClass.FOLDABLE -> "Unfolded"
         HomeLayoutDeviceClass.TABLET -> "Tablet"
+        HomeLayoutDeviceClass.DESKTOP -> "Desktop"
     }
