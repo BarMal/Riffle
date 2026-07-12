@@ -182,7 +182,10 @@ class HomePageEngine {
         }
     }
 
-    fun togglePagePinned(layout: HomeLayout, pageId: LauncherPageId): HomePageEditResult =
+    fun togglePagePinned(
+        layout: HomeLayout,
+        pageId: LauncherPageId,
+    ): HomePageEditResult =
         layout.pages.firstOrNull { it.id == pageId }
             ?.let { page ->
                 HomePageEditResult.Updated(
