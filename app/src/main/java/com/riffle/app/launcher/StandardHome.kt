@@ -42,6 +42,7 @@ import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.home.FolderItem
 import com.riffle.core.domain.launcher.home.GridCell
 import com.riffle.core.domain.launcher.home.GridDimensions
+import com.riffle.core.domain.launcher.home.GridInsets
 import com.riffle.core.domain.launcher.home.HomeEditMode
 import com.riffle.core.domain.launcher.home.HomeLabelSettings
 import com.riffle.core.domain.launcher.home.HomeLayout
@@ -131,6 +132,7 @@ private fun StandardHomeColumn(
         actions.copy(
             onBackgroundClick = dockShelf.dismiss,
         )
+    val margins = homeSurfaceMargins(state.visibleLayout.settings.grid.margin)
 
     Column(
         modifier =
@@ -143,8 +145,10 @@ private fun StandardHomeColumn(
                 )
                 .windowInsetsPadding(state.presentation.homeInsetPolicy.safeDrawingInsets())
                 .padding(
-                    horizontal = HOME_SURFACE_HORIZONTAL_PADDING_DP.dp,
-                    vertical = HOME_SURFACE_VERTICAL_PADDING_DP.dp,
+                    start = margins.start.dp,
+                    top = margins.top.dp,
+                    end = margins.end.dp,
+                    bottom = margins.bottom.dp,
                 ),
         verticalArrangement = Arrangement.Top,
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -416,6 +420,14 @@ internal fun homeInsetPolicy(appearance: AppearanceSettings): HomeInsetPolicy =
         reserveNavigationBar = !appearance.homeSystemBars.navigationBarHidden,
     )
 
+internal fun homeSurfaceMargins(gridInsets: GridInsets): GridInsets =
+    GridInsets(
+        start = gridInsets.start.coerceAtLeast(0),
+        top = gridInsets.top.coerceAtLeast(0),
+        end = gridInsets.end.coerceAtLeast(0),
+        bottom = gridInsets.bottom.coerceAtLeast(0),
+    )
+
 @Composable
 private fun HomeInsetPolicy.safeDrawingInsets(): WindowInsets {
     var insets = WindowInsets.safeDrawing
@@ -451,8 +463,6 @@ internal data class HomeWorkspaceActions(
     val onAction: (LauncherShellAction) -> Unit,
 )
 
-private const val HOME_SURFACE_HORIZONTAL_PADDING_DP = 12
-private const val HOME_SURFACE_VERTICAL_PADDING_DP = 16
 private const val HOME_BOTTOM_CONTROLS_TOP_SPACING_DP = 8
 private const val HOME_SEARCH_AREA_HEIGHT_DP = 36
 private const val HOME_SEARCH_PILL_HEIGHT_DP = 30

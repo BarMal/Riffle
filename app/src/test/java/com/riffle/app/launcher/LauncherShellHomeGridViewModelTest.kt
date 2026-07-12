@@ -8,6 +8,7 @@ import com.riffle.core.domain.launcher.apps.InstalledAppRepository
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.GridCell
 import com.riffle.core.domain.launcher.home.GridDimensions
+import com.riffle.core.domain.launcher.home.GridInsets
 import com.riffle.core.domain.launcher.home.GridPlacement
 import com.riffle.core.domain.launcher.home.GridSettings
 import com.riffle.core.domain.launcher.home.HomeLayout
@@ -24,6 +25,26 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class LauncherShellHomeGridViewModelTest {
+    @Test
+    fun updatesHomeGridMarginsAndSavesLayout() {
+        val repository = FakeHomeLayoutRepository(savedLayout = HomeLayoutDefaults.standard())
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                homeLayoutRepository = repository,
+            )
+
+        viewModel.onHomePageEdited(
+            LauncherShellAction.SelectHomeGridMargin(horizontalDp = 8, verticalDp = 20),
+        )
+
+        assertEquals(
+            GridInsets(start = 8, top = 20, end = 8, bottom = 20),
+            viewModel.state.value.homeLayout.settings.grid.margin,
+        )
+        assertEquals(viewModel.state.value.homeLayout, repository.savedLayout)
+    }
+
     @Test
     fun updatesHomeGridDimensionsAndSavesLayout() {
         val repository = FakeHomeLayoutRepository(savedLayout = HomeLayoutDefaults.standard())

@@ -11,6 +11,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.home.GridSettings
 import com.riffle.core.domain.launcher.home.LauncherViewMode
+import com.riffle.core.domain.launcher.home.MAX_HOME_GRID_MARGIN_DP
+import com.riffle.core.domain.launcher.home.MIN_HOME_GRID_MARGIN_DP
 
 @Composable
 internal fun HomeGridSetting(
@@ -55,11 +57,68 @@ internal fun HomeGridSetting(
                 )
             },
         )
+        GridMarginSetting(
+            label = "Horizontal screen margin",
+            value = grid.margin.start,
+            onValueChange = { horizontalDp ->
+                onAction(
+                    LauncherShellAction.SelectHomeGridMargin(
+                        horizontalDp = horizontalDp,
+                        verticalDp = grid.margin.top,
+                    ),
+                )
+            },
+        )
+        GridMarginSetting(
+            label = "Vertical screen margin",
+            value = grid.margin.top,
+            onValueChange = { verticalDp ->
+                onAction(
+                    LauncherShellAction.SelectHomeGridMargin(
+                        horizontalDp = grid.margin.start,
+                        verticalDp = verticalDp,
+                    ),
+                )
+            },
+        )
         if (viewMode == LauncherViewMode.HOME_SCREEN_LIBRARY) {
             LibraryPageCompactionSetting(
                 enabled = grid.compactLibraryPages,
                 onAction = onAction,
             )
+        }
+    }
+}
+
+@Composable
+private fun GridMarginSetting(
+    label: String,
+    value: Int,
+    onValueChange: (Int) -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        SettingsTextColumn(
+            modifier = Modifier.weight(1f),
+            title = label,
+            subtitle = "$value dp",
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            TextButton(
+                enabled = value > MIN_HOME_GRID_MARGIN_DP,
+                onClick = { onValueChange(value - 1) },
+            ) {
+                SettingsButtonText(text = "-")
+            }
+            TextButton(
+                enabled = value < MAX_HOME_GRID_MARGIN_DP,
+                onClick = { onValueChange(value + 1) },
+            ) {
+                SettingsButtonText(text = "+")
+            }
         }
     }
 }

@@ -91,7 +91,7 @@ enum class WallpaperScrollMode {
 
 data class GridSettings(
     val dimensions: GridDimensions,
-    val margin: GridInsets = GridInsets(),
+    val margin: GridInsets = standardHomeGridMargin,
     val padding: GridInsets = GridInsets(),
     val cellSpacing: GridSpacing = GridSpacing(),
     val compactLibraryPages: Boolean = false,
@@ -124,6 +124,14 @@ data class GridSettings(
     }
 }
 
+val standardHomeGridMargin =
+    GridInsets(
+        start = DEFAULT_HOME_GRID_HORIZONTAL_MARGIN_DP,
+        top = DEFAULT_HOME_GRID_VERTICAL_MARGIN_DP,
+        end = DEFAULT_HOME_GRID_HORIZONTAL_MARGIN_DP,
+        bottom = DEFAULT_HOME_GRID_VERTICAL_MARGIN_DP,
+    )
+
 data class GridInsets(
     val start: Int = 0,
     val top: Int = 0,
@@ -148,3 +156,7 @@ const val MAX_HOME_LABEL_MAX_WIDTH_DP = 120
 const val DEFAULT_HOME_LABEL_MAX_LINES = 1
 const val MIN_HOME_LABEL_MAX_LINES = 1
 const val MAX_HOME_LABEL_MAX_LINES = 2
+const val DEFAULT_HOME_GRID_HORIZONTAL_MARGIN_DP = 12
+const val DEFAULT_HOME_GRID_VERTICAL_MARGIN_DP = 16
+const val MIN_HOME_GRID_MARGIN_DP = 0
+const val MAX_HOME_GRID_MARGIN_DP = 96

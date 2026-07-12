@@ -1,5 +1,6 @@
 package com.riffle.app.launcher
 
+import com.riffle.core.domain.launcher.home.GridInsets
 import com.riffle.core.domain.launcher.settings.AppearanceSettings
 import com.riffle.core.domain.launcher.settings.HomeSystemBars
 import com.riffle.core.domain.launcher.settings.withHomeSystemBars
@@ -7,6 +8,16 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class HomeInsetPolicyTest {
+    @Test
+    fun homeSurfaceUsesConfiguredNonNegativeGridInsets() {
+        val insets = GridInsets(start = 8, top = -12, end = 16, bottom = 20)
+
+        assertEquals(
+            GridInsets(start = 8, top = 0, end = 16, bottom = 20),
+            homeSurfaceMargins(insets),
+        )
+    }
+
     @Test
     fun defaultAppearanceReservesSafeDrawingForBothHomeBars() {
         assertEquals(

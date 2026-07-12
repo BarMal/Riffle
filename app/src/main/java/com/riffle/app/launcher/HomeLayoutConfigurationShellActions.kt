@@ -1,15 +1,18 @@
 package com.riffle.app.launcher
 
+import com.riffle.core.domain.launcher.home.GridInsets
 import com.riffle.core.domain.launcher.home.HomeLabelSizing
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomePageEditRejectionReason
 import com.riffle.core.domain.launcher.home.HomePageEditResult
 import com.riffle.core.domain.launcher.home.HomePageEngine
 import com.riffle.core.domain.launcher.home.LauncherViewMode
+import com.riffle.core.domain.launcher.home.MAX_HOME_GRID_MARGIN_DP
 import com.riffle.core.domain.launcher.home.MAX_HOME_LABEL_BACKGROUND_ALPHA_PERCENT
 import com.riffle.core.domain.launcher.home.MAX_HOME_LABEL_MAX_LINES
 import com.riffle.core.domain.launcher.home.MAX_HOME_LABEL_MAX_WIDTH_DP
 import com.riffle.core.domain.launcher.home.MAX_HOME_LABEL_TEXT_SIZE_SP
+import com.riffle.core.domain.launcher.home.MIN_HOME_GRID_MARGIN_DP
 import com.riffle.core.domain.launcher.home.MIN_HOME_LABEL_BACKGROUND_ALPHA_PERCENT
 import com.riffle.core.domain.launcher.home.MIN_HOME_LABEL_MAX_LINES
 import com.riffle.core.domain.launcher.home.MIN_HOME_LABEL_MAX_WIDTH_DP
@@ -38,6 +41,12 @@ internal fun HomePageEngine.applyHomeLayoutConfigurationEdit(
             updateGridDimensions(
                 layout = layout.layoutForGridDimensionUpdate(),
                 dimensions = action.dimensions,
+            )
+
+        is LauncherShellAction.SelectHomeGridMargin ->
+            layout.withHomeGridMargin(
+                horizontalDp = action.horizontalDp,
+                verticalDp = action.verticalDp,
             )
 
         is LauncherShellAction.SelectLibraryPageCompaction ->
@@ -80,6 +89,35 @@ private fun HomeLayout.withHomeLabelBackgroundAlpha(alphaPercent: Int): HomePage
             )
 
         else -> HomePageEditResult.Rejected(HomePageEditRejectionReason.INVALID_LABEL_SETTING)
+    }
+
+private fun HomeLayout.withHomeGridMargin(
+    horizontalDp: Int,
+    verticalDp: Int,
+): HomePageEditResult =
+    when {
+        horizontalDp !in MIN_HOME_GRID_MARGIN_DP..MAX_HOME_GRID_MARGIN_DP ||
+            verticalDp !in MIN_HOME_GRID_MARGIN_DP..MAX_HOME_GRID_MARGIN_DP ->
+            HomePageEditResult.Rejected(HomePageEditRejectionReason.INVALID_GRID_DIMENSIONS)
+
+        else ->
+            HomePageEditResult.Updated(
+                copy(
+                    settings =
+                        settings.copy(
+                            grid =
+                                settings.grid.copy(
+                                    margin =
+                                        GridInsets(
+                                            start = horizontalDp,
+                                            top = verticalDp,
+                                            end = horizontalDp,
+                                            bottom = verticalDp,
+                                        ),
+                                ),
+                        ),
+                ),
+            )
     }
 
 private fun HomeLayout.withHomeLabelMaxLines(maxLines: Int): HomePageEditResult =
