@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -127,7 +126,7 @@ fun LauncherPanel(
                     .widthIn(max = PANEL_MAX_WIDTH_DP.dp)
                     .fillMaxWidth()
                     .fillMaxHeight(),
-            shape = RoundedCornerShape(32.dp),
+            shape = LocalLauncherPanelShape.current,
             color = MaterialTheme.colorScheme.surface.copy(alpha = PANEL_SURFACE_ALPHA),
             tonalElevation = 6.dp,
         ) {
