@@ -5,6 +5,7 @@ import android.os.Build
 import android.os.Process
 import android.os.UserHandle
 import android.os.UserManager
+import androidx.annotation.RequiresApi
 import com.riffle.core.domain.launcher.apps.AppProfile
 import com.riffle.core.domain.launcher.apps.AppProfileId
 import com.riffle.core.domain.launcher.apps.AppProfileType
@@ -44,13 +45,17 @@ internal fun UserHandle.toAppProfile(
     launcherApps: LauncherApps? = null,
     mapper: AndroidUserProfileMapper = AndroidUserProfileMapper(),
 ): AppProfile =
-    mapper.map(
-        AndroidUserProfile(
-            stableId = stableProfileId(userManager = userManager, launcherApps = launcherApps),
-            isCurrentUser = this == currentUser,
-            type = androidUserProfileType(launcherApps = launcherApps),
-        ),
-    )
+    if (this == currentUser) {
+        AppProfile.personal()
+    } else {
+        mapper.map(
+            AndroidUserProfile(
+                stableId = stableProfileId(userManager = userManager, launcherApps = launcherApps),
+                isCurrentUser = false,
+                type = androidUserProfileType(launcherApps = launcherApps),
+            ),
+        )
+    }
 
 internal fun AppProfile.toUserHandle(
     userProfiles: List<UserHandle>,
@@ -73,8 +78,7 @@ private fun UserHandle.stableProfileId(
 ): String =
     when {
         Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM ->
-            launcherApps
-                ?.getLauncherUserInfo(this)
+            launcherApps?.launcherUserInfo(this)
                 ?.userSerialNumber
                 ?.toString()
                 ?: serialFromUserManager(userManager)
@@ -91,7 +95,7 @@ private fun UserHandle.serialFromUserManager(userManager: UserManager?): String 
 
 private fun UserHandle.androidUserProfileType(launcherApps: LauncherApps?): AndroidUserProfileType =
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
-        when (launcherApps?.getLauncherUserInfo(this)?.userType) {
+        when (launcherApps?.launcherUserInfo(this)?.userType) {
             UserManager.USER_TYPE_PROFILE_MANAGED -> AndroidUserProfileType.MANAGED
             UserManager.USER_TYPE_PROFILE_PRIVATE -> AndroidUserProfileType.PRIVATE
             else -> AndroidUserProfileType.PERSONAL
@@ -99,3 +103,6 @@ private fun UserHandle.androidUserProfileType(launcherApps: LauncherApps?): Andr
     } else {
         AndroidUserProfileType.MANAGED
     }
+
+@RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
+private fun LauncherApps.launcherUserInfo(user: UserHandle) = runCatching { getLauncherUserInfo(user) }.getOrNull()

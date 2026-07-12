@@ -14,9 +14,9 @@ class AndroidUserProfileMapperTest {
         val profile =
             mapper.map(
                 AndroidUserProfile(
-                    stableId = "0",
+                    stableId = "unavailable",
                     isCurrentUser = true,
-                    type = AndroidUserProfileType.PERSONAL,
+                    type = AndroidUserProfileType.MANAGED,
                 ),
             )
 
