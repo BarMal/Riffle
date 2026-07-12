@@ -12,8 +12,19 @@ class HomeLayoutDeviceClassClassifierTest {
     }
 
     @Test
-    fun classifiesCompactHeightsAsPhone() {
-        assertEquals(HomeLayoutDeviceClass.PHONE, classifier.classify(screenWidthDp = 700, screenHeightDp = 599))
+    fun classifiesCompactLandscapeHeightsSeparately() {
+        assertEquals(
+            HomeLayoutDeviceClass.PHONE_LANDSCAPE,
+            classifier.classify(screenWidthDp = 700, screenHeightDp = 599),
+        )
+    }
+
+    @Test
+    fun classifiesCompactLandscapeWindowsSeparately() {
+        assertEquals(
+            HomeLayoutDeviceClass.PHONE_LANDSCAPE,
+            classifier.classify(screenWidthDp = 720, screenHeightDp = 412),
+        )
     }
 
     @Test

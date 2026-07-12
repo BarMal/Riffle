@@ -7,6 +7,7 @@ data class HomeLayoutKey(
 
 enum class HomeLayoutDeviceClass {
     PHONE,
+    PHONE_LANDSCAPE,
     FOLDABLE,
     TABLET,
     DESKTOP,

@@ -54,6 +54,13 @@ private val HomeLayoutDeviceClass.standardDock: DockModel
                     itemSpacingDp = 8,
                 )
 
+            HomeLayoutDeviceClass.PHONE_LANDSCAPE ->
+                DockModel(
+                    capacity = 5,
+                    iconSizeDp = 44,
+                    itemSpacingDp = 8,
+                )
+
             HomeLayoutDeviceClass.FOLDABLE ->
                 DockModel(
                     capacity = 6,
