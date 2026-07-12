@@ -176,6 +176,26 @@ class HomeLayoutDeviceClassSelectionTest {
     }
 
     @Test
+    fun classifiesUnfoldedDesktopSizedWindowAsDesktop() {
+        val selection =
+            homeLayoutDeviceClassSelectionFromWindowLayout(
+                foldablePosture = HomeLayoutFoldablePosture.UNFOLDED,
+                screenWidthDp = 1_200,
+                screenHeightDp = 900,
+            )
+
+        assertEquals(HomeLayoutDeviceClass.DESKTOP, selection?.activeDeviceClass)
+        assertEquals(
+            setOf(
+                HomeLayoutDeviceClass.PHONE,
+                HomeLayoutDeviceClass.FOLDABLE,
+                HomeLayoutDeviceClass.DESKTOP,
+            ),
+            selection?.availableDeviceClasses,
+        )
+    }
+
+    @Test
     fun classifiesFoldedWindowAsPhoneEvenWhenConfigurationIsLarge() {
         assertEquals(
             HomeLayoutDeviceClass.PHONE,

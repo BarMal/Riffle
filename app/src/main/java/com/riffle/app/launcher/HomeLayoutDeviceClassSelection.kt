@@ -66,14 +66,17 @@ internal fun homeLayoutDeviceClassSelectionFromWindowLayout(
     val activeDeviceClass =
         when (foldablePosture) {
             HomeLayoutFoldablePosture.FOLDED -> HomeLayoutDeviceClass.PHONE
-            HomeLayoutFoldablePosture.UNFOLDED -> HomeLayoutDeviceClass.FOLDABLE
+            HomeLayoutFoldablePosture.UNFOLDED ->
+                configurationClass.takeIf { it == HomeLayoutDeviceClass.DESKTOP } ?: HomeLayoutDeviceClass.FOLDABLE
             HomeLayoutFoldablePosture.NONE -> configurationClass
         }
     val availableDeviceClasses =
         when (foldablePosture) {
             HomeLayoutFoldablePosture.FOLDED,
             HomeLayoutFoldablePosture.UNFOLDED,
-            -> setOf(HomeLayoutDeviceClass.PHONE, HomeLayoutDeviceClass.FOLDABLE)
+            ->
+                setOf(HomeLayoutDeviceClass.PHONE, HomeLayoutDeviceClass.FOLDABLE) +
+                    setOfNotNull(configurationClass.takeIf { it == HomeLayoutDeviceClass.DESKTOP })
 
             HomeLayoutFoldablePosture.NONE -> setOf(activeDeviceClass)
         }
