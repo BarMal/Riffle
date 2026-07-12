@@ -39,10 +39,24 @@ class RiffleNotificationListenerService : NotificationListenerService() {
         }.isSuccess
 
     private fun saveActiveNotifications() {
-        repository.saveActiveNotifications(
-            activeNotifications
-                ?.map(notificationMapper::map)
-                .orEmpty(),
-        )
+        activeNotificationSnapshotOrNull(
+            activeNotifications = { activeNotifications },
+            mapper = notificationMapper::map,
+        )?.let(repository::saveActiveNotifications)
     }
 }
+
+/**
+ * A notification listener may be disconnected while its platform snapshot is read. Keep the
+ * persisted snapshot in that case: replacing it with an empty list would hide notifications, and
+ * allowing the platform exception out of the service would crash the launcher process.
+ */
+internal fun <Input, Output> activeNotificationSnapshotOrNull(
+    activeNotifications: () -> Array<Input>?,
+    mapper: (Input) -> Output,
+): List<Output>? =
+    runCatching {
+        activeNotifications()
+            ?.map(mapper)
+            .orEmpty()
+    }.getOrNull()
