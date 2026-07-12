@@ -90,24 +90,33 @@ internal fun launcherPanelShape(themePreset: LauncherThemePreset): Shape =
 
 internal fun launcherTypography(themePreset: LauncherThemePreset): Typography =
     when (themePreset) {
-        LauncherThemePreset.VICTORIAN ->
-            defaultLauncherTypography.copy(
-                headlineLarge = defaultLauncherTypography.headlineLarge.copy(fontFamily = FontFamily.Serif),
-                headlineMedium = defaultLauncherTypography.headlineMedium.copy(fontFamily = FontFamily.Serif),
-                titleLarge = defaultLauncherTypography.titleLarge.copy(fontFamily = FontFamily.Serif),
-            )
+        LauncherThemePreset.VICTORIAN -> defaultLauncherTypography.withFontFamily(FontFamily.Serif)
 
-        LauncherThemePreset.TERMINAL ->
-            defaultLauncherTypography.copy(
-                bodyLarge = defaultLauncherTypography.bodyLarge.copy(fontFamily = FontFamily.Monospace),
-                bodyMedium = defaultLauncherTypography.bodyMedium.copy(fontFamily = FontFamily.Monospace),
-                labelLarge = defaultLauncherTypography.labelLarge.copy(fontFamily = FontFamily.Monospace),
-            )
+        LauncherThemePreset.TERMINAL -> defaultLauncherTypography.withFontFamily(FontFamily.Monospace)
 
         else -> defaultLauncherTypography
     }
 
 private val defaultLauncherTypography = Typography()
+
+private fun Typography.withFontFamily(fontFamily: FontFamily): Typography =
+    copy(
+        displayLarge = displayLarge.copy(fontFamily = fontFamily),
+        displayMedium = displayMedium.copy(fontFamily = fontFamily),
+        displaySmall = displaySmall.copy(fontFamily = fontFamily),
+        headlineLarge = headlineLarge.copy(fontFamily = fontFamily),
+        headlineMedium = headlineMedium.copy(fontFamily = fontFamily),
+        headlineSmall = headlineSmall.copy(fontFamily = fontFamily),
+        titleLarge = titleLarge.copy(fontFamily = fontFamily),
+        titleMedium = titleMedium.copy(fontFamily = fontFamily),
+        titleSmall = titleSmall.copy(fontFamily = fontFamily),
+        bodyLarge = bodyLarge.copy(fontFamily = fontFamily),
+        bodyMedium = bodyMedium.copy(fontFamily = fontFamily),
+        bodySmall = bodySmall.copy(fontFamily = fontFamily),
+        labelLarge = labelLarge.copy(fontFamily = fontFamily),
+        labelMedium = labelMedium.copy(fontFamily = fontFamily),
+        labelSmall = labelSmall.copy(fontFamily = fontFamily),
+    )
 
 internal fun supportsDynamicMaterialColor(sdkInt: Int): Boolean = sdkInt >= Build.VERSION_CODES.S
 
