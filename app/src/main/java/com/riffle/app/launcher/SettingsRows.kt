@@ -2,7 +2,6 @@ package com.riffle.app.launcher
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.Switch
@@ -10,7 +9,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.unit.dp
 
 @Composable
 internal fun SettingsClickableRow(
@@ -74,9 +72,10 @@ internal fun SettingsListRow(
     )
 }
 
+@Composable
 private fun Modifier.settingsRowModifier(): Modifier =
     fillMaxWidth()
-        .clip(RoundedCornerShape(16.dp))
+        .clip(LocalLauncherCardShape.current)
 
 @Composable
 private fun SettingsListItem(
