@@ -26,4 +26,9 @@ class HomeLayoutDeviceClassClassifierTest {
     fun classifiesExpandedWidthsAsTablet() {
         assertEquals(HomeLayoutDeviceClass.TABLET, classifier.classify(screenWidthDp = 840, screenHeightDp = 900))
     }
+
+    @Test
+    fun classifiesLargeWindowsAsDesktop() {
+        assertEquals(HomeLayoutDeviceClass.DESKTOP, classifier.classify(screenWidthDp = 1_200, screenHeightDp = 900))
+    }
 }

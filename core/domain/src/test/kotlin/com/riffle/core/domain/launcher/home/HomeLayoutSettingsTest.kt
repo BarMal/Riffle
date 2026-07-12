@@ -37,6 +37,15 @@ class HomeLayoutSettingsTest {
     }
 
     @Test
+    fun standardDesktopSettingsUseTheWidestDefaultGrid() {
+        val settings = HomeLayoutSettings.standardDesktop()
+
+        assertEquals(GridDimensions(columns = 8, rows = 6), settings.grid.dimensions)
+        assertEquals(WallpaperSettings.system(), settings.wallpaper)
+        assertEquals(HomeLabelSettings.standard(), settings.labels)
+    }
+
+    @Test
     fun gridSettingsCanConfigureSpacingWithoutChangingGridOccupancy() {
         val settings =
             GridSettings(

@@ -7,6 +7,7 @@ class HomeLayoutDeviceClassClassifier {
     ): HomeLayoutDeviceClass =
         when {
             minOf(screenWidthDp, screenHeightDp) < FOLDABLE_MIN_SHORT_SIDE_DP -> HomeLayoutDeviceClass.PHONE
+            screenWidthDp >= DESKTOP_MIN_WIDTH_DP -> HomeLayoutDeviceClass.DESKTOP
             screenWidthDp >= TABLET_MIN_WIDTH_DP -> HomeLayoutDeviceClass.TABLET
             screenWidthDp >= FOLDABLE_MIN_WIDTH_DP -> HomeLayoutDeviceClass.FOLDABLE
             else -> HomeLayoutDeviceClass.PHONE
@@ -16,5 +17,6 @@ class HomeLayoutDeviceClassClassifier {
         const val FOLDABLE_MIN_SHORT_SIDE_DP = 600
         const val FOLDABLE_MIN_WIDTH_DP = 600
         const val TABLET_MIN_WIDTH_DP = 840
+        const val DESKTOP_MIN_WIDTH_DP = 1_200
     }
 }
