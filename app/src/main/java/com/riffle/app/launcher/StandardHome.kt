@@ -119,7 +119,14 @@ private fun StandardHomeColumn(
             reducedMotion = state.presentation.reducedMotion,
             actions = actions,
         )
-    val dockShelf = rememberDockShelfController(state.visibleLayout)
+    val notificationShelfState =
+        dockNotificationShelfState(
+            showNotificationCards = state.visibleLayout.dock.showNotificationCards,
+            groups = state.presentation.notificationGroupsByApp,
+            notificationAccessStatus = state.presentation.notificationAccessStatus,
+            apps = state.presentation.installedApps,
+        )
+    val dockShelf = rememberDockShelfController(state.visibleLayout, notificationShelfState)
     val homeActions =
         actions.copy(
             onBackgroundClick = dockShelf.dismiss,
@@ -172,6 +179,7 @@ private fun StandardHomeColumn(
         StandardHomeDockArea(
             layout = state.visibleLayout,
             presentation = state.presentation,
+            notificationShelfState = notificationShelfState,
             isDockShelfExpanded = dockShelf.isExpanded,
             onDockShelfExpandedChange = dockShelf.onExpandedChange,
             appIconLoader = appIconLoader,
@@ -181,15 +189,22 @@ private fun StandardHomeColumn(
 }
 
 @Composable
-private fun rememberDockShelfController(layout: HomeLayout): DockShelfController {
+private fun rememberDockShelfController(
+    layout: HomeLayout,
+    notificationShelfState: DockNotificationShelfState,
+): DockShelfController {
     val isExpanded = remember { mutableStateOf(false) }
-    val hasOverflow = dockHasOverflow(capacity = layout.dock.capacity, itemCount = layout.dock.items.size)
+    val hasContent =
+        dockHasExpandedContent(
+            hasOverflow = dockHasOverflow(capacity = layout.dock.capacity, itemCount = layout.dock.items.size),
+            notificationShelfState = notificationShelfState,
+        )
 
-    LaunchedEffect(hasOverflow) {
+    LaunchedEffect(hasContent) {
         isExpanded.value =
-            dockShelfExpandedStateForOverflow(
+            dockShelfExpandedStateForContent(
                 isExpanded = isExpanded.value,
-                hasOverflow = hasOverflow,
+                hasContent = hasContent,
             )
     }
 

@@ -80,6 +80,33 @@ class DockNotificationCardsTest {
     }
 
     @Test
+    fun notificationCardsProvideExpandedDockContentWithoutShortcutOverflow() {
+        assertEquals(
+            true,
+            dockHasExpandedContent(
+                hasOverflow = false,
+                notificationShelfState =
+                    DockNotificationShelfState.Content(
+                        cards =
+                            listOf(
+                                DockNotificationCardState(
+                                    app = null,
+                                    group = notificationGroup(packageName = "com.example.chat"),
+                                ),
+                            ),
+                    ),
+            ),
+        )
+        assertEquals(
+            false,
+            dockHasExpandedContent(
+                hasOverflow = false,
+                notificationShelfState = DockNotificationShelfState.Hidden,
+            ),
+        )
+    }
+
+    @Test
     fun grantedAccessProjectsTopThreeNotificationCardsWithMatchedApps() {
         val chat =
             notificationGroup(

@@ -34,10 +34,15 @@ internal fun dockShelfExpandedStateAfterBackgroundTap(isExpanded: Boolean): Bool
     return if (isExpanded) false else isExpanded
 }
 
-internal fun dockShelfExpandedStateForOverflow(
+internal fun dockShelfExpandedStateForContent(
     isExpanded: Boolean,
+    hasContent: Boolean,
+): Boolean = isExpanded && hasContent
+
+internal fun dockHasExpandedContent(
     hasOverflow: Boolean,
-): Boolean = isExpanded && hasOverflow
+    notificationShelfState: DockNotificationShelfState,
+): Boolean = hasOverflow || notificationShelfState != DockNotificationShelfState.Hidden
 
 internal fun Modifier.dockShelfGestureInput(interactions: DockInteractions): Modifier =
     fillMaxWidth()

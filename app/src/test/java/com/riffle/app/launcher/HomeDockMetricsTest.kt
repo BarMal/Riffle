@@ -514,18 +514,18 @@ class HomeDockMetricsTest {
     }
 
     @Test
-    fun dockShelfCollapsesWhenDockNoLongerOverflows() {
+    fun dockShelfCollapsesWhenItHasNoContent() {
         assertEquals(
             true,
-            dockShelfExpandedStateForOverflow(isExpanded = true, hasOverflow = true),
+            dockShelfExpandedStateForContent(isExpanded = true, hasContent = true),
         )
         assertEquals(
             false,
-            dockShelfExpandedStateForOverflow(isExpanded = true, hasOverflow = false),
+            dockShelfExpandedStateForContent(isExpanded = true, hasContent = false),
         )
         assertEquals(
             false,
-            dockShelfExpandedStateForOverflow(isExpanded = false, hasOverflow = true),
+            dockShelfExpandedStateForContent(isExpanded = false, hasContent = true),
         )
     }
 

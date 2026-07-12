@@ -94,6 +94,7 @@ internal fun ExpandedDockSurface(
 ) {
     val primaryDock = dock.primaryDock(showShelf = true)
     val overflowDock = dock.overflowShelfDock()
+    val hasOverflow = dockHasOverflow(capacity = dock.capacity, itemCount = dock.items.size)
     val presentation =
         DockPresentation(
             notificationGroupsByApp = notificationGroupsByApp,
@@ -149,15 +150,17 @@ internal fun ExpandedDockSurface(
                 }
                 Spacer(modifier = Modifier.height(DOCK_SHELF_CONTENT_SPACING_DP.dp))
             }
-            DockSurfaceRow(
-                dock = overflowDock,
-                surfaceMetrics = surfaceMetrics,
-                isEditing = false,
-                presentation = presentation,
-                appIconLoader = appIconLoader,
-                renderBackground = false,
-            )
-            Spacer(modifier = Modifier.height(DOCK_SHELF_CONTENT_SPACING_DP.dp))
+            if (hasOverflow) {
+                DockSurfaceRow(
+                    dock = overflowDock,
+                    surfaceMetrics = surfaceMetrics,
+                    isEditing = false,
+                    presentation = presentation,
+                    appIconLoader = appIconLoader,
+                    renderBackground = false,
+                )
+                Spacer(modifier = Modifier.height(DOCK_SHELF_CONTENT_SPACING_DP.dp))
+            }
             DockSurfaceRow(
                 dock = primaryDock,
                 surfaceMetrics = surfaceMetrics,
