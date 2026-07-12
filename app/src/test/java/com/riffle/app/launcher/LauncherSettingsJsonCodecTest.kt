@@ -336,6 +336,28 @@ class LauncherSettingsJsonCodecTest {
     }
 
     @Test
+    fun defaultsMalformedSettingsSectionsIndependently() {
+        val decodedSettings =
+            decodeLauncherSettings(
+                """
+                {
+                  "appearance": [],
+                  "contextual": "enabled",
+                  "gestures": [],
+                  "haptics": 1,
+                  "motion": true
+                }
+                """.trimIndent(),
+            )
+
+        assertEquals(AppearanceSettings(), decodedSettings.appearance)
+        assertEquals(ContextualSettings(), decodedSettings.contextual)
+        assertEquals(GestureSettings(), decodedSettings.gestures)
+        assertEquals(HapticSettings(), decodedSettings.haptics)
+        assertEquals(MotionSettings(), decodedSettings.motion)
+    }
+
+    @Test
     fun roundTripsOverlayDockSettings() {
         val settings =
             LauncherSettings(
