@@ -128,6 +128,24 @@ class LauncherShellPageOverviewViewModelTest {
     }
 
     @Test
+    fun addsPageWhileStayingInOverview() {
+        val repository = FakeHomeLayoutRepository(savedLayout = HomeLayoutDefaults.standard())
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                homeLayoutRepository = repository,
+            )
+        viewModel.onHomePageEdited(LauncherShellAction.EnterHomePageOverview)
+
+        viewModel.onHomePageEdited(LauncherShellAction.AddHomePage)
+
+        assertEquals(HomeEditMode.ManagingPages, viewModel.state.value.homeLayout.editMode)
+        assertEquals(2, viewModel.state.value.homeLayout.pages.size)
+        assertEquals(LauncherPageId("home-2"), viewModel.state.value.homeLayout.selectedPageId)
+        assertEquals(viewModel.state.value.homeLayout, repository.savedLayout)
+    }
+
+    @Test
     fun duplicatesSelectedPageWhileStayingInOverview() {
         val repository = FakeHomeLayoutRepository(savedLayout = HomeLayoutDefaults.standard())
         val viewModel =
