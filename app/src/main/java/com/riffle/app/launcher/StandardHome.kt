@@ -1,5 +1,13 @@
 package com.riffle.app.launcher
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -175,6 +183,7 @@ private fun StandardHomeColumn(
             layout = state.visibleLayout,
             selectedPageIndex = pagerState.visualSelectedPageIndex,
             showPageIndicator = pagerState.rememberPageIndicatorVisible(),
+            reducedMotion = state.presentation.reducedMotion,
             appIconLoader = appIconLoader,
             widgetViewFactory = state.presentation.widgetViewFactory,
             actions = homeActions,
@@ -226,34 +235,69 @@ private fun HomeBottomControls(
     layout: HomeLayout,
     selectedPageIndex: Int,
     showPageIndicator: Boolean,
+    reducedMotion: Boolean,
     appIconLoader: AppIconLoader,
     widgetViewFactory: HomeWidgetViewFactory,
     actions: HomeWorkspaceActions,
 ) {
-    when (layout.editMode) {
-        HomeEditMode.Browsing ->
-            HomeBottomSearchArea(
-                pageCount = layout.pages.size,
-                selectedPageIndex = selectedPageIndex,
-                showPageIndicator = showPageIndicator,
-                actions = actions,
+    AnimatedContent(
+        targetState = layout.editMode,
+        transitionSpec = {
+            homePageOverviewMotionPolicy(reducedMotion).contentTransform(
+                enteringOverview = targetState == HomeEditMode.ManagingPages,
+                exitingOverview = initialState == HomeEditMode.ManagingPages,
             )
+        },
+        label = "home-page-overview",
+    ) { editMode ->
+        when (editMode) {
+            HomeEditMode.Browsing ->
+                HomeBottomSearchArea(
+                    pageCount = layout.pages.size,
+                    selectedPageIndex = selectedPageIndex,
+                    showPageIndicator = showPageIndicator,
+                    actions = actions,
+                )
 
-        is HomeEditMode.EditingPage ->
-            PageEditControls(
-                pageCount = layout.pages.size,
-                selectedPageIndex = layout.selectedPageIndex,
-                onAction = actions.onAction,
-            )
+            is HomeEditMode.EditingPage ->
+                PageEditControls(
+                    pageCount = layout.pages.size,
+                    selectedPageIndex = layout.selectedPageIndex,
+                    onAction = actions.onAction,
+                )
 
-        HomeEditMode.ManagingPages ->
-            PageOverviewControls(
-                layout = layout,
-                appIconLoader = appIconLoader,
-                widgetViewFactory = widgetViewFactory,
-                onAction = actions.onAction,
-            )
+            HomeEditMode.ManagingPages ->
+                PageOverviewControls(
+                    layout = layout,
+                    appIconLoader = appIconLoader,
+                    widgetViewFactory = widgetViewFactory,
+                    onAction = actions.onAction,
+                )
+        }
     }
+}
+
+internal fun homePageOverviewMotionPolicy(reducedMotion: Boolean): HomePageOverviewMotionPolicy =
+    if (reducedMotion) HomePageOverviewMotionPolicy.NONE else HomePageOverviewMotionPolicy.ZOOM
+
+internal enum class HomePageOverviewMotionPolicy {
+    NONE,
+    ZOOM,
+    ;
+
+    fun contentTransform(
+        enteringOverview: Boolean,
+        exitingOverview: Boolean,
+    ) =
+        when (this) {
+            NONE -> EnterTransition.None togetherWith ExitTransition.None
+            ZOOM ->
+                when {
+                    enteringOverview -> (fadeIn() + scaleIn(initialScale = 0.92f)) togetherWith fadeOut()
+                    exitingOverview -> fadeIn() togetherWith (fadeOut() + scaleOut(targetScale = 0.92f))
+                    else -> fadeIn() togetherWith fadeOut()
+                }
+        }
 }
 
 @Composable

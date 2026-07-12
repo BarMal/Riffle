@@ -20,6 +20,12 @@ import org.junit.Test
 
 class HomePageControlsTest {
     @Test
+    fun pageOverviewMotionRespectsReducedMotion() {
+        assertEquals(HomePageOverviewMotionPolicy.ZOOM, homePageOverviewMotionPolicy(reducedMotion = false))
+        assertEquals(HomePageOverviewMotionPolicy.NONE, homePageOverviewMotionPolicy(reducedMotion = true))
+    }
+
+    @Test
     fun pageManagementMenuDisablesUnavailablePageMovement() {
         val items = pageManagementMenuItems(pageCount = 1, selectedPageIndex = 0)
 
