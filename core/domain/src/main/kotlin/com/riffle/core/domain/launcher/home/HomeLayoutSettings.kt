@@ -9,6 +9,7 @@ data class HomeLayoutSettings(
         fun standard(deviceClass: HomeLayoutDeviceClass): HomeLayoutSettings =
             when (deviceClass) {
                 HomeLayoutDeviceClass.PHONE -> standardPhone()
+                HomeLayoutDeviceClass.PHONE_LANDSCAPE -> standardPhoneLandscape()
                 HomeLayoutDeviceClass.FOLDABLE -> standardFoldable()
                 HomeLayoutDeviceClass.TABLET -> standardTablet()
                 HomeLayoutDeviceClass.DESKTOP -> standardDesktop()
@@ -24,6 +25,13 @@ data class HomeLayoutSettings(
         fun standardFoldable(): HomeLayoutSettings =
             HomeLayoutSettings(
                 grid = GridSettings.standardFoldable(),
+                wallpaper = WallpaperSettings.system(),
+                labels = HomeLabelSettings.standard(),
+            )
+
+        fun standardPhoneLandscape(): HomeLayoutSettings =
+            HomeLayoutSettings(
+                grid = GridSettings.standardPhoneLandscape(),
                 wallpaper = WallpaperSettings.system(),
                 labels = HomeLabelSettings.standard(),
             )
@@ -97,6 +105,11 @@ data class GridSettings(
         fun standardFoldable(): GridSettings =
             GridSettings(
                 dimensions = GridDimensions(columns = 5, rows = 6),
+            )
+
+        fun standardPhoneLandscape(): GridSettings =
+            GridSettings(
+                dimensions = GridDimensions(columns = 5, rows = 4),
             )
 
         fun standardTablet(): GridSettings =

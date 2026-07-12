@@ -96,6 +96,7 @@ internal fun LauncherShellState.withSettingsLayoutDeviceClass(deviceClass: HomeL
     val supportsSettingsDeviceClass =
         deviceClass in availableLayoutDeviceClasses ||
             deviceClass == HomeLayoutDeviceClass.PHONE ||
+            deviceClass == HomeLayoutDeviceClass.PHONE_LANDSCAPE ||
             deviceClass == HomeLayoutDeviceClass.FOLDABLE ||
             deviceClass == HomeLayoutDeviceClass.DESKTOP
 

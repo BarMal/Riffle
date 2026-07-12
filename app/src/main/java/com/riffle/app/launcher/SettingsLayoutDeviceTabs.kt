@@ -61,6 +61,7 @@ internal fun settingsLayoutDeviceTabs(classes: Set<HomeLayoutDeviceClass>): List
         else ->
             buildList {
                 add(HomeLayoutDeviceClass.PHONE)
+                if (HomeLayoutDeviceClass.PHONE_LANDSCAPE in classes) add(HomeLayoutDeviceClass.PHONE_LANDSCAPE)
                 add(HomeLayoutDeviceClass.FOLDABLE)
                 if (HomeLayoutDeviceClass.TABLET in classes) add(HomeLayoutDeviceClass.TABLET)
                 if (HomeLayoutDeviceClass.DESKTOP in classes) add(HomeLayoutDeviceClass.DESKTOP)
@@ -76,6 +77,7 @@ internal fun settingsLayoutDeviceTabs(classes: Set<HomeLayoutDeviceClass>): List
 private fun HomeLayoutDeviceClass.settingsLabel(): String =
     when (this) {
         HomeLayoutDeviceClass.PHONE -> "Folded"
+        HomeLayoutDeviceClass.PHONE_LANDSCAPE -> "Landscape"
         HomeLayoutDeviceClass.FOLDABLE -> "Unfolded"
         HomeLayoutDeviceClass.TABLET -> "Tablet"
         HomeLayoutDeviceClass.DESKTOP -> "Desktop"
