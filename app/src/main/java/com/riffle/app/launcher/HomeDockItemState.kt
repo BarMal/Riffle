@@ -8,7 +8,6 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.requiredSize
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -80,7 +79,7 @@ internal fun DockItemPlaceholder(
         modifier =
             modifier
                 .requiredSize(iconSizeDp.dp)
-                .clip(RoundedCornerShape(18.dp))
+                .clip(LocalLauncherCardShape.current)
                 .background(MaterialTheme.colorScheme.secondaryContainer)
                 .semantics {
                     contentDescription = "${item.label} ${item.kind.label} dock item"
@@ -128,7 +127,7 @@ internal fun DockWidget(
         modifier =
             Modifier
                 .requiredSize(iconSizeDp.dp)
-                .clip(RoundedCornerShape(18.dp))
+                .clip(LocalLauncherCardShape.current)
                 .background(MaterialTheme.colorScheme.surfaceContainerHighest),
         contentAlignment = Alignment.Center,
     ) {
