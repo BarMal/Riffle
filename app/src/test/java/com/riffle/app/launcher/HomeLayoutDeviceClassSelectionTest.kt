@@ -151,6 +151,19 @@ class HomeLayoutDeviceClassSelectionTest {
     }
 
     @Test
+    fun classifiesWideShortDesktopConfigurationAndExposesOnlyDesktopClass() {
+        val selection =
+            homeLayoutDeviceClassSelectionFromWindowLayout(
+                foldablePosture = HomeLayoutFoldablePosture.NONE,
+                screenWidthDp = 1_200,
+                screenHeightDp = 500,
+            )
+
+        assertEquals(HomeLayoutDeviceClass.DESKTOP, selection?.activeDeviceClass)
+        assertEquals(setOf(HomeLayoutDeviceClass.DESKTOP), selection?.availableDeviceClasses)
+    }
+
+    @Test
     fun classifiesUnfoldedWindowAsFoldableEvenWhenConfigurationIsTabletSized() {
         assertEquals(
             HomeLayoutDeviceClass.FOLDABLE,
