@@ -8,10 +8,14 @@ class ActiveNotificationRefreshCoordinator(
     private val notificationChangeSource: ActiveNotificationChangeSource,
     private val dispatchOnMainThread: (() -> Unit) -> Unit,
     private val refreshNotifications: () -> Unit,
+    private val refreshPlatformStatuses: () -> Unit,
 ) {
     fun start() {
         notificationChangeSource.observeActiveNotifications {
-            dispatchOnMainThread(refreshNotifications)
+            dispatchOnMainThread {
+                refreshPlatformStatuses()
+                refreshNotifications()
+            }
         }
     }
 }

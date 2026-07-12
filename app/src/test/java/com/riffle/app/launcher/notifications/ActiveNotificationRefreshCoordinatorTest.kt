@@ -9,11 +9,20 @@ class ActiveNotificationRefreshCoordinatorTest {
         val source = FakeNotificationChangeSource()
         val dispatchedActions = mutableListOf<() -> Unit>()
         var refreshCount = 0
+        var platformStatusRefreshCount = 0
+        val refreshOrder = mutableListOf<String>()
         val coordinator =
             ActiveNotificationRefreshCoordinator(
                 notificationChangeSource = source,
                 dispatchOnMainThread = { action -> dispatchedActions += action },
-                refreshNotifications = { refreshCount += 1 },
+                refreshNotifications = {
+                    refreshCount += 1
+                    refreshOrder += "notifications"
+                },
+                refreshPlatformStatuses = {
+                    platformStatusRefreshCount += 1
+                    refreshOrder += "platform statuses"
+                },
             )
 
         coordinator.start()
@@ -25,6 +34,8 @@ class ActiveNotificationRefreshCoordinatorTest {
         dispatchedActions.single().invoke()
 
         assertEquals(1, refreshCount)
+        assertEquals(1, platformStatusRefreshCount)
+        assertEquals(listOf("platform statuses", "notifications"), refreshOrder)
     }
 
     private class FakeNotificationChangeSource : ActiveNotificationChangeSource {
