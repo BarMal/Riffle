@@ -56,4 +56,16 @@ class ActiveNotificationSnapshotTest {
 
         assertEquals(listOf("1", "2"), savedNotifications)
     }
+
+    @Test
+    fun ignoresListenerSetupFailureBeforeReadingPlatformSnapshot() {
+        var setupStarted = false
+
+        ignoreNotificationListenerFailure {
+            setupStarted = true
+            error("Notification storage is unavailable")
+        }
+
+        assertEquals(true, setupStarted)
+    }
 }

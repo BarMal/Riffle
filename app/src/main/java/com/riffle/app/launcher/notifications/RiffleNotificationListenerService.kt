@@ -39,11 +39,13 @@ class RiffleNotificationListenerService : NotificationListenerService() {
         }.isSuccess
 
     private fun saveActiveNotifications() {
-        saveActiveNotificationSnapshot(
-            activeNotifications = { activeNotifications },
-            mapper = notificationMapper::map,
-            saveNotifications = repository::saveActiveNotifications,
-        )
+        ignoreNotificationListenerFailure {
+            saveActiveNotificationSnapshot(
+                activeNotifications = { activeNotifications },
+                mapper = notificationMapper::map,
+                saveNotifications = repository::saveActiveNotifications,
+            )
+        }
     }
 }
 
@@ -75,4 +77,12 @@ internal fun <Input, Output> saveActiveNotificationSnapshot(
         activeNotifications = activeNotifications,
         mapper = mapper,
     )?.let { snapshot -> runCatching { saveNotifications(snapshot) } }
+}
+
+/**
+ * Lazy platform services and storage are resolved before notification snapshot handling begins.
+ * Keep failures in that setup boundary from escaping a listener callback into the launcher process.
+ */
+internal fun ignoreNotificationListenerFailure(action: () -> Unit) {
+    runCatching(action)
 }
