@@ -93,7 +93,10 @@ class MainActivity : ComponentActivity() {
     private val overlayDockServiceController get() = dependencies.overlayDockServiceController
     private val homeLayoutDeviceClassObserver get() = dependencies.homeLayoutDeviceClassObserver
     private val activeNotificationRefreshCoordinator by lazy {
-        dependencies.activeNotificationRefreshCoordinator { shellViewModel.refreshNotifications() }
+        dependencies.activeNotificationRefreshCoordinator(
+            refreshNotifications = { shellViewModel.refreshNotifications() },
+            refreshPlatformStatuses = ::refreshPlatformStatuses,
+        )
     }
     private val backupDocumentHandler by lazy {
         dependencies.backupDocumentHandler { shellViewModel.state.value }

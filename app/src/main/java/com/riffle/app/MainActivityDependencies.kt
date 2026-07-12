@@ -83,11 +83,15 @@ internal class MainActivityDependencies(
             activity.runOnUiThread(refreshInstalledApps)
         }
 
-    fun activeNotificationRefreshCoordinator(refreshNotifications: () -> Unit): ActiveNotificationRefreshCoordinator =
+    fun activeNotificationRefreshCoordinator(
+        refreshNotifications: () -> Unit,
+        refreshPlatformStatuses: () -> Unit,
+    ): ActiveNotificationRefreshCoordinator =
         ActiveNotificationRefreshCoordinator(
             notificationChangeSource = activeNotificationRepository,
             dispatchOnMainThread = { action -> activity.runOnUiThread { action() } },
             refreshNotifications = refreshNotifications,
+            refreshPlatformStatuses = refreshPlatformStatuses,
         )
 
     fun backupDocumentHandler(currentState: () -> LauncherShellState): LauncherBackupDocumentHandler =
