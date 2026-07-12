@@ -144,6 +144,7 @@ private fun List<FoldingFeature>.foldablePosture(
     homeLayoutFoldablePosture(
         hasFoldableHardware = hasFoldableHardware,
         hasFoldingFeature = isNotEmpty(),
+        hasHalfOpenedFoldingFeature = any { feature -> feature.state == FoldingFeature.State.HALF_OPENED },
         hasUnfoldedFoldingFeature =
             any { feature -> feature.state == FoldingFeature.State.FLAT || feature.isSeparating },
         configurationClass = configurationClass,
