@@ -40,4 +40,20 @@ class ActiveNotificationSnapshotTest {
 
         assertEquals(listOf("1", "2"), snapshot)
     }
+
+    @Test
+    fun ignoresPersistenceFailureAfterReadingPlatformSnapshot() {
+        var savedNotifications: List<String>? = null
+
+        saveActiveNotificationSnapshot(
+            activeNotifications = { arrayOf(1, 2) },
+            mapper = Int::toString,
+            saveNotifications = { notifications ->
+                savedNotifications = notifications
+                error("Data store is unavailable")
+            },
+        )
+
+        assertEquals(listOf("1", "2"), savedNotifications)
+    }
 }
