@@ -8,4 +8,5 @@ data class LauncherPage(
     val type: LauncherPageType = LauncherPageType.Home,
     val grid: GridDimensions,
     val items: List<LauncherItem> = emptyList(),
+    val isPinned: Boolean = false,
 )

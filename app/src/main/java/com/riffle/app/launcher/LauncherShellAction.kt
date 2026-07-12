@@ -90,6 +90,8 @@ sealed interface LauncherShellAction {
 
     data class SelectSelectedHomePageType(val type: LauncherPageType) : LauncherShellAction
 
+    data object ToggleSelectedHomePagePinned : LauncherShellAction
+
     data class SelectSelectedHomePageGridDimensions(val dimensions: GridDimensions) : LauncherShellAction
 
     data class SelectHomeGridDimensions(val dimensions: GridDimensions) : LauncherShellAction

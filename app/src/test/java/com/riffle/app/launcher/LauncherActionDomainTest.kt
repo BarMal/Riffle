@@ -166,6 +166,7 @@ class LauncherActionDomainTest {
                     "SelectSelectedHomePageType",
                     LauncherShellAction.SelectSelectedHomePageType(LauncherPageType.AllApps),
                 ),
+                activity("ToggleSelectedHomePagePinned", LauncherShellAction.ToggleSelectedHomePagePinned),
                 activity(
                     "SelectSelectedHomePageGridDimensions",
                     LauncherShellAction.SelectSelectedHomePageGridDimensions(GridDimensions(4, 6)),

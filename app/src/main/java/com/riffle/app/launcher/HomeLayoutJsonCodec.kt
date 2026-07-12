@@ -102,6 +102,7 @@ private fun encodePage(page: LauncherPage): JSONObject =
         }
         .put("columns", page.grid.columns)
         .put("rows", page.grid.rows)
+        .put("isPinned", page.isPinned)
         .put("items", JSONArray(page.items.map(::encodeLauncherItem)))
 
 private fun JSONArray.toPages(defaultGrid: GridDimensions): List<LauncherPage> =
@@ -122,4 +123,5 @@ private fun JSONObject.toPage(defaultGrid: GridDimensions): LauncherPage =
                 rows = optInt("rows", defaultGrid.rows),
             ),
         items = optJSONArray("items")?.toLauncherItems().orEmpty(),
+        isPinned = optBoolean("isPinned", false),
     )
