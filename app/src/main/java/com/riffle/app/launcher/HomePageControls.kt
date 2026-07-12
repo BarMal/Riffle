@@ -131,6 +131,9 @@ fun PageOverviewControls(
             OutlinedButton(onClick = { onAction(LauncherShellAction.DuplicateSelectedHomePage) }) {
                 Text(text = "Duplicate")
             }
+            OutlinedButton(onClick = { onAction(LauncherShellAction.ToggleSelectedHomePagePinned) }) {
+                Text(text = if (selectedPage.isPinned) "Unpin" else "Pin")
+            }
             TextButton(onClick = { isPageMenuExpanded.value = true }) {
                 Text(text = "More")
             }

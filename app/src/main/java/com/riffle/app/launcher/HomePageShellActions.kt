@@ -45,6 +45,9 @@ fun HomePageEngine.applyEdit(
         LauncherShellAction.DeleteSelectedHomePage ->
             applyPageDeletionEdit(layout = layout)
 
+        LauncherShellAction.ToggleSelectedHomePagePinned ->
+            togglePagePinned(layout = layout, pageId = layout.selectedPageId)
+
         is LauncherShellAction.SelectSelectedHomePageType,
         is LauncherShellAction.SelectSelectedHomePageGridDimensions,
         is LauncherShellAction.SelectHomeGridDimensions,

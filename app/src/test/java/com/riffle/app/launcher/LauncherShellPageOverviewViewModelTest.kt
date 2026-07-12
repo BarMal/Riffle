@@ -128,6 +128,16 @@ class LauncherShellPageOverviewViewModelTest {
     }
 
     @Test
+    fun pinsSelectedPageFromOverview() {
+        val repository = FakeHomeLayoutRepository(savedLayout = HomeLayoutDefaults.standard())
+        val viewModel = LauncherShellViewModel(FakeFirstRunRepository(), homeLayoutRepository = repository)
+        viewModel.onHomePageEdited(LauncherShellAction.EnterHomePageOverview)
+        viewModel.onHomePageEdited(LauncherShellAction.ToggleSelectedHomePagePinned)
+        assertTrue(viewModel.state.value.homeLayout.selectedPage.isPinned)
+        assertEquals(viewModel.state.value.homeLayout, repository.savedLayout)
+    }
+
+    @Test
     fun addsPageWhileStayingInOverview() {
         val repository = FakeHomeLayoutRepository(savedLayout = HomeLayoutDefaults.standard())
         val viewModel =

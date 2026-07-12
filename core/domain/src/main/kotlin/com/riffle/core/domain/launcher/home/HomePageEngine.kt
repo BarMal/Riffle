@@ -182,6 +182,18 @@ class HomePageEngine {
         }
     }
 
+    fun togglePagePinned(
+        layout: HomeLayout,
+        pageId: LauncherPageId,
+    ): HomePageEditResult =
+        layout.pages.firstOrNull { it.id == pageId }
+            ?.let { page ->
+                HomePageEditResult.Updated(
+                    layout.withUpdatedSelectedPage(page.copy(isPinned = !page.isPinned)),
+                )
+            }
+            ?: HomePageEditResult.Rejected(HomePageEditRejectionReason.PAGE_NOT_FOUND)
+
     fun enterPageEditMode(
         layout: HomeLayout,
         pageId: LauncherPageId,
