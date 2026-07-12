@@ -14,6 +14,7 @@ import com.riffle.core.domain.launcher.home.HomeLayout
 internal fun StandardHomeDockArea(
     layout: HomeLayout,
     presentation: StandardHomePresentation,
+    notificationShelfState: DockNotificationShelfState,
     isDockShelfExpanded: Boolean,
     onDockShelfExpandedChange: (Boolean) -> Unit,
     appIconLoader: AppIconLoader,
@@ -23,21 +24,18 @@ internal fun StandardHomeDockArea(
         return
     }
 
-    val hasDockOverflow = dockHasOverflow(capacity = layout.dock.capacity, itemCount = layout.dock.items.size)
-    val showDockShelf = isDockShelfExpanded && hasDockOverflow
-    val notificationShelfState =
-        dockNotificationShelfState(
-            showNotificationCards = layout.dock.showNotificationCards,
-            groups = presentation.notificationGroupsByApp,
-            notificationAccessStatus = presentation.notificationAccessStatus,
-            apps = presentation.installedApps,
+    val hasExpandedContent =
+        dockHasExpandedContent(
+            hasOverflow = dockHasOverflow(capacity = layout.dock.capacity, itemCount = layout.dock.items.size),
+            notificationShelfState = notificationShelfState,
         )
+    val showDockShelf = isDockShelfExpanded && hasExpandedContent
     val dockInteractions =
         DockInteractions(
             haptics = actions.haptics,
             onFolderOpen = actions.onFolderOpen,
             isShelfExpanded = showDockShelf,
-            onShelfExpandedChange = onDockShelfExpandedChange.takeIf { hasDockOverflow },
+            onShelfExpandedChange = onDockShelfExpandedChange.takeIf { hasExpandedContent },
             reducedMotion = presentation.reducedMotion,
             homeInsetPolicy = presentation.homeInsetPolicy,
             onAction = actions.onAction,
