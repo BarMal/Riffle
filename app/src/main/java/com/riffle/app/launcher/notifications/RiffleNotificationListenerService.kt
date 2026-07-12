@@ -16,20 +16,24 @@ class RiffleNotificationListenerService : NotificationListenerService() {
     }
 
     override fun onListenerConnected() {
-        RiffleNotificationListenerConnection.connect(this)
-        saveActiveNotifications()
+        ignoreNotificationListenerFailure {
+            RiffleNotificationListenerConnection.connect(this)
+            saveActiveNotifications()
+        }
     }
 
     override fun onListenerDisconnected() {
-        RiffleNotificationListenerConnection.disconnect(this)
+        ignoreNotificationListenerFailure {
+            RiffleNotificationListenerConnection.disconnect(this)
+        }
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
-        saveActiveNotifications()
+        ignoreNotificationListenerFailure(::saveActiveNotifications)
     }
 
     override fun onNotificationRemoved(sbn: StatusBarNotification?) {
-        saveActiveNotifications()
+        ignoreNotificationListenerFailure(::saveActiveNotifications)
     }
 
     fun dismissNotifications(keys: List<LauncherNotificationKey>): Boolean =
@@ -80,8 +84,8 @@ internal fun <Input, Output> saveActiveNotificationSnapshot(
 }
 
 /**
- * Lazy platform services and storage are resolved before notification snapshot handling begins.
- * Keep failures in that setup boundary from escaping a listener callback into the launcher process.
+ * Listener connection callbacks can race with permission changes and lazy platform service setup.
+ * Keep every callback boundary from propagating a transient platform failure into the launcher process.
  */
 internal fun ignoreNotificationListenerFailure(action: () -> Unit) {
     runCatching(action)

@@ -58,14 +58,15 @@ class ActiveNotificationSnapshotTest {
     }
 
     @Test
-    fun ignoresListenerSetupFailureBeforeReadingPlatformSnapshot() {
-        var setupStarted = false
+    fun ignoresListenerCallbackFailure() {
+        val callbackEvents = mutableListOf<String>()
 
         ignoreNotificationListenerFailure {
-            setupStarted = true
-            error("Notification storage is unavailable")
+            callbackEvents += "started"
+            error("Listener connection changed during callback")
         }
+        callbackEvents += "returned"
 
-        assertEquals(true, setupStarted)
+        assertEquals(listOf("started", "returned"), callbackEvents)
     }
 }
