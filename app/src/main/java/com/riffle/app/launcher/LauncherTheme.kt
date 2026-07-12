@@ -43,7 +43,10 @@ fun RiffleLauncherTheme(
             else -> fallbackScheme(darkTheme = darkTheme, themePreset = themePreset)
         }
 
-    CompositionLocalProvider(LocalLauncherCardShape provides launcherCardShape(themePreset)) {
+    CompositionLocalProvider(
+        LocalLauncherCardShape provides launcherCardShape(themePreset),
+        LocalLauncherPanelShape provides launcherPanelShape(themePreset),
+    ) {
         MaterialTheme(
             colorScheme = colorScheme,
             content = content,
@@ -52,6 +55,7 @@ fun RiffleLauncherTheme(
 }
 
 internal val LocalLauncherCardShape = staticCompositionLocalOf<Shape> { RoundedCornerShape(24.dp) }
+internal val LocalLauncherPanelShape = staticCompositionLocalOf<Shape> { RoundedCornerShape(32.dp) }
 
 internal fun launcherCardShape(themePreset: LauncherThemePreset): Shape =
     RoundedCornerShape(
@@ -64,6 +68,20 @@ internal fun launcherCardShape(themePreset: LauncherThemePreset): Shape =
             LauncherThemePreset.MATERIAL,
             LauncherThemePreset.CUSTOM,
             -> 24.dp
+        },
+    )
+
+internal fun launcherPanelShape(themePreset: LauncherThemePreset): Shape =
+    RoundedCornerShape(
+        when (themePreset) {
+            LauncherThemePreset.MINIMAL -> 12.dp
+            LauncherThemePreset.VICTORIAN -> 28.dp
+            LauncherThemePreset.RETRO -> 20.dp
+            LauncherThemePreset.GLASS -> 36.dp
+            LauncherThemePreset.TERMINAL -> 0.dp
+            LauncherThemePreset.MATERIAL,
+            LauncherThemePreset.CUSTOM,
+            -> 32.dp
         },
     )
 
