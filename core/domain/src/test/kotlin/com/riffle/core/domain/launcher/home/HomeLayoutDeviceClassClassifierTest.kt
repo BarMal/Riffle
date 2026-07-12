@@ -17,6 +17,11 @@ class HomeLayoutDeviceClassClassifierTest {
     }
 
     @Test
+    fun classifiesWideShortWindowsAsDesktop() {
+        assertEquals(HomeLayoutDeviceClass.DESKTOP, classifier.classify(screenWidthDp = 1_200, screenHeightDp = 500))
+    }
+
+    @Test
     fun classifiesMediumWidthsAsFoldable() {
         assertEquals(HomeLayoutDeviceClass.FOLDABLE, classifier.classify(screenWidthDp = 600, screenHeightDp = 900))
         assertEquals(HomeLayoutDeviceClass.FOLDABLE, classifier.classify(screenWidthDp = 839, screenHeightDp = 900))

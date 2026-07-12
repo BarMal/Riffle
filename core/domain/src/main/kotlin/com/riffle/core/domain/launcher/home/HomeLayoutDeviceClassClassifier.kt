@@ -6,8 +6,8 @@ class HomeLayoutDeviceClassClassifier {
         screenHeightDp: Int,
     ): HomeLayoutDeviceClass =
         when {
-            minOf(screenWidthDp, screenHeightDp) < FOLDABLE_MIN_SHORT_SIDE_DP -> HomeLayoutDeviceClass.PHONE
             screenWidthDp >= DESKTOP_MIN_WIDTH_DP -> HomeLayoutDeviceClass.DESKTOP
+            minOf(screenWidthDp, screenHeightDp) < FOLDABLE_MIN_SHORT_SIDE_DP -> HomeLayoutDeviceClass.PHONE
             screenWidthDp >= TABLET_MIN_WIDTH_DP -> HomeLayoutDeviceClass.TABLET
             screenWidthDp >= FOLDABLE_MIN_WIDTH_DP -> HomeLayoutDeviceClass.FOLDABLE
             else -> HomeLayoutDeviceClass.PHONE
