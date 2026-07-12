@@ -44,10 +44,30 @@ internal fun HomePageEngine.applyHomeLayoutConfigurationEdit(
             )
 
         is LauncherShellAction.SelectHomeGridMargin ->
-            layout.withHomeGridMargin(
-                horizontalDp = action.horizontalDp,
-                verticalDp = action.verticalDp,
-            )
+            when {
+                action.horizontalDp !in MIN_HOME_GRID_MARGIN_DP..MAX_HOME_GRID_MARGIN_DP ||
+                    action.verticalDp !in MIN_HOME_GRID_MARGIN_DP..MAX_HOME_GRID_MARGIN_DP ->
+                    HomePageEditResult.Rejected(HomePageEditRejectionReason.INVALID_GRID_DIMENSIONS)
+
+                else ->
+                    HomePageEditResult.Updated(
+                        layout.copy(
+                            settings =
+                                layout.settings.copy(
+                                    grid =
+                                        layout.settings.grid.copy(
+                                            margin =
+                                                GridInsets(
+                                                    start = action.horizontalDp,
+                                                    top = action.verticalDp,
+                                                    end = action.horizontalDp,
+                                                    bottom = action.verticalDp,
+                                                ),
+                                        ),
+                                ),
+                        ),
+                    )
+            }
 
         is LauncherShellAction.SelectLibraryPageCompaction ->
             HomePageEditResult.Updated(layout.withLibraryPageCompaction(action.enabled))
@@ -89,35 +109,6 @@ private fun HomeLayout.withHomeLabelBackgroundAlpha(alphaPercent: Int): HomePage
             )
 
         else -> HomePageEditResult.Rejected(HomePageEditRejectionReason.INVALID_LABEL_SETTING)
-    }
-
-private fun HomeLayout.withHomeGridMargin(
-    horizontalDp: Int,
-    verticalDp: Int,
-): HomePageEditResult =
-    when {
-        horizontalDp !in MIN_HOME_GRID_MARGIN_DP..MAX_HOME_GRID_MARGIN_DP ||
-            verticalDp !in MIN_HOME_GRID_MARGIN_DP..MAX_HOME_GRID_MARGIN_DP ->
-            HomePageEditResult.Rejected(HomePageEditRejectionReason.INVALID_GRID_DIMENSIONS)
-
-        else ->
-            HomePageEditResult.Updated(
-                copy(
-                    settings =
-                        settings.copy(
-                            grid =
-                                settings.grid.copy(
-                                    margin =
-                                        GridInsets(
-                                            start = horizontalDp,
-                                            top = verticalDp,
-                                            end = horizontalDp,
-                                            bottom = verticalDp,
-                                        ),
-                                ),
-                        ),
-                ),
-            )
     }
 
 private fun HomeLayout.withHomeLabelMaxLines(maxLines: Int): HomePageEditResult =

@@ -42,7 +42,6 @@ import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.home.FolderItem
 import com.riffle.core.domain.launcher.home.GridCell
 import com.riffle.core.domain.launcher.home.GridDimensions
-import com.riffle.core.domain.launcher.home.GridInsets
 import com.riffle.core.domain.launcher.home.HomeEditMode
 import com.riffle.core.domain.launcher.home.HomeLabelSettings
 import com.riffle.core.domain.launcher.home.HomeLayout
@@ -132,7 +131,7 @@ private fun StandardHomeColumn(
         actions.copy(
             onBackgroundClick = dockShelf.dismiss,
         )
-    val margins = homeSurfaceMargins(state.visibleLayout.settings.grid.margin)
+    val margins = state.visibleLayout.settings.grid.margin
 
     Column(
         modifier =
@@ -145,10 +144,10 @@ private fun StandardHomeColumn(
                 )
                 .windowInsetsPadding(state.presentation.homeInsetPolicy.safeDrawingInsets())
                 .padding(
-                    start = margins.start.dp,
-                    top = margins.top.dp,
-                    end = margins.end.dp,
-                    bottom = margins.bottom.dp,
+                    start = margins.start.coerceAtLeast(0).dp,
+                    top = margins.top.coerceAtLeast(0).dp,
+                    end = margins.end.coerceAtLeast(0).dp,
+                    bottom = margins.bottom.coerceAtLeast(0).dp,
                 ),
         verticalArrangement = Arrangement.Top,
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -418,14 +417,6 @@ internal fun homeInsetPolicy(appearance: AppearanceSettings): HomeInsetPolicy =
     HomeInsetPolicy(
         reserveStatusBar = !appearance.homeSystemBars.statusBarHidden,
         reserveNavigationBar = !appearance.homeSystemBars.navigationBarHidden,
-    )
-
-internal fun homeSurfaceMargins(gridInsets: GridInsets): GridInsets =
-    GridInsets(
-        start = gridInsets.start.coerceAtLeast(0),
-        top = gridInsets.top.coerceAtLeast(0),
-        end = gridInsets.end.coerceAtLeast(0),
-        bottom = gridInsets.bottom.coerceAtLeast(0),
     )
 
 @Composable
