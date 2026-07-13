@@ -46,9 +46,7 @@ internal fun HomeFolder(
     folder: FolderItem,
     dragState: HomeItemDragState,
     isEditing: Boolean,
-    notificationCount: Int,
-    labelSettings: HomeLabelSettings,
-    reducedMotion: Boolean,
+    presentation: HomeFolderPresentation,
     appIconLoader: AppIconLoader,
     actions: HomeWorkspaceActions,
 ) {
@@ -61,10 +59,10 @@ internal fun HomeFolder(
             modifier =
                 Modifier
                     .align(Alignment.Center)
-                    .heightIn(min = metrics.homeItemContentHeightDp(labelSettings).dp)
+                    .heightIn(min = metrics.homeItemContentHeightDp(presentation.labelSettings).dp)
                     .homeIconPressMotion(
                         interactionSource = pressInteractionSource,
-                        policy = homeIconPressMotionPolicy(reducedMotion),
+                        policy = homeIconPressMotionPolicy(presentation.reducedMotion),
                     )
                     .combinedClickable(
                         enabled = true,
@@ -94,14 +92,14 @@ internal fun HomeFolder(
                 )
                 if (!isEditing) {
                     NotificationCountBadge(
-                        count = notificationCount,
+                        count = presentation.notificationCount,
                         modifier = Modifier.align(Alignment.TopEnd),
                     )
                 }
             }
             WallpaperReadableLabel(
                 text = folder.label,
-                settings = labelSettings,
+                settings = presentation.labelSettings,
             )
         }
 
@@ -126,6 +124,12 @@ internal fun HomeFolder(
         }
     }
 }
+
+internal data class HomeFolderPresentation(
+    val notificationCount: Int,
+    val labelSettings: HomeLabelSettings,
+    val reducedMotion: Boolean,
+)
 
 @Composable
 fun FolderSurface(

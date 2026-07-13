@@ -222,9 +222,12 @@ private fun HomeGridItem(
                             pageItems = state.pageItems,
                         ),
                     isEditing = state.isEditing,
-                    notificationCount = presentation.notificationGroupsByApp.notificationCountFor(item),
-                    labelSettings = presentation.labelSettings,
-                    reducedMotion = presentation.reducedMotion,
+                    presentation =
+                        HomeFolderPresentation(
+                            notificationCount = presentation.notificationGroupsByApp.notificationCountFor(item),
+                            labelSettings = presentation.labelSettings,
+                            reducedMotion = presentation.reducedMotion,
+                        ),
                     appIconLoader = appIconLoader,
                     actions = actions,
                 )
