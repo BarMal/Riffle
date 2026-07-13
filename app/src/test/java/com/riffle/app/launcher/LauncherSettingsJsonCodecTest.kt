@@ -324,6 +324,22 @@ class LauncherSettingsJsonCodecTest {
     }
 
     @Test
+    fun defaultsMalformedMotionPerformanceTarget() {
+        val decodedSettings =
+            decodeLauncherSettings(
+                """
+                {
+                  "motion": {
+                    "performanceTargetFps": "FPS_144"
+                  }
+                }
+                """.trimIndent(),
+            )
+
+        assertEquals(MotionPerformanceTargetFps.FPS_120, decodedSettings.motion.performanceTargetFps)
+    }
+
+    @Test
     fun roundTripsContextualSettings() {
         val settings =
             LauncherSettings(

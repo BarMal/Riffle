@@ -22,6 +22,7 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.settings.MotionPerformanceTargetFps
+import kotlin.math.abs
 
 private const val DOCK_SHELF_SYSTEM_GESTURE_ZONE_DP = 24
 internal const val REDUCED_MOTION_DOCK_SHELF_DURATION_MILLIS = 80
@@ -64,13 +65,63 @@ internal fun interface DockShelfFrameRateLease {
 internal interface DockShelfFrameRatePlatform {
     fun preferredFrameRate(): Float?
 
+    fun supportedFrameRates(): List<Float>?
+
     fun setPreferredFrameRate(frameRate: Float): Boolean
 }
+
+internal data class DockShelfFrameRateChoice(
+    val targetFps: MotionPerformanceTargetFps,
+    val frameRate: Float,
+)
+
+internal data class DockShelfFrameRateAvailability(
+    val requestedTargetFps: MotionPerformanceTargetFps,
+    val choices: List<DockShelfFrameRateChoice>,
+) {
+    val effectiveChoice: DockShelfFrameRateChoice?
+        get() =
+            choices.firstOrNull { choice -> choice.targetFps == requestedTargetFps }
+                ?: choices.maxByOrNull { choice -> choice.targetFps.framesPerSecond }
+
+    val usesFallback: Boolean
+        get() = effectiveChoice?.targetFps != requestedTargetFps
+}
+
+internal fun dockShelfFrameRateAvailability(
+    requestedTargetFps: MotionPerformanceTargetFps,
+    supportedFrameRates: List<Float>?,
+): DockShelfFrameRateAvailability =
+    DockShelfFrameRateAvailability(
+        requestedTargetFps = requestedTargetFps,
+        choices =
+            supportedFrameRates
+                ?.let { frameRates ->
+                    MotionPerformanceTargetFps.entries.mapNotNull { targetFps ->
+                        frameRates
+                            .filter(Float::isFinite)
+                            .minByOrNull { frameRate ->
+                                abs(frameRate - targetFps.framesPerSecond)
+                            }
+                            ?.takeIf { frameRate ->
+                                abs(frameRate - targetFps.framesPerSecond) <= FRAME_RATE_MATCH_TOLERANCE_HZ
+                            }
+                            ?.let { frameRate -> DockShelfFrameRateChoice(targetFps, frameRate) }
+                    }
+                }
+                .orEmpty(),
+    )
 
 internal class DockShelfFrameRateGateway(
     private val platform: DockShelfFrameRatePlatform,
 ) {
-    fun acquire(targetFrameRate: Float): DockShelfFrameRateLease? =
+    fun availability(targetFps: MotionPerformanceTargetFps): DockShelfFrameRateAvailability =
+        dockShelfFrameRateAvailability(targetFps, platform.supportedFrameRates())
+
+    fun acquire(targetFps: MotionPerformanceTargetFps): DockShelfFrameRateLease? =
+        availability(targetFps).effectiveChoice?.let { choice -> acquire(choice.frameRate) }
+
+    private fun acquire(targetFrameRate: Float): DockShelfFrameRateLease? =
         platform.preferredFrameRate()?.takeIf { platform.setPreferredFrameRate(targetFrameRate) }?.let {
                 originalFrameRate ->
             DockShelfFrameRateLease {
@@ -89,9 +140,8 @@ internal fun Modifier.dockShelfFrameRatePreference(targetFps: MotionPerformanceT
             remember(view) {
                 DockShelfFrameRateGateway(AndroidDockShelfFrameRatePlatform(view.context))
             }
-        val frameRate = targetFps.framesPerSecond.toFloat()
-        DisposableEffect(frameRateGateway, frameRate) {
-            val lease = frameRateGateway.acquire(frameRate)
+        DisposableEffect(frameRateGateway, targetFps) {
+            val lease = frameRateGateway.acquire(targetFps)
             onDispose {
                 lease?.restore()
             }
@@ -99,7 +149,7 @@ internal fun Modifier.dockShelfFrameRatePreference(targetFps: MotionPerformanceT
         this
     }
 
-private class AndroidDockShelfFrameRatePlatform(
+internal class AndroidDockShelfFrameRatePlatform(
     context: Context,
 ) : DockShelfFrameRatePlatform {
     private val activity = context.findActivity()
@@ -111,11 +161,17 @@ private class AndroidDockShelfFrameRatePlatform(
             ?.attributes
             ?.preferredRefreshRate
 
+    override fun supportedFrameRates(): List<Float>? {
+        return activity
+            ?.supportedDisplayModes()
+            ?.map(Display.Mode::getRefreshRate)
+    }
+
     override fun setPreferredFrameRate(frameRate: Float): Boolean {
         val currentActivity = activity
         return if (
             currentActivity != null &&
-            currentActivity.supportedDisplayModes()?.any { mode -> mode.refreshRate == frameRate } == true
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.P
         ) {
             currentActivity.window.attributes =
                 currentActivity.window.attributes.apply { preferredRefreshRate = frameRate }
@@ -125,6 +181,8 @@ private class AndroidDockShelfFrameRatePlatform(
         }
     }
 }
+
+private const val FRAME_RATE_MATCH_TOLERANCE_HZ = 1f
 
 private fun Activity.supportedDisplayModes(): Array<Display.Mode>? =
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
