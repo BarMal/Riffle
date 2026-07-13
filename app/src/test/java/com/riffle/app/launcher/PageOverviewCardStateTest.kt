@@ -5,6 +5,26 @@ import org.junit.Test
 
 class PageOverviewCardStateTest {
     @Test
+    fun reflowStartsAtThePreviousCardPosition() {
+        assertEquals(
+            -192f,
+            pageOverviewReflowStartOffsetPx(
+                previousIndex = 0,
+                newIndex = 1,
+                cardStepPx = 192f,
+            ),
+        )
+        assertEquals(
+            384f,
+            pageOverviewReflowStartOffsetPx(
+                previousIndex = 3,
+                newIndex = 1,
+                cardStepPx = 192f,
+            ),
+        )
+    }
+
+    @Test
     fun dropTargetRoundsToTheNearestCardAndStaysWithinTheOverview() {
         assertEquals(
             2,
