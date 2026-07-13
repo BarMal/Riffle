@@ -5,6 +5,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.Slider
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 
 /** A settings control that exposes a bounded integer range as discrete slider stops. */
 @Composable
@@ -16,13 +19,21 @@ internal fun DiscreteSettingSlider(
     onValueChange: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val formattedValue = valueLabel(value)
+
     Column(modifier = modifier.fillMaxWidth()) {
         SettingsTextColumn(
             title = title,
-            subtitle = valueLabel(value),
+            subtitle = formattedValue,
         )
         Slider(
-            modifier = Modifier.fillMaxWidth(),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .semantics {
+                        contentDescription = title
+                        stateDescription = formattedValue
+                    },
             value = value.coerceIn(valueRange).toFloat(),
             onValueChange = { selectedValue -> onValueChange(selectedValue.toInt()) },
             valueRange = valueRange.first.toFloat()..valueRange.last.toFloat(),
