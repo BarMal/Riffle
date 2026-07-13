@@ -74,6 +74,18 @@ fun HomeSwipeGestureSetting(
             settings = homeGestures,
             onAction = onAction,
         )
+        GestureGroup(
+            title = "Three fingers",
+            rows =
+                listOf(
+                    GestureRowState("Swipe up", HomeGesture.THREE_FINGER_UP),
+                    GestureRowState("Swipe down", HomeGesture.THREE_FINGER_DOWN),
+                    GestureRowState("Swipe left", HomeGesture.THREE_FINGER_LEFT),
+                    GestureRowState("Swipe right", HomeGesture.THREE_FINGER_RIGHT),
+                ),
+            settings = homeGestures,
+            onAction = onAction,
+        )
         TextButton(onClick = { onAction(LauncherShellAction.ResetHomeSwipeGestureActions) }) {
             SettingsButtonText(text = "Reset")
         }
@@ -175,6 +187,10 @@ internal val HomeGesture.label: String
             HomeGesture.TWO_FINGER_DOWN -> "Two-finger swipe down"
             HomeGesture.TWO_FINGER_LEFT -> "Two-finger swipe left"
             HomeGesture.TWO_FINGER_RIGHT -> "Two-finger swipe right"
+            HomeGesture.THREE_FINGER_UP -> "Three-finger swipe up"
+            HomeGesture.THREE_FINGER_DOWN -> "Three-finger swipe down"
+            HomeGesture.THREE_FINGER_LEFT -> "Three-finger swipe left"
+            HomeGesture.THREE_FINGER_RIGHT -> "Three-finger swipe right"
             HomeGesture.PINCH_IN -> "Pinch in"
             HomeGesture.PINCH_OUT -> "Pinch out"
         }
