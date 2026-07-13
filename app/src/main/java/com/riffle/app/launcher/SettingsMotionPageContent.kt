@@ -8,6 +8,19 @@ internal fun SettingsMotionPageContent(
     onAction: (LauncherShellAction) -> Unit,
 ) {
     SettingsSection(title = "Motion") {
+        val performanceTargetFps = state.settings.motion.performanceTargetFps
+        SettingsClickableRow(
+            title = "Animation performance",
+            subtitle = "Target ${performanceTargetFps.framesPerSecond} fps for dock animations",
+            onClick = {
+                onAction(
+                    LauncherShellAction.SelectMotionPerformanceTargetFps(performanceTargetFps.next()),
+                )
+            },
+            trailingContent = {
+                SettingsButtonText(text = "${performanceTargetFps.framesPerSecond} fps")
+            },
+        )
         SettingsSwitchRow(
             title = "Reduced motion",
             subtitle = "Minimise home page settle animations",

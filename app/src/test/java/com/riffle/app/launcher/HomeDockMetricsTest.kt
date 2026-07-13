@@ -6,6 +6,7 @@ import com.riffle.core.domain.launcher.home.DockOverflowMode
 import com.riffle.core.domain.launcher.home.HostedWidgetId
 import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.home.WidgetItem
+import com.riffle.core.domain.launcher.settings.MotionPerformanceTargetFps
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -389,6 +390,13 @@ class HomeDockMetricsTest {
             dockShelfMotionPolicy(reducedMotion = true),
         )
         assertEquals(80, REDUCED_MOTION_DOCK_SHELF_DURATION_MILLIS)
+    }
+
+    @Test
+    fun motionPerformanceTargetsCycleThroughSupportedRefreshRates() {
+        assertEquals(MotionPerformanceTargetFps.FPS_90, MotionPerformanceTargetFps.FPS_60.next())
+        assertEquals(MotionPerformanceTargetFps.FPS_120, MotionPerformanceTargetFps.FPS_90.next())
+        assertEquals(MotionPerformanceTargetFps.FPS_60, MotionPerformanceTargetFps.FPS_120.next())
     }
 
     @Test

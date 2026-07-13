@@ -61,7 +61,8 @@ internal class LauncherSettingsStateReducer(
                         launcherSettingsRepository = launcherSettingsRepository,
                     )
 
-                is LauncherShellAction.SelectReducedMotionEnabled ->
+                is LauncherShellAction.SelectReducedMotionEnabled,
+                is LauncherShellAction.SelectMotionPerformanceTargetFps ->
                     state.withMotionSettingsAction(
                         action = action,
                         launcherSettingsRepository = launcherSettingsRepository,

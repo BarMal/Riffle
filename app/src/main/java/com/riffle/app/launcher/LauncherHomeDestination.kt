@@ -39,6 +39,7 @@ fun HomeDestination(
                         appShortcutsByApp = state.appShortcutsByApp,
                         homeGestures = state.launcherSettings.gestures.homeGestures,
                         reducedMotion = state.launcherSettings.motion.reducedMotion,
+                        motionPerformanceTargetFps = state.launcherSettings.motion.performanceTargetFps,
                         widgetViewFactory = widgetRenderers.viewFactory,
                         widgetPicker =
                             StandardHomeWidgetPickerState(
