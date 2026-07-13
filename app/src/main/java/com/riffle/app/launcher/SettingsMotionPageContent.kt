@@ -3,6 +3,7 @@ package com.riffle.app.launcher
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalView
+import com.riffle.core.domain.launcher.settings.MotionPerformanceTargetFps
 
 @Composable
 internal fun SettingsMotionPageContent(
