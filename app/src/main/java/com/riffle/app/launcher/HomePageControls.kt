@@ -4,10 +4,7 @@ package com.riffle.app.launcher
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.snap
-import androidx.compose.animation.core.spring
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -94,7 +91,6 @@ fun PageEditControls(
 @Composable
 fun PageOverviewControls(
     layout: HomeLayout,
-    reducedMotion: Boolean,
     appIconLoader: AppIconLoader,
     widgetViewFactory: HomeWidgetViewFactory,
     onAction: (LauncherShellAction) -> Unit,
@@ -109,7 +105,6 @@ fun PageOverviewControls(
     ) {
         PageOverviewStrip(
             layout = layout,
-            reducedMotion = reducedMotion,
             appIconLoader = appIconLoader,
             widgetViewFactory = widgetViewFactory,
             onAction = onAction,
@@ -172,7 +167,6 @@ fun PageOverviewControls(
 @Composable
 private fun PageOverviewStrip(
     layout: HomeLayout,
-    reducedMotion: Boolean,
     appIconLoader: AppIconLoader,
     widgetViewFactory: HomeWidgetViewFactory,
     onAction: (LauncherShellAction) -> Unit,
@@ -197,7 +191,6 @@ private fun PageOverviewStrip(
                     ),
                 appIconLoader = appIconLoader,
                 widgetViewFactory = widgetViewFactory,
-                reducedMotion = reducedMotion,
                 onClick = { onAction(LauncherShellAction.SelectHomePage(page.id)) },
                 onAction = onAction,
                 onMoveToIndex = { targetIndex ->
@@ -209,12 +202,10 @@ private fun PageOverviewStrip(
 }
 
 @Composable
-@OptIn(ExperimentalFoundationApi::class)
 private fun PageOverviewCard(
     state: PageOverviewCardState,
     appIconLoader: AppIconLoader,
     widgetViewFactory: HomeWidgetViewFactory,
-    reducedMotion: Boolean,
     onClick: () -> Unit,
     onAction: (LauncherShellAction) -> Unit,
     onMoveToIndex: (Int) -> Unit,
@@ -225,14 +216,6 @@ private fun PageOverviewCard(
         modifier =
             Modifier
                 .width(PAGE_OVERVIEW_CARD_WIDTH_DP.dp)
-                .animateItemPlacement(
-                    animationSpec =
-                        if (reducedMotion) {
-                            snap()
-                        } else {
-                            spring()
-                        },
-                )
                 .pageOverviewReorderDrag(state = state, onMoveToIndex = onMoveToIndex)
                 .clip(LocalLauncherCardShape.current)
                 .clickable(onClick = onClick),
