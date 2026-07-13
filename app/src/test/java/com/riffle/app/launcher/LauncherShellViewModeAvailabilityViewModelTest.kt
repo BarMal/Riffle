@@ -42,7 +42,7 @@ class LauncherShellViewModeAvailabilityViewModelTest {
     }
 
     @Test
-    fun restoresStoredCardLayoutWhenCardModeIsAvailableByDefault() {
+    fun startsWithStandardWhenStoredActiveCardModeIsGated() {
         val standardKey = HomeLayoutKey(LauncherViewMode.STANDARD_APP_DRAWER)
         val cardKey = HomeLayoutKey(LauncherViewMode.CARD_INTERFACE)
         val cardLayout =
@@ -65,12 +65,12 @@ class LauncherShellViewModeAvailabilityViewModelTest {
                 homeLayoutRepository = repository,
             )
 
-        assertEquals(cardKey, viewModel.state.value.homeLayoutSet.activeKey)
-        assertEquals(LauncherViewMode.CARD_INTERFACE, viewModel.state.value.homeLayout.viewMode)
+        assertEquals(standardKey, viewModel.state.value.homeLayoutSet.activeKey)
+        assertEquals(LauncherViewMode.STANDARD_APP_DRAWER, viewModel.state.value.homeLayout.viewMode)
         assertEquals(cardLayout, repository.savedLayoutSet?.layoutFor(cardKey))
         assertEquals(
             LauncherViewMode.CARD_INTERFACE,
-            viewModel.state.value.homeLayoutSet.preferredModesByDeviceClass[HomeLayoutDeviceClass.PHONE],
+            repository.savedLayoutSet?.preferredModesByDeviceClass?.get(HomeLayoutDeviceClass.PHONE),
         )
     }
 
