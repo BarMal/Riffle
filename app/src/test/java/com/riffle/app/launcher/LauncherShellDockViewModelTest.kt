@@ -87,7 +87,7 @@ class LauncherShellDockViewModelTest {
     }
 
     @Test
-    fun addsDockShortcutAndExpandsFullDock() {
+    fun doesNotAddDockShortcutToEnabledZeroCapacityDock() {
         val phone = app(label = "Phone")
         val repository =
             FakeHomeLayoutRepository(
@@ -101,11 +101,8 @@ class LauncherShellDockViewModelTest {
 
         viewModel.onDockEdited(LauncherShellAction.AddAppToDock(phone))
 
-        assertEquals(1, viewModel.state.value.homeLayout.dock.capacity)
-        assertEquals(
-            listOf("Phone"),
-            viewModel.state.value.homeLayout.dock.items.filterIsInstance<AppShortcutItem>().labels,
-        )
+        assertEquals(0, viewModel.state.value.homeLayout.dock.capacity)
+        assertEquals(emptyList<AppShortcutItem>(), viewModel.state.value.homeLayout.dock.items)
         assertEquals(viewModel.state.value.homeLayout, repository.savedLayout)
     }
 

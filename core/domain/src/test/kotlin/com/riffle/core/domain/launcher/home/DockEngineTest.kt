@@ -66,6 +66,16 @@ class DockEngineTest {
     }
 
     @Test
+    fun rejectsAddingAppShortcutToEnabledZeroCapacityDock() {
+        val layout = HomeLayoutDefaults.standard().copy(dock = DockModel(capacity = 0, isEnabled = true))
+
+        val result = engine.addAppToDock(layout = layout, app = app(label = "Phone"))
+
+        val rejected = assertIs<DockEditResult.Rejected>(result)
+        assertEquals(DockEditRejectionReason.NO_AVAILABLE_SLOT, rejected.reason)
+    }
+
+    @Test
     fun addsWidgetToDock() {
         val layout = HomeLayoutDefaults.standard().copy(dock = DockModel(capacity = 0, isEnabled = false))
 
