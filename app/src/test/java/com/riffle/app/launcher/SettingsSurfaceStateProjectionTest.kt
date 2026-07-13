@@ -15,6 +15,20 @@ import org.junit.Test
 
 class SettingsSurfaceStateProjectionTest {
     @Test
+    fun defaultLayoutSettingsExposeCardMode() {
+        val surfaceState = LauncherShellState().settingsSurfaceState()
+
+        assertEquals(
+            listOf(
+                LauncherViewMode.STANDARD_APP_DRAWER,
+                LauncherViewMode.HOME_SCREEN_LIBRARY,
+                LauncherViewMode.CARD_INTERFACE,
+            ),
+            surfaceState.availableLauncherViewModes,
+        )
+    }
+
+    @Test
     fun dockPageProjectsSelectedSettingsDeviceClassDockInsteadOfActiveDock() {
         val phoneKey = HomeLayoutKey(LauncherViewMode.STANDARD_APP_DRAWER, HomeLayoutDeviceClass.PHONE)
         val foldableKey = HomeLayoutKey(LauncherViewMode.STANDARD_APP_DRAWER, HomeLayoutDeviceClass.FOLDABLE)

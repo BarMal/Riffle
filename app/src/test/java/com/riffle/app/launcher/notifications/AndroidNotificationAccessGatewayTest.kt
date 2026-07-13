@@ -87,4 +87,26 @@ class AndroidNotificationAccessGatewayTest {
             ),
         )
     }
+
+    @Test
+    fun retainsSecureSettingsFallbackWhenNotificationManagerReadFails() {
+        assertEquals(
+            setOf("com.riffle.app"),
+            enabledNotificationListenerPackages(
+                notificationManagerPackages = { error("temporary platform failure") },
+                secureSetting = { "com.riffle.app/.launcher.notifications.RiffleNotificationListenerService" },
+            ),
+        )
+    }
+
+    @Test
+    fun retainsNotificationManagerFallbackWhenSecureSettingsReadFails() {
+        assertEquals(
+            setOf("com.riffle.app"),
+            enabledNotificationListenerPackages(
+                notificationManagerPackages = { setOf("com.riffle.app") },
+                secureSetting = { error("temporary platform failure") },
+            ),
+        )
+    }
 }

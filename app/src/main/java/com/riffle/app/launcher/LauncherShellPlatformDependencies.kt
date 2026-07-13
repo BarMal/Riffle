@@ -25,5 +25,10 @@ data class LauncherShellPlatformDependencies(
 fun defaultLauncherViewModeAvailability(): LauncherViewModeAvailability =
     LauncherViewModeAvailability(
         enabledExperimentalModesByDeviceClass =
-            HomeLayoutDeviceClass.entries.associateWith { setOf(LauncherViewMode.HOME_SCREEN_LIBRARY) },
+            HomeLayoutDeviceClass.entries.associateWith {
+                setOf(
+                    LauncherViewMode.HOME_SCREEN_LIBRARY,
+                    LauncherViewMode.CARD_INTERFACE,
+                )
+            },
     )

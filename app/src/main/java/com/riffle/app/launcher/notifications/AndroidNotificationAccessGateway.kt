@@ -14,10 +14,14 @@ class AndroidNotificationAccessGateway(
         notificationAccessStatus(
             appPackageName = context.packageName,
             enabledListenerPackages =
-                NotificationManagerCompat.getEnabledListenerPackages(context) +
-                    enabledNotificationListenerPackages(
-                        Settings.Secure.getString(context.contentResolver, ENABLED_NOTIFICATION_LISTENERS),
-                    ),
+                enabledNotificationListenerPackages(
+                    notificationManagerPackages = {
+                        NotificationManagerCompat.getEnabledListenerPackages(context)
+                    },
+                    secureSetting = {
+                        Settings.Secure.getString(context.contentResolver, ENABLED_NOTIFICATION_LISTENERS)
+                    },
+                ),
             isListenerConnected = RiffleNotificationListenerConnection.isConnected(),
         )
 
@@ -31,6 +35,20 @@ internal fun enabledNotificationListenerPackages(enabledListeners: String?): Set
         .mapNotNull { component ->
             component.substringBefore('/', missingDelimiterValue = "").takeIf(String::isNotEmpty)
         }.toSet()
+
+/**
+ * Read both platform sources independently. Some devices can temporarily fail one source while a
+ * notification-listener settings change is propagating; the other source is still a valid signal.
+ * A failed read never grants access on its own.
+ */
+internal fun enabledNotificationListenerPackages(
+    notificationManagerPackages: () -> Set<String>,
+    secureSetting: () -> String?,
+): Set<String> =
+    runCatching(notificationManagerPackages).getOrDefault(emptySet()) +
+        runCatching(secureSetting)
+            .getOrNull()
+            .let(::enabledNotificationListenerPackages)
 
 internal fun notificationAccessStatus(
     appPackageName: String,
