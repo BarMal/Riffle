@@ -17,7 +17,7 @@ class DockEngine {
                     layout.copy(
                         dock =
                             layout.dock.copy(
-                                capacity = layout.dock.capacity.coerceAtLeast(layout.dock.items.size + 1),
+                                capacity = layout.dock.capacityAfterAddingAppShortcut(),
                                 isEnabled = true,
                                 items = layout.dock.items + appShortcutFor(app = app, layout = layout),
                             ),
@@ -121,6 +121,13 @@ class DockEngine {
         dock.items
             .filterIsInstance<AppShortcutItem>()
             .count { item -> item.appIdentity == app.identity } + 1
+
+    private fun DockModel.capacityAfterAddingAppShortcut(): Int =
+        if (isEnabled) {
+            capacity
+        } else {
+            capacity.coerceAtLeast(1)
+        }
 
     private val AppIdentity.shortcutKey: String
         get() = "${profile.id.value}:${packageName.value}/${activityName.value}"
