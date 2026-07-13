@@ -20,7 +20,6 @@ import com.riffle.core.domain.launcher.home.LauncherPage
 import com.riffle.core.domain.launcher.home.LauncherPageId
 import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.home.LauncherViewModeAvailability
-import com.riffle.core.domain.launcher.home.MAX_HOME_ICON_SIZE_DP
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -35,9 +34,9 @@ class LauncherShellHomeGridViewModelTest {
                 homeLayoutRepository = repository,
             )
 
-        viewModel.onHomePageEdited(LauncherShellAction.SelectHomeIconSize(sizeDp = MAX_HOME_ICON_SIZE_DP))
+        viewModel.onHomePageEdited(LauncherShellAction.SelectHomeIconSize(sizeDp = 56))
 
-        assertEquals(MAX_HOME_ICON_SIZE_DP, viewModel.state.value.homeLayout.settings.labels.iconSizeDp)
+        assertEquals(56, viewModel.state.value.homeLayout.settings.labels.iconSizeDp)
         assertEquals(viewModel.state.value.homeLayout, repository.savedLayout)
     }
 
