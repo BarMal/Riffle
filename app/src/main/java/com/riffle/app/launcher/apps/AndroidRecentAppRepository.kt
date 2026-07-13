@@ -47,7 +47,9 @@ internal data class PlatformRecentAppUsage(
     val lastUsedAtMillis: Long,
 )
 
-internal fun List<PlatformRecentAppUsage>.toRecentAppUsages(): List<RecentAppUsage> =
+internal typealias PlatformRecentAppUsages = List<PlatformRecentAppUsage>
+
+internal fun PlatformRecentAppUsages.toRecentAppUsages(): List<RecentAppUsage> =
     asSequence()
         .filter { usage -> usage.packageName.isNotBlank() && usage.lastUsedAtMillis > 0 }
         .map { usage ->
@@ -61,9 +63,7 @@ internal fun List<PlatformRecentAppUsage>.toRecentAppUsages(): List<RecentAppUsa
         )
         .toList()
 
-internal fun recentAppUsagesOrEmpty(
-    platformUsages: Result<List<PlatformRecentAppUsage>>,
-): List<RecentAppUsage> =
+internal fun recentAppUsagesOrEmpty(platformUsages: Result<PlatformRecentAppUsages>): List<RecentAppUsage> =
     platformUsages.map { usages -> usages.toRecentAppUsages() }.getOrDefault(emptyList())
 
 internal const val DEFAULT_RECENT_APP_LOOKBACK_MILLIS = 30L * 24 * 60 * 60 * 1_000
