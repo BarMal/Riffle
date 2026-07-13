@@ -28,6 +28,7 @@ import com.riffle.core.domain.launcher.settings.HomeSwipeGestureDirection
 import com.riffle.core.domain.launcher.settings.LauncherGestureAction
 import com.riffle.core.domain.launcher.settings.LauncherThemeMode
 import com.riffle.core.domain.launcher.settings.LauncherThemePreset
+import com.riffle.core.domain.launcher.settings.MotionPerformanceTargetFps
 import com.riffle.core.domain.launcher.settings.OverlayDockEdge
 import com.riffle.core.domain.launcher.settings.OverlayDockExpandedOrientation
 import com.riffle.core.domain.launcher.settings.OverlayDockItemMoveDirection
@@ -305,6 +306,10 @@ sealed interface LauncherShellAction {
     ) : LauncherShellAction
 
     data class SelectReducedMotionEnabled(val enabled: Boolean) : LauncherShellAction
+
+    data class SelectMotionPerformanceTargetFps(
+        val targetFps: MotionPerformanceTargetFps,
+    ) : LauncherShellAction
 
     data class SelectContextualEnabled(val enabled: Boolean) : LauncherShellAction
 

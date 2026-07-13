@@ -74,6 +74,18 @@ internal fun LauncherShellState.withMotionSettingsAction(
                 launcherSettingsRepository = launcherSettingsRepository,
             )
 
+        is LauncherShellAction.SelectMotionPerformanceTargetFps ->
+            withLauncherSettings(
+                settings =
+                    launcherSettings.copy(
+                        motion =
+                            launcherSettings.motion.copy(
+                                performanceTargetFps = action.targetFps,
+                            ),
+                    ),
+                launcherSettingsRepository = launcherSettingsRepository,
+            )
+
         else -> this
     }
 

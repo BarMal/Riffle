@@ -30,6 +30,7 @@ import com.riffle.core.domain.launcher.settings.MIN_OVERLAY_DOCK_HANDLE_ALPHA_PE
 import com.riffle.core.domain.launcher.settings.MIN_OVERLAY_DOCK_HANDLE_HEIGHT_DP
 import com.riffle.core.domain.launcher.settings.MIN_OVERLAY_DOCK_HANDLE_THICKNESS_DP
 import com.riffle.core.domain.launcher.settings.MIN_OVERLAY_DOCK_VERTICAL_OFFSET_DP
+import com.riffle.core.domain.launcher.settings.MotionPerformanceTargetFps
 import com.riffle.core.domain.launcher.settings.MotionSettings
 import com.riffle.core.domain.launcher.settings.OverlayDockEdge
 import com.riffle.core.domain.launcher.settings.OverlayDockExpandedOrientation
@@ -301,12 +302,17 @@ class LauncherSettingsJsonCodecTest {
     fun roundTripsMotionSettings() {
         val settings =
             LauncherSettings(
-                motion = MotionSettings(reducedMotion = true),
+                motion =
+                    MotionSettings(
+                        reducedMotion = true,
+                        performanceTargetFps = MotionPerformanceTargetFps.FPS_90,
+                    ),
             )
 
         val decodedSettings = decodeLauncherSettings(encodeLauncherSettings(settings))
 
         assertEquals(true, decodedSettings.motion.reducedMotion)
+        assertEquals(MotionPerformanceTargetFps.FPS_90, decodedSettings.motion.performanceTargetFps)
     }
 
     @Test
@@ -314,6 +320,23 @@ class LauncherSettingsJsonCodecTest {
         val decodedSettings = decodeLauncherSettings("{}")
 
         assertEquals(false, decodedSettings.motion.reducedMotion)
+        assertEquals(MotionPerformanceTargetFps.FPS_120, decodedSettings.motion.performanceTargetFps)
+    }
+
+    @Test
+    fun defaultsMalformedMotionPerformanceTarget() {
+        val decodedSettings =
+            decodeLauncherSettings(
+                """
+                {
+                  "motion": {
+                    "performanceTargetFps": "FPS_144"
+                  }
+                }
+                """.trimIndent(),
+            )
+
+        assertEquals(MotionPerformanceTargetFps.FPS_120, decodedSettings.motion.performanceTargetFps)
     }
 
     @Test

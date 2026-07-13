@@ -122,7 +122,19 @@ data class HapticSettings(
 
 data class MotionSettings(
     val reducedMotion: Boolean = false,
+    val performanceTargetFps: MotionPerformanceTargetFps = MotionPerformanceTargetFps.FPS_120,
 )
+
+enum class MotionPerformanceTargetFps(
+    val framesPerSecond: Int,
+) {
+    FPS_60(60),
+    FPS_90(90),
+    FPS_120(120),
+    ;
+
+    fun next(): MotionPerformanceTargetFps = entries[(ordinal + 1) % entries.size]
+}
 
 data class OverlayDockSettings(
     val enabled: Boolean = false,

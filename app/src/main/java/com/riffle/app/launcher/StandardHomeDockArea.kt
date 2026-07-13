@@ -42,7 +42,10 @@ internal fun StandardHomeDockArea(
         )
 
     Column(
-        modifier = Modifier.dockShelfMotion(dockShelfMotionPolicy(presentation.reducedMotion)),
+        modifier =
+            Modifier
+                .dockShelfMotion(dockShelfMotionPolicy(presentation.reducedMotion))
+                .dockShelfFrameRatePreference(presentation.motionPerformanceTargetFps),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Spacer(modifier = Modifier.height(HOME_DOCK_TOP_SPACING_DP.dp))

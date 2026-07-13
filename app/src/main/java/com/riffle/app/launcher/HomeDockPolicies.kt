@@ -1,5 +1,10 @@
 package com.riffle.app.launcher
 
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
+import android.os.Build
+import android.view.Display
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.FiniteAnimationSpec
 import androidx.compose.animation.core.LinearOutSlowInEasing
@@ -7,12 +12,17 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.systemGestureExclusion
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import com.riffle.core.domain.launcher.settings.MotionPerformanceTargetFps
+import kotlin.math.abs
 
 private const val DOCK_SHELF_SYSTEM_GESTURE_ZONE_DP = 24
 internal const val REDUCED_MOTION_DOCK_SHELF_DURATION_MILLIS = 80
@@ -48,8 +58,145 @@ internal data class DockShelfGesturePolicy(
     val bottomSystemGestureExclusionDp: Int,
 )
 
+internal fun interface DockShelfFrameRateLease {
+    fun restore()
+}
+
+internal interface DockShelfFrameRatePlatform {
+    fun preferredFrameRate(): Float?
+
+    fun supportedFrameRates(): List<Float>?
+
+    fun setPreferredFrameRate(frameRate: Float): Boolean
+}
+
+internal data class DockShelfFrameRateChoice(
+    val targetFps: MotionPerformanceTargetFps,
+    val frameRate: Float,
+)
+
+internal data class DockShelfFrameRateAvailability(
+    val requestedTargetFps: MotionPerformanceTargetFps,
+    val choices: List<DockShelfFrameRateChoice>,
+) {
+    val effectiveChoice: DockShelfFrameRateChoice?
+        get() =
+            choices.firstOrNull { choice -> choice.targetFps == requestedTargetFps }
+                ?: choices.maxByOrNull { choice -> choice.targetFps.framesPerSecond }
+
+    val usesFallback: Boolean
+        get() = effectiveChoice?.targetFps != requestedTargetFps
+}
+
+internal fun dockShelfFrameRateAvailability(
+    requestedTargetFps: MotionPerformanceTargetFps,
+    supportedFrameRates: List<Float>?,
+): DockShelfFrameRateAvailability =
+    DockShelfFrameRateAvailability(
+        requestedTargetFps = requestedTargetFps,
+        choices =
+            supportedFrameRates
+                ?.let { frameRates ->
+                    MotionPerformanceTargetFps.entries.mapNotNull { targetFps ->
+                        frameRates
+                            .filter(Float::isFinite)
+                            .minByOrNull { frameRate ->
+                                abs(frameRate - targetFps.framesPerSecond)
+                            }
+                            ?.takeIf { frameRate ->
+                                abs(frameRate - targetFps.framesPerSecond) <= FRAME_RATE_MATCH_TOLERANCE_HZ
+                            }
+                            ?.let { frameRate -> DockShelfFrameRateChoice(targetFps, frameRate) }
+                    }
+                }
+                .orEmpty(),
+    )
+
+internal class DockShelfFrameRateGateway(
+    private val platform: DockShelfFrameRatePlatform,
+) {
+    fun availability(targetFps: MotionPerformanceTargetFps): DockShelfFrameRateAvailability =
+        dockShelfFrameRateAvailability(targetFps, platform.supportedFrameRates())
+
+    fun acquire(targetFps: MotionPerformanceTargetFps): DockShelfFrameRateLease? =
+        availability(targetFps).effectiveChoice?.let { choice -> acquire(choice.frameRate) }
+
+    private fun acquire(targetFrameRate: Float): DockShelfFrameRateLease? =
+        platform.preferredFrameRate()?.takeIf { platform.setPreferredFrameRate(targetFrameRate) }?.let {
+                originalFrameRate ->
+            DockShelfFrameRateLease {
+                platform.setPreferredFrameRate(originalFrameRate)
+            }
+        }
+}
+
 internal fun Modifier.dockShelfMotion(policy: DockShelfMotionPolicy): Modifier =
     animateContentSize(animationSpec = dockShelfSizeAnimation(policy))
+
+internal fun Modifier.dockShelfFrameRatePreference(targetFps: MotionPerformanceTargetFps): Modifier =
+    composed {
+        val view = LocalView.current
+        val frameRateGateway =
+            remember(view) {
+                DockShelfFrameRateGateway(AndroidDockShelfFrameRatePlatform(view.context))
+            }
+        DisposableEffect(frameRateGateway, targetFps) {
+            val lease = frameRateGateway.acquire(targetFps)
+            onDispose {
+                lease?.restore()
+            }
+        }
+        this
+    }
+
+internal class AndroidDockShelfFrameRatePlatform(
+    context: Context,
+) : DockShelfFrameRatePlatform {
+    private val activity = context.findActivity()
+
+    override fun preferredFrameRate(): Float? =
+        activity
+            ?.takeIf { Build.VERSION.SDK_INT >= Build.VERSION_CODES.P }
+            ?.window
+            ?.attributes
+            ?.preferredRefreshRate
+
+    override fun supportedFrameRates(): List<Float>? {
+        return activity
+            ?.supportedDisplayModes()
+            ?.map(Display.Mode::getRefreshRate)
+    }
+
+    override fun setPreferredFrameRate(frameRate: Float): Boolean {
+        val currentActivity = activity
+        return if (
+            currentActivity != null &&
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.P
+        ) {
+            currentActivity.window.attributes =
+                currentActivity.window.attributes.apply { preferredRefreshRate = frameRate }
+            true
+        } else {
+            false
+        }
+    }
+}
+
+private const val FRAME_RATE_MATCH_TOLERANCE_HZ = 1f
+
+private fun Activity.supportedDisplayModes(): Array<Display.Mode>? =
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+        windowManager.defaultDisplay.supportedModes
+    } else {
+        null
+    }
+
+private tailrec fun Context.findActivity(): Activity? =
+    when (this) {
+        is Activity -> this
+        is ContextWrapper -> baseContext.findActivity()
+        else -> null
+    }
 
 internal fun Modifier.dockShelfPolicies(interactions: DockInteractions): Modifier =
     dockShelfSystemGestureExclusion(
