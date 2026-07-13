@@ -4,7 +4,7 @@ These instructions apply to coding-agent work in this repository.
 
 ## Project intent
 
-Riffle is a first-principles Android launcher rewrite inspired by Calm. It should work well as a polished standard Android launcher before optional dynamic page and card features are enabled.
+Riffle is a polished standard Android launcher. Standard UI should use current Android and Material design language; TimeScape is an interaction inspiration only, expressed through focused card stacks with clear ordering and predictable accessible transitions.
 
 ## Operating rules
 
@@ -24,13 +24,13 @@ Riffle is a first-principles Android launcher rewrite inspired by Calm. It shoul
 - Keep launcher domain models independent from Compose UI and Android framework types where practical.
 - Prefer module boundaries that can support classic launcher behaviour and Riffle-specific dynamic/card behaviour independently.
 - Add tests for domain logic, model migrations, placement/collision rules, and settings/default behaviour.
-- Do not hard-code fixed Calm-style chapter layouts where configurable Riffle pages/templates are required.
+- Do not hard-code fixed layouts where configurable Riffle pages/templates are required.
 
 ## Product priorities
 
 1. Standard Android launcher parity: home app registration, app discovery, app launch, app drawer/search, widgets, folders, wallpaper, grid/page editing, settings, backup/restore.
 2. Polished defaults: clear permission flows, accessibility, reduced motion support, and Material 3 baseline components where appropriate.
-3. Riffle-specific capabilities: dynamic pages, templates, cards, stack geometry, Victorian layouts, and motion profiles.
+3. Riffle-specific capabilities: dynamic pages, templates, cards, stack geometry, and motion profiles.
 4. Advanced contextual behaviour after the foundations are robust.
 
 ## Android expectations
