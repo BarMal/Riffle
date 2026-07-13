@@ -114,14 +114,16 @@ private fun JSONArray.toPages(defaultGrid: GridDimensions): List<LauncherPage> =
         }
 
 private fun JSONObject.toPage(defaultGrid: GridDimensions): LauncherPage =
-    LauncherPage(
-        id = LauncherPageId(getString("id")),
-        type = optPageType(),
-        grid =
-            GridDimensions(
-                columns = optInt("columns", defaultGrid.columns),
-                rows = optInt("rows", defaultGrid.rows),
-            ),
-        items = optJSONArray("items")?.toLauncherItems().orEmpty(),
-        isPinned = optBoolean("isPinned", false),
-    )
+    optPageType().let { type ->
+        LauncherPage(
+            id = LauncherPageId(getString("id")),
+            type = type,
+            grid =
+                GridDimensions(
+                    columns = optInt("columns", defaultGrid.columns),
+                    rows = optInt("rows", defaultGrid.rows),
+                ),
+            items = optJSONArray("items")?.toLauncherItems().orEmpty(),
+            isPinned = optBoolean("isPinned", false) && type is LauncherPageType.Generated,
+        )
+    }
