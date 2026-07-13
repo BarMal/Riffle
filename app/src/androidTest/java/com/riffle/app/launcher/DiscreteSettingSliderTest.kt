@@ -10,6 +10,7 @@ import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.click
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.performSemanticsAction
@@ -91,6 +92,37 @@ class DiscreteSettingSliderTest {
                     start = Offset(width / 2f, height / 2f),
                     end = Offset(width - 1f, height / 2f),
                 )
+            }
+
+        composeRule.runOnIdle {
+            assertEquals(1, committedValues.size)
+            assertTrue(committedValues.single() > 10)
+        }
+    }
+
+    @Test
+    fun tapCommitsTheCurrentPreviewValue() {
+        val committedValues = mutableListOf<Int>()
+        composeRule.setContent {
+            var persistedValue by remember { mutableIntStateOf(10) }
+            MaterialTheme {
+                DiscreteSettingSlider(
+                    title = "Horizontal screen margin",
+                    value = persistedValue,
+                    valueRange = 0..20,
+                    valueLabel = { "$it dp" },
+                    onValueChange = { value ->
+                        persistedValue = value
+                        committedValues += value
+                    },
+                )
+            }
+        }
+
+        composeRule
+            .onNodeWithContentDescription("Horizontal screen margin")
+            .performTouchInput {
+                click(Offset(width * 3f / 4f, height / 2f))
             }
 
         composeRule.runOnIdle {

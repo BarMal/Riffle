@@ -57,8 +57,9 @@ internal fun DiscreteSettingSlider(
             value = previewValue,
             onValueChange = { selectedValue -> previewValue = selectedValue },
             onValueChangeFinished = {
-                if (selectedValue != persistedValue) {
-                    onValueChange(selectedValue)
+                val finalValue = previewValue.roundToInt().coerceIn(valueRange)
+                if (finalValue != persistedValue) {
+                    onValueChange(finalValue)
                 }
             },
             valueRange = valueRange.first.toFloat()..valueRange.last.toFloat(),
