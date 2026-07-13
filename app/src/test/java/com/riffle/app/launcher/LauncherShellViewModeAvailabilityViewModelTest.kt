@@ -42,7 +42,7 @@ class LauncherShellViewModeAvailabilityViewModelTest {
     }
 
     @Test
-    fun startsWithStandardWhenStoredActiveViewModeIsUnavailable() {
+    fun startsWithStandardWhenStoredActiveCardModeIsGated() {
         val standardKey = HomeLayoutKey(LauncherViewMode.STANDARD_APP_DRAWER)
         val cardKey = HomeLayoutKey(LauncherViewMode.CARD_INTERFACE)
         val cardLayout =
