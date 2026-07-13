@@ -56,10 +56,13 @@ class AndroidRecentAppRepositoryTest {
 
     @Test
     fun fallsBackToNoRecentAppsWhenUsageAccessIsUnavailableOrDenied() {
-        assertEquals(emptyList<RecentAppUsage>(), recentAppUsagesOrEmpty { emptyList() })
         assertEquals(
             emptyList<RecentAppUsage>(),
-            recentAppUsagesOrEmpty { throw SecurityException("Usage Access denied") },
+            recentAppUsagesOrEmpty(Result.success(emptyList())),
+        )
+        assertEquals(
+            emptyList<RecentAppUsage>(),
+            recentAppUsagesOrEmpty(Result.failure(SecurityException("Usage Access denied"))),
         )
     }
 }
