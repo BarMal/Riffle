@@ -25,7 +25,7 @@ class AndroidRecentAppRepository(
         val endTimeMillis = currentTimeMillis()
         val startTimeMillis = (endTimeMillis - lookbackMillis).coerceAtLeast(0)
 
-        return runCatching {
+        return recentAppUsagesOrEmpty {
             usageStatsManager
                 ?.queryAndAggregateUsageStats(startTimeMillis, endTimeMillis)
                 .orEmpty()
@@ -35,8 +35,8 @@ class AndroidRecentAppRepository(
                         packageName = usage.packageName,
                         lastUsedAtMillis = usage.lastTimeUsed,
                     )
-                }.toRecentAppUsages()
-        }.getOrDefault(emptyList())
+                }
+        }
     }
 }
 
@@ -53,7 +53,15 @@ internal fun List<PlatformRecentAppUsage>.toRecentAppUsages(): List<RecentAppUsa
                 packageName = AppPackageName(usage.packageName),
                 lastUsedAtMillis = usage.lastUsedAtMillis,
             )
-        }.sortedByDescending(RecentAppUsage::lastUsedAtMillis)
+        }.sortedWith(
+            compareByDescending<RecentAppUsage> { usage -> usage.lastUsedAtMillis }
+                .thenBy { usage -> usage.packageName.value },
+        )
         .toList()
+
+internal fun recentAppUsagesOrEmpty(
+    loadPlatformUsages: () -> List<PlatformRecentAppUsage>,
+): List<RecentAppUsage> =
+    runCatching { loadPlatformUsages().toRecentAppUsages() }.getOrDefault(emptyList())
 
 internal const val DEFAULT_RECENT_APP_LOOKBACK_MILLIS = 30L * 24 * 60 * 60 * 1_000

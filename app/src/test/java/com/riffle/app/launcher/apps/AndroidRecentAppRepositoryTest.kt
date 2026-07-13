@@ -1,6 +1,7 @@
 package com.riffle.app.launcher.apps
 
 import com.riffle.core.domain.launcher.apps.AppPackageName
+import com.riffle.core.domain.launcher.apps.RecentAppUsage
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -25,6 +26,23 @@ class AndroidRecentAppRepositoryTest {
     }
 
     @Test
+    fun ordersEqualUsageTimestampsByPackageName() {
+        val usages =
+            listOf(
+                PlatformRecentAppUsage(packageName = "com.riffle.zebra", lastUsedAtMillis = 100),
+                PlatformRecentAppUsage(packageName = "com.riffle.alpha", lastUsedAtMillis = 100),
+            ).toRecentAppUsages()
+
+        assertEquals(
+            listOf(
+                AppPackageName("com.riffle.alpha"),
+                AppPackageName("com.riffle.zebra"),
+            ),
+            usages.map { usage -> usage.packageName },
+        )
+    }
+
+    @Test
     fun excludesBlankPackagesAndRecordsWithoutForegroundUse() {
         val usages =
             listOf(
@@ -34,5 +52,14 @@ class AndroidRecentAppRepositoryTest {
             ).toRecentAppUsages()
 
         assertEquals(listOf(AppPackageName("com.riffle.valid")), usages.map { usage -> usage.packageName })
+    }
+
+    @Test
+    fun fallsBackToNoRecentAppsWhenUsageAccessIsUnavailableOrDenied() {
+        assertEquals(emptyList<RecentAppUsage>(), recentAppUsagesOrEmpty { emptyList() })
+        assertEquals(
+            emptyList<RecentAppUsage>(),
+            recentAppUsagesOrEmpty { throw SecurityException("Usage Access denied") },
+        )
     }
 }
