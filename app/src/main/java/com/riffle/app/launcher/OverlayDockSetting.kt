@@ -123,20 +123,13 @@ private fun OverlayDockHandleThicknessSetting(
 ) {
     OverlayDockStepperSetting(
         title = "Handle thickness",
-        subtitle = "$thicknessDp dp",
-        decreaseEnabled = thicknessDp > MIN_OVERLAY_DOCK_HANDLE_THICKNESS_DP,
-        increaseEnabled = thicknessDp < MAX_OVERLAY_DOCK_HANDLE_THICKNESS_DP,
-        onDecrease = {
+        value = thicknessDp,
+        valueRange = MIN_OVERLAY_DOCK_HANDLE_THICKNESS_DP..MAX_OVERLAY_DOCK_HANDLE_THICKNESS_DP,
+        valueLabel = { "$it dp" },
+        onValueChange = { value ->
             onAction(
                 LauncherShellAction.SelectOverlayDockHandleThickness(
-                    thicknessDp = thicknessDp - OVERLAY_THICKNESS_STEP_DP,
-                ),
-            )
-        },
-        onIncrease = {
-            onAction(
-                LauncherShellAction.SelectOverlayDockHandleThickness(
-                    thicknessDp = thicknessDp + OVERLAY_THICKNESS_STEP_DP,
+                    thicknessDp = value,
                 ),
             )
         },
@@ -150,11 +143,10 @@ private fun OverlayDockHandleHeightSetting(
 ) {
     OverlayDockStepperSetting(
         title = "Handle size",
-        subtitle = "$heightDp dp",
-        decreaseEnabled = heightDp > MIN_OVERLAY_DOCK_HANDLE_HEIGHT_DP,
-        increaseEnabled = heightDp < MAX_OVERLAY_DOCK_HANDLE_HEIGHT_DP,
-        onDecrease = { onAction(LauncherShellAction.SelectOverlayDockHandleHeight(heightDp - OVERLAY_SIZE_STEP_DP)) },
-        onIncrease = { onAction(LauncherShellAction.SelectOverlayDockHandleHeight(heightDp + OVERLAY_SIZE_STEP_DP)) },
+        value = heightDp,
+        valueRange = MIN_OVERLAY_DOCK_HANDLE_HEIGHT_DP..MAX_OVERLAY_DOCK_HANDLE_HEIGHT_DP,
+        valueLabel = { "$it dp" },
+        onValueChange = { value -> onAction(LauncherShellAction.SelectOverlayDockHandleHeight(value)) },
     )
 }
 
@@ -165,20 +157,16 @@ private fun OverlayDockVerticalOffsetSetting(
 ) {
     OverlayDockStepperSetting(
         title = "Handle position",
-        subtitle =
+        value = offsetDp,
+        valueRange = MIN_OVERLAY_DOCK_VERTICAL_OFFSET_DP..MAX_OVERLAY_DOCK_VERTICAL_OFFSET_DP,
+        valueLabel = { value ->
             when {
-                offsetDp < 0 -> "${-offsetDp} dp up"
-                offsetDp > 0 -> "$offsetDp dp down"
+                value < 0 -> "${-value} dp up"
+                value > 0 -> "$value dp down"
                 else -> "Centered"
-            },
-        decreaseEnabled = offsetDp > MIN_OVERLAY_DOCK_VERTICAL_OFFSET_DP,
-        increaseEnabled = offsetDp < MAX_OVERLAY_DOCK_VERTICAL_OFFSET_DP,
-        onDecrease = {
-            onAction(LauncherShellAction.SelectOverlayDockVerticalOffset(offsetDp - OVERLAY_OFFSET_STEP_DP))
+            }
         },
-        onIncrease = {
-            onAction(LauncherShellAction.SelectOverlayDockVerticalOffset(offsetDp + OVERLAY_OFFSET_STEP_DP))
-        },
+        onValueChange = { value -> onAction(LauncherShellAction.SelectOverlayDockVerticalOffset(value)) },
     )
 }
 
@@ -189,11 +177,10 @@ private fun OverlayDockHandleAlphaSetting(
 ) {
     OverlayDockStepperSetting(
         title = "Handle opacity",
-        subtitle = "$alphaPercent%",
-        decreaseEnabled = alphaPercent > MIN_OVERLAY_DOCK_HANDLE_ALPHA_PERCENT,
-        increaseEnabled = alphaPercent < MAX_OVERLAY_DOCK_HANDLE_ALPHA_PERCENT,
-        onDecrease = { onAction(LauncherShellAction.SelectOverlayDockHandleAlpha(alphaPercent - OVERLAY_ALPHA_STEP)) },
-        onIncrease = { onAction(LauncherShellAction.SelectOverlayDockHandleAlpha(alphaPercent + OVERLAY_ALPHA_STEP)) },
+        value = alphaPercent,
+        valueRange = MIN_OVERLAY_DOCK_HANDLE_ALPHA_PERCENT..MAX_OVERLAY_DOCK_HANDLE_ALPHA_PERCENT,
+        valueLabel = { "$it%" },
+        onValueChange = { value -> onAction(LauncherShellAction.SelectOverlayDockHandleAlpha(value)) },
     )
 }
 
@@ -204,11 +191,10 @@ private fun OverlayDockExpandedIconSizeSetting(
 ) {
     OverlayDockStepperSetting(
         title = "Expanded icon size",
-        subtitle = "$sizeDp dp",
-        decreaseEnabled = sizeDp > MIN_OVERLAY_DOCK_EXPANDED_ICON_SIZE_DP,
-        increaseEnabled = sizeDp < MAX_OVERLAY_DOCK_EXPANDED_ICON_SIZE_DP,
-        onDecrease = { onAction(LauncherShellAction.SelectOverlayDockExpandedIconSize(sizeDp - OVERLAY_ICON_STEP_DP)) },
-        onIncrease = { onAction(LauncherShellAction.SelectOverlayDockExpandedIconSize(sizeDp + OVERLAY_ICON_STEP_DP)) },
+        value = sizeDp,
+        valueRange = MIN_OVERLAY_DOCK_EXPANDED_ICON_SIZE_DP..MAX_OVERLAY_DOCK_EXPANDED_ICON_SIZE_DP,
+        valueLabel = { "$it dp" },
+        onValueChange = { value -> onAction(LauncherShellAction.SelectOverlayDockExpandedIconSize(value)) },
     )
 }
 
@@ -228,44 +214,17 @@ private fun OverlayDockLabelSetting(
 @Composable
 private fun OverlayDockStepperSetting(
     title: String,
-    subtitle: String,
-    decreaseEnabled: Boolean,
-    increaseEnabled: Boolean,
-    onDecrease: () -> Unit,
-    onIncrease: () -> Unit,
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        SettingsTextColumn(
-            modifier = Modifier.weight(1f),
-            title = title,
-            subtitle = subtitle,
-        )
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            TextButton(
-                enabled = decreaseEnabled,
-                onClick = onDecrease,
-            ) {
-                SettingsButtonText(text = "-")
-            }
-            TextButton(
-                enabled = increaseEnabled,
-                onClick = onIncrease,
-            ) {
-                SettingsButtonText(text = "+")
-            }
-        }
-    }
-}
-
-private const val OVERLAY_THICKNESS_STEP_DP = 6
-private const val OVERLAY_SIZE_STEP_DP = 24
-private const val OVERLAY_OFFSET_STEP_DP = 24
-private const val OVERLAY_ALPHA_STEP = 5
-private const val OVERLAY_ICON_STEP_DP = 4
+    value: Int,
+    valueRange: IntRange,
+    valueLabel: (Int) -> String,
+    onValueChange: (Int) -> Unit,
+) = DiscreteSettingSlider(
+    title = title,
+    value = value,
+    valueRange = valueRange,
+    valueLabel = valueLabel,
+    onValueChange = onValueChange,
+)
 
 private val OverlayDockEdge.label: String
     get() =

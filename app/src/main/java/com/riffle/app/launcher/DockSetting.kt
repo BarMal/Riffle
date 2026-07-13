@@ -62,81 +62,25 @@ internal fun DockSetting(
 private fun DockIconSizeSetting(
     sizeDp: Int,
     onAction: (LauncherShellAction) -> Unit,
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        SettingsTextColumn(
-            modifier = Modifier.weight(1f),
-            title = "Dock icon size",
-            subtitle = "$sizeDp dp",
-        )
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            TextButton(
-                enabled = sizeDp > MIN_DOCK_ICON_SIZE_DP,
-                onClick = { onAction(LauncherShellAction.SelectDockIconSize(sizeDp - DOCK_ICON_SIZE_STEP_DP)) },
-            ) {
-                SettingsButtonText(text = "-")
-            }
-            TextButton(
-                enabled = sizeDp < MAX_DOCK_ICON_SIZE_DP,
-                onClick = { onAction(LauncherShellAction.SelectDockIconSize(sizeDp + DOCK_ICON_SIZE_STEP_DP)) },
-            ) {
-                SettingsButtonText(text = "+")
-            }
-        }
-    }
-}
-
-private const val DOCK_ICON_SIZE_STEP_DP = 4
+) = DiscreteSettingSlider(
+    title = "Dock icon size",
+    value = sizeDp,
+    valueRange = MIN_DOCK_ICON_SIZE_DP..MAX_DOCK_ICON_SIZE_DP,
+    valueLabel = { "$it dp" },
+    onValueChange = { value -> onAction(LauncherShellAction.SelectDockIconSize(value)) },
+)
 
 @Composable
 private fun DockBackgroundAlphaSetting(
     alphaPercent: Int,
     onAction: (LauncherShellAction) -> Unit,
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        SettingsTextColumn(
-            modifier = Modifier.weight(1f),
-            title = "Dock background",
-            subtitle = "$alphaPercent%",
-        )
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            TextButton(
-                enabled = alphaPercent > MIN_DOCK_BACKGROUND_ALPHA_PERCENT,
-                onClick = {
-                    onAction(
-                        LauncherShellAction.SelectDockBackgroundAlpha(
-                            alphaPercent - DOCK_BACKGROUND_ALPHA_STEP_PERCENT,
-                        ),
-                    )
-                },
-            ) {
-                SettingsButtonText(text = "-")
-            }
-            TextButton(
-                enabled = alphaPercent < MAX_DOCK_BACKGROUND_ALPHA_PERCENT,
-                onClick = {
-                    onAction(
-                        LauncherShellAction.SelectDockBackgroundAlpha(
-                            alphaPercent + DOCK_BACKGROUND_ALPHA_STEP_PERCENT,
-                        ),
-                    )
-                },
-            ) {
-                SettingsButtonText(text = "+")
-            }
-        }
-    }
-}
-
-private const val DOCK_BACKGROUND_ALPHA_STEP_PERCENT = 5
+) = DiscreteSettingSlider(
+    title = "Dock background",
+    value = alphaPercent,
+    valueRange = MIN_DOCK_BACKGROUND_ALPHA_PERCENT..MAX_DOCK_BACKGROUND_ALPHA_PERCENT,
+    valueLabel = { "$it%" },
+    onValueChange = { value -> onAction(LauncherShellAction.SelectDockBackgroundAlpha(value)) },
+)
 
 @Composable
 private fun DockBackgroundSizingSetting(
@@ -178,35 +122,13 @@ private fun DockBackgroundSizingSetting(
 private fun DockItemSpacingSetting(
     spacingDp: Int,
     onAction: (LauncherShellAction) -> Unit,
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        SettingsTextColumn(
-            modifier = Modifier.weight(1f),
-            title = "Dock item spacing",
-            subtitle = "$spacingDp dp",
-        )
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            TextButton(
-                enabled = spacingDp > MIN_DOCK_ITEM_SPACING_DP,
-                onClick = { onAction(LauncherShellAction.SelectDockItemSpacing(spacingDp - DOCK_SPACING_STEP_DP)) },
-            ) {
-                SettingsButtonText(text = "-")
-            }
-            TextButton(
-                enabled = spacingDp < MAX_DOCK_ITEM_SPACING_DP,
-                onClick = { onAction(LauncherShellAction.SelectDockItemSpacing(spacingDp + DOCK_SPACING_STEP_DP)) },
-            ) {
-                SettingsButtonText(text = "+")
-            }
-        }
-    }
-}
-
-private const val DOCK_SPACING_STEP_DP = 2
+) = DiscreteSettingSlider(
+    title = "Dock item spacing",
+    value = spacingDp,
+    valueRange = MIN_DOCK_ITEM_SPACING_DP..MAX_DOCK_ITEM_SPACING_DP,
+    valueLabel = { "$it dp" },
+    onValueChange = { value -> onAction(LauncherShellAction.SelectDockItemSpacing(value)) },
+)
 
 @Composable
 private fun DockVisibilitySetting(
