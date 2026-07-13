@@ -106,6 +106,8 @@ sealed interface LauncherShellAction {
 
     data class SelectHomeLabelBackgroundAlpha(val alphaPercent: Int) : LauncherShellAction
 
+    data class SelectHomeIconSize(val sizeDp: Int) : LauncherShellAction
+
     data class SelectHomeLabelTextSize(val textSizeSp: Int) : LauncherShellAction
 
     data class SelectHomeLabelTextVisible(val visible: Boolean) : LauncherShellAction

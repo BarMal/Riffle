@@ -53,6 +53,7 @@ data class HomeLayoutSettings(
 }
 
 data class HomeLabelSettings(
+    val iconSizeDp: Int = DEFAULT_HOME_ICON_SIZE_DP,
     val backgroundAlphaPercent: Int = DEFAULT_HOME_LABEL_BACKGROUND_ALPHA_PERCENT,
     val textSizeSp: Int = DEFAULT_HOME_LABEL_TEXT_SIZE_SP,
     val showText: Boolean = true,
@@ -138,6 +139,10 @@ data class GridInsets(
     val end: Int = 0,
     val bottom: Int = 0,
 )
+
+const val DEFAULT_HOME_ICON_SIZE_DP = 44
+const val MIN_HOME_ICON_SIZE_DP = 32
+const val MAX_HOME_ICON_SIZE_DP = 64
 
 data class GridSpacing(
     val horizontal: Int = 0,

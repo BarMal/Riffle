@@ -16,6 +16,7 @@ class HomeLayoutSettingsTest {
         assertEquals(WallpaperSettings.system(), settings.wallpaper)
         assertEquals(HomeLabelSettings.standard(), settings.labels)
         assertEquals(HomeLabelSizing.FIXED, settings.labels.sizing)
+        assertEquals(DEFAULT_HOME_ICON_SIZE_DP, settings.labels.iconSizeDp)
     }
 
     @Test

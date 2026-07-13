@@ -26,6 +26,21 @@ import org.junit.Test
 
 class LauncherShellHomeGridViewModelTest {
     @Test
+    fun updatesHomeIconSizeAndSavesLayout() {
+        val repository = FakeHomeLayoutRepository(savedLayout = HomeLayoutDefaults.standard())
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                homeLayoutRepository = repository,
+            )
+
+        viewModel.onHomePageEdited(LauncherShellAction.SelectHomeIconSize(sizeDp = 56))
+
+        assertEquals(56, viewModel.state.value.homeLayout.settings.labels.iconSizeDp)
+        assertEquals(viewModel.state.value.homeLayout, repository.savedLayout)
+    }
+
+    @Test
     fun updatesHomeGridMarginsAndSavesLayout() {
         val repository = FakeHomeLayoutRepository(savedLayout = HomeLayoutDefaults.standard())
         val viewModel =

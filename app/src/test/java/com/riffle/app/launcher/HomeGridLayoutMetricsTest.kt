@@ -57,6 +57,16 @@ class HomeGridLayoutMetricsTest {
     }
 
     @Test
+    fun homeItemContentHeightUsesConfiguredIconSize() {
+        assertEquals(
+            88,
+            metrics.homeItemContentHeightDp(
+                HomeLabelSettings(iconSizeDp = 64),
+            ),
+        )
+    }
+
+    @Test
     fun homeItemContentHeightReservesDefaultSingleLineLabel() {
         assertEquals(
             68,

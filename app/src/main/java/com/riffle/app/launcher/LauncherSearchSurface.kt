@@ -270,12 +270,12 @@ private fun SearchIconGridItem(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        Box(modifier = Modifier.size(HOME_ICON_SIZE_DP.dp)) {
+        Box(modifier = Modifier.size(labelSettings.iconSizeDp.dp)) {
             LauncherAppIcon(
                 identity = appIdentity,
                 label = result.label,
                 iconLoader = appListContext.appIconLoader,
-                modifier = Modifier.size(HOME_ICON_SIZE_DP.dp),
+                modifier = Modifier.size(labelSettings.iconSizeDp.dp),
             )
             NotificationCountBadge(
                 count = appListContext.notificationCountFor(appIdentity),

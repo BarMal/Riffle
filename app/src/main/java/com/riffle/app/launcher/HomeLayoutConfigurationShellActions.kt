@@ -1,3 +1,5 @@
+@file:Suppress("TooManyFunctions")
+
 package com.riffle.app.launcher
 
 import com.riffle.core.domain.launcher.home.GridInsets
@@ -8,16 +10,19 @@ import com.riffle.core.domain.launcher.home.HomePageEditResult
 import com.riffle.core.domain.launcher.home.HomePageEngine
 import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.home.MAX_HOME_GRID_MARGIN_DP
+import com.riffle.core.domain.launcher.home.MAX_HOME_ICON_SIZE_DP
 import com.riffle.core.domain.launcher.home.MAX_HOME_LABEL_BACKGROUND_ALPHA_PERCENT
 import com.riffle.core.domain.launcher.home.MAX_HOME_LABEL_MAX_LINES
 import com.riffle.core.domain.launcher.home.MAX_HOME_LABEL_MAX_WIDTH_DP
 import com.riffle.core.domain.launcher.home.MAX_HOME_LABEL_TEXT_SIZE_SP
 import com.riffle.core.domain.launcher.home.MIN_HOME_GRID_MARGIN_DP
+import com.riffle.core.domain.launcher.home.MIN_HOME_ICON_SIZE_DP
 import com.riffle.core.domain.launcher.home.MIN_HOME_LABEL_BACKGROUND_ALPHA_PERCENT
 import com.riffle.core.domain.launcher.home.MIN_HOME_LABEL_MAX_LINES
 import com.riffle.core.domain.launcher.home.MIN_HOME_LABEL_MAX_WIDTH_DP
 import com.riffle.core.domain.launcher.home.MIN_HOME_LABEL_TEXT_SIZE_SP
 
+@Suppress("CyclomaticComplexMethod")
 internal fun HomePageEngine.applyHomeLayoutConfigurationEdit(
     action: LauncherShellAction,
     layout: HomeLayout,
@@ -84,6 +89,8 @@ internal fun HomePageEngine.applyHomeLayoutConfigurationEdit(
         is LauncherShellAction.SelectHomeLabelBackgroundAlpha ->
             layout.withHomeLabelBackgroundAlpha(action.alphaPercent)
 
+        is LauncherShellAction.SelectHomeIconSize -> layout.withHomeIconSize(action.sizeDp)
+
         is LauncherShellAction.SelectHomeLabelTextSize ->
             layout.withHomeLabelTextSize(action.textSizeSp)
 
@@ -115,6 +122,16 @@ private fun HomeLayout.withHomeLabelBackgroundAlpha(alphaPercent: Int): HomePage
                             labels = settings.labels.copy(backgroundAlphaPercent = alphaPercent),
                         ),
                 ),
+            )
+
+        else -> HomePageEditResult.Rejected(HomePageEditRejectionReason.INVALID_LABEL_SETTING)
+    }
+
+private fun HomeLayout.withHomeIconSize(sizeDp: Int): HomePageEditResult =
+    when (sizeDp) {
+        in MIN_HOME_ICON_SIZE_DP..MAX_HOME_ICON_SIZE_DP ->
+            HomePageEditResult.Updated(
+                copy(settings = settings.copy(labels = settings.labels.copy(iconSizeDp = sizeDp))),
             )
 
         else -> HomePageEditResult.Rejected(HomePageEditRejectionReason.INVALID_LABEL_SETTING)

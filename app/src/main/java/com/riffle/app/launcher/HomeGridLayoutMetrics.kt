@@ -18,10 +18,10 @@ class HomeGridLayoutMetrics {
 
     fun homeItemContentHeightDp(labelSettings: HomeLabelSettings): Int {
         if (!labelSettings.showText) {
-            return HOME_ICON_SIZE_DP
+            return labelSettings.iconSizeDp
         }
 
-        return HOME_ICON_SIZE_DP +
+        return labelSettings.iconSizeDp +
             HOME_ICON_LABEL_SPACING_DP +
             homeLabelContainerHeightDp(labelSettings)
     }
@@ -38,8 +38,6 @@ class HomeGridLayoutMetrics {
             HomeLabelSizing.DYNAMIC -> null
         }
 }
-
-internal const val HOME_ICON_SIZE_DP = 44
 
 private const val HOME_ICON_LABEL_SPACING_DP = 6
 private const val HOME_LABEL_VERTICAL_PADDING_DP = 2

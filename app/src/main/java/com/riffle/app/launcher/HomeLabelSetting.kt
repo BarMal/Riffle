@@ -11,10 +11,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.home.HomeLabelSettings
 import com.riffle.core.domain.launcher.home.HomeLabelSizing
+import com.riffle.core.domain.launcher.home.MAX_HOME_ICON_SIZE_DP
 import com.riffle.core.domain.launcher.home.MAX_HOME_LABEL_BACKGROUND_ALPHA_PERCENT
 import com.riffle.core.domain.launcher.home.MAX_HOME_LABEL_MAX_LINES
 import com.riffle.core.domain.launcher.home.MAX_HOME_LABEL_MAX_WIDTH_DP
 import com.riffle.core.domain.launcher.home.MAX_HOME_LABEL_TEXT_SIZE_SP
+import com.riffle.core.domain.launcher.home.MIN_HOME_ICON_SIZE_DP
 import com.riffle.core.domain.launcher.home.MIN_HOME_LABEL_BACKGROUND_ALPHA_PERCENT
 import com.riffle.core.domain.launcher.home.MIN_HOME_LABEL_MAX_LINES
 import com.riffle.core.domain.launcher.home.MIN_HOME_LABEL_MAX_WIDTH_DP
@@ -26,6 +28,7 @@ internal fun HomeLabelSetting(
     onAction: (LauncherShellAction) -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        HomeIconSizeSetting(settings = settings, onAction = onAction)
         HomeLabelVisibilitySetting(
             settings = settings,
             onAction = onAction,
@@ -52,6 +55,18 @@ internal fun HomeLabelSetting(
         )
     }
 }
+
+@Composable
+private fun HomeIconSizeSetting(
+    settings: HomeLabelSettings,
+    onAction: (LauncherShellAction) -> Unit,
+) = DiscreteSettingSlider(
+    title = "App icon size",
+    value = settings.iconSizeDp,
+    valueRange = MIN_HOME_ICON_SIZE_DP..MAX_HOME_ICON_SIZE_DP,
+    valueLabel = { "$it dp" },
+    onValueChange = { value -> onAction(LauncherShellAction.SelectHomeIconSize(value)) },
+)
 
 @Composable
 private fun HomeLabelVisibilitySetting(
