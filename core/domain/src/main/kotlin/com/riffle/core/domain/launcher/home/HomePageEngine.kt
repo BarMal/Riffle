@@ -144,7 +144,10 @@ class HomePageEngine {
                         pages =
                             layout.pages.map { page ->
                                 if (page.id == pageId) {
-                                    page.copy(type = type)
+                                    page.copy(
+                                        type = type,
+                                        isPinned = page.isPinned && type is LauncherPageType.Generated,
+                                    )
                                 } else {
                                     page
                                 }
@@ -188,9 +191,16 @@ class HomePageEngine {
     ): HomePageEditResult =
         layout.pages.firstOrNull { it.id == pageId }
             ?.let { page ->
-                HomePageEditResult.Updated(
-                    layout.withUpdatedSelectedPage(page.copy(isPinned = !page.isPinned)),
-                )
+                when (page.type) {
+                    is LauncherPageType.Generated ->
+                        HomePageEditResult.Updated(
+                            layout.withUpdatedSelectedPage(page.copy(isPinned = !page.isPinned)),
+                        )
+
+                    LauncherPageType.AllApps,
+                    LauncherPageType.Home,
+                    -> HomePageEditResult.Rejected(HomePageEditRejectionReason.CANNOT_PIN_NON_GENERATED_PAGE)
+                }
             }
             ?: HomePageEditResult.Rejected(HomePageEditRejectionReason.PAGE_NOT_FOUND)
 
@@ -316,6 +326,7 @@ enum class HomePageEditRejectionReason {
     INVALID_PAGE_ITEMS,
     CANNOT_DUPLICATE_PAGE_WITH_WIDGETS,
     CANNOT_ASSIGN_GENERATED_PAGE_TYPE_WITH_ITEMS,
+    CANNOT_PIN_NON_GENERATED_PAGE,
     INVALID_LABEL_SETTING,
 }
 

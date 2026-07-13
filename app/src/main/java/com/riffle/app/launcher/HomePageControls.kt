@@ -131,8 +131,13 @@ fun PageOverviewControls(
             OutlinedButton(onClick = { onAction(LauncherShellAction.DuplicateSelectedHomePage) }) {
                 Text(text = "Duplicate page")
             }
-            OutlinedButton(onClick = { onAction(LauncherShellAction.ToggleSelectedHomePagePinned) }) {
-                Text(text = if (selectedPage.isPinned) "Unpin" else "Pin")
+            pageOverviewPinActionLabel(
+                type = selectedPage.type,
+                isPinned = selectedPage.isPinned,
+            )?.let { label ->
+                OutlinedButton(onClick = { onAction(LauncherShellAction.ToggleSelectedHomePagePinned) }) {
+                    Text(text = label)
+                }
             }
             TextButton(onClick = { isPageMenuExpanded.value = true }) {
                 Text(text = "More")
@@ -458,6 +463,17 @@ internal data class PageGridDimensionOption(
     val label: String,
     val dimensions: GridDimensions,
 )
+
+internal fun pageOverviewPinActionLabel(
+    type: LauncherPageType,
+    isPinned: Boolean,
+): String? =
+    when (type) {
+        is LauncherPageType.Generated -> if (isPinned) "Unpin" else "Pin"
+        LauncherPageType.AllApps,
+        LauncherPageType.Home,
+        -> null
+    }
 
 internal fun pageGridDimensionOptions(selectedGrid: GridDimensions): List<PageGridDimensionOption> =
     listOf(

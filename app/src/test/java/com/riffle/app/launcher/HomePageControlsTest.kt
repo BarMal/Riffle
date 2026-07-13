@@ -20,6 +20,26 @@ import org.junit.Test
 
 class HomePageControlsTest {
     @Test
+    fun pageOverviewOnlyOffersPinningForGeneratedPages() {
+        assertEquals(null, pageOverviewPinActionLabel(LauncherPageType.Home, isPinned = false))
+        assertEquals(null, pageOverviewPinActionLabel(LauncherPageType.AllApps, isPinned = false))
+        assertEquals(
+            "Pin",
+            pageOverviewPinActionLabel(
+                LauncherPageType.Generated(GeneratedLauncherPageKind.TODAY),
+                isPinned = false,
+            ),
+        )
+        assertEquals(
+            "Unpin",
+            pageOverviewPinActionLabel(
+                LauncherPageType.Generated(GeneratedLauncherPageKind.TODAY),
+                isPinned = true,
+            ),
+        )
+    }
+
+    @Test
     fun pageOverviewMotionRespectsReducedMotion() {
         assertEquals(HomePageOverviewMotionPolicy.ZOOM, homePageOverviewMotionPolicy(reducedMotion = false))
         assertEquals(HomePageOverviewMotionPolicy.NONE, homePageOverviewMotionPolicy(reducedMotion = true))

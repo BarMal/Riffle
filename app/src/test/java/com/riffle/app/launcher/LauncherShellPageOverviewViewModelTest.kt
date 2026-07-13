@@ -1,5 +1,6 @@
 package com.riffle.app.launcher
 
+import com.riffle.core.domain.launcher.home.GeneratedLauncherPageKind
 import com.riffle.core.domain.launcher.home.GridDimensions
 import com.riffle.core.domain.launcher.home.HomeEditMode
 import com.riffle.core.domain.launcher.home.HomeLayout
@@ -132,6 +133,11 @@ class LauncherShellPageOverviewViewModelTest {
         val repository = FakeHomeLayoutRepository(savedLayout = HomeLayoutDefaults.standard())
         val viewModel = LauncherShellViewModel(FakeFirstRunRepository(), homeLayoutRepository = repository)
         viewModel.onHomePageEdited(LauncherShellAction.EnterHomePageOverview)
+        viewModel.onHomePageEdited(
+            LauncherShellAction.SelectSelectedHomePageType(
+                LauncherPageType.Generated(GeneratedLauncherPageKind.TODAY),
+            ),
+        )
         viewModel.onHomePageEdited(LauncherShellAction.ToggleSelectedHomePagePinned)
         assertTrue(viewModel.state.value.homeLayout.selectedPage.isPinned)
         assertEquals(viewModel.state.value.homeLayout, repository.savedLayout)
