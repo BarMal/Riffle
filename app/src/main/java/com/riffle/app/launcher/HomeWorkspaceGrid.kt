@@ -299,6 +299,7 @@ private fun HomeShortcut(
                     .combinedClickable(
                         enabled = true,
                         interactionSource = pressInteractionSource,
+                        indication = null,
                         onClick = {
                             if (isEditing) {
                                 isContextMenuExpanded.value = true
