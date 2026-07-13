@@ -90,10 +90,11 @@ internal fun HomeFolder(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            Box(modifier = Modifier.size(HOME_ICON_SIZE_DP.dp)) {
+            Box(modifier = Modifier.size(presentation.labelSettings.iconSizeDp.dp)) {
                 FolderPreviewIcon(
                     folder = folder,
                     appIconLoader = appIconLoader,
+                    iconSizeDp = presentation.labelSettings.iconSizeDp,
                 )
                 if (!isEditing) {
                     NotificationCountBadge(

@@ -57,6 +57,16 @@ class HomeGridLayoutMetricsTest {
     }
 
     @Test
+    fun homeItemContentHeightUsesConfiguredIconSize() {
+        assertEquals(
+            88,
+            metrics.homeItemContentHeightDp(
+                HomeLabelSettings(iconSizeDp = 64),
+            ),
+        )
+    }
+
+    @Test
     fun homeItemContentHeightReservesDefaultSingleLineLabel() {
         assertEquals(
             68,
@@ -118,5 +128,15 @@ class HomeGridLayoutMetricsTest {
                 ),
             ),
         )
+    }
+
+    @Test
+    fun folderPreviewLayoutFitsAtMinimumIconSize() {
+        assertEquals(FolderPreviewLayout(paddingDp = 3, spacingDp = 1, childIconSizeDp = 12), folderPreviewLayout(32))
+    }
+
+    @Test
+    fun folderPreviewLayoutScalesAtMaximumIconSize() {
+        assertEquals(FolderPreviewLayout(paddingDp = 6, spacingDp = 2, childIconSizeDp = 25), folderPreviewLayout(64))
     }
 }

@@ -38,6 +38,7 @@ internal fun HomeDragPlaceholder(
     cellSize: Dp,
     cellSizePx: Float,
     fillSpan: Boolean,
+    iconSizeDp: Int,
 ) {
     val outlineColor = MaterialTheme.colorScheme.outline
     val sizeModifier =
@@ -50,7 +51,7 @@ internal fun HomeDragPlaceholder(
                     translationY = ((span.rows.coerceAtLeast(1) - 1) * cellSizePx) / 2f
                 }
         } else {
-            Modifier.size(HOME_ICON_SIZE_DP.dp)
+            Modifier.size(iconSizeDp.dp)
         }
 
     Box(
@@ -201,13 +202,14 @@ private fun HomeDraggedItemContent(
                     identity = item.appIdentity,
                     label = item.label,
                     iconLoader = appIconLoader,
-                    modifier = Modifier.size(HOME_ICON_SIZE_DP.dp),
+                    modifier = Modifier.size(presentation.labelSettings.iconSizeDp.dp),
                 )
 
             is FolderItem ->
                 FolderPreviewIcon(
                     folder = item,
                     appIconLoader = appIconLoader,
+                    iconSizeDp = presentation.labelSettings.iconSizeDp,
                 )
 
             is WidgetItem ->

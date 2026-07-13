@@ -37,7 +37,7 @@ internal fun SearchSettingGridItem(
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         Surface(
-            modifier = Modifier.size(HOME_ICON_SIZE_DP.dp),
+            modifier = Modifier.size(labelSettings.iconSizeDp.dp),
             shape = RoundedCornerShape(16.dp),
             color = MaterialTheme.colorScheme.secondaryContainer,
         ) {

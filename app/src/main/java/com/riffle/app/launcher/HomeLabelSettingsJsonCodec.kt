@@ -6,6 +6,7 @@ import org.json.JSONObject
 
 internal fun encodeLabels(settings: HomeLabelSettings): JSONObject =
     JSONObject()
+        .put("iconSizeDp", settings.iconSizeDp)
         .put("backgroundAlphaPercent", settings.backgroundAlphaPercent)
         .put("textSizeSp", settings.textSizeSp)
         .put("showText", settings.showText)
@@ -15,6 +16,7 @@ internal fun encodeLabels(settings: HomeLabelSettings): JSONObject =
 
 internal fun JSONObject.toLabelSettings(defaults: HomeLabelSettings): HomeLabelSettings =
     HomeLabelSettings(
+        iconSizeDp = optInt("iconSizeDp", defaults.iconSizeDp),
         backgroundAlphaPercent = optInt("backgroundAlphaPercent", defaults.backgroundAlphaPercent),
         textSizeSp = optInt("textSizeSp", defaults.textSizeSp),
         showText = optBoolean("showText", defaults.showText),
