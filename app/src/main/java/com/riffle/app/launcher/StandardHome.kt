@@ -263,6 +263,7 @@ private fun HomeBottomControls(
             HomeEditMode.ManagingPages ->
                 PageOverviewControls(
                     layout = layout,
+                    reducedMotion = reducedMotion,
                     appIconLoader = appIconLoader,
                     widgetViewFactory = widgetViewFactory,
                     onAction = actions.onAction,

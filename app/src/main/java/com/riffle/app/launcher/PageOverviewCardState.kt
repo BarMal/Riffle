@@ -55,8 +55,12 @@ internal fun Modifier.pageOverviewReorderDrag(
                 onDragCancel = { dragOffsetX = 0f },
                 onDragEnd = {
                     val targetIndex =
-                        (state.index + (totalDragX / cardStepPx).roundToInt())
-                            .coerceIn(0, state.pageCount - 1)
+                        pageOverviewDropTargetIndex(
+                            index = state.index,
+                            pageCount = state.pageCount,
+                            dragDistancePx = totalDragX,
+                            cardStepPx = cardStepPx,
+                        )
 
                     dragOffsetX = 0f
                     if (targetIndex != state.index) {
@@ -65,6 +69,19 @@ internal fun Modifier.pageOverviewReorderDrag(
                 },
             )
         }
+}
+
+internal fun pageOverviewDropTargetIndex(
+    index: Int,
+    pageCount: Int,
+    dragDistancePx: Float,
+    cardStepPx: Float,
+): Int {
+    require(pageCount > 0) { "Page overview requires at least one page." }
+    require(index in 0 until pageCount) { "Page index must be within the overview." }
+    require(cardStepPx > 0f) { "Card step must be positive." }
+
+    return (index + (dragDistancePx / cardStepPx).roundToInt()).coerceIn(0, pageCount - 1)
 }
 
 private const val PAGE_OVERVIEW_DRAG_Z_INDEX = 2f

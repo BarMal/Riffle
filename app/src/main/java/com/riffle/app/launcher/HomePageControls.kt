@@ -4,6 +4,8 @@ package com.riffle.app.launcher
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -11,11 +13,14 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.FilledTonalButton
@@ -88,6 +93,7 @@ fun PageEditControls(
 @Composable
 fun PageOverviewControls(
     layout: HomeLayout,
+    reducedMotion: Boolean,
     appIconLoader: AppIconLoader,
     widgetViewFactory: HomeWidgetViewFactory,
     onAction: (LauncherShellAction) -> Unit,
@@ -102,6 +108,7 @@ fun PageOverviewControls(
     ) {
         PageOverviewStrip(
             layout = layout,
+            reducedMotion = reducedMotion,
             appIconLoader = appIconLoader,
             widgetViewFactory = widgetViewFactory,
             onAction = onAction,
@@ -164,19 +171,21 @@ fun PageOverviewControls(
 @Composable
 private fun PageOverviewStrip(
     layout: HomeLayout,
+    reducedMotion: Boolean,
     appIconLoader: AppIconLoader,
     widgetViewFactory: HomeWidgetViewFactory,
     onAction: (LauncherShellAction) -> Unit,
 ) {
-    Row(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState()),
+    LazyRow(
+        modifier = Modifier.fillMaxWidth(),
+        contentPadding = PaddingValues(horizontal = PAGE_OVERVIEW_CONTENT_PADDING_DP.dp, vertical = 4.dp),
         horizontalArrangement = Arrangement.spacedBy(PAGE_OVERVIEW_CARD_SPACING_DP.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        layout.pages.forEachIndexed { index, page ->
+        itemsIndexed(
+            items = layout.pages,
+            key = { _, page -> page.id.value },
+        ) { index, page ->
             PageOverviewCard(
                 state =
                     PageOverviewCardState(
@@ -187,6 +196,7 @@ private fun PageOverviewStrip(
                     ),
                 appIconLoader = appIconLoader,
                 widgetViewFactory = widgetViewFactory,
+                reducedMotion = reducedMotion,
                 onClick = { onAction(LauncherShellAction.SelectHomePage(page.id)) },
                 onAction = onAction,
                 onMoveToIndex = { targetIndex ->
@@ -202,6 +212,7 @@ private fun PageOverviewCard(
     state: PageOverviewCardState,
     appIconLoader: AppIconLoader,
     widgetViewFactory: HomeWidgetViewFactory,
+    reducedMotion: Boolean,
     onClick: () -> Unit,
     onAction: (LauncherShellAction) -> Unit,
     onMoveToIndex: (Int) -> Unit,
@@ -212,6 +223,14 @@ private fun PageOverviewCard(
         modifier =
             Modifier
                 .width(PAGE_OVERVIEW_CARD_WIDTH_DP.dp)
+                .animateItem(
+                    placementSpec =
+                        if (reducedMotion) {
+                            snap()
+                        } else {
+                            spring()
+                        },
+                )
                 .pageOverviewReorderDrag(state = state, onMoveToIndex = onMoveToIndex)
                 .clip(LocalLauncherCardShape.current)
                 .clickable(onClick = onClick),
@@ -261,6 +280,11 @@ private fun PageOverviewCard(
             Text(
                 text = state.page.type.pageOverviewTypeLabel,
                 style = MaterialTheme.typography.labelMedium,
+            )
+            Text(
+                text = "Press and hold, then drag to reorder",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             PageOverviewPreview(
                 page = state.page,
@@ -533,5 +557,6 @@ private val GeneratedLauncherPageKind.pageOverviewTypeLabel: String
             GeneratedLauncherPageKind.NOTIFICATION_CARDS -> "Cards"
         }
 
-internal const val PAGE_OVERVIEW_CARD_WIDTH_DP = 148
+internal const val PAGE_OVERVIEW_CARD_WIDTH_DP = 184
 internal const val PAGE_OVERVIEW_CARD_SPACING_DP = 8
+private const val PAGE_OVERVIEW_CONTENT_PADDING_DP = 16
