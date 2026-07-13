@@ -142,7 +142,7 @@ data class GridInsets(
 
 const val DEFAULT_HOME_ICON_SIZE_DP = 44
 const val MIN_HOME_ICON_SIZE_DP = 32
-const val MAX_HOME_ICON_SIZE_DP = 64
+const val MAX_HOME_ICON_SIZE_DP = 96
 
 data class GridSpacing(
     val horizontal: Int = 0,
