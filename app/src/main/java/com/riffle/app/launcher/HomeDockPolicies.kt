@@ -56,9 +56,7 @@ internal data class DockShelfGesturePolicy(
 internal fun Modifier.dockShelfMotion(policy: DockShelfMotionPolicy): Modifier =
     animateContentSize(animationSpec = dockShelfSizeAnimation(policy))
 
-internal fun Modifier.dockShelfFrameRatePreference(
-    targetFps: MotionPerformanceTargetFps,
-): Modifier =
+internal fun Modifier.dockShelfFrameRatePreference(targetFps: MotionPerformanceTargetFps): Modifier =
     composed {
         val view = LocalView.current
         val frameRate = targetFps.framesPerSecond.toFloat()

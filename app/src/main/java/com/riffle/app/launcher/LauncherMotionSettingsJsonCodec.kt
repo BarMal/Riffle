@@ -1,7 +1,7 @@
 package com.riffle.app.launcher
 
-import com.riffle.core.domain.launcher.settings.MotionSettings
 import com.riffle.core.domain.launcher.settings.MotionPerformanceTargetFps
+import com.riffle.core.domain.launcher.settings.MotionSettings
 import org.json.JSONObject
 
 internal fun encodeMotionSettings(settings: MotionSettings): JSONObject =

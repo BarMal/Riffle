@@ -38,7 +38,10 @@ class LauncherShellMotionSettingsTest {
             LauncherShellAction.SelectMotionPerformanceTargetFps(MotionPerformanceTargetFps.FPS_90),
         )
 
-        assertEquals(MotionPerformanceTargetFps.FPS_90, viewModel.state.value.launcherSettings.motion.performanceTargetFps)
+        assertEquals(
+            MotionPerformanceTargetFps.FPS_90,
+            viewModel.state.value.launcherSettings.motion.performanceTargetFps,
+        )
         assertEquals(viewModel.state.value.launcherSettings, repository.savedSettings)
     }
 
