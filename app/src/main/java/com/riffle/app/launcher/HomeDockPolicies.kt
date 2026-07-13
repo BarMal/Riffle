@@ -70,14 +70,13 @@ internal interface DockShelfFrameRatePlatform {
 internal class DockShelfFrameRateGateway(
     private val platform: DockShelfFrameRatePlatform,
 ) {
-    fun acquire(targetFrameRate: Float): DockShelfFrameRateLease? {
-        val originalFrameRate = platform.preferredFrameRate() ?: return null
-        if (!platform.setPreferredFrameRate(targetFrameRate)) return null
-
-        return DockShelfFrameRateLease {
-            platform.setPreferredFrameRate(originalFrameRate)
+    fun acquire(targetFrameRate: Float): DockShelfFrameRateLease? =
+        platform.preferredFrameRate()?.takeIf { platform.setPreferredFrameRate(targetFrameRate) }?.let {
+            originalFrameRate ->
+            DockShelfFrameRateLease {
+                platform.setPreferredFrameRate(originalFrameRate)
+            }
         }
-    }
 }
 
 internal fun Modifier.dockShelfMotion(policy: DockShelfMotionPolicy): Modifier =
@@ -113,13 +112,17 @@ private class AndroidDockShelfFrameRatePlatform(
             ?.preferredRefreshRate
 
     override fun setPreferredFrameRate(frameRate: Float): Boolean {
-        val currentActivity = activity ?: return false
-        val supportedModes = currentActivity.supportedDisplayModes() ?: return false
-        if (supportedModes.none { mode -> mode.refreshRate == frameRate }) return false
-
-        currentActivity.window.attributes =
-            currentActivity.window.attributes.apply { preferredRefreshRate = frameRate }
-        return true
+        val currentActivity = activity
+        return if (
+            currentActivity != null &&
+                currentActivity.supportedDisplayModes()?.any { mode -> mode.refreshRate == frameRate } == true
+        ) {
+            currentActivity.window.attributes =
+                currentActivity.window.attributes.apply { preferredRefreshRate = frameRate }
+            true
+        } else {
+            false
+        }
     }
 }
 
