@@ -42,9 +42,9 @@ class PageOverviewReorderInteractionTest {
         verifyOffScreenPageDrag(width = 840.dp)
     }
 
-    private fun verifyOffScreenPageDrag(width: Dp) {
+    private fun verifyOffScreenPageDrag(containerWidth: Dp) {
         val actions = mutableListOf<LauncherShellAction>()
-        setContent(width = width, onAction = actions::add)
+        setContent(width = containerWidth, onAction = actions::add)
 
         composeRule.onNodeWithText("Page 7").performScrollTo().assertIsDisplayed()
         composeRule.onNodeWithText("Page 7").performTouchInput {
