@@ -22,23 +22,33 @@ internal fun SettingsMotionPageContent(
                 frameRateGateway.availability(performanceTargetFps)
             }
         val effectiveChoice = frameRateAvailability.effectiveChoice
-        SettingsClickableRow(
-            title = "Animation performance",
-            subtitle = frameRateAvailability.settingsDescription(),
-            onClick = {
-                effectiveChoice?.let { choice ->
+        if (effectiveChoice == null) {
+            SettingsListRow(
+                title = "Animation performance",
+                subtitle = frameRateAvailability.settingsDescription(),
+                trailingContent = {
+                    SettingsButtonText(text = "Unavailable")
+                },
+            )
+        } else {
+            SettingsClickableRow(
+                title = "Animation performance",
+                subtitle = frameRateAvailability.settingsDescription(),
+                onClick = {
                     onAction(
                         LauncherShellAction.SelectMotionPerformanceTargetFps(
-                            nextDockShelfFrameRateTarget(choice.targetFps, frameRateAvailability.choices),
+                            nextDockShelfFrameRateTarget(
+                                effectiveChoice.targetFps,
+                                frameRateAvailability.choices,
+                            ),
                         ),
                     )
-                }
-            },
-            trailingContent = {
-                val targetLabel = effectiveChoice?.let { "${it.targetFps.framesPerSecond} fps" } ?: "Unavailable"
-                SettingsButtonText(text = targetLabel)
-            },
-        )
+                },
+                trailingContent = {
+                    SettingsButtonText(text = "${effectiveChoice.targetFps.framesPerSecond} fps")
+                },
+            )
+        }
         SettingsSwitchRow(
             title = "Reduced motion",
             subtitle = "Minimise home page settle animations",
