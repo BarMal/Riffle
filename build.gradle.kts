@@ -17,4 +17,5 @@ tasks.register("verify") {
     dependsOn(checkableProjects.map { "${it.path}:ktlintCheck" })
     dependsOn(checkableProjects.map { "${it.path}:detekt" })
     dependsOn(appProjects.map { "${it.path}:assembleDebug" })
+    dependsOn(appProjects.map { "${it.path}:connectedDebugAndroidTest" })
 }

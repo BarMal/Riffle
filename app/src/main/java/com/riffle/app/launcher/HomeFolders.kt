@@ -1,8 +1,10 @@
 package com.riffle.app.launcher
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -45,36 +47,45 @@ internal fun HomeFolder(
     folder: FolderItem,
     dragState: HomeItemDragState,
     isEditing: Boolean,
-    notificationCount: Int,
-    labelSettings: HomeLabelSettings,
+    presentation: HomeFolderPresentation,
     appIconLoader: AppIconLoader,
     actions: HomeWorkspaceActions,
 ) {
     val metrics = HomeGridLayoutMetrics()
     val isContextMenuExpanded = remember(folder.id) { mutableStateOf(false) }
+    val pressInteractionSource = remember { MutableInteractionSource() }
+    val pressMotionPolicy = homeIconPressMotionPolicy(presentation.reducedMotion)
+    val pressIndication =
+        if (pressMotionPolicy.usesDefaultPressIndication) LocalIndication.current else null
+    val pressHandlers =
+        homeFolderPressHandlers(
+            isEditing = isEditing,
+            onShowContextMenu = { isContextMenuExpanded.value = true },
+            onOpenFolder = { actions.onFolderOpen(folder) },
+        )
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier =
                 Modifier
                     .align(Alignment.Center)
-                    .heightIn(min = metrics.homeItemContentHeightDp(labelSettings).dp)
+                    .heightIn(min = metrics.homeItemContentHeightDp(presentation.labelSettings).dp)
+                    .homeIconPressMotion(
+                        interactionSource = pressInteractionSource,
+                        policy = pressMotionPolicy,
+                    )
                     .combinedClickable(
                         enabled = true,
-                        onClick = {
-                            if (isEditing) {
-                                isContextMenuExpanded.value = true
-                            } else {
-                                actions.onFolderOpen(folder)
-                            }
-                        },
+                        interactionSource = pressInteractionSource,
+                        indication = pressIndication,
+                        onClick = pressHandlers.onTap,
                     )
                     .homeItemDrag(
                         enabled = true,
                         item = folder,
                         dragState = dragState,
                         actions = actions,
-                        onStationaryLongPress = { isContextMenuExpanded.value = true },
+                        onStationaryLongPress = pressHandlers.onLongPress,
                     ),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(6.dp),
@@ -86,14 +97,14 @@ internal fun HomeFolder(
                 )
                 if (!isEditing) {
                     NotificationCountBadge(
-                        count = notificationCount,
+                        count = presentation.notificationCount,
                         modifier = Modifier.align(Alignment.TopEnd),
                     )
                 }
             }
             WallpaperReadableLabel(
                 text = folder.label,
-                settings = labelSettings,
+                settings = presentation.labelSettings,
             )
         }
 
@@ -118,6 +129,12 @@ internal fun HomeFolder(
         }
     }
 }
+
+internal data class HomeFolderPresentation(
+    val notificationCount: Int,
+    val labelSettings: HomeLabelSettings,
+    val reducedMotion: Boolean,
+)
 
 @Composable
 fun FolderSurface(
