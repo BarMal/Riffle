@@ -74,38 +74,6 @@ fun HomeGestureSettings.toLauncherGestureMappings(): LauncherGestureMappings =
         )
     }
 
-fun HomeGesture.toLauncherGesture(): LauncherGesture =
-    when (this) {
-        HomeGesture.ONE_FINGER_UP -> LauncherGesture.ONE_FINGER_UP
-        HomeGesture.ONE_FINGER_DOWN -> LauncherGesture.ONE_FINGER_DOWN
-        HomeGesture.ONE_FINGER_LEFT -> LauncherGesture.ONE_FINGER_LEFT
-        HomeGesture.ONE_FINGER_RIGHT -> LauncherGesture.ONE_FINGER_RIGHT
-        HomeGesture.TWO_FINGER_UP -> LauncherGesture.TWO_FINGER_UP
-        HomeGesture.TWO_FINGER_DOWN -> LauncherGesture.TWO_FINGER_DOWN
-        HomeGesture.TWO_FINGER_LEFT -> LauncherGesture.TWO_FINGER_LEFT
-        HomeGesture.TWO_FINGER_RIGHT -> LauncherGesture.TWO_FINGER_RIGHT
-        HomeGesture.THREE_FINGER_UP -> LauncherGesture.THREE_FINGER_UP
-        HomeGesture.THREE_FINGER_DOWN -> LauncherGesture.THREE_FINGER_DOWN
-        HomeGesture.THREE_FINGER_LEFT -> LauncherGesture.THREE_FINGER_LEFT
-        HomeGesture.THREE_FINGER_RIGHT -> LauncherGesture.THREE_FINGER_RIGHT
-        HomeGesture.PINCH_IN -> LauncherGesture.PINCH_IN
-        HomeGesture.PINCH_OUT -> LauncherGesture.PINCH_OUT
-    }
+fun HomeGesture.toLauncherGesture(): LauncherGesture = LauncherGesture.valueOf(name)
 
-fun LauncherGesture.toHomeGesture(): HomeGesture =
-    when (this) {
-        LauncherGesture.ONE_FINGER_UP -> HomeGesture.ONE_FINGER_UP
-        LauncherGesture.ONE_FINGER_DOWN -> HomeGesture.ONE_FINGER_DOWN
-        LauncherGesture.ONE_FINGER_LEFT -> HomeGesture.ONE_FINGER_LEFT
-        LauncherGesture.ONE_FINGER_RIGHT -> HomeGesture.ONE_FINGER_RIGHT
-        LauncherGesture.TWO_FINGER_UP -> HomeGesture.TWO_FINGER_UP
-        LauncherGesture.TWO_FINGER_DOWN -> HomeGesture.TWO_FINGER_DOWN
-        LauncherGesture.TWO_FINGER_LEFT -> HomeGesture.TWO_FINGER_LEFT
-        LauncherGesture.TWO_FINGER_RIGHT -> HomeGesture.TWO_FINGER_RIGHT
-        LauncherGesture.THREE_FINGER_UP -> HomeGesture.THREE_FINGER_UP
-        LauncherGesture.THREE_FINGER_DOWN -> HomeGesture.THREE_FINGER_DOWN
-        LauncherGesture.THREE_FINGER_LEFT -> HomeGesture.THREE_FINGER_LEFT
-        LauncherGesture.THREE_FINGER_RIGHT -> HomeGesture.THREE_FINGER_RIGHT
-        LauncherGesture.PINCH_IN -> HomeGesture.PINCH_IN
-        LauncherGesture.PINCH_OUT -> HomeGesture.PINCH_OUT
-    }
+fun LauncherGesture.toHomeGesture(): HomeGesture = HomeGesture.valueOf(name)
