@@ -94,7 +94,7 @@ class ContextualBehaviorTest {
     }
 
     @Test
-    fun selectorReturnsNoContextualPagesOrCardsWhenDisabled() {
+    fun disabledSelectorSuppressesEveryContextualPageAndCardSignal() {
         val selection =
             ContextualBehaviorSelector.select(
                 settings = ContextualSettings(enabled = false),
