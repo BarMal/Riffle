@@ -400,10 +400,58 @@ class HomeDockMetricsTest {
     }
 
     @Test
+    fun frameRateGatewaySkipsUnsupportedPlatformCapabilities() {
+        val platform = FakeDockShelfFrameRatePlatform(initialFrameRate = null)
+
+        assertEquals(null, DockShelfFrameRateGateway(platform).acquire(targetFrameRate = 90f))
+        assertEquals(emptyList<Float>(), platform.requestedFrameRates)
+    }
+
+    @Test
+    fun frameRateGatewayFallsBackWhenPlatformRejectsTarget() {
+        val platform = FakeDockShelfFrameRatePlatform(initialFrameRate = 60f, acceptsRequests = false)
+
+        assertEquals(null, DockShelfFrameRateGateway(platform).acquire(targetFrameRate = 90f))
+        assertEquals(60f, platform.currentFrameRate)
+        assertEquals(listOf(90f), platform.requestedFrameRates)
+    }
+
+    @Test
+    fun frameRateGatewayRestoresPreviousPreferenceWhenLeaseEnds() {
+        val platform = FakeDockShelfFrameRatePlatform(initialFrameRate = 60f)
+        val lease = DockShelfFrameRateGateway(platform).acquire(targetFrameRate = 90f)
+
+        assertEquals(90f, platform.currentFrameRate)
+        lease?.restore()
+
+        assertEquals(60f, platform.currentFrameRate)
+        assertEquals(listOf(90f, 60f), platform.requestedFrameRates)
+    }
+
+    @Test
     fun dockOverflowRequiresMoreItemsThanCapacity() {
         assertEquals(true, dockHasOverflow(capacity = 5, itemCount = 6))
         assertEquals(false, dockHasOverflow(capacity = 5, itemCount = 5))
         assertEquals(false, dockHasOverflow(capacity = 0, itemCount = 1))
+    }
+
+    private class FakeDockShelfFrameRatePlatform(
+        initialFrameRate: Float?,
+        private val acceptsRequests: Boolean = true,
+    ) : DockShelfFrameRatePlatform {
+        var currentFrameRate = initialFrameRate
+            private set
+        val requestedFrameRates = mutableListOf<Float>()
+
+        override fun preferredFrameRate(): Float? = currentFrameRate
+
+        override fun setPreferredFrameRate(frameRate: Float): Boolean {
+            requestedFrameRates += frameRate
+            if (!acceptsRequests) return false
+
+            currentFrameRate = frameRate
+            return true
+        }
     }
 
     @Test

@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
 import android.os.Build
+import android.view.Display
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.FiniteAnimationSpec
 import androidx.compose.animation.core.LinearOutSlowInEasing
@@ -12,6 +13,7 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.systemGestureExclusion
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.geometry.Rect
@@ -55,33 +57,77 @@ internal data class DockShelfGesturePolicy(
     val bottomSystemGestureExclusionDp: Int,
 )
 
+internal fun interface DockShelfFrameRateLease {
+    fun restore()
+}
+
+internal interface DockShelfFrameRatePlatform {
+    fun preferredFrameRate(): Float?
+
+    fun setPreferredFrameRate(frameRate: Float): Boolean
+}
+
+internal class DockShelfFrameRateGateway(
+    private val platform: DockShelfFrameRatePlatform,
+) {
+    fun acquire(targetFrameRate: Float): DockShelfFrameRateLease? {
+        val originalFrameRate = platform.preferredFrameRate() ?: return null
+        if (!platform.setPreferredFrameRate(targetFrameRate)) return null
+
+        return DockShelfFrameRateLease {
+            platform.setPreferredFrameRate(originalFrameRate)
+        }
+    }
+}
+
 internal fun Modifier.dockShelfMotion(policy: DockShelfMotionPolicy): Modifier =
     animateContentSize(animationSpec = dockShelfSizeAnimation(policy))
 
 internal fun Modifier.dockShelfFrameRatePreference(targetFps: MotionPerformanceTargetFps): Modifier =
     composed {
         val view = LocalView.current
+        val frameRateGateway =
+            remember(view) {
+                DockShelfFrameRateGateway(AndroidDockShelfFrameRatePlatform(view.context))
+            }
         val frameRate = targetFps.framesPerSecond.toFloat()
-        DisposableEffect(view, frameRate) {
-            val originalFrameRate =
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                    view.context.findActivity()?.window?.let { window ->
-                        window.attributes.preferredRefreshRate.also {
-                            window.attributes = window.attributes.apply { preferredRefreshRate = frameRate }
-                        }
-                    }
-                } else {
-                    null
-                }
+        DisposableEffect(frameRateGateway, frameRate) {
+            val lease = frameRateGateway.acquire(frameRate)
             onDispose {
-                if (originalFrameRate != null) {
-                    view.context.findActivity()?.window?.let { window ->
-                        window.attributes = window.attributes.apply { preferredRefreshRate = originalFrameRate }
-                    }
-                }
+                lease?.restore()
             }
         }
         this
+    }
+
+private class AndroidDockShelfFrameRatePlatform(
+    context: Context,
+) : DockShelfFrameRatePlatform {
+    private val activity = context.findActivity()
+
+    override fun preferredFrameRate(): Float? =
+        activity
+            ?.takeIf { Build.VERSION.SDK_INT >= Build.VERSION_CODES.P }
+            ?.window
+            ?.attributes
+            ?.preferredRefreshRate
+
+    override fun setPreferredFrameRate(frameRate: Float): Boolean {
+        val currentActivity = activity ?: return false
+        val supportedModes = currentActivity.supportedDisplayModes() ?: return false
+        if (supportedModes.none { mode -> mode.refreshRate == frameRate }) return false
+
+        currentActivity.window.attributes =
+            currentActivity.window.attributes.apply { preferredRefreshRate = frameRate }
+        return true
+    }
+}
+
+private fun Activity.supportedDisplayModes(): Array<Display.Mode>? =
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+        windowManager.defaultDisplay.supportedModes
+    } else {
+        null
     }
 
 private tailrec fun Context.findActivity(): Activity? =
