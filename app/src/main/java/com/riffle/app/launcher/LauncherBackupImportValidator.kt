@@ -2,6 +2,8 @@ package com.riffle.app.launcher
 
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutSet
+import com.riffle.core.domain.launcher.home.MAX_HOME_ICON_SIZE_DP
+import com.riffle.core.domain.launcher.home.MIN_HOME_ICON_SIZE_DP
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.MAX_OVERLAY_DOCK_EXPANDED_ICON_SIZE_DP
 import com.riffle.core.domain.launcher.settings.MAX_OVERLAY_DOCK_HANDLE_ALPHA_PERCENT
@@ -27,7 +29,8 @@ private fun HomeLayoutSet.isImportableBackupLayoutSet(): Boolean =
 private fun HomeLayout.isImportableBackupLayout(): Boolean =
     pages.isNotEmpty() &&
         pages.any { page -> page.id == selectedPageId } &&
-        pages.all { page -> page.grid.columns > 0 && page.grid.rows > 0 }
+        pages.all { page -> page.grid.columns > 0 && page.grid.rows > 0 } &&
+        settings.labels.iconSizeDp in MIN_HOME_ICON_SIZE_DP..MAX_HOME_ICON_SIZE_DP
 
 private fun LauncherSettings.isImportableBackupSettings(): Boolean = overlayDock.isImportableBackupOverlayDockSettings()
 
