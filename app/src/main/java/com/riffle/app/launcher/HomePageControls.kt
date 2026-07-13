@@ -7,6 +7,7 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -208,6 +209,7 @@ private fun PageOverviewStrip(
 }
 
 @Composable
+@OptIn(ExperimentalFoundationApi::class)
 private fun PageOverviewCard(
     state: PageOverviewCardState,
     appIconLoader: AppIconLoader,
@@ -223,8 +225,8 @@ private fun PageOverviewCard(
         modifier =
             Modifier
                 .width(PAGE_OVERVIEW_CARD_WIDTH_DP.dp)
-                .animateItem(
-                    placementSpec =
+                .animateItemPlacement(
+                    animationSpec =
                         if (reducedMotion) {
                             snap()
                         } else {
