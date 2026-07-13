@@ -2,6 +2,7 @@ package com.riffle.app.launcher
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -203,6 +204,7 @@ private fun HomeGridItem(
                         notificationCount = presentation.notificationGroupsByApp.notificationCountFor(item),
                         appShortcuts = presentation.appShortcutsByApp[item.appIdentity].orEmpty(),
                         labelSettings = presentation.labelSettings,
+                        reducedMotion = presentation.reducedMotion,
                     ),
                 appIconLoader = appIconLoader,
                 actions = actions,
@@ -222,6 +224,7 @@ private fun HomeGridItem(
                     isEditing = state.isEditing,
                     notificationCount = presentation.notificationGroupsByApp.notificationCountFor(item),
                     labelSettings = presentation.labelSettings,
+                    reducedMotion = presentation.reducedMotion,
                     appIconLoader = appIconLoader,
                     actions = actions,
                 )
@@ -272,6 +275,7 @@ private fun HomeShortcut(
 ) {
     val metrics = HomeGridLayoutMetrics()
     val isContextMenuExpanded = remember(shortcut.id) { mutableStateOf(false) }
+    val pressInteractionSource = remember { MutableInteractionSource() }
     val longClickLabel =
         if (isEditing) {
             "Show ${shortcut.label} actions"
@@ -285,8 +289,13 @@ private fun HomeShortcut(
                 Modifier
                     .align(Alignment.Center)
                     .heightIn(min = metrics.homeItemContentHeightDp(presentation.labelSettings).dp)
+                    .homeIconPressMotion(
+                        interactionSource = pressInteractionSource,
+                        policy = homeIconPressMotionPolicy(presentation.reducedMotion),
+                    )
                     .combinedClickable(
                         enabled = true,
+                        interactionSource = pressInteractionSource,
                         onClick = {
                             if (isEditing) {
                                 isContextMenuExpanded.value = true
@@ -373,6 +382,7 @@ private data class HomeShortcutPresentation(
     val notificationCount: Int,
     val appShortcuts: List<AppShortcut>,
     val labelSettings: HomeLabelSettings,
+    val reducedMotion: Boolean,
 )
 
 private const val DRAGGED_GRID_ITEM_Z_INDEX = 1f

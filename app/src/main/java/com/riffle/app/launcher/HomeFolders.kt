@@ -3,6 +3,7 @@ package com.riffle.app.launcher
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -47,11 +48,13 @@ internal fun HomeFolder(
     isEditing: Boolean,
     notificationCount: Int,
     labelSettings: HomeLabelSettings,
+    reducedMotion: Boolean,
     appIconLoader: AppIconLoader,
     actions: HomeWorkspaceActions,
 ) {
     val metrics = HomeGridLayoutMetrics()
     val isContextMenuExpanded = remember(folder.id) { mutableStateOf(false) }
+    val pressInteractionSource = remember { MutableInteractionSource() }
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
@@ -59,8 +62,13 @@ internal fun HomeFolder(
                 Modifier
                     .align(Alignment.Center)
                     .heightIn(min = metrics.homeItemContentHeightDp(labelSettings).dp)
+                    .homeIconPressMotion(
+                        interactionSource = pressInteractionSource,
+                        policy = homeIconPressMotionPolicy(reducedMotion),
+                    )
                     .combinedClickable(
                         enabled = true,
+                        interactionSource = pressInteractionSource,
                         onClick = {
                             if (isEditing) {
                                 isContextMenuExpanded.value = true
