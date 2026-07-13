@@ -24,7 +24,6 @@ internal fun SettingsMotionPageContent(
         SettingsClickableRow(
             title = "Animation performance",
             subtitle = frameRateAvailability.settingsDescription(),
-            enabled = effectiveChoice != null,
             onClick = {
                 effectiveChoice?.let { choice ->
                     onAction(

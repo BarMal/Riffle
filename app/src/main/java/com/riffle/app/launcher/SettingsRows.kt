@@ -15,7 +15,6 @@ internal fun SettingsClickableRow(
     title: String,
     subtitle: String? = null,
     onClick: () -> Unit,
-    enabled: Boolean = true,
     modifier: Modifier = Modifier,
     trailingContent: @Composable (() -> Unit)? = {
         SettingsButtonText(text = "Open")
@@ -25,7 +24,7 @@ internal fun SettingsClickableRow(
         modifier =
             modifier
                 .settingsRowModifier()
-                .clickable(enabled = enabled, role = Role.Button, onClick = onClick),
+                .clickable(role = Role.Button, onClick = onClick),
         title = title,
         subtitle = subtitle,
         trailingContent = trailingContent,
