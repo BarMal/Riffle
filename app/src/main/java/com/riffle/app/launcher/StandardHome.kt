@@ -144,13 +144,7 @@ private fun StandardHomeColumn(
                     settings = state.presentation.homeGestures,
                     onAction = actions.onAction,
                 )
-                .windowInsetsPadding(state.presentation.homeInsetPolicy.safeDrawingInsets())
-                .padding(
-                    start = margins.start.coerceAtLeast(0).dp,
-                    top = margins.top.coerceAtLeast(0).dp,
-                    end = margins.end.coerceAtLeast(0).dp,
-                    bottom = margins.bottom.coerceAtLeast(0).dp,
-                ),
+                .windowInsetsPadding(state.presentation.homeInsetPolicy.safeDrawingInsets()),
         verticalArrangement = Arrangement.Top,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
@@ -170,7 +164,13 @@ private fun StandardHomeColumn(
             modifier =
                 Modifier
                     .weight(1f)
-                    .fillMaxWidth(),
+                    .fillMaxWidth()
+                    .padding(
+                        start = margins.start.coerceAtLeast(0).dp,
+                        top = margins.top.coerceAtLeast(0).dp,
+                        end = margins.end.coerceAtLeast(0).dp,
+                        bottom = margins.bottom.coerceAtLeast(0).dp,
+                    ),
         )
         Spacer(modifier = Modifier.height(HOME_BOTTOM_CONTROLS_TOP_SPACING_DP.dp))
         HomeBottomControls(
