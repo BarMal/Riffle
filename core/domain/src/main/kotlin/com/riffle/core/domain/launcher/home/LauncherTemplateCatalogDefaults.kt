@@ -7,10 +7,14 @@ object LauncherTemplateCatalogDefaults {
     val conservativeGeneratedPagesId: LauncherTemplateId =
         LauncherTemplateId("conservative-generated-pages")
 
+    val cardInterfaceId: LauncherTemplateId =
+        LauncherTemplateId("card-interface")
+
     val templates: List<LauncherTemplate> =
         listOf(
             standardPhoneAppDrawer(),
             conservativeGeneratedPages(),
+            cardInterface(),
         ).sortedBy { template -> template.id.value }
             .also(::requireUniqueIds)
 
@@ -76,6 +80,41 @@ object LauncherTemplateCatalogDefaults {
                                 LauncherTemplateSupportedElementType.DYNAMIC_CONTENT,
                                 LauncherTemplateSupportedElementType.CARD,
                                 LauncherTemplateSupportedElementType.TEXT,
+                            ),
+                            slot(
+                                "dock",
+                                LauncherTemplateSupportedElementType.APP_ICON,
+                                LauncherTemplateSupportedElementType.CARD,
+                            ),
+                        ),
+                    elements = emptyList(),
+                ),
+        )
+
+    private fun cardInterface(): LauncherTemplate =
+        LauncherTemplate(
+            id = cardInterfaceId,
+            metadata =
+                LauncherTemplateMetadata(
+                    displayName = "Card interface",
+                    description = "A card-first launcher layout with notification cards and a dock.",
+                ),
+            supportedViewModes = setOf(LauncherViewMode.CARD_INTERFACE),
+            supportedDeviceClasses = HomeLayoutDeviceClass.entries.toSet(),
+            seedPageTypes =
+                listOf(
+                    LauncherPageType.Home,
+                ),
+            schema =
+                LauncherTemplateSchema(
+                    slots =
+                        listOf(
+                            slot(
+                                "cards",
+                                LauncherTemplateSupportedElementType.CARD,
+                                LauncherTemplateSupportedElementType.DYNAMIC_CONTENT,
+                                LauncherTemplateSupportedElementType.TEXT,
+                                LauncherTemplateSupportedElementType.IMAGE,
                             ),
                             slot(
                                 "dock",

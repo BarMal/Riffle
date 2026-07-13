@@ -19,6 +19,7 @@ class LauncherTemplateCatalogDefaultsTest {
         assertEquals(ids.distinct(), ids)
         assertEquals(
             listOf(
+                LauncherTemplateCatalogDefaults.cardInterfaceId,
                 LauncherTemplateCatalogDefaults.conservativeGeneratedPagesId,
                 LauncherTemplateCatalogDefaults.standardPhoneAppDrawerId,
             ),
@@ -64,6 +65,27 @@ class LauncherTemplateCatalogDefaultsTest {
     }
 
     @Test
+    fun cardInterfaceDefaultsToAStaticHomePageAndDockSlots() {
+        val template = requireTemplate(LauncherTemplateCatalogDefaults.cardInterfaceId)
+
+        assertEquals("Card interface", template.metadata.displayName)
+        assertEquals(setOf(LauncherViewMode.CARD_INTERFACE), template.supportedViewModes)
+        assertEquals(HomeLayoutDeviceClass.entries.toSet(), template.supportedDeviceClasses)
+        assertEquals(
+            listOf(LauncherPageType.Home),
+            template.seedPageTypes,
+        )
+        assertEquals(
+            emptySet(),
+            generatedDataSources(template),
+        )
+        assertEquals(
+            listOf("cards", "dock"),
+            template.schema.slots.map { slot -> slot.id.value },
+        )
+    }
+
+    @Test
     fun catalogCompatibilityFiltersByModeAndDeviceClass() {
         assertEquals(
             listOf(LauncherTemplateCatalogDefaults.standardPhoneAppDrawerId),
@@ -88,6 +110,15 @@ class LauncherTemplateCatalogDefaultsTest {
             catalog
                 .compatibleWith(
                     viewMode = LauncherViewMode.HOME_SCREEN_LIBRARY,
+                    deviceClass = HomeLayoutDeviceClass.TABLET,
+                )
+                .map { template -> template.id },
+        )
+        assertEquals(
+            listOf(LauncherTemplateCatalogDefaults.cardInterfaceId),
+            catalog
+                .compatibleWith(
+                    viewMode = LauncherViewMode.CARD_INTERFACE,
                     deviceClass = HomeLayoutDeviceClass.TABLET,
                 )
                 .map { template -> template.id },
