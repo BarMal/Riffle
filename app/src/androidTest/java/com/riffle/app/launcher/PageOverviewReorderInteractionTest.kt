@@ -34,12 +34,12 @@ class PageOverviewReorderInteractionTest {
 
     @Test
     fun longPressDragReordersAnOffScreenPageOnPhoneWidth() {
-        verifyOffScreenPageDrag(width = 360.dp)
+        verifyOffScreenPageDrag(containerWidth = 360.dp)
     }
 
     @Test
     fun longPressDragReordersAnOffScreenPageOnFoldableWidth() {
-        verifyOffScreenPageDrag(width = 840.dp)
+        verifyOffScreenPageDrag(containerWidth = 840.dp)
     }
 
     private fun verifyOffScreenPageDrag(containerWidth: Dp) {
