@@ -1,6 +1,7 @@
 package com.riffle.app.launcher
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class HomeIconPressMotionTest {
@@ -11,8 +12,9 @@ class HomeIconPressMotionTest {
     }
 
     @Test
-    fun keepsHomeIconsStaticForReducedMotion() {
+    fun keepsHomeIconsStaticAndRetainsPressIndicationForReducedMotion() {
         assertEquals(HomeIconPressMotionPolicy.NONE, homeIconPressMotionPolicy(reducedMotion = true))
         assertEquals(1f, HomeIconPressMotionPolicy.NONE.pressedScale, 0f)
+        assertTrue(HomeIconPressMotionPolicy.NONE.usesDefaultPressIndication)
     }
 }

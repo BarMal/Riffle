@@ -1,6 +1,7 @@
 package com.riffle.app.launcher
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -53,6 +54,15 @@ internal fun HomeFolder(
     val metrics = HomeGridLayoutMetrics()
     val isContextMenuExpanded = remember(folder.id) { mutableStateOf(false) }
     val pressInteractionSource = remember { MutableInteractionSource() }
+    val pressMotionPolicy = homeIconPressMotionPolicy(presentation.reducedMotion)
+    val pressIndication =
+        if (pressMotionPolicy.usesDefaultPressIndication) LocalIndication.current else null
+    val pressHandlers =
+        homeFolderPressHandlers(
+            isEditing = isEditing,
+            onShowContextMenu = { isContextMenuExpanded.value = true },
+            onOpenFolder = { actions.onFolderOpen(folder) },
+        )
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
@@ -62,26 +72,20 @@ internal fun HomeFolder(
                     .heightIn(min = metrics.homeItemContentHeightDp(presentation.labelSettings).dp)
                     .homeIconPressMotion(
                         interactionSource = pressInteractionSource,
-                        policy = homeIconPressMotionPolicy(presentation.reducedMotion),
+                        policy = pressMotionPolicy,
                     )
                     .combinedClickable(
                         enabled = true,
                         interactionSource = pressInteractionSource,
-                        indication = null,
-                        onClick = {
-                            if (isEditing) {
-                                isContextMenuExpanded.value = true
-                            } else {
-                                actions.onFolderOpen(folder)
-                            }
-                        },
+                        indication = pressIndication,
+                        onClick = pressHandlers.onTap,
                     )
                     .homeItemDrag(
                         enabled = true,
                         item = folder,
                         dragState = dragState,
                         actions = actions,
-                        onStationaryLongPress = { isContextMenuExpanded.value = true },
+                        onStationaryLongPress = pressHandlers.onLongPress,
                     ),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(6.dp),

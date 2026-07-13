@@ -1,6 +1,7 @@
 package com.riffle.app.launcher
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -279,6 +280,15 @@ private fun HomeShortcut(
     val metrics = HomeGridLayoutMetrics()
     val isContextMenuExpanded = remember(shortcut.id) { mutableStateOf(false) }
     val pressInteractionSource = remember { MutableInteractionSource() }
+    val pressMotionPolicy = homeIconPressMotionPolicy(presentation.reducedMotion)
+    val pressIndication =
+        if (pressMotionPolicy.usesDefaultPressIndication) LocalIndication.current else null
+    val pressHandlers =
+        homeShortcutPressHandlers(
+            isEditing = isEditing,
+            onShowContextMenu = { isContextMenuExpanded.value = true },
+            onLaunch = { actions.onAction(shortcut.launchAction()) },
+        )
     val longClickLabel =
         if (isEditing) {
             "Show ${shortcut.label} actions"
@@ -294,19 +304,13 @@ private fun HomeShortcut(
                     .heightIn(min = metrics.homeItemContentHeightDp(presentation.labelSettings).dp)
                     .homeIconPressMotion(
                         interactionSource = pressInteractionSource,
-                        policy = homeIconPressMotionPolicy(presentation.reducedMotion),
+                        policy = pressMotionPolicy,
                     )
                     .combinedClickable(
                         enabled = true,
                         interactionSource = pressInteractionSource,
-                        indication = null,
-                        onClick = {
-                            if (isEditing) {
-                                isContextMenuExpanded.value = true
-                            } else {
-                                actions.onAction(shortcut.launchAction())
-                            }
-                        },
+                        indication = pressIndication,
+                        onClick = pressHandlers.onTap,
                         onLongClickLabel = longClickLabel,
                     )
                     .homeItemDrag(
@@ -314,7 +318,7 @@ private fun HomeShortcut(
                         item = shortcut,
                         dragState = dragState,
                         actions = actions,
-                        onStationaryLongPress = { isContextMenuExpanded.value = true },
+                        onStationaryLongPress = pressHandlers.onLongPress,
                     ),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(6.dp),

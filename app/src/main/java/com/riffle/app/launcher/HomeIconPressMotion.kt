@@ -14,9 +14,16 @@ internal fun homeIconPressMotionPolicy(reducedMotion: Boolean): HomeIconPressMot
 
 internal enum class HomeIconPressMotionPolicy(
     val pressedScale: Float,
+    val usesDefaultPressIndication: Boolean,
 ) {
-    NONE(pressedScale = 1f),
-    SHRINK(pressedScale = 0.94f),
+    NONE(
+        pressedScale = 1f,
+        usesDefaultPressIndication = true,
+    ),
+    SHRINK(
+        pressedScale = 0.94f,
+        usesDefaultPressIndication = false,
+    ),
 }
 
 internal fun Modifier.homeIconPressMotion(
