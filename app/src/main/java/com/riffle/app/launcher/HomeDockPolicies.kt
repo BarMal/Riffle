@@ -1,7 +1,9 @@
 package com.riffle.app.launcher
 
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
 import android.os.Build
-import android.view.View
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.FiniteAnimationSpec
 import androidx.compose.animation.core.LinearOutSlowInEasing
@@ -61,16 +63,32 @@ internal fun Modifier.dockShelfFrameRatePreference(targetFps: MotionPerformanceT
         val view = LocalView.current
         val frameRate = targetFps.framesPerSecond.toFloat()
         DisposableEffect(view, frameRate) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                view.setFrameRate(frameRate, View.FRAME_RATE_COMPATIBILITY_DEFAULT)
-            }
-            onDispose {
+            val originalFrameRate =
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                    view.setFrameRate(0f, View.FRAME_RATE_COMPATIBILITY_DEFAULT)
+                    view.context.findActivity()?.window?.let { window ->
+                        window.attributes.preferredRefreshRate.also {
+                            window.attributes = window.attributes.apply { preferredRefreshRate = frameRate }
+                        }
+                    }
+                } else {
+                    null
+                }
+            onDispose {
+                if (originalFrameRate != null) {
+                    view.context.findActivity()?.window?.let { window ->
+                        window.attributes = window.attributes.apply { preferredRefreshRate = originalFrameRate }
+                    }
                 }
             }
         }
         this
+    }
+
+private tailrec fun Context.findActivity(): Activity? =
+    when (this) {
+        is Activity -> this
+        is ContextWrapper -> baseContext.findActivity()
+        else -> null
     }
 
 internal fun Modifier.dockShelfPolicies(interactions: DockInteractions): Modifier =
