@@ -259,24 +259,13 @@ private fun PageOverviewCard(
             modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = pageOverviewLabel(index = state.index),
-                    style = MaterialTheme.typography.titleSmall,
-                )
-                TextButton(
-                    onClick = {
-                        onAction(LauncherShellAction.SelectHomePage(state.page.id))
-                        isMenuExpanded.value = true
-                    },
-                ) {
-                    Text(text = "More")
-                }
-            }
+            PageOverviewCardHeader(
+                state = state,
+                onMoreClick = {
+                    onAction(LauncherShellAction.SelectHomePage(state.page.id))
+                    isMenuExpanded.value = true
+                },
+            )
             Text(
                 text = state.page.type.pageOverviewTypeLabel,
                 style = MaterialTheme.typography.labelMedium,
@@ -297,6 +286,26 @@ private fun PageOverviewCard(
                 onDismissRequest = { isMenuExpanded.value = false },
                 onAction = onAction,
             )
+        }
+    }
+}
+
+@Composable
+private fun PageOverviewCardHeader(
+    state: PageOverviewCardState,
+    onMoreClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = pageOverviewLabel(index = state.index),
+            style = MaterialTheme.typography.titleSmall,
+        )
+        TextButton(onClick = onMoreClick) {
+            Text(text = "More")
         }
     }
 }
