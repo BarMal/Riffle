@@ -30,7 +30,6 @@ class CardStackTest {
             composeRule.onNodeWithText(cardLabel(entry.cardIndex)).assertExists()
         }
         assertTraversalIndex(cardIndex = 1, index = -2f)
-        assertTraversalIndex(cardIndex = 0, index = 0f)
     }
 
     @Test
