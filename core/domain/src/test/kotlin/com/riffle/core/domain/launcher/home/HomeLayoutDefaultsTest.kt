@@ -80,6 +80,7 @@ class HomeLayoutDefaultsTest {
         assertEquals(8, layout.dock.itemSpacingDp)
         assertEquals(5, layout.dock.availableSlots)
         assertTrue(layout.dock.items.isEmpty())
+        assertEquals(false, layout.dock.showNotificationCards)
     }
 
     @Test

@@ -67,16 +67,18 @@ class DockNotificationCardsTest {
     }
 
     @Test
-    fun hiddenWhenDockNotificationCardsAreDisabled() {
-        assertEquals(
-            DockNotificationShelfState.Hidden,
-            dockNotificationShelfState(
-                showNotificationCards = false,
-                groups = listOf(notificationGroup(packageName = "com.example.chat")),
-                notificationAccessStatus = NotificationAccessStatus.GRANTED,
-                apps = emptyList(),
-            ),
-        )
+    fun disabledNotificationCardsNeverShowContentOrPermissionPrompts() {
+        NotificationAccessStatus.entries.forEach { notificationAccessStatus ->
+            assertEquals(
+                DockNotificationShelfState.Hidden,
+                dockNotificationShelfState(
+                    showNotificationCards = false,
+                    groups = listOf(notificationGroup(packageName = "com.example.chat")),
+                    notificationAccessStatus = notificationAccessStatus,
+                    apps = emptyList(),
+                ),
+            )
+        }
     }
 
     @Test

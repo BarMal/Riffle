@@ -5,12 +5,19 @@ launcher experience fully usable without contextual pages, cards, or smart behav
 
 ## Default behaviour
 
-- Contextual behaviour is off by default and can remain off in **Settings > Contextual**.
+- Contextual behaviour and expanded dock notification cards are off by default. They can remain
+  off in **Settings > Contextual** and **Settings > Dock**, respectively.
 - Home screens, the app drawer, dock, folders, widgets, wallpaper, search, shortcuts,
   grid editing, gestures, backup/restore, profiles, hidden apps, and notification indicators
   continue to work as standard launcher features.
 - Dynamic pages, cards, and TimeScape-inspired surfaces are optional enhancements. They must
   not be required for navigation, layout persistence, settings, or launcher performance.
+
+## Disabled-feature contract
+
+With contextual behaviour and expanded dock notification cards disabled, Riffle must keep the
+standard home, app drawer, dock, and settings surfaces available. Disabled notification cards
+must not produce a notification-access prompt; enabling them is an explicit user choice.
 
 ## Product and design guardrails
 
