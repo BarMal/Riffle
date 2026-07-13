@@ -4,12 +4,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
-import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.hasAnyDescendant
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNode
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.hasAnyDescendant
-import androidx.compose.ui.test.hasText
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.riffle.core.domain.launcher.cards.CardStackLayoutEntry
 import com.riffle.core.domain.launcher.cards.CardStackLayoutPolicy
