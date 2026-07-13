@@ -72,30 +72,47 @@ private fun FilledFolderPreviewIcon(
     appIconLoader: AppIconLoader,
     iconSizeDp: Int,
 ) {
+    val layout = folderPreviewLayout(iconSizeDp)
     Column(
         modifier =
             Modifier
                 .size(iconSizeDp.dp)
                 .clip(RoundedCornerShape(12.dp))
                 .background(MaterialTheme.colorScheme.secondaryContainer)
-                .padding(4.dp),
-        verticalArrangement = Arrangement.spacedBy(2.dp),
+                .padding(layout.paddingDp.dp),
+        verticalArrangement = Arrangement.spacedBy(layout.spacingDp.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         folder.items.take(FOLDER_PREVIEW_ICON_COUNT).chunked(2).forEach { rowItems ->
-            Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(layout.spacingDp.dp)) {
                 rowItems.forEach { shortcut ->
                     LauncherAppIcon(
                         identity = shortcut.appIdentity,
                         label = shortcut.label,
                         iconLoader = appIconLoader,
-                        modifier = Modifier.size(17.dp),
+                        modifier = Modifier.size(layout.childIconSizeDp.dp),
                         shape = RoundedCornerShape(5.dp),
                     )
                 }
             }
         }
     }
+}
+
+internal data class FolderPreviewLayout(
+    val paddingDp: Int,
+    val spacingDp: Int,
+    val childIconSizeDp: Int,
+)
+
+internal fun folderPreviewLayout(iconSizeDp: Int): FolderPreviewLayout {
+    val paddingDp = (iconSizeDp / 10).coerceAtLeast(1)
+    val spacingDp = (iconSizeDp / 22).coerceAtLeast(1)
+    return FolderPreviewLayout(
+        paddingDp = paddingDp,
+        spacingDp = spacingDp,
+        childIconSizeDp = ((iconSizeDp - (paddingDp * 2) - spacingDp) / 2).coerceAtLeast(1),
+    )
 }
 
 private const val FOLDER_PREVIEW_ICON_COUNT = 4
