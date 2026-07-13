@@ -70,6 +70,7 @@ class LauncherGestureMappingsTest {
                 actions =
                     mapOf(
                         HomeGesture.ONE_FINGER_UP to LauncherGestureAction.OPEN_SEARCH,
+                        HomeGesture.THREE_FINGER_LEFT to LauncherGestureAction.OPEN_SETTINGS,
                         HomeGesture.PINCH_OUT to LauncherGestureAction.OPEN_SEARCH,
                     ),
             ).toLauncherGestureMappings()
@@ -81,6 +82,10 @@ class LauncherGestureMappingsTest {
         assertEquals(
             LauncherGestureAction.OPEN_SEARCH,
             mappings.actionFor(LauncherGestureSurface.HOME_PAGE, LauncherGesture.PINCH_OUT),
+        )
+        assertEquals(
+            LauncherGestureAction.OPEN_SETTINGS,
+            mappings.actionFor(LauncherGestureSurface.HOME_PAGE, LauncherGesture.THREE_FINGER_LEFT),
         )
         assertTrue(
             LauncherGestureConflictDetector.conflictsIn(mappings).isNotEmpty(),
@@ -104,6 +109,10 @@ class LauncherGestureMappingsTest {
         assertEquals(
             LauncherGestureAction.NONE,
             mappings.actionFor(LauncherGestureSurface.HOME_PAGE, LauncherGesture.TWO_FINGER_LEFT),
+        )
+        assertEquals(
+            LauncherGestureAction.NONE,
+            mappings.actionFor(LauncherGestureSurface.HOME_PAGE, LauncherGesture.THREE_FINGER_LEFT),
         )
         assertEquals(
             listOf(

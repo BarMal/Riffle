@@ -18,7 +18,7 @@ class HomeSwipeGestureInterpreter(
         val dragAxis = dominantAxis(horizontalDragPx = horizontalDragPx, verticalDragPx = verticalDragPx)
 
         return when {
-            pointerCount >= 2 && kotlin.math.abs(scaleDelta) >= pinchThreshold ->
+            pointerCount == 2 && kotlin.math.abs(scaleDelta) >= pinchThreshold ->
                 pinchGestureFor(scaleDelta)
 
             dragAxis == GestureAxis.HORIZONTAL ->
@@ -50,19 +50,9 @@ class HomeSwipeGestureInterpreter(
         verticalDragPx: Float,
     ): HomeGesture? =
         when {
-            verticalDragPx <= -thresholdPx ->
-                if (pointerCount >= 2) {
-                    HomeGesture.TWO_FINGER_UP
-                } else {
-                    HomeGesture.ONE_FINGER_UP
-                }
+            verticalDragPx <= -thresholdPx -> verticalGestureFor(pointerCount, up = true)
 
-            verticalDragPx >= thresholdPx ->
-                if (pointerCount >= 2) {
-                    HomeGesture.TWO_FINGER_DOWN
-                } else {
-                    HomeGesture.ONE_FINGER_DOWN
-                }
+            verticalDragPx >= thresholdPx -> verticalGestureFor(pointerCount, up = false)
 
             else -> null
         }
@@ -72,21 +62,37 @@ class HomeSwipeGestureInterpreter(
         horizontalDragPx: Float,
     ): HomeGesture? =
         when {
-            horizontalDragPx <= -thresholdPx ->
-                if (pointerCount >= 2) {
-                    HomeGesture.TWO_FINGER_LEFT
-                } else {
-                    HomeGesture.ONE_FINGER_LEFT
-                }
+            horizontalDragPx <= -thresholdPx -> horizontalGestureFor(pointerCount, left = true)
 
-            horizontalDragPx >= thresholdPx ->
-                if (pointerCount >= 2) {
-                    HomeGesture.TWO_FINGER_RIGHT
-                } else {
-                    HomeGesture.ONE_FINGER_RIGHT
-                }
+            horizontalDragPx >= thresholdPx -> horizontalGestureFor(pointerCount, left = false)
 
             else -> null
+        }
+
+    private fun verticalGestureFor(
+        pointerCount: Int,
+        up: Boolean,
+    ): HomeGesture =
+        when {
+            pointerCount >= 3 && up -> HomeGesture.THREE_FINGER_UP
+            pointerCount >= 3 -> HomeGesture.THREE_FINGER_DOWN
+            pointerCount == 2 && up -> HomeGesture.TWO_FINGER_UP
+            pointerCount == 2 -> HomeGesture.TWO_FINGER_DOWN
+            up -> HomeGesture.ONE_FINGER_UP
+            else -> HomeGesture.ONE_FINGER_DOWN
+        }
+
+    private fun horizontalGestureFor(
+        pointerCount: Int,
+        left: Boolean,
+    ): HomeGesture =
+        when {
+            pointerCount >= 3 && left -> HomeGesture.THREE_FINGER_LEFT
+            pointerCount >= 3 -> HomeGesture.THREE_FINGER_RIGHT
+            pointerCount == 2 && left -> HomeGesture.TWO_FINGER_LEFT
+            pointerCount == 2 -> HomeGesture.TWO_FINGER_RIGHT
+            left -> HomeGesture.ONE_FINGER_LEFT
+            else -> HomeGesture.ONE_FINGER_RIGHT
         }
 
     private fun pinchGestureFor(scaleDelta: Float): HomeGesture =

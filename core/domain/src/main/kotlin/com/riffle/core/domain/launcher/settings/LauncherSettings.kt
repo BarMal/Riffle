@@ -78,6 +78,10 @@ enum class HomeGesture {
     TWO_FINGER_DOWN,
     TWO_FINGER_LEFT,
     TWO_FINGER_RIGHT,
+    THREE_FINGER_UP,
+    THREE_FINGER_DOWN,
+    THREE_FINGER_LEFT,
+    THREE_FINGER_RIGHT,
     PINCH_IN,
     PINCH_OUT,
 }
@@ -92,6 +96,10 @@ val defaultHomeGestureActions: Map<HomeGesture, LauncherGestureAction> =
         HomeGesture.TWO_FINGER_DOWN to LauncherGestureAction.OPEN_SETTINGS,
         HomeGesture.TWO_FINGER_LEFT to LauncherGestureAction.NONE,
         HomeGesture.TWO_FINGER_RIGHT to LauncherGestureAction.NONE,
+        HomeGesture.THREE_FINGER_UP to LauncherGestureAction.NONE,
+        HomeGesture.THREE_FINGER_DOWN to LauncherGestureAction.NONE,
+        HomeGesture.THREE_FINGER_LEFT to LauncherGestureAction.NONE,
+        HomeGesture.THREE_FINGER_RIGHT to LauncherGestureAction.NONE,
         HomeGesture.PINCH_IN to LauncherGestureAction.ENTER_HOME_EDIT_MODE,
         HomeGesture.PINCH_OUT to LauncherGestureAction.OPEN_APP_DRAWER,
     )

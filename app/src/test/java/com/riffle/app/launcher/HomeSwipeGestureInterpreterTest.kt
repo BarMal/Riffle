@@ -45,6 +45,26 @@ class HomeSwipeGestureInterpreterTest {
     }
 
     @Test
+    fun interpretsThreeFingerSwipes() {
+        assertEquals(
+            HomeGesture.THREE_FINGER_UP,
+            interpreter.gestureFor(pointerCount = 3, horizontalDragPx = 0f, verticalDragPx = -100f),
+        )
+        assertEquals(
+            HomeGesture.THREE_FINGER_DOWN,
+            interpreter.gestureFor(pointerCount = 3, horizontalDragPx = 0f, verticalDragPx = 100f),
+        )
+        assertEquals(
+            HomeGesture.THREE_FINGER_LEFT,
+            interpreter.gestureFor(pointerCount = 3, horizontalDragPx = -100f, verticalDragPx = 0f),
+        )
+        assertEquals(
+            HomeGesture.THREE_FINGER_RIGHT,
+            interpreter.gestureFor(pointerCount = 3, horizontalDragPx = 100f, verticalDragPx = 0f),
+        )
+    }
+
+    @Test
     fun interpretsPinchesBeforeTwoFingerSwipes() {
         assertEquals(
             HomeGesture.PINCH_IN,
@@ -115,6 +135,7 @@ class HomeSwipeGestureInterpreterTest {
                         HomeGesture.ONE_FINGER_RIGHT to LauncherGestureAction.ENTER_HOME_PAGE_OVERVIEW,
                         HomeGesture.PINCH_OUT to LauncherGestureAction.OPEN_NOTIFICATIONS,
                         HomeGesture.TWO_FINGER_RIGHT to LauncherGestureAction.ENTER_FULLSCREEN_HOME,
+                        HomeGesture.THREE_FINGER_LEFT to LauncherGestureAction.OPEN_APP_DRAWER,
                     ),
             )
 
@@ -132,6 +153,10 @@ class HomeSwipeGestureInterpreterTest {
         assertEquals(
             LauncherShellAction.SelectFullscreenHomeEnabled(true),
             actionMapper.actionFor(HomeGesture.TWO_FINGER_RIGHT, settings),
+        )
+        assertEquals(
+            LauncherShellAction.OpenAppDrawer,
+            actionMapper.actionFor(HomeGesture.THREE_FINGER_LEFT, settings),
         )
     }
 
