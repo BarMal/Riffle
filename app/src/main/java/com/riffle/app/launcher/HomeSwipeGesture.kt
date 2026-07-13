@@ -18,6 +18,8 @@ class HomeSwipeGestureInterpreter(
         val dragAxis = dominantAxis(horizontalDragPx = horizontalDragPx, verticalDragPx = verticalDragPx)
 
         return when {
+            pointerCount > 3 -> null
+
             pointerCount == 2 && kotlin.math.abs(scaleDelta) >= pinchThreshold ->
                 pinchGestureFor(scaleDelta)
 
@@ -74,8 +76,8 @@ class HomeSwipeGestureInterpreter(
         up: Boolean,
     ): HomeGesture =
         when {
-            pointerCount >= 3 && up -> HomeGesture.THREE_FINGER_UP
-            pointerCount >= 3 -> HomeGesture.THREE_FINGER_DOWN
+            pointerCount == 3 && up -> HomeGesture.THREE_FINGER_UP
+            pointerCount == 3 -> HomeGesture.THREE_FINGER_DOWN
             pointerCount == 2 && up -> HomeGesture.TWO_FINGER_UP
             pointerCount == 2 -> HomeGesture.TWO_FINGER_DOWN
             up -> HomeGesture.ONE_FINGER_UP
@@ -87,8 +89,8 @@ class HomeSwipeGestureInterpreter(
         left: Boolean,
     ): HomeGesture =
         when {
-            pointerCount >= 3 && left -> HomeGesture.THREE_FINGER_LEFT
-            pointerCount >= 3 -> HomeGesture.THREE_FINGER_RIGHT
+            pointerCount == 3 && left -> HomeGesture.THREE_FINGER_LEFT
+            pointerCount == 3 -> HomeGesture.THREE_FINGER_RIGHT
             pointerCount == 2 && left -> HomeGesture.TWO_FINGER_LEFT
             pointerCount == 2 -> HomeGesture.TWO_FINGER_RIGHT
             left -> HomeGesture.ONE_FINGER_LEFT

@@ -65,6 +65,28 @@ class HomeSwipeGestureInterpreterTest {
     }
 
     @Test
+    fun ignoresFourFingerSwipes() {
+        val settings =
+            HomeGestureSettings(
+                actions = mapOf(HomeGesture.THREE_FINGER_LEFT to LauncherGestureAction.OPEN_APP_DRAWER),
+            )
+
+        assertNull(
+            interpreter.gestureFor(pointerCount = 4, horizontalDragPx = -100f, verticalDragPx = 0f),
+        )
+        assertNull(
+            homeSwipeActionForDrag(
+                pointerCount = 4,
+                horizontalDragPx = -100f,
+                verticalDragPx = 0f,
+                settings = settings,
+                interpreter = interpreter,
+                actionMapper = actionMapper,
+            ),
+        )
+    }
+
+    @Test
     fun interpretsPinchesBeforeTwoFingerSwipes() {
         assertEquals(
             HomeGesture.PINCH_IN,
