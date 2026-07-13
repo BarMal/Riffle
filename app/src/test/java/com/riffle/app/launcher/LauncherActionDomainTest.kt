@@ -31,6 +31,7 @@ import com.riffle.core.domain.launcher.settings.HomeGesture
 import com.riffle.core.domain.launcher.settings.HomeSwipeGestureDirection
 import com.riffle.core.domain.launcher.settings.LauncherGestureAction
 import com.riffle.core.domain.launcher.settings.LauncherSettings
+import com.riffle.core.domain.launcher.settings.MotionPerformanceTargetFps
 import com.riffle.core.domain.launcher.settings.OverlayDockEdge
 import com.riffle.core.domain.launcher.settings.OverlayDockExpandedOrientation
 import com.riffle.core.domain.launcher.settings.OverlayDockItemMoveDirection
@@ -336,6 +337,10 @@ class LauncherActionDomainTest {
                     LauncherShellAction.SelectHapticFeedbackStrength(HapticFeedbackStrength.LIGHT),
                 ),
                 settings("SelectReducedMotionEnabled", LauncherShellAction.SelectReducedMotionEnabled(enabled = true)),
+                settings(
+                    "SelectMotionPerformanceTargetFps",
+                    LauncherShellAction.SelectMotionPerformanceTargetFps(MotionPerformanceTargetFps.FPS_120),
+                ),
                 settings("SelectContextualEnabled", LauncherShellAction.SelectContextualEnabled(enabled = true)),
                 settings("SelectOverlayDockEnabled", LauncherShellAction.SelectOverlayDockEnabled(enabled = true)),
                 settings("SelectOverlayDockEdge", LauncherShellAction.SelectOverlayDockEdge(OverlayDockEdge.START)),
