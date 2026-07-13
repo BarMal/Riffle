@@ -64,7 +64,6 @@ internal fun launcherCardShape(themePreset: LauncherThemePreset): Shape =
     RoundedCornerShape(
         when (themePreset) {
             LauncherThemePreset.MINIMAL -> 8.dp
-            LauncherThemePreset.VICTORIAN -> 20.dp
             LauncherThemePreset.RETRO -> 12.dp
             LauncherThemePreset.GLASS -> 28.dp
             LauncherThemePreset.TERMINAL -> 0.dp
@@ -78,7 +77,6 @@ internal fun launcherPanelShape(themePreset: LauncherThemePreset): Shape =
     RoundedCornerShape(
         when (themePreset) {
             LauncherThemePreset.MINIMAL -> 12.dp
-            LauncherThemePreset.VICTORIAN -> 28.dp
             LauncherThemePreset.RETRO -> 20.dp
             LauncherThemePreset.GLASS -> 36.dp
             LauncherThemePreset.TERMINAL -> 0.dp
@@ -90,8 +88,6 @@ internal fun launcherPanelShape(themePreset: LauncherThemePreset): Shape =
 
 internal fun launcherTypography(themePreset: LauncherThemePreset): Typography =
     when (themePreset) {
-        LauncherThemePreset.VICTORIAN -> defaultLauncherTypography.withFontFamily(FontFamily.Serif)
-
         LauncherThemePreset.TERMINAL -> defaultLauncherTypography.withFontFamily(FontFamily.Monospace)
 
         else -> defaultLauncherTypography
@@ -134,7 +130,6 @@ private fun ColorScheme.withThemePreset(preset: LauncherThemePreset): ColorSchem
         -> this
 
         LauncherThemePreset.MINIMAL -> copy(primary = Color(0xFF5B5F66), secondary = Color(0xFF5B5F66))
-        LauncherThemePreset.VICTORIAN -> copy(primary = Color(0xFF76546F), secondary = Color(0xFF4D5C92))
         LauncherThemePreset.RETRO -> copy(primary = Color(0xFF875A00), secondary = Color(0xFF006B5F))
         LauncherThemePreset.GLASS -> copy(primary = Color(0xFF356F8A), secondary = Color(0xFF4D5C92))
         LauncherThemePreset.TERMINAL -> copy(primary = Color(0xFF1D7A45), secondary = Color(0xFF1D7A45))

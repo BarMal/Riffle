@@ -70,9 +70,7 @@ class LauncherThemeTest {
     }
 
     @Test
-    fun typographyTokenVariesForVictorianAndTerminal() {
-        assertEquals(FontFamily.Serif, launcherTypography(LauncherThemePreset.VICTORIAN).headlineMedium.fontFamily)
-        assertEquals(FontFamily.Serif, launcherTypography(LauncherThemePreset.VICTORIAN).bodyMedium.fontFamily)
+    fun typographyTokenVariesForTerminal() {
         assertEquals(FontFamily.Monospace, launcherTypography(LauncherThemePreset.TERMINAL).headlineMedium.fontFamily)
         assertEquals(FontFamily.Monospace, launcherTypography(LauncherThemePreset.TERMINAL).bodyMedium.fontFamily)
         assertSame(launcherTypography(LauncherThemePreset.MATERIAL), launcherTypography(LauncherThemePreset.CUSTOM))

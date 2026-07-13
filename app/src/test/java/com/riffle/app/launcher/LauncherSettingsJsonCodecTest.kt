@@ -181,11 +181,11 @@ class LauncherSettingsJsonCodecTest {
 
     @Test
     fun roundTripsThemePreset() {
-        val settings = LauncherSettings(appearance = AppearanceSettings(themePreset = LauncherThemePreset.VICTORIAN))
+        val settings = LauncherSettings(appearance = AppearanceSettings(themePreset = LauncherThemePreset.RETRO))
 
         val decodedSettings = decodeLauncherSettings(encodeLauncherSettings(settings))
 
-        assertEquals(LauncherThemePreset.VICTORIAN, decodedSettings.appearance.themePreset)
+        assertEquals(LauncherThemePreset.RETRO, decodedSettings.appearance.themePreset)
     }
 
     @Test
@@ -197,6 +197,16 @@ class LauncherSettingsJsonCodecTest {
         assertEquals(
             LauncherThemePreset.MATERIAL,
             decodeLauncherSettings("{\"appearance\": {\"themePreset\": \"UNKNOWN\"}}").appearance.themePreset,
+        )
+    }
+
+    @Test
+    fun migratesHistoricalVictorianThemePresetToMaterial() {
+        assertEquals(
+            LauncherThemePreset.MATERIAL,
+            decodeLauncherSettings(
+                "{\"appearance\": {\"themePreset\": \"VICTORIAN\"}}",
+            ).appearance.themePreset,
         )
     }
 

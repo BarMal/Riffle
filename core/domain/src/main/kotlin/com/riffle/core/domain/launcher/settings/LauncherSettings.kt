@@ -31,7 +31,6 @@ enum class LauncherThemeMode {
 enum class LauncherThemePreset {
     MATERIAL,
     MINIMAL,
-    VICTORIAN,
     RETRO,
     GLASS,
     TERMINAL,

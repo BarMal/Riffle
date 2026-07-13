@@ -302,7 +302,7 @@ class LauncherActionDomainTest {
                 settings(
                     "SelectLauncherThemePreset",
                     LauncherShellAction.SelectLauncherThemePreset(
-                        com.riffle.core.domain.launcher.settings.LauncherThemePreset.VICTORIAN,
+                        com.riffle.core.domain.launcher.settings.LauncherThemePreset.RETRO,
                     ),
                 ),
                 settings(

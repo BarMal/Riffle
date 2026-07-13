@@ -5,7 +5,6 @@ enum class CardStackLayoutProfile(
 ) {
     DECK(CardStackLayoutPolicy()),
     FAN(CardStackLayoutPolicy(offsetStep = 28f, verticalOffsetStep = 4f, rotationStep = 4f)),
-    VICTORIAN(CardStackLayoutPolicy(offsetStep = 18f, curveStep = 8f, rotationStep = 3f)),
     VERTICAL(CardStackLayoutPolicy(offsetStep = 0f, verticalOffsetStep = 36f)),
     CAROUSEL(CardStackLayoutPolicy(offsetStep = 48f, verticalOffsetStep = 6f, rotationStep = 8f)),
     COMPACT(CardStackLayoutPolicy(maxVisibleDepth = 2, scaleStep = 0.03f, offsetStep = 12f, alphaStep = 0.08f)),
