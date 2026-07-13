@@ -36,27 +36,42 @@ class HomeIconPressInteractionTest {
     val composeRule = createComposeRule()
 
     @Test
-    fun shortcutTapAndLongPressWorkWithBothMotionPolicies() {
-        val shortcut = shortcut(label = "Camera")
-
-        listOf(false, true).forEach { reducedMotion ->
-            val actions = mutableListOf<LauncherShellAction>()
-            setContent(item = shortcut, reducedMotion = reducedMotion, actions = actions)
-
-            composeRule.onNodeWithText(shortcut.label).performClick()
-
-            composeRule.runOnIdle {
-                assertEquals(listOf(shortcut.launchAction()), actions)
-            }
-
-            composeRule.onNodeWithText(shortcut.label).performTouchInput { longClick() }
-
-            composeRule.onNodeWithText("Remove from home").assertExists()
-        }
+    fun shortcutTapAndLongPressWorkWithStandardMotion() {
+        verifyShortcutPressInteractions(reducedMotion = false)
     }
 
     @Test
-    fun folderTapAndLongPressWorkWithBothMotionPolicies() {
+    fun shortcutTapAndLongPressWorkWithReducedMotion() {
+        verifyShortcutPressInteractions(reducedMotion = true)
+    }
+
+    @Test
+    fun folderTapAndLongPressWorkWithStandardMotion() {
+        verifyFolderPressInteractions(reducedMotion = false)
+    }
+
+    @Test
+    fun folderTapAndLongPressWorkWithReducedMotion() {
+        verifyFolderPressInteractions(reducedMotion = true)
+    }
+
+    private fun verifyShortcutPressInteractions(reducedMotion: Boolean) {
+        val shortcut = shortcut(label = "Camera")
+        val actions = mutableListOf<LauncherShellAction>()
+        setContent(item = shortcut, reducedMotion = reducedMotion, actions = actions)
+
+        composeRule.onNodeWithText(shortcut.label).performClick()
+
+        composeRule.runOnIdle {
+            assertEquals(listOf(shortcut.launchAction()), actions)
+        }
+
+        composeRule.onNodeWithText(shortcut.label).performTouchInput { longClick() }
+
+        composeRule.onNodeWithText("Remove from home").assertExists()
+    }
+
+    private fun verifyFolderPressInteractions(reducedMotion: Boolean) {
         val folder =
             FolderItem(
                 id = LauncherItemId("folder:tools"),
@@ -64,21 +79,18 @@ class HomeIconPressInteractionTest {
                 items = emptyList(),
                 placement = GridPlacement(cell = GridCell(column = 0, row = 0)),
             )
+        val openedFolders = mutableListOf<FolderItem>()
+        setContent(item = folder, reducedMotion = reducedMotion, openedFolders = openedFolders)
 
-        listOf(false, true).forEach { reducedMotion ->
-            val openedFolders = mutableListOf<FolderItem>()
-            setContent(item = folder, reducedMotion = reducedMotion, openedFolders = openedFolders)
+        composeRule.onNodeWithText(folder.label).performClick()
 
-            composeRule.onNodeWithText(folder.label).performClick()
-
-            composeRule.runOnIdle {
-                assertEquals(listOf(folder), openedFolders)
-            }
-
-            composeRule.onNodeWithText(folder.label).performTouchInput { longClick() }
-
-            composeRule.onNodeWithText("Remove from home").assertExists()
+        composeRule.runOnIdle {
+            assertEquals(listOf(folder), openedFolders)
         }
+
+        composeRule.onNodeWithText(folder.label).performTouchInput { longClick() }
+
+        composeRule.onNodeWithText("Remove from home").assertExists()
     }
 
     private fun setContent(
