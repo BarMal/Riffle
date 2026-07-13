@@ -95,33 +95,13 @@ private fun GridMarginSetting(
     label: String,
     value: Int,
     onValueChange: (Int) -> Unit,
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        SettingsTextColumn(
-            modifier = Modifier.weight(1f),
-            title = label,
-            subtitle = "$value dp",
-        )
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            TextButton(
-                enabled = value > MIN_HOME_GRID_MARGIN_DP,
-                onClick = { onValueChange(value - 1) },
-            ) {
-                SettingsButtonText(text = "-")
-            }
-            TextButton(
-                enabled = value < MAX_HOME_GRID_MARGIN_DP,
-                onClick = { onValueChange(value + 1) },
-            ) {
-                SettingsButtonText(text = "+")
-            }
-        }
-    }
-}
+) = DiscreteSettingSlider(
+    title = label,
+    value = value,
+    valueRange = MIN_HOME_GRID_MARGIN_DP..MAX_HOME_GRID_MARGIN_DP,
+    valueLabel = { "$it dp" },
+    onValueChange = onValueChange,
+)
 
 @Composable
 private fun GridDimensionSetting(

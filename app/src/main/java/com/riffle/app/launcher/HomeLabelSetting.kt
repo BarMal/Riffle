@@ -70,139 +70,37 @@ private fun HomeLabelVisibilitySetting(
 private fun HomeLabelBackgroundSetting(
     settings: HomeLabelSettings,
     onAction: (LauncherShellAction) -> Unit,
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        SettingsTextColumn(
-            modifier = Modifier.weight(1f),
-            title = "Label background",
-            subtitle = "${settings.backgroundAlphaPercent}%",
-        )
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            TextButton(
-                enabled = settings.backgroundAlphaPercent > MIN_HOME_LABEL_BACKGROUND_ALPHA_PERCENT,
-                onClick = {
-                    onAction(
-                        LauncherShellAction.SelectHomeLabelBackgroundAlpha(
-                            settings.backgroundAlphaPercent - HOME_LABEL_BACKGROUND_ALPHA_STEP_PERCENT,
-                        ),
-                    )
-                },
-            ) {
-                SettingsButtonText(text = "-")
-            }
-            TextButton(
-                enabled = settings.backgroundAlphaPercent < MAX_HOME_LABEL_BACKGROUND_ALPHA_PERCENT,
-                onClick = {
-                    onAction(
-                        LauncherShellAction.SelectHomeLabelBackgroundAlpha(
-                            settings.backgroundAlphaPercent + HOME_LABEL_BACKGROUND_ALPHA_STEP_PERCENT,
-                        ),
-                    )
-                },
-            ) {
-                SettingsButtonText(text = "+")
-            }
-        }
-    }
-}
-
-private const val HOME_LABEL_BACKGROUND_ALPHA_STEP_PERCENT = 5
+) = DiscreteSettingSlider(
+    title = "Label background",
+    value = settings.backgroundAlphaPercent,
+    valueRange = MIN_HOME_LABEL_BACKGROUND_ALPHA_PERCENT..MAX_HOME_LABEL_BACKGROUND_ALPHA_PERCENT,
+    valueLabel = { "$it%" },
+    onValueChange = { value -> onAction(LauncherShellAction.SelectHomeLabelBackgroundAlpha(value)) },
+)
 
 @Composable
 private fun HomeLabelTextSizeSetting(
     settings: HomeLabelSettings,
     onAction: (LauncherShellAction) -> Unit,
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        SettingsTextColumn(
-            modifier = Modifier.weight(1f),
-            title = "Label text size",
-            subtitle = "${settings.textSizeSp} sp",
-        )
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            TextButton(
-                enabled = settings.textSizeSp > MIN_HOME_LABEL_TEXT_SIZE_SP,
-                onClick = {
-                    onAction(
-                        LauncherShellAction.SelectHomeLabelTextSize(
-                            settings.textSizeSp - HOME_LABEL_TEXT_SIZE_STEP_SP,
-                        ),
-                    )
-                },
-            ) {
-                SettingsButtonText(text = "-")
-            }
-            TextButton(
-                enabled = settings.textSizeSp < MAX_HOME_LABEL_TEXT_SIZE_SP,
-                onClick = {
-                    onAction(
-                        LauncherShellAction.SelectHomeLabelTextSize(
-                            settings.textSizeSp + HOME_LABEL_TEXT_SIZE_STEP_SP,
-                        ),
-                    )
-                },
-            ) {
-                SettingsButtonText(text = "+")
-            }
-        }
-    }
-}
-
-private const val HOME_LABEL_TEXT_SIZE_STEP_SP = 1
+) = DiscreteSettingSlider(
+    title = "Label text size",
+    value = settings.textSizeSp,
+    valueRange = MIN_HOME_LABEL_TEXT_SIZE_SP..MAX_HOME_LABEL_TEXT_SIZE_SP,
+    valueLabel = { "$it sp" },
+    onValueChange = { value -> onAction(LauncherShellAction.SelectHomeLabelTextSize(value)) },
+)
 
 @Composable
 private fun HomeLabelWidthSetting(
     settings: HomeLabelSettings,
     onAction: (LauncherShellAction) -> Unit,
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        SettingsTextColumn(
-            modifier = Modifier.weight(1f),
-            title = "Label width",
-            subtitle = homeLabelWidthDescription(settings),
-        )
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            TextButton(
-                enabled = settings.maxWidthDp > MIN_HOME_LABEL_MAX_WIDTH_DP,
-                onClick = {
-                    onAction(
-                        LauncherShellAction.SelectHomeLabelMaxWidth(
-                            settings.maxWidthDp - HOME_LABEL_WIDTH_STEP_DP,
-                        ),
-                    )
-                },
-            ) {
-                SettingsButtonText(text = "-")
-            }
-            TextButton(
-                enabled = settings.maxWidthDp < MAX_HOME_LABEL_MAX_WIDTH_DP,
-                onClick = {
-                    onAction(
-                        LauncherShellAction.SelectHomeLabelMaxWidth(
-                            settings.maxWidthDp + HOME_LABEL_WIDTH_STEP_DP,
-                        ),
-                    )
-                },
-            ) {
-                SettingsButtonText(text = "+")
-            }
-        }
-    }
-}
-
-private const val HOME_LABEL_WIDTH_STEP_DP = 8
+) = DiscreteSettingSlider(
+    title = "Label width",
+    value = settings.maxWidthDp,
+    valueRange = MIN_HOME_LABEL_MAX_WIDTH_DP..MAX_HOME_LABEL_MAX_WIDTH_DP,
+    valueLabel = { homeLabelWidthDescription(settings.copy(maxWidthDp = it)) },
+    onValueChange = { value -> onAction(LauncherShellAction.SelectHomeLabelMaxWidth(value)) },
+)
 
 internal fun homeLabelWidthDescription(settings: HomeLabelSettings): String =
     when (settings.sizing) {
@@ -242,33 +140,13 @@ private fun HomeLabelSizingSetting(
 private fun HomeLabelLineCountSetting(
     settings: HomeLabelSettings,
     onAction: (LauncherShellAction) -> Unit,
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        SettingsTextColumn(
-            modifier = Modifier.weight(1f),
-            title = "Label lines",
-            subtitle = settings.maxLines.toString(),
-        )
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            TextButton(
-                enabled = settings.maxLines > MIN_HOME_LABEL_MAX_LINES,
-                onClick = { onAction(LauncherShellAction.SelectHomeLabelMaxLines(settings.maxLines - 1)) },
-            ) {
-                SettingsButtonText(text = "-")
-            }
-            TextButton(
-                enabled = settings.maxLines < MAX_HOME_LABEL_MAX_LINES,
-                onClick = { onAction(LauncherShellAction.SelectHomeLabelMaxLines(settings.maxLines + 1)) },
-            ) {
-                SettingsButtonText(text = "+")
-            }
-        }
-    }
-}
+) = DiscreteSettingSlider(
+    title = "Label lines",
+    value = settings.maxLines,
+    valueRange = MIN_HOME_LABEL_MAX_LINES..MAX_HOME_LABEL_MAX_LINES,
+    valueLabel = Int::toString,
+    onValueChange = { value -> onAction(LauncherShellAction.SelectHomeLabelMaxLines(value)) },
+)
 
 private val HomeLabelSizing.buttonLabel: String
     get() =
