@@ -28,19 +28,13 @@ class LauncherTemplateCatalogDefaultsTest {
     }
 
     @Test
-    fun standardPhoneAppDrawerDefaultsToClassicPhoneSeeds() {
+    fun standardPhoneAppDrawerDefaultsToHomeSeed() {
         val template = requireTemplate(LauncherTemplateCatalogDefaults.standardPhoneAppDrawerId)
 
         assertEquals("Standard phone app drawer", template.metadata.displayName)
         assertEquals(setOf(LauncherViewMode.STANDARD_APP_DRAWER), template.supportedViewModes)
         assertEquals(setOf(HomeLayoutDeviceClass.PHONE), template.supportedDeviceClasses)
-        assertEquals(
-            listOf(
-                LauncherPageType.Home,
-                LauncherPageType.AllApps,
-            ),
-            template.seedPageTypes,
-        )
+        assertEquals(listOf(LauncherPageType.Home), template.seedPageTypes)
     }
 
     @Test
@@ -168,7 +162,6 @@ class LauncherTemplateCatalogDefaultsTest {
         assertEquals(
             listOf(
                 LauncherPageId("home"),
-                LauncherPageId("all-apps"),
             ),
             standard.pages.map { page -> page.id },
         )
