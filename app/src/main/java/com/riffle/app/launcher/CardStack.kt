@@ -22,6 +22,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.semantics.isTraversalGroup
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.traversalIndex
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.zIndex
 import com.riffle.core.domain.launcher.cards.CardStackAnimationProfile
 import com.riffle.core.domain.launcher.cards.CardStackLayoutEntry
@@ -97,7 +98,7 @@ private fun cardStackContentTransform(
     val exitingPose = cardStackTransitionPose(animationProfile, entering = false)
     val spec = animationProfile.spec
     val alphaAnimation = tween<Float>(durationMillis = spec.durationMillis)
-    val translationAnimation = tween<Int>(durationMillis = spec.durationMillis)
+    val translationAnimation = tween<IntOffset>(durationMillis = spec.durationMillis)
     val enterAlpha =
         if (spec.animatesAlpha) fadeIn(alphaAnimation, enteringPose.alpha) else EnterTransition.None
     val enterHorizontalTranslation =
