@@ -1,6 +1,7 @@
 package com.riffle.app.launcher
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -14,7 +15,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
@@ -35,6 +35,10 @@ fun SettingsSurface(
     onAction: (LauncherShellAction) -> Unit,
 ) {
     val selectedPage = remember(initialPage) { mutableStateOf(initialPage) }
+    val pageScrollStates =
+        remember {
+            SettingsPage.entries.associateWith { ScrollState(initial = 0) }
+        }
 
     BackHandler(enabled = selectedPage.value != SettingsPage.MAIN) {
         selectedPage.value = SettingsPage.MAIN
@@ -66,7 +70,7 @@ fun SettingsSurface(
                         .weight(1f)
                         .widthIn(max = SETTINGS_PAGE_MAX_WIDTH_DP.dp)
                         .align(Alignment.CenterHorizontally)
-                        .verticalScroll(rememberScrollState()),
+                        .verticalScroll(pageScrollStates.getValue(selectedPage.value)),
                 state = state,
                 page = selectedPage.value,
                 onPageSelected = { page -> selectedPage.value = page },
