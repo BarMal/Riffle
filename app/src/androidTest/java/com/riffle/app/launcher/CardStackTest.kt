@@ -127,6 +127,7 @@ class CardStackTest {
         }
 
         composeRule.onNodeWithText("View").performClick()
+        composeRule.mainClock.advanceTimeByFrame()
 
         composeRule
             .onNode(
