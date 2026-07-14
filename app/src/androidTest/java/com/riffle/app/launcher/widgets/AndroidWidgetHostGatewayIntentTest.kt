@@ -3,6 +3,7 @@ package com.riffle.app.launcher.widgets
 import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import android.content.Context
+import android.content.Intent
 import android.view.View
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.riffle.core.domain.launcher.apps.AppPackageName
@@ -26,10 +27,7 @@ class AndroidWidgetHostGatewayIntentTest {
         assertEquals(42, intent.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, -1))
         assertEquals(
             ComponentName("com.example.weather", ".WeatherWidget"),
-            intent.getParcelableExtra(
-                AppWidgetManager.EXTRA_APPWIDGET_PROVIDER,
-                ComponentName::class.java,
-            ),
+            intent.bindProvider(),
         )
     }
 
@@ -51,6 +49,10 @@ class AndroidWidgetHostGatewayIntentTest {
             packageName = AppPackageName("com.example.weather"),
             className = WidgetProviderClassName(".WeatherWidget"),
         )
+
+    @Suppress("DEPRECATION")
+    private fun Intent.bindProvider(): ComponentName? =
+        getParcelableExtra(AppWidgetManager.EXTRA_APPWIDGET_PROVIDER)
 
     private class FakeAndroidWidgetHostPlatform : AndroidWidgetHostPlatform {
         var configureActivity: AndroidWidgetProviderBindingTarget? = null
