@@ -215,9 +215,12 @@ private fun LauncherDestination(
                 groups = state.notificationGroupsByApp,
                 categoryCounts = state.notificationCountsByCategory,
                 notificationAccessStatus = state.notificationAccessStatus,
-                apps = state.installedApps,
-                appIconLoader = appIconLoader,
-                reducedMotion = state.launcherSettings.motion.reducedMotion,
+                presentation =
+                    NotificationOverviewPresentation(
+                        apps = state.installedApps,
+                        appIconLoader = appIconLoader,
+                        reducedMotion = state.launcherSettings.motion.reducedMotion,
+                    ),
                 onAction = settingsPageActionRouter.onAction,
             )
 

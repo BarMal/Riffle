@@ -6,6 +6,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -39,7 +40,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.apps.InstalledApp
-import com.riffle.core.domain.launcher.cards.CardStackAnimationProfile
 import com.riffle.core.domain.launcher.cards.CardStackLayoutPolicy
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroupKey
@@ -49,9 +49,7 @@ import com.riffle.core.domain.launcher.notifications.LauncherNotification
 internal fun NotificationGroupPrototype(
     groups: List<AppNotificationGroup>,
     selectedGroupKey: AppNotificationGroupKey,
-    apps: List<InstalledApp>,
-    appIconLoader: AppIconLoader,
-    reducedMotion: Boolean,
+    presentation: NotificationOverviewPresentation,
     onBack: () -> Unit,
     onGroupChanged: (AppNotificationGroupKey) -> Unit,
     onAction: (LauncherShellAction) -> Unit,
@@ -76,7 +74,7 @@ internal fun NotificationGroupPrototype(
         key = { page -> groups[page].key },
     ) { page ->
         val group = groups[page]
-        val app = apps.firstOrNull { installedApp -> installedApp.matches(group) }
+        val app = presentation.apps.firstOrNull { installedApp -> installedApp.matches(group) }
         val listState = rememberLazyListState()
         val focusedNotification =
             notificationOverviewFocusedNotification(
@@ -91,6 +89,7 @@ internal fun NotificationGroupPrototype(
                 firstVisibleItemSize = listState.visibleItemSize(),
             )
         val label = notificationOverviewGroupLabel(app = app, group = group)
+        val heroPresentation = notificationPrototypeHeroPresentation(group, app, presentation)
 
         Column(
             modifier = Modifier.fillMaxSize(),
@@ -106,10 +105,7 @@ internal fun NotificationGroupPrototype(
                 notification = focusedNotification,
                 upcomingNotification = upcomingNotification,
                 swipeProgress = swipeProgress,
-                group = group,
-                app = app,
-                appIconLoader = appIconLoader,
-                reducedMotion = reducedMotion,
+                presentation = heroPresentation,
                 modifier = Modifier.weight(1f),
             )
             LazyColumn(
@@ -190,13 +186,10 @@ private fun NotificationPrototypeHero(
     notification: LauncherNotification,
     upcomingNotification: LauncherNotification?,
     swipeProgress: Float,
-    group: AppNotificationGroup,
-    app: InstalledApp?,
-    appIconLoader: AppIconLoader,
-    reducedMotion: Boolean,
+    presentation: NotificationPrototypeHeroPresentation,
     modifier: Modifier = Modifier,
 ) {
-    val label = notificationOverviewGroupLabel(app = app, group = group)
+    val label = notificationOverviewGroupLabel(app = presentation.app, group = presentation.group)
     val heroNotifications = listOfNotNull(notification, upcomingNotification)
     val featuredNotification =
         heroNotifications.getOrElse(if (swipeProgress >= 0.5f) 1 else 0) { notification }
@@ -205,8 +198,6 @@ private fun NotificationPrototypeHero(
             cardCount = heroNotifications.size,
             activeIndex = heroNotifications.indexOf(featuredNotification),
         )
-    val cardStackMotion = notificationPrototypeCardStackMotion(reducedMotion)
-
     Box(
         modifier =
             modifier
@@ -217,14 +208,14 @@ private fun NotificationPrototypeHero(
         CardStack(
             entries = cardEntries,
             modifier = Modifier.fillMaxSize(),
-            animationProfile = cardStackMotion.animationProfile,
-            reducedMotion = cardStackMotion.reducedMotion,
+            animationProfile = presentation.cardStackMotion.animationProfile,
+            reducedMotion = presentation.cardStackMotion.reducedMotion,
         ) { entry ->
             NotificationPrototypeHeroArt(
                 notification = heroNotifications[entry.cardIndex],
                 label = label,
-                app = app,
-                appIconLoader = appIconLoader,
+                app = presentation.app,
+                appIconLoader = presentation.appIconLoader,
                 modifier = Modifier.fillMaxSize(),
             )
         }
@@ -242,50 +233,66 @@ private fun NotificationPrototypeHero(
                         ),
                     ),
         )
-        Surface(
-            modifier =
-                Modifier
-                    .align(Alignment.BottomStart)
-                    .padding(20.dp)
-                    .widthIn(max = 420.dp),
-            shape = RoundedCornerShape(24.dp),
-            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.84f),
-        ) {
-            Column(
-                modifier = Modifier.padding(horizontal = 18.dp, vertical = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                Text(
-                    text =
-                        notificationOverviewNotificationTitle(
-                            notification = featuredNotification,
-                            fallbackLabel = label,
-                        ),
-                    style = MaterialTheme.typography.headlineSmall,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Text(
-                    text = featuredNotification.text.ifBlank { group.notificationOverviewMetadataLabel(label) },
-                    style = MaterialTheme.typography.bodyMedium,
-                    maxLines = 4,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-        }
+        NotificationPrototypeHeroDetails(
+            notification = featuredNotification,
+            fallbackLabel = label,
+            group = presentation.group,
+        )
     }
 }
 
-internal data class NotificationPrototypeCardStackMotion(
-    val animationProfile: CardStackAnimationProfile,
-    val reducedMotion: Boolean,
+private data class NotificationPrototypeHeroPresentation(
+    val group: AppNotificationGroup,
+    val app: InstalledApp?,
+    val appIconLoader: AppIconLoader,
+    val cardStackMotion: NotificationPrototypeCardStackMotion,
 )
 
-internal fun notificationPrototypeCardStackMotion(reducedMotion: Boolean): NotificationPrototypeCardStackMotion {
-    return NotificationPrototypeCardStackMotion(
-        animationProfile = CardStackAnimationProfile.CARD_FLIGHT,
-        reducedMotion = reducedMotion,
+private fun notificationPrototypeHeroPresentation(
+    group: AppNotificationGroup,
+    app: InstalledApp?,
+    presentation: NotificationOverviewPresentation,
+): NotificationPrototypeHeroPresentation =
+    NotificationPrototypeHeroPresentation(
+        group = group,
+        app = app,
+        appIconLoader = presentation.appIconLoader,
+        cardStackMotion = notificationPrototypeCardStackMotion(presentation.reducedMotion),
     )
+
+@Composable
+private fun BoxScope.NotificationPrototypeHeroDetails(
+    notification: LauncherNotification,
+    fallbackLabel: String,
+    group: AppNotificationGroup,
+) {
+    Surface(
+        modifier =
+            Modifier
+                .align(Alignment.BottomStart)
+                .padding(20.dp)
+                .widthIn(max = 420.dp),
+        shape = RoundedCornerShape(24.dp),
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.84f),
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 18.dp, vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Text(
+                text = notificationOverviewNotificationTitle(notification, fallbackLabel),
+                style = MaterialTheme.typography.headlineSmall,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = notification.text.ifBlank { group.notificationOverviewMetadataLabel(fallbackLabel) },
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = 4,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
 }
 
 @Composable
@@ -402,22 +409,6 @@ private fun NotificationPrototypeCard(
         }
     }
 }
-
-internal fun notificationOverviewScrollProgress(
-    firstVisibleItemScrollOffset: Int,
-    firstVisibleItemSize: Int,
-): Float =
-    if (firstVisibleItemSize <= 0) {
-        0f
-    } else {
-        (firstVisibleItemScrollOffset.toFloat() / firstVisibleItemSize)
-            .coerceIn(0f, 1f)
-    }
-
-internal fun notificationOverviewNotificationTitle(
-    notification: LauncherNotification,
-    fallbackLabel: String,
-): String = notification.title.ifBlank { fallbackLabel }
 
 internal val AppNotificationGroup.key: AppNotificationGroupKey
     get() = AppNotificationGroupKey(packageName = packageName, profileId = profileId)
