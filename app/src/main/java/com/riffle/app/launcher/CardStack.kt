@@ -52,7 +52,7 @@ internal fun CardStack(
             transitionSpec = {
                 cardStackContentTransform(
                     animationProfile = animationProfile,
-                    motionMode = motionMode,
+                    reducedMotion = reducedMotion,
                 )
             },
             label = "card-stack-content",
@@ -64,7 +64,7 @@ internal fun CardStack(
                     AnimatedCardStackEntry(
                         entry = entry,
                         animationProfile = animationProfile,
-                        reducedMotion = reducedMotion,
+                        motionMode = motionMode,
                         content = content,
                     )
                 }
