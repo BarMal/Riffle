@@ -7,9 +7,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.hasAnyDescendant
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -78,6 +80,7 @@ class CardStackTest {
 
         focusedEntries.forEach { entry ->
             composeRule.onNodeWithText(cardLabel(entry.cardIndex)).assertExists()
+            composeRule.onAllNodesWithText(cardLabel(entry.cardIndex)).assertCountEquals(1)
         }
         assertTraversalIndex(cardIndex = 2, index = -2f)
     }
