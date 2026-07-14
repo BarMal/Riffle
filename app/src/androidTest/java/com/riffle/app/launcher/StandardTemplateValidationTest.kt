@@ -2,6 +2,9 @@ package com.riffle.app.launcher
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsDisplayed
@@ -29,8 +32,12 @@ class StandardTemplateValidationTest {
 
     @Test
     fun installedAppsRemainAccessibleInDrawerAcrossThemeAndWidthValidationMatrix() {
+        var displayedCase by mutableStateOf(validationCases.first())
+        setContent { displayedCase }
+
         validationCases.forEach { case ->
-            setContent(case)
+            composeRule.runOnIdle { displayedCase = case }
+            composeRule.waitForIdle()
 
             composeRule.onNodeWithText("Apps").assertIsDisplayed()
             composeRule.onNodeWithText("2 apps available").assertIsDisplayed()
@@ -40,12 +47,19 @@ class StandardTemplateValidationTest {
         }
     }
 
-    private fun setContent(case: ValidationCase) {
+    private fun setContent(case: () -> ValidationCase) {
         val apps = listOf(app("Camera"), app("Calendar"))
 
         composeRule.setContent {
-            RiffleLauncherTheme(themeMode = case.themeMode) {
-                Box(modifier = Modifier.size(width = case.widthDp.dp, height = case.heightDp.dp)) {
+            val displayedCase = case()
+            RiffleLauncherTheme(themeMode = displayedCase.themeMode) {
+                Box(
+                    modifier =
+                        Modifier.size(
+                            width = displayedCase.widthDp.dp,
+                            height = displayedCase.heightDp.dp,
+                        ),
+                ) {
                     AppDrawer(
                         query = "",
                         profileFilter = AppDrawerProfileFilter.ALL,
