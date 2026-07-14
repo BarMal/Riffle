@@ -156,6 +156,12 @@ private fun SettingsLayoutPageContent(
             availableViewModes = state.availableLauncherViewModes,
             onAction = onAction,
         )
+        HomeTemplateSetting(
+            selectedViewMode = state.homeLayout.viewMode,
+            availableViewModes = state.availableLauncherViewModes,
+            deviceClass = state.selectedLayoutDeviceClass,
+            onAction = onAction,
+        )
         HomeGridSetting(
             grid = state.homeLayout.settings.grid,
             viewMode = state.homeLayout.viewMode,
