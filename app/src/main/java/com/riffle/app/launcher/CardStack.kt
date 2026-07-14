@@ -46,9 +46,11 @@ internal fun CardStack(
             // A card index identifies a stable card while focus changes, so Compose can
             // interpolate that card's prior pose into its new pose without composing a
             // second, outgoing stack.
-            key(itemKey(entry)) {
+            val stableItemKey = itemKey(entry)
+            key(stableItemKey) {
                 AnimatedCardStackEntry(
                     entry = entry,
+                    stableItemKey = stableItemKey,
                     animationProfile = animationProfile,
                     motionMode = motionMode,
                     content = content,
@@ -116,13 +118,14 @@ internal fun cardStackRenderedPose(
 @Composable
 private fun AnimatedCardStackEntry(
     entry: CardStackLayoutEntry,
+    stableItemKey: Any,
     animationProfile: CardStackAnimationProfile,
     motionMode: CardStackMotionMode,
     content: @Composable (CardStackLayoutEntry) -> Unit,
 ) {
     val spec = animationProfile.spec
-    var hasEntered by remember(entry.cardIndex) { mutableStateOf(motionMode == CardStackMotionMode.SNAP) }
-    LaunchedEffect(entry.cardIndex, motionMode) { hasEntered = true }
+    var hasEntered by remember(stableItemKey) { mutableStateOf(motionMode == CardStackMotionMode.SNAP) }
+    LaunchedEffect(stableItemKey, motionMode) { hasEntered = true }
     val density = LocalDensity.current
     BoxWithConstraints {
         val renderedPose =

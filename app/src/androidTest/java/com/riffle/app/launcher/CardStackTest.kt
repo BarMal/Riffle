@@ -86,6 +86,30 @@ class CardStackTest {
     }
 
     @Test
+    fun notificationScrollReflowKeepsTheSharedNotificationAsOneStableCard() {
+        val entries = CardStackLayoutPolicy().entries(cardCount = 2, activeIndex = 0)
+        var notifications by mutableStateOf(listOf("A", "B"))
+
+        composeRule.setContent {
+            MaterialTheme {
+                CardStack(
+                    entries = entries,
+                    animationProfile = CardStackAnimationProfile.CARD_FLIGHT,
+                    itemKey = { entry -> notifications[entry.cardIndex] },
+                ) { entry ->
+                    Text(notifications[entry.cardIndex])
+                }
+            }
+        }
+
+        composeRule.runOnIdle { notifications = listOf("B", "C") }
+
+        composeRule.onAllNodesWithText("B").assertCountEquals(1)
+        composeRule.onAllNodesWithText("C").assertCountEquals(1)
+        composeRule.onNodeWithText("A").assertDoesNotExist()
+    }
+
+    @Test
     fun profilesExposeDeterministicEnterAndExitPoses() {
         assertEquals(
             CardStackMotionMode.ANIMATED,
