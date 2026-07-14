@@ -1,7 +1,10 @@
 package com.riffle.app.launcher
 
+import com.riffle.core.domain.launcher.apps.AppActivityName
+import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppProfileId
+import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
 import com.riffle.core.domain.launcher.notifications.LauncherNotification
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
@@ -10,6 +13,7 @@ import com.riffle.core.domain.launcher.notifications.NotificationAgeBucket
 import com.riffle.core.domain.launcher.notifications.NotificationCategory
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class GeneratedPageSurfaceTest {
@@ -69,6 +73,22 @@ class GeneratedPageSurfaceTest {
         )
     }
 
+    @Test
+    fun appBackedGeneratedCardProvidesLaunchActionAndTapToOpenDescription() {
+        val app = installedApp(label = "Chat", packageName = "com.example.chat")
+        val card =
+            DockNotificationCardState(
+                app = app,
+                group = notificationGroup(packageName = "com.example.chat", profileId = "personal"),
+            )
+
+        assertEquals(
+            LauncherShellAction.LaunchApp(app.identity),
+            generatedNotificationCardLaunchAction(card),
+        )
+        assertTrue(generatedNotificationCardContentDescription(card).contains("Tap to open Chat"))
+    }
+
     private fun notificationGroup(
         packageName: String,
         profileId: String,
@@ -88,5 +108,13 @@ class GeneratedPageSurfaceTest {
         packageName = AppPackageName(packageName),
         canDismiss = true,
         postedAtEpochMillis = 1L,
+    )
+
+    private fun installedApp(
+        label: String,
+        packageName: String,
+    ) = InstalledApp(
+        identity = AppIdentity(AppPackageName(packageName), AppActivityName(".MainActivity")),
+        label = label,
     )
 }

@@ -1,5 +1,6 @@
 package com.riffle.app.launcher
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -79,12 +80,22 @@ private fun GeneratedNotificationCard(
     card: DockNotificationCardState,
     onAction: (LauncherShellAction) -> Unit,
 ) {
+    val label = dockNotificationCardLabel(card)
+    val identity = card.app?.identity
     Surface(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp)
+                .semantics {
+                    contentDescription = generatedNotificationCardContentDescription(card)
+                }
+                .clickable(enabled = identity != null) {
+                    generatedNotificationCardLaunchAction(card)?.let(onAction)
+                },
         shape = LocalLauncherCardShape.current,
         color = MaterialTheme.colorScheme.surfaceVariant,
     ) {
-        val label = dockNotificationCardLabel(card)
         Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text(text = label, style = MaterialTheme.typography.titleMedium)
             Text(
@@ -144,3 +155,12 @@ internal fun generatedNotificationCardClearContentDescription(card: DockNotifica
         label = dockNotificationCardLabel(card),
         clearableCount = card.group.clearableCount,
     )
+
+internal fun generatedNotificationCardContentDescription(card: DockNotificationCardState): String =
+    dockNotificationCardContentDescription(
+        card = card,
+        label = dockNotificationCardLabel(card),
+    )
+
+internal fun generatedNotificationCardLaunchAction(card: DockNotificationCardState): LauncherShellAction.LaunchApp? =
+    card.app?.identity?.let(LauncherShellAction::LaunchApp)
