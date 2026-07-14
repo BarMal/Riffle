@@ -22,14 +22,36 @@ class GeneratedLauncherPageContentPlanApplier {
 
         val materialized =
             GeneratedLauncherPageContentItemMaterializer().materialize(plan, appLabelProvider)
-        return if (rejectionReason == null && materialized.skippedItems.isEmpty()) {
-            GeneratedLauncherPageContentPlanApplyResult.Applied(
-                page = page.copy(items = materialized.items),
-            )
+        val placedPage =
+            if (rejectionReason == null && materialized.skippedItems.isEmpty()) {
+                placeItems(page, materialized.items)
+            } else {
+                null
+            }
+        return if (placedPage != null) {
+            GeneratedLauncherPageContentPlanApplyResult.Applied(page = placedPage)
         } else {
             GeneratedLauncherPageContentPlanApplyResult.Rejected(
-                rejectionReason ?: GeneratedLauncherPageContentPlanApplyRejectionReason.UNSUPPORTED_CONTENT,
+                rejectionReason
+                    ?: if (materialized.skippedItems.isNotEmpty()) {
+                        GeneratedLauncherPageContentPlanApplyRejectionReason.UNSUPPORTED_CONTENT
+                    } else {
+                        GeneratedLauncherPageContentPlanApplyRejectionReason.INSUFFICIENT_GRID_SPACE
+                    },
             )
+        }
+    }
+
+    private fun placeItems(
+        page: LauncherPage,
+        items: List<AppShortcutItem>,
+    ): LauncherPage? {
+        val placementEngine = GridPlacementEngine()
+        return items.fold(page.copy(items = emptyList())) { placedPage, item ->
+            when (val result = placementEngine.placeItemInFirstAvailableCell(placedPage, item)) {
+                is PlaceLauncherItemResult.Placed -> result.page
+                is PlaceLauncherItemResult.Rejected -> return null
+            }
         }
     }
 }
@@ -48,4 +70,5 @@ enum class GeneratedLauncherPageContentPlanApplyRejectionReason {
     PAGE_KIND_MISMATCH,
     PAGE_HAS_MANUAL_ITEMS,
     UNSUPPORTED_CONTENT,
+    INSUFFICIENT_GRID_SPACE,
 }
