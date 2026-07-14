@@ -126,7 +126,10 @@ class GeneratedLauncherPageContentPlanApplierTest {
                 ),
             )
 
-        assertEquals(listOf(apps.first().identity), applied.items.filterIsInstance<AppShortcutItem>().map { it.appIdentity })
+        assertEquals(
+            listOf(apps.first().identity),
+            applied.items.filterIsInstance<AppShortcutItem>().map { it.appIdentity },
+        )
         assertEquals(GridCell(column = 0, row = 0), requireNotNull(applied.items.single().placement).cell)
     }
 
