@@ -19,6 +19,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.semantics.SemanticsPropertyKey
 import androidx.compose.ui.semantics.isTraversalGroup
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.traversalIndex
@@ -36,10 +37,14 @@ internal fun CardStack(
     reducedMotion: Boolean = false,
     content: @Composable (CardStackLayoutEntry) -> Unit,
 ) {
+    val motionMode = cardStackMotionMode(animationProfile, reducedMotion)
+
     Box(
         modifier =
             modifier.semantics {
                 isTraversalGroup = true
+                this[CardStackAnimationProfileKey] = animationProfile
+                this[CardStackMotionModeKey] = motionMode
             },
     ) {
         AnimatedContent(
@@ -47,7 +52,7 @@ internal fun CardStack(
             transitionSpec = {
                 cardStackContentTransform(
                     animationProfile = animationProfile,
-                    reducedMotion = reducedMotion,
+                    motionMode = motionMode,
                 )
             },
             label = "card-stack-content",
@@ -74,6 +79,26 @@ internal data class CardStackTransitionPose(
     val verticalTravelFraction: Float,
 )
 
+internal enum class CardStackMotionMode {
+    ANIMATED,
+    SNAP,
+}
+
+internal val CardStackAnimationProfileKey =
+    SemanticsPropertyKey<CardStackAnimationProfile>("CardStackAnimationProfile")
+
+internal val CardStackMotionModeKey = SemanticsPropertyKey<CardStackMotionMode>("CardStackMotionMode")
+
+internal fun cardStackMotionMode(
+    animationProfile: CardStackAnimationProfile,
+    reducedMotion: Boolean,
+): CardStackMotionMode =
+    if (reducedMotion || animationProfile == CardStackAnimationProfile.STACK_REFLOW) {
+        CardStackMotionMode.SNAP
+    } else {
+        CardStackMotionMode.ANIMATED
+    }
+
 internal fun cardStackTransitionPose(
     animationProfile: CardStackAnimationProfile,
     entering: Boolean,
@@ -95,7 +120,7 @@ private fun Float.directedTravel(direction: Float): Float {
 private fun cardStackContentTransform(
     animationProfile: CardStackAnimationProfile,
     reducedMotion: Boolean,
-) = if (reducedMotion || animationProfile == CardStackAnimationProfile.STACK_REFLOW) {
+) = if (cardStackMotionMode(animationProfile, reducedMotion) == CardStackMotionMode.SNAP) {
     EnterTransition.None togetherWith ExitTransition.None
 } else {
     val enteringPose = cardStackTransitionPose(animationProfile, entering = true)
@@ -149,12 +174,12 @@ private fun cardStackContentTransform(
 private fun AnimatedCardStackEntry(
     entry: CardStackLayoutEntry,
     animationProfile: CardStackAnimationProfile,
-    reducedMotion: Boolean,
+    motionMode: CardStackMotionMode,
     content: @Composable (CardStackLayoutEntry) -> Unit,
 ) {
     val spec = animationProfile.spec
     val animationSpec =
-        if (reducedMotion) {
+        if (motionMode == CardStackMotionMode.SNAP) {
             snap()
         } else {
             tween<Float>(durationMillis = spec.durationMillis)

@@ -10,11 +10,21 @@ import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.hasAnyDescendant
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNode
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.riffle.core.domain.launcher.apps.AppPackageName
+import com.riffle.core.domain.launcher.apps.AppProfile
 import com.riffle.core.domain.launcher.cards.CardStackAnimationProfile
 import com.riffle.core.domain.launcher.cards.CardStackLayoutEntry
 import com.riffle.core.domain.launcher.cards.CardStackLayoutPolicy
+import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
+import com.riffle.core.domain.launcher.notifications.LauncherNotification
+import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
+import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
+import com.riffle.core.domain.launcher.notifications.NotificationAgeBucket
+import com.riffle.core.domain.launcher.notifications.NotificationCategory
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -97,6 +107,38 @@ class CardStackTest {
         )
     }
 
+    @Test
+    fun notificationOverviewUsesCardFlightSnapMotionWhenReducedMotionIsEnabled() {
+        composeRule.mainClock.autoAdvance = false
+        composeRule.setContent {
+            MaterialTheme {
+                NotificationOverviewSurface(
+                    groups = listOf(notificationGroup()),
+                    categoryCounts = mapOf(NotificationCategory.MESSAGE to 2),
+                    notificationAccessStatus = NotificationAccessStatus.GRANTED,
+                    presentation =
+                        NotificationOverviewPresentation(
+                            apps = emptyList(),
+                            appIconLoader = EmptyAppIconLoader,
+                            reducedMotion = true,
+                        ),
+                    onAction = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("View").performClick()
+
+        composeRule
+            .onNode(
+                SemanticsMatcher.expectValue(
+                    CardStackAnimationProfileKey,
+                    CardStackAnimationProfile.CARD_FLIGHT,
+                ) and SemanticsMatcher.expectValue(CardStackMotionModeKey, CardStackMotionMode.SNAP),
+                useUnmergedTree = true,
+            ).assertExists()
+    }
+
     private fun setContent(entries: List<CardStackLayoutEntry>) {
         composeRule.setContent {
             MaterialTheme {
@@ -124,4 +166,30 @@ class CardStackTest {
     }
 
     private fun cardLabel(cardIndex: Int): String = "Card $cardIndex"
+
+    private fun notificationGroup(): AppNotificationGroup =
+        AppNotificationGroup(
+            packageName = AppPackageName("com.example.messages"),
+            profileId = AppProfile.personal().id,
+            latestCategory = NotificationCategory.MESSAGE,
+            latestAgeBucket = NotificationAgeBucket.RECENT,
+            notifications =
+                listOf(
+                    notification("message-1", "First"),
+                    notification("message-2", "Second"),
+                ),
+        )
+
+    private fun notification(
+        key: String,
+        title: String,
+    ): LauncherNotification =
+        LauncherNotification(
+            key = LauncherNotificationKey(key),
+            packageName = AppPackageName("com.example.messages"),
+            category = NotificationCategory.MESSAGE,
+            title = title,
+            text = "Body",
+            postedAtEpochMillis = 1L,
+        )
 }
