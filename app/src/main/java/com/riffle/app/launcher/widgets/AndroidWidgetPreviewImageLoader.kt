@@ -20,20 +20,17 @@ class AndroidWidgetPreviewImageLoader(
     private val previews = ConcurrentHashMap<WidgetProviderIdentity, ImageBitmap>()
 
     override fun previewFor(identity: WidgetProviderIdentity): ImageBitmap? =
-        previews[identity] ?: loadPreview(identity)?.also { preview -> previews[identity] = preview }
+        previews[identity] ?: runCatching { loadPreview(identity) }.getOrNull()?.also { preview ->
+            previews[identity] = preview
+        }
 
     override fun cachedPreviewFor(identity: WidgetProviderIdentity): ImageBitmap? = previews[identity]
 
     private fun loadPreview(identity: WidgetProviderIdentity): ImageBitmap? =
         appWidgetManager.installedProviders
             .firstOrNull { provider -> provider.matches(identity) }
-            ?.let { provider ->
-                runCatching {
-                    provider
-                        .loadPreviewImage(context, WIDGET_PREVIEW_DENSITY)
-                        ?.toWidgetPreviewBitmap()
-                }.getOrNull()
-            }
+            ?.loadPreviewImage(context, WIDGET_PREVIEW_DENSITY)
+            ?.toWidgetPreviewBitmap()
 }
 
 private fun AppWidgetProviderInfo.matches(identity: WidgetProviderIdentity): Boolean =

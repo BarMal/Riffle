@@ -7,9 +7,26 @@ import com.riffle.core.domain.launcher.widgets.WidgetProviderClassName
 import com.riffle.core.domain.launcher.widgets.WidgetProviderDimensions
 import com.riffle.core.domain.launcher.widgets.WidgetProviderIdentity
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Test
 
 class WidgetPickerDialogTest {
+    @Test
+    fun previewLoaderFailuresFallBackToNoPreview() {
+        val identity =
+            WidgetProviderIdentity(
+                packageName = AppPackageName("com.example.clock"),
+                className = WidgetProviderClassName(".ClockWidget"),
+            )
+        val loader =
+            object : WidgetPreviewImageLoader {
+                override fun previewFor(identity: WidgetProviderIdentity) = error("Preview provider failed")
+            }
+
+        assertNull(loader.cachedPreviewForOrNull(identity))
+        assertNull(loader.previewForOrNull(identity))
+    }
+
     @Test
     fun providerSummaryIncludesPackageAndMinimumDimensions() {
         val provider =
