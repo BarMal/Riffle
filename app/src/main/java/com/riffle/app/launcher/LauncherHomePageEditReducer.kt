@@ -66,8 +66,19 @@ internal class LauncherHomePageEditReducer(
                         state
                             .withHomeLayout(result.layout, homeLayoutRepository)
                             .withHomeScreenLibraryApps(homeLayoutRepository)
+                            .refreshGeneratedPageAfterTypeSelection(action, homeLayoutRepository)
 
                     is HomePageEditResult.Rejected -> state
                 }
+        }
+
+    private fun LauncherShellState.refreshGeneratedPageAfterTypeSelection(
+        action: LauncherShellAction,
+        homeLayoutRepository: HomeLayoutRepository,
+    ): LauncherShellState =
+        if (action is LauncherShellAction.SelectSelectedHomePageType) {
+            withRefreshedGeneratedPages(homeLayoutRepository)
+        } else {
+            this
         }
 }

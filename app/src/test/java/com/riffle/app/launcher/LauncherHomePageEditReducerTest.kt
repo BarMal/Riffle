@@ -10,6 +10,7 @@ import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.apps.InstalledAppCatalog
 import com.riffle.core.domain.launcher.home.AppShortcutItem
+import com.riffle.core.domain.launcher.home.GeneratedLauncherPageKind
 import com.riffle.core.domain.launcher.home.GridCell
 import com.riffle.core.domain.launcher.home.GridDimensions
 import com.riffle.core.domain.launcher.home.GridPlacement
@@ -43,6 +44,34 @@ class LauncherHomePageEditReducerTest {
 
         assertEquals(listOf(LauncherPageId("home"), LauncherPageId("home-2")), updated.homeLayout.pageIds)
         assertEquals(LauncherPageId("home-2"), updated.homeLayout.selectedPageId)
+        assertEquals(updated.homeLayout, repository.savedLayoutSet?.activeLayout)
+    }
+
+    @Test
+    fun selectingCategoryPageImmediatelyPopulatesCategorizedInstalledApps() {
+        val repository = FakeHomeLayoutRepository(HomeLayoutDefaults.standard())
+        val reducer = LauncherHomePageEditReducer(homeLayoutRepository = repository)
+        val camera = app(label = "Camera", category = "Image")
+        val music = app(label = "Music", category = "Audio")
+        val uncategorized = app(label = "Notes")
+        val state = launcherState(repository.savedLayoutSet).copy(installedApps = listOf(camera, music, uncategorized))
+
+        val updated =
+            reducer.reduce(
+                state,
+                LauncherShellAction.SelectSelectedHomePageType(
+                    LauncherPageType.Generated(GeneratedLauncherPageKind.CATEGORY),
+                ),
+            )
+
+        assertEquals(
+            LauncherPageType.Generated(GeneratedLauncherPageKind.CATEGORY),
+            updated.homeLayout.selectedPage.type,
+        )
+        assertEquals(
+            listOf(music.identity, camera.identity),
+            updated.homeLayout.selectedPage.items.map { item -> (item as AppShortcutItem).appIdentity },
+        )
         assertEquals(updated.homeLayout, repository.savedLayoutSet?.activeLayout)
     }
 
@@ -403,7 +432,10 @@ class LauncherHomePageEditReducerTest {
         )
     }
 
-    private fun app(label: String): InstalledApp =
+    private fun app(
+        label: String,
+        category: String? = null,
+    ): InstalledApp =
         InstalledApp(
             identity =
                 AppIdentity(
@@ -411,6 +443,7 @@ class LauncherHomePageEditReducerTest {
                     activityName = AppActivityName(".MainActivity"),
                 ),
             label = label,
+            category = category,
         )
 
     private fun HomeLayout.withGrid(dimensions: GridDimensions): HomeLayout =
