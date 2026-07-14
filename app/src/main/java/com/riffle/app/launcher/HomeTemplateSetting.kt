@@ -45,7 +45,7 @@ internal fun homeTemplateOptions(
         }.sortedBy { option -> option.displayName }
 
 @Composable
-internal fun HomeTemplateSetting(
+internal fun HomeViewModePresetSetting(
     selectedViewMode: LauncherViewMode,
     availableViewModes: List<LauncherViewMode>,
     deviceClass: HomeLayoutDeviceClass,
@@ -56,8 +56,13 @@ internal fun HomeTemplateSetting(
 
     Column {
         SettingsTextColumn(
-            title = "Layout template",
-            subtitle = selectedOption?.description ?: "No compatible template is available",
+            title = "Launcher mode presets",
+            subtitle =
+                selectedOption
+                    ?.let { option ->
+                        "${option.displayName}: switches launcher mode and keeps your current pages."
+                    }
+                    ?: "No compatible launcher mode preset is available",
         )
         Row(
             modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
@@ -68,9 +73,17 @@ internal fun HomeTemplateSetting(
                     enabled = option.viewMode != selectedViewMode,
                     onClick = { onAction(LauncherShellAction.SelectLauncherViewMode(option.viewMode)) },
                 ) {
-                    SettingsButtonText(text = option.displayName)
+                    SettingsButtonText(text = option.viewMode.presetLabel)
                 }
             }
         }
     }
 }
+
+private val LauncherViewMode.presetLabel: String
+    get() =
+        when (this) {
+            LauncherViewMode.STANDARD_APP_DRAWER -> "Standard"
+            LauncherViewMode.HOME_SCREEN_LIBRARY -> "Library"
+            LauncherViewMode.CARD_INTERFACE -> "Cards"
+        }

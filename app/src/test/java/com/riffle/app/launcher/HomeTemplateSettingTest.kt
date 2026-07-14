@@ -8,7 +8,7 @@ import org.junit.Test
 
 class HomeTemplateSettingTest {
     @Test
-    fun exposesCompatibleDefaultTemplatesAsViewModeOptions() {
+    fun mapsCompatibleDefaultTemplatesToViewModePresets() {
         assertEquals(
             listOf(
                 HomeTemplateOption(

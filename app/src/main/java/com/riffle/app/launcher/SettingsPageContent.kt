@@ -156,7 +156,7 @@ private fun SettingsLayoutPageContent(
             availableViewModes = state.availableLauncherViewModes,
             onAction = onAction,
         )
-        HomeTemplateSetting(
+        HomeViewModePresetSetting(
             selectedViewMode = state.homeLayout.viewMode,
             availableViewModes = state.availableLauncherViewModes,
             deviceClass = state.selectedLayoutDeviceClass,
