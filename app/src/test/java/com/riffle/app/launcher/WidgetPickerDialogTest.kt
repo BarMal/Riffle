@@ -18,7 +18,10 @@ class WidgetPickerDialogTest {
                 packageName = AppPackageName("com.example.clock"),
                 className = WidgetProviderClassName(".ClockWidget"),
             )
-        val loader = WidgetPreviewImageLoader { error("Preview provider failed") }
+        val loader =
+            object : WidgetPreviewImageLoader {
+                override fun previewFor(identity: WidgetProviderIdentity) = error("Preview provider failed")
+            }
 
         assertNull(loader.cachedPreviewForOrNull(identity))
         assertNull(loader.previewForOrNull(identity))
