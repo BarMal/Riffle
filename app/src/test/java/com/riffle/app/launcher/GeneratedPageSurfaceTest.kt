@@ -57,7 +57,7 @@ class GeneratedPageSurfaceTest {
         packageName = AppPackageName(packageName),
         profileId = AppProfileId(profileId),
         latestCategory = NotificationCategory.UNKNOWN,
-        latestAgeBucket = NotificationAgeBucket.UNKNOWN,
+        latestAgeBucket = NotificationAgeBucket.NOW,
         notifications = emptyList(),
     )
 }
