@@ -34,6 +34,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.riffle.app.launcher.widgets.HomeWidgetViewFactory
 import com.riffle.core.domain.launcher.home.GeneratedLauncherPageKind
@@ -175,7 +176,7 @@ private fun PageOverviewStrip(
     onAction: (LauncherShellAction) -> Unit,
 ) {
     LazyRow(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().testTag(PAGE_OVERVIEW_STRIP_TEST_TAG),
         contentPadding = PaddingValues(horizontal = PAGE_OVERVIEW_CONTENT_PADDING_DP.dp, vertical = 4.dp),
         horizontalArrangement = Arrangement.spacedBy(PAGE_OVERVIEW_CARD_SPACING_DP.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -224,6 +225,7 @@ private fun PageOverviewCard(
                 .pageOverviewReflow(state = state, reducedMotion = reducedMotion)
                 .pageOverviewReorderDrag(state = state, onMoveToIndex = onMoveToIndex)
                 .clip(LocalLauncherCardShape.current)
+                .testTag(pageOverviewCardTestTag(state.page.id.value))
                 .clickable(onClick = onClick),
         shape = LocalLauncherCardShape.current,
         color =
@@ -560,3 +562,6 @@ private val GeneratedLauncherPageKind.pageOverviewTypeLabel: String
 internal const val PAGE_OVERVIEW_CARD_WIDTH_DP = 184
 internal const val PAGE_OVERVIEW_CARD_SPACING_DP = 8
 private const val PAGE_OVERVIEW_CONTENT_PADDING_DP = 16
+internal const val PAGE_OVERVIEW_STRIP_TEST_TAG = "page-overview-strip"
+
+internal fun pageOverviewCardTestTag(pageId: String): String = "page-overview-card-$pageId"

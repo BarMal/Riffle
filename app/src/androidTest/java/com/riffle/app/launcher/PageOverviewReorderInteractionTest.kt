@@ -11,8 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -46,8 +45,9 @@ class PageOverviewReorderInteractionTest {
         val actions = mutableListOf<LauncherShellAction>()
         setContent(width = containerWidth, onAction = actions::add)
 
-        composeRule.onNodeWithText("Page 7").performScrollTo().assertIsDisplayed()
-        composeRule.onNodeWithText("Page 7").performTouchInput {
+        composeRule.scrollToPageOverviewCard(pageId = "page-7")
+        composeRule.onNodeWithTag(pageOverviewCardTestTag("page-7")).assertIsDisplayed()
+        composeRule.onNodeWithTag(pageOverviewCardTestTag("page-7")).performTouchInput {
             down(center)
             advanceEventTime(viewConfiguration.longPressTimeoutMillis + 50L)
             moveBy(Offset(x = -width.toFloat(), y = 0f))
@@ -60,6 +60,15 @@ class PageOverviewReorderInteractionTest {
                 actions,
             )
         }
+    }
+
+    private fun scrollToPageOverviewCard(pageId: String) {
+        repeat(8) {
+            composeRule.onNodeWithTag(PAGE_OVERVIEW_STRIP_TEST_TAG).performTouchInput { swipeLeft() }
+        }
+
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag(pageOverviewCardTestTag(pageId)).assertIsDisplayed()
     }
 
     private fun setContent(
