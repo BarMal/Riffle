@@ -88,8 +88,9 @@ internal fun cardStackTransitionPose(
     )
 }
 
-private fun Float.directedTravel(direction: Float): Float =
-    if (this == 0f) 0f else this * direction
+private fun Float.directedTravel(direction: Float): Float {
+    return if (this == 0f) 0f else this * direction
+}
 
 private fun cardStackContentTransform(
     animationProfile: CardStackAnimationProfile,
