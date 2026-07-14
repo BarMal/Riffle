@@ -246,14 +246,14 @@ private fun rememberWidgetPreview(
     previewImageLoader: WidgetPreviewImageLoader,
 ): ImageBitmap? {
     var preview by remember(provider.identity, previewImageLoader) {
-        mutableStateOf(previewImageLoader.cachedPreviewFor(provider.identity))
+        mutableStateOf(previewImageLoader.cachedPreviewForOrNull(provider.identity))
     }
 
     LaunchedEffect(provider.identity, previewImageLoader) {
-        val cachedPreview = previewImageLoader.cachedPreviewFor(provider.identity)
+        val cachedPreview = previewImageLoader.cachedPreviewForOrNull(provider.identity)
         preview =
             cachedPreview ?: withContext(Dispatchers.Default) {
-                previewImageLoader.previewFor(provider.identity)
+                previewImageLoader.previewForOrNull(provider.identity)
             }
     }
 
