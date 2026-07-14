@@ -184,7 +184,6 @@ internal fun ImmediateWorkspacePager(
     presentation: HomeGridPresentation,
     appIconLoader: AppIconLoader,
     actions: HomeWorkspaceActions,
-    generatedPageContent: @Composable (LauncherPage, Modifier) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier,
 ) {
     val coroutineScope = rememberCoroutineScope()
@@ -221,7 +220,13 @@ internal fun ImmediateWorkspacePager(
                             clip = true
                         }
                 if (page.isNotificationCardsPage) {
-                    generatedPageContent(page, pageModifier)
+                    GeneratedNotificationCardsPage(
+                        groups = presentation.generatedPage.notificationGroupsByApp,
+                        notificationAccessStatus = presentation.generatedPage.notificationAccessStatus,
+                        apps = presentation.generatedPage.installedApps,
+                        onAction = presentation.generatedPage.onAction,
+                        modifier = pageModifier,
+                    )
                 } else {
                     WorkspaceGrid(
                         page = page,

@@ -40,7 +40,10 @@ internal fun GeneratedNotificationCardsPage(
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     item { GeneratedCardsHeading() }
-                    items(state.cards, key = { card -> card.group.packageName.value + card.group.profileId.value }) { card ->
+                    items(
+                        state.cards,
+                        key = { card -> card.group.packageName.value + card.group.profileId.value },
+                    ) { card ->
                         GeneratedNotificationCard(card, onAction)
                     }
                 }
