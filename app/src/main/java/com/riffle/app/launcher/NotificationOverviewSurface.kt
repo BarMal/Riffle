@@ -32,7 +32,7 @@ import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.notifications.NotificationAgeBucket
 import com.riffle.core.domain.launcher.notifications.NotificationCategory
 
-internal data class NotificationOverviewPresentation(
+data class NotificationOverviewPresentation(
     val apps: List<InstalledApp>,
     val appIconLoader: AppIconLoader,
     val reducedMotion: Boolean,
