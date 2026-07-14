@@ -84,13 +84,11 @@ internal fun NotificationGroupPrototype(
             ) ?: return@HorizontalPager
         val upcomingNotification =
             group.notifications.getOrNull(listState.firstVisibleItemIndex.coerceAtLeast(0) + 1)
-        val firstVisibleItemSize = listState.visibleItemSize()
         val swipeProgress =
-            if (firstVisibleItemSize <= 0) {
-                0f
-            } else {
-                (listState.firstVisibleItemScrollOffset.toFloat() / firstVisibleItemSize).coerceIn(0f, 1f)
-            }
+            notificationOverviewScrollProgress(
+                firstVisibleItemScrollOffset = listState.firstVisibleItemScrollOffset,
+                firstVisibleItemSize = listState.firstVisibleItemSize,
+            )
         val label = notificationOverviewGroupLabel(app = app, group = group)
         val heroPresentation = NotificationPrototypeHeroPresentation(group, app, presentation)
 
@@ -403,16 +401,28 @@ private fun NotificationPrototypeCard(
 internal val AppNotificationGroup.key: AppNotificationGroupKey
     get() = AppNotificationGroupKey(packageName = packageName, profileId = profileId)
 
-private fun LazyListState.visibleItemSize(): Int =
-    layoutInfo.visibleItemsInfo
-        .firstOrNull { item -> item.index == firstVisibleItemIndex }
-        ?.size
-        ?: 0
-
 internal fun notificationOverviewNotificationTitle(
     notification: LauncherNotification,
     fallbackLabel: String,
 ): String = notification.title.ifBlank { fallbackLabel }
+
+internal fun notificationOverviewScrollProgress(
+    firstVisibleItemScrollOffset: Int,
+    firstVisibleItemSize: Int,
+): Float =
+    if (firstVisibleItemSize <= 0) {
+        0f
+    } else {
+        (firstVisibleItemScrollOffset.toFloat() / firstVisibleItemSize)
+            .coerceIn(0f, 1f)
+    }
+
+private val LazyListState.firstVisibleItemSize: Int
+    get() =
+        layoutInfo.visibleItemsInfo
+            .firstOrNull { item -> item.index == firstVisibleItemIndex }
+            ?.size
+            ?: 0
 
 private fun String.decodeNotificationArtwork(): ImageBitmap? =
     runCatching {
