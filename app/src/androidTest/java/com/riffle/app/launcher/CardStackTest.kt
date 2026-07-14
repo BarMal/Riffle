@@ -1,6 +1,9 @@
 package com.riffle.app.launcher
 
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.material3.Text
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
@@ -11,6 +14,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.riffle.core.domain.launcher.cards.CardStackLayoutEntry
 import com.riffle.core.domain.launcher.cards.CardStackLayoutPolicy
+import com.riffle.core.domain.launcher.cards.CardStackAnimationProfile
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -44,10 +48,38 @@ class CardStackTest {
         assertTraversalIndex(cardIndex = 1, index = -2f)
     }
 
+    @Test
+    fun reflowingFocusKeepsCardIdentityAndUpdatesAccessibilityOrder() {
+        val initialEntries = CardStackLayoutPolicy().entries(cardCount = 3, activeIndex = 0)
+        val focusedEntries = CardStackLayoutPolicy().entries(cardCount = 3, activeIndex = 2)
+        var entries by mutableStateOf(initialEntries)
+
+        composeRule.setContent {
+            MaterialTheme {
+                CardStack(
+                    entries = entries,
+                    animationProfile = CardStackAnimationProfile.STACK_REFLOW,
+                ) { entry ->
+                    Text(cardLabel(entry.cardIndex))
+                }
+            }
+        }
+        composeRule.runOnIdle { entries = focusedEntries }
+
+        focusedEntries.forEach { entry ->
+            composeRule.onNodeWithText(cardLabel(entry.cardIndex)).assertExists()
+        }
+        assertTraversalIndex(cardIndex = 2, index = -2f)
+    }
+
     private fun setContent(entries: List<CardStackLayoutEntry>) {
         composeRule.setContent {
             MaterialTheme {
-                CardStack(entries = entries) { entry ->
+                CardStack(
+                    entries = entries,
+                    animationProfile = CardStackAnimationProfile.STACK_REFLOW,
+                    reducedMotion = false,
+                ) { entry ->
                     Text(cardLabel(entry.cardIndex))
                 }
             }
