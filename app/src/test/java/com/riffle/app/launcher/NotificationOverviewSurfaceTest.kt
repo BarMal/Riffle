@@ -2,6 +2,7 @@ package com.riffle.app.launcher
 
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppProfile
+import com.riffle.core.domain.launcher.cards.CardStackAnimationProfile
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroupKey
 import com.riffle.core.domain.launcher.notifications.LauncherNotification
@@ -10,9 +11,18 @@ import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.notifications.NotificationAgeBucket
 import com.riffle.core.domain.launcher.notifications.NotificationCategory
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class NotificationOverviewSurfaceTest {
+    @Test
+    fun cardFlightPrototypePassesReducedMotionToTheCardStack() {
+        val motion = notificationPrototypeCardStackMotion(reducedMotion = true)
+
+        assertEquals(CardStackAnimationProfile.CARD_FLIGHT, motion.animationProfile)
+        assertTrue(motion.reducedMotion)
+    }
+
     @Test
     fun titleIncludesActiveNotificationCount() {
         assertEquals(

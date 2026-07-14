@@ -39,6 +39,7 @@ fun NotificationOverviewSurface(
     notificationAccessStatus: NotificationAccessStatus,
     apps: List<InstalledApp>,
     appIconLoader: AppIconLoader,
+    reducedMotion: Boolean,
     onAction: (LauncherShellAction) -> Unit,
     title: String = "Notifications",
 ) {
@@ -73,6 +74,7 @@ fun NotificationOverviewSurface(
                 selectedGroupKey = selectedGroup.key,
                 apps = apps,
                 appIconLoader = appIconLoader,
+                reducedMotion = reducedMotion,
                 onBack = { selectedGroupKey = null },
                 onGroupChanged = { groupKey -> selectedGroupKey = groupKey },
                 onAction = onAction,

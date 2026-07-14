@@ -217,6 +217,7 @@ private fun LauncherDestination(
                 notificationAccessStatus = state.notificationAccessStatus,
                 apps = state.installedApps,
                 appIconLoader = appIconLoader,
+                reducedMotion = state.launcherSettings.motion.reducedMotion,
                 onAction = settingsPageActionRouter.onAction,
             )
 

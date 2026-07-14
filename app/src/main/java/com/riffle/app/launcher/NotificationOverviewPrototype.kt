@@ -51,6 +51,7 @@ internal fun NotificationGroupPrototype(
     selectedGroupKey: AppNotificationGroupKey,
     apps: List<InstalledApp>,
     appIconLoader: AppIconLoader,
+    reducedMotion: Boolean,
     onBack: () -> Unit,
     onGroupChanged: (AppNotificationGroupKey) -> Unit,
     onAction: (LauncherShellAction) -> Unit,
@@ -108,6 +109,7 @@ internal fun NotificationGroupPrototype(
                 group = group,
                 app = app,
                 appIconLoader = appIconLoader,
+                reducedMotion = reducedMotion,
                 modifier = Modifier.weight(1f),
             )
             LazyColumn(
@@ -191,6 +193,7 @@ private fun NotificationPrototypeHero(
     group: AppNotificationGroup,
     app: InstalledApp?,
     appIconLoader: AppIconLoader,
+    reducedMotion: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val label = notificationOverviewGroupLabel(app = app, group = group)
@@ -202,6 +205,7 @@ private fun NotificationPrototypeHero(
             cardCount = heroNotifications.size,
             activeIndex = heroNotifications.indexOf(featuredNotification),
         )
+    val cardStackMotion = notificationPrototypeCardStackMotion(reducedMotion)
 
     Box(
         modifier =
@@ -213,7 +217,8 @@ private fun NotificationPrototypeHero(
         CardStack(
             entries = cardEntries,
             modifier = Modifier.fillMaxSize(),
-            animationProfile = CardStackAnimationProfile.CARD_FLIGHT,
+            animationProfile = cardStackMotion.animationProfile,
+            reducedMotion = cardStackMotion.reducedMotion,
         ) { entry ->
             NotificationPrototypeHeroArt(
                 notification = heroNotifications[entry.cardIndex],
@@ -269,6 +274,18 @@ private fun NotificationPrototypeHero(
             }
         }
     }
+}
+
+internal data class NotificationPrototypeCardStackMotion(
+    val animationProfile: CardStackAnimationProfile,
+    val reducedMotion: Boolean,
+)
+
+internal fun notificationPrototypeCardStackMotion(reducedMotion: Boolean): NotificationPrototypeCardStackMotion {
+    return NotificationPrototypeCardStackMotion(
+        animationProfile = CardStackAnimationProfile.CARD_FLIGHT,
+        reducedMotion = reducedMotion,
+    )
 }
 
 @Composable
