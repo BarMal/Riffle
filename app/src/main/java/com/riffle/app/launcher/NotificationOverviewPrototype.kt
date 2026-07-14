@@ -40,6 +40,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.apps.InstalledApp
+import com.riffle.core.domain.launcher.cards.CardStackAnimationProfile
 import com.riffle.core.domain.launcher.cards.CardStackLayoutPolicy
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroupKey
@@ -83,13 +84,15 @@ internal fun NotificationGroupPrototype(
             ) ?: return@HorizontalPager
         val upcomingNotification =
             group.notifications.getOrNull(listState.firstVisibleItemIndex.coerceAtLeast(0) + 1)
+        val firstVisibleItemSize = listState.visibleItemSize()
         val swipeProgress =
-            notificationOverviewScrollProgress(
-                firstVisibleItemScrollOffset = listState.firstVisibleItemScrollOffset,
-                firstVisibleItemSize = listState.visibleItemSize(),
-            )
+            if (firstVisibleItemSize <= 0) {
+                0f
+            } else {
+                (listState.firstVisibleItemScrollOffset.toFloat() / firstVisibleItemSize).coerceIn(0f, 1f)
+            }
         val label = notificationOverviewGroupLabel(app = app, group = group)
-        val heroPresentation = notificationPrototypeHeroPresentation(group, app, presentation)
+        val heroPresentation = NotificationPrototypeHeroPresentation(group, app, presentation)
 
         Column(
             modifier = Modifier.fillMaxSize(),
@@ -208,14 +211,14 @@ private fun NotificationPrototypeHero(
         CardStack(
             entries = cardEntries,
             modifier = Modifier.fillMaxSize(),
-            animationProfile = presentation.cardStackMotion.animationProfile,
-            reducedMotion = presentation.cardStackMotion.reducedMotion,
+            animationProfile = CardStackAnimationProfile.CARD_FLIGHT,
+            reducedMotion = presentation.overviewPresentation.reducedMotion,
         ) { entry ->
             NotificationPrototypeHeroArt(
                 notification = heroNotifications[entry.cardIndex],
                 label = label,
                 app = presentation.app,
-                appIconLoader = presentation.appIconLoader,
+                appIconLoader = presentation.overviewPresentation.appIconLoader,
                 modifier = Modifier.fillMaxSize(),
             )
         }
@@ -244,21 +247,8 @@ private fun NotificationPrototypeHero(
 private data class NotificationPrototypeHeroPresentation(
     val group: AppNotificationGroup,
     val app: InstalledApp?,
-    val appIconLoader: AppIconLoader,
-    val cardStackMotion: NotificationPrototypeCardStackMotion,
+    val overviewPresentation: NotificationOverviewPresentation,
 )
-
-private fun notificationPrototypeHeroPresentation(
-    group: AppNotificationGroup,
-    app: InstalledApp?,
-    presentation: NotificationOverviewPresentation,
-): NotificationPrototypeHeroPresentation =
-    NotificationPrototypeHeroPresentation(
-        group = group,
-        app = app,
-        appIconLoader = presentation.appIconLoader,
-        cardStackMotion = notificationPrototypeCardStackMotion(presentation.reducedMotion),
-    )
 
 @Composable
 private fun BoxScope.NotificationPrototypeHeroDetails(
@@ -418,6 +408,11 @@ private fun LazyListState.visibleItemSize(): Int =
         .firstOrNull { item -> item.index == firstVisibleItemIndex }
         ?.size
         ?: 0
+
+internal fun notificationOverviewNotificationTitle(
+    notification: LauncherNotification,
+    fallbackLabel: String,
+): String = notification.title.ifBlank { fallbackLabel }
 
 private fun String.decodeNotificationArtwork(): ImageBitmap? =
     runCatching {
