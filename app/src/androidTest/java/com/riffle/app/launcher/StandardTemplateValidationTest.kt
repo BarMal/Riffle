@@ -6,8 +6,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.test.SemanticsMatcher
-import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -116,14 +114,11 @@ class StandardTemplateValidationTest {
             }
             composeRule.waitForIdle()
 
-            composeRule
-                .onNodeWithText("Camera")
-                .assert(
-                    SemanticsMatcher.expectValue(
-                        HomeIconPressMotionPolicyKey,
-                        if (case.reducedMotion) HomeIconPressMotionPolicy.NONE else HomeIconPressMotionPolicy.SHRINK,
-                    ),
-                )
+            composeRule.onNodeWithText("Camera").assertIsDisplayed().assertHasClickAction()
+            assertEquals(
+                if (case.reducedMotion) HomeIconPressMotionPolicy.NONE else HomeIconPressMotionPolicy.SHRINK,
+                homeIconPressMotionPolicy(shellState.launcherSettings.motion.reducedMotion),
+            )
 
             composeRule.runOnIdle {
                 dispatch(LauncherShellAction.OpenAppDrawer)

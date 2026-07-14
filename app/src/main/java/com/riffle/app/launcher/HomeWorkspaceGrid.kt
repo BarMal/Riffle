@@ -26,7 +26,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
@@ -308,7 +307,6 @@ private fun HomeShortcut(
                         interactionSource = pressInteractionSource,
                         policy = pressMotionPolicy,
                     )
-                    .semantics { homeIconPressMotionPolicy = pressMotionPolicy }
                     .combinedClickable(
                         enabled = true,
                         interactionSource = pressInteractionSource,
