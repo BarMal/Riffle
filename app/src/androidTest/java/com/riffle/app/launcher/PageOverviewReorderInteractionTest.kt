@@ -45,7 +45,7 @@ class PageOverviewReorderInteractionTest {
         val actions = mutableListOf<LauncherShellAction>()
         setContent(width = containerWidth, onAction = actions::add)
 
-        composeRule.scrollToPageOverviewCard(pageId = "page-7")
+        scrollToPageOverviewCard(pageId = "page-7")
         composeRule.onNodeWithTag(pageOverviewCardTestTag("page-7")).assertIsDisplayed()
         composeRule.onNodeWithTag(pageOverviewCardTestTag("page-7")).performTouchInput {
             down(center)
@@ -64,7 +64,11 @@ class PageOverviewReorderInteractionTest {
 
     private fun scrollToPageOverviewCard(pageId: String) {
         repeat(8) {
-            composeRule.onNodeWithTag(PAGE_OVERVIEW_STRIP_TEST_TAG).performTouchInput { swipeLeft() }
+            composeRule.onNodeWithTag(PAGE_OVERVIEW_STRIP_TEST_TAG).performTouchInput {
+                down(center)
+                moveBy(Offset(x = -width.toFloat(), y = 0f))
+                up()
+            }
         }
 
         composeRule.waitForIdle()
