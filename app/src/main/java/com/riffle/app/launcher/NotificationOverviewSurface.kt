@@ -32,13 +32,18 @@ import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.notifications.NotificationAgeBucket
 import com.riffle.core.domain.launcher.notifications.NotificationCategory
 
+data class NotificationOverviewPresentation(
+    val apps: List<InstalledApp>,
+    val appIconLoader: AppIconLoader,
+    val reducedMotion: Boolean,
+)
+
 @Composable
 fun NotificationOverviewSurface(
     groups: List<AppNotificationGroup>,
     categoryCounts: Map<NotificationCategory, Int>,
     notificationAccessStatus: NotificationAccessStatus,
-    apps: List<InstalledApp>,
-    appIconLoader: AppIconLoader,
+    presentation: NotificationOverviewPresentation,
     onAction: (LauncherShellAction) -> Unit,
     title: String = "Notifications",
 ) {
@@ -52,7 +57,8 @@ fun NotificationOverviewSurface(
         selectedGroupKey?.let { key ->
             visibleGroups.firstOrNull { group -> group.key == key }
         }
-    val selectedApp = selectedGroup?.let { group -> apps.firstOrNull { app -> app.matches(group) } }
+    val selectedApp =
+        selectedGroup?.let { group -> presentation.apps.firstOrNull { app -> app.matches(group) } }
     val panelTitle =
         selectedGroup?.let { group ->
             "${notificationOverviewGroupLabel(app = selectedApp, group = group)} (${group.count})"
@@ -71,8 +77,7 @@ fun NotificationOverviewSurface(
             NotificationGroupPrototype(
                 groups = visibleGroups,
                 selectedGroupKey = selectedGroup.key,
-                apps = apps,
-                appIconLoader = appIconLoader,
+                presentation = presentation,
                 onBack = { selectedGroupKey = null },
                 onGroupChanged = { groupKey -> selectedGroupKey = groupKey },
                 onAction = onAction,
@@ -98,8 +103,8 @@ fun NotificationOverviewSurface(
                 ) { group ->
                     NotificationGroupRow(
                         group = group,
-                        app = apps.firstOrNull { app -> app.matches(group) },
-                        appIconLoader = appIconLoader,
+                        app = presentation.apps.firstOrNull { app -> app.matches(group) },
+                        appIconLoader = presentation.appIconLoader,
                         onOpenGroup = { selectedGroupKey = group.key },
                         onAction = onAction,
                     )
