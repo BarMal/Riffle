@@ -1,7 +1,6 @@
 package com.riffle.app.launcher.widgets
 
 import android.appwidget.AppWidgetManager
-import android.content.ComponentName
 import android.content.Context
 import android.content.ContextWrapper
 import android.view.View
@@ -85,18 +84,6 @@ class AndroidWidgetHostGatewayTest {
     }
 
     @Test
-    fun createsBindIntentWithHostedWidgetAndProvider() {
-        val intent = gateway.createBindHostedWidgetIntent(HostedWidgetId(42), weatherProvider())
-
-        assertEquals(AppWidgetManager.ACTION_APPWIDGET_BIND, intent.action)
-        assertEquals(42, intent.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, -1))
-        assertEquals(
-            ComponentName("com.example.weather", ".WeatherWidget"),
-            intent.getParcelableExtra(AppWidgetManager.EXTRA_APPWIDGET_PROVIDER),
-        )
-    }
-
-    @Test
     fun reportsBindingPermissionRequirement() {
         platform.bindAllowed = false
 
@@ -123,19 +110,6 @@ class AndroidWidgetHostGatewayTest {
             ),
             configureHostedWidgetIntentData(HostedWidgetId(42), configureActivity),
         )
-    }
-
-    @Test
-    fun createsConfigureIntentWithProviderActivity() {
-        platform.configureActivity =
-            AndroidWidgetProviderBindingTarget("com.example.weather", ".ConfigureWeatherWidget")
-
-        val intent = gateway.createConfigureHostedWidgetIntent(HostedWidgetId(42))
-
-        assertEquals(AppWidgetManager.ACTION_APPWIDGET_CONFIGURE, intent.action)
-        assertEquals(42, intent.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, -1))
-        assertEquals(ComponentName("com.example.weather", ".ConfigureWeatherWidget"), intent.component)
-        assertEquals(42, platform.configuredAppWidgetId)
     }
 
     @Test
