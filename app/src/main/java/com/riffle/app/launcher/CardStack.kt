@@ -83,10 +83,13 @@ internal fun cardStackTransitionPose(
 
     return CardStackTransitionPose(
         alpha = if (entering) spec.enteringAlpha else spec.exitingAlpha,
-        horizontalTravelFraction = spec.horizontalTravelFraction * travelDirection,
-        verticalTravelFraction = spec.verticalTravelFraction * travelDirection,
+        horizontalTravelFraction = spec.horizontalTravelFraction.directedTravel(travelDirection),
+        verticalTravelFraction = spec.verticalTravelFraction.directedTravel(travelDirection),
     )
 }
+
+private fun Float.directedTravel(direction: Float): Float =
+    if (this == 0f) 0f else this * direction
 
 private fun cardStackContentTransform(
     animationProfile: CardStackAnimationProfile,
