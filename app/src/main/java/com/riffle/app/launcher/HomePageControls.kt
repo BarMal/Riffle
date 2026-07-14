@@ -11,11 +11,14 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.FilledTonalButton
@@ -31,6 +34,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.riffle.app.launcher.widgets.HomeWidgetViewFactory
 import com.riffle.core.domain.launcher.home.GeneratedLauncherPageKind
@@ -88,6 +92,7 @@ fun PageEditControls(
 @Composable
 fun PageOverviewControls(
     layout: HomeLayout,
+    reducedMotion: Boolean,
     appIconLoader: AppIconLoader,
     widgetViewFactory: HomeWidgetViewFactory,
     onAction: (LauncherShellAction) -> Unit,
@@ -102,6 +107,7 @@ fun PageOverviewControls(
     ) {
         PageOverviewStrip(
             layout = layout,
+            reducedMotion = reducedMotion,
             appIconLoader = appIconLoader,
             widgetViewFactory = widgetViewFactory,
             onAction = onAction,
@@ -164,19 +170,21 @@ fun PageOverviewControls(
 @Composable
 private fun PageOverviewStrip(
     layout: HomeLayout,
+    reducedMotion: Boolean,
     appIconLoader: AppIconLoader,
     widgetViewFactory: HomeWidgetViewFactory,
     onAction: (LauncherShellAction) -> Unit,
 ) {
-    Row(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState()),
+    LazyRow(
+        modifier = Modifier.fillMaxWidth().testTag(PAGE_OVERVIEW_STRIP_TEST_TAG),
+        contentPadding = PaddingValues(horizontal = PAGE_OVERVIEW_CONTENT_PADDING_DP.dp, vertical = 4.dp),
         horizontalArrangement = Arrangement.spacedBy(PAGE_OVERVIEW_CARD_SPACING_DP.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        layout.pages.forEachIndexed { index, page ->
+        itemsIndexed(
+            items = layout.pages,
+            key = { _, page -> page.id.value },
+        ) { index, page ->
             PageOverviewCard(
                 state =
                     PageOverviewCardState(
@@ -187,6 +195,7 @@ private fun PageOverviewStrip(
                     ),
                 appIconLoader = appIconLoader,
                 widgetViewFactory = widgetViewFactory,
+                reducedMotion = reducedMotion,
                 onClick = { onAction(LauncherShellAction.SelectHomePage(page.id)) },
                 onAction = onAction,
                 onMoveToIndex = { targetIndex ->
@@ -202,6 +211,7 @@ private fun PageOverviewCard(
     state: PageOverviewCardState,
     appIconLoader: AppIconLoader,
     widgetViewFactory: HomeWidgetViewFactory,
+    reducedMotion: Boolean,
     onClick: () -> Unit,
     onAction: (LauncherShellAction) -> Unit,
     onMoveToIndex: (Int) -> Unit,
@@ -212,8 +222,10 @@ private fun PageOverviewCard(
         modifier =
             Modifier
                 .width(PAGE_OVERVIEW_CARD_WIDTH_DP.dp)
+                .pageOverviewReflow(state = state, reducedMotion = reducedMotion)
                 .pageOverviewReorderDrag(state = state, onMoveToIndex = onMoveToIndex)
                 .clip(LocalLauncherCardShape.current)
+                .testTag(pageOverviewCardTestTag(state.page.id.value))
                 .clickable(onClick = onClick),
         shape = LocalLauncherCardShape.current,
         color =
@@ -240,27 +252,21 @@ private fun PageOverviewCard(
             modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = pageOverviewLabel(index = state.index),
-                    style = MaterialTheme.typography.titleSmall,
-                )
-                TextButton(
-                    onClick = {
-                        onAction(LauncherShellAction.SelectHomePage(state.page.id))
-                        isMenuExpanded.value = true
-                    },
-                ) {
-                    Text(text = "More")
-                }
-            }
+            PageOverviewCardHeader(
+                state = state,
+                onMoreClick = {
+                    onAction(LauncherShellAction.SelectHomePage(state.page.id))
+                    isMenuExpanded.value = true
+                },
+            )
             Text(
                 text = state.page.type.pageOverviewTypeLabel,
                 style = MaterialTheme.typography.labelMedium,
+            )
+            Text(
+                text = "Press and hold, then drag to reorder",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             PageOverviewPreview(
                 page = state.page,
@@ -273,6 +279,26 @@ private fun PageOverviewCard(
                 onDismissRequest = { isMenuExpanded.value = false },
                 onAction = onAction,
             )
+        }
+    }
+}
+
+@Composable
+private fun PageOverviewCardHeader(
+    state: PageOverviewCardState,
+    onMoreClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = pageOverviewLabel(index = state.index),
+            style = MaterialTheme.typography.titleSmall,
+        )
+        TextButton(onClick = onMoreClick) {
+            Text(text = "More")
         }
     }
 }
@@ -533,5 +559,9 @@ private val GeneratedLauncherPageKind.pageOverviewTypeLabel: String
             GeneratedLauncherPageKind.NOTIFICATION_CARDS -> "Cards"
         }
 
-internal const val PAGE_OVERVIEW_CARD_WIDTH_DP = 148
+internal const val PAGE_OVERVIEW_CARD_WIDTH_DP = 184
 internal const val PAGE_OVERVIEW_CARD_SPACING_DP = 8
+private const val PAGE_OVERVIEW_CONTENT_PADDING_DP = 16
+internal const val PAGE_OVERVIEW_STRIP_TEST_TAG = "page-overview-strip"
+
+internal fun pageOverviewCardTestTag(pageId: String): String = "page-overview-card-$pageId"

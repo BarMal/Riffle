@@ -252,7 +252,7 @@ private fun View.removeFromParent() {
     (parent as? ViewGroup)?.removeView(this)
 }
 
-private const val PAGE_OVERVIEW_PREVIEW_HEIGHT_DP = 118
+private const val PAGE_OVERVIEW_PREVIEW_HEIGHT_DP = 142
 private const val PAGE_OVERVIEW_PREVIEW_CORNER_RADIUS_DP = 14
 private const val PAGE_OVERVIEW_PREVIEW_PADDING_DP = 8
 private const val PAGE_OVERVIEW_PREVIEW_CELL_GAP_DP = 3
