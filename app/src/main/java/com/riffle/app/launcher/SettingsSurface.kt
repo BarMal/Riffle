@@ -1,6 +1,7 @@
 package com.riffle.app.launcher
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -35,6 +36,7 @@ fun SettingsSurface(
     onAction: (LauncherShellAction) -> Unit,
 ) {
     val selectedPage = remember(initialPage) { mutableStateOf(initialPage) }
+    val pageScrollStates = settingsPageScrollStates()
 
     BackHandler(enabled = selectedPage.value != SettingsPage.MAIN) {
         selectedPage.value = SettingsPage.MAIN
@@ -66,7 +68,7 @@ fun SettingsSurface(
                         .weight(1f)
                         .widthIn(max = SETTINGS_PAGE_MAX_WIDTH_DP.dp)
                         .align(Alignment.CenterHorizontally)
-                        .verticalScroll(rememberScrollState()),
+                        .verticalScroll(settingsPageScrollStateFor(pageScrollStates, selectedPage.value)),
                 state = state,
                 page = selectedPage.value,
                 onPageSelected = { page -> selectedPage.value = page },
@@ -146,5 +148,18 @@ internal fun SettingsSection(
         }
     }
 }
+
+@Composable
+internal fun settingsPageScrollStates(): Map<SettingsPage, ScrollState> =
+    buildMap {
+        SettingsPage.entries.forEach { page ->
+            put(page, rememberScrollState())
+        }
+    }
+
+internal fun settingsPageScrollStateFor(
+    pageScrollStates: Map<SettingsPage, ScrollState>,
+    page: SettingsPage,
+): ScrollState = pageScrollStates.getValue(page)
 
 private const val SETTINGS_PAGE_MAX_WIDTH_DP = 840
