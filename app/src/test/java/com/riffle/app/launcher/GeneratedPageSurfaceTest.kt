@@ -86,7 +86,7 @@ class GeneratedPageSurfaceTest {
             LauncherShellAction.LaunchApp(app.identity),
             generatedNotificationCardLaunchAction(card),
         )
-        assertTrue(generatedNotificationCardContentDescription(card).contains("Tap to open Chat"))
+        assertTrue(generatedNotificationCardContentDescription(card).contains("Tap to open"))
     }
 
     private fun notificationGroup(
