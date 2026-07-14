@@ -40,10 +40,11 @@ internal fun Modifier.pageOverviewReflow(
 
     LaunchedEffect(state.index, cardStepPx, reducedMotion) {
         val startOffsetX =
-            pageOverviewReflowStartOffsetPx(
+            pageOverviewReflowInitialOffsetPx(
                 previousIndex = previousIndex,
                 newIndex = state.index,
                 cardStepPx = cardStepPx,
+                reducedMotion = reducedMotion,
             )
         previousIndex = state.index
         reflowOffsetX.snapTo(startOffsetX)
@@ -126,6 +127,22 @@ internal fun pageOverviewReflowStartOffsetPx(
 
     return (previousIndex - newIndex) * cardStepPx
 }
+
+internal fun pageOverviewReflowInitialOffsetPx(
+    previousIndex: Int,
+    newIndex: Int,
+    cardStepPx: Float,
+    reducedMotion: Boolean,
+): Float =
+    if (reducedMotion) {
+        0f
+    } else {
+        pageOverviewReflowStartOffsetPx(
+            previousIndex = previousIndex,
+            newIndex = newIndex,
+            cardStepPx = cardStepPx,
+        )
+    }
 
 private const val PAGE_OVERVIEW_DRAG_Z_INDEX = 2f
 private const val PAGE_OVERVIEW_DRAG_ELEVATION = 16f

@@ -25,6 +25,19 @@ class PageOverviewCardStateTest {
     }
 
     @Test
+    fun reducedMotionReflowStartsAtTheCurrentPosition() {
+        assertEquals(
+            0f,
+            pageOverviewReflowInitialOffsetPx(
+                previousIndex = 3,
+                newIndex = 1,
+                cardStepPx = 192f,
+                reducedMotion = true,
+            ),
+        )
+    }
+
+    @Test
     fun dropTargetRoundsToTheNearestCardAndStaysWithinTheOverview() {
         assertEquals(
             2,
