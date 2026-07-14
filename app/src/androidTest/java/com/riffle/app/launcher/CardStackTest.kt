@@ -110,6 +110,22 @@ class CardStackTest {
     }
 
     @Test
+    fun cardFlightRenderedEnterPoseUsesDeclaredHorizontalAndVerticalTravel() {
+        val entry = CardStackLayoutPolicy().entries(cardCount = 1, activeIndex = 0).single()
+
+        assertEquals(
+            CardStackRenderedPose(alpha = 0.65f, offset = 200f, verticalOffset = 45f),
+            cardStackRenderedPose(
+                entry = entry,
+                animationProfile = CardStackAnimationProfile.CARD_FLIGHT,
+                entering = true,
+                width = 200f,
+                height = 300f,
+            ),
+        )
+    }
+
+    @Test
     fun notificationOverviewUsesCardFlightSnapMotionWhenReducedMotionIsEnabled() {
         composeRule.setContent {
             MaterialTheme {
