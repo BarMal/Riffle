@@ -26,7 +26,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 
 @Composable
@@ -38,7 +37,7 @@ fun SettingsSurface(
     val selectedPage = remember(initialPage) { mutableStateOf(initialPage) }
     val pageScrollStates =
         remember {
-            SettingsPage.entries.associateWith { ScrollState(initial = 0) }
+            settingsPageScrollStates()
         }
 
     BackHandler(enabled = selectedPage.value != SettingsPage.MAIN) {
@@ -71,8 +70,7 @@ fun SettingsSurface(
                         .weight(1f)
                         .widthIn(max = SETTINGS_PAGE_MAX_WIDTH_DP.dp)
                         .align(Alignment.CenterHorizontally)
-                        .testTag(SETTINGS_PAGE_CONTENT_TEST_TAG)
-                        .verticalScroll(pageScrollStates.getValue(selectedPage.value)),
+                        .verticalScroll(settingsPageScrollStateFor(pageScrollStates, selectedPage.value)),
                 state = state,
                 page = selectedPage.value,
                 onPageSelected = { page -> selectedPage.value = page },
@@ -153,5 +151,13 @@ internal fun SettingsSection(
     }
 }
 
+internal fun settingsPageScrollStates(): Map<SettingsPage, ScrollState> {
+    return SettingsPage.entries.associateWith { ScrollState(initial = 0) }
+}
+
+internal fun settingsPageScrollStateFor(
+    pageScrollStates: Map<SettingsPage, ScrollState>,
+    page: SettingsPage,
+): ScrollState = pageScrollStates.getValue(page)
+
 private const val SETTINGS_PAGE_MAX_WIDTH_DP = 840
-internal const val SETTINGS_PAGE_CONTENT_TEST_TAG = "settings-page-content"
