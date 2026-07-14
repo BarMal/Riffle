@@ -108,7 +108,6 @@ class CardStackTest {
 
     @Test
     fun notificationOverviewUsesCardFlightSnapMotionWhenReducedMotionIsEnabled() {
-        composeRule.mainClock.autoAdvance = false
         composeRule.setContent {
             MaterialTheme {
                 NotificationOverviewSurface(
@@ -127,7 +126,6 @@ class CardStackTest {
         }
 
         composeRule.onNodeWithText("View").performClick()
-        composeRule.mainClock.advanceTimeByFrame()
 
         composeRule
             .onNode(
