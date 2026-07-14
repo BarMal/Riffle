@@ -1,11 +1,14 @@
 package com.riffle.app.launcher
 
 import com.riffle.core.domain.launcher.LauncherShellState
+import com.riffle.core.domain.launcher.LauncherShellStateReducer
 import com.riffle.core.domain.launcher.ShellDestination
+import com.riffle.core.domain.launcher.ShellNavigationAction
 import com.riffle.core.domain.launcher.apps.AppActivityName
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.InstalledApp
+import com.riffle.core.domain.launcher.apps.InstalledAppCatalog
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.GridCell
 import com.riffle.core.domain.launcher.home.GridDimensions
@@ -21,6 +24,7 @@ import com.riffle.core.domain.launcher.home.HomeLayoutRepository
 import com.riffle.core.domain.launcher.home.HomeLayoutSet
 import com.riffle.core.domain.launcher.home.HostedWidgetId
 import com.riffle.core.domain.launcher.home.LauncherPageId
+import com.riffle.core.domain.launcher.home.LauncherPageType
 import com.riffle.core.domain.launcher.home.LauncherTemplateCatalogDefaults
 import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.home.LauncherViewModeAvailability
@@ -174,6 +178,38 @@ class LauncherHomePageEditReducerTest {
             assertEquals(template.seedPageTypes, updated.homeLayout.pages.map { page -> page.type })
             assertEquals(updated.homeLayout, repository.savedLayoutSet?.activeLayout)
         }
+    }
+
+    @Test
+    fun standardTemplateUsesDedicatedAppDrawerForInstalledApps() {
+        val apps = listOf(app(label = "Camera"), app(label = "Calendar"))
+        val repository = FakeHomeLayoutRepository(HomeLayoutDefaults.standard())
+        val selectedTemplate =
+            LauncherHomePageEditReducer(homeLayoutRepository = repository).reduce(
+                launcherState(repository.savedLayoutSet).copy(installedApps = apps),
+                LauncherShellAction.SelectLauncherTemplate(
+                    templateId = LauncherTemplateCatalogDefaults.standardPhoneAppDrawerId,
+                    mode = LauncherViewMode.STANDARD_APP_DRAWER,
+                ),
+            )
+
+        assertEquals(listOf(LauncherPageType.Home), selectedTemplate.homeLayout.pages.map { page -> page.type })
+
+        val drawerState =
+            LauncherShellStateReducer().navigationActionSelected(
+                selectedTemplate,
+                ShellNavigationAction.OpenAppDrawer,
+            )
+        val populatedDrawer =
+            checkNotNull(
+                LauncherAppListActionReducer(InstalledAppCatalog()).reduce(
+                    drawerState,
+                    LauncherShellAction.AppDrawerQueryChanged(""),
+                ),
+            )
+
+        assertEquals(ShellDestination.APP_DRAWER, populatedDrawer.destination)
+        assertEquals(listOf("Calendar", "Camera"), populatedDrawer.appDrawerApps.map { app -> app.label })
     }
 
     @Test
