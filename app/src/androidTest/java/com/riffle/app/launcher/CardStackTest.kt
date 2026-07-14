@@ -88,6 +88,14 @@ class CardStackTest {
     @Test
     fun profilesExposeDeterministicEnterAndExitPoses() {
         assertEquals(
+            CardStackMotionMode.ANIMATED,
+            cardStackMotionMode(reducedMotion = false),
+        )
+        assertEquals(
+            CardStackMotionMode.SNAP,
+            cardStackMotionMode(reducedMotion = true),
+        )
+        assertEquals(
             CardStackTransitionPose(alpha = 0f, horizontalTravelFraction = 0f, verticalTravelFraction = 0f),
             cardStackTransitionPose(CardStackAnimationProfile.FADE, entering = true),
         )

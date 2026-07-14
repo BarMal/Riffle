@@ -31,7 +31,7 @@ internal fun CardStack(
     reducedMotion: Boolean = false,
     content: @Composable (CardStackLayoutEntry) -> Unit,
 ) {
-    val motionMode = cardStackMotionMode(animationProfile, reducedMotion)
+    val motionMode = cardStackMotionMode(reducedMotion)
 
     Box(
         modifier =
@@ -79,11 +79,8 @@ internal val CardStackAnimationProfileKey =
 
 internal val CardStackMotionModeKey = SemanticsPropertyKey<CardStackMotionMode>("CardStackMotionMode")
 
-internal fun cardStackMotionMode(
-    animationProfile: CardStackAnimationProfile,
-    reducedMotion: Boolean,
-): CardStackMotionMode =
-    if (reducedMotion || animationProfile == CardStackAnimationProfile.STACK_REFLOW) {
+internal fun cardStackMotionMode(reducedMotion: Boolean): CardStackMotionMode =
+    if (reducedMotion) {
         CardStackMotionMode.SNAP
     } else {
         CardStackMotionMode.ANIMATED
