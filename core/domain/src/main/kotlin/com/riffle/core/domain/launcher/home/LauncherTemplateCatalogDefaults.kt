@@ -33,7 +33,6 @@ object LauncherTemplateCatalogDefaults {
             seedPageTypes =
                 listOf(
                     LauncherPageType.Home,
-                    LauncherPageType.AllApps,
                 ),
             schema =
                 LauncherTemplateSchema(
@@ -44,7 +43,6 @@ object LauncherTemplateCatalogDefaults {
                                 LauncherTemplateSupportedElementType.APP_ICON,
                                 LauncherTemplateSupportedElementType.WIDGET,
                             ),
-                            slot("all-apps", LauncherTemplateSupportedElementType.APP_ICON),
                         ),
                     elements = emptyList(),
                 ),

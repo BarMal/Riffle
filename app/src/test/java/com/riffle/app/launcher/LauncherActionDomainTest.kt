@@ -22,6 +22,7 @@ import com.riffle.core.domain.launcher.home.HostedWidgetId
 import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.home.LauncherPageId
 import com.riffle.core.domain.launcher.home.LauncherPageType
+import com.riffle.core.domain.launcher.home.LauncherTemplateCatalogDefaults
 import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.home.WallpaperScrollMode
 import com.riffle.core.domain.launcher.home.WallpaperSource
@@ -197,6 +198,13 @@ class LauncherActionDomainTest {
                 activity(
                     "SelectLauncherViewMode",
                     LauncherShellAction.SelectLauncherViewMode(LauncherViewMode.HOME_SCREEN_LIBRARY),
+                ),
+                activity(
+                    "SelectLauncherTemplate",
+                    LauncherShellAction.SelectLauncherTemplate(
+                        templateId = LauncherTemplateCatalogDefaults.conservativeGeneratedPagesId,
+                        mode = LauncherViewMode.HOME_SCREEN_LIBRARY,
+                    ),
                 ),
                 activity(
                     "SelectHomeLayoutDeviceClass",

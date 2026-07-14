@@ -18,6 +18,7 @@ import com.riffle.core.domain.launcher.home.HostedWidgetId
 import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.home.LauncherPageId
 import com.riffle.core.domain.launcher.home.LauncherPageType
+import com.riffle.core.domain.launcher.home.LauncherTemplateId
 import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.home.WallpaperScrollMode
 import com.riffle.core.domain.launcher.home.WallpaperSource
@@ -119,6 +120,11 @@ sealed interface LauncherShellAction {
     data class SelectHomeLabelSizing(val sizing: HomeLabelSizing) : LauncherShellAction
 
     data class SelectLauncherViewMode(val mode: LauncherViewMode) : LauncherShellAction
+
+    data class SelectLauncherTemplate(
+        val templateId: LauncherTemplateId,
+        val mode: LauncherViewMode,
+    ) : LauncherShellAction
 
     data class SelectHomeLayoutDeviceClass(
         val deviceClass: HomeLayoutDeviceClass,
