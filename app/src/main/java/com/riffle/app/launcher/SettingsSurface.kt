@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
@@ -35,10 +36,7 @@ fun SettingsSurface(
     onAction: (LauncherShellAction) -> Unit,
 ) {
     val selectedPage = remember(initialPage) { mutableStateOf(initialPage) }
-    val pageScrollStates =
-        remember {
-            settingsPageScrollStates()
-        }
+    val pageScrollStates = settingsPageScrollStates()
 
     BackHandler(enabled = selectedPage.value != SettingsPage.MAIN) {
         selectedPage.value = SettingsPage.MAIN
@@ -151,9 +149,13 @@ internal fun SettingsSection(
     }
 }
 
-internal fun settingsPageScrollStates(): Map<SettingsPage, ScrollState> {
-    return SettingsPage.entries.associateWith { ScrollState(initial = 0) }
-}
+@Composable
+internal fun settingsPageScrollStates(): Map<SettingsPage, ScrollState> =
+    buildMap {
+        SettingsPage.entries.forEach { page ->
+            put(page, rememberScrollState())
+        }
+    }
 
 internal fun settingsPageScrollStateFor(
     pageScrollStates: Map<SettingsPage, ScrollState>,

@@ -13,7 +13,7 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.riffle.core.domain.launcher.LauncherShellState
-import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotSame
 import org.junit.Assert.assertSame
 import org.junit.Rule
 import org.junit.Test
@@ -46,19 +46,18 @@ class SettingsSurfaceNavigationTest {
 
     @Test
     fun pageScrollStatesKeepTheMainOffsetSeparateFromAppearance() {
-        val mainScrollState = ScrollState(initial = 72)
-        val appearanceScrollState = ScrollState(initial = 184)
-        val pageScrollStates =
-            mapOf(
-                SettingsPage.MAIN to mainScrollState,
-                SettingsPage.APPEARANCE to appearanceScrollState,
-            )
+        lateinit var pageScrollStates: Map<SettingsPage, ScrollState>
 
-        val restoredMainScrollState = settingsPageScrollStateFor(pageScrollStates, SettingsPage.MAIN)
-        val currentAppearanceScrollState = settingsPageScrollStateFor(pageScrollStates, SettingsPage.APPEARANCE)
+        composeRule.setContent {
+            pageScrollStates = settingsPageScrollStates()
+        }
 
-        assertSame(mainScrollState, restoredMainScrollState)
-        assertEquals(72, restoredMainScrollState.value)
-        assertEquals(184, currentAppearanceScrollState.value)
+        composeRule.runOnIdle {
+            val restoredMainScrollState = settingsPageScrollStateFor(pageScrollStates, SettingsPage.MAIN)
+            val currentAppearanceScrollState = settingsPageScrollStateFor(pageScrollStates, SettingsPage.APPEARANCE)
+
+            assertSame(pageScrollStates.getValue(SettingsPage.MAIN), restoredMainScrollState)
+            assertNotSame(restoredMainScrollState, currentAppearanceScrollState)
+        }
     }
 }
