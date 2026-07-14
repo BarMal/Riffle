@@ -1,5 +1,15 @@
 package com.riffle.app.launcher
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
@@ -15,6 +25,7 @@ import androidx.compose.ui.semantics.traversalIndex
 import androidx.compose.ui.zIndex
 import com.riffle.core.domain.launcher.cards.CardStackAnimationProfile
 import com.riffle.core.domain.launcher.cards.CardStackLayoutEntry
+import kotlin.math.roundToInt
 
 @Composable
 internal fun CardStack(
@@ -30,20 +41,99 @@ internal fun CardStack(
                 isTraversalGroup = true
             },
     ) {
-        entries.forEach { entry ->
-            // A card index identifies a stable card while focus changes, so Compose can
-            // interpolate that card's old pose into its new pose instead of restarting it.
-            key(entry.cardIndex) {
-                AnimatedCardStackEntry(
-                    entry = entry,
+        AnimatedContent(
+            targetState = entries,
+            transitionSpec = {
+                cardStackContentTransform(
                     animationProfile = animationProfile,
                     reducedMotion = reducedMotion,
-                    content = content,
                 )
+            },
+            label = "card-stack-content",
+        ) { visibleEntries ->
+            visibleEntries.forEach { entry ->
+                // A card index identifies a stable card while focus changes, so Compose can
+                // interpolate that card's old pose into its new pose instead of restarting it.
+                key(entry.cardIndex) {
+                    AnimatedCardStackEntry(
+                        entry = entry,
+                        animationProfile = animationProfile,
+                        reducedMotion = reducedMotion,
+                        content = content,
+                    )
+                }
             }
         }
     }
 }
+
+internal data class CardStackTransitionPose(
+    val alpha: Float,
+    val horizontalTravelFraction: Float,
+    val verticalTravelFraction: Float,
+)
+
+internal fun cardStackTransitionPose(
+    animationProfile: CardStackAnimationProfile,
+    entering: Boolean,
+): CardStackTransitionPose {
+    val spec = animationProfile.spec
+    val travelDirection = if (entering) 1f else -1f
+
+    return CardStackTransitionPose(
+        alpha = if (entering) spec.enteringAlpha else spec.exitingAlpha,
+        horizontalTravelFraction = spec.horizontalTravelFraction * travelDirection,
+        verticalTravelFraction = spec.verticalTravelFraction * travelDirection,
+    )
+}
+
+private fun cardStackContentTransform(
+    animationProfile: CardStackAnimationProfile,
+    reducedMotion: Boolean,
+) =
+    if (reducedMotion || animationProfile == CardStackAnimationProfile.STACK_REFLOW) {
+        EnterTransition.None togetherWith ExitTransition.None
+    } else {
+        val enteringPose = cardStackTransitionPose(animationProfile, entering = true)
+        val exitingPose = cardStackTransitionPose(animationProfile, entering = false)
+        val spec = animationProfile.spec
+        val alphaAnimation = tween<Float>(durationMillis = spec.durationMillis)
+        val translationAnimation = tween<Int>(durationMillis = spec.durationMillis)
+        val enter =
+            (if (spec.animatesAlpha) fadeIn(alphaAnimation, enteringPose.alpha) else EnterTransition.None) +
+                (if (spec.animatesHorizontalTranslation) {
+                    slideInHorizontally(translationAnimation) { width ->
+                        (width * enteringPose.horizontalTravelFraction).roundToInt()
+                    }
+                } else {
+                    EnterTransition.None
+                }) +
+                (if (spec.animatesVerticalTranslation) {
+                    slideInVertically(translationAnimation) { height ->
+                        (height * enteringPose.verticalTravelFraction).roundToInt()
+                    }
+                } else {
+                    EnterTransition.None
+                })
+        val exit =
+            (if (spec.animatesAlpha) fadeOut(alphaAnimation, exitingPose.alpha) else ExitTransition.None) +
+                (if (spec.animatesHorizontalTranslation) {
+                    slideOutHorizontally(translationAnimation) { width ->
+                        (width * exitingPose.horizontalTravelFraction).roundToInt()
+                    }
+                } else {
+                    ExitTransition.None
+                }) +
+                (if (spec.animatesVerticalTranslation) {
+                    slideOutVertically(translationAnimation) { height ->
+                        (height * exitingPose.verticalTravelFraction).roundToInt()
+                    }
+                } else {
+                    ExitTransition.None
+                })
+
+        enter togetherWith exit
+    }
 
 @Composable
 private fun AnimatedCardStackEntry(

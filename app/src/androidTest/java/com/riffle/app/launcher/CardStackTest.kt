@@ -15,6 +15,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.riffle.core.domain.launcher.cards.CardStackAnimationProfile
 import com.riffle.core.domain.launcher.cards.CardStackLayoutEntry
 import com.riffle.core.domain.launcher.cards.CardStackLayoutPolicy
+import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -70,6 +71,30 @@ class CardStackTest {
             composeRule.onNodeWithText(cardLabel(entry.cardIndex)).assertExists()
         }
         assertTraversalIndex(cardIndex = 2, index = -2f)
+    }
+
+    @Test
+    fun profilesExposeDeterministicEnterAndExitPoses() {
+        assertEquals(
+            CardStackTransitionPose(alpha = 0f, horizontalTravelFraction = 0f, verticalTravelFraction = 0f),
+            cardStackTransitionPose(CardStackAnimationProfile.FADE, entering = true),
+        )
+        assertEquals(
+            CardStackTransitionPose(alpha = 1f, horizontalTravelFraction = -1f, verticalTravelFraction = 0f),
+            cardStackTransitionPose(CardStackAnimationProfile.SLIDE, entering = false),
+        )
+        assertEquals(
+            CardStackTransitionPose(
+                alpha = 0.65f,
+                horizontalTravelFraction = 1f,
+                verticalTravelFraction = 0.15f,
+            ),
+            cardStackTransitionPose(CardStackAnimationProfile.CARD_FLIGHT, entering = true),
+        )
+        assertEquals(
+            CardStackTransitionPose(alpha = 0f, horizontalTravelFraction = -1f, verticalTravelFraction = 0f),
+            cardStackTransitionPose(CardStackAnimationProfile.SLIDE_AND_FADE, entering = false),
+        )
     }
 
     private fun setContent(entries: List<CardStackLayoutEntry>) {

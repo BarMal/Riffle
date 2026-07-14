@@ -31,7 +31,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.ImageBitmap
@@ -40,6 +39,8 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.apps.InstalledApp
+import com.riffle.core.domain.launcher.cards.CardStackAnimationProfile
+import com.riffle.core.domain.launcher.cards.CardStackLayoutPolicy
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroupKey
 import com.riffle.core.domain.launcher.notifications.LauncherNotification
@@ -193,6 +194,14 @@ private fun NotificationPrototypeHero(
     modifier: Modifier = Modifier,
 ) {
     val label = notificationOverviewGroupLabel(app = app, group = group)
+    val heroNotifications = listOfNotNull(notification, upcomingNotification)
+    val featuredNotification =
+        heroNotifications.getOrElse(if (swipeProgress >= 0.5f) 1 else 0) { notification }
+    val cardEntries =
+        CardStackLayoutPolicy().entries(
+            cardCount = heroNotifications.size,
+            activeIndex = heroNotifications.indexOf(featuredNotification),
+        )
 
     Box(
         modifier =
@@ -201,20 +210,17 @@ private fun NotificationPrototypeHero(
                 .clip(RoundedCornerShape(32.dp))
                 .background(MaterialTheme.colorScheme.surfaceVariant),
     ) {
-        NotificationPrototypeHeroArt(
-            notification = notification,
-            label = label,
-            app = app,
-            appIconLoader = appIconLoader,
-            modifier = Modifier.fillMaxSize().alpha(1f - swipeProgress),
-        )
-        upcomingNotification?.let { next ->
+        CardStack(
+            entries = cardEntries,
+            modifier = Modifier.fillMaxSize(),
+            animationProfile = CardStackAnimationProfile.CARD_FLIGHT,
+        ) { entry ->
             NotificationPrototypeHeroArt(
-                notification = next,
+                notification = heroNotifications[entry.cardIndex],
                 label = label,
                 app = app,
                 appIconLoader = appIconLoader,
-                modifier = Modifier.fillMaxSize().alpha(swipeProgress),
+                modifier = Modifier.fillMaxSize(),
             )
         }
         Box(
@@ -247,7 +253,7 @@ private fun NotificationPrototypeHero(
                 Text(
                     text =
                         notificationOverviewNotificationTitle(
-                            notification = notification,
+                            notification = featuredNotification,
                             fallbackLabel = label,
                         ),
                     style = MaterialTheme.typography.headlineSmall,
@@ -255,7 +261,7 @@ private fun NotificationPrototypeHero(
                     overflow = TextOverflow.Ellipsis,
                 )
                 Text(
-                    text = notification.text.ifBlank { group.notificationOverviewMetadataLabel(label) },
+                    text = featuredNotification.text.ifBlank { group.notificationOverviewMetadataLabel(label) },
                     style = MaterialTheme.typography.bodyMedium,
                     maxLines = 4,
                     overflow = TextOverflow.Ellipsis,
