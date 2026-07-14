@@ -10,16 +10,23 @@ import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.riffle.core.domain.launcher.FirstRunStatus
+import com.riffle.core.domain.launcher.LauncherShellState
+import com.riffle.core.domain.launcher.LauncherShellStateReducer
+import com.riffle.core.domain.launcher.ShellDestination
 import com.riffle.core.domain.launcher.apps.AppActivityName
-import com.riffle.core.domain.launcher.apps.AppDrawerProfileFilter
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.InstalledApp
-import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
+import com.riffle.core.domain.launcher.apps.InstalledAppCatalog
+import com.riffle.core.domain.launcher.home.HomeLayout
+import com.riffle.core.domain.launcher.home.HomeLayoutRepository
+import com.riffle.core.domain.launcher.home.HomeLayoutSet
+import com.riffle.core.domain.launcher.home.LauncherTemplateCatalogDefaults
 import com.riffle.core.domain.launcher.settings.LauncherThemeMode
-import com.riffle.core.domain.launcher.settings.OverlayDockSettings
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -32,11 +39,66 @@ class StandardTemplateValidationTest {
 
     @Test
     fun installedAppsRemainAccessibleInDrawerAcrossThemeAndWidthValidationMatrix() {
+        val apps = listOf(app("Camera"), app("Calendar"))
+        val homeLayoutRepository = FakeHomeLayoutRepository()
+        val homePageEditReducer = LauncherHomePageEditReducer(homeLayoutRepository = homeLayoutRepository)
+        val appListActionReducer = LauncherAppListActionReducer(InstalledAppCatalog())
+        val shellStateReducer = LauncherShellStateReducer()
         var displayedCase by mutableStateOf(validationCases.first())
-        setContent { displayedCase }
+        var showTemplateSetting by mutableStateOf(true)
+        var shellState by mutableStateOf(launcherState(apps))
+
+        fun dispatch(action: LauncherShellAction) {
+            when (val route = action.launcherActivityRoute()) {
+                LauncherActivityRoute.HomePageEdit -> {
+                    shellState = homePageEditReducer.reduce(shellState, action)
+                    shellState =
+                        checkNotNull(
+                            appListActionReducer.reduce(
+                                shellState,
+                                LauncherShellAction.AppDrawerQueryChanged(""),
+                            ),
+                        )
+                    showTemplateSetting = false
+                }
+
+                is LauncherActivityRoute.Navigation ->
+                    shellState = shellStateReducer.navigationActionSelected(shellState, route.action)
+
+                else -> Unit
+            }
+        }
+
+        composeRule.setContent {
+            RiffleLauncherTheme(themeMode = displayedCase.themeMode) {
+                Box(modifier = Modifier.size(width = displayedCase.widthDp.dp, height = displayedCase.heightDp.dp)) {
+                    if (showTemplateSetting) {
+                        HomeTemplateSetting(
+                            selectedViewMode = shellState.homeLayout.viewMode,
+                            selectedTemplateId = shellState.homeLayout.templateId,
+                            availableViewModes = listOf(shellState.homeLayout.viewMode),
+                            deviceClass = shellState.settingsLayoutDeviceClass,
+                            onAction = ::dispatch,
+                        )
+                    } else {
+                        LauncherShellContent(state = shellState, onAction = ::dispatch)
+                    }
+                }
+            }
+        }
+
+        composeRule.onNodeWithText("Standard phone app drawer").performClick()
+        composeRule.runOnIdle {
+            assertEquals(LauncherTemplateCatalogDefaults.standardPhoneAppDrawerId, shellState.homeLayout.templateId)
+            assertEquals(1, shellState.homeLayout.pages.size)
+            assertEquals(ShellDestination.HOME, shellState.destination)
+        }
 
         validationCases.forEach { case ->
-            composeRule.runOnIdle { displayedCase = case }
+            composeRule.runOnIdle {
+                displayedCase = case
+                dispatch(LauncherShellAction.OpenAppDrawer)
+            }
             composeRule.waitForIdle()
 
             composeRule.onNodeWithText("Apps").assertIsDisplayed()
@@ -44,41 +106,15 @@ class StandardTemplateValidationTest {
             composeRule.onNodeWithText("Camera").assertIsDisplayed().assertHasClickAction()
             composeRule.onNodeWithText("Calendar").assertIsDisplayed().assertHasClickAction()
             assertEquals(case.motionPolicy, homePageSettleMotionPolicy(case.reducedMotion))
+            assertEquals(ShellDestination.APP_DRAWER, shellState.destination)
         }
     }
 
-    private fun setContent(case: () -> ValidationCase) {
-        val apps = listOf(app("Camera"), app("Calendar"))
-
-        composeRule.setContent {
-            val displayedCase = case()
-            RiffleLauncherTheme(themeMode = displayedCase.themeMode) {
-                Box(
-                    modifier =
-                        Modifier.size(
-                            width = displayedCase.widthDp.dp,
-                            height = displayedCase.heightDp.dp,
-                        ),
-                ) {
-                    AppDrawer(
-                        query = "",
-                        profileFilter = AppDrawerProfileFilter.ALL,
-                        installedApps = apps,
-                        apps = apps,
-                        appListContext =
-                            AppListContext(
-                                homeLayout = HomeLayoutDefaults.standard(),
-                                overlayDock = OverlayDockSettings(),
-                                notificationGroupsByApp = emptyList(),
-                                appIconLoader = EmptyAppIconLoader,
-                                onAction = {},
-                            ),
-                        onAction = {},
-                    )
-                }
-            }
-        }
-    }
+    private fun launcherState(apps: List<InstalledApp>): LauncherShellState =
+        LauncherShellState(
+            firstRunStatus = FirstRunStatus.COMPLETE,
+            installedApps = apps,
+        )
 
     private fun app(label: String): InstalledApp =
         InstalledApp(
@@ -113,5 +149,21 @@ class StandardTemplateValidationTest {
                 ValidationCase(840, 700, LauncherThemeMode.LIGHT, reducedMotion = false),
                 ValidationCase(840, 700, LauncherThemeMode.DARK, reducedMotion = true),
             )
+    }
+
+    private class FakeHomeLayoutRepository : HomeLayoutRepository {
+        private var homeLayoutSet: HomeLayoutSet? = null
+
+        override fun loadHomeLayout(): HomeLayout? = homeLayoutSet?.activeLayout
+
+        override fun saveHomeLayout(layout: HomeLayout) {
+            homeLayoutSet = HomeLayoutSet.fromLayout(layout)
+        }
+
+        override fun loadHomeLayoutSet(): HomeLayoutSet? = homeLayoutSet
+
+        override fun saveHomeLayoutSet(layoutSet: HomeLayoutSet) {
+            homeLayoutSet = layoutSet
+        }
     }
 }
