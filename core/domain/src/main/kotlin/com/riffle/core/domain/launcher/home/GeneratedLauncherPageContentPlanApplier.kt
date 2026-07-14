@@ -24,7 +24,9 @@ class GeneratedLauncherPageContentPlanApplier {
             GeneratedLauncherPageContentItemMaterializer().materialize(plan, appLabelProvider)
         return if (rejectionReason == null && materialized.skippedItems.isEmpty()) {
             GeneratedLauncherPageContentPlanApplyResult.Applied(
-                page = placeItems(page, materialized.items),
+                page = placeItems(page, materialized.items).let { placedPage ->
+                    placedPage.copy(generatedContentOverflowCount = materialized.items.size - placedPage.items.size)
+                },
             )
         } else {
             GeneratedLauncherPageContentPlanApplyResult.Rejected(

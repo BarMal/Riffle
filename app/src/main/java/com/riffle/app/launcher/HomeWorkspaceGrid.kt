@@ -100,20 +100,17 @@ internal fun WorkspaceGrid(
                     }
                 }
             }
-        }
-        if (page.hasGeneratedContentOverflowAffordance) {
-            TextButton(
-                onClick = { actions.onAction(LauncherShellAction.OpenAppDrawer) },
-                modifier = Modifier.align(Alignment.BottomCenter),
-            ) {
-                Text(text = "More apps")
+            if (page.hasGeneratedContentOverflowAffordance) {
+                TextButton(onClick = { actions.onAction(LauncherShellAction.OpenAppDrawer) }) {
+                    Text(text = "More apps (${page.generatedContentOverflowCount} more)")
+                }
             }
         }
     }
 }
 
 private val LauncherPage.hasGeneratedContentOverflowAffordance: Boolean
-    get() = type is LauncherPageType.Generated && items.size >= grid.columns * grid.rows
+    get() = type is LauncherPageType.Generated && generatedContentOverflowCount > 0
 
 @Composable
 private fun RowScope.HomeGridCell(
