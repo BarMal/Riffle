@@ -22,22 +22,14 @@ class GeneratedLauncherPageContentPlanApplier {
 
         val materialized =
             GeneratedLauncherPageContentItemMaterializer().materialize(plan, appLabelProvider)
-        val placedPage =
-            if (rejectionReason == null && materialized.skippedItems.isEmpty()) {
-                placeItems(page, materialized.items)
-            } else {
-                null
-            }
-        return if (placedPage != null) {
-            GeneratedLauncherPageContentPlanApplyResult.Applied(page = placedPage)
+        return if (rejectionReason == null && materialized.skippedItems.isEmpty()) {
+            GeneratedLauncherPageContentPlanApplyResult.Applied(
+                page = placeItems(page, materialized.items),
+            )
         } else {
             GeneratedLauncherPageContentPlanApplyResult.Rejected(
                 rejectionReason
-                    ?: if (materialized.skippedItems.isNotEmpty()) {
-                        GeneratedLauncherPageContentPlanApplyRejectionReason.UNSUPPORTED_CONTENT
-                    } else {
-                        GeneratedLauncherPageContentPlanApplyRejectionReason.INSUFFICIENT_GRID_SPACE
-                    },
+                    ?: GeneratedLauncherPageContentPlanApplyRejectionReason.UNSUPPORTED_CONTENT,
             )
         }
     }
@@ -45,12 +37,12 @@ class GeneratedLauncherPageContentPlanApplier {
     private fun placeItems(
         page: LauncherPage,
         items: List<AppShortcutItem>,
-    ): LauncherPage? {
+    ): LauncherPage {
         val placementEngine = GridPlacementEngine()
         return items.fold(page.copy(items = emptyList())) { placedPage, item ->
             when (val result = placementEngine.placeItemInFirstAvailableCell(placedPage, item)) {
                 is PlaceLauncherItemResult.Placed -> result.page
-                is PlaceLauncherItemResult.Rejected -> return null
+                is PlaceLauncherItemResult.Rejected -> placedPage
             }
         }
     }
@@ -70,5 +62,4 @@ enum class GeneratedLauncherPageContentPlanApplyRejectionReason {
     PAGE_KIND_MISMATCH,
     PAGE_HAS_MANUAL_ITEMS,
     UNSUPPORTED_CONTENT,
-    INSUFFICIENT_GRID_SPACE,
 }
