@@ -6,9 +6,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.unit.dp
@@ -23,6 +25,7 @@ import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.apps.InstalledAppCatalog
 import com.riffle.core.domain.launcher.home.HomeLayout
+import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
 import com.riffle.core.domain.launcher.home.HomeLayoutSet
 import com.riffle.core.domain.launcher.home.HomeShortcutEngine
@@ -132,6 +135,40 @@ class StandardTemplateValidationTest {
             assertEquals(case.reducedMotion, shellState.launcherSettings.motion.reducedMotion)
             assertEquals(ShellDestination.APP_DRAWER, shellState.destination)
         }
+    }
+
+    @Test
+    fun standardTemplateIsUnavailableForFoldableLayoutState() {
+        val homeLayoutRepository = FakeHomeLayoutRepository()
+        val foldableState =
+            launcherState(emptyList()).copy(
+                settingsLayoutDeviceClass = HomeLayoutDeviceClass.FOLDABLE,
+                availableLayoutDeviceClasses = setOf(HomeLayoutDeviceClass.PHONE, HomeLayoutDeviceClass.FOLDABLE),
+            )
+        val reducer = LauncherHomePageEditReducer(homeLayoutRepository = homeLayoutRepository)
+
+        composeRule.setContent {
+            HomeTemplateSetting(
+                selectedViewMode = foldableState.homeLayout.viewMode,
+                selectedTemplateId = foldableState.homeLayout.templateId,
+                availableViewModes = listOf(foldableState.homeLayout.viewMode),
+                deviceClass = foldableState.settingsLayoutDeviceClass,
+                onAction = {},
+            )
+        }
+
+        composeRule.onAllNodesWithText("Standard phone app drawer").assertCountEquals(0)
+        composeRule.onNodeWithText("No compatible template is available").assertIsDisplayed()
+        assertEquals(
+            foldableState,
+            reducer.reduce(
+                foldableState,
+                LauncherShellAction.SelectLauncherTemplate(
+                    templateId = LauncherTemplateCatalogDefaults.standardPhoneAppDrawerId,
+                    mode = foldableState.homeLayout.viewMode,
+                ),
+            ),
+        )
     }
 
     private fun launcherState(apps: List<InstalledApp>): LauncherShellState =
