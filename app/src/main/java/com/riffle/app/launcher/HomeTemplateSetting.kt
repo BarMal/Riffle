@@ -1,3 +1,5 @@
+@file:Suppress("MatchingDeclarationName")
+
 package com.riffle.app.launcher
 
 import androidx.compose.foundation.horizontalScroll
