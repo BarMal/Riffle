@@ -1,6 +1,7 @@
 package com.riffle.app.launcher.widgets
 
 import android.appwidget.AppWidgetManager
+import android.content.ComponentName
 import android.content.Context
 import android.content.ContextWrapper
 import android.view.View
@@ -70,6 +71,7 @@ class AndroidWidgetHostGatewayTest {
             AndroidWidgetProviderBindingTarget("com.example.weather", ".WeatherWidget"),
             platform.boundProvider,
         )
+        assertEquals(42, platform.boundAppWidgetId)
 
         val intentData = bindHostedWidgetIntentData(hostedWidgetId, provider)
         assertEquals(
@@ -79,6 +81,18 @@ class AndroidWidgetHostGatewayTest {
                 provider = AndroidWidgetProviderBindingTarget("com.example.weather", ".WeatherWidget"),
             ),
             intentData,
+        )
+    }
+
+    @Test
+    fun createsBindIntentWithHostedWidgetAndProvider() {
+        val intent = gateway.createBindHostedWidgetIntent(HostedWidgetId(42), weatherProvider())
+
+        assertEquals(AppWidgetManager.ACTION_APPWIDGET_BIND, intent.action)
+        assertEquals(42, intent.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, -1))
+        assertEquals(
+            ComponentName("com.example.weather", ".WeatherWidget"),
+            intent.getParcelableExtra(AppWidgetManager.EXTRA_APPWIDGET_PROVIDER),
         )
     }
 
@@ -100,6 +114,7 @@ class AndroidWidgetHostGatewayTest {
         platform.configureActivity = configureActivity
 
         assertTrue(gateway.hostedWidgetRequiresConfiguration(HostedWidgetId(42)))
+        assertEquals(42, platform.configuredAppWidgetId)
         assertEquals(
             AndroidWidgetHostIntentData(
                 action = AppWidgetManager.ACTION_APPWIDGET_CONFIGURE,
@@ -108,6 +123,19 @@ class AndroidWidgetHostGatewayTest {
             ),
             configureHostedWidgetIntentData(HostedWidgetId(42), configureActivity),
         )
+    }
+
+    @Test
+    fun createsConfigureIntentWithProviderActivity() {
+        platform.configureActivity =
+            AndroidWidgetProviderBindingTarget("com.example.weather", ".ConfigureWeatherWidget")
+
+        val intent = gateway.createConfigureHostedWidgetIntent(HostedWidgetId(42))
+
+        assertEquals(AppWidgetManager.ACTION_APPWIDGET_CONFIGURE, intent.action)
+        assertEquals(42, intent.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, -1))
+        assertEquals(ComponentName("com.example.weather", ".ConfigureWeatherWidget"), intent.component)
+        assertEquals(42, platform.configuredAppWidgetId)
     }
 
     @Test
@@ -144,6 +172,8 @@ class AndroidWidgetHostGatewayTest {
         var configureActivity: AndroidWidgetProviderBindingTarget? = null
         var view: View? = null
         var boundProvider: AndroidWidgetProviderBindingTarget? = null
+        var boundAppWidgetId: Int? = null
+        var configuredAppWidgetId: Int? = null
         var startListeningCount = 0
         var stopListeningCount = 0
         val deletedAppWidgetIds = mutableListOf<Int>()
@@ -163,11 +193,15 @@ class AndroidWidgetHostGatewayTest {
             appWidgetId: Int,
             provider: AndroidWidgetProviderBindingTarget,
         ): Boolean {
+            boundAppWidgetId = appWidgetId
             boundProvider = provider
             return bindAllowed
         }
 
-        override fun configureActivity(appWidgetId: Int): AndroidWidgetProviderBindingTarget? = configureActivity
+        override fun configureActivity(appWidgetId: Int): AndroidWidgetProviderBindingTarget? {
+            configuredAppWidgetId = appWidgetId
+            return configureActivity
+        }
 
         override fun createView(
             context: Context,
