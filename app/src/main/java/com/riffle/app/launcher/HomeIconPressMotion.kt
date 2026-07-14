@@ -8,6 +8,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.semantics.SemanticsPropertyKey
+import androidx.compose.ui.semantics.SemanticsPropertyReceiver
+
+internal val HomeIconPressMotionPolicyKey =
+    SemanticsPropertyKey<HomeIconPressMotionPolicy>("HomeIconPressMotionPolicy")
+
+internal var SemanticsPropertyReceiver.homeIconPressMotionPolicy by HomeIconPressMotionPolicyKey
 
 internal fun homeIconPressMotionPolicy(reducedMotion: Boolean): HomeIconPressMotionPolicy =
     if (reducedMotion) HomeIconPressMotionPolicy.NONE else HomeIconPressMotionPolicy.SHRINK
