@@ -8,18 +8,62 @@ import org.junit.Test
 
 class AndroidNotificationAccessGatewayTest {
     @Test
-    fun directsSupportedDevicesToTheListenerDetailSettings() {
+    fun directsSupportedDevicesToTheListenerDetailSettingsWithRifflesComponent() {
+        val componentName = "com.riffle.app/.launcher.notifications.RiffleNotificationListenerService"
+
         assertEquals(
-            Settings.ACTION_NOTIFICATION_LISTENER_DETAIL_SETTINGS,
-            notificationListenerSettingsAction(Build.VERSION_CODES.R),
+            listOf(
+                NotificationListenerSettingsIntentData(
+                    action = Settings.ACTION_NOTIFICATION_LISTENER_DETAIL_SETTINGS,
+                    listenerComponentName = componentName,
+                ),
+                NotificationListenerSettingsIntentData(
+                    action = Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS,
+                ),
+            ),
+            notificationListenerSettingsIntentData(
+                sdkInt = Build.VERSION_CODES.R,
+                listenerComponentName = componentName,
+            ),
         )
     }
 
     @Test
     fun retainsTheListenerSettingsListOnOlderDevices() {
         assertEquals(
-            Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS,
-            notificationListenerSettingsAction(Build.VERSION_CODES.Q),
+            listOf(NotificationListenerSettingsIntentData(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)),
+            notificationListenerSettingsIntentData(
+                sdkInt = Build.VERSION_CODES.Q,
+                listenerComponentName = "ignored-on-older-devices",
+            ),
+        )
+    }
+
+    @Test
+    fun fallsBackToGenericSettingsWhenTheDetailPageCannotLaunch() {
+        val launches = mutableListOf<String>()
+
+        val launched =
+            launchNotificationListenerSettings(
+                candidates = listOf("detail", "generic"),
+                launch = { candidate ->
+                    launches += candidate
+                    if (candidate == "detail") error("No detail settings activity")
+                },
+            )
+
+        assertEquals(true, launched)
+        assertEquals(listOf("detail", "generic"), launches)
+    }
+
+    @Test
+    fun reportsSettingsUnavailableWhenEveryCandidateFailsToLaunch() {
+        assertEquals(
+            false,
+            launchNotificationListenerSettings(
+                candidates = listOf("detail", "generic"),
+                launch = { error("No settings activity") },
+            ),
         )
     }
 
