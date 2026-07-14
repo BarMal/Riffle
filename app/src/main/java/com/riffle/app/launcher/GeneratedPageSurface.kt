@@ -84,14 +84,21 @@ private fun GeneratedNotificationCard(
         shape = LocalLauncherCardShape.current,
         color = MaterialTheme.colorScheme.surfaceVariant,
     ) {
+        val label = dockNotificationCardLabel(card)
         Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text(text = card.app?.label ?: card.group.packageName.value, style = MaterialTheme.typography.titleMedium)
+            Text(text = label, style = MaterialTheme.typography.titleMedium)
             Text(
                 text = dockNotificationCardSummary(card.group, canLaunchApp = card.app != null),
                 style = MaterialTheme.typography.bodyMedium,
             )
             card.clearAction?.let { action ->
-                TextButton(onClick = { onAction(action) }) {
+                TextButton(
+                    onClick = { onAction(action) },
+                    modifier =
+                        Modifier.semantics {
+                            contentDescription = generatedNotificationCardClearContentDescription(card)
+                        },
+                ) {
                     Text(text = "Clear")
                 }
             }
@@ -131,3 +138,9 @@ internal fun generatedNotificationCardsPageState(
 
 internal fun generatedNotificationCardKey(group: AppNotificationGroup): AppNotificationGroupKey =
     AppNotificationGroupKey(packageName = group.packageName, profileId = group.profileId)
+
+internal fun generatedNotificationCardClearContentDescription(card: DockNotificationCardState): String =
+    dockNotificationClearContentDescription(
+        label = dockNotificationCardLabel(card),
+        clearableCount = card.group.clearableCount,
+    )

@@ -3,6 +3,8 @@ package com.riffle.app.launcher
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppProfileId
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
+import com.riffle.core.domain.launcher.notifications.LauncherNotification
+import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.notifications.NotificationAgeBucket
 import com.riffle.core.domain.launcher.notifications.NotificationCategory
@@ -50,6 +52,23 @@ class GeneratedPageSurfaceTest {
         assertNotEquals(generatedNotificationCardKey(first), generatedNotificationCardKey(second))
     }
 
+    @Test
+    fun generatedCardClearDescriptionNamesTheAppAndClearableNotifications() {
+        val group =
+            notificationGroup(packageName = "com.example.chat", profileId = "personal").copy(
+                notifications =
+                    listOf(
+                        notification(packageName = "com.example.chat", key = "chat:1"),
+                        notification(packageName = "com.example.chat", key = "chat:2"),
+                    ),
+            )
+
+        assertEquals(
+            "Clear Chat notifications",
+            generatedNotificationCardClearContentDescription(DockNotificationCardState(app = null, group = group)),
+        )
+    }
+
     private fun notificationGroup(
         packageName: String,
         profileId: String,
@@ -59,5 +78,15 @@ class GeneratedPageSurfaceTest {
         latestCategory = NotificationCategory.UNKNOWN,
         latestAgeBucket = NotificationAgeBucket.NOW,
         notifications = emptyList(),
+    )
+
+    private fun notification(
+        packageName: String,
+        key: String,
+    ) = LauncherNotification(
+        key = LauncherNotificationKey(key),
+        packageName = AppPackageName(packageName),
+        canDismiss = true,
+        postedAtEpochMillis = 1L,
     )
 }
