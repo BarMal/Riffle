@@ -1,10 +1,28 @@
 package com.riffle.app.launcher.notifications
 
+import android.os.Build
+import android.provider.Settings
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class AndroidNotificationAccessGatewayTest {
+    @Test
+    fun directsSupportedDevicesToTheListenerDetailSettings() {
+        assertEquals(
+            Settings.ACTION_NOTIFICATION_LISTENER_DETAIL_SETTINGS,
+            notificationListenerSettingsAction(Build.VERSION_CODES.R),
+        )
+    }
+
+    @Test
+    fun retainsTheListenerSettingsListOnOlderDevices() {
+        assertEquals(
+            Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS,
+            notificationListenerSettingsAction(Build.VERSION_CODES.Q),
+        )
+    }
+
     @Test
     fun reportsGrantedWhenAppPackageHasEnabledListener() {
         assertEquals(

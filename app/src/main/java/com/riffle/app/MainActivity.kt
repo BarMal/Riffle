@@ -124,6 +124,13 @@ class MainActivity : ComponentActivity() {
             refreshPlatformStatuses()
         }
 
+    private val requestNotificationAccess =
+        registerForActivityResult(
+            ActivityResultContracts.StartActivityForResult(),
+        ) {
+            refreshPlatformStatuses()
+        }
+
     private val requestWidgetBind =
         registerForActivityResult(
             ActivityResultContracts.StartActivityForResult(),
@@ -219,7 +226,9 @@ class MainActivity : ComponentActivity() {
                             },
                             requestNotificationAccess = {
                                 runCatching {
-                                    startActivity(notificationAccessGateway.createNotificationListenerSettingsIntent())
+                                    requestNotificationAccess.launch(
+                                        notificationAccessGateway.createNotificationListenerSettingsIntent(),
+                                    )
                                 }
                             },
                             requestOverlayDockPermission = {

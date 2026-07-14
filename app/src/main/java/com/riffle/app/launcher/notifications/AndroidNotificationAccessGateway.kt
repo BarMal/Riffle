@@ -1,7 +1,9 @@
 package com.riffle.app.launcher.notifications
 
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.provider.Settings
 import androidx.core.app.NotificationManagerCompat
 import com.riffle.app.launcher.systemPermissionPackageCandidates
@@ -25,7 +27,15 @@ class AndroidNotificationAccessGateway(
             isListenerConnected = RiffleNotificationListenerConnection.isConnected(),
         )
 
-    fun createNotificationListenerSettingsIntent(): Intent = Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
+    fun createNotificationListenerSettingsIntent(): Intent =
+        Intent(notificationListenerSettingsAction(Build.VERSION.SDK_INT)).apply {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                putExtra(
+                    Settings.EXTRA_NOTIFICATION_LISTENER_COMPONENT_NAME,
+                    ComponentName(context, RiffleNotificationListenerService::class.java).flattenToString(),
+                )
+            }
+        }
 }
 
 internal fun enabledNotificationListenerPackages(enabledListeners: String?): Set<String> =
@@ -63,3 +73,10 @@ internal fun notificationAccessStatus(
     }
 
 private const val ENABLED_NOTIFICATION_LISTENERS = "enabled_notification_listeners"
+
+internal fun notificationListenerSettingsAction(sdkInt: Int): String =
+    if (sdkInt >= Build.VERSION_CODES.R) {
+        Settings.ACTION_NOTIFICATION_LISTENER_DETAIL_SETTINGS
+    } else {
+        Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS
+    }
