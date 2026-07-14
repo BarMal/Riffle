@@ -51,8 +51,7 @@ class AndroidWidgetHostGatewayIntentTest {
         )
 
     @Suppress("DEPRECATION")
-    private fun Intent.bindProvider(): ComponentName? =
-        getParcelableExtra(AppWidgetManager.EXTRA_APPWIDGET_PROVIDER)
+    private fun Intent.bindProvider(): ComponentName? = getParcelableExtra(AppWidgetManager.EXTRA_APPWIDGET_PROVIDER)
 
     private class FakeAndroidWidgetHostPlatform : AndroidWidgetHostPlatform {
         var configureActivity: AndroidWidgetProviderBindingTarget? = null
