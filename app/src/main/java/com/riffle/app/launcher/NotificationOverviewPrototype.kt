@@ -72,7 +72,7 @@ internal fun NotificationGroupPrototype(
         state = pagerState,
         modifier = Modifier.fillMaxSize(),
         pageSpacing = 16.dp,
-        key = { page -> groups[page].key },
+        key = { page -> "${groups[page].profileId.value}:${groups[page].packageName.value}" },
     ) { page ->
         val group = groups[page]
         val app = presentation.apps.firstOrNull { installedApp -> installedApp.matches(group) }
