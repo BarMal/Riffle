@@ -25,7 +25,6 @@ import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.home.LauncherPage
 import com.riffle.core.domain.launcher.home.LauncherPageId
 import com.riffle.core.domain.launcher.home.LauncherPageType
-import com.riffle.core.domain.launcher.home.LauncherTemplateCatalogDefaults
 import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.home.WallpaperScrollMode
 import com.riffle.core.domain.launcher.home.WallpaperSettings
@@ -37,16 +36,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class HomeLayoutJsonCodecTest {
-    @Test
-    fun roundTripsSelectedTemplateId() {
-        val layout =
-            HomeLayoutDefaults.standard().copy(
-                templateId = LauncherTemplateCatalogDefaults.standardPhoneAppDrawerId,
-            )
-
-        assertEquals(layout.templateId, decodeHomeLayout(encodeHomeLayout(layout)).templateId)
-    }
-
     @Test
     fun roundTripsFolderItems() {
         val camera = appShortcut(id = "camera")

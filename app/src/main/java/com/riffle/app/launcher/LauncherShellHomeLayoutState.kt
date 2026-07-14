@@ -53,38 +53,42 @@ internal fun LauncherShellState.withSelectedHomeLayoutTemplate(
     templateCatalog: LauncherTemplateCatalog = LauncherTemplateCatalogDefaults.catalog,
 ): LauncherShellState {
     val targetDeviceClass = settingsLayoutDeviceClass
-    if (mode !in viewModeAvailability.availableModes(targetDeviceClass)) return this
-
     val targetKey = HomeLayoutKey(viewMode = mode, deviceClass = targetDeviceClass)
     val layout =
-        templateCatalog.templates
-            .firstOrNull { template -> template.id == templateId }
-            ?.seedHomeLayout(targetKey)
-            ?: return this
-    val currentLayoutSet = currentLayoutSet(homeLayoutRepository).withActiveLayout(homeLayout)
-    val updatedLayoutSet =
-        currentLayoutSet
-            .withLayout(key = targetKey, layout = layout)
-            .withPreferredMode(deviceClass = targetDeviceClass, mode = mode)
-            .let { layoutSet ->
-                if (layoutSet.activeKey.deviceClass == targetDeviceClass) {
-                    layoutSet.selectMode(mode)
-                } else {
-                    layoutSet
+        if (mode in viewModeAvailability.availableModes(targetDeviceClass)) {
+            templateCatalog.templates
+                .firstOrNull { template -> template.id == templateId }
+                ?.seedHomeLayout(targetKey)
+        } else {
+            null
+        }
+
+    return layout?.let { selectedLayout ->
+        val currentLayoutSet = currentLayoutSet(homeLayoutRepository).withActiveLayout(homeLayout)
+        val updatedLayoutSet =
+            currentLayoutSet
+                .withLayout(key = targetKey, layout = selectedLayout)
+                .withPreferredMode(deviceClass = targetDeviceClass, mode = mode)
+                .let { layoutSet ->
+                    if (layoutSet.activeKey.deviceClass == targetDeviceClass) {
+                        layoutSet.selectMode(mode)
+                    } else {
+                        layoutSet
+                    }
                 }
-            }
 
-    homeLayoutRepository.saveHomeLayoutSet(updatedLayoutSet)
+        homeLayoutRepository.saveHomeLayoutSet(updatedLayoutSet)
 
-    return copy(
-        homeLayout =
-            if (updatedLayoutSet.activeKey == targetKey) {
-                updatedLayoutSet.activeLayout
-            } else {
-                homeLayout
-            },
-        homeLayoutSet = updatedLayoutSet,
-    )
+        copy(
+            homeLayout =
+                if (updatedLayoutSet.activeKey == targetKey) {
+                    updatedLayoutSet.activeLayout
+                } else {
+                    homeLayout
+                },
+            homeLayoutSet = updatedLayoutSet,
+        )
+    } ?: this
 }
 
 internal fun LauncherShellState.withSelectedHomeLayoutDeviceClass(

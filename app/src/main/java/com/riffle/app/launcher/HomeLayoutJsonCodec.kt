@@ -8,7 +8,6 @@ import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.LauncherPage
 import com.riffle.core.domain.launcher.home.LauncherPageId
 import com.riffle.core.domain.launcher.home.LauncherPageType
-import com.riffle.core.domain.launcher.home.LauncherTemplateId
 import com.riffle.core.domain.launcher.home.LauncherViewMode
 import org.json.JSONArray
 import org.json.JSONObject
@@ -48,7 +47,11 @@ internal fun JSONObject.toHomeLayout(defaults: HomeLayout = HomeLayoutDefaults.s
 
         defaults.copy(
             viewMode = json.optViewMode(defaults.viewMode),
-            templateId = json.optTemplateId(),
+            templateId =
+                json
+                    .optString("templateId", "")
+                    .takeIf(String::isNotBlank)
+                    ?.let(::LauncherTemplateId),
             pages = pages.ifEmpty { defaults.pages },
             selectedPageId = safeSelectedPageId,
             dock = json.optJSONObject("dock")?.toDock(defaults.dock) ?: defaults.dock,
@@ -61,11 +64,6 @@ private fun JSONObject.optViewMode(default: LauncherViewMode): LauncherViewMode 
         .takeIf(String::isNotBlank)
         ?.let { value -> runCatching { LauncherViewMode.valueOf(value) }.getOrNull() }
         ?: default
-
-private fun JSONObject.optTemplateId(): LauncherTemplateId? =
-    optString("templateId", "")
-        .takeIf(String::isNotBlank)
-        ?.let(::LauncherTemplateId)
 
 private fun encodeDock(dock: DockModel): JSONObject =
     JSONObject()

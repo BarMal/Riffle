@@ -16,20 +16,16 @@ data class HomeLayout(
         pages.indexOfFirst { page -> page.id == selectedPageId }
 }
 
-fun LauncherTemplate.seedHomeLayout(targetKey: HomeLayoutKey): HomeLayout? {
-    val plan =
-        (LauncherTemplateSeedPlanner().plan(template = this, targetKey = targetKey)
-            as? LauncherTemplateSeedPlanResult.Planned)
-            ?.plan
-            ?: return null
-
-    val layout =
-        (LauncherTemplateSeedApplier().apply(plan) as? LauncherTemplateSeedApplyResult.Applied)
-            ?.layout
-            ?: return null
-
-    return layout.copy(templateId = id)
-}
+fun LauncherTemplate.seedHomeLayout(targetKey: HomeLayoutKey): HomeLayout? =
+    (
+        LauncherTemplateSeedPlanner().plan(template = this, targetKey = targetKey)
+            as? LauncherTemplateSeedPlanResult.Planned
+    )
+        ?.plan
+        ?.let { plan ->
+            (LauncherTemplateSeedApplier().apply(plan) as? LauncherTemplateSeedApplyResult.Applied)
+                ?.layout
+        }?.copy(templateId = id)
 
 internal fun HomeLayout.withUpdatedSelectedPage(page: LauncherPage): HomeLayout =
     copy(
