@@ -32,7 +32,8 @@ class StandardTemplateValidationTest {
         validationCases.forEach { case ->
             setContent(case)
 
-            composeRule.onNodeWithText("Apps (2)").assertIsDisplayed()
+            composeRule.onNodeWithText("Apps").assertIsDisplayed()
+            composeRule.onNodeWithText("2 apps available").assertIsDisplayed()
             composeRule.onNodeWithText("Camera").assertIsDisplayed().assertHasClickAction()
             composeRule.onNodeWithText("Calendar").assertIsDisplayed().assertHasClickAction()
             assertEquals(case.motionPolicy, homePageSettleMotionPolicy(case.reducedMotion))
