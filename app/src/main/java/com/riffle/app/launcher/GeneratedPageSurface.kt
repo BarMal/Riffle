@@ -18,6 +18,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
+import com.riffle.core.domain.launcher.notifications.AppNotificationGroupKey
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 
 @Composable
@@ -42,7 +43,7 @@ internal fun GeneratedNotificationCardsPage(
                     item { GeneratedCardsHeading() }
                     items(
                         state.cards,
-                        key = { card -> card.group.packageName.value + card.group.profileId.value },
+                        key = { card -> generatedNotificationCardKey(card.group) },
                     ) { card ->
                         GeneratedNotificationCard(card, onAction)
                     }
@@ -127,3 +128,6 @@ internal fun generatedNotificationCardsPageState(
                 "Allow notification access to show your notification cards.",
             )
     }
+
+internal fun generatedNotificationCardKey(group: AppNotificationGroup): AppNotificationGroupKey =
+    AppNotificationGroupKey(packageName = group.packageName, profileId = group.profileId)
