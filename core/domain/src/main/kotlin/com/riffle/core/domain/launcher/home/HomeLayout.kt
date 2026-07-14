@@ -5,6 +5,7 @@ data class HomeLayout(
     val pages: List<LauncherPage>,
     val selectedPageId: LauncherPageId,
     val dock: DockModel,
+    val templateId: LauncherTemplateId? = null,
     val settings: HomeLayoutSettings = HomeLayoutSettings.standardPhone(),
     val editMode: HomeEditMode = HomeEditMode.Browsing,
 ) {
@@ -13,6 +14,21 @@ data class HomeLayout(
 
     val selectedPageIndex: Int =
         pages.indexOfFirst { page -> page.id == selectedPageId }
+}
+
+fun LauncherTemplate.seedHomeLayout(targetKey: HomeLayoutKey): HomeLayout? {
+    val plan =
+        (LauncherTemplateSeedPlanner().plan(template = this, targetKey = targetKey)
+            as? LauncherTemplateSeedPlanResult.Planned)
+            ?.plan
+            ?: return null
+
+    val layout =
+        (LauncherTemplateSeedApplier().apply(plan) as? LauncherTemplateSeedApplyResult.Applied)
+            ?.layout
+            ?: return null
+
+    return layout.copy(templateId = id)
 }
 
 internal fun HomeLayout.withUpdatedSelectedPage(page: LauncherPage): HomeLayout =

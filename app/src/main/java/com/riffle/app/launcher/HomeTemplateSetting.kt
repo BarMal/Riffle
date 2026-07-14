@@ -45,24 +45,22 @@ internal fun homeTemplateOptions(
         }.sortedBy { option -> option.displayName }
 
 @Composable
-internal fun HomeViewModePresetSetting(
+internal fun HomeTemplateSetting(
     selectedViewMode: LauncherViewMode,
+    selectedTemplateId: LauncherTemplateId?,
     availableViewModes: List<LauncherViewMode>,
     deviceClass: HomeLayoutDeviceClass,
     onAction: (LauncherShellAction) -> Unit,
 ) {
     val options = homeTemplateOptions(availableViewModes = availableViewModes, deviceClass = deviceClass)
-    val selectedOption = options.firstOrNull { option -> option.viewMode == selectedViewMode }
+    val selectedOption =
+        options.firstOrNull { option -> option.id == selectedTemplateId }
+            ?: options.firstOrNull { option -> option.viewMode == selectedViewMode }
 
     Column {
         SettingsTextColumn(
-            title = "Launcher mode presets",
-            subtitle =
-                selectedOption
-                    ?.let { option ->
-                        "${option.displayName}: switches launcher mode and keeps your current pages."
-                    }
-                    ?: "No compatible launcher mode preset is available",
+            title = "Layout template",
+            subtitle = selectedOption?.description ?: "No compatible template is available",
         )
         Row(
             modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
@@ -70,20 +68,19 @@ internal fun HomeViewModePresetSetting(
         ) {
             options.forEach { option ->
                 TextButton(
-                    enabled = option.viewMode != selectedViewMode,
-                    onClick = { onAction(LauncherShellAction.SelectLauncherViewMode(option.viewMode)) },
+                    enabled = option.id != selectedTemplateId,
+                    onClick = {
+                        onAction(
+                            LauncherShellAction.SelectLauncherTemplate(
+                                templateId = option.id,
+                                mode = option.viewMode,
+                            ),
+                        )
+                    },
                 ) {
-                    SettingsButtonText(text = option.viewMode.presetLabel)
+                    SettingsButtonText(text = option.displayName)
                 }
             }
         }
     }
 }
-
-private val LauncherViewMode.presetLabel: String
-    get() =
-        when (this) {
-            LauncherViewMode.STANDARD_APP_DRAWER -> "Standard"
-            LauncherViewMode.HOME_SCREEN_LIBRARY -> "Library"
-            LauncherViewMode.CARD_INTERFACE -> "Cards"
-        }

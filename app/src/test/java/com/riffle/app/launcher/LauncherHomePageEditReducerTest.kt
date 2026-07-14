@@ -21,6 +21,7 @@ import com.riffle.core.domain.launcher.home.HomeLayoutRepository
 import com.riffle.core.domain.launcher.home.HomeLayoutSet
 import com.riffle.core.domain.launcher.home.HostedWidgetId
 import com.riffle.core.domain.launcher.home.LauncherPageId
+import com.riffle.core.domain.launcher.home.LauncherTemplateCatalogDefaults
 import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.home.LauncherViewModeAvailability
 import com.riffle.core.domain.launcher.home.WidgetItem
@@ -133,6 +134,46 @@ class LauncherHomePageEditReducerTest {
         assertEquals(LauncherViewMode.HOME_SCREEN_LIBRARY, updated.homeLayout.viewMode)
         assertEquals(camera.identity, updated.homeLayout.selectedPage.items.singleAppShortcut().appIdentity)
         assertEquals(updated.homeLayout, repository.savedLayoutSet?.activeLayout)
+    }
+
+    @Test
+    fun templateSelectionAppliesAndPersistsEachDefaultTemplatesSeedLayout() {
+        val selections =
+            listOf(
+                LauncherTemplateCatalogDefaults.standardPhoneAppDrawerId to LauncherViewMode.STANDARD_APP_DRAWER,
+                LauncherTemplateCatalogDefaults.conservativeGeneratedPagesId to LauncherViewMode.HOME_SCREEN_LIBRARY,
+                LauncherTemplateCatalogDefaults.cardInterfaceId to LauncherViewMode.CARD_INTERFACE,
+            )
+
+        selections.forEach { (templateId, mode) ->
+            val repository = FakeHomeLayoutRepository(HomeLayoutDefaults.standard())
+            val reducer =
+                LauncherHomePageEditReducer(
+                    homeLayoutRepository = repository,
+                    viewModeAvailability =
+                        LauncherViewModeAvailability(
+                            enabledExperimentalModesByDeviceClass =
+                                mapOf(
+                                    HomeLayoutDeviceClass.PHONE to
+                                        setOf(
+                                            LauncherViewMode.HOME_SCREEN_LIBRARY,
+                                            LauncherViewMode.CARD_INTERFACE,
+                                        ),
+                                ),
+                        ),
+                )
+            val updated =
+                reducer.reduce(
+                    launcherState(repository.savedLayoutSet),
+                    LauncherShellAction.SelectLauncherTemplate(templateId = templateId, mode = mode),
+                )
+            val template = LauncherTemplateCatalogDefaults.templates.first { it.id == templateId }
+
+            assertEquals(templateId, updated.homeLayout.templateId)
+            assertEquals(mode, updated.homeLayout.viewMode)
+            assertEquals(template.seedPageTypes, updated.homeLayout.pages.map { page -> page.type })
+            assertEquals(updated.homeLayout, repository.savedLayoutSet?.activeLayout)
+        }
     }
 
     @Test

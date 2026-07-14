@@ -4,18 +4,30 @@ import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
 import com.riffle.core.domain.launcher.home.HomePageEditResult
 import com.riffle.core.domain.launcher.home.HomePageEngine
+import com.riffle.core.domain.launcher.home.LauncherTemplateCatalog
+import com.riffle.core.domain.launcher.home.LauncherTemplateCatalogDefaults
 import com.riffle.core.domain.launcher.home.LauncherViewModeAvailability
 
 internal class LauncherHomePageEditReducer(
     private val homePageEngine: HomePageEngine = HomePageEngine(),
     private val homeLayoutRepository: HomeLayoutRepository,
     private val viewModeAvailability: LauncherViewModeAvailability = LauncherViewModeAvailability(),
+    private val templateCatalog: LauncherTemplateCatalog = LauncherTemplateCatalogDefaults.catalog,
 ) {
     fun reduce(
         state: LauncherShellState,
         action: LauncherShellAction,
     ): LauncherShellState =
         when {
+            action is LauncherShellAction.SelectLauncherTemplate ->
+                state.withSelectedHomeLayoutTemplate(
+                    templateId = action.templateId,
+                    mode = action.mode,
+                    homeLayoutRepository = homeLayoutRepository,
+                    viewModeAvailability = viewModeAvailability,
+                    templateCatalog = templateCatalog,
+                ).withHomeScreenLibraryApps(homeLayoutRepository)
+
             state.shouldEditSettingsTargetLayout(action) ->
                 state.withSettingsHomePageEdit(
                     action = action,

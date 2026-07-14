@@ -28,6 +28,7 @@ internal fun LauncherShellAction.isHomePageEditAction(): Boolean =
         is LauncherShellAction.SelectHomeLabelMaxLines,
         is LauncherShellAction.SelectHomeLabelSizing,
         is LauncherShellAction.SelectLauncherViewMode,
+        is LauncherShellAction.SelectLauncherTemplate,
         is LauncherShellAction.SelectHomeLayoutDeviceClass,
         -> true
 
@@ -48,6 +49,7 @@ internal fun LauncherShellAction.isHomeLayoutConfigurationAction(): Boolean =
         is LauncherShellAction.SelectHomeLabelMaxLines,
         is LauncherShellAction.SelectHomeLabelSizing,
         is LauncherShellAction.SelectLauncherViewMode,
+        is LauncherShellAction.SelectLauncherTemplate,
         -> true
 
         else -> false

@@ -7,8 +7,12 @@ import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.HomeLayoutKey
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
 import com.riffle.core.domain.launcher.home.HomeLayoutSet
+import com.riffle.core.domain.launcher.home.LauncherTemplateCatalog
+import com.riffle.core.domain.launcher.home.LauncherTemplateCatalogDefaults
+import com.riffle.core.domain.launcher.home.LauncherTemplateId
 import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.home.LauncherViewModeAvailability
+import com.riffle.core.domain.launcher.home.seedHomeLayout
 
 internal fun LauncherShellState.withHomeLayout(
     layout: HomeLayout,
@@ -40,6 +44,48 @@ internal fun LauncherShellState.withSelectedHomeLayoutMode(
                 settingsLayoutDeviceClass = layoutSet.activeKey.deviceClass,
             )
         }
+
+internal fun LauncherShellState.withSelectedHomeLayoutTemplate(
+    templateId: LauncherTemplateId,
+    mode: LauncherViewMode,
+    homeLayoutRepository: HomeLayoutRepository,
+    viewModeAvailability: LauncherViewModeAvailability,
+    templateCatalog: LauncherTemplateCatalog = LauncherTemplateCatalogDefaults.catalog,
+): LauncherShellState {
+    val targetDeviceClass = settingsLayoutDeviceClass
+    if (mode !in viewModeAvailability.availableModes(targetDeviceClass)) return this
+
+    val targetKey = HomeLayoutKey(viewMode = mode, deviceClass = targetDeviceClass)
+    val layout =
+        templateCatalog.templates
+            .firstOrNull { template -> template.id == templateId }
+            ?.seedHomeLayout(targetKey)
+            ?: return this
+    val currentLayoutSet = currentLayoutSet(homeLayoutRepository).withActiveLayout(homeLayout)
+    val updatedLayoutSet =
+        currentLayoutSet
+            .withLayout(key = targetKey, layout = layout)
+            .withPreferredMode(deviceClass = targetDeviceClass, mode = mode)
+            .let { layoutSet ->
+                if (layoutSet.activeKey.deviceClass == targetDeviceClass) {
+                    layoutSet.selectMode(mode)
+                } else {
+                    layoutSet
+                }
+            }
+
+    homeLayoutRepository.saveHomeLayoutSet(updatedLayoutSet)
+
+    return copy(
+        homeLayout =
+            if (updatedLayoutSet.activeKey == targetKey) {
+                updatedLayoutSet.activeLayout
+            } else {
+                homeLayout
+            },
+        homeLayoutSet = updatedLayoutSet,
+    )
+}
 
 internal fun LauncherShellState.withSelectedHomeLayoutDeviceClass(
     deviceClass: HomeLayoutDeviceClass,
