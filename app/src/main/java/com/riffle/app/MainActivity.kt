@@ -39,6 +39,7 @@ import com.riffle.app.launcher.failureMessage
 import com.riffle.app.launcher.fallbackWallpaperSourceAction
 import com.riffle.app.launcher.isLauncherHomeIntent
 import com.riffle.app.launcher.notifications.AndroidNotificationDismissalGateway
+import com.riffle.app.launcher.notifications.launchNotificationListenerSettings
 import com.riffle.app.launcher.refreshInstalledApps
 import com.riffle.app.launcher.refreshNotifications
 import com.riffle.app.launcher.refreshWidgetProviders
@@ -118,6 +119,13 @@ class MainActivity : ComponentActivity() {
         }
 
     private val requestOverlayDockPermission =
+        registerForActivityResult(
+            ActivityResultContracts.StartActivityForResult(),
+        ) {
+            refreshPlatformStatuses()
+        }
+
+    private val requestNotificationAccess =
         registerForActivityResult(
             ActivityResultContracts.StartActivityForResult(),
         ) {
@@ -218,8 +226,18 @@ class MainActivity : ComponentActivity() {
                                 syncOverlayDockService()
                             },
                             requestNotificationAccess = {
-                                runCatching {
-                                    startActivity(notificationAccessGateway.createNotificationListenerSettingsIntent())
+                                val launched =
+                                    launchNotificationListenerSettings(
+                                        candidates =
+                                            notificationAccessGateway.createNotificationListenerSettingsIntents(),
+                                        launch = requestNotificationAccess::launch,
+                                    )
+                                if (!launched) {
+                                    Toast.makeText(
+                                        this,
+                                        "Notification access settings are unavailable on this device.",
+                                        Toast.LENGTH_SHORT,
+                                    ).show()
                                 }
                             },
                             requestOverlayDockPermission = {

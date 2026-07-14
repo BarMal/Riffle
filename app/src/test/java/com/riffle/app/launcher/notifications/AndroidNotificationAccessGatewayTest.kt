@@ -1,10 +1,72 @@
 package com.riffle.app.launcher.notifications
 
+import android.os.Build
+import android.provider.Settings
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class AndroidNotificationAccessGatewayTest {
+    @Test
+    fun directsSupportedDevicesToTheListenerDetailSettingsWithRifflesComponent() {
+        val componentName = "com.riffle.app/.launcher.notifications.RiffleNotificationListenerService"
+
+        assertEquals(
+            listOf(
+                NotificationListenerSettingsIntentData(
+                    action = Settings.ACTION_NOTIFICATION_LISTENER_DETAIL_SETTINGS,
+                    listenerComponentName = componentName,
+                ),
+                NotificationListenerSettingsIntentData(
+                    action = Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS,
+                ),
+            ),
+            notificationListenerSettingsIntentData(
+                sdkInt = Build.VERSION_CODES.R,
+                listenerComponentName = componentName,
+            ),
+        )
+    }
+
+    @Test
+    fun retainsTheListenerSettingsListOnOlderDevices() {
+        assertEquals(
+            listOf(NotificationListenerSettingsIntentData(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)),
+            notificationListenerSettingsIntentData(
+                sdkInt = Build.VERSION_CODES.Q,
+                listenerComponentName = "ignored-on-older-devices",
+            ),
+        )
+    }
+
+    @Test
+    fun fallsBackToGenericSettingsWhenTheDetailPageCannotLaunch() {
+        val launches = mutableListOf<String>()
+
+        val launched =
+            launchNotificationListenerSettings(
+                candidates = listOf("detail", "generic"),
+                launch = { candidate ->
+                    launches += candidate
+                    if (candidate == "detail") error("No detail settings activity")
+                },
+            )
+
+        assertEquals(true, launched)
+        assertEquals(listOf("detail", "generic"), launches)
+    }
+
+    @Test
+    fun reportsSettingsUnavailableWhenEveryCandidateFailsToLaunch() {
+        assertEquals(
+            false,
+            launchNotificationListenerSettings(
+                candidates = listOf("detail", "generic"),
+                launch = { error("No settings activity") },
+            ),
+        )
+    }
+
     @Test
     fun reportsGrantedWhenAppPackageHasEnabledListener() {
         assertEquals(

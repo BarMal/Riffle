@@ -1,7 +1,9 @@
 package com.riffle.app.launcher.notifications
 
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.provider.Settings
 import androidx.core.app.NotificationManagerCompat
 import com.riffle.app.launcher.systemPermissionPackageCandidates
@@ -25,7 +27,12 @@ class AndroidNotificationAccessGateway(
             isListenerConnected = RiffleNotificationListenerConnection.isConnected(),
         )
 
-    fun createNotificationListenerSettingsIntent(): Intent = Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
+    fun createNotificationListenerSettingsIntents(): List<Intent> =
+        notificationListenerSettingsIntentData(
+            sdkInt = Build.VERSION.SDK_INT,
+            listenerComponentName =
+                ComponentName(context, RiffleNotificationListenerService::class.java).flattenToString(),
+        ).map(NotificationListenerSettingsIntentData::toIntent)
 }
 
 internal fun enabledNotificationListenerPackages(enabledListeners: String?): Set<String> =
@@ -63,3 +70,38 @@ internal fun notificationAccessStatus(
     }
 
 private const val ENABLED_NOTIFICATION_LISTENERS = "enabled_notification_listeners"
+
+internal data class NotificationListenerSettingsIntentData(
+    val action: String,
+    val listenerComponentName: String? = null,
+) {
+    fun toIntent(): Intent =
+        Intent(action).apply {
+            listenerComponentName?.let { componentName ->
+                putExtra(Settings.EXTRA_NOTIFICATION_LISTENER_COMPONENT_NAME, componentName)
+            }
+        }
+}
+
+internal fun notificationListenerSettingsIntentData(
+    sdkInt: Int,
+    listenerComponentName: String,
+): List<NotificationListenerSettingsIntentData> =
+    if (sdkInt >= Build.VERSION_CODES.R) {
+        listOf(
+            NotificationListenerSettingsIntentData(
+                action = Settings.ACTION_NOTIFICATION_LISTENER_DETAIL_SETTINGS,
+                listenerComponentName = listenerComponentName,
+            ),
+            NotificationListenerSettingsIntentData(
+                action = Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS,
+            ),
+        )
+    } else {
+        listOf(NotificationListenerSettingsIntentData(action = Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+    }
+
+internal fun <Candidate> launchNotificationListenerSettings(
+    candidates: List<Candidate>,
+    launch: (Candidate) -> Unit,
+): Boolean = candidates.any { candidate -> runCatching { launch(candidate) }.isSuccess }
