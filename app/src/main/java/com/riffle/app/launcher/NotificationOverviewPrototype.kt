@@ -211,6 +211,7 @@ private fun NotificationPrototypeHero(
             modifier = Modifier.fillMaxSize(),
             animationProfile = CardStackAnimationProfile.CARD_FLIGHT,
             reducedMotion = presentation.overviewPresentation.reducedMotion,
+            itemKey = { entry -> heroNotifications[entry.cardIndex].key.value },
         ) { entry ->
             NotificationPrototypeHeroArt(
                 notification = heroNotifications[entry.cardIndex],

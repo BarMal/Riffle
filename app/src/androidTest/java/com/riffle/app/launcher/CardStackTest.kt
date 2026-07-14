@@ -97,11 +97,11 @@ class CardStackTest {
         )
         assertEquals(
             CardStackTransitionPose(alpha = 0f, horizontalTravelFraction = 0f, verticalTravelFraction = 0f),
-            cardStackTransitionPose(CardStackAnimationProfile.FADE, entering = true),
+            cardStackTransitionPose(CardStackAnimationProfile.FADE),
         )
         assertEquals(
-            CardStackTransitionPose(alpha = 1f, horizontalTravelFraction = -1f, verticalTravelFraction = 0f),
-            cardStackTransitionPose(CardStackAnimationProfile.SLIDE, entering = false),
+            CardStackTransitionPose(alpha = 1f, horizontalTravelFraction = 1f, verticalTravelFraction = 0f),
+            cardStackTransitionPose(CardStackAnimationProfile.SLIDE),
         )
         assertEquals(
             CardStackTransitionPose(
@@ -109,11 +109,11 @@ class CardStackTest {
                 horizontalTravelFraction = 1f,
                 verticalTravelFraction = 0.15f,
             ),
-            cardStackTransitionPose(CardStackAnimationProfile.CARD_FLIGHT, entering = true),
+            cardStackTransitionPose(CardStackAnimationProfile.CARD_FLIGHT),
         )
         assertEquals(
-            CardStackTransitionPose(alpha = 0f, horizontalTravelFraction = -1f, verticalTravelFraction = 0f),
-            cardStackTransitionPose(CardStackAnimationProfile.SLIDE_AND_FADE, entering = false),
+            CardStackTransitionPose(alpha = 0f, horizontalTravelFraction = 1f, verticalTravelFraction = 0f),
+            cardStackTransitionPose(CardStackAnimationProfile.SLIDE_AND_FADE),
         )
     }
 

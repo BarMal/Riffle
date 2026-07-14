@@ -29,6 +29,7 @@ internal fun CardStack(
     modifier: Modifier = Modifier,
     animationProfile: CardStackAnimationProfile = CardStackAnimationProfile.STACK_REFLOW,
     reducedMotion: Boolean = false,
+    itemKey: (CardStackLayoutEntry) -> Any = { entry -> entry.cardIndex },
     content: @Composable (CardStackLayoutEntry) -> Unit,
 ) {
     val motionMode = cardStackMotionMode(reducedMotion)
@@ -45,7 +46,7 @@ internal fun CardStack(
             // A card index identifies a stable card while focus changes, so Compose can
             // interpolate that card's prior pose into its new pose without composing a
             // second, outgoing stack.
-            key(entry.cardIndex) {
+            key(itemKey(entry)) {
                 AnimatedCardStackEntry(
                     entry = entry,
                     animationProfile = animationProfile,
@@ -86,22 +87,14 @@ internal fun cardStackMotionMode(reducedMotion: Boolean): CardStackMotionMode =
         CardStackMotionMode.ANIMATED
     }
 
-internal fun cardStackTransitionPose(
-    animationProfile: CardStackAnimationProfile,
-    entering: Boolean,
-): CardStackTransitionPose {
+internal fun cardStackTransitionPose(animationProfile: CardStackAnimationProfile): CardStackTransitionPose {
     val spec = animationProfile.spec
-    val travelDirection = if (entering) 1f else -1f
 
     return CardStackTransitionPose(
-        alpha = if (entering) spec.enteringAlpha else spec.exitingAlpha,
-        horizontalTravelFraction = spec.horizontalTravelFraction.directedTravel(travelDirection),
-        verticalTravelFraction = spec.verticalTravelFraction.directedTravel(travelDirection),
+        alpha = spec.enteringAlpha,
+        horizontalTravelFraction = spec.horizontalTravelFraction,
+        verticalTravelFraction = spec.verticalTravelFraction,
     )
-}
-
-private fun Float.directedTravel(direction: Float): Float {
-    return if (this == 0f) 0f else this * direction
 }
 
 internal fun cardStackRenderedPose(
@@ -112,7 +105,7 @@ internal fun cardStackRenderedPose(
     height: Float,
 ): CardStackRenderedPose {
     if (!entering) return CardStackRenderedPose(entry.alpha, entry.offset, entry.verticalOffset)
-    val pose = cardStackTransitionPose(animationProfile, entering = true)
+    val pose = cardStackTransitionPose(animationProfile)
     return CardStackRenderedPose(
         alpha = entry.alpha * pose.alpha,
         offset = entry.offset + width * pose.horizontalTravelFraction,

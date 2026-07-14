@@ -6,7 +6,6 @@ enum class CardStackAnimationProfile(
     FADE(
         CardStackAnimationSpec(
             enteringAlpha = 0f,
-            exitingAlpha = 0f,
             animatesAlpha = true,
         ),
     ),
@@ -19,7 +18,6 @@ enum class CardStackAnimationProfile(
     CARD_FLIGHT(
         CardStackAnimationSpec(
             enteringAlpha = CARD_FLIGHT_ALPHA,
-            exitingAlpha = CARD_FLIGHT_ALPHA,
             horizontalTravelFraction = 1f,
             verticalTravelFraction = CARD_FLIGHT_VERTICAL_TRAVEL_FRACTION,
             animatesAlpha = true,
@@ -31,7 +29,6 @@ enum class CardStackAnimationProfile(
     SLIDE_AND_FADE(
         CardStackAnimationSpec(
             enteringAlpha = 0f,
-            exitingAlpha = 0f,
             horizontalTravelFraction = 1f,
             animatesAlpha = true,
             animatesHorizontalTranslation = true,
@@ -51,7 +48,6 @@ enum class CardStackAnimationProfile(
 
 data class CardStackAnimationSpec(
     val enteringAlpha: Float = 1f,
-    val exitingAlpha: Float = 1f,
     val horizontalTravelFraction: Float = 0f,
     val verticalTravelFraction: Float = 0f,
     val reflowsStack: Boolean = false,
@@ -64,7 +60,6 @@ data class CardStackAnimationSpec(
 ) {
     init {
         require(enteringAlpha in 0f..1f) { "Entering alpha must be between zero and one." }
-        require(exitingAlpha in 0f..1f) { "Exiting alpha must be between zero and one." }
         require(horizontalTravelFraction >= 0f) { "Horizontal travel must not be negative." }
         require(verticalTravelFraction >= 0f) { "Vertical travel must not be negative." }
         require(durationMillis > 0) { "Animation duration must be positive." }

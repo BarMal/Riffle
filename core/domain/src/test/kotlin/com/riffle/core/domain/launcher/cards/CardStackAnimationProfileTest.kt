@@ -24,7 +24,6 @@ class CardStackAnimationProfileTest {
         assertEquals(
             CardStackAnimationSpec(
                 enteringAlpha = 0f,
-                exitingAlpha = 0f,
                 animatesAlpha = true,
             ),
             CardStackAnimationProfile.FADE.spec,
@@ -49,7 +48,6 @@ class CardStackAnimationProfileTest {
     @Test
     fun rejectsInvalidAnimationSpecs() {
         assertFailsWith<IllegalArgumentException> { CardStackAnimationSpec(enteringAlpha = -0.1f) }
-        assertFailsWith<IllegalArgumentException> { CardStackAnimationSpec(exitingAlpha = 1.1f) }
         assertFailsWith<IllegalArgumentException> { CardStackAnimationSpec(horizontalTravelFraction = -1f) }
         assertFailsWith<IllegalArgumentException> { CardStackAnimationSpec(verticalTravelFraction = -1f) }
         assertFailsWith<IllegalArgumentException> { CardStackAnimationSpec(durationMillis = 0) }
