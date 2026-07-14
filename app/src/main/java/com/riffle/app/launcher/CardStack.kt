@@ -91,54 +91,54 @@ private fun cardStackContentTransform(
     animationProfile: CardStackAnimationProfile,
     reducedMotion: Boolean,
 ) = if (reducedMotion || animationProfile == CardStackAnimationProfile.STACK_REFLOW) {
-        EnterTransition.None togetherWith ExitTransition.None
-    } else {
-        val enteringPose = cardStackTransitionPose(animationProfile, entering = true)
-        val exitingPose = cardStackTransitionPose(animationProfile, entering = false)
-        val spec = animationProfile.spec
-        val alphaAnimation = tween<Float>(durationMillis = spec.durationMillis)
-        val translationAnimation = tween<Int>(durationMillis = spec.durationMillis)
-        val enterAlpha =
-            if (spec.animatesAlpha) fadeIn(alphaAnimation, enteringPose.alpha) else EnterTransition.None
-        val enterHorizontalTranslation =
-            if (spec.animatesHorizontalTranslation) {
-                slideInHorizontally(translationAnimation) { width ->
-                    (width * enteringPose.horizontalTravelFraction).roundToInt()
-                }
-            } else {
-                EnterTransition.None
+    EnterTransition.None togetherWith ExitTransition.None
+} else {
+    val enteringPose = cardStackTransitionPose(animationProfile, entering = true)
+    val exitingPose = cardStackTransitionPose(animationProfile, entering = false)
+    val spec = animationProfile.spec
+    val alphaAnimation = tween<Float>(durationMillis = spec.durationMillis)
+    val translationAnimation = tween<Int>(durationMillis = spec.durationMillis)
+    val enterAlpha =
+        if (spec.animatesAlpha) fadeIn(alphaAnimation, enteringPose.alpha) else EnterTransition.None
+    val enterHorizontalTranslation =
+        if (spec.animatesHorizontalTranslation) {
+            slideInHorizontally(translationAnimation) { width ->
+                (width * enteringPose.horizontalTravelFraction).roundToInt()
             }
-        val enterVerticalTranslation =
-            if (spec.animatesVerticalTranslation) {
-                slideInVertically(translationAnimation) { height ->
-                    (height * enteringPose.verticalTravelFraction).roundToInt()
-                }
-            } else {
-                EnterTransition.None
+        } else {
+            EnterTransition.None
+        }
+    val enterVerticalTranslation =
+        if (spec.animatesVerticalTranslation) {
+            slideInVertically(translationAnimation) { height ->
+                (height * enteringPose.verticalTravelFraction).roundToInt()
             }
-        val exitAlpha =
-            if (spec.animatesAlpha) fadeOut(alphaAnimation, exitingPose.alpha) else ExitTransition.None
-        val exitHorizontalTranslation =
-            if (spec.animatesHorizontalTranslation) {
-                slideOutHorizontally(translationAnimation) { width ->
-                    (width * exitingPose.horizontalTravelFraction).roundToInt()
-                }
-            } else {
-                ExitTransition.None
+        } else {
+            EnterTransition.None
+        }
+    val exitAlpha =
+        if (spec.animatesAlpha) fadeOut(alphaAnimation, exitingPose.alpha) else ExitTransition.None
+    val exitHorizontalTranslation =
+        if (spec.animatesHorizontalTranslation) {
+            slideOutHorizontally(translationAnimation) { width ->
+                (width * exitingPose.horizontalTravelFraction).roundToInt()
             }
-        val exitVerticalTranslation =
-            if (spec.animatesVerticalTranslation) {
-                slideOutVertically(translationAnimation) { height ->
-                    (height * exitingPose.verticalTravelFraction).roundToInt()
-                }
-            } else {
-                ExitTransition.None
+        } else {
+            ExitTransition.None
+        }
+    val exitVerticalTranslation =
+        if (spec.animatesVerticalTranslation) {
+            slideOutVertically(translationAnimation) { height ->
+                (height * exitingPose.verticalTravelFraction).roundToInt()
             }
-        val enter = enterAlpha + enterHorizontalTranslation + enterVerticalTranslation
-        val exit = exitAlpha + exitHorizontalTranslation + exitVerticalTranslation
+        } else {
+            ExitTransition.None
+        }
+    val enter = enterAlpha + enterHorizontalTranslation + enterVerticalTranslation
+    val exit = exitAlpha + exitHorizontalTranslation + exitVerticalTranslation
 
-        enter togetherWith exit
-    }
+    enter togetherWith exit
+}
 
 @Composable
 private fun AnimatedCardStackEntry(
