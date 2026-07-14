@@ -27,7 +27,10 @@ import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.platform.LocalDensity
+import com.riffle.core.domain.launcher.home.GeneratedLauncherPageKind
 import com.riffle.core.domain.launcher.home.HomeLayout
+import com.riffle.core.domain.launcher.home.LauncherPage
+import com.riffle.core.domain.launcher.home.LauncherPageType
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.launch
 import kotlin.math.abs
@@ -181,6 +184,7 @@ internal fun ImmediateWorkspacePager(
     presentation: HomeGridPresentation,
     appIconLoader: AppIconLoader,
     actions: HomeWorkspaceActions,
+    generatedPageContent: @Composable (LauncherPage, Modifier) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier,
 ) {
     val coroutineScope = rememberCoroutineScope()
@@ -208,25 +212,33 @@ internal fun ImmediateWorkspacePager(
                     ),
         ) {
             layout.pages.forEachIndexed { index, page ->
-                WorkspaceGrid(
-                    page = page,
-                    gridState = gridState,
-                    presentation = presentation,
-                    appIconLoader = appIconLoader,
-                    actions = actions,
-                    modifier =
-                        Modifier
-                            .width(pageWidth)
-                            .fillMaxHeight()
-                            .graphicsLayer {
-                                translationX = pageCenterOffsetPx + ((index - pagerState.pagePosition) * pageWidthPx)
-                                clip = true
-                            },
-                )
+                val pageModifier =
+                    Modifier
+                        .width(pageWidth)
+                        .fillMaxHeight()
+                        .graphicsLayer {
+                            translationX = pageCenterOffsetPx + ((index - pagerState.pagePosition) * pageWidthPx)
+                            clip = true
+                        }
+                if (page.isNotificationCardsPage) {
+                    generatedPageContent(page, pageModifier)
+                } else {
+                    WorkspaceGrid(
+                        page = page,
+                        gridState = gridState,
+                        presentation = presentation,
+                        appIconLoader = appIconLoader,
+                        actions = actions,
+                        modifier = pageModifier,
+                    )
+                }
             }
         }
     }
 }
+
+private val LauncherPage.isNotificationCardsPage: Boolean
+    get() = (type as? LauncherPageType.Generated)?.kind == GeneratedLauncherPageKind.NOTIFICATION_CARDS
 
 private fun Modifier.immediateHomePageDrag(
     enabled: Boolean,

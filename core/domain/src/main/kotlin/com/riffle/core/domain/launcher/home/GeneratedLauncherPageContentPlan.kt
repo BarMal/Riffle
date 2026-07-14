@@ -94,7 +94,8 @@ private fun GeneratedLauncherPageContentPlanInput.contentItemsFor(
         GeneratedLauncherPageKind.PERSONAL -> visibleAppItems(profileSelection = AppProfileSelection.personal())
         GeneratedLauncherPageKind.NOTIFICATION_CARDS -> notificationGroupItems()
 
-        GeneratedLauncherPageKind.CATEGORY,
+        GeneratedLauncherPageKind.CATEGORY -> categoryAppItems()
+
         GeneratedLauncherPageKind.FAVOURITES,
         GeneratedLauncherPageKind.FREQUENTLY_USED,
         -> emptyList()
@@ -117,6 +118,18 @@ private fun GeneratedLauncherPageContentPlanInput.notificationGroupItems(): List
         .sortedWith(notificationGroupContentOrder)
         .distinct()
         .map { key -> NotificationGroupContentItem(key = key) }
+        .toList()
+
+private fun GeneratedLauncherPageContentPlanInput.categoryAppItems(): List<GeneratedLauncherPageContentItem.App> =
+    generatedPageData.visibleInstalledApps
+        .asSequence()
+        .filter { app -> !app.category.isNullOrBlank() }
+        .sortedWith(
+            compareBy<InstalledApp> { app -> app.category.orEmpty().lowercase() }
+                .thenBy { app -> app.label.lowercase() }
+                .then(installedAppContentOrder),
+        ).distinctBy { app -> app.identity }
+        .map { app -> GeneratedLauncherPageContentItem.App(identity = app.identity) }
         .toList()
 
 private val installedAppContentOrder: Comparator<InstalledApp> =

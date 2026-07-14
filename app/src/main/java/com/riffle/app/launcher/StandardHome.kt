@@ -161,6 +161,15 @@ private fun StandardHomeColumn(
             presentation = state.homeGridPresentation(),
             appIconLoader = appIconLoader,
             actions = homeActions,
+            generatedPageContent = { _, modifier ->
+                GeneratedNotificationCardsPage(
+                    groups = state.presentation.notificationGroupsByApp,
+                    notificationAccessStatus = state.presentation.notificationAccessStatus,
+                    apps = state.presentation.installedApps,
+                    onAction = actions.onAction,
+                    modifier = modifier,
+                )
+            },
             modifier =
                 Modifier
                     .weight(1f)

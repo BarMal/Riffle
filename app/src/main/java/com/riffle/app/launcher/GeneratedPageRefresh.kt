@@ -37,7 +37,10 @@ internal fun LauncherShellState.withRefreshedGeneratedPages(homeLayoutRepository
 }
 
 private fun LauncherShellState.generatedPageInput() =
-    com.riffle.core.domain.launcher.home.GeneratedLauncherPageContentPlanInput(installedApps = installedApps)
+    com.riffle.core.domain.launcher.home.GeneratedLauncherPageContentPlanInput(
+        installedApps = installedApps,
+        appCategoriesAvailable = installedApps.any { app -> !app.category.isNullOrBlank() },
+    )
 
 private val appBackedGeneratedPageKinds =
     setOf(
@@ -45,4 +48,5 @@ private val appBackedGeneratedPageKinds =
         GeneratedLauncherPageKind.TODAY,
         GeneratedLauncherPageKind.WORK,
         GeneratedLauncherPageKind.PERSONAL,
+        GeneratedLauncherPageKind.CATEGORY,
     )
