@@ -460,21 +460,28 @@ class WidgetBindingCoordinatorTest {
     }
 
     @Test
-    fun restoredConfigurationTransactionCompletesWithoutAllocatingAnotherHostedId() {
+    fun freshProcessRestoresConfigurationTransactionWithoutAllocatingAnotherHostedId() {
         val gateway =
             FakeWidgetHostGateway(
                 bindingResult = WidgetBindingResult.Bound,
                 configuredWidgetIds = setOf(HostedWidgetId(1)),
             )
-        val store = FakeWidgetAddTransactionStore()
-        WidgetBindingCoordinator(gateway, transactionStore = store).requestAddWidget(
+        val persisted = PersistedTransactionValue()
+        WidgetBindingCoordinator(
+            gateway,
+            transactionStore = SerializedWidgetAddTransactionStore(persisted),
+        ).requestAddWidget(
             action = requestAddWidget(label = "Weather"),
             grid = GridDimensions(columns = 4, rows = 5),
             availableWidthDp = 400,
             availableHeightDp = 1000,
         )
 
-        val restored = WidgetBindingCoordinator(gateway, transactionStore = store)
+        val restored =
+            WidgetBindingCoordinator(
+                gateway,
+                transactionStore = SerializedWidgetAddTransactionStore(persisted),
+            )
 
         assertEquals(
             WidgetConfigurationResult.Bound(
@@ -487,13 +494,38 @@ class WidgetBindingCoordinatorTest {
             restored.onConfigurationResult(configured = true),
         )
         assertEquals(emptyList<HostedWidgetId>(), gateway.deletedHostedWidgetIds)
-        assertEquals(null, store.read())
+        assertEquals(null, persisted.value)
+    }
+
+    @Test
+    fun freshProcessCleansUpConfigurationTransactionWhoseProviderBindingDisappeared() {
+        val gateway =
+            FakeWidgetHostGateway(
+                bindingResult = WidgetBindingResult.Bound,
+                configuredWidgetIds = setOf(HostedWidgetId(1)),
+            )
+        val persisted = PersistedTransactionValue()
+        WidgetBindingCoordinator(
+            gateway,
+            transactionStore = SerializedWidgetAddTransactionStore(persisted),
+        ).requestAddWidget(
+            action = requestAddWidget(label = "Weather"),
+            grid = GridDimensions(columns = 4, rows = 5),
+            availableWidthDp = 400,
+            availableHeightDp = 1000,
+        )
+        gateway.isBoundToSelectedProvider = false
+
+        WidgetBindingCoordinator(gateway, transactionStore = SerializedWidgetAddTransactionStore(persisted))
+
+        assertEquals(listOf(HostedWidgetId(1)), gateway.deletedHostedWidgetIds)
+        assertEquals(null, persisted.value)
     }
 
     private class FakeWidgetHostGateway(
         var bindingResult: WidgetBindingResult = WidgetBindingResult.Bound,
         private val configuredWidgetIds: Set<HostedWidgetId> = emptySet(),
-        private val isBoundToSelectedProvider: Boolean = true,
+        var isBoundToSelectedProvider: Boolean = true,
     ) : WidgetHostGateway {
         private var nextHostedWidgetId = 1
         val boundHostedWidgetIds = mutableListOf<HostedWidgetId>()
@@ -533,17 +565,21 @@ class WidgetBindingCoordinatorTest {
         }
     }
 
-    private class FakeWidgetAddTransactionStore : WidgetAddTransactionStore {
-        private var transaction: PendingWidgetAddTransaction? = null
+    private class PersistedTransactionValue(
+        var value: String? = null,
+    )
 
-        override fun read(): PendingWidgetAddTransaction? = transaction
+    private class SerializedWidgetAddTransactionStore(
+        private val persisted: PersistedTransactionValue,
+    ) : WidgetAddTransactionStore {
+        override fun read(): PendingWidgetAddTransaction? = persisted.value?.let(::decodeWidgetAddTransaction)
 
         override fun write(transaction: PendingWidgetAddTransaction) {
-            this.transaction = transaction
+            persisted.value = encodeWidgetAddTransaction(transaction)
         }
 
         override fun clear() {
-            transaction = null
+            persisted.value = null
         }
     }
 

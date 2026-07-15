@@ -34,7 +34,7 @@ import com.riffle.app.launcher.overlay.AndroidOverlayDockServiceController
 import com.riffle.app.launcher.widgets.AndroidInstalledWidgetProviderRepository
 import com.riffle.app.launcher.widgets.AndroidWidgetHostGateway
 import com.riffle.app.launcher.widgets.AndroidWidgetPreviewImageLoader
-import com.riffle.app.launcher.widgets.RetainedWidgetAddTransactionStore
+import com.riffle.app.launcher.widgets.PersistentWidgetAddTransactionStore
 import com.riffle.app.launcher.widgets.WidgetBindingCoordinator
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.home.GridDimensions
@@ -67,7 +67,7 @@ internal class MainActivityDependencies(
     val widgetBindingCoordinator by lazy {
         WidgetBindingCoordinator(
             widgetHostGateway = widgetHostGateway,
-            transactionStore = RetainedWidgetAddTransactionStore,
+            transactionStore = PersistentWidgetAddTransactionStore(activity),
         )
     }
     val widgetAddWindowSizeProvider by lazy { AndroidWidgetAddWindowSizeProvider(activity) }
