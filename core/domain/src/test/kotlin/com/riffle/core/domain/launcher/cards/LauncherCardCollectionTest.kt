@@ -84,6 +84,31 @@ class LauncherCardCollectionTest {
     }
 
     @Test
+    fun projectsConflictingDuplicateSourcesAsStaleWithoutPayloadOrActions() {
+        val first =
+            card(
+                id = "mail",
+                sourcePackageName = "com.riffle.mail.personal",
+                content = LauncherCardContent.Text(title = "Personal mail"),
+                supportedActions = setOf(LauncherCardAction.OPEN),
+            )
+        val second =
+            card(
+                id = "mail",
+                sourcePackageName = "com.riffle.mail.work",
+                content = LauncherCardContent.Text(title = "Work mail"),
+                supportedActions = setOf(LauncherCardAction.DISMISS),
+            )
+        val forward = planner.plan(listOf(first, second))
+        val reversed = planner.plan(listOf(second, first))
+
+        assertEquals(forward, reversed)
+        assertEquals(LauncherCardState.STALE, forward.cards.single().state)
+        assertNull(forward.cards.single().content)
+        assertEquals(emptySet(), forward.cards.single().supportedActions)
+    }
+
+    @Test
     fun filtersRemovedCardsWithoutHidingRecoverableUnavailableCards() {
         val collection =
             planner.plan(
@@ -138,15 +163,18 @@ class LauncherCardCollectionTest {
         privacy: LauncherCardPrivacy = LauncherCardPrivacy.VISIBLE,
         content: LauncherCardContent? = null,
         userIntent: LauncherCardUserIntent = LauncherCardUserIntent(),
+        sourcePackageName: String = "com.riffle.$id",
+        supportedActions: Set<LauncherCardAction> = emptySet(),
     ): LauncherCard {
         return LauncherCard(
             id = LauncherCardId(id),
-            sourceRef = LauncherCardSourceRef.App(appIdentity(packageName = "com.riffle.$id")),
+            sourceRef = LauncherCardSourceRef.App(appIdentity(packageName = sourcePackageName)),
             state = state,
             privacy = privacy,
             chronology = LauncherCardChronology(updatedAtEpochMillis = updatedAt, rankingScore = score),
             content = content,
             userIntent = userIntent,
+            supportedActions = supportedActions,
         )
     }
 

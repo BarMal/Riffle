@@ -53,8 +53,9 @@ class LauncherCardCollectionPlanner {
     private companion object {
         fun resolveDuplicate(duplicates: List<LauncherCard>): LauncherCard {
             val resolved = duplicates.maxWithOrNull(duplicateResolutionOrder)!!
-            val tiedSnapshots = duplicates.filter { card -> duplicateResolutionOrder.compare(card, resolved) == 0 }
-            if (tiedSnapshots.distinct().size == 1) return resolved
+            val tiedSnapshots = duplicates.filter { card -> sourceSnapshotOrder.compare(card, resolved) == 0 }
+            val hasConflictingSources = duplicates.map(LauncherCard::sourceRef).distinct().size > 1
+            if (!hasConflictingSources && tiedSnapshots.distinct().size == 1) return resolved
 
             return resolved.copy(
                 size = LauncherCardSize(),
@@ -67,10 +68,13 @@ class LauncherCardCollectionPlanner {
             )
         }
 
-        val duplicateResolutionOrder: Comparator<LauncherCard> =
+        val sourceSnapshotOrder: Comparator<LauncherCard> =
             compareBy<LauncherCard> { card -> card.chronology.updatedAtEpochMillis }
                 .thenBy { card -> card.chronology.rankingScore }
                 .thenBy { card -> card.state.duplicateResolutionRank }
+
+        val duplicateResolutionOrder: Comparator<LauncherCard> =
+            sourceSnapshotOrder
                 .thenBy { card -> card.sourceRef.stableIdentity }
 
         val displayOrder: Comparator<LauncherCard> =
