@@ -10,6 +10,9 @@ import com.riffle.core.domain.launcher.widgets.WidgetProviderIdentity
 class WidgetBindingCoordinator(
     private val widgetHostGateway: WidgetHostGateway,
     private val transactionStore: WidgetAddTransactionStore = InMemoryWidgetAddTransactionStore(),
+    private val hostedWidgetIdReferenceState: (HostedWidgetId) -> HostedWidgetIdReferenceState = {
+        HostedWidgetIdReferenceState.Unknown
+    },
     private val epochMillisProvider: () -> Long = System::currentTimeMillis,
 ) {
     private var pendingAdd: PendingWidgetAddTransaction? = transactionStore.read()
@@ -17,7 +20,11 @@ class WidgetBindingCoordinator(
     init {
         val restoredTransaction = pendingAdd
         if (restoredTransaction == null) {
-            transactionStore.discardInvalidTransaction()?.let(widgetHostGateway::deleteHostedWidgetId)
+            transactionStore.discardInvalidTransaction()?.let { hostedWidgetId ->
+                if (hostedWidgetIdReferenceState(hostedWidgetId) == HostedWidgetIdReferenceState.Unreferenced) {
+                    widgetHostGateway.deleteHostedWidgetId(hostedWidgetId)
+                }
+            }
         } else if (
             restoredTransaction.step == PendingWidgetAddStep.CONFIGURATION &&
             !widgetHostGateway.isHostedWidgetBoundTo(
@@ -221,6 +228,12 @@ class WidgetBindingCoordinator(
                     label = label,
                 )
         }
+}
+
+enum class HostedWidgetIdReferenceState {
+    Referenced,
+    Unreferenced,
+    Unknown,
 }
 
 data class PendingWidgetActivityResult(

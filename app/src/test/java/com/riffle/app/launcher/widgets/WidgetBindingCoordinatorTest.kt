@@ -593,10 +593,47 @@ class WidgetBindingCoordinatorTest {
                 value = "{\"version\":1,\"hostedWidgetId\":42}",
             )
 
-        WidgetBindingCoordinator(gateway, transactionStore = SerializedWidgetAddTransactionStore(persisted))
-        WidgetBindingCoordinator(gateway, transactionStore = SerializedWidgetAddTransactionStore(persisted))
+        WidgetBindingCoordinator(
+            gateway,
+            transactionStore = SerializedWidgetAddTransactionStore(persisted),
+            hostedWidgetIdReferenceState = { HostedWidgetIdReferenceState.Unreferenced },
+        )
+        WidgetBindingCoordinator(
+            gateway,
+            transactionStore = SerializedWidgetAddTransactionStore(persisted),
+            hostedWidgetIdReferenceState = { HostedWidgetIdReferenceState.Unreferenced },
+        )
 
         assertEquals(listOf(HostedWidgetId(42)), gateway.deletedHostedWidgetIds)
+        assertEquals(null, persisted.value)
+    }
+
+    @Test
+    fun corruptTransactionCannotDeleteHostedIdReferencedByPersistedLayout() {
+        val gateway = FakeWidgetHostGateway()
+        val persisted = PersistedTransactionValue(value = "{\"version\":1,\"hostedWidgetId\":42}")
+
+        WidgetBindingCoordinator(
+            gateway,
+            transactionStore = SerializedWidgetAddTransactionStore(persisted),
+            hostedWidgetIdReferenceState = { HostedWidgetIdReferenceState.Referenced },
+        )
+
+        assertEquals(emptyList<HostedWidgetId>(), gateway.deletedHostedWidgetIds)
+        assertEquals(null, persisted.value)
+    }
+
+    @Test
+    fun corruptTransactionRetainsHostedIdWhenLayoutReferencesAreUnknown() {
+        val gateway = FakeWidgetHostGateway()
+        val persisted = PersistedTransactionValue(value = "{\"version\":1,\"hostedWidgetId\":42}")
+
+        WidgetBindingCoordinator(
+            gateway,
+            transactionStore = SerializedWidgetAddTransactionStore(persisted),
+        )
+
+        assertEquals(emptyList<HostedWidgetId>(), gateway.deletedHostedWidgetIds)
         assertEquals(null, persisted.value)
     }
 
