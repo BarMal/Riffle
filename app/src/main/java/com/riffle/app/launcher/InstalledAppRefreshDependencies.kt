@@ -4,6 +4,7 @@ import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.apps.AppShortcutRepository
 import com.riffle.core.domain.launcher.apps.AppVisibilityRepository
 import com.riffle.core.domain.launcher.apps.InstalledAppCatalog
+import com.riffle.core.domain.launcher.apps.InstalledAppRefreshResult
 import com.riffle.core.domain.launcher.apps.InstalledAppRepository
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
 
@@ -24,12 +25,18 @@ internal fun LauncherShellAction.applyAppVisibilityAction(appVisibilityRepositor
 }
 
 internal fun LauncherShellState.withRefreshedInstalledApps(deps: InstalledAppRefreshDependencies): LauncherShellState =
-    withInstalledApps(
-        installedAppRepository = deps.installedAppRepository,
-        appVisibilityRepository = deps.appVisibilityRepository,
-        appCatalog = deps.appCatalog,
-    )
-        .withoutUnavailableApps(deps.homeLayoutRepository)
-        .withHomeScreenLibraryApps(deps.homeLayoutRepository)
-        .withRefreshedGeneratedPages(deps.homeLayoutRepository)
-        .withAppShortcuts(deps.appShortcutRepository, deps.appCatalog)
+    when (val result = deps.installedAppRepository.refreshResult()) {
+        is InstalledAppRefreshResult.Authoritative ->
+            withInstalledApps(
+                apps = result.apps,
+                appVisibilityRepository = deps.appVisibilityRepository,
+                appCatalog = deps.appCatalog,
+            )
+                .withHomeScreenLibraryApps(deps.homeLayoutRepository)
+                .withRefreshedGeneratedPages(deps.homeLayoutRepository)
+                .withAppShortcuts(deps.appShortcutRepository, deps.appCatalog)
+
+        is InstalledAppRefreshResult.Partial,
+        InstalledAppRefreshResult.Unavailable,
+        -> this
+    }

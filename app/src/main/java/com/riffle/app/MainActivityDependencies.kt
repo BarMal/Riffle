@@ -22,6 +22,7 @@ import com.riffle.app.launcher.SharedPreferencesFirstRunRepository
 import com.riffle.app.launcher.apps.AndroidAppLauncher
 import com.riffle.app.launcher.apps.AndroidAppShortcutRepository
 import com.riffle.app.launcher.apps.AndroidPackageChangeObserver
+import com.riffle.app.launcher.apps.AppCatalogChange
 import com.riffle.app.launcher.apps.PackageManagerAppIconLoader
 import com.riffle.app.launcher.apps.PackageManagerInstalledAppRepository
 import com.riffle.app.launcher.homeLayoutDeviceClassFromConfiguration
@@ -78,9 +79,9 @@ internal class MainActivityDependencies(
             deleteHostedWidgetId = widgetHostGateway::deleteHostedWidgetId,
         )
 
-    fun packageChangeObserver(refreshInstalledApps: () -> Unit): AndroidPackageChangeObserver =
-        AndroidPackageChangeObserver(activity) {
-            activity.runOnUiThread(refreshInstalledApps)
+    fun packageChangeObserver(onCatalogChanged: (AppCatalogChange) -> Unit): AndroidPackageChangeObserver =
+        AndroidPackageChangeObserver(activity) { change ->
+            activity.runOnUiThread { onCatalogChanged(change) }
         }
 
     fun activeNotificationRefreshCoordinator(
