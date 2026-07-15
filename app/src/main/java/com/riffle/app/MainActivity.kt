@@ -351,6 +351,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         wallpaperController.applySource(shellViewModel.state.value.launcherSettings.appearance.wallpaper.source)
         activeNotificationRefreshCoordinator.start()
+        lifecycle.addObserver(activeNotificationRefreshCoordinator)
         lifecycle.addObserver(packageChangeObserver)
         lifecycle.addObserver(widgetHostGateway)
         refreshHomeLayoutDeviceClass(source = "onCreate")
@@ -386,11 +387,6 @@ class MainActivity : ComponentActivity() {
         refreshPlatformStatuses()
     }
 
-    override fun onDestroy() {
-        activeNotificationRefreshCoordinator.stop()
-        super.onDestroy()
-    }
-
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
@@ -416,7 +412,7 @@ class MainActivity : ComponentActivity() {
         )
         if (
             notificationAccessStatus == NotificationAccessStatus.REVOKED &&
-                !notificationAccessWasRevoked
+            !notificationAccessWasRevoked
         ) {
             activeNotificationRepository.saveActiveNotifications(emptyList())
         }

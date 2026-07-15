@@ -9,8 +9,7 @@ import com.riffle.core.domain.launcher.OverlayDockPermissionStatus
 class AndroidOverlayDockPermissionGateway(
     private val context: Context,
 ) {
-    fun getOverlayDockPermissionStatus(): OverlayDockPermissionStatus =
-        overlayDockPermissionStatus { Settings.canDrawOverlays(context) }
+    fun getOverlayDockPermissionStatus(): OverlayDockPermissionStatus = overlayDockPermissionStatus { Settings.canDrawOverlays(context) }
 
     fun createOverlayPermissionSettingsIntent(): Intent =
         Intent(
@@ -25,9 +24,7 @@ internal fun overlayDockPermissionStatus(canDrawOverlays: Boolean): OverlayDockP
         else -> OverlayDockPermissionStatus.NOT_GRANTED
     }
 
-internal fun overlayDockPermissionStatus(
-    canDrawOverlays: () -> Boolean,
-): OverlayDockPermissionStatus =
+internal fun overlayDockPermissionStatus(canDrawOverlays: () -> Boolean): OverlayDockPermissionStatus =
     runCatching(canDrawOverlays)
         .fold(
             onSuccess = ::overlayDockPermissionStatus,

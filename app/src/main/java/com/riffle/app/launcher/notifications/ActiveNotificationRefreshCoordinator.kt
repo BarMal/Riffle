@@ -1,5 +1,8 @@
 package com.riffle.app.launcher.notifications
 
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.LifecycleOwner
+
 fun interface ActiveNotificationChangeSource {
     fun observeActiveNotifications(onChanged: () -> Unit): () -> Unit
 }
@@ -15,15 +18,16 @@ class ActiveNotificationRefreshCoordinator(
     private val dispatchOnMainThread: (() -> Unit) -> Unit,
     private val refreshNotifications: () -> Unit,
     private val refreshPlatformStatuses: () -> Unit,
-) {
+) : DefaultLifecycleObserver {
     private var removeNotificationObserver: (() -> Unit)? = null
     private var removeConnectionObserver: (() -> Unit)? = null
 
     fun start() {
         if (removeNotificationObserver != null) return
-        removeNotificationObserver = notificationChangeSource.observeActiveNotifications {
-            dispatchRefresh()
-        }
+        removeNotificationObserver =
+            notificationChangeSource.observeActiveNotifications {
+                dispatchRefresh()
+            }
         removeConnectionObserver = connectionChangeSource.observeConnection(::dispatchRefresh)
     }
 
@@ -34,8 +38,13 @@ class ActiveNotificationRefreshCoordinator(
         removeConnectionObserver = null
     }
 
-    private fun dispatchRefresh() = dispatchOnMainThread {
-        refreshPlatformStatuses()
-        refreshNotifications()
+    override fun onDestroy(owner: LifecycleOwner) {
+        stop()
     }
+
+    private fun dispatchRefresh() =
+        dispatchOnMainThread {
+            refreshPlatformStatuses()
+            refreshNotifications()
+        }
 }
