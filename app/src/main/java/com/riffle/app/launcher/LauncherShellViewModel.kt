@@ -1,3 +1,5 @@
+@file:Suppress("TooManyFunctions")
+
 package com.riffle.app.launcher
 
 import androidx.lifecycle.ViewModel

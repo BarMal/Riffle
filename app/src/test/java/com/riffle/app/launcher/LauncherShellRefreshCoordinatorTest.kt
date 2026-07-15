@@ -91,12 +91,19 @@ class LauncherShellRefreshCoordinatorTest {
         val homeLayoutRepository = FakeHomeLayoutRepository()
         val coordinator =
             coordinator(
-                installedAppRepository = FakeInstalledAppRepository(refreshResult = InstalledAppRefreshResult.Authoritative(emptyList())),
+                installedAppRepository =
+                    FakeInstalledAppRepository(
+                        refreshResult = InstalledAppRefreshResult.Authoritative(emptyList()),
+                    ),
                 homeLayoutRepository = homeLayoutRepository,
             )
-        val layout = layoutWithPlacements(camera.identity, app(label = "Docs", profile = AppProfile.work()).identity)
+        val workDocs = app(label = "Docs", profile = AppProfile.work())
+        val layout = layoutWithPlacements(camera.identity, workDocs.identity)
 
-        val refreshed = coordinator.refreshInstalledApps(LauncherShellState(homeLayout = layout, installedApps = listOf(camera)))
+        val refreshed =
+            coordinator.refreshInstalledApps(
+                LauncherShellState(homeLayout = layout, installedApps = listOf(camera)),
+            )
 
         assertEquals(emptyList<InstalledApp>(), refreshed.installedApps)
         assertEquals(layout, refreshed.homeLayout)

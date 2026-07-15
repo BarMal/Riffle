@@ -35,7 +35,9 @@ fun LauncherShellState.withoutConfirmedPackage(
             }
         }
 
-fun HomeLayout.keepingApps(identities: Set<AppIdentity>): HomeLayout = keepingApps { identity -> identity in identities }
+fun HomeLayout.keepingApps(identities: Set<AppIdentity>): HomeLayout {
+    return keepingApps { identity -> identity in identities }
+}
 
 private fun HomeLayout.keepingApps(shouldKeep: (AppIdentity) -> Boolean): HomeLayout =
     copy(
