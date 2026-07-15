@@ -136,6 +136,23 @@ class WidgetPreferredSpanTest {
     }
 
     @Test
+    fun fallsBackToNormalizedMinimumsWhenTargetCellsAreInvalid() {
+        val span =
+            WidgetProviderDimensions(
+                minWidthDp = 200,
+                minHeightDp = 100,
+                targetCellWidth = 0,
+                targetCellHeight = -1,
+            ).preferredGridSpan(
+                grid = GridDimensions(columns = 4, rows = 4),
+                availableWidthDp = 400,
+                availableHeightDp = 400,
+            )
+
+        assertEquals(GridSpan(columns = 2, rows = 1), span)
+    }
+
+    @Test
     fun reportsWhenWidgetWasShrunkFromIdealSpan() {
         assertEquals(
             "Weather ideal size is 3x2; added as 2x2",
