@@ -36,6 +36,60 @@ data class CardsChapterPlan(
         get() = chapters.map(CardsChapter::id)
 }
 
+/**
+ * Persistable user intent for Cards chapters.
+ *
+ * It intentionally excludes notification groups and their content. Those source snapshots are
+ * transient and are supplied to [CardsChapterPlanner] each time a plan is refreshed.
+ */
+data class CardsChapterPreferences(
+    val pinnedChapterIds: List<CardsChapterId.App> = emptyList(),
+    val selectedChapterId: CardsChapterId = CardsChapterId.Overview,
+) {
+    init {
+        require(pinnedChapterIds.distinct().size == pinnedChapterIds.size) {
+            "Pinned Cards chapters must have unique identities."
+        }
+    }
+
+    fun pin(chapterId: CardsChapterId.App): CardsChapterPreferences =
+        if (chapterId in pinnedChapterIds) this else copy(pinnedChapterIds = pinnedChapterIds + chapterId)
+
+    fun unpin(chapterId: CardsChapterId.App): CardsChapterPreferences {
+        return copy(pinnedChapterIds = pinnedChapterIds - chapterId)
+    }
+
+    fun movePinnedChapter(
+        chapterId: CardsChapterId.App,
+        targetIndex: Int,
+    ): CardsChapterPreferences {
+        val sourceIndex = pinnedChapterIds.indexOf(chapterId)
+        if (sourceIndex < 0) return this
+
+        val reordered = pinnedChapterIds.toMutableList()
+        reordered.removeAt(sourceIndex)
+        reordered.add(targetIndex.coerceIn(0, reordered.size), chapterId)
+        return copy(pinnedChapterIds = reordered)
+    }
+
+    fun select(chapterId: CardsChapterId): CardsChapterPreferences = copy(selectedChapterId = chapterId)
+}
+
+/** A refreshed navigator snapshot paired with the user intent needed to recreate it. */
+data class CardsChapterState(
+    val plan: CardsChapterPlan,
+    val preferences: CardsChapterPreferences,
+) {
+    init {
+        require(preferences.selectedChapterId in plan.chapterIds) {
+            "Cards chapter state must select an available chapter."
+        }
+    }
+
+    val selectedChapter: CardsChapter
+        get() = plan.chapters.first { chapter -> chapter.id == preferences.selectedChapterId }
+}
+
 sealed interface CardsChapter {
     val id: CardsChapterId
 
@@ -57,6 +111,18 @@ sealed interface CardsChapter {
  * active notification group; non-pinned chapters exist only while their group is active.
  */
 class CardsChapterPlanner {
+    fun state(
+        notificationGroups: List<AppNotificationGroup>,
+        preferences: CardsChapterPreferences = CardsChapterPreferences(),
+    ): CardsChapterState {
+        val plan = plan(notificationGroups, preferences.pinnedChapterIds)
+        val selectedChapterId = reconcileSelectedChapter(preferences.selectedChapterId, plan)
+        return CardsChapterState(
+            plan = plan,
+            preferences = preferences.select(selectedChapterId),
+        )
+    }
+
     fun plan(
         notificationGroups: List<AppNotificationGroup>,
         pinnedChapterIds: List<CardsChapterId.App> = emptyList(),
