@@ -82,7 +82,7 @@ class WidgetBindingCoordinator(
                         target = action.target,
                         step = PendingWidgetAddStep.PERMISSION,
                         createdAtEpochMillis = epochMillisProvider(),
-                    )
+                    ),
                 )
                 WidgetAddRequestResult.RequiresPermission(
                     hostedWidgetId = hostedWidgetId,
