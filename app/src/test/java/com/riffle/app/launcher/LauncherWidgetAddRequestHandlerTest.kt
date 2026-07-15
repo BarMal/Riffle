@@ -127,7 +127,7 @@ class LauncherWidgetAddRequestHandlerTest {
     }
 
     @Test
-    fun completedBindAfterPendingPermissionCompletesOnlyReplacementAndDeletesPendingWidgetId() {
+    fun addRequestIsRejectedWhilePlatformPermissionResultIsPending() {
         val completedActions = mutableListOf<HostedWidgetAddAction>()
         val gateway =
             FakeWidgetHostGateway(
@@ -161,18 +161,9 @@ class LauncherWidgetAddRequestHandlerTest {
             ),
             pendingResult,
         )
-        assertEquals(LauncherWidgetAddHandlingResult.Completed("Weather added"), replacementResult)
-        assertEquals(listOf(HostedWidgetId(1)), gateway.deletedHostedWidgetIds)
-        assertEquals(
-            listOf(
-                LauncherShellAction.AddHostedWidgetToHome(
-                    hostedWidgetId = HostedWidgetId(2),
-                    label = "Weather",
-                    preferredSpan = GridSpan(columns = 2, rows = 1),
-                ),
-            ),
-            completedActions,
-        )
+        assertEquals(LauncherWidgetAddHandlingResult.Cancelled, replacementResult)
+        assertEquals(emptyList<HostedWidgetId>(), gateway.deletedHostedWidgetIds)
+        assertEquals(emptyList<HostedWidgetAddAction>(), completedActions)
     }
 
     @Test

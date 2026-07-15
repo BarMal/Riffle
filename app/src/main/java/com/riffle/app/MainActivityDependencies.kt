@@ -34,9 +34,14 @@ import com.riffle.app.launcher.overlay.AndroidOverlayDockServiceController
 import com.riffle.app.launcher.widgets.AndroidInstalledWidgetProviderRepository
 import com.riffle.app.launcher.widgets.AndroidWidgetHostGateway
 import com.riffle.app.launcher.widgets.AndroidWidgetPreviewImageLoader
+import com.riffle.app.launcher.widgets.HostedWidgetIdReferenceState
+import com.riffle.app.launcher.widgets.PersistentWidgetAddTransactionStore
 import com.riffle.app.launcher.widgets.WidgetBindingCoordinator
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.home.GridDimensions
+import com.riffle.core.domain.launcher.home.HomeLayoutSet
+import com.riffle.core.domain.launcher.home.HostedWidgetId
+import com.riffle.core.domain.launcher.home.WidgetItem
 
 internal class MainActivityDependencies(
     private val activity: Activity,
@@ -63,7 +68,17 @@ internal class MainActivityDependencies(
     val homeLayoutDeviceClassObserver by lazy { AndroidHomeLayoutDeviceClassObserver(activity) }
     val activeNotificationRepository by lazy { DataStoreActiveNotificationRepository(activity) }
     val widgetHostGateway by lazy { AndroidWidgetHostGateway(activity) }
-    val widgetBindingCoordinator by lazy { WidgetBindingCoordinator(widgetHostGateway) }
+    val widgetBindingCoordinator by lazy {
+        WidgetBindingCoordinator(
+            widgetHostGateway = widgetHostGateway,
+            transactionStore = PersistentWidgetAddTransactionStore(activity),
+            hostedWidgetIdReferenceState = { hostedWidgetId ->
+                homeLayoutRepository.loadHomeLayoutSet()
+                    ?.hostedWidgetIdReferenceState(hostedWidgetId)
+                    ?: HostedWidgetIdReferenceState.Unknown
+            },
+        )
+    }
     val widgetAddWindowSizeProvider by lazy { AndroidWidgetAddWindowSizeProvider(activity) }
     val widgetPreviewImageLoader by lazy { AndroidWidgetPreviewImageLoader(activity) }
 
@@ -119,3 +134,17 @@ internal class MainActivityDependencies(
             deleteHostedWidgetId = widgetHostGateway::deleteHostedWidgetId,
         )
 }
+
+private fun HomeLayoutSet.hostedWidgetIdReferenceState(hostedWidgetId: HostedWidgetId): HostedWidgetIdReferenceState =
+    layouts.values
+        .asSequence()
+        .flatMap { layout -> (layout.pages.flatMap { it.items } + layout.dock.items).asSequence() }
+        .filterIsInstance<WidgetItem>()
+        .any { it.appWidgetId == hostedWidgetId }
+        .let { referenced ->
+            if (referenced) {
+                HostedWidgetIdReferenceState.Referenced
+            } else {
+                HostedWidgetIdReferenceState.Unreferenced
+            }
+        }

@@ -76,7 +76,7 @@ class WidgetBindingCoordinatorTest {
             availableHeightDp = 1000,
         )
 
-        val result = coordinator.onPermissionResult(granted = true)
+        val result = coordinator.onPermissionResult(hostedWidgetId = HostedWidgetId(1), granted = true)
 
         assertEquals(
             WidgetBindPermissionResult.Bound(
@@ -102,7 +102,7 @@ class WidgetBindingCoordinatorTest {
             availableHeightDp = 1000,
         )
 
-        val result = coordinator.onPermissionResult(granted = true)
+        val result = coordinator.onPermissionResult(hostedWidgetId = HostedWidgetId(1), granted = true)
 
         assertEquals(
             WidgetBindPermissionResult.Bound(
@@ -141,7 +141,7 @@ class WidgetBindingCoordinatorTest {
                     preferredSpan = GridSpan(columns = 2, rows = 1),
                 ),
             ),
-            coordinator.onConfigurationResult(configured = true),
+            coordinator.onConfigurationResult(hostedWidgetId = HostedWidgetId(1), configured = true),
         )
         assertEquals(emptyList<HostedWidgetId>(), gateway.deletedHostedWidgetIds)
     }
@@ -171,7 +171,7 @@ class WidgetBindingCoordinatorTest {
                     label = "Weather",
                 ),
             ),
-            coordinator.onConfigurationResult(configured = true),
+            coordinator.onConfigurationResult(hostedWidgetId = HostedWidgetId(1), configured = true),
         )
     }
 
@@ -192,7 +192,7 @@ class WidgetBindingCoordinatorTest {
 
         assertEquals(
             WidgetBindPermissionResult.RequiresConfiguration(HostedWidgetId(1)),
-            coordinator.onPermissionResult(granted = true),
+            coordinator.onPermissionResult(hostedWidgetId = HostedWidgetId(1), granted = true),
         )
         assertEquals(
             WidgetConfigurationResult.Bound(
@@ -202,7 +202,7 @@ class WidgetBindingCoordinatorTest {
                     preferredSpan = GridSpan(columns = 2, rows = 1),
                 ),
             ),
-            coordinator.onConfigurationResult(configured = true),
+            coordinator.onConfigurationResult(hostedWidgetId = HostedWidgetId(1), configured = true),
         )
         assertEquals(emptyList<HostedWidgetId>(), gateway.deletedHostedWidgetIds)
     }
@@ -224,7 +224,7 @@ class WidgetBindingCoordinatorTest {
 
         assertEquals(
             WidgetBindPermissionResult.RequiresConfiguration(HostedWidgetId(1)),
-            coordinator.onPermissionResult(granted = true),
+            coordinator.onPermissionResult(hostedWidgetId = HostedWidgetId(1), granted = true),
         )
         assertEquals(
             WidgetConfigurationResult.Bound(
@@ -233,7 +233,7 @@ class WidgetBindingCoordinatorTest {
                     label = "Calendar",
                 ),
             ),
-            coordinator.onConfigurationResult(configured = true),
+            coordinator.onConfigurationResult(hostedWidgetId = HostedWidgetId(1), configured = true),
         )
     }
 
@@ -252,7 +252,7 @@ class WidgetBindingCoordinatorTest {
             availableHeightDp = 1000,
         )
 
-        val result = coordinator.onConfigurationResult(configured = false)
+        val result = coordinator.onConfigurationResult(hostedWidgetId = HostedWidgetId(1), configured = false)
 
         assertEquals(WidgetConfigurationResult.Cancelled, result)
         assertEquals(listOf(HostedWidgetId(1)), gateway.deletedHostedWidgetIds)
@@ -273,14 +273,14 @@ class WidgetBindingCoordinatorTest {
             availableHeightDp = 1000,
         )
 
-        val result = coordinator.onPermissionResult(granted = false)
+        val result = coordinator.onPermissionResult(hostedWidgetId = HostedWidgetId(1), granted = false)
 
         assertEquals(WidgetBindPermissionResult.Ignored, result)
         assertEquals(emptyList<HostedWidgetId>(), gateway.deletedHostedWidgetIds)
     }
 
     @Test
-    fun replacementConfigurationRequestDeletesPreviousPendingHostedWidgetId() {
+    fun configurationRequestCannotBeReplacedWhilePlatformResultIsPending() {
         val gateway =
             FakeWidgetHostGateway(
                 bindingResult = WidgetBindingResult.Bound,
@@ -302,17 +302,17 @@ class WidgetBindingCoordinatorTest {
                 availableHeightDp = 1000,
             )
 
-        assertEquals(listOf(HostedWidgetId(1)), gateway.deletedHostedWidgetIds)
-        assertEquals(WidgetAddRequestResult.RequiresConfiguration(HostedWidgetId(2)), result)
+        assertEquals(emptyList<HostedWidgetId>(), gateway.deletedHostedWidgetIds)
+        assertEquals(WidgetAddRequestResult.AlreadyInProgress, result)
         assertEquals(
             WidgetConfigurationResult.Bound(
                 LauncherShellAction.AddHostedWidgetToHome(
-                    hostedWidgetId = HostedWidgetId(2),
-                    label = "Weather",
+                    hostedWidgetId = HostedWidgetId(1),
+                    label = "Calendar",
                     preferredSpan = GridSpan(columns = 2, rows = 1),
                 ),
             ),
-            coordinator.onConfigurationResult(configured = true),
+            coordinator.onConfigurationResult(hostedWidgetId = HostedWidgetId(1), configured = true),
         )
     }
 
@@ -327,7 +327,7 @@ class WidgetBindingCoordinatorTest {
             availableHeightDp = 1000,
         )
 
-        val result = coordinator.onPermissionResult(granted = false)
+        val result = coordinator.onPermissionResult(hostedWidgetId = HostedWidgetId(1), granted = false)
 
         assertEquals(WidgetBindPermissionResult.Cancelled, result)
         assertEquals(listOf(HostedWidgetId(1)), gateway.deletedHostedWidgetIds)
@@ -344,14 +344,14 @@ class WidgetBindingCoordinatorTest {
             availableHeightDp = 1000,
         )
 
-        val result = coordinator.onConfigurationResult(configured = false)
+        val result = coordinator.onConfigurationResult(hostedWidgetId = HostedWidgetId(1), configured = false)
 
         assertEquals(WidgetConfigurationResult.Ignored, result)
         assertEquals(emptyList<HostedWidgetId>(), gateway.deletedHostedWidgetIds)
     }
 
     @Test
-    fun replacementPermissionRequestDeletesPreviousPendingHostedWidgetId() {
+    fun permissionRequestCannotBeReplacedWhilePlatformResultIsPending() {
         val gateway = FakeWidgetHostGateway(bindingResult = WidgetBindingResult.RequiresPermission)
         val coordinator = WidgetBindingCoordinator(gateway)
         coordinator.requestAddWidget(
@@ -369,28 +369,22 @@ class WidgetBindingCoordinatorTest {
                 availableHeightDp = 1000,
             )
 
-        assertEquals(listOf(HostedWidgetId(1)), gateway.deletedHostedWidgetIds)
-        assertEquals(
-            WidgetAddRequestResult.RequiresPermission(
-                hostedWidgetId = HostedWidgetId(2),
-                provider = providerIdentity,
-            ),
-            result,
-        )
+        assertEquals(emptyList<HostedWidgetId>(), gateway.deletedHostedWidgetIds)
+        assertEquals(WidgetAddRequestResult.AlreadyInProgress, result)
         assertEquals(
             WidgetBindPermissionResult.Bound(
                 LauncherShellAction.AddHostedWidgetToHome(
-                    hostedWidgetId = HostedWidgetId(2),
-                    label = "Weather",
+                    hostedWidgetId = HostedWidgetId(1),
+                    label = "Calendar",
                     preferredSpan = GridSpan(columns = 2, rows = 1),
                 ),
             ),
-            coordinator.onPermissionResult(granted = true),
+            coordinator.onPermissionResult(hostedWidgetId = HostedWidgetId(1), granted = true),
         )
     }
 
     @Test
-    fun immediateBindAfterPendingPermissionDeletesPendingHostedWidgetIdAndIgnoresLaterPermissionResult() {
+    fun immediateBindCannotSupersedePendingPermissionResult() {
         val gateway = FakeWidgetHostGateway(bindingResult = WidgetBindingResult.RequiresPermission)
         val coordinator = WidgetBindingCoordinator(gateway)
         coordinator.requestAddWidget(
@@ -409,39 +403,244 @@ class WidgetBindingCoordinatorTest {
                 availableHeightDp = 1000,
             )
 
-        assertEquals(listOf(HostedWidgetId(1), HostedWidgetId(2)), gateway.boundHostedWidgetIds)
-        assertEquals(listOf(HostedWidgetId(1)), gateway.deletedHostedWidgetIds)
+        assertEquals(listOf(HostedWidgetId(1)), gateway.boundHostedWidgetIds)
+        assertEquals(emptyList<HostedWidgetId>(), gateway.deletedHostedWidgetIds)
+        assertEquals(WidgetAddRequestResult.AlreadyInProgress, result)
         assertEquals(
-            WidgetAddRequestResult.Bound(
+            WidgetBindPermissionResult.Bound(
                 LauncherShellAction.AddHostedWidgetToHome(
-                    hostedWidgetId = HostedWidgetId(2),
-                    label = "Weather",
+                    hostedWidgetId = HostedWidgetId(1),
+                    label = "Calendar",
                     preferredSpan = GridSpan(columns = 2, rows = 1),
                 ),
             ),
-            result,
+            coordinator.onPermissionResult(hostedWidgetId = HostedWidgetId(1), granted = true),
         )
-        assertEquals(WidgetBindPermissionResult.Ignored, coordinator.onPermissionResult(granted = true))
-        assertEquals(listOf(HostedWidgetId(1)), gateway.deletedHostedWidgetIds)
+        assertEquals(emptyList<HostedWidgetId>(), gateway.deletedHostedWidgetIds)
     }
 
     @Test
     fun permissionResultWithoutPendingRequestIsIgnored() {
         val coordinator = WidgetBindingCoordinator(FakeWidgetHostGateway())
 
-        assertEquals(WidgetBindPermissionResult.Ignored, coordinator.onPermissionResult(granted = true))
+        assertEquals(
+            WidgetBindPermissionResult.Ignored,
+            coordinator.onPermissionResult(hostedWidgetId = HostedWidgetId(1), granted = true),
+        )
     }
 
     @Test
     fun configurationResultWithoutPendingRequestIsIgnored() {
         val coordinator = WidgetBindingCoordinator(FakeWidgetHostGateway())
 
-        assertEquals(WidgetConfigurationResult.Ignored, coordinator.onConfigurationResult(configured = true))
+        assertEquals(
+            WidgetConfigurationResult.Ignored,
+            coordinator.onConfigurationResult(hostedWidgetId = HostedWidgetId(1), configured = true),
+        )
+    }
+
+    @Test
+    fun configurationSuccessDeletesWidgetWhenHostedIdIsNoLongerBoundToSelectedProvider() {
+        val gateway =
+            FakeWidgetHostGateway(
+                bindingResult = WidgetBindingResult.Bound,
+                configuredWidgetIds = setOf(HostedWidgetId(1)),
+                isBoundToSelectedProvider = false,
+            )
+        val coordinator = WidgetBindingCoordinator(gateway)
+        coordinator.requestAddWidget(
+            action = requestAddWidget(label = "Weather"),
+            grid = GridDimensions(columns = 4, rows = 5),
+            availableWidthDp = 400,
+            availableHeightDp = 1000,
+        )
+
+        assertEquals(
+            WidgetConfigurationResult.Cancelled,
+            coordinator.onConfigurationResult(hostedWidgetId = HostedWidgetId(1), configured = true),
+        )
+        assertEquals(listOf(HostedWidgetId(1)), gateway.deletedHostedWidgetIds)
+    }
+
+    @Test
+    fun freshProcessRestoresConfigurationTransactionWithoutAllocatingAnotherHostedId() {
+        val gateway =
+            FakeWidgetHostGateway(
+                bindingResult = WidgetBindingResult.Bound,
+                configuredWidgetIds = setOf(HostedWidgetId(1)),
+            )
+        val persisted = PersistedTransactionValue()
+        WidgetBindingCoordinator(
+            gateway,
+            transactionStore = SerializedWidgetAddTransactionStore(persisted),
+        ).requestAddWidget(
+            action = requestAddWidget(label = "Weather"),
+            grid = GridDimensions(columns = 4, rows = 5),
+            availableWidthDp = 400,
+            availableHeightDp = 1000,
+        )
+
+        val restored =
+            WidgetBindingCoordinator(
+                gateway,
+                transactionStore = SerializedWidgetAddTransactionStore(persisted),
+            )
+
+        assertEquals(
+            PendingWidgetActivityResult(HostedWidgetId(1), PendingWidgetAddStep.CONFIGURATION),
+            restored.pendingActivityResult,
+        )
+        assertEquals(
+            WidgetConfigurationResult.Bound(
+                LauncherShellAction.AddHostedWidgetToHome(
+                    hostedWidgetId = HostedWidgetId(1),
+                    label = "Weather",
+                    preferredSpan = GridSpan(columns = 2, rows = 1),
+                ),
+            ),
+            restored.onConfigurationResult(hostedWidgetId = HostedWidgetId(1), configured = true),
+        )
+        assertEquals(emptyList<HostedWidgetId>(), gateway.deletedHostedWidgetIds)
+        assertEquals(null, persisted.value)
+    }
+
+    @Test
+    fun freshProcessHomeReturnResumesConfigurationWhenNoResultCallbackArrives() {
+        val gateway =
+            FakeWidgetHostGateway(
+                bindingResult = WidgetBindingResult.Bound,
+                configuredWidgetIds = setOf(HostedWidgetId(1)),
+            )
+        val persisted = PersistedTransactionValue()
+        WidgetBindingCoordinator(
+            gateway,
+            transactionStore = SerializedWidgetAddTransactionStore(persisted),
+        ).requestAddWidget(
+            action = requestAddWidget(label = "Weather"),
+            grid = GridDimensions(columns = 4, rows = 5),
+            availableWidthDp = 400,
+            availableHeightDp = 1000,
+        )
+
+        val restored =
+            WidgetBindingCoordinator(
+                gateway,
+                transactionStore = SerializedWidgetAddTransactionStore(persisted),
+            )
+
+        assertEquals(
+            WidgetAddRecoveryResult.ResumeConfiguration(HostedWidgetId(1)),
+            restored.recoverPendingAdd(),
+        )
+        assertEquals(emptyList<HostedWidgetId>(), gateway.deletedHostedWidgetIds)
+    }
+
+    @Test
+    fun freshProcessHomeReturnCleansUpPendingBindWhenNoResultCallbackArrives() {
+        val gateway = FakeWidgetHostGateway(bindingResult = WidgetBindingResult.RequiresPermission)
+        val persisted = PersistedTransactionValue()
+        WidgetBindingCoordinator(
+            gateway,
+            transactionStore = SerializedWidgetAddTransactionStore(persisted),
+        ).requestAddWidget(
+            action = requestAddWidget(label = "Calendar"),
+            grid = GridDimensions(columns = 4, rows = 5),
+            availableWidthDp = 400,
+            availableHeightDp = 1000,
+        )
+
+        val restored =
+            WidgetBindingCoordinator(
+                gateway,
+                transactionStore = SerializedWidgetAddTransactionStore(persisted),
+            )
+
+        assertEquals(WidgetAddRecoveryResult.Cancelled, restored.recoverPendingAdd())
+        assertEquals(listOf(HostedWidgetId(1)), gateway.deletedHostedWidgetIds)
+        assertEquals(null, persisted.value)
+    }
+
+    @Test
+    fun freshProcessCleansUpConfigurationTransactionWhoseProviderBindingDisappeared() {
+        val gateway =
+            FakeWidgetHostGateway(
+                bindingResult = WidgetBindingResult.Bound,
+                configuredWidgetIds = setOf(HostedWidgetId(1)),
+            )
+        val persisted = PersistedTransactionValue()
+        WidgetBindingCoordinator(
+            gateway,
+            transactionStore = SerializedWidgetAddTransactionStore(persisted),
+        ).requestAddWidget(
+            action = requestAddWidget(label = "Weather"),
+            grid = GridDimensions(columns = 4, rows = 5),
+            availableWidthDp = 400,
+            availableHeightDp = 1000,
+        )
+        gateway.isBoundToSelectedProvider = false
+
+        WidgetBindingCoordinator(gateway, transactionStore = SerializedWidgetAddTransactionStore(persisted))
+
+        assertEquals(listOf(HostedWidgetId(1)), gateway.deletedHostedWidgetIds)
+        assertEquals(null, persisted.value)
+    }
+
+    @Test
+    fun freshProcessCleansUpCorruptTransactionWithRecoverableHostedIdExactlyOnce() {
+        val gateway = FakeWidgetHostGateway()
+        val persisted =
+            PersistedTransactionValue(
+                value = "{\"version\":1,\"hostedWidgetId\":42}",
+            )
+
+        WidgetBindingCoordinator(
+            gateway,
+            transactionStore = SerializedWidgetAddTransactionStore(persisted),
+            hostedWidgetIdReferenceState = { HostedWidgetIdReferenceState.Unreferenced },
+        )
+        WidgetBindingCoordinator(
+            gateway,
+            transactionStore = SerializedWidgetAddTransactionStore(persisted),
+            hostedWidgetIdReferenceState = { HostedWidgetIdReferenceState.Unreferenced },
+        )
+
+        assertEquals(listOf(HostedWidgetId(42)), gateway.deletedHostedWidgetIds)
+        assertEquals(null, persisted.value)
+    }
+
+    @Test
+    fun corruptTransactionCannotDeleteHostedIdReferencedByPersistedLayout() {
+        val gateway = FakeWidgetHostGateway()
+        val persisted = PersistedTransactionValue(value = "{\"version\":1,\"hostedWidgetId\":42}")
+
+        WidgetBindingCoordinator(
+            gateway,
+            transactionStore = SerializedWidgetAddTransactionStore(persisted),
+            hostedWidgetIdReferenceState = { HostedWidgetIdReferenceState.Referenced },
+        )
+
+        assertEquals(emptyList<HostedWidgetId>(), gateway.deletedHostedWidgetIds)
+        assertEquals(null, persisted.value)
+    }
+
+    @Test
+    fun corruptTransactionRetainsHostedIdWhenLayoutReferencesAreUnknown() {
+        val gateway = FakeWidgetHostGateway()
+        val persisted = PersistedTransactionValue(value = "{\"version\":1,\"hostedWidgetId\":42}")
+
+        WidgetBindingCoordinator(
+            gateway,
+            transactionStore = SerializedWidgetAddTransactionStore(persisted),
+        )
+
+        assertEquals(emptyList<HostedWidgetId>(), gateway.deletedHostedWidgetIds)
+        assertEquals(null, persisted.value)
     }
 
     private class FakeWidgetHostGateway(
         var bindingResult: WidgetBindingResult = WidgetBindingResult.Bound,
         private val configuredWidgetIds: Set<HostedWidgetId> = emptySet(),
+        var isBoundToSelectedProvider: Boolean = true,
     ) : WidgetHostGateway {
         private var nextHostedWidgetId = 1
         val boundHostedWidgetIds = mutableListOf<HostedWidgetId>()
@@ -467,12 +666,43 @@ class WidgetBindingCoordinatorTest {
             return hostedWidgetId in configuredWidgetIds
         }
 
+        override fun isHostedWidgetBoundTo(
+            hostedWidgetId: HostedWidgetId,
+            provider: WidgetProviderIdentity,
+        ): Boolean = isBoundToSelectedProvider
+
         override fun createConfigureHostedWidgetIntent(hostedWidgetId: HostedWidgetId): Intent {
             error("Intent creation stays in MainActivity")
         }
 
         override fun deleteHostedWidgetId(hostedWidgetId: HostedWidgetId) {
             deletedHostedWidgetIds += hostedWidgetId
+        }
+    }
+
+    private class PersistedTransactionValue(
+        var value: String? = null,
+    )
+
+    private class SerializedWidgetAddTransactionStore(
+        private val persisted: PersistedTransactionValue,
+    ) : WidgetAddTransactionStore {
+        override fun read(): PendingWidgetAddTransaction? = persisted.value?.let(::decodeWidgetAddTransaction)
+
+        override fun discardInvalidTransaction(): HostedWidgetId? =
+            persisted.value
+                ?.takeIf { decodeWidgetAddTransaction(it) == null }
+                ?.let { value ->
+                    persisted.value = null
+                    decodeInvalidWidgetAddTransactionHostedId(value)
+                }
+
+        override fun write(transaction: PendingWidgetAddTransaction) {
+            persisted.value = encodeWidgetAddTransaction(transaction)
+        }
+
+        override fun clear() {
+            persisted.value = null
         }
     }
 

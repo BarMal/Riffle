@@ -1,6 +1,7 @@
 package com.riffle.app
 
 import android.app.Activity
+import android.appwidget.AppWidgetManager
 import android.content.Intent
 import android.content.res.Configuration
 import android.os.Bundle
@@ -46,9 +47,13 @@ import com.riffle.app.launcher.refreshNotifications
 import com.riffle.app.launcher.refreshWidgetProviders
 import com.riffle.app.launcher.startSystemUiSync
 import com.riffle.app.launcher.startWallpaperOffsetSync
+import com.riffle.app.launcher.widgets.PendingWidgetAddStep
+import com.riffle.app.launcher.widgets.WidgetAddRecoveryResult
 import com.riffle.app.launcher.widgets.WidgetBindPermissionResult
 import com.riffle.app.launcher.widgets.WidgetConfigurationResult
+import com.riffle.core.domain.launcher.home.HostedWidgetId
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
+import com.riffle.core.domain.launcher.widgets.WidgetProviderIdentity
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -145,18 +150,29 @@ class MainActivity : ComponentActivity() {
         registerForActivityResult(
             ActivityResultContracts.StartActivityForResult(),
         ) { result ->
+            val expectedHostedWidgetId =
+                widgetBindingCoordinator.pendingActivityResult
+                    ?.takeIf { it.step == PendingWidgetAddStep.PERMISSION }
+                    ?.hostedWidgetId
+            if (expectedHostedWidgetId == null) {
+                showWidgetAddRecoveryMessage()
+                return@registerForActivityResult
+            }
+            val hostedWidgetId = result.hostedWidgetIdOr(expectedHostedWidgetId)
             val permissionResult =
-                widgetBindingCoordinator.onPermissionResult(result.resultCode == Activity.RESULT_OK)
+                widgetBindingCoordinator.onPermissionResult(
+                    hostedWidgetId = hostedWidgetId,
+                    granted = result.resultCode == Activity.RESULT_OK,
+                )
             when (permissionResult) {
                 is WidgetBindPermissionResult.Bound ->
                     completeConfiguredWidgetAdd(permissionResult.action)
 
                 is WidgetBindPermissionResult.RequiresConfiguration ->
-                    requestWidgetConfiguration.launch(
-                        widgetHostGateway.createConfigureHostedWidgetIntent(permissionResult.hostedWidgetId),
-                    )
+                    launchWidgetConfiguration(permissionResult.hostedWidgetId)
 
-                WidgetBindPermissionResult.Cancelled,
+                WidgetBindPermissionResult.Cancelled -> showWidgetAddRecoveryMessage()
+
                 WidgetBindPermissionResult.Ignored,
                 -> Unit
             }
@@ -184,11 +200,24 @@ class MainActivity : ComponentActivity() {
         registerForActivityResult(
             ActivityResultContracts.StartActivityForResult(),
         ) { result ->
+            val expectedHostedWidgetId =
+                widgetBindingCoordinator.pendingActivityResult
+                    ?.takeIf { it.step == PendingWidgetAddStep.CONFIGURATION }
+                    ?.hostedWidgetId
+            if (expectedHostedWidgetId == null) {
+                showWidgetAddRecoveryMessage()
+                return@registerForActivityResult
+            }
+            val hostedWidgetId = result.hostedWidgetIdOr(expectedHostedWidgetId)
             val configurationResult =
-                widgetBindingCoordinator.onConfigurationResult(result.resultCode == Activity.RESULT_OK)
+                widgetBindingCoordinator.onConfigurationResult(
+                    hostedWidgetId = hostedWidgetId,
+                    configured = result.resultCode == Activity.RESULT_OK,
+                )
             when (configurationResult) {
                 is WidgetConfigurationResult.Bound -> completeConfiguredWidgetAdd(configurationResult.action)
-                WidgetConfigurationResult.Cancelled,
+                WidgetConfigurationResult.Cancelled -> showWidgetAddRecoveryMessage()
+
                 WidgetConfigurationResult.Ignored,
                 -> Unit
             }
@@ -385,6 +414,11 @@ class MainActivity : ComponentActivity() {
         shellViewModel.refreshWidgetProviders()
         refreshHomeLayoutDeviceClass(source = "onResume")
         refreshPlatformStatuses()
+        when (val result = widgetBindingCoordinator.recoverPendingAdd()) {
+            WidgetAddRecoveryResult.None -> Unit
+            WidgetAddRecoveryResult.Cancelled -> showWidgetAddRecoveryMessage()
+            is WidgetAddRecoveryResult.ResumeConfiguration -> launchWidgetConfiguration(result.hostedWidgetId)
+        }
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -453,28 +487,61 @@ class MainActivity : ComponentActivity() {
 
     private fun handleWidgetAddRequest(action: LauncherShellAction.RequestAddWidget) {
         when (val result = widgetAddRequestHandler.handle(action)) {
+            LauncherWidgetAddHandlingResult.Cancelled ->
+                Toast.makeText(this, "Widget could not be added", Toast.LENGTH_SHORT).show()
+
             is LauncherWidgetAddHandlingResult.Completed ->
                 result.message?.let { message -> Toast.makeText(this, message, Toast.LENGTH_SHORT).show() }
 
             is LauncherWidgetAddHandlingResult.RequiresPermission ->
-                requestWidgetBind.launch(
-                    widgetHostGateway.createBindHostedWidgetIntent(
-                        result.hostedWidgetId,
-                        result.provider,
-                    ),
-                )
+                launchWidgetBind(result.hostedWidgetId, result.provider)
 
             is LauncherWidgetAddHandlingResult.RequiresConfiguration ->
-                requestWidgetConfiguration.launch(
-                    widgetHostGateway.createConfigureHostedWidgetIntent(result.hostedWidgetId),
-                )
+                launchWidgetConfiguration(result.hostedWidgetId)
         }
+    }
+
+    private val launchWidgetBind: (HostedWidgetId, WidgetProviderIdentity) -> Unit =
+        { hostedWidgetId, provider ->
+            runCatching {
+                requestWidgetBind.launch(widgetHostGateway.createBindHostedWidgetIntent(hostedWidgetId, provider))
+            }.onFailure {
+                widgetBindingCoordinator.onPermissionResult(hostedWidgetId, granted = false)
+                showWidgetAddRecoveryMessage()
+            }
+        }
+
+    private val launchWidgetConfiguration: (HostedWidgetId) -> Unit = { hostedWidgetId ->
+        runCatching {
+            requestWidgetConfiguration.launch(widgetHostGateway.createConfigureHostedWidgetIntent(hostedWidgetId))
+        }.onFailure {
+            widgetBindingCoordinator.onConfigurationResult(hostedWidgetId, configured = false)
+            showWidgetAddRecoveryMessage()
+        }
+    }
+
+    private val showWidgetAddRecoveryMessage = {
+        Toast.makeText(this, "Widget setup was cancelled. Try again.", Toast.LENGTH_SHORT).show()
     }
 }
 
 private const val BACKUP_DOCUMENT_MIME_TYPE = "application/json"
 private const val BACKUP_DOCUMENT_NAME = "riffle-backup.json"
 private const val FOLDABLE_LAYOUT_LOG_TAG = "RiffleFoldableLayout"
+
+private fun androidx.activity.result.ActivityResult.hostedWidgetIdOr(fallback: HostedWidgetId): HostedWidgetId {
+    val value = data?.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID)
+    val returnedHostedWidgetId =
+        value
+            ?.takeIf { it != AppWidgetManager.INVALID_APPWIDGET_ID }
+            ?.let(::HostedWidgetId)
+    return resolveHostedWidgetResultId(returnedHostedWidgetId, fallback)
+}
+
+internal fun resolveHostedWidgetResultId(
+    returnedHostedWidgetId: HostedWidgetId?,
+    expectedHostedWidgetId: HostedWidgetId,
+): HostedWidgetId = returnedHostedWidgetId ?: expectedHostedWidgetId
 
 private fun String.launcherBuildTypeLabel(): String =
     when {

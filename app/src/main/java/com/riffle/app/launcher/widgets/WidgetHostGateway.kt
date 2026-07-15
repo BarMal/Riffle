@@ -19,6 +19,11 @@ interface WidgetHostGateway {
 
     fun hostedWidgetRequiresConfiguration(hostedWidgetId: HostedWidgetId): Boolean
 
+    fun isHostedWidgetBoundTo(
+        hostedWidgetId: HostedWidgetId,
+        provider: WidgetProviderIdentity,
+    ): Boolean = true
+
     fun createConfigureHostedWidgetIntent(hostedWidgetId: HostedWidgetId): Intent
 
     fun deleteHostedWidgetId(hostedWidgetId: HostedWidgetId)

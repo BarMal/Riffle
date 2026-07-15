@@ -51,6 +51,11 @@ class AndroidWidgetHostGateway internal constructor(
     override fun hostedWidgetRequiresConfiguration(hostedWidgetId: HostedWidgetId): Boolean =
         platform.configureActivity(hostedWidgetId.value) != null
 
+    override fun isHostedWidgetBoundTo(
+        hostedWidgetId: HostedWidgetId,
+        provider: WidgetProviderIdentity,
+    ): Boolean = platform.boundProvider(hostedWidgetId.value) == provider.androidBindingTarget()
+
     override fun createConfigureHostedWidgetIntent(hostedWidgetId: HostedWidgetId): Intent =
         configureHostedWidgetIntentData(hostedWidgetId, platform.configureActivity(hostedWidgetId.value)).toIntent()
 
@@ -78,6 +83,8 @@ internal interface AndroidWidgetHostPlatform {
 
     fun configureActivity(appWidgetId: Int): AndroidWidgetProviderBindingTarget?
 
+    fun boundProvider(appWidgetId: Int): AndroidWidgetProviderBindingTarget? = null
+
     fun createView(
         context: Context,
         appWidgetId: Int,
@@ -104,6 +111,9 @@ private class FrameworkAndroidWidgetHostPlatform(
 
     override fun configureActivity(appWidgetId: Int): AndroidWidgetProviderBindingTarget? =
         appWidgetManager.getAppWidgetInfo(appWidgetId)?.configure?.toAndroidBindingTarget()
+
+    override fun boundProvider(appWidgetId: Int): AndroidWidgetProviderBindingTarget? =
+        appWidgetManager.getAppWidgetInfo(appWidgetId)?.provider?.toAndroidBindingTarget()
 
     override fun createView(
         context: Context,
