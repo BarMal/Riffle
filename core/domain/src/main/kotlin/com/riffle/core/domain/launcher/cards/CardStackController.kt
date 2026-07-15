@@ -92,7 +92,8 @@ class CardStackController {
 
     /**
      * Reconciles a live content update. If focus vanishes, the closest survivor in the prior
-     * ordering wins; ties choose the earlier prior card, then the earlier current card.
+     * ordering wins; ties choose the earlier prior card, then the earlier current card. When no
+     * prior card survives, focus clears rather than moving to an unrelated replacement card.
      */
     fun reconcile(
         state: CardStackFocusState,
@@ -139,8 +140,7 @@ class CardStackController {
                 apply(
                     state = state,
                     focusedCardId =
-                        nearestSurvivor(previousCardIds, cardIds, previousFocusedIndex)
-                            ?: cardIds[previousFocusedIndex.coerceIn(0, cardIds.lastIndex)],
+                        nearestSurvivor(previousCardIds, cardIds, previousFocusedIndex),
                 )
             }
         }

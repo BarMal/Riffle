@@ -57,7 +57,7 @@ class CardStackControllerTest {
     }
 
     @Test
-    fun reconciliationHandlesEmptyContentAndNewContentWithoutAnUnrelatedJumpWhenASurvivorExists() {
+    fun reconciliationHandlesEmptyContentAndPreservesASurvivingCard() {
         val focused =
             controller
                 .jumpTo(
@@ -72,6 +72,28 @@ class CardStackControllerTest {
 
         assertEquals(null, empty.state.focusedCardId)
         assertEquals(c, surviving.state.focusedCardId)
+    }
+
+    @Test
+    fun reconciliationClearsFocusWhenNoPriorCardSurvives() {
+        val focused =
+            controller
+                .jumpTo(
+                    controller.initialize(overview, listOf(a, b, c)).applied().state,
+                    listOf(a, b, c),
+                    b,
+                ).applied()
+                .state
+
+        val replaced =
+            controller
+                .reconcile(
+                    state = focused,
+                    previousCardIds = listOf(a, b, c),
+                    cardIds = listOf(LauncherCardId("replacement-one"), LauncherCardId("replacement-two")),
+                ).applied()
+
+        assertEquals(null, replaced.state.focusedCardId)
     }
 
     @Test
