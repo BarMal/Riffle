@@ -176,7 +176,7 @@ class CardStackTest {
             }
         }
 
-        composeRule.onNodeWithText("View").performClick()
+        composeRule.onNodeWithText("View card").performClick()
 
         composeRule
             .onNode(
