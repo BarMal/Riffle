@@ -56,6 +56,7 @@ internal fun enabledNotificationListenerPackages(enabledListeners: String?): Set
 internal data class EnabledNotificationListenerPackageReads(
     val packages: Set<String>,
     val hasSuccessfulRead: Boolean,
+    val hasFailedRead: Boolean = false,
 )
 
 internal fun enabledNotificationListenerPackages(
@@ -69,6 +70,7 @@ internal fun enabledNotificationListenerPackages(
             notificationManagerResult.getOrDefault(emptySet()) +
                 secureSettingResult.getOrNull().let(::enabledNotificationListenerPackages),
         hasSuccessfulRead = notificationManagerResult.isSuccess || secureSettingResult.isSuccess,
+        hasFailedRead = notificationManagerResult.isFailure || secureSettingResult.isFailure,
     )
 }
 
@@ -83,6 +85,9 @@ internal fun notificationAccessStatus(
         enabledListenerPackageReads.packages.any(systemPermissionPackageCandidates(appPackageName)::contains) ->
             NotificationAccessStatus.GRANTED
         !enabledListenerPackageReads.hasSuccessfulRead -> NotificationAccessStatus.UNKNOWN
+        enabledListenerPackageReads.hasFailedRead &&
+            previousStatus == NotificationAccessStatus.GRANTED ->
+            NotificationAccessStatus.GRANTED
         previousStatus == NotificationAccessStatus.GRANTED || previousStatus == NotificationAccessStatus.REVOKED ->
             NotificationAccessStatus.REVOKED
         else -> NotificationAccessStatus.NOT_GRANTED
