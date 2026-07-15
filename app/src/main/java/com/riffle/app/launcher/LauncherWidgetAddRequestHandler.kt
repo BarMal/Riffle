@@ -24,6 +24,8 @@ class LauncherWidgetAddRequestHandler(
                     availableHeightDp = size.availableHeightDp,
                 )
         ) {
+            WidgetAddRequestResult.Cancelled -> LauncherWidgetAddHandlingResult.Cancelled
+
             is WidgetAddRequestResult.Bound ->
                 completeWidgetAdd(requestResult.action)
                     .deleteHostedWidgetIdWhenRejected(requestResult.action, deleteHostedWidgetId)
@@ -53,6 +55,8 @@ data class LauncherWidgetAddWindowSize(
 )
 
 sealed interface LauncherWidgetAddHandlingResult {
+    data object Cancelled : LauncherWidgetAddHandlingResult
+
     data class Completed(
         val message: String?,
     ) : LauncherWidgetAddHandlingResult

@@ -453,6 +453,9 @@ class MainActivity : ComponentActivity() {
 
     private fun handleWidgetAddRequest(action: LauncherShellAction.RequestAddWidget) {
         when (val result = widgetAddRequestHandler.handle(action)) {
+            LauncherWidgetAddHandlingResult.Cancelled ->
+                Toast.makeText(this, "Widget could not be added", Toast.LENGTH_SHORT).show()
+
             is LauncherWidgetAddHandlingResult.Completed ->
                 result.message?.let { message -> Toast.makeText(this, message, Toast.LENGTH_SHORT).show() }
 

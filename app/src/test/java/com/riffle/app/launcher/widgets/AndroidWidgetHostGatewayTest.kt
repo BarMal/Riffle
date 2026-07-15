@@ -113,6 +113,22 @@ class AndroidWidgetHostGatewayTest {
     }
 
     @Test
+    fun verifiesHostedWidgetBindingAgainstExpectedProvider() {
+        platform.boundProvider = AndroidWidgetProviderBindingTarget("com.example.weather", ".WeatherWidget")
+
+        assertTrue(gateway.isHostedWidgetBoundTo(HostedWidgetId(42), weatherProvider()))
+        assertFalse(
+            gateway.isHostedWidgetBoundTo(
+                HostedWidgetId(42),
+                WidgetProviderIdentity(
+                    packageName = AppPackageName("com.example.clock"),
+                    className = WidgetProviderClassName(".ClockWidget"),
+                ),
+            ),
+        )
+    }
+
+    @Test
     fun createsViewOnlyWhenPlatformCanCreateOne() {
         val widget =
             WidgetItem(
@@ -176,6 +192,8 @@ class AndroidWidgetHostGatewayTest {
             configuredAppWidgetId = appWidgetId
             return configureActivity
         }
+
+        override fun boundProvider(appWidgetId: Int): AndroidWidgetProviderBindingTarget? = boundProvider
 
         override fun createView(
             context: Context,
