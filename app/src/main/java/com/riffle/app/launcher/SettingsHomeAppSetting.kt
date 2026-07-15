@@ -42,21 +42,21 @@ internal fun SettingsHomeAppSetting(
     status: HomeRoleStatus,
     onAction: (LauncherShellAction) -> Unit,
 ) {
-    SettingsClickableRow(
-        title = "Default home app",
-        subtitle = status.settingsHomeAppStatusLabel(),
-        onClick = { onAction(LauncherShellAction.RequestDefaultHome) },
-        trailingContent = {
-            SettingsButtonText(
-                text =
-                    if (status == HomeRoleStatus.DEFAULT_HOME) {
-                        "Default"
-                    } else {
-                        "Set home"
-                    },
-            )
-        },
-    )
+    if (status == HomeRoleStatus.UNKNOWN) {
+        SettingsListRow(
+            title = "Default home app",
+            subtitle = status.settingsHomeAppStatusLabel(),
+        )
+    } else {
+        SettingsClickableRow(
+            title = "Default home app",
+            subtitle = status.settingsHomeAppStatusLabel(),
+            onClick = { onAction(LauncherShellAction.RequestDefaultHome) },
+            trailingContent = {
+                SettingsButtonText(text = status.settingsHomeAppActionLabel())
+            },
+        )
+    }
 }
 
 internal fun HomeRoleStatus.settingsHomeAppStatusLabel(): String =
@@ -64,4 +64,11 @@ internal fun HomeRoleStatus.settingsHomeAppStatusLabel(): String =
         HomeRoleStatus.DEFAULT_HOME -> "Riffle is default"
         HomeRoleStatus.NOT_DEFAULT_HOME -> "Riffle is not default"
         HomeRoleStatus.UNKNOWN -> "Status unknown"
+    }
+
+internal fun HomeRoleStatus.settingsHomeAppActionLabel(): String =
+    when (this) {
+        HomeRoleStatus.DEFAULT_HOME -> "Default"
+        HomeRoleStatus.NOT_DEFAULT_HOME -> "Set home"
+        HomeRoleStatus.UNKNOWN -> error("Unknown Home status has no action")
     }

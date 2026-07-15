@@ -47,6 +47,38 @@ class LauncherShellStateReducerTest {
     }
 
     @Test
+    fun completedDefaultHomeStaysDefaultWhenRoleCannotBeDetermined() {
+        val state =
+            reducer.homeRoleChanged(
+                currentState =
+                    LauncherShellState(
+                        firstRunStatus = FirstRunStatus.COMPLETE,
+                        homeRoleStatus = HomeRoleStatus.DEFAULT_HOME,
+                    ),
+                homeRoleStatus = HomeRoleStatus.UNKNOWN,
+            )
+
+        assertEquals(HomeRoleStatus.DEFAULT_HOME, state.homeRoleStatus)
+        assertFalse(state.shouldShowDefaultHomePrompt)
+    }
+
+    @Test
+    fun unresolvedHomeRoleAfterRequestDoesNotShowAnotherSetupPrompt() {
+        val state =
+            reducer.homeRoleChanged(
+                currentState =
+                    reducer.defaultHomeRequestStarted(
+                        LauncherShellState(),
+                    ),
+                homeRoleStatus = HomeRoleStatus.UNKNOWN,
+            )
+
+        assertEquals(FirstRunStatus.REQUESTING_HOME_ROLE, state.firstRunStatus)
+        assertFalse(state.shouldShowDefaultHomePrompt)
+        assertTrue(state.shouldShowEmptyHome)
+    }
+
+    @Test
     fun navigationActionsSelectShellDestinations() {
         val appDrawerState =
             reducer.navigationActionSelected(

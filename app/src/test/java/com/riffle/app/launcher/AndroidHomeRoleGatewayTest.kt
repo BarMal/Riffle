@@ -105,6 +105,28 @@ class AndroidHomeRoleGatewayTest {
     }
 
     @Test
+    fun reportsUnknownWhenRoleManagerReportsNotHeldWithoutResolvedHomeEvidence() {
+        assertEquals(
+            HomeRoleStatus.UNKNOWN,
+            homeRoleStatus(
+                roleManagerStatus = HomeRoleStatus.NOT_DEFAULT_HOME,
+                resolvedDefaultHomeStatus = HomeRoleStatus.UNKNOWN,
+            ),
+        )
+    }
+
+    @Test
+    fun prefersResolvedDifferentHomeOverStaleRoleManagerOwnership() {
+        assertEquals(
+            HomeRoleStatus.NOT_DEFAULT_HOME,
+            homeRoleStatus(
+                roleManagerStatus = HomeRoleStatus.DEFAULT_HOME,
+                resolvedDefaultHomeStatus = HomeRoleStatus.NOT_DEFAULT_HOME,
+            ),
+        )
+    }
+
+    @Test
     fun fallsBackToResolvedHomeStatusWhenRoleManagerIsUnavailable() {
         assertEquals(
             HomeRoleStatus.NOT_DEFAULT_HOME,
