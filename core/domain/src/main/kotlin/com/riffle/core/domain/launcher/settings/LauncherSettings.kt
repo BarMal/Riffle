@@ -1,5 +1,7 @@
 package com.riffle.core.domain.launcher.settings
 
+import com.riffle.core.domain.launcher.apps.AppIdentity
+import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.contextual.ContextualSettings
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.WallpaperSettings
@@ -58,6 +60,7 @@ data class GestureSettings(
 
 data class HomeGestureSettings(
     val actions: Map<HomeGesture, LauncherGestureAction> = defaultHomeGestureActions,
+    val launchTargets: Map<HomeGesture, LauncherGestureLaunchTarget> = emptyMap(),
 ) {
     fun actionFor(gesture: HomeGesture): LauncherGestureAction =
         actions[gesture] ?: defaultHomeGestureActions[gesture] ?: LauncherGestureAction.NONE
@@ -65,7 +68,26 @@ data class HomeGestureSettings(
     fun withAction(
         gesture: HomeGesture,
         action: LauncherGestureAction,
-    ): HomeGestureSettings = copy(actions = actions + (gesture to action))
+        launchTarget: LauncherGestureLaunchTarget? = null,
+    ): HomeGestureSettings =
+        copy(
+            actions = actions + (gesture to action),
+            launchTargets =
+                launchTarget?.let { target -> launchTargets + (gesture to target) }
+                    ?: (launchTargets - gesture),
+        )
+
+    fun launchTargetFor(gesture: HomeGesture): LauncherGestureLaunchTarget? = launchTargets[gesture]
+}
+
+sealed interface LauncherGestureLaunchTarget {
+    data class App(
+        val identity: AppIdentity,
+    ) : LauncherGestureLaunchTarget
+
+    data class Shortcut(
+        val shortcut: AppShortcut,
+    ) : LauncherGestureLaunchTarget
 }
 
 enum class HomeGesture {
@@ -214,6 +236,8 @@ enum class LauncherGestureAction {
     ENTER_FULLSCREEN_HOME,
     SELECT_NEXT_HOME_PAGE,
     SELECT_PREVIOUS_HOME_PAGE,
+    LAUNCH_APP,
+    LAUNCH_APP_SHORTCUT,
 }
 
 enum class HapticFeedbackStrength {

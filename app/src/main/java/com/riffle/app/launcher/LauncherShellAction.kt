@@ -27,6 +27,7 @@ import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
 import com.riffle.core.domain.launcher.settings.HomeGesture
 import com.riffle.core.domain.launcher.settings.HomeSwipeGestureDirection
 import com.riffle.core.domain.launcher.settings.LauncherGestureAction
+import com.riffle.core.domain.launcher.settings.LauncherGestureLaunchTarget
 import com.riffle.core.domain.launcher.settings.LauncherThemeMode
 import com.riffle.core.domain.launcher.settings.LauncherThemePreset
 import com.riffle.core.domain.launcher.settings.MotionPerformanceTargetFps
@@ -305,6 +306,7 @@ sealed interface LauncherShellAction {
     data class SelectHomeGestureAction(
         val gesture: HomeGesture,
         val action: LauncherGestureAction,
+        val launchTarget: LauncherGestureLaunchTarget? = null,
     ) : LauncherShellAction
 
     data object ResetHomeSwipeGestureActions : LauncherShellAction

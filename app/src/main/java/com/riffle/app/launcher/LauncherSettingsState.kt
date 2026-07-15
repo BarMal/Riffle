@@ -5,6 +5,7 @@ import com.riffle.core.domain.launcher.settings.HomeGesture
 import com.riffle.core.domain.launcher.settings.HomeGestureSettings
 import com.riffle.core.domain.launcher.settings.HomeSwipeGestureDirection
 import com.riffle.core.domain.launcher.settings.LauncherGestureAction
+import com.riffle.core.domain.launcher.settings.LauncherGestureLaunchTarget
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettingsRepository
 import com.riffle.core.domain.launcher.settings.withFullscreenHome
@@ -32,6 +33,7 @@ fun LauncherShellState.withHomeSwipeGestureAction(
 fun LauncherShellState.withHomeGestureAction(
     gesture: HomeGesture,
     action: LauncherGestureAction,
+    launchTarget: LauncherGestureLaunchTarget? = null,
     launcherSettingsRepository: LauncherSettingsRepository,
 ): LauncherShellState =
     withLauncherSettings(
@@ -39,7 +41,7 @@ fun LauncherShellState.withHomeGestureAction(
             launcherSettings.copy(
                 gestures =
                     launcherSettings.gestures.copy(
-                        homeGestures = launcherSettings.gestures.homeGestures.withAction(gesture, action),
+                        homeGestures = launcherSettings.gestures.homeGestures.withAction(gesture, action, launchTarget),
                     ),
             ),
         launcherSettingsRepository = launcherSettingsRepository,

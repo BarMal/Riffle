@@ -4,6 +4,12 @@ import com.riffle.core.domain.launcher.settings.GestureSettings
 import com.riffle.core.domain.launcher.settings.HomeGesture
 import com.riffle.core.domain.launcher.settings.HomeGestureSettings
 import com.riffle.core.domain.launcher.settings.LauncherGestureAction
+import com.riffle.core.domain.launcher.settings.LauncherGestureLaunchTarget
+import com.riffle.core.domain.launcher.apps.AppActivityName
+import com.riffle.core.domain.launcher.apps.AppIdentity
+import com.riffle.core.domain.launcher.apps.AppPackageName
+import com.riffle.core.domain.launcher.apps.AppShortcut
+import com.riffle.core.domain.launcher.apps.AppShortcutId
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -11,6 +17,57 @@ import org.junit.Test
 class HomeSwipeGestureInterpreterTest {
     private val interpreter = HomeSwipeGestureInterpreter(thresholdPx = 80f)
     private val actionMapper = HomeSwipeGestureActionMapper()
+
+    @Test
+    fun mapsAppLaunchGestureToSelectedApp() {
+        val identity = appIdentity()
+        val settings =
+            HomeGestureSettings(
+                actions = mapOf(HomeGesture.THREE_FINGER_UP to LauncherGestureAction.LAUNCH_APP),
+                launchTargets =
+                    mapOf(
+                        HomeGesture.THREE_FINGER_UP to LauncherGestureLaunchTarget.App(identity),
+                    ),
+            )
+
+        assertEquals(
+            LauncherShellAction.LaunchApp(identity),
+            actionMapper.actionFor(HomeGesture.THREE_FINGER_UP, settings),
+        )
+    }
+
+    @Test
+    fun mapsShortcutLaunchGestureToSelectedShortcut() {
+        val shortcut =
+            AppShortcut(
+                id = AppShortcutId("compose"),
+                appIdentity = appIdentity(),
+                shortLabel = "Compose",
+            )
+        val settings =
+            HomeGestureSettings(
+                actions = mapOf(HomeGesture.THREE_FINGER_DOWN to LauncherGestureAction.LAUNCH_APP_SHORTCUT),
+                launchTargets =
+                    mapOf(
+                        HomeGesture.THREE_FINGER_DOWN to LauncherGestureLaunchTarget.Shortcut(shortcut),
+                    ),
+            )
+
+        assertEquals(
+            LauncherShellAction.LaunchAppShortcut(shortcut),
+            actionMapper.actionFor(HomeGesture.THREE_FINGER_DOWN, settings),
+        )
+    }
+
+    @Test
+    fun ignoresLaunchGestureWithoutSelectedTarget() {
+        val settings =
+            HomeGestureSettings(
+                actions = mapOf(HomeGesture.THREE_FINGER_UP to LauncherGestureAction.LAUNCH_APP),
+            )
+
+        assertNull(actionMapper.actionFor(HomeGesture.THREE_FINGER_UP, settings))
+    }
 
     @Test
     fun interpretsSwipeUpPastThreshold() {
@@ -230,6 +287,12 @@ class HomeSwipeGestureInterpreterTest {
 
         assertNull(homeGestureConflictSummary(GestureSettings(homeGestures = settings)))
     }
+
+    private fun appIdentity(): AppIdentity =
+        AppIdentity(
+            packageName = AppPackageName("com.riffle.mail"),
+            activityName = AppActivityName("com.riffle.mail.MainActivity"),
+        )
 
     @Test
     fun mapsConfiguredSwipeUpDragToAppDrawerAction() {

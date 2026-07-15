@@ -4,29 +4,43 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.riffle.core.domain.launcher.apps.AppShortcut
+import com.riffle.core.domain.launcher.apps.AppShortcutsByApp
+import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.settings.GestureSettings
 import com.riffle.core.domain.launcher.settings.HomeGesture
 import com.riffle.core.domain.launcher.settings.HomeGestureSettings
 import com.riffle.core.domain.launcher.settings.LauncherGestureAction
+import com.riffle.core.domain.launcher.settings.LauncherGestureLaunchTarget
 import com.riffle.core.domain.launcher.settings.LauncherGestureSurface
 import com.riffle.core.domain.launcher.settings.toHomeGesture
 
 @Composable
 fun HomeSwipeGestureSetting(
     settings: GestureSettings,
+    installedApps: List<InstalledApp>,
+    appShortcutsByApp: AppShortcutsByApp,
     onAction: (LauncherShellAction) -> Unit,
 ) {
     val homeGestures = settings.homeGestures
+    var targetPickerRequest by remember { mutableStateOf<GestureTargetPickerRequest?>(null) }
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(
@@ -51,6 +65,9 @@ fun HomeSwipeGestureSetting(
                 ),
             settings = homeGestures,
             onAction = onAction,
+            onTargetPickerRequest = { gesture, action ->
+                targetPickerRequest = GestureTargetPickerRequest(gesture, action)
+            },
         )
         GestureGroup(
             title = "Two fingers",
@@ -63,6 +80,9 @@ fun HomeSwipeGestureSetting(
                 ),
             settings = homeGestures,
             onAction = onAction,
+            onTargetPickerRequest = { gesture, action ->
+                targetPickerRequest = GestureTargetPickerRequest(gesture, action)
+            },
         )
         GestureGroup(
             title = "Pinch",
@@ -73,6 +93,9 @@ fun HomeSwipeGestureSetting(
                 ),
             settings = homeGestures,
             onAction = onAction,
+            onTargetPickerRequest = { gesture, action ->
+                targetPickerRequest = GestureTargetPickerRequest(gesture, action)
+            },
         )
         GestureGroup(
             title = "Three fingers",
@@ -85,10 +108,31 @@ fun HomeSwipeGestureSetting(
                 ),
             settings = homeGestures,
             onAction = onAction,
+            onTargetPickerRequest = { gesture, action ->
+                targetPickerRequest = GestureTargetPickerRequest(gesture, action)
+            },
         )
         TextButton(onClick = { onAction(LauncherShellAction.ResetHomeSwipeGestureActions) }) {
             SettingsButtonText(text = "Reset")
         }
+    }
+    targetPickerRequest?.let { request ->
+        GestureTargetPicker(
+            request = request,
+            installedApps = installedApps,
+            appShortcutsByApp = appShortcutsByApp,
+            onDismissRequest = { targetPickerRequest = null },
+            onTargetSelected = { target ->
+                onAction(
+                    LauncherShellAction.SelectHomeGestureAction(
+                        gesture = request.gesture,
+                        action = request.action,
+                        launchTarget = target,
+                    ),
+                )
+                targetPickerRequest = null
+            },
+        )
     }
 }
 
@@ -98,6 +142,7 @@ private fun GestureGroup(
     rows: List<GestureRowState>,
     settings: HomeGestureSettings,
     onAction: (LauncherShellAction) -> Unit,
+    onTargetPickerRequest: (HomeGesture, LauncherGestureAction) -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
@@ -110,7 +155,9 @@ private fun GestureGroup(
                 label = row.label,
                 gesture = row.gesture,
                 action = settings.actionFor(row.gesture),
+                launchTarget = settings.launchTargetFor(row.gesture),
                 onAction = onAction,
+                onTargetPickerRequest = onTargetPickerRequest,
             )
         }
     }
@@ -121,7 +168,9 @@ private fun HomeGestureRow(
     label: String,
     gesture: HomeGesture,
     action: LauncherGestureAction,
+    launchTarget: LauncherGestureLaunchTarget?,
     onAction: (LauncherShellAction) -> Unit,
+    onTargetPickerRequest: (HomeGesture, LauncherGestureAction) -> Unit,
 ) {
     val isExpanded = remember { mutableStateOf(false) }
 
@@ -136,7 +185,7 @@ private fun HomeGestureRow(
         )
         Column {
             TextButton(onClick = { isExpanded.value = true }) {
-                SettingsButtonText(text = action.label)
+                SettingsButtonText(text = action.targetLabel(launchTarget))
             }
             DropdownMenu(
                 expanded = isExpanded.value,
@@ -147,12 +196,16 @@ private fun HomeGestureRow(
                         text = { Text(text = option.label) },
                         onClick = {
                             isExpanded.value = false
-                            onAction(
-                                LauncherShellAction.SelectHomeGestureAction(
-                                    gesture = gesture,
-                                    action = option,
-                                ),
-                            )
+                            if (option.requiresLaunchTarget) {
+                                onTargetPickerRequest(gesture, option)
+                            } else {
+                                onAction(
+                                    LauncherShellAction.SelectHomeGestureAction(
+                                        gesture = gesture,
+                                        action = option,
+                                    ),
+                                )
+                            }
                         },
                     )
                 }
@@ -174,7 +227,19 @@ internal val LauncherGestureAction.label: String
             LauncherGestureAction.ENTER_FULLSCREEN_HOME -> "Fullscreen home"
             LauncherGestureAction.SELECT_NEXT_HOME_PAGE -> "Next page"
             LauncherGestureAction.SELECT_PREVIOUS_HOME_PAGE -> "Previous page"
+            LauncherGestureAction.LAUNCH_APP -> "Launch app"
+            LauncherGestureAction.LAUNCH_APP_SHORTCUT -> "Launch shortcut"
         }
+
+private val LauncherGestureAction.requiresLaunchTarget: Boolean
+    get() = this == LauncherGestureAction.LAUNCH_APP || this == LauncherGestureAction.LAUNCH_APP_SHORTCUT
+
+private fun LauncherGestureAction.targetLabel(target: LauncherGestureLaunchTarget?): String =
+    when (target) {
+        is LauncherGestureLaunchTarget.App -> "${label}: ${target.identity.packageName.value}"
+        is LauncherGestureLaunchTarget.Shortcut -> "${label}: ${target.shortcut.longLabel ?: target.shortcut.shortLabel}"
+        null -> label
+    }
 
 internal val HomeGesture.label: String
     get() =
@@ -207,3 +272,93 @@ private data class GestureRowState(
     val label: String,
     val gesture: HomeGesture,
 )
+
+private data class GestureTargetPickerRequest(
+    val gesture: HomeGesture,
+    val action: LauncherGestureAction,
+)
+
+@Composable
+private fun GestureTargetPicker(
+    request: GestureTargetPickerRequest,
+    installedApps: List<InstalledApp>,
+    appShortcutsByApp: AppShortcutsByApp,
+    onDismissRequest: () -> Unit,
+    onTargetSelected: (LauncherGestureLaunchTarget) -> Unit,
+) {
+    var query by remember { mutableStateOf("") }
+    val normalizedQuery = query.trim()
+    val appMatches =
+        installedApps
+            .filter(InstalledApp::enabled)
+            .filter { app -> normalizedQuery.isBlank() || app.label.contains(normalizedQuery, ignoreCase = true) }
+    val shortcutMatches =
+        appShortcutsByApp.values
+            .flatten()
+            .filter(AppShortcut::enabled)
+            .filter { shortcut ->
+                normalizedQuery.isBlank() ||
+                    shortcut.shortLabel.contains(normalizedQuery, ignoreCase = true) ||
+                    shortcut.longLabel?.contains(normalizedQuery, ignoreCase = true) == true
+            }
+
+    AlertDialog(
+        onDismissRequest = onDismissRequest,
+        title = {
+            Text(
+                text =
+                    if (request.action == LauncherGestureAction.LAUNCH_APP) {
+                        "Choose app"
+                    } else {
+                        "Choose shortcut"
+                    },
+            )
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    modifier = Modifier.fillMaxWidth(),
+                    value = query,
+                    onValueChange = { query = it },
+                    label = { Text("Search") },
+                    singleLine = true,
+                )
+                Column(
+                    modifier = Modifier.heightIn(max = 360.dp).verticalScroll(rememberScrollState()),
+                ) {
+                    when (request.action) {
+                        LauncherGestureAction.LAUNCH_APP ->
+                            appMatches.forEach { app ->
+                                TextButton(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    onClick = { onTargetSelected(LauncherGestureLaunchTarget.App(app.identity)) },
+                                ) { Text(app.label) }
+                            }
+
+                        LauncherGestureAction.LAUNCH_APP_SHORTCUT ->
+                            shortcutMatches.forEach { shortcut ->
+                                TextButton(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    onClick = { onTargetSelected(LauncherGestureLaunchTarget.Shortcut(shortcut)) },
+                                ) { Text(shortcut.longLabel ?: shortcut.shortLabel) }
+                            }
+
+                        else -> Unit
+                    }
+                    if ((request.action == LauncherGestureAction.LAUNCH_APP && appMatches.isEmpty()) ||
+                        (request.action == LauncherGestureAction.LAUNCH_APP_SHORTCUT && shortcutMatches.isEmpty())
+                    ) {
+                        Text(
+                            text = "No matches",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismissRequest) { Text("Cancel") }
+        },
+    )
+}

@@ -283,6 +283,8 @@ private fun SettingsGesturesPageContent(
     SettingsSection(title = "Gestures") {
         HomeSwipeGestureSetting(
             settings = state.settings.gestures,
+            installedApps = state.installedApps,
+            appShortcutsByApp = state.appShortcutsByApp,
             onAction = onAction,
         )
     }

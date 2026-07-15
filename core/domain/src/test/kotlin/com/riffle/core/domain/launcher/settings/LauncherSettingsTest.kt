@@ -1,11 +1,37 @@
 package com.riffle.core.domain.launcher.settings
 
+import com.riffle.core.domain.launcher.apps.AppActivityName
+import com.riffle.core.domain.launcher.apps.AppIdentity
+import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.home.WallpaperSettings
 import com.riffle.core.domain.launcher.home.WallpaperSource
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class LauncherSettingsTest {
+    @Test
+    fun replacesLaunchTargetWhenGestureActionChanges() {
+        val identity =
+            AppIdentity(
+                packageName = AppPackageName("com.riffle.mail"),
+                activityName = AppActivityName("com.riffle.mail.MainActivity"),
+            )
+        val configured =
+            HomeGestureSettings().withAction(
+                gesture = HomeGesture.THREE_FINGER_UP,
+                action = LauncherGestureAction.LAUNCH_APP,
+                launchTarget = LauncherGestureLaunchTarget.App(identity),
+            )
+
+        val updated =
+            configured.withAction(
+                gesture = HomeGesture.THREE_FINGER_UP,
+                action = LauncherGestureAction.OPEN_SEARCH,
+            )
+
+        assertEquals(null, updated.launchTargetFor(HomeGesture.THREE_FINGER_UP))
+    }
+
     @Test
     fun defaultsToSystemWallpaper() {
         val settings = LauncherSettings()

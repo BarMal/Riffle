@@ -41,6 +41,7 @@ internal class LauncherSettingsStateReducer(
                     state.withHomeGestureAction(
                         gesture = action.gesture,
                         action = action.action,
+                        launchTarget = action.launchTarget,
                         launcherSettingsRepository = launcherSettingsRepository,
                     )
 
