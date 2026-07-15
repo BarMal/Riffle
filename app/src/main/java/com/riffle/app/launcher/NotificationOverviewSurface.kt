@@ -1,5 +1,12 @@
 package com.riffle.app.launcher
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -14,6 +21,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -68,48 +76,89 @@ fun NotificationOverviewSurface(
         title = panelTitle,
         onAction = onAction,
     ) {
-        if (groups.isEmpty()) {
-            EmptyNotifications(
-                notificationAccessStatus = notificationAccessStatus,
-                onAction = onAction,
-            )
-        } else if (selectedGroup != null) {
-            NotificationGroupPrototype(
-                groups = visibleGroups,
-                selectedGroupKey = selectedGroup.key,
-                presentation = presentation,
-                onBack = { selectedGroupKey = null },
-                onGroupChanged = { groupKey -> selectedGroupKey = groupKey },
-                onAction = onAction,
-            )
-        } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                item {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        NotificationCategorySummary(categoryCounts = categoryCounts)
-                        NotificationCategoryFilter(
-                            options = categoryOptions,
-                            selectedCategory = effectiveSelectedCategory,
-                            onCategorySelected = { category -> selectedCategory = category },
-                        )
-                    }
+        AnimatedContent(
+            targetState = selectedGroup != null,
+            transitionSpec = {
+                if (presentation.reducedMotion) {
+                    EnterTransition.None togetherWith ExitTransition.None
+                } else {
+                    fadeIn(animationSpec = tween(CARD_EXPANSION_DURATION_MILLIS)) togetherWith
+                        fadeOut(animationSpec = tween(CARD_EXPANSION_DURATION_MILLIS))
                 }
-                items(
-                    items = visibleGroups,
-                    key = { group -> "${group.profileId.value}:${group.packageName.value}" },
-                ) { group ->
-                    NotificationGroupRow(
-                        group = group,
-                        app = presentation.apps.firstOrNull { app -> app.matches(group) },
-                        appIconLoader = presentation.appIconLoader,
-                        onOpenGroup = { selectedGroupKey = group.key },
+            },
+            label = "notification-card-expansion",
+        ) { isCardExpanded ->
+            when {
+                groups.isEmpty() ->
+                    EmptyNotifications(
+                        notificationAccessStatus = notificationAccessStatus,
                         onAction = onAction,
                     )
-                }
+
+                isCardExpanded && selectedGroup != null ->
+                    NotificationGroupPrototype(
+                        groups = visibleGroups,
+                        selectedGroupKey = selectedGroup.key,
+                        presentation = presentation,
+                        onBack = { selectedGroupKey = null },
+                        onGroupChanged = { groupKey -> selectedGroupKey = groupKey },
+                        onAction = onAction,
+                    )
+
+                else ->
+                    NotificationCardList(
+                        groups = visibleGroups,
+                        categoryCounts = categoryCounts,
+                        categoryOptions = categoryOptions,
+                        selectedCategory = effectiveSelectedCategory,
+                        appIconLoader = presentation.appIconLoader,
+                        apps = presentation.apps,
+                        onCategorySelected = { category -> selectedCategory = category },
+                        onOpenGroup = { groupKey -> selectedGroupKey = groupKey },
+                        onAction = onAction,
+                    )
             }
+        }
+    }
+}
+
+@Composable
+private fun NotificationCardList(
+    groups: List<AppNotificationGroup>,
+    categoryCounts: Map<NotificationCategory, Int>,
+    categoryOptions: List<NotificationCategoryOption>,
+    selectedCategory: NotificationCategory?,
+    apps: List<InstalledApp>,
+    appIconLoader: AppIconLoader,
+    onCategorySelected: (NotificationCategory?) -> Unit,
+    onOpenGroup: (AppNotificationGroupKey) -> Unit,
+    onAction: (LauncherShellAction) -> Unit,
+) {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        item {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                NotificationCategorySummary(categoryCounts = categoryCounts)
+                NotificationCategoryFilter(
+                    options = categoryOptions,
+                    selectedCategory = selectedCategory,
+                    onCategorySelected = onCategorySelected,
+                )
+            }
+        }
+        items(
+            items = groups,
+            key = { group -> "${group.profileId.value}:${group.packageName.value}" },
+        ) { group ->
+            NotificationGroupRow(
+                group = group,
+                app = apps.firstOrNull { app -> app.matches(group) },
+                appIconLoader = appIconLoader,
+                onOpenGroup = { onOpenGroup(group.key) },
+                onAction = onAction,
+            )
         }
     }
 }
@@ -243,60 +292,77 @@ private fun NotificationGroupRow(
     onOpenGroup: () -> Unit,
     onAction: (LauncherShellAction) -> Unit,
 ) {
-    Row(
+    Surface(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .defaultMinSize(minHeight = 56.dp)
-                .clickable(enabled = app != null) {
-                    app?.let { matchedApp -> onAction(LauncherShellAction.LaunchApp(matchedApp.identity)) }
-                }
-                .padding(horizontal = 2.dp, vertical = 4.dp),
-        horizontalArrangement = Arrangement.spacedBy(14.dp),
-        verticalAlignment = Alignment.CenterVertically,
+                .defaultMinSize(minHeight = 96.dp)
+                .clickable(onClick = onOpenGroup),
+        shape = LocalLauncherCardShape.current,
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
     ) {
-        if (app != null) {
-            LauncherAppIcon(
-                identity = app.identity,
-                label = app.label,
-                iconLoader = appIconLoader,
-                modifier = Modifier.launcherIconSize(),
-                shape = CircleShape,
-            )
-        }
         Column(
-            modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.Center,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            val label = notificationOverviewGroupLabel(app = app, group = group)
-            Text(
-                text = label,
-                style = MaterialTheme.typography.bodyLarge,
-            )
-            Text(
-                text = group.notificationOverviewMetadataLabel(label),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        Text(
-            text = group.latestAgeBucket.label,
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        TextButton(onClick = onOpenGroup) {
-            Text(text = "View")
-        }
-        if (group.dismissibleNotificationKeys.isNotEmpty()) {
-            TextButton(
-                onClick = {
-                    onAction(LauncherShellAction.DismissNotifications(group.dismissibleNotificationKeys))
-                },
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(14.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(text = "Clear")
+                if (app != null) {
+                    LauncherAppIcon(
+                        identity = app.identity,
+                        label = app.label,
+                        iconLoader = appIconLoader,
+                        modifier = Modifier.launcherIconSize(),
+                        shape = CircleShape,
+                    )
+                }
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.Center,
+                ) {
+                    val label = notificationOverviewGroupLabel(app = app, group = group)
+                    Text(
+                        text = label,
+                        style = MaterialTheme.typography.titleMedium,
+                    )
+                    Text(
+                        text = group.notificationOverviewMetadataLabel(label),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Text(
+                    text = group.latestAgeBucket.label,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                NotificationCountBadge(count = group.count)
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+            ) {
+                app?.let { matchedApp ->
+                    TextButton(onClick = { onAction(LauncherShellAction.LaunchApp(matchedApp.identity)) }) {
+                        Text(text = "Open app")
+                    }
+                }
+                TextButton(onClick = onOpenGroup) {
+                    Text(text = "View card")
+                }
+                if (group.dismissibleNotificationKeys.isNotEmpty()) {
+                    TextButton(
+                        onClick = {
+                            onAction(LauncherShellAction.DismissNotifications(group.dismissibleNotificationKeys))
+                        },
+                    ) {
+                        Text(text = "Clear")
+                    }
+                }
             }
         }
-        NotificationCountBadge(count = group.count)
     }
 }
 
@@ -314,6 +380,7 @@ private val Map<NotificationCategory, Int>.summaryLabel: String
             .joinToString(separator = " - ") { (category, count) -> "${category.label} $count" }
 
 private const val MAX_CATEGORY_SUMMARY_ITEMS = 4
+private const val CARD_EXPANSION_DURATION_MILLIS = 220
 
 internal val NotificationAgeBucket.label: String
     get() =
