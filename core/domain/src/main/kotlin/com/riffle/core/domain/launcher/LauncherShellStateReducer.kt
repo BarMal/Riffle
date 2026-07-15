@@ -32,6 +32,8 @@ class LauncherShellStateReducer {
         when {
             currentState.firstRunStatus == FirstRunStatus.COMPLETE -> FirstRunStatus.COMPLETE
             homeRoleStatus == HomeRoleStatus.DEFAULT_HOME -> FirstRunStatus.COMPLETE
+            currentState.firstRunStatus == FirstRunStatus.REQUESTING_HOME_ROLE &&
+                homeRoleStatus == HomeRoleStatus.UNKNOWN -> FirstRunStatus.REQUESTING_HOME_ROLE
             else -> FirstRunStatus.NEEDS_HOME_ROLE
         }
 

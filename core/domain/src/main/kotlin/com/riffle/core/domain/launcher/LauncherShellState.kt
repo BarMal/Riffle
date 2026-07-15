@@ -45,10 +45,11 @@ data class LauncherShellState(
     val isWidgetPickerOpen: Boolean = false,
 ) {
     val shouldShowDefaultHomePrompt: Boolean =
-        firstRunStatus != FirstRunStatus.COMPLETE && homeRoleStatus != HomeRoleStatus.DEFAULT_HOME
+        firstRunStatus == FirstRunStatus.NEEDS_HOME_ROLE &&
+            homeRoleStatus != HomeRoleStatus.DEFAULT_HOME
 
     val shouldShowEmptyHome: Boolean =
-        firstRunStatus == FirstRunStatus.COMPLETE || homeRoleStatus == HomeRoleStatus.DEFAULT_HOME
+        !shouldShowDefaultHomePrompt
 }
 
 enum class FirstRunStatus {
