@@ -47,6 +47,7 @@ import com.riffle.app.launcher.refreshNotifications
 import com.riffle.app.launcher.refreshWidgetProviders
 import com.riffle.app.launcher.startSystemUiSync
 import com.riffle.app.launcher.startWallpaperOffsetSync
+import com.riffle.app.launcher.widgets.PendingWidgetAddStep
 import com.riffle.app.launcher.widgets.WidgetAddRecoveryResult
 import com.riffle.app.launcher.widgets.WidgetBindPermissionResult
 import com.riffle.app.launcher.widgets.WidgetConfigurationResult
@@ -149,13 +150,15 @@ class MainActivity : ComponentActivity() {
         registerForActivityResult(
             ActivityResultContracts.StartActivityForResult(),
         ) { result ->
-            val expectedHostedWidgetId = pendingWidgetBindResultId
+            val expectedHostedWidgetId =
+                widgetBindingCoordinator.pendingActivityResult
+                    ?.takeIf { it.step == PendingWidgetAddStep.PERMISSION }
+                    ?.hostedWidgetId
             if (expectedHostedWidgetId == null) {
                 showWidgetAddRecoveryMessage()
                 return@registerForActivityResult
             }
             val hostedWidgetId = result.hostedWidgetIdOr(expectedHostedWidgetId)
-            if (hostedWidgetId == expectedHostedWidgetId) pendingWidgetBindResultId = null
             val permissionResult =
                 widgetBindingCoordinator.onPermissionResult(
                     hostedWidgetId = hostedWidgetId,
@@ -197,15 +200,15 @@ class MainActivity : ComponentActivity() {
         registerForActivityResult(
             ActivityResultContracts.StartActivityForResult(),
         ) { result ->
-            val expectedHostedWidgetId = pendingWidgetConfigurationResultId
+            val expectedHostedWidgetId =
+                widgetBindingCoordinator.pendingActivityResult
+                    ?.takeIf { it.step == PendingWidgetAddStep.CONFIGURATION }
+                    ?.hostedWidgetId
             if (expectedHostedWidgetId == null) {
                 showWidgetAddRecoveryMessage()
                 return@registerForActivityResult
             }
             val hostedWidgetId = result.hostedWidgetIdOr(expectedHostedWidgetId)
-            if (hostedWidgetId == expectedHostedWidgetId) {
-                pendingWidgetConfigurationResultId = null
-            }
             val configurationResult =
                 widgetBindingCoordinator.onConfigurationResult(
                     hostedWidgetId = hostedWidgetId,
@@ -219,9 +222,6 @@ class MainActivity : ComponentActivity() {
                 -> Unit
             }
         }
-
-    private var pendingWidgetBindResultId: HostedWidgetId? = null
-    private var pendingWidgetConfigurationResultId: HostedWidgetId? = null
 
     private val activityActionHandler by lazy {
         LauncherActivityActionHandler(
@@ -503,22 +503,18 @@ class MainActivity : ComponentActivity() {
 
     private val launchWidgetBind: (HostedWidgetId, WidgetProviderIdentity) -> Unit =
         { hostedWidgetId, provider ->
-            pendingWidgetBindResultId = hostedWidgetId
             runCatching {
                 requestWidgetBind.launch(widgetHostGateway.createBindHostedWidgetIntent(hostedWidgetId, provider))
             }.onFailure {
-                pendingWidgetBindResultId = null
                 widgetBindingCoordinator.onPermissionResult(hostedWidgetId, granted = false)
                 showWidgetAddRecoveryMessage()
             }
         }
 
     private val launchWidgetConfiguration: (HostedWidgetId) -> Unit = { hostedWidgetId ->
-        pendingWidgetConfigurationResultId = hostedWidgetId
         runCatching {
             requestWidgetConfiguration.launch(widgetHostGateway.createConfigureHostedWidgetIntent(hostedWidgetId))
         }.onFailure {
-            pendingWidgetConfigurationResultId = null
             widgetBindingCoordinator.onConfigurationResult(hostedWidgetId, configured = false)
             showWidgetAddRecoveryMessage()
         }
@@ -535,11 +531,17 @@ private const val FOLDABLE_LAYOUT_LOG_TAG = "RiffleFoldableLayout"
 
 private fun androidx.activity.result.ActivityResult.hostedWidgetIdOr(fallback: HostedWidgetId): HostedWidgetId {
     val value = data?.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID)
-    return value
-        ?.takeIf { it != AppWidgetManager.INVALID_APPWIDGET_ID }
-        ?.let(::HostedWidgetId)
-        ?: fallback
+    val returnedHostedWidgetId =
+        value
+            ?.takeIf { it != AppWidgetManager.INVALID_APPWIDGET_ID }
+            ?.let(::HostedWidgetId)
+    return resolveHostedWidgetResultId(returnedHostedWidgetId, fallback)
 }
+
+internal fun resolveHostedWidgetResultId(
+    returnedHostedWidgetId: HostedWidgetId?,
+    expectedHostedWidgetId: HostedWidgetId,
+): HostedWidgetId = returnedHostedWidgetId ?: expectedHostedWidgetId
 
 private fun String.launcherBuildTypeLabel(): String =
     when {

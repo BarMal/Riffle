@@ -24,7 +24,9 @@ class LauncherWidgetAddRequestHandler(
                     availableHeightDp = size.availableHeightDp,
                 )
         ) {
-            WidgetAddRequestResult.Cancelled -> LauncherWidgetAddHandlingResult.Cancelled
+            WidgetAddRequestResult.AlreadyInProgress,
+            WidgetAddRequestResult.Cancelled,
+            -> LauncherWidgetAddHandlingResult.Cancelled
 
             is WidgetAddRequestResult.Bound ->
                 completeWidgetAdd(requestResult.action)

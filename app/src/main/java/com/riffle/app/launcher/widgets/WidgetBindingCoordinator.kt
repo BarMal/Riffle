@@ -33,7 +33,7 @@ class WidgetBindingCoordinator(
         availableWidthDp: Int,
         availableHeightDp: Int,
     ): WidgetAddRequestResult {
-        pendingAdd?.let(::abandon)
+        if (pendingAdd != null) return WidgetAddRequestResult.AlreadyInProgress
         val hostedWidgetId = widgetHostGateway.allocateHostedWidgetId()
         val preferredSpan =
             action.dimensions.preferredGridSpan(
@@ -91,6 +91,9 @@ class WidgetBindingCoordinator(
             }
         }
     }
+
+    val pendingActivityResult: PendingWidgetActivityResult?
+        get() = pendingAdd?.let { PendingWidgetActivityResult(it.hostedWidgetId, it.step) }
 
     fun onPermissionResult(
         hostedWidgetId: HostedWidgetId,
@@ -218,7 +221,14 @@ class WidgetBindingCoordinator(
         }
 }
 
+data class PendingWidgetActivityResult(
+    val hostedWidgetId: HostedWidgetId,
+    val step: PendingWidgetAddStep,
+)
+
 sealed interface WidgetAddRequestResult {
+    data object AlreadyInProgress : WidgetAddRequestResult
+
     data object Cancelled : WidgetAddRequestResult
 
     data class Bound(
