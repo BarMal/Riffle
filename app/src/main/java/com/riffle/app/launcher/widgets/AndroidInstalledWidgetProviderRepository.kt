@@ -4,51 +4,66 @@ import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProviderInfo
 import android.content.Context
 import android.os.Build
-import android.os.UserHandle
+import com.riffle.app.launcher.apps.toAppProfile
+import com.riffle.core.domain.launcher.apps.AppProfile
 import com.riffle.core.domain.launcher.widgets.InstalledWidgetProvider
 import com.riffle.core.domain.launcher.widgets.InstalledWidgetProviderRepository
 
 class AndroidInstalledWidgetProviderRepository(
     private val appWidgetManager: AppWidgetManager,
+    private val densityProvider: () -> Float = { 1f },
     private val mapper: AndroidInstalledWidgetProviderMapper = AndroidInstalledWidgetProviderMapper(),
 ) : InstalledWidgetProviderRepository {
-    constructor(context: Context) : this(AppWidgetManager.getInstance(context))
+    constructor(context: Context) : this(
+        appWidgetManager = AppWidgetManager.getInstance(context),
+        densityProvider = { context.resources.displayMetrics.density },
+    )
 
     override fun installedWidgetProviders(): List<InstalledWidgetProvider> =
         appWidgetManager.installedProviders
             .map { provider -> provider.toAndroidWidgetProvider() }
-            .map(mapper::map)
+            .map { provider -> mapper.map(provider, density = densityProvider()) }
 }
 
-private fun AppWidgetProviderInfo.toAndroidWidgetProvider(): AndroidWidgetProvider =
+internal fun AppWidgetProviderInfo.toAndroidWidgetProvider(): AndroidWidgetProvider =
     AndroidWidgetProvider(
         packageName = provider.packageName,
         className = provider.className,
-        profile = profile,
+        profile = profile?.toAppProfile() ?: AppProfile.personal(),
         label = label.orEmpty(),
         description = null,
-        minWidthDp = minWidth,
-        minHeightDp = minHeight,
-        minResizeWidthDp = minResizeWidth.takeIf { value -> value > 0 },
-        minResizeHeightDp = minResizeHeight.takeIf { value -> value > 0 },
+        minWidthPx = minWidth,
+        minHeightPx = minHeight,
+        minResizeWidthPx = minResizeWidth.takeIf { value -> value > 0 },
+        minResizeHeightPx = minResizeHeight.takeIf { value -> value > 0 },
+        maxResizeWidthPx = maxResizeWidthCompat,
+        maxResizeHeightPx = maxResizeHeightCompat,
         targetCellWidth = targetCellWidthCompat,
         targetCellHeight = targetCellHeightCompat,
         resizeMode = resizeMode,
+        widgetCategory = widgetCategory,
+        hasConfigurationActivity = configure != null,
+        supportsReconfiguration = supportsReconfigurationCompat,
     )
 
 internal data class AndroidWidgetProvider(
     val packageName: String,
     val className: String,
-    val profile: UserHandle?,
+    val profile: AppProfile,
     val label: String,
     val description: String?,
-    val minWidthDp: Int,
-    val minHeightDp: Int,
-    val minResizeWidthDp: Int?,
-    val minResizeHeightDp: Int?,
+    val minWidthPx: Int,
+    val minHeightPx: Int,
+    val minResizeWidthPx: Int?,
+    val minResizeHeightPx: Int?,
+    val maxResizeWidthPx: Int? = null,
+    val maxResizeHeightPx: Int? = null,
     val targetCellWidth: Int?,
     val targetCellHeight: Int?,
     val resizeMode: Int,
+    val widgetCategory: Int,
+    val hasConfigurationActivity: Boolean = false,
+    val supportsReconfiguration: Boolean = false,
 )
 
 private val AppWidgetProviderInfo.targetCellWidthCompat: Int?
@@ -66,3 +81,24 @@ private val AppWidgetProviderInfo.targetCellHeightCompat: Int?
         } else {
             null
         }
+
+private val AppWidgetProviderInfo.maxResizeWidthCompat: Int?
+    get() =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            maxResizeWidth.takeIf { value -> value > 0 }
+        } else {
+            null
+        }
+
+private val AppWidgetProviderInfo.maxResizeHeightCompat: Int?
+    get() =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            maxResizeHeight.takeIf { value -> value > 0 }
+        } else {
+            null
+        }
+
+private val AppWidgetProviderInfo.supportsReconfigurationCompat: Boolean
+    get() =
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+            widgetFeatures and AppWidgetProviderInfo.WIDGET_FEATURE_RECONFIGURABLE != 0

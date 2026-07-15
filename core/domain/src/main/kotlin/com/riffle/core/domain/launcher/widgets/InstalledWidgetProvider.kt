@@ -10,6 +10,9 @@ data class InstalledWidgetProvider(
     val dimensions: WidgetProviderDimensions,
     val supportsHorizontalResize: Boolean = false,
     val supportsVerticalResize: Boolean = false,
+    val widgetCategory: Int = 0,
+    val hasConfigurationActivity: Boolean = false,
+    val supportsReconfiguration: Boolean = false,
 )
 
 data class WidgetProviderIdentity(
@@ -26,6 +29,8 @@ data class WidgetProviderDimensions(
     val minHeightDp: Int,
     val minResizeWidthDp: Int? = null,
     val minResizeHeightDp: Int? = null,
+    val maxResizeWidthDp: Int? = null,
+    val maxResizeHeightDp: Int? = null,
     val targetCellWidth: Int? = null,
     val targetCellHeight: Int? = null,
 )

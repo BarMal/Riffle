@@ -12,10 +12,10 @@ fun WidgetProviderDimensions.preferredGridSpan(
 ): GridSpan {
     return GridSpan(
         columns =
-            targetCellWidth
+            targetCellWidth?.takeIf { it > 0 }
                 ?: minWidthDp.spanCells(availableDp = availableWidthDp, gridCells = grid.columns),
         rows =
-            targetCellHeight
+            targetCellHeight?.takeIf { it > 0 }
                 ?: minHeightDp.spanCells(availableDp = availableHeightDp, gridCells = grid.rows),
     ).fitWidgetPreferredSpan(grid)
 }
