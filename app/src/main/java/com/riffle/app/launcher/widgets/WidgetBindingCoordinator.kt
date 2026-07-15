@@ -92,30 +92,63 @@ class WidgetBindingCoordinator(
         }
     }
 
-    fun onPermissionResult(granted: Boolean): WidgetBindPermissionResult =
-        when (val pending = pendingAdd) {
-            null -> WidgetBindPermissionResult.Ignored
-            else ->
-                when (pending.step) {
-                    PendingWidgetAddStep.CONFIGURATION -> WidgetBindPermissionResult.Ignored
-                    PendingWidgetAddStep.PERMISSION ->
-                        when (granted) {
-                            true -> grantedPermissionResult(pending)
-                            false -> {
-                                abandon(pending)
-                                WidgetBindPermissionResult.Cancelled
-                            }
-                        }
-                }
+    fun onPermissionResult(
+        hostedWidgetId: HostedWidgetId,
+        granted: Boolean,
+    ): WidgetBindPermissionResult {
+        val pending = pendingAdd
+        if (pending?.step != PendingWidgetAddStep.PERMISSION || pending.hostedWidgetId != hostedWidgetId) {
+            return WidgetBindPermissionResult.Ignored
         }
+        return if (granted) {
+            grantedPermissionResult(pending)
+        } else {
+            abandon(pending)
+            WidgetBindPermissionResult.Cancelled
+        }
+    }
 
-    fun onConfigurationResult(configured: Boolean): WidgetConfigurationResult =
+    fun onConfigurationResult(
+        hostedWidgetId: HostedWidgetId,
+        configured: Boolean,
+    ): WidgetConfigurationResult =
         when (val pending = pendingAdd) {
             null -> WidgetConfigurationResult.Ignored
             else ->
                 when (pending.step) {
                     PendingWidgetAddStep.PERMISSION -> WidgetConfigurationResult.Ignored
-                    PendingWidgetAddStep.CONFIGURATION -> completeConfiguration(pending, configured)
+                    PendingWidgetAddStep.CONFIGURATION ->
+                        if (pending.hostedWidgetId == hostedWidgetId) {
+                            completeConfiguration(pending, configured)
+                        } else {
+                            WidgetConfigurationResult.Ignored
+                        }
+                }
+        }
+
+    /**
+     * Resolves work restored after Riffle returns without the system activity result.
+     *
+     * A bind permission request cannot safely be resumed, so its host ID is released. A valid
+     * provider configuration can be restarted because its provider binding is already known.
+     */
+    fun recoverPendingAdd(): WidgetAddRecoveryResult =
+        when (val pending = pendingAdd) {
+            null -> WidgetAddRecoveryResult.None
+            else ->
+                when (pending.step) {
+                    PendingWidgetAddStep.PERMISSION -> {
+                        abandon(pending)
+                        WidgetAddRecoveryResult.Cancelled
+                    }
+
+                    PendingWidgetAddStep.CONFIGURATION ->
+                        if (widgetHostGateway.isHostedWidgetBoundTo(pending.hostedWidgetId, pending.provider)) {
+                            WidgetAddRecoveryResult.ResumeConfiguration(pending.hostedWidgetId)
+                        } else {
+                            abandon(pending)
+                            WidgetAddRecoveryResult.Cancelled
+                        }
                 }
         }
 
@@ -224,4 +257,14 @@ sealed interface WidgetConfigurationResult {
     data class Bound(
         val action: HostedWidgetAddAction,
     ) : WidgetConfigurationResult
+}
+
+sealed interface WidgetAddRecoveryResult {
+    data object None : WidgetAddRecoveryResult
+
+    data object Cancelled : WidgetAddRecoveryResult
+
+    data class ResumeConfiguration(
+        val hostedWidgetId: HostedWidgetId,
+    ) : WidgetAddRecoveryResult
 }
