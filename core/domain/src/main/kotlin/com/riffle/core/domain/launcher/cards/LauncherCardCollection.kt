@@ -56,11 +56,6 @@ class LauncherCardCollectionPlanner {
             val tiedSnapshots = duplicates.filter { card -> duplicateResolutionOrder.compare(card, resolved) == 0 }
             if (tiedSnapshots.distinct().size == 1) return resolved
 
-            val userIntents = tiedSnapshots.map(LauncherCard::userIntent).distinct()
-            require(userIntents.size == 1) {
-                "Duplicate card snapshots must agree on user-owned intent."
-            }
-
             return resolved.copy(
                 size = LauncherCardSize(),
                 content = null,
@@ -68,7 +63,7 @@ class LauncherCardCollectionPlanner {
                 privacy = tiedSnapshots.maxBy { card -> card.privacy.restrictionRank }.privacy,
                 dismissibility = LauncherCardDismissibility.NOT_DISMISSIBLE,
                 supportedActions = emptySet(),
-                userIntent = userIntents.single(),
+                userIntent = tiedSnapshots.map(LauncherCard::userIntent).mergeNonDestructively(),
             )
         }
 
@@ -111,6 +106,17 @@ private val LauncherCardPrivacy.restrictionRank: Int
             LauncherCardPrivacy.REDACTED -> 1
             LauncherCardPrivacy.HIDDEN -> 2
         }
+
+/**
+ * Source reconnects may carry stale copies of user-owned intent. Preserve an enabled choice until
+ * the durable intent owner can provide an unambiguous update; a malformed snapshot must not clear
+ * a pin or favourite merely because another copy has fallen behind.
+ */
+private fun List<LauncherCardUserIntent>.mergeNonDestructively(): LauncherCardUserIntent =
+    LauncherCardUserIntent(
+        isPinned = any(LauncherCardUserIntent::isPinned),
+        isFavourite = any(LauncherCardUserIntent::isFavourite),
+    )
 
 private val LauncherCardSourceRef.stableIdentity: String
     get() =

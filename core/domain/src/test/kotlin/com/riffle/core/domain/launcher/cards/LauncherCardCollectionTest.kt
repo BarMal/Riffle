@@ -68,16 +68,19 @@ class LauncherCardCollectionTest {
     }
 
     @Test
-    fun rejectsAmbiguousDuplicatesWithConflictingUserIntent() {
+    fun mergesConflictingAmbiguousDuplicateIntentWithoutClearingChoices() {
         val first = card(id = "mail", content = LauncherCardContent.Text(title = "First"))
         val second =
             card(
                 id = "mail",
                 content = LauncherCardContent.Text(title = "Second"),
-                userIntent = LauncherCardUserIntent(isPinned = true),
+                userIntent = LauncherCardUserIntent(isPinned = true, isFavourite = true),
             )
+        val forward = planner.plan(listOf(first, second))
+        val reversed = planner.plan(listOf(second, first))
 
-        assertFailsWith<IllegalArgumentException> { planner.plan(listOf(first, second)) }
+        assertEquals(forward, reversed)
+        assertEquals(LauncherCardUserIntent(isPinned = true, isFavourite = true), forward.cards.single().userIntent)
     }
 
     @Test
