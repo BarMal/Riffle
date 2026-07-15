@@ -79,8 +79,9 @@ internal fun homeRoleStatus(
     resolvedDefaultHomeStatus: HomeRoleStatus,
 ): HomeRoleStatus =
     when {
+        resolvedDefaultHomeStatus == HomeRoleStatus.NOT_DEFAULT_HOME -> HomeRoleStatus.NOT_DEFAULT_HOME
         roleManagerStatus == HomeRoleStatus.DEFAULT_HOME -> HomeRoleStatus.DEFAULT_HOME
         resolvedDefaultHomeStatus == HomeRoleStatus.DEFAULT_HOME -> HomeRoleStatus.DEFAULT_HOME
-        roleManagerStatus != null -> roleManagerStatus
+        roleManagerStatus == HomeRoleStatus.NOT_DEFAULT_HOME -> HomeRoleStatus.UNKNOWN
         else -> resolvedDefaultHomeStatus
     }
