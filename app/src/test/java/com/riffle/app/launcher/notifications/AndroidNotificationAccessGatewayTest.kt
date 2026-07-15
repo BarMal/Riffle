@@ -226,6 +226,25 @@ class AndroidNotificationAccessGatewayTest {
         )
     }
 
+    @Test
+    fun reportsUnknownAfterProcessRecreationWhenAnEmptyReadConflictsWithAnotherSourceFailure() {
+        val reads =
+            enabledNotificationListenerPackages(
+                notificationManagerPackages = { emptySet() },
+                secureSetting = { error("temporary platform failure") },
+            )
+
+        assertEquals(
+            NotificationAccessStatus.UNKNOWN,
+            notificationAccessStatus(
+                appPackageName = "com.riffle",
+                enabledListenerPackageReads = reads,
+                isListenerConnected = false,
+                previousStatus = NotificationAccessStatus.UNKNOWN,
+            ),
+        )
+    }
+
     private fun successfulPackageRead(vararg packages: String) =
         EnabledNotificationListenerPackageReads(packages.toSet(), hasSuccessfulRead = true)
 }

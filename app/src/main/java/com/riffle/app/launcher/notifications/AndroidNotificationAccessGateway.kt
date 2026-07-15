@@ -88,6 +88,7 @@ internal fun notificationAccessStatus(
         enabledListenerPackageReads.hasFailedRead &&
             previousStatus == NotificationAccessStatus.GRANTED ->
             NotificationAccessStatus.GRANTED
+        enabledListenerPackageReads.hasFailedRead -> NotificationAccessStatus.UNKNOWN
         previousStatus == NotificationAccessStatus.GRANTED || previousStatus == NotificationAccessStatus.REVOKED ->
             NotificationAccessStatus.REVOKED
         else -> NotificationAccessStatus.NOT_GRANTED
