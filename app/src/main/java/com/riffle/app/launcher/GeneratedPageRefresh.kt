@@ -6,41 +6,45 @@ import com.riffle.core.domain.launcher.home.GeneratedLauncherPageContentPlanAppl
 import com.riffle.core.domain.launcher.home.GeneratedLauncherPageContentPlanApplyResult
 import com.riffle.core.domain.launcher.home.GeneratedLauncherPageContentPlanner
 import com.riffle.core.domain.launcher.home.GeneratedLauncherPageKind
+import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
 import com.riffle.core.domain.launcher.home.LauncherPageType
 
 @Suppress("MaxLineLength")
 internal fun LauncherShellState.withRefreshedGeneratedPages(homeLayoutRepository: HomeLayoutRepository): LauncherShellState {
+    val layout = refreshedGeneratedPages(homeLayout)
+    return if (layout == homeLayout) this else withHomeLayout(layout, homeLayoutRepository)
+}
+
+internal fun LauncherShellState.refreshedGeneratedPages(layout: HomeLayout): HomeLayout {
     val planner = GeneratedLauncherPageContentPlanner()
     val applier = GeneratedLauncherPageContentPlanApplier()
     val labels = installedApps.associate { app -> app.identity to app.label }
-    val layout =
-        homeLayout.copy(
-            pages =
-                homeLayout.pages.map { page ->
-                    val type =
-                        page.type as? LauncherPageType.Generated
-                            ?: return@map page
-                    if (type.kind !in appBackedGeneratedPageKinds) return@map page
-                    val result =
-                        applier.apply(
-                            plan = planner.plan(type.kind, input = generatedPageInput(), pageId = page.id),
-                            page = page,
-                            appLabelProvider = { item -> labels[item.identity].orEmpty() },
-                        )
-                    when (result) {
-                        is GeneratedLauncherPageContentPlanApplyResult.Applied -> result.page
-                        is GeneratedLauncherPageContentPlanApplyResult.Rejected ->
-                            when (result.reason) {
-                                GeneratedLauncherPageContentPlanApplyRejectionReason.UNAVAILABLE_PLAN ->
-                                    page.copy(items = emptyList(), generatedContentOverflowCount = 0)
+    return layout.copy(
+        pages =
+            layout.pages.map { page ->
+                val type =
+                    page.type as? LauncherPageType.Generated
+                        ?: return@map page
+                if (type.kind !in appBackedGeneratedPageKinds) return@map page
+                val result =
+                    applier.apply(
+                        plan = planner.plan(type.kind, input = generatedPageInput(), pageId = page.id),
+                        page = page,
+                        appLabelProvider = { item -> labels[item.identity].orEmpty() },
+                    )
+                when (result) {
+                    is GeneratedLauncherPageContentPlanApplyResult.Applied -> result.page
+                    is GeneratedLauncherPageContentPlanApplyResult.Rejected ->
+                        when (result.reason) {
+                            GeneratedLauncherPageContentPlanApplyRejectionReason.UNAVAILABLE_PLAN ->
+                                page.copy(items = emptyList(), generatedContentOverflowCount = 0)
 
-                                else -> page
-                            }
-                    }
-                },
-        )
-    return if (layout == homeLayout) this else withHomeLayout(layout, homeLayoutRepository)
+                            else -> page
+                        }
+                }
+            },
+    )
 }
 
 private fun LauncherShellState.generatedPageInput() =

@@ -37,6 +37,7 @@ internal fun LauncherShellAction.isHomePageEditAction(): Boolean =
 
 internal fun LauncherShellAction.isHomeLayoutConfigurationAction(): Boolean =
     when (this) {
+        is LauncherShellAction.SelectSelectedHomePageType,
         is LauncherShellAction.SelectSelectedHomePageGridDimensions,
         is LauncherShellAction.SelectHomeGridDimensions,
         is LauncherShellAction.SelectHomeGridMargin,

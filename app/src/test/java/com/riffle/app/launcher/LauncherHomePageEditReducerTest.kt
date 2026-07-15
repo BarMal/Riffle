@@ -419,6 +419,50 @@ class LauncherHomePageEditReducerTest {
         assertEquals(phoneKey, savedLayoutSet.activeKey)
     }
 
+    @Test
+    fun selectingCategoryPageFromSettingsRefreshesSettingsTargetLayout() {
+        val phoneKey = HomeLayoutKey(LauncherViewMode.STANDARD_APP_DRAWER, HomeLayoutDeviceClass.PHONE)
+        val foldableKey = HomeLayoutKey(LauncherViewMode.STANDARD_APP_DRAWER, HomeLayoutDeviceClass.FOLDABLE)
+        val phoneLayout = HomeLayoutDefaults.standard(HomeLayoutDeviceClass.PHONE)
+        val foldableLayout = HomeLayoutDefaults.standard(HomeLayoutDeviceClass.FOLDABLE)
+        val layoutSet =
+            HomeLayoutSet(
+                activeKey = phoneKey,
+                layouts = mapOf(phoneKey to phoneLayout, foldableKey to foldableLayout),
+            )
+        val repository = FakeHomeLayoutRepository(layoutSet)
+        val reducer = LauncherHomePageEditReducer(homeLayoutRepository = repository)
+        val camera = app(label = "Camera", category = "Image")
+        val state =
+            launcherState(layoutSet).copy(
+                destination = ShellDestination.SETTINGS,
+                settingsLayoutDeviceClass = HomeLayoutDeviceClass.FOLDABLE,
+                availableLayoutDeviceClasses = setOf(HomeLayoutDeviceClass.PHONE, HomeLayoutDeviceClass.FOLDABLE),
+                installedApps = listOf(camera),
+            )
+
+        val updated =
+            reducer.reduce(
+                state,
+                LauncherShellAction.SelectSelectedHomePageType(
+                    LauncherPageType.Generated(GeneratedLauncherPageKind.CATEGORY),
+                ),
+            )
+
+        val savedLayoutSet = checkNotNull(repository.savedLayoutSet)
+        assertEquals(phoneLayout, updated.homeLayout)
+        assertEquals(
+            LauncherPageType.Generated(GeneratedLauncherPageKind.CATEGORY),
+            savedLayoutSet.layoutFor(foldableKey).selectedPage.type,
+        )
+        assertEquals(
+            listOf(camera.identity),
+            savedLayoutSet.layoutFor(foldableKey).selectedPage.items.map { item ->
+                (item as AppShortcutItem).appIdentity
+            },
+        )
+    }
+
     private class FakeHomeLayoutRepository : HomeLayoutRepository {
         var savedLayoutSet: HomeLayoutSet? = null
 
