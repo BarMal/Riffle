@@ -40,9 +40,7 @@ class LauncherShellStateReducer {
             else -> FirstRunStatus.NEEDS_HOME_ROLE
         }
 
-    private fun LauncherShellState.preservedHomeRoleStatus(
-        refreshedStatus: HomeRoleStatus,
-    ): HomeRoleStatus =
+    private fun LauncherShellState.preservedHomeRoleStatus(refreshedStatus: HomeRoleStatus): HomeRoleStatus =
         if (
             firstRunStatus == FirstRunStatus.COMPLETE &&
             homeRoleStatus == HomeRoleStatus.DEFAULT_HOME &&
