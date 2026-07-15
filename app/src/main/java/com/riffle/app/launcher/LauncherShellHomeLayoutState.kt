@@ -198,10 +198,11 @@ internal fun LauncherShellState.withSettingsTargetLayout(
 
 internal val LauncherShellState.settingsTargetLayoutKey: HomeLayoutKey
     get() =
-        HomeLayoutKey(
-            viewMode = homeLayoutSet.preferredModesByDeviceClass[settingsLayoutDeviceClass] ?: homeLayout.viewMode,
-            deviceClass = settingsLayoutDeviceClass,
-        )
+        homeLayoutSet.activeKey.takeIf { key -> key.deviceClass == settingsLayoutDeviceClass }
+            ?: HomeLayoutKey(
+                viewMode = homeLayoutSet.preferredModesByDeviceClass[settingsLayoutDeviceClass] ?: homeLayout.viewMode,
+                deviceClass = settingsLayoutDeviceClass,
+            )
 
 internal fun LauncherShellState.settingsTargetLayout(homeLayoutRepository: HomeLayoutRepository): HomeLayout =
     currentLayoutSet(homeLayoutRepository).layoutFor(settingsTargetLayoutKey)

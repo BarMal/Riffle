@@ -81,6 +81,49 @@ class LauncherShellSettingsDockViewModelTest {
         assertEquals(foldableKey, savedLayoutSet.activeKey)
     }
 
+    @Test
+    fun togglingDockCardsKeepsTheActiveDockLayoutWhenItsStoredPreferredModeIsStale() {
+        val standardKey = HomeLayoutKey(LauncherViewMode.STANDARD_APP_DRAWER, HomeLayoutDeviceClass.PHONE)
+        val configuredDock =
+            HomeLayoutDefaults.standard().dock.copy(
+                capacity = 7,
+                iconSizeDp = 52,
+                itemSpacingDp = 16,
+            )
+        val repository =
+            FakeHomeLayoutRepository().also { repo ->
+                repo.savedLayoutSet =
+                    HomeLayoutSet(
+                        activeKey = standardKey,
+                        layouts =
+                            mapOf(
+                                standardKey to HomeLayoutDefaults.standard().copy(dock = configuredDock),
+                            ),
+                        preferredModesByDeviceClass =
+                            mapOf(HomeLayoutDeviceClass.PHONE to LauncherViewMode.CARD_INTERFACE),
+                    )
+            }
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                installedAppRepository = InstalledAppRepository { emptyList() },
+                homeLayoutRepository = repository,
+            )
+        val router = routerFor(viewModel)
+
+        assertTrue(router.handle(LauncherShellAction.OpenSettings))
+        assertTrue(router.handle(LauncherShellAction.SelectDockNotificationCardsEnabled(enabled = true)))
+
+        assertEquals(standardKey, viewModel.state.value.homeLayoutSet.activeKey)
+        assertEquals(configuredDock.copy(showNotificationCards = true), viewModel.state.value.homeLayout.dock)
+
+        assertTrue(router.handle(LauncherShellAction.SelectDockNotificationCardsEnabled(enabled = false)))
+
+        assertEquals(standardKey, viewModel.state.value.homeLayoutSet.activeKey)
+        assertEquals(configuredDock, viewModel.state.value.homeLayout.dock)
+        assertEquals(configuredDock, checkNotNull(repository.savedLayoutSet).layoutFor(standardKey).dock)
+    }
+
     private fun routerFor(viewModel: LauncherShellViewModel): LauncherActionRouter =
         LauncherActionRouter(
             activityActionHandler =
