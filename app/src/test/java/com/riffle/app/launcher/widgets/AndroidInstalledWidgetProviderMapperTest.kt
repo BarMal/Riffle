@@ -31,6 +31,7 @@ class AndroidInstalledWidgetProviderMapperTest {
                 targetCellWidth = 3,
                 targetCellHeight = 2,
                 resizeMode = AppWidgetProviderInfo.RESIZE_HORIZONTAL or AppWidgetProviderInfo.RESIZE_VERTICAL,
+                widgetCategory = AppWidgetProviderInfo.WIDGET_CATEGORY_HOME_SCREEN,
                 hasConfigurationActivity = true,
                 supportsReconfiguration = true,
             )
@@ -61,6 +62,7 @@ class AndroidInstalledWidgetProviderMapperTest {
         )
         assertTrue(mapped.supportsHorizontalResize)
         assertTrue(mapped.supportsVerticalResize)
+        assertEquals(AppWidgetProviderInfo.WIDGET_CATEGORY_HOME_SCREEN, mapped.widgetCategory)
         assertTrue(mapped.hasConfigurationActivity)
         assertTrue(mapped.supportsReconfiguration)
     }
@@ -81,6 +83,7 @@ class AndroidInstalledWidgetProviderMapperTest {
                 targetCellWidth = null,
                 targetCellHeight = null,
                 resizeMode = AppWidgetProviderInfo.RESIZE_NONE,
+                widgetCategory = AppWidgetProviderInfo.WIDGET_CATEGORY_KEYGUARD,
             )
 
         val mapped = mapper.map(provider, density = 1f)
@@ -89,6 +92,7 @@ class AndroidInstalledWidgetProviderMapperTest {
         assertEquals(null, mapped.description)
         assertFalse(mapped.supportsHorizontalResize)
         assertFalse(mapped.supportsVerticalResize)
+        assertEquals(AppWidgetProviderInfo.WIDGET_CATEGORY_KEYGUARD, mapped.widgetCategory)
     }
 
     @Test
@@ -107,6 +111,7 @@ class AndroidInstalledWidgetProviderMapperTest {
                 targetCellWidth = null,
                 targetCellHeight = null,
                 resizeMode = AppWidgetProviderInfo.RESIZE_NONE,
+                widgetCategory = AppWidgetProviderInfo.WIDGET_CATEGORY_HOME_SCREEN,
             )
 
         val dimensions = mapper.map(provider, density = 2.5f).dimensions
@@ -135,6 +140,7 @@ class AndroidInstalledWidgetProviderMapperTest {
                 targetCellWidth = 0,
                 targetCellHeight = 101,
                 resizeMode = AppWidgetProviderInfo.RESIZE_NONE,
+                widgetCategory = AppWidgetProviderInfo.WIDGET_CATEGORY_HOME_SCREEN,
             )
 
         val dimensions = mapper.map(provider, density = 2f).dimensions

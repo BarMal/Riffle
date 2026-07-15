@@ -40,6 +40,7 @@ private fun AppWidgetProviderInfo.toAndroidWidgetProvider(): AndroidWidgetProvid
         targetCellWidth = targetCellWidthCompat,
         targetCellHeight = targetCellHeightCompat,
         resizeMode = resizeMode,
+        widgetCategory = widgetCategory,
         hasConfigurationActivity = configure != null,
         supportsReconfiguration = supportsReconfigurationCompat,
     )
@@ -59,6 +60,7 @@ internal data class AndroidWidgetProvider(
     val targetCellWidth: Int?,
     val targetCellHeight: Int?,
     val resizeMode: Int,
+    val widgetCategory: Int,
     val hasConfigurationActivity: Boolean = false,
     val supportsReconfiguration: Boolean = false,
 )

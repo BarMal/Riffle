@@ -10,6 +10,7 @@ data class InstalledWidgetProvider(
     val dimensions: WidgetProviderDimensions,
     val supportsHorizontalResize: Boolean = false,
     val supportsVerticalResize: Boolean = false,
+    val widgetCategory: Int = 0,
     val hasConfigurationActivity: Boolean = false,
     val supportsReconfiguration: Boolean = false,
 )

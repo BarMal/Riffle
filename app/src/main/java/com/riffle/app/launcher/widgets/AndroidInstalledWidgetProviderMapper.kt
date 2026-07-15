@@ -42,6 +42,7 @@ class AndroidInstalledWidgetProviderMapper {
                 provider.resizeMode and AppWidgetProviderInfo.RESIZE_HORIZONTAL != 0,
             supportsVerticalResize =
                 provider.resizeMode and AppWidgetProviderInfo.RESIZE_VERTICAL != 0,
+            widgetCategory = provider.widgetCategory,
             hasConfigurationActivity = provider.hasConfigurationActivity,
             supportsReconfiguration = provider.supportsReconfiguration,
         )
