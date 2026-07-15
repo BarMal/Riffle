@@ -9,6 +9,7 @@ import com.riffle.core.domain.launcher.home.HomeLayoutKey
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
 import com.riffle.core.domain.launcher.home.HomeLayoutSet
 import com.riffle.core.domain.launcher.home.LauncherViewMode
+import com.riffle.core.domain.launcher.home.LauncherViewModeAvailability
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
@@ -108,6 +109,10 @@ class LauncherShellSettingsDockViewModelTest {
                 firstRunRepository = FakeFirstRunRepository(),
                 installedAppRepository = InstalledAppRepository { emptyList() },
                 homeLayoutRepository = repository,
+                platformDependencies =
+                    LauncherShellPlatformDependencies(
+                        viewModeAvailability = LauncherViewModeAvailability(),
+                    ),
             )
         val router = routerFor(viewModel)
 
