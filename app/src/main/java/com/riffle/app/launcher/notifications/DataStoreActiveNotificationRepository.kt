@@ -41,14 +41,16 @@ class DataStoreActiveNotificationRepository(context: Context) :
         writeActiveNotifications(notifications)
     }
 
-    override fun observeActiveNotifications(onChanged: () -> Unit) {
-        observeScope.launch {
-            dataStore.data
-                .map { preferences -> preferences[ActiveNotificationDataStoreKeys.snapshotRevision] }
-                .distinctUntilChanged()
-                .drop(1)
-                .collect { onChanged() }
-        }
+    override fun observeActiveNotifications(onChanged: () -> Unit): () -> Unit {
+        val observation =
+            observeScope.launch {
+                dataStore.data
+                    .map { preferences -> preferences[ActiveNotificationDataStoreKeys.snapshotRevision] }
+                    .distinctUntilChanged()
+                    .drop(1)
+                    .collect { onChanged() }
+            }
+        return observation::cancel
     }
 
     private fun readString(key: Preferences.Key<String>): String? = runBlocking { dataStore.data.first()[key] }

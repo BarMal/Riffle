@@ -20,4 +20,12 @@ class AndroidOverlayDockPermissionGatewayTest {
             overlayDockPermissionStatus(canDrawOverlays = false),
         )
     }
+
+    @Test
+    fun reportsUnknownWhenPlatformOverlayReadFails() {
+        assertEquals(
+            OverlayDockPermissionStatus.UNKNOWN,
+            overlayDockPermissionStatus { error("temporary platform failure") },
+        )
+    }
 }
