@@ -585,6 +585,21 @@ class WidgetBindingCoordinatorTest {
         assertEquals(null, persisted.value)
     }
 
+    @Test
+    fun freshProcessCleansUpCorruptTransactionWithRecoverableHostedIdExactlyOnce() {
+        val gateway = FakeWidgetHostGateway()
+        val persisted =
+            PersistedTransactionValue(
+                value = "{\"version\":1,\"hostedWidgetId\":42}",
+            )
+
+        WidgetBindingCoordinator(gateway, transactionStore = SerializedWidgetAddTransactionStore(persisted))
+        WidgetBindingCoordinator(gateway, transactionStore = SerializedWidgetAddTransactionStore(persisted))
+
+        assertEquals(listOf(HostedWidgetId(42)), gateway.deletedHostedWidgetIds)
+        assertEquals(null, persisted.value)
+    }
+
     private class FakeWidgetHostGateway(
         var bindingResult: WidgetBindingResult = WidgetBindingResult.Bound,
         private val configuredWidgetIds: Set<HostedWidgetId> = emptySet(),
@@ -636,6 +651,14 @@ class WidgetBindingCoordinatorTest {
         private val persisted: PersistedTransactionValue,
     ) : WidgetAddTransactionStore {
         override fun read(): PendingWidgetAddTransaction? = persisted.value?.let(::decodeWidgetAddTransaction)
+
+        override fun discardInvalidTransaction(): HostedWidgetId? =
+            persisted.value
+                ?.takeIf { decodeWidgetAddTransaction(it) == null }
+                ?.let { value ->
+                    persisted.value = null
+                    decodeInvalidWidgetAddTransactionHostedId(value)
+                }
 
         override fun write(transaction: PendingWidgetAddTransaction) {
             persisted.value = encodeWidgetAddTransaction(transaction)

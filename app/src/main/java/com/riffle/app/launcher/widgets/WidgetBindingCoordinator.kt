@@ -16,8 +16,10 @@ class WidgetBindingCoordinator(
 
     init {
         val restoredTransaction = pendingAdd
-        if (
-            restoredTransaction?.step == PendingWidgetAddStep.CONFIGURATION &&
+        if (restoredTransaction == null) {
+            transactionStore.discardInvalidTransaction()?.let(widgetHostGateway::deleteHostedWidgetId)
+        } else if (
+            restoredTransaction.step == PendingWidgetAddStep.CONFIGURATION &&
             !widgetHostGateway.isHostedWidgetBoundTo(
                 restoredTransaction.hostedWidgetId,
                 restoredTransaction.provider,

@@ -49,4 +49,18 @@ class WidgetAddTransactionStoreTest {
             ),
         )
     }
+
+    @Test
+    fun recoversHostedIdFromObsoleteTransactionForCleanup() {
+        val obsoleteTransaction =
+            listOf(
+                "{\"version\":99,\"hostedWidgetId\":42,\"packageName\":\"com.example\",",
+                "\"className\":\".Widget\",\"profileId\":\"personal\",\"profileType\":\"PERSONAL\",",
+                "\"label\":\"Widget\",\"columns\":1,\"rows\":1,\"target\":\"HOME\",",
+                "\"step\":\"PERMISSION\",\"createdAtEpochMillis\":0}",
+            ).joinToString(separator = "")
+
+        assertEquals(HostedWidgetId(42), decodeInvalidWidgetAddTransactionHostedId(obsoleteTransaction))
+        assertNull(decodeInvalidWidgetAddTransactionHostedId("not-json"))
+    }
 }

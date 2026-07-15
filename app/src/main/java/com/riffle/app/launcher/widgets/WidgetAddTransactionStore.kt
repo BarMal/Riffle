@@ -32,6 +32,12 @@ enum class PendingWidgetAddStep {
 interface WidgetAddTransactionStore {
     fun read(): PendingWidgetAddTransaction?
 
+    /**
+     * Removes an unreadable persisted transaction and returns its hosted ID only when that ID can
+     * be safely recovered for cleanup.
+     */
+    fun discardInvalidTransaction(): HostedWidgetId? = null
+
     fun write(transaction: PendingWidgetAddTransaction)
 
     fun clear()
@@ -61,6 +67,14 @@ class PersistentWidgetAddTransactionStore(
     override fun read(): PendingWidgetAddTransaction? =
         preferences.getString(WIDGET_ADD_TRANSACTION_KEY, null)
             ?.let(::decodeWidgetAddTransaction)
+
+    override fun discardInvalidTransaction(): HostedWidgetId? =
+        preferences.getString(WIDGET_ADD_TRANSACTION_KEY, null)
+            ?.takeIf { decodeWidgetAddTransaction(it) == null }
+            ?.let { value ->
+                clear()
+                decodeInvalidWidgetAddTransactionHostedId(value)
+            }
 
     override fun write(transaction: PendingWidgetAddTransaction) {
         preferences.edit().putString(WIDGET_ADD_TRANSACTION_KEY, encodeWidgetAddTransaction(transaction)).apply()
@@ -114,6 +128,11 @@ internal fun decodeWidgetAddTransaction(value: String): PendingWidgetAddTransact
                 version = json.getInt("version").also { require(it == CURRENT_WIDGET_ADD_TRANSACTION_VERSION) },
             )
         }
+    }.getOrNull()
+
+internal fun decodeInvalidWidgetAddTransactionHostedId(value: String): HostedWidgetId? =
+    runCatching {
+        HostedWidgetId(JSONObject(value).getInt("hostedWidgetId").also { require(it > 0) })
     }.getOrNull()
 
 private const val CURRENT_WIDGET_ADD_TRANSACTION_VERSION = 1
