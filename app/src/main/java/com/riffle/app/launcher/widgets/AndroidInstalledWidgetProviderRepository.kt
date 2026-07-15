@@ -25,7 +25,7 @@ class AndroidInstalledWidgetProviderRepository(
             .map { provider -> mapper.map(provider, density = densityProvider()) }
 }
 
-internal fun AppWidgetProviderInfo.toAndroidWidgetProvider(sdkInt: Int = Build.VERSION.SDK_INT): AndroidWidgetProvider =
+internal fun AppWidgetProviderInfo.toAndroidWidgetProvider(): AndroidWidgetProvider =
     AndroidWidgetProvider(
         packageName = provider.packageName,
         className = provider.className,
@@ -36,14 +36,14 @@ internal fun AppWidgetProviderInfo.toAndroidWidgetProvider(sdkInt: Int = Build.V
         minHeightPx = minHeight,
         minResizeWidthPx = minResizeWidth.takeIf { value -> value > 0 },
         minResizeHeightPx = minResizeHeight.takeIf { value -> value > 0 },
-        maxResizeWidthPx = maxResizeWidthCompat(sdkInt),
-        maxResizeHeightPx = maxResizeHeightCompat(sdkInt),
-        targetCellWidth = targetCellWidthCompat(sdkInt),
-        targetCellHeight = targetCellHeightCompat(sdkInt),
+        maxResizeWidthPx = maxResizeWidthCompat,
+        maxResizeHeightPx = maxResizeHeightCompat,
+        targetCellWidth = targetCellWidthCompat,
+        targetCellHeight = targetCellHeightCompat,
         resizeMode = resizeMode,
         widgetCategory = widgetCategory,
         hasConfigurationActivity = configure != null,
-        supportsReconfiguration = supportsReconfigurationCompat(sdkInt),
+        supportsReconfiguration = supportsReconfigurationCompat,
     )
 
 internal data class AndroidWidgetProvider(
@@ -66,34 +66,39 @@ internal data class AndroidWidgetProvider(
     val supportsReconfiguration: Boolean = false,
 )
 
-private fun AppWidgetProviderInfo.targetCellWidthCompat(sdkInt: Int): Int? =
-    if (sdkInt >= Build.VERSION_CODES.S) {
-        targetCellWidth.takeIf { value -> value > 0 }
-    } else {
-        null
-    }
+private val AppWidgetProviderInfo.targetCellWidthCompat: Int?
+    get() =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            targetCellWidth.takeIf { value -> value > 0 }
+        } else {
+            null
+        }
 
-private fun AppWidgetProviderInfo.targetCellHeightCompat(sdkInt: Int): Int? =
-    if (sdkInt >= Build.VERSION_CODES.S) {
-        targetCellHeight.takeIf { value -> value > 0 }
-    } else {
-        null
-    }
+private val AppWidgetProviderInfo.targetCellHeightCompat: Int?
+    get() =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            targetCellHeight.takeIf { value -> value > 0 }
+        } else {
+            null
+        }
 
-private fun AppWidgetProviderInfo.maxResizeWidthCompat(sdkInt: Int): Int? =
-    if (sdkInt >= Build.VERSION_CODES.S) {
-        maxResizeWidth.takeIf { value -> value > 0 }
-    } else {
-        null
-    }
+private val AppWidgetProviderInfo.maxResizeWidthCompat: Int?
+    get() =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            maxResizeWidth.takeIf { value -> value > 0 }
+        } else {
+            null
+        }
 
-private fun AppWidgetProviderInfo.maxResizeHeightCompat(sdkInt: Int): Int? =
-    if (sdkInt >= Build.VERSION_CODES.S) {
-        maxResizeHeight.takeIf { value -> value > 0 }
-    } else {
-        null
-    }
+private val AppWidgetProviderInfo.maxResizeHeightCompat: Int?
+    get() =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            maxResizeHeight.takeIf { value -> value > 0 }
+        } else {
+            null
+        }
 
-private fun AppWidgetProviderInfo.supportsReconfigurationCompat(sdkInt: Int): Boolean =
-    sdkInt >= Build.VERSION_CODES.S &&
-        widgetFeatures and AppWidgetProviderInfo.WIDGET_FEATURE_RECONFIGURABLE != 0
+private val AppWidgetProviderInfo.supportsReconfigurationCompat: Boolean
+    get() =
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+            widgetFeatures and AppWidgetProviderInfo.WIDGET_FEATURE_RECONFIGURABLE != 0
