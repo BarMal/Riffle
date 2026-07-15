@@ -1,5 +1,6 @@
 package com.riffle.app.launcher
 
+import androidx.activity.ComponentActivity
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.height
@@ -12,6 +13,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.runAndroidComposeUiTest
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.riffle.core.domain.launcher.LauncherShellState
@@ -26,8 +28,6 @@ import org.junit.runner.RunWith
 class SettingsSurfaceNavigationTest {
     @get:Rule
     val composeRule = createComposeRule()
-
-    private val restorationTester = StateRestorationTester(composeRule)
 
     @Test
     fun returningToMainKeepsItsScrollPositionAfterScrollingAnotherPage() {
@@ -65,25 +65,31 @@ class SettingsSurfaceNavigationTest {
             assertNotSame(restoredMainScrollState, currentAppearanceScrollState)
         }
     }
+}
 
+@RunWith(AndroidJUnit4::class)
+@OptIn(ExperimentalTestApi::class)
+class SettingsSurfaceStateRestorationTest {
     @Test
-    fun restoresTheActiveSettingsPageAndScrollPositionAfterActivityRecreation() {
-        restorationTester.setContent {
-            MaterialTheme {
-                Box(modifier = Modifier.height(480.dp)) {
-                    SettingsSurface(
-                        state = LauncherShellState().settingsSurfaceState(),
-                        onAction = {},
-                    )
+    fun restoresTheActiveSettingsPageAndScrollPositionAfterActivityRecreation() =
+        runAndroidComposeUiTest<ComponentActivity> {
+            val restorationTester = StateRestorationTester(this)
+            restorationTester.setContent {
+                MaterialTheme {
+                    Box(modifier = Modifier.height(480.dp)) {
+                        SettingsSurface(
+                            state = LauncherShellState().settingsSurfaceState(),
+                            onAction = {},
+                        )
+                    }
                 }
             }
+
+            onNodeWithText("Appearance").performScrollTo().performClick()
+            onNodeWithText("Hide navigation bar").performScrollTo().assertIsDisplayed()
+
+            restorationTester.emulateSaveAndRestore()
+
+            onNodeWithText("Hide navigation bar").assertIsDisplayed()
         }
-
-        composeRule.onNodeWithText("Appearance").performScrollTo().performClick()
-        composeRule.onNodeWithText("Hide navigation bar").performScrollTo().assertIsDisplayed()
-
-        restorationTester.emulateSavedInstanceStateRestore()
-
-        composeRule.onNodeWithText("Hide navigation bar").assertIsDisplayed()
-    }
 }
