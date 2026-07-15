@@ -1,3 +1,5 @@
+@file:Suppress("TooManyFunctions")
+
 package com.riffle.app.launcher
 
 import androidx.lifecycle.ViewModel
@@ -9,11 +11,14 @@ import com.riffle.core.domain.launcher.OverlayDockPermissionStatus
 import com.riffle.core.domain.launcher.ShellDestination
 import com.riffle.core.domain.launcher.ShellNavigationAction
 import com.riffle.core.domain.launcher.apps.AppIdentity
+import com.riffle.core.domain.launcher.apps.AppPackageName
+import com.riffle.core.domain.launcher.apps.AppProfile
 import com.riffle.core.domain.launcher.apps.AppShortcutRepository
 import com.riffle.core.domain.launcher.apps.AppShortcutsByApp
 import com.riffle.core.domain.launcher.apps.AppVisibilityRepository
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.apps.InstalledAppCatalog
+import com.riffle.core.domain.launcher.apps.InstalledAppRefreshResult
 import com.riffle.core.domain.launcher.apps.InstalledAppRepository
 import com.riffle.core.domain.launcher.apps.withHiddenApps
 import com.riffle.core.domain.launcher.home.DockEngine
@@ -141,6 +146,31 @@ class LauncherShellViewModel(
             refreshNotifications()
             refreshWidgetProviders()
         }
+    }
+
+    fun onConfirmedPackageRemoved(
+        packageName: AppPackageName,
+        profile: AppProfile,
+    ) {
+        val state = mutableState.value
+        mutableState.value =
+            state
+                .withInstalledApps(
+                    apps =
+                        state.installedApps.filterNot { app ->
+                            app.identity.packageName == packageName && app.identity.profile == profile
+                        },
+                    appVisibilityRepository = appVisibilityRepository,
+                    appCatalog = appCatalog,
+                )
+                .withoutConfirmedPackage(
+                    packageName = packageName,
+                    profile = profile,
+                    homeLayoutRepository = homeLayoutRepository,
+                )
+                .withHomeScreenLibraryApps(homeLayoutRepository)
+                .withRefreshedGeneratedPages(homeLayoutRepository)
+                .withAppShortcuts(appShortcutRepository, appCatalog)
     }
 
     fun onHomeRoleStatusChanged(
@@ -445,7 +475,25 @@ internal fun LauncherShellState.withInstalledApps(
     appVisibilityRepository: AppVisibilityRepository,
     appCatalog: InstalledAppCatalog,
 ): LauncherShellState =
-    installedAppRepository.installedApps()
+    when (val result = installedAppRepository.refreshResult()) {
+        is InstalledAppRefreshResult.Authoritative ->
+            withInstalledApps(
+                apps = result.apps,
+                appVisibilityRepository = appVisibilityRepository,
+                appCatalog = appCatalog,
+            )
+
+        is InstalledAppRefreshResult.Partial,
+        InstalledAppRefreshResult.Unavailable,
+        -> this
+    }
+
+internal fun LauncherShellState.withInstalledApps(
+    apps: List<InstalledApp>,
+    appVisibilityRepository: AppVisibilityRepository,
+    appCatalog: InstalledAppCatalog,
+): LauncherShellState =
+    apps
         .withHiddenApps(appVisibilityRepository.hiddenAppIdentities())
         .let { apps ->
             copy(

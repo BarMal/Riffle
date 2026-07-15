@@ -116,7 +116,7 @@ class LauncherShellHiddenAppsViewModelTest {
     }
 
     @Test
-    fun hidingHomeAppFreesGridCellForNewApps() {
+    fun hidingHomeAppPreservesItsGridPlacement() {
         val camera = app(label = "Camera")
         val docs = app(label = "Docs")
         val maps = app(label = "Maps")
@@ -158,13 +158,13 @@ class LauncherShellHiddenAppsViewModelTest {
         viewModel.onAddAppToHome(maps)
 
         val shortcut = viewModel.state.value.homeLayout.selectedPage.items.single() as AppShortcutItem
-        assertEquals(maps.identity, shortcut.appIdentity)
+        assertEquals(camera.identity, shortcut.appIdentity)
         assertEquals(GridPlacement(cell = GridCell(column = 0, row = 0)), shortcut.placement)
         assertEquals(viewModel.state.value.homeLayout, homeLayoutRepository.savedLayout)
     }
 
     @Test
-    fun hidingDockAppFreesDockSlotForNewApps() {
+    fun hidingDockAppPreservesItsDockPlacement() {
         val phone = app(label = "Phone")
         val camera = app(label = "Camera")
         val dispatcher = QueuedDispatcher()
@@ -188,15 +188,14 @@ class LauncherShellHiddenAppsViewModelTest {
             refreshJob = viewModel.onAppActionSelected(LauncherShellAction.HideApp(phone.identity)),
             dispatcher = dispatcher,
         )
-        viewModel.onDockEdited(LauncherShellAction.AddAppToDock(camera))
 
         val shortcut = viewModel.state.value.homeLayout.dock.items.single() as AppShortcutItem
-        assertEquals(camera.identity, shortcut.appIdentity)
+        assertEquals(phone.identity, shortcut.appIdentity)
         assertEquals(viewModel.state.value.homeLayout, homeLayoutRepository.savedLayout)
     }
 
     @Test
-    fun refreshPrunesRemovedHomeAppAndFreesGridCell() {
+    fun authoritativeRefreshDoesNotPruneRemovedHomeAppWithoutConfirmedRemoval() {
         val camera = app(label = "Camera")
         val maps = app(label = "Maps")
         val installedAppRepository = FakeInstalledAppRepository(apps = listOf(camera, maps))
@@ -233,13 +232,13 @@ class LauncherShellHiddenAppsViewModelTest {
         viewModel.onAddAppToHome(maps)
 
         val shortcut = viewModel.state.value.homeLayout.selectedPage.items.single() as AppShortcutItem
-        assertEquals(maps.identity, shortcut.appIdentity)
+        assertEquals(camera.identity, shortcut.appIdentity)
         assertEquals(GridPlacement(cell = GridCell(column = 0, row = 0)), shortcut.placement)
         assertEquals(viewModel.state.value.homeLayout, homeLayoutRepository.savedLayout)
     }
 
     @Test
-    fun refreshPrunesRemovedDockAppAndFreesDockSlot() {
+    fun authoritativeRefreshDoesNotPruneRemovedDockAppWithoutConfirmedRemoval() {
         val phone = app(label = "Phone")
         val camera = app(label = "Camera")
         val installedAppRepository = FakeInstalledAppRepository(apps = listOf(phone, camera))
@@ -259,10 +258,9 @@ class LauncherShellHiddenAppsViewModelTest {
 
         installedAppRepository.apps = listOf(camera)
         runBlocking { viewModel.refreshInstalledApps().join() }
-        viewModel.onDockEdited(LauncherShellAction.AddAppToDock(camera))
 
         val shortcut = viewModel.state.value.homeLayout.dock.items.single() as AppShortcutItem
-        assertEquals(camera.identity, shortcut.appIdentity)
+        assertEquals(phone.identity, shortcut.appIdentity)
         assertEquals(viewModel.state.value.homeLayout, homeLayoutRepository.savedLayout)
     }
 

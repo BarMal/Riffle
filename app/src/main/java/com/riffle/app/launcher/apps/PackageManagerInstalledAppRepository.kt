@@ -15,6 +15,7 @@ import com.riffle.core.domain.launcher.apps.AppProfileType
 import com.riffle.core.domain.launcher.apps.AppShortcutRepository
 import com.riffle.core.domain.launcher.apps.AppShortcutsByApp
 import com.riffle.core.domain.launcher.apps.InstalledApp
+import com.riffle.core.domain.launcher.apps.InstalledAppRefreshResult
 import com.riffle.core.domain.launcher.apps.InstalledAppRepository
 
 class PackageManagerInstalledAppRepository(
@@ -37,25 +38,44 @@ class PackageManagerInstalledAppRepository(
         appShortcutRepository = appShortcutRepository,
     )
 
-    override fun installedApps(): List<InstalledApp> =
-        queryLaunchableActivities().ifEmpty { queryPackageManagerLaunchableActivities() }
-            .map(mapper::map)
+    override fun installedApps(): List<InstalledApp> = refreshResult().apps
+
+    override fun refreshResult(): InstalledAppRefreshResult =
+        launcherApps
+            ?.let(::queryLauncherApps)
+            ?: queryPackageManagerLaunchableActivities()
 
     override fun shortcutsFor(apps: List<InstalledApp>): AppShortcutsByApp = appShortcutRepository.shortcutsFor(apps)
 
-    @Suppress("DEPRECATION")
-    private fun queryLaunchableActivities(): List<LaunchableActivity> =
-        launcherApps
-            ?.let { apps ->
-                launcherProfiles(apps).flatMap { user -> apps.launchableActivitiesFor(user) }
-            }
-            .orEmpty()
+    private fun queryLauncherApps(apps: LauncherApps): InstalledAppRefreshResult {
+        val profiles = runCatching { apps.getProfiles() }.getOrElse { return InstalledAppRefreshResult.Unavailable }
+        val users = profiles.ifEmpty { listOf(Process.myUserHandle()) }
+        val activities = mutableListOf<LaunchableActivity>()
+        var partial = false
 
-    private fun LauncherApps.launchableActivitiesFor(user: UserHandle): List<LaunchableActivity> =
-        runCatching {
-            getActivityList(null, user)
-                .map { activity -> activity.toLaunchableActivity(user) }
-        }.getOrDefault(emptyList())
+        users.forEach { user ->
+            if (user.isLockedPrivateProfile()) {
+                partial = true
+                return@forEach
+            }
+            val profileActivities =
+                runCatching {
+                    apps.getActivityList(null, user)
+                        .map { activity -> activity.toLaunchableActivity(user) }
+                }.getOrElse {
+                    partial = true
+                    emptyList()
+                }
+            activities += profileActivities
+        }
+
+        val mappedApps = activities.map(mapper::map)
+        return if (partial) {
+            InstalledAppRefreshResult.Partial(mappedApps)
+        } else {
+            InstalledAppRefreshResult.Authoritative(mappedApps)
+        }
+    }
 
     private fun LauncherActivityInfo.toLaunchableActivity(user: UserHandle): LaunchableActivity =
         LaunchableActivity(
@@ -72,16 +92,23 @@ class PackageManagerInstalledAppRepository(
         )
 
     @Suppress("DEPRECATION")
-    private fun queryPackageManagerLaunchableActivities(): List<LaunchableActivity> =
-        when {
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU ->
-                packageManager.queryIntentActivities(
-                    launcherIntent,
-                    PackageManager.ResolveInfoFlags.of(0),
-                )
+    private fun queryPackageManagerLaunchableActivities(): InstalledAppRefreshResult =
+        runCatching {
+            when {
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU ->
+                    packageManager.queryIntentActivities(
+                        launcherIntent,
+                        PackageManager.ResolveInfoFlags.of(0),
+                    )
 
-            else -> packageManager.queryIntentActivities(launcherIntent, 0)
-        }.mapNotNull { resolveInfo -> resolveInfo.toLaunchableActivity() }
+                else -> packageManager.queryIntentActivities(launcherIntent, 0)
+            }
+                .mapNotNull { resolveInfo -> resolveInfo.toLaunchableActivity() }
+                .map(mapper::map)
+        }.fold(
+            onSuccess = ::packageManagerFallbackRefreshResult,
+            onFailure = { InstalledAppRefreshResult.Unavailable },
+        )
 
     private fun ResolveInfo.toLaunchableActivity(): LaunchableActivity? =
         activityInfo?.let { info ->
@@ -96,12 +123,6 @@ class PackageManagerInstalledAppRepository(
 
     private val launcherIntent: Intent
         get() = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
-
-    private fun launcherProfiles(launcherApps: LauncherApps): List<UserHandle> =
-        runCatching { launcherApps.getProfiles() }
-            .getOrDefault(userManager?.userProfiles.orEmpty())
-            .filterNot { user -> user.isLockedPrivateProfile() }
-            .ifEmpty { listOf(Process.myUserHandle()) }
 
     private fun UserHandle.isLockedPrivateProfile(): Boolean =
         toAppProfile(
@@ -127,3 +148,15 @@ private fun ApplicationInfo.launcherCategoryLabel(): String? =
     } else {
         null
     }
+
+private val InstalledAppRefreshResult.apps: List<InstalledApp>
+    get() =
+        when (this) {
+            is InstalledAppRefreshResult.Authoritative -> apps
+            is InstalledAppRefreshResult.Partial -> apps
+            InstalledAppRefreshResult.Unavailable -> emptyList()
+        }
+
+/** PackageManager only enumerates the calling profile, so this fallback is never a complete catalog. */
+internal fun packageManagerFallbackRefreshResult(apps: List<InstalledApp>): InstalledAppRefreshResult =
+    InstalledAppRefreshResult.Partial(apps)

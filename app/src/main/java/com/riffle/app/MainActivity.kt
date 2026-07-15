@@ -33,6 +33,7 @@ import com.riffle.app.launcher.LauncherShellViewModelFactory
 import com.riffle.app.launcher.LauncherWidgetAddHandlingResult
 import com.riffle.app.launcher.LauncherWidgetRenderers
 import com.riffle.app.launcher.WallpaperPickerLaunchResult
+import com.riffle.app.launcher.apps.AppCatalogChange
 import com.riffle.app.launcher.completeWidgetAdd
 import com.riffle.app.launcher.deleteHostedWidgetIdWhenRejected
 import com.riffle.app.launcher.failureMessage
@@ -85,7 +86,13 @@ class MainActivity : ComponentActivity() {
     }
     private val appIconLoader get() = dependencies.appIconLoader
     private val packageChangeObserver by lazy {
-        dependencies.packageChangeObserver { shellViewModel.refreshInstalledApps() }
+        dependencies.packageChangeObserver { change ->
+            when (change) {
+                AppCatalogChange.Refresh -> shellViewModel.refreshInstalledApps()
+                is AppCatalogChange.PackageRemoved ->
+                    shellViewModel.onConfirmedPackageRemoved(change.packageName, change.profile)
+            }
+        }
     }
     private val wallpaperController get() = dependencies.wallpaperController
     private val wallpaperPickerGateway get() = dependencies.wallpaperPickerGateway

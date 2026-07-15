@@ -1,12 +1,15 @@
 package com.riffle.app.launcher
 
+import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.apps.AppActivityName
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
+import com.riffle.core.domain.launcher.apps.AppProfile
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.GridCell
 import com.riffle.core.domain.launcher.home.GridPlacement
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
+import com.riffle.core.domain.launcher.home.HomeLayoutRepository
 import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.home.LauncherPage
 import com.riffle.core.domain.launcher.home.LauncherPageId
@@ -72,10 +75,45 @@ class HomeLayoutUnavailableAppPrunerTest {
         assertEquals(LauncherPageId("spare"), prunedLayout.selectedPageId)
     }
 
-    private fun app(label: String): AppIdentity =
+    @Test
+    fun confirmedRemovalPrunesOnlyTheMatchingPackageAndProfile() {
+        val personalCamera = app("Camera")
+        val workCamera = app("Camera", profile = AppProfile.work())
+        val layout =
+            HomeLayoutDefaults.standard().let { defaults ->
+                defaults.copy(
+                    pages =
+                        listOf(
+                            defaults.selectedPage.copy(
+                                items =
+                                    listOf(
+                                        shortcut(id = "personal-camera", app = personalCamera),
+                                        shortcut(id = "work-camera", app = workCamera),
+                                    ),
+                            ),
+                        ),
+                )
+            }
+
+        val pruned =
+            LauncherShellState(homeLayout = layout).withoutConfirmedPackage(
+                packageName = personalCamera.packageName,
+                profile = personalCamera.profile,
+                homeLayoutRepository = InMemoryHomeLayoutRepository(),
+            )
+
+        val shortcuts = pruned.homeLayout.selectedPage.items.filterIsInstance<AppShortcutItem>()
+        assertEquals(listOf(workCamera), shortcuts.map { shortcut -> shortcut.appIdentity })
+    }
+
+    private fun app(
+        label: String,
+        profile: AppProfile = AppProfile.personal(),
+    ): AppIdentity =
         AppIdentity(
             packageName = AppPackageName("com.riffle.${label.lowercase()}"),
             activityName = AppActivityName(".MainActivity"),
+            profile = profile,
         )
 
     private fun shortcut(
@@ -88,4 +126,10 @@ class HomeLayoutUnavailableAppPrunerTest {
             label = app.packageName.value,
             placement = GridPlacement(cell = GridCell(column = 0, row = 0)),
         )
+
+    private class InMemoryHomeLayoutRepository : HomeLayoutRepository {
+        override fun loadHomeLayout() = null
+
+        override fun saveHomeLayout(layout: com.riffle.core.domain.launcher.home.HomeLayout) = Unit
+    }
 }

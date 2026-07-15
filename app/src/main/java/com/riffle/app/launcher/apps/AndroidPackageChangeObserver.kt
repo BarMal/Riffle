@@ -7,24 +7,37 @@ import android.content.IntentFilter
 import android.content.pm.LauncherApps
 import android.content.pm.ShortcutInfo
 import android.os.UserHandle
+import android.os.UserManager
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
+import com.riffle.core.domain.launcher.apps.AppPackageName
+import com.riffle.core.domain.launcher.apps.AppProfile
+
+internal sealed interface AppCatalogChange {
+    data object Refresh : AppCatalogChange
+
+    data class PackageRemoved(
+        val packageName: AppPackageName,
+        val profile: AppProfile,
+    ) : AppCatalogChange
+}
 
 internal class AndroidPackageChangeObserver(
     private val context: Context,
-    private val onPackagesChanged: () -> Unit,
+    private val onCatalogChanged: (AppCatalogChange) -> Unit,
 ) : DefaultLifecycleObserver {
     private var registered = false
     private var profileReceiverRegistered = false
     private val launcherApps by lazy { context.getSystemService(LauncherApps::class.java) }
+    private val userManager by lazy { context.getSystemService(UserManager::class.java) }
     private val profileReceiver =
         object : BroadcastReceiver() {
             override fun onReceive(
                 context: Context,
                 intent: Intent,
             ) {
-                onPackagesChanged()
+                onCatalogChanged(AppCatalogChange.Refresh)
             }
         }
     private val callback =
@@ -33,21 +46,26 @@ internal class AndroidPackageChangeObserver(
                 packageName: String,
                 user: UserHandle,
             ) {
-                onPackagesChanged()
+                onCatalogChanged(AppCatalogChange.Refresh)
             }
 
             override fun onPackageRemoved(
                 packageName: String,
                 user: UserHandle,
             ) {
-                onPackagesChanged()
+                onCatalogChanged(
+                    AppCatalogChange.PackageRemoved(
+                        packageName = AppPackageName(packageName),
+                        profile = user.toAppProfile(userManager = userManager, launcherApps = launcherApps),
+                    ),
+                )
             }
 
             override fun onPackageChanged(
                 packageName: String,
                 user: UserHandle,
             ) {
-                onPackagesChanged()
+                onCatalogChanged(AppCatalogChange.Refresh)
             }
 
             override fun onPackagesAvailable(
@@ -55,7 +73,7 @@ internal class AndroidPackageChangeObserver(
                 user: UserHandle,
                 replacing: Boolean,
             ) {
-                onPackagesChanged()
+                onCatalogChanged(AppCatalogChange.Refresh)
             }
 
             override fun onPackagesUnavailable(
@@ -63,21 +81,21 @@ internal class AndroidPackageChangeObserver(
                 user: UserHandle,
                 replacing: Boolean,
             ) {
-                onPackagesChanged()
+                onCatalogChanged(AppCatalogChange.Refresh)
             }
 
             override fun onPackagesSuspended(
                 packageNames: Array<out String>,
                 user: UserHandle,
             ) {
-                onPackagesChanged()
+                onCatalogChanged(AppCatalogChange.Refresh)
             }
 
             override fun onPackagesUnsuspended(
                 packageNames: Array<out String>,
                 user: UserHandle,
             ) {
-                onPackagesChanged()
+                onCatalogChanged(AppCatalogChange.Refresh)
             }
 
             override fun onShortcutsChanged(
@@ -85,7 +103,7 @@ internal class AndroidPackageChangeObserver(
                 shortcuts: MutableList<ShortcutInfo>,
                 user: UserHandle,
             ) {
-                onPackagesChanged()
+                onCatalogChanged(AppCatalogChange.Refresh)
             }
         }
 
