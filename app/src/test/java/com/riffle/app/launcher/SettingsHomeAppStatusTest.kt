@@ -1,7 +1,10 @@
 package com.riffle.app.launcher
 
+import com.riffle.core.domain.launcher.FirstRunStatus
 import com.riffle.core.domain.launcher.HomeRoleStatus
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class SettingsHomeAppStatusTest {
@@ -16,5 +19,23 @@ class SettingsHomeAppStatusTest {
     fun usesSetHomeActionOnlyWhenRiffleIsKnownNotToBeDefault() {
         assertEquals("Default", HomeRoleStatus.DEFAULT_HOME.settingsHomeAppActionLabel())
         assertEquals("Set home", HomeRoleStatus.NOT_DEFAULT_HOME.settingsHomeAppActionLabel())
+    }
+
+    @Test
+    fun unresolvedHomeRoleAfterRequestDoesNotRepeatOnboarding() {
+        val viewModel = LauncherShellViewModel(firstRunRepository = FakeFirstRunRepository())
+
+        viewModel.onDefaultHomeRequestStarted()
+        viewModel.onHomeRoleStatusChanged(HomeRoleStatus.UNKNOWN)
+
+        assertEquals(FirstRunStatus.REQUESTING_HOME_ROLE, viewModel.state.value.firstRunStatus)
+        assertFalse(viewModel.state.value.shouldShowDefaultHomePrompt)
+        assertTrue(viewModel.state.value.shouldShowEmptyHome)
+    }
+
+    private class FakeFirstRunRepository : FirstRunRepository {
+        override fun isFirstRunComplete(): Boolean = false
+
+        override fun setFirstRunComplete() = Unit
     }
 }

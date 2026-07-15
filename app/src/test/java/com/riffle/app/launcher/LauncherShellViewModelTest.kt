@@ -55,18 +55,6 @@ class LauncherShellViewModelTest {
     }
 
     @Test
-    fun unresolvedHomeRoleAfterRequestDoesNotRepeatOnboarding() {
-        val viewModel = LauncherShellViewModel(firstRunRepository = FakeFirstRunRepository())
-
-        viewModel.onDefaultHomeRequestStarted()
-        viewModel.onHomeRoleStatusChanged(HomeRoleStatus.UNKNOWN)
-
-        assertEquals(FirstRunStatus.REQUESTING_HOME_ROLE, viewModel.state.value.firstRunStatus)
-        assertFalse(viewModel.state.value.shouldShowDefaultHomePrompt)
-        assertTrue(viewModel.state.value.shouldShowEmptyHome)
-    }
-
-    @Test
     fun hidesPromptWhenAppBecomesDefaultHome() {
         val repository = FakeFirstRunRepository()
         val viewModel = LauncherShellViewModel(firstRunRepository = repository)
