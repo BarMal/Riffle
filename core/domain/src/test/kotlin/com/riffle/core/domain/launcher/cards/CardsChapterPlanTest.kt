@@ -9,6 +9,7 @@ import com.riffle.core.domain.launcher.notifications.NotificationAgeBucket
 import com.riffle.core.domain.launcher.notifications.NotificationCategory
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
 
 class CardsChapterPlanTest {
@@ -100,6 +101,62 @@ class CardsChapterPlanTest {
         val plan = planner.plan(notificationGroups = emptyList(), pinnedChapterIds = listOf(pinnedId))
 
         assertEquals(pinnedId, planner.reconcileSelectedChapter(pinnedId, plan))
+    }
+
+    @Test
+    fun persistsOnlyChapterIntentAcrossARefresh() {
+        val mail = appId("com.riffle.mail")
+        val state =
+            planner.state(
+                notificationGroups = listOf(group(packageName = "com.riffle.mail")),
+                preferences = CardsChapterPreferences().pin(mail).select(mail),
+            )
+
+        assertEquals(listOf(mail), state.preferences.pinnedChapterIds)
+        assertEquals(mail, state.preferences.selectedChapterId)
+        assertEquals(mail, state.selectedChapter.id)
+    }
+
+    @Test
+    fun keepsPinnedChapterSelectedWhenRefreshRemovesItsFinalNotification() {
+        val mail = appId("com.riffle.mail")
+        val state =
+            planner.state(
+                notificationGroups = emptyList(),
+                preferences = CardsChapterPreferences().pin(mail).select(mail),
+            )
+
+        assertEquals(mail, state.preferences.selectedChapterId)
+        assertNull((state.selectedChapter as CardsChapter.App).notificationGroup)
+    }
+
+    @Test
+    fun fallsBackToOverviewWhenRefreshRemovesSelectedTransientChapter() {
+        val state =
+            planner.state(
+                notificationGroups = emptyList(),
+                preferences = CardsChapterPreferences().select(appId("com.riffle.mail")),
+            )
+
+        assertEquals(CardsChapterId.Overview, state.preferences.selectedChapterId)
+    }
+
+    @Test
+    fun movesPinnedChaptersWithoutChangingTheirIdentities() {
+        val calendar = appId("com.riffle.calendar")
+        val mail = appId("com.riffle.mail")
+        val preferences = CardsChapterPreferences().pin(calendar).pin(mail).movePinnedChapter(mail, 0)
+
+        assertEquals(listOf(mail, calendar), preferences.pinnedChapterIds)
+    }
+
+    @Test
+    fun rejectsDuplicatePersistedPins() {
+        val mail = appId("com.riffle.mail")
+
+        assertFailsWith<IllegalArgumentException> {
+            CardsChapterPreferences(pinnedChapterIds = listOf(mail, mail))
+        }
     }
 
     private fun appId(
