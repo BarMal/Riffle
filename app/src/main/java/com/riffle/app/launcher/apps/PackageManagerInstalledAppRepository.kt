@@ -106,7 +106,7 @@ class PackageManagerInstalledAppRepository(
                 .mapNotNull { resolveInfo -> resolveInfo.toLaunchableActivity() }
                 .map(mapper::map)
         }.fold(
-            onSuccess = InstalledAppRefreshResult::Authoritative,
+            onSuccess = ::packageManagerFallbackRefreshResult,
             onFailure = { InstalledAppRefreshResult.Unavailable },
         )
 
@@ -156,3 +156,7 @@ private val InstalledAppRefreshResult.apps: List<InstalledApp>
             is InstalledAppRefreshResult.Partial -> apps
             InstalledAppRefreshResult.Unavailable -> emptyList()
         }
+
+/** PackageManager only enumerates the calling profile, so this fallback is never a complete catalog. */
+internal fun packageManagerFallbackRefreshResult(apps: List<InstalledApp>): InstalledAppRefreshResult =
+    InstalledAppRefreshResult.Partial(apps)

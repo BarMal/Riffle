@@ -55,7 +55,7 @@ class LauncherShellRefreshCoordinatorTest {
     }
 
     @Test
-    fun nonAuthoritativeInstalledAppRefreshPreservesCatalogAndPersistedPlacements() {
+    fun singleProfileFallbackPreservesUnavailableWorkCatalogAndPersistedPlacements() {
         val personal = app(label = "Camera")
         val work = app(label = "Docs", profile = AppProfile.work())
         val repository =
