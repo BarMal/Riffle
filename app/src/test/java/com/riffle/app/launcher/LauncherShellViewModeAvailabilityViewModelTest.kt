@@ -2,7 +2,6 @@ package com.riffle.app.launcher
 
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
-import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.HomeLayoutKey
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
 import com.riffle.core.domain.launcher.home.HomeLayoutSet
@@ -42,7 +41,7 @@ class LauncherShellViewModeAvailabilityViewModelTest {
     }
 
     @Test
-    fun startsWithStandardWhenStoredActiveCardModeIsGated() {
+    fun startsWithStoredCardLayoutWhenAppDefaultAllowsCardMode() {
         val standardKey = HomeLayoutKey(LauncherViewMode.STANDARD_APP_DRAWER)
         val cardKey = HomeLayoutKey(LauncherViewMode.CARD_INTERFACE)
         val cardLayout =
@@ -65,13 +64,9 @@ class LauncherShellViewModeAvailabilityViewModelTest {
                 homeLayoutRepository = repository,
             )
 
-        assertEquals(standardKey, viewModel.state.value.homeLayoutSet.activeKey)
-        assertEquals(LauncherViewMode.STANDARD_APP_DRAWER, viewModel.state.value.homeLayout.viewMode)
+        assertEquals(cardKey, viewModel.state.value.homeLayoutSet.activeKey)
+        assertEquals(LauncherViewMode.CARD_INTERFACE, viewModel.state.value.homeLayout.viewMode)
         assertEquals(cardLayout, repository.savedLayoutSet?.layoutFor(cardKey))
-        assertEquals(
-            LauncherViewMode.CARD_INTERFACE,
-            repository.savedLayoutSet?.preferredModesByDeviceClass?.get(HomeLayoutDeviceClass.PHONE),
-        )
     }
 
     private class FakeFirstRunRepository : FirstRunRepository {

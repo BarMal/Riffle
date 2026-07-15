@@ -158,7 +158,7 @@ private fun StandardHomeColumn(
                     selectedPageIndex = state.visibleLayout.selectedPageIndex,
                     dragSession = state.dragSession,
                 ),
-            presentation = state.homeGridPresentation(),
+            presentation = state.homeGridPresentation(actions),
             appIconLoader = appIconLoader,
             actions = homeActions,
             modifier =
@@ -386,13 +386,20 @@ private data class DockShelfController(
     val onExpandedChange: (Boolean) -> Unit,
 )
 
-private fun StandardHomeContentState.homeGridPresentation(): HomeGridPresentation =
+private fun StandardHomeContentState.homeGridPresentation(actions: HomeWorkspaceActions): HomeGridPresentation =
     HomeGridPresentation(
         notificationGroupsByApp = presentation.notificationGroupsByApp,
         appShortcutsByApp = presentation.appShortcutsByApp,
         labelSettings = layout.settings.labels,
         reducedMotion = presentation.reducedMotion,
         widgetViewFactory = presentation.widgetViewFactory,
+        generatedPage =
+            GeneratedPagePresentation(
+                notificationGroupsByApp = presentation.notificationGroupsByApp,
+                notificationAccessStatus = presentation.notificationAccessStatus,
+                installedApps = presentation.installedApps,
+                onAction = actions.onAction,
+            ),
     )
 
 internal data class HomeDragSession(
@@ -454,6 +461,14 @@ internal data class HomeGridPresentation(
     val labelSettings: HomeLabelSettings,
     val reducedMotion: Boolean = false,
     val widgetViewFactory: HomeWidgetViewFactory,
+    val generatedPage: GeneratedPagePresentation = GeneratedPagePresentation(),
+)
+
+internal data class GeneratedPagePresentation(
+    val notificationGroupsByApp: List<AppNotificationGroup> = emptyList(),
+    val notificationAccessStatus: NotificationAccessStatus = NotificationAccessStatus.UNKNOWN,
+    val installedApps: List<InstalledApp> = emptyList(),
+    val onAction: (LauncherShellAction) -> Unit = {},
 )
 
 internal data class HomeItemDragState(

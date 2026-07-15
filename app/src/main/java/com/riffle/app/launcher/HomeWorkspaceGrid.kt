@@ -18,6 +18,8 @@ import androidx.compose.foundation.layout.requiredHeight
 import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
@@ -38,6 +40,7 @@ import com.riffle.core.domain.launcher.home.GridSpan
 import com.riffle.core.domain.launcher.home.HomeLabelSettings
 import com.riffle.core.domain.launcher.home.LauncherItem
 import com.riffle.core.domain.launcher.home.LauncherPage
+import com.riffle.core.domain.launcher.home.LauncherPageType
 import com.riffle.core.domain.launcher.home.WidgetItem
 
 @Composable
@@ -97,9 +100,17 @@ internal fun WorkspaceGrid(
                     }
                 }
             }
+            if (page.hasGeneratedContentOverflowAffordance) {
+                TextButton(onClick = { actions.onAction(LauncherShellAction.OpenAppDrawer) }) {
+                    Text(text = "More apps (${page.generatedContentOverflowCount} more)")
+                }
+            }
         }
     }
 }
+
+private val LauncherPage.hasGeneratedContentOverflowAffordance: Boolean
+    get() = type is LauncherPageType.Generated && generatedContentOverflowCount > 0
 
 @Composable
 private fun RowScope.HomeGridCell(

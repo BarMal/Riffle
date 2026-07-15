@@ -147,6 +147,35 @@ class GeneratedLauncherPageContentPlanTest {
     }
 
     @Test
+    fun categoryPlansIncludeCategorizedAppsInCategoryThenLabelOrder() {
+        val plan =
+            planner.plan(
+                kind = GeneratedLauncherPageKind.CATEGORY,
+                input =
+                    GeneratedLauncherPageContentPlanInput(
+                        installedApps =
+                            listOf(
+                                app(packageName = "com.riffle.zeta", category = "Social", label = "Zeta"),
+                                app(packageName = "com.riffle.alpha", category = "Audio", label = "Alpha"),
+                                app(packageName = "com.riffle.uncategorized"),
+                                app(packageName = "com.riffle.beta", category = "Audio", label = "Beta"),
+                            ),
+                        appCategoriesAvailable = true,
+                    ),
+            )
+
+        assertTrue(plan.canCreate)
+        assertEquals(
+            listOf(
+                appItem(packageName = "com.riffle.alpha"),
+                appItem(packageName = "com.riffle.beta"),
+                appItem(packageName = "com.riffle.zeta"),
+            ),
+            plan.items,
+        )
+    }
+
+    @Test
     fun unavailablePlansKeepSpecConstraintsAndNoContent() {
         val plan =
             planner.plan(
@@ -170,6 +199,8 @@ class GeneratedLauncherPageContentPlanTest {
         profile: AppProfile = AppProfile.personal(),
         enabled: Boolean = true,
         visibility: AppVisibility = AppVisibility.VISIBLE,
+        category: String? = null,
+        label: String = packageName,
     ): InstalledApp =
         InstalledApp(
             identity =
@@ -183,9 +214,10 @@ class GeneratedLauncherPageContentPlanTest {
                             profile
                         },
                 ),
-            label = packageName.substringAfterLast('.'),
             enabled = enabled,
             visibility = visibility,
+            category = category,
+            label = label,
         )
 
     private fun appItem(

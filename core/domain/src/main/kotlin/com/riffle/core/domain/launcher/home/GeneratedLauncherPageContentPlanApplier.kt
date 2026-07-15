@@ -24,12 +24,31 @@ class GeneratedLauncherPageContentPlanApplier {
             GeneratedLauncherPageContentItemMaterializer().materialize(plan, appLabelProvider)
         return if (rejectionReason == null && materialized.skippedItems.isEmpty()) {
             GeneratedLauncherPageContentPlanApplyResult.Applied(
-                page = page.copy(items = materialized.items),
+                page =
+                    placeItems(page, materialized.items).let { placedPage ->
+                        placedPage.copy(
+                            generatedContentOverflowCount = materialized.items.size - placedPage.items.size,
+                        )
+                    },
             )
         } else {
             GeneratedLauncherPageContentPlanApplyResult.Rejected(
-                rejectionReason ?: GeneratedLauncherPageContentPlanApplyRejectionReason.UNSUPPORTED_CONTENT,
+                rejectionReason
+                    ?: GeneratedLauncherPageContentPlanApplyRejectionReason.UNSUPPORTED_CONTENT,
             )
+        }
+    }
+
+    private fun placeItems(
+        page: LauncherPage,
+        items: List<AppShortcutItem>,
+    ): LauncherPage {
+        val placementEngine = GridPlacementEngine()
+        return items.fold(page.copy(items = emptyList())) { placedPage, item ->
+            when (val result = placementEngine.placeItemInFirstAvailableCell(placedPage, item)) {
+                is PlaceLauncherItemResult.Placed -> result.page
+                is PlaceLauncherItemResult.Rejected -> placedPage
+            }
         }
     }
 }

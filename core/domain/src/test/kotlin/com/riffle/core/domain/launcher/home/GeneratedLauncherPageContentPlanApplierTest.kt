@@ -77,6 +77,63 @@ class GeneratedLauncherPageContentPlanApplierTest {
     }
 
     @Test
+    fun materializedAppsOccupyDistinctGridCellsInReadingOrder() {
+        val apps =
+            listOf(
+                "calendar",
+                "camera",
+                "clock",
+            ).map { packageSuffix ->
+                GeneratedLauncherPageContentItem.App(
+                    AppIdentity(AppPackageName("com.riffle.$packageSuffix"), AppActivityName(".MainActivity")),
+                )
+            }
+
+        val applied =
+            appliedPage(
+                plan(kind = GeneratedLauncherPageKind.CATEGORY, items = apps),
+                generatedPage(
+                    kind = GeneratedLauncherPageKind.CATEGORY,
+                    grid = GridDimensions(columns = 2, rows = 2),
+                ),
+            )
+
+        assertEquals(
+            listOf(
+                GridCell(column = 0, row = 0),
+                GridCell(column = 1, row = 0),
+                GridCell(column = 0, row = 1),
+            ),
+            applied.items.map { item -> requireNotNull(item.placement).cell },
+        )
+    }
+
+    @Test
+    fun materializingMoreAppsThanGridCapacityKeepsTheAppsThatFit() {
+        val apps =
+            listOf("calendar", "camera").map { packageSuffix ->
+                GeneratedLauncherPageContentItem.App(
+                    AppIdentity(AppPackageName("com.riffle.$packageSuffix"), AppActivityName(".MainActivity")),
+                )
+            }
+
+        val applied =
+            appliedPage(
+                plan(kind = GeneratedLauncherPageKind.CATEGORY, items = apps),
+                generatedPage(
+                    kind = GeneratedLauncherPageKind.CATEGORY,
+                    grid = GridDimensions(columns = 1, rows = 1),
+                ),
+            )
+
+        assertEquals(
+            listOf(apps.first().identity),
+            applied.items.filterIsInstance<AppShortcutItem>().map { it.appIdentity },
+        )
+        assertEquals(GridCell(column = 0, row = 0), requireNotNull(applied.items.single().placement).cell)
+    }
+
+    @Test
     fun replacesExistingGeneratedContent() {
         val oldApp =
             GeneratedLauncherPageContentItem.App(
