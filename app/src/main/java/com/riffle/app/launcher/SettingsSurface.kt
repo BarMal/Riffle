@@ -25,6 +25,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -35,7 +36,9 @@ fun SettingsSurface(
     initialPage: SettingsPage = SettingsPage.MAIN,
     onAction: (LauncherShellAction) -> Unit,
 ) {
-    val selectedPage = remember(initialPage) { mutableStateOf(initialPage) }
+    // Keep the active page and its per-page scroll position through activity recreation,
+    // while this settings session remains open. Leaving Settings removes this state.
+    val selectedPage = rememberSaveable(initialPage) { mutableStateOf(initialPage) }
     val pageScrollStates = settingsPageScrollStates()
 
     BackHandler(enabled = selectedPage.value != SettingsPage.MAIN) {
