@@ -17,9 +17,18 @@ class LauncherCardCollectionTest {
         val collection =
             planner.plan(
                 listOf(
-                    card(id = "zeta", score = 1, updatedAt = 10L),
-                    card(id = "alpha", score = 1, updatedAt = 10L),
-                    card(id = "mail", score = 2, updatedAt = 1L),
+                    card(
+                        id = "zeta",
+                        chronology = LauncherCardChronology(rankingScore = 1, updatedAtEpochMillis = 10L),
+                    ),
+                    card(
+                        id = "alpha",
+                        chronology = LauncherCardChronology(rankingScore = 1, updatedAtEpochMillis = 10L),
+                    ),
+                    card(
+                        id = "mail",
+                        chronology = LauncherCardChronology(rankingScore = 2, updatedAtEpochMillis = 1L),
+                    ),
                 ),
             )
 
@@ -31,8 +40,14 @@ class LauncherCardCollectionTest {
         val collection =
             planner.plan(
                 listOf(
-                    card(id = "mail", score = 5, updatedAt = 10L),
-                    card(id = "mail", score = 1, updatedAt = 20L),
+                    card(
+                        id = "mail",
+                        chronology = LauncherCardChronology(rankingScore = 5, updatedAtEpochMillis = 10L),
+                    ),
+                    card(
+                        id = "mail",
+                        chronology = LauncherCardChronology(rankingScore = 1, updatedAtEpochMillis = 20L),
+                    ),
                 ),
             )
 
@@ -88,16 +103,22 @@ class LauncherCardCollectionTest {
         val first =
             card(
                 id = "mail",
-                sourcePackageName = "com.riffle.mail.personal",
                 content = LauncherCardContent.Text(title = "Personal mail"),
-                supportedActions = setOf(LauncherCardAction.OPEN),
+                presentation =
+                    CardPresentation(
+                        sourcePackageName = "com.riffle.mail.personal",
+                        supportedActions = setOf(LauncherCardAction.OPEN),
+                    ),
             )
         val second =
             card(
                 id = "mail",
-                sourcePackageName = "com.riffle.mail.work",
                 content = LauncherCardContent.Text(title = "Work mail"),
-                supportedActions = setOf(LauncherCardAction.DISMISS),
+                presentation =
+                    CardPresentation(
+                        sourcePackageName = "com.riffle.mail.work",
+                        supportedActions = setOf(LauncherCardAction.DISMISS),
+                    ),
             )
         val forward = planner.plan(listOf(first, second))
         val reversed = planner.plan(listOf(second, first))
@@ -141,7 +162,13 @@ class LauncherCardCollectionTest {
 
     @Test
     fun capsHighVolumeCollectionsAndReportsOmittedCards() {
-        val collection = planner.plan((1..3).map { index -> card(id = "card-$index", score = index) }, maxCards = 2)
+        val collection =
+            planner.plan(
+                (1..3).map { index ->
+                    card(id = "card-$index", chronology = LauncherCardChronology(rankingScore = index))
+                },
+                maxCards = 2,
+            )
 
         assertEquals(listOf("card-3", "card-2"), collection.cards.map { card -> card.id.value })
         assertEquals(1, collection.omittedCardCount)
@@ -157,26 +184,32 @@ class LauncherCardCollectionTest {
 
     private fun card(
         id: String,
-        score: Int = 0,
-        updatedAt: Long = 0L,
+        chronology: LauncherCardChronology = LauncherCardChronology(),
         state: LauncherCardState = LauncherCardState.READY,
         privacy: LauncherCardPrivacy = LauncherCardPrivacy.VISIBLE,
         content: LauncherCardContent? = null,
         userIntent: LauncherCardUserIntent = LauncherCardUserIntent(),
-        sourcePackageName: String = "com.riffle.$id",
-        supportedActions: Set<LauncherCardAction> = emptySet(),
+        presentation: CardPresentation = CardPresentation(),
     ): LauncherCard {
         return LauncherCard(
             id = LauncherCardId(id),
-            sourceRef = LauncherCardSourceRef.App(appIdentity(packageName = sourcePackageName)),
+            sourceRef =
+                LauncherCardSourceRef.App(
+                    appIdentity(packageName = presentation.sourcePackageName ?: "com.riffle.$id"),
+                ),
             state = state,
             privacy = privacy,
-            chronology = LauncherCardChronology(updatedAtEpochMillis = updatedAt, rankingScore = score),
+            chronology = chronology,
             content = content,
             userIntent = userIntent,
-            supportedActions = supportedActions,
+            supportedActions = presentation.supportedActions,
         )
     }
+
+    private data class CardPresentation(
+        val sourcePackageName: String? = null,
+        val supportedActions: Set<LauncherCardAction> = emptySet(),
+    )
 
     private fun appIdentity(packageName: String) =
         AppIdentity(
