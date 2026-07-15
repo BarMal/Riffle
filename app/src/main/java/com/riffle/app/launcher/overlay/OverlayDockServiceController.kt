@@ -8,16 +8,26 @@ import com.riffle.core.domain.launcher.settings.LauncherSettings
 class AndroidOverlayDockServiceController(
     private val context: Context,
 ) {
+    private var serviceShouldBeRunning: Boolean? = null
+
     fun sync(
         settings: LauncherSettings,
         permissionStatus: OverlayDockPermissionStatus,
     ) {
-        when (overlayDockServiceCommand(settings, permissionStatus)) {
-            OverlayDockServiceCommand.START ->
-                context.startService(Intent(context, OverlayDockService::class.java))
+        val command = overlayDockServiceCommand(settings, permissionStatus)
+        val shouldBeRunning = command == OverlayDockServiceCommand.START
+        if (serviceShouldBeRunning == shouldBeRunning) return
 
-            OverlayDockServiceCommand.STOP ->
-                context.stopService(Intent(context, OverlayDockService::class.java))
+        val synchronized =
+            when (command) {
+                OverlayDockServiceCommand.START ->
+                    runCatching { context.startService(Intent(context, OverlayDockService::class.java)) }.isSuccess
+
+                OverlayDockServiceCommand.STOP ->
+                    runCatching { context.stopService(Intent(context, OverlayDockService::class.java)) }.isSuccess
+            }
+        if (synchronized) {
+            serviceShouldBeRunning = shouldBeRunning
         }
     }
 }
@@ -32,7 +42,7 @@ internal fun overlayDockServiceCommand(
     permissionStatus: OverlayDockPermissionStatus,
 ): OverlayDockServiceCommand =
     when {
-        settings.overlayDock.enabled && permissionStatus != OverlayDockPermissionStatus.NOT_GRANTED ->
+        settings.overlayDock.enabled && permissionStatus == OverlayDockPermissionStatus.GRANTED ->
             OverlayDockServiceCommand.START
 
         else -> OverlayDockServiceCommand.STOP

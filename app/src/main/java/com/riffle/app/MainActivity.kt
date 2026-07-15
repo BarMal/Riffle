@@ -48,6 +48,7 @@ import com.riffle.app.launcher.startSystemUiSync
 import com.riffle.app.launcher.startWallpaperOffsetSync
 import com.riffle.app.launcher.widgets.WidgetBindPermissionResult
 import com.riffle.app.launcher.widgets.WidgetConfigurationResult
+import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -99,6 +100,7 @@ class MainActivity : ComponentActivity() {
     private val notificationAccessGateway get() = dependencies.notificationAccessGateway
     private val overlayDockPermissionGateway get() = dependencies.overlayDockPermissionGateway
     private val overlayDockServiceController get() = dependencies.overlayDockServiceController
+    private val activeNotificationRepository get() = dependencies.activeNotificationRepository
     private val homeLayoutDeviceClassObserver get() = dependencies.homeLayoutDeviceClassObserver
     private val activeNotificationRefreshCoordinator by lazy {
         dependencies.activeNotificationRefreshCoordinator(
@@ -248,9 +250,19 @@ class MainActivity : ComponentActivity() {
                                 }
                             },
                             requestOverlayDockPermission = {
-                                requestOverlayDockPermission.launch(
-                                    overlayDockPermissionGateway.createOverlayPermissionSettingsIntent(),
-                                )
+                                val launched =
+                                    runCatching {
+                                        requestOverlayDockPermission.launch(
+                                            overlayDockPermissionGateway.createOverlayPermissionSettingsIntent(),
+                                        )
+                                    }.isSuccess
+                                if (!launched) {
+                                    Toast.makeText(
+                                        this,
+                                        "Overlay permission settings are unavailable on this device.",
+                                        Toast.LENGTH_SHORT,
+                                    ).show()
+                                }
                             },
                             changeWallpaper = {
                                 when (wallpaperPickerGateway.launchWallpaperPicker()) {
@@ -374,6 +386,11 @@ class MainActivity : ComponentActivity() {
         refreshPlatformStatuses()
     }
 
+    override fun onDestroy() {
+        activeNotificationRefreshCoordinator.stop()
+        super.onDestroy()
+    }
+
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
@@ -389,11 +406,20 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun refreshPlatformStatuses() {
+        val notificationAccessStatus = notificationAccessGateway.getNotificationAccessStatus()
+        val notificationAccessWasRevoked =
+            shellViewModel.state.value.notificationAccessStatus == NotificationAccessStatus.REVOKED
         shellViewModel.onHomeRoleStatusChanged(
             homeRoleStatus = homeRoleGateway.getHomeRoleStatus(),
-            notificationAccessStatus = notificationAccessGateway.getNotificationAccessStatus(),
+            notificationAccessStatus = notificationAccessStatus,
             overlayDockPermissionStatus = overlayDockPermissionGateway.getOverlayDockPermissionStatus(),
         )
+        if (
+            notificationAccessStatus == NotificationAccessStatus.REVOKED &&
+                !notificationAccessWasRevoked
+        ) {
+            activeNotificationRepository.saveActiveNotifications(emptyList())
+        }
         syncOverlayDockService()
     }
 

@@ -12,10 +12,12 @@ import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 class AndroidNotificationAccessGateway(
     private val context: Context,
 ) {
+    private var lastKnownStatus: NotificationAccessStatus = NotificationAccessStatus.UNKNOWN
+
     fun getNotificationAccessStatus(): NotificationAccessStatus =
         notificationAccessStatus(
             appPackageName = context.packageName,
-            enabledListenerPackages =
+            enabledListenerPackageReads =
                 enabledNotificationListenerPackages(
                     notificationManagerPackages = {
                         NotificationManagerCompat.getEnabledListenerPackages(context)
@@ -25,7 +27,10 @@ class AndroidNotificationAccessGateway(
                     },
                 ),
             isListenerConnected = RiffleNotificationListenerConnection.isConnected(),
-        )
+            previousStatus = lastKnownStatus,
+        ).also { status ->
+            lastKnownStatus = status
+        }
 
     fun createNotificationListenerSettingsIntents(): List<Intent> =
         notificationListenerSettingsIntentData(
@@ -48,24 +53,38 @@ internal fun enabledNotificationListenerPackages(enabledListeners: String?): Set
  * notification-listener settings change is propagating; the other source is still a valid signal.
  * A failed read never grants access on its own.
  */
+internal data class EnabledNotificationListenerPackageReads(
+    val packages: Set<String>,
+    val hasSuccessfulRead: Boolean,
+)
+
 internal fun enabledNotificationListenerPackages(
     notificationManagerPackages: () -> Set<String>,
     secureSetting: () -> String?,
-): Set<String> =
-    runCatching(notificationManagerPackages).getOrDefault(emptySet()) +
-        runCatching(secureSetting)
-            .getOrNull()
-            .let(::enabledNotificationListenerPackages)
+): EnabledNotificationListenerPackageReads {
+    val notificationManagerResult = runCatching(notificationManagerPackages)
+    val secureSettingResult = runCatching(secureSetting)
+    return EnabledNotificationListenerPackageReads(
+        packages =
+            notificationManagerResult.getOrDefault(emptySet()) +
+                secureSettingResult.getOrNull().let(::enabledNotificationListenerPackages),
+        hasSuccessfulRead = notificationManagerResult.isSuccess || secureSettingResult.isSuccess,
+    )
+}
 
 internal fun notificationAccessStatus(
     appPackageName: String,
-    enabledListenerPackages: Set<String>,
+    enabledListenerPackageReads: EnabledNotificationListenerPackageReads,
     isListenerConnected: Boolean,
+    previousStatus: NotificationAccessStatus = NotificationAccessStatus.UNKNOWN,
 ): NotificationAccessStatus =
     when {
         isListenerConnected -> NotificationAccessStatus.GRANTED
-        enabledListenerPackages.any(systemPermissionPackageCandidates(appPackageName)::contains) ->
+        enabledListenerPackageReads.packages.any(systemPermissionPackageCandidates(appPackageName)::contains) ->
             NotificationAccessStatus.GRANTED
+        !enabledListenerPackageReads.hasSuccessfulRead -> NotificationAccessStatus.UNKNOWN
+        previousStatus == NotificationAccessStatus.GRANTED || previousStatus == NotificationAccessStatus.REVOKED ->
+            NotificationAccessStatus.REVOKED
         else -> NotificationAccessStatus.NOT_GRANTED
     }
 

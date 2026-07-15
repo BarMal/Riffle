@@ -73,7 +73,7 @@ class AndroidNotificationAccessGatewayTest {
             NotificationAccessStatus.GRANTED,
             notificationAccessStatus(
                 appPackageName = "com.riffle",
-                enabledListenerPackages = setOf("com.riffle"),
+                enabledListenerPackageReads = successfulPackageRead("com.riffle"),
                 isListenerConnected = false,
             ),
         )
@@ -85,7 +85,7 @@ class AndroidNotificationAccessGatewayTest {
             NotificationAccessStatus.GRANTED,
             notificationAccessStatus(
                 appPackageName = "com.riffle.debug",
-                enabledListenerPackages = setOf("com.riffle"),
+                enabledListenerPackageReads = successfulPackageRead("com.riffle"),
                 isListenerConnected = false,
             ),
         )
@@ -97,7 +97,7 @@ class AndroidNotificationAccessGatewayTest {
             NotificationAccessStatus.NOT_GRANTED,
             notificationAccessStatus(
                 appPackageName = "com.riffle",
-                enabledListenerPackages = setOf("com.riffle.debug"),
+                enabledListenerPackageReads = successfulPackageRead("com.riffle.debug"),
                 isListenerConnected = false,
             ),
         )
@@ -109,7 +109,7 @@ class AndroidNotificationAccessGatewayTest {
             NotificationAccessStatus.NOT_GRANTED,
             notificationAccessStatus(
                 appPackageName = "com.riffle",
-                enabledListenerPackages = setOf("com.other"),
+                enabledListenerPackageReads = successfulPackageRead("com.other"),
                 isListenerConnected = false,
             ),
         )
@@ -121,7 +121,7 @@ class AndroidNotificationAccessGatewayTest {
             NotificationAccessStatus.GRANTED,
             notificationAccessStatus(
                 appPackageName = "com.riffle",
-                enabledListenerPackages = emptySet(),
+                enabledListenerPackageReads = successfulPackageRead(),
                 isListenerConnected = true,
             ),
         )
@@ -133,7 +133,7 @@ class AndroidNotificationAccessGatewayTest {
             NotificationAccessStatus.GRANTED,
             notificationAccessStatus(
                 appPackageName = "com.riffle",
-                enabledListenerPackages = setOf("com.other"),
+                enabledListenerPackageReads = successfulPackageRead("com.other"),
                 isListenerConnected = true,
             ),
         )
@@ -153,7 +153,10 @@ class AndroidNotificationAccessGatewayTest {
     @Test
     fun retainsSecureSettingsFallbackWhenNotificationManagerReadFails() {
         assertEquals(
-            setOf("com.riffle.app"),
+            EnabledNotificationListenerPackageReads(
+                packages = setOf("com.riffle.app"),
+                hasSuccessfulRead = true,
+            ),
             enabledNotificationListenerPackages(
                 notificationManagerPackages = { error("temporary platform failure") },
                 secureSetting = { "com.riffle.app/.launcher.notifications.RiffleNotificationListenerService" },
@@ -164,11 +167,44 @@ class AndroidNotificationAccessGatewayTest {
     @Test
     fun retainsNotificationManagerFallbackWhenSecureSettingsReadFails() {
         assertEquals(
-            setOf("com.riffle.app"),
+            EnabledNotificationListenerPackageReads(
+                packages = setOf("com.riffle.app"),
+                hasSuccessfulRead = true,
+            ),
             enabledNotificationListenerPackages(
                 notificationManagerPackages = { setOf("com.riffle.app") },
                 secureSetting = { error("temporary platform failure") },
             ),
         )
     }
+
+    @Test
+    fun reportsUnknownWhenEveryPlatformSourceFails() {
+        assertEquals(
+            NotificationAccessStatus.UNKNOWN,
+            notificationAccessStatus(
+                appPackageName = "com.riffle",
+                enabledListenerPackageReads =
+                    EnabledNotificationListenerPackageReads(emptySet(), hasSuccessfulRead = false),
+                isListenerConnected = false,
+                previousStatus = NotificationAccessStatus.GRANTED,
+            ),
+        )
+    }
+
+    @Test
+    fun reportsRevokedOnlyAfterAConfirmedGrantAndReliableAbsentRead() {
+        assertEquals(
+            NotificationAccessStatus.REVOKED,
+            notificationAccessStatus(
+                appPackageName = "com.riffle",
+                enabledListenerPackageReads = successfulPackageRead(),
+                isListenerConnected = false,
+                previousStatus = NotificationAccessStatus.GRANTED,
+            ),
+        )
+    }
+
+    private fun successfulPackageRead(vararg packages: String) =
+        EnabledNotificationListenerPackageReads(packages.toSet(), hasSuccessfulRead = true)
 }

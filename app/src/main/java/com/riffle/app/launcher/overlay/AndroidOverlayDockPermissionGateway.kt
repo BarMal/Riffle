@@ -10,7 +10,7 @@ class AndroidOverlayDockPermissionGateway(
     private val context: Context,
 ) {
     fun getOverlayDockPermissionStatus(): OverlayDockPermissionStatus =
-        overlayDockPermissionStatus(canDrawOverlays = Settings.canDrawOverlays(context))
+        overlayDockPermissionStatus { Settings.canDrawOverlays(context) }
 
     fun createOverlayPermissionSettingsIntent(): Intent =
         Intent(
@@ -24,3 +24,12 @@ internal fun overlayDockPermissionStatus(canDrawOverlays: Boolean): OverlayDockP
         canDrawOverlays -> OverlayDockPermissionStatus.GRANTED
         else -> OverlayDockPermissionStatus.NOT_GRANTED
     }
+
+internal fun overlayDockPermissionStatus(
+    canDrawOverlays: () -> Boolean,
+): OverlayDockPermissionStatus =
+    runCatching(canDrawOverlays)
+        .fold(
+            onSuccess = ::overlayDockPermissionStatus,
+            onFailure = { OverlayDockPermissionStatus.UNKNOWN },
+        )
