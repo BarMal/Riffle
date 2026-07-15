@@ -21,8 +21,10 @@ data class LauncherCardCollection(
 /**
  * Applies a stable diff policy to source snapshots before they reach overview, chapter, or dock UI.
  *
- * Duplicate IDs resolve to the newest source update, then its ranking score and source state. Cards
- * marked removed are omitted, while other unavailable states remain renderable for recovery copy.
+ * Duplicate IDs resolve to the newest source update, then its ranking score and source state. Tied
+ * but divergent snapshots are rejected instead of allowing input order to churn a card's content.
+ * Removed and hidden cards are omitted, while other unavailable states remain renderable for
+ * recovery copy.
  */
 class LauncherCardCollectionPlanner {
     fun plan(
@@ -35,8 +37,10 @@ class LauncherCardCollectionPlanner {
             cards
                 .groupBy(LauncherCard::id)
                 .values
-                .map { duplicates -> duplicates.maxWithOrNull(duplicateResolutionOrder)!! }
-                .filterNot { card -> card.state == LauncherCardState.REMOVED }
+                .map(::resolveDuplicate)
+                .filterNot { card ->
+                    card.state == LauncherCardState.REMOVED || card.privacy == LauncherCardPrivacy.HIDDEN
+                }
                 .sortedWith(displayOrder)
 
         return LauncherCardCollection(
@@ -46,6 +50,15 @@ class LauncherCardCollectionPlanner {
     }
 
     private companion object {
+        fun resolveDuplicate(duplicates: List<LauncherCard>): LauncherCard {
+            val resolved = duplicates.maxWithOrNull(duplicateResolutionOrder)!!
+            val tiedSnapshots = duplicates.filter { card -> duplicateResolutionOrder.compare(card, resolved) == 0 }
+            require(tiedSnapshots.distinct().size == 1) {
+                "Duplicate card snapshots must have a deterministic resolution."
+            }
+            return resolved
+        }
+
         val duplicateResolutionOrder: Comparator<LauncherCard> =
             compareBy<LauncherCard> { card -> card.chronology.updatedAtEpochMillis }
                 .thenBy { card -> card.chronology.rankingScore }

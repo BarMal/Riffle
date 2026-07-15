@@ -53,6 +53,15 @@ class LauncherCardCollectionTest {
     }
 
     @Test
+    fun rejectsAmbiguousDuplicateSnapshotsInEitherInputOrder() {
+        val first = card(id = "mail", content = LauncherCardContent.Text(title = "First"))
+        val second = card(id = "mail", content = LauncherCardContent.Text(title = "Second"))
+
+        assertFailsWith<IllegalArgumentException> { planner.plan(listOf(first, second)) }
+        assertFailsWith<IllegalArgumentException> { planner.plan(listOf(second, first)) }
+    }
+
+    @Test
     fun filtersRemovedCardsWithoutHidingRecoverableUnavailableCards() {
         val collection =
             planner.plan(
@@ -63,6 +72,24 @@ class LauncherCardCollectionTest {
             )
 
         assertEquals(listOf("unavailable"), collection.cards.map { card -> card.id.value })
+    }
+
+    @Test
+    fun filtersHiddenCardsAndTheirSourceContentBeforePresentation() {
+        val collection =
+            planner.plan(
+                listOf(
+                    card(
+                        id = "hidden",
+                        privacy = LauncherCardPrivacy.HIDDEN,
+                        content = LauncherCardContent.Text(title = "Private title", body = "Private body"),
+                    ),
+                    card(id = "visible", content = LauncherCardContent.Text(title = "Visible title")),
+                ),
+            )
+
+        assertEquals(listOf("visible"), collection.cards.map { card -> card.id.value })
+        assertEquals(0, collection.omittedCardCount)
     }
 
     @Test
@@ -86,12 +113,16 @@ class LauncherCardCollectionTest {
         score: Int = 0,
         updatedAt: Long = 0L,
         state: LauncherCardState = LauncherCardState.READY,
+        privacy: LauncherCardPrivacy = LauncherCardPrivacy.VISIBLE,
+        content: LauncherCardContent? = null,
     ): LauncherCard {
         return LauncherCard(
             id = LauncherCardId(id),
             sourceRef = LauncherCardSourceRef.App(appIdentity(packageName = "com.riffle.$id")),
             state = state,
+            privacy = privacy,
             chronology = LauncherCardChronology(updatedAtEpochMillis = updatedAt, rankingScore = score),
+            content = content,
         )
     }
 
