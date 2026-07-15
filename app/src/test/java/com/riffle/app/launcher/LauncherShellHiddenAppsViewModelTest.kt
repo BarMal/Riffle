@@ -188,7 +188,6 @@ class LauncherShellHiddenAppsViewModelTest {
             refreshJob = viewModel.onAppActionSelected(LauncherShellAction.HideApp(phone.identity)),
             dispatcher = dispatcher,
         )
-        viewModel.onDockEdited(LauncherShellAction.AddAppToDock(camera))
 
         val shortcut = viewModel.state.value.homeLayout.dock.items.single() as AppShortcutItem
         assertEquals(phone.identity, shortcut.appIdentity)
@@ -259,7 +258,6 @@ class LauncherShellHiddenAppsViewModelTest {
 
         installedAppRepository.apps = listOf(camera)
         runBlocking { viewModel.refreshInstalledApps().join() }
-        viewModel.onDockEdited(LauncherShellAction.AddAppToDock(camera))
 
         val shortcut = viewModel.state.value.homeLayout.dock.items.single() as AppShortcutItem
         assertEquals(phone.identity, shortcut.appIdentity)
