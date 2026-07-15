@@ -2,12 +2,11 @@ package com.riffle.app.launcher
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -18,6 +17,9 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.apps.InstalledApp
+import com.riffle.core.domain.launcher.cards.CardStackAnimationProfile
+import com.riffle.core.domain.launcher.cards.CardStackLayoutEntry
+import com.riffle.core.domain.launcher.cards.CardStackLayoutPolicy
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroupKey
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
@@ -28,6 +30,7 @@ internal fun GeneratedNotificationCardsPage(
     notificationAccessStatus: NotificationAccessStatus,
     apps: List<InstalledApp>,
     onAction: (LauncherShellAction) -> Unit,
+    reducedMotion: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val state = generatedNotificationCardsPageState(groups, notificationAccessStatus, apps)
@@ -37,16 +40,24 @@ internal fun GeneratedNotificationCardsPage(
     ) {
         when (state) {
             is GeneratedNotificationCardsPageState.Content ->
-                LazyColumn(
+                Column(
                     modifier = Modifier.fillMaxSize().semantics { contentDescription = "Notification cards page" },
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    item { GeneratedCardsHeading() }
-                    items(
-                        state.cards,
-                        key = { card -> generatedNotificationCardKey(card.group) },
-                    ) { card ->
-                        GeneratedNotificationCard(card, onAction)
+                    GeneratedCardsHeading()
+                    Box(modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp, vertical = 8.dp)) {
+                        CardStack(
+                            entries = generatedNotificationCardStackEntries(state.cards),
+                            modifier = Modifier.fillMaxSize(),
+                            animationProfile = CardStackAnimationProfile.CARD_FLIGHT,
+                            reducedMotion = reducedMotion,
+                            itemKey = { entry -> generatedNotificationCardKey(state.cards[entry.cardIndex].group) },
+                        ) { entry ->
+                            GeneratedNotificationCard(
+                                card = state.cards[entry.cardIndex],
+                                onAction = onAction,
+                                modifier = Modifier.fillMaxSize(),
+                            )
+                        }
                     }
                 }
 
@@ -79,14 +90,14 @@ private fun GeneratedCardsHeading() {
 private fun GeneratedNotificationCard(
     card: DockNotificationCardState,
     onAction: (LauncherShellAction) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val label = dockNotificationCardLabel(card)
     val identity = card.app?.identity
     Surface(
         modifier =
             Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp)
+                .then(modifier)
                 .semantics {
                     contentDescription = generatedNotificationCardContentDescription(card)
                 }
@@ -160,6 +171,15 @@ internal fun generatedNotificationCardContentDescription(card: DockNotificationC
     dockNotificationCardContentDescription(
         card = card,
         label = dockNotificationCardLabel(card),
+    )
+
+internal fun generatedNotificationCardStackEntries(
+    cards: List<DockNotificationCardState>,
+    focusedCardIndex: Int = 0,
+): List<CardStackLayoutEntry> =
+    CardStackLayoutPolicy().entries(
+        cardCount = cards.size,
+        activeIndex = focusedCardIndex,
     )
 
 internal fun generatedNotificationCardLaunchAction(card: DockNotificationCardState): LauncherShellAction.LaunchApp? =

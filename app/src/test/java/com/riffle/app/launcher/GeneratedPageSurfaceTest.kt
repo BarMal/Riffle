@@ -89,6 +89,20 @@ class GeneratedPageSurfaceTest {
         assertTrue(generatedNotificationCardContentDescription(card).contains("Tap to open"))
     }
 
+    @Test
+    fun generatedCardsUseFocusedStackEntries() {
+        val cards =
+            listOf(
+                DockNotificationCardState(null, notificationGroup("com.example.first", "personal")),
+                DockNotificationCardState(null, notificationGroup("com.example.second", "personal")),
+            )
+
+        val entries = generatedNotificationCardStackEntries(cards, focusedCardIndex = 1)
+
+        assertEquals(2, entries.size)
+        assertEquals(1, entries.maxBy { entry -> entry.order }.cardIndex)
+    }
+
     private fun notificationGroup(
         packageName: String,
         profileId: String,

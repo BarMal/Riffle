@@ -76,6 +76,28 @@ class LauncherHomePageEditReducerTest {
     }
 
     @Test
+    fun categoryRefreshClearsGeneratedShortcutsWhenCategoriesBecomeUnavailable() {
+        val repository = FakeHomeLayoutRepository(HomeLayoutDefaults.standard())
+        val reducer = LauncherHomePageEditReducer(homeLayoutRepository = repository)
+        val categorizedApp = app(label = "Camera", category = "Image")
+        val categorizedState = launcherState(repository.savedLayoutSet).copy(installedApps = listOf(categorizedApp))
+        val generatedState =
+            reducer.reduce(
+                categorizedState,
+                LauncherShellAction.SelectSelectedHomePageType(
+                    LauncherPageType.Generated(GeneratedLauncherPageKind.CATEGORY),
+                ),
+            )
+
+        val refreshed =
+            generatedState.copy(installedApps = emptyList()).withRefreshedGeneratedPages(repository)
+
+        assertEquals(emptyList<Any>(), refreshed.homeLayout.selectedPage.items)
+        assertEquals(0, refreshed.homeLayout.selectedPage.generatedContentOverflowCount)
+        assertEquals(refreshed.homeLayout, repository.savedLayoutSet?.activeLayout)
+    }
+
+    @Test
     fun persistsReorderedPageOverviewLayout() {
         val repository = FakeHomeLayoutRepository(HomeLayoutDefaults.standard())
         val reducer = LauncherHomePageEditReducer(homeLayoutRepository = repository)

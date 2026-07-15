@@ -225,6 +225,7 @@ internal fun ImmediateWorkspacePager(
                         notificationAccessStatus = presentation.generatedPage.notificationAccessStatus,
                         apps = presentation.generatedPage.installedApps,
                         onAction = presentation.generatedPage.onAction,
+                        reducedMotion = presentation.reducedMotion,
                         modifier = pageModifier,
                     )
                 } else {

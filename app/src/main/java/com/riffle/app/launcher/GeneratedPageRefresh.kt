@@ -2,6 +2,7 @@ package com.riffle.app.launcher
 
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.home.GeneratedLauncherPageContentPlanApplier
+import com.riffle.core.domain.launcher.home.GeneratedLauncherPageContentPlanApplyRejectionReason
 import com.riffle.core.domain.launcher.home.GeneratedLauncherPageContentPlanApplyResult
 import com.riffle.core.domain.launcher.home.GeneratedLauncherPageContentPlanner
 import com.riffle.core.domain.launcher.home.GeneratedLauncherPageKind
@@ -29,7 +30,13 @@ internal fun LauncherShellState.withRefreshedGeneratedPages(homeLayoutRepository
                         )
                     when (result) {
                         is GeneratedLauncherPageContentPlanApplyResult.Applied -> result.page
-                        is GeneratedLauncherPageContentPlanApplyResult.Rejected -> page
+                        is GeneratedLauncherPageContentPlanApplyResult.Rejected ->
+                            when (result.reason) {
+                                GeneratedLauncherPageContentPlanApplyRejectionReason.UNAVAILABLE_PLAN ->
+                                    page.copy(items = emptyList(), generatedContentOverflowCount = 0)
+
+                                else -> page
+                            }
                     }
                 },
         )
