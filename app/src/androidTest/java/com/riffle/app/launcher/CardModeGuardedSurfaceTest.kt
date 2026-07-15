@@ -76,7 +76,7 @@ class CardModeGuardedSurfaceTest {
         composeRule.onNodeWithText("View card").performClick()
 
         composeRule.onNodeWithText("All apps").assertExists()
-        composeRule.onNodeWithText("Welcome").assertExists()
+        composeRule.onNodeWithText("Your first card is ready").assertExists()
     }
 
     private fun cardsState(
