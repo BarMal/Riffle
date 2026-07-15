@@ -55,14 +55,29 @@ class LauncherCardCollectionTest {
 
     @Test
     fun projectsAmbiguousDuplicateSnapshotsStablyInEitherInputOrder() {
-        val first = card(id = "mail", content = LauncherCardContent.Text(title = "First"))
-        val second = card(id = "mail", content = LauncherCardContent.Text(title = "Second"))
+        val intent = LauncherCardUserIntent(isPinned = true, isFavourite = true)
+        val first = card(id = "mail", content = LauncherCardContent.Text(title = "First"), userIntent = intent)
+        val second = card(id = "mail", content = LauncherCardContent.Text(title = "Second"), userIntent = intent)
         val forward = planner.plan(listOf(first, second))
         val reversed = planner.plan(listOf(second, first))
 
         assertEquals(forward, reversed)
         assertEquals(LauncherCardState.STALE, forward.cards.single().state)
         assertNull(forward.cards.single().content)
+        assertEquals(intent, forward.cards.single().userIntent)
+    }
+
+    @Test
+    fun rejectsAmbiguousDuplicatesWithConflictingUserIntent() {
+        val first = card(id = "mail", content = LauncherCardContent.Text(title = "First"))
+        val second =
+            card(
+                id = "mail",
+                content = LauncherCardContent.Text(title = "Second"),
+                userIntent = LauncherCardUserIntent(isPinned = true),
+            )
+
+        assertFailsWith<IllegalArgumentException> { planner.plan(listOf(first, second)) }
     }
 
     @Test
@@ -119,6 +134,7 @@ class LauncherCardCollectionTest {
         state: LauncherCardState = LauncherCardState.READY,
         privacy: LauncherCardPrivacy = LauncherCardPrivacy.VISIBLE,
         content: LauncherCardContent? = null,
+        userIntent: LauncherCardUserIntent = LauncherCardUserIntent(),
     ): LauncherCard {
         return LauncherCard(
             id = LauncherCardId(id),
@@ -127,6 +143,7 @@ class LauncherCardCollectionTest {
             privacy = privacy,
             chronology = LauncherCardChronology(updatedAtEpochMillis = updatedAt, rankingScore = score),
             content = content,
+            userIntent = userIntent,
         )
     }
 

@@ -56,6 +56,11 @@ class LauncherCardCollectionPlanner {
             val tiedSnapshots = duplicates.filter { card -> duplicateResolutionOrder.compare(card, resolved) == 0 }
             if (tiedSnapshots.distinct().size == 1) return resolved
 
+            val userIntents = tiedSnapshots.map(LauncherCard::userIntent).distinct()
+            require(userIntents.size == 1) {
+                "Duplicate card snapshots must agree on user-owned intent."
+            }
+
             return resolved.copy(
                 size = LauncherCardSize(),
                 content = null,
@@ -63,7 +68,7 @@ class LauncherCardCollectionPlanner {
                 privacy = tiedSnapshots.maxBy { card -> card.privacy.restrictionRank }.privacy,
                 dismissibility = LauncherCardDismissibility.NOT_DISMISSIBLE,
                 supportedActions = emptySet(),
-                userIntent = LauncherCardUserIntent(),
+                userIntent = userIntents.single(),
             )
         }
 
