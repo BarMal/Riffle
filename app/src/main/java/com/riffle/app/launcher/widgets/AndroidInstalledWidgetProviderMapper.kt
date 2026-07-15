@@ -1,9 +1,7 @@
 package com.riffle.app.launcher.widgets
 
 import android.appwidget.AppWidgetProviderInfo
-import com.riffle.app.launcher.apps.toAppProfile
 import com.riffle.core.domain.launcher.apps.AppPackageName
-import com.riffle.core.domain.launcher.apps.AppProfile
 import com.riffle.core.domain.launcher.widgets.InstalledWidgetProvider
 import com.riffle.core.domain.launcher.widgets.WidgetProviderClassName
 import com.riffle.core.domain.launcher.widgets.WidgetProviderDimensions
@@ -23,7 +21,7 @@ class AndroidInstalledWidgetProviderMapper {
                 WidgetProviderIdentity(
                     packageName = AppPackageName(provider.packageName),
                     className = WidgetProviderClassName(provider.className),
-                    profile = provider.profile?.toAppProfile() ?: AppProfile.personal(),
+                    profile = provider.profile,
                 ),
             label = provider.label.ifBlank { provider.packageName },
             description = provider.description?.takeIf(String::isNotBlank),

@@ -2,6 +2,7 @@ package com.riffle.app.launcher.widgets
 
 import android.appwidget.AppWidgetProviderInfo
 import com.riffle.core.domain.launcher.apps.AppPackageName
+import com.riffle.core.domain.launcher.apps.AppProfile
 import com.riffle.core.domain.launcher.widgets.WidgetProviderClassName
 import com.riffle.core.domain.launcher.widgets.WidgetProviderDimensions
 import com.riffle.core.domain.launcher.widgets.WidgetProviderIdentity
@@ -19,7 +20,7 @@ class AndroidInstalledWidgetProviderMapperTest {
             AndroidWidgetProvider(
                 packageName = "com.example.weather",
                 className = ".WeatherWidget",
-                profile = null,
+                profile = AppProfile.personal(),
                 label = "Weather",
                 description = "Forecast",
                 minWidthPx = 1350,
@@ -73,7 +74,7 @@ class AndroidInstalledWidgetProviderMapperTest {
             AndroidWidgetProvider(
                 packageName = "com.example.notes",
                 className = ".NotesWidget",
-                profile = null,
+                profile = AppProfile.personal(),
                 label = "",
                 description = "",
                 minWidthPx = 100,
@@ -101,7 +102,7 @@ class AndroidInstalledWidgetProviderMapperTest {
             AndroidWidgetProvider(
                 packageName = "com.example.clock",
                 className = ".ClockWidget",
-                profile = null,
+                profile = AppProfile.personal(),
                 label = "Clock",
                 description = null,
                 minWidthPx = 401,
@@ -128,7 +129,7 @@ class AndroidInstalledWidgetProviderMapperTest {
             AndroidWidgetProvider(
                 packageName = "com.example.broken",
                 className = ".BrokenWidget",
-                profile = null,
+                profile = AppProfile.personal(),
                 label = "Broken",
                 description = null,
                 minWidthPx = 0,
@@ -153,5 +154,76 @@ class AndroidInstalledWidgetProviderMapperTest {
         assertEquals(null, dimensions.maxResizeHeightDp)
         assertEquals(null, dimensions.targetCellWidth)
         assertEquals(null, dimensions.targetCellHeight)
+    }
+
+    @Test
+    fun preAndroid12ProvidersOmitTargetMaximumAndReconfigurationMetadata() {
+        val provider =
+            AndroidWidgetProvider(
+                packageName = "com.example.legacy",
+                className = ".LegacyWidget",
+                profile = AppProfile.personal(),
+                label = "Legacy",
+                description = null,
+                minWidthPx = 360,
+                minHeightPx = 180,
+                minResizeWidthPx = 180,
+                minResizeHeightPx = 90,
+                targetCellWidth = null,
+                targetCellHeight = null,
+                resizeMode = AppWidgetProviderInfo.RESIZE_NONE,
+                widgetCategory = AppWidgetProviderInfo.WIDGET_CATEGORY_HOME_SCREEN,
+                supportsReconfiguration = false,
+            )
+
+        val mapped =
+            mapper.map(
+                provider,
+                density = 3f,
+            )
+
+        assertEquals(
+            WidgetProviderDimensions(
+                minWidthDp = 120,
+                minHeightDp = 60,
+                minResizeWidthDp = 60,
+                minResizeHeightDp = 30,
+            ),
+            mapped.dimensions,
+        )
+        assertFalse(mapped.supportsReconfiguration)
+    }
+
+    @Test
+    fun preservesPersonalWorkAndPrivateProfilesWhileNormalizingGeometry() {
+        val profiles = listOf(AppProfile.personal(), AppProfile.work(), AppProfile.private())
+
+        val mapped =
+            profiles.map { profile ->
+                mapper.map(
+                    AndroidWidgetProvider(
+                        packageName = "com.example.${profile.id.value}",
+                        className = ".Widget",
+                        profile = profile,
+                        label = "Widget",
+                        description = null,
+                        minWidthPx = 360,
+                        minHeightPx = 180,
+                        minResizeWidthPx = null,
+                        minResizeHeightPx = null,
+                        targetCellWidth = null,
+                        targetCellHeight = null,
+                        resizeMode = AppWidgetProviderInfo.RESIZE_NONE,
+                        widgetCategory = AppWidgetProviderInfo.WIDGET_CATEGORY_HOME_SCREEN,
+                    ),
+                    density = 3f,
+                )
+            }
+
+        assertEquals(profiles, mapped.map { provider -> provider.identity.profile })
+        assertEquals(
+            listOf(WidgetProviderDimensions(minWidthDp = 120, minHeightDp = 60)),
+            mapped.map { provider -> provider.dimensions }.distinct(),
+        )
     }
 }
