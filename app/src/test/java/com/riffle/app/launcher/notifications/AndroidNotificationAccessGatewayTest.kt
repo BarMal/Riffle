@@ -156,6 +156,7 @@ class AndroidNotificationAccessGatewayTest {
             EnabledNotificationListenerPackageReads(
                 packages = setOf("com.riffle.app"),
                 hasSuccessfulRead = true,
+                hasFailedRead = true,
             ),
             enabledNotificationListenerPackages(
                 notificationManagerPackages = { error("temporary platform failure") },
@@ -170,6 +171,7 @@ class AndroidNotificationAccessGatewayTest {
             EnabledNotificationListenerPackageReads(
                 packages = setOf("com.riffle.app"),
                 hasSuccessfulRead = true,
+                hasFailedRead = true,
             ),
             enabledNotificationListenerPackages(
                 notificationManagerPackages = { setOf("com.riffle.app") },
