@@ -110,19 +110,20 @@ class CardStackController {
         direction: CardStackNavigationDirection,
     ): CardStackFocusResult {
         val focusedIndex = cardIds.indexOf(state.focusedCardId)
-        val resolvedIndex = focusedIndex.takeIf { it >= 0 } ?: cardIds.indices.firstOrNull()
-        return if (resolvedIndex == null) {
-            apply(state, null)
-        } else {
-            val targetIndex = resolvedIndex + direction.indexDelta
-            if (targetIndex !in cardIds.indices) {
-                CardStackFocusResult.Applied(
-                    state = state.copy(focusedCardId = cardIds[resolvedIndex]),
-                    focusChanged = state.focusedCardId != cardIds[resolvedIndex],
-                    boundaryReached = true,
-                )
-            } else {
-                apply(state, cardIds[targetIndex])
+        return when {
+            cardIds.isEmpty() -> apply(state, null)
+            focusedIndex < 0 -> apply(state, cardIds.first())
+            else -> {
+                val targetIndex = focusedIndex + direction.indexDelta
+                if (targetIndex !in cardIds.indices) {
+                    CardStackFocusResult.Applied(
+                        state = state.copy(focusedCardId = cardIds[focusedIndex]),
+                        focusChanged = state.focusedCardId != cardIds[focusedIndex],
+                        boundaryReached = true,
+                    )
+                } else {
+                    apply(state, cardIds[targetIndex])
+                }
             }
         }
     }

@@ -76,6 +76,8 @@ class CardStackControllerTest {
 
     @Test
     fun reconciliationClearsFocusWhenNoPriorCardSurvives() {
+        val firstReplacement = LauncherCardId("replacement-one")
+        val secondReplacement = LauncherCardId("replacement-two")
         val focused =
             controller
                 .jumpTo(
@@ -90,10 +92,19 @@ class CardStackControllerTest {
                 .reconcile(
                     state = focused,
                     previousCardIds = listOf(a, b, c),
-                    cardIds = listOf(LauncherCardId("replacement-one"), LauncherCardId("replacement-two")),
+                    cardIds = listOf(firstReplacement, secondReplacement),
+                ).applied()
+        val firstNext =
+            controller
+                .navigate(
+                    state = replaced.state,
+                    cardIds = listOf(firstReplacement, secondReplacement),
+                    direction = CardStackNavigationDirection.NEXT,
                 ).applied()
 
         assertEquals(null, replaced.state.focusedCardId)
+        assertEquals(firstReplacement, firstNext.state.focusedCardId)
+        assertEquals(false, firstNext.boundaryReached)
     }
 
     @Test
