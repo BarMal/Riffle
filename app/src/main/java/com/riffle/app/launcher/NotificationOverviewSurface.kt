@@ -1,3 +1,5 @@
+@file:Suppress("TooManyFunctions")
+
 package com.riffle.app.launcher
 
 import androidx.compose.animation.AnimatedContent
@@ -123,6 +125,7 @@ fun NotificationOverviewSurface(
 }
 
 @Composable
+@Suppress("LongParameterList")
 private fun NotificationCardList(
     groups: List<AppNotificationGroup>,
     categoryCounts: Map<NotificationCategory, Int>,
