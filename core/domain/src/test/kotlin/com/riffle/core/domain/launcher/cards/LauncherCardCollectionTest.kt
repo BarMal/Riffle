@@ -99,10 +99,11 @@ class LauncherCardCollectionTest {
     }
 
     @Test
-    fun projectsConflictingDuplicateSourcesAsStaleWithoutPayloadOrActions() {
+    fun preservesOlderConflictingSourcePrivacyAndIntentInTheStaleFallback() {
         val first =
             card(
                 id = "mail",
+                chronology = LauncherCardChronology(updatedAtEpochMillis = 20L),
                 content = LauncherCardContent.Text(title = "Personal mail"),
                 presentation =
                     CardPresentation(
@@ -113,7 +114,10 @@ class LauncherCardCollectionTest {
         val second =
             card(
                 id = "mail",
+                chronology = LauncherCardChronology(updatedAtEpochMillis = 10L),
+                privacy = LauncherCardPrivacy.REDACTED,
                 content = LauncherCardContent.Text(title = "Work mail"),
+                userIntent = LauncherCardUserIntent(isPinned = true, isFavourite = true),
                 presentation =
                     CardPresentation(
                         sourcePackageName = "com.riffle.mail.work",
@@ -127,6 +131,28 @@ class LauncherCardCollectionTest {
         assertEquals(LauncherCardState.STALE, forward.cards.single().state)
         assertNull(forward.cards.single().content)
         assertEquals(emptySet(), forward.cards.single().supportedActions)
+        assertEquals(LauncherCardPrivacy.REDACTED, forward.cards.single().privacy)
+        assertEquals(LauncherCardUserIntent(isPinned = true, isFavourite = true), forward.cards.single().userIntent)
+    }
+
+    @Test
+    fun filtersConflictingSourcesWhenAnOlderSnapshotIsHidden() {
+        val latest =
+            card(
+                id = "mail",
+                chronology = LauncherCardChronology(updatedAtEpochMillis = 20L),
+                presentation = CardPresentation(sourcePackageName = "com.riffle.mail.personal"),
+            )
+        val olderHidden =
+            card(
+                id = "mail",
+                chronology = LauncherCardChronology(updatedAtEpochMillis = 10L),
+                privacy = LauncherCardPrivacy.HIDDEN,
+                userIntent = LauncherCardUserIntent(isPinned = true),
+                presentation = CardPresentation(sourcePackageName = "com.riffle.mail.work"),
+            )
+
+        assertEquals(emptyList(), planner.plan(listOf(latest, olderHidden)).cards)
     }
 
     @Test

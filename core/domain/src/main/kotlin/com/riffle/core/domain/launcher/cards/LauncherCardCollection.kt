@@ -56,15 +56,16 @@ class LauncherCardCollectionPlanner {
             val tiedSnapshots = duplicates.filter { card -> sourceSnapshotOrder.compare(card, resolved) == 0 }
             val hasConflictingSources = duplicates.map(LauncherCard::sourceRef).distinct().size > 1
             if (!hasConflictingSources && tiedSnapshots.distinct().size == 1) return resolved
+            val fallbackSnapshots = if (hasConflictingSources) duplicates else tiedSnapshots
 
             return resolved.copy(
                 size = LauncherCardSize(),
                 content = null,
                 state = LauncherCardState.STALE,
-                privacy = tiedSnapshots.maxBy { card -> card.privacy.restrictionRank }.privacy,
+                privacy = fallbackSnapshots.maxBy { card -> card.privacy.restrictionRank }.privacy,
                 dismissibility = LauncherCardDismissibility.NOT_DISMISSIBLE,
                 supportedActions = emptySet(),
-                userIntent = tiedSnapshots.map(LauncherCard::userIntent).mergeNonDestructively(),
+                userIntent = fallbackSnapshots.map(LauncherCard::userIntent).mergeNonDestructively(),
             )
         }
 
