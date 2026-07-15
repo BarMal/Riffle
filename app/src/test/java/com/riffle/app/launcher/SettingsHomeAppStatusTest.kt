@@ -23,7 +23,8 @@ class SettingsHomeAppStatusTest {
 
     @Test
     fun unresolvedHomeRoleAfterRequestDoesNotRepeatOnboarding() {
-        val viewModel = LauncherShellViewModel(firstRunRepository = FakeFirstRunRepository())
+        val repository = FakeFirstRunRepository()
+        val viewModel = LauncherShellViewModel(firstRunRepository = repository)
 
         viewModel.onDefaultHomeRequestStarted()
         viewModel.onHomeRoleStatusChanged(HomeRoleStatus.UNKNOWN)
@@ -31,11 +32,29 @@ class SettingsHomeAppStatusTest {
         assertEquals(FirstRunStatus.REQUESTING_HOME_ROLE, viewModel.state.value.firstRunStatus)
         assertFalse(viewModel.state.value.shouldShowDefaultHomePrompt)
         assertTrue(viewModel.state.value.shouldShowEmptyHome)
+        assertFalse(repository.isFirstRunComplete())
+    }
+
+    @Test
+    fun confirmedHomeOutcomeSurvivesColdStartWhenOemStatusIsUnknown() {
+        val repository = FakeFirstRunRepository()
+        LauncherShellViewModel(firstRunRepository = repository)
+            .onHomeRoleStatusChanged(HomeRoleStatus.DEFAULT_HOME)
+
+        val coldStartViewModel = LauncherShellViewModel(firstRunRepository = repository)
+        coldStartViewModel.onHomeRoleStatusChanged(HomeRoleStatus.UNKNOWN)
+
+        assertEquals(HomeRoleStatus.DEFAULT_HOME, coldStartViewModel.state.value.homeRoleStatus)
+        assertFalse(coldStartViewModel.state.value.shouldShowDefaultHomePrompt)
     }
 
     private class FakeFirstRunRepository : FirstRunRepository {
-        override fun isFirstRunComplete(): Boolean = false
+        private var isComplete = false
 
-        override fun setFirstRunComplete() = Unit
+        override fun isFirstRunComplete(): Boolean = isComplete
+
+        override fun setFirstRunComplete() {
+            isComplete = true
+        }
     }
 }

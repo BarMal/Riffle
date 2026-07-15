@@ -4,6 +4,7 @@ package com.riffle.app.launcher
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.riffle.core.domain.launcher.FirstRunStatus
 import com.riffle.core.domain.launcher.HomeRoleStatus
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.LauncherShellStateReducer
@@ -443,7 +444,9 @@ private fun createInitialState(
         launcherSettings = launcherSettingsRepository.loadLauncherSettings() ?: LauncherSettings(),
     ).let { initialState ->
         if (firstRunRepository.isFirstRunComplete()) {
-            reducer.firstRunCompleted(initialState)
+            reducer.firstRunCompleted(
+                initialState.copy(homeRoleStatus = HomeRoleStatus.DEFAULT_HOME),
+            )
         } else {
             initialState
         }
@@ -545,7 +548,7 @@ private fun persistCompletedFirstRun(
     state: LauncherShellState,
     firstRunRepository: FirstRunRepository,
 ) {
-    if (state.shouldShowEmptyHome) {
+    if (state.firstRunStatus == FirstRunStatus.COMPLETE) {
         firstRunRepository.setFirstRunComplete()
     }
 }
