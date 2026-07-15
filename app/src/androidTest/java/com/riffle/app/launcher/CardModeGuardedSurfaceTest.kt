@@ -4,6 +4,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -75,7 +76,15 @@ class CardModeGuardedSurfaceTest {
         composeRule.onNodeWithText("Messages").assertExists()
         composeRule.onNodeWithText("View card").performClick()
 
-        composeRule.onNodeWithText("All apps").assertExists()
+        composeRule
+            .onNode(
+                SemanticsMatcher.expectValue(
+                    CardStackAnimationProfileKey,
+                    CardStackAnimationProfile.CARD_FLIGHT,
+                ),
+                useUnmergedTree = true,
+            ).assertExists()
+        composeRule.waitForIdle()
     }
 
     private fun cardsState(
