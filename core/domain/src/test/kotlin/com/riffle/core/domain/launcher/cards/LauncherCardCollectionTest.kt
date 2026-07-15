@@ -7,6 +7,7 @@ import com.riffle.core.domain.launcher.apps.AppProfile
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertNull
 
 class LauncherCardCollectionTest {
     private val planner = LauncherCardCollectionPlanner()
@@ -53,12 +54,15 @@ class LauncherCardCollectionTest {
     }
 
     @Test
-    fun rejectsAmbiguousDuplicateSnapshotsInEitherInputOrder() {
+    fun projectsAmbiguousDuplicateSnapshotsStablyInEitherInputOrder() {
         val first = card(id = "mail", content = LauncherCardContent.Text(title = "First"))
         val second = card(id = "mail", content = LauncherCardContent.Text(title = "Second"))
+        val forward = planner.plan(listOf(first, second))
+        val reversed = planner.plan(listOf(second, first))
 
-        assertFailsWith<IllegalArgumentException> { planner.plan(listOf(first, second)) }
-        assertFailsWith<IllegalArgumentException> { planner.plan(listOf(second, first)) }
+        assertEquals(forward, reversed)
+        assertEquals(LauncherCardState.STALE, forward.cards.single().state)
+        assertNull(forward.cards.single().content)
     }
 
     @Test

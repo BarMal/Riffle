@@ -21,8 +21,9 @@ data class LauncherCardCollection(
 /**
  * Applies a stable diff policy to source snapshots before they reach overview, chapter, or dock UI.
  *
- * Duplicate IDs resolve to the newest source update, then its ranking score and source state. Tied
- * but divergent snapshots are rejected instead of allowing input order to churn a card's content.
+ * Duplicate IDs resolve to the newest source update, then its ranking score and source state. A
+ * divergent tie produces a stable, non-actionable stale projection without source content, so a
+ * reconnect or malformed source snapshot cannot churn focus or expose an arbitrary payload.
  * Removed and hidden cards are omitted, while other unavailable states remain renderable for
  * recovery copy.
  */
@@ -53,10 +54,17 @@ class LauncherCardCollectionPlanner {
         fun resolveDuplicate(duplicates: List<LauncherCard>): LauncherCard {
             val resolved = duplicates.maxWithOrNull(duplicateResolutionOrder)!!
             val tiedSnapshots = duplicates.filter { card -> duplicateResolutionOrder.compare(card, resolved) == 0 }
-            require(tiedSnapshots.distinct().size == 1) {
-                "Duplicate card snapshots must have a deterministic resolution."
-            }
-            return resolved
+            if (tiedSnapshots.distinct().size == 1) return resolved
+
+            return resolved.copy(
+                size = LauncherCardSize(),
+                content = null,
+                state = LauncherCardState.STALE,
+                privacy = tiedSnapshots.maxBy { card -> card.privacy.restrictionRank }.privacy,
+                dismissibility = LauncherCardDismissibility.NOT_DISMISSIBLE,
+                supportedActions = emptySet(),
+                userIntent = LauncherCardUserIntent(),
+            )
         }
 
         val duplicateResolutionOrder: Comparator<LauncherCard> =
@@ -91,14 +99,24 @@ private val LauncherCardState.duplicateResolutionRank: Int
             LauncherCardState.REMOVED -> 0
         }
 
+private val LauncherCardPrivacy.restrictionRank: Int
+    get() =
+        when (this) {
+            LauncherCardPrivacy.VISIBLE -> 0
+            LauncherCardPrivacy.REDACTED -> 1
+            LauncherCardPrivacy.HIDDEN -> 2
+        }
+
 private val LauncherCardSourceRef.stableIdentity: String
     get() =
         when (this) {
             is LauncherCardSourceRef.App ->
-                "app:${identity.profile.id.value}:${identity.packageName.value}:${identity.activityName.value}"
+                "app:${identity.profile.id.value}:${identity.profile.type.name}:" +
+                    "${identity.packageName.value}:${identity.activityName.value}"
 
             is LauncherCardSourceRef.WidgetProvider ->
-                "widget:${identity.profile.id.value}:${identity.packageName.value}:${identity.className.value}"
+                "widget:${identity.profile.id.value}:${identity.profile.type.name}:" +
+                    "${identity.packageName.value}:${identity.className.value}"
 
             is LauncherCardSourceRef.AppNotificationGroup ->
                 "notification:${key.profileId.value}:${key.packageName.value}"
