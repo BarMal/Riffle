@@ -1,3 +1,5 @@
+@file:Suppress("TooManyFunctions")
+
 package com.riffle.app.launcher
 
 import androidx.compose.foundation.clickable
@@ -12,9 +14,15 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.cards.CardStackAnimationProfile
@@ -43,11 +51,33 @@ internal fun GeneratedNotificationCardsPage(
                 Column(
                     modifier = Modifier.fillMaxSize().semantics { contentDescription = "Notification cards page" },
                 ) {
+                    var focusedCardIndex by rememberSaveable { mutableIntStateOf(0) }
+                    val activeCardIndex = focusedCardIndex.coerceIn(0, state.cards.lastIndex)
                     GeneratedCardsHeading()
+                    GeneratedCardStackControls(
+                        focusedCardIndex = activeCardIndex,
+                        cardCount = state.cards.size,
+                        onPrevious = {
+                            focusedCardIndex = (activeCardIndex - 1 + state.cards.size) % state.cards.size
+                        },
+                        onNext = {
+                            focusedCardIndex = (activeCardIndex + 1) % state.cards.size
+                        },
+                    )
                     Box(modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp, vertical = 8.dp)) {
                         CardStack(
-                            entries = generatedNotificationCardStackEntries(state.cards),
-                            modifier = Modifier.fillMaxSize(),
+                            entries = generatedNotificationCardStackEntries(state.cards, activeCardIndex),
+                            modifier =
+                                Modifier
+                                    .fillMaxSize()
+                                    .testTag(GENERATED_NOTIFICATION_CARD_STACK_TEST_TAG)
+                                    .semantics {
+                                        stateDescription =
+                                            generatedNotificationCardFocusDescription(
+                                                activeCardIndex,
+                                                state.cards.size,
+                                            )
+                                    },
                             animationProfile = CardStackAnimationProfile.CARD_FLIGHT,
                             reducedMotion = reducedMotion,
                             itemKey = { entry -> generatedNotificationCardKey(state.cards[entry.cardIndex].group) },
@@ -83,6 +113,36 @@ private fun GeneratedCardsHeading() {
     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp)) {
         Text(text = "Cards", style = MaterialTheme.typography.headlineSmall)
         Text(text = "Your current notifications", style = MaterialTheme.typography.bodyMedium)
+    }
+}
+
+@Composable
+private fun GeneratedCardStackControls(
+    focusedCardIndex: Int,
+    cardCount: Int,
+    onPrevious: () -> Unit,
+    onNext: () -> Unit,
+) {
+    if (cardCount < 2) return
+
+    androidx.compose.foundation.layout.Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
+        TextButton(
+            onClick = onPrevious,
+            modifier = Modifier.semantics { contentDescription = "Show previous card" },
+        ) {
+            Text(text = "Previous")
+        }
+        Text(
+            text = generatedNotificationCardFocusDescription(focusedCardIndex, cardCount),
+            modifier = Modifier.padding(top = 12.dp, start = 8.dp),
+            style = MaterialTheme.typography.labelMedium,
+        )
+        TextButton(
+            onClick = onNext,
+            modifier = Modifier.semantics { contentDescription = "Show next card" },
+        ) {
+            Text(text = "Next")
+        }
     }
 }
 
@@ -181,6 +241,13 @@ internal fun generatedNotificationCardStackEntries(
         cardCount = cards.size,
         activeIndex = focusedCardIndex,
     )
+
+internal fun generatedNotificationCardFocusDescription(
+    focusedCardIndex: Int,
+    cardCount: Int,
+): String = "Card ${focusedCardIndex + 1} of $cardCount"
+
+internal const val GENERATED_NOTIFICATION_CARD_STACK_TEST_TAG = "generated-notification-card-stack"
 
 internal fun generatedNotificationCardLaunchAction(card: DockNotificationCardState): LauncherShellAction.LaunchApp? =
     card.app?.identity?.let(LauncherShellAction::LaunchApp)
