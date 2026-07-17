@@ -6,12 +6,15 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.exclude
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.MaterialTheme
@@ -110,13 +113,14 @@ fun LauncherPanel(
     title: String,
     onAction: (LauncherShellAction) -> Unit,
     showSettingsAction: Boolean = true,
+    windowInsets: WindowInsets = WindowInsets.safeDrawing,
     content: @Composable () -> Unit,
 ) {
     Box(
         modifier =
             Modifier
                 .fillMaxSize()
-                .windowInsetsPadding(WindowInsets.safeDrawing)
+                .windowInsetsPadding(windowInsets)
                 .padding(16.dp),
         contentAlignment = Alignment.Center,
     ) {
@@ -163,6 +167,18 @@ fun LauncherPanel(
             }
         }
     }
+}
+
+@Composable
+internal fun HomeInsetPolicy.safeDrawingPanelInsets(): WindowInsets {
+    var insets = WindowInsets.safeDrawing
+    if (!reserveStatusBar) {
+        insets = insets.exclude(WindowInsets.statusBars)
+    }
+    if (!reserveNavigationBar) {
+        insets = insets.exclude(WindowInsets.navigationBars)
+    }
+    return insets
 }
 
 private const val PANEL_MAX_WIDTH_DP = 840

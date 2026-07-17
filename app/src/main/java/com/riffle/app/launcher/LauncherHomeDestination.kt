@@ -24,6 +24,8 @@ fun HomeDestination(
                         appIconLoader = appIconLoader,
                         reducedMotion = state.launcherSettings.motion.reducedMotion,
                     ),
+                windowInsets =
+                    homeInsetPolicy(state.launcherSettings.appearance).safeDrawingPanelInsets(),
                 onAction = onAction,
             )
 

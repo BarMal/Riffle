@@ -6,6 +6,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -22,6 +23,8 @@ import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.notifications.NotificationAgeBucket
 import com.riffle.core.domain.launcher.notifications.NotificationCategory
+import com.riffle.core.domain.launcher.settings.AppearanceSettings
+import com.riffle.core.domain.launcher.settings.LauncherSettings
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -88,9 +91,29 @@ class CardModeGuardedSurfaceTest {
         composeRule.waitForIdle()
     }
 
+    @Test
+    fun fullscreenCardsSurfaceKeepsOneCardsHeader() {
+        composeRule.setContent {
+            MaterialTheme {
+                HomeDestination(
+                    state =
+                        cardsState(
+                            notificationAccessStatus = NotificationAccessStatus.GRANTED,
+                            fullscreenHome = true,
+                        ),
+                    appIconLoader = EmptyAppIconLoader,
+                    onAction = {},
+                )
+            }
+        }
+
+        composeRule.onAllNodesWithText("Cards").assertCountEquals(1)
+    }
+
     private fun cardsState(
         notificationAccessStatus: NotificationAccessStatus,
         groups: List<AppNotificationGroup> = emptyList(),
+        fullscreenHome: Boolean = false,
     ): LauncherShellState {
         val layout = HomeLayoutDefaults.standard().copy(viewMode = LauncherViewMode.CARD_INTERFACE)
         return LauncherShellState(
@@ -99,6 +122,10 @@ class CardModeGuardedSurfaceTest {
             notificationAccessStatus = notificationAccessStatus,
             notificationGroupsByApp = groups,
             notificationCountsByCategory = mapOf(NotificationCategory.MESSAGE to groups.sumOf { group -> group.count }),
+            launcherSettings =
+                LauncherSettings(
+                    appearance = AppearanceSettings(fullscreenHome = fullscreenHome),
+                ),
         )
     }
 
