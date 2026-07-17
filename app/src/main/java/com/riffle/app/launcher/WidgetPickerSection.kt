@@ -7,6 +7,7 @@ import androidx.compose.runtime.Composable
 import com.riffle.core.domain.launcher.widgets.InstalledWidgetProvider
 
 internal data class WidgetPickerSection(
+    val key: String,
     val title: String,
     val providers: List<InstalledWidgetProvider>,
 ) {
@@ -15,10 +16,11 @@ internal data class WidgetPickerSection(
 
 internal fun widgetPickerSectionsFor(providers: List<InstalledWidgetProvider>): List<WidgetPickerSection> =
     providers
-        .groupBy { provider -> provider.widgetPickerSectionTitle() }
-        .map { (title, sectionProviders) ->
+        .groupBy { provider -> provider.widgetPickerSectionKey }
+        .map { (key, sectionProviders) ->
             WidgetPickerSection(
-                title = title,
+                key = key,
+                title = sectionProviders.first().widgetPickerSectionTitle(),
                 providers =
                     sectionProviders.sortedWith(
                         compareBy<InstalledWidgetProvider> { provider -> provider.label.lowercase() }
@@ -35,6 +37,9 @@ internal fun InstalledWidgetProvider.widgetPickerSectionTitle(): String {
     val profilePrefix = identity.profile.drawerProfilePrefix() ?: "Personal"
     return "$profilePrefix - ${appLabel.trim().ifEmpty { label }}"
 }
+
+internal val InstalledWidgetProvider.widgetPickerSectionKey: String
+    get() = "${identity.profile.id.value}:${identity.profile.type.name}:${identity.packageName.value}"
 
 private fun String.widgetPickerProfileSortRank(): Int =
     when (substringBefore(" - ")) {

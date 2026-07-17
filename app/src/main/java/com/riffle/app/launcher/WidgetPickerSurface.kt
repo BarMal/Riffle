@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
@@ -146,9 +147,9 @@ private fun WidgetPickerContent(
             ) {
                 val collapsedSections = collapsedSectionTitles.toCollapsedWidgetPickerSections()
                 providerSections.forEach { section ->
-                    val isExpanded = section.title !in collapsedSections
+                    val isExpanded = section.key !in collapsedSections
                     item(
-                        key = "section:${section.title}",
+                        key = "section:${section.key}",
                         span = { GridItemSpan(maxLineSpan) },
                     ) {
                         WidgetPickerSectionHeader(
@@ -159,7 +160,7 @@ private fun WidgetPickerContent(
                                     collapsedSections
                                         .toMutableSet()
                                         .apply {
-                                            if (expanded) remove(section.title) else add(section.title)
+                                            if (expanded) remove(section.key) else add(section.key)
                                         }.joinToString(WIDGET_PICKER_SECTION_STATE_SEPARATOR),
                                 )
                             },
@@ -271,6 +272,10 @@ private fun WidgetProviderPreview(
                 Modifier
                     .fillMaxWidth()
                     .aspectRatio(provider.widgetPickerPreviewAspectRatio())
+                    .heightIn(
+                        min = WIDGET_PREVIEW_MIN_HEIGHT_DP.dp,
+                        max = WIDGET_PREVIEW_MAX_HEIGHT_DP.dp,
+                    )
                     .clip(RoundedCornerShape(12.dp)),
         )
     } else {
@@ -329,6 +334,8 @@ internal fun InstalledWidgetProvider.requestAddWidgetAction(
 
 private const val WIDGET_PICKER_SCREEN_PADDING_DP = 20
 private const val WIDGET_TILE_MIN_WIDTH_DP = 144
+private const val WIDGET_PREVIEW_MIN_HEIGHT_DP = 72
+private const val WIDGET_PREVIEW_MAX_HEIGHT_DP = 240
 private const val WIDGET_PICKER_SECTION_STATE_SEPARATOR = "\u001f"
 
 private fun String.toCollapsedWidgetPickerSections(): Set<String> =

@@ -39,15 +39,29 @@ class WidgetPickerSectionsTest {
         assertEquals(listOf(clock, weather), sections.single().providers)
     }
 
+    @Test
+    fun keepsAppsWithIdenticalLabelsInSeparateStableSections() {
+        val first = widgetProvider(label = "Clock", appLabel = "Clock", packageName = "com.example.clock")
+        val second = widgetProvider(label = "Clock", appLabel = "Clock", packageName = "com.other.clock")
+
+        val sections = widgetPickerSectionsFor(listOf(first, second))
+
+        assertEquals(2, sections.size)
+        assertEquals(2, sections.map { section -> section.key }.toSet().size)
+        assertEquals(listOf(first), sections[0].providers)
+        assertEquals(listOf(second), sections[1].providers)
+    }
+
     private fun widgetProvider(
         label: String,
-        profile: AppProfile,
+        profile: AppProfile = AppProfile.personal(),
         appLabel: String = label,
+        packageName: String = "com.example.${label.lowercase()}",
     ): InstalledWidgetProvider =
         InstalledWidgetProvider(
             identity =
                 WidgetProviderIdentity(
-                    packageName = AppPackageName("com.example.${label.lowercase()}"),
+                    packageName = AppPackageName(packageName),
                     className = WidgetProviderClassName(".$label"),
                     profile = profile,
                 ),
