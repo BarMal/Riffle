@@ -29,12 +29,13 @@ class MainActivityStartupTest {
     }
 
     @Test
-    fun platformEventFlowIsIgnoredWhenMappedEventReadFails() = runBlocking {
-        assertEquals(
-            emptyList<String>(),
-            startupPlatformFlow {
-                flow<String> { error("Window metrics are unavailable") }
-            }.toList(),
-        )
-    }
+    fun platformEventFlowIsIgnoredWhenMappedEventReadFails() =
+        runBlocking {
+            assertEquals(
+                emptyList<String>(),
+                startupPlatformFlow {
+                    flow<String> { error("Window metrics are unavailable") }
+                }.toList(),
+            )
+        }
 }
