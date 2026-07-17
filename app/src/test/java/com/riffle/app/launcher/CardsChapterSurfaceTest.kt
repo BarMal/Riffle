@@ -19,6 +19,7 @@ import com.riffle.core.domain.launcher.notifications.NotificationAgeBucket
 import com.riffle.core.domain.launcher.notifications.NotificationCategory
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class CardsChapterSurfaceTest {
@@ -97,6 +98,60 @@ class CardsChapterSurfaceTest {
         assertEquals(
             listOf(CardsChapterId.Overview) + chapterIds,
             cardsChapterNavigatorChapterIds(state),
+        )
+    }
+
+    @Test
+    fun navigatorIdentifiesTheSelectedProfiledChapterAndNotificationCount() {
+        val personal = AppProfile.personal()
+        val work = AppProfile.work()
+        val apps =
+            listOf(
+                installedApp(label = "Mail", profile = personal),
+                installedApp(label = "Mail", profile = work),
+            )
+        val workChapter = CardsChapterId.App(AppPackageName("com.riffle.mail"), work.id)
+        val state =
+            CardsChapterPlanner().state(
+                notificationGroups =
+                    listOf(
+                        group(packageName = "com.riffle.mail", profile = personal, postedAtEpochMillis = 10L),
+                        group(packageName = "com.riffle.mail", profile = work, postedAtEpochMillis = 20L),
+                    ),
+                preferences = CardsChapterPreferences().select(workChapter),
+            )
+
+        val items = cardsChapterNavigatorItems(state, apps)
+        val selectedItem = items.first { item -> item.chapterId == workChapter }
+
+        assertEquals("Work - Mail (1)", selectedItem.displayLabel)
+        assertTrue(selectedItem.contentDescription.contains("1 notification"))
+        assertTrue(selectedItem.contentDescription.contains("selected"))
+        val personalItem =
+            items.first { item ->
+                item.chapterId != workChapter && item.chapterId !is CardsChapterId.Overview
+            }
+        assertEquals("Mail (1)", personalItem.displayLabel)
+    }
+
+    @Test
+    fun navigatorKeepsProfilesDistinctWhenTheAppCatalogIsUnavailable() {
+        val personal = AppProfile.personal()
+        val work = AppProfile.work()
+        val state =
+            CardsChapterPlanner().state(
+                notificationGroups =
+                    listOf(
+                        group(packageName = "com.riffle.mail", profile = personal, postedAtEpochMillis = 10L),
+                        group(packageName = "com.riffle.mail", profile = work, postedAtEpochMillis = 20L),
+                    ),
+            )
+
+        val items = cardsChapterNavigatorItems(state, apps = emptyList())
+
+        assertEquals(
+            listOf("Overview", "com.riffle.mail (work) (1)", "com.riffle.mail (personal) (1)"),
+            items.map(CardsChapterNavigatorItem::displayLabel),
         )
     }
 
@@ -224,5 +279,19 @@ class CardsChapterSurfaceTest {
                         postedAtEpochMillis = postedAtEpochMillis,
                     ),
                 ),
+        )
+
+    private fun installedApp(
+        label: String,
+        profile: AppProfile,
+    ): InstalledApp =
+        InstalledApp(
+            identity =
+                AppIdentity(
+                    packageName = AppPackageName("com.riffle.mail"),
+                    activityName = AppActivityName(".Main"),
+                    profile = profile,
+                ),
+            label = label,
         )
 }

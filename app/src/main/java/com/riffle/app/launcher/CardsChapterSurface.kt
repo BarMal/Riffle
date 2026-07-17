@@ -44,7 +44,7 @@ internal fun CardsChapterSurface(
 ) {
     Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.surface) {
         Column(modifier = Modifier.fillMaxSize().windowInsetsPadding(windowInsets)) {
-            CardsChapterHeader(state, onAction)
+            CardsChapterHeader(state, apps, onAction)
             CardsChapterNavigator(state, apps, onAction)
             when (val chapter = state.selectedChapter) {
                 CardsChapter.Overview ->
@@ -64,13 +64,15 @@ internal fun CardsChapterSurface(
 @Composable
 private fun CardsChapterHeader(
     state: CardsChapterState,
+    apps: List<InstalledApp>,
     onAction: (LauncherShellAction) -> Unit,
 ) {
     val selectedIndex = state.plan.chapterIds.indexOf(state.preferences.selectedChapterId)
+    val chapterPosition = "Chapter ${selectedIndex + 1} of ${state.plan.chapters.size}"
     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp)) {
         Text(text = "Cards", style = MaterialTheme.typography.headlineSmall)
         Text(
-            text = "Chapter ${selectedIndex + 1} of ${state.plan.chapters.size}",
+            text = "${state.selectedChapter.navigatorLabel(apps)} · $chapterPosition",
             style = MaterialTheme.typography.bodyMedium,
         )
         if (state.plan.chapters.size > 1) {
@@ -103,18 +105,38 @@ private fun CardsChapterNavigator(
     onAction: (LauncherShellAction) -> Unit,
 ) {
     LazyRow(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
-        items(cardsChapterNavigatorChapterIds(state), key = { chapterId -> chapterId }) { chapterId ->
-            val chapter = state.plan.chapters.first { it.id == chapterId }
-            val label = chapter.label(apps)
+        items(cardsChapterNavigatorItems(state, apps), key = CardsChapterNavigatorItem::chapterId) { item ->
             TextButton(
-                onClick = { onAction(LauncherShellAction.SelectCardsChapter(chapterId)) },
-                modifier = Modifier.semantics { contentDescription = "Open $label chapter" },
-            ) { Text(label) }
+                onClick = { onAction(LauncherShellAction.SelectCardsChapter(item.chapterId)) },
+                modifier = Modifier.semantics { contentDescription = item.contentDescription },
+            ) { Text(item.displayLabel) }
         }
     }
 }
 
 internal fun cardsChapterNavigatorChapterIds(state: CardsChapterState): List<CardsChapterId> = state.plan.chapterIds
+
+internal data class CardsChapterNavigatorItem(
+    val chapterId: CardsChapterId,
+    val displayLabel: String,
+    val contentDescription: String,
+)
+
+internal fun cardsChapterNavigatorItems(
+    state: CardsChapterState,
+    apps: List<InstalledApp>,
+): List<CardsChapterNavigatorItem> =
+    state.plan.chapters.map { chapter ->
+        val label = chapter.navigatorLabel(apps)
+        val notificationCount = (chapter as? CardsChapter.App)?.notificationGroup?.count
+        val countLabel = notificationCount?.let { count -> ", $count ${count.notificationLabel}" }.orEmpty()
+        val selectedLabel = if (chapter.id == state.preferences.selectedChapterId) ", selected" else ""
+        CardsChapterNavigatorItem(
+            chapterId = chapter.id,
+            displayLabel = notificationCount?.let { count -> "$label ($count)" } ?: label,
+            contentDescription = "$label$countLabel$selectedLabel. Open chapter",
+        )
+    }
 
 @Composable
 private fun CardsOverview(
@@ -301,7 +323,7 @@ private fun CardsAppChapter(
     apps: List<InstalledApp>,
     onAction: (LauncherShellAction) -> Unit,
 ) {
-    val label = chapter.label(apps)
+    val label = chapter.navigatorLabel(apps)
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = androidx.compose.foundation.layout.PaddingValues(20.dp),
@@ -326,7 +348,7 @@ private fun CardsAppChapter(
             }
         }
         chapter.notificationGroup?.let { group ->
-            item { Text("${group.count} notifications", style = MaterialTheme.typography.titleMedium) }
+            item { Text("${group.count.notificationLabel}", style = MaterialTheme.typography.titleMedium) }
             items(cardsAppChapterNotifications(chapter), key = { notification -> notification.key }) { notification ->
                 Text(notification.key.value, style = MaterialTheme.typography.bodyMedium)
             }
@@ -367,6 +389,18 @@ internal fun CardsChapter.label(apps: List<InstalledApp>): String =
 
 private fun InstalledApp.matches(id: CardsChapterId.App): Boolean =
     identity.packageName == id.packageName && identity.profile.id == id.profileId
+
+private fun CardsChapter.navigatorLabel(apps: List<InstalledApp>): String =
+    when (this) {
+        CardsChapter.Overview -> "Overview"
+        is CardsChapter.App ->
+            apps.firstOrNull { it.matches(id) }
+                ?.let { app -> app.identity.profile.profileDisplayLabel(app.label) }
+                ?: "${id.packageName.value} (${id.profileId.value})"
+    }
+
+private val Int.notificationLabel: String
+    get() = "$this ${if (this == 1) "notification" else "notifications"}"
 
 private fun List<CardsChapterId>.previousOf(index: Int): CardsChapterId = this[(index - 1 + size) % size]
 
