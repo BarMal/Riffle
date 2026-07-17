@@ -163,34 +163,45 @@ private fun CardsAppChapter(
     onAction: (LauncherShellAction) -> Unit,
 ) {
     val label = chapter.label(apps)
-    Column(modifier = Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text(label, style = MaterialTheme.typography.headlineSmall)
-        Row {
-            TextButton(
-                onClick = { onAction(LauncherShellAction.ToggleCardsChapterPinned(chapter.id)) },
-                modifier =
-                    Modifier.semantics {
-                        contentDescription = if (chapter.isPinned) "Unpin $label chapter" else "Pin $label chapter"
-                    },
-            ) { Text(if (chapter.isPinned) "Unpin" else "Pin") }
-            apps.firstOrNull { it.matches(chapter.id) }?.let { app ->
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(20.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        item { Text(label, style = MaterialTheme.typography.headlineSmall) }
+        item {
+            Row {
                 TextButton(
-                    onClick = { onAction(LauncherShellAction.LaunchApp(app.identity)) },
-                    modifier = Modifier.semantics { contentDescription = "Open $label" },
-                ) { Text("Open app") }
+                    onClick = { onAction(LauncherShellAction.ToggleCardsChapterPinned(chapter.id)) },
+                    modifier =
+                        Modifier.semantics {
+                            contentDescription = if (chapter.isPinned) "Unpin $label chapter" else "Pin $label chapter"
+                        },
+                ) { Text(if (chapter.isPinned) "Unpin" else "Pin") }
+                apps.firstOrNull { it.matches(chapter.id) }?.let { app ->
+                    TextButton(
+                        onClick = { onAction(LauncherShellAction.LaunchApp(app.identity)) },
+                        modifier = Modifier.semantics { contentDescription = "Open $label" },
+                    ) { Text("Open app") }
+                }
             }
         }
         chapter.notificationGroup?.let { group ->
-            Text("${group.count} notifications", style = MaterialTheme.typography.titleMedium)
-            group.notifications.forEach { notification ->
+            item { Text("${group.count} notifications", style = MaterialTheme.typography.titleMedium) }
+            items(cardsAppChapterNotifications(chapter), key = { notification -> notification.key }) { notification ->
                 Text(notification.key.value, style = MaterialTheme.typography.bodyMedium)
             }
-        } ?: Text(
-            "No active notifications. This pinned chapter remains available.",
-            style = MaterialTheme.typography.bodyMedium,
-        )
+        } ?: item {
+            Text(
+                "No active notifications. This pinned chapter remains available.",
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        }
     }
 }
+
+@Suppress("MaxLineLength")
+internal fun cardsAppChapterNotifications(chapter: CardsChapter.App) = chapter.notificationGroup?.notifications.orEmpty()
 
 @Composable
 private fun CardsMessage(
