@@ -165,6 +165,7 @@ internal data class CardsOverviewAccessMessage(
     val actionLabel: String? = null,
 )
 
+@Suppress("MaxLineLength")
 internal fun cardsOverviewAccessMessage(notificationAccessStatus: NotificationAccessStatus): CardsOverviewAccessMessage? =
     when (notificationAccessStatus) {
         NotificationAccessStatus.GRANTED -> null
