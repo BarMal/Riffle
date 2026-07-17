@@ -203,23 +203,45 @@ internal fun LauncherGestureAction.targetLabel(
     }
 
 private fun List<InstalledApp>.gestureTargetLabel(target: LauncherGestureLaunchTarget.App): String? {
-    val selectedApp = firstOrNull { app -> app.identity == target.identity } ?: return null
-    val sameLabelApps = filter { app -> app.label == selectedApp.label }
-    val profileIsAmbiguous = sameLabelApps.any { app -> app.identity.profile != selectedApp.identity.profile }
+    return firstOrNull { app -> app.identity == target.identity }?.gesturePickerLabel(this)
+}
+
+internal fun InstalledApp.gesturePickerLabel(installedApps: List<InstalledApp>): String {
+    val sameLabelApps = installedApps.filter { app -> app.label == label }
+    val profileIsAmbiguous = sameLabelApps.any { app -> app.identity.profile != identity.profile }
     val activityIsAmbiguous =
         sameLabelApps
-            .filter { app -> app.identity.profile == selectedApp.identity.profile }
+            .filter { app -> app.identity.profile == identity.profile }
             .map { app -> app.identity.activityName }
             .distinct()
             .size > 1
     val appLabel =
         if (profileIsAmbiguous) {
-            selectedApp.identity.profile.profileDisplayLabel(selectedApp.label)
+            identity.profile.profileDisplayLabel(label)
         } else {
-            selectedApp.label
+            label
         }
 
-    return if (activityIsAmbiguous) "$appLabel (${selectedApp.identity.activityName.value})" else appLabel
+    return if (activityIsAmbiguous) "$appLabel (${identity.activityName.value})" else appLabel
+}
+
+internal fun AppShortcut.gesturePickerLabel(
+    shortcuts: List<AppShortcut>,
+    installedApps: List<InstalledApp>,
+): String {
+    val shortcutLabel = longLabel ?: shortLabel
+    val sameLabelShortcuts = shortcuts.filter { shortcut -> (shortcut.longLabel ?: shortcut.shortLabel) == shortcutLabel }
+    if (sameLabelShortcuts.size == 1) return shortcutLabel
+
+    val owningAppLabel =
+        installedApps
+            .firstOrNull { app -> app.identity == appIdentity }
+            ?.gesturePickerLabel(installedApps)
+            ?: appIdentity.packageName.value
+    val sameAppShortcuts = sameLabelShortcuts.filter { shortcut -> shortcut.appIdentity == appIdentity }
+    val shortcutIdSuffix = if (sameAppShortcuts.size > 1) " (${id.value})" else ""
+
+    return "$shortcutLabel — $owningAppLabel$shortcutIdSuffix"
 }
 
 internal val HomeGesture.label: String
@@ -361,7 +383,7 @@ private fun GestureTargetPicker(
                                 TextButton(
                                     modifier = Modifier.fillMaxWidth(),
                                     onClick = { onTargetSelected(LauncherGestureLaunchTarget.App(app.identity)) },
-                                ) { Text(app.label) }
+                                ) { Text(app.gesturePickerLabel(appMatches)) }
                             }
 
                         LauncherGestureAction.LAUNCH_APP_SHORTCUT ->
@@ -369,7 +391,7 @@ private fun GestureTargetPicker(
                                 TextButton(
                                     modifier = Modifier.fillMaxWidth(),
                                     onClick = { onTargetSelected(LauncherGestureLaunchTarget.Shortcut(shortcut)) },
-                                ) { Text(shortcut.longLabel ?: shortcut.shortLabel) }
+                                ) { Text(shortcut.gesturePickerLabel(shortcutMatches, installedApps)) }
                             }
 
                         else -> Unit

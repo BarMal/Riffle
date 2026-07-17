@@ -4,6 +4,8 @@ import com.riffle.core.domain.launcher.apps.AppActivityName
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppProfile
+import com.riffle.core.domain.launcher.apps.AppShortcut
+import com.riffle.core.domain.launcher.apps.AppShortcutId
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.settings.LauncherGestureAction
 import com.riffle.core.domain.launcher.settings.LauncherGestureLaunchTarget
@@ -65,6 +67,45 @@ class GestureSettingsPanelTest {
         )
     }
 
+    @Test
+    fun appPickerLabelDisambiguatesProfilesWithTheSameAppLabel() {
+        val personalMail = app(label = "Mail")
+        val workMail = app(label = "Mail", profile = AppProfile.work())
+
+        assertEquals("Work - Mail", workMail.gesturePickerLabel(listOf(personalMail, workMail)))
+    }
+
+    @Test
+    fun shortcutPickerLabelIncludesOwningAppForDuplicateShortcutLabels() {
+        val personalMail = app(label = "Mail")
+        val workMail = app(label = "Mail", profile = AppProfile.work())
+        val personalCompose = shortcut(id = "personal-compose", app = personalMail, label = "Compose")
+        val workCompose = shortcut(id = "work-compose", app = workMail, label = "Compose")
+
+        assertEquals(
+            "Compose — Work - Mail",
+            workCompose.gesturePickerLabel(
+                shortcuts = listOf(personalCompose, workCompose),
+                installedApps = listOf(personalMail, workMail),
+            ),
+        )
+    }
+
+    @Test
+    fun shortcutPickerLabelIncludesShortcutIdWhenOwningAppIsAlsoDuplicated() {
+        val mail = app(label = "Mail")
+        val firstCompose = shortcut(id = "compose-first", app = mail, label = "Compose")
+        val secondCompose = shortcut(id = "compose-second", app = mail, label = "Compose")
+
+        assertEquals(
+            "Compose — Mail (compose-second)",
+            secondCompose.gesturePickerLabel(
+                shortcuts = listOf(firstCompose, secondCompose),
+                installedApps = listOf(mail),
+            ),
+        )
+    }
+
     private fun app(
         label: String,
         activityName: String = ".MainActivity",
@@ -78,5 +119,16 @@ class GestureSettingsPanelTest {
                     profile = profile,
                 ),
             label = label,
+        )
+
+    private fun shortcut(
+        id: String,
+        app: InstalledApp,
+        label: String,
+    ): AppShortcut =
+        AppShortcut(
+            id = AppShortcutId(id),
+            appIdentity = app.identity,
+            shortLabel = label,
         )
 }
