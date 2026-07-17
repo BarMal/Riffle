@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.FilledTonalButton
@@ -29,8 +30,10 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -134,17 +137,6 @@ fun PageOverviewControls(
             OutlinedButton(onClick = { onAction(LauncherShellAction.AddHomePage) }) {
                 Text(text = "Add page")
             }
-            OutlinedButton(onClick = { onAction(LauncherShellAction.DuplicateSelectedHomePage) }) {
-                Text(text = "Duplicate page")
-            }
-            pageOverviewPinActionLabel(
-                type = selectedPage.type,
-                isPinned = selectedPage.isPinned,
-            )?.let { label ->
-                OutlinedButton(onClick = { onAction(LauncherShellAction.ToggleSelectedHomePagePinned) }) {
-                    Text(text = label)
-                }
-            }
             TextButton(onClick = { isPageMenuExpanded.value = true }) {
                 Text(text = "More")
             }
@@ -154,11 +146,10 @@ fun PageOverviewControls(
             ShortcutContextMenu(
                 expanded = isPageMenuExpanded.value,
                 items =
-                    pageManagementMenuItems(
+                    pageOverviewActionsMenuItems(
                         pageCount = layout.pages.size,
                         selectedPageIndex = layout.selectedPageIndex,
-                        includeOverview = false,
-                        includeCreationActions = false,
+                        selectedPage = selectedPage,
                     ),
                 onDismissRequest = { isPageMenuExpanded.value = false },
                 onAction = onAction,
@@ -175,8 +166,12 @@ private fun PageOverviewStrip(
     widgetViewFactory: HomeWidgetViewFactory,
     onAction: (LauncherShellAction) -> Unit,
 ) {
+    val overviewListState = rememberLazyListState()
+    var dragPreview by remember { mutableStateOf<PageOverviewDragPreview?>(null) }
+
     LazyRow(
         modifier = Modifier.fillMaxWidth().testTag(PAGE_OVERVIEW_STRIP_TEST_TAG),
+        state = overviewListState,
         contentPadding = PaddingValues(horizontal = PAGE_OVERVIEW_CONTENT_PADDING_DP.dp, vertical = 4.dp),
         horizontalArrangement = Arrangement.spacedBy(PAGE_OVERVIEW_CARD_SPACING_DP.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -192,15 +187,27 @@ private fun PageOverviewStrip(
                         pageCount = layout.pages.size,
                         page = page,
                         isSelected = page.id == layout.selectedPageId,
+                        projectedIndex =
+                            pageOverviewProjectedVisualIndex(
+                                pageIndex = index,
+                                dragPreview = dragPreview,
+                            ),
                     ),
                 appIconLoader = appIconLoader,
                 widgetViewFactory = widgetViewFactory,
                 reducedMotion = reducedMotion,
                 onClick = { onAction(LauncherShellAction.SelectHomePage(page.id)) },
                 onAction = onAction,
-                onMoveToIndex = { targetIndex ->
-                    onAction(LauncherShellAction.MoveHomePage(pageId = page.id, targetIndex = targetIndex))
-                },
+                dragActions =
+                    PageOverviewCardDragActions(
+                        listState = overviewListState,
+                        onMoveToIndex = { targetIndex ->
+                            onAction(LauncherShellAction.MoveHomePage(pageId = page.id, targetIndex = targetIndex))
+                        },
+                        onDragPreviewChanged = { targetIndex ->
+                            dragPreview = targetIndex?.let { PageOverviewDragPreview(index, it) }
+                        },
+                    ),
             )
         }
     }
@@ -214,7 +221,7 @@ private fun PageOverviewCard(
     reducedMotion: Boolean,
     onClick: () -> Unit,
     onAction: (LauncherShellAction) -> Unit,
-    onMoveToIndex: (Int) -> Unit,
+    dragActions: PageOverviewCardDragActions,
 ) {
     val isMenuExpanded = remember(state.page.id) { mutableStateOf(false) }
 
@@ -223,7 +230,10 @@ private fun PageOverviewCard(
             Modifier
                 .width(PAGE_OVERVIEW_CARD_WIDTH_DP.dp)
                 .pageOverviewReflow(state = state, reducedMotion = reducedMotion)
-                .pageOverviewReorderDrag(state = state, onMoveToIndex = onMoveToIndex)
+                .pageOverviewReorderDrag(
+                    state = state,
+                    dragActions = dragActions,
+                )
                 .clip(LocalLauncherCardShape.current)
                 .testTag(pageOverviewCardTestTag(state.page.id.value))
                 .clickable(onClick = onClick),
@@ -434,6 +444,25 @@ internal fun pageOverviewCardMenuItems(
         includeOverview = false,
     )
 
+internal fun pageOverviewActionsMenuItems(
+    pageCount: Int,
+    selectedPageIndex: Int,
+    selectedPage: com.riffle.core.domain.launcher.home.LauncherPage,
+): List<ShortcutContextMenuItem> =
+    pageManagementMenuItems(
+        pageCount = pageCount,
+        selectedPageIndex = selectedPageIndex,
+        includeOverview = false,
+    ) +
+        listOfNotNull(
+            pageOverviewPinActionLabel(
+                type = selectedPage.type,
+                isPinned = selectedPage.isPinned,
+            )?.let { label ->
+                ShortcutContextMenuItem(label, LauncherShellAction.ToggleSelectedHomePagePinned)
+            },
+        )
+
 @Composable
 fun PageIndicator(
     pageCount: Int,
@@ -559,7 +588,7 @@ private val GeneratedLauncherPageKind.pageOverviewTypeLabel: String
             GeneratedLauncherPageKind.NOTIFICATION_CARDS -> "Cards"
         }
 
-internal const val PAGE_OVERVIEW_CARD_WIDTH_DP = 184
+internal const val PAGE_OVERVIEW_CARD_WIDTH_DP = 248
 internal const val PAGE_OVERVIEW_CARD_SPACING_DP = 8
 private const val PAGE_OVERVIEW_CONTENT_PADDING_DP = 16
 internal const val PAGE_OVERVIEW_STRIP_TEST_TAG = "page-overview-strip"

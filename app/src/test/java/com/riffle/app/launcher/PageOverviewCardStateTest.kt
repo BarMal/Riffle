@@ -67,4 +67,32 @@ class PageOverviewCardStateTest {
             ),
         )
     }
+
+    @Test
+    fun projectedPositionMovesCardsOutOfTheDraggedCardsTargetRange() {
+        val preview = PageOverviewDragPreview(sourceIndex = 1, targetIndex = 3)
+
+        assertEquals(0, pageOverviewProjectedVisualIndex(pageIndex = 0, dragPreview = preview))
+        assertEquals(1, pageOverviewProjectedVisualIndex(pageIndex = 1, dragPreview = preview))
+        assertEquals(1, pageOverviewProjectedVisualIndex(pageIndex = 2, dragPreview = preview))
+        assertEquals(2, pageOverviewProjectedVisualIndex(pageIndex = 3, dragPreview = preview))
+        assertEquals(4, pageOverviewProjectedVisualIndex(pageIndex = 4, dragPreview = preview))
+    }
+
+    @Test
+    fun projectedPositionMovesCardsRightWhenTheDraggedCardMovesLeft() {
+        val preview = PageOverviewDragPreview(sourceIndex = 3, targetIndex = 1)
+
+        assertEquals(0, pageOverviewProjectedVisualIndex(pageIndex = 0, dragPreview = preview))
+        assertEquals(2, pageOverviewProjectedVisualIndex(pageIndex = 1, dragPreview = preview))
+        assertEquals(3, pageOverviewProjectedVisualIndex(pageIndex = 2, dragPreview = preview))
+        assertEquals(3, pageOverviewProjectedVisualIndex(pageIndex = 3, dragPreview = preview))
+    }
+
+    @Test
+    fun edgeScrollStartsAfterTheDraggedCardReachesTheHalfwayPoint() {
+        assertEquals(null, pageOverviewEdgeScrollDistancePx(dragOffsetX = 99f, cardWidthPx = 200f))
+        assertEquals(28f, pageOverviewEdgeScrollDistancePx(dragOffsetX = 100f, cardWidthPx = 200f))
+        assertEquals(-28f, pageOverviewEdgeScrollDistancePx(dragOffsetX = -100f, cardWidthPx = 200f))
+    }
 }

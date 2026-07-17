@@ -96,7 +96,7 @@ class HomePageControlsTest {
     }
 
     @Test
-    fun pageOverviewMoreMenuOmitsActionsAlreadyShownAsButtons() {
+    fun pageOverviewMoreMenuKeepsSecondaryPageActionsOutOfTheMainToolbar() {
         val items =
             pageManagementMenuItems(
                 pageCount = 3,
@@ -112,6 +112,32 @@ class HomePageControlsTest {
                 ShortcutContextMenuItem("Delete page", LauncherShellAction.DeleteSelectedHomePage),
             ),
             items,
+        )
+    }
+
+    @Test
+    fun pageOverviewActionsMenuKeepsPinningReachableWithoutAddingAnotherToolbarButton() {
+        val page =
+            LauncherPage(
+                id = LauncherPageId("today"),
+                type = LauncherPageType.Generated(GeneratedLauncherPageKind.TODAY),
+                grid = GridDimensions(columns = 4, rows = 5),
+            )
+
+        assertEquals(
+            listOf(
+                ShortcutContextMenuItem("Add page", LauncherShellAction.AddHomePage),
+                ShortcutContextMenuItem("Duplicate page", LauncherShellAction.DuplicateSelectedHomePage),
+                ShortcutContextMenuItem("Move page left", LauncherShellAction.MoveSelectedHomePageLeft),
+                ShortcutContextMenuItem("Move page right", LauncherShellAction.MoveSelectedHomePageRight),
+                ShortcutContextMenuItem("Delete page", LauncherShellAction.DeleteSelectedHomePage),
+                ShortcutContextMenuItem("Pin", LauncherShellAction.ToggleSelectedHomePagePinned),
+            ),
+            pageOverviewActionsMenuItems(
+                pageCount = 3,
+                selectedPageIndex = 1,
+                selectedPage = page,
+            ),
         )
     }
 
