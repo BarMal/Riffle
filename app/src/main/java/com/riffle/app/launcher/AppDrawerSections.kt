@@ -11,6 +11,15 @@ data class AppDrawerSection(
     val displayTitle: String = "$title (${apps.size})"
 }
 
+/**
+ * Manual validation:
+ * - On phone and large or folded/unfolded widths, verify category headings and app rows do not
+ *   clip or overlap in light and dark themes.
+ * - For Personal, Work, and Private profile filters, verify category sections only contain apps
+ *   from the selected profile.
+ * - Search for categorized and uncategorized apps, then clear the query to verify category and
+ *   alphabetical sections are restored correctly.
+ */
 object AppDrawerSections {
     fun from(apps: List<InstalledApp>): List<AppDrawerSection> =
         apps
@@ -23,23 +32,16 @@ object AppDrawerSections {
             }
             .sortedWith(
                 compareBy<AppDrawerSection> { section -> section.profileBucketSortKey() }
-                    .thenBy { section -> section.title.letterSectionSortKey() },
+                    .thenBy { section -> section.title.sectionSortKey() },
             )
 
     private val InstalledApp.sectionTitle: String
         get() {
-            val letterSection =
-                label
-                    .trim()
-                    .firstOrNull()
-                    ?.takeIf { character -> character.isLetter() }
-                    ?.uppercaseChar()
-                    ?.toString()
-                    ?: OTHER_SECTION_TITLE
+            val section = category.normalizedCategory() ?: label.letterSectionTitle()
 
             return identity.profile.drawerProfilePrefix()
-                ?.let { prefix -> "$prefix - $letterSection" }
-                ?: letterSection
+                ?.let { prefix -> "$prefix - $section" }
+                ?: section
         }
 }
 
@@ -55,10 +57,20 @@ private fun AppDrawerSection.profileBucketSortKey(): Int {
     }
 }
 
-private fun String.letterSectionSortKey(): String =
+private fun String.sectionSortKey(): String =
     substringAfter(delimiter = " - ", missingDelimiterValue = this)
         .takeUnless { section -> section == OTHER_SECTION_TITLE }
         ?: OTHER_SECTION_SORT_TITLE
+
+private fun String?.normalizedCategory(): String? = this?.trim()?.takeIf { category -> category.isNotEmpty() }
+
+private fun String.letterSectionTitle(): String =
+    trim()
+        .firstOrNull()
+        ?.takeIf { character -> character.isLetter() }
+        ?.uppercaseChar()
+        ?.toString()
+        ?: OTHER_SECTION_TITLE
 
 private const val OTHER_SECTION_TITLE = "#"
 private const val OTHER_SECTION_SORT_TITLE = "{"

@@ -139,9 +139,40 @@ class AppDrawerSectionsTest {
         )
     }
 
+    @Test
+    fun sectionsGroupCategorizedAppsUnderTheirLauncherCategory() {
+        val sections =
+            AppDrawerSections.from(
+                listOf(
+                    app("Camera", category = "Image"),
+                    app("Browser", category = "News"),
+                    app("Gallery", category = " Image "),
+                    app("Calculator"),
+                ),
+            )
+
+        assertEquals(listOf("C", "Image", "News"), sections.map { section -> section.title })
+        assertEquals(listOf("Camera", "Gallery"), sections[1].apps.map { app -> app.label })
+    }
+
+    @Test
+    fun sectionsKeepCategoriesSeparatedByProfileAndIgnoreBlankCategoryNames() {
+        val sections =
+            AppDrawerSections.from(
+                listOf(
+                    app("Camera", category = "Image"),
+                    app("Gallery", category = "Image", profile = AppProfile.work()),
+                    app("Browser", category = " "),
+                ),
+            )
+
+        assertEquals(listOf("B", "Image", "Work - Image"), sections.map { section -> section.title })
+    }
+
     private fun app(
         label: String,
         profile: AppProfile = AppProfile.personal(),
+        category: String? = null,
     ): InstalledApp =
         InstalledApp(
             identity =
@@ -151,5 +182,6 @@ class AppDrawerSectionsTest {
                     profile = profile,
                 ),
             label = label,
+            category = category,
         )
 }
