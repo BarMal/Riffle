@@ -33,6 +33,7 @@ data class LauncherShellState(
     val notificationAccessStatus: NotificationAccessStatus = NotificationAccessStatus.UNKNOWN,
     val notificationCountsByCategory: Map<NotificationCategory, Int> = emptyMap(),
     val notificationGroupsByApp: List<AppNotificationGroup> = emptyList(),
+    val profileContentVisibility: Map<AppProfileId, AppProfileContentVisibility> = emptyMap(),
     val installedApps: List<InstalledApp> = emptyList(),
     val hiddenApps: List<InstalledApp> = emptyList(),
     val appShortcutsByApp: AppShortcutsByApp = emptyMap(),
@@ -56,8 +57,7 @@ data class LauncherShellState(
         )
 
     /** Profile content policy used by Cards surfaces; profiles without an app-state decision are redacted. */
-    fun cardsProfileContentVisibility(): Map<AppProfileId, AppProfileContentVisibility> =
-        installedApps.associate { app -> app.identity.profile.id to app.identity.profile.contentVisibility }
+    fun cardsProfileContentVisibility(): Map<AppProfileId, AppProfileContentVisibility> = profileContentVisibility
 
     fun withReconciledCardsChapterSelection(): LauncherShellState {
         val preferences = cardsChapterState().preferences

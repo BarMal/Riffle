@@ -1,6 +1,5 @@
 package com.riffle.app.launcher.apps
 
-import com.riffle.core.domain.launcher.apps.AppProfile
 import com.riffle.core.domain.launcher.apps.AppProfileContentVisibility
 import com.riffle.core.domain.launcher.apps.AppProfileId
 import com.riffle.core.domain.launcher.apps.AppProfileType
@@ -42,17 +41,14 @@ class AndroidUserProfilesTest {
     }
 
     @Test
-    fun mapperRetainsTheProfileContentVisibilityDecision() {
+    fun profileContentVisibilityRedactsQuietAndLockedProfiles() {
         assertEquals(
             AppProfileContentVisibility.REDACTED_QUIET,
-            mapper
-                .map(
-                    AndroidUserProfile(
-                        stableId = "42",
-                        isCurrentUser = false,
-                        contentVisibility = AppProfileContentVisibility.REDACTED_QUIET,
-                    ),
-                ).contentVisibility,
+            profileContentVisibility(isQuietModeEnabled = true, isUserUnlocked = true),
+        )
+        assertEquals(
+            AppProfileContentVisibility.REDACTED_LOCKED,
+            profileContentVisibility(isQuietModeEnabled = false, isUserUnlocked = false),
         )
     }
 }

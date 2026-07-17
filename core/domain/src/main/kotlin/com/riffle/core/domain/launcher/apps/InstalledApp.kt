@@ -18,7 +18,6 @@ data class AppIdentity(
 data class AppProfile(
     val id: AppProfileId,
     val type: AppProfileType,
-    val contentVisibility: AppProfileContentVisibility = AppProfileContentVisibility.VISIBLE,
 ) {
     companion object {
         fun personal(): AppProfile =

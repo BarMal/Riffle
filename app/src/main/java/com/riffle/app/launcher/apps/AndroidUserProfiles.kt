@@ -15,7 +15,6 @@ internal data class AndroidUserProfile(
     val stableId: String,
     val isCurrentUser: Boolean,
     val type: AndroidUserProfileType = AndroidUserProfileType.MANAGED,
-    val contentVisibility: AppProfileContentVisibility = AppProfileContentVisibility.VISIBLE,
 )
 
 internal enum class AndroidUserProfileType {
@@ -37,7 +36,6 @@ internal class AndroidUserProfileMapper {
                         AndroidUserProfileType.MANAGED -> AppProfileType.WORK
                         AndroidUserProfileType.PRIVATE -> AppProfileType.PRIVATE
                     },
-                contentVisibility = profile.contentVisibility,
             )
         }
 }
@@ -56,7 +54,6 @@ internal fun UserHandle.toAppProfile(
                 stableId = stableProfileId(userManager = userManager, launcherApps = launcherApps),
                 isCurrentUser = false,
                 type = androidUserProfileType(launcherApps = launcherApps),
-                contentVisibility = profileContentVisibility(userManager),
             ),
         )
     }
@@ -108,14 +105,23 @@ private fun UserHandle.androidUserProfileType(launcherApps: LauncherApps?): Andr
         AndroidUserProfileType.MANAGED
     }
 
-private fun UserHandle.profileContentVisibility(userManager: UserManager?): AppProfileContentVisibility =
+internal fun UserHandle.profileContentVisibility(userManager: UserManager?): AppProfileContentVisibility =
     runCatching {
-        when {
-            userManager?.isQuietModeEnabled(this) == true -> AppProfileContentVisibility.REDACTED_QUIET
-            userManager?.isUserUnlocked(this) == false -> AppProfileContentVisibility.REDACTED_LOCKED
-            else -> AppProfileContentVisibility.VISIBLE
-        }
+        profileContentVisibility(
+            isQuietModeEnabled = userManager?.isQuietModeEnabled(this) == true,
+            isUserUnlocked = userManager?.isUserUnlocked(this) != false,
+        )
     }.getOrDefault(AppProfileContentVisibility.REDACTED_UNAVAILABLE)
+
+internal fun profileContentVisibility(
+    isQuietModeEnabled: Boolean,
+    isUserUnlocked: Boolean,
+): AppProfileContentVisibility =
+    when {
+        isQuietModeEnabled -> AppProfileContentVisibility.REDACTED_QUIET
+        !isUserUnlocked -> AppProfileContentVisibility.REDACTED_LOCKED
+        else -> AppProfileContentVisibility.VISIBLE
+    }
 
 @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
 private fun LauncherApps.launcherUserInfo(user: UserHandle) = runCatching { getLauncherUserInfo(user) }.getOrNull()

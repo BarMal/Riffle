@@ -15,10 +15,12 @@ fun interface InstalledAppRepository {
 sealed interface InstalledAppRefreshResult {
     data class Authoritative(
         val apps: List<InstalledApp>,
+        val profileContentVisibility: Map<AppProfileId, AppProfileContentVisibility> = emptyMap(),
     ) : InstalledAppRefreshResult
 
     data class Partial(
         val apps: List<InstalledApp>,
+        val profileContentVisibility: Map<AppProfileId, AppProfileContentVisibility> = emptyMap(),
     ) : InstalledAppRefreshResult
 
     data object Unavailable : InstalledAppRefreshResult
