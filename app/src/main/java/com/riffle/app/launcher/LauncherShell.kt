@@ -165,6 +165,7 @@ private fun LauncherDestination(
                     apps = state.installedApps,
                     notificationAccessStatus = state.notificationAccessStatus,
                     onAction = settingsPageActionRouter.onAction,
+                    windowInsets = cardsPanelInsetPolicy(state).safeDrawingPanelInsets(),
                 )
             } else {
                 HomeDestination(

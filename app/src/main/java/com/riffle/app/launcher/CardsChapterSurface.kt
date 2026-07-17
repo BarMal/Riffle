@@ -1,13 +1,18 @@
+@file:Suppress("TooManyFunctions")
+
 package com.riffle.app.launcher
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -31,9 +36,10 @@ internal fun CardsChapterSurface(
     notificationAccessStatus: NotificationAccessStatus,
     onAction: (LauncherShellAction) -> Unit,
     modifier: Modifier = Modifier,
+    windowInsets: WindowInsets = WindowInsets(0, 0, 0, 0),
 ) {
     Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.surface) {
-        Column(modifier = Modifier.fillMaxSize()) {
+        Column(modifier = Modifier.fillMaxSize().windowInsetsPadding(windowInsets)) {
             CardsChapterHeader(state, onAction)
             CardsChapterNavigator(state, apps, onAction)
             when (val chapter = state.selectedChapter) {
@@ -85,16 +91,19 @@ private fun CardsChapterNavigator(
     apps: List<InstalledApp>,
     onAction: (LauncherShellAction) -> Unit,
 ) {
-    Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
-        state.plan.chapters.forEach { chapter ->
+    LazyRow(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
+        items(cardsChapterNavigatorChapterIds(state), key = { chapterId -> chapterId }) { chapterId ->
+            val chapter = state.plan.chapters.first { it.id == chapterId }
             val label = chapter.label(apps)
             TextButton(
-                onClick = { onAction(LauncherShellAction.SelectCardsChapter(chapter.id)) },
+                onClick = { onAction(LauncherShellAction.SelectCardsChapter(chapterId)) },
                 modifier = Modifier.semantics { contentDescription = "Open $label chapter" },
             ) { Text(label) }
         }
     }
 }
+
+internal fun cardsChapterNavigatorChapterIds(state: CardsChapterState): List<CardsChapterId> = state.plan.chapterIds
 
 @Composable
 private fun CardsOverview(

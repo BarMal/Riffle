@@ -7,10 +7,31 @@ import com.riffle.core.domain.launcher.apps.AppProfile
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.cards.CardsChapter
 import com.riffle.core.domain.launcher.cards.CardsChapterId
+import com.riffle.core.domain.launcher.cards.CardsChapterPlanner
+import com.riffle.core.domain.launcher.cards.CardsChapterPreferences
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class CardsChapterSurfaceTest {
+    @Test
+    fun navigatorKeepsEveryChapterReachableWhenThePlanExceedsCompactWidth() {
+        val profile = AppProfile.personal()
+        val chapterIds =
+            (1..12).map { index ->
+                CardsChapterId.App(AppPackageName("com.riffle.app$index"), profile.id)
+            }
+        val state =
+            CardsChapterPlanner().state(
+                notificationGroups = emptyList(),
+                preferences = CardsChapterPreferences(pinnedChapterIds = chapterIds),
+            )
+
+        assertEquals(
+            listOf(CardsChapterId.Overview) + chapterIds,
+            cardsChapterNavigatorChapterIds(state),
+        )
+    }
+
     @Test
     fun labelsAppChaptersWithTheMatchingProfiledApp() {
         val personal = AppProfile.personal()
