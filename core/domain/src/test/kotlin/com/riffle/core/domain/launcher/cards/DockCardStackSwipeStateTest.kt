@@ -100,13 +100,26 @@ class DockCardStackSwipeStateTest {
     }
 
     @Test
+    fun wrappedSingleCardSwipeStillRejectsAnInvalidActiveCardIndex() {
+        assertFailsWith<IllegalArgumentException> {
+            DockCardStackSwipeState.create(
+                cardCount = 1,
+                activeCardIndex = 1,
+                direction = DockCardStackSwipeDirection.NEXT,
+                content = DockCardStackContent.APPS,
+                wrapAround = true,
+            )
+        }
+    }
+
+    @Test
     fun hybridFocusSurvivesDockReorderByAppIdentity() {
         val mail = app("mail")
         val chat = app("chat")
         val focus = HybridDockFocus(appIdentity = mail, notificationKey = LauncherNotificationKey("mail:1"))
 
         assertEquals(
-            focus,
+            focus.copy(appPosition = 1),
             reconcileHybridDockFocus(
                 focus = focus,
                 eligibleAppIdentities = listOf(chat, mail),
@@ -116,22 +129,31 @@ class DockCardStackSwipeStateTest {
     }
 
     @Test
-    fun hybridFocusUsesNearestRemainingAppAndNotificationWhenContentDisappears() {
+    fun hybridFocusUsesPersistedPositionsWhenContentDisappearsAfterRecreation() {
         val calendar = app("calendar")
         val chat = app("chat")
         val mail = app("mail")
 
         assertEquals(
-            HybridDockFocus(appIdentity = mail, notificationKey = LauncherNotificationKey("mail:2")),
+            HybridDockFocus(
+                appIdentity = mail,
+                notificationKey = LauncherNotificationKey("mail:2"),
+                appPosition = 1,
+                notificationPosition = 1,
+            ),
             reconcileHybridDockFocus(
-                focus = HybridDockFocus(appIdentity = chat, notificationKey = LauncherNotificationKey("chat:1")),
+                focus =
+                    HybridDockFocus(
+                        appIdentity = chat,
+                        notificationKey = LauncherNotificationKey("chat:1"),
+                        appPosition = 1,
+                        notificationPosition = 1,
+                    ),
                 eligibleAppIdentities = listOf(calendar, mail),
                 notificationKeysByApp =
                     mapOf(
                         mail to listOf(LauncherNotificationKey("mail:1"), LauncherNotificationKey("mail:2")),
                     ),
-                appFallbackIndex = 1,
-                notificationFallbackIndex = 1,
             ),
         )
     }

@@ -41,8 +41,10 @@ data class DockCardStackSwipeState(
             wrapAround: Boolean = false,
         ): DockCardStackSwipeState? {
             require(cardCount >= 0) { "Card count must not be negative." }
+            if (cardCount > 0) {
+                require(activeCardIndex in 0 until cardCount) { "Active card index must be in the stack." }
+            }
             if (cardCount == 0 || (wrapAround && cardCount == 1)) return null
-            require(activeCardIndex in 0 until cardCount) { "Active card index must be in the stack." }
 
             val incomingCardIndex =
                 (activeCardIndex + direction.indexDelta).let { candidate ->
@@ -74,45 +76,58 @@ data class DockCardStackSwipeState(
 data class HybridDockFocus(
     val appIdentity: AppIdentity,
     val notificationKey: LauncherNotificationKey? = null,
-)
+    val appPosition: Int = 0,
+    val notificationPosition: Int = 0,
+) {
+    init {
+        require(appPosition >= 0) { "App position must not be negative." }
+        require(notificationPosition >= 0) { "Notification position must not be negative." }
+    }
+}
 
 /**
  * Reconciles persisted Hybrid Dock focus with currently eligible Dock apps and their notifications.
  *
- * When an identity disappears, the caller-provided index selects the nearest remaining item. The
+ * When an identity disappears, the persisted position selects the nearest remaining item. The
  * focused notification follows the same rule, while an app without notifications retains its app card.
  */
 fun reconcileHybridDockFocus(
     focus: HybridDockFocus?,
     eligibleAppIdentities: List<AppIdentity>,
     notificationKeysByApp: Map<AppIdentity, List<LauncherNotificationKey>>,
-    appFallbackIndex: Int = 0,
-    notificationFallbackIndex: Int = 0,
 ): HybridDockFocus? {
     require(eligibleAppIdentities.distinct().size == eligibleAppIdentities.size) {
         "Eligible Hybrid Dock apps must be unique."
     }
-    require(appFallbackIndex >= 0) { "App fallback index must not be negative." }
-    require(notificationFallbackIndex >= 0) { "Notification fallback index must not be negative." }
-
     if (eligibleAppIdentities.isEmpty()) return null
 
-    val appIdentity =
+    val selectedAppPosition =
         focus
             ?.appIdentity
-            ?.takeIf { it in eligibleAppIdentities }
-            ?: eligibleAppIdentities[appFallbackIndex.coerceAtMost(eligibleAppIdentities.lastIndex)]
+            ?.let(eligibleAppIdentities::indexOf)
+            ?.takeIf { it >= 0 }
+            ?: focus?.appPosition?.coerceAtMost(eligibleAppIdentities.lastIndex)
+            ?: 0
+    val appIdentity = eligibleAppIdentities[selectedAppPosition]
     val notificationKeys = notificationKeysByApp[appIdentity].orEmpty()
-    val notificationKey =
-        focus
-            ?.takeIf { it.appIdentity == appIdentity }
-            ?.notificationKey
-            ?.takeIf { it in notificationKeys }
-            ?: notificationKeys.getOrNull(notificationFallbackIndex.coerceAtMost(notificationKeys.lastIndex))
+    val selectedNotificationPosition =
+        if (notificationKeys.isEmpty()) {
+            0
+        } else {
+            focus
+                ?.takeIf { it.appIdentity == appIdentity }
+                ?.notificationKey
+                ?.let(notificationKeys::indexOf)
+                ?.takeIf { it >= 0 }
+                ?: focus?.notificationPosition?.coerceAtMost(notificationKeys.lastIndex)
+                ?: 0
+        }
 
     return HybridDockFocus(
         appIdentity = appIdentity,
-        notificationKey = notificationKey,
+        notificationKey = notificationKeys.getOrNull(selectedNotificationPosition),
+        appPosition = selectedAppPosition,
+        notificationPosition = selectedNotificationPosition,
     )
 }
 
