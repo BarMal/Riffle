@@ -1,5 +1,6 @@
 package com.riffle.app.launcher
 
+import androidx.compose.ui.unit.Density
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -64,6 +65,90 @@ class PageOverviewCardStateTest {
                 pageCount = 4,
                 dragDistancePx = 600f,
                 cardStepPx = 100f,
+            ),
+        )
+        assertEquals(
+            3,
+            pageOverviewDropTargetIndex(
+                index = 1,
+                pageCount = 4,
+                dragDistancePx = 10f,
+                scrollDistancePx = 220f,
+                cardStepPx = 100f,
+            ),
+        )
+    }
+
+    @Test
+    fun draggedCardTranslationCompensatesForLazyRowScroll() {
+        assertEquals(
+            230f,
+            pageOverviewDraggedCardTranslationPx(
+                dragDistancePx = 30f,
+                scrollDistancePx = 200f,
+            ),
+        )
+        assertEquals(
+            -180f,
+            pageOverviewDraggedCardTranslationPx(
+                dragDistancePx = 20f,
+                scrollDistancePx = -200f,
+            ),
+        )
+    }
+
+    @Test
+    fun projectedPositionMovesCardsOutOfTheDraggedCardsTargetRange() {
+        val preview = PageOverviewDragPreview(sourceIndex = 1, targetIndex = 3)
+
+        assertEquals(0, pageOverviewProjectedVisualIndex(pageIndex = 0, dragPreview = preview))
+        assertEquals(1, pageOverviewProjectedVisualIndex(pageIndex = 1, dragPreview = preview))
+        assertEquals(1, pageOverviewProjectedVisualIndex(pageIndex = 2, dragPreview = preview))
+        assertEquals(2, pageOverviewProjectedVisualIndex(pageIndex = 3, dragPreview = preview))
+        assertEquals(4, pageOverviewProjectedVisualIndex(pageIndex = 4, dragPreview = preview))
+    }
+
+    @Test
+    fun projectedPositionMovesCardsRightWhenTheDraggedCardMovesLeft() {
+        val preview = PageOverviewDragPreview(sourceIndex = 3, targetIndex = 1)
+
+        assertEquals(0, pageOverviewProjectedVisualIndex(pageIndex = 0, dragPreview = preview))
+        assertEquals(2, pageOverviewProjectedVisualIndex(pageIndex = 1, dragPreview = preview))
+        assertEquals(3, pageOverviewProjectedVisualIndex(pageIndex = 2, dragPreview = preview))
+        assertEquals(3, pageOverviewProjectedVisualIndex(pageIndex = 3, dragPreview = preview))
+    }
+
+    @Test
+    fun edgeScrollDirectionUsesTheActualViewportEdges() {
+        val edgeScrollZonePx = pageOverviewEdgeScrollZonePx(Density(3f))
+
+        assertEquals(168f, edgeScrollZonePx)
+        assertEquals(60f, pageOverviewEdgeScrollStepPx(Density(3f)))
+        assertEquals(
+            -1,
+            pageOverviewViewportEdgeScrollDirection(
+                pointerPositionPx = 168f,
+                viewportStartPx = 0f,
+                viewportEndPx = 1_080f,
+                edgeScrollZonePx = edgeScrollZonePx,
+            ),
+        )
+        assertEquals(
+            0,
+            pageOverviewViewportEdgeScrollDirection(
+                pointerPositionPx = 540f,
+                viewportStartPx = 0f,
+                viewportEndPx = 1_080f,
+                edgeScrollZonePx = edgeScrollZonePx,
+            ),
+        )
+        assertEquals(
+            1,
+            pageOverviewViewportEdgeScrollDirection(
+                pointerPositionPx = 912f,
+                viewportStartPx = 0f,
+                viewportEndPx = 1_080f,
+                edgeScrollZonePx = edgeScrollZonePx,
             ),
         )
     }
