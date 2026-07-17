@@ -2,8 +2,8 @@ package com.riffle.app.launcher
 
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.test.assertHeightIsAtMost
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.fetchSemanticsNode
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -14,6 +14,7 @@ import com.riffle.core.domain.launcher.widgets.InstalledWidgetProvider
 import com.riffle.core.domain.launcher.widgets.WidgetProviderClassName
 import com.riffle.core.domain.launcher.widgets.WidgetProviderDimensions
 import com.riffle.core.domain.launcher.widgets.WidgetProviderIdentity
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -56,7 +57,10 @@ class WidgetPickerSurfaceTest {
             }
         }
 
-        composeRule.onNodeWithTag(WIDGET_PICKER_PREVIEW_TEST_TAG).assertHeightIsAtMost(240.dp)
+        val previewHeight =
+            composeRule.onNodeWithTag(WIDGET_PICKER_PREVIEW_TEST_TAG).fetchSemanticsNode().boundsInRoot.height
+
+        assertTrue(previewHeight <= with(composeRule.density) { 240.dp.toPx() })
     }
 
     private fun widgetProvider(): InstalledWidgetProvider =
