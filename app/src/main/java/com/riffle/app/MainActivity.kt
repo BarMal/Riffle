@@ -561,8 +561,7 @@ internal fun <Value> startupPlatformValue(
 
 internal fun <Value> startupPlatformValueOrNull(read: () -> Value?): Value? = runCatching(read).getOrNull()
 
-internal fun <Value> startupPlatformFlow(read: () -> Flow<Value>): Flow<Value> =
-    flow { emitAll(read()) }.catch { }
+internal fun <Value> startupPlatformFlow(read: () -> Flow<Value>): Flow<Value> = flow { emitAll(read()) }.catch { }
 
 private fun String.launcherBuildTypeLabel(): String =
     when {
