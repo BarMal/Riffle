@@ -145,6 +145,7 @@ private fun DefaultHomePrompt(onAction: (LauncherShellAction) -> Unit) {
     }
 }
 
+@Suppress("LongMethod")
 @Composable
 private fun LauncherDestination(
     state: LauncherShellState,
@@ -158,13 +159,23 @@ private fun LauncherDestination(
 
     when (state.destination) {
         ShellDestination.HOME ->
-            HomeDestination(
-                state = state,
-                appIconLoader = appIconLoader,
-                widgetRenderers = widgetRenderers,
-                haptics = haptics,
-                onAction = settingsPageActionRouter.onAction,
-            )
+            if (state.homeLayout.viewMode.homeSurfaceKind() == HomeSurfaceKind.CARDS) {
+                CardsChapterSurface(
+                    state = state.cardsChapterState(),
+                    apps = state.installedApps,
+                    notificationAccessStatus = state.notificationAccessStatus,
+                    onAction = settingsPageActionRouter.onAction,
+                    windowInsets = cardsPanelInsetPolicy(state).safeDrawingPanelInsets(),
+                )
+            } else {
+                HomeDestination(
+                    state = state,
+                    appIconLoader = appIconLoader,
+                    widgetRenderers = widgetRenderers,
+                    haptics = haptics,
+                    onAction = settingsPageActionRouter.onAction,
+                )
+            }
 
         ShellDestination.APP_DRAWER ->
             AppDrawer(

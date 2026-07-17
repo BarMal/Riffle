@@ -6,6 +6,7 @@ import com.riffle.core.domain.launcher.apps.AppProfileType
 import com.riffle.core.domain.launcher.apps.AppSearchContentFilter
 import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.apps.InstalledApp
+import com.riffle.core.domain.launcher.cards.CardsChapterId
 import com.riffle.core.domain.launcher.home.DockBackgroundSizing
 import com.riffle.core.domain.launcher.home.DockItemMoveDirection
 import com.riffle.core.domain.launcher.home.FolderItemMoveDirection
@@ -75,6 +76,10 @@ sealed interface LauncherShellAction {
     data object DuplicateSelectedHomePage : LauncherShellAction
 
     data class SelectHomePage(val pageId: LauncherPageId) : LauncherShellAction
+
+    data class SelectCardsChapter(val chapterId: CardsChapterId) : LauncherShellAction
+
+    data class ToggleCardsChapterPinned(val chapterId: CardsChapterId.App) : LauncherShellAction
 
     data object SelectPreviousHomePage : LauncherShellAction
 

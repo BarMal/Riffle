@@ -137,7 +137,13 @@ class LauncherShellViewModel(
             coroutineScope = viewModelScope,
             refreshDispatcher = refreshDispatcher,
             currentState = { mutableState.value },
-            updateState = { state -> mutableState.value = state },
+            updateState = { state ->
+                val previousState = mutableState.value
+                mutableState.value = state
+                if (state.launcherSettings != previousState.launcherSettings) {
+                    launcherSettingsRepository.saveLauncherSettings(state.launcherSettings)
+                }
+            },
             refreshCoordinator = refreshCoordinator,
         )
 
@@ -262,6 +268,11 @@ class LauncherShellViewModel(
     }
 
     fun onHomePageEdited(action: LauncherShellAction) {
+        if (action.isCardsChapterAction()) {
+            mutableState.value = mutableState.value.withCardsChapterAction(action, launcherSettingsRepository)
+            return
+        }
+
         val previousState = mutableState.value
         val removedHostedWidgetIds =
             when (action) {
@@ -314,6 +325,44 @@ class LauncherShellViewModel(
     private object NoopAppShortcutRepository : AppShortcutRepository {
         override fun shortcutsFor(apps: List<InstalledApp>): AppShortcutsByApp = emptyMap()
     }
+}
+
+private fun LauncherShellAction.isCardsChapterAction(): Boolean =
+    when (this) {
+        is LauncherShellAction.SelectCardsChapter,
+        is LauncherShellAction.ToggleCardsChapterPinned,
+        -> true
+
+        else -> false
+    }
+
+private fun LauncherShellState.withCardsChapterAction(
+    action: LauncherShellAction,
+    launcherSettingsRepository: LauncherSettingsRepository,
+): LauncherShellState {
+    val preferences = launcherSettings.cards.chapterPreferences
+    val updatedPreferences =
+        when (action) {
+            is LauncherShellAction.SelectCardsChapter -> preferences.select(action.chapterId)
+            is LauncherShellAction.ToggleCardsChapterPinned ->
+                if (action.chapterId in preferences.pinnedChapterIds) {
+                    preferences.unpin(action.chapterId)
+                } else {
+                    preferences.pin(action.chapterId)
+                }
+
+            else -> return this
+        }
+    val updatedState =
+        copy(
+            launcherSettings =
+                launcherSettings.copy(
+                    cards = launcherSettings.cards.copy(chapterPreferences = updatedPreferences),
+                ),
+        )
+            .withReconciledCardsChapterSelection()
+    launcherSettingsRepository.saveLauncherSettings(updatedState.launcherSettings)
+    return updatedState
 }
 
 private fun reduceHomeShortcutEdit(

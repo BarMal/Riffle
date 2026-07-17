@@ -3,6 +3,9 @@ package com.riffle.app.launcher
 import com.riffle.core.domain.launcher.apps.AppActivityName
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
+import com.riffle.core.domain.launcher.apps.AppProfile
+import com.riffle.core.domain.launcher.cards.CardsChapterId
+import com.riffle.core.domain.launcher.cards.CardsChapterPreferences
 import com.riffle.core.domain.launcher.contextual.ContextualSettings
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.LauncherItemId
@@ -10,6 +13,7 @@ import com.riffle.core.domain.launcher.home.WallpaperScrollMode
 import com.riffle.core.domain.launcher.home.WallpaperSettings
 import com.riffle.core.domain.launcher.home.WallpaperSource
 import com.riffle.core.domain.launcher.settings.AppearanceSettings
+import com.riffle.core.domain.launcher.settings.CardsSettings
 import com.riffle.core.domain.launcher.settings.GestureSettings
 import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
 import com.riffle.core.domain.launcher.settings.HapticSettings
@@ -42,6 +46,20 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class LauncherSettingsJsonCodecTest {
+    @Test
+    fun roundTripsCardsChapterIntent() {
+        val mail = CardsChapterId.App(AppPackageName("com.riffle.mail"), AppProfile.personal().id)
+        val settings =
+            LauncherSettings(
+                cards =
+                    CardsSettings(
+                        CardsChapterPreferences(pinnedChapterIds = listOf(mail), selectedChapterId = mail),
+                    ),
+            )
+
+        assertEquals(settings.cards, decodeLauncherSettings(encodeLauncherSettings(settings)).cards)
+    }
+
     @Test
     fun encodesSettingsVersion() {
         val encodedSettings = JSONObject(encodeLauncherSettings(LauncherSettings()))

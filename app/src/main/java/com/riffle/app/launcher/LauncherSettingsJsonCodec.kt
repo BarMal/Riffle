@@ -1,9 +1,16 @@
+@file:Suppress("TooManyFunctions")
+
 package com.riffle.app.launcher
 
+import com.riffle.core.domain.launcher.apps.AppPackageName
+import com.riffle.core.domain.launcher.apps.AppProfileId
+import com.riffle.core.domain.launcher.cards.CardsChapterId
+import com.riffle.core.domain.launcher.cards.CardsChapterPreferences
 import com.riffle.core.domain.launcher.home.WallpaperScrollMode
 import com.riffle.core.domain.launcher.home.WallpaperSettings
 import com.riffle.core.domain.launcher.home.WallpaperSource
 import com.riffle.core.domain.launcher.settings.AppearanceSettings
+import com.riffle.core.domain.launcher.settings.CardsSettings
 import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
 import com.riffle.core.domain.launcher.settings.HapticSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettings
@@ -22,6 +29,7 @@ fun encodeLauncherSettings(settings: LauncherSettings): String =
     JSONObject()
         .put("version", LAUNCHER_SETTINGS_JSON_VERSION)
         .put("appearance", encodeAppearance(settings.appearance))
+        .put("cards", encodeCardsSettings(settings.cards))
         .put("contextual", encodeContextual(settings.contextual))
         .put("gestures", encodeGestures(settings.gestures))
         .put("haptics", encodeHaptics(settings.haptics))
@@ -34,6 +42,7 @@ fun decodeLauncherSettings(value: String): LauncherSettings =
         val defaults = LauncherSettings()
         defaults.copy(
             appearance = json.optJSONObject("appearance")?.toAppearance(defaults.appearance) ?: defaults.appearance,
+            cards = json.optJSONObject("cards")?.toCardsSettings(defaults.cards) ?: defaults.cards,
             contextual = json.optJSONObject("contextual")?.toContextual(defaults.contextual) ?: defaults.contextual,
             gestures = json.optJSONObject("gestures")?.toGestures(defaults.gestures) ?: defaults.gestures,
             haptics = json.optJSONObject("haptics")?.toHaptics(defaults.haptics) ?: defaults.haptics,
@@ -41,6 +50,48 @@ fun decodeLauncherSettings(value: String): LauncherSettings =
             overlayDock =
                 json.optJSONObject("overlayDock")?.toOverlayDock(defaults.overlayDock) ?: defaults.overlayDock,
         )
+    }
+
+private fun encodeCardsSettings(settings: CardsSettings): JSONObject =
+    JSONObject()
+        .put("pinnedChapterIds", JSONArray(settings.chapterPreferences.pinnedChapterIds.map(::encodeCardsAppChapterId)))
+        .put("selectedChapterId", encodeCardsChapterId(settings.chapterPreferences.selectedChapterId))
+
+private fun encodeCardsChapterId(id: CardsChapterId): JSONObject =
+    when (id) {
+        CardsChapterId.Overview -> JSONObject().put("kind", "overview")
+        is CardsChapterId.App -> encodeCardsAppChapterId(id).put("kind", "app")
+    }
+
+private fun encodeCardsAppChapterId(id: CardsChapterId.App): JSONObject =
+    JSONObject().put("packageName", id.packageName.value).put("profileId", id.profileId.value)
+
+private fun JSONObject.toCardsSettings(defaults: CardsSettings): CardsSettings {
+    val pinnedChapterIds =
+        optJSONArray("pinnedChapterIds")
+            ?.let { ids ->
+                (0 until ids.length())
+                    .mapNotNull { index -> ids.optJSONObject(index)?.toCardsAppChapterId() }
+                    .distinct()
+            }
+            ?: defaults.chapterPreferences.pinnedChapterIds
+    val selectedChapterId =
+        optJSONObject("selectedChapterId")?.toCardsChapterId() ?: defaults.chapterPreferences.selectedChapterId
+    return CardsSettings(CardsChapterPreferences(pinnedChapterIds, selectedChapterId))
+}
+
+private fun JSONObject.toCardsChapterId(): CardsChapterId? =
+    when (optString("kind")) {
+        "overview" -> CardsChapterId.Overview
+        "app" -> toCardsAppChapterId()
+        else -> null
+    }
+
+private fun JSONObject.toCardsAppChapterId(): CardsChapterId.App? =
+    optString("packageName").takeIf(String::isNotBlank)?.let { packageName ->
+        optString("profileId").takeIf(String::isNotBlank)?.let { profileId ->
+            CardsChapterId.App(AppPackageName(packageName), AppProfileId(profileId))
+        }
     }
 
 private fun encodeAppearance(settings: AppearanceSettings): JSONObject =
@@ -136,4 +187,4 @@ private fun JSONObject.toOverlayDock(defaults: OverlayDockSettings): OverlayDock
         showLabels = optBoolean("showLabels", defaults.showLabels),
     ).coerceOverlayDockSettings()
 
-internal const val LAUNCHER_SETTINGS_JSON_VERSION = 1
+internal const val LAUNCHER_SETTINGS_JSON_VERSION = 2

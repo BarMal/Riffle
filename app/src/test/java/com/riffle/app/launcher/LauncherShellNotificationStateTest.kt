@@ -8,11 +8,16 @@ import com.riffle.core.domain.launcher.apps.AppProfileId
 import com.riffle.core.domain.launcher.apps.AppVisibilityRepository
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.apps.InstalledAppRepository
+import com.riffle.core.domain.launcher.cards.CardsChapterId
+import com.riffle.core.domain.launcher.cards.CardsChapterPreferences
 import com.riffle.core.domain.launcher.notifications.LauncherNotification
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationRepository
 import com.riffle.core.domain.launcher.notifications.NotificationAgeBucket
 import com.riffle.core.domain.launcher.notifications.NotificationCategory
+import com.riffle.core.domain.launcher.settings.CardsSettings
+import com.riffle.core.domain.launcher.settings.LauncherSettings
+import com.riffle.core.domain.launcher.settings.LauncherSettingsRepository
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
@@ -20,6 +25,37 @@ import org.junit.Test
 import kotlin.coroutines.CoroutineContext
 
 class LauncherShellNotificationStateTest {
+    @Test
+    fun refreshPersistsOverviewWhenTheSelectedTransientChapterDisappears() {
+        val mail = CardsChapterId.App(AppPackageName("com.riffle.mail"), AppProfile.personal().id)
+        val settingsRepository =
+            FakeLauncherSettingsRepository(
+                LauncherSettings(
+                    cards = CardsSettings(CardsChapterPreferences(selectedChapterId = mail)),
+                ),
+            )
+        val notificationRepository =
+            FakeNotificationRepository(
+                notifications = listOf(notification(key = "mail-1", packageName = "com.riffle.mail")),
+            )
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                launcherSettingsRepository = settingsRepository,
+                platformDependencies =
+                    LauncherShellPlatformDependencies(notificationRepository = notificationRepository),
+            )
+
+        runBlocking { viewModel.refreshNotifications().join() }
+        assertEquals(mail, viewModel.state.value.cardsChapterState().preferences.selectedChapterId)
+
+        notificationRepository.notifications = emptyList()
+        runBlocking { viewModel.refreshNotifications().join() }
+
+        assertEquals(CardsChapterId.Overview, viewModel.state.value.cardsChapterState().preferences.selectedChapterId)
+        assertEquals(CardsChapterId.Overview, settingsRepository.settings.cards.chapterPreferences.selectedChapterId)
+    }
+
     @Test
     fun refreshLoadsNotificationGroups() {
         val viewModel =
@@ -336,6 +372,16 @@ class LauncherShellNotificationStateTest {
 
         override fun showApp(identity: AppIdentity) {
             hiddenApps = hiddenApps - identity
+        }
+    }
+
+    private class FakeLauncherSettingsRepository(
+        var settings: LauncherSettings,
+    ) : LauncherSettingsRepository {
+        override fun loadLauncherSettings(): LauncherSettings = settings
+
+        override fun saveLauncherSettings(settings: LauncherSettings) {
+            this.settings = settings
         }
     }
 
