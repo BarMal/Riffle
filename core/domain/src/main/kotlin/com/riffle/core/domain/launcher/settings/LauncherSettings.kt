@@ -2,17 +2,24 @@ package com.riffle.core.domain.launcher.settings
 
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppShortcut
+import com.riffle.core.domain.launcher.cards.CardsChapterPreferences
 import com.riffle.core.domain.launcher.contextual.ContextualSettings
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.WallpaperSettings
 
 data class LauncherSettings(
     val appearance: AppearanceSettings = AppearanceSettings(),
+    val cards: CardsSettings = CardsSettings(),
     val contextual: ContextualSettings = ContextualSettings(),
     val gestures: GestureSettings = GestureSettings(),
     val haptics: HapticSettings = HapticSettings(),
     val motion: MotionSettings = MotionSettings(),
     val overlayDock: OverlayDockSettings = OverlayDockSettings(),
+)
+
+/** Stored user intent for Cards chapters. Notification content remains transient. */
+data class CardsSettings(
+    val chapterPreferences: CardsChapterPreferences = CardsChapterPreferences(),
 )
 
 data class AppearanceSettings(

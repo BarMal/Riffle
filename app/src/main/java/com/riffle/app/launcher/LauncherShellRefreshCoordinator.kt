@@ -27,7 +27,7 @@ internal class LauncherShellRefreshCoordinator(
             appNotificationGrouper = notificationDependencies.appNotificationGrouper,
             notificationStaleFilter = notificationDependencies.notificationStaleFilter,
             nowEpochMillis = notificationDependencies.epochMillisProvider.nowEpochMillis(),
-        )
+        ).withReconciledCardsChapterSelection()
 
     fun refreshWidgetProviders(currentState: LauncherShellState): LauncherShellState =
         currentState.copy(

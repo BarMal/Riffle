@@ -3,12 +3,21 @@ package com.riffle.core.domain.launcher.settings
 import com.riffle.core.domain.launcher.apps.AppActivityName
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
+import com.riffle.core.domain.launcher.cards.CardsChapterId
 import com.riffle.core.domain.launcher.home.WallpaperSettings
 import com.riffle.core.domain.launcher.home.WallpaperSource
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class LauncherSettingsTest {
+    @Test
+    fun cardsChapterIntentDefaultsToOverviewWithoutPins() {
+        val cards = LauncherSettings().cards.chapterPreferences
+
+        assertEquals(emptyList(), cards.pinnedChapterIds)
+        assertEquals(CardsChapterId.Overview, cards.selectedChapterId)
+    }
+
     @Test
     fun replacesLaunchTargetWhenGestureActionChanges() {
         val identity =

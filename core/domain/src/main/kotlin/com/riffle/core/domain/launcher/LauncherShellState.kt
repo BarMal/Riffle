@@ -5,6 +5,8 @@ import com.riffle.core.domain.launcher.apps.AppSearchFilters
 import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.apps.AppShortcutsByApp
 import com.riffle.core.domain.launcher.apps.InstalledApp
+import com.riffle.core.domain.launcher.cards.CardsChapterPlanner
+import com.riffle.core.domain.launcher.cards.CardsChapterState
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
@@ -44,6 +46,27 @@ data class LauncherShellState(
     val installedWidgetProviders: List<InstalledWidgetProvider> = emptyList(),
     val isWidgetPickerOpen: Boolean = false,
 ) {
+    /** Rebuilds transient Cards content from the current notification snapshot and stored intent. */
+    fun cardsChapterState(planner: CardsChapterPlanner = CardsChapterPlanner()): CardsChapterState =
+        planner.state(
+            notificationGroups = notificationGroupsByApp,
+            preferences = launcherSettings.cards.chapterPreferences,
+        )
+
+    fun withReconciledCardsChapterSelection(): LauncherShellState {
+        val preferences = cardsChapterState().preferences
+        return if (preferences == launcherSettings.cards.chapterPreferences) {
+            this
+        } else {
+            copy(
+                launcherSettings =
+                    launcherSettings.copy(
+                        cards = launcherSettings.cards.copy(chapterPreferences = preferences),
+                    ),
+            )
+        }
+    }
+
     val shouldShowDefaultHomePrompt: Boolean =
         firstRunStatus == FirstRunStatus.NEEDS_HOME_ROLE &&
             homeRoleStatus != HomeRoleStatus.DEFAULT_HOME
