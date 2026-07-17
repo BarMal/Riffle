@@ -61,9 +61,8 @@ data class GestureSettings(
             )
 }
 
-private fun List<LauncherGestureConflict>.withHomeLaunchTargets(
-    settings: HomeGestureSettings,
-): List<LauncherGestureConflict> =
+@Suppress("MaxLineLength")
+private fun List<LauncherGestureConflict>.withHomeLaunchTargets(settings: HomeGestureSettings): List<LauncherGestureConflict> =
     flatMap { conflict ->
         if (!conflict.action.requiresLaunchTarget) {
             listOf(conflict)
