@@ -293,9 +293,9 @@ class HomeDockMetricsTest {
     }
 
     @Test
-    fun emptyDynamicDockHidesBackground() {
+    fun emptyDynamicDockShowsBackgroundDuringRecovery() {
         assertEquals(
-            false,
+            true,
             dockBackgroundVisible(
                 capacity = 5,
                 itemCount = 0,
