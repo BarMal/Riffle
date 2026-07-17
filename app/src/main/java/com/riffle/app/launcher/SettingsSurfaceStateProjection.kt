@@ -24,6 +24,7 @@ internal fun LauncherShellState.settingsSurfaceState(
         overlayDockPermissionStatus = overlayDockPermissionStatus,
         notificationAccessStatus = notificationAccessStatus,
         installedApps = installedApps,
+        appShortcutsByApp = appShortcutsByApp,
         hiddenApps = hiddenApps,
         appVersionLabel = appVersionLabel,
         appBuildIdentityLabel = appBuildIdentityLabel,

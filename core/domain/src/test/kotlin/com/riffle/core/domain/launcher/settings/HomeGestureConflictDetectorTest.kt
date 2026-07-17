@@ -1,10 +1,36 @@
 package com.riffle.core.domain.launcher.settings
 
+import com.riffle.core.domain.launcher.apps.AppActivityName
+import com.riffle.core.domain.launcher.apps.AppIdentity
+import com.riffle.core.domain.launcher.apps.AppPackageName
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class HomeGestureConflictDetectorTest {
+    @Test
+    fun ignoresLaunchAppGesturesWithDifferentTargets() {
+        val settings =
+            HomeGestureSettings(
+                actions =
+                    mapOf(
+                        HomeGesture.TWO_FINGER_LEFT to LauncherGestureAction.LAUNCH_APP,
+                        HomeGesture.TWO_FINGER_RIGHT to LauncherGestureAction.LAUNCH_APP,
+                    ),
+                launchTargets =
+                    mapOf(
+                        HomeGesture.TWO_FINGER_LEFT to LauncherGestureLaunchTarget.App(appIdentity("mail")),
+                        HomeGesture.TWO_FINGER_RIGHT to LauncherGestureLaunchTarget.App(appIdentity("calendar")),
+                    ),
+            )
+
+        assertTrue(
+            HomeGestureConflictDetector
+                .conflictsIn(settings)
+                .none { conflict -> conflict.action == LauncherGestureAction.LAUNCH_APP },
+        )
+    }
+
     @Test
     fun returnsNoConflictWhenEnabledActionsAreUnique() {
         val settings =
@@ -89,4 +115,10 @@ class HomeGestureConflictDetectorTest {
             conflict.gestures,
         )
     }
+
+    private fun appIdentity(name: String): AppIdentity =
+        AppIdentity(
+            packageName = AppPackageName("com.riffle.$name"),
+            activityName = AppActivityName("com.riffle.$name.MainActivity"),
+        )
 }

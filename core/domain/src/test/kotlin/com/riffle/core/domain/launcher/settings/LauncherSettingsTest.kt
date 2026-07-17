@@ -1,11 +1,96 @@
 package com.riffle.core.domain.launcher.settings
 
+import com.riffle.core.domain.launcher.apps.AppActivityName
+import com.riffle.core.domain.launcher.apps.AppIdentity
+import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.home.WallpaperSettings
 import com.riffle.core.domain.launcher.home.WallpaperSource
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class LauncherSettingsTest {
+    @Test
+    fun replacesLaunchTargetWhenGestureActionChanges() {
+        val identity =
+            AppIdentity(
+                packageName = AppPackageName("com.riffle.mail"),
+                activityName = AppActivityName("com.riffle.mail.MainActivity"),
+            )
+        val configured =
+            HomeGestureSettings().withAction(
+                gesture = HomeGesture.THREE_FINGER_UP,
+                action = LauncherGestureAction.LAUNCH_APP,
+                launchTarget = LauncherGestureLaunchTarget.App(identity),
+            )
+
+        val updated =
+            configured.withAction(
+                gesture = HomeGesture.THREE_FINGER_UP,
+                action = LauncherGestureAction.OPEN_SEARCH,
+            )
+
+        assertEquals(null, updated.launchTargetFor(HomeGesture.THREE_FINGER_UP))
+    }
+
+    @Test
+    fun doesNotReportConflictForLaunchAppGesturesWithDifferentTargets() {
+        val mail = appIdentity("mail")
+        val calendar = appIdentity("calendar")
+        val settings =
+            GestureSettings(
+                homeGestures =
+                    HomeGestureSettings(
+                        actions =
+                            mapOf(
+                                HomeGesture.TWO_FINGER_LEFT to LauncherGestureAction.LAUNCH_APP,
+                                HomeGesture.TWO_FINGER_RIGHT to LauncherGestureAction.LAUNCH_APP,
+                            ),
+                        launchTargets =
+                            mapOf(
+                                HomeGesture.TWO_FINGER_LEFT to LauncherGestureLaunchTarget.App(mail),
+                                HomeGesture.TWO_FINGER_RIGHT to LauncherGestureLaunchTarget.App(calendar),
+                            ),
+                    ),
+            )
+
+        assertEquals(
+            emptyList<LauncherGestureConflict>(),
+            settings.conflicts.filter { it.action == LauncherGestureAction.LAUNCH_APP },
+        )
+    }
+
+    @Test
+    fun reportsConflictForLaunchAppGesturesWithSameTarget() {
+        val mail = appIdentity("mail")
+        val settings =
+            GestureSettings(
+                homeGestures =
+                    HomeGestureSettings(
+                        actions =
+                            mapOf(
+                                HomeGesture.TWO_FINGER_LEFT to LauncherGestureAction.LAUNCH_APP,
+                                HomeGesture.TWO_FINGER_RIGHT to LauncherGestureAction.LAUNCH_APP,
+                            ),
+                        launchTargets =
+                            mapOf(
+                                HomeGesture.TWO_FINGER_LEFT to LauncherGestureLaunchTarget.App(mail),
+                                HomeGesture.TWO_FINGER_RIGHT to LauncherGestureLaunchTarget.App(mail),
+                            ),
+                    ),
+            )
+
+        assertEquals(
+            listOf(
+                LauncherGestureConflict(
+                    surface = LauncherGestureSurface.HOME_PAGE,
+                    action = LauncherGestureAction.LAUNCH_APP,
+                    gestures = listOf(LauncherGesture.TWO_FINGER_LEFT, LauncherGesture.TWO_FINGER_RIGHT),
+                ),
+            ),
+            settings.conflicts.filter { it.action == LauncherGestureAction.LAUNCH_APP },
+        )
+    }
+
     @Test
     fun defaultsToSystemWallpaper() {
         val settings = LauncherSettings()
@@ -111,4 +196,10 @@ class LauncherSettingsTest {
 
         assertEquals(WallpaperSource.SOLID_COLOR, settings.appearance.wallpaper.source)
     }
+
+    private fun appIdentity(name: String): AppIdentity =
+        AppIdentity(
+            packageName = AppPackageName("com.riffle.$name"),
+            activityName = AppActivityName("com.riffle.$name.MainActivity"),
+        )
 }

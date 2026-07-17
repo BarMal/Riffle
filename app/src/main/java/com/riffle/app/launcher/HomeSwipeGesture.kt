@@ -3,6 +3,7 @@ package com.riffle.app.launcher
 import com.riffle.core.domain.launcher.settings.HomeGesture
 import com.riffle.core.domain.launcher.settings.HomeGestureSettings
 import com.riffle.core.domain.launcher.settings.LauncherGestureAction
+import com.riffle.core.domain.launcher.settings.LauncherGestureLaunchTarget
 
 class HomeSwipeGestureInterpreter(
     private val thresholdPx: Float,
@@ -114,9 +115,9 @@ class HomeSwipeGestureActionMapper {
     fun actionFor(
         gesture: HomeGesture,
         settings: HomeGestureSettings = HomeGestureSettings(),
-    ): LauncherShellAction? = settings.actionFor(gesture).toShellAction()
+    ): LauncherShellAction? = settings.actionFor(gesture).toShellAction(settings.launchTargetFor(gesture))
 
-    private fun LauncherGestureAction.toShellAction(): LauncherShellAction? =
+    private fun LauncherGestureAction.toShellAction(launchTarget: LauncherGestureLaunchTarget?): LauncherShellAction? =
         when (this) {
             LauncherGestureAction.NONE -> null
             LauncherGestureAction.OPEN_APP_DRAWER -> LauncherShellAction.OpenAppDrawer
@@ -128,6 +129,16 @@ class HomeSwipeGestureActionMapper {
             LauncherGestureAction.ENTER_FULLSCREEN_HOME -> LauncherShellAction.SelectFullscreenHomeEnabled(true)
             LauncherGestureAction.SELECT_NEXT_HOME_PAGE -> LauncherShellAction.SelectNextHomePage
             LauncherGestureAction.SELECT_PREVIOUS_HOME_PAGE -> LauncherShellAction.SelectPreviousHomePage
+            LauncherGestureAction.LAUNCH_APP -> launchTarget.launchAppAction()
+            LauncherGestureAction.LAUNCH_APP_SHORTCUT -> launchTarget.launchShortcutAction()
+        }
+
+    private fun LauncherGestureLaunchTarget?.launchAppAction(): LauncherShellAction? =
+        (this as? LauncherGestureLaunchTarget.App)?.let { target -> LauncherShellAction.LaunchApp(target.identity) }
+
+    private fun LauncherGestureLaunchTarget?.launchShortcutAction(): LauncherShellAction? =
+        (this as? LauncherGestureLaunchTarget.Shortcut)?.let { target ->
+            LauncherShellAction.LaunchAppShortcut(target.shortcut)
         }
 }
 
