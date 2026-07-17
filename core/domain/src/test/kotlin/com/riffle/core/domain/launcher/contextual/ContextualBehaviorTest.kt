@@ -105,7 +105,7 @@ class ContextualBehaviorTest {
     }
 
     @Test
-    fun enabledSelectorMapsSimpleSignalsToExistingPageKindsDeterministically() {
+    fun enabledSelectorPrioritizesEventDrivenPagesOverAvailableProfiles() {
         val selection =
             ContextualBehaviorSelector.select(
                 settings = ContextualSettings(enabled = true),
@@ -121,9 +121,32 @@ class ContextualBehaviorTest {
         assertEquals(
             listOf(
                 GeneratedLauncherPageKind.TODAY,
-                GeneratedLauncherPageKind.WORK,
-                GeneratedLauncherPageKind.FREQUENTLY_USED,
                 GeneratedLauncherPageKind.NOTIFICATION_CARDS,
+                GeneratedLauncherPageKind.FREQUENTLY_USED,
+                GeneratedLauncherPageKind.WORK,
+            ),
+            selection.pageKinds,
+        )
+    }
+
+    @Test
+    fun enabledSelectorPrioritizesNotificationCardsWhenBothProfilesAreAvailable() {
+        val selection =
+            ContextualBehaviorSelector.select(
+                settings = ContextualSettings(enabled = true),
+                signals =
+                    setOf(
+                        ContextualSignal.WORK_PROFILE_ACTIVE,
+                        ContextualSignal.PERSONAL_PROFILE_ACTIVE,
+                        ContextualSignal.NOTIFICATION_ACTIVITY,
+                    ),
+            )
+
+        assertEquals(
+            listOf(
+                GeneratedLauncherPageKind.NOTIFICATION_CARDS,
+                GeneratedLauncherPageKind.WORK,
+                GeneratedLauncherPageKind.PERSONAL,
             ),
             selection.pageKinds,
         )
@@ -144,8 +167,8 @@ class ContextualBehaviorTest {
 
         assertEquals(
             listOf(
-                LauncherCardKind.APP,
                 LauncherCardKind.NOTIFICATION_GROUP,
+                LauncherCardKind.APP,
             ),
             selection.cardKinds,
         )

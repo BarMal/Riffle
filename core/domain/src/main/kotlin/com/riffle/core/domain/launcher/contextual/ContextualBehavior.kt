@@ -77,12 +77,21 @@ object ContextualBehaviorSelector {
 }
 
 private fun <T> Set<ContextualSignal>.mapInStableSignalOrder(transform: (ContextualSignal) -> T?): List<T> =
-    ContextualSignal.entries
+    contextualSignalPriority
         .asSequence()
         .filter { signal -> signal in this }
         .mapNotNull(transform)
         .distinct()
         .toList()
+
+private val contextualSignalPriority =
+    listOf(
+        ContextualSignal.DAY_START,
+        ContextualSignal.NOTIFICATION_ACTIVITY,
+        ContextualSignal.APP_ACTIVITY,
+        ContextualSignal.WORK_PROFILE_ACTIVE,
+        ContextualSignal.PERSONAL_PROFILE_ACTIVE,
+    )
 
 private fun ContextualSignal.matches(input: ContextualSignalPlanInput): Boolean =
     when (this) {
