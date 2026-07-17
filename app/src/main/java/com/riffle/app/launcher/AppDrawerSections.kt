@@ -23,23 +23,16 @@ object AppDrawerSections {
             }
             .sortedWith(
                 compareBy<AppDrawerSection> { section -> section.profileBucketSortKey() }
-                    .thenBy { section -> section.title.letterSectionSortKey() },
+                    .thenBy { section -> section.title.sectionSortKey() },
             )
 
     private val InstalledApp.sectionTitle: String
         get() {
-            val letterSection =
-                label
-                    .trim()
-                    .firstOrNull()
-                    ?.takeIf { character -> character.isLetter() }
-                    ?.uppercaseChar()
-                    ?.toString()
-                    ?: OTHER_SECTION_TITLE
+            val section = category.normalizedCategory() ?: label.letterSectionTitle()
 
             return identity.profile.drawerProfilePrefix()
-                ?.let { prefix -> "$prefix - $letterSection" }
-                ?: letterSection
+                ?.let { prefix -> "$prefix - $section" }
+                ?: section
         }
 }
 
@@ -55,10 +48,21 @@ private fun AppDrawerSection.profileBucketSortKey(): Int {
     }
 }
 
-private fun String.letterSectionSortKey(): String =
+private fun String.sectionSortKey(): String =
     substringAfter(delimiter = " - ", missingDelimiterValue = this)
         .takeUnless { section -> section == OTHER_SECTION_TITLE }
         ?: OTHER_SECTION_SORT_TITLE
+
+private fun String?.normalizedCategory(): String? =
+    this?.trim()?.takeIf { category -> category.isNotEmpty() }
+
+private fun String.letterSectionTitle(): String =
+    trim()
+        .firstOrNull()
+        ?.takeIf { character -> character.isLetter() }
+        ?.uppercaseChar()
+        ?.toString()
+        ?: OTHER_SECTION_TITLE
 
 private const val OTHER_SECTION_TITLE = "#"
 private const val OTHER_SECTION_SORT_TITLE = "{"
