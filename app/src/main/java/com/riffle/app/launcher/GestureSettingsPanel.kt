@@ -230,7 +230,10 @@ internal fun AppShortcut.gesturePickerLabel(
     installedApps: List<InstalledApp>,
 ): String {
     val shortcutLabel = longLabel ?: shortLabel
-    val sameLabelShortcuts = shortcuts.filter { shortcut -> (shortcut.longLabel ?: shortcut.shortLabel) == shortcutLabel }
+    val sameLabelShortcuts =
+        shortcuts.filter { shortcut ->
+            (shortcut.longLabel ?: shortcut.shortLabel) == shortcutLabel
+        }
     if (sameLabelShortcuts.size == 1) return shortcutLabel
 
     val owningAppLabel =
