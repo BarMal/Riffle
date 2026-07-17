@@ -114,7 +114,7 @@ class LauncherAppListActionReducerTest {
     }
 
     @Test
-    fun defaultSearchExcludesShortcutLabels() {
+    fun defaultSearchIncludesShortcutLabels() {
         val camera = app(label = "Camera")
         val browser = app(label = "Browser")
         val state =
@@ -131,11 +131,11 @@ class LauncherAppListActionReducerTest {
 
         assertEquals("new tab", updated?.searchQuery)
         assertEquals(emptyList<String>(), updated?.searchResults?.map { app -> app.label })
-        assertEquals(emptyList<String>(), updated?.searchShortcutResults?.map { shortcut -> shortcut.shortLabel })
+        assertEquals(listOf("New tab"), updated?.searchShortcutResults?.map { shortcut -> shortcut.shortLabel })
     }
 
     @Test
-    fun togglingShortcutFilterIncludesShortcutLabels() {
+    fun togglingShortcutFilterExcludesShortcutLabels() {
         val browser = app(label = "Browser")
         val state =
             LauncherShellState(
@@ -155,11 +155,11 @@ class LauncherAppListActionReducerTest {
             )
 
         assertEquals(
-            setOf(AppSearchContentFilter.APPS, AppSearchContentFilter.SHORTCUTS),
+            setOf(AppSearchContentFilter.APPS),
             updated?.searchFilters?.content,
         )
         assertEquals(emptyList<String>(), updated?.searchResults?.map { app -> app.label })
-        assertEquals(listOf("New tab"), updated?.searchShortcutResults?.map { shortcut -> shortcut.shortLabel })
+        assertEquals(emptyList<String>(), updated?.searchShortcutResults?.map { shortcut -> shortcut.shortLabel })
     }
 
     @Test
