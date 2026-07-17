@@ -30,8 +30,18 @@ class WidgetPickerSectionsTest {
 
     @Test
     fun groupsVariantsFromTheSameAppAndSortsThemByVisibleLabel() {
-        val clock = widgetProvider(label = "Clock", appLabel = "Google", profile = AppProfile.personal())
-        val weather = widgetProvider(label = "Weather", appLabel = "Google", profile = AppProfile.personal())
+        val clock =
+            widgetProvider(
+                label = "Clock",
+                appLabel = "Google",
+                packageName = "com.example.google",
+            )
+        val weather =
+            widgetProvider(
+                label = "Weather",
+                appLabel = "Google",
+                packageName = "com.example.google",
+            )
 
         val sections = widgetPickerSectionsFor(listOf(weather, clock))
 
