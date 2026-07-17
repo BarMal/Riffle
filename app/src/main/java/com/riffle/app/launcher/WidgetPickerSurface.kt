@@ -37,6 +37,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.widgets.InstalledWidgetProvider
@@ -268,15 +269,7 @@ private fun WidgetProviderPreview(
             bitmap = preview,
             contentDescription = "${provider.label} widget preview",
             contentScale = ContentScale.Fit,
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(provider.widgetPickerPreviewAspectRatio())
-                    .heightIn(
-                        min = WIDGET_PREVIEW_MIN_HEIGHT_DP.dp,
-                        max = WIDGET_PREVIEW_MAX_HEIGHT_DP.dp,
-                    )
-                    .clip(RoundedCornerShape(12.dp)),
+            modifier = Modifier.widgetPickerPreviewBounds(provider),
         )
     } else {
         WidgetProviderPreviewFallback(provider = provider)
@@ -308,9 +301,7 @@ private fun WidgetProviderPreviewFallback(provider: InstalledWidgetProvider) {
     Box(
         modifier =
             Modifier
-                .fillMaxWidth()
-                .aspectRatio(provider.widgetPickerPreviewAspectRatio())
-                .clip(RoundedCornerShape(12.dp))
+                .widgetPickerPreviewBounds(provider)
                 .background(MaterialTheme.colorScheme.secondaryContainer),
         contentAlignment = Alignment.Center,
     ) {
@@ -321,6 +312,16 @@ private fun WidgetProviderPreviewFallback(provider: InstalledWidgetProvider) {
         )
     }
 }
+
+private fun Modifier.widgetPickerPreviewBounds(provider: InstalledWidgetProvider): Modifier =
+    fillMaxWidth()
+        .aspectRatio(provider.widgetPickerPreviewAspectRatio())
+        .heightIn(
+            min = WIDGET_PREVIEW_MIN_HEIGHT_DP.dp,
+            max = WIDGET_PREVIEW_MAX_HEIGHT_DP.dp,
+        )
+        .clip(RoundedCornerShape(12.dp))
+        .testTag(WIDGET_PICKER_PREVIEW_TEST_TAG)
 
 internal fun InstalledWidgetProvider.requestAddWidgetAction(
     target: WidgetAddTarget = WidgetAddTarget.HOME,
@@ -336,6 +337,7 @@ private const val WIDGET_PICKER_SCREEN_PADDING_DP = 20
 private const val WIDGET_TILE_MIN_WIDTH_DP = 144
 private const val WIDGET_PREVIEW_MIN_HEIGHT_DP = 72
 private const val WIDGET_PREVIEW_MAX_HEIGHT_DP = 240
+internal const val WIDGET_PICKER_PREVIEW_TEST_TAG = "widget-picker-preview"
 private const val WIDGET_PICKER_SECTION_STATE_SEPARATOR = "\u001f"
 
 private fun String.toCollapsedWidgetPickerSections(): Set<String> =

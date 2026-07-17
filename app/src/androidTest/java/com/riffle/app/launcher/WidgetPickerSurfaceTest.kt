@@ -3,8 +3,11 @@ package com.riffle.app.launcher
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertHeightIsAtMost
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.widgets.InstalledWidgetProvider
@@ -34,6 +37,26 @@ class WidgetPickerSurfaceTest {
 
         composeRule.onNodeWithText("Clock").assertIsDisplayed()
         composeRule.onNodeWithText("Add Clock").assertIsDisplayed()
+    }
+
+    @Test
+    fun boundsAnExtremeFallbackPreviewHeight() {
+        composeRule.setContent {
+            MaterialTheme {
+                WidgetPickerSurface(
+                    providers =
+                        listOf(
+                            widgetProvider().copy(
+                                dimensions = WidgetProviderDimensions(minWidthDp = 1, minHeightDp = 10_000),
+                            ),
+                        ),
+                    previewImageLoader = ThrowingWidgetPreviewImageLoader,
+                    onAction = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(WIDGET_PICKER_PREVIEW_TEST_TAG).assertHeightIsAtMost(240.dp)
     }
 
     private fun widgetProvider(): InstalledWidgetProvider =
