@@ -10,7 +10,8 @@ internal fun SettingsContextualPageContent(
     SettingsSection(title = "Contextual") {
         SettingsSwitchRow(
             title = "Contextual behaviour",
-            subtitle = "Allow persisted contextual model and action decisions",
+            subtitle =
+                "Open one of your configured Work, Personal, or Cards pages when it matches current activity",
             checked = state.settings.contextual.enabled,
             onCheckedChange = { enabled ->
                 onAction(LauncherShellAction.SelectContextualEnabled(enabled))

@@ -12,17 +12,22 @@ import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.apps.InstalledAppCatalog
 import com.riffle.core.domain.launcher.apps.InstalledAppRefreshResult
 import com.riffle.core.domain.launcher.apps.InstalledAppRepository
+import com.riffle.core.domain.launcher.contextual.ContextualSettings
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.DockModel
 import com.riffle.core.domain.launcher.home.FolderItem
+import com.riffle.core.domain.launcher.home.GeneratedLauncherPageKind
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
 import com.riffle.core.domain.launcher.home.LauncherItemId
+import com.riffle.core.domain.launcher.home.LauncherPageId
+import com.riffle.core.domain.launcher.home.LauncherPageType
 import com.riffle.core.domain.launcher.notifications.LauncherNotification
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationRepository
 import com.riffle.core.domain.launcher.notifications.NotificationCategory
+import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.widgets.InstalledWidgetProvider
 import com.riffle.core.domain.launcher.widgets.InstalledWidgetProviderRepository
 import com.riffle.core.domain.launcher.widgets.WidgetProviderClassName
@@ -138,6 +143,52 @@ class LauncherShellRefreshCoordinatorTest {
         assertEquals(1, state.notificationCountsByCategory[NotificationCategory.EMAIL])
         assertEquals(0, installedAppRepository.installedAppReadCount)
         assertEquals(0, widgetProviderRepository.providerReadCount)
+    }
+
+    @Test
+    fun refreshNotificationsSelectsConfiguredCardsPageAheadOfConfiguredProfilePages() {
+        val defaults = HomeLayoutDefaults.standard()
+        val workPage =
+            defaults.selectedPage.copy(
+                id = LauncherPageId("work"),
+                type = LauncherPageType.Generated(GeneratedLauncherPageKind.WORK),
+            )
+        val personalPage =
+            defaults.selectedPage.copy(
+                id = LauncherPageId("personal"),
+                type = LauncherPageType.Generated(GeneratedLauncherPageKind.PERSONAL),
+            )
+        val cardsPage =
+            defaults.selectedPage.copy(
+                id = LauncherPageId("cards"),
+                type = LauncherPageType.Generated(GeneratedLauncherPageKind.NOTIFICATION_CARDS),
+            )
+        val layout = defaults.copy(pages = listOf(defaults.selectedPage, workPage, personalPage, cardsPage))
+        val homeLayoutRepository = FakeHomeLayoutRepository()
+        val coordinator =
+            coordinator(
+                notificationRepository =
+                    FakeNotificationRepository(
+                        notifications = listOf(notification(key = "mail-1", packageName = "com.riffle.mail")),
+                    ),
+                homeLayoutRepository = homeLayoutRepository,
+            )
+
+        val refreshed =
+            coordinator.refreshNotifications(
+                LauncherShellState(
+                    homeLayout = layout,
+                    installedApps =
+                        listOf(
+                            app(label = "Docs"),
+                            app(label = "Work Docs", profile = AppProfile.work()),
+                        ),
+                    launcherSettings = LauncherSettings(contextual = ContextualSettings(enabled = true)),
+                ),
+            )
+
+        assertEquals(cardsPage.id, refreshed.homeLayout.selectedPageId)
+        assertEquals(refreshed.homeLayout, homeLayoutRepository.savedLayouts.single())
     }
 
     @Test
