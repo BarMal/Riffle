@@ -24,18 +24,27 @@ class AndroidInstalledWidgetProviderRepository(
 
     override fun installedWidgetProviders(): List<InstalledWidgetProvider> =
         appWidgetManager.installedProviders
-            .map { provider -> provider.toAndroidWidgetProvider(packageManager) }
+            .map { provider ->
+                val appLabel =
+                    packageManager
+                        ?.applicationLabelFor(provider.provider.packageName)
+                        .orEmpty()
+                provider
+                    .toAndroidWidgetProvider()
+                    .copy(
+                        appLabel = appLabel,
+                    )
+            }
             .map { provider -> mapper.map(provider, density = densityProvider()) }
 }
 
-internal fun AppWidgetProviderInfo
-    .toAndroidWidgetProvider(packageManager: PackageManager?): AndroidWidgetProvider =
+internal fun AppWidgetProviderInfo.toAndroidWidgetProvider(): AndroidWidgetProvider =
     AndroidWidgetProvider(
         packageName = provider.packageName,
         className = provider.className,
         profile = profile?.toAppProfile() ?: AppProfile.personal(),
         label = label.orEmpty(),
-        appLabel = packageManager?.applicationLabelFor(provider.packageName).orEmpty(),
+        appLabel = label.orEmpty(),
         description = null,
         minWidthPx = minWidth,
         minHeightPx = minHeight,
