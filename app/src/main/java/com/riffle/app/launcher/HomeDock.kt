@@ -215,6 +215,7 @@ internal fun dockRenderedSlotCount(
         else -> capacity
     }
 
+@Suppress("UnusedParameter")
 internal fun dockBackgroundVisible(
     capacity: Int,
     itemCount: Int,
@@ -224,8 +225,9 @@ internal fun dockBackgroundVisible(
     when {
         backgroundSizing == DockBackgroundSizing.FIXED -> true
         capacity <= 0 -> false
-        isEditing -> true
-        else -> itemCount > 0
+        // An empty app catalog can be a transient recovery state. Keep an enabled dynamic dock
+        // visible so it does not disappear until app discovery completes.
+        else -> true
     }
 
 internal data class DockOverflowAffordance(
