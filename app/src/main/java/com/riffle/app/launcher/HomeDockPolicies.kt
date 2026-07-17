@@ -98,14 +98,7 @@ internal fun dockShelfFrameRateAvailability(
             supportedFrameRates
                 ?.let { frameRates ->
                     MotionPerformanceTargetFps.entries.mapNotNull { targetFps ->
-                        frameRates
-                            .filter(Float::isFinite)
-                            .minByOrNull { frameRate ->
-                                abs(frameRate - targetFps.framesPerSecond)
-                            }
-                            ?.takeIf { frameRate ->
-                                abs(frameRate - targetFps.framesPerSecond) <= FRAME_RATE_MATCH_TOLERANCE_HZ
-                            }
+                        frameRates.frameRateFor(targetFps)
                             ?.let { frameRate -> DockShelfFrameRateChoice(targetFps, frameRate) }
                     }
                 }
@@ -183,6 +176,16 @@ internal class AndroidDockShelfFrameRatePlatform(
 }
 
 private const val FRAME_RATE_MATCH_TOLERANCE_HZ = 1f
+
+private fun List<Float>.frameRateFor(targetFps: MotionPerformanceTargetFps): Float? {
+    val supportedRates = filter(Float::isFinite)
+    return supportedRates
+        .minByOrNull { frameRate -> abs(frameRate - targetFps.framesPerSecond) }
+        ?.takeIf { frameRate -> abs(frameRate - targetFps.framesPerSecond) <= FRAME_RATE_MATCH_TOLERANCE_HZ }
+        ?: supportedRates
+            .filter { frameRate -> frameRate >= targetFps.framesPerSecond }
+            .minOrNull()
+}
 
 private fun Activity.supportedDisplayModes(): Array<Display.Mode>? =
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {

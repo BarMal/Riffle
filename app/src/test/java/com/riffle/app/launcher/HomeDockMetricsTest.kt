@@ -429,6 +429,22 @@ class HomeDockMetricsTest {
     }
 
     @Test
+    fun frameRateGatewayUsesTheLowestSupportedRateAtOrAboveTheTarget() {
+        val platform =
+            FakeDockShelfFrameRatePlatform(
+                initialFrameRate = 60f,
+                supportedFrameRates = listOf(60f, 144f),
+            )
+
+        val lease = DockShelfFrameRateGateway(platform).acquire(MotionPerformanceTargetFps.FPS_120)
+
+        assertEquals(144f, platform.currentFrameRate)
+        lease?.restore()
+        assertEquals(60f, platform.currentFrameRate)
+        assertEquals(listOf(144f, 60f), platform.requestedFrameRates)
+    }
+
+    @Test
     fun frameRateGatewayUsesFractionalSupportedModesForMatchingTarget() {
         val platform =
             FakeDockShelfFrameRatePlatform(
