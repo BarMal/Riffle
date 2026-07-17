@@ -68,11 +68,11 @@ private fun CardsChapterHeader(
     onAction: (LauncherShellAction) -> Unit,
 ) {
     val selectedIndex = state.plan.chapterIds.indexOf(state.preferences.selectedChapterId)
+    val chapterPosition = "Chapter ${selectedIndex + 1} of ${state.plan.chapters.size}"
     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp)) {
         Text(text = "Cards", style = MaterialTheme.typography.headlineSmall)
         Text(
-            text =
-                "${state.selectedChapter.navigatorLabel(apps)} · Chapter ${selectedIndex + 1} of ${state.plan.chapters.size}",
+            text = "${state.selectedChapter.navigatorLabel(apps)} · $chapterPosition",
             style = MaterialTheme.typography.bodyMedium,
         )
         if (state.plan.chapters.size > 1) {
