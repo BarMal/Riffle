@@ -144,6 +144,8 @@ internal fun ColorScheme.withThemeAccent(
             onTertiary = roles.onTertiary,
             tertiaryContainer = roles.tertiaryContainer,
             onTertiaryContainer = roles.onTertiaryContainer,
+            surfaceTint = roles.primary,
+            inversePrimary = roles.inversePrimary,
         )
     } ?: this
 
@@ -160,6 +162,7 @@ private data class LauncherAccentColorRoles(
     val onTertiary: Color,
     val tertiaryContainer: Color,
     val onTertiaryContainer: Color,
+    val inversePrimary: Color,
 )
 
 private fun LauncherThemeAccent.colorRoles(darkTheme: Boolean): LauncherAccentColorRoles? =
@@ -179,6 +182,7 @@ private val blueLightAccent =
         secondaryContainer = Color(0xFFD7E3F7), onSecondaryContainer = Color(0xFF0A1D31),
         tertiary = Color(0xFF66587A), onTertiary = Color.White,
         tertiaryContainer = Color(0xFFECDDFF), onTertiaryContainer = Color(0xFF201634),
+        inversePrimary = Color(0xFF9DCAFF),
     )
 
 private val blueDarkAccent =
@@ -189,6 +193,7 @@ private val blueDarkAccent =
         secondaryContainer = Color(0xFF36485E), onSecondaryContainer = Color(0xFFD7E3F7),
         tertiary = Color(0xFFD0BEE8), onTertiary = Color(0xFF372B4A),
         tertiaryContainer = Color(0xFF4E4062), onTertiaryContainer = Color(0xFFECDDFF),
+        inversePrimary = Color(0xFF2C6094),
     )
 
 private val tealLightAccent =
@@ -199,6 +204,7 @@ private val tealLightAccent =
         secondaryContainer = Color(0xFFCCE8E2), onSecondaryContainer = Color(0xFF05201C),
         tertiary = Color(0xFF456179), onTertiary = Color.White,
         tertiaryContainer = Color(0xFFCBE6FF), onTertiaryContainer = Color(0xFF001E2F),
+        inversePrimary = Color(0xFF55DBC8),
     )
 
 private val tealDarkAccent =
@@ -209,6 +215,7 @@ private val tealDarkAccent =
         secondaryContainer = Color(0xFF334B46), onSecondaryContainer = Color(0xFFCCE8E2),
         tertiary = Color(0xFFADCAE5), onTertiary = Color(0xFF153349),
         tertiaryContainer = Color(0xFF2D4961), onTertiaryContainer = Color(0xFFCBE6FF),
+        inversePrimary = Color(0xFF006B61),
     )
 
 private val roseLightAccent =
@@ -219,6 +226,7 @@ private val roseLightAccent =
         secondaryContainer = Color(0xFFFFD9E3), onSecondaryContainer = Color(0xFF2A151E),
         tertiary = Color(0xFF7C5633), onTertiary = Color.White,
         tertiaryContainer = Color(0xFFFFDCC1), onTertiaryContainer = Color(0xFF2E1500),
+        inversePrimary = Color(0xFFFFB0D0),
     )
 
 private val roseDarkAccent =
@@ -229,6 +237,7 @@ private val roseDarkAccent =
         secondaryContainer = Color(0xFF5A3F49), onSecondaryContainer = Color(0xFFFFD9E3),
         tertiary = Color(0xFFEFBF95), onTertiary = Color(0xFF472A0B),
         tertiaryContainer = Color(0xFF60401F), onTertiaryContainer = Color(0xFFFFDCC1),
+        inversePrimary = Color(0xFF904B72),
     )
 
 private val amberLightAccent =
@@ -239,6 +248,7 @@ private val amberLightAccent =
         secondaryContainer = Color(0xFFFBDDBA), onSecondaryContainer = Color(0xFF281805),
         tertiary = Color(0xFF53643D), onTertiary = Color.White,
         tertiaryContainer = Color(0xFFD7EABA), onTertiaryContainer = Color(0xFF112000),
+        inversePrimary = Color(0xFFFFB95F),
     )
 
 private val amberDarkAccent =
@@ -249,6 +259,7 @@ private val amberDarkAccent =
         secondaryContainer = Color(0xFF57432A), onSecondaryContainer = Color(0xFFFBDDBA),
         tertiary = Color(0xFFBBCEA0), onTertiary = Color(0xFF263515),
         tertiaryContainer = Color(0xFF3C4C28), onTertiaryContainer = Color(0xFFD7EABA),
+        inversePrimary = Color(0xFF825500),
     )
 
 private fun ColorScheme.withThemePreset(preset: LauncherThemePreset): ColorScheme =
