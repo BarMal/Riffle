@@ -51,9 +51,15 @@ import com.riffle.app.launcher.widgets.PendingWidgetAddStep
 import com.riffle.app.launcher.widgets.WidgetAddRecoveryResult
 import com.riffle.app.launcher.widgets.WidgetBindPermissionResult
 import com.riffle.app.launcher.widgets.WidgetConfigurationResult
+import com.riffle.core.domain.launcher.HomeRoleStatus
 import com.riffle.core.domain.launcher.home.HostedWidgetId
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.widgets.WidgetProviderIdentity
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -440,7 +446,11 @@ class MainActivity : ComponentActivity() {
         val notificationAccessWasRevoked =
             shellViewModel.state.value.notificationAccessStatus == NotificationAccessStatus.REVOKED
         shellViewModel.onHomeRoleStatusChanged(
-            homeRoleStatus = homeRoleGateway.getHomeRoleStatus(),
+            homeRoleStatus =
+                startupPlatformValue(
+                    fallback = HomeRoleStatus.UNKNOWN,
+                    read = homeRoleGateway::getHomeRoleStatus,
+                ),
             notificationAccessStatus = notificationAccessStatus,
             overlayDockPermissionStatus = overlayDockPermissionGateway.getOverlayDockPermissionStatus(),
         )
@@ -461,13 +471,15 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun refreshHomeLayoutDeviceClass(source: String) {
-        homeLayoutDeviceClassObserver.currentDeviceClassEvent(source)?.let(::applyHomeLayoutDeviceClassEvent)
+        startupPlatformValueOrNull {
+            homeLayoutDeviceClassObserver.currentDeviceClassEvent(source)
+        }?.let(::applyHomeLayoutDeviceClassEvent)
     }
 
     private fun observeHomeLayoutDeviceClass() {
         lifecycleScope.launch {
             lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                homeLayoutDeviceClassObserver.deviceClassEvents()
+                startupPlatformFlow(homeLayoutDeviceClassObserver::deviceClassEvents)
                     .collect { event ->
                         event?.let(::applyHomeLayoutDeviceClassEvent)
                     }
@@ -542,6 +554,23 @@ internal fun resolveHostedWidgetResultId(
     returnedHostedWidgetId: HostedWidgetId?,
     expectedHostedWidgetId: HostedWidgetId,
 ): HostedWidgetId = returnedHostedWidgetId ?: expectedHostedWidgetId
+
+internal fun <Value> startupPlatformValue(
+    fallback: Value,
+    read: () -> Value,
+): Value =
+    runCatching(read).getOrElse { failure ->
+        if (failure is CancellationException) throw failure
+        fallback
+    }
+
+internal fun <Value> startupPlatformValueOrNull(read: () -> Value?): Value? =
+    runCatching(read).getOrElse { failure ->
+        if (failure is CancellationException) throw failure
+        null
+    }
+
+internal fun <Value> startupPlatformFlow(read: () -> Flow<Value>): Flow<Value> = flow { emitAll(read()) }.catch { }
 
 private fun String.launcherBuildTypeLabel(): String =
     when {
