@@ -9,19 +9,18 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -42,7 +41,6 @@ import com.riffle.core.domain.launcher.apps.AppSearchContentFilter
 import com.riffle.core.domain.launcher.apps.AppSearchFilters
 import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.apps.InstalledApp
-import com.riffle.core.domain.launcher.home.HomeLabelSettings
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.search.LauncherSearchResult
 
@@ -100,14 +98,13 @@ fun SearchSurface(
             )
             Spacer(modifier = Modifier.height(8.dp))
         }
-        SearchIconGrid(
+        SearchResultList(
             results =
                 searchGridResults(
                     apps = state.results,
                     shortcuts = state.shortcutResults,
                     settings = state.settingsResults,
                 ),
-            homeLayout = state.homeLayout,
             appListContext = appListContext,
             emptyText =
                 searchEmptyText(
@@ -187,9 +184,8 @@ private fun SearchTopControls(
 }
 
 @Composable
-private fun SearchIconGrid(
+private fun SearchResultList(
     results: List<SearchGridResult>,
-    homeLayout: HomeLayout,
     appListContext: AppListContext,
     emptyText: String,
     modifier: Modifier = Modifier,
@@ -208,8 +204,7 @@ private fun SearchIconGrid(
         return
     }
 
-    LazyVerticalGrid(
-        columns = GridCells.Fixed(homeLayout.selectedPage.grid.columns.coerceAtLeast(1)),
+    LazyColumn(
         modifier =
             modifier
                 .widthIn(max = SEARCH_GRID_MAX_WIDTH_DP.dp)
@@ -221,16 +216,14 @@ private fun SearchIconGrid(
                 end = 4.dp,
                 bottom = SEARCH_GRID_KEYBOARD_OVERLAY_SCROLL_PADDING_DP.dp,
             ),
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         items(
             items = results,
             key = { result -> result.key },
         ) { result ->
-            SearchIconGridItem(
+            SearchResultListItem(
                 result = result,
-                labelSettings = homeLayout.settings.labels,
                 appListContext = appListContext,
             )
         }
@@ -238,54 +231,75 @@ private fun SearchIconGrid(
 }
 
 @Composable
-private fun SearchIconGridItem(
+private fun SearchResultListItem(
     result: SearchGridResult,
-    labelSettings: HomeLabelSettings,
     appListContext: AppListContext,
 ) {
-    if (result is SearchGridResult.Setting) {
-        SearchSettingGridItem(
-            result = result,
-            labelSettings = labelSettings,
-            onAction = appListContext.onAction,
-        )
-        return
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .defaultMinSize(minHeight = SEARCH_RESULT_MIN_HEIGHT_DP.dp)
+                .clickable { appListContext.onAction(result.action) }
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        SearchResultIcon(result = result, appListContext = appListContext)
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = result.label,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Text(
+                text = result.supportingText,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
     }
+}
 
+@Composable
+private fun SearchResultIcon(
+    result: SearchGridResult,
+    appListContext: AppListContext,
+) {
     val appIdentity =
         when (result) {
             is SearchGridResult.App -> result.app.identity
             is SearchGridResult.Shortcut -> result.shortcut.appIdentity
-            is SearchGridResult.Setting -> error("Settings results are handled above")
+            is SearchGridResult.Setting -> null
         }
-    val metrics = HomeGridLayoutMetrics()
 
-    Column(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .heightIn(min = metrics.homeItemContentHeightDp(labelSettings).dp)
-                .clickable { appListContext.onAction(result.action) }
-                .padding(vertical = 4.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
-        Box(modifier = Modifier.size(labelSettings.iconSizeDp.dp)) {
+    if (appIdentity == null) {
+        Surface(
+            modifier = Modifier.size(SEARCH_RESULT_ICON_SIZE_DP.dp),
+            shape = RoundedCornerShape(SEARCH_RESULT_ICON_CORNER_DP.dp),
+            color = MaterialTheme.colorScheme.secondaryContainer,
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Text(
+                    text = "SET",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                )
+            }
+        }
+    } else {
+        Box(modifier = Modifier.size(SEARCH_RESULT_ICON_SIZE_DP.dp)) {
             LauncherAppIcon(
                 identity = appIdentity,
                 label = result.label,
                 iconLoader = appListContext.appIconLoader,
-                modifier = Modifier.size(labelSettings.iconSizeDp.dp),
+                modifier = Modifier.size(SEARCH_RESULT_ICON_SIZE_DP.dp),
             )
             NotificationCountBadge(
                 count = appListContext.notificationCountFor(appIdentity),
                 modifier = Modifier.align(Alignment.TopEnd),
             )
         }
-        WallpaperReadableLabel(
-            text = result.label,
-            settings = labelSettings,
-        )
     }
 }
 
@@ -335,8 +349,19 @@ private fun AppSearchFilters.searchResultTypeNoun(): String =
 
 private fun String.pluralized(count: Int): String = if (count == 1) this else "${this}s"
 
+private val SearchGridResult.supportingText: String
+    get() =
+        when (this) {
+            is SearchGridResult.App -> "App"
+            is SearchGridResult.Shortcut -> "App shortcut"
+            is SearchGridResult.Setting -> subtitle
+        }
+
 private const val SEARCH_CONTROLS_MAX_WIDTH_DP = 840
 private const val SEARCH_CONTROLS_CORNER_DP = 28
 private const val SEARCH_CONTROLS_ALPHA = 0.96f
 private const val SEARCH_GRID_MAX_WIDTH_DP = 840
 private const val SEARCH_GRID_KEYBOARD_OVERLAY_SCROLL_PADDING_DP = 220
+private const val SEARCH_RESULT_MIN_HEIGHT_DP = 64
+private const val SEARCH_RESULT_ICON_SIZE_DP = 40
+private const val SEARCH_RESULT_ICON_CORNER_DP = 12

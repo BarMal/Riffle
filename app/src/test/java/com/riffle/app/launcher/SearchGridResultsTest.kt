@@ -77,6 +77,15 @@ class SearchGridResultsTest {
     }
 
     @Test
+    fun searchGridResultsKeepShortcutTypeAvailableForListPresentation() {
+        val maps = app("Maps")
+        val result = searchGridResults(apps = emptyList(), shortcuts = listOf(shortcut(app = maps, label = "Route home"))).single()
+
+        assertEquals("Route home", result.label)
+        assertEquals(LauncherShellAction.LaunchAppShortcut((result as SearchGridResult.Shortcut).shortcut), result.action)
+    }
+
+    @Test
     fun searchGridResultsFallbackToMainSettingsForUnknownSettingsEntryIds() {
         val results =
             searchGridResults(
