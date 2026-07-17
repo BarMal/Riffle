@@ -27,7 +27,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -50,7 +49,7 @@ fun WidgetPickerSurface(
     onAction: (LauncherShellAction) -> Unit,
 ) {
     var query by rememberSaveable { mutableStateOf("") }
-    val expandedSections = rememberSaveable { mutableStateMapOf<String, Boolean>() }
+    var collapsedSectionTitles by rememberSaveable { mutableStateOf("") }
     val filteredProviders = providers.filteredWidgetProviders(query)
     val providerSections = widgetPickerSectionsFor(filteredProviders)
 
@@ -102,7 +101,8 @@ fun WidgetPickerSurface(
                 providers = providers,
                 providerSections = providerSections,
                 query = query,
-                expandedSections = expandedSections,
+                collapsedSectionTitles = collapsedSectionTitles,
+                onCollapsedSectionTitlesChange = { value -> collapsedSectionTitles = value },
                 previewImageLoader = previewImageLoader,
                 onAction = onAction,
             )
@@ -125,7 +125,8 @@ private fun WidgetPickerContent(
     providers: List<InstalledWidgetProvider>,
     providerSections: List<WidgetPickerSection>,
     query: String,
-    expandedSections: MutableMap<String, Boolean>,
+    collapsedSectionTitles: String,
+    onCollapsedSectionTitlesChange: (String) -> Unit,
     previewImageLoader: WidgetPreviewImageLoader,
     onAction: (LauncherShellAction) -> Unit,
 ) {
@@ -143,8 +144,9 @@ private fun WidgetPickerContent(
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
                 verticalArrangement = Arrangement.spacedBy(18.dp),
             ) {
+                val collapsedSections = collapsedSectionTitles.toCollapsedWidgetPickerSections()
                 providerSections.forEach { section ->
-                    val isExpanded = expandedSections[section.title] ?: true
+                    val isExpanded = section.title !in collapsedSections
                     item(
                         key = "section:${section.title}",
                         span = { GridItemSpan(maxLineSpan) },
@@ -152,7 +154,15 @@ private fun WidgetPickerContent(
                         WidgetPickerSectionHeader(
                             title = section.displayTitle,
                             expanded = isExpanded,
-                            onExpandedChange = { expandedSections[section.title] = it },
+                            onExpandedChange = { expanded ->
+                                onCollapsedSectionTitlesChange(
+                                    collapsedSections
+                                        .toMutableSet()
+                                        .apply {
+                                            if (expanded) remove(section.title) else add(section.title)
+                                        }.joinToString(WIDGET_PICKER_SECTION_STATE_SEPARATOR),
+                                )
+                            },
                         )
                     }
                     if (isExpanded) {
@@ -319,3 +329,9 @@ internal fun InstalledWidgetProvider.requestAddWidgetAction(
 
 private const val WIDGET_PICKER_SCREEN_PADDING_DP = 20
 private const val WIDGET_TILE_MIN_WIDTH_DP = 144
+private const val WIDGET_PICKER_SECTION_STATE_SEPARATOR = "\u001f"
+
+private fun String.toCollapsedWidgetPickerSections(): Set<String> =
+    split(WIDGET_PICKER_SECTION_STATE_SEPARATOR)
+        .filter(String::isNotEmpty)
+        .toSet()
