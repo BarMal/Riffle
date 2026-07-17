@@ -18,6 +18,8 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
+import com.riffle.core.domain.launcher.settings.CustomThemeSettings
+import com.riffle.core.domain.launcher.settings.LauncherThemeAccent
 import com.riffle.core.domain.launcher.settings.LauncherThemeMode
 import com.riffle.core.domain.launcher.settings.LauncherThemePreset
 
@@ -25,6 +27,7 @@ import com.riffle.core.domain.launcher.settings.LauncherThemePreset
 fun RiffleLauncherTheme(
     themeMode: LauncherThemeMode = LauncherThemeMode.SYSTEM,
     themePreset: LauncherThemePreset = LauncherThemePreset.MATERIAL,
+    customTheme: CustomThemeSettings = CustomThemeSettings(),
     content: @Composable () -> Unit,
 ) {
     val darkTheme =
@@ -42,12 +45,12 @@ fun RiffleLauncherTheme(
 
             themePreset == LauncherThemePreset.MATERIAL &&
                 Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> dynamicLightColorScheme(context)
-            else -> fallbackScheme(darkTheme = darkTheme, themePreset = themePreset)
+            else -> fallbackScheme(darkTheme = darkTheme, themePreset = themePreset, customTheme = customTheme)
         }
 
     CompositionLocalProvider(
-        LocalLauncherCardShape provides launcherCardShape(themePreset),
-        LocalLauncherPanelShape provides launcherPanelShape(themePreset),
+        LocalLauncherCardShape provides launcherCardShape(themePreset, customTheme),
+        LocalLauncherPanelShape provides launcherPanelShape(themePreset, customTheme),
     ) {
         MaterialTheme(
             colorScheme = colorScheme,
@@ -60,29 +63,33 @@ fun RiffleLauncherTheme(
 internal val LocalLauncherCardShape = staticCompositionLocalOf<Shape> { RoundedCornerShape(24.dp) }
 internal val LocalLauncherPanelShape = staticCompositionLocalOf<Shape> { RoundedCornerShape(32.dp) }
 
-internal fun launcherCardShape(themePreset: LauncherThemePreset): Shape =
+internal fun launcherCardShape(
+    themePreset: LauncherThemePreset,
+    customTheme: CustomThemeSettings = CustomThemeSettings(),
+): Shape =
     RoundedCornerShape(
         when (themePreset) {
             LauncherThemePreset.MINIMAL -> 8.dp
             LauncherThemePreset.RETRO -> 12.dp
             LauncherThemePreset.GLASS -> 28.dp
             LauncherThemePreset.TERMINAL -> 0.dp
-            LauncherThemePreset.MATERIAL,
-            LauncherThemePreset.CUSTOM,
-            -> 24.dp
+            LauncherThemePreset.MATERIAL -> 24.dp
+            LauncherThemePreset.CUSTOM -> customTheme.cardCornerRadiusDp.dp
         },
     )
 
-internal fun launcherPanelShape(themePreset: LauncherThemePreset): Shape =
+internal fun launcherPanelShape(
+    themePreset: LauncherThemePreset,
+    customTheme: CustomThemeSettings = CustomThemeSettings(),
+): Shape =
     RoundedCornerShape(
         when (themePreset) {
             LauncherThemePreset.MINIMAL -> 12.dp
             LauncherThemePreset.RETRO -> 20.dp
             LauncherThemePreset.GLASS -> 36.dp
             LauncherThemePreset.TERMINAL -> 0.dp
-            LauncherThemePreset.MATERIAL,
-            LauncherThemePreset.CUSTOM,
-            -> 32.dp
+            LauncherThemePreset.MATERIAL -> 32.dp
+            LauncherThemePreset.CUSTOM -> (customTheme.cardCornerRadiusDp + 8).dp
         },
     )
 
@@ -119,20 +126,44 @@ internal fun supportsDynamicMaterialColor(sdkInt: Int): Boolean = sdkInt >= Buil
 internal fun fallbackScheme(
     darkTheme: Boolean,
     themePreset: LauncherThemePreset = LauncherThemePreset.MATERIAL,
+    customTheme: CustomThemeSettings = CustomThemeSettings(),
 ): ColorScheme =
     (if (darkTheme) darkScheme else lightScheme)
-        .withThemePreset(themePreset)
+        .withThemePreset(themePreset, customTheme, darkTheme)
 
-private fun ColorScheme.withThemePreset(preset: LauncherThemePreset): ColorScheme =
+private fun ColorScheme.withThemePreset(
+    preset: LauncherThemePreset,
+    customTheme: CustomThemeSettings,
+    darkTheme: Boolean,
+): ColorScheme =
     when (preset) {
-        LauncherThemePreset.MATERIAL,
-        LauncherThemePreset.CUSTOM,
-        -> this
+        LauncherThemePreset.MATERIAL -> this
 
         LauncherThemePreset.MINIMAL -> copy(primary = Color(0xFF5B5F66), secondary = Color(0xFF5B5F66))
         LauncherThemePreset.RETRO -> copy(primary = Color(0xFF875A00), secondary = Color(0xFF006B5F))
         LauncherThemePreset.GLASS -> copy(primary = Color(0xFF356F8A), secondary = Color(0xFF4D5C92))
         LauncherThemePreset.TERMINAL -> copy(primary = Color(0xFF1D7A45), secondary = Color(0xFF1D7A45))
+        LauncherThemePreset.CUSTOM -> withCustomAccent(customTheme.accent, darkTheme)
+    }
+
+private fun ColorScheme.withCustomAccent(
+    accent: LauncherThemeAccent,
+    darkTheme: Boolean,
+): ColorScheme =
+    if (darkTheme) {
+        when (accent) {
+            LauncherThemeAccent.INDIGO -> copy(primary = Color(0xFFBBC6FF), secondary = Color(0xFF5EE1CD))
+            LauncherThemeAccent.OCEAN -> copy(primary = Color(0xFF67D5F8), secondary = Color(0xFF5CD9E8))
+            LauncherThemeAccent.FOREST -> copy(primary = Color(0xFF8FE9A8), secondary = Color(0xFFC2D77A))
+            LauncherThemeAccent.ORCHID -> copy(primary = Color(0xFFF1B7F6), secondary = Color(0xFFEAB8DF))
+        }
+    } else {
+        when (accent) {
+            LauncherThemeAccent.INDIGO -> copy(primary = Color(0xFF4D5C92), secondary = Color(0xFF006B5F))
+            LauncherThemeAccent.OCEAN -> copy(primary = Color(0xFF006782), secondary = Color(0xFF006875))
+            LauncherThemeAccent.FOREST -> copy(primary = Color(0xFF246A3D), secondary = Color(0xFF4D5F00))
+            LauncherThemeAccent.ORCHID -> copy(primary = Color(0xFF80558F), secondary = Color(0xFF76546F))
+        }
     }
 
 internal val lightScheme =

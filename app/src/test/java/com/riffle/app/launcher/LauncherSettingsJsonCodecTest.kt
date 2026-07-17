@@ -14,6 +14,7 @@ import com.riffle.core.domain.launcher.home.WallpaperSettings
 import com.riffle.core.domain.launcher.home.WallpaperSource
 import com.riffle.core.domain.launcher.settings.AppearanceSettings
 import com.riffle.core.domain.launcher.settings.CardsSettings
+import com.riffle.core.domain.launcher.settings.CustomThemeSettings
 import com.riffle.core.domain.launcher.settings.GestureSettings
 import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
 import com.riffle.core.domain.launcher.settings.HapticSettings
@@ -22,6 +23,7 @@ import com.riffle.core.domain.launcher.settings.HomeGestureSettings
 import com.riffle.core.domain.launcher.settings.HomeSystemBars
 import com.riffle.core.domain.launcher.settings.LauncherGestureAction
 import com.riffle.core.domain.launcher.settings.LauncherSettings
+import com.riffle.core.domain.launcher.settings.LauncherThemeAccent
 import com.riffle.core.domain.launcher.settings.LauncherThemeMode
 import com.riffle.core.domain.launcher.settings.LauncherThemePreset
 import com.riffle.core.domain.launcher.settings.MAX_OVERLAY_DOCK_EXPANDED_ICON_SIZE_DP
@@ -204,6 +206,40 @@ class LauncherSettingsJsonCodecTest {
         val decodedSettings = decodeLauncherSettings(encodeLauncherSettings(settings))
 
         assertEquals(LauncherThemePreset.RETRO, decodedSettings.appearance.themePreset)
+    }
+
+    @Test
+    fun roundTripsCustomThemeTokens() {
+        val settings =
+            LauncherSettings(
+                appearance =
+                    AppearanceSettings(
+                        customTheme =
+                            CustomThemeSettings(
+                                accent = LauncherThemeAccent.ORCHID,
+                                cardCornerRadiusDp = 12,
+                            ),
+                    ),
+            )
+
+        assertEquals(
+            settings.appearance.customTheme,
+            decodeLauncherSettings(encodeLauncherSettings(settings)).appearance.customTheme,
+        )
+    }
+
+    @Test
+    fun defaultsAndBoundsCustomThemeTokens() {
+        assertEquals(
+            CustomThemeSettings(),
+            decodeLauncherSettings("{\"appearance\": {}}").appearance.customTheme,
+        )
+        assertEquals(
+            32,
+            decodeLauncherSettings(
+                "{\"appearance\": {\"customTheme\": {\"accent\": \"UNKNOWN\", \"cardCornerRadiusDp\": 200}}}",
+            ).appearance.customTheme.cardCornerRadiusDp,
+        )
     }
 
     @Test

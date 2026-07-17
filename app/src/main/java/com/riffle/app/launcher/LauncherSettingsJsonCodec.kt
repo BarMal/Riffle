@@ -11,11 +11,15 @@ import com.riffle.core.domain.launcher.home.WallpaperSettings
 import com.riffle.core.domain.launcher.home.WallpaperSource
 import com.riffle.core.domain.launcher.settings.AppearanceSettings
 import com.riffle.core.domain.launcher.settings.CardsSettings
+import com.riffle.core.domain.launcher.settings.CustomThemeSettings
 import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
 import com.riffle.core.domain.launcher.settings.HapticSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettings
+import com.riffle.core.domain.launcher.settings.LauncherThemeAccent
 import com.riffle.core.domain.launcher.settings.LauncherThemeMode
 import com.riffle.core.domain.launcher.settings.LauncherThemePreset
+import com.riffle.core.domain.launcher.settings.MAX_CUSTOM_THEME_CARD_CORNER_RADIUS_DP
+import com.riffle.core.domain.launcher.settings.MIN_CUSTOM_THEME_CARD_CORNER_RADIUS_DP
 import com.riffle.core.domain.launcher.settings.OverlayDockEdge
 import com.riffle.core.domain.launcher.settings.OverlayDockExpandedOrientation
 import com.riffle.core.domain.launcher.settings.OverlayDockSettings
@@ -101,6 +105,7 @@ private fun encodeAppearance(settings: AppearanceSettings): JSONObject =
         .put("hideNavigationBarOnHome", settings.homeSystemBars.hideNavigationBarOnHome)
         .put("themeMode", settings.themeMode.name)
         .put("themePreset", settings.themePreset.name)
+        .put("customTheme", encodeCustomTheme(settings.customTheme))
         .put("wallpaper", encodeWallpaper(settings.wallpaper))
 
 private fun JSONObject.toAppearance(defaults: AppearanceSettings): AppearanceSettings {
@@ -119,9 +124,23 @@ private fun JSONObject.toAppearance(defaults: AppearanceSettings): AppearanceSet
             themePreset =
                 runCatching { LauncherThemePreset.valueOf(optString("themePreset")) }
                     .getOrDefault(defaults.themePreset),
+            customTheme = optJSONObject("customTheme")?.toCustomTheme(defaults.customTheme) ?: defaults.customTheme,
             wallpaper = optJSONObject("wallpaper")?.toWallpaper(defaults.wallpaper) ?: defaults.wallpaper,
         ).withHomeSystemBars(homeSystemBars)
 }
+
+private fun encodeCustomTheme(settings: CustomThemeSettings): JSONObject =
+    JSONObject()
+        .put("accent", settings.accent.name)
+        .put("cardCornerRadiusDp", settings.cardCornerRadiusDp)
+
+private fun JSONObject.toCustomTheme(defaults: CustomThemeSettings): CustomThemeSettings =
+    defaults.copy(
+        accent = runCatching { LauncherThemeAccent.valueOf(optString("accent")) }.getOrDefault(defaults.accent),
+        cardCornerRadiusDp =
+            optInt("cardCornerRadiusDp", defaults.cardCornerRadiusDp)
+                .coerceIn(MIN_CUSTOM_THEME_CARD_CORNER_RADIUS_DP, MAX_CUSTOM_THEME_CARD_CORNER_RADIUS_DP),
+    )
 
 private fun encodeWallpaper(settings: WallpaperSettings): JSONObject =
     JSONObject()

@@ -26,6 +26,7 @@ data class AppearanceSettings(
     val wallpaper: WallpaperSettings = WallpaperSettings.system(),
     val themeMode: LauncherThemeMode = LauncherThemeMode.SYSTEM,
     val themePreset: LauncherThemePreset = LauncherThemePreset.MATERIAL,
+    val customTheme: CustomThemeSettings = CustomThemeSettings(),
     val fullscreenHome: Boolean = false,
     val hideStatusBarOnHome: Boolean = false,
     val hideNavigationBarOnHome: Boolean = false,
@@ -45,6 +46,23 @@ enum class LauncherThemePreset {
     TERMINAL,
     CUSTOM,
 }
+
+/** User-owned tokens applied only when [LauncherThemePreset.CUSTOM] is selected. */
+data class CustomThemeSettings(
+    val accent: LauncherThemeAccent = LauncherThemeAccent.INDIGO,
+    val cardCornerRadiusDp: Int = DEFAULT_CUSTOM_THEME_CARD_CORNER_RADIUS_DP,
+)
+
+enum class LauncherThemeAccent {
+    INDIGO,
+    OCEAN,
+    FOREST,
+    ORCHID,
+}
+
+const val DEFAULT_CUSTOM_THEME_CARD_CORNER_RADIUS_DP = 24
+const val MIN_CUSTOM_THEME_CARD_CORNER_RADIUS_DP = 0
+const val MAX_CUSTOM_THEME_CARD_CORNER_RADIUS_DP = 32
 
 data class GestureSettings(
     val homeGestures: HomeGestureSettings = HomeGestureSettings(),

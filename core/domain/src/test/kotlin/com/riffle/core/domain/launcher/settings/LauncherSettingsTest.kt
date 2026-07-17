@@ -108,6 +108,14 @@ class LauncherSettingsTest {
     }
 
     @Test
+    fun customThemeDefaultsToAnIndigoAccentAndSharedCardRadius() {
+        val customTheme = LauncherSettings().appearance.customTheme
+
+        assertEquals(LauncherThemeAccent.INDIGO, customTheme.accent)
+        assertEquals(DEFAULT_CUSTOM_THEME_CARD_CORNER_RADIUS_DP, customTheme.cardCornerRadiusDp)
+    }
+
+    @Test
     fun defaultsHomeSwipeGesturesToStandardLauncherActions() {
         val settings = LauncherSettings()
 

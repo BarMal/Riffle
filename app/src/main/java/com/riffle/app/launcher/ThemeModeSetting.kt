@@ -10,8 +10,12 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.riffle.core.domain.launcher.settings.CustomThemeSettings
+import com.riffle.core.domain.launcher.settings.LauncherThemeAccent
 import com.riffle.core.domain.launcher.settings.LauncherThemeMode
 import com.riffle.core.domain.launcher.settings.LauncherThemePreset
+import com.riffle.core.domain.launcher.settings.MAX_CUSTOM_THEME_CARD_CORNER_RADIUS_DP
+import com.riffle.core.domain.launcher.settings.MIN_CUSTOM_THEME_CARD_CORNER_RADIUS_DP
 
 @Composable
 internal fun ThemeModeSetting(
@@ -21,7 +25,10 @@ internal fun ThemeModeSetting(
     SettingsListRow(
         title = "Color mode",
         trailingContent = {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
                 LauncherThemeMode.entries.forEach { mode ->
                     TextButton(
                         enabled = mode != selectedMode,
@@ -38,6 +45,7 @@ internal fun ThemeModeSetting(
 @Composable
 internal fun ThemePresetSetting(
     selectedPreset: LauncherThemePreset,
+    customTheme: CustomThemeSettings,
     onAction: (LauncherShellAction) -> Unit,
 ) {
     Column {
@@ -55,5 +63,40 @@ internal fun ThemePresetSetting(
                 }
             }
         }
+        if (selectedPreset == LauncherThemePreset.CUSTOM) {
+            CustomThemeSettingsControls(customTheme = customTheme, onAction = onAction)
+        }
     }
+}
+
+@Composable
+private fun CustomThemeSettingsControls(
+    customTheme: CustomThemeSettings,
+    onAction: (LauncherShellAction) -> Unit,
+) {
+    SettingsListRow(
+        title = "Accent",
+        trailingContent = {
+            Row(
+                modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                LauncherThemeAccent.entries.forEach { accent ->
+                    TextButton(
+                        enabled = accent != customTheme.accent,
+                        onClick = { onAction(LauncherShellAction.SelectCustomThemeAccent(accent)) },
+                    ) {
+                        SettingsButtonText(text = accent.name.lowercase().replaceFirstChar(Char::uppercase))
+                    }
+                }
+            }
+        },
+    )
+    DiscreteSettingSlider(
+        title = "Card corner radius",
+        value = customTheme.cardCornerRadiusDp,
+        valueRange = MIN_CUSTOM_THEME_CARD_CORNER_RADIUS_DP..MAX_CUSTOM_THEME_CARD_CORNER_RADIUS_DP,
+        valueLabel = { value -> "$value dp" },
+        onValueChange = { radius -> onAction(LauncherShellAction.SelectCustomThemeCardCornerRadius(radius)) },
+    )
 }
