@@ -41,7 +41,7 @@ data class DockCardStackSwipeState(
             wrapAround: Boolean = false,
         ): DockCardStackSwipeState? {
             require(cardCount >= 0) { "Card count must not be negative." }
-            if (cardCount == 0) return null
+            if (cardCount == 0 || (wrapAround && cardCount == 1)) return null
             require(activeCardIndex in 0 until cardCount) { "Active card index must be in the stack." }
 
             val incomingCardIndex =

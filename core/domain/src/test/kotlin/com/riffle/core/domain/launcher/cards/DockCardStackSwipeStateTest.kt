@@ -87,6 +87,19 @@ class DockCardStackSwipeStateTest {
     }
 
     @Test
+    fun wrappedSwipeDoesNotTransitionASingleCardStack() {
+        assertNull(
+            DockCardStackSwipeState.create(
+                cardCount = 1,
+                activeCardIndex = 0,
+                direction = DockCardStackSwipeDirection.NEXT,
+                content = DockCardStackContent.APPS,
+                wrapAround = true,
+            ),
+        )
+    }
+
+    @Test
     fun hybridFocusSurvivesDockReorderByAppIdentity() {
         val mail = app("mail")
         val chat = app("chat")
