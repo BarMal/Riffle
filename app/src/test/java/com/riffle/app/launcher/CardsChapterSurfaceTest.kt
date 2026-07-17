@@ -101,6 +101,33 @@ class CardsChapterSurfaceTest {
     }
 
     @Test
+    fun navigatorIdentifiesTheSelectedProfiledChapterAndNotificationCount() {
+        val personal = AppProfile.personal()
+        val work = AppProfile.work()
+        val apps =
+            listOf(
+                installedApp(label = "Mail", profile = personal),
+                installedApp(label = "Mail", profile = work),
+            )
+        val workChapter = CardsChapterId.App(AppPackageName("com.riffle.mail"), work.id)
+        val state =
+            CardsChapterPlanner().state(
+                notificationGroups =
+                    listOf(
+                        group(packageName = "com.riffle.mail", profile = personal, postedAtEpochMillis = 10L),
+                        group(packageName = "com.riffle.mail", profile = work, postedAtEpochMillis = 20L),
+                    ),
+                preferences = CardsChapterPreferences().select(workChapter),
+            )
+
+        val items = cardsChapterNavigatorItems(state, apps)
+
+        assertEquals("Work - Mail (1)", items[1].displayLabel)
+        assertEquals("Work - Mail, 1 notification, selected. Open chapter", items[1].contentDescription)
+        assertEquals("Mail (1)", items.last().displayLabel)
+    }
+
+    @Test
     fun labelsAppChaptersWithTheMatchingProfiledApp() {
         val personal = AppProfile.personal()
         val app =
@@ -224,5 +251,19 @@ class CardsChapterSurfaceTest {
                         postedAtEpochMillis = postedAtEpochMillis,
                     ),
                 ),
+        )
+
+    private fun installedApp(
+        label: String,
+        profile: AppProfile,
+    ): InstalledApp =
+        InstalledApp(
+            identity =
+                AppIdentity(
+                    packageName = AppPackageName("com.riffle.mail"),
+                    activityName = AppActivityName(".Main"),
+                    profile = profile,
+                ),
+            label = label,
         )
 }
