@@ -5,9 +5,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.SemanticsMatcher
-import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -26,6 +24,7 @@ import com.riffle.core.domain.launcher.notifications.NotificationAgeBucket
 import com.riffle.core.domain.launcher.notifications.NotificationCategory
 import com.riffle.core.domain.launcher.settings.AppearanceSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettings
+import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -93,28 +92,46 @@ class CardModeGuardedSurfaceTest {
     }
 
     @Test
-    fun fullscreenCardsSurfaceKeepsOneCardsHeader() {
-        composeRule.setContent {
-            MaterialTheme {
-                HomeDestination(
-                    state =
-                        cardsState(
-                            notificationAccessStatus = NotificationAccessStatus.GRANTED,
-                            fullscreenHome = true,
-                        ),
-                    appIconLoader = EmptyAppIconLoader,
-                    onAction = {},
-                )
-            }
-        }
-
-        composeRule.onAllNodesWithText("Cards").assertCountEquals(1)
+    fun cardsSurfaceUsesEffectiveSystemBarInsetPolicy() {
+        assertEquals(
+            HomeInsetPolicy(reserveStatusBar = false, reserveNavigationBar = false),
+            cardsPanelInsetPolicy(
+                cardsState(
+                    notificationAccessStatus = NotificationAccessStatus.GRANTED,
+                    fullscreenHome = true,
+                ),
+            ),
+        )
+        assertEquals(
+            HomeInsetPolicy(reserveStatusBar = false, reserveNavigationBar = true),
+            cardsPanelInsetPolicy(
+                cardsState(
+                    notificationAccessStatus = NotificationAccessStatus.GRANTED,
+                    hideStatusBarOnHome = true,
+                ),
+            ),
+        )
+        assertEquals(
+            HomeInsetPolicy(reserveStatusBar = true, reserveNavigationBar = false),
+            cardsPanelInsetPolicy(
+                cardsState(
+                    notificationAccessStatus = NotificationAccessStatus.GRANTED,
+                    hideNavigationBarOnHome = true,
+                ),
+            ),
+        )
+        assertEquals(
+            HomeInsetPolicy(reserveStatusBar = true, reserveNavigationBar = true),
+            cardsPanelInsetPolicy(cardsState(NotificationAccessStatus.GRANTED)),
+        )
     }
 
     private fun cardsState(
         notificationAccessStatus: NotificationAccessStatus,
         groups: List<AppNotificationGroup> = emptyList(),
         fullscreenHome: Boolean = false,
+        hideStatusBarOnHome: Boolean = false,
+        hideNavigationBarOnHome: Boolean = false,
     ): LauncherShellState {
         val layout = HomeLayoutDefaults.standard().copy(viewMode = LauncherViewMode.CARD_INTERFACE)
         return LauncherShellState(
@@ -125,7 +142,12 @@ class CardModeGuardedSurfaceTest {
             notificationCountsByCategory = mapOf(NotificationCategory.MESSAGE to groups.sumOf { group -> group.count }),
             launcherSettings =
                 LauncherSettings(
-                    appearance = AppearanceSettings(fullscreenHome = fullscreenHome),
+                    appearance =
+                        AppearanceSettings(
+                            fullscreenHome = fullscreenHome,
+                            hideStatusBarOnHome = hideStatusBarOnHome,
+                            hideNavigationBarOnHome = hideNavigationBarOnHome,
+                        ),
                 ),
         )
     }

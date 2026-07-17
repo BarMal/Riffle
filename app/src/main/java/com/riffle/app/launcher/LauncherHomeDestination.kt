@@ -25,7 +25,7 @@ fun HomeDestination(
                         reducedMotion = state.launcherSettings.motion.reducedMotion,
                     ),
                 windowInsets =
-                    homeInsetPolicy(state.launcherSettings.appearance).safeDrawingPanelInsets(),
+                    cardsPanelInsetPolicy(state).safeDrawingPanelInsets(),
                 onAction = onAction,
             )
 
@@ -59,4 +59,8 @@ fun HomeDestination(
                 onAction = onAction,
             )
     }
+}
+
+internal fun cardsPanelInsetPolicy(state: LauncherShellState): HomeInsetPolicy {
+    return homeInsetPolicy(state.launcherSettings.appearance)
 }
