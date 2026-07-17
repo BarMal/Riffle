@@ -57,6 +57,7 @@ internal fun appProfileFilterOptionsFor(
     selectedFilter: AppDrawerProfileFilter = AppDrawerProfileFilter.ALL,
 ): List<AppProfileFilterOption> =
     appProfileFiltersFor(
+        apps = apps,
         selectedFilter = selectedFilter,
     ).map { filter ->
         AppProfileFilterOption(
@@ -65,12 +66,16 @@ internal fun appProfileFilterOptionsFor(
         )
     }
 
-internal fun appProfileFiltersFor(selectedFilter: AppDrawerProfileFilter): List<AppDrawerProfileFilter> {
-    return (AppDrawerProfileFilter.entries + selectedFilter).distinct()
-}
+internal fun appProfileFiltersFor(
+    apps: List<InstalledApp>,
+    selectedFilter: AppDrawerProfileFilter,
+): List<AppDrawerProfileFilter> =
+    (AppDrawerProfileFilter.entries + selectedFilter)
+        .distinct()
+        .filter { filter -> filter.availableFor(apps) || filter == selectedFilter }
 
 internal fun appProfileFiltersFor(): List<AppDrawerProfileFilter> {
-    return appProfileFiltersFor(selectedFilter = AppDrawerProfileFilter.ALL)
+    return AppDrawerProfileFilter.entries
 }
 
 internal fun AppDrawerProfileFilter.availableFor(apps: List<InstalledApp>): Boolean =
