@@ -59,6 +59,7 @@ fun HomeSwipeGestureSetting(
                 title = group.title,
                 rows = group.rows,
                 settings = homeGestures,
+                installedApps = installedApps,
                 onAction = onAction,
                 onTargetPickerRequest = { gesture, action ->
                     targetPickerRequest = GestureTargetPickerRequest(gesture, action)
@@ -94,6 +95,7 @@ private fun GestureGroup(
     title: String,
     rows: List<GestureRowState>,
     settings: HomeGestureSettings,
+    installedApps: List<InstalledApp>,
     onAction: (LauncherShellAction) -> Unit,
     onTargetPickerRequest: (HomeGesture, LauncherGestureAction) -> Unit,
 ) {
@@ -109,6 +111,7 @@ private fun GestureGroup(
                 gesture = row.gesture,
                 action = settings.actionFor(row.gesture),
                 launchTarget = settings.launchTargetFor(row.gesture),
+                installedApps = installedApps,
                 onAction = onAction,
                 onTargetPickerRequest = onTargetPickerRequest,
             )
@@ -122,6 +125,7 @@ private fun HomeGestureRow(
     gesture: HomeGesture,
     action: LauncherGestureAction,
     launchTarget: LauncherGestureLaunchTarget?,
+    installedApps: List<InstalledApp>,
     onAction: (LauncherShellAction) -> Unit,
     onTargetPickerRequest: (HomeGesture, LauncherGestureAction) -> Unit,
 ) {
@@ -138,7 +142,7 @@ private fun HomeGestureRow(
         )
         Column {
             TextButton(onClick = { isExpanded.value = true }) {
-                SettingsButtonText(text = action.targetLabel(launchTarget))
+                SettingsButtonText(text = action.targetLabel(launchTarget, installedApps))
             }
             DropdownMenu(
                 expanded = isExpanded.value,
@@ -187,12 +191,36 @@ internal val LauncherGestureAction.label: String
 private val LauncherGestureAction.requiresLaunchTarget: Boolean
     get() = this == LauncherGestureAction.LAUNCH_APP || this == LauncherGestureAction.LAUNCH_APP_SHORTCUT
 
-private fun LauncherGestureAction.targetLabel(target: LauncherGestureLaunchTarget?): String =
+internal fun LauncherGestureAction.targetLabel(
+    target: LauncherGestureLaunchTarget?,
+    installedApps: List<InstalledApp>,
+): String =
     when (target) {
-        is LauncherGestureLaunchTarget.App -> "$label: ${target.identity.packageName.value}"
+        is LauncherGestureLaunchTarget.App ->
+            "$label: ${installedApps.gestureTargetLabel(target) ?: target.identity.packageName.value}"
         is LauncherGestureLaunchTarget.Shortcut -> "$label: ${target.shortcut.longLabel ?: target.shortcut.shortLabel}"
         null -> label
     }
+
+private fun List<InstalledApp>.gestureTargetLabel(target: LauncherGestureLaunchTarget.App): String? {
+    val selectedApp = firstOrNull { app -> app.identity == target.identity } ?: return null
+    val sameLabelApps = filter { app -> app.label == selectedApp.label }
+    val profileIsAmbiguous = sameLabelApps.any { app -> app.identity.profile != selectedApp.identity.profile }
+    val activityIsAmbiguous =
+        sameLabelApps
+            .filter { app -> app.identity.profile == selectedApp.identity.profile }
+            .map { app -> app.identity.activityName }
+            .distinct()
+            .size > 1
+    val appLabel =
+        if (profileIsAmbiguous) {
+            selectedApp.identity.profile.profileDisplayLabel(selectedApp.label)
+        } else {
+            selectedApp.label
+        }
+
+    return if (activityIsAmbiguous) "$appLabel (${selectedApp.identity.activityName.value})" else appLabel
+}
 
 internal val HomeGesture.label: String
     get() =
