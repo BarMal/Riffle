@@ -54,64 +54,17 @@ fun HomeSwipeGestureSetting(
                 color = MaterialTheme.colorScheme.error,
             )
         }
-        GestureGroup(
-            title = "One finger",
-            rows =
-                listOf(
-                    GestureRowState("Swipe up", HomeGesture.ONE_FINGER_UP),
-                    GestureRowState("Swipe down", HomeGesture.ONE_FINGER_DOWN),
-                    GestureRowState("Swipe left", HomeGesture.ONE_FINGER_LEFT),
-                    GestureRowState("Swipe right", HomeGesture.ONE_FINGER_RIGHT),
-                ),
-            settings = homeGestures,
-            onAction = onAction,
-            onTargetPickerRequest = { gesture, action ->
-                targetPickerRequest = GestureTargetPickerRequest(gesture, action)
-            },
-        )
-        GestureGroup(
-            title = "Two fingers",
-            rows =
-                listOf(
-                    GestureRowState("Swipe up", HomeGesture.TWO_FINGER_UP),
-                    GestureRowState("Swipe down", HomeGesture.TWO_FINGER_DOWN),
-                    GestureRowState("Swipe left", HomeGesture.TWO_FINGER_LEFT),
-                    GestureRowState("Swipe right", HomeGesture.TWO_FINGER_RIGHT),
-                ),
-            settings = homeGestures,
-            onAction = onAction,
-            onTargetPickerRequest = { gesture, action ->
-                targetPickerRequest = GestureTargetPickerRequest(gesture, action)
-            },
-        )
-        GestureGroup(
-            title = "Pinch",
-            rows =
-                listOf(
-                    GestureRowState("Pinch in", HomeGesture.PINCH_IN),
-                    GestureRowState("Pinch out", HomeGesture.PINCH_OUT),
-                ),
-            settings = homeGestures,
-            onAction = onAction,
-            onTargetPickerRequest = { gesture, action ->
-                targetPickerRequest = GestureTargetPickerRequest(gesture, action)
-            },
-        )
-        GestureGroup(
-            title = "Three fingers",
-            rows =
-                listOf(
-                    GestureRowState("Swipe up", HomeGesture.THREE_FINGER_UP),
-                    GestureRowState("Swipe down", HomeGesture.THREE_FINGER_DOWN),
-                    GestureRowState("Swipe left", HomeGesture.THREE_FINGER_LEFT),
-                    GestureRowState("Swipe right", HomeGesture.THREE_FINGER_RIGHT),
-                ),
-            settings = homeGestures,
-            onAction = onAction,
-            onTargetPickerRequest = { gesture, action ->
-                targetPickerRequest = GestureTargetPickerRequest(gesture, action)
-            },
-        )
+        gestureGroups.forEach { group ->
+            GestureGroup(
+                title = group.title,
+                rows = group.rows,
+                settings = homeGestures,
+                onAction = onAction,
+                onTargetPickerRequest = { gesture, action ->
+                    targetPickerRequest = GestureTargetPickerRequest(gesture, action)
+                },
+            )
+        }
         TextButton(onClick = { onAction(LauncherShellAction.ResetHomeSwipeGestureActions) }) {
             SettingsButtonText(text = "Reset")
         }
@@ -236,8 +189,8 @@ private val LauncherGestureAction.requiresLaunchTarget: Boolean
 
 private fun LauncherGestureAction.targetLabel(target: LauncherGestureLaunchTarget?): String =
     when (target) {
-        is LauncherGestureLaunchTarget.App -> "${label}: ${target.identity.packageName.value}"
-        is LauncherGestureLaunchTarget.Shortcut -> "${label}: ${target.shortcut.longLabel ?: target.shortcut.shortLabel}"
+        is LauncherGestureLaunchTarget.App -> "$label: ${target.identity.packageName.value}"
+        is LauncherGestureLaunchTarget.Shortcut -> "$label: ${target.shortcut.longLabel ?: target.shortcut.shortLabel}"
         null -> label
     }
 
@@ -273,12 +226,60 @@ private data class GestureRowState(
     val gesture: HomeGesture,
 )
 
+private data class GestureGroupState(
+    val title: String,
+    val rows: List<GestureRowState>,
+)
+
+private val gestureGroups =
+    listOf(
+        GestureGroupState(
+            title = "One finger",
+            rows =
+                listOf(
+                    GestureRowState("Swipe up", HomeGesture.ONE_FINGER_UP),
+                    GestureRowState("Swipe down", HomeGesture.ONE_FINGER_DOWN),
+                    GestureRowState("Swipe left", HomeGesture.ONE_FINGER_LEFT),
+                    GestureRowState("Swipe right", HomeGesture.ONE_FINGER_RIGHT),
+                ),
+        ),
+        GestureGroupState(
+            title = "Two fingers",
+            rows =
+                listOf(
+                    GestureRowState("Swipe up", HomeGesture.TWO_FINGER_UP),
+                    GestureRowState("Swipe down", HomeGesture.TWO_FINGER_DOWN),
+                    GestureRowState("Swipe left", HomeGesture.TWO_FINGER_LEFT),
+                    GestureRowState("Swipe right", HomeGesture.TWO_FINGER_RIGHT),
+                ),
+        ),
+        GestureGroupState(
+            title = "Pinch",
+            rows =
+                listOf(
+                    GestureRowState("Pinch in", HomeGesture.PINCH_IN),
+                    GestureRowState("Pinch out", HomeGesture.PINCH_OUT),
+                ),
+        ),
+        GestureGroupState(
+            title = "Three fingers",
+            rows =
+                listOf(
+                    GestureRowState("Swipe up", HomeGesture.THREE_FINGER_UP),
+                    GestureRowState("Swipe down", HomeGesture.THREE_FINGER_DOWN),
+                    GestureRowState("Swipe left", HomeGesture.THREE_FINGER_LEFT),
+                    GestureRowState("Swipe right", HomeGesture.THREE_FINGER_RIGHT),
+                ),
+        ),
+    )
+
 private data class GestureTargetPickerRequest(
     val gesture: HomeGesture,
     val action: LauncherGestureAction,
 )
 
 @Composable
+@Suppress("CyclomaticComplexMethod", "ComplexCondition")
 private fun GestureTargetPicker(
     request: GestureTargetPickerRequest,
     installedApps: List<InstalledApp>,

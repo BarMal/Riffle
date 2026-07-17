@@ -1,3 +1,5 @@
+@file:Suppress("TooManyFunctions")
+
 package com.riffle.app.launcher
 
 import com.riffle.core.domain.launcher.apps.AppActivityName

@@ -115,12 +115,9 @@ class HomeSwipeGestureActionMapper {
     fun actionFor(
         gesture: HomeGesture,
         settings: HomeGestureSettings = HomeGestureSettings(),
-    ): LauncherShellAction? =
-        settings.actionFor(gesture).toShellAction(settings.launchTargetFor(gesture))
+    ): LauncherShellAction? = settings.actionFor(gesture).toShellAction(settings.launchTargetFor(gesture))
 
-    private fun LauncherGestureAction.toShellAction(
-        launchTarget: LauncherGestureLaunchTarget?,
-    ): LauncherShellAction? =
+    private fun LauncherGestureAction.toShellAction(launchTarget: LauncherGestureLaunchTarget?): LauncherShellAction? =
         when (this) {
             LauncherGestureAction.NONE -> null
             LauncherGestureAction.OPEN_APP_DRAWER -> LauncherShellAction.OpenAppDrawer
@@ -132,16 +129,15 @@ class HomeSwipeGestureActionMapper {
             LauncherGestureAction.ENTER_FULLSCREEN_HOME -> LauncherShellAction.SelectFullscreenHomeEnabled(true)
             LauncherGestureAction.SELECT_NEXT_HOME_PAGE -> LauncherShellAction.SelectNextHomePage
             LauncherGestureAction.SELECT_PREVIOUS_HOME_PAGE -> LauncherShellAction.SelectPreviousHomePage
-            LauncherGestureAction.LAUNCH_APP ->
-                (launchTarget as? LauncherGestureLaunchTarget.App)?.let { target ->
-                    LauncherShellAction.LaunchApp(target.identity)
-                }
-
-            LauncherGestureAction.LAUNCH_APP_SHORTCUT ->
-                (launchTarget as? LauncherGestureLaunchTarget.Shortcut)?.let { target ->
-                    LauncherShellAction.LaunchAppShortcut(target.shortcut)
-                }
+            LauncherGestureAction.LAUNCH_APP -> launchTarget.launchAppAction()
+            LauncherGestureAction.LAUNCH_APP_SHORTCUT -> launchTarget.launchShortcutAction()
         }
+
+    private fun LauncherGestureLaunchTarget?.launchAppAction(): LauncherShellAction? =
+        (this as? LauncherGestureLaunchTarget.App)?.let { target -> LauncherShellAction.LaunchApp(target.identity) }
+
+    private fun LauncherGestureLaunchTarget?.launchShortcutAction(): LauncherShellAction? =
+        (this as? LauncherGestureLaunchTarget.Shortcut)?.let { target -> LauncherShellAction.LaunchAppShortcut(target.shortcut) }
 }
 
 fun homeSwipeActionForDrag(
