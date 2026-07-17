@@ -135,6 +135,27 @@ class CardsChapterSurfaceTest {
     }
 
     @Test
+    fun navigatorKeepsProfilesDistinctWhenTheAppCatalogIsUnavailable() {
+        val personal = AppProfile.personal()
+        val work = AppProfile.work()
+        val state =
+            CardsChapterPlanner().state(
+                notificationGroups =
+                    listOf(
+                        group(packageName = "com.riffle.mail", profile = personal, postedAtEpochMillis = 10L),
+                        group(packageName = "com.riffle.mail", profile = work, postedAtEpochMillis = 20L),
+                    ),
+            )
+
+        val items = cardsChapterNavigatorItems(state, apps = emptyList())
+
+        assertEquals(
+            listOf("Overview", "com.riffle.mail (work) (1)", "com.riffle.mail (personal) (1)"),
+            items.map(CardsChapterNavigatorItem::displayLabel),
+        )
+    }
+
+    @Test
     fun labelsAppChaptersWithTheMatchingProfiledApp() {
         val personal = AppProfile.personal()
         val app =

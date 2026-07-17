@@ -396,7 +396,7 @@ private fun CardsChapter.navigatorLabel(apps: List<InstalledApp>): String =
         is CardsChapter.App ->
             apps.firstOrNull { it.matches(id) }
                 ?.let { app -> app.identity.profile.profileDisplayLabel(app.label) }
-                ?: id.packageName.value
+                ?: "${id.packageName.value} (${id.profileId.value})"
     }
 
 private val Int.notificationLabel: String
