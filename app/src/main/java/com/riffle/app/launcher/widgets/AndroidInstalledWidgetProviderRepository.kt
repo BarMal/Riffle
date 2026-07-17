@@ -28,7 +28,9 @@ class AndroidInstalledWidgetProviderRepository(
             .map { provider -> mapper.map(provider, density = densityProvider()) }
 }
 
-internal fun AppWidgetProviderInfo.toAndroidWidgetProvider(packageManager: PackageManager? = null): AndroidWidgetProvider =
+internal fun AppWidgetProviderInfo.toAndroidWidgetProvider(
+    packageManager: PackageManager? = null,
+): AndroidWidgetProvider =
     AndroidWidgetProvider(
         packageName = provider.packageName,
         className = provider.className,
