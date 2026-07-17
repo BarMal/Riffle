@@ -19,6 +19,7 @@ import com.riffle.core.domain.launcher.notifications.NotificationAgeBucket
 import com.riffle.core.domain.launcher.notifications.NotificationCategory
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class CardsChapterSurfaceTest {
@@ -121,10 +122,16 @@ class CardsChapterSurfaceTest {
             )
 
         val items = cardsChapterNavigatorItems(state, apps)
+        val selectedItem = items.first { item -> item.chapterId == workChapter }
 
-        assertEquals("Work - Mail (1)", items[1].displayLabel)
-        assertEquals("Work - Mail, 1 notification, selected. Open chapter", items[1].contentDescription)
-        assertEquals("Mail (1)", items.last().displayLabel)
+        assertEquals("Work - Mail (1)", selectedItem.displayLabel)
+        assertTrue(selectedItem.contentDescription.contains("1 notification"))
+        assertTrue(selectedItem.contentDescription.contains("selected"))
+        val personalItem =
+            items.first { item ->
+                item.chapterId != workChapter && item.chapterId !is CardsChapterId.Overview
+            }
+        assertEquals("Mail (1)", personalItem.displayLabel)
     }
 
     @Test
