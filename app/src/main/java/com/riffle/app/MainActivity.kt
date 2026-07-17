@@ -440,7 +440,11 @@ class MainActivity : ComponentActivity() {
         val notificationAccessWasRevoked =
             shellViewModel.state.value.notificationAccessStatus == NotificationAccessStatus.REVOKED
         shellViewModel.onHomeRoleStatusChanged(
-            homeRoleStatus = homeRoleGateway.getHomeRoleStatus(),
+            homeRoleStatus =
+                startupPlatformValue(
+                    fallback = HomeRoleStatus.UNKNOWN,
+                    read = homeRoleGateway::getHomeRoleStatus,
+                ),
             notificationAccessStatus = notificationAccessStatus,
             overlayDockPermissionStatus = overlayDockPermissionGateway.getOverlayDockPermissionStatus(),
         )
@@ -461,7 +465,9 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun refreshHomeLayoutDeviceClass(source: String) {
-        homeLayoutDeviceClassObserver.currentDeviceClassEvent(source)?.let(::applyHomeLayoutDeviceClassEvent)
+        startupPlatformValueOrNull {
+            homeLayoutDeviceClassObserver.currentDeviceClassEvent(source)
+        }?.let(::applyHomeLayoutDeviceClassEvent)
     }
 
     private fun observeHomeLayoutDeviceClass() {
@@ -542,6 +548,15 @@ internal fun resolveHostedWidgetResultId(
     returnedHostedWidgetId: HostedWidgetId?,
     expectedHostedWidgetId: HostedWidgetId,
 ): HostedWidgetId = returnedHostedWidgetId ?: expectedHostedWidgetId
+
+internal fun <Value> startupPlatformValue(
+    fallback: Value,
+    read: () -> Value,
+): Value =
+    runCatching(read).getOrDefault(fallback)
+
+internal fun <Value> startupPlatformValueOrNull(read: () -> Value?): Value? =
+    runCatching(read).getOrNull()
 
 private fun String.launcherBuildTypeLabel(): String =
     when {
