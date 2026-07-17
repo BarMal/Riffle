@@ -34,7 +34,12 @@ internal class LauncherSettingsStateReducer(
                     state.withHomeSwipeGestureAction(action.direction, action.action, launcherSettingsRepository)
 
                 is LauncherShellAction.SelectHomeGestureAction ->
-                    state.withHomeGestureAction(action.gesture, action.action, action.launchTarget, launcherSettingsRepository)
+                    state.withHomeGestureAction(
+                        action.gesture,
+                        action.action,
+                        action.launchTarget,
+                        launcherSettingsRepository,
+                    )
 
                 LauncherShellAction.ResetHomeSwipeGestureActions ->
                     state.withDefaultHomeSwipes(

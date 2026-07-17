@@ -137,7 +137,9 @@ class HomeSwipeGestureActionMapper {
         (this as? LauncherGestureLaunchTarget.App)?.let { target -> LauncherShellAction.LaunchApp(target.identity) }
 
     private fun LauncherGestureLaunchTarget?.launchShortcutAction(): LauncherShellAction? =
-        (this as? LauncherGestureLaunchTarget.Shortcut)?.let { target -> LauncherShellAction.LaunchAppShortcut(target.shortcut) }
+        (this as? LauncherGestureLaunchTarget.Shortcut)?.let { target ->
+            LauncherShellAction.LaunchAppShortcut(target.shortcut)
+        }
 }
 
 fun homeSwipeActionForDrag(
