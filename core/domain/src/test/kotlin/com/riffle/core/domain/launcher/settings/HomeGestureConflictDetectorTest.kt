@@ -30,6 +30,7 @@ class HomeGestureConflictDetectorTest {
                 .none { conflict -> conflict.action == LauncherGestureAction.LAUNCH_APP },
         )
     }
+
     @Test
     fun returnsNoConflictWhenEnabledActionsAreUnique() {
         val settings =
