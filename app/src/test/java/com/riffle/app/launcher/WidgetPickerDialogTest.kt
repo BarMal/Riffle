@@ -28,19 +28,20 @@ class WidgetPickerDialogTest {
     }
 
     @Test
-    fun providerSummaryIncludesPackageAndMinimumDimensions() {
+    fun providerSummaryUsesTargetCellsWithoutExposingPackageOrRawDimensions() {
         val provider =
             widgetProvider(
                 label = "Weather",
                 packageName = "com.example.weather",
                 className = ".WeatherWidget",
+                dimensions = widgetDimensions(targetCellWidth = 3, targetCellHeight = 2),
             )
 
-        assertEquals("com.example.weather - 120x80dp", provider.widgetPickerSummary())
+        assertEquals("3 x 2 cells", provider.widgetPickerSummary())
     }
 
     @Test
-    fun providerSummaryOmitsRedundantWorkProfilePrefix() {
+    fun providerSummaryDoesNotExposeWorkProfileOrPackageIdentity() {
         val provider =
             widgetProvider(
                 label = "Weather",
@@ -49,13 +50,13 @@ class WidgetPickerDialogTest {
                 profile = AppProfile.work(),
             )
 
-        assertEquals("com.example.weather - 120x80dp", provider.widgetPickerSummary())
+        assertEquals("", provider.widgetPickerSummary())
     }
 
     @Test
     fun providerSummaryIncludesResizeCapabilities() {
         assertEquals(
-            "com.example.weather - 120x80dp - Resizable",
+            "Resizable",
             widgetProvider(
                 label = "Weather",
                 packageName = "com.example.weather",

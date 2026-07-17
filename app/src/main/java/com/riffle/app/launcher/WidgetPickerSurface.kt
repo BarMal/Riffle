@@ -1,10 +1,12 @@
+@file:Suppress("TooManyFunctions")
+
 package com.riffle.app.launcher
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
@@ -19,6 +21,8 @@ import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -35,7 +39,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.widgets.InstalledWidgetProvider
 import kotlinx.coroutines.Dispatchers
@@ -48,6 +54,7 @@ fun WidgetPickerSurface(
     onAction: (LauncherShellAction) -> Unit,
 ) {
     var query by rememberSaveable { mutableStateOf("") }
+    var collapsedSectionTitles by rememberSaveable { mutableStateOf("") }
     val filteredProviders = providers.filteredWidgetProviders(query)
     val providerSections = widgetPickerSectionsFor(filteredProviders)
 
@@ -99,6 +106,8 @@ fun WidgetPickerSurface(
                 providers = providers,
                 providerSections = providerSections,
                 query = query,
+                collapsedSectionTitles = collapsedSectionTitles,
+                onCollapsedSectionTitlesChange = { value -> collapsedSectionTitles = value },
                 previewImageLoader = previewImageLoader,
                 onAction = onAction,
             )
@@ -121,6 +130,8 @@ private fun WidgetPickerContent(
     providers: List<InstalledWidgetProvider>,
     providerSections: List<WidgetPickerSection>,
     query: String,
+    collapsedSectionTitles: String,
+    onCollapsedSectionTitlesChange: (String) -> Unit,
     previewImageLoader: WidgetPreviewImageLoader,
     onAction: (LauncherShellAction) -> Unit,
 ) {
@@ -138,24 +149,38 @@ private fun WidgetPickerContent(
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
                 verticalArrangement = Arrangement.spacedBy(18.dp),
             ) {
+                val collapsedSections = collapsedSectionTitles.toCollapsedWidgetPickerSections()
                 providerSections.forEach { section ->
-                    if (providerSections.size > 1) {
-                        item(
-                            key = "section:${section.title}",
-                            span = { GridItemSpan(maxLineSpan) },
-                        ) {
-                            WidgetPickerSectionHeader(title = section.displayTitle)
-                        }
-                    }
-                    items(
-                        items = section.providers,
-                        key = { provider -> provider.widgetPickerKey },
-                    ) { provider ->
-                        WidgetProviderTile(
-                            provider = provider,
-                            previewImageLoader = previewImageLoader,
-                            onAction = onAction,
+                    val isExpanded = section.key !in collapsedSections
+                    item(
+                        key = "section:${section.key}",
+                        span = { GridItemSpan(maxLineSpan) },
+                    ) {
+                        WidgetPickerSectionHeader(
+                            title = section.displayTitle,
+                            expanded = isExpanded,
+                            onExpandedChange = { expanded ->
+                                onCollapsedSectionTitlesChange(
+                                    collapsedSections
+                                        .toMutableSet()
+                                        .apply {
+                                            if (expanded) remove(section.key) else add(section.key)
+                                        }.joinToString(WIDGET_PICKER_SECTION_STATE_SEPARATOR),
+                                )
+                            },
                         )
+                    }
+                    if (isExpanded) {
+                        items(
+                            items = section.providers,
+                            key = { provider -> provider.widgetPickerKey },
+                        ) { provider ->
+                            WidgetProviderTile(
+                                provider = provider,
+                                previewImageLoader = previewImageLoader,
+                                onAction = onAction,
+                            )
+                        }
                     }
                 }
             }
@@ -168,13 +193,12 @@ private fun WidgetProviderTile(
     previewImageLoader: WidgetPreviewImageLoader,
     onAction: (LauncherShellAction) -> Unit,
 ) {
-    val requestAddWidgetAction = provider.requestAddWidgetAction()
+    val summary = provider.widgetPickerSummary()
 
     Column(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .clickable { onAction(requestAddWidgetAction) }
                 .padding(bottom = 2.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -190,23 +214,48 @@ private fun WidgetProviderTile(
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        Text(
-            text = provider.widgetPickerSummary(),
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
-            verticalAlignment = Alignment.CenterVertically,
+        if (summary.isNotBlank()) {
+            Text(
+                text = summary,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        WidgetProviderAddMenu(provider = provider, onAction = onAction)
+    }
+}
+
+@Composable
+private fun WidgetProviderAddMenu(
+    provider: InstalledWidgetProvider,
+    onAction: (LauncherShellAction) -> Unit,
+) {
+    var menuExpanded by remember { mutableStateOf(false) }
+
+    Box {
+        TextButton(onClick = { menuExpanded = true }) {
+            Text(text = "Add ${provider.label}")
+        }
+        DropdownMenu(
+            expanded = menuExpanded,
+            onDismissRequest = { menuExpanded = false },
         ) {
-            TextButton(onClick = { onAction(provider.requestAddWidgetAction(WidgetAddTarget.HOME)) }) {
-                Text(text = "Home")
-            }
-            TextButton(onClick = { onAction(provider.requestAddWidgetAction(WidgetAddTarget.DOCK)) }) {
-                Text(text = "Dock")
-            }
+            DropdownMenuItem(
+                text = { Text("Choose Home position") },
+                onClick = {
+                    menuExpanded = false
+                    onAction(provider.requestAddWidgetAction(WidgetAddTarget.HOME))
+                },
+            )
+            DropdownMenuItem(
+                text = { Text("Choose Dock position") },
+                onClick = {
+                    menuExpanded = false
+                    onAction(provider.requestAddWidgetAction(WidgetAddTarget.DOCK))
+                },
+            )
         }
     }
 }
@@ -218,24 +267,21 @@ private fun WidgetProviderPreview(
 ) {
     val preview = rememberWidgetPreview(provider = provider, previewImageLoader = previewImageLoader)
 
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        tonalElevation = 2.dp,
-        color = MaterialTheme.colorScheme.surfaceVariant,
-    ) {
+    BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+        val previewAspectRatio = provider.widgetPickerPreviewAspectRatio().boundedFor(maxWidth)
+
         if (preview != null) {
             Image(
                 bitmap = preview,
                 contentDescription = "${provider.label} widget preview",
-                contentScale = ContentScale.Crop,
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .aspectRatio(provider.widgetPickerPreviewAspectRatio()),
+                contentScale = ContentScale.Fit,
+                modifier = Modifier.widgetPickerPreviewBounds(previewAspectRatio),
             )
         } else {
-            WidgetProviderPreviewFallback(provider = provider)
+            WidgetProviderPreviewFallback(
+                provider = provider,
+                previewAspectRatio = previewAspectRatio,
+            )
         }
     }
 }
@@ -261,13 +307,14 @@ private fun rememberWidgetPreview(
 }
 
 @Composable
-private fun WidgetProviderPreviewFallback(provider: InstalledWidgetProvider) {
+private fun WidgetProviderPreviewFallback(
+    provider: InstalledWidgetProvider,
+    previewAspectRatio: Float,
+) {
     Box(
         modifier =
             Modifier
-                .fillMaxWidth()
-                .aspectRatio(provider.widgetPickerPreviewAspectRatio())
-                .clip(RoundedCornerShape(12.dp))
+                .widgetPickerPreviewBounds(previewAspectRatio)
                 .background(MaterialTheme.colorScheme.secondaryContainer),
         contentAlignment = Alignment.Center,
     ) {
@@ -278,6 +325,18 @@ private fun WidgetProviderPreviewFallback(provider: InstalledWidgetProvider) {
         )
     }
 }
+
+private fun Modifier.widgetPickerPreviewBounds(previewAspectRatio: Float): Modifier =
+    fillMaxWidth()
+        .aspectRatio(previewAspectRatio)
+        .clip(RoundedCornerShape(12.dp))
+        .testTag(WIDGET_PICKER_PREVIEW_TEST_TAG)
+
+private fun Float.boundedFor(maxWidth: Dp): Float =
+    coerceIn(
+        minimumValue = maxWidth / WIDGET_PREVIEW_MAX_HEIGHT_DP.dp,
+        maximumValue = maxWidth / WIDGET_PREVIEW_MIN_HEIGHT_DP.dp,
+    )
 
 internal fun InstalledWidgetProvider.requestAddWidgetAction(
     target: WidgetAddTarget = WidgetAddTarget.HOME,
@@ -291,3 +350,12 @@ internal fun InstalledWidgetProvider.requestAddWidgetAction(
 
 private const val WIDGET_PICKER_SCREEN_PADDING_DP = 20
 private const val WIDGET_TILE_MIN_WIDTH_DP = 144
+private const val WIDGET_PREVIEW_MIN_HEIGHT_DP = 72
+private const val WIDGET_PREVIEW_MAX_HEIGHT_DP = 240
+internal const val WIDGET_PICKER_PREVIEW_TEST_TAG = "widget-picker-preview"
+private const val WIDGET_PICKER_SECTION_STATE_SEPARATOR = "\u001f"
+
+private fun String.toCollapsedWidgetPickerSections(): Set<String> =
+    split(WIDGET_PICKER_SECTION_STATE_SEPARATOR)
+        .filter(String::isNotEmpty)
+        .toSet()

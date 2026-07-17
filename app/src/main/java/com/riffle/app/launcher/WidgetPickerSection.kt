@@ -1,15 +1,13 @@
 package com.riffle.app.launcher
 
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.widgets.InstalledWidgetProvider
 
 internal data class WidgetPickerSection(
+    val key: String,
     val title: String,
     val providers: List<InstalledWidgetProvider>,
 ) {
@@ -18,39 +16,52 @@ internal data class WidgetPickerSection(
 
 internal fun widgetPickerSectionsFor(providers: List<InstalledWidgetProvider>): List<WidgetPickerSection> =
     providers
-        .groupBy { provider -> provider.widgetPickerSectionTitle() }
-        .map { (title, sectionProviders) ->
+        .groupBy { provider -> provider.widgetPickerSectionKey }
+        .map { (key, sectionProviders) ->
             WidgetPickerSection(
-                title = title,
-                providers = sectionProviders,
+                key = key,
+                title = sectionProviders.first().widgetPickerSectionTitle(),
+                providers =
+                    sectionProviders.sortedWith(
+                        compareBy<InstalledWidgetProvider> { provider -> provider.label.lowercase() }
+                            .thenBy { provider -> provider.identity.className.value },
+                    ),
             )
         }
         .sortedWith(
             compareBy<WidgetPickerSection> { section -> section.title.widgetPickerProfileSortRank() }
-                .thenBy { section -> section.title },
+                .thenBy { section -> section.title.widgetPickerAppSortLabel() },
         )
 
 internal fun InstalledWidgetProvider.widgetPickerSectionTitle(): String {
-    return identity.profile.drawerProfilePrefix() ?: "Personal"
+    val profilePrefix = identity.profile.drawerProfilePrefix() ?: "Personal"
+    return "$profilePrefix - ${appLabel.trim().ifEmpty { label }}"
 }
 
+internal val InstalledWidgetProvider.widgetPickerSectionKey: String
+    get() = "${identity.profile.id.value}:${identity.profile.type.name}:${identity.packageName.value}"
+
 private fun String.widgetPickerProfileSortRank(): Int =
-    when (this) {
+    when (substringBefore(" - ")) {
         "Personal" -> 0
         "Work" -> 1
         "Private" -> 2
         else -> 3
     }
 
+private fun String.widgetPickerAppSortLabel(): String = substringAfter(" - ").lowercase()
+
 @Composable
-internal fun WidgetPickerSectionHeader(title: String) {
-    Text(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(top = 10.dp, bottom = 2.dp),
-        text = title,
-        style = MaterialTheme.typography.labelLarge,
-        color = MaterialTheme.colorScheme.primary,
-    )
+internal fun WidgetPickerSectionHeader(
+    title: String,
+    expanded: Boolean,
+    onExpandedChange: (Boolean) -> Unit,
+) {
+    TextButton(onClick = { onExpandedChange(!expanded) }) {
+        Text(
+            text = "$title, ${if (expanded) "collapse" else "expand"}",
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.primary,
+        )
+    }
 }

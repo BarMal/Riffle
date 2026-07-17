@@ -3,6 +3,7 @@ package com.riffle.app.launcher.widgets
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProviderInfo
 import android.content.Context
+import android.content.pm.PackageManager
 import android.os.Build
 import com.riffle.app.launcher.apps.toAppProfile
 import com.riffle.core.domain.launcher.apps.AppProfile
@@ -13,15 +14,27 @@ class AndroidInstalledWidgetProviderRepository(
     private val appWidgetManager: AppWidgetManager,
     private val densityProvider: () -> Float = { 1f },
     private val mapper: AndroidInstalledWidgetProviderMapper = AndroidInstalledWidgetProviderMapper(),
+    private val packageManager: PackageManager? = null,
 ) : InstalledWidgetProviderRepository {
     constructor(context: Context) : this(
         appWidgetManager = AppWidgetManager.getInstance(context),
         densityProvider = { context.resources.displayMetrics.density },
+        packageManager = context.packageManager,
     )
 
     override fun installedWidgetProviders(): List<InstalledWidgetProvider> =
         appWidgetManager.installedProviders
-            .map { provider -> provider.toAndroidWidgetProvider() }
+            .map { provider ->
+                val appLabel =
+                    packageManager
+                        ?.applicationLabelFor(provider.provider.packageName)
+                        .orEmpty()
+                provider
+                    .toAndroidWidgetProvider()
+                    .copy(
+                        appLabel = appLabel,
+                    )
+            }
             .map { provider -> mapper.map(provider, density = densityProvider()) }
 }
 
@@ -31,6 +44,7 @@ internal fun AppWidgetProviderInfo.toAndroidWidgetProvider(): AndroidWidgetProvi
         className = provider.className,
         profile = profile?.toAppProfile() ?: AppProfile.personal(),
         label = label.orEmpty(),
+        appLabel = label.orEmpty(),
         description = null,
         minWidthPx = minWidth,
         minHeightPx = minHeight,
@@ -51,7 +65,8 @@ internal data class AndroidWidgetProvider(
     val className: String,
     val profile: AppProfile,
     val label: String,
-    val description: String?,
+    val appLabel: String = label,
+    val description: String? = null,
     val minWidthPx: Int,
     val minHeightPx: Int,
     val minResizeWidthPx: Int?,
@@ -65,6 +80,11 @@ internal data class AndroidWidgetProvider(
     val hasConfigurationActivity: Boolean = false,
     val supportsReconfiguration: Boolean = false,
 )
+
+private fun PackageManager.applicationLabelFor(packageName: String): String? =
+    runCatching {
+        getApplicationLabel(getApplicationInfo(packageName, 0)).toString()
+    }.getOrNull()
 
 private val AppWidgetProviderInfo.targetCellWidthCompat: Int?
     get() =

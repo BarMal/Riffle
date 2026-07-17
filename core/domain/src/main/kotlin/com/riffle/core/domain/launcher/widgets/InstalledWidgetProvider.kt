@@ -6,6 +6,7 @@ import com.riffle.core.domain.launcher.apps.AppProfile
 data class InstalledWidgetProvider(
     val identity: WidgetProviderIdentity,
     val label: String,
+    val appLabel: String = label,
     val description: String? = null,
     val dimensions: WidgetProviderDimensions,
     val supportsHorizontalResize: Boolean = false,

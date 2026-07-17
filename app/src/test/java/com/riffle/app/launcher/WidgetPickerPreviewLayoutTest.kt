@@ -26,13 +26,13 @@ class WidgetPickerPreviewLayoutTest {
     }
 
     @Test
-    fun previewAspectRatioClampsExtremeShapes() {
+    fun previewAspectRatioPreservesExtremeProviderShapes() {
         assertEquals(
-            2.25f,
+            8f,
             widgetProvider(minWidthDp = 800, minHeightDp = 100).widgetPickerPreviewAspectRatio(),
         )
         assertEquals(
-            0.75f,
+            0.125f,
             widgetProvider(minWidthDp = 100, minHeightDp = 800).widgetPickerPreviewAspectRatio(),
         )
     }
