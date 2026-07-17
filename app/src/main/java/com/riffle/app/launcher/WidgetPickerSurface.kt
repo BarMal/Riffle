@@ -317,11 +317,11 @@ private fun WidgetProviderPreviewFallback(provider: InstalledWidgetProvider) {
 
 private fun Modifier.widgetPickerPreviewBounds(provider: InstalledWidgetProvider): Modifier =
     fillMaxWidth()
-        .aspectRatio(provider.widgetPickerPreviewAspectRatio())
         .heightIn(
             min = WIDGET_PREVIEW_MIN_HEIGHT_DP.dp,
             max = WIDGET_PREVIEW_MAX_HEIGHT_DP.dp,
         )
+        .aspectRatio(provider.widgetPickerPreviewAspectRatio())
         .clip(RoundedCornerShape(12.dp))
         .testTag(WIDGET_PICKER_PREVIEW_TEST_TAG)
 
