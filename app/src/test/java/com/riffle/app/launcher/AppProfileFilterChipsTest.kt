@@ -24,9 +24,9 @@ class AppProfileFilterChipsTest {
     }
 
     @Test
-    fun labelsProfileFiltersWithCounts() {
+    fun labelsAvailableProfileFiltersWithCounts() {
         assertEquals(
-            listOf("All (3)", "Personal (1)", "Work (2)", "Private (0)"),
+            listOf("All (3)", "Personal (1)", "Work (2)"),
             appProfileFilterOptionsFor(
                 apps =
                     listOf(
@@ -51,11 +51,10 @@ class AppProfileFilterChipsTest {
         assertEquals(
             listOf(
                 AppDrawerProfileFilter.ALL,
-                AppDrawerProfileFilter.PERSONAL,
-                AppDrawerProfileFilter.WORK,
                 AppDrawerProfileFilter.PRIVATE,
             ),
             appProfileFiltersFor(
+                apps = emptyList(),
                 selectedFilter = AppDrawerProfileFilter.PRIVATE,
             ),
         )
@@ -66,20 +65,19 @@ class AppProfileFilterChipsTest {
         assertEquals(
             listOf(
                 AppDrawerProfileFilter.ALL,
-                AppDrawerProfileFilter.PERSONAL,
-                AppDrawerProfileFilter.WORK,
-                AppDrawerProfileFilter.PRIVATE,
             ),
-            appProfileFiltersFor(),
+            appProfileFiltersFor(
+                apps = emptyList(),
+                selectedFilter = AppDrawerProfileFilter.ALL,
+            ),
         )
         assertEquals(
             listOf(
                 AppDrawerProfileFilter.ALL,
-                AppDrawerProfileFilter.PERSONAL,
                 AppDrawerProfileFilter.WORK,
-                AppDrawerProfileFilter.PRIVATE,
             ),
             appProfileFiltersFor(
+                apps = emptyList(),
                 selectedFilter = AppDrawerProfileFilter.WORK,
             ),
         )
