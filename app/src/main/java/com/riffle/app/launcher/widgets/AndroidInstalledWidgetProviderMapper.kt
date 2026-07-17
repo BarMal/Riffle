@@ -22,8 +22,9 @@ class AndroidInstalledWidgetProviderMapper {
                     packageName = AppPackageName(provider.packageName),
                     className = WidgetProviderClassName(provider.className),
                     profile = provider.profile,
-                ),
+            ),
             label = provider.label.ifBlank { provider.packageName },
+            appLabel = provider.appLabel.ifBlank { provider.label.ifBlank { provider.packageName } },
             description = provider.description?.takeIf(String::isNotBlank),
             dimensions =
                 WidgetProviderDimensions(

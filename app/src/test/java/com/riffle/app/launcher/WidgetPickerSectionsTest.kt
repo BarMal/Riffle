@@ -11,7 +11,7 @@ import org.junit.Test
 
 class WidgetPickerSectionsTest {
     @Test
-    fun sectionsWidgetProvidersByProfileLabel() {
+    fun sectionsWidgetProvidersByOwningAppAndProfile() {
         val personal = widgetProvider(label = "Clock", profile = AppProfile.personal())
         val work = widgetProvider(label = "Calendar", profile = AppProfile.work())
         val private = widgetProvider(label = "Vault", profile = AppProfile.private())
@@ -19,28 +19,30 @@ class WidgetPickerSectionsTest {
         val sections = widgetPickerSectionsFor(listOf(work, personal, private))
 
         assertEquals(
-            listOf("Personal", "Work", "Private"),
+            listOf("Personal - Clock", "Work - Calendar", "Private - Vault"),
             sections.map { section -> section.title },
         )
         assertEquals(
-            listOf("Personal (1)", "Work (1)", "Private (1)"),
+            listOf("Personal - Clock (1)", "Work - Calendar (1)", "Private - Vault (1)"),
             sections.map { section -> section.displayTitle },
         )
     }
 
     @Test
-    fun keepsProviderOrderWithinProfileSections() {
-        val clock = widgetProvider(label = "Clock", profile = AppProfile.personal())
-        val weather = widgetProvider(label = "Weather", profile = AppProfile.personal())
+    fun groupsVariantsFromTheSameAppAndSortsThemByVisibleLabel() {
+        val clock = widgetProvider(label = "Clock", appLabel = "Google", profile = AppProfile.personal())
+        val weather = widgetProvider(label = "Weather", appLabel = "Google", profile = AppProfile.personal())
 
-        val sections = widgetPickerSectionsFor(listOf(clock, weather))
+        val sections = widgetPickerSectionsFor(listOf(weather, clock))
 
+        assertEquals("Personal - Google", sections.single().title)
         assertEquals(listOf(clock, weather), sections.single().providers)
     }
 
     private fun widgetProvider(
         label: String,
         profile: AppProfile,
+        appLabel: String = label,
     ): InstalledWidgetProvider =
         InstalledWidgetProvider(
             identity =
@@ -50,6 +52,7 @@ class WidgetPickerSectionsTest {
                     profile = profile,
                 ),
             label = label,
+            appLabel = appLabel,
             dimensions = WidgetProviderDimensions(minWidthDp = 120, minHeightDp = 80),
         )
 }

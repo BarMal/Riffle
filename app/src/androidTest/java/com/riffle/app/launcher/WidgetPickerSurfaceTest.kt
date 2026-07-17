@@ -33,9 +33,7 @@ class WidgetPickerSurfaceTest {
         }
 
         composeRule.onNodeWithText("Clock").assertIsDisplayed()
-        composeRule.onNodeWithText("120 x 80").assertIsDisplayed()
-        composeRule.onNodeWithText("Home").assertIsDisplayed()
-        composeRule.onNodeWithText("Dock").assertIsDisplayed()
+        composeRule.onNodeWithText("Add Clock").assertIsDisplayed()
     }
 
     private fun widgetProvider(): InstalledWidgetProvider =

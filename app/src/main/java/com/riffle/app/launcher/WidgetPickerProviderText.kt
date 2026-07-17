@@ -4,10 +4,14 @@ import com.riffle.core.domain.launcher.widgets.InstalledWidgetProvider
 
 internal fun InstalledWidgetProvider.widgetPickerSummary(): String =
     listOfNotNull(
-        identity.packageName.value,
-        "${dimensions.minWidthDp}x${dimensions.minHeightDp}dp",
+        widgetPickerCellSizeLabel(),
         widgetPickerResizeLabel(),
     ).joinToString(" - ")
+
+private fun InstalledWidgetProvider.widgetPickerCellSizeLabel(): String? =
+    listOfNotNull(dimensions.targetCellWidth, dimensions.targetCellHeight)
+        .takeIf { cells -> cells.size == 2 }
+        ?.joinToString(separator = " x ", postfix = " cells")
 
 internal fun InstalledWidgetProvider.widgetPickerResizeLabel(): String? =
     when {

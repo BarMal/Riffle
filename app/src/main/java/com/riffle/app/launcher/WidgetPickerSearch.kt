@@ -23,6 +23,8 @@ private fun InstalledWidgetProvider.matchesWidgetQuery(queryTokens: List<String>
 private fun InstalledWidgetProvider.widgetSearchableValues(): List<String> =
     listOfNotNull(
         label,
+        appLabel,
+        description,
         identity.packageName.value,
         identity.className.value,
         widgetPickerSectionTitle(),

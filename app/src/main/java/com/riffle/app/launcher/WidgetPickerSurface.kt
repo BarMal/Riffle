@@ -2,7 +2,6 @@ package com.riffle.app.launcher
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,6 +19,8 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -27,6 +28,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -48,6 +50,7 @@ fun WidgetPickerSurface(
     onAction: (LauncherShellAction) -> Unit,
 ) {
     var query by rememberSaveable { mutableStateOf("") }
+    val expandedSections = rememberSaveable { mutableStateMapOf<String, Boolean>() }
     val filteredProviders = providers.filteredWidgetProviders(query)
     val providerSections = widgetPickerSectionsFor(filteredProviders)
 
@@ -99,6 +102,7 @@ fun WidgetPickerSurface(
                 providers = providers,
                 providerSections = providerSections,
                 query = query,
+                expandedSections = expandedSections,
                 previewImageLoader = previewImageLoader,
                 onAction = onAction,
             )
@@ -121,6 +125,7 @@ private fun WidgetPickerContent(
     providers: List<InstalledWidgetProvider>,
     providerSections: List<WidgetPickerSection>,
     query: String,
+    expandedSections: MutableMap<String, Boolean>,
     previewImageLoader: WidgetPreviewImageLoader,
     onAction: (LauncherShellAction) -> Unit,
 ) {
@@ -139,23 +144,28 @@ private fun WidgetPickerContent(
                 verticalArrangement = Arrangement.spacedBy(18.dp),
             ) {
                 providerSections.forEach { section ->
-                    if (providerSections.size > 1) {
-                        item(
-                            key = "section:${section.title}",
-                            span = { GridItemSpan(maxLineSpan) },
-                        ) {
-                            WidgetPickerSectionHeader(title = section.displayTitle)
-                        }
-                    }
-                    items(
-                        items = section.providers,
-                        key = { provider -> provider.widgetPickerKey },
-                    ) { provider ->
-                        WidgetProviderTile(
-                            provider = provider,
-                            previewImageLoader = previewImageLoader,
-                            onAction = onAction,
+                    val isExpanded = expandedSections[section.title] ?: true
+                    item(
+                        key = "section:${section.title}",
+                        span = { GridItemSpan(maxLineSpan) },
+                    ) {
+                        WidgetPickerSectionHeader(
+                            title = section.displayTitle,
+                            expanded = isExpanded,
+                            onExpandedChange = { expandedSections[section.title] = it },
                         )
+                    }
+                    if (isExpanded) {
+                        items(
+                            items = section.providers,
+                            key = { provider -> provider.widgetPickerKey },
+                        ) { provider ->
+                            WidgetProviderTile(
+                                provider = provider,
+                                previewImageLoader = previewImageLoader,
+                                onAction = onAction,
+                            )
+                        }
                     }
                 }
             }
@@ -168,13 +178,12 @@ private fun WidgetProviderTile(
     previewImageLoader: WidgetPreviewImageLoader,
     onAction: (LauncherShellAction) -> Unit,
 ) {
-    val requestAddWidgetAction = provider.requestAddWidgetAction()
+    val summary = provider.widgetPickerSummary()
 
     Column(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .clickable { onAction(requestAddWidgetAction) }
                 .padding(bottom = 2.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -190,23 +199,48 @@ private fun WidgetProviderTile(
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        Text(
-            text = provider.widgetPickerSummary(),
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
-            verticalAlignment = Alignment.CenterVertically,
+        if (summary.isNotBlank()) {
+            Text(
+                text = summary,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        WidgetProviderAddMenu(provider = provider, onAction = onAction)
+    }
+}
+
+@Composable
+private fun WidgetProviderAddMenu(
+    provider: InstalledWidgetProvider,
+    onAction: (LauncherShellAction) -> Unit,
+) {
+    var menuExpanded by remember { mutableStateOf(false) }
+
+    Box {
+        TextButton(onClick = { menuExpanded = true }) {
+            Text(text = "Add ${provider.label}")
+        }
+        DropdownMenu(
+            expanded = menuExpanded,
+            onDismissRequest = { menuExpanded = false },
         ) {
-            TextButton(onClick = { onAction(provider.requestAddWidgetAction(WidgetAddTarget.HOME)) }) {
-                Text(text = "Home")
-            }
-            TextButton(onClick = { onAction(provider.requestAddWidgetAction(WidgetAddTarget.DOCK)) }) {
-                Text(text = "Dock")
-            }
+            DropdownMenuItem(
+                text = { Text("Choose Home position") },
+                onClick = {
+                    menuExpanded = false
+                    onAction(provider.requestAddWidgetAction(WidgetAddTarget.HOME))
+                },
+            )
+            DropdownMenuItem(
+                text = { Text("Choose Dock position") },
+                onClick = {
+                    menuExpanded = false
+                    onAction(provider.requestAddWidgetAction(WidgetAddTarget.DOCK))
+                },
+            )
         }
     }
 }
@@ -218,25 +252,19 @@ private fun WidgetProviderPreview(
 ) {
     val preview = rememberWidgetPreview(provider = provider, previewImageLoader = previewImageLoader)
 
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        tonalElevation = 2.dp,
-        color = MaterialTheme.colorScheme.surfaceVariant,
-    ) {
-        if (preview != null) {
-            Image(
-                bitmap = preview,
-                contentDescription = "${provider.label} widget preview",
-                contentScale = ContentScale.Crop,
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .aspectRatio(provider.widgetPickerPreviewAspectRatio()),
-            )
-        } else {
-            WidgetProviderPreviewFallback(provider = provider)
-        }
+    if (preview != null) {
+        Image(
+            bitmap = preview,
+            contentDescription = "${provider.label} widget preview",
+            contentScale = ContentScale.Fit,
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(provider.widgetPickerPreviewAspectRatio())
+                    .clip(RoundedCornerShape(12.dp)),
+        )
+    } else {
+        WidgetProviderPreviewFallback(provider = provider)
     }
 }
 
