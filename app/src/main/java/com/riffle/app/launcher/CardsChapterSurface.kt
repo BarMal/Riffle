@@ -189,7 +189,8 @@ private fun AppNotificationGroup.toOverviewSummary(
     chapter: CardsChapter.App,
     apps: List<InstalledApp>,
 ): CardsOverviewChapterSummary {
-    val label = chapter.label(apps)
+    val app = apps.firstOrNull { candidate -> candidate.matches(this) }
+    val label = notificationOverviewGroupLabel(app = app, group = this)
     val latestNotification = notifications.maxByOrNull { notification -> notification.postedAtEpochMillis }
     val countLabel = "$count ${if (count == 1) "notification" else "notifications"}"
     val metadata = "${latestCategory.label} · ${latestAgeBucket.label} · $countLabel"
