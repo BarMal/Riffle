@@ -66,6 +66,16 @@ class PageOverviewCardStateTest {
                 cardStepPx = 100f,
             ),
         )
+        assertEquals(
+            3,
+            pageOverviewDropTargetIndex(
+                index = 1,
+                pageCount = 4,
+                dragDistancePx = 10f,
+                scrollDistancePx = 220f,
+                cardStepPx = 100f,
+            ),
+        )
     }
 
     @Test
@@ -90,9 +100,30 @@ class PageOverviewCardStateTest {
     }
 
     @Test
-    fun edgeScrollStartsAfterTheDraggedCardReachesTheHalfwayPoint() {
-        assertEquals(null, pageOverviewEdgeScrollDistancePx(dragOffsetX = 99f, cardWidthPx = 200f))
-        assertEquals(28f, pageOverviewEdgeScrollDistancePx(dragOffsetX = 100f, cardWidthPx = 200f))
-        assertEquals(-28f, pageOverviewEdgeScrollDistancePx(dragOffsetX = -100f, cardWidthPx = 200f))
+    fun edgeScrollDirectionUsesTheActualViewportEdges() {
+        assertEquals(
+            -1,
+            pageOverviewViewportEdgeScrollDirection(
+                pointerPositionPx = 55f,
+                viewportStartPx = 0f,
+                viewportEndPx = 360f,
+            ),
+        )
+        assertEquals(
+            0,
+            pageOverviewViewportEdgeScrollDirection(
+                pointerPositionPx = 180f,
+                viewportStartPx = 0f,
+                viewportEndPx = 360f,
+            ),
+        )
+        assertEquals(
+            1,
+            pageOverviewViewportEdgeScrollDirection(
+                pointerPositionPx = 304f,
+                viewportStartPx = 0f,
+                viewportEndPx = 360f,
+            ),
+        )
     }
 }
