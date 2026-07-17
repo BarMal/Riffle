@@ -20,7 +20,7 @@ import org.junit.Test
 
 class LauncherShellSearchViewModelTest {
     @Test
-    fun defaultSearchExcludesShortcutLabels() {
+    fun defaultSearchIncludesShortcutLabels() {
         val camera = app(label = "Camera")
         val browser = app(label = "Browser")
         val viewModel =
@@ -41,10 +41,14 @@ class LauncherShellSearchViewModelTest {
         viewModel.onAppActionSelected(LauncherShellAction.SearchQueryChanged("new tab"))
 
         assertEquals(emptyList<String>(), viewModel.state.value.searchResults.map { app -> app.label })
+        assertEquals(
+            listOf("New tab"),
+            viewModel.state.value.searchShortcutResults.map { shortcut -> shortcut.shortLabel },
+        )
     }
 
     @Test
-    fun shortcutFilterControlsShortcutLabelMatching() {
+    fun shortcutFilterCanExcludeShortcutLabelMatching() {
         val browser = app(label = "Browser")
         val viewModel =
             LauncherShellViewModel(
@@ -66,12 +70,12 @@ class LauncherShellSearchViewModelTest {
         )
 
         assertEquals(
-            setOf(AppSearchContentFilter.APPS, AppSearchContentFilter.SHORTCUTS),
+            setOf(AppSearchContentFilter.APPS),
             viewModel.state.value.searchFilters.content,
         )
         assertEquals(emptyList<String>(), viewModel.state.value.searchResults.map { app -> app.label })
         assertEquals(
-            listOf("New tab"),
+            emptyList<String>(),
             viewModel.state.value.searchShortcutResults.map { shortcut -> shortcut.shortLabel },
         )
     }
