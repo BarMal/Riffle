@@ -120,4 +120,57 @@ class CardsChapterSurfaceTest {
 
         assertEquals("Mail", chapter.label(listOf(app)))
     }
+
+    @Test
+    fun overviewSummariesKeepPlannerOrderAndDescribeLatestNotificationContent() {
+        val profile = AppProfile.personal()
+        val state =
+            CardsChapterPlanner().state(
+                notificationGroups =
+                    listOf(
+                        group(packageName = "com.riffle.mail", postedAtEpochMillis = 10L),
+                        group(packageName = "com.riffle.chat", postedAtEpochMillis = 20L),
+                    ),
+                preferences =
+                    CardsChapterPreferences(
+                        pinnedChapterIds = listOf(CardsChapterId.App(AppPackageName("com.riffle.mail"), profile.id)),
+                    ),
+            )
+
+        val summaries = cardsOverviewChapterSummaries(state, apps = emptyList())
+
+        assertEquals(
+            listOf("Mail", "Chat"),
+            summaries.map(CardsOverviewChapterSummary::label),
+        )
+        assertEquals("Mail subject", summaries.first().latestTitle)
+        assertEquals("Mail preview", summaries.first().latestContent)
+        assertEquals("Email · Recent · 1 notification", summaries.first().metadata)
+        assertEquals(
+            "Mail. 1 notification. Mail subject. Mail preview. Email · Recent · 1 notification. Open chapter",
+            summaries.first().contentDescription,
+        )
+    }
+
+    private fun group(
+        packageName: String,
+        postedAtEpochMillis: Long,
+    ): AppNotificationGroup =
+        AppNotificationGroup(
+            packageName = AppPackageName(packageName),
+            profileId = AppProfile.personal().id,
+            latestCategory = NotificationCategory.EMAIL,
+            latestAgeBucket = NotificationAgeBucket.RECENT,
+            notifications =
+                listOf(
+                    LauncherNotification(
+                        key = LauncherNotificationKey(packageName),
+                        packageName = AppPackageName(packageName),
+                        profileId = AppProfile.personal().id,
+                        title = "${packageName.substringAfterLast('.').replaceFirstChar { it.uppercase() }} subject",
+                        text = "${packageName.substringAfterLast('.').replaceFirstChar { it.uppercase() }} preview",
+                        postedAtEpochMillis = postedAtEpochMillis,
+                    ),
+                ),
+        )
 }

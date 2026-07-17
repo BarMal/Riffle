@@ -27,6 +27,7 @@ import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.cards.CardsChapter
 import com.riffle.core.domain.launcher.cards.CardsChapterId
 import com.riffle.core.domain.launcher.cards.CardsChapterState
+import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 
 @Composable
@@ -124,7 +125,7 @@ private fun CardsOverview(
     }
 
     when {
-        state.plan.chapters.filterIsInstance<CardsChapter.App>().none { it.notificationGroup != null } ->
+        cardsOverviewChapterSummaries(state, apps).isEmpty() ->
             CardsMessage(title = "No notifications", message = "New notifications will appear in Overview.")
 
         else ->
@@ -133,29 +134,77 @@ private fun CardsOverview(
                 contentPadding = androidx.compose.foundation.layout.PaddingValues(12.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                items(state.plan.chapters.filterIsInstance<CardsChapter.App>(), key = { it.id }) { chapter ->
-                    chapter.notificationGroup?.let { group ->
-                        val label = chapter.label(apps)
-                        Surface(
-                            modifier =
-                                Modifier
-                                    .fillMaxWidth()
-                                    .clickable { onAction(LauncherShellAction.SelectCardsChapter(chapter.id)) }
-                                    .semantics {
-                                        contentDescription = "Open $label chapter, ${group.count} notifications"
-                                    },
-                            color = MaterialTheme.colorScheme.surfaceVariant,
-                            shape = LocalLauncherCardShape.current,
+                items(cardsOverviewChapterSummaries(state, apps), key = { summary -> summary.chapterId }) { summary ->
+                    Surface(
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    onAction(LauncherShellAction.SelectCardsChapter(summary.chapterId))
+                                }.semantics {
+                                    contentDescription = summary.contentDescription
+                                },
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        shape = LocalLauncherCardShape.current,
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp),
                         ) {
-                            Column(modifier = Modifier.padding(16.dp)) {
-                                Text(label, style = MaterialTheme.typography.titleMedium)
-                                Text("${group.count} notifications", style = MaterialTheme.typography.bodyMedium)
-                            }
+                            Text(summary.label, style = MaterialTheme.typography.titleMedium)
+                            Text(summary.latestTitle, style = MaterialTheme.typography.bodyLarge)
+                            Text(summary.latestContent, style = MaterialTheme.typography.bodyMedium)
+                            Text(summary.metadata, style = MaterialTheme.typography.bodySmall)
                         }
                     }
                 }
             }
     }
+}
+
+internal data class CardsOverviewChapterSummary(
+    val chapterId: CardsChapterId.App,
+    val label: String,
+    val latestTitle: String,
+    val latestContent: String,
+    val metadata: String,
+    val notificationCount: Int,
+) {
+    val contentDescription: String
+        get() =
+            "$label. $notificationCount ${if (notificationCount == 1) "notification" else "notifications"}. " +
+                "$latestTitle. $latestContent. $metadata. Open chapter"
+}
+
+internal fun cardsOverviewChapterSummaries(
+    state: CardsChapterState,
+    apps: List<InstalledApp>,
+): List<CardsOverviewChapterSummary> =
+    state.plan.activeAppChapters.map { chapter ->
+        val group = requireNotNull(chapter.notificationGroup)
+        group.toOverviewSummary(chapter = chapter, apps = apps)
+    }
+
+private fun AppNotificationGroup.toOverviewSummary(
+    chapter: CardsChapter.App,
+    apps: List<InstalledApp>,
+): CardsOverviewChapterSummary {
+    val label = chapter.label(apps)
+    val latestNotification = notifications.maxByOrNull { notification -> notification.postedAtEpochMillis }
+    val countLabel = "$count ${if (count == 1) "notification" else "notifications"}"
+    val metadata = "${latestCategory.label} · ${latestAgeBucket.label} · $countLabel"
+    return CardsOverviewChapterSummary(
+        chapterId = chapter.id,
+        label = label,
+        latestTitle =
+            latestNotification?.let { notification -> notificationOverviewNotificationTitle(notification, label) }
+                ?: label,
+        latestContent =
+            latestNotification?.text?.ifBlank { notificationOverviewMetadataLabel(label) }
+                ?: notificationOverviewMetadataLabel(label),
+        metadata = metadata,
+        notificationCount = count,
+    )
 }
 
 internal data class CardsOverviewAccessMessage(
