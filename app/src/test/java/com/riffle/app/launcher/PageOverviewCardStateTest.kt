@@ -1,5 +1,6 @@
 package com.riffle.app.launcher
 
+import androidx.compose.ui.unit.Density
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -119,28 +120,35 @@ class PageOverviewCardStateTest {
 
     @Test
     fun edgeScrollDirectionUsesTheActualViewportEdges() {
+        val edgeScrollZonePx = pageOverviewEdgeScrollZonePx(Density(3f))
+
+        assertEquals(168f, edgeScrollZonePx)
+        assertEquals(60f, pageOverviewEdgeScrollStepPx(Density(3f)))
         assertEquals(
             -1,
             pageOverviewViewportEdgeScrollDirection(
-                pointerPositionPx = 55f,
+                pointerPositionPx = 168f,
                 viewportStartPx = 0f,
-                viewportEndPx = 360f,
+                viewportEndPx = 1_080f,
+                edgeScrollZonePx = edgeScrollZonePx,
             ),
         )
         assertEquals(
             0,
             pageOverviewViewportEdgeScrollDirection(
-                pointerPositionPx = 180f,
+                pointerPositionPx = 540f,
                 viewportStartPx = 0f,
-                viewportEndPx = 360f,
+                viewportEndPx = 1_080f,
+                edgeScrollZonePx = edgeScrollZonePx,
             ),
         )
         assertEquals(
             1,
             pageOverviewViewportEdgeScrollDirection(
-                pointerPositionPx = 304f,
+                pointerPositionPx = 912f,
                 viewportStartPx = 0f,
-                viewportEndPx = 360f,
+                viewportEndPx = 1_080f,
+                edgeScrollZonePx = edgeScrollZonePx,
             ),
         )
     }
