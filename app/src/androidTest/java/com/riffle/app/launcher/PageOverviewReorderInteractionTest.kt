@@ -108,5 +108,4 @@ class PageOverviewReorderInteractionTest {
 
         return baseLayout.copy(pages = pages, selectedPageId = pages.first().id)
     }
-
 }
