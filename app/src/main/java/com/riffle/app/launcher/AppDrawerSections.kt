@@ -53,8 +53,7 @@ private fun String.sectionSortKey(): String =
         .takeUnless { section -> section == OTHER_SECTION_TITLE }
         ?: OTHER_SECTION_SORT_TITLE
 
-private fun String?.normalizedCategory(): String? =
-    this?.trim()?.takeIf { category -> category.isNotEmpty() }
+private fun String?.normalizedCategory(): String? = this?.trim()?.takeIf { category -> category.isNotEmpty() }
 
 private fun String.letterSectionTitle(): String =
     trim()
