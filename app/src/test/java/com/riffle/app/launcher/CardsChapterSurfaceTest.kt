@@ -4,6 +4,8 @@ import com.riffle.core.domain.launcher.apps.AppActivityName
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppProfile
+import com.riffle.core.domain.launcher.apps.AppProfileContentVisibility
+import com.riffle.core.domain.launcher.apps.AppProfileId
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.cards.CardsChapter
 import com.riffle.core.domain.launcher.cards.CardsChapterId
@@ -137,7 +139,12 @@ class CardsChapterSurfaceTest {
                     ),
             )
 
-        val summaries = cardsOverviewChapterSummaries(state, apps = emptyList())
+        val summaries =
+            cardsOverviewChapterSummaries(
+                state = state,
+                apps = emptyList(),
+                profileContentVisibility = mapOf(profile.id to AppProfileContentVisibility.VISIBLE),
+            )
 
         assertEquals(
             listOf("Mail", "Chat"),
@@ -152,13 +159,58 @@ class CardsChapterSurfaceTest {
         )
     }
 
+    @Test
+    fun overviewSummariesRedactNotificationTextForQuietLockedAndUnavailableProfiles() {
+        val personal = AppProfile.personal()
+        val work = AppProfile.work()
+        val private = AppProfile.private()
+        val unavailable = AppProfile(AppProfileId("removed"), work.type)
+        val state =
+            CardsChapterPlanner().state(
+                notificationGroups =
+                    listOf(
+                        group(packageName = "com.riffle.unavailable", profile = unavailable, postedAtEpochMillis = 40L),
+                        group(packageName = "com.riffle.quiet", profile = work, postedAtEpochMillis = 30L),
+                        group(packageName = "com.riffle.locked", profile = private, postedAtEpochMillis = 20L),
+                        group(packageName = "com.riffle.visible", profile = personal, postedAtEpochMillis = 10L),
+                    ),
+            )
+
+        val summaries =
+            cardsOverviewChapterSummaries(
+                state = state,
+                apps = emptyList(),
+                profileContentVisibility =
+                    mapOf(
+                        work.id to AppProfileContentVisibility.REDACTED_QUIET,
+                        private.id to AppProfileContentVisibility.REDACTED_LOCKED,
+                        personal.id to AppProfileContentVisibility.VISIBLE,
+                    ),
+            )
+
+        assertEquals("Unavailable notification", summaries[0].latestTitle)
+        assertEquals("Profile content is unavailable", summaries[0].latestContent)
+        assertEquals("Quiet notification", summaries[1].latestTitle)
+        assertEquals("Profile is paused", summaries[1].latestContent)
+        assertEquals("Locked notification", summaries[2].latestTitle)
+        assertEquals("Profile is locked", summaries[2].latestContent)
+        assertEquals("Visible subject", summaries[3].latestTitle)
+        assertEquals("Visible preview", summaries[3].latestContent)
+        assertEquals(
+            "Quiet. 1 notification. Quiet notification. Profile is paused. " +
+                "Email · Recent · 1 notification. Open chapter",
+            summaries[1].contentDescription,
+        )
+    }
+
     private fun group(
         packageName: String,
+        profile: AppProfile = AppProfile.personal(),
         postedAtEpochMillis: Long,
     ): AppNotificationGroup =
         AppNotificationGroup(
             packageName = AppPackageName(packageName),
-            profileId = AppProfile.personal().id,
+            profileId = profile.id,
             latestCategory = NotificationCategory.EMAIL,
             latestAgeBucket = NotificationAgeBucket.RECENT,
             notifications =
@@ -166,7 +218,7 @@ class CardsChapterSurfaceTest {
                     LauncherNotification(
                         key = LauncherNotificationKey(packageName),
                         packageName = AppPackageName(packageName),
-                        profileId = AppProfile.personal().id,
+                        profileId = profile.id,
                         title = "${packageName.substringAfterLast('.').replaceFirstChar { it.uppercase() }} subject",
                         text = "${packageName.substringAfterLast('.').replaceFirstChar { it.uppercase() }} preview",
                         postedAtEpochMillis = postedAtEpochMillis,

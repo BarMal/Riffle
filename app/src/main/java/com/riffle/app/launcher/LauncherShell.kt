@@ -163,6 +163,7 @@ private fun LauncherDestination(
                 CardsChapterSurface(
                     state = state.cardsChapterState(),
                     apps = state.installedApps,
+                    profileContentVisibility = state.cardsProfileContentVisibility(),
                     notificationAccessStatus = state.notificationAccessStatus,
                     onAction = settingsPageActionRouter.onAction,
                     windowInsets = cardsPanelInsetPolicy(state).safeDrawingPanelInsets(),

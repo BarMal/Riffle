@@ -1,6 +1,7 @@
 package com.riffle.app.launcher.apps
 
 import com.riffle.core.domain.launcher.apps.AppProfile
+import com.riffle.core.domain.launcher.apps.AppProfileContentVisibility
 import com.riffle.core.domain.launcher.apps.AppProfileId
 import com.riffle.core.domain.launcher.apps.AppProfileType
 import org.junit.Assert.assertEquals
@@ -37,6 +38,21 @@ class AndroidUserProfilesTest {
                     type = AndroidUserProfileType.MANAGED,
                 ),
             ),
+        )
+    }
+
+    @Test
+    fun mapperRetainsTheProfileContentVisibilityDecision() {
+        assertEquals(
+            AppProfileContentVisibility.REDACTED_QUIET,
+            mapper
+                .map(
+                    AndroidUserProfile(
+                        stableId = "42",
+                        isCurrentUser = false,
+                        contentVisibility = AppProfileContentVisibility.REDACTED_QUIET,
+                    ),
+                ).contentVisibility,
         )
     }
 }

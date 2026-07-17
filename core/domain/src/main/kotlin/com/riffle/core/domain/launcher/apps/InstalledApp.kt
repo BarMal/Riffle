@@ -18,6 +18,7 @@ data class AppIdentity(
 data class AppProfile(
     val id: AppProfileId,
     val type: AppProfileType,
+    val contentVisibility: AppProfileContentVisibility = AppProfileContentVisibility.VISIBLE,
 ) {
     companion object {
         fun personal(): AppProfile =
@@ -38,6 +39,14 @@ data class AppProfile(
                 type = AppProfileType.PRIVATE,
             )
     }
+}
+
+/** Whether notification content for a profile may be exposed outside the system notification shade. */
+enum class AppProfileContentVisibility {
+    VISIBLE,
+    REDACTED_QUIET,
+    REDACTED_LOCKED,
+    REDACTED_UNAVAILABLE,
 }
 
 @JvmInline

@@ -23,6 +23,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import com.riffle.core.domain.launcher.apps.AppProfileContentVisibility
+import com.riffle.core.domain.launcher.apps.AppProfileId
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.cards.CardsChapter
 import com.riffle.core.domain.launcher.cards.CardsChapterId
@@ -34,6 +36,7 @@ import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 internal fun CardsChapterSurface(
     state: CardsChapterState,
     apps: List<InstalledApp>,
+    profileContentVisibility: Map<AppProfileId, AppProfileContentVisibility>,
     notificationAccessStatus: NotificationAccessStatus,
     onAction: (LauncherShellAction) -> Unit,
     modifier: Modifier = Modifier,
@@ -44,7 +47,14 @@ internal fun CardsChapterSurface(
             CardsChapterHeader(state, onAction)
             CardsChapterNavigator(state, apps, onAction)
             when (val chapter = state.selectedChapter) {
-                CardsChapter.Overview -> CardsOverview(state, apps, notificationAccessStatus, onAction)
+                CardsChapter.Overview ->
+                    CardsOverview(
+                        state = state,
+                        apps = apps,
+                        profileContentVisibility = profileContentVisibility,
+                        notificationAccessStatus = notificationAccessStatus,
+                        onAction = onAction,
+                    )
                 is CardsChapter.App -> CardsAppChapter(chapter, apps, onAction)
             }
         }
@@ -110,6 +120,7 @@ internal fun cardsChapterNavigatorChapterIds(state: CardsChapterState): List<Car
 private fun CardsOverview(
     state: CardsChapterState,
     apps: List<InstalledApp>,
+    profileContentVisibility: Map<AppProfileId, AppProfileContentVisibility>,
     notificationAccessStatus: NotificationAccessStatus,
     onAction: (LauncherShellAction) -> Unit,
 ) {
@@ -125,7 +136,7 @@ private fun CardsOverview(
     }
 
     when {
-        cardsOverviewChapterSummaries(state, apps).isEmpty() ->
+        cardsOverviewChapterSummaries(state, apps, profileContentVisibility).isEmpty() ->
             CardsMessage(title = "No notifications", message = "New notifications will appear in Overview.")
 
         else ->
@@ -134,7 +145,10 @@ private fun CardsOverview(
                 contentPadding = androidx.compose.foundation.layout.PaddingValues(12.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                items(cardsOverviewChapterSummaries(state, apps), key = { summary -> summary.chapterId }) { summary ->
+                items(
+                    cardsOverviewChapterSummaries(state, apps, profileContentVisibility),
+                    key = { summary -> summary.chapterId },
+                ) { summary ->
                     Surface(
                         modifier =
                             Modifier
@@ -179,15 +193,23 @@ internal data class CardsOverviewChapterSummary(
 internal fun cardsOverviewChapterSummaries(
     state: CardsChapterState,
     apps: List<InstalledApp>,
+    profileContentVisibility: Map<AppProfileId, AppProfileContentVisibility>,
 ): List<CardsOverviewChapterSummary> =
     state.plan.activeAppChapters.map { chapter ->
         val group = requireNotNull(chapter.notificationGroup)
-        group.toOverviewSummary(chapter = chapter, apps = apps)
+        group.toOverviewSummary(
+            chapter = chapter,
+            apps = apps,
+            contentVisibility =
+                profileContentVisibility[chapter.id.profileId]
+                    ?: AppProfileContentVisibility.REDACTED_UNAVAILABLE,
+        )
     }
 
 private fun AppNotificationGroup.toOverviewSummary(
     chapter: CardsChapter.App,
     apps: List<InstalledApp>,
+    contentVisibility: AppProfileContentVisibility,
 ): CardsOverviewChapterSummary {
     val app = apps.firstOrNull { candidate -> candidate.matches(this) }
     val label = notificationOverviewGroupLabel(app = app, group = this)
@@ -198,15 +220,46 @@ private fun AppNotificationGroup.toOverviewSummary(
         chapterId = chapter.id,
         label = label,
         latestTitle =
-            latestNotification?.let { notification -> notificationOverviewNotificationTitle(notification, label) }
+            latestNotification?.let { notification ->
+                notificationOverviewTitle(notification, label, contentVisibility)
+            }
                 ?: label,
-        latestContent =
-            latestNotification?.text?.ifBlank { notificationOverviewMetadataLabel(label) }
-                ?: notificationOverviewMetadataLabel(label),
+        latestContent = notificationOverviewContent(label, contentVisibility, latestNotification?.text),
         metadata = metadata,
         notificationCount = count,
     )
 }
+
+private fun notificationOverviewTitle(
+    notification: com.riffle.core.domain.launcher.notifications.LauncherNotification,
+    label: String,
+    contentVisibility: AppProfileContentVisibility,
+): String =
+    if (contentVisibility == AppProfileContentVisibility.VISIBLE) {
+        notificationOverviewNotificationTitle(notification, label)
+    } else {
+        "$label notification"
+    }
+
+private fun AppNotificationGroup.notificationOverviewContent(
+    label: String,
+    contentVisibility: AppProfileContentVisibility,
+    text: String?,
+): String =
+    if (contentVisibility == AppProfileContentVisibility.VISIBLE) {
+        text?.ifBlank { notificationOverviewMetadataLabel(label) } ?: notificationOverviewMetadataLabel(label)
+    } else {
+        contentVisibility.redactedContentLabel
+    }
+
+private val AppProfileContentVisibility.redactedContentLabel: String
+    get() =
+        when (this) {
+            AppProfileContentVisibility.VISIBLE -> error("Visible profile content must not be redacted.")
+            AppProfileContentVisibility.REDACTED_QUIET -> "Profile is paused"
+            AppProfileContentVisibility.REDACTED_LOCKED -> "Profile is locked"
+            AppProfileContentVisibility.REDACTED_UNAVAILABLE -> "Profile content is unavailable"
+        }
 
 internal data class CardsOverviewAccessMessage(
     val title: String,

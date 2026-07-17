@@ -1,6 +1,8 @@
 package com.riffle.core.domain.launcher
 
 import com.riffle.core.domain.launcher.apps.AppDrawerProfileFilter
+import com.riffle.core.domain.launcher.apps.AppProfileContentVisibility
+import com.riffle.core.domain.launcher.apps.AppProfileId
 import com.riffle.core.domain.launcher.apps.AppSearchFilters
 import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.apps.AppShortcutsByApp
@@ -52,6 +54,10 @@ data class LauncherShellState(
             notificationGroups = notificationGroupsByApp,
             preferences = launcherSettings.cards.chapterPreferences,
         )
+
+    /** Profile content policy used by Cards surfaces; profiles without an app-state decision are redacted. */
+    fun cardsProfileContentVisibility(): Map<AppProfileId, AppProfileContentVisibility> =
+        installedApps.associate { app -> app.identity.profile.id to app.identity.profile.contentVisibility }
 
     fun withReconciledCardsChapterSelection(): LauncherShellState {
         val preferences = cardsChapterState().preferences
