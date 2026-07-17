@@ -26,7 +26,31 @@ interface WidgetHostGateway {
 
     fun createConfigureHostedWidgetIntent(hostedWidgetId: HostedWidgetId): Intent
 
+    /**
+     * Reports the currently committed host bounds to the provider.
+     *
+     * Values are density-independent pixels, matching the Android AppWidget options contract.
+     */
+    fun updateHostedWidgetOptions(
+        hostedWidgetId: HostedWidgetId,
+        size: WidgetSizeOptions,
+    ) = Unit
+
     fun deleteHostedWidgetId(hostedWidgetId: HostedWidgetId)
+}
+
+data class WidgetSizeOptions(
+    val minWidthDp: Int,
+    val minHeightDp: Int,
+    val maxWidthDp: Int = minWidthDp,
+    val maxHeightDp: Int = minHeightDp,
+) {
+    init {
+        require(minWidthDp > 0) { "Widget minimum width must be positive." }
+        require(minHeightDp > 0) { "Widget minimum height must be positive." }
+        require(maxWidthDp >= minWidthDp) { "Widget maximum width cannot be smaller than minimum width." }
+        require(maxHeightDp >= minHeightDp) { "Widget maximum height cannot be smaller than minimum height." }
+    }
 }
 
 sealed interface WidgetBindingResult {

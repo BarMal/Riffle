@@ -5,6 +5,7 @@ import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.os.Bundle
 import android.view.View
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
@@ -12,11 +13,14 @@ import com.riffle.core.domain.launcher.home.HostedWidgetId
 import com.riffle.core.domain.launcher.home.WidgetItem
 import com.riffle.core.domain.launcher.widgets.WidgetProviderIdentity
 
+@Suppress("TooManyFunctions") // One platform adapter owns the complete AppWidget host contract.
 class AndroidWidgetHostGateway internal constructor(
     private val platform: AndroidWidgetHostPlatform,
 ) : WidgetHostGateway,
     HomeWidgetViewFactory,
     DefaultLifecycleObserver {
+    private val reportedWidgetSizes = mutableMapOf<HostedWidgetId, WidgetSizeOptions>()
+
     constructor(context: Context) : this(FrameworkAndroidWidgetHostPlatform(context))
 
     override fun onStart(owner: LifecycleOwner) {
@@ -59,12 +63,34 @@ class AndroidWidgetHostGateway internal constructor(
     override fun createConfigureHostedWidgetIntent(hostedWidgetId: HostedWidgetId): Intent =
         configureHostedWidgetIntentData(hostedWidgetId, platform.configureActivity(hostedWidgetId.value)).toIntent()
 
+    override fun updateHostedWidgetOptions(
+        hostedWidgetId: HostedWidgetId,
+        size: WidgetSizeOptions,
+    ) {
+        if (reportedWidgetSizes[hostedWidgetId] != size) {
+            platform.updateAppWidgetOptions(hostedWidgetId.value, size)
+            reportedWidgetSizes[hostedWidgetId] = size
+        }
+    }
+
     override fun createHostedWidgetView(
         context: Context,
         widget: WidgetItem,
     ): View? = platform.createView(context, widget.appWidgetId.value)
 
+    override fun updateHostedWidgetSize(
+        widget: WidgetItem,
+        widthDp: Int,
+        heightDp: Int,
+    ) {
+        updateHostedWidgetOptions(
+            hostedWidgetId = widget.appWidgetId,
+            size = WidgetSizeOptions(minWidthDp = widthDp, minHeightDp = heightDp),
+        )
+    }
+
     override fun deleteHostedWidgetId(hostedWidgetId: HostedWidgetId) {
+        reportedWidgetSizes.remove(hostedWidgetId)
         platform.deleteAppWidgetId(hostedWidgetId.value)
     }
 }
@@ -89,6 +115,11 @@ internal interface AndroidWidgetHostPlatform {
         context: Context,
         appWidgetId: Int,
     ): View?
+
+    fun updateAppWidgetOptions(
+        appWidgetId: Int,
+        size: WidgetSizeOptions,
+    ) = Unit
 
     fun deleteAppWidgetId(appWidgetId: Int)
 }
@@ -121,6 +152,13 @@ private class FrameworkAndroidWidgetHostPlatform(
     ): View? =
         appWidgetManager.getAppWidgetInfo(appWidgetId)
             ?.let { providerInfo -> appWidgetHost.createView(context, appWidgetId, providerInfo) }
+
+    override fun updateAppWidgetOptions(
+        appWidgetId: Int,
+        size: WidgetSizeOptions,
+    ) {
+        appWidgetManager.updateAppWidgetOptions(appWidgetId, size.toAppWidgetOptions())
+    }
 
     override fun deleteAppWidgetId(appWidgetId: Int) = appWidgetHost.deleteAppWidgetId(appWidgetId)
 }
@@ -177,5 +215,13 @@ private fun AndroidWidgetProviderBindingTarget.toComponentName(): ComponentName 
 
 private fun ComponentName.toAndroidBindingTarget(): AndroidWidgetProviderBindingTarget =
     AndroidWidgetProviderBindingTarget(packageName, className)
+
+private fun WidgetSizeOptions.toAppWidgetOptions(): Bundle =
+    Bundle().apply {
+        putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, minWidthDp)
+        putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, minHeightDp)
+        putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH, maxWidthDp)
+        putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, maxHeightDp)
+    }
 
 private const val RIFFLE_APP_WIDGET_HOST_ID = 1024
