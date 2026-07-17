@@ -55,6 +55,10 @@ import com.riffle.core.domain.launcher.HomeRoleStatus
 import com.riffle.core.domain.launcher.home.HostedWidgetId
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.widgets.WidgetProviderIdentity
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -474,7 +478,7 @@ class MainActivity : ComponentActivity() {
     private fun observeHomeLayoutDeviceClass() {
         lifecycleScope.launch {
             lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                homeLayoutDeviceClassObserver.deviceClassEvents()
+                startupPlatformFlow(homeLayoutDeviceClassObserver::deviceClassEvents)
                     .collect { event ->
                         event?.let(::applyHomeLayoutDeviceClassEvent)
                     }
@@ -556,6 +560,9 @@ internal fun <Value> startupPlatformValue(
 ): Value = runCatching(read).getOrDefault(fallback)
 
 internal fun <Value> startupPlatformValueOrNull(read: () -> Value?): Value? = runCatching(read).getOrNull()
+
+internal fun <Value> startupPlatformFlow(read: () -> Flow<Value>): Flow<Value> =
+    flow { emitAll(read()) }.catch { }
 
 private fun String.launcherBuildTypeLabel(): String =
     when {
