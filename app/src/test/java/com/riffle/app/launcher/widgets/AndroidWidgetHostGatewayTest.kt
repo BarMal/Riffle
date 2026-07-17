@@ -146,6 +146,40 @@ class AndroidWidgetHostGatewayTest {
         assertEquals(listOf(42, 42), platform.requestedViewIds)
     }
 
+    @Test
+    fun reportsVisibleWidgetSizeAsProviderOptionsOnlyWhenItChanges() {
+        val widget =
+            WidgetItem(
+                id = LauncherItemId("widget:42"),
+                appWidgetId = HostedWidgetId(42),
+                label = "Weather",
+            )
+
+        gateway.updateHostedWidgetSize(widget, widthDp = 240, heightDp = 120)
+        gateway.updateHostedWidgetSize(widget, widthDp = 240, heightDp = 120)
+        gateway.updateHostedWidgetSize(widget, widthDp = 320, heightDp = 120)
+
+        assertEquals(
+            listOf(
+                42 to WidgetSizeOptions(minWidthDp = 240, minHeightDp = 120),
+                42 to WidgetSizeOptions(minWidthDp = 320, minHeightDp = 120),
+            ),
+            platform.updatedWidgetOptions,
+        )
+    }
+
+    @Test
+    fun allowsDeletedWidgetIdToReportSizeAgainWhenItsIdIsReused() {
+        val hostedWidgetId = HostedWidgetId(42)
+        val size = WidgetSizeOptions(minWidthDp = 240, minHeightDp = 120)
+
+        gateway.updateHostedWidgetOptions(hostedWidgetId, size)
+        gateway.deleteHostedWidgetId(hostedWidgetId)
+        gateway.updateHostedWidgetOptions(hostedWidgetId, size)
+
+        assertEquals(listOf(42 to size, 42 to size), platform.updatedWidgetOptions)
+    }
+
     private fun weatherProvider() =
         WidgetProviderIdentity(
             packageName = AppPackageName("com.example.weather"),
@@ -168,6 +202,7 @@ class AndroidWidgetHostGatewayTest {
         var stopListeningCount = 0
         val deletedAppWidgetIds = mutableListOf<Int>()
         val requestedViewIds = mutableListOf<Int>()
+        val updatedWidgetOptions = mutableListOf<Pair<Int, WidgetSizeOptions>>()
 
         override fun startListening() {
             startListeningCount += 1
@@ -201,6 +236,13 @@ class AndroidWidgetHostGatewayTest {
         ): View? {
             requestedViewIds += appWidgetId
             return view
+        }
+
+        override fun updateAppWidgetOptions(
+            appWidgetId: Int,
+            size: WidgetSizeOptions,
+        ) {
+            updatedWidgetOptions += appWidgetId to size
         }
 
         override fun deleteAppWidgetId(appWidgetId: Int) {

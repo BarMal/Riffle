@@ -8,6 +8,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -15,6 +16,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -36,6 +38,7 @@ import com.riffle.core.domain.launcher.home.LauncherPage
 import com.riffle.core.domain.launcher.home.LauncherPageId
 import com.riffle.core.domain.launcher.home.PlaceLauncherItemResult
 import com.riffle.core.domain.launcher.home.WidgetItem
+import kotlin.math.roundToInt
 
 @Composable
 @OptIn(ExperimentalFoundationApi::class)
@@ -60,7 +63,7 @@ internal fun HomeWidgetPlaceholder(
         }
     }
 
-    Box(
+    BoxWithConstraints(
         modifier =
             Modifier
                 .fillMaxSize()
@@ -68,6 +71,16 @@ internal fun HomeWidgetPlaceholder(
                 .background(MaterialTheme.colorScheme.surfaceContainerHighest),
         contentAlignment = Alignment.Center,
     ) {
+        val widthDp = maxWidth.value.roundToInt().coerceAtLeast(1)
+        val heightDp = maxHeight.value.roundToInt().coerceAtLeast(1)
+
+        LaunchedEffect(widget.appWidgetId, widthDp, heightDp) {
+            widgetViewFactory.updateHostedWidgetSize(
+                widget = widget,
+                widthDp = widthDp,
+                heightDp = heightDp,
+            )
+        }
         if (hostedWidgetView == null) {
             HomeWidgetFallbackLabel(widget)
         } else {

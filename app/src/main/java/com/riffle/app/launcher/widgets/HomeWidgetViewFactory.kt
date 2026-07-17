@@ -9,6 +9,16 @@ fun interface HomeWidgetViewFactory {
         context: Context,
         widget: WidgetItem,
     ): View?
+
+    /**
+     * Called after the host has measured a widget's committed visible bounds.
+     * Implementations that do not host Android AppWidgets can safely ignore it.
+     */
+    fun updateHostedWidgetSize(
+        widget: WidgetItem,
+        widthDp: Int,
+        heightDp: Int,
+    ) = Unit
 }
 
 object EmptyHomeWidgetViewFactory : HomeWidgetViewFactory {
