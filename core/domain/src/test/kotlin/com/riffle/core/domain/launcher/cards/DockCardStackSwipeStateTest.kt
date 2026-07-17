@@ -113,6 +113,18 @@ class DockCardStackSwipeStateTest {
     }
 
     @Test
+    fun emptyStackRejectsAnInvalidActiveCardIndex() {
+        assertFailsWith<IllegalArgumentException> {
+            DockCardStackSwipeState.create(
+                cardCount = 0,
+                activeCardIndex = 1,
+                direction = DockCardStackSwipeDirection.NEXT,
+                content = DockCardStackContent.APPS,
+            )
+        }
+    }
+
+    @Test
     fun hybridFocusSurvivesDockReorderByAppIdentity() {
         val mail = app("mail")
         val chat = app("chat")
@@ -170,6 +182,20 @@ class DockCardStackSwipeStateTest {
                 notificationKeysByApp = emptyMap(),
             ),
         )
+    }
+
+    @Test
+    fun hybridFocusRejectsDuplicateNotificationIdentities() {
+        val mail = app("mail")
+        val notification = LauncherNotificationKey("mail:1")
+
+        assertFailsWith<IllegalArgumentException> {
+            reconcileHybridDockFocus(
+                focus = HybridDockFocus(appIdentity = mail, notificationKey = notification),
+                eligibleAppIdentities = listOf(mail),
+                notificationKeysByApp = mapOf(mail to listOf(notification, notification)),
+            )
+        }
     }
 
     @Test

@@ -41,8 +41,8 @@ data class DockCardStackSwipeState(
             wrapAround: Boolean = false,
         ): DockCardStackSwipeState? {
             require(cardCount >= 0) { "Card count must not be negative." }
-            if (cardCount > 0) {
-                require(activeCardIndex in 0 until cardCount) { "Active card index must be in the stack." }
+            require(activeCardIndex in 0 until cardCount || (cardCount == 0 && activeCardIndex == 0)) {
+                "Active card index must be in the stack."
             }
             if (cardCount == 0 || (wrapAround && cardCount == 1)) return null
 
@@ -98,6 +98,9 @@ fun reconcileHybridDockFocus(
 ): HybridDockFocus? {
     require(eligibleAppIdentities.distinct().size == eligibleAppIdentities.size) {
         "Eligible Hybrid Dock apps must be unique."
+    }
+    require(notificationKeysByApp.values.all { keys -> keys.distinct().size == keys.size }) {
+        "Hybrid Dock notification keys must be unique for each app."
     }
     if (eligibleAppIdentities.isEmpty()) return null
 
