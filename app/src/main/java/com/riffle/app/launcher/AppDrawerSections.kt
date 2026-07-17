@@ -11,6 +11,15 @@ data class AppDrawerSection(
     val displayTitle: String = "$title (${apps.size})"
 }
 
+/**
+ * Manual validation:
+ * - On phone and large or folded/unfolded widths, verify category headings and app rows do not
+ *   clip or overlap in light and dark themes.
+ * - For Personal, Work, and Private profile filters, verify category sections only contain apps
+ *   from the selected profile.
+ * - Search for categorized and uncategorized apps, then clear the query to verify category and
+ *   alphabetical sections are restored correctly.
+ */
 object AppDrawerSections {
     fun from(apps: List<InstalledApp>): List<AppDrawerSection> =
         apps
