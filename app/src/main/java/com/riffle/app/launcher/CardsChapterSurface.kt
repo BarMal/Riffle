@@ -112,16 +112,18 @@ private fun CardsOverview(
     notificationAccessStatus: NotificationAccessStatus,
     onAction: (LauncherShellAction) -> Unit,
 ) {
-    when {
-        notificationAccessStatus != NotificationAccessStatus.GRANTED ->
-            CardsMessage(
-                title = "Notification access needed",
-                message = "Allow notification access to show your Cards chapters.",
-                action = LauncherShellAction.RequestNotificationAccess,
-                actionLabel = "Allow notification access",
-                onAction = onAction,
-            )
+    cardsOverviewAccessMessage(notificationAccessStatus)?.let { accessMessage ->
+        CardsMessage(
+            title = accessMessage.title,
+            message = accessMessage.message,
+            action = accessMessage.action,
+            actionLabel = accessMessage.actionLabel,
+            onAction = onAction,
+        )
+        return
+    }
 
+    when {
         state.plan.chapters.filterIsInstance<CardsChapter.App>().none { it.notificationGroup != null } ->
             CardsMessage(title = "No notifications", message = "New notifications will appear in Overview.")
 
@@ -155,6 +157,40 @@ private fun CardsOverview(
             }
     }
 }
+
+internal data class CardsOverviewAccessMessage(
+    val title: String,
+    val message: String,
+    val action: LauncherShellAction? = null,
+    val actionLabel: String? = null,
+)
+
+@Suppress("MaxLineLength")
+internal fun cardsOverviewAccessMessage(notificationAccessStatus: NotificationAccessStatus): CardsOverviewAccessMessage? =
+    when (notificationAccessStatus) {
+        NotificationAccessStatus.GRANTED -> null
+        NotificationAccessStatus.NOT_GRANTED ->
+            CardsOverviewAccessMessage(
+                title = "Notification access needed",
+                message = "Allow notification access to show your Cards chapters.",
+                action = LauncherShellAction.RequestNotificationAccess,
+                actionLabel = "Allow notification access",
+            )
+
+        NotificationAccessStatus.REVOKED ->
+            CardsOverviewAccessMessage(
+                title = "Notification access was revoked",
+                message = "Restore notification access to update your Cards chapters.",
+                action = LauncherShellAction.RequestNotificationAccess,
+                actionLabel = "Restore notification access",
+            )
+
+        NotificationAccessStatus.UNKNOWN ->
+            CardsOverviewAccessMessage(
+                title = "Checking notification access",
+                message = "Cards will update when notification access is available.",
+            )
+    }
 
 @Composable
 private fun CardsAppChapter(
