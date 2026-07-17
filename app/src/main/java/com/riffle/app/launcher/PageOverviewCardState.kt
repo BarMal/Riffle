@@ -5,11 +5,11 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.scrollBy
-import androidx.compose.foundation.lazy.LazyListItemInfo
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -20,12 +20,12 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import com.riffle.core.domain.launcher.home.LauncherPage
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import kotlin.math.abs
 import kotlin.math.roundToInt
 
 internal data class PageOverviewCardState(
@@ -41,12 +41,10 @@ internal data class PageOverviewDragPreview(
     val targetIndex: Int,
 )
 
-internal data class PageOverviewReorderActions(
+internal data class PageOverviewCardDragActions(
     val listState: LazyListState,
-    val onDragStarted: (Int) -> Unit,
-    val onDragPreviewChanged: (Int, Int) -> Unit,
-    val onDragFinished: () -> Unit,
-    val onMoveToIndex: (Int, Int) -> Unit,
+    val onMoveToIndex: (Int) -> Unit,
+    val onDragPreviewChanged: (Int?) -> Unit,
 )
 
 internal fun pageOverviewProjectedVisualIndex(
@@ -66,16 +64,6 @@ internal fun pageOverviewProjectedVisualIndex(
         else -> pageIndex
     }
 }
-
-internal fun pageOverviewSourceIndex(
-    pointerPositionPx: Float,
-    visibleItems: List<LazyListItemInfo>,
-): Int? =
-    visibleItems
-        .firstOrNull { item ->
-            pointerPositionPx in item.offset.toFloat()..(item.offset + item.size).toFloat()
-        }?.index
-        ?: visibleItems.minByOrNull { item -> abs(item.offset + (item.size / 2) - pointerPositionPx) }?.index
 
 @Composable
 internal fun Modifier.pageOverviewReflow(
@@ -115,41 +103,43 @@ internal fun Modifier.pageOverviewReflow(
 
 @Composable
 internal fun Modifier.pageOverviewReorderDrag(
-    pageCount: Int,
-    actions: PageOverviewReorderActions,
+    state: PageOverviewCardState,
+    dragActions: PageOverviewCardDragActions,
 ): Modifier {
+    var dragOffsetX by remember(state.page.id) { mutableFloatStateOf(0f) }
     val scope = rememberCoroutineScope()
-    val currentActions by rememberUpdatedState(actions)
+    val currentDragActions by rememberUpdatedState(dragActions)
     val cardStepPx =
         with(LocalDensity.current) {
             (PAGE_OVERVIEW_CARD_WIDTH_DP.dp + PAGE_OVERVIEW_CARD_SPACING_DP.dp).toPx()
         }
 
     return this
-        .pointerInput(pageCount, cardStepPx) {
-            var sourceIndex: Int? = null
+        .zIndex(if (dragOffsetX != 0f) PAGE_OVERVIEW_DRAG_Z_INDEX else 0f)
+        .graphicsLayer {
+            translationX = dragOffsetX
+            shadowElevation = if (dragOffsetX != 0f) PAGE_OVERVIEW_DRAG_ELEVATION else 0f
+        }
+        .pointerInput(state.page.id, state.index, state.pageCount, cardStepPx) {
             var dragDistancePx = 0f
             var scrollDistancePx = 0f
             var edgeScrollJob: Job? = null
             var edgeScrollDirection = 0
 
             fun updatePreview() {
-                sourceIndex?.let { index ->
-                    currentActions.onDragPreviewChanged(
-                        index,
-                        pageOverviewDropTargetIndex(
-                            index = index,
-                            pageCount = pageCount,
-                            dragDistancePx = dragDistancePx,
-                            scrollDistancePx = scrollDistancePx,
-                            cardStepPx = cardStepPx,
-                        ),
-                    )
-                }
+                currentDragActions.onDragPreviewChanged(
+                    pageOverviewDropTargetIndex(
+                        index = state.index,
+                        pageCount = state.pageCount,
+                        dragDistancePx = dragDistancePx,
+                        scrollDistancePx = scrollDistancePx,
+                        cardStepPx = cardStepPx,
+                    ),
+                )
             }
 
             fun updateEdgeScroll(pointerPositionPx: Float) {
-                val layoutInfo = currentActions.listState.layoutInfo
+                val layoutInfo = currentDragActions.listState.layoutInfo
                 val direction =
                     pageOverviewViewportEdgeScrollDirection(
                         pointerPositionPx = pointerPositionPx,
@@ -167,7 +157,7 @@ internal fun Modifier.pageOverviewReorderDrag(
                         scope.launch {
                             while (isActive) {
                                 val appliedScrollPx =
-                                    currentActions.listState.scrollBy(
+                                    currentDragActions.listState.scrollBy(
                                         direction * PAGE_OVERVIEW_EDGE_SCROLL_STEP_PX,
                                     )
                                 if (appliedScrollPx == 0f) break
@@ -182,39 +172,34 @@ internal fun Modifier.pageOverviewReorderDrag(
 
             detectDragGesturesAfterLongPress(
                 onDragStart = { offset ->
-                    sourceIndex =
-                        pageOverviewSourceIndex(
-                            pointerPositionPx = offset.x,
-                            visibleItems = currentActions.listState.layoutInfo.visibleItemsInfo,
-                        )
-                    if (sourceIndex == null) return@detectDragGesturesAfterLongPress
-
                     dragDistancePx = 0f
                     scrollDistancePx = 0f
-                    currentActions.onDragStarted(sourceIndex!!)
+                    dragOffsetX = 0f
                     updatePreview()
-                    updateEdgeScroll(offset.x)
+                    currentDragActions.listState.layoutInfo.visibleItemsInfo
+                        .firstOrNull { item -> item.index == state.index }
+                        ?.let { item -> updateEdgeScroll(item.offset + offset.x) }
                 },
                 onDrag = { change, dragAmount ->
-                    if (sourceIndex == null) return@detectDragGesturesAfterLongPress
-
                     change.consume()
                     dragDistancePx += dragAmount.x
+                    dragOffsetX = dragDistancePx
                     updatePreview()
-                    updateEdgeScroll(change.position.x)
+                    currentDragActions.listState.layoutInfo.visibleItemsInfo
+                        .firstOrNull { item -> item.index == state.index }
+                        ?.let { item -> updateEdgeScroll(item.offset + change.position.x) }
                 },
                 onDragCancel = {
                     edgeScrollJob?.cancel()
                     edgeScrollDirection = 0
-                    sourceIndex = null
-                    currentActions.onDragFinished()
+                    dragOffsetX = 0f
+                    currentDragActions.onDragPreviewChanged(null)
                 },
                 onDragEnd = {
-                    val index = sourceIndex ?: return@detectDragGesturesAfterLongPress
                     val targetIndex =
                         pageOverviewDropTargetIndex(
-                            index = index,
-                            pageCount = pageCount,
+                            index = state.index,
+                            pageCount = state.pageCount,
                             dragDistancePx = dragDistancePx,
                             scrollDistancePx = scrollDistancePx,
                             cardStepPx = cardStepPx,
@@ -222,10 +207,10 @@ internal fun Modifier.pageOverviewReorderDrag(
 
                     edgeScrollJob?.cancel()
                     edgeScrollDirection = 0
-                    sourceIndex = null
-                    currentActions.onDragFinished()
-                    if (targetIndex != index) {
-                        currentActions.onMoveToIndex(index, targetIndex)
+                    dragOffsetX = 0f
+                    currentDragActions.onDragPreviewChanged(null)
+                    if (targetIndex != state.index) {
+                        currentDragActions.onMoveToIndex(targetIndex)
                     }
                 },
             )
@@ -288,6 +273,8 @@ internal fun pageOverviewReflowInitialOffsetPx(
         )
     }
 
+private const val PAGE_OVERVIEW_DRAG_Z_INDEX = 2f
+private const val PAGE_OVERVIEW_DRAG_ELEVATION = 16f
 private const val PAGE_OVERVIEW_EDGE_SCROLL_ZONE_PX = 56f
 private const val PAGE_OVERVIEW_EDGE_SCROLL_STEP_PX = 20f
 private const val PAGE_OVERVIEW_EDGE_SCROLL_FRAME_DELAY_MILLIS = 16L

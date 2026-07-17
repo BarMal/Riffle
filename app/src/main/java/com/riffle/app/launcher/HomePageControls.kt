@@ -169,65 +169,46 @@ private fun PageOverviewStrip(
     val overviewListState = rememberLazyListState()
     var dragPreview by remember { mutableStateOf<PageOverviewDragPreview?>(null) }
 
-    Box(
-        modifier = Modifier.fillMaxWidth(),
+    LazyRow(
+        modifier = Modifier.fillMaxWidth().testTag(PAGE_OVERVIEW_STRIP_TEST_TAG),
+        state = overviewListState,
+        contentPadding = PaddingValues(horizontal = PAGE_OVERVIEW_CONTENT_PADDING_DP.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(PAGE_OVERVIEW_CARD_SPACING_DP.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        LazyRow(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .pageOverviewReorderDrag(
+        itemsIndexed(
+            items = layout.pages,
+            key = { _, page -> page.id.value },
+        ) { index, page ->
+            PageOverviewCard(
+                state =
+                    PageOverviewCardState(
+                        index = index,
                         pageCount = layout.pages.size,
-                        actions =
-                            PageOverviewReorderActions(
-                                listState = overviewListState,
-                                onDragStarted = { index ->
-                                    dragPreview = PageOverviewDragPreview(index, index)
-                                },
-                                onDragPreviewChanged = { sourceIndex, targetIndex ->
-                                    dragPreview = PageOverviewDragPreview(sourceIndex, targetIndex)
-                                },
-                                onDragFinished = { dragPreview = null },
-                                onMoveToIndex = { sourceIndex, targetIndex ->
-                                    onAction(
-                                        LauncherShellAction.MoveHomePage(
-                                            pageId = layout.pages[sourceIndex].id,
-                                            targetIndex = targetIndex,
-                                        ),
-                                    )
-                                },
+                        page = page,
+                        isSelected = page.id == layout.selectedPageId,
+                        projectedIndex =
+                            pageOverviewProjectedVisualIndex(
+                                pageIndex = index,
+                                dragPreview = dragPreview,
                             ),
-                    )
-                    .testTag(PAGE_OVERVIEW_STRIP_TEST_TAG),
-            state = overviewListState,
-            contentPadding = PaddingValues(horizontal = PAGE_OVERVIEW_CONTENT_PADDING_DP.dp, vertical = 4.dp),
-            horizontalArrangement = Arrangement.spacedBy(PAGE_OVERVIEW_CARD_SPACING_DP.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            itemsIndexed(
-                items = layout.pages,
-                key = { _, page -> page.id.value },
-            ) { index, page ->
-                PageOverviewCard(
-                    state =
-                        PageOverviewCardState(
-                            index = index,
-                            pageCount = layout.pages.size,
-                            page = page,
-                            isSelected = page.id == layout.selectedPageId,
-                            projectedIndex =
-                                pageOverviewProjectedVisualIndex(
-                                    pageIndex = index,
-                                    dragPreview = dragPreview,
-                                ),
-                        ),
-                    appIconLoader = appIconLoader,
-                    widgetViewFactory = widgetViewFactory,
-                    reducedMotion = reducedMotion,
-                    onClick = { onAction(LauncherShellAction.SelectHomePage(page.id)) },
-                    onAction = onAction,
-                )
-            }
+                    ),
+                appIconLoader = appIconLoader,
+                widgetViewFactory = widgetViewFactory,
+                reducedMotion = reducedMotion,
+                onClick = { onAction(LauncherShellAction.SelectHomePage(page.id)) },
+                onAction = onAction,
+                dragActions =
+                    PageOverviewCardDragActions(
+                        listState = overviewListState,
+                        onMoveToIndex = { targetIndex ->
+                            onAction(LauncherShellAction.MoveHomePage(pageId = page.id, targetIndex = targetIndex))
+                        },
+                        onDragPreviewChanged = { targetIndex ->
+                            dragPreview = targetIndex?.let { PageOverviewDragPreview(index, it) }
+                        },
+                    ),
+            )
         }
     }
 }
@@ -240,6 +221,7 @@ private fun PageOverviewCard(
     reducedMotion: Boolean,
     onClick: () -> Unit,
     onAction: (LauncherShellAction) -> Unit,
+    dragActions: PageOverviewCardDragActions,
 ) {
     val isMenuExpanded = remember(state.page.id) { mutableStateOf(false) }
 
@@ -248,6 +230,10 @@ private fun PageOverviewCard(
             Modifier
                 .width(PAGE_OVERVIEW_CARD_WIDTH_DP.dp)
                 .pageOverviewReflow(state = state, reducedMotion = reducedMotion)
+                .pageOverviewReorderDrag(
+                    state = state,
+                    dragActions = dragActions,
+                )
                 .clip(LocalLauncherCardShape.current)
                 .testTag(pageOverviewCardTestTag(state.page.id.value))
                 .clickable(onClick = onClick),
