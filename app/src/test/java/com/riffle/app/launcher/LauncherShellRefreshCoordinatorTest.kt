@@ -5,6 +5,7 @@ import com.riffle.core.domain.launcher.apps.AppActivityName
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppProfile
+import com.riffle.core.domain.launcher.apps.AppProfileContentVisibility
 import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.apps.AppShortcutRepository
 import com.riffle.core.domain.launcher.apps.AppVisibilityRepository
@@ -88,6 +89,35 @@ class LauncherShellRefreshCoordinatorTest {
         val refreshed = coordinator.refreshInstalledApps(state)
 
         assertEquals(state, refreshed)
+    }
+
+    @Test
+    fun partialLockedPrivateProfileRefreshPreservesAppsAndUpdatesCardsRedaction() {
+        val privateApp = app(label = "Vault", profile = AppProfile.private())
+        val repository =
+            FakeInstalledAppRepository(
+                refreshResult =
+                    InstalledAppRefreshResult.Partial(
+                        apps = emptyList(),
+                        profileContentVisibility =
+                            mapOf(privateApp.identity.profile.id to AppProfileContentVisibility.REDACTED_LOCKED),
+                    ),
+            )
+        val coordinator = coordinator(installedAppRepository = repository)
+        val state =
+            LauncherShellState(
+                installedApps = listOf(privateApp),
+                profileContentVisibility =
+                    mapOf(privateApp.identity.profile.id to AppProfileContentVisibility.VISIBLE),
+            )
+
+        val refreshed = coordinator.refreshInstalledApps(state)
+
+        assertEquals(listOf(privateApp), refreshed.installedApps)
+        assertEquals(
+            AppProfileContentVisibility.REDACTED_LOCKED,
+            refreshed.cardsProfileContentVisibility()[privateApp.identity.profile.id],
+        )
     }
 
     @Test

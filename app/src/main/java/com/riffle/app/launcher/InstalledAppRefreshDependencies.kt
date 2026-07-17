@@ -1,6 +1,8 @@
 package com.riffle.app.launcher
 
 import com.riffle.core.domain.launcher.LauncherShellState
+import com.riffle.core.domain.launcher.apps.AppProfileContentVisibility
+import com.riffle.core.domain.launcher.apps.AppProfileId
 import com.riffle.core.domain.launcher.apps.AppShortcutRepository
 import com.riffle.core.domain.launcher.apps.AppVisibilityRepository
 import com.riffle.core.domain.launcher.apps.InstalledAppCatalog
@@ -35,8 +37,24 @@ internal fun LauncherShellState.withRefreshedInstalledApps(deps: InstalledAppRef
                 .withHomeScreenLibraryApps(deps.homeLayoutRepository)
                 .withRefreshedGeneratedPages(deps.homeLayoutRepository)
                 .withAppShortcuts(deps.appShortcutRepository, deps.appCatalog)
+                .withAuthoritativeProfileContentVisibility(result.profileContentVisibility)
 
-        is InstalledAppRefreshResult.Partial,
+        is InstalledAppRefreshResult.Partial ->
+            withPartialProfileContentVisibility(result.profileContentVisibility)
+
         InstalledAppRefreshResult.Unavailable,
         -> this
+    }
+
+private fun LauncherShellState.withAuthoritativeProfileContentVisibility(
+    refreshedVisibility: Map<AppProfileId, AppProfileContentVisibility>,
+): LauncherShellState = copy(profileContentVisibility = refreshedVisibility)
+
+private fun LauncherShellState.withPartialProfileContentVisibility(
+    refreshedVisibility: Map<AppProfileId, AppProfileContentVisibility>,
+): LauncherShellState =
+    if (refreshedVisibility.isEmpty()) {
+        this
+    } else {
+        copy(profileContentVisibility = profileContentVisibility + refreshedVisibility)
     }

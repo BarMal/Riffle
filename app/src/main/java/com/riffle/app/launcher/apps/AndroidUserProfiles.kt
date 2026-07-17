@@ -7,6 +7,7 @@ import android.os.UserHandle
 import android.os.UserManager
 import androidx.annotation.RequiresApi
 import com.riffle.core.domain.launcher.apps.AppProfile
+import com.riffle.core.domain.launcher.apps.AppProfileContentVisibility
 import com.riffle.core.domain.launcher.apps.AppProfileId
 import com.riffle.core.domain.launcher.apps.AppProfileType
 
@@ -102,6 +103,24 @@ private fun UserHandle.androidUserProfileType(launcherApps: LauncherApps?): Andr
         }
     } else {
         AndroidUserProfileType.MANAGED
+    }
+
+internal fun UserHandle.profileContentVisibility(userManager: UserManager?): AppProfileContentVisibility =
+    runCatching {
+        profileContentVisibility(
+            isQuietModeEnabled = userManager?.isQuietModeEnabled(this) == true,
+            isUserUnlocked = userManager?.isUserUnlocked(this) != false,
+        )
+    }.getOrDefault(AppProfileContentVisibility.REDACTED_UNAVAILABLE)
+
+internal fun profileContentVisibility(
+    isQuietModeEnabled: Boolean,
+    isUserUnlocked: Boolean,
+): AppProfileContentVisibility =
+    when {
+        isQuietModeEnabled -> AppProfileContentVisibility.REDACTED_QUIET
+        !isUserUnlocked -> AppProfileContentVisibility.REDACTED_LOCKED
+        else -> AppProfileContentVisibility.VISIBLE
     }
 
 @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)

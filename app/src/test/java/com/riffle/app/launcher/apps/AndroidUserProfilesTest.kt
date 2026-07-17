@@ -1,6 +1,7 @@
 package com.riffle.app.launcher.apps
 
 import com.riffle.core.domain.launcher.apps.AppProfile
+import com.riffle.core.domain.launcher.apps.AppProfileContentVisibility
 import com.riffle.core.domain.launcher.apps.AppProfileId
 import com.riffle.core.domain.launcher.apps.AppProfileType
 import org.junit.Assert.assertEquals
@@ -37,6 +38,18 @@ class AndroidUserProfilesTest {
                     type = AndroidUserProfileType.MANAGED,
                 ),
             ),
+        )
+    }
+
+    @Test
+    fun profileContentVisibilityRedactsQuietAndLockedProfiles() {
+        assertEquals(
+            AppProfileContentVisibility.REDACTED_QUIET,
+            profileContentVisibility(isQuietModeEnabled = true, isUserUnlocked = true),
+        )
+        assertEquals(
+            AppProfileContentVisibility.REDACTED_LOCKED,
+            profileContentVisibility(isQuietModeEnabled = false, isUserUnlocked = false),
         )
     }
 }

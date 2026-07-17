@@ -11,6 +11,8 @@ import android.os.Build
 import android.os.Process
 import android.os.UserHandle
 import android.os.UserManager
+import com.riffle.core.domain.launcher.apps.AppProfileContentVisibility
+import com.riffle.core.domain.launcher.apps.AppProfileId
 import com.riffle.core.domain.launcher.apps.AppProfileType
 import com.riffle.core.domain.launcher.apps.AppShortcutRepository
 import com.riffle.core.domain.launcher.apps.AppShortcutsByApp
@@ -51,10 +53,14 @@ class PackageManagerInstalledAppRepository(
         val profiles = runCatching { apps.getProfiles() }.getOrElse { return InstalledAppRefreshResult.Unavailable }
         val users = profiles.ifEmpty { listOf(Process.myUserHandle()) }
         val activities = mutableListOf<LaunchableActivity>()
+        val profileContentVisibility = mutableMapOf<AppProfileId, AppProfileContentVisibility>()
         var partial = false
 
         users.forEach { user ->
-            if (user.isLockedPrivateProfile()) {
+            val profile = user.toAppProfile(userManager = userManager, launcherApps = launcherApps)
+            val visibility = user.profileContentVisibility(userManager)
+            profileContentVisibility[profile.id] = visibility
+            if (profile.type == AppProfileType.PRIVATE && visibility != AppProfileContentVisibility.VISIBLE) {
                 partial = true
                 return@forEach
             }
@@ -71,9 +77,9 @@ class PackageManagerInstalledAppRepository(
 
         val mappedApps = activities.map(mapper::map)
         return if (partial) {
-            InstalledAppRefreshResult.Partial(mappedApps)
+            InstalledAppRefreshResult.Partial(mappedApps, profileContentVisibility)
         } else {
-            InstalledAppRefreshResult.Authoritative(mappedApps)
+            InstalledAppRefreshResult.Authoritative(mappedApps, profileContentVisibility)
         }
     }
 
@@ -123,13 +129,6 @@ class PackageManagerInstalledAppRepository(
 
     private val launcherIntent: Intent
         get() = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
-
-    private fun UserHandle.isLockedPrivateProfile(): Boolean =
-        toAppProfile(
-            userManager = userManager,
-            launcherApps = launcherApps,
-        ).type == AppProfileType.PRIVATE &&
-            runCatching { userManager?.isQuietModeEnabled(this) == true }.getOrDefault(false)
 }
 
 private fun ApplicationInfo.launcherCategoryLabel(): String? =

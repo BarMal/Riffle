@@ -34,6 +34,16 @@ data class CardsChapterPlan(
 
     val chapterIds: List<CardsChapterId>
         get() = chapters.map(CardsChapter::id)
+
+    /**
+     * The canonical Overview order for active app chapters.
+     *
+     * Pinned chapters retain their user-defined order, followed by transient chapters ordered by
+     * recency and stable identity. Empty pinned chapters remain navigator destinations but do not
+     * duplicate content in Overview.
+     */
+    val activeAppChapters: List<CardsChapter.App>
+        get() = chapters.filterIsInstance<CardsChapter.App>().filter { chapter -> chapter.notificationGroup != null }
 }
 
 /**

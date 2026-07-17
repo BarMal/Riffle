@@ -86,6 +86,26 @@ class CardsChapterPlanTest {
     }
 
     @Test
+    fun overviewUsesActiveChaptersInPinnedThenStableTransientOrder() {
+        val calendar = appId("com.riffle.calendar")
+        val mail = appId("com.riffle.mail")
+        val plan =
+            planner.plan(
+                notificationGroups =
+                    listOf(
+                        group(packageName = "com.riffle.mail", postedAtEpochMillis = 100L),
+                        group(packageName = "com.riffle.chat", postedAtEpochMillis = 200L),
+                    ),
+                pinnedChapterIds = listOf(calendar, mail),
+            )
+
+        assertEquals(
+            listOf(mail, appId("com.riffle.chat")),
+            plan.activeAppChapters.map(CardsChapter.App::id),
+        )
+    }
+
+    @Test
     fun recoversToOverviewWhenSelectedTransientChapterDisappears() {
         val plan = planner.plan(notificationGroups = emptyList())
 

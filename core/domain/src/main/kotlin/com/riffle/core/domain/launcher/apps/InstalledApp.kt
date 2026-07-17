@@ -40,6 +40,14 @@ data class AppProfile(
     }
 }
 
+/** Whether notification content for a profile may be exposed outside the system notification shade. */
+enum class AppProfileContentVisibility {
+    VISIBLE,
+    REDACTED_QUIET,
+    REDACTED_LOCKED,
+    REDACTED_UNAVAILABLE,
+}
+
 @JvmInline
 value class AppProfileId(val value: String)
 

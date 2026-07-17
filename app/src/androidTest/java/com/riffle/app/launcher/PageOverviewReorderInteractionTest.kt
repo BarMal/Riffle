@@ -66,9 +66,11 @@ class PageOverviewReorderInteractionTest {
                 moveBy(Offset(x = -width.toFloat(), y = 0f))
                 up()
             }
+            // Let LazyRow finish applying each gesture before dispatching the next one. Without
+            // this boundary, rapid test input can overlap the previous layout observation.
+            composeRule.waitForIdle()
         }
 
-        composeRule.waitForIdle()
         composeRule.onNodeWithTag(pageOverviewCardTestTag(pageId)).assertIsDisplayed()
     }
 
