@@ -5,6 +5,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.scrollBy
+import androidx.compose.foundation.lazy.LazyListItemInfo
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -24,6 +25,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlin.math.abs
 import kotlin.math.roundToInt
 
 internal data class PageOverviewCardState(
@@ -64,6 +66,16 @@ internal fun pageOverviewProjectedVisualIndex(
         else -> pageIndex
     }
 }
+
+internal fun pageOverviewSourceIndex(
+    pointerPositionPx: Float,
+    visibleItems: List<LazyListItemInfo>,
+): Int? =
+    visibleItems
+        .firstOrNull { item ->
+            pointerPositionPx in item.offset.toFloat()..(item.offset + item.size).toFloat()
+        }?.index
+        ?: visibleItems.minByOrNull { item -> abs(item.offset + (item.size / 2) - pointerPositionPx) }?.index
 
 @Composable
 internal fun Modifier.pageOverviewReflow(
@@ -171,11 +183,10 @@ internal fun Modifier.pageOverviewReorderDrag(
             detectDragGesturesAfterLongPress(
                 onDragStart = { offset ->
                     sourceIndex =
-                        currentActions.listState.layoutInfo.visibleItemsInfo
-                            .firstOrNull { item ->
-                                offset.x in item.offset.toFloat()..(item.offset + item.size).toFloat()
-                            }
-                            ?.index
+                        pageOverviewSourceIndex(
+                            pointerPositionPx = offset.x,
+                            visibleItems = currentActions.listState.layoutInfo.visibleItemsInfo,
+                        )
                     if (sourceIndex == null) return@detectDragGesturesAfterLongPress
 
                     dragDistancePx = 0f

@@ -170,34 +170,35 @@ private fun PageOverviewStrip(
     var dragPreview by remember { mutableStateOf<PageOverviewDragPreview?>(null) }
 
     Box(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .pageOverviewReorderDrag(
-                    pageCount = layout.pages.size,
-                    actions =
-                        PageOverviewReorderActions(
-                            listState = overviewListState,
-                            onDragStarted = { index ->
-                                dragPreview = PageOverviewDragPreview(index, index)
-                            },
-                            onDragPreviewChanged = { sourceIndex, targetIndex ->
-                                dragPreview = PageOverviewDragPreview(sourceIndex, targetIndex)
-                            },
-                            onDragFinished = { dragPreview = null },
-                            onMoveToIndex = { sourceIndex, targetIndex ->
-                                onAction(
-                                    LauncherShellAction.MoveHomePage(
-                                        pageId = layout.pages[sourceIndex].id,
-                                        targetIndex = targetIndex,
-                                    ),
-                                )
-                            },
-                        ),
-                ),
+        modifier = Modifier.fillMaxWidth(),
     ) {
         LazyRow(
-            modifier = Modifier.fillMaxWidth().testTag(PAGE_OVERVIEW_STRIP_TEST_TAG),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .pageOverviewReorderDrag(
+                        pageCount = layout.pages.size,
+                        actions =
+                            PageOverviewReorderActions(
+                                listState = overviewListState,
+                                onDragStarted = { index ->
+                                    dragPreview = PageOverviewDragPreview(index, index)
+                                },
+                                onDragPreviewChanged = { sourceIndex, targetIndex ->
+                                    dragPreview = PageOverviewDragPreview(sourceIndex, targetIndex)
+                                },
+                                onDragFinished = { dragPreview = null },
+                                onMoveToIndex = { sourceIndex, targetIndex ->
+                                    onAction(
+                                        LauncherShellAction.MoveHomePage(
+                                            pageId = layout.pages[sourceIndex].id,
+                                            targetIndex = targetIndex,
+                                        ),
+                                    )
+                                },
+                            ),
+                    )
+                    .testTag(PAGE_OVERVIEW_STRIP_TEST_TAG),
             state = overviewListState,
             contentPadding = PaddingValues(horizontal = PAGE_OVERVIEW_CONTENT_PADDING_DP.dp, vertical = 4.dp),
             horizontalArrangement = Arrangement.spacedBy(PAGE_OVERVIEW_CARD_SPACING_DP.dp),
