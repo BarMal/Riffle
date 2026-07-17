@@ -46,7 +46,10 @@ data class GestureSettings(
         get() = homeGestures.toLauncherGestureMappings()
 
     val conflicts: List<LauncherGestureConflict>
-        get() = LauncherGestureConflictDetector.conflictsIn(mappings)
+        get() =
+            LauncherGestureConflictDetector
+                .conflictsIn(mappings)
+                .withHomeLaunchTargets(homeGestures)
 
     val homeSwipe: HomeSwipeGestureSettings
         get() =
@@ -57,6 +60,24 @@ data class GestureSettings(
                 right = homeGestures.actionFor(HomeGesture.ONE_FINGER_RIGHT),
             )
 }
+
+private fun List<LauncherGestureConflict>.withHomeLaunchTargets(
+    settings: HomeGestureSettings,
+): List<LauncherGestureConflict> =
+    flatMap { conflict ->
+        if (!conflict.action.requiresLaunchTarget) {
+            listOf(conflict)
+        } else {
+            conflict.gestures
+                .groupBy { gesture -> settings.launchTargetFor(gesture.toHomeGesture()) }
+                .filterKeys { target -> target != null }
+                .filterValues { gestures -> gestures.size > 1 }
+                .map { (_, gestures) -> conflict.copy(gestures = gestures) }
+        }
+    }
+
+private val LauncherGestureAction.requiresLaunchTarget: Boolean
+    get() = this == LauncherGestureAction.LAUNCH_APP || this == LauncherGestureAction.LAUNCH_APP_SHORTCUT
 
 data class HomeGestureSettings(
     val actions: Map<HomeGesture, LauncherGestureAction> = defaultHomeGestureActions,

@@ -33,6 +33,65 @@ class LauncherSettingsTest {
     }
 
     @Test
+    fun doesNotReportConflictForLaunchAppGesturesWithDifferentTargets() {
+        val mail = appIdentity("mail")
+        val calendar = appIdentity("calendar")
+        val settings =
+            GestureSettings(
+                homeGestures =
+                    HomeGestureSettings(
+                        actions =
+                            mapOf(
+                                HomeGesture.TWO_FINGER_LEFT to LauncherGestureAction.LAUNCH_APP,
+                                HomeGesture.TWO_FINGER_RIGHT to LauncherGestureAction.LAUNCH_APP,
+                            ),
+                        launchTargets =
+                            mapOf(
+                                HomeGesture.TWO_FINGER_LEFT to LauncherGestureLaunchTarget.App(mail),
+                                HomeGesture.TWO_FINGER_RIGHT to LauncherGestureLaunchTarget.App(calendar),
+                            ),
+                    ),
+            )
+
+        assertEquals(
+            emptyList<LauncherGestureConflict>(),
+            settings.conflicts.filter { it.action == LauncherGestureAction.LAUNCH_APP },
+        )
+    }
+
+    @Test
+    fun reportsConflictForLaunchAppGesturesWithSameTarget() {
+        val mail = appIdentity("mail")
+        val settings =
+            GestureSettings(
+                homeGestures =
+                    HomeGestureSettings(
+                        actions =
+                            mapOf(
+                                HomeGesture.TWO_FINGER_LEFT to LauncherGestureAction.LAUNCH_APP,
+                                HomeGesture.TWO_FINGER_RIGHT to LauncherGestureAction.LAUNCH_APP,
+                            ),
+                        launchTargets =
+                            mapOf(
+                                HomeGesture.TWO_FINGER_LEFT to LauncherGestureLaunchTarget.App(mail),
+                                HomeGesture.TWO_FINGER_RIGHT to LauncherGestureLaunchTarget.App(mail),
+                            ),
+                    ),
+            )
+
+        assertEquals(
+            listOf(
+                LauncherGestureConflict(
+                    surface = LauncherGestureSurface.HOME_PAGE,
+                    action = LauncherGestureAction.LAUNCH_APP,
+                    gestures = listOf(LauncherGesture.TWO_FINGER_LEFT, LauncherGesture.TWO_FINGER_RIGHT),
+                ),
+            ),
+            settings.conflicts.filter { it.action == LauncherGestureAction.LAUNCH_APP },
+        )
+    }
+
+    @Test
     fun defaultsToSystemWallpaper() {
         val settings = LauncherSettings()
 
@@ -137,4 +196,10 @@ class LauncherSettingsTest {
 
         assertEquals(WallpaperSource.SOLID_COLOR, settings.appearance.wallpaper.source)
     }
+
+    private fun appIdentity(name: String): AppIdentity =
+        AppIdentity(
+            packageName = AppPackageName("com.riffle.$name"),
+            activityName = AppActivityName("com.riffle.$name.MainActivity"),
+        )
 }
