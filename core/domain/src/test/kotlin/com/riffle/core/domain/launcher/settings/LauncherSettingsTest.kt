@@ -11,6 +11,11 @@ import kotlin.test.assertEquals
 
 class LauncherSettingsTest {
     @Test
+    fun defaultsThemeAccentToDefault() {
+        assertEquals(LauncherThemeAccent.DEFAULT, LauncherSettings().appearance.themeAccent)
+    }
+
+    @Test
     fun cardsChapterIntentDefaultsToOverviewWithoutPins() {
         val cards = LauncherSettings().cards.chapterPreferences
 

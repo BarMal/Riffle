@@ -22,6 +22,7 @@ import com.riffle.core.domain.launcher.settings.HomeGestureSettings
 import com.riffle.core.domain.launcher.settings.HomeSystemBars
 import com.riffle.core.domain.launcher.settings.LauncherGestureAction
 import com.riffle.core.domain.launcher.settings.LauncherSettings
+import com.riffle.core.domain.launcher.settings.LauncherThemeAccent
 import com.riffle.core.domain.launcher.settings.LauncherThemeMode
 import com.riffle.core.domain.launcher.settings.LauncherThemePreset
 import com.riffle.core.domain.launcher.settings.MAX_OVERLAY_DOCK_EXPANDED_ICON_SIZE_DP
@@ -204,6 +205,28 @@ class LauncherSettingsJsonCodecTest {
         val decodedSettings = decodeLauncherSettings(encodeLauncherSettings(settings))
 
         assertEquals(LauncherThemePreset.RETRO, decodedSettings.appearance.themePreset)
+    }
+
+    @Test
+    fun roundTripsThemeAccent() {
+        val settings = LauncherSettings(appearance = AppearanceSettings(themeAccent = LauncherThemeAccent.TEAL))
+
+        assertEquals(
+            LauncherThemeAccent.TEAL,
+            decodeLauncherSettings(encodeLauncherSettings(settings)).appearance.themeAccent,
+        )
+    }
+
+    @Test
+    fun defaultsMissingOrInvalidThemeAccent() {
+        assertEquals(
+            LauncherThemeAccent.DEFAULT,
+            decodeLauncherSettings("{\"appearance\": {}}").appearance.themeAccent,
+        )
+        assertEquals(
+            LauncherThemeAccent.DEFAULT,
+            decodeLauncherSettings("{\"appearance\": {\"themeAccent\": \"UNKNOWN\"}}").appearance.themeAccent,
+        )
     }
 
     @Test

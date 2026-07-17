@@ -10,6 +10,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.riffle.core.domain.launcher.settings.LauncherThemeAccent
 import com.riffle.core.domain.launcher.settings.LauncherThemeMode
 import com.riffle.core.domain.launcher.settings.LauncherThemePreset
 
@@ -52,6 +53,29 @@ internal fun ThemePresetSetting(
                     onClick = { onAction(LauncherShellAction.SelectLauncherThemePreset(preset)) },
                 ) {
                     SettingsButtonText(text = preset.name.lowercase().replaceFirstChar(Char::uppercase))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+internal fun ThemeAccentSetting(
+    selectedAccent: LauncherThemeAccent,
+    onAction: (LauncherShellAction) -> Unit,
+) {
+    Column {
+        SettingsListRow(title = "Theme accent")
+        Row(
+            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            LauncherThemeAccent.entries.forEach { accent ->
+                TextButton(
+                    enabled = accent != selectedAccent,
+                    onClick = { onAction(LauncherShellAction.SelectLauncherThemeAccent(accent)) },
+                ) {
+                    SettingsButtonText(text = accent.name.lowercase().replaceFirstChar(Char::uppercase))
                 }
             }
         }
