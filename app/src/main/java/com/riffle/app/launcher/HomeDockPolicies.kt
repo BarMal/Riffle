@@ -97,16 +97,18 @@ internal fun dockShelfFrameRateAvailability(
         choices =
             supportedFrameRates
                 ?.let { frameRates ->
+                    val supportedRates = frameRates.filter(Float::isFinite)
                     MotionPerformanceTargetFps.entries.mapNotNull { targetFps ->
-                        frameRates
-                            .filter(Float::isFinite)
-                            .minByOrNull { frameRate ->
-                                abs(frameRate - targetFps.framesPerSecond)
-                            }
-                            ?.takeIf { frameRate ->
-                                abs(frameRate - targetFps.framesPerSecond) <= FRAME_RATE_MATCH_TOLERANCE_HZ
-                            }
-                            ?.let { frameRate -> DockShelfFrameRateChoice(targetFps, frameRate) }
+                        val targetFrameRate =
+                            supportedRates
+                                .minByOrNull { frameRate -> abs(frameRate - targetFps.framesPerSecond) }
+                                ?.takeIf { frameRate ->
+                                    abs(frameRate - targetFps.framesPerSecond) <= FRAME_RATE_MATCH_TOLERANCE_HZ
+                                }
+                                ?: supportedRates
+                                    .filter { frameRate -> frameRate >= targetFps.framesPerSecond }
+                                    .minOrNull()
+                        targetFrameRate?.let { frameRate -> DockShelfFrameRateChoice(targetFps, frameRate) }
                     }
                 }
                 .orEmpty(),
