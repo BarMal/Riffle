@@ -4,9 +4,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.assertIsDisplayed
@@ -80,8 +77,6 @@ class PageOverviewReorderInteractionTest {
         onAction: (LauncherShellAction) -> Unit,
     ) {
         composeRule.setContent {
-            var layout by mutableStateOf(pageOverviewLayout())
-
             MaterialTheme {
                 Box(
                     modifier =
@@ -90,16 +85,11 @@ class PageOverviewReorderInteractionTest {
                             .height(640.dp),
                 ) {
                     PageOverviewControls(
-                        layout = layout,
+                        layout = pageOverviewLayout(),
                         reducedMotion = false,
                         appIconLoader = EmptyAppIconLoader,
                         widgetViewFactory = EmptyHomeWidgetViewFactory,
-                        onAction = { action ->
-                            onAction(action)
-                            if (action is LauncherShellAction.MoveHomePage) {
-                                layout = layout.movePage(action.pageId, action.targetIndex)
-                            }
-                        },
+                        onAction = onAction,
                     )
                 }
             }
@@ -117,15 +107,5 @@ class PageOverviewReorderInteractionTest {
             }
 
         return baseLayout.copy(pages = pages, selectedPageId = pages.first().id)
-    }
-
-    private fun HomeLayout.movePage(
-        pageId: LauncherPageId,
-        targetIndex: Int,
-    ): HomeLayout {
-        val page = pages.first { it.id == pageId }
-        val reorderedPages = pages.filterNot { it.id == pageId }.toMutableList()
-        reorderedPages.add(targetIndex, page)
-        return copy(pages = reorderedPages)
     }
 }
