@@ -55,6 +55,7 @@ import com.riffle.core.domain.launcher.HomeRoleStatus
 import com.riffle.core.domain.launcher.home.HostedWidgetId
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.widgets.WidgetProviderIdentity
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.emitAll
@@ -557,9 +558,17 @@ internal fun resolveHostedWidgetResultId(
 internal fun <Value> startupPlatformValue(
     fallback: Value,
     read: () -> Value,
-): Value = runCatching(read).getOrDefault(fallback)
+): Value =
+    runCatching(read).getOrElse { failure ->
+        if (failure is CancellationException) throw failure
+        fallback
+    }
 
-internal fun <Value> startupPlatformValueOrNull(read: () -> Value?): Value? = runCatching(read).getOrNull()
+internal fun <Value> startupPlatformValueOrNull(read: () -> Value?): Value? =
+    runCatching(read).getOrElse { failure ->
+        if (failure is CancellationException) throw failure
+        null
+    }
 
 internal fun <Value> startupPlatformFlow(read: () -> Flow<Value>): Flow<Value> = flow { emitAll(read()) }.catch { }
 
