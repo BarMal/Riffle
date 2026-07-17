@@ -79,6 +79,24 @@ class PageOverviewCardStateTest {
     }
 
     @Test
+    fun draggedCardTranslationCompensatesForLazyRowScroll() {
+        assertEquals(
+            230f,
+            pageOverviewDraggedCardTranslationPx(
+                dragDistancePx = 30f,
+                scrollDistancePx = 200f,
+            ),
+        )
+        assertEquals(
+            -180f,
+            pageOverviewDraggedCardTranslationPx(
+                dragDistancePx = 20f,
+                scrollDistancePx = -200f,
+            ),
+        )
+    }
+
+    @Test
     fun projectedPositionMovesCardsOutOfTheDraggedCardsTargetRange() {
         val preview = PageOverviewDragPreview(sourceIndex = 1, targetIndex = 3)
 

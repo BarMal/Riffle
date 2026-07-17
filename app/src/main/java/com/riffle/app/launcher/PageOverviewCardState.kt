@@ -163,6 +163,11 @@ internal fun Modifier.pageOverviewReorderDrag(
                                 if (appliedScrollPx == 0f) break
 
                                 scrollDistancePx += appliedScrollPx
+                                dragOffsetX =
+                                    pageOverviewDraggedCardTranslationPx(
+                                        dragDistancePx = dragDistancePx,
+                                        scrollDistancePx = scrollDistancePx,
+                                    )
                                 updatePreview()
                                 delay(PAGE_OVERVIEW_EDGE_SCROLL_FRAME_DELAY_MILLIS)
                             }
@@ -183,7 +188,11 @@ internal fun Modifier.pageOverviewReorderDrag(
                 onDrag = { change, dragAmount ->
                     change.consume()
                     dragDistancePx += dragAmount.x
-                    dragOffsetX = dragDistancePx
+                    dragOffsetX =
+                        pageOverviewDraggedCardTranslationPx(
+                            dragDistancePx = dragDistancePx,
+                            scrollDistancePx = scrollDistancePx,
+                        )
                     updatePreview()
                     currentDragActions.listState.layoutInfo.visibleItemsInfo
                         .firstOrNull { item -> item.index == state.index }
@@ -216,6 +225,11 @@ internal fun Modifier.pageOverviewReorderDrag(
             )
         }
 }
+
+internal fun pageOverviewDraggedCardTranslationPx(
+    dragDistancePx: Float,
+    scrollDistancePx: Float,
+): Float = dragDistancePx + scrollDistancePx
 
 internal fun pageOverviewViewportEdgeScrollDirection(
     pointerPositionPx: Float,
