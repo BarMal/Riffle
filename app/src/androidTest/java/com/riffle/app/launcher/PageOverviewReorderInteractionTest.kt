@@ -88,7 +88,9 @@ class PageOverviewReorderInteractionTest {
                 ) {
                     PageOverviewControls(
                         layout = pageOverviewLayout(),
-                        reducedMotion = false,
+                        // The drag/drop contract is independent from reflow animation. Keeping
+                        // motion disabled prevents preview springs from racing test input.
+                        reducedMotion = true,
                         appIconLoader = EmptyAppIconLoader,
                         widgetViewFactory = EmptyHomeWidgetViewFactory,
                         onAction = onAction,
