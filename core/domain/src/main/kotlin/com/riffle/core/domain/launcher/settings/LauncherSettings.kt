@@ -26,6 +26,7 @@ data class AppearanceSettings(
     val wallpaper: WallpaperSettings = WallpaperSettings.system(),
     val themeMode: LauncherThemeMode = LauncherThemeMode.SYSTEM,
     val themePreset: LauncherThemePreset = LauncherThemePreset.MATERIAL,
+    val themeAccent: LauncherThemeAccent = LauncherThemeAccent.DEFAULT,
     val fullscreenHome: Boolean = false,
     val hideStatusBarOnHome: Boolean = false,
     val hideNavigationBarOnHome: Boolean = false,
@@ -44,6 +45,15 @@ enum class LauncherThemePreset {
     GLASS,
     TERMINAL,
     CUSTOM,
+}
+
+/** User-selected colour family applied consistently to Material theme roles. */
+enum class LauncherThemeAccent {
+    DEFAULT,
+    BLUE,
+    TEAL,
+    ROSE,
+    AMBER,
 }
 
 data class GestureSettings(

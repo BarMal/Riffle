@@ -29,6 +29,7 @@ import com.riffle.core.domain.launcher.settings.HomeGesture
 import com.riffle.core.domain.launcher.settings.HomeSwipeGestureDirection
 import com.riffle.core.domain.launcher.settings.LauncherGestureAction
 import com.riffle.core.domain.launcher.settings.LauncherGestureLaunchTarget
+import com.riffle.core.domain.launcher.settings.LauncherThemeAccent
 import com.riffle.core.domain.launcher.settings.LauncherThemeMode
 import com.riffle.core.domain.launcher.settings.LauncherThemePreset
 import com.riffle.core.domain.launcher.settings.MotionPerformanceTargetFps
@@ -292,6 +293,8 @@ sealed interface LauncherShellAction {
     data class SelectLauncherThemeMode(val mode: LauncherThemeMode) : LauncherShellAction
 
     data class SelectLauncherThemePreset(val preset: LauncherThemePreset) : LauncherShellAction
+
+    data class SelectLauncherThemeAccent(val accent: LauncherThemeAccent) : LauncherShellAction
 
     data class SelectWallpaperScrollMode(val mode: WallpaperScrollMode) : LauncherShellAction
 

@@ -18,6 +18,7 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
+import com.riffle.core.domain.launcher.settings.LauncherThemeAccent
 import com.riffle.core.domain.launcher.settings.LauncherThemeMode
 import com.riffle.core.domain.launcher.settings.LauncherThemePreset
 
@@ -25,6 +26,7 @@ import com.riffle.core.domain.launcher.settings.LauncherThemePreset
 fun RiffleLauncherTheme(
     themeMode: LauncherThemeMode = LauncherThemeMode.SYSTEM,
     themePreset: LauncherThemePreset = LauncherThemePreset.MATERIAL,
+    themeAccent: LauncherThemeAccent = LauncherThemeAccent.DEFAULT,
     content: @Composable () -> Unit,
 ) {
     val darkTheme =
@@ -34,7 +36,7 @@ fun RiffleLauncherTheme(
             LauncherThemeMode.DARK -> true
         }
     val context = LocalContext.current
-    val colorScheme =
+    val baseColorScheme =
         when {
             themePreset == LauncherThemePreset.MATERIAL &&
                 Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
@@ -44,6 +46,7 @@ fun RiffleLauncherTheme(
                 Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> dynamicLightColorScheme(context)
             else -> fallbackScheme(darkTheme = darkTheme, themePreset = themePreset)
         }
+    val colorScheme = baseColorScheme.withThemeAccent(themeAccent, darkTheme)
 
     CompositionLocalProvider(
         LocalLauncherCardShape provides launcherCardShape(themePreset),
@@ -122,6 +125,131 @@ internal fun fallbackScheme(
 ): ColorScheme =
     (if (darkTheme) darkScheme else lightScheme)
         .withThemePreset(themePreset)
+
+internal fun ColorScheme.withThemeAccent(
+    accent: LauncherThemeAccent,
+    darkTheme: Boolean,
+): ColorScheme =
+    accent.colorRoles(darkTheme)?.let { roles ->
+        copy(
+            primary = roles.primary,
+            onPrimary = roles.onPrimary,
+            primaryContainer = roles.primaryContainer,
+            onPrimaryContainer = roles.onPrimaryContainer,
+            secondary = roles.secondary,
+            onSecondary = roles.onSecondary,
+            secondaryContainer = roles.secondaryContainer,
+            onSecondaryContainer = roles.onSecondaryContainer,
+            tertiary = roles.tertiary,
+            onTertiary = roles.onTertiary,
+            tertiaryContainer = roles.tertiaryContainer,
+            onTertiaryContainer = roles.onTertiaryContainer,
+        )
+    } ?: this
+
+private data class LauncherAccentColorRoles(
+    val primary: Color,
+    val onPrimary: Color,
+    val primaryContainer: Color,
+    val onPrimaryContainer: Color,
+    val secondary: Color,
+    val onSecondary: Color,
+    val secondaryContainer: Color,
+    val onSecondaryContainer: Color,
+    val tertiary: Color,
+    val onTertiary: Color,
+    val tertiaryContainer: Color,
+    val onTertiaryContainer: Color,
+)
+
+private fun LauncherThemeAccent.colorRoles(darkTheme: Boolean): LauncherAccentColorRoles? =
+    when (this) {
+        LauncherThemeAccent.DEFAULT -> null
+        LauncherThemeAccent.BLUE -> if (darkTheme) blueDarkAccent else blueLightAccent
+        LauncherThemeAccent.TEAL -> if (darkTheme) tealDarkAccent else tealLightAccent
+        LauncherThemeAccent.ROSE -> if (darkTheme) roseDarkAccent else roseLightAccent
+        LauncherThemeAccent.AMBER -> if (darkTheme) amberDarkAccent else amberLightAccent
+    }
+
+private val blueLightAccent =
+    LauncherAccentColorRoles(
+        primary = Color(0xFF2C6094), onPrimary = Color.White,
+        primaryContainer = Color(0xFFD1E4FF), onPrimaryContainer = Color(0xFF001D35),
+        secondary = Color(0xFF4E6078), onSecondary = Color.White,
+        secondaryContainer = Color(0xFFD7E3F7), onSecondaryContainer = Color(0xFF0A1D31),
+        tertiary = Color(0xFF66587A), onTertiary = Color.White,
+        tertiaryContainer = Color(0xFFECDDFF), onTertiaryContainer = Color(0xFF201634),
+    )
+
+private val blueDarkAccent =
+    LauncherAccentColorRoles(
+        primary = Color(0xFF9DCAFF), onPrimary = Color(0xFF003258),
+        primaryContainer = Color(0xFF124875), onPrimaryContainer = Color(0xFFD1E4FF),
+        secondary = Color(0xFFB6C8DF), onSecondary = Color(0xFF203246),
+        secondaryContainer = Color(0xFF36485E), onSecondaryContainer = Color(0xFFD7E3F7),
+        tertiary = Color(0xFFD0BEE8), onTertiary = Color(0xFF372B4A),
+        tertiaryContainer = Color(0xFF4E4062), onTertiaryContainer = Color(0xFFECDDFF),
+    )
+
+private val tealLightAccent =
+    LauncherAccentColorRoles(
+        primary = Color(0xFF006B61), onPrimary = Color.White,
+        primaryContainer = Color(0xFF72F8E6), onPrimaryContainer = Color(0xFF00201C),
+        secondary = Color(0xFF4A635F), onSecondary = Color.White,
+        secondaryContainer = Color(0xFFCCE8E2), onSecondaryContainer = Color(0xFF05201C),
+        tertiary = Color(0xFF456179), onTertiary = Color.White,
+        tertiaryContainer = Color(0xFFCBE6FF), onTertiaryContainer = Color(0xFF001E2F),
+    )
+
+private val tealDarkAccent =
+    LauncherAccentColorRoles(
+        primary = Color(0xFF55DBC8), onPrimary = Color(0xFF003731),
+        primaryContainer = Color(0xFF005047), onPrimaryContainer = Color(0xFF72F8E6),
+        secondary = Color(0xFFB1CCC6), onSecondary = Color(0xFF1D3531),
+        secondaryContainer = Color(0xFF334B46), onSecondaryContainer = Color(0xFFCCE8E2),
+        tertiary = Color(0xFFADCAE5), onTertiary = Color(0xFF153349),
+        tertiaryContainer = Color(0xFF2D4961), onTertiaryContainer = Color(0xFFCBE6FF),
+    )
+
+private val roseLightAccent =
+    LauncherAccentColorRoles(
+        primary = Color(0xFF904B72), onPrimary = Color.White,
+        primaryContainer = Color(0xFFFFD8E8), onPrimaryContainer = Color(0xFF3A0027),
+        secondary = Color(0xFF735761), onSecondary = Color.White,
+        secondaryContainer = Color(0xFFFFD9E3), onSecondaryContainer = Color(0xFF2A151E),
+        tertiary = Color(0xFF7C5633), onTertiary = Color.White,
+        tertiaryContainer = Color(0xFFFFDCC1), onTertiaryContainer = Color(0xFF2E1500),
+    )
+
+private val roseDarkAccent =
+    LauncherAccentColorRoles(
+        primary = Color(0xFFFFB0D0), onPrimary = Color(0xFF58113F),
+        primaryContainer = Color(0xFF723157), onPrimaryContainer = Color(0xFFFFD8E8),
+        secondary = Color(0xFFE2BDC8), onSecondary = Color(0xFF422A33),
+        secondaryContainer = Color(0xFF5A3F49), onSecondaryContainer = Color(0xFFFFD9E3),
+        tertiary = Color(0xFFEFBF95), onTertiary = Color(0xFF472A0B),
+        tertiaryContainer = Color(0xFF60401F), onTertiaryContainer = Color(0xFFFFDCC1),
+    )
+
+private val amberLightAccent =
+    LauncherAccentColorRoles(
+        primary = Color(0xFF825500), onPrimary = Color.White,
+        primaryContainer = Color(0xFFFFDDB7), onPrimaryContainer = Color(0xFF291800),
+        secondary = Color(0xFF705B40), onSecondary = Color.White,
+        secondaryContainer = Color(0xFFFBDDBA), onSecondaryContainer = Color(0xFF281805),
+        tertiary = Color(0xFF53643D), onTertiary = Color.White,
+        tertiaryContainer = Color(0xFFD7EABA), onTertiaryContainer = Color(0xFF112000),
+    )
+
+private val amberDarkAccent =
+    LauncherAccentColorRoles(
+        primary = Color(0xFFFFB95F), onPrimary = Color(0xFF452B00),
+        primaryContainer = Color(0xFF623F00), onPrimaryContainer = Color(0xFFFFDDB7),
+        secondary = Color(0xFFDEC3A0), onSecondary = Color(0xFF3E2D16),
+        secondaryContainer = Color(0xFF57432A), onSecondaryContainer = Color(0xFFFBDDBA),
+        tertiary = Color(0xFFBBCEA0), onTertiary = Color(0xFF263515),
+        tertiaryContainer = Color(0xFF3C4C28), onTertiaryContainer = Color(0xFFD7EABA),
+    )
 
 private fun ColorScheme.withThemePreset(preset: LauncherThemePreset): ColorScheme =
     when (preset) {

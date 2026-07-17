@@ -3,6 +3,7 @@ package com.riffle.app.launcher
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
+import com.riffle.core.domain.launcher.settings.LauncherThemeAccent
 import com.riffle.core.domain.launcher.settings.LauncherThemePreset
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -53,6 +54,32 @@ class LauncherThemeTest {
             lightScheme,
             fallbackScheme(darkTheme = false, themePreset = LauncherThemePreset.CUSTOM),
         )
+    }
+
+    @Test
+    fun defaultAccentPreservesTheBaseColorScheme() {
+        assertSame(
+            lightScheme,
+            lightScheme.withThemeAccent(LauncherThemeAccent.DEFAULT, darkTheme = false),
+        )
+    }
+
+    @Test
+    fun selectedAccentChangesPrimaryAndContainerRolesInLightAndDarkThemes() {
+        LauncherThemeAccent.entries
+            .filterNot { accent -> accent == LauncherThemeAccent.DEFAULT }
+            .forEach { accent ->
+                assertNotEquals(
+                    "light accent=$accent",
+                    lightScheme.primary,
+                    lightScheme.withThemeAccent(accent, darkTheme = false).primary,
+                )
+                assertNotEquals(
+                    "dark accent=$accent",
+                    darkScheme.primaryContainer,
+                    darkScheme.withThemeAccent(accent, darkTheme = true).primaryContainer,
+                )
+            }
     }
 
     @Test
