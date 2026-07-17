@@ -6,13 +6,13 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
@@ -41,6 +41,7 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.widgets.InstalledWidgetProvider
 import kotlinx.coroutines.Dispatchers
@@ -266,15 +267,22 @@ private fun WidgetProviderPreview(
 ) {
     val preview = rememberWidgetPreview(provider = provider, previewImageLoader = previewImageLoader)
 
-    if (preview != null) {
-        Image(
-            bitmap = preview,
-            contentDescription = "${provider.label} widget preview",
-            contentScale = ContentScale.Fit,
-            modifier = Modifier.widgetPickerPreviewBounds(provider),
-        )
-    } else {
-        WidgetProviderPreviewFallback(provider = provider)
+    BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+        val previewAspectRatio = provider.widgetPickerPreviewAspectRatio().boundedFor(maxWidth)
+
+        if (preview != null) {
+            Image(
+                bitmap = preview,
+                contentDescription = "${provider.label} widget preview",
+                contentScale = ContentScale.Fit,
+                modifier = Modifier.widgetPickerPreviewBounds(previewAspectRatio),
+            )
+        } else {
+            WidgetProviderPreviewFallback(
+                provider = provider,
+                previewAspectRatio = previewAspectRatio,
+            )
+        }
     }
 }
 
@@ -299,11 +307,14 @@ private fun rememberWidgetPreview(
 }
 
 @Composable
-private fun WidgetProviderPreviewFallback(provider: InstalledWidgetProvider) {
+private fun WidgetProviderPreviewFallback(
+    provider: InstalledWidgetProvider,
+    previewAspectRatio: Float,
+) {
     Box(
         modifier =
             Modifier
-                .widgetPickerPreviewBounds(provider)
+                .widgetPickerPreviewBounds(previewAspectRatio)
                 .background(MaterialTheme.colorScheme.secondaryContainer),
         contentAlignment = Alignment.Center,
     ) {
@@ -315,15 +326,17 @@ private fun WidgetProviderPreviewFallback(provider: InstalledWidgetProvider) {
     }
 }
 
-private fun Modifier.widgetPickerPreviewBounds(provider: InstalledWidgetProvider): Modifier =
+private fun Modifier.widgetPickerPreviewBounds(previewAspectRatio: Float): Modifier =
     fillMaxWidth()
-        .heightIn(
-            min = WIDGET_PREVIEW_MIN_HEIGHT_DP.dp,
-            max = WIDGET_PREVIEW_MAX_HEIGHT_DP.dp,
-        )
-        .aspectRatio(provider.widgetPickerPreviewAspectRatio())
+        .aspectRatio(previewAspectRatio)
         .clip(RoundedCornerShape(12.dp))
         .testTag(WIDGET_PICKER_PREVIEW_TEST_TAG)
+
+private fun Float.boundedFor(maxWidth: Dp): Float =
+    coerceIn(
+        minimumValue = maxWidth / WIDGET_PREVIEW_MAX_HEIGHT_DP.dp,
+        maximumValue = maxWidth / WIDGET_PREVIEW_MIN_HEIGHT_DP.dp,
+    )
 
 internal fun InstalledWidgetProvider.requestAddWidgetAction(
     target: WidgetAddTarget = WidgetAddTarget.HOME,
