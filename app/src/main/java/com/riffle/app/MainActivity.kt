@@ -552,11 +552,9 @@ internal fun resolveHostedWidgetResultId(
 internal fun <Value> startupPlatformValue(
     fallback: Value,
     read: () -> Value,
-): Value =
-    runCatching(read).getOrDefault(fallback)
+): Value = runCatching(read).getOrDefault(fallback)
 
-internal fun <Value> startupPlatformValueOrNull(read: () -> Value?): Value? =
-    runCatching(read).getOrNull()
+internal fun <Value> startupPlatformValueOrNull(read: () -> Value?): Value? = runCatching(read).getOrNull()
 
 private fun String.launcherBuildTypeLabel(): String =
     when {
