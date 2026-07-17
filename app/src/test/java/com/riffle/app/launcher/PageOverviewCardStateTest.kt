@@ -126,4 +126,18 @@ class PageOverviewCardStateTest {
             ),
         )
     }
+
+    @Test
+    fun accumulatedScrollCanProjectToTheEndOfALongPageList() {
+        assertEquals(
+            29,
+            pageOverviewDropTargetIndex(
+                index = 0,
+                pageCount = 30,
+                dragDistancePx = 20f,
+                scrollDistancePx = 7_500f,
+                cardStepPx = 256f,
+            ),
+        )
+    }
 }

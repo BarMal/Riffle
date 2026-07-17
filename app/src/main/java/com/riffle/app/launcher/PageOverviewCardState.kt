@@ -9,7 +9,6 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -20,7 +19,6 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.zIndex
 import com.riffle.core.domain.launcher.home.LauncherPage
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -41,10 +39,12 @@ internal data class PageOverviewDragPreview(
     val targetIndex: Int,
 )
 
-internal data class PageOverviewCardDragActions(
+internal data class PageOverviewReorderActions(
     val listState: LazyListState,
-    val onMoveToIndex: (Int) -> Unit,
-    val onDragPreviewChanged: (Int?) -> Unit,
+    val onDragStarted: (Int) -> Unit,
+    val onDragPreviewChanged: (Int, Int) -> Unit,
+    val onDragFinished: () -> Unit,
+    val onMoveToIndex: (Int, Int) -> Unit,
 )
 
 internal fun pageOverviewProjectedVisualIndex(
@@ -103,43 +103,41 @@ internal fun Modifier.pageOverviewReflow(
 
 @Composable
 internal fun Modifier.pageOverviewReorderDrag(
-    state: PageOverviewCardState,
-    dragActions: PageOverviewCardDragActions,
+    pageCount: Int,
+    actions: PageOverviewReorderActions,
 ): Modifier {
-    var dragOffsetX by remember(state.page.id) { mutableFloatStateOf(0f) }
     val scope = rememberCoroutineScope()
-    val currentDragActions by rememberUpdatedState(dragActions)
+    val currentActions by rememberUpdatedState(actions)
     val cardStepPx =
         with(LocalDensity.current) {
             (PAGE_OVERVIEW_CARD_WIDTH_DP.dp + PAGE_OVERVIEW_CARD_SPACING_DP.dp).toPx()
         }
 
     return this
-        .zIndex(if (dragOffsetX != 0f) PAGE_OVERVIEW_DRAG_Z_INDEX else 0f)
-        .graphicsLayer {
-            translationX = dragOffsetX
-            shadowElevation = if (dragOffsetX != 0f) PAGE_OVERVIEW_DRAG_ELEVATION else 0f
-        }
-        .pointerInput(state.page.id, state.index, state.pageCount, cardStepPx) {
+        .pointerInput(pageCount, cardStepPx) {
+            var sourceIndex: Int? = null
             var dragDistancePx = 0f
             var scrollDistancePx = 0f
             var edgeScrollJob: Job? = null
             var edgeScrollDirection = 0
 
             fun updatePreview() {
-                currentDragActions.onDragPreviewChanged(
-                    pageOverviewDropTargetIndex(
-                        index = state.index,
-                        pageCount = state.pageCount,
-                        dragDistancePx = dragDistancePx,
-                        scrollDistancePx = scrollDistancePx,
-                        cardStepPx = cardStepPx,
-                    ),
-                )
+                sourceIndex?.let { index ->
+                    currentActions.onDragPreviewChanged(
+                        index,
+                        pageOverviewDropTargetIndex(
+                            index = index,
+                            pageCount = pageCount,
+                            dragDistancePx = dragDistancePx,
+                            scrollDistancePx = scrollDistancePx,
+                            cardStepPx = cardStepPx,
+                        ),
+                    )
+                }
             }
 
             fun updateEdgeScroll(pointerPositionPx: Float) {
-                val layoutInfo = currentDragActions.listState.layoutInfo
+                val layoutInfo = currentActions.listState.layoutInfo
                 val direction =
                     pageOverviewViewportEdgeScrollDirection(
                         pointerPositionPx = pointerPositionPx,
@@ -157,7 +155,7 @@ internal fun Modifier.pageOverviewReorderDrag(
                         scope.launch {
                             while (isActive) {
                                 val appliedScrollPx =
-                                    currentDragActions.listState.scrollBy(
+                                    currentActions.listState.scrollBy(
                                         direction * PAGE_OVERVIEW_EDGE_SCROLL_STEP_PX,
                                     )
                                 if (appliedScrollPx == 0f) break
@@ -172,34 +170,40 @@ internal fun Modifier.pageOverviewReorderDrag(
 
             detectDragGesturesAfterLongPress(
                 onDragStart = { offset ->
+                    sourceIndex =
+                        currentActions.listState.layoutInfo.visibleItemsInfo
+                            .firstOrNull { item ->
+                                offset.x in item.offset.toFloat()..(item.offset + item.size).toFloat()
+                            }
+                            ?.index
+                    if (sourceIndex == null) return@detectDragGesturesAfterLongPress
+
                     dragDistancePx = 0f
                     scrollDistancePx = 0f
-                    dragOffsetX = 0f
+                    currentActions.onDragStarted(sourceIndex!!)
                     updatePreview()
-                    currentDragActions.listState.layoutInfo.visibleItemsInfo
-                        .firstOrNull { item -> item.index == state.index }
-                        ?.let { item -> updateEdgeScroll(item.offset + offset.x) }
+                    updateEdgeScroll(offset.x)
                 },
                 onDrag = { change, dragAmount ->
+                    if (sourceIndex == null) return@detectDragGesturesAfterLongPress
+
                     change.consume()
                     dragDistancePx += dragAmount.x
-                    dragOffsetX = dragDistancePx
                     updatePreview()
-                    currentDragActions.listState.layoutInfo.visibleItemsInfo
-                        .firstOrNull { item -> item.index == state.index }
-                        ?.let { item -> updateEdgeScroll(item.offset + change.position.x) }
+                    updateEdgeScroll(change.position.x)
                 },
                 onDragCancel = {
                     edgeScrollJob?.cancel()
                     edgeScrollDirection = 0
-                    dragOffsetX = 0f
-                    currentDragActions.onDragPreviewChanged(null)
+                    sourceIndex = null
+                    currentActions.onDragFinished()
                 },
                 onDragEnd = {
+                    val index = sourceIndex ?: return@detectDragGesturesAfterLongPress
                     val targetIndex =
                         pageOverviewDropTargetIndex(
-                            index = state.index,
-                            pageCount = state.pageCount,
+                            index = index,
+                            pageCount = pageCount,
                             dragDistancePx = dragDistancePx,
                             scrollDistancePx = scrollDistancePx,
                             cardStepPx = cardStepPx,
@@ -207,10 +211,10 @@ internal fun Modifier.pageOverviewReorderDrag(
 
                     edgeScrollJob?.cancel()
                     edgeScrollDirection = 0
-                    dragOffsetX = 0f
-                    currentDragActions.onDragPreviewChanged(null)
-                    if (targetIndex != state.index) {
-                        currentDragActions.onMoveToIndex(targetIndex)
+                    sourceIndex = null
+                    currentActions.onDragFinished()
+                    if (targetIndex != index) {
+                        currentActions.onMoveToIndex(index, targetIndex)
                     }
                 },
             )
@@ -273,8 +277,6 @@ internal fun pageOverviewReflowInitialOffsetPx(
         )
     }
 
-private const val PAGE_OVERVIEW_DRAG_Z_INDEX = 2f
-private const val PAGE_OVERVIEW_DRAG_ELEVATION = 16f
 private const val PAGE_OVERVIEW_EDGE_SCROLL_ZONE_PX = 56f
 private const val PAGE_OVERVIEW_EDGE_SCROLL_STEP_PX = 20f
 private const val PAGE_OVERVIEW_EDGE_SCROLL_FRAME_DELAY_MILLIS = 16L

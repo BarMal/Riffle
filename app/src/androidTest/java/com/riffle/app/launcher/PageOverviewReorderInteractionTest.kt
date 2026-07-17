@@ -41,9 +41,29 @@ class PageOverviewReorderInteractionTest {
         verifyOffScreenPageDrag(containerWidth = 840.dp)
     }
 
+    @Test
+    fun longPressDragCanTargetTheEndOfALongPageList() {
+        val actions = mutableListOf<LauncherShellAction>()
+        setContent(width = 360.dp, pageCount = 30, onAction = actions::add)
+
+        composeRule.onNodeWithTag(pageOverviewCardTestTag("page-1")).performTouchInput {
+            down(center)
+            advanceEventTime(viewConfiguration.longPressTimeoutMillis + 50L)
+            moveBy(Offset(x = width.toFloat() * 28f, y = 0f))
+            up()
+        }
+
+        composeRule.runOnIdle {
+            assertEquals(
+                listOf(LauncherShellAction.MoveHomePage(LauncherPageId("page-1"), targetIndex = 29)),
+                actions,
+            )
+        }
+    }
+
     private fun verifyOffScreenPageDrag(containerWidth: Dp) {
         val actions = mutableListOf<LauncherShellAction>()
-        setContent(width = containerWidth, onAction = actions::add)
+        setContent(width = containerWidth, pageCount = 7, onAction = actions::add)
 
         scrollToPageOverviewCard(pageId = "page-7")
         composeRule.onNodeWithTag(pageOverviewCardTestTag("page-7")).assertIsDisplayed()
@@ -77,10 +97,11 @@ class PageOverviewReorderInteractionTest {
 
     private fun setContent(
         width: Dp,
+        pageCount: Int,
         onAction: (LauncherShellAction) -> Unit,
     ) {
         composeRule.setContent {
-            var layout by mutableStateOf(pageOverviewLayout())
+            var layout by mutableStateOf(pageOverviewLayout(pageCount))
 
             MaterialTheme {
                 Box(
@@ -106,10 +127,10 @@ class PageOverviewReorderInteractionTest {
         }
     }
 
-    private fun pageOverviewLayout(): HomeLayout {
+    private fun pageOverviewLayout(pageCount: Int): HomeLayout {
         val baseLayout = HomeLayoutDefaults.standard()
         val pages =
-            (1..7).map { number ->
+            (1..pageCount).map { number ->
                 LauncherPage(
                     id = LauncherPageId("page-$number"),
                     grid = baseLayout.settings.grid.dimensions,
