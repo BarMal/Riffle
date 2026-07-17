@@ -13,10 +13,12 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -56,6 +58,7 @@ fun NotificationOverviewSurface(
     presentation: NotificationOverviewPresentation,
     onAction: (LauncherShellAction) -> Unit,
     title: String = "Notifications",
+    windowInsets: WindowInsets = WindowInsets.safeDrawing,
 ) {
     var selectedCategory by remember { mutableStateOf<NotificationCategory?>(null) }
     var selectedGroupKey by remember { mutableStateOf<AppNotificationGroupKey?>(null) }
@@ -77,6 +80,7 @@ fun NotificationOverviewSurface(
     LauncherPanel(
         title = panelTitle,
         onAction = onAction,
+        windowInsets = windowInsets,
     ) {
         AnimatedContent(
             targetState = selectedGroup != null,
