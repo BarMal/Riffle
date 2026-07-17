@@ -235,6 +235,19 @@ private fun SearchResultListItem(
     result: SearchGridResult,
     appListContext: AppListContext,
 ) {
+    val appIdentity =
+        when (result) {
+            is SearchGridResult.App -> result.app.identity
+            is SearchGridResult.Shortcut -> result.shortcut.appIdentity
+            is SearchGridResult.Setting -> null
+        }
+    val supportingText =
+        when (result) {
+            is SearchGridResult.App -> "App"
+            is SearchGridResult.Shortcut -> "App shortcut"
+            is SearchGridResult.Setting -> result.subtitle
+        }
+
     Row(
         modifier =
             Modifier
@@ -245,7 +258,34 @@ private fun SearchResultListItem(
         horizontalArrangement = Arrangement.spacedBy(14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        SearchResultIcon(result = result, appListContext = appListContext)
+        if (appIdentity == null) {
+            Surface(
+                modifier = Modifier.size(SEARCH_RESULT_ICON_SIZE_DP.dp),
+                shape = RoundedCornerShape(SEARCH_RESULT_ICON_CORNER_DP.dp),
+                color = MaterialTheme.colorScheme.secondaryContainer,
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Text(
+                        text = "SET",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                    )
+                }
+            }
+        } else {
+            Box(modifier = Modifier.size(SEARCH_RESULT_ICON_SIZE_DP.dp)) {
+                LauncherAppIcon(
+                    identity = appIdentity,
+                    label = result.label,
+                    iconLoader = appListContext.appIconLoader,
+                    modifier = Modifier.size(SEARCH_RESULT_ICON_SIZE_DP.dp),
+                )
+                NotificationCountBadge(
+                    count = appListContext.notificationCountFor(appIdentity),
+                    modifier = Modifier.align(Alignment.TopEnd),
+                )
+            }
+        }
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = result.label,
@@ -253,51 +293,9 @@ private fun SearchResultListItem(
                 color = MaterialTheme.colorScheme.onSurface,
             )
             Text(
-                text = result.supportingText,
+                text = supportingText,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
-}
-
-@Composable
-private fun SearchResultIcon(
-    result: SearchGridResult,
-    appListContext: AppListContext,
-) {
-    val appIdentity =
-        when (result) {
-            is SearchGridResult.App -> result.app.identity
-            is SearchGridResult.Shortcut -> result.shortcut.appIdentity
-            is SearchGridResult.Setting -> null
-        }
-
-    if (appIdentity == null) {
-        Surface(
-            modifier = Modifier.size(SEARCH_RESULT_ICON_SIZE_DP.dp),
-            shape = RoundedCornerShape(SEARCH_RESULT_ICON_CORNER_DP.dp),
-            color = MaterialTheme.colorScheme.secondaryContainer,
-        ) {
-            Box(contentAlignment = Alignment.Center) {
-                Text(
-                    text = "SET",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer,
-                )
-            }
-        }
-    } else {
-        Box(modifier = Modifier.size(SEARCH_RESULT_ICON_SIZE_DP.dp)) {
-            LauncherAppIcon(
-                identity = appIdentity,
-                label = result.label,
-                iconLoader = appListContext.appIconLoader,
-                modifier = Modifier.size(SEARCH_RESULT_ICON_SIZE_DP.dp),
-            )
-            NotificationCountBadge(
-                count = appListContext.notificationCountFor(appIdentity),
-                modifier = Modifier.align(Alignment.TopEnd),
             )
         }
     }
@@ -348,14 +346,6 @@ private fun AppSearchFilters.searchResultTypeNoun(): String =
     }
 
 private fun String.pluralized(count: Int): String = if (count == 1) this else "${this}s"
-
-private val SearchGridResult.supportingText: String
-    get() =
-        when (this) {
-            is SearchGridResult.App -> "App"
-            is SearchGridResult.Shortcut -> "App shortcut"
-            is SearchGridResult.Setting -> subtitle
-        }
 
 private const val SEARCH_CONTROLS_MAX_WIDTH_DP = 840
 private const val SEARCH_CONTROLS_CORNER_DP = 28
