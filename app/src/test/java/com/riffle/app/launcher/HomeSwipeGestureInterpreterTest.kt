@@ -1,15 +1,15 @@
 package com.riffle.app.launcher
 
-import com.riffle.core.domain.launcher.settings.GestureSettings
-import com.riffle.core.domain.launcher.settings.HomeGesture
-import com.riffle.core.domain.launcher.settings.HomeGestureSettings
-import com.riffle.core.domain.launcher.settings.LauncherGestureAction
-import com.riffle.core.domain.launcher.settings.LauncherGestureLaunchTarget
 import com.riffle.core.domain.launcher.apps.AppActivityName
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.apps.AppShortcutId
+import com.riffle.core.domain.launcher.settings.GestureSettings
+import com.riffle.core.domain.launcher.settings.HomeGesture
+import com.riffle.core.domain.launcher.settings.HomeGestureSettings
+import com.riffle.core.domain.launcher.settings.LauncherGestureAction
+import com.riffle.core.domain.launcher.settings.LauncherGestureLaunchTarget
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
