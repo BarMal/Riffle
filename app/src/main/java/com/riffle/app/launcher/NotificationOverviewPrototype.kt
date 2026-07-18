@@ -29,10 +29,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -68,6 +66,7 @@ internal fun NotificationGroupPrototype(
             initialPage = selectedGroupIndex,
             pageCount = { groups.size },
         )
+    val focusedNotificationIndexes = remember { mutableStateMapOf<AppNotificationGroupKey, Int>() }
     LaunchedEffect(pagerState.currentPage) {
         groups.getOrNull(pagerState.currentPage)?.let { group ->
             onGroupChanged(group.key)
@@ -83,9 +82,9 @@ internal fun NotificationGroupPrototype(
         val group = groups[page]
         if (group.notifications.isEmpty()) return@HorizontalPager
         val app = presentation.apps.firstOrNull { installedApp -> installedApp.matches(group) }
-        var focusedNotificationIndex by remember(group.key) { mutableIntStateOf(0) }
         val listState = rememberLazyListState()
-        val activeNotificationIndex = focusedNotificationIndex.coerceIn(0, group.notifications.lastIndex)
+        val activeNotificationIndex =
+            (focusedNotificationIndexes[group.key] ?: 0).coerceIn(0, group.notifications.lastIndex)
         val focusedNotification =
             group.notifications.getOrNull(activeNotificationIndex) ?: return@HorizontalPager
         val upcomingNotification =
@@ -98,10 +97,10 @@ internal fun NotificationGroupPrototype(
                 canFocusPrevious = activeNotificationIndex > 0,
                 canFocusNext = activeNotificationIndex < group.notifications.lastIndex,
                 onFocusPrevious = {
-                    focusedNotificationIndex = activeNotificationIndex - 1
+                    focusedNotificationIndexes[group.key] = activeNotificationIndex - 1
                 },
                 onFocusNext = {
-                    focusedNotificationIndex = activeNotificationIndex + 1
+                    focusedNotificationIndexes[group.key] = activeNotificationIndex + 1
                 },
             )
         val swipeProgress =
