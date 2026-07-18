@@ -243,26 +243,13 @@ class CardStackTest {
         composeRule.onNodeWithTag(NOTIFICATION_PROTOTYPE_NEXT_FOCUS_TEST_TAG).assertIsEnabled()
 
         composeRule.onNodeWithTag(NOTIFICATION_PROTOTYPE_NEXT_FOCUS_TEST_TAG).performClick()
-        composeRule.waitUntil(timeoutMillis = 5_000) {
-            composeRule
-                .onNodeWithTag(NOTIFICATION_PROTOTYPE_PREVIOUS_FOCUS_TEST_TAG)
-                .fetchSemanticsNode()
-                .config
-                .contains(SemanticsProperties.Disabled)
-                .not()
-        }
+        composeRule.waitForIdle()
         composeRule.onNodeWithTag(NOTIFICATION_PROTOTYPE_FOCUSED_CARD_TITLE_TEST_TAG).assertTextEquals("Second")
         composeRule.onNodeWithTag(NOTIFICATION_PROTOTYPE_PREVIOUS_FOCUS_TEST_TAG).assertIsEnabled()
         composeRule.onNodeWithTag(NOTIFICATION_PROTOTYPE_NEXT_FOCUS_TEST_TAG).assertIsNotEnabled()
 
         composeRule.onNodeWithTag(NOTIFICATION_PROTOTYPE_PREVIOUS_FOCUS_TEST_TAG).performClick()
-        composeRule.waitUntil(timeoutMillis = 5_000) {
-            composeRule
-                .onNodeWithTag(NOTIFICATION_PROTOTYPE_PREVIOUS_FOCUS_TEST_TAG)
-                .fetchSemanticsNode()
-                .config
-                .contains(SemanticsProperties.Disabled)
-        }
+        composeRule.waitForIdle()
         composeRule.onNodeWithTag(NOTIFICATION_PROTOTYPE_FOCUSED_CARD_TITLE_TEST_TAG).assertTextEquals("First")
         composeRule.onNodeWithTag(NOTIFICATION_PROTOTYPE_PREVIOUS_FOCUS_TEST_TAG).assertIsNotEnabled()
         composeRule.onNodeWithTag(NOTIFICATION_PROTOTYPE_NEXT_FOCUS_TEST_TAG).assertIsEnabled()
