@@ -29,8 +29,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -66,7 +68,7 @@ internal fun NotificationGroupPrototype(
             initialPage = selectedGroupIndex,
             pageCount = { groups.size },
         )
-    val focusedNotificationIndexes = remember { mutableStateMapOf<AppNotificationGroupKey, Int>() }
+    var focusedNotificationIndexes by remember { mutableStateOf(emptyMap<AppNotificationGroupKey, Int>()) }
     LaunchedEffect(pagerState.currentPage) {
         groups.getOrNull(pagerState.currentPage)?.let { group ->
             onGroupChanged(group.key)
@@ -97,10 +99,12 @@ internal fun NotificationGroupPrototype(
                 canFocusPrevious = activeNotificationIndex > 0,
                 canFocusNext = activeNotificationIndex < group.notifications.lastIndex,
                 onFocusPrevious = {
-                    focusedNotificationIndexes[group.key] = activeNotificationIndex - 1
+                    focusedNotificationIndexes =
+                        focusedNotificationIndexes + (group.key to activeNotificationIndex - 1)
                 },
                 onFocusNext = {
-                    focusedNotificationIndexes[group.key] = activeNotificationIndex + 1
+                    focusedNotificationIndexes =
+                        focusedNotificationIndexes + (group.key to activeNotificationIndex + 1)
                 },
             )
         val swipeProgress =
