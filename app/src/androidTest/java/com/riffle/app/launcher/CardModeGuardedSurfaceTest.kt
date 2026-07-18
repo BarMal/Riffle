@@ -9,6 +9,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.riffle.core.domain.launcher.FirstRunStatus
+import com.riffle.core.domain.launcher.HomeRoleStatus
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppProfile
@@ -132,6 +133,7 @@ class CardModeGuardedSurfaceTest {
         val layout = HomeLayoutDefaults.standard().copy(viewMode = LauncherViewMode.CARD_INTERFACE)
         return LauncherShellState(
             firstRunStatus = FirstRunStatus.COMPLETE,
+            homeRoleStatus = HomeRoleStatus.DEFAULT_HOME,
             homeLayout = layout,
             homeLayoutSet = HomeLayoutSet.fromLayout(layout),
             notificationAccessStatus = notificationAccessStatus,

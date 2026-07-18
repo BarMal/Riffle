@@ -12,13 +12,14 @@ class SettingsHomeAppStatusTest {
     fun labelsDefaultHomeStatus() {
         assertEquals("Riffle is default", HomeRoleStatus.DEFAULT_HOME.settingsHomeAppStatusLabel())
         assertEquals("Riffle is not default", HomeRoleStatus.NOT_DEFAULT_HOME.settingsHomeAppStatusLabel())
-        assertEquals("Status unknown", HomeRoleStatus.UNKNOWN.settingsHomeAppStatusLabel())
+        assertEquals("Home app status unavailable", HomeRoleStatus.UNKNOWN.settingsHomeAppStatusLabel())
     }
 
     @Test
-    fun usesSetHomeActionOnlyWhenRiffleIsKnownNotToBeDefault() {
+    fun usesAHomeSettingsActionForEveryLiveStatus() {
         assertEquals("Default", HomeRoleStatus.DEFAULT_HOME.settingsHomeAppActionLabel())
         assertEquals("Set home", HomeRoleStatus.NOT_DEFAULT_HOME.settingsHomeAppActionLabel())
+        assertEquals("Set home", HomeRoleStatus.UNKNOWN.settingsHomeAppActionLabel())
     }
 
     @Test

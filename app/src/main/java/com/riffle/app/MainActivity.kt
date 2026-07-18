@@ -15,6 +15,7 @@ import androidx.activity.viewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import com.riffle.app.launcher.DefaultHomeRoleRequestHandler
 import com.riffle.app.launcher.DefaultLauncherNotificationActionHandler
 import com.riffle.app.launcher.DefaultLauncherSettingsActionHandler
 import com.riffle.app.launcher.HomeLayoutDeviceClassEvent
@@ -232,8 +233,7 @@ class MainActivity : ComponentActivity() {
     private val activityActionHandler by lazy {
         LauncherActivityActionHandler(
             requestDefaultHome = {
-                shellViewModel.onDefaultHomeRequestStarted()
-                requestHomeRole.launch(homeRoleGateway.createHomeRoleRequestIntent())
+                defaultHomeRoleRequestHandler.request()
             },
             navigate = shellViewModel::onNavigationActionSelected,
             editHomePage = shellViewModel::onHomePageEdited,
@@ -241,6 +241,22 @@ class MainActivity : ComponentActivity() {
             editDock = shellViewModel::onDockEdited,
         )
     }
+
+    private val defaultHomeRoleRequestHandler by lazy {
+        DefaultHomeRoleRequestHandler(
+            createRequestIntent = homeRoleGateway::createResolvableHomeRoleRequestIntent,
+            onRequestStarted = shellViewModel::onDefaultHomeRequestStarted,
+            launchRequest = requestHomeRole::launch,
+            refreshPlatformStatuses = ::refreshPlatformStatuses,
+            showUnavailable = {
+                Toast.makeText(this, "Home app settings are unavailable on this device.", Toast.LENGTH_SHORT).show()
+            },
+            logLaunchFailure = { failure ->
+                Log.w(FOLDABLE_LAYOUT_LOG_TAG, "Home role request could not be launched", failure)
+            },
+        )
+    }
+
     private val launcherActionRouter by lazy {
         LauncherActionRouter(
             activityActionHandler = activityActionHandler,

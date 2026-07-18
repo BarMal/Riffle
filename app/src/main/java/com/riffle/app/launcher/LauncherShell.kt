@@ -119,6 +119,7 @@ fun LauncherShellContent(
                             .align(Alignment.TopCenter)
                             .windowInsetsPadding(WindowInsets.safeDrawing)
                             .padding(16.dp),
+                    homeRoleStatus = state.homeRoleStatus,
                     onSetHome = { onAction(LauncherShellAction.RequestDefaultHome) },
                     onDismiss = onSetupCardDismissed,
                 )
@@ -135,6 +136,7 @@ data class LauncherShellAppInfo(
 @Composable
 private fun PreviewSetupCard(
     modifier: Modifier = Modifier,
+    homeRoleStatus: HomeRoleStatus,
     onSetHome: () -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -149,9 +151,31 @@ private fun PreviewSetupCard(
             modifier = Modifier.padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            val presentation =
+                when (homeRoleStatus) {
+                    HomeRoleStatus.DEFAULT_HOME ->
+                        PreviewHomeSetupPresentation(
+                            statusMessage = "Riffle is your Home app.",
+                            actionLabel = "Open Home settings",
+                        )
+                    HomeRoleStatus.NOT_DEFAULT_HOME ->
+                        PreviewHomeSetupPresentation(
+                            statusMessage = "Riffle is not your Home app yet.",
+                            actionLabel = "Set as Home app",
+                        )
+                    HomeRoleStatus.UNKNOWN ->
+                        PreviewHomeSetupPresentation(
+                            statusMessage = "Home app status is unavailable right now.",
+                            actionLabel = "Set as Home app",
+                        )
+                }
             Text(
                 text = "Preview Riffle",
                 style = MaterialTheme.typography.titleLarge,
+            )
+            Text(
+                text = presentation.statusMessage,
+                style = MaterialTheme.typography.labelLarge,
             )
             Text(
                 text =
@@ -160,7 +184,7 @@ private fun PreviewSetupCard(
                 style = MaterialTheme.typography.bodyMedium,
             )
             Button(onClick = onSetHome) {
-                Text(text = "Set as Home app")
+                Text(text = presentation.actionLabel)
             }
             TextButton(onClick = onDismiss) {
                 Text(text = "Not now")
@@ -168,6 +192,11 @@ private fun PreviewSetupCard(
         }
     }
 }
+
+private data class PreviewHomeSetupPresentation(
+    val statusMessage: String,
+    val actionLabel: String,
+)
 
 @Suppress("LongMethod")
 @Composable
