@@ -20,6 +20,10 @@ class LauncherShellStateReducer {
     fun defaultHomeRequestStarted(currentState: LauncherShellState): LauncherShellState =
         currentState.copy(firstRunStatus = FirstRunStatus.REQUESTING_HOME_ROLE)
 
+    fun setupCardDismissed(currentState: LauncherShellState): LauncherShellState {
+        return currentState.copy(setupCardDismissed = true)
+    }
+
     fun firstRunCompleted(currentState: LauncherShellState): LauncherShellState =
         currentState.copy(firstRunStatus = FirstRunStatus.COMPLETE)
 

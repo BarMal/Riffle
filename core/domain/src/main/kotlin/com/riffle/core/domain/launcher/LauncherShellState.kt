@@ -22,6 +22,8 @@ import com.riffle.core.domain.launcher.widgets.InstalledWidgetProvider
 
 data class LauncherShellState(
     val firstRunStatus: FirstRunStatus = FirstRunStatus.NEEDS_HOME_ROLE,
+    /** Presentation-only state; the live [homeRoleStatus] remains authoritative. */
+    val setupCardDismissed: Boolean = false,
     val homeRoleStatus: HomeRoleStatus = HomeRoleStatus.UNKNOWN,
     val overlayDockPermissionStatus: OverlayDockPermissionStatus = OverlayDockPermissionStatus.UNKNOWN,
     val destination: ShellDestination = ShellDestination.HOME,
@@ -73,12 +75,16 @@ data class LauncherShellState(
         }
     }
 
-    val shouldShowDefaultHomePrompt: Boolean =
-        firstRunStatus == FirstRunStatus.NEEDS_HOME_ROLE &&
-            homeRoleStatus != HomeRoleStatus.DEFAULT_HOME
+    /**
+     * Retained for callers migrating from the blocking first-run prompt. Preview-first setup
+     * never blocks the launcher shell.
+     */
+    val shouldShowDefaultHomePrompt: Boolean = false
 
-    val shouldShowEmptyHome: Boolean =
-        !shouldShowDefaultHomePrompt
+    val shouldShowEmptyHome: Boolean = true
+
+    val shouldShowSetupCard: Boolean =
+        !setupCardDismissed && homeRoleStatus != HomeRoleStatus.DEFAULT_HOME
 }
 
 enum class FirstRunStatus {
