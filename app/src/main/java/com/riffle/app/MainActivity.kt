@@ -15,6 +15,7 @@ import androidx.activity.viewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import com.riffle.app.launcher.DefaultHomeRoleRequestHandler
 import com.riffle.app.launcher.DefaultLauncherNotificationActionHandler
 import com.riffle.app.launcher.DefaultLauncherSettingsActionHandler
 import com.riffle.app.launcher.HomeLayoutDeviceClassEvent
@@ -232,7 +233,7 @@ class MainActivity : ComponentActivity() {
     private val activityActionHandler by lazy {
         LauncherActivityActionHandler(
             requestDefaultHome = {
-                requestDefaultHomeRole()
+                defaultHomeRoleRequestHandler.request()
             },
             navigate = shellViewModel::onNavigationActionSelected,
             editHomePage = shellViewModel::onHomePageEdited,
@@ -241,24 +242,19 @@ class MainActivity : ComponentActivity() {
         )
     }
 
-    private fun requestDefaultHomeRole() {
-        val intent = homeRoleGateway.createResolvableHomeRoleRequestIntent()
-        if (intent == null) {
-            showHomeRoleRequestUnavailable()
-            return
-        }
-
-        shellViewModel.onDefaultHomeRequestStarted()
-        runCatching { requestHomeRole.launch(intent) }
-            .onFailure {
-                Log.w(FOLDABLE_LAYOUT_LOG_TAG, "Home role request could not be launched", it)
-                refreshPlatformStatuses()
-                showHomeRoleRequestUnavailable()
-            }
-    }
-
-    private fun showHomeRoleRequestUnavailable() {
-        Toast.makeText(this, "Home app settings are unavailable on this device.", Toast.LENGTH_SHORT).show()
+    private val defaultHomeRoleRequestHandler by lazy {
+        DefaultHomeRoleRequestHandler(
+            createRequestIntent = homeRoleGateway::createResolvableHomeRoleRequestIntent,
+            onRequestStarted = shellViewModel::onDefaultHomeRequestStarted,
+            launchRequest = requestHomeRole::launch,
+            refreshPlatformStatuses = ::refreshPlatformStatuses,
+            showUnavailable = {
+                Toast.makeText(this, "Home app settings are unavailable on this device.", Toast.LENGTH_SHORT).show()
+            },
+            logLaunchFailure = { failure ->
+                Log.w(FOLDABLE_LAYOUT_LOG_TAG, "Home role request could not be launched", failure)
+            },
+        )
     }
 
     private val launcherActionRouter by lazy {
