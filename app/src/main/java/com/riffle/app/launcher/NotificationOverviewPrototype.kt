@@ -96,6 +96,7 @@ internal fun NotificationGroupPrototype(
             group.notifications.getOrNull(activeNotificationIndex + 1)
         val focusControls =
             NotificationFocusControls(
+                focusedNotification = focusedNotification,
                 canFocusPrevious = activeNotificationIndex > 0,
                 canFocusNext = activeNotificationIndex < group.notifications.lastIndex,
                 onFocusPrevious = {
@@ -295,7 +296,7 @@ private fun NotificationPrototypeHero(
                     ),
         )
         NotificationPrototypeHeroDetails(
-            notification = featuredNotification,
+            notification = focusControls.focusedNotification,
             fallbackLabel = label,
             group = presentation.group,
             focusControls = focusControls,
@@ -310,6 +311,7 @@ private data class NotificationPrototypeHeroPresentation(
 )
 
 private data class NotificationFocusControls(
+    val focusedNotification: LauncherNotification,
     val canFocusPrevious: Boolean,
     val canFocusNext: Boolean,
     val onFocusPrevious: () -> Unit,
