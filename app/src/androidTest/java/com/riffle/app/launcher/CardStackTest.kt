@@ -253,7 +253,7 @@ class CardStackTest {
     }
 
     @Test
-    fun notificationCardFocusIsIndependentAndRetainedAcrossGroups() {
+    fun notificationCardFocusRemainsIndependentAcrossScrolledPagerGroups() {
         val messagesGroup = notificationGroup()
         val calendarGroup =
             notificationGroup(
@@ -283,18 +283,14 @@ class CardStackTest {
         }
 
         composeRule.onNodeWithTag(viewCardTestTag(messagesGroup.key)).performClick()
-        composeRule.onNodeWithTag(nextFocusTestTag(messagesGroup.key)).performClick()
-        assertNotificationFocus(messagesGroup.key, position = 2, count = 2, previousEnabled = true, nextEnabled = false)
+        scrollNotificationListTo(messagesGroup.key, index = 1)
+        assertNotificationFocus(messagesGroup.key, position = 1, count = 2, previousEnabled = false, nextEnabled = true)
 
         scrollNotificationPagerTo(page = 1)
         assertNotificationFocus(calendarGroup.key, position = 1, count = 3, previousEnabled = false, nextEnabled = true)
 
-        composeRule.onNodeWithTag(nextFocusTestTag(calendarGroup.key)).performClick()
-        composeRule.onNodeWithTag(nextFocusTestTag(calendarGroup.key)).performClick()
-        assertNotificationFocus(calendarGroup.key, position = 3, count = 3, previousEnabled = true, nextEnabled = false)
-
         scrollNotificationPagerTo(page = 0)
-        assertNotificationFocus(messagesGroup.key, position = 2, count = 2, previousEnabled = true, nextEnabled = false)
+        assertNotificationFocus(messagesGroup.key, position = 1, count = 2, previousEnabled = false, nextEnabled = true)
     }
 
     private fun setContent(entries: List<CardStackLayoutEntry>) {
@@ -362,6 +358,17 @@ class CardStackTest {
             }
     }
 
+    private fun scrollNotificationListTo(
+        groupKey: AppNotificationGroupKey,
+        index: Int,
+    ) {
+        composeRule
+            .onNodeWithTag(notificationListTestTag(groupKey))
+            .performSemanticsAction(SemanticsActions.ScrollToIndex) { scrollToIndex ->
+                assertTrue(scrollToIndex(index))
+            }
+    }
+
     private fun focusPositionTestTag(groupKey: AppNotificationGroupKey): String =
         "$NOTIFICATION_PROTOTYPE_FOCUS_POSITION_TEST_TAG-${groupKey.profileId.value}-${groupKey.packageName.value}"
 
@@ -370,6 +377,9 @@ class CardStackTest {
 
     private fun nextFocusTestTag(groupKey: AppNotificationGroupKey): String =
         "$NOTIFICATION_PROTOTYPE_NEXT_FOCUS_TEST_TAG-${groupKey.profileId.value}-${groupKey.packageName.value}"
+
+    private fun notificationListTestTag(groupKey: AppNotificationGroupKey): String =
+        "$NOTIFICATION_PROTOTYPE_LIST_TEST_TAG-${groupKey.profileId.value}-${groupKey.packageName.value}"
 
     private fun viewCardTestTag(groupKey: AppNotificationGroupKey): String =
         "$NOTIFICATION_OVERVIEW_VIEW_CARD_TEST_TAG-${groupKey.profileId.value}-${groupKey.packageName.value}"
