@@ -102,6 +102,53 @@ class WidgetEngineTest {
     }
 
     @Test
+    fun addsWidgetAtMinimumResizeSpanWhenPreferredSpanIsTooSmall() {
+        val result =
+            engine.addWidgetToSelectedPage(
+                layout = HomeLayoutDefaults.standard(),
+                hostedWidgetId = HostedWidgetId(42),
+                label = "Weather",
+                preferredSpan = GridSpan(columns = 1, rows = 1),
+                resizeConstraints =
+                    WidgetResizeConstraints(
+                        minSpan = GridSpan(columns = 2, rows = 1),
+                        maxSpan = GridSpan(columns = 4, rows = 1),
+                    ),
+            )
+
+        val updated = assertIs<WidgetEditResult.Updated>(result)
+        assertEquals(GridSpan(columns = 2, rows = 1), updated.placedSpan)
+        assertEquals(GridSpan(columns = 2, rows = 1), updated.layout.selectedPage.items.single().placement?.span)
+    }
+
+    @Test
+    fun rejectsWidgetWhenNoLegalResizeSpanFitsSelectedPage() {
+        val layout =
+            HomeLayoutDefaults.standard().copy(
+                pages =
+                    listOf(
+                        HomeLayoutDefaults.standard().selectedPage.copy(
+                            grid = GridDimensions(columns = 1, rows = 1),
+                        ),
+                    ),
+            )
+
+        val result =
+            engine.addWidgetToSelectedPage(
+                layout = layout,
+                hostedWidgetId = HostedWidgetId(42),
+                label = "Weather",
+                preferredSpan = GridSpan(columns = 1, rows = 1),
+                resizeConstraints = WidgetResizeConstraints(minSpan = GridSpan(columns = 2, rows = 1)),
+            )
+
+        assertEquals(
+            PlacementRejectionReason.NO_AVAILABLE_CELL,
+            assertIs<WidgetEditResult.Rejected>(result).reason,
+        )
+    }
+
+    @Test
     fun addsWidgetToRequestedCellWhenTargetIsAvailable() {
         val result =
             engine.addWidgetToSelectedPage(
@@ -263,6 +310,33 @@ class WidgetEngineTest {
             ),
             updated.layout.selectedPage.items.single().placement,
         )
+    }
+
+    @Test
+    fun rejectsResizeOutsidePersistedProviderConstraints() {
+        val widget =
+            WidgetItem(
+                id = LauncherItemId("widget:42"),
+                appWidgetId = HostedWidgetId(42),
+                label = "Weather",
+                resizeConstraints =
+                    WidgetResizeConstraints(
+                        minSpan = GridSpan(columns = 2, rows = 1),
+                        maxSpan = GridSpan(columns = 3, rows = 1),
+                        supportsHorizontalResize = true,
+                        supportsVerticalResize = false,
+                    ),
+                placement = GridPlacement(cell = GridCell(column = 0, row = 0), span = GridSpan(2, 1)),
+            )
+
+        val result =
+            engine.resizeWidgetOnSelectedPage(
+                HomeLayoutDefaults.standard().withSelectedPageItems(widget),
+                widget.id,
+                GridSpan(2, 2),
+            )
+
+        assertEquals(PlacementRejectionReason.OUT_OF_BOUNDS, assertIs<WidgetEditResult.Rejected>(result).reason)
     }
 
     @Test

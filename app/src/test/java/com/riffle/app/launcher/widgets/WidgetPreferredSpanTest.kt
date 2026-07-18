@@ -4,10 +4,36 @@ import com.riffle.core.domain.launcher.home.GridDimensions
 import com.riffle.core.domain.launcher.home.GridSpan
 import com.riffle.core.domain.launcher.widgets.WidgetProviderDimensions
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class WidgetPreferredSpanTest {
+    @Test
+    fun resizeConstraintsRespectProviderAxesAndGridRelativeMinimumAndMaximum() {
+        val constraints =
+            WidgetProviderDimensions(
+                minWidthDp = 100,
+                minHeightDp = 100,
+                minResizeWidthDp = 200,
+                minResizeHeightDp = 100,
+                maxResizeWidthDp = 300,
+                maxResizeHeightDp = 400,
+            ).resizeConstraints(
+                grid = GridDimensions(columns = 4, rows = 4),
+                availableWidthDp = 400,
+                availableHeightDp = 400,
+                supportsHorizontalResize = true,
+                supportsVerticalResize = false,
+            )
+
+        assertEquals(GridSpan(columns = 2, rows = 1), constraints.minSpan)
+        assertEquals(GridSpan(columns = 3, rows = 1), constraints.maxSpan)
+        assertTrue(constraints.supportsHorizontalResize)
+        assertFalse(constraints.supportsVerticalResize)
+    }
+
     @Test
     fun calculatesPreferredSpanFromProviderDimensionsAndAvailableGridSize() {
         val span =

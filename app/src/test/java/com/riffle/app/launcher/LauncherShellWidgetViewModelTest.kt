@@ -11,6 +11,7 @@ import com.riffle.core.domain.launcher.home.HomeLayoutRepository
 import com.riffle.core.domain.launcher.home.HostedWidgetId
 import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.home.WidgetItem
+import com.riffle.core.domain.launcher.home.WidgetResizeConstraints
 import com.riffle.core.domain.launcher.widgets.InstalledWidgetProvider
 import com.riffle.core.domain.launcher.widgets.InstalledWidgetProviderRepository
 import com.riffle.core.domain.launcher.widgets.WidgetProviderClassName
@@ -191,6 +192,33 @@ class LauncherShellWidgetViewModelTest {
             ),
             viewModel.state.value.homeLayout.selectedPage.items.single(),
         )
+        assertEquals(viewModel.state.value.homeLayout, repository.savedLayout)
+    }
+
+    @Test
+    fun bindingWidgetToHomeUsesPersistedMinimumResizeSpan() {
+        val repository = FakeHomeLayoutRepository()
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                homeLayoutRepository = repository,
+            )
+
+        viewModel.onHomeShortcutEdited(
+            LauncherShellAction.AddHostedWidgetToHome(
+                hostedWidgetId = HostedWidgetId(42),
+                label = "Weather",
+                preferredSpan = GridSpan(columns = 1, rows = 1),
+                resizeConstraints =
+                    WidgetResizeConstraints(
+                        minSpan = GridSpan(columns = 2, rows = 1),
+                        maxSpan = GridSpan(columns = 4, rows = 1),
+                    ),
+            ),
+        )
+
+        val widget = viewModel.state.value.homeLayout.selectedPage.items.single() as WidgetItem
+        assertEquals(GridSpan(columns = 2, rows = 1), widget.placement?.span)
         assertEquals(viewModel.state.value.homeLayout, repository.savedLayout)
     }
 

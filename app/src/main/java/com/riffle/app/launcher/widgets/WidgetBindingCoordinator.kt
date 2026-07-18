@@ -5,6 +5,7 @@ import com.riffle.app.launcher.LauncherShellAction
 import com.riffle.app.launcher.WidgetAddTarget
 import com.riffle.core.domain.launcher.home.GridDimensions
 import com.riffle.core.domain.launcher.home.HostedWidgetId
+import com.riffle.core.domain.launcher.home.WidgetResizeConstraints
 import com.riffle.core.domain.launcher.widgets.WidgetProviderIdentity
 
 class WidgetBindingCoordinator(
@@ -50,6 +51,18 @@ class WidgetBindingCoordinator(
                 availableWidthDp = availableWidthDp,
                 availableHeightDp = availableHeightDp,
             )
+        val resizeConstraints =
+            if (action.supportsHorizontalResize == null && action.supportsVerticalResize == null) {
+                WidgetResizeConstraints()
+            } else {
+                action.dimensions.resizeConstraints(
+                    grid = grid,
+                    availableWidthDp = availableWidthDp,
+                    availableHeightDp = availableHeightDp,
+                    supportsHorizontalResize = action.supportsHorizontalResize == true,
+                    supportsVerticalResize = action.supportsVerticalResize == true,
+                )
+            }
 
         return when (widgetHostGateway.bindHostedWidget(hostedWidgetId, action.provider)) {
             WidgetBindingResult.Bound -> {
@@ -59,6 +72,7 @@ class WidgetBindingCoordinator(
                         provider = action.provider,
                         label = action.label,
                         preferredSpan = preferredSpan,
+                        resizeConstraints = resizeConstraints,
                         target = action.target,
                         step = PendingWidgetAddStep.CONFIGURATION,
                         createdAtEpochMillis = epochMillisProvider(),
@@ -88,6 +102,7 @@ class WidgetBindingCoordinator(
                         provider = action.provider,
                         label = action.label,
                         preferredSpan = preferredSpan,
+                        resizeConstraints = resizeConstraints,
                         target = action.target,
                         step = PendingWidgetAddStep.PERMISSION,
                         createdAtEpochMillis = epochMillisProvider(),
@@ -220,6 +235,7 @@ class WidgetBindingCoordinator(
                     hostedWidgetId = hostedWidgetId,
                     label = label,
                     preferredSpan = preferredSpan,
+                    resizeConstraints = resizeConstraints,
                 )
 
             WidgetAddTarget.DOCK ->

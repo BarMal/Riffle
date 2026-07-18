@@ -36,6 +36,7 @@ data class WidgetItem(
     override val id: LauncherItemId,
     val appWidgetId: HostedWidgetId,
     val label: String,
+    val resizeConstraints: WidgetResizeConstraints = WidgetResizeConstraints(),
     override val placement: GridPlacement? = null,
 ) : LauncherItem {
     override fun withPlacement(placement: GridPlacement): LauncherItem = copy(placement = placement)
@@ -43,3 +44,16 @@ data class WidgetItem(
 
 @JvmInline
 value class HostedWidgetId(val value: Int)
+
+/** The persisted, grid-relative provider contract for a hosted widget. */
+data class WidgetResizeConstraints(
+    val minSpan: GridSpan = GridSpan(),
+    val maxSpan: GridSpan? = null,
+    val supportsHorizontalResize: Boolean = true,
+    val supportsVerticalResize: Boolean = true,
+) {
+    fun permits(span: GridSpan): Boolean =
+        span.columns >= minSpan.columns &&
+            span.rows >= minSpan.rows &&
+            (maxSpan == null || (span.columns <= maxSpan.columns && span.rows <= maxSpan.rows))
+}

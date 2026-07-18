@@ -345,6 +345,8 @@ internal fun InstalledWidgetProvider.requestAddWidgetAction(
         provider = identity,
         label = label,
         dimensions = dimensions,
+        supportsHorizontalResize = supportsHorizontalResize,
+        supportsVerticalResize = supportsVerticalResize,
         target = target,
     )
 

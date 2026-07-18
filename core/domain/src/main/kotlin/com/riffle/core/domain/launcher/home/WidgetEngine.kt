@@ -8,6 +8,7 @@ class WidgetEngine(
         hostedWidgetId: HostedWidgetId,
         label: String,
         preferredSpan: GridSpan = GridSpan(),
+        resizeConstraints: WidgetResizeConstraints = WidgetResizeConstraints(),
         targetCell: GridCell? = null,
     ): WidgetEditResult =
         when {
@@ -22,9 +23,10 @@ class WidgetEngine(
                     id = LauncherItemId("widget:${hostedWidgetId.value}"),
                     appWidgetId = hostedWidgetId,
                     label = label.ifBlank { DEFAULT_WIDGET_LABEL },
+                    resizeConstraints = resizeConstraints,
                 ).let { widget ->
                     preferredSpan
-                        .placementCandidates()
+                        .placementCandidates(resizeConstraints)
                         .map { span ->
                             span to
                                 if (targetCell == null) {
@@ -62,23 +64,27 @@ class WidgetEngine(
         itemId: LauncherItemId,
         span: GridSpan,
     ): WidgetEditResult =
-        when (layout.selectedPage.items.firstOrNull { item -> item.id == itemId }) {
+        when (val widget = layout.selectedPage.items.firstOrNull { item -> item.id == itemId }) {
             null, !is WidgetItem -> WidgetEditResult.Rejected(PlacementRejectionReason.ITEM_NOT_FOUND)
 
             else ->
-                when (
-                    val result =
-                        gridPlacementEngine.resizeItem(
-                            page = layout.selectedPage,
-                            itemId = itemId,
-                            span = span.coerceAtLeastOneCell(),
-                        )
-                ) {
-                    is PlaceLauncherItemResult.Placed ->
-                        WidgetEditResult.Updated(layout.withUpdatedSelectedPage(result.page))
+                if (!widget.resizeConstraints.permits(span.coerceAtLeastOneCell())) {
+                    WidgetEditResult.Rejected(PlacementRejectionReason.OUT_OF_BOUNDS)
+                } else {
+                    when (
+                        val result =
+                            gridPlacementEngine.resizeItem(
+                                page = layout.selectedPage,
+                                itemId = itemId,
+                                span = span.coerceAtLeastOneCell(),
+                            )
+                    ) {
+                        is PlaceLauncherItemResult.Placed ->
+                            WidgetEditResult.Updated(layout.withUpdatedSelectedPage(result.page))
 
-                    is PlaceLauncherItemResult.Rejected ->
-                        WidgetEditResult.Rejected(result.reason)
+                        is PlaceLauncherItemResult.Rejected ->
+                            WidgetEditResult.Rejected(result.reason)
+                    }
                 }
         }
 
@@ -108,19 +114,26 @@ private fun HomeLayout.hasHostedWidget(hostedWidgetId: HostedWidgetId): Boolean 
         .filterIsInstance<WidgetItem>()
         .any { widget -> widget.appWidgetId == hostedWidgetId }
 
-private fun GridSpan.placementCandidates(): List<GridSpan> =
-    coerceAtLeastOneCell().let { preferredSpan ->
+private fun GridSpan.placementCandidates(resizeConstraints: WidgetResizeConstraints): List<GridSpan> =
+    coerceAtLeastOneCell().coerceAtLeast(resizeConstraints.minSpan).let { preferredSpan ->
         (preferredSpan.columns downTo 1).flatMap { columns ->
             (preferredSpan.rows downTo 1).map { rows ->
                 GridSpan(columns = columns, rows = rows)
             }
         }.distinct()
+            .filter(resizeConstraints::permits)
             .sortedWith(
                 compareBy<GridSpan> { span -> preferredSpan.area - span.area }
                     .thenBy { span -> preferredSpan.columns - span.columns }
                     .thenBy { span -> preferredSpan.rows - span.rows },
             )
     }
+
+private fun GridSpan.coerceAtLeast(minimum: GridSpan): GridSpan =
+    GridSpan(
+        columns = maxOf(columns, minimum.columns),
+        rows = maxOf(rows, minimum.rows),
+    )
 
 private val GridSpan.area: Int
     get() = columns * rows

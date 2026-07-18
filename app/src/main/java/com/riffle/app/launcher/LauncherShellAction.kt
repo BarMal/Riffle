@@ -24,6 +24,7 @@ import com.riffle.core.domain.launcher.home.LauncherTemplateId
 import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.home.WallpaperScrollMode
 import com.riffle.core.domain.launcher.home.WallpaperSource
+import com.riffle.core.domain.launcher.home.WidgetResizeConstraints
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
 import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
 import com.riffle.core.domain.launcher.settings.HomeGesture
@@ -258,6 +259,8 @@ sealed interface LauncherShellAction {
         val provider: WidgetProviderIdentity,
         val label: String,
         val dimensions: WidgetProviderDimensions,
+        val supportsHorizontalResize: Boolean? = null,
+        val supportsVerticalResize: Boolean? = null,
         val target: WidgetAddTarget = WidgetAddTarget.HOME,
     ) : LauncherShellAction
 
@@ -265,6 +268,7 @@ sealed interface LauncherShellAction {
         override val hostedWidgetId: HostedWidgetId,
         override val label: String,
         val preferredSpan: GridSpan = GridSpan(),
+        val resizeConstraints: WidgetResizeConstraints = WidgetResizeConstraints(),
         val targetCell: GridCell? = null,
     ) : LauncherShellAction,
         HostedWidgetAddAction
