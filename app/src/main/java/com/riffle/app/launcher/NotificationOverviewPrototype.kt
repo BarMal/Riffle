@@ -188,7 +188,6 @@ internal fun NotificationGroupPrototype(
 
 internal const val NOTIFICATION_PROTOTYPE_CENTER_STAGE_TEST_TAG = "notification-prototype-center-stage"
 internal const val NOTIFICATION_PROTOTYPE_SIDE_BY_SIDE_TEST_TAG = "notification-prototype-side-by-side"
-internal const val NOTIFICATION_PROTOTYPE_FOCUSED_CARD_TITLE_TEST_TAG = "notification-prototype-focused-card-title"
 
 internal fun notificationOverviewSelectedGroupIndex(
     groups: List<AppNotificationGroup>,
@@ -339,7 +338,6 @@ private fun BoxScope.NotificationPrototypeHeroDetails(
                 style = MaterialTheme.typography.headlineSmall,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.testTag(NOTIFICATION_PROTOTYPE_FOCUSED_CARD_TITLE_TEST_TAG),
             )
             Text(
                 text = notification.text.ifBlank { group.notificationOverviewMetadataLabel(fallbackLabel) },

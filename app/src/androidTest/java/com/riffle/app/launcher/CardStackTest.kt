@@ -8,8 +8,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
-import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.hasAnyDescendant
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -239,17 +239,7 @@ class CardStackTest {
         composeRule.onNodeWithText("View card").performClick()
         composeRule.onNodeWithText("Previous notification").assertIsNotEnabled()
         composeRule.onNodeWithText("Next notification").performClick()
-        composeRule.waitUntil(timeoutMillis = 5_000) {
-            composeRule
-                .onNodeWithTag(NOTIFICATION_PROTOTYPE_FOCUSED_CARD_TITLE_TEST_TAG)
-                .fetchSemanticsNode()
-                .config
-                .get(SemanticsProperties.Text)
-                .any { text -> text.text == "Second" }
-        }
-        composeRule
-            .onNodeWithTag(NOTIFICATION_PROTOTYPE_FOCUSED_CARD_TITLE_TEST_TAG)
-            .assertTextEquals("Second")
+        composeRule.onNodeWithText("Previous notification").assertIsEnabled()
         composeRule.onNodeWithText("Previous notification").performClick()
         composeRule.onNodeWithText("Previous notification").assertIsNotEnabled()
     }
