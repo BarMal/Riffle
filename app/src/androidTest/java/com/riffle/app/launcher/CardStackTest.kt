@@ -244,9 +244,8 @@ class CardStackTest {
                 .onNodeWithTag(NOTIFICATION_PROTOTYPE_FOCUSED_CARD_TITLE_TEST_TAG)
                 .fetchSemanticsNode()
                 .config
-                .getOrNull(SemanticsProperties.Text)
-                ?.any { text -> text.text == "Second" }
-                ?: false
+                .get(SemanticsProperties.Text)
+                .any { text -> text.text == "Second" }
         }
         composeRule
             .onNodeWithTag(NOTIFICATION_PROTOTYPE_FOCUSED_CARD_TITLE_TEST_TAG)
