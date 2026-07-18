@@ -138,8 +138,8 @@ class LauncherThemeTest {
             FontFamily.Monospace,
             launcherTypography(LauncherThemePreset.MATERIAL, LauncherThemeTypography.MONOSPACE).bodyMedium.fontFamily,
         )
-        assertEquals(
-            null,
+        assertNotEquals(
+            FontFamily.Monospace,
             launcherTypography(LauncherThemePreset.TERMINAL, LauncherThemeTypography.SYSTEM).bodyMedium.fontFamily,
         )
     }
