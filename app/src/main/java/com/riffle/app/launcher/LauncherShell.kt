@@ -154,7 +154,8 @@ private fun PreviewSetupCard(
                 style = MaterialTheme.typography.titleLarge,
             )
             Text(
-                text = "Explore your apps and settings first. Set Riffle as your Home app when you are ready.",
+                text =
+                    "Explore your apps and settings first. While previewing, pressing your device Home button may return to your current default launcher.",
                 style = MaterialTheme.typography.bodyMedium,
             )
             Button(onClick = onSetHome) {
