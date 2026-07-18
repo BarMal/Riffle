@@ -117,8 +117,11 @@ fun NotificationOverviewSurface(
                         presentation = presentation,
                         onBack = { selectedGroupKey = null },
                         onGroupChanged = { groupKey ->
+                            val groupChanged = selectedGroupKey != groupKey
                             selectedGroupKey = groupKey
-                            focusedNotificationIndex = 0
+                            if (groupChanged) {
+                                focusedNotificationIndex = 0
+                            }
                         },
                         onAction = onAction,
                     )
