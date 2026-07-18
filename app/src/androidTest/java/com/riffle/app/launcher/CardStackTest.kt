@@ -29,6 +29,7 @@ import com.riffle.core.domain.launcher.cards.CardStackLayoutEntry
 import com.riffle.core.domain.launcher.cards.CardStackLayoutPolicy
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
+import com.riffle.core.domain.launcher.notifications.AppNotificationGroupKey
 import com.riffle.core.domain.launcher.notifications.LauncherNotification
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
@@ -223,10 +224,11 @@ class CardStackTest {
 
     @Test
     fun notificationCardFocusControlsExposeInitialPositionAndBoundaries() {
+        val group = notificationGroup()
         composeRule.setContent {
             MaterialTheme {
                 NotificationOverviewSurface(
-                    groups = listOf(notificationGroup()),
+                    groups = listOf(group),
                     categoryCounts = mapOf(NotificationCategory.MESSAGE to 2),
                     notificationAccessStatus = NotificationAccessStatus.GRANTED,
                     presentation =
@@ -242,30 +244,31 @@ class CardStackTest {
 
         composeRule.onNodeWithText("View card").performClick()
         composeRule
-            .onNodeWithTag(NOTIFICATION_PROTOTYPE_FOCUS_POSITION_TEST_TAG)
+            .onNodeWithTag(focusPositionTestTag(group.key))
             .assertTextEquals("Focused notification 1 of 2")
-        composeRule.onNodeWithTag(NOTIFICATION_PROTOTYPE_PREVIOUS_FOCUS_TEST_TAG).assertIsNotEnabled()
-        composeRule.onNodeWithTag(NOTIFICATION_PROTOTYPE_NEXT_FOCUS_TEST_TAG).assertIsEnabled()
+        composeRule
+            .onNodeWithTag(previousFocusTestTag(group.key))
+            .assertIsNotEnabled()
+        composeRule.onNodeWithTag(nextFocusTestTag(group.key)).assertIsEnabled()
     }
 
     @Test
     fun notificationCardFocusIsIndependentAndRetainedAcrossGroups() {
+        val messagesGroup = notificationGroup()
+        val calendarGroup =
+            notificationGroup(
+                packageName = "com.example.calendar",
+                notificationKeysAndTitles =
+                    listOf(
+                        "calendar-1" to "Today",
+                        "calendar-2" to "Tomorrow",
+                        "calendar-3" to "Next week",
+                    ),
+            )
         composeRule.setContent {
             MaterialTheme {
                 NotificationOverviewSurface(
-                    groups =
-                        listOf(
-                            notificationGroup(),
-                            notificationGroup(
-                                packageName = "com.example.calendar",
-                                notificationKeysAndTitles =
-                                    listOf(
-                                        "calendar-1" to "Today",
-                                        "calendar-2" to "Tomorrow",
-                                        "calendar-3" to "Next week",
-                                    ),
-                            ),
-                        ),
+                    groups = listOf(messagesGroup, calendarGroup),
                     categoryCounts = mapOf(NotificationCategory.MESSAGE to 5),
                     notificationAccessStatus = NotificationAccessStatus.GRANTED,
                     presentation =
@@ -280,18 +283,18 @@ class CardStackTest {
         }
 
         composeRule.onAllNodesWithText("View card")[0].performClick()
-        composeRule.onNodeWithTag(NOTIFICATION_PROTOTYPE_NEXT_FOCUS_TEST_TAG).performClick()
-        assertNotificationFocus(position = 2, count = 2, previousEnabled = true, nextEnabled = false)
+        composeRule.onNodeWithTag(nextFocusTestTag(messagesGroup.key)).performClick()
+        assertNotificationFocus(messagesGroup.key, position = 2, count = 2, previousEnabled = true, nextEnabled = false)
 
         composeRule.onNodeWithTag(NOTIFICATION_PROTOTYPE_PAGER_TEST_TAG).performTouchInput { swipeLeft() }
-        assertNotificationFocus(position = 1, count = 3, previousEnabled = false, nextEnabled = true)
+        assertNotificationFocus(calendarGroup.key, position = 1, count = 3, previousEnabled = false, nextEnabled = true)
 
-        composeRule.onNodeWithTag(NOTIFICATION_PROTOTYPE_NEXT_FOCUS_TEST_TAG).performClick()
-        composeRule.onNodeWithTag(NOTIFICATION_PROTOTYPE_NEXT_FOCUS_TEST_TAG).performClick()
-        assertNotificationFocus(position = 3, count = 3, previousEnabled = true, nextEnabled = false)
+        composeRule.onNodeWithTag(nextFocusTestTag(calendarGroup.key)).performClick()
+        composeRule.onNodeWithTag(nextFocusTestTag(calendarGroup.key)).performClick()
+        assertNotificationFocus(calendarGroup.key, position = 3, count = 3, previousEnabled = true, nextEnabled = false)
 
         composeRule.onNodeWithTag(NOTIFICATION_PROTOTYPE_PAGER_TEST_TAG).performTouchInput { swipeRight() }
-        assertNotificationFocus(position = 2, count = 2, previousEnabled = true, nextEnabled = false)
+        assertNotificationFocus(messagesGroup.key, position = 2, count = 2, previousEnabled = true, nextEnabled = false)
     }
 
     private fun setContent(entries: List<CardStackLayoutEntry>) {
@@ -323,6 +326,7 @@ class CardStackTest {
     private fun cardLabel(cardIndex: Int): String = "Card $cardIndex"
 
     private fun assertNotificationFocus(
+        groupKey: AppNotificationGroupKey,
         position: Int,
         count: Int,
         previousEnabled: Boolean,
@@ -332,7 +336,7 @@ class CardStackTest {
         composeRule.waitUntil(timeoutMillis = 5_000) {
             try {
                 composeRule
-                    .onNodeWithTag(NOTIFICATION_PROTOTYPE_FOCUS_POSITION_TEST_TAG)
+                    .onNodeWithTag(focusPositionTestTag(groupKey))
                     .assertTextEquals(expectedPosition)
                 true
             } catch (_: AssertionError) {
@@ -340,15 +344,24 @@ class CardStackTest {
             }
         }
         composeRule
-            .onNodeWithTag(NOTIFICATION_PROTOTYPE_FOCUS_POSITION_TEST_TAG)
+            .onNodeWithTag(focusPositionTestTag(groupKey))
             .assertTextEquals(expectedPosition)
         composeRule
-            .onNodeWithTag(NOTIFICATION_PROTOTYPE_PREVIOUS_FOCUS_TEST_TAG)
+            .onNodeWithTag(previousFocusTestTag(groupKey))
             .run { if (previousEnabled) assertIsEnabled() else assertIsNotEnabled() }
         composeRule
-            .onNodeWithTag(NOTIFICATION_PROTOTYPE_NEXT_FOCUS_TEST_TAG)
+            .onNodeWithTag(nextFocusTestTag(groupKey))
             .run { if (nextEnabled) assertIsEnabled() else assertIsNotEnabled() }
     }
+
+    private fun focusPositionTestTag(groupKey: AppNotificationGroupKey): String =
+        "$NOTIFICATION_PROTOTYPE_FOCUS_POSITION_TEST_TAG-${groupKey.profileId.value}-${groupKey.packageName.value}"
+
+    private fun previousFocusTestTag(groupKey: AppNotificationGroupKey): String =
+        "$NOTIFICATION_PROTOTYPE_PREVIOUS_FOCUS_TEST_TAG-${groupKey.profileId.value}-${groupKey.packageName.value}"
+
+    private fun nextFocusTestTag(groupKey: AppNotificationGroupKey): String =
+        "$NOTIFICATION_PROTOTYPE_NEXT_FOCUS_TEST_TAG-${groupKey.profileId.value}-${groupKey.packageName.value}"
 
     private fun notificationGroup(
         packageName: String = "com.example.messages",

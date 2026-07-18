@@ -319,6 +319,7 @@ private fun BoxScope.NotificationPrototypeHeroDetails(
     group: AppNotificationGroup,
     focusControls: NotificationFocusControls,
 ) {
+    val groupTestTagSuffix = "${group.profileId.value}-${group.packageName.value}"
     Surface(
         modifier =
             Modifier
@@ -347,20 +348,29 @@ private fun BoxScope.NotificationPrototypeHeroDetails(
             Text(
                 text = "Focused notification ${focusControls.focusedPosition} of ${focusControls.notificationCount}",
                 style = MaterialTheme.typography.labelMedium,
-                modifier = Modifier.testTag(NOTIFICATION_PROTOTYPE_FOCUS_POSITION_TEST_TAG),
+                modifier =
+                    Modifier.testTag(
+                        "$NOTIFICATION_PROTOTYPE_FOCUS_POSITION_TEST_TAG-$groupTestTagSuffix",
+                    ),
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 TextButton(
                     onClick = focusControls.onFocusPrevious,
                     enabled = focusControls.canFocusPrevious,
-                    modifier = Modifier.testTag(NOTIFICATION_PROTOTYPE_PREVIOUS_FOCUS_TEST_TAG),
+                    modifier =
+                        Modifier.testTag(
+                            "$NOTIFICATION_PROTOTYPE_PREVIOUS_FOCUS_TEST_TAG-$groupTestTagSuffix",
+                        ),
                 ) {
                     Text(text = "Previous notification")
                 }
                 TextButton(
                     onClick = focusControls.onFocusNext,
                     enabled = focusControls.canFocusNext,
-                    modifier = Modifier.testTag(NOTIFICATION_PROTOTYPE_NEXT_FOCUS_TEST_TAG),
+                    modifier =
+                        Modifier.testTag(
+                            "$NOTIFICATION_PROTOTYPE_NEXT_FOCUS_TEST_TAG-$groupTestTagSuffix",
+                        ),
                 ) {
                     Text(text = "Next notification")
                 }
