@@ -151,7 +151,24 @@ private fun PreviewSetupCard(
             modifier = Modifier.padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            val presentation = homeRoleStatus.previewHomeSetupPresentation()
+            val presentation =
+                when (homeRoleStatus) {
+                    HomeRoleStatus.DEFAULT_HOME ->
+                        PreviewHomeSetupPresentation(
+                            statusMessage = "Riffle is your Home app.",
+                            actionLabel = "Open Home settings",
+                        )
+                    HomeRoleStatus.NOT_DEFAULT_HOME ->
+                        PreviewHomeSetupPresentation(
+                            statusMessage = "Riffle is not your Home app yet.",
+                            actionLabel = "Set as Home app",
+                        )
+                    HomeRoleStatus.UNKNOWN ->
+                        PreviewHomeSetupPresentation(
+                            statusMessage = "Home app status is unavailable right now.",
+                            actionLabel = "Open Home settings",
+                        )
+                }
             Text(
                 text = "Preview Riffle",
                 style = MaterialTheme.typography.titleLarge,
@@ -175,22 +192,6 @@ private fun PreviewSetupCard(
         }
     }
 }
-
-private fun HomeRoleStatus.previewHomeSetupPresentation(): PreviewHomeSetupPresentation =
-    when (this) {
-        HomeRoleStatus.DEFAULT_HOME -> PreviewHomeSetupPresentation(
-            statusMessage = "Riffle is your Home app.",
-            actionLabel = "Open Home settings",
-        )
-        HomeRoleStatus.NOT_DEFAULT_HOME -> PreviewHomeSetupPresentation(
-            statusMessage = "Riffle is not your Home app yet.",
-            actionLabel = "Set as Home app",
-        )
-        HomeRoleStatus.UNKNOWN -> PreviewHomeSetupPresentation(
-            statusMessage = "Home app status is unavailable right now.",
-            actionLabel = "Open Home settings",
-        )
-    }
 
 private data class PreviewHomeSetupPresentation(
     val statusMessage: String,
