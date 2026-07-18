@@ -70,6 +70,7 @@ internal fun NotificationGroupPrototype(
             initialPage = selectedGroupIndex,
             pageCount = { groups.size },
         )
+    var focusedNotificationIndex by remember(selectedGroupKey) { mutableIntStateOf(0) }
 
     LaunchedEffect(groups, pagerState.currentPage) {
         groups.getOrNull(pagerState.currentPage)?.let { group ->
@@ -88,7 +89,6 @@ internal fun NotificationGroupPrototype(
         val app = presentation.apps.firstOrNull { installedApp -> installedApp.matches(group) }
         val listState = rememberLazyListState()
         val coroutineScope = rememberCoroutineScope()
-        var focusedNotificationIndex by remember(group.key) { mutableIntStateOf(0) }
         val activeNotificationIndex = focusedNotificationIndex.coerceIn(0, group.notifications.lastIndex)
         val focusedNotification =
             group.notifications.getOrNull(activeNotificationIndex) ?: return@HorizontalPager
@@ -188,6 +188,9 @@ internal fun NotificationGroupPrototype(
 
 internal const val NOTIFICATION_PROTOTYPE_CENTER_STAGE_TEST_TAG = "notification-prototype-center-stage"
 internal const val NOTIFICATION_PROTOTYPE_SIDE_BY_SIDE_TEST_TAG = "notification-prototype-side-by-side"
+internal const val NOTIFICATION_PROTOTYPE_FOCUSED_CARD_TITLE_TEST_TAG = "notification-prototype-focused-card-title"
+internal const val NOTIFICATION_PROTOTYPE_PREVIOUS_FOCUS_TEST_TAG = "notification-prototype-previous-focus"
+internal const val NOTIFICATION_PROTOTYPE_NEXT_FOCUS_TEST_TAG = "notification-prototype-next-focus"
 
 internal fun notificationOverviewSelectedGroupIndex(
     groups: List<AppNotificationGroup>,
@@ -338,6 +341,7 @@ private fun BoxScope.NotificationPrototypeHeroDetails(
                 style = MaterialTheme.typography.headlineSmall,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.testTag(NOTIFICATION_PROTOTYPE_FOCUSED_CARD_TITLE_TEST_TAG),
             )
             Text(
                 text = notification.text.ifBlank { group.notificationOverviewMetadataLabel(fallbackLabel) },
@@ -349,12 +353,14 @@ private fun BoxScope.NotificationPrototypeHeroDetails(
                 TextButton(
                     onClick = focusControls.onFocusPrevious,
                     enabled = focusControls.canFocusPrevious,
+                    modifier = Modifier.testTag(NOTIFICATION_PROTOTYPE_PREVIOUS_FOCUS_TEST_TAG),
                 ) {
                     Text(text = "Previous notification")
                 }
                 TextButton(
                     onClick = focusControls.onFocusNext,
                     enabled = focusControls.canFocusNext,
+                    modifier = Modifier.testTag(NOTIFICATION_PROTOTYPE_NEXT_FOCUS_TEST_TAG),
                 ) {
                     Text(text = "Next notification")
                 }
