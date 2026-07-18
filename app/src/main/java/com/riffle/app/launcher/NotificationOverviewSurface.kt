@@ -64,6 +64,7 @@ fun NotificationOverviewSurface(
 ) {
     var selectedCategory by remember { mutableStateOf<NotificationCategory?>(null) }
     var selectedGroupKey by remember { mutableStateOf<AppNotificationGroupKey?>(null) }
+    var focusedNotificationIndexes by remember { mutableStateOf(emptyMap<AppNotificationGroupKey, Int>()) }
     val categoryOptions = notificationCategoryFilterOptions(groups)
     val effectiveSelectedCategory =
         selectedCategory.takeIf { category -> categoryOptions.any { option -> option.category == category } }
@@ -108,6 +109,14 @@ fun NotificationOverviewSurface(
                         groups = visibleGroups,
                         selectedGroupKey = selectedGroup.key,
                         presentation = presentation,
+                        focusState =
+                            NotificationFocusState(
+                                indexes = focusedNotificationIndexes,
+                                onFocusChanged = { groupKey, index ->
+                                    focusedNotificationIndexes =
+                                        focusedNotificationIndexes + (groupKey to index)
+                                },
+                            ),
                         onBack = { selectedGroupKey = null },
                         onGroupChanged = { groupKey -> selectedGroupKey = groupKey },
                         onAction = onAction,
