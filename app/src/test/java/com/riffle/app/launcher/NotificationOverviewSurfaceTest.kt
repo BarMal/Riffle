@@ -2,6 +2,8 @@ package com.riffle.app.launcher
 
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppProfile
+import com.riffle.core.domain.launcher.cards.CardStackSurfaceLayout
+import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroupKey
 import com.riffle.core.domain.launcher.notifications.LauncherNotification
@@ -13,6 +15,18 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class NotificationOverviewSurfaceTest {
+    @Test
+    fun prototypeLayoutKeepsPhoneCardsCenterStageAndUsesWiderWindowContext() {
+        assertEquals(
+            CardStackSurfaceLayout.CENTER_STAGE,
+            notificationPrototypeSurfaceLayout(HomeLayoutDeviceClass.PHONE),
+        )
+        assertEquals(
+            CardStackSurfaceLayout.SIDE_BY_SIDE,
+            notificationPrototypeSurfaceLayout(HomeLayoutDeviceClass.FOLDABLE),
+        )
+    }
+
     @Test
     fun titleIncludesActiveNotificationCount() {
         assertEquals(

@@ -12,6 +12,7 @@ import androidx.compose.ui.test.hasAnyDescendant
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -20,6 +21,7 @@ import com.riffle.core.domain.launcher.apps.AppProfile
 import com.riffle.core.domain.launcher.cards.CardStackAnimationProfile
 import com.riffle.core.domain.launcher.cards.CardStackLayoutEntry
 import com.riffle.core.domain.launcher.cards.CardStackLayoutPolicy
+import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
 import com.riffle.core.domain.launcher.notifications.LauncherNotification
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
@@ -186,6 +188,31 @@ class CardStackTest {
                 ) and SemanticsMatcher.expectValue(CardStackMotionModeKey, CardStackMotionMode.SNAP),
                 useUnmergedTree = true,
             ).assertExists()
+    }
+
+    @Test
+    fun wideCardsPlaceFocusedStageBesideNotificationContent() {
+        composeRule.setContent {
+            MaterialTheme {
+                NotificationOverviewSurface(
+                    groups = listOf(notificationGroup()),
+                    categoryCounts = mapOf(NotificationCategory.MESSAGE to 2),
+                    notificationAccessStatus = NotificationAccessStatus.GRANTED,
+                    presentation =
+                        NotificationOverviewPresentation(
+                            apps = emptyList(),
+                            appIconLoader = EmptyAppIconLoader,
+                            reducedMotion = true,
+                            deviceClass = HomeLayoutDeviceClass.DESKTOP,
+                        ),
+                    onAction = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("View card").performClick()
+
+        composeRule.onNodeWithTag(NOTIFICATION_PROTOTYPE_SIDE_BY_SIDE_TEST_TAG).assertExists()
     }
 
     private fun setContent(entries: List<CardStackLayoutEntry>) {
