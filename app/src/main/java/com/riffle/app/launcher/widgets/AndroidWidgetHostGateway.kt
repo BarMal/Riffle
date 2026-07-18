@@ -216,7 +216,7 @@ private fun AndroidWidgetProviderBindingTarget.toComponentName(): ComponentName 
 private fun ComponentName.toAndroidBindingTarget(): AndroidWidgetProviderBindingTarget =
     AndroidWidgetProviderBindingTarget(packageName, className)
 
-internal fun WidgetSizeOptions.toAppWidgetOptions(): Bundle =
+private fun WidgetSizeOptions.toAppWidgetOptions(): Bundle =
     Bundle().apply {
         putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, minWidthDp)
         putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, minHeightDp)

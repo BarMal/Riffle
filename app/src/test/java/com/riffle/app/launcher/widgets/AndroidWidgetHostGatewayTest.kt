@@ -1,6 +1,5 @@
 package com.riffle.app.launcher.widgets
 
-import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProviderInfo
 import android.content.Context
 import android.content.ContextWrapper
@@ -167,19 +166,9 @@ class AndroidWidgetHostGatewayTest {
             ),
             platform.updatedWidgetOptions,
         )
-    }
-
-    @Test
-    fun serializesHomeScreenHostCategoryWithWidgetSizeOptions() {
-        val options =
-            WidgetSizeOptions(
-                minWidthDp = 240,
-                minHeightDp = 120,
-            ).toAppWidgetOptions()
-
         assertEquals(
             AppWidgetProviderInfo.WIDGET_CATEGORY_HOME_SCREEN,
-            options.getInt(AppWidgetManager.OPTION_APPWIDGET_HOST_CATEGORY),
+            platform.updatedWidgetOptions.first().second.hostCategory,
         )
     }
 
