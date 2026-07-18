@@ -138,6 +138,8 @@ class WidgetPickerDialogTest {
                 provider = provider.identity,
                 label = "Clock",
                 dimensions = provider.dimensions,
+                supportsHorizontalResize = provider.supportsHorizontalResize,
+                supportsVerticalResize = provider.supportsVerticalResize,
             ),
             provider.requestAddWidgetAction(),
         )
@@ -152,6 +154,8 @@ class WidgetPickerDialogTest {
                 provider = provider.identity,
                 label = "Clock",
                 dimensions = provider.dimensions,
+                supportsHorizontalResize = provider.supportsHorizontalResize,
+                supportsVerticalResize = provider.supportsVerticalResize,
                 target = WidgetAddTarget.DOCK,
             ),
             provider.requestAddWidgetAction(WidgetAddTarget.DOCK),
