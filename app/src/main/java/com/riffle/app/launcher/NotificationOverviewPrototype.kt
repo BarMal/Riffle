@@ -112,12 +112,7 @@ internal fun NotificationGroupPrototype(
         val notificationList: @Composable (Modifier) -> Unit = { modifier ->
             LazyColumn(
                 state = listState,
-                modifier =
-                    modifier
-                        .fillMaxWidth()
-                        .testTag(
-                            "$NOTIFICATION_PROTOTYPE_LIST_TEST_TAG-${group.profileId.value}-${group.packageName.value}",
-                        ),
+                modifier = modifier.fillMaxWidth(),
                 contentPadding = PaddingValues(vertical = 4.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -188,7 +183,6 @@ internal const val NOTIFICATION_PROTOTYPE_PAGER_TEST_TAG = "notification-prototy
 internal const val NOTIFICATION_PROTOTYPE_FOCUS_POSITION_TEST_TAG = "notification-prototype-focus-position"
 internal const val NOTIFICATION_PROTOTYPE_PREVIOUS_FOCUS_TEST_TAG = "notification-prototype-previous-focus"
 internal const val NOTIFICATION_PROTOTYPE_NEXT_FOCUS_TEST_TAG = "notification-prototype-next-focus"
-internal const val NOTIFICATION_PROTOTYPE_LIST_TEST_TAG = "notification-prototype-list"
 
 internal fun notificationOverviewSelectedGroupIndex(
     groups: List<AppNotificationGroup>,
