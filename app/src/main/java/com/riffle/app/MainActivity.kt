@@ -232,8 +232,7 @@ class MainActivity : ComponentActivity() {
     private val activityActionHandler by lazy {
         LauncherActivityActionHandler(
             requestDefaultHome = {
-                shellViewModel.onDefaultHomeRequestStarted()
-                requestHomeRole.launch(homeRoleGateway.createHomeRoleRequestIntent())
+                requestDefaultHomeRole()
             },
             navigate = shellViewModel::onNavigationActionSelected,
             editHomePage = shellViewModel::onHomePageEdited,
@@ -241,6 +240,27 @@ class MainActivity : ComponentActivity() {
             editDock = shellViewModel::onDockEdited,
         )
     }
+
+    private fun requestDefaultHomeRole() {
+        val intent = homeRoleGateway.createResolvableHomeRoleRequestIntent()
+        if (intent == null) {
+            showHomeRoleRequestUnavailable()
+            return
+        }
+
+        shellViewModel.onDefaultHomeRequestStarted()
+        runCatching { requestHomeRole.launch(intent) }
+            .onFailure {
+                Log.w(FOLDABLE_LAYOUT_LOG_TAG, "Home role request could not be launched", it)
+                refreshPlatformStatuses()
+                showHomeRoleRequestUnavailable()
+            }
+    }
+
+    private fun showHomeRoleRequestUnavailable() {
+        Toast.makeText(this, "Home app settings are unavailable on this device.", Toast.LENGTH_SHORT).show()
+    }
+
     private val launcherActionRouter by lazy {
         LauncherActionRouter(
             activityActionHandler = activityActionHandler,

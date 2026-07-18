@@ -1,11 +1,24 @@
 package com.riffle.app.launcher
 
+import android.content.Intent
 import com.riffle.core.domain.launcher.HomeRoleStatus
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 
 class AndroidHomeRoleGatewayTest {
+    @Test
+    fun keepsAResolvableHomeRoleRequestIntent() {
+        val intent = Intent("request-home-role")
+
+        assertEquals(intent, homeRoleRequestIntentIfResolvable(intent, isResolvable = true))
+    }
+
+    @Test
+    fun hidesAnUnresolvableHomeRoleRequestIntent() {
+        assertNull(homeRoleRequestIntentIfResolvable(Intent("request-home-role"), isResolvable = false))
+    }
+
     @Test
     fun reportsDefaultHomeWhenHomeRoleIsHeld() {
         assertEquals(

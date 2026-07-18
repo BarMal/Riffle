@@ -31,6 +31,14 @@ class AndroidHomeRoleGateway(
             Intent(Settings.ACTION_HOME_SETTINGS)
         }
 
+    fun createResolvableHomeRoleRequestIntent(): Intent? {
+        val intent = createHomeRoleRequestIntent()
+        return homeRoleRequestIntentIfResolvable(
+            intent = intent,
+            isResolvable = intent.resolveActivity(context.packageManager) != null,
+        )
+    }
+
     private fun homeRoleStatusFromRoleManager(): HomeRoleStatus? =
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             context.getSystemService(RoleManager::class.java)
@@ -85,3 +93,8 @@ internal fun homeRoleStatus(
         roleManagerStatus == HomeRoleStatus.NOT_DEFAULT_HOME -> HomeRoleStatus.UNKNOWN
         else -> resolvedDefaultHomeStatus
     }
+
+internal fun homeRoleRequestIntentIfResolvable(
+    intent: Intent,
+    isResolvable: Boolean,
+): Intent? = intent.takeIf { isResolvable }
