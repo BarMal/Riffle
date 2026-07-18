@@ -1,5 +1,6 @@
 package com.riffle.app.launcher.widgets
 
+import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProviderInfo
 import android.content.Context
 import android.content.ContextWrapper
