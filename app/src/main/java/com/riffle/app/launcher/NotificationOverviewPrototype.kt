@@ -29,6 +29,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -83,7 +84,7 @@ internal fun NotificationGroupPrototype(
         val app = presentation.apps.firstOrNull { installedApp -> installedApp.matches(group) }
         val listState = rememberLazyListState()
         val activeNotificationIndex =
-            (focusState.indexes[group.key] ?: 0).coerceIn(0, group.notifications.lastIndex)
+            (focusState.indexes.value[group.key] ?: 0).coerceIn(0, group.notifications.lastIndex)
         val focusedNotification =
             group.notifications.getOrNull(activeNotificationIndex) ?: return@HorizontalPager
         val upcomingNotification =
@@ -302,7 +303,7 @@ private data class NotificationPrototypeHeroPresentation(
 )
 
 internal data class NotificationFocusState(
-    val indexes: Map<AppNotificationGroupKey, Int>,
+    val indexes: State<Map<AppNotificationGroupKey, Int>>,
     val onFocusChanged: (AppNotificationGroupKey, Int) -> Unit,
 )
 
