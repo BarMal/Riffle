@@ -329,16 +329,7 @@ class CardStackTest {
         nextEnabled: Boolean,
     ) {
         val expectedPosition = "Focused notification $position of $count"
-        composeRule.waitUntil(timeoutMillis = 5_000) {
-            try {
-                composeRule
-                    .onNodeWithTag(focusPositionTestTag(groupKey))
-                    .assertTextEquals(expectedPosition)
-                true
-            } catch (_: AssertionError) {
-                false
-            }
-        }
+        composeRule.waitForIdle()
         composeRule
             .onNodeWithTag(focusPositionTestTag(groupKey))
             .assertTextEquals(expectedPosition)
