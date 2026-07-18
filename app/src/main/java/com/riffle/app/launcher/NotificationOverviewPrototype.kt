@@ -31,7 +31,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -51,7 +50,6 @@ import com.riffle.core.domain.launcher.cards.CardStackSurfaceLayoutPolicy
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroupKey
 import com.riffle.core.domain.launcher.notifications.LauncherNotification
-import kotlinx.coroutines.launch
 
 @Composable
 @Suppress("LongMethod")
@@ -65,7 +63,6 @@ internal fun NotificationGroupPrototype(
 ) {
     val selectedGroupIndex = notificationOverviewSelectedGroupIndex(groups, selectedGroupKey)
     val listState = rememberLazyListState()
-    val coroutineScope = rememberCoroutineScope()
     val pagerState =
         rememberPagerState(
             initialPage = selectedGroupIndex,
@@ -99,14 +96,10 @@ internal fun NotificationGroupPrototype(
                 canFocusPrevious = activeNotificationIndex > 0,
                 canFocusNext = activeNotificationIndex < group.notifications.lastIndex,
                 onFocusPrevious = {
-                    coroutineScope.launch {
-                        listState.scrollToItem(activeNotificationIndex - 1)
-                    }
+                    listState.requestScrollToItem(activeNotificationIndex - 1)
                 },
                 onFocusNext = {
-                    coroutineScope.launch {
-                        listState.scrollToItem(activeNotificationIndex + 1)
-                    }
+                    listState.requestScrollToItem(activeNotificationIndex + 1)
                 },
             )
         val swipeProgress =
