@@ -1,10 +1,10 @@
 package com.riffle.app.launcher
 
+import com.riffle.core.domain.launcher.home.GridSpan
 import com.riffle.core.domain.launcher.home.HostedWidgetId
 import com.riffle.core.domain.launcher.home.LauncherItemId
-import com.riffle.core.domain.launcher.home.WidgetItem
 import com.riffle.core.domain.launcher.home.WidgetResizeConstraints
-import com.riffle.core.domain.launcher.home.GridSpan
+import com.riffle.core.domain.launcher.home.WidgetItem
 import org.json.JSONObject
 
 fun encodeWidget(widget: WidgetItem): JSONObject =
@@ -32,9 +32,10 @@ fun JSONObject.toWidget(): WidgetItem =
         resizeConstraints =
             WidgetResizeConstraints(
                 minSpan = GridSpan(optInt("minColumns", 1), optInt("minRows", 1)),
-                maxSpan = optInt("maxColumns", 0).takeIf { it > 0 }?.let { columns ->
-                    GridSpan(columns, optInt("maxRows", 0).coerceAtLeast(1))
-                },
+                maxSpan =
+                    optInt("maxColumns", 0).takeIf { it > 0 }?.let { columns ->
+                        GridSpan(columns, optInt("maxRows", 0).coerceAtLeast(1))
+                    },
                 supportsHorizontalResize = optBoolean("supportsHorizontalResize", true),
                 supportsVerticalResize = optBoolean("supportsVerticalResize", true),
             ),

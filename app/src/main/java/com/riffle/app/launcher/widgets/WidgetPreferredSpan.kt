@@ -30,12 +30,16 @@ fun WidgetProviderDimensions.resizeConstraints(
 ): WidgetResizeConstraints {
     val preferred = preferredGridSpan(grid, availableWidthDp, availableHeightDp)
     val minimum = GridSpan(
-        columns = (minResizeWidthDp ?: minWidthDp).spanCells(availableWidthDp, grid.columns),
-        rows = (minResizeHeightDp ?: minHeightDp).spanCells(availableHeightDp, grid.rows),
+        columns =
+            (minResizeWidthDp ?: minWidthDp).spanCells(availableWidthDp, grid.columns),
+        rows =
+            (minResizeHeightDp ?: minHeightDp).spanCells(availableHeightDp, grid.rows),
     ).fitWidgetPreferredSpan(grid)
     val maximum = GridSpan(
-        columns = (maxResizeWidthDp ?: availableWidthDp).spanCells(availableWidthDp, grid.columns),
-        rows = (maxResizeHeightDp ?: availableHeightDp).spanCells(availableHeightDp, grid.rows),
+        columns =
+            (maxResizeWidthDp ?: availableWidthDp).spanCells(availableWidthDp, grid.columns),
+        rows =
+            (maxResizeHeightDp ?: availableHeightDp).spanCells(availableHeightDp, grid.rows),
     ).fitWidgetPreferredSpan(grid)
     return WidgetResizeConstraints(
         minSpan = GridSpan(
@@ -43,8 +47,10 @@ fun WidgetProviderDimensions.resizeConstraints(
             rows = if (supportsVerticalResize) minimum.rows else preferred.rows,
         ),
         maxSpan = GridSpan(
-            columns = if (supportsHorizontalResize) maxOf(minimum.columns, maximum.columns) else preferred.columns,
-            rows = if (supportsVerticalResize) maxOf(minimum.rows, maximum.rows) else preferred.rows,
+            columns =
+                if (supportsHorizontalResize) maxOf(minimum.columns, maximum.columns) else preferred.columns,
+            rows =
+                if (supportsVerticalResize) maxOf(minimum.rows, maximum.rows) else preferred.rows,
         ),
         supportsHorizontalResize = supportsHorizontalResize,
         supportsVerticalResize = supportsVerticalResize,
