@@ -81,18 +81,6 @@ class LauncherShellViewModelTest {
     }
 
     @Test
-    fun dismissingSetupCardPersistsOnlyPresentationState() {
-        val repository = FakeFirstRunRepository()
-        val viewModel = LauncherShellViewModel(firstRunRepository = repository)
-
-        viewModel.onSetupCardDismissed()
-
-        assertTrue(repository.isSetupCardDismissed())
-        assertFalse(viewModel.state.value.shouldShowSetupCard)
-        assertEquals(HomeRoleStatus.UNKNOWN, viewModel.state.value.homeRoleStatus)
-    }
-
-    @Test
     fun startsWithUnknownNotificationAccessStatus() {
         val viewModel = LauncherShellViewModel(firstRunRepository = FakeFirstRunRepository())
 

@@ -49,8 +49,7 @@ fun LauncherShell(
         LauncherShellContent(
             state = state,
             viewModeAvailability = viewModel.viewModeAvailability,
-            appVersionLabel = appVersionLabel,
-            appBuildIdentityLabel = appBuildIdentityLabel,
+            appInfo = LauncherShellAppInfo(appVersionLabel, appBuildIdentityLabel),
             appIconLoader = appIconLoader,
             widgetRenderers = widgetRenderers,
             onAction = onAction,
@@ -63,8 +62,7 @@ fun LauncherShell(
 fun LauncherShellContent(
     state: LauncherShellState,
     viewModeAvailability: LauncherViewModeAvailability = defaultLauncherViewModeAvailability(),
-    appVersionLabel: String = "",
-    appBuildIdentityLabel: String = "",
+    appInfo: LauncherShellAppInfo = LauncherShellAppInfo(),
     appIconLoader: AppIconLoader = EmptyAppIconLoader,
     widgetRenderers: LauncherWidgetRenderers = LauncherWidgetRenderers(),
     onAction: (LauncherShellAction) -> Unit,
@@ -105,8 +103,8 @@ fun LauncherShellContent(
                 state = state,
                 settingsState =
                     state.settingsSurfaceState(
-                        appVersionLabel = appVersionLabel,
-                        appBuildIdentityLabel = appBuildIdentityLabel,
+                        appVersionLabel = appInfo.versionLabel,
+                        appBuildIdentityLabel = appInfo.buildIdentityLabel,
                         viewModeAvailability = viewModeAvailability,
                     ),
                 appIconLoader = appIconLoader,
@@ -128,6 +126,11 @@ fun LauncherShellContent(
         }
     }
 }
+
+data class LauncherShellAppInfo(
+    val versionLabel: String = "",
+    val buildIdentityLabel: String = "",
+)
 
 @Composable
 private fun PreviewSetupCard(

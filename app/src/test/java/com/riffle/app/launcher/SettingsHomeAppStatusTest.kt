@@ -49,6 +49,18 @@ class SettingsHomeAppStatusTest {
         assertFalse(coldStartViewModel.state.value.shouldShowDefaultHomePrompt)
     }
 
+    @Test
+    fun dismissingSetupCardPersistsOnlyPresentationState() {
+        val repository = FakeFirstRunRepository()
+        val viewModel = LauncherShellViewModel(firstRunRepository = repository)
+
+        viewModel.onSetupCardDismissed()
+
+        assertTrue(repository.isSetupCardDismissed())
+        assertFalse(viewModel.state.value.shouldShowSetupCard)
+        assertEquals(HomeRoleStatus.UNKNOWN, viewModel.state.value.homeRoleStatus)
+    }
+
     private class FakeFirstRunRepository : FirstRunRepository {
         private var isComplete = false
         private var setupCardDismissed = false

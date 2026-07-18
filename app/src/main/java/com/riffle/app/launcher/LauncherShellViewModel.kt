@@ -126,7 +126,6 @@ class LauncherShellViewModel(
                 homeLayoutRepository = homeLayoutRepository,
                 launcherSettingsRepository = launcherSettingsRepository,
                 firstRunRepository = firstRunRepository,
-                reducer = reducer,
                 platformDependencies = platformDependencies,
                 viewModeAvailability = platformDependencies.viewModeAvailability,
             ),
@@ -472,7 +471,6 @@ private fun createInitialState(
     homeLayoutRepository: HomeLayoutRepository,
     launcherSettingsRepository: LauncherSettingsRepository,
     firstRunRepository: FirstRunRepository,
-    reducer: LauncherShellStateReducer,
     platformDependencies: LauncherShellPlatformDependencies,
     viewModeAvailability: LauncherViewModeAvailability,
 ): LauncherShellState {
