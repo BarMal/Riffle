@@ -32,7 +32,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -53,7 +52,6 @@ import com.riffle.core.domain.launcher.cards.CardStackSurfaceLayoutPolicy
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroupKey
 import com.riffle.core.domain.launcher.notifications.LauncherNotification
-import kotlinx.coroutines.launch
 
 @Composable
 @Suppress("LongMethod")
@@ -88,7 +86,6 @@ internal fun NotificationGroupPrototype(
         if (group.notifications.isEmpty()) return@HorizontalPager
         val app = presentation.apps.firstOrNull { installedApp -> installedApp.matches(group) }
         val listState = rememberLazyListState()
-        val coroutineScope = rememberCoroutineScope()
         val activeNotificationIndex = focusedNotificationIndex.coerceIn(0, group.notifications.lastIndex)
         val focusedNotification =
             group.notifications.getOrNull(activeNotificationIndex) ?: return@HorizontalPager
@@ -102,18 +99,10 @@ internal fun NotificationGroupPrototype(
                 canFocusPrevious = activeNotificationIndex > 0,
                 canFocusNext = activeNotificationIndex < group.notifications.lastIndex,
                 onFocusPrevious = {
-                    val targetNotificationIndex = activeNotificationIndex - 1
-                    focusedNotificationIndex = targetNotificationIndex
-                    coroutineScope.launch {
-                        listState.animateScrollToItem(targetNotificationIndex)
-                    }
+                    focusedNotificationIndex = activeNotificationIndex - 1
                 },
                 onFocusNext = {
-                    val targetNotificationIndex = activeNotificationIndex + 1
-                    focusedNotificationIndex = targetNotificationIndex
-                    coroutineScope.launch {
-                        listState.animateScrollToItem(targetNotificationIndex)
-                    }
+                    focusedNotificationIndex = activeNotificationIndex + 1
                 },
             )
         val swipeProgress =
