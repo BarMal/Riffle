@@ -33,6 +33,7 @@ class WidgetPreferredSpanTest {
         assertTrue(constraints.supportsHorizontalResize)
         assertFalse(constraints.supportsVerticalResize)
     }
+
     @Test
     fun calculatesPreferredSpanFromProviderDimensionsAndAvailableGridSize() {
         val span =

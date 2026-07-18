@@ -34,6 +34,7 @@ class HomeWidgetPlaceholderContextMenuTest {
         assertEquals(true, items.single { item -> item.label == "Make wider" }.enabled)
         assertEquals(false, items.single { item -> item.label == "Make taller" }.enabled)
     }
+
     @Test
     fun widgetPlaceholderMenuRemovesWidgetFromHome() {
         val widget =

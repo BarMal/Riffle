@@ -282,7 +282,12 @@ class WidgetEngineTest {
                 placement = GridPlacement(cell = GridCell(column = 0, row = 0), span = GridSpan(2, 1)),
             )
 
-        val result = engine.resizeWidgetOnSelectedPage(HomeLayoutDefaults.standard().withSelectedPageItems(widget), widget.id, GridSpan(2, 2))
+        val result =
+            engine.resizeWidgetOnSelectedPage(
+                HomeLayoutDefaults.standard().withSelectedPageItems(widget),
+                widget.id,
+                GridSpan(2, 2),
+            )
 
         assertEquals(PlacementRejectionReason.OUT_OF_BOUNDS, assertIs<WidgetEditResult.Rejected>(result).reason)
     }
