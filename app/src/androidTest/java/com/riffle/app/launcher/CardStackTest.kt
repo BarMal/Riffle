@@ -15,6 +15,7 @@ import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.hasAnyDescendant
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -351,7 +352,15 @@ class CardStackTest {
         nextEnabled: Boolean,
     ) {
         val expectedPosition = "Focused notification $position of $count"
-        composeRule.waitForIdle()
+        composeRule.waitUntil(timeoutMillis = 5_000) {
+            composeRule
+                .onAllNodesWithTag(focusPositionTestTag(groupKey))
+                .fetchSemanticsNodes()
+                .any { node ->
+                    node.config.getOrNull(SemanticsProperties.Text)
+                        ?.any { text -> text.text == expectedPosition } == true
+                }
+        }
         try {
             composeRule
                 .onNodeWithTag(focusPositionTestTag(groupKey))
