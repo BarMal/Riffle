@@ -166,7 +166,7 @@ private fun PreviewSetupCard(
                     HomeRoleStatus.UNKNOWN ->
                         PreviewHomeSetupPresentation(
                             statusMessage = "Home app status is unavailable right now.",
-                            actionLabel = "Open Home settings",
+                            actionLabel = "Set as Home app",
                         )
                 }
             Text(

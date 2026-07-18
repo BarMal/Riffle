@@ -74,7 +74,7 @@ class PreviewFirstSetupTest {
         }
 
         composeRule.onNodeWithText("Home app status is unavailable right now.").assertExists()
-        composeRule.onNodeWithText("Open Home settings").performClick()
+        composeRule.onNodeWithText("Set as Home app").performClick()
 
         assertEquals(listOf(LauncherShellAction.RequestDefaultHome), actions)
     }
