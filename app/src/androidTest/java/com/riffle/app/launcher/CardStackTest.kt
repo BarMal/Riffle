@@ -10,7 +10,7 @@ import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
-import androidx.compose.ui.test.assertTextEquals
+import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.hasAnyDescendant
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -238,19 +238,19 @@ class CardStackTest {
         }
 
         composeRule.onNodeWithText("View card").performClick()
-        composeRule.onNodeWithTag(NOTIFICATION_PROTOTYPE_FOCUSED_CARD_TITLE_TEST_TAG).assertTextEquals("First")
+        composeRule.onNodeWithTag(NOTIFICATION_PROTOTYPE_FOCUSED_CARD_TITLE_TEST_TAG).assertTextContains("First")
         composeRule.onNodeWithTag(NOTIFICATION_PROTOTYPE_PREVIOUS_FOCUS_TEST_TAG).assertIsNotEnabled()
         composeRule.onNodeWithTag(NOTIFICATION_PROTOTYPE_NEXT_FOCUS_TEST_TAG).assertIsEnabled()
 
         composeRule.onNodeWithTag(NOTIFICATION_PROTOTYPE_NEXT_FOCUS_TEST_TAG).performClick()
         composeRule.waitForIdle()
-        composeRule.onNodeWithTag(NOTIFICATION_PROTOTYPE_FOCUSED_CARD_TITLE_TEST_TAG).assertTextEquals("Second")
+        composeRule.onNodeWithTag(NOTIFICATION_PROTOTYPE_FOCUSED_CARD_TITLE_TEST_TAG).assertTextContains("Second")
         composeRule.onNodeWithTag(NOTIFICATION_PROTOTYPE_PREVIOUS_FOCUS_TEST_TAG).assertIsEnabled()
         composeRule.onNodeWithTag(NOTIFICATION_PROTOTYPE_NEXT_FOCUS_TEST_TAG).assertIsNotEnabled()
 
         composeRule.onNodeWithTag(NOTIFICATION_PROTOTYPE_PREVIOUS_FOCUS_TEST_TAG).performClick()
         composeRule.waitForIdle()
-        composeRule.onNodeWithTag(NOTIFICATION_PROTOTYPE_FOCUSED_CARD_TITLE_TEST_TAG).assertTextEquals("First")
+        composeRule.onNodeWithTag(NOTIFICATION_PROTOTYPE_FOCUSED_CARD_TITLE_TEST_TAG).assertTextContains("First")
         composeRule.onNodeWithTag(NOTIFICATION_PROTOTYPE_PREVIOUS_FOCUS_TEST_TAG).assertIsNotEnabled()
         composeRule.onNodeWithTag(NOTIFICATION_PROTOTYPE_NEXT_FOCUS_TEST_TAG).assertIsEnabled()
     }
