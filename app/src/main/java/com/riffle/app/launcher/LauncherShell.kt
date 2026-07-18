@@ -151,12 +151,13 @@ private fun PreviewSetupCard(
             modifier = Modifier.padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            val presentation = homeRoleStatus.previewHomeSetupPresentation()
             Text(
                 text = "Preview Riffle",
                 style = MaterialTheme.typography.titleLarge,
             )
             Text(
-                text = homeRoleStatus.previewHomeStatusMessage(),
+                text = presentation.statusMessage,
                 style = MaterialTheme.typography.labelLarge,
             )
             Text(
@@ -166,7 +167,7 @@ private fun PreviewSetupCard(
                 style = MaterialTheme.typography.bodyMedium,
             )
             Button(onClick = onSetHome) {
-                Text(text = homeRoleStatus.previewHomeActionLabel())
+                Text(text = presentation.actionLabel)
             }
             TextButton(onClick = onDismiss) {
                 Text(text = "Not now")
@@ -175,19 +176,26 @@ private fun PreviewSetupCard(
     }
 }
 
-private fun HomeRoleStatus.previewHomeStatusMessage(): String =
+private fun HomeRoleStatus.previewHomeSetupPresentation(): PreviewHomeSetupPresentation =
     when (this) {
-        HomeRoleStatus.DEFAULT_HOME -> "Riffle is your Home app."
-        HomeRoleStatus.NOT_DEFAULT_HOME -> "Riffle is not your Home app yet."
-        HomeRoleStatus.UNKNOWN -> "Home app status is unavailable right now."
+        HomeRoleStatus.DEFAULT_HOME -> PreviewHomeSetupPresentation(
+            statusMessage = "Riffle is your Home app.",
+            actionLabel = "Open Home settings",
+        )
+        HomeRoleStatus.NOT_DEFAULT_HOME -> PreviewHomeSetupPresentation(
+            statusMessage = "Riffle is not your Home app yet.",
+            actionLabel = "Set as Home app",
+        )
+        HomeRoleStatus.UNKNOWN -> PreviewHomeSetupPresentation(
+            statusMessage = "Home app status is unavailable right now.",
+            actionLabel = "Open Home settings",
+        )
     }
 
-private fun HomeRoleStatus.previewHomeActionLabel(): String =
-    when (this) {
-        HomeRoleStatus.DEFAULT_HOME -> "Open Home settings"
-        HomeRoleStatus.NOT_DEFAULT_HOME -> "Set as Home app"
-        HomeRoleStatus.UNKNOWN -> "Open Home settings"
-    }
+private data class PreviewHomeSetupPresentation(
+    val statusMessage: String,
+    val actionLabel: String,
+)
 
 @Suppress("LongMethod")
 @Composable
