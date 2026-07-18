@@ -32,8 +32,10 @@ import com.riffle.core.domain.launcher.settings.HomeSwipeGestureDirection
 import com.riffle.core.domain.launcher.settings.LauncherGestureAction
 import com.riffle.core.domain.launcher.settings.LauncherGestureLaunchTarget
 import com.riffle.core.domain.launcher.settings.LauncherThemeAccent
+import com.riffle.core.domain.launcher.settings.LauncherThemeCornerStyle
 import com.riffle.core.domain.launcher.settings.LauncherThemeMode
 import com.riffle.core.domain.launcher.settings.LauncherThemePreset
+import com.riffle.core.domain.launcher.settings.LauncherThemeTypography
 import com.riffle.core.domain.launcher.settings.MotionPerformanceTargetFps
 import com.riffle.core.domain.launcher.settings.OverlayDockEdge
 import com.riffle.core.domain.launcher.settings.OverlayDockExpandedOrientation
@@ -302,6 +304,10 @@ sealed interface LauncherShellAction {
     data class SelectLauncherThemePreset(val preset: LauncherThemePreset) : LauncherShellAction
 
     data class SelectLauncherThemeAccent(val accent: LauncherThemeAccent) : LauncherShellAction
+
+    data class SelectLauncherThemeCornerStyle(val style: LauncherThemeCornerStyle) : LauncherShellAction
+
+    data class SelectLauncherThemeTypography(val typography: LauncherThemeTypography) : LauncherShellAction
 
     data class SelectWallpaperScrollMode(val mode: WallpaperScrollMode) : LauncherShellAction
 

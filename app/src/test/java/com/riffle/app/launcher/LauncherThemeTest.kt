@@ -4,7 +4,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.settings.LauncherThemeAccent
+import com.riffle.core.domain.launcher.settings.LauncherThemeCornerStyle
 import com.riffle.core.domain.launcher.settings.LauncherThemePreset
+import com.riffle.core.domain.launcher.settings.LauncherThemeTypography
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
@@ -116,5 +118,29 @@ class LauncherThemeTest {
         assertEquals(FontFamily.Monospace, launcherTypography(LauncherThemePreset.TERMINAL).headlineMedium.fontFamily)
         assertEquals(FontFamily.Monospace, launcherTypography(LauncherThemePreset.TERMINAL).bodyMedium.fontFamily)
         assertSame(launcherTypography(LauncherThemePreset.MATERIAL), launcherTypography(LauncherThemePreset.CUSTOM))
+    }
+
+    @Test
+    fun cornerOverrideTakesPrecedenceOverPresetShape() {
+        assertEquals(
+            RoundedCornerShape(8.dp),
+            launcherCardShape(LauncherThemePreset.GLASS, LauncherThemeCornerStyle.COMPACT),
+        )
+        assertEquals(
+            RoundedCornerShape(36.dp),
+            launcherPanelShape(LauncherThemePreset.TERMINAL, LauncherThemeCornerStyle.ROUNDED),
+        )
+    }
+
+    @Test
+    fun typographyOverrideTakesPrecedenceOverPresetTypography() {
+        assertEquals(
+            FontFamily.Monospace,
+            launcherTypography(LauncherThemePreset.MATERIAL, LauncherThemeTypography.MONOSPACE).bodyMedium.fontFamily,
+        )
+        assertNotEquals(
+            FontFamily.Monospace,
+            launcherTypography(LauncherThemePreset.TERMINAL, LauncherThemeTypography.SYSTEM).bodyMedium.fontFamily,
+        )
     }
 }

@@ -15,8 +15,10 @@ import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
 import com.riffle.core.domain.launcher.settings.HapticSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.LauncherThemeAccent
+import com.riffle.core.domain.launcher.settings.LauncherThemeCornerStyle
 import com.riffle.core.domain.launcher.settings.LauncherThemeMode
 import com.riffle.core.domain.launcher.settings.LauncherThemePreset
+import com.riffle.core.domain.launcher.settings.LauncherThemeTypography
 import com.riffle.core.domain.launcher.settings.OverlayDockEdge
 import com.riffle.core.domain.launcher.settings.OverlayDockExpandedOrientation
 import com.riffle.core.domain.launcher.settings.OverlayDockSettings
@@ -103,6 +105,8 @@ private fun encodeAppearance(settings: AppearanceSettings): JSONObject =
         .put("themeMode", settings.themeMode.name)
         .put("themePreset", settings.themePreset.name)
         .put("themeAccent", settings.themeAccent.name)
+        .put("themeCornerStyle", settings.themeCornerStyle.name)
+        .put("themeTypography", settings.themeTypography.name)
         .put("wallpaper", encodeWallpaper(settings.wallpaper))
 
 private fun JSONObject.toAppearance(defaults: AppearanceSettings): AppearanceSettings {
@@ -124,6 +128,12 @@ private fun JSONObject.toAppearance(defaults: AppearanceSettings): AppearanceSet
             themeAccent =
                 runCatching { LauncherThemeAccent.valueOf(optString("themeAccent")) }
                     .getOrDefault(defaults.themeAccent),
+            themeCornerStyle =
+                runCatching { LauncherThemeCornerStyle.valueOf(optString("themeCornerStyle")) }
+                    .getOrDefault(defaults.themeCornerStyle),
+            themeTypography =
+                runCatching { LauncherThemeTypography.valueOf(optString("themeTypography")) }
+                    .getOrDefault(defaults.themeTypography),
             wallpaper = optJSONObject("wallpaper")?.toWallpaper(defaults.wallpaper) ?: defaults.wallpaper,
         ).withHomeSystemBars(homeSystemBars)
 }
@@ -192,4 +202,4 @@ private fun JSONObject.toOverlayDock(defaults: OverlayDockSettings): OverlayDock
         showLabels = optBoolean("showLabels", defaults.showLabels),
     ).coerceOverlayDockSettings()
 
-internal const val LAUNCHER_SETTINGS_JSON_VERSION = 2
+internal const val LAUNCHER_SETTINGS_JSON_VERSION = 3

@@ -128,32 +128,12 @@ internal fun LauncherShellState.withAppearanceSettingsAction(
                 launcherSettingsRepository = launcherSettingsRepository,
             )
 
-        is LauncherShellAction.SelectLauncherThemeMode ->
-            withLauncherSettings(
-                settings =
-                    launcherSettings.copy(
-                        appearance = launcherSettings.appearance.copy(themeMode = action.mode),
-                    ),
-                launcherSettingsRepository = launcherSettingsRepository,
-            )
-
-        is LauncherShellAction.SelectLauncherThemePreset ->
-            withLauncherSettings(
-                settings =
-                    launcherSettings.copy(
-                        appearance = launcherSettings.appearance.copy(themePreset = action.preset),
-                    ),
-                launcherSettingsRepository = launcherSettingsRepository,
-            )
-
-        is LauncherShellAction.SelectLauncherThemeAccent ->
-            withLauncherSettings(
-                settings =
-                    launcherSettings.copy(
-                        appearance = launcherSettings.appearance.copy(themeAccent = action.accent),
-                    ),
-                launcherSettingsRepository = launcherSettingsRepository,
-            )
+        is LauncherShellAction.SelectLauncherThemeMode,
+        is LauncherShellAction.SelectLauncherThemePreset,
+        is LauncherShellAction.SelectLauncherThemeAccent,
+        is LauncherShellAction.SelectLauncherThemeCornerStyle,
+        is LauncherShellAction.SelectLauncherThemeTypography,
+        -> withThemeSelectionAction(action, launcherSettingsRepository)
 
         is LauncherShellAction.SelectWallpaperScrollMode ->
             withLauncherSettings(
@@ -199,6 +179,34 @@ internal fun LauncherShellState.withAppearanceSettingsAction(
 
         else -> this
     }
+
+private fun LauncherShellState.withThemeSelectionAction(
+    action: LauncherShellAction,
+    launcherSettingsRepository: LauncherSettingsRepository,
+): LauncherShellState {
+    val appearance =
+        when (action) {
+            is LauncherShellAction.SelectLauncherThemeMode ->
+                launcherSettings.appearance.copy(themeMode = action.mode)
+
+            is LauncherShellAction.SelectLauncherThemePreset ->
+                launcherSettings.appearance.copy(themePreset = action.preset)
+
+            is LauncherShellAction.SelectLauncherThemeAccent ->
+                launcherSettings.appearance.copy(themeAccent = action.accent)
+            is LauncherShellAction.SelectLauncherThemeCornerStyle ->
+                launcherSettings.appearance.copy(themeCornerStyle = action.style)
+
+            is LauncherShellAction.SelectLauncherThemeTypography ->
+                launcherSettings.appearance.copy(themeTypography = action.typography)
+
+            else -> return this
+        }
+    return withLauncherSettings(
+        settings = launcherSettings.copy(appearance = appearance),
+        launcherSettingsRepository = launcherSettingsRepository,
+    )
+}
 
 internal fun LauncherShellState.withOverlayDockSettingsAction(
     action: LauncherShellAction,

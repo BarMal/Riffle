@@ -16,6 +16,12 @@ class LauncherSettingsTest {
     }
 
     @Test
+    fun defaultsThemeOverridesToPresetTokens() {
+        assertEquals(LauncherThemeCornerStyle.PRESET, LauncherSettings().appearance.themeCornerStyle)
+        assertEquals(LauncherThemeTypography.PRESET, LauncherSettings().appearance.themeTypography)
+    }
+
+    @Test
     fun cardsChapterIntentDefaultsToOverviewWithoutPins() {
         val cards = LauncherSettings().cards.chapterPreferences
 

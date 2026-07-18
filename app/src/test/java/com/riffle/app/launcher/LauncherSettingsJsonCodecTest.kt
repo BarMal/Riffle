@@ -23,8 +23,10 @@ import com.riffle.core.domain.launcher.settings.HomeSystemBars
 import com.riffle.core.domain.launcher.settings.LauncherGestureAction
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.LauncherThemeAccent
+import com.riffle.core.domain.launcher.settings.LauncherThemeCornerStyle
 import com.riffle.core.domain.launcher.settings.LauncherThemeMode
 import com.riffle.core.domain.launcher.settings.LauncherThemePreset
+import com.riffle.core.domain.launcher.settings.LauncherThemeTypography
 import com.riffle.core.domain.launcher.settings.MAX_OVERLAY_DOCK_EXPANDED_ICON_SIZE_DP
 import com.riffle.core.domain.launcher.settings.MAX_OVERLAY_DOCK_HANDLE_ALPHA_PERCENT
 import com.riffle.core.domain.launcher.settings.MAX_OVERLAY_DOCK_HANDLE_HEIGHT_DP
@@ -215,6 +217,37 @@ class LauncherSettingsJsonCodecTest {
             LauncherThemeAccent.TEAL,
             decodeLauncherSettings(encodeLauncherSettings(settings)).appearance.themeAccent,
         )
+    }
+
+    @Test
+    fun roundTripsThemeTokenOverrides() {
+        val settings =
+            LauncherSettings(
+                appearance =
+                    AppearanceSettings(
+                        themeCornerStyle = LauncherThemeCornerStyle.ROUNDED,
+                        themeTypography = LauncherThemeTypography.MONOSPACE,
+                    ),
+            )
+
+        val decodedAppearance = decodeLauncherSettings(encodeLauncherSettings(settings)).appearance
+
+        assertEquals(LauncherThemeCornerStyle.ROUNDED, decodedAppearance.themeCornerStyle)
+        assertEquals(LauncherThemeTypography.MONOSPACE, decodedAppearance.themeTypography)
+    }
+
+    @Test
+    fun defaultsMissingOrInvalidThemeTokenOverrides() {
+        val missing = decodeLauncherSettings("{\"appearance\": {}}").appearance
+        val invalid =
+            decodeLauncherSettings(
+                "{\"appearance\": {\"themeCornerStyle\": \"UNKNOWN\", \"themeTypography\": \"UNKNOWN\"}}",
+            ).appearance
+
+        assertEquals(LauncherThemeCornerStyle.PRESET, missing.themeCornerStyle)
+        assertEquals(LauncherThemeTypography.PRESET, missing.themeTypography)
+        assertEquals(LauncherThemeCornerStyle.PRESET, invalid.themeCornerStyle)
+        assertEquals(LauncherThemeTypography.PRESET, invalid.themeTypography)
     }
 
     @Test

@@ -3,6 +3,8 @@ package com.riffle.app.launcher
 import com.riffle.core.domain.launcher.home.WallpaperScrollMode
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettingsRepository
+import com.riffle.core.domain.launcher.settings.LauncherThemeCornerStyle
+import com.riffle.core.domain.launcher.settings.LauncherThemeTypography
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -44,6 +46,33 @@ class LauncherShellAppearanceSettingsTest {
         assertEquals(
             WallpaperScrollMode.SCROLLING,
             viewModel.state.value.launcherSettings.appearance.wallpaper.scrollMode,
+        )
+        assertEquals(viewModel.state.value.launcherSettings, repository.savedSettings)
+    }
+
+    @Test
+    fun savesThemeTokenOverrides() {
+        val repository = FakeLauncherSettingsRepository()
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                launcherSettingsRepository = repository,
+            )
+
+        viewModel.onLauncherSettingsActionSelected(
+            LauncherShellAction.SelectLauncherThemeCornerStyle(LauncherThemeCornerStyle.ROUNDED),
+        )
+        viewModel.onLauncherSettingsActionSelected(
+            LauncherShellAction.SelectLauncherThemeTypography(LauncherThemeTypography.MONOSPACE),
+        )
+
+        assertEquals(
+            LauncherThemeCornerStyle.ROUNDED,
+            viewModel.state.value.launcherSettings.appearance.themeCornerStyle,
+        )
+        assertEquals(
+            LauncherThemeTypography.MONOSPACE,
+            viewModel.state.value.launcherSettings.appearance.themeTypography,
         )
         assertEquals(viewModel.state.value.launcherSettings, repository.savedSettings)
     }

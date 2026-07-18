@@ -10,8 +10,10 @@ import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.settings.AppearanceSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.LauncherThemeAccent
+import com.riffle.core.domain.launcher.settings.LauncherThemeCornerStyle
 import com.riffle.core.domain.launcher.settings.LauncherThemeMode
 import com.riffle.core.domain.launcher.settings.LauncherThemePreset
+import com.riffle.core.domain.launcher.settings.LauncherThemeTypography
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -22,7 +24,7 @@ class ThemeModeSettingTest {
     val composeRule = createComposeRule()
 
     @Test
-    fun appearanceSettingsShowSelectedModePresetAndAccent() {
+    fun appearanceSettingsShowSelectedThemeTokens() {
         composeRule.setContent {
             MaterialTheme {
                 SettingsPageContent(
@@ -36,6 +38,8 @@ class ThemeModeSettingTest {
                                             themeMode = LauncherThemeMode.DARK,
                                             themePreset = LauncherThemePreset.GLASS,
                                             themeAccent = LauncherThemeAccent.TEAL,
+                                            themeCornerStyle = LauncherThemeCornerStyle.ROUNDED,
+                                            themeTypography = LauncherThemeTypography.MONOSPACE,
                                         ),
                                 ),
                         ).settingsSurfaceState(),
@@ -49,5 +53,7 @@ class ThemeModeSettingTest {
         composeRule.onNodeWithText("Dark (selected)").assertIsDisplayed()
         composeRule.onNodeWithText("Glass (selected)").assertIsDisplayed()
         composeRule.onNodeWithText("Teal (selected)").assertIsDisplayed()
+        composeRule.onNodeWithText("Rounded (selected)").assertIsDisplayed()
+        composeRule.onNodeWithText("Monospace (selected)").assertIsDisplayed()
     }
 }
