@@ -30,6 +30,7 @@ import com.riffle.core.domain.launcher.home.WallpaperScrollMode
 import com.riffle.core.domain.launcher.home.WallpaperSettings
 import com.riffle.core.domain.launcher.home.WallpaperSource
 import com.riffle.core.domain.launcher.home.WidgetItem
+import com.riffle.core.domain.launcher.home.WidgetResizeConstraints
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -73,6 +74,13 @@ class HomeLayoutJsonCodecTest {
                 id = LauncherItemId("widget:weather"),
                 appWidgetId = HostedWidgetId(42),
                 label = "Weather",
+                resizeConstraints =
+                    WidgetResizeConstraints(
+                        minSpan = GridSpan(columns = 2, rows = 1),
+                        maxSpan = GridSpan(columns = 3, rows = 2),
+                        supportsHorizontalResize = true,
+                        supportsVerticalResize = false,
+                    ),
                 placement =
                     GridPlacement(
                         cell = GridCell(column = 1, row = 2),

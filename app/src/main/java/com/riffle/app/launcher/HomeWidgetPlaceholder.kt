@@ -299,6 +299,9 @@ private fun WidgetItem.canResize(
 
     return when {
         placement == null || resizedSpan == null -> false
+        columnsDelta != 0 && !resizeConstraints.supportsHorizontalResize -> false
+        rowsDelta != 0 && !resizeConstraints.supportsVerticalResize -> false
+        !resizeConstraints.permits(resizedSpan) -> false
         grid == null -> resizedSpan.columns >= 1 && resizedSpan.rows >= 1
         else ->
             GridPlacementEngine().resizeItem(

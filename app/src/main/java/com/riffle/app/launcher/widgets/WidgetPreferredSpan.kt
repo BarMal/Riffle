@@ -2,6 +2,7 @@ package com.riffle.app.launcher.widgets
 
 import com.riffle.core.domain.launcher.home.GridDimensions
 import com.riffle.core.domain.launcher.home.GridSpan
+import com.riffle.core.domain.launcher.home.WidgetResizeConstraints
 import com.riffle.core.domain.launcher.widgets.WidgetProviderDimensions
 import kotlin.math.ceil
 
@@ -18,6 +19,36 @@ fun WidgetProviderDimensions.preferredGridSpan(
             targetCellHeight?.takeIf { it > 0 }
                 ?: minHeightDp.spanCells(availableDp = availableHeightDp, gridCells = grid.rows),
     ).fitWidgetPreferredSpan(grid)
+}
+
+fun WidgetProviderDimensions.resizeConstraints(
+    grid: GridDimensions,
+    availableWidthDp: Int,
+    availableHeightDp: Int,
+    supportsHorizontalResize: Boolean,
+    supportsVerticalResize: Boolean,
+): WidgetResizeConstraints {
+    val preferred = preferredGridSpan(grid, availableWidthDp, availableHeightDp)
+    val minimum = GridSpan(
+        columns = (minResizeWidthDp ?: minWidthDp).spanCells(availableWidthDp, grid.columns),
+        rows = (minResizeHeightDp ?: minHeightDp).spanCells(availableHeightDp, grid.rows),
+    ).fitWidgetPreferredSpan(grid)
+    val maximum = GridSpan(
+        columns = (maxResizeWidthDp ?: availableWidthDp).spanCells(availableWidthDp, grid.columns),
+        rows = (maxResizeHeightDp ?: availableHeightDp).spanCells(availableHeightDp, grid.rows),
+    ).fitWidgetPreferredSpan(grid)
+    return WidgetResizeConstraints(
+        minSpan = GridSpan(
+            columns = if (supportsHorizontalResize) minimum.columns else preferred.columns,
+            rows = if (supportsVerticalResize) minimum.rows else preferred.rows,
+        ),
+        maxSpan = GridSpan(
+            columns = if (supportsHorizontalResize) maxOf(minimum.columns, maximum.columns) else preferred.columns,
+            rows = if (supportsVerticalResize) maxOf(minimum.rows, maximum.rows) else preferred.rows,
+        ),
+        supportsHorizontalResize = supportsHorizontalResize,
+        supportsVerticalResize = supportsVerticalResize,
+    )
 }
 
 fun GridSpan.fitWidgetPreferredSpan(grid: GridDimensions): GridSpan =

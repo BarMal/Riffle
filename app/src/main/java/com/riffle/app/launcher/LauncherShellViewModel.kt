@@ -393,6 +393,7 @@ private fun reduceHomeShortcutEdit(
                         hostedWidgetId = action.hostedWidgetId,
                         label = action.label,
                         preferredSpan = action.preferredSpan,
+                        resizeConstraints = action.resizeConstraints,
                         targetCell = action.targetCell,
                     )
             ) {

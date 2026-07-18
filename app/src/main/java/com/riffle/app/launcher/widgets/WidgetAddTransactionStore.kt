@@ -9,6 +9,7 @@ import com.riffle.core.domain.launcher.apps.AppProfileId
 import com.riffle.core.domain.launcher.apps.AppProfileType
 import com.riffle.core.domain.launcher.home.GridSpan
 import com.riffle.core.domain.launcher.home.HostedWidgetId
+import com.riffle.core.domain.launcher.home.WidgetResizeConstraints
 import com.riffle.core.domain.launcher.widgets.WidgetProviderClassName
 import com.riffle.core.domain.launcher.widgets.WidgetProviderIdentity
 import org.json.JSONObject
@@ -18,6 +19,7 @@ data class PendingWidgetAddTransaction(
     val provider: WidgetProviderIdentity,
     val label: String,
     val preferredSpan: GridSpan,
+    val resizeConstraints: WidgetResizeConstraints = WidgetResizeConstraints(),
     val target: WidgetAddTarget,
     val step: PendingWidgetAddStep,
     val createdAtEpochMillis: Long,
@@ -96,6 +98,12 @@ internal fun encodeWidgetAddTransaction(transaction: PendingWidgetAddTransaction
         .put("label", transaction.label)
         .put("columns", transaction.preferredSpan.columns)
         .put("rows", transaction.preferredSpan.rows)
+        .put("minColumns", transaction.resizeConstraints.minSpan.columns)
+        .put("minRows", transaction.resizeConstraints.minSpan.rows)
+        .put("maxColumns", transaction.resizeConstraints.maxSpan?.columns)
+        .put("maxRows", transaction.resizeConstraints.maxSpan?.rows)
+        .put("supportsHorizontalResize", transaction.resizeConstraints.supportsHorizontalResize)
+        .put("supportsVerticalResize", transaction.resizeConstraints.supportsVerticalResize)
         .put("target", transaction.target.name)
         .put("step", transaction.step.name)
         .put("createdAtEpochMillis", transaction.createdAtEpochMillis)
@@ -121,6 +129,16 @@ internal fun decodeWidgetAddTransaction(value: String): PendingWidgetAddTransact
                     GridSpan(
                         columns = json.getInt("columns").also { require(it > 0) },
                         rows = json.getInt("rows").also { require(it > 0) },
+                    ),
+                resizeConstraints =
+                    WidgetResizeConstraints(
+                        minSpan = GridSpan(json.optInt("minColumns", 1), json.optInt("minRows", 1)),
+                        maxSpan =
+                            json.optInt("maxColumns", 0).takeIf { it > 0 }?.let { columns ->
+                                GridSpan(columns, json.optInt("maxRows", 0).coerceAtLeast(1))
+                            },
+                        supportsHorizontalResize = json.optBoolean("supportsHorizontalResize", true),
+                        supportsVerticalResize = json.optBoolean("supportsVerticalResize", true),
                     ),
                 target = WidgetAddTarget.valueOf(json.getString("target")),
                 step = PendingWidgetAddStep.valueOf(json.getString("step")),

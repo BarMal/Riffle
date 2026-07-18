@@ -266,6 +266,28 @@ class WidgetEngineTest {
     }
 
     @Test
+    fun rejectsResizeOutsidePersistedProviderConstraints() {
+        val widget =
+            WidgetItem(
+                id = LauncherItemId("widget:42"),
+                appWidgetId = HostedWidgetId(42),
+                label = "Weather",
+                resizeConstraints =
+                    WidgetResizeConstraints(
+                        minSpan = GridSpan(columns = 2, rows = 1),
+                        maxSpan = GridSpan(columns = 3, rows = 1),
+                        supportsHorizontalResize = true,
+                        supportsVerticalResize = false,
+                    ),
+                placement = GridPlacement(cell = GridCell(column = 0, row = 0), span = GridSpan(2, 1)),
+            )
+
+        val result = engine.resizeWidgetOnSelectedPage(HomeLayoutDefaults.standard().withSelectedPageItems(widget), widget.id, GridSpan(2, 2))
+
+        assertEquals(PlacementRejectionReason.OUT_OF_BOUNDS, assertIs<WidgetEditResult.Rejected>(result).reason)
+    }
+
+    @Test
     fun rejectsWidgetResizeIntoOccupiedCells() {
         val widget =
             WidgetItem(

@@ -7,10 +7,33 @@ import com.riffle.core.domain.launcher.home.GridSpan
 import com.riffle.core.domain.launcher.home.HostedWidgetId
 import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.home.WidgetItem
+import com.riffle.core.domain.launcher.home.WidgetResizeConstraints
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class HomeWidgetPlaceholderContextMenuTest {
+    @Test
+    fun widgetPlaceholderMenuExposesOnlyProviderSupportedResizeAxis() {
+        val widget =
+            WidgetItem(
+                id = LauncherItemId("widget"),
+                appWidgetId = HostedWidgetId(42),
+                label = "Calendar",
+                resizeConstraints =
+                    WidgetResizeConstraints(
+                        minSpan = GridSpan(columns = 1, rows = 1),
+                        maxSpan = GridSpan(columns = 3, rows = 1),
+                        supportsHorizontalResize = true,
+                        supportsVerticalResize = false,
+                    ),
+                placement = GridPlacement(cell = GridCell(column = 0, row = 0)),
+            )
+
+        val items = widgetPlaceholderContextMenuItems(widget, GridDimensions(columns = 3, rows = 3))
+
+        assertEquals(true, items.single { item -> item.label == "Make wider" }.enabled)
+        assertEquals(false, items.single { item -> item.label == "Make taller" }.enabled)
+    }
     @Test
     fun widgetPlaceholderMenuRemovesWidgetFromHome() {
         val widget =

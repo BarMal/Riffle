@@ -17,6 +17,7 @@ import com.riffle.core.domain.launcher.home.GridSpan
 import com.riffle.core.domain.launcher.home.HomeLabelSizing
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.HostedWidgetId
+import com.riffle.core.domain.launcher.home.WidgetResizeConstraints
 import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.home.LauncherPageId
 import com.riffle.core.domain.launcher.home.LauncherPageType
@@ -258,6 +259,8 @@ sealed interface LauncherShellAction {
         val provider: WidgetProviderIdentity,
         val label: String,
         val dimensions: WidgetProviderDimensions,
+        val supportsHorizontalResize: Boolean? = null,
+        val supportsVerticalResize: Boolean? = null,
         val target: WidgetAddTarget = WidgetAddTarget.HOME,
     ) : LauncherShellAction
 
@@ -265,6 +268,7 @@ sealed interface LauncherShellAction {
         override val hostedWidgetId: HostedWidgetId,
         override val label: String,
         val preferredSpan: GridSpan = GridSpan(),
+        val resizeConstraints: WidgetResizeConstraints = WidgetResizeConstraints(),
         val targetCell: GridCell? = null,
     ) : LauncherShellAction,
         HostedWidgetAddAction
