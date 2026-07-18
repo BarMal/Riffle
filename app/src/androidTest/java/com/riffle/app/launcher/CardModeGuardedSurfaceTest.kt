@@ -75,6 +75,7 @@ class CardModeGuardedSurfaceTest {
 
         composeRule.onNodeWithText("Messages").assertExists()
         composeRule.onNodeWithText("View card").performClick()
+        composeRule.waitForIdle()
 
         composeRule
             .onNode(
@@ -84,7 +85,6 @@ class CardModeGuardedSurfaceTest {
                 ),
                 useUnmergedTree = true,
             ).assertExists()
-        composeRule.waitForIdle()
     }
 
     @Test
