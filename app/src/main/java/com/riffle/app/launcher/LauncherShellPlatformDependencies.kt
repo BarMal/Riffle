@@ -28,6 +28,7 @@ fun defaultLauncherViewModeAvailability(): LauncherViewModeAvailability =
             HomeLayoutDeviceClass.entries.associateWith {
                 setOf(
                     LauncherViewMode.HOME_SCREEN_LIBRARY,
+                    LauncherViewMode.CARD_INTERFACE,
                 )
             },
     )

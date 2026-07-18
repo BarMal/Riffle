@@ -1,6 +1,5 @@
 package com.riffle.app.launcher
 
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -9,6 +8,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.riffle.core.domain.launcher.FirstRunStatus
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppProfile
@@ -35,17 +35,15 @@ class CardModeGuardedSurfaceTest {
     val composeRule = createComposeRule()
 
     @Test
-    fun guardedCardsSurfaceExplainsEmptyGrantedAndRevokedStatesThenRecoversToStandard() {
+    fun launcherShellRoutesCardModeToTheGuardedCardsSurfaceAndRecoversToStandard() {
         var state by mutableStateOf(cardsState(NotificationAccessStatus.GRANTED))
 
         composeRule.setContent {
-            MaterialTheme {
-                HomeDestination(
-                    state = state,
-                    appIconLoader = EmptyAppIconLoader,
-                    onAction = {},
-                )
-            }
+            LauncherShellContent(
+                state = state,
+                appIconLoader = EmptyAppIconLoader,
+                onAction = {},
+            )
         }
 
         composeRule.onNodeWithText("No active notifications").assertExists()
@@ -66,15 +64,13 @@ class CardModeGuardedSurfaceTest {
     }
 
     @Test
-    fun cardsSurfaceShowsAVisibleCardThatExpandsIntoTheCardStackDetail() {
+    fun launcherShellCardModeShowsAVisibleCardThatExpandsIntoTheCardStackDetail() {
         composeRule.setContent {
-            MaterialTheme {
-                HomeDestination(
-                    state = cardsState(NotificationAccessStatus.GRANTED, groups = listOf(notificationGroup())),
-                    appIconLoader = EmptyAppIconLoader,
-                    onAction = {},
-                )
-            }
+            LauncherShellContent(
+                state = cardsState(NotificationAccessStatus.GRANTED, groups = listOf(notificationGroup())),
+                appIconLoader = EmptyAppIconLoader,
+                onAction = {},
+            )
         }
 
         composeRule.onNodeWithText("Messages").assertExists()
@@ -135,6 +131,7 @@ class CardModeGuardedSurfaceTest {
     ): LauncherShellState {
         val layout = HomeLayoutDefaults.standard().copy(viewMode = LauncherViewMode.CARD_INTERFACE)
         return LauncherShellState(
+            firstRunStatus = FirstRunStatus.COMPLETE,
             homeLayout = layout,
             homeLayoutSet = HomeLayoutSet.fromLayout(layout),
             notificationAccessStatus = notificationAccessStatus,
@@ -155,6 +152,7 @@ class CardModeGuardedSurfaceTest {
     private fun standardState(): LauncherShellState {
         val layout = HomeLayoutDefaults.standard()
         return LauncherShellState(
+            firstRunStatus = FirstRunStatus.COMPLETE,
             homeLayout = layout,
             homeLayoutSet = HomeLayoutSet.fromLayout(layout),
         )

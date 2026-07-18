@@ -160,24 +160,13 @@ private fun LauncherDestination(
 
     when (state.destination) {
         ShellDestination.HOME ->
-            if (state.homeLayout.viewMode.homeSurfaceKind() == HomeSurfaceKind.CARDS) {
-                CardsChapterSurface(
-                    state = state.cardsChapterState(),
-                    apps = state.installedApps,
-                    profileContentVisibility = state.cardsProfileContentVisibility(),
-                    notificationAccessStatus = state.notificationAccessStatus,
-                    onAction = settingsPageActionRouter.onAction,
-                    windowInsets = cardsPanelInsetPolicy(state).safeDrawingPanelInsets(),
-                )
-            } else {
-                HomeDestination(
-                    state = state,
-                    appIconLoader = appIconLoader,
-                    widgetRenderers = widgetRenderers,
-                    haptics = haptics,
-                    onAction = settingsPageActionRouter.onAction,
-                )
-            }
+            HomeDestination(
+                state = state,
+                appIconLoader = appIconLoader,
+                widgetRenderers = widgetRenderers,
+                haptics = haptics,
+                onAction = settingsPageActionRouter.onAction,
+            )
 
         ShellDestination.APP_DRAWER ->
             AppDrawer(
