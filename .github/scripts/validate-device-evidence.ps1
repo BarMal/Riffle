@@ -89,7 +89,7 @@ if (-not (Test-Path -LiteralPath $EvidencePath)) {
 }
 
 try {
-    $evidence = Get-Content -LiteralPath $EvidencePath -Raw | ConvertFrom-Json -Depth 20
+    $evidence = Get-Content -LiteralPath $EvidencePath -Raw | ConvertFrom-Json -Depth 20 -DateKind String
 } catch {
     throw "Evidence file is not valid JSON: $($_.Exception.Message)"
 }
