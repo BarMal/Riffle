@@ -5,6 +5,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertCountEquals
@@ -18,9 +19,7 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performTouchInput
-import androidx.compose.ui.test.swipeLeft
-import androidx.compose.ui.test.swipeRight
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppProfile
@@ -36,6 +35,7 @@ import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.notifications.NotificationAgeBucket
 import com.riffle.core.domain.launcher.notifications.NotificationCategory
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -286,14 +286,14 @@ class CardStackTest {
         composeRule.onNodeWithTag(nextFocusTestTag(messagesGroup.key)).performClick()
         assertNotificationFocus(messagesGroup.key, position = 2, count = 2, previousEnabled = true, nextEnabled = false)
 
-        composeRule.onNodeWithTag(NOTIFICATION_PROTOTYPE_PAGER_TEST_TAG).performTouchInput { swipeLeft() }
+        scrollNotificationPagerBy(1_000f)
         assertNotificationFocus(calendarGroup.key, position = 1, count = 3, previousEnabled = false, nextEnabled = true)
 
         composeRule.onNodeWithTag(nextFocusTestTag(calendarGroup.key)).performClick()
         composeRule.onNodeWithTag(nextFocusTestTag(calendarGroup.key)).performClick()
         assertNotificationFocus(calendarGroup.key, position = 3, count = 3, previousEnabled = true, nextEnabled = false)
 
-        composeRule.onNodeWithTag(NOTIFICATION_PROTOTYPE_PAGER_TEST_TAG).performTouchInput { swipeRight() }
+        scrollNotificationPagerBy(-1_000f)
         assertNotificationFocus(messagesGroup.key, position = 2, count = 2, previousEnabled = true, nextEnabled = false)
     }
 
@@ -352,6 +352,14 @@ class CardStackTest {
         composeRule
             .onNodeWithTag(nextFocusTestTag(groupKey))
             .run { if (nextEnabled) assertIsEnabled() else assertIsNotEnabled() }
+    }
+
+    private fun scrollNotificationPagerBy(horizontalPixels: Float) {
+        composeRule
+            .onNodeWithTag(NOTIFICATION_PROTOTYPE_PAGER_TEST_TAG)
+            .performSemanticsAction(SemanticsActions.ScrollBy) { scrollBy ->
+                assertTrue(scrollBy(horizontalPixels, 0f))
+            }
     }
 
     private fun focusPositionTestTag(groupKey: AppNotificationGroupKey): String =
