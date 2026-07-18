@@ -44,6 +44,7 @@ class PageOverviewReorderInteractionTest {
 
         scrollToPageOverviewCard(pageId = "page-7")
         composeRule.onNodeWithTag(pageOverviewCardTestTag("page-7")).assertIsDisplayed()
+        composeRule.waitForIdle()
         composeRule.onNodeWithTag(pageOverviewCardTestTag("page-7")).performTouchInput {
             down(center)
             advanceEventTime(viewConfiguration.longPressTimeoutMillis + 50L)
