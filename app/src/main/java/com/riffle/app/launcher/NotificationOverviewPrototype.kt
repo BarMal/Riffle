@@ -30,8 +30,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -60,6 +58,7 @@ import kotlinx.coroutines.launch
 internal fun NotificationGroupPrototype(
     groups: List<AppNotificationGroup>,
     selectedGroupKey: AppNotificationGroupKey,
+    focusState: NotificationFocusState,
     presentation: NotificationOverviewPresentation,
     onBack: () -> Unit,
     onGroupChanged: (AppNotificationGroupKey) -> Unit,
@@ -71,8 +70,6 @@ internal fun NotificationGroupPrototype(
             initialPage = selectedGroupIndex,
             pageCount = { groups.size },
         )
-    var focusedNotificationIndex by remember { mutableIntStateOf(0) }
-
     LaunchedEffect(pagerState.currentPage) {
         groups.getOrNull(pagerState.currentPage)?.let { group ->
             onGroupChanged(group.key)
@@ -90,7 +87,7 @@ internal fun NotificationGroupPrototype(
         val app = presentation.apps.firstOrNull { installedApp -> installedApp.matches(group) }
         val listState = rememberLazyListState()
         val coroutineScope = rememberCoroutineScope()
-        val activeNotificationIndex = focusedNotificationIndex.coerceIn(0, group.notifications.lastIndex)
+        val activeNotificationIndex = focusState.index.coerceIn(0, group.notifications.lastIndex)
         val focusedNotification =
             group.notifications.getOrNull(activeNotificationIndex) ?: return@HorizontalPager
         val upcomingNotification =
@@ -103,15 +100,17 @@ internal fun NotificationGroupPrototype(
                 canFocusPrevious = activeNotificationIndex > 0,
                 canFocusNext = activeNotificationIndex < group.notifications.lastIndex,
                 onFocusPrevious = {
-                    focusedNotificationIndex = activeNotificationIndex - 1
+                    val targetNotificationIndex = activeNotificationIndex - 1
+                    focusState.onChanged(targetNotificationIndex)
                     coroutineScope.launch {
-                        listState.animateScrollToItem(focusedNotificationIndex)
+                        listState.animateScrollToItem(targetNotificationIndex)
                     }
                 },
                 onFocusNext = {
-                    focusedNotificationIndex = activeNotificationIndex + 1
+                    val targetNotificationIndex = activeNotificationIndex + 1
+                    focusState.onChanged(targetNotificationIndex)
                     coroutineScope.launch {
-                        listState.animateScrollToItem(focusedNotificationIndex)
+                        listState.animateScrollToItem(targetNotificationIndex)
                     }
                 },
             )
@@ -159,16 +158,14 @@ internal fun NotificationGroupPrototype(
                         modifier = Modifier.fillMaxSize().testTag(NOTIFICATION_PROTOTYPE_CENTER_STAGE_TEST_TAG),
                         verticalArrangement = Arrangement.spacedBy(16.dp),
                     ) {
-                        key(activeNotificationIndex) {
-                            NotificationPrototypeHero(
-                                notification = focusedNotification,
-                                upcomingNotification = upcomingNotification,
-                                swipeProgress = swipeProgress,
-                                presentation = heroPresentation,
-                                focusControls = focusControls,
-                                modifier = Modifier.weight(1f),
-                            )
-                        }
+                        NotificationPrototypeHero(
+                            notification = focusedNotification,
+                            upcomingNotification = upcomingNotification,
+                            swipeProgress = swipeProgress,
+                            presentation = heroPresentation,
+                            focusControls = focusControls,
+                            modifier = Modifier.weight(1f),
+                        )
                         notificationList(Modifier.weight(1f))
                     }
 
@@ -177,16 +174,14 @@ internal fun NotificationGroupPrototype(
                         modifier = Modifier.fillMaxSize().testTag(NOTIFICATION_PROTOTYPE_SIDE_BY_SIDE_TEST_TAG),
                         horizontalArrangement = Arrangement.spacedBy(16.dp),
                     ) {
-                        key(activeNotificationIndex) {
-                            NotificationPrototypeHero(
-                                notification = focusedNotification,
-                                upcomingNotification = upcomingNotification,
-                                swipeProgress = swipeProgress,
-                                presentation = heroPresentation,
-                                focusControls = focusControls,
-                                modifier = Modifier.weight(1f),
-                            )
-                        }
+                        NotificationPrototypeHero(
+                            notification = focusedNotification,
+                            upcomingNotification = upcomingNotification,
+                            swipeProgress = swipeProgress,
+                            presentation = heroPresentation,
+                            focusControls = focusControls,
+                            modifier = Modifier.weight(1f),
+                        )
                         notificationList(Modifier.weight(1f))
                     }
             }
@@ -199,6 +194,11 @@ internal const val NOTIFICATION_PROTOTYPE_SIDE_BY_SIDE_TEST_TAG = "notification-
 internal const val NOTIFICATION_PROTOTYPE_FOCUS_POSITION_TEST_TAG = "notification-prototype-focus-position"
 internal const val NOTIFICATION_PROTOTYPE_PREVIOUS_FOCUS_TEST_TAG = "notification-prototype-previous-focus"
 internal const val NOTIFICATION_PROTOTYPE_NEXT_FOCUS_TEST_TAG = "notification-prototype-next-focus"
+
+internal data class NotificationFocusState(
+    val index: Int,
+    val onChanged: (Int) -> Unit,
+)
 
 internal fun notificationOverviewSelectedGroupIndex(
     groups: List<AppNotificationGroup>,

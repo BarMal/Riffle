@@ -30,6 +30,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -64,6 +65,7 @@ fun NotificationOverviewSurface(
 ) {
     var selectedCategory by remember { mutableStateOf<NotificationCategory?>(null) }
     var selectedGroupKey by remember { mutableStateOf<AppNotificationGroupKey?>(null) }
+    var focusedNotificationIndex by remember { mutableIntStateOf(0) }
     val categoryOptions = notificationCategoryFilterOptions(groups)
     val effectiveSelectedCategory =
         selectedCategory.takeIf { category -> categoryOptions.any { option -> option.category == category } }
@@ -107,9 +109,17 @@ fun NotificationOverviewSurface(
                     NotificationGroupPrototype(
                         groups = visibleGroups,
                         selectedGroupKey = selectedGroup.key,
+                        focusState =
+                            NotificationFocusState(
+                                index = focusedNotificationIndex,
+                                onChanged = { index -> focusedNotificationIndex = index },
+                            ),
                         presentation = presentation,
                         onBack = { selectedGroupKey = null },
-                        onGroupChanged = { groupKey -> selectedGroupKey = groupKey },
+                        onGroupChanged = { groupKey ->
+                            selectedGroupKey = groupKey
+                            focusedNotificationIndex = 0
+                        },
                         onAction = onAction,
                     )
 
