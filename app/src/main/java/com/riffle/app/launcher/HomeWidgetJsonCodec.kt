@@ -3,8 +3,8 @@ package com.riffle.app.launcher
 import com.riffle.core.domain.launcher.home.GridSpan
 import com.riffle.core.domain.launcher.home.HostedWidgetId
 import com.riffle.core.domain.launcher.home.LauncherItemId
-import com.riffle.core.domain.launcher.home.WidgetResizeConstraints
 import com.riffle.core.domain.launcher.home.WidgetItem
+import com.riffle.core.domain.launcher.home.WidgetResizeConstraints
 import org.json.JSONObject
 
 fun encodeWidget(widget: WidgetItem): JSONObject =

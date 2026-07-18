@@ -29,17 +29,17 @@ fun WidgetProviderDimensions.resizeConstraints(
     supportsVerticalResize: Boolean,
 ): WidgetResizeConstraints {
     val preferred = preferredGridSpan(grid, availableWidthDp, availableHeightDp)
+    val minWidth = minResizeWidthDp ?: minWidthDp
+    val minHeight = minResizeHeightDp ?: minHeightDp
+    val maxWidth = maxResizeWidthDp ?: availableWidthDp
+    val maxHeight = maxResizeHeightDp ?: availableHeightDp
     val minimum = GridSpan(
-        columns =
-            (minResizeWidthDp ?: minWidthDp).spanCells(availableWidthDp, grid.columns),
-        rows =
-            (minResizeHeightDp ?: minHeightDp).spanCells(availableHeightDp, grid.rows),
+        columns = minWidth.spanCells(availableWidthDp, grid.columns),
+        rows = minHeight.spanCells(availableHeightDp, grid.rows),
     ).fitWidgetPreferredSpan(grid)
     val maximum = GridSpan(
-        columns =
-            (maxResizeWidthDp ?: availableWidthDp).spanCells(availableWidthDp, grid.columns),
-        rows =
-            (maxResizeHeightDp ?: availableHeightDp).spanCells(availableHeightDp, grid.rows),
+        columns = maxWidth.spanCells(availableWidthDp, grid.columns),
+        rows = maxHeight.spanCells(availableHeightDp, grid.rows),
     ).fitWidgetPreferredSpan(grid)
     return WidgetResizeConstraints(
         minSpan = GridSpan(
