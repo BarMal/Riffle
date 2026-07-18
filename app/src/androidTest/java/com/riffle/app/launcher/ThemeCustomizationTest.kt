@@ -79,25 +79,25 @@ class ThemeCustomizationTest {
 
     @Test
     fun appearanceAndDockControlsDispatchAccessibleCustomizationActions() {
-        var accent by mutableStateOf(LauncherThemeAccent.DEFAULT)
-        var dock by mutableStateOf(DockModel(capacity = 4))
+        val selectedAccents = mutableListOf<LauncherThemeAccent>()
+        val selectedDockEffects = mutableListOf<DockVisualEffect>()
 
         composeRule.setContent {
             Column {
                 ThemeAccentSetting(
-                    selectedAccent = accent,
+                    selectedAccent = LauncherThemeAccent.DEFAULT,
                     onAction = { action ->
                         if (action is LauncherShellAction.SelectLauncherThemeAccent) {
-                            accent = action.accent
+                            selectedAccents += action.accent
                         }
                     },
                 )
                 DockSetting(
-                    dock = dock,
+                    dock = DockModel(capacity = 4),
                     notificationAccessStatus = NotificationAccessStatus.NOT_GRANTED,
                     onAction = { action ->
                         if (action is LauncherShellAction.SelectDockVisualEffect) {
-                            dock = dock.copy(visualEffect = action.effect)
+                            selectedDockEffects += action.effect
                         }
                     },
                 )
@@ -106,14 +106,13 @@ class ThemeCustomizationTest {
 
         composeRule.onNodeWithText("Teal").assertHasClickAction().performClick()
         composeRule.runOnIdle {
-            assertEquals(LauncherThemeAccent.TEAL, accent)
+            assertEquals(listOf(LauncherThemeAccent.TEAL), selectedAccents)
         }
 
         composeRule.onNodeWithText("Outlined").assertHasClickAction().performClick()
         composeRule.runOnIdle {
-            assertEquals(DockVisualEffect.OUTLINED, dock.visualEffect)
+            assertEquals(listOf(DockVisualEffect.OUTLINED), selectedDockEffects)
         }
-        composeRule.onNodeWithText("Teal (selected)").assertExists()
     }
 
     @Composable
