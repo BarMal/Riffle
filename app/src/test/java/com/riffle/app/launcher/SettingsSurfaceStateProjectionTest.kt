@@ -15,13 +15,14 @@ import org.junit.Test
 
 class SettingsSurfaceStateProjectionTest {
     @Test
-    fun defaultLayoutSettingsHideCardMode() {
+    fun defaultLayoutSettingsExposeCardMode() {
         val surfaceState = LauncherShellState().settingsSurfaceState()
 
         assertEquals(
             listOf(
                 LauncherViewMode.STANDARD_APP_DRAWER,
                 LauncherViewMode.HOME_SCREEN_LIBRARY,
+                LauncherViewMode.CARD_INTERFACE,
             ),
             surfaceState.availableLauncherViewModes,
         )
