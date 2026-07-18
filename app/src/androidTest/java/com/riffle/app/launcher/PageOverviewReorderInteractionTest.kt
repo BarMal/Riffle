@@ -29,13 +29,11 @@ class PageOverviewReorderInteractionTest {
     val composeRule = createComposeRule()
 
     @Test
-    fun longPressDragReordersAnOffScreenPageOnPhoneWidth() {
-        verifyOffScreenPageDrag(containerWidth = 360.dp)
-    }
-
-    @Test
-    fun longPressDragReordersAnOffScreenPageOnFoldableWidth() {
-        verifyOffScreenPageDrag(containerWidth = 840.dp)
+    fun longPressDragReordersAnOffScreenPageAtPhoneAndFoldableWidths() {
+        // Keep both widths in one Compose rule lifecycle. Android instrumentation may schedule
+        // separate test methods on different threads, which can leave Compose's layout observer
+        // owned by the previous thread between methods.
+        listOf(360.dp, 840.dp).forEach(::verifyOffScreenPageDrag)
     }
 
     private fun verifyOffScreenPageDrag(containerWidth: Dp) {
