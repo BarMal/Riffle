@@ -76,7 +76,7 @@ internal fun NotificationGroupPrototype(
 
     HorizontalPager(
         state = pagerState,
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier.fillMaxSize().testTag(NOTIFICATION_PROTOTYPE_PAGER_TEST_TAG),
         pageSpacing = 16.dp,
         key = { page -> "${groups[page].profileId.value}:${groups[page].packageName.value}" },
     ) { page ->
@@ -181,6 +181,7 @@ internal fun NotificationGroupPrototype(
 
 internal const val NOTIFICATION_PROTOTYPE_CENTER_STAGE_TEST_TAG = "notification-prototype-center-stage"
 internal const val NOTIFICATION_PROTOTYPE_SIDE_BY_SIDE_TEST_TAG = "notification-prototype-side-by-side"
+internal const val NOTIFICATION_PROTOTYPE_PAGER_TEST_TAG = "notification-prototype-pager"
 internal const val NOTIFICATION_PROTOTYPE_FOCUS_POSITION_TEST_TAG = "notification-prototype-focus-position"
 internal const val NOTIFICATION_PROTOTYPE_PREVIOUS_FOCUS_TEST_TAG = "notification-prototype-previous-focus"
 internal const val NOTIFICATION_PROTOTYPE_NEXT_FOCUS_TEST_TAG = "notification-prototype-next-focus"
