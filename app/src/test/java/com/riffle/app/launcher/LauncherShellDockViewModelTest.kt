@@ -7,6 +7,7 @@ import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.apps.InstalledAppRepository
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.DockModel
+import com.riffle.core.domain.launcher.home.DockVisualEffect
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
@@ -160,6 +161,21 @@ class LauncherShellDockViewModelTest {
         viewModel.onDockEdited(LauncherShellAction.SelectDockBackgroundAlpha(alphaPercent = 85))
 
         assertEquals(85, viewModel.state.value.homeLayout.dock.backgroundAlphaPercent)
+        assertEquals(viewModel.state.value.homeLayout, repository.savedLayout)
+    }
+
+    @Test
+    fun updatesDockVisualEffectAndSavesLayout() {
+        val repository = FakeHomeLayoutRepository()
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                homeLayoutRepository = repository,
+            )
+
+        viewModel.onDockEdited(LauncherShellAction.SelectDockVisualEffect(DockVisualEffect.ELEVATED))
+
+        assertEquals(DockVisualEffect.ELEVATED, viewModel.state.value.homeLayout.dock.visualEffect)
         assertEquals(viewModel.state.value.homeLayout, repository.savedLayout)
     }
 

@@ -9,6 +9,7 @@ import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.cards.CardsChapterId
 import com.riffle.core.domain.launcher.home.DockBackgroundSizing
 import com.riffle.core.domain.launcher.home.DockItemMoveDirection
+import com.riffle.core.domain.launcher.home.DockVisualEffect
 import com.riffle.core.domain.launcher.home.FolderItemMoveDirection
 import com.riffle.core.domain.launcher.home.GridCell
 import com.riffle.core.domain.launcher.home.GridDimensions
@@ -180,6 +181,8 @@ sealed interface LauncherShellAction {
     data class SelectDockIconSize(val sizeDp: Int) : LauncherShellAction
 
     data class SelectDockBackgroundAlpha(val alphaPercent: Int) : LauncherShellAction
+
+    data class SelectDockVisualEffect(val effect: DockVisualEffect) : LauncherShellAction
 
     data class SelectDockBackgroundSizing(val sizing: DockBackgroundSizing) : LauncherShellAction
 

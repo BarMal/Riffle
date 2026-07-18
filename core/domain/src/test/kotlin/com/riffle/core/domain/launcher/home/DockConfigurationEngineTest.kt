@@ -94,6 +94,16 @@ class DockConfigurationEngineTest {
     }
 
     @Test
+    fun updatesDockVisualEffectWithoutChangingItems() {
+        val phone = appShortcut(id = "phone")
+        val result = engine.setDockVisualEffect(layout = layoutWithDockItems(phone), effect = DockVisualEffect.OUTLINED)
+
+        val updated = assertIs<DockEditResult.Updated>(result)
+        assertEquals(DockVisualEffect.OUTLINED, updated.layout.dock.visualEffect)
+        assertEquals(listOf(phone.id), updated.layout.dock.items.map { item -> item.id })
+    }
+
+    @Test
     fun updatesDockBackgroundSizing() {
         val result =
             engine.setDockBackgroundSizing(

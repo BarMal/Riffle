@@ -91,10 +91,7 @@ internal fun DockSlotsRow(
             scrollOffsetPx = scrollState.value,
             maxScrollOffsetPx = scrollState.maxValue,
         )
-    val fadeColor =
-        MaterialTheme.colorScheme.surfaceVariant.copy(
-            alpha = dock.backgroundAlphaPercent / 100f,
-        )
+    val fadeColor = dockSurfaceColor(dock)
 
     Box(
         modifier =

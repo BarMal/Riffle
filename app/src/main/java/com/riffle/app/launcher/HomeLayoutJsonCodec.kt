@@ -2,6 +2,7 @@ package com.riffle.app.launcher
 
 import com.riffle.core.domain.launcher.home.DockBackgroundSizing
 import com.riffle.core.domain.launcher.home.DockModel
+import com.riffle.core.domain.launcher.home.DockVisualEffect
 import com.riffle.core.domain.launcher.home.GridDimensions
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
@@ -72,6 +73,7 @@ private fun encodeDock(dock: DockModel): JSONObject =
         .put("showNotificationCards", dock.showNotificationCards)
         .put("iconSizeDp", dock.iconSizeDp)
         .put("backgroundAlphaPercent", dock.backgroundAlphaPercent)
+        .put("visualEffect", dock.visualEffect.name)
         .put("backgroundSizing", dock.backgroundSizing.name)
         .put("itemSpacingDp", dock.itemSpacingDp)
         .put("capacity", dock.capacity)
@@ -87,6 +89,11 @@ private fun JSONObject.toDock(defaults: DockModel): DockModel =
                 "backgroundAlphaPercent",
                 defaults.backgroundAlphaPercent,
             ),
+        visualEffect =
+            optString("visualEffect", "")
+                .takeIf(String::isNotBlank)
+                ?.let { value -> runCatching { DockVisualEffect.valueOf(value) }.getOrNull() }
+                ?: defaults.visualEffect,
         backgroundSizing =
             optString("backgroundSizing", "")
                 .takeIf(String::isNotBlank)
