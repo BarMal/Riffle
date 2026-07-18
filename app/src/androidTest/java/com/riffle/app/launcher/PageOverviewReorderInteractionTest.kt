@@ -4,6 +4,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.assertIsDisplayed
@@ -33,13 +35,20 @@ class PageOverviewReorderInteractionTest {
         // Keep both widths in one Compose rule lifecycle. Android instrumentation may schedule
         // separate test methods on different threads, which can leave Compose's layout observer
         // owned by the previous thread between methods.
-        listOf(360.dp, 840.dp).forEach(::verifyOffScreenPageDrag)
+        val containerWidth = mutableStateOf(360.dp)
+        val actions = mutableListOf<LauncherShellAction>()
+        setContent(containerWidth = containerWidth, onAction = actions::add)
+
+        listOf(360.dp, 840.dp).forEach { width ->
+            composeRule.runOnIdle {
+                containerWidth.value = width
+                actions.clear()
+            }
+            verifyOffScreenPageDrag(actions)
+        }
     }
 
-    private fun verifyOffScreenPageDrag(containerWidth: Dp) {
-        val actions = mutableListOf<LauncherShellAction>()
-        setContent(width = containerWidth, onAction = actions::add)
-
+    private fun verifyOffScreenPageDrag(actions: List<LauncherShellAction>) {
         scrollToPageOverviewCard(pageId = "page-7")
         composeRule.onNodeWithTag(pageOverviewCardTestTag("page-7")).assertIsDisplayed()
         composeRule.onNodeWithTag(pageOverviewCardTestTag("page-7")).performTouchInput {
@@ -73,7 +82,7 @@ class PageOverviewReorderInteractionTest {
     }
 
     private fun setContent(
-        width: Dp,
+        containerWidth: MutableState<Dp>,
         onAction: (LauncherShellAction) -> Unit,
     ) {
         composeRule.setContent {
@@ -81,7 +90,7 @@ class PageOverviewReorderInteractionTest {
                 Box(
                     modifier =
                         Modifier
-                            .width(width)
+                            .width(containerWidth.value)
                             .height(640.dp),
                 ) {
                     PageOverviewControls(
