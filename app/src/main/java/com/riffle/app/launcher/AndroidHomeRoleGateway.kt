@@ -69,7 +69,7 @@ internal fun homeRoleStatusFromResolvedDefaultHome(
     resolvedDefaultHomePackageName: String?,
 ): HomeRoleStatus =
     when (resolvedDefaultHomePackageName) {
-        in systemPermissionPackageCandidates(appPackageName) -> HomeRoleStatus.DEFAULT_HOME
+        appPackageName -> HomeRoleStatus.DEFAULT_HOME
         null -> HomeRoleStatus.UNKNOWN
         else -> HomeRoleStatus.NOT_DEFAULT_HOME
     }
