@@ -24,6 +24,12 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
+      - name: Run device evidence contract tests
+        shell: pwsh
+        run: |
+          Install-Module Pester -Force -Scope CurrentUser -MinimumVersion 5.0.0
+          Invoke-Pester .github/scripts/test/validate-device-evidence.Tests.ps1 -CI -Output Detailed
+
       - name: Set up JDK
         uses: actions/setup-java@v4
         with:

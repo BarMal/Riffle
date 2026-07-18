@@ -72,4 +72,28 @@ Describe "validate-device-evidence" {
 
         { & $scriptPath -EvidencePath $evidencePath -ExpectedCommitSha $candidateSha } | Should -Throw "*cannot be overridden*"
     }
+
+    It "rejects non-integer Android API values" {
+        $evidence = New-CompleteEvidence
+        $evidence.runs[0].device.androidApi = "not-an-api"
+        $evidence | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $evidencePath
+
+        { & $scriptPath -EvidencePath $evidencePath -ExpectedCommitSha $candidateSha } | Should -Throw "*androidApi must be an integer*"
+    }
+
+    It "rejects undocumented device enum values" {
+        $evidence = New-CompleteEvidence
+        $evidence.runs[0].device.formFactor = "unknown"
+        $evidence | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $evidencePath
+
+        { & $scriptPath -EvidencePath $evidencePath -ExpectedCommitSha $candidateSha } | Should -Throw "*formFactor has an unsupported value*"
+    }
+
+    It "rejects non-RFC3339 run timestamps" {
+        $evidence = New-CompleteEvidence
+        $evidence.runs[0].timestamp = "tomorrow morning"
+        $evidence | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $evidencePath
+
+        { & $scriptPath -EvidencePath $evidencePath -ExpectedCommitSha $candidateSha } | Should -Throw "*timestamp must be an RFC3339 date-time*"
+    }
 }
