@@ -11,6 +11,12 @@ import org.junit.Test
 
 class SettingsPagesTest {
     @Test
+    fun labelsSelectedThemeOptionsClearly() {
+        assertEquals("Teal (selected)", themeOptionLabel(optionName = "TEAL", isSelected = true))
+        assertEquals("Material", themeOptionLabel(optionName = "MATERIAL", isSelected = false))
+    }
+
+    @Test
     fun mainSettingsPageUsesLauncherStyleGroups() {
         assertEquals(
             listOf(

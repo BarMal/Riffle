@@ -28,7 +28,9 @@ internal fun ThemeModeSetting(
                         enabled = mode != selectedMode,
                         onClick = { onAction(LauncherShellAction.SelectLauncherThemeMode(mode)) },
                     ) {
-                        SettingsButtonText(text = mode.name.lowercase().replaceFirstChar(Char::uppercase))
+                        SettingsButtonText(
+                            text = themeOptionLabel(mode.name, isSelected = mode == selectedMode),
+                        )
                     }
                 }
             }
@@ -52,7 +54,9 @@ internal fun ThemePresetSetting(
                     enabled = preset != selectedPreset,
                     onClick = { onAction(LauncherShellAction.SelectLauncherThemePreset(preset)) },
                 ) {
-                    SettingsButtonText(text = preset.name.lowercase().replaceFirstChar(Char::uppercase))
+                    SettingsButtonText(
+                        text = themeOptionLabel(preset.name, isSelected = preset == selectedPreset),
+                    )
                 }
             }
         }
@@ -75,9 +79,19 @@ internal fun ThemeAccentSetting(
                     enabled = accent != selectedAccent,
                     onClick = { onAction(LauncherShellAction.SelectLauncherThemeAccent(accent)) },
                 ) {
-                    SettingsButtonText(text = accent.name.lowercase().replaceFirstChar(Char::uppercase))
+                    SettingsButtonText(
+                        text = themeOptionLabel(accent.name, isSelected = accent == selectedAccent),
+                    )
                 }
             }
         }
     }
 }
+
+internal fun themeOptionLabel(
+    optionName: String,
+    isSelected: Boolean,
+): String =
+    optionName.lowercase().replaceFirstChar(Char::uppercase).let { label ->
+        if (isSelected) "$label (selected)" else label
+    }
