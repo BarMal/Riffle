@@ -68,24 +68,20 @@ private fun DockVisualEffectSetting(
     effect: DockVisualEffect,
     onAction: (LauncherShellAction) -> Unit,
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
+    Column(
+        verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         SettingsTextColumn(
-            modifier = Modifier.weight(1f),
             title = "Dock effect",
             subtitle = "${effect.name.lowercase().replaceFirstChar(Char::uppercase)} Material treatment",
         )
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            DockVisualEffect.entries.forEach { candidate ->
-                TextButton(
-                    enabled = candidate != effect,
-                    onClick = { onAction(LauncherShellAction.SelectDockVisualEffect(candidate)) },
-                ) {
-                    SettingsButtonText(text = candidate.name.lowercase().replaceFirstChar(Char::uppercase))
-                }
+        DockVisualEffect.entries.forEach { candidate ->
+            TextButton(
+                modifier = Modifier.fillMaxWidth(),
+                enabled = candidate != effect,
+                onClick = { onAction(LauncherShellAction.SelectDockVisualEffect(candidate)) },
+            ) {
+                SettingsButtonText(text = candidate.name.lowercase().replaceFirstChar(Char::uppercase))
             }
         }
     }
