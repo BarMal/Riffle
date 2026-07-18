@@ -495,7 +495,15 @@ private fun createInitialState(
         settingsLayoutDeviceClass = layoutSet.activeKey.deviceClass,
         availableLayoutDeviceClasses = setOf(layoutSet.activeKey.deviceClass),
         launcherSettings = launcherSettingsRepository.loadLauncherSettings() ?: LauncherSettings(),
-    ).copy(setupCardDismissed = firstRunRepository.isSetupCardDismissed())
+    ).copy(
+        firstRunStatus =
+            if (firstRunRepository.isFirstRunComplete()) {
+                FirstRunStatus.COMPLETE
+            } else {
+                FirstRunStatus.NEEDS_HOME_ROLE
+            },
+        setupCardDismissed = firstRunRepository.isSetupCardDismissed(),
+    )
 }
 
 private fun HomeLayoutSet.selectInitialDeviceClass(
