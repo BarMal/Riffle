@@ -30,6 +30,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -48,6 +49,7 @@ import com.riffle.core.domain.launcher.cards.CardStackSurfaceLayoutPolicy
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroupKey
 import com.riffle.core.domain.launcher.notifications.LauncherNotification
+import kotlinx.coroutines.launch
 
 @Composable
 @Suppress("LongMethod")
@@ -81,6 +83,7 @@ internal fun NotificationGroupPrototype(
         val group = groups[page]
         val app = presentation.apps.firstOrNull { installedApp -> installedApp.matches(group) }
         val listState = rememberLazyListState()
+        val coroutineScope = rememberCoroutineScope()
         val focusedNotification =
             notificationOverviewFocusedNotification(
                 notifications = group.notifications,
@@ -88,6 +91,21 @@ internal fun NotificationGroupPrototype(
             ) ?: return@HorizontalPager
         val upcomingNotification =
             group.notifications.getOrNull(listState.firstVisibleItemIndex.coerceAtLeast(0) + 1)
+        val focusControls =
+            NotificationFocusControls(
+                canFocusPrevious = listState.firstVisibleItemIndex > 0,
+                canFocusNext = listState.firstVisibleItemIndex < group.notifications.lastIndex,
+                onFocusPrevious = {
+                    coroutineScope.launch {
+                        listState.animateScrollToItem(listState.firstVisibleItemIndex - 1)
+                    }
+                },
+                onFocusNext = {
+                    coroutineScope.launch {
+                        listState.animateScrollToItem(listState.firstVisibleItemIndex + 1)
+                    }
+                },
+            )
         val swipeProgress =
             notificationOverviewScrollProgress(
                 firstVisibleItemScrollOffset = listState.firstVisibleItemScrollOffset,
@@ -137,6 +155,7 @@ internal fun NotificationGroupPrototype(
                             upcomingNotification = upcomingNotification,
                             swipeProgress = swipeProgress,
                             presentation = heroPresentation,
+                            focusControls = focusControls,
                             modifier = Modifier.weight(1f),
                         )
                         notificationList(Modifier.weight(1f))
@@ -152,6 +171,7 @@ internal fun NotificationGroupPrototype(
                             upcomingNotification = upcomingNotification,
                             swipeProgress = swipeProgress,
                             presentation = heroPresentation,
+                            focusControls = focusControls,
                             modifier = Modifier.weight(1f),
                         )
                         notificationList(Modifier.weight(1f))
@@ -163,6 +183,7 @@ internal fun NotificationGroupPrototype(
 
 internal const val NOTIFICATION_PROTOTYPE_CENTER_STAGE_TEST_TAG = "notification-prototype-center-stage"
 internal const val NOTIFICATION_PROTOTYPE_SIDE_BY_SIDE_TEST_TAG = "notification-prototype-side-by-side"
+internal const val NOTIFICATION_PROTOTYPE_FOCUSED_CARD_TITLE_TEST_TAG = "notification-prototype-focused-card-title"
 
 internal fun notificationOverviewSelectedGroupIndex(
     groups: List<AppNotificationGroup>,
@@ -218,6 +239,7 @@ private fun NotificationPrototypeHero(
     upcomingNotification: LauncherNotification?,
     swipeProgress: Float,
     presentation: NotificationPrototypeHeroPresentation,
+    focusControls: NotificationFocusControls,
     modifier: Modifier = Modifier,
 ) {
     val label = notificationOverviewGroupLabel(app = presentation.app, group = presentation.group)
@@ -269,6 +291,7 @@ private fun NotificationPrototypeHero(
             notification = featuredNotification,
             fallbackLabel = label,
             group = presentation.group,
+            focusControls = focusControls,
         )
     }
 }
@@ -279,11 +302,19 @@ private data class NotificationPrototypeHeroPresentation(
     val overviewPresentation: NotificationOverviewPresentation,
 )
 
+private data class NotificationFocusControls(
+    val canFocusPrevious: Boolean,
+    val canFocusNext: Boolean,
+    val onFocusPrevious: () -> Unit,
+    val onFocusNext: () -> Unit,
+)
+
 @Composable
 private fun BoxScope.NotificationPrototypeHeroDetails(
     notification: LauncherNotification,
     fallbackLabel: String,
     group: AppNotificationGroup,
+    focusControls: NotificationFocusControls,
 ) {
     Surface(
         modifier =
@@ -303,6 +334,7 @@ private fun BoxScope.NotificationPrototypeHeroDetails(
                 style = MaterialTheme.typography.headlineSmall,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.testTag(NOTIFICATION_PROTOTYPE_FOCUSED_CARD_TITLE_TEST_TAG),
             )
             Text(
                 text = notification.text.ifBlank { group.notificationOverviewMetadataLabel(fallbackLabel) },
@@ -310,6 +342,20 @@ private fun BoxScope.NotificationPrototypeHeroDetails(
                 maxLines = 4,
                 overflow = TextOverflow.Ellipsis,
             )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                TextButton(
+                    onClick = focusControls.onFocusPrevious,
+                    enabled = focusControls.canFocusPrevious,
+                ) {
+                    Text(text = "Previous notification")
+                }
+                TextButton(
+                    onClick = focusControls.onFocusNext,
+                    enabled = focusControls.canFocusNext,
+                ) {
+                    Text(text = "Next notification")
+                }
+            }
         }
     }
 }

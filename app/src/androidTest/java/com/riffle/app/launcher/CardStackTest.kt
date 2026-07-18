@@ -8,6 +8,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.hasAnyDescendant
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -213,6 +215,44 @@ class CardStackTest {
         composeRule.onNodeWithText("View card").performClick()
 
         composeRule.onNodeWithTag(NOTIFICATION_PROTOTYPE_SIDE_BY_SIDE_TEST_TAG).assertExists()
+    }
+
+    @Test
+    fun notificationCardFocusControlsMoveThroughTheNotificationStack() {
+        composeRule.setContent {
+            MaterialTheme {
+                NotificationOverviewSurface(
+                    groups = listOf(notificationGroup()),
+                    categoryCounts = mapOf(NotificationCategory.MESSAGE to 2),
+                    notificationAccessStatus = NotificationAccessStatus.GRANTED,
+                    presentation =
+                        NotificationOverviewPresentation(
+                            apps = emptyList(),
+                            appIconLoader = EmptyAppIconLoader,
+                            reducedMotion = true,
+                        ),
+                    onAction = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("View card").performClick()
+        composeRule.onNodeWithText("Previous notification").assertIsNotEnabled()
+        composeRule.onNodeWithText("Next notification").performClick()
+        composeRule.waitUntil(timeoutMillis = 5_000) {
+            composeRule
+                .onNodeWithTag(NOTIFICATION_PROTOTYPE_FOCUSED_CARD_TITLE_TEST_TAG)
+                .fetchSemanticsNode()
+                .config
+                .getOrNull(SemanticsProperties.Text)
+                ?.any { text -> text.text == "Second" }
+                ?: false
+        }
+        composeRule
+            .onNodeWithTag(NOTIFICATION_PROTOTYPE_FOCUSED_CARD_TITLE_TEST_TAG)
+            .assertTextEquals("Second")
+        composeRule.onNodeWithText("Previous notification").performClick()
+        composeRule.onNodeWithText("Previous notification").assertIsNotEnabled()
     }
 
     private fun setContent(entries: List<CardStackLayoutEntry>) {
