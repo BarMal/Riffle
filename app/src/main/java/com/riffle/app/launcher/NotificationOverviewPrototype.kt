@@ -30,6 +30,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -158,14 +159,16 @@ internal fun NotificationGroupPrototype(
                         modifier = Modifier.fillMaxSize().testTag(NOTIFICATION_PROTOTYPE_CENTER_STAGE_TEST_TAG),
                         verticalArrangement = Arrangement.spacedBy(16.dp),
                     ) {
-                        NotificationPrototypeHero(
-                            notification = focusedNotification,
-                            upcomingNotification = upcomingNotification,
-                            swipeProgress = swipeProgress,
-                            presentation = heroPresentation,
-                            focusControls = focusControls,
-                            modifier = Modifier.weight(1f),
-                        )
+                        key(activeNotificationIndex) {
+                            NotificationPrototypeHero(
+                                notification = focusedNotification,
+                                upcomingNotification = upcomingNotification,
+                                swipeProgress = swipeProgress,
+                                presentation = heroPresentation,
+                                focusControls = focusControls,
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
                         notificationList(Modifier.weight(1f))
                     }
 
@@ -174,14 +177,16 @@ internal fun NotificationGroupPrototype(
                         modifier = Modifier.fillMaxSize().testTag(NOTIFICATION_PROTOTYPE_SIDE_BY_SIDE_TEST_TAG),
                         horizontalArrangement = Arrangement.spacedBy(16.dp),
                     ) {
-                        NotificationPrototypeHero(
-                            notification = focusedNotification,
-                            upcomingNotification = upcomingNotification,
-                            swipeProgress = swipeProgress,
-                            presentation = heroPresentation,
-                            focusControls = focusControls,
-                            modifier = Modifier.weight(1f),
-                        )
+                        key(activeNotificationIndex) {
+                            NotificationPrototypeHero(
+                                notification = focusedNotification,
+                                upcomingNotification = upcomingNotification,
+                                swipeProgress = swipeProgress,
+                                presentation = heroPresentation,
+                                focusControls = focusControls,
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
                         notificationList(Modifier.weight(1f))
                     }
             }
