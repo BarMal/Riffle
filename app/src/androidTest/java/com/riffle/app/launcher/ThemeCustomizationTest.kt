@@ -17,6 +17,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.riffle.core.domain.launcher.home.DockModel
+import com.riffle.core.domain.launcher.home.DockVisualEffect
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.settings.LauncherThemeAccent
 import com.riffle.core.domain.launcher.settings.LauncherThemeCornerStyle
@@ -77,8 +78,9 @@ class ThemeCustomizationTest {
     }
 
     @Test
-    fun appearanceControlsDispatchAccessibleCustomizationActionsAndShowDockEffect() {
+    fun appearanceAndDockControlsDispatchAccessibleCustomizationActions() {
         val selectedAccents = mutableListOf<LauncherThemeAccent>()
+        val selectedDockEffects = mutableListOf<DockVisualEffect>()
 
         composeRule.setContent {
             Column {
@@ -93,7 +95,11 @@ class ThemeCustomizationTest {
                 DockSetting(
                     dock = DockModel(capacity = 4),
                     notificationAccessStatus = NotificationAccessStatus.NOT_GRANTED,
-                    onAction = {},
+                    onAction = { action ->
+                        if (action is LauncherShellAction.SelectDockVisualEffect) {
+                            selectedDockEffects += action.effect
+                        }
+                    },
                 )
             }
         }
@@ -103,7 +109,10 @@ class ThemeCustomizationTest {
             assertEquals(listOf(LauncherThemeAccent.TEAL), selectedAccents)
         }
 
-        composeRule.onNodeWithText("Dock effect").assertExists()
+        composeRule.onNodeWithText("Elevated").assertHasClickAction().performClick()
+        composeRule.runOnIdle {
+            assertEquals(listOf(DockVisualEffect.ELEVATED), selectedDockEffects)
+        }
     }
 
     @Composable
