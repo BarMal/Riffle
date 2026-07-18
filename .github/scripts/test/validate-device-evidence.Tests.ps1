@@ -1,51 +1,53 @@
-$scriptPath = Join-Path $PSScriptRoot ".." "validate-device-evidence.ps1"
-$candidateSha = "0123456789abcdef0123456789abcdef01234567"
+Describe "validate-device-evidence" {
+    BeforeAll {
+        $scriptPath = Join-Path $PSScriptRoot ".." "validate-device-evidence.ps1"
+        $candidateSha = "0123456789abcdef0123456789abcdef01234567"
 
-function New-CompleteEvidence {
-    $scenarioIds = @(
-        "clean-install-first-open",
-        "home-role-lifecycle",
-        "catalog-resilience",
-        "home-navigation",
-        "notification-access",
-        "widget-hosting",
-        "adaptive-layout",
-        "accessibility-reduced-motion",
-        "backup-layout-migration",
-        "release-upgrade"
-    )
-    $runs =
-        foreach ($scenarioId in $scenarioIds) {
-            [ordered]@{
-                scenarioId = $scenarioId
-                evidenceType = if ($scenarioId -in @("home-role-lifecycle", "notification-access", "widget-hosting")) { "physical-device" } else { "automated-emulator" }
-                result = "pass"
-                validator = "Release validation"
-                timestamp = "2026-07-18T12:00:00Z"
-                knownLimitation = ""
-                device = [ordered]@{
-                    manufacturer = if ($scenarioId -in @("home-role-lifecycle", "notification-access", "widget-hosting")) { "Honor" } else { "Google" }
-                    model = "Test device"
-                    androidApi = 35
-                    build = "test-build"
-                    formFactor = "phone"
-                    windowMode = "fullscreen"
-                    installType = "release"
+        function New-CompleteEvidence {
+            $scenarioIds = @(
+                "clean-install-first-open",
+                "home-role-lifecycle",
+                "catalog-resilience",
+                "home-navigation",
+                "notification-access",
+                "widget-hosting",
+                "adaptive-layout",
+                "accessibility-reduced-motion",
+                "backup-layout-migration",
+                "release-upgrade"
+            )
+            $runs =
+                foreach ($scenarioId in $scenarioIds) {
+                    [ordered]@{
+                        scenarioId = $scenarioId
+                        evidenceType = if ($scenarioId -in @("home-role-lifecycle", "notification-access", "widget-hosting")) { "physical-device" } else { "automated-emulator" }
+                        result = "pass"
+                        validator = "Release validation"
+                        timestamp = "2026-07-18T12:00:00Z"
+                        knownLimitation = ""
+                        device = [ordered]@{
+                            manufacturer = if ($scenarioId -in @("home-role-lifecycle", "notification-access", "widget-hosting")) { "Honor" } else { "Google" }
+                            model = "Test device"
+                            androidApi = 35
+                            build = "test-build"
+                            formFactor = "phone"
+                            windowMode = "fullscreen"
+                            installType = "release"
+                        }
+                    }
                 }
+            return [ordered]@{
+                schemaVersion = 1
+                candidate = [ordered]@{
+                    commitSha = $candidateSha
+                    buildIdentity = "0.1.0-alpha.1 (1)"
+                    generatedAt = "2026-07-18T12:00:00Z"
+                }
+                runs = @($runs)
             }
         }
-    return [ordered]@{
-        schemaVersion = 1
-        candidate = [ordered]@{
-            commitSha = $candidateSha
-            buildIdentity = "0.1.0-alpha.1 (1)"
-            generatedAt = "2026-07-18T12:00:00Z"
-        }
-        runs = @($runs)
     }
-}
 
-Describe "validate-device-evidence" {
     BeforeEach {
         $evidencePath = Join-Path $TestDrive "evidence.json"
     }
