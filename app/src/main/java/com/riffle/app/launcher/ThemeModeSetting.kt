@@ -132,7 +132,10 @@ private fun ThemeOptionRow(
     options: @Composable () -> Unit,
 ) {
     Column {
-        SettingsListRow(title = title)
+        SettingsListRow(
+            title = title,
+            subtitle = "Override the selected theme preset",
+        )
         Row(
             modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
