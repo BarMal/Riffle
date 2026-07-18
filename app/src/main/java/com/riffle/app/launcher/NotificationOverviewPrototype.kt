@@ -30,8 +30,10 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -58,12 +60,12 @@ import kotlinx.coroutines.launch
 internal fun NotificationGroupPrototype(
     groups: List<AppNotificationGroup>,
     selectedGroupKey: AppNotificationGroupKey,
-    focusState: NotificationFocusState,
     presentation: NotificationOverviewPresentation,
     onBack: () -> Unit,
     onGroupChanged: (AppNotificationGroupKey) -> Unit,
     onAction: (LauncherShellAction) -> Unit,
 ) {
+    var focusedNotificationIndex by rememberSaveable(selectedGroupKey) { mutableIntStateOf(0) }
     val selectedGroupIndex = notificationOverviewSelectedGroupIndex(groups, selectedGroupKey)
     val pagerState =
         rememberPagerState(
@@ -87,7 +89,7 @@ internal fun NotificationGroupPrototype(
         val app = presentation.apps.firstOrNull { installedApp -> installedApp.matches(group) }
         val listState = rememberLazyListState()
         val coroutineScope = rememberCoroutineScope()
-        val activeNotificationIndex = focusState.index.coerceIn(0, group.notifications.lastIndex)
+        val activeNotificationIndex = focusedNotificationIndex.coerceIn(0, group.notifications.lastIndex)
         val focusedNotification =
             group.notifications.getOrNull(activeNotificationIndex) ?: return@HorizontalPager
         val upcomingNotification =
@@ -101,14 +103,14 @@ internal fun NotificationGroupPrototype(
                 canFocusNext = activeNotificationIndex < group.notifications.lastIndex,
                 onFocusPrevious = {
                     val targetNotificationIndex = activeNotificationIndex - 1
-                    focusState.onChanged(targetNotificationIndex)
+                    focusedNotificationIndex = targetNotificationIndex
                     coroutineScope.launch {
                         listState.animateScrollToItem(targetNotificationIndex)
                     }
                 },
                 onFocusNext = {
                     val targetNotificationIndex = activeNotificationIndex + 1
-                    focusState.onChanged(targetNotificationIndex)
+                    focusedNotificationIndex = targetNotificationIndex
                     coroutineScope.launch {
                         listState.animateScrollToItem(targetNotificationIndex)
                     }
@@ -194,11 +196,6 @@ internal const val NOTIFICATION_PROTOTYPE_SIDE_BY_SIDE_TEST_TAG = "notification-
 internal const val NOTIFICATION_PROTOTYPE_FOCUS_POSITION_TEST_TAG = "notification-prototype-focus-position"
 internal const val NOTIFICATION_PROTOTYPE_PREVIOUS_FOCUS_TEST_TAG = "notification-prototype-previous-focus"
 internal const val NOTIFICATION_PROTOTYPE_NEXT_FOCUS_TEST_TAG = "notification-prototype-next-focus"
-
-internal data class NotificationFocusState(
-    val index: Int,
-    val onChanged: (Int) -> Unit,
-)
 
 internal fun notificationOverviewSelectedGroupIndex(
     groups: List<AppNotificationGroup>,
