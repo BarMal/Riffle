@@ -10,6 +10,7 @@ internal class DefaultHomeRoleRequestHandler(
     private val showUnavailable: () -> Unit,
     private val logLaunchFailure: (Throwable) -> Unit,
 ) {
+    @Suppress("TooGenericExceptionCaught")
     fun request() {
         val intent = createRequestIntent()
         if (intent == null) {
@@ -18,11 +19,12 @@ internal class DefaultHomeRoleRequestHandler(
         }
 
         onRequestStarted()
-        runCatching { launchRequest(intent) }
-            .onFailure { failure ->
-                logLaunchFailure(failure)
-                refreshPlatformStatuses()
-                showUnavailable()
-            }
+        try {
+            launchRequest(intent)
+        } catch (failure: Exception) {
+            logLaunchFailure(failure)
+            refreshPlatformStatuses()
+            showUnavailable()
+        }
     }
 }

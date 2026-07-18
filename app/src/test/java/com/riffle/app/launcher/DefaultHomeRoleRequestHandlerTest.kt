@@ -2,6 +2,8 @@ package com.riffle.app.launcher
 
 import android.content.Intent
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertSame
+import org.junit.Assert.assertThrows
 import org.junit.Test
 
 class DefaultHomeRoleRequestHandlerTest {
@@ -28,6 +30,23 @@ class DefaultHomeRoleRequestHandlerTest {
         ).request()
 
         assertEquals(listOf("started", "launch", "failure", "refresh", "unavailable"), calls)
+    }
+
+    @Test
+    fun fatalLaunchErrorIsNotHandledAsUnavailable() {
+        val calls = mutableListOf<String>()
+        val fatalError = AssertionError("fatal")
+
+        val thrown = assertThrows(AssertionError::class.java) {
+            handler(
+                createRequestIntent = { Intent("request-home-role") },
+                calls = calls,
+                launchRequest = { throw fatalError },
+            ).request()
+        }
+
+        assertSame(fatalError, thrown)
+        assertEquals(listOf("started", "launch"), calls)
     }
 
     @Test
