@@ -238,6 +238,7 @@ class CardStackTest {
         }
 
         composeRule.onNodeWithText("View card").performClick()
+        composeRule.waitForIdle()
         composeRule
             .onNodeWithTag(NOTIFICATION_PROTOTYPE_FOCUS_POSITION_TEST_TAG)
             .assertTextEquals("Focused notification 1 of 2")
