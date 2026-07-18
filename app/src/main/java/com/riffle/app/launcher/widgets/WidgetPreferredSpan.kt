@@ -33,25 +33,37 @@ fun WidgetProviderDimensions.resizeConstraints(
     val minHeight = minResizeHeightDp ?: minHeightDp
     val maxWidth = maxResizeWidthDp ?: availableWidthDp
     val maxHeight = maxResizeHeightDp ?: availableHeightDp
-    val minimum = GridSpan(
-        columns = minWidth.spanCells(availableWidthDp, grid.columns),
-        rows = minHeight.spanCells(availableHeightDp, grid.rows),
-    ).fitWidgetPreferredSpan(grid)
-    val maximum = GridSpan(
-        columns = maxWidth.spanCells(availableWidthDp, grid.columns),
-        rows = maxHeight.spanCells(availableHeightDp, grid.rows),
-    ).fitWidgetPreferredSpan(grid)
+    val minimum =
+        GridSpan(
+            columns = minWidth.spanCells(availableWidthDp, grid.columns),
+            rows = minHeight.spanCells(availableHeightDp, grid.rows),
+        ).fitWidgetPreferredSpan(grid)
+    val maximum =
+        GridSpan(
+            columns = maxWidth.spanCells(availableWidthDp, grid.columns),
+            rows = maxHeight.spanCells(availableHeightDp, grid.rows),
+        ).fitWidgetPreferredSpan(grid)
     return WidgetResizeConstraints(
-        minSpan = GridSpan(
-            columns = if (supportsHorizontalResize) minimum.columns else preferred.columns,
-            rows = if (supportsVerticalResize) minimum.rows else preferred.rows,
-        ),
-        maxSpan = GridSpan(
-            columns =
-                if (supportsHorizontalResize) maxOf(minimum.columns, maximum.columns) else preferred.columns,
-            rows =
-                if (supportsVerticalResize) maxOf(minimum.rows, maximum.rows) else preferred.rows,
-        ),
+        minSpan =
+            GridSpan(
+                columns = if (supportsHorizontalResize) minimum.columns else preferred.columns,
+                rows = if (supportsVerticalResize) minimum.rows else preferred.rows,
+            ),
+        maxSpan =
+            GridSpan(
+                columns =
+                    if (supportsHorizontalResize) {
+                        maxOf(minimum.columns, maximum.columns)
+                    } else {
+                        preferred.columns
+                    },
+                rows =
+                    if (supportsVerticalResize) {
+                        maxOf(minimum.rows, maximum.rows)
+                    } else {
+                        preferred.rows
+                    },
+            ),
         supportsHorizontalResize = supportsHorizontalResize,
         supportsVerticalResize = supportsVerticalResize,
     )
