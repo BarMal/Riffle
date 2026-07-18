@@ -119,6 +119,7 @@ fun LauncherShellContent(
                             .align(Alignment.TopCenter)
                             .windowInsetsPadding(WindowInsets.safeDrawing)
                             .padding(16.dp),
+                    homeRoleStatus = state.homeRoleStatus,
                     onSetHome = { onAction(LauncherShellAction.RequestDefaultHome) },
                     onDismiss = onSetupCardDismissed,
                 )
@@ -135,6 +136,7 @@ data class LauncherShellAppInfo(
 @Composable
 private fun PreviewSetupCard(
     modifier: Modifier = Modifier,
+    homeRoleStatus: HomeRoleStatus,
     onSetHome: () -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -154,13 +156,17 @@ private fun PreviewSetupCard(
                 style = MaterialTheme.typography.titleLarge,
             )
             Text(
+                text = homeRoleStatus.previewHomeStatusMessage(),
+                style = MaterialTheme.typography.labelLarge,
+            )
+            Text(
                 text =
                     "Explore your apps and settings first. While previewing, pressing your device Home " +
                         "button may return to your current default launcher.",
                 style = MaterialTheme.typography.bodyMedium,
             )
             Button(onClick = onSetHome) {
-                Text(text = "Set as Home app")
+                Text(text = homeRoleStatus.previewHomeActionLabel())
             }
             TextButton(onClick = onDismiss) {
                 Text(text = "Not now")
@@ -168,6 +174,20 @@ private fun PreviewSetupCard(
         }
     }
 }
+
+private fun HomeRoleStatus.previewHomeStatusMessage(): String =
+    when (this) {
+        HomeRoleStatus.DEFAULT_HOME -> "Riffle is your Home app."
+        HomeRoleStatus.NOT_DEFAULT_HOME -> "Riffle is not your Home app yet."
+        HomeRoleStatus.UNKNOWN -> "Home app status is unavailable right now."
+    }
+
+private fun HomeRoleStatus.previewHomeActionLabel(): String =
+    when (this) {
+        HomeRoleStatus.DEFAULT_HOME -> "Open Home settings"
+        HomeRoleStatus.NOT_DEFAULT_HOME -> "Set as Home app"
+        HomeRoleStatus.UNKNOWN -> "Open Home settings"
+    }
 
 @Suppress("LongMethod")
 @Composable

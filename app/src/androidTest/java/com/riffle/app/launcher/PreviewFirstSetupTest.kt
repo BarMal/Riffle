@@ -63,6 +63,23 @@ class PreviewFirstSetupTest {
     }
 
     @Test
+    fun unavailableHomeStatusKeepsARecoverableSettingsAction() {
+        val actions = mutableListOf<LauncherShellAction>()
+
+        composeRule.setContent {
+            LauncherShellContent(
+                state = LauncherShellState(homeRoleStatus = HomeRoleStatus.UNKNOWN),
+                onAction = { action -> actions.add(action) },
+            )
+        }
+
+        composeRule.onNodeWithText("Home app status is unavailable right now.").assertExists()
+        composeRule.onNodeWithText("Open Home settings").performClick()
+
+        assertEquals(listOf(LauncherShellAction.RequestDefaultHome), actions)
+    }
+
+    @Test
     fun dismissingSetupCardPersistsForTheNextShellState() {
         val repository = FakeFirstRunRepository()
         val viewModel = LauncherShellViewModel(firstRunRepository = repository)
