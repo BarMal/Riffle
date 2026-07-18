@@ -216,12 +216,13 @@ private fun AndroidWidgetProviderBindingTarget.toComponentName(): ComponentName 
 private fun ComponentName.toAndroidBindingTarget(): AndroidWidgetProviderBindingTarget =
     AndroidWidgetProviderBindingTarget(packageName, className)
 
-private fun WidgetSizeOptions.toAppWidgetOptions(): Bundle =
+internal fun WidgetSizeOptions.toAppWidgetOptions(): Bundle =
     Bundle().apply {
         putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, minWidthDp)
         putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, minHeightDp)
         putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH, maxWidthDp)
         putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, maxHeightDp)
+        putInt(AppWidgetManager.OPTION_APPWIDGET_HOST_CATEGORY, hostCategory)
     }
 
 private const val RIFFLE_APP_WIDGET_HOST_ID = 1024
