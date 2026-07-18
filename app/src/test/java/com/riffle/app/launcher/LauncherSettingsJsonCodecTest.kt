@@ -14,6 +14,7 @@ import com.riffle.core.domain.launcher.home.WallpaperSettings
 import com.riffle.core.domain.launcher.home.WallpaperSource
 import com.riffle.core.domain.launcher.settings.AppearanceSettings
 import com.riffle.core.domain.launcher.settings.CardsSettings
+import com.riffle.core.domain.launcher.settings.CustomThemeSettings
 import com.riffle.core.domain.launcher.settings.GestureSettings
 import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
 import com.riffle.core.domain.launcher.settings.HapticSettings
@@ -214,6 +215,25 @@ class LauncherSettingsJsonCodecTest {
         assertEquals(
             LauncherThemeAccent.TEAL,
             decodeLauncherSettings(encodeLauncherSettings(settings)).appearance.themeAccent,
+        )
+    }
+
+    @Test
+    fun roundTripsAndBoundsCustomThemeTokens() {
+        val settings =
+            LauncherSettings(
+                appearance = AppearanceSettings(customTheme = CustomThemeSettings(cardCornerRadiusDp = 12)),
+            )
+
+        assertEquals(
+            settings.appearance.customTheme,
+            decodeLauncherSettings(encodeLauncherSettings(settings)).appearance.customTheme,
+        )
+        assertEquals(
+            32,
+            decodeLauncherSettings(
+                "{\"appearance\": {\"customTheme\": {\"cardCornerRadiusDp\": 200}}}",
+            ).appearance.customTheme.cardCornerRadiusDp,
         )
     }
 

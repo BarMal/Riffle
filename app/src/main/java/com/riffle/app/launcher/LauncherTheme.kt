@@ -18,6 +18,7 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
+import com.riffle.core.domain.launcher.settings.CustomThemeSettings
 import com.riffle.core.domain.launcher.settings.LauncherThemeAccent
 import com.riffle.core.domain.launcher.settings.LauncherThemeMode
 import com.riffle.core.domain.launcher.settings.LauncherThemePreset
@@ -27,6 +28,7 @@ fun RiffleLauncherTheme(
     themeMode: LauncherThemeMode = LauncherThemeMode.SYSTEM,
     themePreset: LauncherThemePreset = LauncherThemePreset.MATERIAL,
     themeAccent: LauncherThemeAccent = LauncherThemeAccent.DEFAULT,
+    customTheme: CustomThemeSettings = CustomThemeSettings(),
     content: @Composable () -> Unit,
 ) {
     val darkTheme =
@@ -49,8 +51,8 @@ fun RiffleLauncherTheme(
     val colorScheme = baseColorScheme.withThemeAccent(themeAccent, darkTheme)
 
     CompositionLocalProvider(
-        LocalLauncherCardShape provides launcherCardShape(themePreset),
-        LocalLauncherPanelShape provides launcherPanelShape(themePreset),
+        LocalLauncherCardShape provides launcherCardShape(themePreset, customTheme),
+        LocalLauncherPanelShape provides launcherPanelShape(themePreset, customTheme),
     ) {
         MaterialTheme(
             colorScheme = colorScheme,
@@ -63,29 +65,33 @@ fun RiffleLauncherTheme(
 internal val LocalLauncherCardShape = staticCompositionLocalOf<Shape> { RoundedCornerShape(24.dp) }
 internal val LocalLauncherPanelShape = staticCompositionLocalOf<Shape> { RoundedCornerShape(32.dp) }
 
-internal fun launcherCardShape(themePreset: LauncherThemePreset): Shape =
+internal fun launcherCardShape(
+    themePreset: LauncherThemePreset,
+    customTheme: CustomThemeSettings = CustomThemeSettings(),
+): Shape =
     RoundedCornerShape(
         when (themePreset) {
             LauncherThemePreset.MINIMAL -> 8.dp
             LauncherThemePreset.RETRO -> 12.dp
             LauncherThemePreset.GLASS -> 28.dp
             LauncherThemePreset.TERMINAL -> 0.dp
-            LauncherThemePreset.MATERIAL,
-            LauncherThemePreset.CUSTOM,
-            -> 24.dp
+            LauncherThemePreset.MATERIAL -> 24.dp
+            LauncherThemePreset.CUSTOM -> customTheme.cardCornerRadiusDp.dp
         },
     )
 
-internal fun launcherPanelShape(themePreset: LauncherThemePreset): Shape =
+internal fun launcherPanelShape(
+    themePreset: LauncherThemePreset,
+    customTheme: CustomThemeSettings = CustomThemeSettings(),
+): Shape =
     RoundedCornerShape(
         when (themePreset) {
             LauncherThemePreset.MINIMAL -> 12.dp
             LauncherThemePreset.RETRO -> 20.dp
             LauncherThemePreset.GLASS -> 36.dp
             LauncherThemePreset.TERMINAL -> 0.dp
-            LauncherThemePreset.MATERIAL,
-            LauncherThemePreset.CUSTOM,
-            -> 32.dp
+            LauncherThemePreset.MATERIAL -> 32.dp
+            LauncherThemePreset.CUSTOM -> (customTheme.cardCornerRadiusDp + 8).dp
         },
     )
 

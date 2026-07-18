@@ -8,6 +8,8 @@ import com.riffle.core.domain.launcher.settings.LauncherGestureAction
 import com.riffle.core.domain.launcher.settings.LauncherGestureLaunchTarget
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettingsRepository
+import com.riffle.core.domain.launcher.settings.MAX_CUSTOM_THEME_CARD_CORNER_RADIUS_DP
+import com.riffle.core.domain.launcher.settings.MIN_CUSTOM_THEME_CARD_CORNER_RADIUS_DP
 import com.riffle.core.domain.launcher.settings.withFullscreenHome
 import com.riffle.core.domain.launcher.settings.withHomeNavigationBarHidden
 import com.riffle.core.domain.launcher.settings.withHomeStatusBarHidden
@@ -151,6 +153,25 @@ internal fun LauncherShellState.withAppearanceSettingsAction(
                 settings =
                     launcherSettings.copy(
                         appearance = launcherSettings.appearance.copy(themeAccent = action.accent),
+                    ),
+                launcherSettingsRepository = launcherSettingsRepository,
+            )
+
+        is LauncherShellAction.SelectCustomThemeCardCornerRadius ->
+            withLauncherSettings(
+                settings =
+                    launcherSettings.copy(
+                        appearance =
+                            launcherSettings.appearance.copy(
+                                customTheme =
+                                    launcherSettings.appearance.customTheme.copy(
+                                        cardCornerRadiusDp =
+                                            action.radiusDp.coerceIn(
+                                                MIN_CUSTOM_THEME_CARD_CORNER_RADIUS_DP,
+                                                MAX_CUSTOM_THEME_CARD_CORNER_RADIUS_DP,
+                                            ),
+                                    ),
+                            ),
                     ),
                 launcherSettingsRepository = launcherSettingsRepository,
             )

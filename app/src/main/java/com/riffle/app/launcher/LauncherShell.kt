@@ -84,6 +84,7 @@ fun LauncherShellContent(
         themeMode = state.launcherSettings.appearance.themeMode,
         themePreset = state.launcherSettings.appearance.themePreset,
         themeAccent = state.launcherSettings.appearance.themeAccent,
+        customTheme = state.launcherSettings.appearance.customTheme,
     ) {
         val usesSystemWallpaper = state.launcherSettings.appearance.wallpaper.source == WallpaperSource.SYSTEM
         val rootModifier =

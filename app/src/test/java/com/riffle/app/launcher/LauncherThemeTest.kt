@@ -3,6 +3,7 @@ package com.riffle.app.launcher
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
+import com.riffle.core.domain.launcher.settings.CustomThemeSettings
 import com.riffle.core.domain.launcher.settings.LauncherThemeAccent
 import com.riffle.core.domain.launcher.settings.LauncherThemePreset
 import org.junit.Assert.assertEquals
@@ -49,7 +50,7 @@ class LauncherThemeTest {
     }
 
     @Test
-    fun customPresetKeepsTheMaterialFallbackUntilCustomTokensExist() {
+    fun customPresetKeepsTheMaterialFallbackForItsColorScheme() {
         assertSame(
             lightScheme,
             fallbackScheme(darkTheme = false, themePreset = LauncherThemePreset.CUSTOM),
@@ -102,6 +103,10 @@ class LauncherThemeTest {
         assertEquals(RoundedCornerShape(0.dp), launcherCardShape(LauncherThemePreset.TERMINAL))
         assertEquals(RoundedCornerShape(28.dp), launcherCardShape(LauncherThemePreset.GLASS))
         assertEquals(RoundedCornerShape(24.dp), launcherCardShape(LauncherThemePreset.MATERIAL))
+        assertEquals(
+            RoundedCornerShape(12.dp),
+            launcherCardShape(LauncherThemePreset.CUSTOM, CustomThemeSettings(cardCornerRadiusDp = 12)),
+        )
     }
 
     @Test
@@ -109,6 +114,10 @@ class LauncherThemeTest {
         assertEquals(RoundedCornerShape(0.dp), launcherPanelShape(LauncherThemePreset.TERMINAL))
         assertEquals(RoundedCornerShape(36.dp), launcherPanelShape(LauncherThemePreset.GLASS))
         assertEquals(RoundedCornerShape(32.dp), launcherPanelShape(LauncherThemePreset.MATERIAL))
+        assertEquals(
+            RoundedCornerShape(20.dp),
+            launcherPanelShape(LauncherThemePreset.CUSTOM, CustomThemeSettings(cardCornerRadiusDp = 12)),
+        )
     }
 
     @Test

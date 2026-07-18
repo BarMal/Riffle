@@ -332,6 +332,10 @@ class LauncherActionDomainTest {
                     LauncherShellAction.SelectLauncherThemeAccent(LauncherThemeAccent.TEAL),
                 ),
                 settings(
+                    "SelectCustomThemeCardCornerRadius",
+                    LauncherShellAction.SelectCustomThemeCardCornerRadius(radiusDp = 12),
+                ),
+                settings(
                     "SelectWallpaperScrollMode",
                     LauncherShellAction.SelectWallpaperScrollMode(WallpaperScrollMode.SCROLLING),
                 ),

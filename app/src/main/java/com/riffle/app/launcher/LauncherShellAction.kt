@@ -299,6 +299,8 @@ sealed interface LauncherShellAction {
 
     data class SelectLauncherThemeAccent(val accent: LauncherThemeAccent) : LauncherShellAction
 
+    data class SelectCustomThemeCardCornerRadius(val radiusDp: Int) : LauncherShellAction
+
     data class SelectWallpaperScrollMode(val mode: WallpaperScrollMode) : LauncherShellAction
 
     data object ChangeWallpaper : LauncherShellAction

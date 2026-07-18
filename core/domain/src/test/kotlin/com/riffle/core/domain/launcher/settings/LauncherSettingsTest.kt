@@ -16,6 +16,14 @@ class LauncherSettingsTest {
     }
 
     @Test
+    fun defaultsCustomThemeToTheStandardCardRadius() {
+        assertEquals(
+            DEFAULT_CUSTOM_THEME_CARD_CORNER_RADIUS_DP,
+            LauncherSettings().appearance.customTheme.cardCornerRadiusDp,
+        )
+    }
+
+    @Test
     fun cardsChapterIntentDefaultsToOverviewWithoutPins() {
         val cards = LauncherSettings().cards.chapterPreferences
 

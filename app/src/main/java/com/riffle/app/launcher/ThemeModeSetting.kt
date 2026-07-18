@@ -10,9 +10,12 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.riffle.core.domain.launcher.settings.CustomThemeSettings
 import com.riffle.core.domain.launcher.settings.LauncherThemeAccent
 import com.riffle.core.domain.launcher.settings.LauncherThemeMode
 import com.riffle.core.domain.launcher.settings.LauncherThemePreset
+import com.riffle.core.domain.launcher.settings.MAX_CUSTOM_THEME_CARD_CORNER_RADIUS_DP
+import com.riffle.core.domain.launcher.settings.MIN_CUSTOM_THEME_CARD_CORNER_RADIUS_DP
 
 @Composable
 internal fun ThemeModeSetting(
@@ -41,6 +44,7 @@ internal fun ThemeModeSetting(
 @Composable
 internal fun ThemePresetSetting(
     selectedPreset: LauncherThemePreset,
+    customTheme: CustomThemeSettings,
     onAction: (LauncherShellAction) -> Unit,
 ) {
     Column {
@@ -59,6 +63,17 @@ internal fun ThemePresetSetting(
                     )
                 }
             }
+        }
+        if (selectedPreset == LauncherThemePreset.CUSTOM) {
+            DiscreteSettingSlider(
+                title = "Card corner radius",
+                value = customTheme.cardCornerRadiusDp,
+                valueRange = MIN_CUSTOM_THEME_CARD_CORNER_RADIUS_DP..MAX_CUSTOM_THEME_CARD_CORNER_RADIUS_DP,
+                valueLabel = { value -> "$value dp" },
+                onValueChange = { radius ->
+                    onAction(LauncherShellAction.SelectCustomThemeCardCornerRadius(radius))
+                },
+            )
         }
     }
 }

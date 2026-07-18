@@ -117,6 +117,7 @@ private val LauncherShellAction.isAppearanceSettingsAction: Boolean
             is LauncherShellAction.SelectLauncherThemeMode,
             is LauncherShellAction.SelectLauncherThemePreset,
             is LauncherShellAction.SelectLauncherThemeAccent,
+            is LauncherShellAction.SelectCustomThemeCardCornerRadius,
             is LauncherShellAction.SelectWallpaperScrollMode,
             is LauncherShellAction.SelectFullscreenHomeEnabled,
             is LauncherShellAction.SelectHomeStatusBarHidden,
