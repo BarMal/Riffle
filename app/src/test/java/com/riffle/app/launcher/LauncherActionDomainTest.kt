@@ -35,6 +35,8 @@ import com.riffle.core.domain.launcher.settings.HomeSwipeGestureDirection
 import com.riffle.core.domain.launcher.settings.LauncherGestureAction
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.LauncherThemeAccent
+import com.riffle.core.domain.launcher.settings.LauncherThemeCornerStyle
+import com.riffle.core.domain.launcher.settings.LauncherThemeTypography
 import com.riffle.core.domain.launcher.settings.MotionPerformanceTargetFps
 import com.riffle.core.domain.launcher.settings.OverlayDockEdge
 import com.riffle.core.domain.launcher.settings.OverlayDockExpandedOrientation
@@ -330,6 +332,14 @@ class LauncherActionDomainTest {
                 settings(
                     "SelectLauncherThemeAccent",
                     LauncherShellAction.SelectLauncherThemeAccent(LauncherThemeAccent.TEAL),
+                ),
+                settings(
+                    "SelectLauncherThemeCornerStyle",
+                    LauncherShellAction.SelectLauncherThemeCornerStyle(LauncherThemeCornerStyle.ROUNDED),
+                ),
+                settings(
+                    "SelectLauncherThemeTypography",
+                    LauncherShellAction.SelectLauncherThemeTypography(LauncherThemeTypography.MONOSPACE),
                 ),
                 settings(
                     "SelectWallpaperScrollMode",

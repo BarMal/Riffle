@@ -19,14 +19,18 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.settings.LauncherThemeAccent
+import com.riffle.core.domain.launcher.settings.LauncherThemeCornerStyle
 import com.riffle.core.domain.launcher.settings.LauncherThemeMode
 import com.riffle.core.domain.launcher.settings.LauncherThemePreset
+import com.riffle.core.domain.launcher.settings.LauncherThemeTypography
 
 @Composable
 fun RiffleLauncherTheme(
     themeMode: LauncherThemeMode = LauncherThemeMode.SYSTEM,
     themePreset: LauncherThemePreset = LauncherThemePreset.MATERIAL,
     themeAccent: LauncherThemeAccent = LauncherThemeAccent.DEFAULT,
+    themeCornerStyle: LauncherThemeCornerStyle = LauncherThemeCornerStyle.PRESET,
+    themeTypography: LauncherThemeTypography = LauncherThemeTypography.PRESET,
     content: @Composable () -> Unit,
 ) {
     val darkTheme =
@@ -49,12 +53,12 @@ fun RiffleLauncherTheme(
     val colorScheme = baseColorScheme.withThemeAccent(themeAccent, darkTheme)
 
     CompositionLocalProvider(
-        LocalLauncherCardShape provides launcherCardShape(themePreset),
-        LocalLauncherPanelShape provides launcherPanelShape(themePreset),
+        LocalLauncherCardShape provides launcherCardShape(themePreset, themeCornerStyle),
+        LocalLauncherPanelShape provides launcherPanelShape(themePreset, themeCornerStyle),
     ) {
         MaterialTheme(
             colorScheme = colorScheme,
-            typography = launcherTypography(themePreset),
+            typography = launcherTypography(themePreset, themeTypography),
             content = content,
         )
     }
@@ -63,37 +67,60 @@ fun RiffleLauncherTheme(
 internal val LocalLauncherCardShape = staticCompositionLocalOf<Shape> { RoundedCornerShape(24.dp) }
 internal val LocalLauncherPanelShape = staticCompositionLocalOf<Shape> { RoundedCornerShape(32.dp) }
 
-internal fun launcherCardShape(themePreset: LauncherThemePreset): Shape =
+internal fun launcherCardShape(
+    themePreset: LauncherThemePreset,
+    cornerStyle: LauncherThemeCornerStyle = LauncherThemeCornerStyle.PRESET,
+): Shape =
     RoundedCornerShape(
-        when (themePreset) {
-            LauncherThemePreset.MINIMAL -> 8.dp
-            LauncherThemePreset.RETRO -> 12.dp
-            LauncherThemePreset.GLASS -> 28.dp
-            LauncherThemePreset.TERMINAL -> 0.dp
-            LauncherThemePreset.MATERIAL,
-            LauncherThemePreset.CUSTOM,
-            -> 24.dp
+        when (cornerStyle) {
+            LauncherThemeCornerStyle.COMPACT -> 8.dp
+            LauncherThemeCornerStyle.ROUNDED -> 28.dp
+            LauncherThemeCornerStyle.PRESET ->
+                when (themePreset) {
+                    LauncherThemePreset.MINIMAL -> 8.dp
+                    LauncherThemePreset.RETRO -> 12.dp
+                    LauncherThemePreset.GLASS -> 28.dp
+                    LauncherThemePreset.TERMINAL -> 0.dp
+                    LauncherThemePreset.MATERIAL,
+                    LauncherThemePreset.CUSTOM,
+                    -> 24.dp
+                }
         },
     )
 
-internal fun launcherPanelShape(themePreset: LauncherThemePreset): Shape =
+internal fun launcherPanelShape(
+    themePreset: LauncherThemePreset,
+    cornerStyle: LauncherThemeCornerStyle = LauncherThemeCornerStyle.PRESET,
+): Shape =
     RoundedCornerShape(
-        when (themePreset) {
-            LauncherThemePreset.MINIMAL -> 12.dp
-            LauncherThemePreset.RETRO -> 20.dp
-            LauncherThemePreset.GLASS -> 36.dp
-            LauncherThemePreset.TERMINAL -> 0.dp
-            LauncherThemePreset.MATERIAL,
-            LauncherThemePreset.CUSTOM,
-            -> 32.dp
+        when (cornerStyle) {
+            LauncherThemeCornerStyle.COMPACT -> 12.dp
+            LauncherThemeCornerStyle.ROUNDED -> 36.dp
+            LauncherThemeCornerStyle.PRESET ->
+                when (themePreset) {
+                    LauncherThemePreset.MINIMAL -> 12.dp
+                    LauncherThemePreset.RETRO -> 20.dp
+                    LauncherThemePreset.GLASS -> 36.dp
+                    LauncherThemePreset.TERMINAL -> 0.dp
+                    LauncherThemePreset.MATERIAL,
+                    LauncherThemePreset.CUSTOM,
+                    -> 32.dp
+                }
         },
     )
 
-internal fun launcherTypography(themePreset: LauncherThemePreset): Typography =
-    when (themePreset) {
-        LauncherThemePreset.TERMINAL -> defaultLauncherTypography.withFontFamily(FontFamily.Monospace)
-
-        else -> defaultLauncherTypography
+internal fun launcherTypography(
+    themePreset: LauncherThemePreset,
+    typography: LauncherThemeTypography = LauncherThemeTypography.PRESET,
+): Typography =
+    when (typography) {
+        LauncherThemeTypography.SYSTEM -> defaultLauncherTypography
+        LauncherThemeTypography.MONOSPACE -> defaultLauncherTypography.withFontFamily(FontFamily.Monospace)
+        LauncherThemeTypography.PRESET ->
+            when (themePreset) {
+                LauncherThemePreset.TERMINAL -> defaultLauncherTypography.withFontFamily(FontFamily.Monospace)
+                else -> defaultLauncherTypography
+            }
     }
 
 private val defaultLauncherTypography = Typography()

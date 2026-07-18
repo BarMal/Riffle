@@ -27,6 +27,8 @@ data class AppearanceSettings(
     val themeMode: LauncherThemeMode = LauncherThemeMode.SYSTEM,
     val themePreset: LauncherThemePreset = LauncherThemePreset.MATERIAL,
     val themeAccent: LauncherThemeAccent = LauncherThemeAccent.DEFAULT,
+    val themeCornerStyle: LauncherThemeCornerStyle = LauncherThemeCornerStyle.PRESET,
+    val themeTypography: LauncherThemeTypography = LauncherThemeTypography.PRESET,
     val fullscreenHome: Boolean = false,
     val hideStatusBarOnHome: Boolean = false,
     val hideNavigationBarOnHome: Boolean = false,
@@ -54,6 +56,22 @@ enum class LauncherThemeAccent {
     TEAL,
     ROSE,
     AMBER,
+}
+
+/** Optional corner override for launcher cards, panels, dock, and settings rows. */
+enum class LauncherThemeCornerStyle {
+    /** Keep the shape supplied by the selected theme preset. */
+    PRESET,
+    COMPACT,
+    ROUNDED,
+}
+
+/** Optional typography override applied through the shared launcher theme. */
+enum class LauncherThemeTypography {
+    /** Keep the typeface supplied by the selected theme preset. */
+    PRESET,
+    SYSTEM,
+    MONOSPACE,
 }
 
 data class GestureSettings(

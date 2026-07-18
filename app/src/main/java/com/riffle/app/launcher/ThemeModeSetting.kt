@@ -11,8 +11,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.settings.LauncherThemeAccent
+import com.riffle.core.domain.launcher.settings.LauncherThemeCornerStyle
 import com.riffle.core.domain.launcher.settings.LauncherThemeMode
 import com.riffle.core.domain.launcher.settings.LauncherThemePreset
+import com.riffle.core.domain.launcher.settings.LauncherThemeTypography
 
 @Composable
 internal fun ThemeModeSetting(
@@ -85,6 +87,57 @@ internal fun ThemeAccentSetting(
                 }
             }
         }
+    }
+}
+
+@Composable
+internal fun ThemeCornerStyleSetting(
+    selectedStyle: LauncherThemeCornerStyle,
+    onAction: (LauncherShellAction) -> Unit,
+) {
+    ThemeOptionRow(title = "Card corners") {
+        LauncherThemeCornerStyle.entries.forEach { style ->
+            TextButton(
+                enabled = style != selectedStyle,
+                onClick = { onAction(LauncherShellAction.SelectLauncherThemeCornerStyle(style)) },
+            ) {
+                SettingsButtonText(text = themeOptionLabel(style.name, isSelected = style == selectedStyle))
+            }
+        }
+    }
+}
+
+@Composable
+internal fun ThemeTypographySetting(
+    selectedTypography: LauncherThemeTypography,
+    onAction: (LauncherShellAction) -> Unit,
+) {
+    ThemeOptionRow(title = "Typography") {
+        LauncherThemeTypography.entries.forEach { typography ->
+            TextButton(
+                enabled = typography != selectedTypography,
+                onClick = { onAction(LauncherShellAction.SelectLauncherThemeTypography(typography)) },
+            ) {
+                SettingsButtonText(
+                    text = themeOptionLabel(typography.name, isSelected = typography == selectedTypography),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ThemeOptionRow(
+    title: String,
+    options: @Composable () -> Unit,
+) {
+    Column {
+        SettingsListRow(title = title)
+        Row(
+            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            content = { options() },
+        )
     }
 }
 
