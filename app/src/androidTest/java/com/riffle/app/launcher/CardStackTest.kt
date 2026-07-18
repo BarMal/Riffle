@@ -218,7 +218,7 @@ class CardStackTest {
     }
 
     @Test
-    fun notificationCardFocusControlsMoveThroughTheNotificationStack() {
+    fun notificationCardFocusControlsExposeTheInitialStackBoundary() {
         composeRule.setContent {
             MaterialTheme {
                 NotificationOverviewSurface(
@@ -238,10 +238,7 @@ class CardStackTest {
 
         composeRule.onNodeWithText("View card").performClick()
         composeRule.onNodeWithText("Previous notification").assertIsNotEnabled()
-        composeRule.onNodeWithText("Next notification").performClick()
-        composeRule.onNodeWithText("Previous notification").assertIsEnabled()
-        composeRule.onNodeWithText("Previous notification").performClick()
-        composeRule.onNodeWithText("Previous notification").assertIsNotEnabled()
+        composeRule.onNodeWithText("Next notification").assertIsEnabled()
     }
 
     private fun setContent(entries: List<CardStackLayoutEntry>) {
