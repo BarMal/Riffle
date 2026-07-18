@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "candidate": {
+    "commitSha": "replace-with-40-character-candidate-sha",
+    "buildIdentity": "replace-with-version-name-and-code",
+    "generatedAt": "replace-with-utc-rfc3339-timestamp"
+  },
+  "runs": [
+    {
+      "scenarioId": "home-role-lifecycle",
+      "evidenceType": "physical-device",
+      "result": "blocked",
+      "validator": "replace-with-validator",
+      "timestamp": "replace-with-utc-rfc3339-timestamp",
+      "knownLimitation": "Replace with the reason until this required run passes.",
+      "device": {
+        "manufacturer": "Honor",
+        "model": "replace-with-model",
+        "androidApi": 0,
+        "build": "replace-with-build",
+        "formFactor": "phone",
+        "windowMode": "fullscreen",
+        "installType": "clean"
+      }
+    }
+  ]
+}
