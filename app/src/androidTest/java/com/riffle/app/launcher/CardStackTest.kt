@@ -328,9 +328,20 @@ class CardStackTest {
         previousEnabled: Boolean,
         nextEnabled: Boolean,
     ) {
+        val expectedPosition = "Focused notification $position of $count"
+        composeRule.waitUntil(timeoutMillis = 5_000) {
+            try {
+                composeRule
+                    .onNodeWithTag(NOTIFICATION_PROTOTYPE_FOCUS_POSITION_TEST_TAG)
+                    .assertTextEquals(expectedPosition)
+                true
+            } catch (_: AssertionError) {
+                false
+            }
+        }
         composeRule
             .onNodeWithTag(NOTIFICATION_PROTOTYPE_FOCUS_POSITION_TEST_TAG)
-            .assertTextEquals("Focused notification $position of $count")
+            .assertTextEquals(expectedPosition)
         composeRule
             .onNodeWithTag(NOTIFICATION_PROTOTYPE_PREVIOUS_FOCUS_TEST_TAG)
             .run { if (previousEnabled) assertIsEnabled() else assertIsNotEnabled() }
