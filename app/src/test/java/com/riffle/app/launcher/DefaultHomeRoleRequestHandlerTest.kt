@@ -37,13 +37,15 @@ class DefaultHomeRoleRequestHandlerTest {
         val calls = mutableListOf<String>()
         val fatalError = AssertionError("fatal")
 
-        val thrown = assertThrows(AssertionError::class.java) {
-            handler(
-                createRequestIntent = { Intent("request-home-role") },
-                calls = calls,
-                launchRequest = { throw fatalError },
-            ).request()
-        }
+        val thrown =
+            assertThrows(AssertionError::class.java) {
+                handler(
+                    createRequestIntent = { Intent("request-home-role") },
+                    calls = calls,
+                    launchRequest = { throw fatalError },
+                )
+                    .request()
+            }
 
         assertSame(fatalError, thrown)
         assertEquals(listOf("started", "launch"), calls)
