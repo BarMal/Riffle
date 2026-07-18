@@ -73,7 +73,6 @@ internal fun NotificationGroupPrototype(
     var focusedNotificationIndex by remember { mutableIntStateOf(0) }
 
     LaunchedEffect(pagerState.currentPage) {
-        focusedNotificationIndex = 0
         groups.getOrNull(pagerState.currentPage)?.let { group ->
             onGroupChanged(group.key)
         }
