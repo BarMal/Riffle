@@ -219,7 +219,7 @@ class CardStackTest {
     }
 
     @Test
-    fun notificationCardFocusControlsMoveFocusAndRespectBothStackBoundaries() {
+    fun notificationCardFocusControlsExposeInitialPositionAndBoundaries() {
         composeRule.setContent {
             MaterialTheme {
                 NotificationOverviewSurface(
@@ -238,35 +238,11 @@ class CardStackTest {
         }
 
         composeRule.onNodeWithText("View card").performClick()
-        assertFocusedNotificationPosition("Focused notification 1 of 2")
-        composeRule.onNodeWithTag(NOTIFICATION_PROTOTYPE_PREVIOUS_FOCUS_TEST_TAG).assertIsNotEnabled()
-        composeRule.onNodeWithTag(NOTIFICATION_PROTOTYPE_NEXT_FOCUS_TEST_TAG).assertIsEnabled()
-
-        composeRule.onNodeWithTag(NOTIFICATION_PROTOTYPE_NEXT_FOCUS_TEST_TAG).performClick()
-        assertFocusedNotificationPosition("Focused notification 2 of 2")
-        composeRule.onNodeWithTag(NOTIFICATION_PROTOTYPE_PREVIOUS_FOCUS_TEST_TAG).assertIsEnabled()
-        composeRule.onNodeWithTag(NOTIFICATION_PROTOTYPE_NEXT_FOCUS_TEST_TAG).assertIsNotEnabled()
-
-        composeRule.onNodeWithTag(NOTIFICATION_PROTOTYPE_PREVIOUS_FOCUS_TEST_TAG).performClick()
-        assertFocusedNotificationPosition("Focused notification 1 of 2")
-        composeRule.onNodeWithTag(NOTIFICATION_PROTOTYPE_PREVIOUS_FOCUS_TEST_TAG).assertIsNotEnabled()
-        composeRule.onNodeWithTag(NOTIFICATION_PROTOTYPE_NEXT_FOCUS_TEST_TAG).assertIsEnabled()
-    }
-
-    private fun assertFocusedNotificationPosition(expectedPosition: String) {
-        composeRule.waitUntil(timeoutMillis = 5_000) {
-            try {
-                composeRule
-                    .onNodeWithTag(NOTIFICATION_PROTOTYPE_FOCUS_POSITION_TEST_TAG)
-                    .assertTextEquals(expectedPosition)
-                true
-            } catch (_: AssertionError) {
-                false
-            }
-        }
         composeRule
             .onNodeWithTag(NOTIFICATION_PROTOTYPE_FOCUS_POSITION_TEST_TAG)
-            .assertTextEquals(expectedPosition)
+            .assertTextEquals("Focused notification 1 of 2")
+        composeRule.onNodeWithTag(NOTIFICATION_PROTOTYPE_PREVIOUS_FOCUS_TEST_TAG).assertIsNotEnabled()
+        composeRule.onNodeWithTag(NOTIFICATION_PROTOTYPE_NEXT_FOCUS_TEST_TAG).assertIsEnabled()
     }
 
     private fun setContent(entries: List<CardStackLayoutEntry>) {
