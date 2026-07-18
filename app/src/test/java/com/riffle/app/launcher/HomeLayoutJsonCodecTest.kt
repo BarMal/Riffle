@@ -6,6 +6,7 @@ import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppShortcutId
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.DockBackgroundSizing
+import com.riffle.core.domain.launcher.home.DockVisualEffect
 import com.riffle.core.domain.launcher.home.FolderItem
 import com.riffle.core.domain.launcher.home.GridCell
 import com.riffle.core.domain.launcher.home.GridDimensions
@@ -169,6 +170,16 @@ class HomeLayoutJsonCodecTest {
 
         assertEquals(WallpaperSource.SOLID_COLOR, decodedLayout.settings.wallpaper.source)
         assertEquals(WallpaperScrollMode.STATIC, decodedLayout.settings.wallpaper.scrollMode)
+    }
+
+    @Test
+    fun roundTripsDockVisualEffect() {
+        val layout =
+            HomeLayoutDefaults.standard().copy(
+                dock = HomeLayoutDefaults.standard().dock.copy(visualEffect = DockVisualEffect.ELEVATED),
+            )
+
+        assertEquals(DockVisualEffect.ELEVATED, decodeHomeLayout(encodeHomeLayout(layout)).dock.visualEffect)
     }
 
     @Test

@@ -65,6 +65,14 @@ class DockConfigurationEngine {
             else -> DockEditResult.Rejected(DockEditRejectionReason.INVALID_BACKGROUND_ALPHA)
         }
 
+    fun setDockVisualEffect(
+        layout: HomeLayout,
+        effect: DockVisualEffect,
+    ): DockEditResult =
+        DockEditResult.Updated(
+            layout.copy(dock = layout.dock.copy(visualEffect = effect)),
+        )
+
     fun setDockBackgroundSizing(
         layout: HomeLayout,
         sizing: DockBackgroundSizing,

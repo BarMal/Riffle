@@ -12,6 +12,7 @@ import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.cards.CardsChapterId
 import com.riffle.core.domain.launcher.home.DockBackgroundSizing
 import com.riffle.core.domain.launcher.home.DockItemMoveDirection
+import com.riffle.core.domain.launcher.home.DockVisualEffect
 import com.riffle.core.domain.launcher.home.FolderItemMoveDirection
 import com.riffle.core.domain.launcher.home.GridCell
 import com.riffle.core.domain.launcher.home.GridDimensions
@@ -248,6 +249,7 @@ class LauncherActionDomainTest {
                 activity("SelectDockCapacity", LauncherShellAction.SelectDockCapacity(capacity = 6)),
                 activity("SelectDockIconSize", LauncherShellAction.SelectDockIconSize(sizeDp = 52)),
                 activity("SelectDockBackgroundAlpha", LauncherShellAction.SelectDockBackgroundAlpha(alphaPercent = 80)),
+                activity("SelectDockVisualEffect", LauncherShellAction.SelectDockVisualEffect(DockVisualEffect.OUTLINED)),
                 activity(
                     "SelectDockBackgroundSizing",
                     LauncherShellAction.SelectDockBackgroundSizing(DockBackgroundSizing.FIXED),
