@@ -5,16 +5,16 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -22,7 +22,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.riffle.core.domain.RiffleProduct
 import com.riffle.core.domain.launcher.FirstRunStatus
 import com.riffle.core.domain.launcher.HomeRoleStatus
 import com.riffle.core.domain.launcher.LauncherShellState
@@ -55,6 +54,7 @@ fun LauncherShell(
             appIconLoader = appIconLoader,
             widgetRenderers = widgetRenderers,
             onAction = onAction,
+            onSetupCardDismissed = viewModel::onSetupCardDismissed,
         )
     }
 }
@@ -68,6 +68,7 @@ fun LauncherShellContent(
     appIconLoader: AppIconLoader = EmptyAppIconLoader,
     widgetRenderers: LauncherWidgetRenderers = LauncherWidgetRenderers(),
     onAction: (LauncherShellAction) -> Unit,
+    onSetupCardDismissed: () -> Unit = {},
 ) {
     val haptics = rememberLauncherHaptics(state.launcherSettings.haptics.feedbackStrength)
 
@@ -100,21 +101,28 @@ fun LauncherShellContent(
         Box(
             modifier = rootModifier,
         ) {
-            if (state.shouldShowDefaultHomePrompt) {
-                DefaultHomePrompt(onAction = onAction)
-            } else {
-                LauncherDestination(
-                    state = state,
-                    settingsState =
-                        state.settingsSurfaceState(
-                            appVersionLabel = appVersionLabel,
-                            appBuildIdentityLabel = appBuildIdentityLabel,
-                            viewModeAvailability = viewModeAvailability,
-                        ),
-                    appIconLoader = appIconLoader,
-                    widgetRenderers = widgetRenderers,
-                    haptics = haptics,
-                    onAction = onAction,
+            LauncherDestination(
+                state = state,
+                settingsState =
+                    state.settingsSurfaceState(
+                        appVersionLabel = appVersionLabel,
+                        appBuildIdentityLabel = appBuildIdentityLabel,
+                        viewModeAvailability = viewModeAvailability,
+                    ),
+                appIconLoader = appIconLoader,
+                widgetRenderers = widgetRenderers,
+                haptics = haptics,
+                onAction = onAction,
+            )
+            if (state.destination == ShellDestination.HOME && state.shouldShowSetupCard) {
+                PreviewSetupCard(
+                    modifier =
+                        Modifier
+                            .align(Alignment.TopCenter)
+                            .windowInsetsPadding(WindowInsets.safeDrawing)
+                            .padding(16.dp),
+                    onSetHome = { onAction(LauncherShellAction.RequestDefaultHome) },
+                    onDismiss = onSetupCardDismissed,
                 )
             }
         }
@@ -122,28 +130,36 @@ fun LauncherShellContent(
 }
 
 @Composable
-private fun DefaultHomePrompt(onAction: (LauncherShellAction) -> Unit) {
-    Column(
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .windowInsetsPadding(WindowInsets.safeDrawing)
-                .padding(32.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally,
+private fun PreviewSetupCard(
+    modifier: Modifier = Modifier,
+    onSetHome: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    Surface(
+        modifier = modifier,
+        shape = MaterialTheme.shapes.extraLarge,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        contentColor = MaterialTheme.colorScheme.onSurface,
+        tonalElevation = 6.dp,
     ) {
-        Text(
-            text = RiffleProduct.DISPLAY_NAME,
-            style = MaterialTheme.typography.headlineLarge,
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        Text(
-            text = "Choose Riffle as your default home app to continue.",
-            style = MaterialTheme.typography.bodyLarge,
-        )
-        Spacer(modifier = Modifier.height(24.dp))
-        Button(onClick = { onAction(LauncherShellAction.RequestDefaultHome) }) {
-            Text(text = "Set as default")
+        Column(
+            modifier = Modifier.padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text(
+                text = "Preview Riffle",
+                style = MaterialTheme.typography.titleLarge,
+            )
+            Text(
+                text = "Explore your apps and settings first. Set Riffle as your Home app when you are ready.",
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            Button(onClick = onSetHome) {
+                Text(text = "Set as Home app")
+            }
+            TextButton(onClick = onDismiss) {
+                Text(text = "Not now")
+            }
         }
     }
 }

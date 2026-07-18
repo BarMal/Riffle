@@ -194,11 +194,16 @@ class LauncherShellViewModel(
                 overlayDockPermissionStatus = overlayDockPermissionStatus,
             ).let { state ->
                 state.copy(searchSettingsResults = state.searchSettingsResults(state.searchQuery))
-            }.also { state -> persistCompletedFirstRun(state, firstRunRepository) }
+            }.also { state -> persistSetupCardDismissal(state, firstRunRepository) }
     }
 
     fun onDefaultHomeRequestStarted() {
         mutableState.value = reducer.defaultHomeRequestStarted(mutableState.value)
+    }
+
+    fun onSetupCardDismissed() {
+        mutableState.value = reducer.setupCardDismissed(mutableState.value)
+        firstRunRepository.setSetupCardDismissed()
     }
 
     fun onNavigationActionSelected(action: ShellNavigationAction) {
@@ -492,15 +497,7 @@ private fun createInitialState(
         settingsLayoutDeviceClass = layoutSet.activeKey.deviceClass,
         availableLayoutDeviceClasses = setOf(layoutSet.activeKey.deviceClass),
         launcherSettings = launcherSettingsRepository.loadLauncherSettings() ?: LauncherSettings(),
-    ).let { initialState ->
-        if (firstRunRepository.isFirstRunComplete()) {
-            reducer.firstRunCompleted(
-                initialState.copy(homeRoleStatus = HomeRoleStatus.DEFAULT_HOME),
-            )
-        } else {
-            initialState
-        }
-    }
+    ).copy(setupCardDismissed = firstRunRepository.isSetupCardDismissed())
 }
 
 private fun HomeLayoutSet.selectInitialDeviceClass(
@@ -594,12 +591,12 @@ internal fun LauncherShellState.withAppShortcuts(
                 }
         }
 
-private fun persistCompletedFirstRun(
+private fun persistSetupCardDismissal(
     state: LauncherShellState,
     firstRunRepository: FirstRunRepository,
 ) {
     if (state.firstRunStatus == FirstRunStatus.COMPLETE) {
-        firstRunRepository.setFirstRunComplete()
+        firstRunRepository.setSetupCardDismissed()
     }
 }
 

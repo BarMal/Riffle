@@ -17,12 +17,12 @@ class LauncherShellStateReducerTest {
             )
 
         assertEquals(FirstRunStatus.COMPLETE, state.firstRunStatus)
-        assertFalse(state.shouldShowDefaultHomePrompt)
+        assertFalse(state.shouldShowSetupCard)
         assertTrue(state.shouldShowEmptyHome)
     }
 
     @Test
-    fun missingDefaultHomeKeepsPromptVisible() {
+    fun missingDefaultHomeKeepsPreviewSetupAvailableWithoutBlockingHome() {
         val state =
             reducer.homeRoleChanged(
                 currentState = LauncherShellState(),
@@ -30,8 +30,9 @@ class LauncherShellStateReducerTest {
             )
 
         assertEquals(FirstRunStatus.NEEDS_HOME_ROLE, state.firstRunStatus)
-        assertTrue(state.shouldShowDefaultHomePrompt)
-        assertFalse(state.shouldShowEmptyHome)
+        assertTrue(state.shouldShowSetupCard)
+        assertFalse(state.shouldShowDefaultHomePrompt)
+        assertTrue(state.shouldShowEmptyHome)
     }
 
     @Test
@@ -43,6 +44,7 @@ class LauncherShellStateReducerTest {
             )
 
         assertEquals(FirstRunStatus.COMPLETE, state.firstRunStatus)
+        assertTrue(state.shouldShowSetupCard)
         assertTrue(state.shouldShowEmptyHome)
     }
 
@@ -59,7 +61,7 @@ class LauncherShellStateReducerTest {
             )
 
         assertEquals(HomeRoleStatus.DEFAULT_HOME, state.homeRoleStatus)
-        assertFalse(state.shouldShowDefaultHomePrompt)
+        assertFalse(state.shouldShowSetupCard)
     }
 
     @Test
@@ -74,8 +76,17 @@ class LauncherShellStateReducerTest {
             )
 
         assertEquals(FirstRunStatus.REQUESTING_HOME_ROLE, state.firstRunStatus)
-        assertFalse(state.shouldShowDefaultHomePrompt)
+        assertTrue(state.shouldShowSetupCard)
         assertTrue(state.shouldShowEmptyHome)
+    }
+
+    @Test
+    fun dismissedSetupCardDoesNotChangeLiveHomeStatus() {
+        val state = reducer.setupCardDismissed(LauncherShellState(homeRoleStatus = HomeRoleStatus.NOT_DEFAULT_HOME))
+
+        assertTrue(state.setupCardDismissed)
+        assertFalse(state.shouldShowSetupCard)
+        assertEquals(HomeRoleStatus.NOT_DEFAULT_HOME, state.homeRoleStatus)
     }
 
     @Test

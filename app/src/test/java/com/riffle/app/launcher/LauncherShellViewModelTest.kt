@@ -39,10 +39,11 @@ import org.junit.Test
 
 class LauncherShellViewModelTest {
     @Test
-    fun startsWithDefaultHomePromptVisible() {
+    fun startsWithPreviewSetupAvailableWithoutBlockingHome() {
         val viewModel = LauncherShellViewModel(firstRunRepository = FakeFirstRunRepository())
 
-        assertTrue(viewModel.state.value.shouldShowDefaultHomePrompt)
+        assertTrue(viewModel.state.value.shouldShowSetupCard)
+        assertFalse(viewModel.state.value.shouldShowDefaultHomePrompt)
     }
 
     @Test
@@ -55,26 +56,40 @@ class LauncherShellViewModelTest {
     }
 
     @Test
-    fun hidesPromptWhenAppBecomesDefaultHome() {
+    fun hidesSetupCardWhenAppBecomesDefaultHome() {
         val repository = FakeFirstRunRepository()
         val viewModel = LauncherShellViewModel(firstRunRepository = repository)
 
         viewModel.onHomeRoleStatusChanged(HomeRoleStatus.DEFAULT_HOME)
 
-        assertFalse(viewModel.state.value.shouldShowDefaultHomePrompt)
+        assertFalse(viewModel.state.value.shouldShowSetupCard)
         assertTrue(viewModel.state.value.shouldShowEmptyHome)
-        assertTrue(repository.isFirstRunComplete())
+        assertTrue(repository.isSetupCardDismissed())
     }
 
     @Test
-    fun restoresCompletedFirstRunFromRepository() {
+    fun migratesCompletedFirstRunToDismissedSetupCardWithoutInventingHomeStatus() {
         val viewModel =
             LauncherShellViewModel(
                 firstRunRepository = FakeFirstRunRepository(isComplete = true),
             )
 
-        assertEquals(FirstRunStatus.COMPLETE, viewModel.state.value.firstRunStatus)
+        assertEquals(FirstRunStatus.NEEDS_HOME_ROLE, viewModel.state.value.firstRunStatus)
+        assertEquals(HomeRoleStatus.UNKNOWN, viewModel.state.value.homeRoleStatus)
+        assertFalse(viewModel.state.value.shouldShowSetupCard)
         assertTrue(viewModel.state.value.shouldShowEmptyHome)
+    }
+
+    @Test
+    fun dismissingSetupCardPersistsOnlyPresentationState() {
+        val repository = FakeFirstRunRepository()
+        val viewModel = LauncherShellViewModel(firstRunRepository = repository)
+
+        viewModel.onSetupCardDismissed()
+
+        assertTrue(repository.isSetupCardDismissed())
+        assertFalse(viewModel.state.value.shouldShowSetupCard)
+        assertEquals(HomeRoleStatus.UNKNOWN, viewModel.state.value.homeRoleStatus)
     }
 
     @Test
@@ -734,10 +749,18 @@ class LauncherShellViewModelTest {
     private class FakeFirstRunRepository(
         private var isComplete: Boolean = false,
     ) : FirstRunRepository {
+        private var setupCardDismissed = isComplete
+
         override fun isFirstRunComplete(): Boolean = isComplete
 
         override fun setFirstRunComplete() {
             isComplete = true
+        }
+
+        override fun isSetupCardDismissed(): Boolean = setupCardDismissed
+
+        override fun setSetupCardDismissed() {
+            setupCardDismissed = true
         }
     }
 

@@ -15,8 +15,21 @@ class SharedPreferencesFirstRunRepository(
             .apply()
     }
 
+    override fun isSetupCardDismissed(): Boolean =
+        preferences.getBoolean(
+            KEY_SETUP_CARD_DISMISSED,
+            isFirstRunComplete(),
+        )
+
+    override fun setSetupCardDismissed() {
+        preferences.edit()
+            .putBoolean(KEY_SETUP_CARD_DISMISSED, true)
+            .apply()
+    }
+
     private companion object {
         const val PREFERENCES_NAME = "riffle_first_run"
         const val KEY_FIRST_RUN_COMPLETE = "first_run_complete"
+        const val KEY_SETUP_CARD_DISMISSED = "setup_card_dismissed"
     }
 }

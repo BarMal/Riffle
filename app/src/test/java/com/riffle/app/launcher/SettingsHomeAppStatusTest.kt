@@ -36,7 +36,7 @@ class SettingsHomeAppStatusTest {
     }
 
     @Test
-    fun confirmedHomeOutcomeSurvivesColdStartWhenOemStatusIsUnknown() {
+    fun storedPresentationStateDoesNotOverrideUnknownLiveHomeStatus() {
         val repository = FakeFirstRunRepository()
         LauncherShellViewModel(firstRunRepository = repository)
             .onHomeRoleStatusChanged(HomeRoleStatus.DEFAULT_HOME)
@@ -44,17 +44,25 @@ class SettingsHomeAppStatusTest {
         val coldStartViewModel = LauncherShellViewModel(firstRunRepository = repository)
         coldStartViewModel.onHomeRoleStatusChanged(HomeRoleStatus.UNKNOWN)
 
-        assertEquals(HomeRoleStatus.DEFAULT_HOME, coldStartViewModel.state.value.homeRoleStatus)
+        assertEquals(HomeRoleStatus.UNKNOWN, coldStartViewModel.state.value.homeRoleStatus)
+        assertFalse(coldStartViewModel.state.value.shouldShowSetupCard)
         assertFalse(coldStartViewModel.state.value.shouldShowDefaultHomePrompt)
     }
 
     private class FakeFirstRunRepository : FirstRunRepository {
         private var isComplete = false
+        private var setupCardDismissed = false
 
         override fun isFirstRunComplete(): Boolean = isComplete
 
         override fun setFirstRunComplete() {
             isComplete = true
+        }
+
+        override fun isSetupCardDismissed(): Boolean = setupCardDismissed || isComplete
+
+        override fun setSetupCardDismissed() {
+            setupCardDismissed = true
         }
     }
 }
