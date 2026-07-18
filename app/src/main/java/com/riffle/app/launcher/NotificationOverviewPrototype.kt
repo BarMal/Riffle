@@ -97,6 +97,8 @@ internal fun NotificationGroupPrototype(
         val focusControls =
             NotificationFocusControls(
                 focusedNotification = focusedNotification,
+                focusedPosition = activeNotificationIndex + 1,
+                notificationCount = group.notifications.size,
                 canFocusPrevious = activeNotificationIndex > 0,
                 canFocusNext = activeNotificationIndex < group.notifications.lastIndex,
                 onFocusPrevious = {
@@ -189,7 +191,7 @@ internal fun NotificationGroupPrototype(
 
 internal const val NOTIFICATION_PROTOTYPE_CENTER_STAGE_TEST_TAG = "notification-prototype-center-stage"
 internal const val NOTIFICATION_PROTOTYPE_SIDE_BY_SIDE_TEST_TAG = "notification-prototype-side-by-side"
-internal const val NOTIFICATION_PROTOTYPE_FOCUSED_CARD_TITLE_TEST_TAG = "notification-prototype-focused-card-title"
+internal const val NOTIFICATION_PROTOTYPE_FOCUS_POSITION_TEST_TAG = "notification-prototype-focus-position"
 internal const val NOTIFICATION_PROTOTYPE_PREVIOUS_FOCUS_TEST_TAG = "notification-prototype-previous-focus"
 internal const val NOTIFICATION_PROTOTYPE_NEXT_FOCUS_TEST_TAG = "notification-prototype-next-focus"
 
@@ -312,6 +314,8 @@ private data class NotificationPrototypeHeroPresentation(
 
 private data class NotificationFocusControls(
     val focusedNotification: LauncherNotification,
+    val focusedPosition: Int,
+    val notificationCount: Int,
     val canFocusPrevious: Boolean,
     val canFocusNext: Boolean,
     val onFocusPrevious: () -> Unit,
@@ -343,13 +347,17 @@ private fun BoxScope.NotificationPrototypeHeroDetails(
                 style = MaterialTheme.typography.headlineSmall,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.testTag(NOTIFICATION_PROTOTYPE_FOCUSED_CARD_TITLE_TEST_TAG),
             )
             Text(
                 text = notification.text.ifBlank { group.notificationOverviewMetadataLabel(fallbackLabel) },
                 style = MaterialTheme.typography.bodyMedium,
                 maxLines = 4,
                 overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = "Focused notification ${focusControls.focusedPosition} of ${focusControls.notificationCount}",
+                style = MaterialTheme.typography.labelMedium,
+                modifier = Modifier.testTag(NOTIFICATION_PROTOTYPE_FOCUS_POSITION_TEST_TAG),
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 TextButton(
