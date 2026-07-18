@@ -37,6 +37,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.apps.InstalledApp
+import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroupKey
 import com.riffle.core.domain.launcher.notifications.LauncherNotification
@@ -48,6 +49,7 @@ data class NotificationOverviewPresentation(
     val apps: List<InstalledApp>,
     val appIconLoader: AppIconLoader,
     val reducedMotion: Boolean,
+    val deviceClass: HomeLayoutDeviceClass = HomeLayoutDeviceClass.PHONE,
 )
 
 @Composable

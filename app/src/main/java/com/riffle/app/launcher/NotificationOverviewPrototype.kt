@@ -37,16 +37,20 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.cards.CardStackAnimationProfile
 import com.riffle.core.domain.launcher.cards.CardStackLayoutPolicy
+import com.riffle.core.domain.launcher.cards.CardStackSurfaceLayout
+import com.riffle.core.domain.launcher.cards.CardStackSurfaceLayoutPolicy
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroupKey
 import com.riffle.core.domain.launcher.notifications.LauncherNotification
 
 @Composable
+@Suppress("LongMethod")
 internal fun NotificationGroupPrototype(
     groups: List<AppNotificationGroup>,
     selectedGroupKey: AppNotificationGroupKey,
@@ -91,30 +95,10 @@ internal fun NotificationGroupPrototype(
             )
         val label = notificationOverviewGroupLabel(app = app, group = group)
         val heroPresentation = NotificationPrototypeHeroPresentation(group, app, presentation)
-
-        Column(
-            modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            NotificationPrototypeActions(
-                group = group,
-                app = app,
-                onBack = onBack,
-                onAction = onAction,
-            )
-            NotificationPrototypeHero(
-                notification = focusedNotification,
-                upcomingNotification = upcomingNotification,
-                swipeProgress = swipeProgress,
-                presentation = heroPresentation,
-                modifier = Modifier.weight(1f),
-            )
+        val notificationList: @Composable (Modifier) -> Unit = { modifier ->
             LazyColumn(
                 state = listState,
-                modifier =
-                    Modifier
-                        .weight(1f)
-                        .fillMaxWidth(),
+                modifier = modifier.fillMaxWidth(),
                 contentPadding = PaddingValues(vertical = 4.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -131,8 +115,54 @@ internal fun NotificationGroupPrototype(
                 }
             }
         }
+
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            NotificationPrototypeActions(
+                group = group,
+                app = app,
+                onBack = onBack,
+                onAction = onAction,
+            )
+            when (CardStackSurfaceLayoutPolicy().layoutFor(presentation.deviceClass)) {
+                CardStackSurfaceLayout.CENTER_STAGE ->
+                    Column(
+                        modifier = Modifier.fillMaxSize().testTag(NOTIFICATION_PROTOTYPE_CENTER_STAGE_TEST_TAG),
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                    ) {
+                        NotificationPrototypeHero(
+                            notification = focusedNotification,
+                            upcomingNotification = upcomingNotification,
+                            swipeProgress = swipeProgress,
+                            presentation = heroPresentation,
+                            modifier = Modifier.weight(1f),
+                        )
+                        notificationList(Modifier.weight(1f))
+                    }
+
+                CardStackSurfaceLayout.SIDE_BY_SIDE ->
+                    Row(
+                        modifier = Modifier.fillMaxSize().testTag(NOTIFICATION_PROTOTYPE_SIDE_BY_SIDE_TEST_TAG),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    ) {
+                        NotificationPrototypeHero(
+                            notification = focusedNotification,
+                            upcomingNotification = upcomingNotification,
+                            swipeProgress = swipeProgress,
+                            presentation = heroPresentation,
+                            modifier = Modifier.weight(1f),
+                        )
+                        notificationList(Modifier.weight(1f))
+                    }
+            }
+        }
     }
 }
+
+internal const val NOTIFICATION_PROTOTYPE_CENTER_STAGE_TEST_TAG = "notification-prototype-center-stage"
+internal const val NOTIFICATION_PROTOTYPE_SIDE_BY_SIDE_TEST_TAG = "notification-prototype-side-by-side"
 
 internal fun notificationOverviewSelectedGroupIndex(
     groups: List<AppNotificationGroup>,

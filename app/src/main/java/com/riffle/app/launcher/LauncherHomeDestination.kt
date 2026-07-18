@@ -23,6 +23,7 @@ fun HomeDestination(
                         apps = state.installedApps,
                         appIconLoader = appIconLoader,
                         reducedMotion = state.launcherSettings.motion.reducedMotion,
+                        deviceClass = state.homeLayoutSet.activeKey.deviceClass,
                     ),
                 windowInsets =
                     cardsPanelInsetPolicy(state).safeDrawingPanelInsets(),
