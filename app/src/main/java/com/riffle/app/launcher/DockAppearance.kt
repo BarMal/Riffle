@@ -12,16 +12,16 @@ import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.home.DockModel
 import com.riffle.core.domain.launcher.home.DockVisualEffect
 
-internal data class DockAppearanceSpec(
+internal data class DockAppearance(
     val elevationDp: Int,
     val outlineWidthDp: Int,
 )
 
-internal fun dockAppearanceSpec(effect: DockVisualEffect): DockAppearanceSpec =
+internal fun dockAppearanceSpec(effect: DockVisualEffect): DockAppearance =
     when (effect) {
-        DockVisualEffect.FLAT -> DockAppearanceSpec(elevationDp = 0, outlineWidthDp = 0)
-        DockVisualEffect.ELEVATED -> DockAppearanceSpec(elevationDp = 6, outlineWidthDp = 0)
-        DockVisualEffect.OUTLINED -> DockAppearanceSpec(elevationDp = 0, outlineWidthDp = 1)
+        DockVisualEffect.FLAT -> DockAppearance(elevationDp = 0, outlineWidthDp = 0)
+        DockVisualEffect.ELEVATED -> DockAppearance(elevationDp = 6, outlineWidthDp = 0)
+        DockVisualEffect.OUTLINED -> DockAppearance(elevationDp = 0, outlineWidthDp = 1)
     }
 
 @Composable

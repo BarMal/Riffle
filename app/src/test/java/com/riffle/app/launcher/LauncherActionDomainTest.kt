@@ -249,7 +249,10 @@ class LauncherActionDomainTest {
                 activity("SelectDockCapacity", LauncherShellAction.SelectDockCapacity(capacity = 6)),
                 activity("SelectDockIconSize", LauncherShellAction.SelectDockIconSize(sizeDp = 52)),
                 activity("SelectDockBackgroundAlpha", LauncherShellAction.SelectDockBackgroundAlpha(alphaPercent = 80)),
-                activity("SelectDockVisualEffect", LauncherShellAction.SelectDockVisualEffect(DockVisualEffect.OUTLINED)),
+                activity(
+                    "SelectDockVisualEffect",
+                    LauncherShellAction.SelectDockVisualEffect(DockVisualEffect.OUTLINED),
+                ),
                 activity(
                     "SelectDockBackgroundSizing",
                     LauncherShellAction.SelectDockBackgroundSizing(DockBackgroundSizing.FIXED),
