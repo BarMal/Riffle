@@ -286,14 +286,14 @@ class CardStackTest {
         composeRule.onNodeWithTag(nextFocusTestTag(messagesGroup.key)).performClick()
         assertNotificationFocus(messagesGroup.key, position = 2, count = 2, previousEnabled = true, nextEnabled = false)
 
-        scrollNotificationPagerBy(1_000f)
+        scrollNotificationPagerTo(page = 1)
         assertNotificationFocus(calendarGroup.key, position = 1, count = 3, previousEnabled = false, nextEnabled = true)
 
         composeRule.onNodeWithTag(nextFocusTestTag(calendarGroup.key)).performClick()
         composeRule.onNodeWithTag(nextFocusTestTag(calendarGroup.key)).performClick()
         assertNotificationFocus(calendarGroup.key, position = 3, count = 3, previousEnabled = true, nextEnabled = false)
 
-        scrollNotificationPagerBy(-1_000f)
+        scrollNotificationPagerTo(page = 0)
         assertNotificationFocus(messagesGroup.key, position = 2, count = 2, previousEnabled = true, nextEnabled = false)
     }
 
@@ -354,11 +354,11 @@ class CardStackTest {
             .run { if (nextEnabled) assertIsEnabled() else assertIsNotEnabled() }
     }
 
-    private fun scrollNotificationPagerBy(horizontalPixels: Float) {
+    private fun scrollNotificationPagerTo(page: Int) {
         composeRule
             .onNodeWithTag(NOTIFICATION_PROTOTYPE_PAGER_TEST_TAG)
-            .performSemanticsAction(SemanticsActions.ScrollBy) { scrollBy ->
-                assertTrue(scrollBy(horizontalPixels, 0f))
+            .performSemanticsAction(SemanticsActions.ScrollToIndex) { scrollToIndex ->
+                assertTrue(scrollToIndex(page))
             }
     }
 
