@@ -155,7 +155,8 @@ private fun PreviewSetupCard(
             )
             Text(
                 text =
-                    "Explore your apps and settings first. While previewing, pressing your device Home button may return to your current default launcher.",
+                    "Explore your apps and settings first. While previewing, pressing your device Home " +
+                        "button may return to your current default launcher.",
                 style = MaterialTheme.typography.bodyMedium,
             )
             Button(onClick = onSetHome) {
