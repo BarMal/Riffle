@@ -284,13 +284,34 @@ class CardStackTest {
 
         composeRule.onNodeWithTag(viewCardTestTag(messagesGroup.key)).performClick()
         composeRule.onNodeWithTag(nextFocusTestTag(messagesGroup.key)).performClick()
-        assertNotificationFocus(messagesGroup.key, position = 2, count = 2, previousEnabled = true, nextEnabled = false)
+        assertNotificationFocus(
+            phase = "after advancing messages",
+            groupKey = messagesGroup.key,
+            position = 2,
+            count = 2,
+            previousEnabled = true,
+            nextEnabled = false,
+        )
 
         scrollNotificationPagerTo(page = 1)
-        assertNotificationFocus(calendarGroup.key, position = 1, count = 3, previousEnabled = false, nextEnabled = true)
+        assertNotificationFocus(
+            phase = "after switching to calendar",
+            groupKey = calendarGroup.key,
+            position = 1,
+            count = 3,
+            previousEnabled = false,
+            nextEnabled = true,
+        )
 
         scrollNotificationPagerTo(page = 0)
-        assertNotificationFocus(messagesGroup.key, position = 2, count = 2, previousEnabled = true, nextEnabled = false)
+        assertNotificationFocus(
+            phase = "after returning to messages",
+            groupKey = messagesGroup.key,
+            position = 2,
+            count = 2,
+            previousEnabled = true,
+            nextEnabled = false,
+        )
     }
 
     private fun setContent(entries: List<CardStackLayoutEntry>) {
@@ -322,6 +343,7 @@ class CardStackTest {
     private fun cardLabel(cardIndex: Int): String = "Card $cardIndex"
 
     private fun assertNotificationFocus(
+        phase: String,
         groupKey: AppNotificationGroupKey,
         position: Int,
         count: Int,
@@ -330,9 +352,13 @@ class CardStackTest {
     ) {
         val expectedPosition = "Focused notification $position of $count"
         composeRule.waitForIdle()
-        composeRule
-            .onNodeWithTag(focusPositionTestTag(groupKey))
-            .assertTextEquals(expectedPosition)
+        try {
+            composeRule
+                .onNodeWithTag(focusPositionTestTag(groupKey))
+                .assertTextEquals(expectedPosition)
+        } catch (error: AssertionError) {
+            throw AssertionError("Notification focus assertion failed $phase.", error)
+        }
         composeRule
             .onNodeWithTag(previousFocusTestTag(groupKey))
             .run { if (previousEnabled) assertIsEnabled() else assertIsNotEnabled() }
