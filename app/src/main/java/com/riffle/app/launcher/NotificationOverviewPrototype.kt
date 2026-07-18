@@ -63,8 +63,6 @@ internal fun NotificationGroupPrototype(
     onAction: (LauncherShellAction) -> Unit,
 ) {
     val selectedGroupIndex = notificationOverviewSelectedGroupIndex(groups, selectedGroupKey)
-    var focusedNotificationIndex by remember { mutableIntStateOf(0) }
-    val listState = rememberLazyListState()
     val pagerState =
         rememberPagerState(
             initialPage = selectedGroupIndex,
@@ -85,6 +83,8 @@ internal fun NotificationGroupPrototype(
         val group = groups[page]
         if (group.notifications.isEmpty()) return@HorizontalPager
         val app = presentation.apps.firstOrNull { installedApp -> installedApp.matches(group) }
+        var focusedNotificationIndex by remember(group.key) { mutableIntStateOf(0) }
+        val listState = rememberLazyListState()
         val activeNotificationIndex = focusedNotificationIndex.coerceIn(0, group.notifications.lastIndex)
         val focusedNotification =
             group.notifications.getOrNull(activeNotificationIndex) ?: return@HorizontalPager
