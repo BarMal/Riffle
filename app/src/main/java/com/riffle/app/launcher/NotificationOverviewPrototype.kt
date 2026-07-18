@@ -57,7 +57,6 @@ internal fun NotificationGroupPrototype(
     selectedGroupKey: AppNotificationGroupKey,
     presentation: NotificationOverviewPresentation,
     focusedNotificationIndexes: Map<AppNotificationGroupKey, Int>,
-    focusRevision: Int,
     onFocusChanged: (AppNotificationGroupKey, Int) -> Unit,
     onBack: () -> Unit,
     onGroupChanged: (AppNotificationGroupKey) -> Unit,
@@ -83,7 +82,7 @@ internal fun NotificationGroupPrototype(
     ) { page ->
         val group = groups[page]
         if (group.notifications.isEmpty()) return@HorizontalPager
-        key(group.key, focusRevision) {
+        key(group.key) {
             val app = presentation.apps.firstOrNull { installedApp -> installedApp.matches(group) }
             val listState = rememberLazyListState()
             val activeNotificationIndex =
