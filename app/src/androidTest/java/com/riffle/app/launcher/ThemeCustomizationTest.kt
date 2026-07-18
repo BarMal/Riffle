@@ -105,10 +105,12 @@ class ThemeCustomizationTest {
         }
 
         composeRule.onNodeWithText("Teal").assertHasClickAction().performClick()
-        composeRule.onNodeWithText("Outlined").assertHasClickAction().performClick()
-
         composeRule.runOnIdle {
             assertEquals(LauncherThemeAccent.TEAL, accent)
+        }
+
+        composeRule.onNodeWithText("Outlined").assertHasClickAction().performClick()
+        composeRule.runOnIdle {
             assertEquals(DockVisualEffect.OUTLINED, dock.visualEffect)
         }
         composeRule.onNodeWithText("Teal (selected)").assertExists()
