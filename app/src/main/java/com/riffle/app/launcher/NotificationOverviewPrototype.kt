@@ -29,8 +29,11 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -81,28 +84,30 @@ internal fun NotificationGroupPrototype(
         key = { page -> "${groups[page].profileId.value}:${groups[page].packageName.value}" },
     ) { page ->
         val group = groups[page]
+        if (group.notifications.isEmpty()) return@HorizontalPager
         val app = presentation.apps.firstOrNull { installedApp -> installedApp.matches(group) }
         val listState = rememberLazyListState()
         val coroutineScope = rememberCoroutineScope()
+        var focusedNotificationIndex by remember(group.key) { mutableIntStateOf(0) }
+        val activeNotificationIndex = focusedNotificationIndex.coerceIn(0, group.notifications.lastIndex)
         val focusedNotification =
-            notificationOverviewFocusedNotification(
-                notifications = group.notifications,
-                firstVisibleItemIndex = listState.firstVisibleItemIndex,
-            ) ?: return@HorizontalPager
+            group.notifications.getOrNull(activeNotificationIndex) ?: return@HorizontalPager
         val upcomingNotification =
-            group.notifications.getOrNull(listState.firstVisibleItemIndex.coerceAtLeast(0) + 1)
+            group.notifications.getOrNull(activeNotificationIndex + 1)
         val focusControls =
             NotificationFocusControls(
-                canFocusPrevious = listState.firstVisibleItemIndex > 0,
-                canFocusNext = listState.firstVisibleItemIndex < group.notifications.lastIndex,
+                canFocusPrevious = activeNotificationIndex > 0,
+                canFocusNext = activeNotificationIndex < group.notifications.lastIndex,
                 onFocusPrevious = {
+                    focusedNotificationIndex = activeNotificationIndex - 1
                     coroutineScope.launch {
-                        listState.animateScrollToItem(listState.firstVisibleItemIndex - 1)
+                        listState.animateScrollToItem(focusedNotificationIndex)
                     }
                 },
                 onFocusNext = {
+                    focusedNotificationIndex = activeNotificationIndex + 1
                     coroutineScope.launch {
-                        listState.animateScrollToItem(listState.firstVisibleItemIndex + 1)
+                        listState.animateScrollToItem(focusedNotificationIndex)
                     }
                 },
             )
