@@ -66,8 +66,14 @@ class LauncherShellAppearanceSettingsTest {
             LauncherShellAction.SelectLauncherThemeTypography(LauncherThemeTypography.MONOSPACE),
         )
 
-        assertEquals(LauncherThemeCornerStyle.ROUNDED, viewModel.state.value.launcherSettings.appearance.themeCornerStyle)
-        assertEquals(LauncherThemeTypography.MONOSPACE, viewModel.state.value.launcherSettings.appearance.themeTypography)
+        assertEquals(
+            LauncherThemeCornerStyle.ROUNDED,
+            viewModel.state.value.launcherSettings.appearance.themeCornerStyle,
+        )
+        assertEquals(
+            LauncherThemeTypography.MONOSPACE,
+            viewModel.state.value.launcherSettings.appearance.themeTypography,
+        )
         assertEquals(viewModel.state.value.launcherSettings, repository.savedSettings)
     }
 
