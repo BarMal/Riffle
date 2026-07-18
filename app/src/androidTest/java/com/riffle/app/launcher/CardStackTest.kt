@@ -357,8 +357,8 @@ class CardStackTest {
                 .onAllNodesWithTag(focusPositionTestTag(groupKey))
                 .fetchSemanticsNodes()
                 .any { node ->
-                    node.config.getOrNull(SemanticsProperties.Text)
-                        ?.any { text -> text.text == expectedPosition } == true
+                    node.config[SemanticsProperties.Text]
+                        .any { text -> text.text == expectedPosition }
                 }
         }
         try {
