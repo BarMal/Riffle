@@ -26,7 +26,7 @@ class WidgetEngine(
                     resizeConstraints = resizeConstraints,
                 ).let { widget ->
                     preferredSpan
-                        .placementCandidates()
+                        .placementCandidates(resizeConstraints)
                         .map { span ->
                             span to
                                 if (targetCell == null) {
@@ -114,19 +114,26 @@ private fun HomeLayout.hasHostedWidget(hostedWidgetId: HostedWidgetId): Boolean 
         .filterIsInstance<WidgetItem>()
         .any { widget -> widget.appWidgetId == hostedWidgetId }
 
-private fun GridSpan.placementCandidates(): List<GridSpan> =
-    coerceAtLeastOneCell().let { preferredSpan ->
+private fun GridSpan.placementCandidates(resizeConstraints: WidgetResizeConstraints): List<GridSpan> =
+    coerceAtLeastOneCell().coerceAtLeast(resizeConstraints.minSpan).let { preferredSpan ->
         (preferredSpan.columns downTo 1).flatMap { columns ->
             (preferredSpan.rows downTo 1).map { rows ->
                 GridSpan(columns = columns, rows = rows)
             }
         }.distinct()
+            .filter(resizeConstraints::permits)
             .sortedWith(
                 compareBy<GridSpan> { span -> preferredSpan.area - span.area }
                     .thenBy { span -> preferredSpan.columns - span.columns }
                     .thenBy { span -> preferredSpan.rows - span.rows },
             )
     }
+
+private fun GridSpan.coerceAtLeast(minimum: GridSpan): GridSpan =
+    GridSpan(
+        columns = maxOf(columns, minimum.columns),
+        rows = maxOf(rows, minimum.rows),
+    )
 
 private val GridSpan.area: Int
     get() = columns * rows

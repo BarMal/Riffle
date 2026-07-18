@@ -7,6 +7,7 @@ import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.home.GridDimensions
 import com.riffle.core.domain.launcher.home.GridSpan
 import com.riffle.core.domain.launcher.home.HostedWidgetId
+import com.riffle.core.domain.launcher.home.WidgetResizeConstraints
 import com.riffle.core.domain.launcher.widgets.WidgetProviderClassName
 import com.riffle.core.domain.launcher.widgets.WidgetProviderDimensions
 import com.riffle.core.domain.launcher.widgets.WidgetProviderIdentity
@@ -39,6 +40,50 @@ class WidgetBindingCoordinatorTest {
         )
         assertEquals(listOf(HostedWidgetId(1)), gateway.boundHostedWidgetIds)
         assertEquals(emptyList<HostedWidgetId>(), gateway.deletedHostedWidgetIds)
+    }
+
+    @Test
+    fun boundHomeWidgetCarriesMinimumResizeSpanToPlacement() {
+        val gateway = FakeWidgetHostGateway(bindingResult = WidgetBindingResult.Bound)
+        val coordinator = WidgetBindingCoordinator(gateway)
+
+        val result =
+            coordinator.requestAddWidget(
+                action =
+                    LauncherShellAction.RequestAddWidget(
+                        provider = providerIdentity,
+                        label = "Weather",
+                        dimensions =
+                            WidgetProviderDimensions(
+                                minWidthDp = 100,
+                                minHeightDp = 100,
+                                minResizeWidthDp = 200,
+                            ),
+                        supportsHorizontalResize = true,
+                        supportsVerticalResize = false,
+                    ),
+                grid = GridDimensions(columns = 4, rows = 5),
+                availableWidthDp = 400,
+                availableHeightDp = 1000,
+            )
+
+        assertEquals(
+            WidgetAddRequestResult.Bound(
+                LauncherShellAction.AddHostedWidgetToHome(
+                    hostedWidgetId = HostedWidgetId(1),
+                    label = "Weather",
+                    preferredSpan = GridSpan(columns = 1, rows = 1),
+                    resizeConstraints =
+                        WidgetResizeConstraints(
+                            minSpan = GridSpan(columns = 2, rows = 1),
+                            maxSpan = GridSpan(columns = 4, rows = 1),
+                            supportsHorizontalResize = true,
+                            supportsVerticalResize = false,
+                        ),
+                ),
+            ),
+            result,
+        )
     }
 
     @Test
