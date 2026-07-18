@@ -1,5 +1,6 @@
 package com.riffle.app.launcher.widgets
 
+import android.appwidget.AppWidgetProviderInfo
 import android.content.Intent
 import com.riffle.core.domain.launcher.home.HostedWidgetId
 import com.riffle.core.domain.launcher.widgets.WidgetProviderIdentity
@@ -44,6 +45,7 @@ data class WidgetSizeOptions(
     val minHeightDp: Int,
     val maxWidthDp: Int = minWidthDp,
     val maxHeightDp: Int = minHeightDp,
+    val hostCategory: Int = AppWidgetProviderInfo.WIDGET_CATEGORY_HOME_SCREEN,
 ) {
     init {
         require(minWidthDp > 0) { "Widget minimum width must be positive." }

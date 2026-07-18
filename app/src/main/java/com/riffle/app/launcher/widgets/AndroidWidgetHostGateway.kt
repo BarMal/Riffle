@@ -222,6 +222,7 @@ private fun WidgetSizeOptions.toAppWidgetOptions(): Bundle =
         putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, minHeightDp)
         putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH, maxWidthDp)
         putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, maxHeightDp)
+        putInt(AppWidgetManager.OPTION_APPWIDGET_HOST_CATEGORY, hostCategory)
     }
 
 private const val RIFFLE_APP_WIDGET_HOST_ID = 1024
