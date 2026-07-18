@@ -35,6 +35,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
@@ -303,6 +304,7 @@ internal val NotificationAccessStatus.emptyNotificationOverviewActionLabel: Stri
         }
 
 @Composable
+@Suppress("LongMethod")
 private fun NotificationGroupRow(
     group: AppNotificationGroup,
     app: InstalledApp?,
@@ -310,6 +312,7 @@ private fun NotificationGroupRow(
     onOpenGroup: () -> Unit,
     onAction: (LauncherShellAction) -> Unit,
 ) {
+    val groupTestTagSuffix = "${group.profileId.value}-${group.packageName.value}"
     Surface(
         modifier =
             Modifier
@@ -367,7 +370,13 @@ private fun NotificationGroupRow(
                         Text(text = "Open app")
                     }
                 }
-                TextButton(onClick = onOpenGroup) {
+                TextButton(
+                    onClick = onOpenGroup,
+                    modifier =
+                        Modifier.testTag(
+                            "$NOTIFICATION_OVERVIEW_VIEW_CARD_TEST_TAG-$groupTestTagSuffix",
+                        ),
+                ) {
                     Text(text = "View card")
                 }
                 if (group.dismissibleNotificationKeys.isNotEmpty()) {
@@ -386,6 +395,8 @@ private fun NotificationGroupRow(
 
 internal fun InstalledApp.matches(group: AppNotificationGroup): Boolean =
     identity.packageName == group.packageName && identity.profile.id == group.profileId
+
+internal const val NOTIFICATION_OVERVIEW_VIEW_CARD_TEST_TAG = "notification-overview-view-card"
 
 private val Map<NotificationCategory, Int>.summaryLabel: String
     get() =

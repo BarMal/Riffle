@@ -282,7 +282,7 @@ class CardStackTest {
             }
         }
 
-        composeRule.onAllNodesWithText("View card")[0].performClick()
+        composeRule.onNodeWithTag(viewCardTestTag(messagesGroup.key)).performClick()
         composeRule.onNodeWithTag(nextFocusTestTag(messagesGroup.key)).performClick()
         assertNotificationFocus(messagesGroup.key, position = 2, count = 2, previousEnabled = true, nextEnabled = false)
 
@@ -370,6 +370,9 @@ class CardStackTest {
 
     private fun nextFocusTestTag(groupKey: AppNotificationGroupKey): String =
         "$NOTIFICATION_PROTOTYPE_NEXT_FOCUS_TEST_TAG-${groupKey.profileId.value}-${groupKey.packageName.value}"
+
+    private fun viewCardTestTag(groupKey: AppNotificationGroupKey): String =
+        "$NOTIFICATION_OVERVIEW_VIEW_CARD_TEST_TAG-${groupKey.profileId.value}-${groupKey.packageName.value}"
 
     private fun notificationGroup(
         packageName: String = "com.example.messages",
