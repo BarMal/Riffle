@@ -1,3 +1,5 @@
+@file:Suppress("TooManyFunctions")
+
 package com.riffle.app.launcher
 
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -311,20 +313,10 @@ private fun DockSlot(
                     appIconLoader = appIconLoader,
                 )
             is DockSlotItemState.Folder ->
-                DockItemPlaceholder(
-                    item =
-                        DockSlotItemState.Placeholder(
-                            id = item.id,
-                            label = item.label,
-                            kind = DockSlotPlaceholderKind.FOLDER,
-                        ),
-                    iconSizeDp = state.iconSizeDp,
-                    modifier =
-                        if (state.isEditing) {
-                            Modifier
-                        } else {
-                            Modifier.clickable(onClick = { presentation.interactions.onFolderOpen(item.folder) })
-                        },
+                DockFolder(
+                    folder = item.folder,
+                    state = state,
+                    presentation = presentation,
                 )
             is DockSlotItemState.Widget ->
                 DockWidgetSlot(
@@ -341,6 +333,54 @@ private fun DockSlot(
                     iconSizeDp = state.iconSizeDp,
                 )
         }
+    }
+}
+
+@Composable
+@OptIn(ExperimentalFoundationApi::class)
+private fun DockFolder(
+    folder: FolderItem,
+    state: DockSlotState,
+    presentation: DockPresentation,
+) {
+    val isContextMenuExpanded = remember(folder.id) { mutableStateOf(false) }
+    val modifier =
+        if (state.isEditing) {
+            Modifier.combinedClickable(
+                onClick = { isContextMenuExpanded.value = true },
+                onLongClick = {
+                    presentation.interactions.haptics.longPress()
+                    isContextMenuExpanded.value = true
+                },
+                onLongClickLabel = "Show ${folder.label} actions",
+            )
+        } else {
+            Modifier.clickable(onClick = { presentation.interactions.onFolderOpen(folder) })
+        }
+
+    Box(modifier = Modifier.requiredSize(state.iconSizeDp.dp)) {
+        DockItemPlaceholder(
+            item =
+                DockSlotItemState.Placeholder(
+                    id = folder.id,
+                    label = folder.label,
+                    kind = DockSlotPlaceholderKind.FOLDER,
+                ),
+            iconSizeDp = state.iconSizeDp,
+            modifier = modifier,
+        )
+        ShortcutContextMenu(
+            expanded = isContextMenuExpanded.value,
+            items =
+                dockFolderContextMenuItems(
+                    folder = folder,
+                    isEditing = state.isEditing,
+                    shortcutIndex = state.shortcutIndex,
+                    shortcutCount = state.shortcutCount,
+                ),
+            onDismissRequest = { isContextMenuExpanded.value = false },
+            onAction = presentation.interactions.onAction,
+        )
     }
 }
 

@@ -1,7 +1,49 @@
 package com.riffle.app.launcher
 
 import com.riffle.core.domain.launcher.home.DockItemMoveDirection
+import com.riffle.core.domain.launcher.home.FolderItem
 import com.riffle.core.domain.launcher.home.WidgetItem
+
+internal fun dockFolderContextMenuItems(
+    folder: FolderItem,
+    isEditing: Boolean = false,
+    shortcutIndex: Int = 0,
+    shortcutCount: Int = 1,
+): List<ShortcutContextMenuItem> {
+    val editItems =
+        if (isEditing) {
+            listOf(
+                ShortcutContextMenuItem(
+                    label = "Move left",
+                    action = LauncherShellAction.MoveDockShortcut(folder.id, DockItemMoveDirection.LEFT),
+                    enabled = shortcutIndex > 0,
+                ),
+                ShortcutContextMenuItem(
+                    label = "Move right",
+                    action = LauncherShellAction.MoveDockShortcut(folder.id, DockItemMoveDirection.RIGHT),
+                    enabled = shortcutIndex < shortcutCount - 1,
+                ),
+                ShortcutContextMenuItem(
+                    label = "Move to start",
+                    action = LauncherShellAction.MoveDockShortcutToIndex(folder.id, targetIndex = 0),
+                    enabled = shortcutIndex > 0,
+                ),
+                ShortcutContextMenuItem(
+                    label = "Move to end",
+                    action =
+                        LauncherShellAction.MoveDockShortcutToIndex(
+                            folder.id,
+                            targetIndex = shortcutCount - 1,
+                        ),
+                    enabled = shortcutIndex < shortcutCount - 1,
+                ),
+            )
+        } else {
+            emptyList()
+        }
+
+    return editItems + ShortcutContextMenuItem("Remove from dock", LauncherShellAction.RemoveDockShortcut(folder.id))
+}
 
 internal fun dockWidgetContextMenuItems(
     widget: WidgetItem,

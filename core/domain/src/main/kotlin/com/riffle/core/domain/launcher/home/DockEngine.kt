@@ -76,40 +76,31 @@ class DockEngine {
                 )
         }
 
+    @Suppress("CyclomaticComplexMethod")
     fun moveDockItem(
         layout: HomeLayout,
         itemId: LauncherItemId,
         direction: DockItemMoveDirection,
     ): DockEditResult =
-        layout.dock.items.indexOfFirst { item -> item.id == itemId }
-            .takeIf { index -> index >= 0 }
-            ?.let { currentIndex ->
-                currentIndex + direction.indexDelta
-            }
-            ?.takeIf { targetIndex -> targetIndex in layout.dock.items.indices }
-            ?.let { targetIndex ->
-                DockEditResult.Updated(
-                    layout.copy(
-                        dock =
-                            layout.dock.copy(
-                                items =
-                                    layout.dock.items.moveItem(
-                                        itemId = itemId,
-                                        targetIndex = targetIndex,
-                                    ),
-                            ),
-                    ),
-                )
-            }
-            ?: DockEditResult.Rejected(
-                when {
-                    layout.dock.items.any { item -> item.id == itemId } ->
-                        DockEditRejectionReason.INDEX_OUT_OF_BOUNDS
+        when {
+            layout.dock.items.hasDuplicateIds() ->
+                DockEditResult.Rejected(DockEditRejectionReason.DUPLICATE_ITEM_ID)
 
-                    else ->
-                        DockEditRejectionReason.ITEM_NOT_FOUND
-                },
-            )
+            else ->
+                layout.dock.items.indexOfFirst { item -> item.id == itemId }.let { currentIndex ->
+                    val targetIndex = currentIndex + direction.indexDelta
+                    when {
+                        currentIndex < 0 ->
+                            DockEditResult.Rejected(DockEditRejectionReason.ITEM_NOT_FOUND)
+
+                        targetIndex !in layout.dock.items.indices ->
+                            DockEditResult.Rejected(DockEditRejectionReason.INDEX_OUT_OF_BOUNDS)
+
+                        else ->
+                            moveDockItemToIndex(layout = layout, itemId = itemId, targetIndex = targetIndex)
+                    }
+                }
+        }
 
     /** Moves a dock item to its final index without mutating the supplied layout. */
     fun moveDockItemToIndex(

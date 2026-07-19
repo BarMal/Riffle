@@ -303,6 +303,20 @@ class DockEngineTest {
         )
     }
 
+    @Test
+    fun rejectsDirectionalDockMoveWithDuplicateIdsWithoutChangingLayout() {
+        val phone = appShortcut(id = "phone")
+        val layout = layoutWithDockItems(phone, phone.copy(label = "Duplicate"))
+
+        val result = engine.moveDockItem(layout, phone.id, DockItemMoveDirection.RIGHT)
+
+        assertEquals(
+            DockEditRejectionReason.DUPLICATE_ITEM_ID,
+            assertIs<DockEditResult.Rejected>(result).reason,
+        )
+        assertEquals(listOf("phone", "phone"), layout.dock.items.map { item -> item.id.value })
+    }
+
     private fun layoutWithDockItems(vararg items: AppShortcutItem): HomeLayout =
         HomeLayoutDefaults.standard().copy(
             dock = DockModel(capacity = 5, items = items.toList()),
