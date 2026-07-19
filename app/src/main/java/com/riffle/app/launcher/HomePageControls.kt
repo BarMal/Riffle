@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
@@ -484,7 +485,9 @@ fun PageIndicator(
     val layoutDirection = LocalLayoutDirection.current
     Row(
         modifier =
-            modifier
+            Modifier
+                .heightIn(min = PAGE_INDICATOR_TOUCH_TARGET_HEIGHT_DP.dp)
+                .then(modifier)
                 .pageIndicatorSemantics(
                     pageCount = pageCount,
                     selectedPageIndex = selectedPageIndex,
@@ -599,6 +602,8 @@ internal fun pageIndicatorStateDescription(
     selectedPageIndex: Int,
     pageCount: Int,
 ): String = "Page ${selectedPageIndex + 1} of $pageCount"
+
+private const val PAGE_INDICATOR_TOUCH_TARGET_HEIGHT_DP = 48
 
 @Composable
 private fun pageIndicatorColor(isSelected: Boolean) =

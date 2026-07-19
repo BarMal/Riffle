@@ -305,7 +305,7 @@ private fun HomeBottomSearchArea(
                 onPageSelected = onPageSelected,
                 modifier =
                     Modifier
-                        .height(HOME_SEARCH_PILL_HEIGHT_DP.dp)
+                        .height(HOME_PAGE_INDICATOR_TOUCH_TARGET_HEIGHT_DP.dp)
                         .clip(RoundedCornerShape(HOME_SEARCH_PILL_HEIGHT_DP.dp))
                         .padding(horizontal = HOME_SEARCH_HORIZONTAL_PADDING_DP.dp),
             )
@@ -492,8 +492,9 @@ internal data class HomeWorkspaceActions(
 )
 
 private const val HOME_BOTTOM_CONTROLS_TOP_SPACING_DP = 8
-private const val HOME_SEARCH_AREA_HEIGHT_DP = 36
+private const val HOME_SEARCH_AREA_HEIGHT_DP = 48
 private const val HOME_SEARCH_PILL_HEIGHT_DP = 30
+private const val HOME_PAGE_INDICATOR_TOUCH_TARGET_HEIGHT_DP = 48
 private const val HOME_SEARCH_HORIZONTAL_PADDING_DP = 14
 private const val HOME_SEARCH_SURFACE_ALPHA = 0.82f
 private const val HOME_SEARCH_BORDER_ALPHA = 0.38f
