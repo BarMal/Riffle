@@ -34,6 +34,7 @@ internal data class CardStackInteraction(
     val focusedItemKey: Any?,
     val onFocusRequest: (CardStackLayoutEntry) -> Unit,
     val onSettle: (verticalDragPx: Float, verticalVelocityPxPerSecond: Float) -> Unit,
+    val onSettleHaptic: () -> Unit = {},
 )
 
 @Composable
@@ -227,8 +228,6 @@ private fun Modifier.cardStackPointerInput(
     return pointerInput(stableItemKey, isFocused, interaction) {
         awaitEachGesture {
             val down = awaitFirstDown(requireUnconsumed = false)
-            // A background card is a focus target, never an implicit content-launch target.
-            if (!isFocused) down.consume()
             val pointerId: PointerId = down.id
             var verticalDrag = 0f
             var horizontalDrag = 0f
@@ -266,17 +265,22 @@ private fun Modifier.cardStackPointerInput(
                         }
                 }
                 if (axis == CardStackGestureAxis.VERTICAL) change.consume()
-                if (!change.pressed) break
+                if (!change.pressed) {
+                    // A background-card tap focuses the card without consuming an ancestor's
+                    // horizontal page/stage drag before that drag's axis is known.
+                    if (axis == null && !isFocused) change.consume()
+                    break
+                }
             }
 
             when {
                 cancelled -> Unit
                 axis == null -> interaction.onFocusRequest(entry)
                 axis == CardStackGestureAxis.VERTICAL ->
-                    interaction.onSettle(
-                        verticalDrag,
-                        velocityTracker.calculateVelocity().y,
-                    )
+                    interaction.run {
+                        onSettle(verticalDrag, velocityTracker.calculateVelocity().y)
+                        onSettleHaptic()
+                    }
                 // Horizontal gestures remain unconsumed for the owning page/stage surface.
                 else -> Unit
             }
