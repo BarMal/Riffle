@@ -40,8 +40,13 @@ data class TimeScapeAppearanceSettings(
                                 0
                             },
                         glassTransparencyPercent =
-                            if (settings.motion.reducedTransparency) 0 else settings.surface.glassTransparencyPercent,
-                        textureIntensityPercent = if (capabilities.supportsTexture) settings.surface.textureIntensityPercent else 0,
+                            if (settings.motion.reducedTransparency) {
+                                0
+                            } else {
+                                settings.surface.glassTransparencyPercent
+                            },
+                        textureIntensityPercent =
+                            if (capabilities.supportsTexture) settings.surface.textureIntensityPercent else 0,
                     ),
                 motion =
                     if (settings.motion.reducedMotion) {

@@ -56,7 +56,13 @@ class TimeScapeAppearanceSettingsTest {
                 motion = TimeScapeMotion(reducedMotion = true, reducedTransparency = true),
             )
 
-        val effective = stored.effectiveFor(TimeScapeRendererCapabilities(supportsBlur = false, supportsTexture = false))
+        val effective =
+            stored.effectiveFor(
+                TimeScapeRendererCapabilities(
+                    supportsBlur = false,
+                    supportsTexture = false,
+                ),
+            )
 
         assertEquals(60, stored.surface.blurStrengthPercent)
         assertEquals(0, effective.surface.blurStrengthPercent)
