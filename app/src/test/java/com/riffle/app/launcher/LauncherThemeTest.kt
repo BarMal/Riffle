@@ -100,6 +100,21 @@ class LauncherThemeTest {
     }
 
     @Test
+    fun selectedAccentAlsoThemesDockAndElevatedSurfaceRoles() {
+        LauncherThemeAccent.entries
+            .filterNot { accent -> accent == LauncherThemeAccent.DEFAULT }
+            .forEach { accent ->
+                val accentedLightScheme = lightScheme.withThemeAccent(accent, darkTheme = false)
+                val accentedDarkScheme = darkScheme.withThemeAccent(accent, darkTheme = true)
+
+                assertNotEquals(lightScheme.surfaceVariant, accentedLightScheme.surfaceVariant)
+                assertNotEquals(darkScheme.surfaceVariant, accentedDarkScheme.surfaceVariant)
+                assertEquals(accentedLightScheme.surfaceVariant, accentedLightScheme.surfaceContainerHigh)
+                assertEquals(accentedDarkScheme.surfaceVariant, accentedDarkScheme.surfaceContainerHighest)
+            }
+    }
+
+    @Test
     fun cardShapeTokenVariesByPreset() {
         assertEquals(RoundedCornerShape(0.dp), launcherCardShape(LauncherThemePreset.TERMINAL))
         assertEquals(RoundedCornerShape(28.dp), launcherCardShape(LauncherThemePreset.GLASS))
