@@ -109,25 +109,47 @@ internal fun HomeFolder(
             )
         }
 
-        DropdownMenu(
+        HomeFolderContextMenu(
+            folder = folder,
             expanded = isContextMenuExpanded.value,
             onDismissRequest = { isContextMenuExpanded.value = false },
-        ) {
-            DropdownMenuItem(
-                text = { Text(text = "Edit folder") },
-                onClick = {
-                    isContextMenuExpanded.value = false
-                    actions.onFolderOpen(folder)
-                },
-            )
-            DropdownMenuItem(
-                text = { Text(text = "Remove from home") },
-                onClick = {
-                    isContextMenuExpanded.value = false
-                    actions.onAction(LauncherShellAction.RemoveHomeShortcut(folder.id))
-                },
-            )
-        }
+            actions = actions,
+        )
+    }
+}
+
+@Composable
+private fun HomeFolderContextMenu(
+    folder: FolderItem,
+    expanded: Boolean,
+    onDismissRequest: () -> Unit,
+    actions: HomeWorkspaceActions,
+) {
+    DropdownMenu(
+        expanded = expanded,
+        onDismissRequest = onDismissRequest,
+    ) {
+        DropdownMenuItem(
+            text = { Text(text = "Edit folder") },
+            onClick = {
+                onDismissRequest()
+                actions.onFolderOpen(folder)
+            },
+        )
+        DropdownMenuItem(
+            text = { Text(text = "Move to dock") },
+            onClick = {
+                onDismissRequest()
+                actions.onAction(LauncherShellAction.MoveHomeItemToDock(folder.id))
+            },
+        )
+        DropdownMenuItem(
+            text = { Text(text = "Remove from home") },
+            onClick = {
+                onDismissRequest()
+                actions.onAction(LauncherShellAction.RemoveHomeShortcut(folder.id))
+            },
+        )
     }
 }
 

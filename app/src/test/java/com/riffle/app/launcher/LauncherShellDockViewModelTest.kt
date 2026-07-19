@@ -1,11 +1,13 @@
 package com.riffle.app.launcher
 
+import com.riffle.core.domain.launcher.ShellNavigationAction
 import com.riffle.core.domain.launcher.apps.AppActivityName
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.apps.InstalledAppRepository
 import com.riffle.core.domain.launcher.home.AppShortcutItem
+import com.riffle.core.domain.launcher.home.DockEditRejectionReason
 import com.riffle.core.domain.launcher.home.DockModel
 import com.riffle.core.domain.launcher.home.DockVisualEffect
 import com.riffle.core.domain.launcher.home.HomeLayout
@@ -13,9 +15,34 @@ import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
 import com.riffle.core.domain.launcher.home.LauncherItemId
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Test
 
 class LauncherShellDockViewModelTest {
+    @Test
+    fun clearsDockRejectionFeedbackWhenDismissedNavigatingOrLeavingEditMode() {
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                homeLayoutRepository = FakeHomeLayoutRepository(),
+            )
+
+        viewModel.onDockEdited(LauncherShellAction.OpenHome)
+        assertEquals(DockEditRejectionReason.ITEM_NOT_FOUND, viewModel.state.value.dockEditRejectionReason)
+
+        viewModel.onDockEditFeedbackDismissed()
+        assertNull(viewModel.state.value.dockEditRejectionReason)
+
+        viewModel.onDockEdited(LauncherShellAction.OpenHome)
+        viewModel.onNavigationActionSelected(ShellNavigationAction.OpenSettings)
+        assertNull(viewModel.state.value.dockEditRejectionReason)
+
+        viewModel.onDockEdited(LauncherShellAction.OpenHome)
+        viewModel.onHomePageEdited(LauncherShellAction.EnterHomeEditMode)
+        viewModel.onHomePageEdited(LauncherShellAction.ExitHomeEditMode)
+        assertNull(viewModel.state.value.dockEditRejectionReason)
+    }
+
     @Test
     fun updatesDockVisibilityAndSavesLayout() {
         val repository = FakeHomeLayoutRepository()

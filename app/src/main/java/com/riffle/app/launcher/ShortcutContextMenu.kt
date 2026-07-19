@@ -98,14 +98,8 @@ private fun ShortcutContextSurface.dockManagementItems(shortcut: AppShortcutItem
         ShortcutContextSurface.HOME ->
             listOf(
                 ShortcutContextMenuItem(
-                    label = "Add to dock",
-                    action =
-                        LauncherShellAction.AddAppToDock(
-                            InstalledApp(
-                                identity = shortcut.appIdentity,
-                                label = shortcut.label,
-                            ),
-                        ),
+                    label = "Move to dock",
+                    action = LauncherShellAction.MoveHomeItemToDock(shortcut.id),
                 ),
                 ShortcutContextMenuItem(
                     label = "Add to floating dock",
@@ -119,7 +113,13 @@ private fun ShortcutContextSurface.dockManagementItems(shortcut: AppShortcutItem
                 ),
             )
 
-        ShortcutContextSurface.DOCK -> emptyList()
+        ShortcutContextSurface.DOCK ->
+            listOf(
+                ShortcutContextMenuItem(
+                    label = "Move to home",
+                    action = LauncherShellAction.MoveDockItemToHome(shortcut.id),
+                ),
+            )
     }
 
 private val AppShortcut.contextMenuLabel: String

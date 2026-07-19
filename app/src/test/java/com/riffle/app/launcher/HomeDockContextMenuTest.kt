@@ -6,13 +6,63 @@ import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.DockItemMoveDirection
 import com.riffle.core.domain.launcher.home.FolderItem
+import com.riffle.core.domain.launcher.home.GridCell
 import com.riffle.core.domain.launcher.home.HostedWidgetId
 import com.riffle.core.domain.launcher.home.LauncherItemId
+import com.riffle.core.domain.launcher.home.LauncherPageId
 import com.riffle.core.domain.launcher.home.WidgetItem
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class HomeDockContextMenuTest {
+    @Test
+    fun directDockDragIsLimitedToShortcutsAndFolders() {
+        assertEquals(true, DockSlotItemState.Shortcut(shortcut()).isDirectDockDragEligible())
+        assertEquals(true, DockSlotItemState.Folder(folder()).isDirectDockDragEligible())
+        assertEquals(false, DockSlotItemState.Widget(widget()).isDirectDockDragEligible())
+    }
+
+    @Test
+    fun dragPreviewReflowsItemsByStableIdWithoutMutatingTheSavedOrder() {
+        val camera = shortcut()
+        val weather = widget()
+        val folder = folder()
+        val original = listOf(camera, weather, folder)
+
+        val preview =
+            original.dockItemsForPreview(
+                DockDragState(itemId = folder.id, originIndex = 2, targetIndex = 0),
+            )
+
+        assertEquals(listOf(folder.id, camera.id, weather.id), preview.map { it.id })
+        assertEquals(listOf(camera.id, weather.id, folder.id), original.map { it.id })
+    }
+
+    @Test
+    fun dragPreviewIgnoresAStaleSourceItem() {
+        val camera = shortcut()
+        val original = listOf(camera)
+
+        assertEquals(
+            original,
+            original.dockItemsForPreview(
+                DockDragState(LauncherItemId("removed"), originIndex = 0, targetIndex = 0),
+            ),
+        )
+    }
+
+    @Test
+    fun moveToHomeDestinationDispatchesTheChosenPageAndCell() {
+        val itemId = LauncherItemId("camera")
+        val pageId = LauncherPageId("second")
+        val cell = GridCell(column = 1, row = 2)
+
+        assertEquals(
+            LauncherShellAction.MoveDockItemToHome(itemId = itemId, pageId = pageId, cell = cell),
+            dockMoveToHomeAction(itemId = itemId, pageId = pageId, cell = cell),
+        )
+    }
+
     @Test
     fun editDockShortcutMenuAddsMoveActionsAndOmitsEditHome() {
         val shortcut = shortcut()
@@ -54,6 +104,7 @@ class HomeDockContextMenuTest {
                 ShortcutContextMenuItem("App info", LauncherShellAction.OpenAppInfo(shortcut.appIdentity)),
                 ShortcutContextMenuItem("Hide app", LauncherShellAction.HideApp(shortcut.appIdentity)),
                 ShortcutContextMenuItem("Uninstall", LauncherShellAction.UninstallApp(shortcut.appIdentity)),
+                ShortcutContextMenuItem("Move to home", LauncherShellAction.MoveDockItemToHome(shortcut.id)),
                 ShortcutContextMenuItem("Remove from dock", LauncherShellAction.RemoveDockShortcut(shortcut.id)),
             ),
             items,
@@ -169,6 +220,10 @@ class HomeDockContextMenuTest {
                 ShortcutContextMenuItem(
                     label = "Move to end",
                     action = LauncherShellAction.MoveDockShortcutToIndex(folder.id, targetIndex = 2),
+                ),
+                ShortcutContextMenuItem(
+                    label = "Move to home",
+                    action = LauncherShellAction.MoveDockItemToHome(folder.id),
                 ),
                 ShortcutContextMenuItem(
                     label = "Remove from dock",

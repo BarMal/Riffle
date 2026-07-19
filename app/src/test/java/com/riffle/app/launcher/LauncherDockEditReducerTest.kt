@@ -7,7 +7,10 @@ import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.home.AppShortcutItem
+import com.riffle.core.domain.launcher.home.DockEditRejectionReason
 import com.riffle.core.domain.launcher.home.DockEngine
+import com.riffle.core.domain.launcher.home.GridCell
+import com.riffle.core.domain.launcher.home.GridPlacement
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
@@ -18,13 +21,14 @@ import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.home.LauncherViewMode
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertSame
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class LauncherDockEditReducerTest {
     @Test
     fun appliesDockEditsToActiveLayout() {
         val repository = FakeHomeLayoutRepository()
-        val state = LauncherShellState()
+        val state = LauncherShellState(dockEditRejectionReason = DockEditRejectionReason.DOCK_DISABLED)
 
         val updatedState =
             reducer(repository).reduce(
@@ -34,10 +38,11 @@ class LauncherDockEditReducerTest {
 
         assertEquals(listOf("Phone"), updatedState.homeLayout.dock.items.filterIsInstance<AppShortcutItem>().labels)
         assertEquals(updatedState.homeLayout, repository.savedLayoutSet?.activeLayout)
+        assertEquals(null, updatedState.dockEditRejectionReason)
     }
 
     @Test
-    fun ignoresRejectedDockEdits() {
+    fun exposesRejectedDockEditsWithoutSavingTheLayout() {
         val repository = FakeHomeLayoutRepository()
         val state = LauncherShellState()
 
@@ -47,7 +52,33 @@ class LauncherDockEditReducerTest {
                 action = LauncherShellAction.OpenHome,
             )
 
-        assertSame(state, updatedState)
+        assertEquals(DockEditRejectionReason.ITEM_NOT_FOUND, updatedState.dockEditRejectionReason)
+        assertSame(state.homeLayout, updatedState.homeLayout)
+        assertEquals(null, repository.savedLayout)
+    }
+
+    @Test
+    fun exposesDisabledDockReasonForRejectedHomeToDockTransfer() {
+        val repository = FakeHomeLayoutRepository()
+        val shortcut = AppShortcutItem(LauncherItemId("phone"), phoneIdentity, "Phone")
+        val state =
+            LauncherShellState(
+                homeLayout =
+                    HomeLayoutDefaults.standard().copy(
+                        dock = HomeLayoutDefaults.standard().dock.copy(isEnabled = false),
+                        pages =
+                            listOf(
+                                HomeLayoutDefaults.standard().selectedPage.copy(
+                                    items = listOf(shortcut.copy(placement = GridPlacement(GridCell(0, 0)))),
+                                ),
+                            ),
+                    ),
+            )
+
+        val updatedState = reducer(repository).reduce(state, LauncherShellAction.MoveHomeItemToDock(shortcut.id))
+
+        assertEquals(DockEditRejectionReason.DOCK_DISABLED, updatedState.dockEditRejectionReason)
+        assertEquals(state.homeLayout, updatedState.homeLayout)
         assertEquals(null, repository.savedLayout)
     }
 
@@ -71,6 +102,35 @@ class LauncherDockEditReducerTest {
             )
 
         assertEquals(listOf(cameraShortcut.id, phoneShortcut.id), updatedState.homeLayout.dock.items.map { it.id })
+        assertEquals(updatedState.homeLayout, repository.savedLayoutSet?.activeLayout)
+    }
+
+    @Test
+    fun persistsHomeToDockTransferOnTheActiveLayout() {
+        val repository = FakeHomeLayoutRepository()
+        val shortcut = AppShortcutItem(LauncherItemId("phone"), phoneIdentity, "Phone")
+        val state =
+            LauncherShellState(
+                homeLayout =
+                    HomeLayoutDefaults.standard().copy(
+                        pages =
+                            listOf(
+                                HomeLayoutDefaults.standard().selectedPage.copy(
+                                    items =
+                                        listOf(
+                                            shortcut.copy(
+                                                placement = GridPlacement(GridCell(0, 0)),
+                                            ),
+                                        ),
+                                ),
+                            ),
+                    ),
+            )
+
+        val updatedState = reducer(repository).reduce(state, LauncherShellAction.MoveHomeItemToDock(shortcut.id))
+
+        assertEquals(listOf(shortcut.id), updatedState.homeLayout.dock.items.map { it.id })
+        assertTrue(updatedState.homeLayout.selectedPage.items.isEmpty())
         assertEquals(updatedState.homeLayout, repository.savedLayoutSet?.activeLayout)
     }
 

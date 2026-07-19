@@ -37,6 +37,10 @@ internal fun dockFolderContextMenuItems(
                         ),
                     enabled = shortcutIndex < shortcutCount - 1,
                 ),
+                ShortcutContextMenuItem(
+                    label = "Move to home",
+                    action = LauncherShellAction.MoveDockItemToHome(folder.id),
+                ),
             )
         } else {
             emptyList()

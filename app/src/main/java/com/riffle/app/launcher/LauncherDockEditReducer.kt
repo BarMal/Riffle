@@ -21,8 +21,10 @@ internal class LauncherDockEditReducer(
             )
         } else {
             when (val result = dockEngine.applyEdit(action = action, layout = state.homeLayout)) {
-                is DockEditResult.Updated -> state.withHomeLayout(result.layout, homeLayoutRepository)
-                is DockEditResult.Rejected -> state
+                is DockEditResult.Updated ->
+                    state.withHomeLayout(result.layout, homeLayoutRepository).copy(dockEditRejectionReason = null)
+
+                is DockEditResult.Rejected -> state.copy(dockEditRejectionReason = result.reason)
             }
         }
 }

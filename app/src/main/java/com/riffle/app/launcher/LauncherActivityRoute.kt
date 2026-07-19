@@ -84,6 +84,8 @@ private fun LauncherShellAction.isDockEditAction(): Boolean =
         is LauncherShellAction.RemoveDockShortcut,
         is LauncherShellAction.MoveDockShortcut,
         is LauncherShellAction.MoveDockShortcutToIndex,
+        is LauncherShellAction.MoveHomeItemToDock,
+        is LauncherShellAction.MoveDockItemToHome,
         -> true
 
         else -> false

@@ -284,6 +284,8 @@ class LauncherActionDomainTest {
                     "MoveDockShortcutToIndex",
                     LauncherShellAction.MoveDockShortcutToIndex(itemId, targetIndex = 2),
                 ),
+                activity("MoveHomeItemToDock", LauncherShellAction.MoveHomeItemToDock(itemId)),
+                activity("MoveDockItemToHome", LauncherShellAction.MoveDockItemToHome(itemId, GridCell(1, 2))),
                 activity("MoveHomeShortcutToCell", LauncherShellAction.MoveHomeShortcutToCell(itemId, GridCell(1, 2))),
                 activity("ResizeHomeWidget", LauncherShellAction.ResizeHomeWidget(itemId, GridSpan(2, 2))),
                 app("OpenWidgetPicker", LauncherShellAction.OpenWidgetPicker),

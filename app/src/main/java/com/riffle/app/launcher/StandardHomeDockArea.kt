@@ -20,7 +20,7 @@ internal fun StandardHomeDockArea(
     appIconLoader: AppIconLoader,
     actions: HomeWorkspaceActions,
 ) {
-    if (layout.editMode != HomeEditMode.Browsing || !layout.shouldShowDock()) {
+    if (!layout.shouldShowDock()) {
         return
     }
 
@@ -29,15 +29,18 @@ internal fun StandardHomeDockArea(
             hasOverflow = dockHasOverflow(capacity = layout.dock.capacity, itemCount = layout.dock.items.size),
             notificationShelfState = notificationShelfState,
         )
-    val showDockShelf = isDockShelfExpanded && hasExpandedContent
+    val showDockShelf =
+        layout.editMode == HomeEditMode.Browsing && isDockShelfExpanded && hasExpandedContent
     val dockInteractions =
         DockInteractions(
             haptics = actions.haptics,
             onFolderOpen = actions.onFolderOpen,
             isShelfExpanded = showDockShelf,
-            onShelfExpandedChange = onDockShelfExpandedChange.takeIf { hasExpandedContent },
+            onShelfExpandedChange =
+                onDockShelfExpandedChange.takeIf { hasExpandedContent && layout.editMode == HomeEditMode.Browsing },
             reducedMotion = presentation.reducedMotion,
             homeInsetPolicy = presentation.homeInsetPolicy,
+            homeLayout = layout,
             onAction = actions.onAction,
         )
 
@@ -62,7 +65,7 @@ internal fun StandardHomeDockArea(
         } else {
             Dock(
                 dock = layout.dock.primaryDock(showShelf = false),
-                isEditing = false,
+                isEditing = layout.editMode is HomeEditMode.EditingPage,
                 notificationGroupsByApp = presentation.notificationGroupsByApp,
                 appShortcutsByApp = presentation.appShortcutsByApp,
                 appIconLoader = appIconLoader,
