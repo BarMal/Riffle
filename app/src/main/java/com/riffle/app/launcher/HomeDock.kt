@@ -289,7 +289,9 @@ internal data class DockDragState(
 
 internal fun dockItemTestTag(itemId: LauncherItemId): String = "dock-item:${itemId.value}"
 
-internal fun DockSlotItemState.isDirectDockDragEligible(): Boolean = this is DockSlotItemState.Shortcut || this is DockSlotItemState.Folder
+internal fun DockSlotItemState.isDirectDockDragEligible(): Boolean {
+    return this is DockSlotItemState.Shortcut || this is DockSlotItemState.Folder
+}
 
 internal fun List<LauncherItem>.dockItemsForPreview(drag: DockDragState?): List<LauncherItem> {
     if (drag == null || drag.itemId !in map { it.id }) return this
