@@ -68,6 +68,8 @@ class TimeScapeAppearanceSettingsTest {
         assertEquals(0, effective.surface.blurStrengthPercent)
         assertEquals(0, effective.surface.textureIntensityPercent)
         assertEquals(0, effective.motion.enterDurationMillis)
+        assertEquals(TimeScapeEasing.STANDARD, effective.motion.easing)
+        assertEquals(0, effective.motion.springBouncinessPercent)
         assertEquals(0, effective.motion.travelIntensityPercent)
         assertFalse(effective.surface.glassTransparencyPercent > 0)
     }

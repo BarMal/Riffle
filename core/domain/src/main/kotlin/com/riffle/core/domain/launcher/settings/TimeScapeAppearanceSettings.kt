@@ -56,6 +56,8 @@ data class TimeScapeAppearanceSettings(
                             enterDurationMillis = 0,
                             exitDurationMillis = 0,
                             expandDurationMillis = 0,
+                            easing = TimeScapeEasing.STANDARD,
+                            springBouncinessPercent = 0,
                             travelIntensityPercent = 0,
                             parallaxIntensityPercent = 0,
                             rotationIntensityPercent = 0,
