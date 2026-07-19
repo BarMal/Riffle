@@ -20,6 +20,7 @@ import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.home.LauncherViewMode
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertSame
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class LauncherDockEditReducerTest {
@@ -101,7 +102,7 @@ class LauncherDockEditReducerTest {
         val updatedState = reducer(repository).reduce(state, LauncherShellAction.MoveHomeItemToDock(shortcut.id))
 
         assertEquals(listOf(shortcut.id), updatedState.homeLayout.dock.items.map { it.id })
-        assertEquals(emptyList(), updatedState.homeLayout.selectedPage.items)
+        assertTrue(updatedState.homeLayout.selectedPage.items.isEmpty())
         assertEquals(updatedState.homeLayout, repository.savedLayoutSet?.activeLayout)
     }
 
