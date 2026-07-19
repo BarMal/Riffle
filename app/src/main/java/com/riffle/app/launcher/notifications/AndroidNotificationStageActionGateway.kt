@@ -69,7 +69,7 @@ object AndroidNotificationStageActionGateway : NotificationStageActionGateway, N
             if (isMedia) {
                 target.mediaController
                     ?.playbackState
-                    ?.let(::mediaCommandsForPlaybackState)
+                    ?.let { state -> mediaCommandsForPlaybackActions(state.actions, state.state) }
                     ?.forEach { command -> add(NotificationStageAction.MediaControl(command)) }
             }
         }
@@ -124,7 +124,9 @@ private fun Targets.perform(
         is NotificationStageAction.MediaControl ->
             mediaController
                 ?.takeIf { controller ->
-                    action.command in mediaCommandsForPlaybackState(controller.playbackState)
+                    controller.playbackState?.let { state ->
+                        action.command in mediaCommandsForPlaybackActions(state.actions, state.state)
+                    } == true
                 }
                 ?.sendResult(action.command)
                 ?: NotificationStageActionResult.Unavailable
@@ -160,14 +162,16 @@ private fun MediaController.perform(command: MediaCommand) {
     }
 }
 
-internal fun mediaCommandsForPlaybackState(playbackState: PlaybackState?): Set<MediaCommand> =
+internal fun mediaCommandsForPlaybackActions(
+    actions: Long,
+    state: Int,
+): Set<MediaCommand> =
     buildSet {
-        val actions = playbackState?.actions ?: return@buildSet
         if (actions and PlaybackState.ACTION_PLAY != 0L) add(MediaCommand.PLAY)
         if (actions and PlaybackState.ACTION_PAUSE != 0L) add(MediaCommand.PAUSE)
         if (actions and PlaybackState.ACTION_PLAY_PAUSE != 0L) {
             add(
-                if (playbackState.state == PlaybackState.STATE_PLAYING) {
+                if (state == PlaybackState.STATE_PLAYING) {
                     MediaCommand.PAUSE
                 } else {
                     MediaCommand.PLAY
