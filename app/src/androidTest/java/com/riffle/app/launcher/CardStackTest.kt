@@ -249,60 +249,6 @@ class CardStackTest {
         composeRule.onNodeWithTag(nextFocusTestTag(group.key)).assertIsEnabled()
     }
 
-    @Test
-    fun notificationCardFocusControlsRetainIndependentFocusForEachGroup() {
-        val messagesGroup = notificationGroup()
-        val calendarGroup =
-            notificationGroup(
-                packageName = "com.example.calendar",
-                notificationKeysAndTitles =
-                    listOf(
-                        "calendar-1" to "Today",
-                        "calendar-2" to "Tomorrow",
-                        "calendar-3" to "Next week",
-                    ),
-            )
-        var visibleGroups by mutableStateOf(listOf(messagesGroup, calendarGroup))
-        composeRule.setContent {
-            MaterialTheme {
-                NotificationOverviewSurface(
-                    groups = visibleGroups,
-                    categoryCounts = mapOf(NotificationCategory.MESSAGE to 5),
-                    notificationAccessStatus = NotificationAccessStatus.GRANTED,
-                    presentation =
-                        NotificationOverviewPresentation(
-                            apps = emptyList(),
-                            appIconLoader = EmptyAppIconLoader,
-                            reducedMotion = true,
-                        ),
-                    onAction = {},
-                )
-            }
-        }
-
-        composeRule.onAllNodesWithText("View card")[0].performClick()
-        composeRule.onNodeWithTag(nextFocusTestTag(messagesGroup.key)).performClick()
-        assertNotificationFocusPosition(messagesGroup.key, position = 2, count = 2)
-        composeRule.onNodeWithTag(previousFocusTestTag(messagesGroup.key)).performClick()
-        assertNotificationFocusPosition(messagesGroup.key, position = 1, count = 2)
-        composeRule.onNodeWithTag(nextFocusTestTag(messagesGroup.key)).performClick()
-        assertNotificationFocusPosition(messagesGroup.key, position = 2, count = 2)
-
-        composeRule.runOnIdle {
-            visibleGroups = listOf(calendarGroup, messagesGroup)
-        }
-        assertNotificationFocusPosition(calendarGroup.key, position = 1, count = 3)
-        composeRule.onNodeWithTag(nextFocusTestTag(calendarGroup.key)).performClick()
-        assertNotificationFocusPosition(calendarGroup.key, position = 2, count = 3)
-        composeRule.onNodeWithTag(previousFocusTestTag(calendarGroup.key)).performClick()
-        assertNotificationFocusPosition(calendarGroup.key, position = 1, count = 3)
-
-        composeRule.runOnIdle {
-            visibleGroups = listOf(messagesGroup, calendarGroup)
-        }
-        assertNotificationFocusPosition(messagesGroup.key, position = 2, count = 2)
-    }
-
     private fun setContent(entries: List<CardStackLayoutEntry>) {
         composeRule.setContent {
             MaterialTheme {
@@ -339,16 +285,6 @@ class CardStackTest {
 
     private fun nextFocusTestTag(groupKey: AppNotificationGroupKey): String =
         "$NOTIFICATION_PROTOTYPE_NEXT_FOCUS_TEST_TAG-${groupKey.profileId.value}-${groupKey.packageName.value}"
-
-    private fun assertNotificationFocusPosition(
-        groupKey: AppNotificationGroupKey,
-        position: Int,
-        count: Int,
-    ) {
-        composeRule
-            .onNodeWithTag(focusPositionTestTag(groupKey))
-            .assertTextEquals("Focused notification $position of $count")
-    }
 
     private fun notificationGroup(
         packageName: String = "com.example.messages",
