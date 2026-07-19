@@ -94,6 +94,26 @@ class PreviewFirstSetupTest {
     }
 
     @Test
+    fun dismissedSetupCardKeepsHomeSetupDiscoverableFromSettings() {
+        val actions = mutableListOf<LauncherShellAction>()
+
+        composeRule.setContent {
+            LauncherShellContent(
+                state =
+                    previewState().copy(
+                        destination = ShellDestination.SETTINGS,
+                        setupCardDismissed = true,
+                    ),
+                onAction = { action -> actions.add(action) },
+            )
+        }
+
+        composeRule.onNodeWithText("Default home app").assertHasClickAction().performClick()
+
+        assertEquals(listOf(LauncherShellAction.RequestDefaultHome), actions)
+    }
+
+    @Test
     fun dismissingSetupCardPersistsForTheNextShellState() {
         val repository = FakeFirstRunRepository()
         val viewModel = LauncherShellViewModel(firstRunRepository = repository)
