@@ -37,7 +37,20 @@ object AndroidNotificationStageActionGateway : NotificationStageActionGateway, N
                 contentIntent = platformNotification.contentIntent,
                 providerActions = providerActions,
                 mediaController = token?.let { MediaController(context, it) },
+                canDismiss = notification.isClearable,
             )
+    }
+
+    fun replaceAll(
+        context: Context,
+        notifications: Array<StatusBarNotification>,
+    ) {
+        targets.clear()
+        notifications.forEach { notification -> replace(context, notification) }
+    }
+
+    fun clear() {
+        targets.clear()
     }
 
     fun remove(key: String) {
@@ -71,6 +84,7 @@ private data class Targets(
     val contentIntent: PendingIntent?,
     val providerActions: Map<String, ProviderTarget>,
     val mediaController: MediaController?,
+    val canDismiss: Boolean,
 )
 
 private data class ProviderTarget(
@@ -99,7 +113,7 @@ private fun Targets.perform(
     when (action) {
         NotificationStageAction.Open -> contentIntent?.sendResult() ?: NotificationStageActionResult.Unavailable
         NotificationStageAction.Dismiss ->
-            if (AndroidNotificationDismissalGateway.dismissNotifications(listOf(key))) {
+            if (canDismiss && AndroidNotificationDismissalGateway.dismissNotifications(listOf(key))) {
                 NotificationStageActionResult.Performed
             } else {
                 NotificationStageActionResult.Failed

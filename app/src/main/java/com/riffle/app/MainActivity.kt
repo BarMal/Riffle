@@ -36,6 +36,7 @@ import com.riffle.app.launcher.LauncherWidgetAddHandlingResult
 import com.riffle.app.launcher.LauncherWidgetRenderers
 import com.riffle.app.launcher.WallpaperPickerLaunchResult
 import com.riffle.app.launcher.apps.AppCatalogChange
+import com.riffle.app.launcher.canPerformStageAction
 import com.riffle.app.launcher.completeWidgetAdd
 import com.riffle.app.launcher.deleteHostedWidgetIdWhenRejected
 import com.riffle.app.launcher.failureMessage
@@ -265,6 +266,7 @@ class MainActivity : ComponentActivity() {
                 DefaultLauncherNotificationActionHandler(
                     notificationDismissalGateway = AndroidNotificationDismissalGateway,
                     refreshNotifications = { shellViewModel.refreshNotifications() },
+                    canPerformStageAction = { key -> shellViewModel.state.value.canPerformStageAction(key) },
                     stageActionGateway = AndroidNotificationStageActionGateway,
                 ),
             settingsActionHandler =

@@ -52,6 +52,7 @@ class AppStageNotificationContentTest {
         assertEquals(1, cards.size)
         assertTrue(cards.single().isRedacted)
         assertEquals("Hidden notification", cards.single().title)
+        assertTrue(cards.single().supportedActions.isEmpty())
     }
 
     @Test

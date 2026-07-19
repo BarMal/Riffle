@@ -25,6 +25,7 @@ class RiffleNotificationListenerService : NotificationListenerService() {
     override fun onListenerDisconnected() {
         ignoreNotificationListenerFailure {
             RiffleNotificationListenerConnection.disconnect(this)
+            AndroidNotificationStageActionGateway.clear()
         }
     }
 
@@ -50,14 +51,10 @@ class RiffleNotificationListenerService : NotificationListenerService() {
 
     private fun saveActiveNotifications() {
         ignoreNotificationListenerFailure {
-            saveActiveNotificationSnapshot(
-                activeNotifications = { activeNotifications },
-                mapper = { notification ->
-                    AndroidNotificationStageActionGateway.replace(this, notification)
-                    notificationMapper.map(notification)
-                },
-                saveNotifications = repository::saveActiveNotifications,
-            )
+            activeNotifications
+                ?.also { notifications -> AndroidNotificationStageActionGateway.replaceAll(this, notifications) }
+                ?.map(notificationMapper::map)
+                ?.let(repository::saveActiveNotifications)
         }
     }
 }

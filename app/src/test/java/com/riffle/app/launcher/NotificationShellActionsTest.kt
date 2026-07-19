@@ -60,4 +60,30 @@ class NotificationShellActionsTest {
         assertFalse(handled)
         assertEquals(0, refreshes)
     }
+
+    @Test
+    fun `unauthorized stage action does not reach the gateway`() {
+        var invoked = false
+        val handler =
+            DefaultLauncherNotificationActionHandler(
+                notificationDismissalGateway = { true },
+                refreshNotifications = {},
+                canPerformStageAction = { false },
+                stageActionGateway =
+                    NotificationStageActionGateway { _, _ ->
+                        invoked = true
+                        NotificationStageActionResult.Performed
+                    },
+            )
+
+        assertFalse(
+            handler.handle(
+                LauncherShellAction.PerformNotificationStageAction(
+                    LauncherNotificationKey("quiet"),
+                    NotificationStageAction.Open,
+                ),
+            ),
+        )
+        assertFalse(invoked)
+    }
 }
