@@ -1,5 +1,6 @@
 package com.riffle.app.launcher
 
+import com.riffle.app.launcher.notifications.NotificationStageAction
 import com.riffle.core.domain.launcher.apps.AppDrawerProfileFilter
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppProfileType
@@ -61,6 +62,12 @@ sealed interface LauncherShellAction {
     data class OpenSettingsPage(val page: SettingsPage) : LauncherShellAction
 
     data object RequestNotificationAccess : LauncherShellAction
+
+    /** Runs a contextual action for one live app-stage notification. */
+    data class PerformNotificationStageAction(
+        val key: LauncherNotificationKey,
+        val action: NotificationStageAction,
+    ) : LauncherShellAction
 
     data object RequestOverlayDockPermission : LauncherShellAction
 

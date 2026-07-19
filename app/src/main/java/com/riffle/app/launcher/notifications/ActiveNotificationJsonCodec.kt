@@ -27,6 +27,7 @@ private fun encodeNotification(notification: LauncherNotification): JSONObject =
         .put("category", notification.category.name)
         .put("priority", notification.priority.name)
         .put("canDismiss", notification.canDismiss)
+        .put("isMediaSession", notification.isMediaSession)
         .put("title", notification.title)
         .put("text", notification.text)
         .put("largeIconPngBase64", notification.largeIconPngBase64)
@@ -41,6 +42,7 @@ private fun JSONObject.toNotificationOrNull(): LauncherNotification? =
             category = optNotificationCategory(),
             priority = optNotificationPriority(),
             canDismiss = optBoolean("canDismiss", false),
+            isMediaSession = optBoolean("isMediaSession", false),
             title = optString("title"),
             text = optString("text"),
             largeIconPngBase64 = optString("largeIconPngBase64").takeIf(String::isNotBlank),

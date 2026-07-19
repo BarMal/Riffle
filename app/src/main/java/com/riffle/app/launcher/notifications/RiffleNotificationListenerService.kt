@@ -25,15 +25,22 @@ class RiffleNotificationListenerService : NotificationListenerService() {
     override fun onListenerDisconnected() {
         ignoreNotificationListenerFailure {
             RiffleNotificationListenerConnection.disconnect(this)
+            AndroidNotificationStageActionGateway.clear()
         }
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
-        ignoreNotificationListenerFailure(::saveActiveNotifications)
+        ignoreNotificationListenerFailure {
+            sbn?.let { notification -> AndroidNotificationStageActionGateway.replace(this, notification) }
+            saveActiveNotifications()
+        }
     }
 
     override fun onNotificationRemoved(sbn: StatusBarNotification?) {
-        ignoreNotificationListenerFailure(::saveActiveNotifications)
+        ignoreNotificationListenerFailure {
+            sbn?.key?.let(AndroidNotificationStageActionGateway::remove)
+            saveActiveNotifications()
+        }
     }
 
     fun dismissNotifications(keys: List<LauncherNotificationKey>): Boolean =
@@ -44,11 +51,10 @@ class RiffleNotificationListenerService : NotificationListenerService() {
 
     private fun saveActiveNotifications() {
         ignoreNotificationListenerFailure {
-            saveActiveNotificationSnapshot(
-                activeNotifications = { activeNotifications },
-                mapper = notificationMapper::map,
-                saveNotifications = repository::saveActiveNotifications,
-            )
+            activeNotifications
+                ?.also { notifications -> AndroidNotificationStageActionGateway.replaceAll(this, notifications) }
+                ?.map(notificationMapper::map)
+                ?.let(repository::saveActiveNotifications)
         }
     }
 }

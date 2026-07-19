@@ -1,5 +1,18 @@
 package com.riffle.core.domain.launcher
 
+import com.riffle.core.domain.launcher.apps.AppActivityName
+import com.riffle.core.domain.launcher.apps.AppIdentity
+import com.riffle.core.domain.launcher.apps.AppPackageName
+import com.riffle.core.domain.launcher.apps.AppProfile
+import com.riffle.core.domain.launcher.apps.AppProfileContentVisibility
+import com.riffle.core.domain.launcher.apps.InstalledApp
+import com.riffle.core.domain.launcher.cards.AppStageContentKind
+import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
+import com.riffle.core.domain.launcher.notifications.LauncherNotification
+import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
+import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
+import com.riffle.core.domain.launcher.notifications.NotificationAgeBucket
+import com.riffle.core.domain.launcher.notifications.NotificationCategory
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -7,6 +20,58 @@ import kotlin.test.assertTrue
 
 class LauncherShellStateReducerTest {
     private val reducer = LauncherShellStateReducer()
+
+    @Test
+    fun appStageSnapshotIncludesVisibleNotificationAndMediaContent() {
+        val profile = AppProfile.personal()
+        val app =
+            InstalledApp(
+                identity =
+                    AppIdentity(
+                        packageName = AppPackageName("com.example.music"),
+                        activityName = AppActivityName(".MainActivity"),
+                        profile = profile,
+                    ),
+                label = "Music",
+            )
+        val notification =
+            LauncherNotification(
+                key = LauncherNotificationKey("playing"),
+                packageName = app.identity.packageName,
+                profileId = profile.id,
+                isMediaSession = true,
+                postedAtEpochMillis = 42L,
+            )
+        val state =
+            LauncherShellState(
+                notificationAccessStatus = NotificationAccessStatus.GRANTED,
+                profileContentVisibility = mapOf(profile.id to AppProfileContentVisibility.VISIBLE),
+                installedApps = listOf(app),
+                notificationGroupsByApp =
+                    listOf(
+                        AppNotificationGroup(
+                            packageName = app.identity.packageName,
+                            profileId = profile.id,
+                            latestCategory = NotificationCategory.UNKNOWN,
+                            latestAgeBucket = NotificationAgeBucket.RECENT,
+                            notifications = listOf(notification),
+                        ),
+                    ),
+            )
+
+        val stage = state.appStageSnapshot().stages.single()
+
+        assertEquals(AppStageContentKind.MEDIA, stage.content.single().kind)
+        assertEquals("stage-notification:personal:playing", stage.content.single().id.value)
+
+        val refreshed =
+            state
+                .copy(notificationGroupsByApp = emptyList())
+                .appStageSnapshot(previous = state.appStageSnapshot())
+
+        assertEquals(1, refreshed.stages.size)
+        assertTrue(refreshed.stages.single().content.isEmpty())
+    }
 
     @Test
     fun defaultHomeCompletesFirstRun() {

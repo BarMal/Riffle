@@ -7,6 +7,9 @@ import com.riffle.core.domain.launcher.apps.AppSearchFilters
 import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.apps.AppShortcutsByApp
 import com.riffle.core.domain.launcher.apps.InstalledApp
+import com.riffle.core.domain.launcher.cards.AppStageContent
+import com.riffle.core.domain.launcher.cards.AppStageContentKind
+import com.riffle.core.domain.launcher.cards.AppStageContentSnapshot
 import com.riffle.core.domain.launcher.cards.AppStageId
 import com.riffle.core.domain.launcher.cards.AppStageIdentitySnapshot
 import com.riffle.core.domain.launcher.cards.AppStagePlanner
@@ -14,6 +17,7 @@ import com.riffle.core.domain.launcher.cards.AppStageProfileState
 import com.riffle.core.domain.launcher.cards.AppStageSnapshot
 import com.riffle.core.domain.launcher.cards.CardsChapterPlanner
 import com.riffle.core.domain.launcher.cards.CardsChapterState
+import com.riffle.core.domain.launcher.cards.LauncherCardId
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
@@ -82,14 +86,30 @@ data class LauncherShellState(
     }
 
     /** Reconciles optional TimeScape stages from the same installed-app/profile/settings snapshot. */
-    fun appStageSnapshot(planner: AppStagePlanner = AppStagePlanner()): AppStageSnapshot =
+    fun appStageSnapshot(
+        contentSnapshot: AppStageContentSnapshot = appStageContentSnapshot(),
+        previous: AppStageSnapshot? = null,
+        planner: AppStagePlanner = AppStagePlanner(),
+    ): AppStageSnapshot =
         planner.reconcile(
             identitySnapshot =
                 AppStageIdentitySnapshot(
                     installedStageIds = installedApps.map(InstalledApp::toAppStageId).distinct(),
                     profileStates = profileStatesForStages(),
                 ),
-            preferences = launcherSettings.cards.stagePreferencesFor(homeLayoutSet.activeKey),
+            contentSnapshot = contentSnapshot,
+            preferences =
+                launcherSettings
+                    .cards
+                    .stagePreferencesFor(homeLayoutSet.activeKey)
+                    .let { preferences ->
+                        if (preferences.selectedStageId == null) {
+                            preferences.copy(selectedStageId = previous?.preferences?.selectedStageId)
+                        } else {
+                            preferences
+                        }
+                    },
+            previous = previous,
         )
 
     /**
@@ -105,6 +125,38 @@ data class LauncherShellState(
 }
 
 private fun InstalledApp.toAppStageId(): AppStageId = AppStageId(identity.packageName, identity.profile.id)
+
+private fun LauncherShellState.appStageContentSnapshot(): AppStageContentSnapshot =
+    if (notificationAccessStatus != NotificationAccessStatus.GRANTED) {
+        AppStageContentSnapshot()
+    } else {
+        AppStageContentSnapshot(
+            notificationGroupsByApp
+                .flatMap(AppNotificationGroup::notifications)
+                .filter { notification ->
+                    profileContentVisibility[notification.profileId] in
+                        setOf(
+                            AppProfileContentVisibility.VISIBLE,
+                            AppProfileContentVisibility.REDACTED_QUIET,
+                        )
+                }.map { notification ->
+                    AppStageContent(
+                        id =
+                            LauncherCardId(
+                                "stage-notification:${notification.profileId.value}:${notification.key.value}",
+                            ),
+                        stageId = AppStageId(notification.packageName, notification.profileId),
+                        kind =
+                            if (notification.isMediaSession) {
+                                AppStageContentKind.MEDIA
+                            } else {
+                                AppStageContentKind.NOTIFICATION
+                            },
+                        meaningfulActivityAtEpochMillis = notification.postedAtEpochMillis.coerceAtLeast(0L),
+                    )
+                },
+        )
+    }
 
 private fun LauncherShellState.profileStatesForStages(): Map<AppProfileId, AppStageProfileState> {
     return profileContentVisibility.mapValues { (_, visibility) ->
