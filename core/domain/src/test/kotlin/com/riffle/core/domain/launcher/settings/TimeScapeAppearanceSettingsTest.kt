@@ -109,6 +109,30 @@ class TimeScapeAppearanceSettingsTest {
     }
 
     @Test
+    fun minimumFocusedScaleKeepsBackgroundCardsWithinHorizontalAndVerticalBounds() {
+        val viewport = TimeScapeViewportDp(widthDp = 400, heightDp = 400)
+        val resolution =
+            TimeScapeAppearanceSettings(
+                geometry = TimeScapeGeometry(cardAspectRatioPercent = 100, focusedScalePercent = 85),
+            ).resolveCardStack(viewport)
+        val backgroundEntries =
+            resolution.layoutPolicy.entries(cardCount = 9, activeIndex = 4).filter { it.depth > 0 }
+
+        assertTrue(resolution.isUsable)
+        assertTrue(
+            backgroundEntries.all { entry ->
+                kotlin.math.abs(entry.offset) + resolution.cardWidthDp * entry.scale / 2f <= viewport.safeWidthDp / 2f
+            },
+        )
+        assertTrue(
+            backgroundEntries.all { entry ->
+                kotlin.math.abs(entry.verticalOffset) + resolution.cardHeightDp * entry.scale / 2f <=
+                    viewport.safeHeightDp / 2f
+            },
+        )
+    }
+
+    @Test
     fun focusedGapAndFanDirectionAffectBoundedLayoutTokens() {
         val viewport = TimeScapeViewportDp(widthDp = 800, heightDp = 1200)
 

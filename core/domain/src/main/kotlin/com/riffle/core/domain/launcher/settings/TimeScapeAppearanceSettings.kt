@@ -86,12 +86,12 @@ data class TimeScapeAppearanceSettings(
         val requestedPadding = appearance.geometry.contentPaddingDp
         val focusedScale = appearance.geometry.focusedScalePercent / 100f
         val cardSize = resolveCardSize(viewport, requestedPadding, appearance.geometry, focusedScale)
-        val cardWidth = cardSize.widthDp
-        val cardHeight = cardSize.heightDp
         val isUsable = cardSize.isUsable
         val depth = if (isUsable) appearance.geometry.visibleDepth else 1
-        val horizontalTravel = ((viewport.safeWidthDp - cardSize.focusedWidthDp) / 2).coerceAtLeast(0)
-        val verticalTravel = ((viewport.safeHeightDp - cardSize.focusedHeightDp) / 2).coerceAtLeast(0)
+        val scaleStep = (1f - MIN_TIMESCAPE_BACKGROUND_CARD_SCALE) / depth
+        val largestRenderedScale = maxOf(focusedScale, 1f - scaleStep)
+        val horizontalTravel = ((viewport.safeWidthDp - cardSize.widthDp * largestRenderedScale) / 2f).coerceAtLeast(0f)
+        val verticalTravel = ((viewport.safeHeightDp - cardSize.heightDp * largestRenderedScale) / 2f).coerceAtLeast(0f)
         val motionScale = appearance.motion.travelIntensityPercent / 100f
         val offsetDirection =
             when (appearance.geometry.fanDirection) {
@@ -103,7 +103,7 @@ data class TimeScapeAppearanceSettings(
             if (offsetDirection == 0f) {
                 0f
             } else {
-                min(appearance.geometry.focusedGapDp * motionScale, horizontalTravel.toFloat())
+                min(appearance.geometry.focusedGapDp * motionScale, horizontalTravel)
             }
         val horizontalStep =
             min(
@@ -113,7 +113,7 @@ data class TimeScapeAppearanceSettings(
         val verticalStep =
             min(
                 appearance.geometry.verticalSpacingDp * motionScale,
-                verticalTravel.toFloat() / depth,
+                verticalTravel / depth,
             )
         val remainingVerticalTravel = (verticalTravel - verticalStep * depth).coerceAtLeast(0f)
         val curveStep =
@@ -126,7 +126,7 @@ data class TimeScapeAppearanceSettings(
         val layoutPolicy =
             CardStackLayoutPolicy(
                 maxVisibleDepth = depth,
-                scaleStep = (1f - MIN_TIMESCAPE_BACKGROUND_CARD_SCALE) / depth,
+                scaleStep = scaleStep,
                 offsetStep = horizontalStep,
                 focusedGap = focusedGap,
                 offsetDirection = offsetDirection,
@@ -140,9 +140,9 @@ data class TimeScapeAppearanceSettings(
         val animated = !appearance.motion.reducedMotion && isUsable
         return TimeScapeCardStackResolution(
             isUsable = isUsable,
-            cardWidthDp = cardWidth,
-            cardHeightDp = cardHeight,
-            contentPaddingDp = requestedPadding.coerceAtMost(min(cardWidth, cardHeight) / 4),
+            cardWidthDp = cardSize.widthDp,
+            cardHeightDp = cardSize.heightDp,
+            contentPaddingDp = requestedPadding.coerceAtMost(min(cardSize.widthDp, cardSize.heightDp) / 4),
             focusedScale = focusedScale,
             reducedMotion = appearance.motion.reducedMotion,
             layoutPolicy = layoutPolicy,
