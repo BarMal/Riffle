@@ -3,6 +3,7 @@ package com.riffle.app.launcher
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.semantics.SemanticsProperties
@@ -249,6 +250,62 @@ class CardStackTest {
         composeRule.onNodeWithTag(nextFocusTestTag(group.key)).assertIsEnabled()
     }
 
+    @Test
+    fun notificationFocusControlsUpdateAndRetainFocusForEachGroup() {
+        val messagesGroup = notificationGroup()
+        val calendarGroup =
+            notificationGroup(
+                packageName = "com.example.calendar",
+                notificationKeysAndTitles =
+                    listOf(
+                        "calendar-1" to "Today",
+                        "calendar-2" to "Tomorrow",
+                        "calendar-3" to "Next week",
+                    ),
+            )
+        var displayedGroup by mutableStateOf(messagesGroup)
+        val focusedNotificationIndexes = mutableStateMapOf<AppNotificationGroupKey, Int>()
+
+        composeRule.setContent {
+            MaterialTheme {
+                NotificationGroupPrototype(
+                    groups = listOf(displayedGroup),
+                    selectedGroupKey = displayedGroup.key,
+                    presentation =
+                        NotificationOverviewPresentation(
+                            apps = emptyList(),
+                            appIconLoader = EmptyAppIconLoader,
+                            reducedMotion = true,
+                        ),
+                    focusedNotificationIndexes = focusedNotificationIndexes,
+                    onFocusChanged = { groupKey, index ->
+                        focusedNotificationIndexes[groupKey] = index
+                    },
+                    onBack = {},
+                    onGroupChanged = {},
+                    onAction = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(nextFocusTestTag(messagesGroup.key)).performClick()
+        assertNotificationFocusPosition(messagesGroup.key, position = 2, count = 2)
+        composeRule.onNodeWithTag(previousFocusTestTag(messagesGroup.key)).performClick()
+        assertNotificationFocusPosition(messagesGroup.key, position = 1, count = 2)
+        composeRule.onNodeWithTag(nextFocusTestTag(messagesGroup.key)).performClick()
+        assertNotificationFocusPosition(messagesGroup.key, position = 2, count = 2)
+
+        composeRule.runOnIdle { displayedGroup = calendarGroup }
+        assertNotificationFocusPosition(calendarGroup.key, position = 1, count = 3)
+        composeRule.onNodeWithTag(nextFocusTestTag(calendarGroup.key)).performClick()
+        assertNotificationFocusPosition(calendarGroup.key, position = 2, count = 3)
+        composeRule.onNodeWithTag(previousFocusTestTag(calendarGroup.key)).performClick()
+        assertNotificationFocusPosition(calendarGroup.key, position = 1, count = 3)
+
+        composeRule.runOnIdle { displayedGroup = messagesGroup }
+        assertNotificationFocusPosition(messagesGroup.key, position = 2, count = 2)
+    }
+
     private fun setContent(entries: List<CardStackLayoutEntry>) {
         composeRule.setContent {
             MaterialTheme {
@@ -285,6 +342,16 @@ class CardStackTest {
 
     private fun nextFocusTestTag(groupKey: AppNotificationGroupKey): String =
         "$NOTIFICATION_PROTOTYPE_NEXT_FOCUS_TEST_TAG-${groupKey.profileId.value}-${groupKey.packageName.value}"
+
+    private fun assertNotificationFocusPosition(
+        groupKey: AppNotificationGroupKey,
+        position: Int,
+        count: Int,
+    ) {
+        composeRule
+            .onNodeWithTag(focusPositionTestTag(groupKey))
+            .assertTextEquals("Focused notification $position of $count")
+    }
 
     private fun notificationGroup(
         packageName: String = "com.example.messages",
