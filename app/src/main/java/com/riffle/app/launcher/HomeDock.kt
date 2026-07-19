@@ -27,6 +27,7 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.riffle.app.launcher.widgets.EmptyHomeWidgetViewFactory
 import com.riffle.app.launcher.widgets.HomeWidgetViewFactory
@@ -286,6 +287,8 @@ internal data class DockDragState(
     val targetIndex: Int,
 )
 
+internal fun dockItemTestTag(itemId: LauncherItemId): String = "dock-item:${itemId.value}"
+
 internal fun List<LauncherItem>.dockItemsForPreview(drag: DockDragState?): List<LauncherItem> {
     if (drag == null || drag.itemId !in map { it.id }) return this
     val sourceIndex = indexOfFirst { it.id == drag.itemId }
@@ -318,9 +321,9 @@ private fun DockSlot(
             modifier
                 .clip(LocalLauncherCardShape.current)
                 .then(if (state.isEditing) Modifier.background(editingSlotColor) else Modifier)
+                .then(state.item?.let { item -> Modifier.testTag(dockItemTestTag(item.id)) } ?: Modifier)
                 .dockItemDrag(
                     state = state,
-                    dragState = dragState,
                     slotWidthDp = state.iconSizeDp,
                     itemSpacingDp = state.itemSpacingDp,
                     onDragStateChanged = onDragStateChanged,
@@ -381,7 +384,6 @@ private fun DockSlot(
 
 private fun Modifier.dockItemDrag(
     state: DockSlotState,
-    dragState: DockDragState?,
     slotWidthDp: Int,
     itemSpacingDp: Int,
     onDragStateChanged: (DockDragState?) -> Unit,
@@ -392,23 +394,25 @@ private fun Modifier.dockItemDrag(
         ?.let { itemId ->
             pointerInput(itemId, state.shortcutIndex, state.shortcutCount, slotWidthDp, itemSpacingDp) {
                 var horizontalDrag = 0f
+                var targetIndex = state.shortcutIndex
                 detectDragGesturesAfterLongPress(
                     onDragStart = {
                         horizontalDrag = 0f
+                        targetIndex = state.shortcutIndex
                         onDragStateChanged(DockDragState(itemId, state.shortcutIndex, state.shortcutIndex))
                     },
                     onDrag = { change, amount ->
                         change.consume()
                         horizontalDrag += amount.x
                         val slotWidthPx = density * (slotWidthDp + itemSpacingDp)
-                        val target =
+                        targetIndex =
                             (state.shortcutIndex + (horizontalDrag / slotWidthPx).roundToInt())
                                 .coerceIn(0, state.shortcutCount - 1)
-                        onDragStateChanged(DockDragState(itemId, state.shortcutIndex, target))
+                        onDragStateChanged(DockDragState(itemId, state.shortcutIndex, targetIndex))
                     },
                     onDragEnd = {
-                        dragState?.takeIf { it.itemId == itemId && it.targetIndex != it.originIndex }?.let { drag ->
-                            onAction(LauncherShellAction.MoveDockShortcutToIndex(itemId, drag.targetIndex))
+                        if (targetIndex != state.shortcutIndex) {
+                            onAction(LauncherShellAction.MoveDockShortcutToIndex(itemId, targetIndex))
                         }
                         onDragStateChanged(null)
                     },
