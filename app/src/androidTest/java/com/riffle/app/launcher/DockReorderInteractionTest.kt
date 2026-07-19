@@ -64,6 +64,28 @@ class DockReorderInteractionTest {
         composeRule.runOnIdle { assertEquals(emptyList<LauncherShellAction>(), actions) }
     }
 
+    @Test
+    fun holdingAtOverflowEdgeMovesToAnOffScreenDockTarget() {
+        val shortcuts = (0 until 10).map { shortcut("app$it") }.toTypedArray()
+        val actions = mutableListOf<LauncherShellAction>()
+        setContent(*shortcuts, actions = actions)
+
+        composeRule.onNodeWithTag(dockItemTestTag(shortcuts.first().id)).performTouchInput {
+            down(center)
+            advanceEventTime(viewConfiguration.longPressTimeoutMillis + 50L)
+            moveBy(Offset(200f, 0f))
+            advanceEventTime(600L)
+            up()
+        }
+
+        composeRule.runOnIdle {
+            assertEquals(
+                listOf(LauncherShellAction.MoveDockShortcutToIndex(shortcuts.first().id, 9)),
+                actions,
+            )
+        }
+    }
+
     private fun setContent(
         vararg shortcuts: AppShortcutItem,
         actions: MutableList<LauncherShellAction>,

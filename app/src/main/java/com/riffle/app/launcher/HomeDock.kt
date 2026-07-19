@@ -42,8 +42,12 @@ import com.riffle.core.domain.launcher.home.FolderItem
 import com.riffle.core.domain.launcher.home.LauncherItem
 import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import kotlin.math.min
-import kotlin.math.roundToInt
 
 @Composable
 internal fun Dock(
@@ -187,6 +191,8 @@ internal const val DOCK_VERTICAL_PADDING_DP = 10
 private const val DOCK_OVERFLOW_FADE_WIDTH_DP = 20
 private const val DOCK_EDGE_AUTO_SCROLL_ZONE_DP = 28
 private const val DOCK_EDGE_AUTO_SCROLL_MAX_PX_PER_EVENT = 24f
+private const val DOCK_DRAG_SLOT_HYSTERESIS = 0.15f
+private const val DOCK_EDGE_AUTO_SCROLL_FRAME_DELAY_MILLIS = 16L
 
 internal fun dockHeightDp(iconSizeDp: Int): Int = iconSizeDp + DOCK_VERTICAL_CHROME_DP
 
@@ -339,6 +345,33 @@ internal fun dockEdgeAutoScrollDelta(
         .coerceIn(-DOCK_EDGE_AUTO_SCROLL_MAX_PX_PER_EVENT, DOCK_EDGE_AUTO_SCROLL_MAX_PX_PER_EVENT)
 }
 
+/** Keeps a candidate in its current slot until the drag clears a hysteresis-adjusted boundary. */
+internal fun dockDragTargetIndex(
+    originIndex: Int,
+    currentTargetIndex: Int,
+    draggedSlotDeltaPx: Float,
+    slotWidthPx: Float,
+    itemCount: Int,
+): Int {
+    if (itemCount <= 0 || slotWidthPx <= 0f) return originIndex
+
+    val draggedSlots = draggedSlotDeltaPx / slotWidthPx
+    var targetIndex = currentTargetIndex.coerceIn(0, itemCount - 1)
+    while (
+        targetIndex < itemCount - 1 &&
+        draggedSlots > (targetIndex - originIndex) + 0.5f + DOCK_DRAG_SLOT_HYSTERESIS
+    ) {
+        targetIndex += 1
+    }
+    while (
+        targetIndex > 0 &&
+        draggedSlots < (targetIndex - originIndex) - 0.5f - DOCK_DRAG_SLOT_HYSTERESIS
+    ) {
+        targetIndex -= 1
+    }
+    return targetIndex
+}
+
 private data class DockShortcutState(
     val iconSizeDp: Int,
     val shortcutIndex: Int,
@@ -440,47 +473,81 @@ private fun Modifier.dockItemDrag(
         ?.id
         ?.let { itemId ->
             pointerInput(itemId, state.shortcutIndex, state.shortcutCount, slotWidthDp, itemSpacingDp) {
-                var horizontalDrag = 0f
-                var targetIndex = state.shortcutIndex
-                var initialScrollOffset = 0
-                detectDragGesturesAfterLongPress(
-                    onDragStart = {
-                        horizontalDrag = 0f
-                        targetIndex = state.shortcutIndex
-                        initialScrollOffset = dragViewport.scrollState.value
-                        onDragStateChanged(DockDragState(itemId, state.shortcutIndex, state.shortcutIndex))
-                    },
-                    onDrag = { change, amount ->
-                        change.consume()
-                        horizontalDrag += amount.x
-                        val slotWidthPx = density * (slotWidthDp + itemSpacingDp)
-                        val viewportWidthPx = density * dragViewport.contentViewportWidthDp
-                        val pointerX =
-                            (state.visualIndex * slotWidthPx) - dragViewport.scrollState.value + change.position.x
-                        val scrollDelta =
-                            dockEdgeAutoScrollDelta(
-                                pointerX = pointerX,
-                                viewportWidthPx = viewportWidthPx,
-                                edgeZonePx = density * DOCK_EDGE_AUTO_SCROLL_ZONE_DP,
-                            )
-                        dragViewport.scrollState.dispatchRawDelta(scrollDelta)
-                        val draggedSlotDelta = horizontalDrag + dragViewport.scrollState.value - initialScrollOffset
+                coroutineScope {
+                    var horizontalDrag = 0f
+                    var targetIndex = state.shortcutIndex
+                    var initialScrollOffset = 0
+                    var edgeAutoScrollDelta = 0f
+                    var autoScrollJob: Job? = null
+
+                    fun updateCandidate(slotWidthPx: Float) {
                         targetIndex =
-                            (
-                                state.shortcutIndex +
-                                    (draggedSlotDelta / slotWidthPx).roundToInt()
+                            dockDragTargetIndex(
+                                originIndex = state.shortcutIndex,
+                                currentTargetIndex = targetIndex,
+                                draggedSlotDeltaPx =
+                                    horizontalDrag + dragViewport.scrollState.value - initialScrollOffset,
+                                slotWidthPx = slotWidthPx,
+                                itemCount = state.shortcutCount,
                             )
-                                .coerceIn(0, state.shortcutCount - 1)
                         onDragStateChanged(DockDragState(itemId, state.shortcutIndex, targetIndex))
-                    },
-                    onDragEnd = {
-                        if (targetIndex != state.shortcutIndex) {
-                            onAction(LauncherShellAction.MoveDockShortcutToIndex(itemId, targetIndex))
+                    }
+
+                    fun updateEdgeAutoScroll(slotWidthPx: Float) {
+                        if (edgeAutoScrollDelta == 0f) {
+                            autoScrollJob?.cancel()
+                            return
                         }
-                        onDragStateChanged(null)
-                    },
-                    onDragCancel = { onDragStateChanged(null) },
-                )
+                        if (autoScrollJob?.isActive == true) return
+                        autoScrollJob =
+                            launch {
+                                while (isActive && edgeAutoScrollDelta != 0f) {
+                                    val scrollOffset = dragViewport.scrollState.value
+                                    dragViewport.scrollState.dispatchRawDelta(edgeAutoScrollDelta)
+                                    if (dragViewport.scrollState.value == scrollOffset) break
+                                    updateCandidate(slotWidthPx)
+                                    delay(DOCK_EDGE_AUTO_SCROLL_FRAME_DELAY_MILLIS)
+                                }
+                            }
+                    }
+
+                    detectDragGesturesAfterLongPress(
+                        onDragStart = {
+                            horizontalDrag = 0f
+                            targetIndex = state.shortcutIndex
+                            initialScrollOffset = dragViewport.scrollState.value
+                            edgeAutoScrollDelta = 0f
+                            onDragStateChanged(DockDragState(itemId, state.shortcutIndex, state.shortcutIndex))
+                        },
+                        onDrag = { change, amount ->
+                            change.consume()
+                            horizontalDrag += amount.x
+                            val slotWidthPx = density * (slotWidthDp + itemSpacingDp)
+                            val viewportWidthPx = density * dragViewport.contentViewportWidthDp
+                            val pointerX =
+                                (state.visualIndex * slotWidthPx) - dragViewport.scrollState.value + change.position.x
+                            edgeAutoScrollDelta =
+                                dockEdgeAutoScrollDelta(
+                                    pointerX = pointerX,
+                                    viewportWidthPx = viewportWidthPx,
+                                    edgeZonePx = density * DOCK_EDGE_AUTO_SCROLL_ZONE_DP,
+                                )
+                            updateCandidate(slotWidthPx)
+                            updateEdgeAutoScroll(slotWidthPx)
+                        },
+                        onDragEnd = {
+                            autoScrollJob?.cancel()
+                            if (targetIndex != state.shortcutIndex) {
+                                onAction(LauncherShellAction.MoveDockShortcutToIndex(itemId, targetIndex))
+                            }
+                            onDragStateChanged(null)
+                        },
+                        onDragCancel = {
+                            autoScrollJob?.cancel()
+                            onDragStateChanged(null)
+                        },
+                    )
+                }
             }
         } ?: this
 }
