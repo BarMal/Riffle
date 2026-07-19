@@ -165,27 +165,33 @@ class DockEngine {
     }
 
     /** Transfers an app shortcut or folder from the Dock to a selected Home cell atomically. */
+    @Suppress("CyclomaticComplexMethod")
     fun moveDockItemToHome(
         layout: HomeLayout,
         itemId: LauncherItemId,
         cell: GridCell? = null,
+        pageId: LauncherPageId? = null,
     ): DockEditResult {
         val item = layout.dock.items.firstOrNull { it.id == itemId }
+        val destinationPage =
+            pageId?.let { targetPageId -> layout.pages.firstOrNull { it.id == targetPageId } } ?: layout.selectedPage
 
         return when {
             item == null -> DockEditResult.Rejected(DockEditRejectionReason.ITEM_NOT_FOUND)
             item !is AppShortcutItem && item !is FolderItem ->
                 DockEditResult.Rejected(DockEditRejectionReason.UNSUPPORTED_ITEM)
-            layout.selectedPage.type is LauncherPageType.Generated ->
+            destinationPage.type is LauncherPageType.Generated ->
                 DockEditResult.Rejected(DockEditRejectionReason.GENERATED_HOME_PAGE)
+            pageId != null && destinationPage.id != pageId ->
+                DockEditResult.Rejected(DockEditRejectionReason.HOME_PAGE_NOT_FOUND)
             else -> {
                 val homeItem = item.withoutHomePlacement()
                 val placement = cell?.let { GridPlacement(cell = it) }
                 val placementResult =
                     if (placement == null) {
-                        gridPlacementEngine.placeItemInFirstAvailableCell(layout.selectedPage, homeItem)
+                        gridPlacementEngine.placeItemInFirstAvailableCell(destinationPage, homeItem)
                     } else {
-                        gridPlacementEngine.placeItem(layout.selectedPage, homeItem.withPlacement(placement))
+                        gridPlacementEngine.placeItem(destinationPage, homeItem.withPlacement(placement))
                     }
 
                 when (placementResult) {
@@ -289,6 +295,7 @@ enum class DockEditRejectionReason {
     DOCK_DISABLED,
     UNSUPPORTED_ITEM,
     GENERATED_HOME_PAGE,
+    HOME_PAGE_NOT_FOUND,
     NO_AVAILABLE_HOME_CELL,
     INVALID_HOME_PLACEMENT,
 }

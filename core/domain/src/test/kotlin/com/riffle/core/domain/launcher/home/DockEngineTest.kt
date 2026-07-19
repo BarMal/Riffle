@@ -313,6 +313,33 @@ class DockEngineTest {
     }
 
     @Test
+    fun movesDockShortcutToTheRequestedCellOnAnotherHomePage() {
+        val phone = appShortcut(id = "phone")
+        val firstPage = HomeLayoutDefaults.standard().selectedPage
+        val targetPage = firstPage.copy(id = LauncherPageId("second"))
+        val layout =
+            HomeLayoutDefaults.standard().copy(
+                pages = listOf(firstPage, targetPage),
+                dock = DockModel(capacity = 2, items = listOf(phone)),
+            )
+
+        val updated =
+            assertIs<DockEditResult.Updated>(
+                engine.moveDockItemToHome(
+                    layout = layout,
+                    itemId = phone.id,
+                    pageId = targetPage.id,
+                    cell = GridCell(column = 1, row = 2),
+                ),
+            ).layout
+
+        assertEquals(emptyList<LauncherItem>(), updated.selectedPage.items)
+        val moved = assertIs<AppShortcutItem>(updated.pages.first { it.id == targetPage.id }.items.single())
+        assertEquals(phone.id, moved.id)
+        assertEquals(GridPlacement(GridCell(column = 1, row = 2)), moved.placement)
+    }
+
+    @Test
     fun rejectsHomeToDockTransferWhenDockIsFullWithoutMutatingEitherSurface() {
         val home = appShortcut(id = "home").copy(placement = GridPlacement(GridCell(0, 0)))
         val dock = appShortcut(id = "dock")

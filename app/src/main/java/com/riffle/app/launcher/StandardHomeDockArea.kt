@@ -40,6 +40,7 @@ internal fun StandardHomeDockArea(
                 onDockShelfExpandedChange.takeIf { hasExpandedContent && layout.editMode == HomeEditMode.Browsing },
             reducedMotion = presentation.reducedMotion,
             homeInsetPolicy = presentation.homeInsetPolicy,
+            homeLayout = layout,
             onAction = actions.onAction,
         )
 

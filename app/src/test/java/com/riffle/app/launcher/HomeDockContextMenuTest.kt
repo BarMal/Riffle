@@ -6,8 +6,10 @@ import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.DockItemMoveDirection
 import com.riffle.core.domain.launcher.home.FolderItem
+import com.riffle.core.domain.launcher.home.GridCell
 import com.riffle.core.domain.launcher.home.HostedWidgetId
 import com.riffle.core.domain.launcher.home.LauncherItemId
+import com.riffle.core.domain.launcher.home.LauncherPageId
 import com.riffle.core.domain.launcher.home.WidgetItem
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -46,6 +48,18 @@ class HomeDockContextMenuTest {
             original.dockItemsForPreview(
                 DockDragState(LauncherItemId("removed"), originIndex = 0, targetIndex = 0),
             ),
+        )
+    }
+
+    @Test
+    fun moveToHomeDestinationDispatchesTheChosenPageAndCell() {
+        val itemId = LauncherItemId("camera")
+        val pageId = LauncherPageId("second")
+        val cell = GridCell(column = 1, row = 2)
+
+        assertEquals(
+            LauncherShellAction.MoveDockItemToHome(itemId = itemId, pageId = pageId, cell = cell),
+            dockMoveToHomeAction(itemId = itemId, pageId = pageId, cell = cell),
         )
     }
 

@@ -263,6 +263,7 @@ sealed interface LauncherShellAction {
     data class MoveDockItemToHome(
         val itemId: LauncherItemId,
         val cell: GridCell? = null,
+        val pageId: LauncherPageId? = null,
     ) : LauncherShellAction
 
     data class MoveHomeShortcutToCell(

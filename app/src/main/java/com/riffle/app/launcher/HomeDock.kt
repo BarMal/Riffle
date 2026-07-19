@@ -11,12 +11,17 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
@@ -39,8 +44,13 @@ import com.riffle.core.domain.launcher.home.DockBackgroundSizing
 import com.riffle.core.domain.launcher.home.DockItemMoveDirection
 import com.riffle.core.domain.launcher.home.DockModel
 import com.riffle.core.domain.launcher.home.FolderItem
+import com.riffle.core.domain.launcher.home.GridCell
+import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.LauncherItem
 import com.riffle.core.domain.launcher.home.LauncherItemId
+import com.riffle.core.domain.launcher.home.LauncherPage
+import com.riffle.core.domain.launcher.home.LauncherPageId
+import com.riffle.core.domain.launcher.home.LauncherPageType
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.coroutineScope
@@ -102,6 +112,21 @@ internal fun DockSlotsRow(
 ) {
     val scrollState = rememberScrollState()
     val dragState = remember { mutableStateOf<DockDragState?>(null) }
+    val moveToHomeItemId = remember { mutableStateOf<LauncherItemId?>(null) }
+    val homeLayout = presentation.interactions.homeLayout
+    val slotPresentation =
+        presentation.copy(
+            interactions =
+                presentation.interactions.copy(
+                    onAction = { action ->
+                        if (action is LauncherShellAction.MoveDockItemToHome && homeLayout != null) {
+                            moveToHomeItemId.value = action.itemId
+                        } else {
+                            presentation.interactions.onAction(action)
+                        }
+                    },
+                ),
+        )
     val previewItems = dock.items.dockItemsForPreview(dragState.value)
     val overflowAffordance =
         DockOverflowAffordance(
@@ -143,7 +168,7 @@ internal fun DockSlotsRow(
                                 itemSpacingDp = slotMetrics.itemSpacingDp,
                                 isEditing = isEditing,
                             ),
-                        presentation = presentation,
+                        presentation = slotPresentation,
                         appIconLoader = appIconLoader,
                         dragState = dragState.value,
                         dragViewport = DockDragViewport(scrollState, contentViewportWidthDp),
@@ -179,6 +204,20 @@ internal fun DockSlotsRow(
                                 colors = listOf(fadeColor.copy(alpha = 0f), fadeColor),
                             ),
                         ),
+            )
+        }
+    }
+
+    moveToHomeItemId.value?.let { itemId ->
+        homeLayout?.let { layout ->
+            DockToHomeDestinationDialog(
+                itemId = itemId,
+                layout = layout,
+                onDismissRequest = { moveToHomeItemId.value = null },
+                onDestinationSelected = { pageId, cell ->
+                    presentation.interactions.onAction(dockMoveToHomeAction(itemId, pageId, cell))
+                    moveToHomeItemId.value = null
+                },
             )
         }
     }
@@ -286,8 +325,70 @@ internal data class DockInteractions(
     val onShelfExpandedChange: ((Boolean) -> Unit)? = null,
     val reducedMotion: Boolean = false,
     val homeInsetPolicy: HomeInsetPolicy = HomeInsetPolicy(),
+    val homeLayout: HomeLayout? = null,
     val onAction: (LauncherShellAction) -> Unit,
 )
+
+internal fun dockMoveToHomeAction(
+    itemId: LauncherItemId,
+    pageId: LauncherPageId,
+    cell: GridCell,
+): LauncherShellAction.MoveDockItemToHome =
+    LauncherShellAction.MoveDockItemToHome(
+        itemId = itemId,
+        pageId = pageId,
+        cell = cell,
+    )
+
+@Composable
+private fun DockToHomeDestinationDialog(
+    itemId: LauncherItemId,
+    layout: HomeLayout,
+    onDismissRequest: () -> Unit,
+    onDestinationSelected: (LauncherPageId, GridCell) -> Unit,
+) {
+    val pages = layout.pages.filter { page -> page.type !is LauncherPageType.Generated }
+    if (pages.isEmpty()) {
+        return
+    }
+    val selectedPageId =
+        remember(itemId) {
+            mutableStateOf(
+                layout.selectedPageId.takeIf { it in pages.map(LauncherPage::id) } ?: pages.first().id,
+            )
+        }
+    val selectedPage = pages.first { page -> page.id == selectedPageId.value }
+
+    AlertDialog(
+        onDismissRequest = onDismissRequest,
+        title = { Text("Move to Home") },
+        text = {
+            Column {
+                Text("Choose page")
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                    pages.forEachIndexed { index, page ->
+                        TextButton(onClick = { selectedPageId.value = page.id }) {
+                            Text(if (page.id == selectedPage.id) "Page ${index + 1}" else "${index + 1}")
+                        }
+                    }
+                }
+                Text("Choose cell")
+                repeat(selectedPage.grid.rows) { row ->
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                        repeat(selectedPage.grid.columns) { column ->
+                            val cell = GridCell(column = column, row = row)
+                            TextButton(onClick = { onDestinationSelected(selectedPage.id, cell) }) {
+                                Text("${column + 1},${row + 1}")
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = { TextButton(onClick = onDismissRequest) { Text("Cancel") } },
+    )
+}
 
 private data class DockSlotState(
     val item: DockSlotItemState?,

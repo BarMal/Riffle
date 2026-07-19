@@ -75,6 +75,7 @@ fun DockEngine.applyEdit(
                 layout = layout,
                 itemId = action.itemId,
                 cell = action.cell,
+                pageId = action.pageId,
             )
 
         else -> DockEditResult.Rejected(DockEditRejectionReason.ITEM_NOT_FOUND)
