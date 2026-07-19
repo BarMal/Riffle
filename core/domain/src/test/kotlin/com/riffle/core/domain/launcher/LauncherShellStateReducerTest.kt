@@ -36,6 +36,26 @@ class LauncherShellStateReducerTest {
     }
 
     @Test
+    fun previewNavigationRemainsExplorableWithoutRestoringTheBlockingPrompt() {
+        val previewState =
+            reducer.homeRoleChanged(
+                currentState = LauncherShellState(),
+                homeRoleStatus = HomeRoleStatus.NOT_DEFAULT_HOME,
+            )
+
+        val settingsState =
+            reducer.navigationActionSelected(
+                currentState = previewState,
+                action = ShellNavigationAction.OpenSettings,
+            )
+
+        assertEquals(ShellDestination.SETTINGS, settingsState.destination)
+        assertEquals(FirstRunStatus.NEEDS_HOME_ROLE, settingsState.firstRunStatus)
+        assertTrue(settingsState.shouldShowSetupCard)
+        assertFalse(settingsState.shouldShowDefaultHomePrompt)
+    }
+
+    @Test
     fun completedFirstRunDoesNotOverrideUnknownLiveHomeStatus() {
         val state =
             reducer.homeRoleChanged(
