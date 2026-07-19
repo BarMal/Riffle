@@ -432,14 +432,7 @@ private fun DockFolder(
     val isContextMenuExpanded = remember(folder.id) { mutableStateOf(false) }
     val modifier =
         if (state.isEditing) {
-            Modifier.combinedClickable(
-                onClick = { isContextMenuExpanded.value = true },
-                onLongClick = {
-                    presentation.interactions.haptics.longPress()
-                    isContextMenuExpanded.value = true
-                },
-                onLongClickLabel = "Show ${folder.label} actions",
-            )
+            Modifier.clickable(onClick = { isContextMenuExpanded.value = true })
         } else {
             Modifier.clickable(onClick = { presentation.interactions.onFolderOpen(folder) })
         }
@@ -490,22 +483,22 @@ private fun DockShortcut(
             label = shortcut.label,
             iconLoader = appIconLoader,
             modifier =
-                Modifier
-                    .requiredSize(state.iconSizeDp.dp)
-                    .combinedClickable(
-                        onClick = {
-                            if (state.isEditing) {
-                                isContextMenuExpanded.value = true
-                            } else {
+                Modifier.requiredSize(state.iconSizeDp.dp).then(
+                    if (state.isEditing) {
+                        Modifier.clickable(onClick = { isContextMenuExpanded.value = true })
+                    } else {
+                        Modifier.combinedClickable(
+                            onClick = {
                                 presentation.interactions.onAction(shortcut.launchAction())
-                            }
-                        },
-                        onLongClick = {
-                            presentation.interactions.haptics.longPress()
-                            isContextMenuExpanded.value = true
-                        },
-                        onLongClickLabel = "Show ${shortcut.label} actions",
-                    ),
+                            },
+                            onLongClick = {
+                                presentation.interactions.haptics.longPress()
+                                isContextMenuExpanded.value = true
+                            },
+                            onLongClickLabel = "Show ${shortcut.label} actions",
+                        )
+                    },
+                ),
         )
 
         if (!state.isEditing) {
