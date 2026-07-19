@@ -462,13 +462,13 @@ private fun Modifier.dockItemDrag(
                                 pointerX = pointerX,
                                 viewportWidthPx = viewportWidthPx,
                                 edgeZonePx = density * DOCK_EDGE_AUTO_SCROLL_ZONE_DP,
-                            )
+                        )
                         dragViewport.scrollState.dispatchRawDelta(scrollDelta)
+                        val draggedSlotDelta = horizontalDrag + dragViewport.scrollState.value - initialScrollOffset
                         targetIndex =
                             (
                                 state.shortcutIndex +
-                                    ((horizontalDrag + dragViewport.scrollState.value - initialScrollOffset) / slotWidthPx)
-                                        .roundToInt()
+                                    (draggedSlotDelta / slotWidthPx).roundToInt()
                             )
                                 .coerceIn(0, state.shortcutCount - 1)
                         onDragStateChanged(DockDragState(itemId, state.shortcutIndex, targetIndex))
