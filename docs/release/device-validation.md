@@ -1,8 +1,9 @@
 # Launcher Device Acceptance Evidence
 
 `ReleaseDeviceEvidenceManifestV1` is Riffle's authoritative, SHA-bound device-acceptance contract
-for launcher-critical release candidates. It complements, and never replaces, `./gradlew verify`.
-Issue #808 consumes a passing manifest before it may sign or publish a candidate.
+for launcher-critical validation. It complements, and never replaces, `./gradlew verify`.
+Routine alphas are gated automatically by successful exact-SHA CI; device evidence remains the
+manual acceptance record for milestone and stable-release decisions.
 
 The contract has three repository-owned parts:
 
