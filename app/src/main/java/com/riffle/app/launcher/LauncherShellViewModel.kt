@@ -519,9 +519,10 @@ private fun createInitialState(
 }
 
 private fun HomeLayoutSet.stagePreferenceLayoutKeys(): Set<HomeLayoutKey> =
-    layouts.keys + HomeLayoutDeviceClass.entries.map { deviceClass ->
-        HomeLayoutKey(viewMode = LauncherViewMode.CARD_INTERFACE, deviceClass = deviceClass)
-    }
+    layouts.keys +
+        HomeLayoutDeviceClass.entries.map { deviceClass ->
+            HomeLayoutKey(viewMode = LauncherViewMode.CARD_INTERFACE, deviceClass = deviceClass)
+        }
 
 private fun HomeLayoutSet.selectInitialDeviceClass(
     deviceClass: HomeLayoutDeviceClass,
