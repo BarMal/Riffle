@@ -3,8 +3,12 @@ package com.riffle.core.domain.launcher.settings
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.cards.CardsChapterPreferences
+import com.riffle.core.domain.launcher.cards.AppStageId
+import com.riffle.core.domain.launcher.cards.AppStagePreferences
+import com.riffle.core.domain.launcher.cards.CardsChapterId
 import com.riffle.core.domain.launcher.contextual.ContextualSettings
 import com.riffle.core.domain.launcher.home.AppShortcutItem
+import com.riffle.core.domain.launcher.home.HomeLayoutKey
 import com.riffle.core.domain.launcher.home.WallpaperSettings
 
 data class LauncherSettings(
@@ -20,7 +24,25 @@ data class LauncherSettings(
 /** Stored user intent for Cards chapters. Notification content remains transient. */
 data class CardsSettings(
     val chapterPreferences: CardsChapterPreferences = CardsChapterPreferences(),
+    val stagePreferencesByLayout: Map<HomeLayoutKey, AppStagePreferences> = emptyMap(),
 )
+
+/** Returns variant-specific TimeScape intent, migrating compatible historical Cards intent on read. */
+fun CardsSettings.stagePreferencesFor(layoutKey: HomeLayoutKey): AppStagePreferences =
+    stagePreferencesByLayout[layoutKey] ?: chapterPreferences.toStagePreferences()
+
+fun CardsSettings.withStagePreferences(
+    layoutKey: HomeLayoutKey,
+    preferences: AppStagePreferences,
+): CardsSettings = copy(stagePreferencesByLayout = stagePreferencesByLayout + (layoutKey to preferences))
+
+private fun CardsChapterPreferences.toStagePreferences(): AppStagePreferences =
+    AppStagePreferences(
+        pinnedStageIds = pinnedChapterIds.map(CardsChapterId.App::toAppStageId),
+        selectedStageId = (selectedChapterId as? CardsChapterId.App)?.toAppStageId(),
+    )
+
+private fun CardsChapterId.App.toAppStageId(): AppStageId = AppStageId(packageName, profileId)
 
 data class AppearanceSettings(
     val wallpaper: WallpaperSettings = WallpaperSettings.system(),

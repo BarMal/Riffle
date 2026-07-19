@@ -3,7 +3,12 @@ package com.riffle.core.domain.launcher.settings
 import com.riffle.core.domain.launcher.apps.AppActivityName
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
+import com.riffle.core.domain.launcher.apps.AppProfile
+import com.riffle.core.domain.launcher.cards.AppStageId
 import com.riffle.core.domain.launcher.cards.CardsChapterId
+import com.riffle.core.domain.launcher.cards.CardsChapterPreferences
+import com.riffle.core.domain.launcher.home.HomeLayoutKey
+import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.home.WallpaperSettings
 import com.riffle.core.domain.launcher.home.WallpaperSource
 import kotlin.test.Test
@@ -27,6 +32,19 @@ class LauncherSettingsTest {
 
         assertEquals(emptyList(), cards.pinnedChapterIds)
         assertEquals(CardsChapterId.Overview, cards.selectedChapterId)
+    }
+
+    @Test
+    fun migratesHistoricalCardsAppIntentToTheRequestedStageLayout() {
+        val chapter = CardsChapterId.App(AppPackageName("com.riffle.mail"), AppProfile.personal().id)
+        val cards = CardsSettings(chapterPreferences = CardsChapterPreferences(listOf(chapter), chapter))
+
+        val stagePreferences = cards.stagePreferencesFor(HomeLayoutKey(LauncherViewMode.CARD_INTERFACE))
+
+        val stageId = AppStageId(chapter.packageName, chapter.profileId)
+
+        assertEquals(listOf(stageId), stagePreferences.pinnedStageIds)
+        assertEquals(stageId, stagePreferences.selectedStageId)
     }
 
     @Test
