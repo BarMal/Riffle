@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.Intent
 import android.media.session.MediaController
 import android.media.session.MediaSession
+import android.media.session.PlaybackState
 import android.service.notification.StatusBarNotification
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
 import java.util.concurrent.ConcurrentHashMap
@@ -65,11 +66,12 @@ object AndroidNotificationStageActionGateway : NotificationStageActionGateway, N
         return buildSet {
             if (target.contentIntent != null) add(NotificationStageAction.Open)
             target.providerActions.keys.forEach { id -> add(NotificationStageAction.ProviderAction(id)) }
-            if (isMedia && target.mediaController != null) {
-                add(NotificationStageAction.MediaControl(MediaCommand.PLAY))
-                add(NotificationStageAction.MediaControl(MediaCommand.PAUSE))
-                add(NotificationStageAction.MediaControl(MediaCommand.PREVIOUS))
-                add(NotificationStageAction.MediaControl(MediaCommand.NEXT))
+            if (isMedia) {
+                target.mediaController
+                    ?.playbackState
+                    ?.actions
+                    ?.let(::mediaCommandsForPlaybackActions)
+                    ?.forEach { command -> add(NotificationStageAction.MediaControl(command)) }
             }
         }
     }
@@ -121,7 +123,13 @@ private fun Targets.perform(
         is NotificationStageAction.ProviderAction ->
             providerActions[action.id]?.sendResult(action.replyText) ?: NotificationStageActionResult.Unavailable
         is NotificationStageAction.MediaControl ->
-            mediaController?.sendResult(action.command) ?: NotificationStageActionResult.Unavailable
+            mediaController
+                ?.takeIf { controller ->
+                    action.command in
+                        mediaCommandsForPlaybackActions(controller.playbackState?.actions ?: 0L)
+                }
+                ?.sendResult(action.command)
+                ?: NotificationStageActionResult.Unavailable
     }
 
 private fun PendingIntent.sendResult(): NotificationStageActionResult =
@@ -153,3 +161,11 @@ private fun MediaController.perform(command: MediaCommand) {
         MediaCommand.NEXT -> transportControls.skipToNext()
     }
 }
+
+internal fun mediaCommandsForPlaybackActions(actions: Long): Set<MediaCommand> =
+    buildSet {
+        if (actions and PlaybackState.ACTION_PLAY != 0L) add(MediaCommand.PLAY)
+        if (actions and PlaybackState.ACTION_PAUSE != 0L) add(MediaCommand.PAUSE)
+        if (actions and PlaybackState.ACTION_SKIP_TO_PREVIOUS != 0L) add(MediaCommand.PREVIOUS)
+        if (actions and PlaybackState.ACTION_SKIP_TO_NEXT != 0L) add(MediaCommand.NEXT)
+    }

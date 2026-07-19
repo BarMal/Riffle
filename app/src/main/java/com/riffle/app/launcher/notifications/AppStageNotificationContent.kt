@@ -40,6 +40,7 @@ data class AppStageShellState(
 )
 
 fun LauncherShellState.appStageShellState(
+    previous: AppStageSnapshot? = null,
     actionAvailability: NotificationStageActionAvailability = NotificationStageActionAvailability.None,
 ): AppStageShellState {
     val notificationCards =
@@ -49,7 +50,11 @@ fun LauncherShellState.appStageShellState(
             profileContentVisibility = profileContentVisibility,
             actionAvailability = actionAvailability,
         )
-    val snapshot = appStageSnapshot(contentSnapshot = appStageContentSnapshot(notificationCards))
+    val snapshot =
+        appStageSnapshot(
+            contentSnapshot = appStageContentSnapshot(notificationCards),
+            previous = previous,
+        )
     return AppStageShellState(
         snapshot = snapshot,
         notificationCards = notificationCards,
@@ -59,6 +64,20 @@ fun LauncherShellState.appStageShellState(
                 .mapNotNull { stage -> appStageEmptyAppCard(stage.id, installedApps, appShortcutsByApp) }
                 .associateBy { card -> AppStageId(card.app.identity.packageName, card.app.identity.profile.id) },
     )
+}
+
+/** Retains the prior process-only snapshot so focused empty dynamic stages obey their lifecycle. */
+class AppStageShellStateReconciler(
+    private val actionAvailability: NotificationStageActionAvailability = NotificationStageActionAvailability.None,
+) {
+    private var previous: AppStageSnapshot? = null
+
+    fun reconcile(state: LauncherShellState): AppStageShellState =
+        state
+            .appStageShellState(
+                previous = previous,
+                actionAvailability = actionAvailability,
+            ).also { shellState -> previous = shellState.snapshot }
 }
 
 /** Builds stable, privacy-aware dynamic input for the app-stage planner. */

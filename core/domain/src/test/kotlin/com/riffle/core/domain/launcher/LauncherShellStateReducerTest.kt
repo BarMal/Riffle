@@ -63,6 +63,14 @@ class LauncherShellStateReducerTest {
 
         assertEquals(AppStageContentKind.MEDIA, stage.content.single().kind)
         assertEquals("stage-notification:personal:playing", stage.content.single().id.value)
+
+        val refreshed =
+            state
+                .copy(notificationGroupsByApp = emptyList())
+                .appStageSnapshot(previous = state.appStageSnapshot())
+
+        assertEquals(1, refreshed.stages.size)
+        assertTrue(refreshed.stages.single().content.isEmpty())
     }
 
     @Test

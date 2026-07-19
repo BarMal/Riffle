@@ -88,6 +88,7 @@ data class LauncherShellState(
     /** Reconciles optional TimeScape stages from the same installed-app/profile/settings snapshot. */
     fun appStageSnapshot(
         contentSnapshot: AppStageContentSnapshot = appStageContentSnapshot(),
+        previous: AppStageSnapshot? = null,
         planner: AppStagePlanner = AppStagePlanner(),
     ): AppStageSnapshot =
         planner.reconcile(
@@ -97,7 +98,18 @@ data class LauncherShellState(
                     profileStates = profileStatesForStages(),
                 ),
             contentSnapshot = contentSnapshot,
-            preferences = launcherSettings.cards.stagePreferencesFor(homeLayoutSet.activeKey),
+            preferences =
+                launcherSettings
+                    .cards
+                    .stagePreferencesFor(homeLayoutSet.activeKey)
+                    .let { preferences ->
+                        if (preferences.selectedStageId == null) {
+                            preferences.copy(selectedStageId = previous?.preferences?.selectedStageId)
+                        } else {
+                            preferences
+                        }
+                    },
+            previous = previous,
         )
 
     /**
