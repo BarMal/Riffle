@@ -61,6 +61,36 @@ class OverlayDockShortcutsTest {
     }
 
     @Test
+    fun limitsRecentShortcutsToTheNewestResolvedApps() {
+        val installedApps =
+            (0..MAX_RECENT_OVERLAY_DOCK_SHORTCUTS).map { index ->
+                InstalledApp(
+                    identity =
+                        AppIdentity(
+                            AppPackageName("com.example.recent$index"),
+                            AppActivityName(".Recent$index"),
+                        ),
+                    label = "Recent $index",
+                )
+            }
+
+        val content =
+            OverlayDockSettings().contentFor(
+                installedApps = installedApps,
+                recentAppUsages =
+                    installedApps.mapIndexed { index, app ->
+                        RecentAppUsage(app.identity.packageName, (installedApps.size - index).toLong())
+                    },
+            )
+
+        assertEquals(MAX_RECENT_OVERLAY_DOCK_SHORTCUTS, content.recentShortcuts.size)
+        assertEquals(
+            (0 until MAX_RECENT_OVERLAY_DOCK_SHORTCUTS).map { index -> "Recent $index" },
+            content.recentShortcuts.map { it.label },
+        )
+    }
+
+    @Test
     fun reportsWhenUsageAccessIsRequiredForRecentApps() {
         val content =
             OverlayDockSettings().contentFor(

@@ -39,6 +39,7 @@ private fun recentOverlayDockShortcuts(
     return recentAppUsages.asSequence()
         .distinctBy { usage -> usage.packageName }
         .mapNotNull { usage -> installedAppsByPackage[usage.packageName] }
+        .take(MAX_RECENT_OVERLAY_DOCK_SHORTCUTS)
         .map { app ->
             AppShortcutItem(
                 id = LauncherItemId("overlay-recent:${app.identity.packageName.value}"),
@@ -48,3 +49,6 @@ private fun recentOverlayDockShortcuts(
         }
         .toList()
 }
+
+/** Keeps the transient overlay shelf small enough to create promptly on high-usage devices. */
+internal const val MAX_RECENT_OVERLAY_DOCK_SHORTCUTS = 6
