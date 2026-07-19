@@ -203,7 +203,8 @@ class DockEngine {
                     is PlaceLauncherItemResult.Rejected ->
                         DockEditResult.Rejected(
                             when (placementResult.reason) {
-                                PlacementRejectionReason.NO_AVAILABLE_CELL -> DockEditRejectionReason.NO_AVAILABLE_HOME_CELL
+                                PlacementRejectionReason.NO_AVAILABLE_CELL ->
+                                    DockEditRejectionReason.NO_AVAILABLE_HOME_CELL
                                 else -> DockEditRejectionReason.INVALID_HOME_PLACEMENT
                             },
                         )
