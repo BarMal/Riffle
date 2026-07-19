@@ -265,7 +265,7 @@ class CardStackTest {
                     ),
             )
         var displayedGroup by mutableStateOf(messagesGroup)
-        val focusedNotificationIndexes = mutableStateMapOf<AppNotificationGroupKey, Int>()
+        val focusedNotificationKeys = mutableStateMapOf<AppNotificationGroupKey, LauncherNotificationKey>()
 
         composeRule.setContent {
             MaterialTheme {
@@ -278,9 +278,9 @@ class CardStackTest {
                             appIconLoader = EmptyAppIconLoader,
                             reducedMotion = true,
                         ),
-                    focusedNotificationIndexes = focusedNotificationIndexes,
-                    onFocusChanged = { groupKey, index ->
-                        focusedNotificationIndexes[groupKey] = index
+                    focusedNotificationKeys = focusedNotificationKeys,
+                    onFocusChanged = { groupKey, notificationKey ->
+                        focusedNotificationKeys[groupKey] = notificationKey
                     },
                     onBack = {},
                     onGroupChanged = {},
@@ -322,7 +322,7 @@ class CardStackTest {
             )
         var visibleGroups by mutableStateOf(listOf(messagesGroup, calendarGroup))
         var selectedGroupKey by mutableStateOf(messagesGroup.key)
-        val focusedNotificationIndexes = mutableStateMapOf<AppNotificationGroupKey, Int>()
+        val focusedNotificationKeys = mutableStateMapOf<AppNotificationGroupKey, LauncherNotificationKey>()
 
         composeRule.setContent {
             MaterialTheme {
@@ -335,9 +335,9 @@ class CardStackTest {
                             appIconLoader = EmptyAppIconLoader,
                             reducedMotion = true,
                         ),
-                    focusedNotificationIndexes = focusedNotificationIndexes,
-                    onFocusChanged = { groupKey, index ->
-                        focusedNotificationIndexes[groupKey] = index
+                    focusedNotificationKeys = focusedNotificationKeys,
+                    onFocusChanged = { groupKey, notificationKey ->
+                        focusedNotificationKeys[groupKey] = notificationKey
                     },
                     onBack = {},
                     onGroupChanged = { groupKey -> selectedGroupKey = groupKey },
@@ -361,6 +361,55 @@ class CardStackTest {
             .onNodeWithTag(focusPositionTestTag(messagesGroup.key))
             .assertIsDisplayed()
             .assertTextEquals("Focused notification 2 of 2")
+    }
+
+    @Test
+    fun notificationRefreshRetainsFocusOnTheSameNotificationAfterReordering() {
+        val initialGroup = notificationGroup()
+        val refreshedGroup =
+            notificationGroup(
+                notificationKeysAndTitles =
+                    listOf(
+                        "message-2" to "Second",
+                        "message-1" to "First",
+                    ),
+            )
+        var visibleGroups by mutableStateOf(listOf(initialGroup))
+        val focusedNotificationKeys = mutableStateMapOf<AppNotificationGroupKey, LauncherNotificationKey>()
+
+        composeRule.setContent {
+            MaterialTheme {
+                NotificationGroupPrototype(
+                    groups = visibleGroups,
+                    selectedGroupKey = initialGroup.key,
+                    presentation =
+                        NotificationOverviewPresentation(
+                            apps = emptyList(),
+                            appIconLoader = EmptyAppIconLoader,
+                            reducedMotion = true,
+                        ),
+                    focusedNotificationKeys = focusedNotificationKeys,
+                    onFocusChanged = { groupKey, notificationKey ->
+                        focusedNotificationKeys[groupKey] = notificationKey
+                    },
+                    onBack = {},
+                    onGroupChanged = {},
+                    onAction = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(nextFocusTestTag(initialGroup.key)).performClick()
+        composeRule.runOnIdle {
+            assertEquals(LauncherNotificationKey("message-2"), focusedNotificationKeys[initialGroup.key])
+            visibleGroups = listOf(refreshedGroup)
+        }
+        composeRule.waitForIdle()
+
+        composeRule
+            .onNodeWithTag(focusedNotificationTitleTestTag(initialGroup.key))
+            .assertTextEquals("Second")
+        assertNotificationFocusPosition(initialGroup.key, position = 1, count = 2)
     }
 
     private fun setContent(entries: List<CardStackLayoutEntry>) {
@@ -393,6 +442,9 @@ class CardStackTest {
 
     private fun focusPositionTestTag(groupKey: AppNotificationGroupKey): String =
         "$NOTIFICATION_PROTOTYPE_FOCUS_POSITION_TEST_TAG-${groupKey.profileId.value}-${groupKey.packageName.value}"
+
+    private fun focusedNotificationTitleTestTag(groupKey: AppNotificationGroupKey): String =
+        "$NOTIFICATION_PROTOTYPE_FOCUSED_TITLE_TEST_TAG-${groupKey.profileId.value}-${groupKey.packageName.value}"
 
     private fun previousFocusTestTag(groupKey: AppNotificationGroupKey): String =
         "$NOTIFICATION_PROTOTYPE_PREVIOUS_FOCUS_TEST_TAG-${groupKey.profileId.value}-${groupKey.packageName.value}"

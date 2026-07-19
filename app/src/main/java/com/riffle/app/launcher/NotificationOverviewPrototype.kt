@@ -49,6 +49,7 @@ import com.riffle.core.domain.launcher.cards.CardStackSurfaceLayoutPolicy
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroupKey
 import com.riffle.core.domain.launcher.notifications.LauncherNotification
+import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
 
 @Composable
 @Suppress("LongMethod", "LongParameterList")
@@ -56,8 +57,8 @@ internal fun NotificationGroupPrototype(
     groups: List<AppNotificationGroup>,
     selectedGroupKey: AppNotificationGroupKey,
     presentation: NotificationOverviewPresentation,
-    focusedNotificationIndexes: Map<AppNotificationGroupKey, Int>,
-    onFocusChanged: (AppNotificationGroupKey, Int) -> Unit,
+    focusedNotificationKeys: Map<AppNotificationGroupKey, LauncherNotificationKey>,
+    onFocusChanged: (AppNotificationGroupKey, LauncherNotificationKey) -> Unit,
     onBack: () -> Unit,
     onGroupChanged: (AppNotificationGroupKey) -> Unit,
     onAction: (LauncherShellAction) -> Unit,
@@ -89,8 +90,10 @@ internal fun NotificationGroupPrototype(
             val app = presentation.apps.firstOrNull { installedApp -> installedApp.matches(group) }
             val listState = rememberLazyListState()
             val activeNotificationIndex =
-                (focusedNotificationIndexes[group.key] ?: 0)
-                    .coerceIn(0, group.notifications.lastIndex)
+                group.notifications
+                    .indexOfFirst { notification -> notification.key == focusedNotificationKeys[group.key] }
+                    .takeIf { index -> index >= 0 }
+                    ?: 0
             val focusedNotification =
                 group.notifications.getOrNull(activeNotificationIndex) ?: return@HorizontalPager
             val upcomingNotification =
@@ -103,10 +106,10 @@ internal fun NotificationGroupPrototype(
                     canFocusPrevious = activeNotificationIndex > 0,
                     canFocusNext = activeNotificationIndex < group.notifications.lastIndex,
                     onFocusPrevious = {
-                        onFocusChanged(group.key, activeNotificationIndex - 1)
+                        onFocusChanged(group.key, group.notifications[activeNotificationIndex - 1].key)
                     },
                     onFocusNext = {
-                        onFocusChanged(group.key, activeNotificationIndex + 1)
+                        onFocusChanged(group.key, group.notifications[activeNotificationIndex + 1].key)
                     },
                 )
             val swipeProgress =
@@ -188,6 +191,7 @@ internal fun NotificationGroupPrototype(
 internal const val NOTIFICATION_PROTOTYPE_CENTER_STAGE_TEST_TAG = "notification-prototype-center-stage"
 internal const val NOTIFICATION_PROTOTYPE_SIDE_BY_SIDE_TEST_TAG = "notification-prototype-side-by-side"
 internal const val NOTIFICATION_PROTOTYPE_FOCUS_POSITION_TEST_TAG = "notification-prototype-focus-position"
+internal const val NOTIFICATION_PROTOTYPE_FOCUSED_TITLE_TEST_TAG = "notification-prototype-focused-title"
 internal const val NOTIFICATION_PROTOTYPE_PREVIOUS_FOCUS_TEST_TAG = "notification-prototype-previous-focus"
 internal const val NOTIFICATION_PROTOTYPE_NEXT_FOCUS_TEST_TAG = "notification-prototype-next-focus"
 
@@ -344,6 +348,10 @@ private fun BoxScope.NotificationPrototypeHeroDetails(
                 style = MaterialTheme.typography.headlineSmall,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
+                modifier =
+                    Modifier.testTag(
+                        "$NOTIFICATION_PROTOTYPE_FOCUSED_TITLE_TEST_TAG-$groupTestTagSuffix",
+                    ),
             )
             Text(
                 text = notification.text.ifBlank { group.notificationOverviewMetadataLabel(fallbackLabel) },

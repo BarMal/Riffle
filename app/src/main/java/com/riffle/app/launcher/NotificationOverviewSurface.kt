@@ -42,6 +42,7 @@ import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroupKey
 import com.riffle.core.domain.launcher.notifications.LauncherNotification
+import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.notifications.NotificationAgeBucket
 import com.riffle.core.domain.launcher.notifications.NotificationCategory
@@ -65,7 +66,7 @@ fun NotificationOverviewSurface(
 ) {
     var selectedCategory by remember { mutableStateOf<NotificationCategory?>(null) }
     var selectedGroupKey by remember { mutableStateOf<AppNotificationGroupKey?>(null) }
-    val focusedNotificationIndexes = remember { mutableStateMapOf<AppNotificationGroupKey, Int>() }
+    val focusedNotificationKeys = remember { mutableStateMapOf<AppNotificationGroupKey, LauncherNotificationKey>() }
     val categoryOptions = notificationCategoryFilterOptions(groups)
     val effectiveSelectedCategory =
         selectedCategory.takeIf { category -> categoryOptions.any { option -> option.category == category } }
@@ -110,9 +111,9 @@ fun NotificationOverviewSurface(
                         groups = visibleGroups,
                         selectedGroupKey = selectedGroup.key,
                         presentation = presentation,
-                        focusedNotificationIndexes = focusedNotificationIndexes,
-                        onFocusChanged = { groupKey, index ->
-                            focusedNotificationIndexes[groupKey] = index
+                        focusedNotificationKeys = focusedNotificationKeys,
+                        onFocusChanged = { groupKey, notificationKey ->
+                            focusedNotificationKeys[groupKey] = notificationKey
                         },
                         onBack = { selectedGroupKey = null },
                         onGroupChanged = { groupKey -> selectedGroupKey = groupKey },
