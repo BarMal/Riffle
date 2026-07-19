@@ -2,6 +2,7 @@ package com.riffle.core.domain.launcher.settings
 
 import com.riffle.core.domain.launcher.cards.CardStackAnimationSpec
 import com.riffle.core.domain.launcher.cards.CardStackLayoutPolicy
+import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.cos
 import kotlin.math.min
@@ -204,9 +205,9 @@ private fun resolveStackBounds(
         val scale = 1f - scaleStep * cardDepth
         val angleRadians = Math.toRadians((rotationStep * cardDepth).toDouble())
         val cosine = cos(angleRadians).toFloat()
-        val sine = sin(angleRadians).toFloat()
-        maxWidthScale = maxOf(maxWidthScale, scale * (cosine + sine / aspectRatio))
-        maxHeightScale = maxOf(maxHeightScale, scale * (sine + cosine / aspectRatio))
+        val absoluteSine = abs(sin(angleRadians)).toFloat()
+        maxWidthScale = maxOf(maxWidthScale, scale * (cosine + absoluteSine / aspectRatio))
+        maxHeightScale = maxOf(maxHeightScale, scale * (absoluteSine + cosine / aspectRatio))
     }
     return ResolvedTimeScapeStackBounds(
         focusedScale = focusedScale,

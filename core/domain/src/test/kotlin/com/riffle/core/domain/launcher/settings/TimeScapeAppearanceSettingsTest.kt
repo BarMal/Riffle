@@ -145,32 +145,39 @@ class TimeScapeAppearanceSettingsTest {
                         rotationDegrees = 18,
                     ),
             ).resolveCardStack(viewport)
-        val backgroundEntries =
-            resolution.layoutPolicy.entries(cardCount = 3, activeIndex = 1).filter { it.depth > 0 }
-
         assertTrue(resolution.isUsable)
         assertTrue(
-            backgroundEntries.all { entry ->
-                val angleRadians = Math.toRadians(entry.rotationDegrees.toDouble())
-                val renderedWidth =
-                    entry.scale *
-                        (
-                            resolution.cardWidthDp * kotlin.math.cos(angleRadians) +
-                                resolution.cardHeightDp * kotlin.math.abs(kotlin.math.sin(angleRadians))
-                        )
-                kotlin.math.abs(entry.offset) + renderedWidth / 2f <= viewport.safeWidthDp / 2f + 0.01f
+            listOf(0, 2).all { focusedIndex ->
+                resolution.layoutPolicy.entries(cardCount = 3, activeIndex = focusedIndex)
+                    .filter { it.depth > 0 }
+                    .all { entry ->
+                        val angleRadians = Math.toRadians(entry.rotationDegrees.toDouble())
+                        val renderedWidth =
+                            entry.scale *
+                                (
+                                    resolution.cardWidthDp * kotlin.math.cos(angleRadians) +
+                                        resolution.cardHeightDp * kotlin.math.abs(kotlin.math.sin(angleRadians))
+                                )
+                        kotlin.math.abs(entry.offset) + renderedWidth / 2f <=
+                            viewport.safeWidthDp / 2f + 0.01f
+                    }
             },
         )
         assertTrue(
-            backgroundEntries.all { entry ->
-                val angleRadians = Math.toRadians(entry.rotationDegrees.toDouble())
-                val renderedHeight =
-                    entry.scale *
-                        (
-                            resolution.cardWidthDp * kotlin.math.abs(kotlin.math.sin(angleRadians)) +
-                                resolution.cardHeightDp * kotlin.math.cos(angleRadians)
-                        )
-                kotlin.math.abs(entry.verticalOffset) + renderedHeight / 2f <= viewport.safeHeightDp / 2f + 0.01f
+            listOf(0, 2).all { focusedIndex ->
+                resolution.layoutPolicy.entries(cardCount = 3, activeIndex = focusedIndex)
+                    .filter { it.depth > 0 }
+                    .all { entry ->
+                        val angleRadians = Math.toRadians(entry.rotationDegrees.toDouble())
+                        val renderedHeight =
+                            entry.scale *
+                                (
+                                    resolution.cardWidthDp * kotlin.math.abs(kotlin.math.sin(angleRadians)) +
+                                        resolution.cardHeightDp * kotlin.math.cos(angleRadians)
+                                )
+                        kotlin.math.abs(entry.verticalOffset) + renderedHeight / 2f <=
+                            viewport.safeHeightDp / 2f + 0.01f
+                    }
             },
         )
     }
