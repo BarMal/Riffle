@@ -283,6 +283,8 @@ internal class OverlayDockViewFactory(
             setTextColor(Color.WHITE)
             gravity = Gravity.CENTER
             setPadding(horizontal = context.dp(12), vertical = context.dp(8))
+            minHeight = context.dp(USAGE_ACCESS_ACTION_MIN_TOUCH_TARGET_DP)
+            minWidth = context.dp(USAGE_ACCESS_ACTION_MIN_TOUCH_TARGET_DP)
             contentDescription = "Allow Usage Access to show recent apps"
             setOnClickListener { onRequestUsageAccess() }
         }
@@ -298,3 +300,5 @@ internal class OverlayDockViewFactory(
             setOnClickListener { onCollapse() }
         }
 }
+
+internal const val USAGE_ACCESS_ACTION_MIN_TOUCH_TARGET_DP = 48

@@ -6,6 +6,11 @@ import org.junit.Test
 
 class OverlayDockViewLayoutTest {
     @Test
+    fun keepsUsageAccessActionTouchTargetAtLeastFortyEightDp() {
+        assertEquals(48, USAGE_ACCESS_ACTION_MIN_TOUCH_TARGET_DP)
+    }
+
+    @Test
     fun keepsCollapsedHandleTouchTargetAtLeastFortyEightDp() {
         assertEquals(
             48,

@@ -18,6 +18,7 @@ class OverlayDockService : Service() {
     private val windowManager by lazy { getSystemService(WindowManager::class.java) }
     private val appLauncher by lazy { AndroidAppLauncher(this) }
     private val recentAppRepository by lazy { AndroidRecentAppRepository(this) }
+    private val usageAccessSettingsAction by lazy { AndroidUsageAccessSettingsAction(this) }
     private val viewFactory by lazy { OverlayDockViewFactory(context = this, appLauncher = appLauncher) }
     private val launcherSettingsRepository by lazy { DataStoreLauncherSettingsRepository(this) }
     private var overlayView: View? = null
@@ -69,13 +70,10 @@ class OverlayDockService : Service() {
                         renderOverlay()
                     },
                     onRequestUsageAccess = {
-                        startActivity(
-                            Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS).apply {
-                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                            },
-                        )
-                        expanded = false
-                        renderOverlay()
+                        if (usageAccessSettingsAction.open()) {
+                            expanded = false
+                            renderOverlay()
+                        }
                     },
                 )
             } else {
