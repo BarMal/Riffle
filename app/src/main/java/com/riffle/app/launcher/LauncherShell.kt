@@ -20,6 +20,8 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.FirstRunStatus
@@ -171,6 +173,7 @@ private fun PreviewSetupCard(
                 }
             Text(
                 text = "Preview Riffle",
+                modifier = Modifier.semantics { heading() },
                 style = MaterialTheme.typography.titleLarge,
             )
             Text(
