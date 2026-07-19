@@ -7,6 +7,7 @@ This checklist applies to every Riffle pull request. A PR can skip an item only 
 - Link the GitHub issue or state that no issue exists.
 - Keep the scope to one issue or one coherent slice.
 - Run `./gradlew verify` before marking the PR ready.
+- Let CI run `deviceVerify`; lack of a local emulator is residual validation, not a reason to block the PR.
 - Add or update tests for changed domain logic, persistence, settings defaults, migrations, placement rules, and user-visible behaviour.
 - Document manual validation steps for Android platform behaviour that cannot be fully covered locally.
 - Keep platform APIs behind app-layer gateways or interfaces where practical.

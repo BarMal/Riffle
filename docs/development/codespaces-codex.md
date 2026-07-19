@@ -43,7 +43,7 @@ Run:
 ./gradlew verify
 ```
 
-This is the same validation command used by CI.
+CI runs the same headless checks plus `deviceVerify` on its configured emulator.
 
 ## Work from GitHub Issues
 

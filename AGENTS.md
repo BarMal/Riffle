@@ -14,6 +14,7 @@ Riffle is a polished standard Android launcher. Standard UI should use current A
 - Prefer small, reviewable pull requests.
 - Include the issue number, scope, verification result, and known limitations in each PR description.
 - Run `./gradlew verify` before marking work ready for review.
+- Connected-device tests run as `deviceVerify` in emulator-backed CI; a missing local device is not a blocker.
 - Do not commit generated APKs, AABs, keystores, signing files, `local.properties`, logs, or credentials.
 - Do not add secrets to source files, Gradle files, scripts, or documentation examples.
 
@@ -49,3 +50,4 @@ Run:
 ```
 
 For UI/platform features that cannot be fully covered locally, document manual validation steps in the PR.
+CI runs `./gradlew verify deviceVerify` so connected-device coverage remains a merge gate.
