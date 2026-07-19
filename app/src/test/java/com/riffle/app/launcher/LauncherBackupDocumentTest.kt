@@ -40,7 +40,9 @@ class LauncherBackupDocumentTest {
                 motion = MotionSettings(reducedMotion = true),
                 cards =
                     CardsSettings(
-                        timeScapeAppearance = TimeScapeAppearanceSettings().applyPreset(TimeScapeAppearancePreset.FLAT_REDUCED_DEPTH),
+                        timeScapeAppearance =
+                            TimeScapeAppearanceSettings()
+                                .applyPreset(TimeScapeAppearancePreset.FLAT_REDUCED_DEPTH),
                     ),
             )
         val document =

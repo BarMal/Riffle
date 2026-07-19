@@ -58,6 +58,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Test
 
+@Suppress("LargeClass")
 class LauncherSettingsJsonCodecTest {
     @Test
     fun roundTripsCardsChapterIntent() {

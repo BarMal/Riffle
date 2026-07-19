@@ -1,4 +1,4 @@
-@file:Suppress("TooManyFunctions")
+@file:Suppress("TooManyFunctions", "LongMethod", "MaxLineLength")
 
 package com.riffle.app.launcher
 
