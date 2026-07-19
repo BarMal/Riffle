@@ -14,6 +14,35 @@ import org.junit.Test
 
 class HomeDockContextMenuTest {
     @Test
+    fun dragPreviewReflowsItemsByStableIdWithoutMutatingTheSavedOrder() {
+        val camera = shortcut()
+        val weather = widget()
+        val folder = folder()
+        val original = listOf(camera, weather, folder)
+
+        val preview =
+            original.dockItemsForPreview(
+                DockDragState(itemId = folder.id, originIndex = 2, targetIndex = 0),
+            )
+
+        assertEquals(listOf(folder.id, camera.id, weather.id), preview.map { it.id })
+        assertEquals(listOf(camera.id, weather.id, folder.id), original.map { it.id })
+    }
+
+    @Test
+    fun dragPreviewIgnoresAStaleSourceItem() {
+        val camera = shortcut()
+        val original = listOf(camera)
+
+        assertEquals(
+            original,
+            original.dockItemsForPreview(
+                DockDragState(LauncherItemId("removed"), originIndex = 0, targetIndex = 0),
+            ),
+        )
+    }
+
+    @Test
     fun editDockShortcutMenuAddsMoveActionsAndOmitsEditHome() {
         val shortcut = shortcut()
 
