@@ -175,6 +175,8 @@ internal fun ColorScheme.withThemeAccent(
             onSurfaceVariant = roles.onSecondaryContainer,
             surfaceContainerHigh = roles.secondaryContainer,
             surfaceContainerHighest = roles.secondaryContainer,
+            outline = roles.secondary,
+            outlineVariant = roles.secondary,
             surfaceTint = roles.primary,
             inversePrimary = roles.inversePrimary,
         )
