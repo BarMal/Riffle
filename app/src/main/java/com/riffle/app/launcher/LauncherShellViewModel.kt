@@ -39,6 +39,7 @@ import com.riffle.core.domain.launcher.home.WidgetEngine
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettingsRepository
+import com.riffle.core.domain.launcher.settings.withMigratedStagePreferences
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -489,12 +490,21 @@ private fun createInitialState(
 
     val layoutSet = initialLayoutSet ?: HomeLayoutSet.fromLayout(HomeLayoutDefaults.standard())
 
+    val storedSettings = launcherSettingsRepository.loadLauncherSettings() ?: LauncherSettings()
+    val launcherSettings =
+        storedSettings.copy(
+            cards = storedSettings.cards.withMigratedStagePreferences(layoutSet.activeKey),
+        )
+    if (launcherSettings != storedSettings) {
+        launcherSettingsRepository.saveLauncherSettings(launcherSettings)
+    }
+
     return LauncherShellState(
         homeLayout = layoutSet.activeLayout,
         homeLayoutSet = layoutSet,
         settingsLayoutDeviceClass = layoutSet.activeKey.deviceClass,
         availableLayoutDeviceClasses = setOf(layoutSet.activeKey.deviceClass),
-        launcherSettings = launcherSettingsRepository.loadLauncherSettings() ?: LauncherSettings(),
+        launcherSettings = launcherSettings,
     ).copy(
         firstRunStatus =
             if (firstRunRepository.isFirstRunComplete()) {

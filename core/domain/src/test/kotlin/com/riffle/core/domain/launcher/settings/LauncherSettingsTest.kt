@@ -48,6 +48,20 @@ class LauncherSettingsTest {
     }
 
     @Test
+    fun materializedStageIntentDoesNotChangeAfterCardsIntentIsEdited() {
+        val mail = CardsChapterId.App(AppPackageName("com.riffle.mail"), AppProfile.personal().id)
+        val calendar = CardsChapterId.App(AppPackageName("com.riffle.calendar"), AppProfile.personal().id)
+        val key = HomeLayoutKey(LauncherViewMode.CARD_INTERFACE)
+        val migrated =
+            CardsSettings(chapterPreferences = CardsChapterPreferences(listOf(mail), mail))
+                .withMigratedStagePreferences(key)
+
+        val updatedCards = migrated.copy(chapterPreferences = CardsChapterPreferences(listOf(calendar), calendar))
+
+        assertEquals(migrated.stagePreferencesFor(key), updatedCards.stagePreferencesFor(key))
+    }
+
+    @Test
     fun replacesLaunchTargetWhenGestureActionChanges() {
         val identity =
             AppIdentity(

@@ -36,6 +36,14 @@ fun CardsSettings.withStagePreferences(
     preferences: AppStagePreferences,
 ): CardsSettings = copy(stagePreferencesByLayout = stagePreferencesByLayout + (layoutKey to preferences))
 
+/** Materializes the legacy Cards mapping once so later Cards edits cannot alter stage intent. */
+fun CardsSettings.withMigratedStagePreferences(layoutKey: HomeLayoutKey): CardsSettings =
+    if (layoutKey in stagePreferencesByLayout) {
+        this
+    } else {
+        withStagePreferences(layoutKey, stagePreferencesFor(layoutKey))
+    }
+
 private fun CardsChapterPreferences.toStagePreferences(): AppStagePreferences =
     AppStagePreferences(
         pinnedStageIds = pinnedChapterIds.map(CardsChapterId.App::toAppStageId),
