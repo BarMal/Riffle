@@ -42,6 +42,14 @@ class HomeDockContextMenuTest {
                             direction = DockItemMoveDirection.RIGHT,
                         ),
                 ),
+                ShortcutContextMenuItem(
+                    label = "Move to start",
+                    action = LauncherShellAction.MoveDockShortcutToIndex(shortcut.id, targetIndex = 0),
+                ),
+                ShortcutContextMenuItem(
+                    label = "Move to end",
+                    action = LauncherShellAction.MoveDockShortcutToIndex(shortcut.id, targetIndex = 2),
+                ),
                 ShortcutContextMenuItem("App info", LauncherShellAction.OpenAppInfo(shortcut.appIdentity)),
                 ShortcutContextMenuItem("Hide app", LauncherShellAction.HideApp(shortcut.appIdentity)),
                 ShortcutContextMenuItem("Uninstall", LauncherShellAction.UninstallApp(shortcut.appIdentity)),
@@ -72,8 +80,12 @@ class HomeDockContextMenuTest {
 
         assertEquals(false, firstItems.first { it.label == "Move left" }.enabled)
         assertEquals(true, firstItems.first { it.label == "Move right" }.enabled)
+        assertEquals(false, firstItems.first { it.label == "Move to start" }.enabled)
+        assertEquals(true, firstItems.first { it.label == "Move to end" }.enabled)
         assertEquals(true, lastItems.first { it.label == "Move left" }.enabled)
         assertEquals(false, lastItems.first { it.label == "Move right" }.enabled)
+        assertEquals(true, lastItems.first { it.label == "Move to start" }.enabled)
+        assertEquals(false, lastItems.first { it.label == "Move to end" }.enabled)
     }
 
     @Test
@@ -112,6 +124,14 @@ class HomeDockContextMenuTest {
                             itemId = widget.id,
                             direction = DockItemMoveDirection.RIGHT,
                         ),
+                ),
+                ShortcutContextMenuItem(
+                    label = "Move to start",
+                    action = LauncherShellAction.MoveDockShortcutToIndex(widget.id, targetIndex = 0),
+                ),
+                ShortcutContextMenuItem(
+                    label = "Move to end",
+                    action = LauncherShellAction.MoveDockShortcutToIndex(widget.id, targetIndex = 2),
                 ),
                 ShortcutContextMenuItem(
                     label = "Remove from dock",

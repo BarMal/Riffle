@@ -201,6 +201,32 @@ class DockEngineTest {
     }
 
     @Test
+    fun movesDockItemToAnExactTargetIndexByStableId() {
+        val phone = appShortcut(id = "phone")
+        val camera = appShortcut(id = "camera")
+        val maps = appShortcut(id = "maps")
+        val layout = layoutWithDockItems(phone, camera, maps)
+
+        val result = engine.moveDockItemToIndex(layout = layout, itemId = phone.id, targetIndex = 2)
+
+        val updated = assertIs<DockEditResult.Updated>(result)
+        assertEquals(listOf(camera.id, maps.id, phone.id), updated.layout.dock.items.map { item -> item.id })
+        assertEquals(listOf(phone.id, camera.id, maps.id), layout.dock.items.map { item -> item.id })
+    }
+
+    @Test
+    fun keepsDockOrderWhenAnExactMoveTargetsItsCurrentIndex() {
+        val phone = appShortcut(id = "phone")
+        val camera = appShortcut(id = "camera")
+        val layout = layoutWithDockItems(phone, camera)
+
+        val result = engine.moveDockItemToIndex(layout = layout, itemId = camera.id, targetIndex = 1)
+
+        val updated = assertIs<DockEditResult.Updated>(result)
+        assertEquals(layout.dock.items, updated.layout.dock.items)
+    }
+
+    @Test
     fun movesNonAppDockItem() {
         val phone = appShortcut(id = "phone")
         val widget =
@@ -252,6 +278,29 @@ class DockEngineTest {
 
         val rejected = assertIs<DockEditResult.Rejected>(result)
         assertEquals(DockEditRejectionReason.ITEM_NOT_FOUND, rejected.reason)
+    }
+
+    @Test
+    fun rejectsExactDockMoveWithAnInvalidTargetOrDuplicateIds() {
+        val phone = appShortcut(id = "phone")
+        val layout = layoutWithDockItems(phone)
+
+        val invalidTarget = engine.moveDockItemToIndex(layout = layout, itemId = phone.id, targetIndex = 1)
+        val duplicateIds =
+            engine.moveDockItemToIndex(
+                layout = layoutWithDockItems(phone, phone.copy(label = "Duplicate")),
+                itemId = phone.id,
+                targetIndex = 0,
+            )
+
+        assertEquals(
+            DockEditRejectionReason.INDEX_OUT_OF_BOUNDS,
+            assertIs<DockEditResult.Rejected>(invalidTarget).reason,
+        )
+        assertEquals(
+            DockEditRejectionReason.DUPLICATE_ITEM_ID,
+            assertIs<DockEditResult.Rejected>(duplicateIds).reason,
+        )
     }
 
     private fun layoutWithDockItems(vararg items: AppShortcutItem): HomeLayout =

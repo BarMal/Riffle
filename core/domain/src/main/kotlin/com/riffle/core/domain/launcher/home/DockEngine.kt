@@ -3,6 +3,7 @@ package com.riffle.core.domain.launcher.home
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.InstalledApp
 
+@Suppress("TooManyFunctions")
 class DockEngine {
     fun addAppToDock(
         layout: HomeLayout,
@@ -110,6 +111,33 @@ class DockEngine {
                 },
             )
 
+    /** Moves a dock item to its final index without mutating the supplied layout. */
+    fun moveDockItemToIndex(
+        layout: HomeLayout,
+        itemId: LauncherItemId,
+        targetIndex: Int,
+    ): DockEditResult =
+        when {
+            layout.dock.items.hasDuplicateIds() ->
+                DockEditResult.Rejected(DockEditRejectionReason.DUPLICATE_ITEM_ID)
+
+            layout.dock.items.none { item -> item.id == itemId } ->
+                DockEditResult.Rejected(DockEditRejectionReason.ITEM_NOT_FOUND)
+
+            targetIndex !in layout.dock.items.indices ->
+                DockEditResult.Rejected(DockEditRejectionReason.INDEX_OUT_OF_BOUNDS)
+
+            else ->
+                DockEditResult.Updated(
+                    layout.copy(
+                        dock =
+                            layout.dock.copy(
+                                items = layout.dock.items.moveItem(itemId = itemId, targetIndex = targetIndex),
+                            ),
+                    ),
+                )
+        }
+
     private fun appShortcutFor(
         app: InstalledApp,
         layout: HomeLayout,
@@ -145,6 +173,8 @@ class DockEngine {
                 .toList()
         }
 
+    private fun List<LauncherItem>.hasDuplicateIds(): Boolean = map(LauncherItem::id).toSet().size != size
+
     private fun HomeLayout.containsHostedWidget(hostedWidgetId: HostedWidgetId): Boolean =
         (
             pages
@@ -167,6 +197,7 @@ enum class DockEditRejectionReason {
     DUPLICATE_APP,
     DUPLICATE_WIDGET,
     ITEM_NOT_FOUND,
+    DUPLICATE_ITEM_ID,
     INDEX_OUT_OF_BOUNDS,
     INVALID_CAPACITY,
     CAPACITY_BELOW_ITEM_COUNT,

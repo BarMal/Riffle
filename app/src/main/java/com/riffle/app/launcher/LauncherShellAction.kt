@@ -243,6 +243,11 @@ sealed interface LauncherShellAction {
         val direction: DockItemMoveDirection,
     ) : LauncherShellAction
 
+    data class MoveDockShortcutToIndex(
+        val itemId: LauncherItemId,
+        val targetIndex: Int,
+    ) : LauncherShellAction
+
     data class MoveHomeShortcutToCell(
         val itemId: LauncherItemId,
         val cell: GridCell,

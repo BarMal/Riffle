@@ -279,6 +279,10 @@ class LauncherActionDomainTest {
                 activity("MoveAppOutOfFolder", LauncherShellAction.MoveAppOutOfFolder(itemId, itemId)),
                 activity("RemoveDockShortcut", LauncherShellAction.RemoveDockShortcut(itemId)),
                 activity("MoveDockShortcut", LauncherShellAction.MoveDockShortcut(itemId, DockItemMoveDirection.RIGHT)),
+                activity(
+                    "MoveDockShortcutToIndex",
+                    LauncherShellAction.MoveDockShortcutToIndex(itemId, targetIndex = 2),
+                ),
                 activity("MoveHomeShortcutToCell", LauncherShellAction.MoveHomeShortcutToCell(itemId, GridCell(1, 2))),
                 activity("ResizeHomeWidget", LauncherShellAction.ResizeHomeWidget(itemId, GridSpan(2, 2))),
                 app("OpenWidgetPicker", LauncherShellAction.OpenWidgetPicker),

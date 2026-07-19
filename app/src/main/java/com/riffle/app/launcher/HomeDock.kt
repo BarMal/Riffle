@@ -432,6 +432,20 @@ internal fun dockShortcutContextMenuItems(
                         ),
                     enabled = shortcutIndex < shortcutCount - 1,
                 ),
+                ShortcutContextMenuItem(
+                    label = "Move to start",
+                    action = LauncherShellAction.MoveDockShortcutToIndex(shortcut.id, targetIndex = 0),
+                    enabled = shortcutIndex > 0,
+                ),
+                ShortcutContextMenuItem(
+                    label = "Move to end",
+                    action =
+                        LauncherShellAction.MoveDockShortcutToIndex(
+                            shortcut.id,
+                            targetIndex = shortcutCount - 1,
+                        ),
+                    enabled = shortcutIndex < shortcutCount - 1,
+                ),
             )
         } else {
             emptyList()

@@ -6,6 +6,7 @@ import com.riffle.core.domain.launcher.home.DockEditResult
 import com.riffle.core.domain.launcher.home.DockEngine
 import com.riffle.core.domain.launcher.home.HomeLayout
 
+@Suppress("CyclomaticComplexMethod")
 fun DockEngine.applyEdit(
     action: LauncherShellAction,
     layout: HomeLayout,
@@ -53,6 +54,13 @@ fun DockEngine.applyEdit(
                 layout = layout,
                 itemId = action.itemId,
                 direction = action.direction,
+            )
+
+        is LauncherShellAction.MoveDockShortcutToIndex ->
+            moveDockItemToIndex(
+                layout = layout,
+                itemId = action.itemId,
+                targetIndex = action.targetIndex,
             )
 
         else -> DockEditResult.Rejected(DockEditRejectionReason.ITEM_NOT_FOUND)
