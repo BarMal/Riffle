@@ -1,4 +1,4 @@
-@file:Suppress("TooManyFunctions")
+@file:Suppress("LongParameterList", "TooManyFunctions")
 
 package com.riffle.app.launcher
 
@@ -18,6 +18,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -40,6 +41,7 @@ import com.riffle.core.domain.launcher.home.DockEditRejectionReason
 import com.riffle.core.domain.launcher.home.LauncherViewModeAvailability
 import com.riffle.core.domain.launcher.home.WallpaperSource
 import com.riffle.core.domain.launcher.search.LauncherSearchResult
+import kotlinx.coroutines.delay
 
 @Composable
 fun LauncherShell(
@@ -61,6 +63,7 @@ fun LauncherShell(
             widgetRenderers = widgetRenderers,
             onAction = onAction,
             onSetupCardDismissed = viewModel::onSetupCardDismissed,
+            onDockEditFeedbackDismissed = viewModel::onDockEditFeedbackDismissed,
         )
     }
 }
@@ -74,6 +77,7 @@ fun LauncherShellContent(
     widgetRenderers: LauncherWidgetRenderers = LauncherWidgetRenderers(),
     onAction: (LauncherShellAction) -> Unit,
     onSetupCardDismissed: () -> Unit = {},
+    onDockEditFeedbackDismissed: () -> Unit = {},
 ) {
     val haptics = rememberLauncherHaptics(state.launcherSettings.haptics.feedbackStrength)
 
@@ -134,6 +138,7 @@ fun LauncherShellContent(
             state.dockEditRejectionReason?.let { reason ->
                 DockEditRejectionMessage(
                     reason = reason,
+                    onDismissRequest = onDockEditFeedbackDismissed,
                     modifier =
                         Modifier
                             .align(Alignment.BottomCenter)
@@ -148,8 +153,13 @@ fun LauncherShellContent(
 @Composable
 private fun DockEditRejectionMessage(
     reason: DockEditRejectionReason,
+    onDismissRequest: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    LaunchedEffect(reason) {
+        delay(DOCK_EDIT_REJECTION_TIMEOUT_MILLIS)
+        onDismissRequest()
+    }
     Surface(
         modifier = modifier.semantics { liveRegion = LiveRegionMode.Assertive },
         shape = MaterialTheme.shapes.medium,
@@ -157,13 +167,17 @@ private fun DockEditRejectionMessage(
         contentColor = MaterialTheme.colorScheme.onErrorContainer,
         tonalElevation = 4.dp,
     ) {
-        Text(
-            text = dockEditRejectionMessage(reason),
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-            style = MaterialTheme.typography.bodyMedium,
-        )
+        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+            Text(
+                text = dockEditRejectionMessage(reason),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            TextButton(onClick = onDismissRequest) { Text("Dismiss") }
+        }
     }
 }
+
+private const val DOCK_EDIT_REJECTION_TIMEOUT_MILLIS = 5_000L
 
 internal fun dockEditRejectionMessage(reason: DockEditRejectionReason): String =
     when (reason) {

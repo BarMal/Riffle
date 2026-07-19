@@ -233,7 +233,11 @@ class LauncherShellViewModel(
 
                     else -> state
                 }
-            }
+            }.copy(dockEditRejectionReason = null)
+    }
+
+    fun onDockEditFeedbackDismissed() {
+        mutableState.value = mutableState.value.copy(dockEditRejectionReason = null)
     }
 
     fun onAppActionSelected(action: LauncherShellAction): Job? {
@@ -287,7 +291,16 @@ class LauncherShellViewModel(
                 else -> emptyList()
             }
 
-        mutableState.value = homePageEditReducer.reduce(previousState, action)
+        mutableState.value =
+            homePageEditReducer
+                .reduce(previousState, action)
+                .let { state ->
+                    if (action == LauncherShellAction.ExitHomeEditMode) {
+                        state.copy(dockEditRejectionReason = null)
+                    } else {
+                        state
+                    }
+                }
 
         if (action == LauncherShellAction.DeleteSelectedHomePage && mutableState.value != previousState) {
             removedHostedWidgetIds.forEach(platformDependencies.deleteHostedWidgetId)

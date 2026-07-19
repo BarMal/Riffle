@@ -28,7 +28,7 @@ class LauncherDockEditReducerTest {
     @Test
     fun appliesDockEditsToActiveLayout() {
         val repository = FakeHomeLayoutRepository()
-        val state = LauncherShellState()
+        val state = LauncherShellState(dockEditRejectionReason = DockEditRejectionReason.DOCK_DISABLED)
 
         val updatedState =
             reducer(repository).reduce(
@@ -38,6 +38,7 @@ class LauncherDockEditReducerTest {
 
         assertEquals(listOf("Phone"), updatedState.homeLayout.dock.items.filterIsInstance<AppShortcutItem>().labels)
         assertEquals(updatedState.homeLayout, repository.savedLayoutSet?.activeLayout)
+        assertEquals(null, updatedState.dockEditRejectionReason)
     }
 
     @Test
