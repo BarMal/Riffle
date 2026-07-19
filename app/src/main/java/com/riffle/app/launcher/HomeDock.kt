@@ -387,33 +387,35 @@ private fun Modifier.dockItemDrag(
     onDragStateChanged: (DockDragState?) -> Unit,
     onAction: (LauncherShellAction) -> Unit,
 ): Modifier {
-    val itemId = state.item?.id ?: return this
-    if (!state.isEditing || state.shortcutCount <= 1) return this
-    return pointerInput(itemId, state.shortcutIndex, state.shortcutCount, slotWidthDp, itemSpacingDp) {
-        var horizontalDrag = 0f
-        detectDragGesturesAfterLongPress(
-            onDragStart = {
-                horizontalDrag = 0f
-                onDragStateChanged(DockDragState(itemId, state.shortcutIndex, state.shortcutIndex))
-            },
-            onDrag = { change, amount ->
-                change.consume()
-                horizontalDrag += amount.x
-                val slotWidthPx = density * (slotWidthDp + itemSpacingDp)
-                val target =
-                    (state.shortcutIndex + (horizontalDrag / slotWidthPx).roundToInt())
-                        .coerceIn(0, state.shortcutCount - 1)
-                onDragStateChanged(DockDragState(itemId, state.shortcutIndex, target))
-            },
-            onDragEnd = {
-                dragState?.takeIf { it.itemId == itemId && it.targetIndex != it.originIndex }?.let { drag ->
-                    onAction(LauncherShellAction.MoveDockShortcutToIndex(itemId, drag.targetIndex))
-                }
-                onDragStateChanged(null)
-            },
-            onDragCancel = { onDragStateChanged(null) },
-        )
-    }
+    return state.item?.id
+        ?.takeIf { state.isEditing && state.shortcutCount > 1 }
+        ?.let { itemId ->
+            pointerInput(itemId, state.shortcutIndex, state.shortcutCount, slotWidthDp, itemSpacingDp) {
+                var horizontalDrag = 0f
+                detectDragGesturesAfterLongPress(
+                    onDragStart = {
+                        horizontalDrag = 0f
+                        onDragStateChanged(DockDragState(itemId, state.shortcutIndex, state.shortcutIndex))
+                    },
+                    onDrag = { change, amount ->
+                        change.consume()
+                        horizontalDrag += amount.x
+                        val slotWidthPx = density * (slotWidthDp + itemSpacingDp)
+                        val target =
+                            (state.shortcutIndex + (horizontalDrag / slotWidthPx).roundToInt())
+                                .coerceIn(0, state.shortcutCount - 1)
+                        onDragStateChanged(DockDragState(itemId, state.shortcutIndex, target))
+                    },
+                    onDragEnd = {
+                        dragState?.takeIf { it.itemId == itemId && it.targetIndex != it.originIndex }?.let { drag ->
+                            onAction(LauncherShellAction.MoveDockShortcutToIndex(itemId, drag.targetIndex))
+                        }
+                        onDragStateChanged(null)
+                    },
+                    onDragCancel = { onDragStateChanged(null) },
+                )
+            }
+        } ?: this
 }
 
 @Composable
