@@ -96,6 +96,46 @@ class TimeScapeAppearanceSettingsTest {
     }
 
     @Test
+    fun focusedScaleCannotOverflowTheSafeViewport() {
+        val viewport = TimeScapeViewportDp(widthDp = 400, heightDp = 400)
+        val resolution =
+            TimeScapeAppearanceSettings(
+                geometry = TimeScapeGeometry(cardAspectRatioPercent = 100, focusedScalePercent = 115),
+            ).resolveCardStack(viewport)
+
+        assertTrue(resolution.isUsable)
+        assertTrue(kotlin.math.ceil(resolution.cardWidthDp * resolution.focusedScale) <= viewport.safeWidthDp)
+        assertTrue(kotlin.math.ceil(resolution.cardHeightDp * resolution.focusedScale) <= viewport.safeHeightDp)
+    }
+
+    @Test
+    fun focusedGapAndFanDirectionAffectBoundedLayoutTokens() {
+        val viewport = TimeScapeViewportDp(widthDp = 800, heightDp = 1200)
+
+        fun resolve(
+            direction: TimeScapeFanDirection,
+            gapDp: Int,
+        ) = TimeScapeAppearanceSettings(
+            geometry = TimeScapeGeometry(fanDirection = direction, focusedGapDp = gapDp),
+        ).resolveCardStack(viewport)
+
+        val towardEnd = resolve(TimeScapeFanDirection.END, gapDp = 32)
+        val towardStart = resolve(TimeScapeFanDirection.START, gapDp = 32)
+        val noFan = resolve(TimeScapeFanDirection.NONE, gapDp = 32)
+        val noGap = resolve(TimeScapeFanDirection.END, gapDp = 0)
+        val endEntry = towardEnd.layoutPolicy.entries(cardCount = 3, activeIndex = 1).last { it.cardIndex == 2 }
+        val startEntry = towardStart.layoutPolicy.entries(cardCount = 3, activeIndex = 1).last { it.cardIndex == 2 }
+        val noFanEntry = noFan.layoutPolicy.entries(cardCount = 3, activeIndex = 1).last { it.cardIndex == 2 }
+        val noGapEntry = noGap.layoutPolicy.entries(cardCount = 3, activeIndex = 1).last { it.cardIndex == 2 }
+        val horizontalTravel = (viewport.safeWidthDp - towardEnd.cardWidthDp * towardEnd.focusedScale) / 2f
+
+        assertTrue(endEntry.offset > noGapEntry.offset)
+        assertEquals(-endEntry.offset, startEntry.offset)
+        assertEquals(0f, noFanEntry.offset)
+        assertTrue(kotlin.math.abs(endEntry.offset) <= horizontalTravel)
+    }
+
+    @Test
     fun reducedMotionResolutionUsesStaticStackTokens() {
         val resolution =
             TimeScapeAppearanceSettings(motion = TimeScapeMotion(reducedMotion = true))

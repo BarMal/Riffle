@@ -2,6 +2,7 @@ package com.riffle.core.domain.launcher.settings
 
 import com.riffle.core.domain.launcher.cards.CardStackAnimationSpec
 import com.riffle.core.domain.launcher.cards.CardStackLayoutPolicy
+import kotlin.math.ceil
 import kotlin.math.min
 
 /**
@@ -82,25 +83,32 @@ data class TimeScapeAppearanceSettings(
         capabilities: TimeScapeRendererCapabilities = TimeScapeRendererCapabilities(),
     ): TimeScapeCardStackResolution {
         val appearance = effectiveFor(capabilities)
-        val safeWidth = viewport.safeWidthDp
-        val safeHeight = viewport.safeHeightDp
         val requestedPadding = appearance.geometry.contentPaddingDp
-        val availableWidth = (safeWidth - requestedPadding * 2).coerceAtLeast(0)
-        val availableHeight = (safeHeight - requestedPadding * 2).coerceAtLeast(0)
-        val aspectRatio = appearance.geometry.cardAspectRatioPercent / 100f
-        val cardWidth = min(availableWidth.toFloat(), availableHeight * aspectRatio).toInt()
-        val cardHeight = if (aspectRatio == 0f) 0 else (cardWidth / aspectRatio).toInt()
-        val isUsable =
-            cardWidth >= MIN_TIMESCAPE_REACHABLE_CARD_WIDTH_DP &&
-                cardHeight >= MIN_TIMESCAPE_REACHABLE_CARD_HEIGHT_DP
+        val focusedScale = appearance.geometry.focusedScalePercent / 100f
+        val cardSize = resolveCardSize(viewport, requestedPadding, appearance.geometry, focusedScale)
+        val cardWidth = cardSize.widthDp
+        val cardHeight = cardSize.heightDp
+        val isUsable = cardSize.isUsable
         val depth = if (isUsable) appearance.geometry.visibleDepth else 1
-        val horizontalTravel = ((safeWidth - cardWidth) / 2).coerceAtLeast(0)
-        val verticalTravel = ((safeHeight - cardHeight) / 2).coerceAtLeast(0)
+        val horizontalTravel = ((viewport.safeWidthDp - cardSize.focusedWidthDp) / 2).coerceAtLeast(0)
+        val verticalTravel = ((viewport.safeHeightDp - cardSize.focusedHeightDp) / 2).coerceAtLeast(0)
         val motionScale = appearance.motion.travelIntensityPercent / 100f
+        val offsetDirection =
+            when (appearance.geometry.fanDirection) {
+                TimeScapeFanDirection.NONE -> 0f
+                TimeScapeFanDirection.START -> -1f
+                TimeScapeFanDirection.END -> 1f
+            }
+        val focusedGap =
+            if (offsetDirection == 0f) {
+                0f
+            } else {
+                min(appearance.geometry.focusedGapDp * motionScale, horizontalTravel.toFloat())
+            }
         val horizontalStep =
             min(
                 appearance.geometry.horizontalOffsetDp * motionScale,
-                horizontalTravel.toFloat() / depth,
+                (horizontalTravel - focusedGap).coerceAtLeast(0f) / depth,
             )
         val verticalStep =
             min(
@@ -120,6 +128,8 @@ data class TimeScapeAppearanceSettings(
                 maxVisibleDepth = depth,
                 scaleStep = (1f - MIN_TIMESCAPE_BACKGROUND_CARD_SCALE) / depth,
                 offsetStep = horizontalStep,
+                focusedGap = focusedGap,
+                offsetDirection = offsetDirection,
                 alphaStep = appearance.geometry.overlapPercent / 100f / depth,
                 verticalOffsetStep = verticalStep,
                 curveStep = curveStep,
@@ -133,7 +143,7 @@ data class TimeScapeAppearanceSettings(
             cardWidthDp = cardWidth,
             cardHeightDp = cardHeight,
             contentPaddingDp = requestedPadding.coerceAtMost(min(cardWidth, cardHeight) / 4),
-            focusedScale = appearance.geometry.focusedScalePercent / 100f,
+            focusedScale = focusedScale,
             reducedMotion = appearance.motion.reducedMotion,
             layoutPolicy = layoutPolicy,
             animation =
@@ -154,6 +164,43 @@ data class TimeScapeAppearanceSettings(
     companion object {
         fun modern(): TimeScapeAppearanceSettings = TimeScapeAppearancePreset.MODERN_TIMESCAPE.settings
     }
+}
+
+private fun resolveCardSize(
+    viewport: TimeScapeViewportDp,
+    requestedPadding: Int,
+    geometry: TimeScapeGeometry,
+    focusedScale: Float,
+): ResolvedTimeScapeCardSize {
+    val availableWidth = (viewport.safeWidthDp - requestedPadding * 2).coerceAtLeast(0)
+    val availableHeight = (viewport.safeHeightDp - requestedPadding * 2).coerceAtLeast(0)
+    val aspectRatio = geometry.cardAspectRatioPercent / 100f
+    val sizingScale = focusedScale.coerceAtLeast(1f)
+    val width = min(availableWidth / sizingScale, availableHeight * aspectRatio / sizingScale).toInt()
+    val height = if (aspectRatio == 0f) 0 else (width / aspectRatio).toInt()
+    val focusedWidth = ceil(width * focusedScale).toInt()
+    val focusedHeight = ceil(height * focusedScale).toInt()
+    return ResolvedTimeScapeCardSize(
+        widthDp = width,
+        heightDp = height,
+        focusedWidthDp = focusedWidth,
+        focusedHeightDp = focusedHeight,
+        fitsAvailableSpace = focusedWidth <= availableWidth && focusedHeight <= availableHeight,
+    )
+}
+
+private data class ResolvedTimeScapeCardSize(
+    val widthDp: Int,
+    val heightDp: Int,
+    val focusedWidthDp: Int,
+    val focusedHeightDp: Int,
+    val fitsAvailableSpace: Boolean,
+) {
+    val isUsable: Boolean
+        get() =
+            focusedWidthDp >= MIN_TIMESCAPE_REACHABLE_CARD_WIDTH_DP &&
+                focusedHeightDp >= MIN_TIMESCAPE_REACHABLE_CARD_HEIGHT_DP &&
+                fitsAvailableSpace
 }
 
 data class TimeScapeViewportDp(
