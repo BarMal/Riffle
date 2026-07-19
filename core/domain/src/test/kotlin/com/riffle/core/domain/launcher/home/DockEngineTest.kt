@@ -252,6 +252,25 @@ class DockEngineTest {
     }
 
     @Test
+    fun movesFolderToAnExactTargetIndexWithoutChangingItsContents() {
+        val phone = appShortcut(id = "phone")
+        val folder =
+            FolderItem(
+                id = LauncherItemId("folder:work"),
+                label = "Work",
+                items = listOf(appShortcut(id = "calendar")),
+            )
+        val camera = appShortcut(id = "camera")
+        val layout = layoutWithDockItems(phone, folder, camera)
+
+        val result = engine.moveDockItemToIndex(layout = layout, itemId = folder.id, targetIndex = 2)
+
+        val updated = assertIs<DockEditResult.Updated>(result)
+        assertEquals(listOf(phone.id, camera.id, folder.id), updated.layout.dock.items.map { item -> item.id })
+        assertEquals(folder.items, assertIs<FolderItem>(updated.layout.dock.items.last()).items)
+    }
+
+    @Test
     fun rejectsDockItemMoveOutsideBounds() {
         val phone = appShortcut(id = "phone")
         val layout = layoutWithDockItems(phone)
@@ -317,7 +336,7 @@ class DockEngineTest {
         assertEquals(listOf("phone", "phone"), layout.dock.items.map { item -> item.id.value })
     }
 
-    private fun layoutWithDockItems(vararg items: AppShortcutItem): HomeLayout =
+    private fun layoutWithDockItems(vararg items: LauncherItem): HomeLayout =
         HomeLayoutDefaults.standard().copy(
             dock = DockModel(capacity = 5, items = items.toList()),
         )
