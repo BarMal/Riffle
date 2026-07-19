@@ -3,6 +3,9 @@ package com.riffle.app.launcher
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
@@ -22,6 +25,17 @@ import org.junit.runner.RunWith
 class PreviewFirstSetupTest {
     @get:Rule
     val composeRule = createComposeRule()
+
+    @Test
+    fun setupCardTitleIsAnAccessibleHeading() {
+        composeRule.setContent {
+            LauncherShellContent(state = previewState(), onAction = {})
+        }
+
+        composeRule
+            .onNodeWithText("Preview Riffle")
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.Heading, Unit))
+    }
 
     @Test
     fun setupCardIsVisibleOnlyOnHome() {
