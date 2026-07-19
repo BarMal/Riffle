@@ -250,6 +250,11 @@ private fun HomeBottomControls(
                     pageCount = layout.pages.size,
                     selectedPageIndex = selectedPageIndex,
                     showPageIndicator = showPageIndicator,
+                    onPageSelected = { pageIndex ->
+                        layout.pages.getOrNull(pageIndex)?.let { page ->
+                            actions.onAction(LauncherShellAction.SelectHomePage(page.id))
+                        }
+                    },
                     actions = actions,
                 )
 
@@ -277,6 +282,7 @@ private fun HomeBottomSearchArea(
     pageCount: Int,
     selectedPageIndex: Int,
     showPageIndicator: Boolean,
+    onPageSelected: (Int) -> Unit,
     actions: HomeWorkspaceActions,
 ) {
     Box(
@@ -296,6 +302,7 @@ private fun HomeBottomSearchArea(
             PageIndicator(
                 pageCount = pageCount,
                 selectedPageIndex = selectedPageIndex,
+                onPageSelected = onPageSelected,
                 modifier =
                     Modifier
                         .height(HOME_SEARCH_PILL_HEIGHT_DP.dp)

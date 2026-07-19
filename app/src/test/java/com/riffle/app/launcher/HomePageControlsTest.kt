@@ -20,6 +20,62 @@ import org.junit.Test
 
 class HomePageControlsTest {
     @Test
+    fun pageIndicatorDragMapsTrackPositionToPageIndex() {
+        assertEquals(
+            0,
+            pageIndicatorDragTargetIndex(
+                dragPositionPx = 0f,
+                trackWidthPx = 100f,
+                pageCount = 5,
+            ),
+        )
+        assertEquals(
+            2,
+            pageIndicatorDragTargetIndex(
+                dragPositionPx = 50f,
+                trackWidthPx = 100f,
+                pageCount = 5,
+            ),
+        )
+        assertEquals(
+            4,
+            pageIndicatorDragTargetIndex(
+                dragPositionPx = 100f,
+                trackWidthPx = 100f,
+                pageCount = 5,
+            ),
+        )
+    }
+
+    @Test
+    fun pageIndicatorDragClampsOutOfBoundsAndDegenerateTracks() {
+        assertEquals(
+            0,
+            pageIndicatorDragTargetIndex(
+                dragPositionPx = -10f,
+                trackWidthPx = 100f,
+                pageCount = 3,
+            ),
+        )
+        assertEquals(
+            2,
+            pageIndicatorDragTargetIndex(
+                dragPositionPx = 200f,
+                trackWidthPx = 100f,
+                pageCount = 3,
+            ),
+        )
+        assertEquals(
+            0,
+            pageIndicatorDragTargetIndex(
+                dragPositionPx = 50f,
+                trackWidthPx = 0f,
+                pageCount = 3,
+            ),
+        )
+    }
+
+    @Test
     fun pageOverviewOnlyOffersPinningForGeneratedPages() {
         assertEquals(null, pageOverviewPinActionLabel(LauncherPageType.Home, isPinned = false))
         assertEquals(null, pageOverviewPinActionLabel(LauncherPageType.AllApps, isPinned = false))

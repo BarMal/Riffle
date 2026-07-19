@@ -7,6 +7,7 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -37,6 +38,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.riffle.app.launcher.widgets.HomeWidgetViewFactory
@@ -44,6 +46,7 @@ import com.riffle.core.domain.launcher.home.GeneratedLauncherPageKind
 import com.riffle.core.domain.launcher.home.GridDimensions
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.LauncherPageType
+import kotlin.math.roundToInt
 
 @Composable
 fun PageEditControls(
@@ -467,10 +470,15 @@ internal fun pageOverviewActionsMenuItems(
 fun PageIndicator(
     pageCount: Int,
     selectedPageIndex: Int,
+    onPageSelected: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Row(
-        modifier = modifier,
+        modifier =
+            modifier.pageIndicatorDrag(
+                pageCount = pageCount,
+                onPageSelected = onPageSelected,
+            ),
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -497,6 +505,51 @@ fun PageIndicator(
             )
         }
     }
+}
+
+private fun Modifier.pageIndicatorDrag(
+    pageCount: Int,
+    onPageSelected: (Int) -> Unit,
+): Modifier =
+    if (pageCount <= 1) {
+        this
+    } else {
+        pointerInput(pageCount) {
+            var targetPageIndex = 0
+
+            detectHorizontalDragGestures(
+                onDragStart = { position ->
+                    targetPageIndex =
+                        pageIndicatorDragTargetIndex(
+                            dragPositionPx = position.x,
+                            trackWidthPx = size.width.toFloat(),
+                            pageCount = pageCount,
+                        )
+                },
+                onHorizontalDrag = { change, _ ->
+                    change.consume()
+                    targetPageIndex =
+                        pageIndicatorDragTargetIndex(
+                            dragPositionPx = change.position.x,
+                            trackWidthPx = size.width.toFloat(),
+                            pageCount = pageCount,
+                        )
+                },
+                onDragEnd = { onPageSelected(targetPageIndex) },
+            )
+        }
+    }
+
+internal fun pageIndicatorDragTargetIndex(
+    dragPositionPx: Float,
+    trackWidthPx: Float,
+    pageCount: Int,
+): Int {
+    if (pageCount <= 1 || trackWidthPx <= 0f) return 0
+
+    return ((dragPositionPx / trackWidthPx) * (pageCount - 1))
+        .roundToInt()
+        .coerceIn(0, pageCount - 1)
 }
 
 @Composable
