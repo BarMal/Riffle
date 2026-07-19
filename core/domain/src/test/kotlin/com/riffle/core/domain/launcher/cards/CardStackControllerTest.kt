@@ -123,6 +123,76 @@ class CardStackControllerTest {
     }
 
     @Test
+    fun settleCommitsOneDirectionalFocusChangeFromDragOrFling() {
+        val initial = controller.initialize(overview, listOf(a, b, c)).applied().state
+
+        val dragged =
+            controller.settle(
+                initial,
+                listOf(a, b, c),
+                CardStackSettleRequest(
+                    focusedCardId = a,
+                    verticalDragPx = -80f,
+                    verticalVelocityPxPerSecond = 0f,
+                    distanceThresholdPx = 48f,
+                    flingVelocityThresholdPxPerSecond = 1_000f,
+                ),
+            ).applied()
+        val flungBack =
+            controller.settle(
+                dragged.state,
+                listOf(a, b, c),
+                CardStackSettleRequest(
+                    focusedCardId = b,
+                    verticalDragPx = -4f,
+                    verticalVelocityPxPerSecond = 1_200f,
+                    distanceThresholdPx = 48f,
+                    flingVelocityThresholdPxPerSecond = 1_000f,
+                ),
+            ).applied()
+
+        assertEquals(b, dragged.state.focusedCardId)
+        assertEquals(a, flungBack.state.focusedCardId)
+    }
+
+    @Test
+    fun cancelledOrShortDragIsANoOpAndBoundarySettleIsReported() {
+        val initial = controller.initialize(overview, listOf(a, b)).applied().state
+
+        val cancelled =
+            controller.settle(
+                initial,
+                listOf(a, b),
+                CardStackSettleRequest(a, -20f, 0f, 48f, 1_000f),
+            ).applied()
+        val boundary =
+            controller.settle(
+                initial,
+                listOf(a, b),
+                CardStackSettleRequest(a, 80f, 0f, 48f, 1_000f),
+            ).applied()
+
+        assertEquals(a, cancelled.state.focusedCardId)
+        assertEquals(false, cancelled.focusChanged)
+        assertEquals(true, boundary.boundaryReached)
+    }
+
+    @Test
+    fun staleSettleCannotOverwriteFocusChangedDuringAGesture() {
+        val initial = controller.initialize(overview, listOf(a, b, c)).applied().state
+        val current = controller.jumpTo(initial, listOf(a, b, c), c).applied().state
+
+        val stale =
+            controller.settle(
+                current,
+                listOf(a, b, c),
+                CardStackSettleRequest(a, -80f, 0f, 48f, 1_000f),
+            )
+
+        assertEquals(CardStackFocusResult.Rejected(CardStackFocusRejection.STALE_SETTLE), stale)
+    }
+
+    @Test
     fun duplicateIdsAndUnknownJumpAreRejectedWithoutThrowing() {
         val duplicate = controller.initialize(overview, listOf(a, a))
         val unknown =

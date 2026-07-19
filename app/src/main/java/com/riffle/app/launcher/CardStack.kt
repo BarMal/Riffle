@@ -3,6 +3,8 @@ package com.riffle.app.launcher
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.runtime.Composable
@@ -14,6 +16,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.PointerId
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.SemanticsPropertyKey
 import androidx.compose.ui.semantics.isTraversalGroup
@@ -22,6 +27,15 @@ import androidx.compose.ui.semantics.traversalIndex
 import androidx.compose.ui.zIndex
 import com.riffle.core.domain.launcher.cards.CardStackAnimationProfile
 import com.riffle.core.domain.launcher.cards.CardStackLayoutEntry
+import kotlin.math.abs
+
+/** Callbacks supplied by a surface that owns durable card focus. */
+internal data class CardStackInteraction(
+    val focusedItemKey: Any?,
+    val onFocusRequest: (CardStackLayoutEntry) -> Unit,
+    val onSettle: (verticalDragPx: Float, verticalVelocityPxPerSecond: Float) -> Unit,
+    val onSettleHaptic: () -> Unit = {},
+)
 
 @Composable
 internal fun CardStack(
@@ -30,7 +44,8 @@ internal fun CardStack(
     animationProfile: CardStackAnimationProfile = CardStackAnimationProfile.STACK_REFLOW,
     reducedMotion: Boolean = false,
     itemKey: (CardStackLayoutEntry) -> Any = { entry -> entry.cardIndex },
-    content: @Composable (CardStackLayoutEntry) -> Unit,
+    interaction: CardStackInteraction? = null,
+    content: @Composable (CardStackLayoutEntry, Modifier) -> Unit,
 ) {
     val motionMode = cardStackMotionMode(reducedMotion)
 
@@ -53,7 +68,17 @@ internal fun CardStack(
                     stableItemKey = stableItemKey,
                     animationProfile = animationProfile,
                     motionMode = motionMode,
-                    content = content,
+                    content = { entry, modifier ->
+                        content(
+                            entry,
+                            modifier.cardStackPointerInput(
+                                entry = entry,
+                                stableItemKey = stableItemKey,
+                                isFocused = stableItemKey == interaction?.focusedItemKey,
+                                interaction = interaction,
+                            ),
+                        )
+                    },
                 )
             }
         }
@@ -121,7 +146,7 @@ private fun AnimatedCardStackEntry(
     stableItemKey: Any,
     animationProfile: CardStackAnimationProfile,
     motionMode: CardStackMotionMode,
-    content: @Composable (CardStackLayoutEntry) -> Unit,
+    content: @Composable (CardStackLayoutEntry, Modifier) -> Unit,
 ) {
     val spec = animationProfile.spec
     var hasEntered by remember(stableItemKey) { mutableStateOf(motionMode == CardStackMotionMode.SNAP) }
@@ -187,7 +212,80 @@ private fun AnimatedCardStackEntry(
                         rotationZ = rotationDegrees
                     },
         ) {
-            content(entry)
+            content(entry, Modifier)
         }
     }
 }
+
+@Suppress("CyclomaticComplexMethod", "LoopWithTooManyJumpStatements")
+private fun Modifier.cardStackPointerInput(
+    entry: CardStackLayoutEntry,
+    stableItemKey: Any,
+    isFocused: Boolean,
+    interaction: CardStackInteraction?,
+): Modifier {
+    if (interaction == null) return this
+    return pointerInput(stableItemKey, isFocused, interaction) {
+        awaitEachGesture {
+            val down = awaitFirstDown(requireUnconsumed = false)
+            val pointerId: PointerId = down.id
+            var verticalDrag = 0f
+            var horizontalDrag = 0f
+            var axis: CardStackGestureAxis? = null
+            var cancelled = false
+            val velocityTracker = VelocityTracker()
+
+            while (true) {
+                val event = awaitPointerEvent()
+                if (event.changes.size != 1) {
+                    cancelled = true
+                    break
+                }
+                val change = event.changes.firstOrNull { it.id == pointerId }
+                if (change == null) {
+                    cancelled = true
+                    break
+                }
+                val delta = change.position - change.previousPosition
+                velocityTracker.addPosition(change.uptimeMillis, change.position)
+                verticalDrag += delta.y
+                horizontalDrag += delta.x
+                if (
+                    axis == null &&
+                    (
+                        abs(verticalDrag) > viewConfiguration.touchSlop ||
+                            abs(horizontalDrag) > viewConfiguration.touchSlop
+                    )
+                ) {
+                    axis =
+                        if (abs(verticalDrag) > abs(horizontalDrag)) {
+                            CardStackGestureAxis.VERTICAL
+                        } else {
+                            CardStackGestureAxis.HORIZONTAL
+                        }
+                }
+                if (axis == CardStackGestureAxis.VERTICAL) change.consume()
+                if (!change.pressed) {
+                    // A background-card tap focuses the card without consuming an ancestor's
+                    // horizontal page/stage drag before that drag's axis is known.
+                    if (axis == null && !isFocused) change.consume()
+                    break
+                }
+            }
+
+            when {
+                cancelled -> Unit
+                axis == null -> interaction.onFocusRequest(entry)
+                axis == CardStackGestureAxis.VERTICAL ->
+                    interaction.run {
+                        onSettle(verticalDrag, velocityTracker.calculateVelocity().y)
+                        onSettleHaptic()
+                    }
+                // Horizontal gestures remain unconsumed for the owning page/stage surface.
+                else -> Unit
+            }
+        }
+    }
+}
+
+private enum class CardStackGestureAxis { VERTICAL, HORIZONTAL }
