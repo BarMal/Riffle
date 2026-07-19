@@ -82,6 +82,35 @@ class AppStagePlannerTest {
     }
 
     @Test
+    fun refreshKeepsPinnedOrderWhenTheirActivityChanges() {
+        val calendar = stage("calendar")
+        val mail = stage("mail")
+        val chat = stage("chat")
+        val preferences =
+            AppStagePreferences(
+                pinnedStageIds = listOf(calendar, mail),
+                selectedStageId = mail,
+            )
+        val initial =
+            planner.reconcile(
+                inventory(calendar, mail, chat),
+                content(calendar to 5L, mail to 10L, chat to 15L),
+                preferences,
+            )
+
+        val refreshed =
+            planner.reconcile(
+                inventory(calendar, mail, chat),
+                content(calendar to 30L, mail to 1L, chat to 20L),
+                initial.preferences,
+                initial,
+            )
+
+        assertEquals(listOf(calendar, mail, chat), refreshed.stages.map(AppStage::id))
+        assertEquals(mail, refreshed.preferences.selectedStageId)
+    }
+
+    @Test
     fun treatsPersonalAndWorkAsIndependentStages() {
         val personal = stage("mail", AppProfile.personal())
         val work = stage("mail", AppProfile.work())
