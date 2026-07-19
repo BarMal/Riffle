@@ -53,7 +53,7 @@ internal class OverlayDockViewFactory(
         }
 
     fun expandedDockView(
-        shortcuts: List<AppShortcutItem>,
+        content: OverlayDockShortcuts,
         settings: OverlayDockSettings,
         onCollapse: () -> Unit,
         onLaunch: () -> Unit,
@@ -65,7 +65,7 @@ internal class OverlayDockViewFactory(
 
             addView(
                 expandedDockScrollView(
-                    shortcuts = shortcuts,
+                    content = content,
                     settings = settings,
                     onCollapse = onCollapse,
                     onLaunch = onLaunch,
@@ -177,7 +177,7 @@ internal class OverlayDockViewFactory(
     }
 
     private fun expandedDockScrollView(
-        shortcuts: List<AppShortcutItem>,
+        content: OverlayDockShortcuts,
         settings: OverlayDockSettings,
         onCollapse: () -> Unit,
         onLaunch: () -> Unit,
@@ -186,7 +186,7 @@ internal class OverlayDockViewFactory(
             OverlayDockExpandedOrientation.WIDE ->
                 HorizontalScrollView(context).apply {
                     isHorizontalScrollBarEnabled = false
-                    addView(expandedDockItems(shortcuts, settings, onCollapse, onLaunch))
+                    addView(expandedDockItems(content, settings, onCollapse, onLaunch))
                 }
 
             OverlayDockExpandedOrientation.TALL ->
@@ -195,35 +195,70 @@ internal class OverlayDockViewFactory(
                     layoutParams =
                         FrameLayout.LayoutParams(
                             FrameLayout.LayoutParams.WRAP_CONTENT,
-                            context.dp(context.tallExpandedDockHeightDp(shortcuts, settings)),
+                            context.dp(
+                                context.tallExpandedDockHeightDp(
+                                    content.pinnedShortcuts + content.recentShortcuts,
+                                    settings,
+                                ),
+                            ),
                         )
-                    addView(expandedDockItems(shortcuts, settings, onCollapse, onLaunch))
+                    addView(expandedDockItems(content, settings, onCollapse, onLaunch))
                 }
         }
 
     private fun expandedDockItems(
-        shortcuts: List<AppShortcutItem>,
+        content: OverlayDockShortcuts,
         settings: OverlayDockSettings,
         onCollapse: () -> Unit,
         onLaunch: () -> Unit,
     ): LinearLayout =
         LinearLayout(context).apply {
-            orientation = settings.expandedOrientation.linearOrientation
+            orientation = LinearLayout.VERTICAL
             gravity = settings.expandedOrientation.itemGravity
-            shortcuts.forEach { shortcut ->
-                addView(
-                    shortcutButton(
-                        shortcut = shortcut,
-                        settings = settings,
-                        itemOrientation = settings.expandedOrientation,
-                        onLaunch = onLaunch,
-                    ),
-                )
+            if (content.pinnedShortcuts.isNotEmpty()) {
+                addView(dockSection("Docked apps", content.pinnedShortcuts, settings, onLaunch))
             }
-            if (shortcuts.isEmpty()) {
+            if (content.recentShortcuts.isNotEmpty()) {
+                addView(dockSection("Recent apps", content.recentShortcuts, settings, onLaunch))
+            }
+            if (content.pinnedShortcuts.isEmpty() && content.recentShortcuts.isEmpty()) {
                 addView(emptyDockText())
             }
             addView(collapseButton(onCollapse))
+        }
+
+    private fun dockSection(
+        title: String,
+        shortcuts: List<AppShortcutItem>,
+        settings: OverlayDockSettings,
+        onLaunch: () -> Unit,
+    ): LinearLayout =
+        LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            addView(
+                TextView(context).apply {
+                    text = title
+                    textSize = 12f
+                    setTextColor(Color.WHITE)
+                    setPadding(horizontal = context.dp(4), vertical = context.dp(4))
+                },
+            )
+            addView(
+                LinearLayout(context).apply {
+                    orientation = settings.expandedOrientation.linearOrientation
+                    gravity = settings.expandedOrientation.itemGravity
+                    shortcuts.forEach { shortcut ->
+                        addView(
+                            shortcutButton(
+                                shortcut = shortcut,
+                                settings = settings,
+                                itemOrientation = settings.expandedOrientation,
+                                onLaunch = onLaunch,
+                            ),
+                        )
+                    }
+                },
+            )
         }
 
     private fun emptyDockText(): TextView =

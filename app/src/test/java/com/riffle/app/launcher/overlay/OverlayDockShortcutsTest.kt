@@ -4,6 +4,7 @@ import com.riffle.core.domain.launcher.apps.AppActivityName
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.InstalledApp
+import com.riffle.core.domain.launcher.apps.RecentAppUsage
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.settings.OverlayDockSettings
@@ -23,6 +24,39 @@ class OverlayDockShortcutsTest {
             )
 
         assertEquals(listOf(cameraShortcut), visibleShortcuts)
+    }
+
+    @Test
+    fun resolvesRecentPackagesToDistinctLaunchableShortcutsInUsageOrder() {
+        val settings = OverlayDockSettings(items = listOf(shortcut("camera", cameraIdentity, "Camera")))
+        val galleryIdentity =
+            AppIdentity(
+                AppPackageName("com.example.gallery"),
+                AppActivityName(".GalleryActivity"),
+            )
+
+        val content =
+            settings.contentFor(
+                installedApps =
+                    listOf(
+                        InstalledApp(identity = cameraIdentity, label = "Camera"),
+                        InstalledApp(identity = galleryIdentity, label = "Gallery"),
+                    ),
+                recentAppUsages =
+                    listOf(
+                        RecentAppUsage(AppPackageName("com.example.gallery"), 300),
+                        RecentAppUsage(AppPackageName("com.example.camera"), 200),
+                        RecentAppUsage(AppPackageName("com.example.gallery"), 100),
+                        RecentAppUsage(AppPackageName("com.example.removed"), 50),
+                    ),
+            )
+
+        assertEquals(listOf("Camera"), content.pinnedShortcuts.map { it.label })
+        assertEquals(listOf("Gallery", "Camera"), content.recentShortcuts.map { it.label })
+        assertEquals(
+            listOf("overlay-recent:com.example.gallery", "overlay-recent:com.example.camera"),
+            content.recentShortcuts.map { it.id.value },
+        )
     }
 
     private fun shortcut(
