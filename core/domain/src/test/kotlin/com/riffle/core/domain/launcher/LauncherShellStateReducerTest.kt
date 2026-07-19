@@ -36,20 +36,21 @@ class LauncherShellStateReducerTest {
     }
 
     @Test
-    fun completedFirstRunStaysCompleteWhenRoleCannotBeDetermined() {
+    fun completedFirstRunDoesNotOverrideUnknownLiveHomeStatus() {
         val state =
             reducer.homeRoleChanged(
                 currentState = LauncherShellState(firstRunStatus = FirstRunStatus.COMPLETE),
                 homeRoleStatus = HomeRoleStatus.UNKNOWN,
             )
 
-        assertEquals(FirstRunStatus.COMPLETE, state.firstRunStatus)
+        assertEquals(FirstRunStatus.NEEDS_HOME_ROLE, state.firstRunStatus)
+        assertEquals(HomeRoleStatus.UNKNOWN, state.homeRoleStatus)
         assertTrue(state.shouldShowSetupCard)
         assertTrue(state.shouldShowEmptyHome)
     }
 
     @Test
-    fun completedDefaultHomeStaysDefaultWhenRoleCannotBeDetermined() {
+    fun completedDefaultHomeDoesNotOverrideUnknownLiveHomeStatus() {
         val state =
             reducer.homeRoleChanged(
                 currentState =
@@ -60,8 +61,9 @@ class LauncherShellStateReducerTest {
                 homeRoleStatus = HomeRoleStatus.UNKNOWN,
             )
 
-        assertEquals(HomeRoleStatus.DEFAULT_HOME, state.homeRoleStatus)
-        assertFalse(state.shouldShowSetupCard)
+        assertEquals(FirstRunStatus.NEEDS_HOME_ROLE, state.firstRunStatus)
+        assertEquals(HomeRoleStatus.UNKNOWN, state.homeRoleStatus)
+        assertTrue(state.shouldShowSetupCard)
     }
 
     @Test

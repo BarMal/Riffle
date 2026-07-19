@@ -5,15 +5,13 @@ class LauncherShellStateReducer {
         currentState: LauncherShellState,
         homeRoleStatus: HomeRoleStatus,
     ): LauncherShellState {
-        val refreshedHomeRoleStatus = currentState.preservedHomeRoleStatus(homeRoleStatus)
-
         return currentState.copy(
             firstRunStatus =
                 firstRunStatusFor(
                     currentState = currentState,
-                    homeRoleStatus = refreshedHomeRoleStatus,
+                    homeRoleStatus = homeRoleStatus,
                 ),
-            homeRoleStatus = refreshedHomeRoleStatus,
+            homeRoleStatus = homeRoleStatus,
         )
     }
 
@@ -37,22 +35,10 @@ class LauncherShellStateReducer {
         homeRoleStatus: HomeRoleStatus,
     ): FirstRunStatus =
         when {
-            currentState.firstRunStatus == FirstRunStatus.COMPLETE -> FirstRunStatus.COMPLETE
             homeRoleStatus == HomeRoleStatus.DEFAULT_HOME -> FirstRunStatus.COMPLETE
             currentState.firstRunStatus == FirstRunStatus.REQUESTING_HOME_ROLE &&
                 homeRoleStatus == HomeRoleStatus.UNKNOWN -> FirstRunStatus.REQUESTING_HOME_ROLE
             else -> FirstRunStatus.NEEDS_HOME_ROLE
-        }
-
-    private fun LauncherShellState.preservedHomeRoleStatus(refreshedStatus: HomeRoleStatus): HomeRoleStatus =
-        if (
-            firstRunStatus == FirstRunStatus.COMPLETE &&
-            homeRoleStatus == HomeRoleStatus.DEFAULT_HOME &&
-            refreshedStatus == HomeRoleStatus.UNKNOWN
-        ) {
-            HomeRoleStatus.DEFAULT_HOME
-        } else {
-            refreshedStatus
         }
 
     private val ShellNavigationAction.destination: ShellDestination
