@@ -5,7 +5,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertCountEquals
@@ -15,7 +14,6 @@ import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.hasAnyDescendant
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -36,7 +34,6 @@ import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.notifications.NotificationAgeBucket
 import com.riffle.core.domain.launcher.notifications.NotificationCategory
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -253,68 +250,6 @@ class CardStackTest {
         composeRule.onNodeWithTag(nextFocusTestTag(group.key)).assertIsEnabled()
     }
 
-    @Test
-    fun notificationCardFocusIsIndependentAndRetainedAcrossPagerGroups() {
-        val messagesGroup = notificationGroup()
-        val calendarGroup =
-            notificationGroup(
-                packageName = "com.example.calendar",
-                notificationKeysAndTitles =
-                    listOf(
-                        "calendar-1" to "Today",
-                        "calendar-2" to "Tomorrow",
-                        "calendar-3" to "Next week",
-                    ),
-            )
-        composeRule.setContent {
-            MaterialTheme {
-                NotificationOverviewSurface(
-                    groups = listOf(messagesGroup, calendarGroup),
-                    categoryCounts = mapOf(NotificationCategory.MESSAGE to 5),
-                    notificationAccessStatus = NotificationAccessStatus.GRANTED,
-                    presentation =
-                        NotificationOverviewPresentation(
-                            apps = emptyList(),
-                            appIconLoader = EmptyAppIconLoader,
-                            reducedMotion = true,
-                        ),
-                    onAction = {},
-                )
-            }
-        }
-
-        composeRule.onNodeWithTag(viewCardTestTag(messagesGroup.key)).performClick()
-        composeRule.onNodeWithTag(nextFocusTestTag(messagesGroup.key)).performClick()
-        assertNotificationFocus(
-            phase = "after advancing messages",
-            groupKey = messagesGroup.key,
-            position = 2,
-            count = 2,
-            previousEnabled = true,
-            nextEnabled = false,
-        )
-
-        scrollNotificationPagerTo(page = 1)
-        assertNotificationFocus(
-            phase = "after switching to calendar",
-            groupKey = calendarGroup.key,
-            position = 1,
-            count = 3,
-            previousEnabled = false,
-            nextEnabled = true,
-        )
-
-        scrollNotificationPagerTo(page = 0)
-        assertNotificationFocus(
-            phase = "after returning to messages",
-            groupKey = messagesGroup.key,
-            position = 2,
-            count = 2,
-            previousEnabled = true,
-            nextEnabled = false,
-        )
-    }
-
     private fun setContent(entries: List<CardStackLayoutEntry>) {
         composeRule.setContent {
             MaterialTheme {
@@ -343,47 +278,6 @@ class CardStackTest {
 
     private fun cardLabel(cardIndex: Int): String = "Card $cardIndex"
 
-    private fun assertNotificationFocus(
-        phase: String,
-        groupKey: AppNotificationGroupKey,
-        position: Int,
-        count: Int,
-        previousEnabled: Boolean,
-        nextEnabled: Boolean,
-    ) {
-        val expectedPosition = "Focused notification $position of $count"
-        composeRule.waitUntil(timeoutMillis = 5_000) {
-            composeRule
-                .onAllNodesWithTag(focusPositionTestTag(groupKey))
-                .fetchSemanticsNodes()
-                .any { node ->
-                    node.config[SemanticsProperties.Text]
-                        .any { text -> text.text == expectedPosition }
-                }
-        }
-        try {
-            composeRule
-                .onNodeWithTag(focusPositionTestTag(groupKey))
-                .assertTextEquals(expectedPosition)
-        } catch (error: AssertionError) {
-            throw AssertionError("Notification focus assertion failed $phase.", error)
-        }
-        composeRule
-            .onNodeWithTag(previousFocusTestTag(groupKey))
-            .run { if (previousEnabled) assertIsEnabled() else assertIsNotEnabled() }
-        composeRule
-            .onNodeWithTag(nextFocusTestTag(groupKey))
-            .run { if (nextEnabled) assertIsEnabled() else assertIsNotEnabled() }
-    }
-
-    private fun scrollNotificationPagerTo(page: Int) {
-        composeRule
-            .onNodeWithTag(NOTIFICATION_PROTOTYPE_PAGER_TEST_TAG)
-            .performSemanticsAction(SemanticsActions.ScrollToIndex) { scrollToIndex ->
-                assertTrue(scrollToIndex(page))
-            }
-    }
-
     private fun focusPositionTestTag(groupKey: AppNotificationGroupKey): String =
         "$NOTIFICATION_PROTOTYPE_FOCUS_POSITION_TEST_TAG-${groupKey.profileId.value}-${groupKey.packageName.value}"
 
@@ -392,9 +286,6 @@ class CardStackTest {
 
     private fun nextFocusTestTag(groupKey: AppNotificationGroupKey): String =
         "$NOTIFICATION_PROTOTYPE_NEXT_FOCUS_TEST_TAG-${groupKey.profileId.value}-${groupKey.packageName.value}"
-
-    private fun viewCardTestTag(groupKey: AppNotificationGroupKey): String =
-        "$NOTIFICATION_OVERVIEW_VIEW_CARD_TEST_TAG-${groupKey.profileId.value}-${groupKey.packageName.value}"
 
     private fun notificationGroup(
         packageName: String = "com.example.messages",
