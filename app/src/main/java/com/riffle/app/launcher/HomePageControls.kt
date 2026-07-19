@@ -7,6 +7,7 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,6 +16,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
@@ -37,13 +39,23 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.ProgressBarRangeInfo
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.progressBarRangeInfo
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.setProgress
+import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import com.riffle.app.launcher.widgets.HomeWidgetViewFactory
 import com.riffle.core.domain.launcher.home.GeneratedLauncherPageKind
 import com.riffle.core.domain.launcher.home.GridDimensions
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.LauncherPageType
+import kotlin.math.roundToInt
 
 @Composable
 fun PageEditControls(
@@ -467,10 +479,24 @@ internal fun pageOverviewActionsMenuItems(
 fun PageIndicator(
     pageCount: Int,
     selectedPageIndex: Int,
+    onPageSelected: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val layoutDirection = LocalLayoutDirection.current
     Row(
-        modifier = modifier,
+        modifier =
+            Modifier
+                .heightIn(min = PAGE_INDICATOR_TOUCH_TARGET_HEIGHT_DP.dp)
+                .then(modifier)
+                .pageIndicatorSemantics(
+                    pageCount = pageCount,
+                    selectedPageIndex = selectedPageIndex,
+                    onPageSelected = onPageSelected,
+                ).pageIndicatorDrag(
+                    pageCount = pageCount,
+                    layoutDirection = layoutDirection,
+                    onPageSelected = onPageSelected,
+                ),
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -498,6 +524,86 @@ fun PageIndicator(
         }
     }
 }
+
+private fun Modifier.pageIndicatorSemantics(
+    pageCount: Int,
+    selectedPageIndex: Int,
+    onPageSelected: (Int) -> Unit,
+): Modifier =
+    semantics {
+        contentDescription = "Page selector"
+        stateDescription = pageIndicatorStateDescription(selectedPageIndex, pageCount)
+        progressBarRangeInfo =
+            ProgressBarRangeInfo(
+                current = selectedPageIndex.toFloat(),
+                range = 0f..(pageCount - 1).coerceAtLeast(0).toFloat(),
+                steps = (pageCount - 2).coerceAtLeast(0),
+            )
+        if (pageCount > 1) {
+            setProgress { targetValue ->
+                onPageSelected(targetValue.roundToInt().coerceIn(0, pageCount - 1))
+                true
+            }
+        }
+    }
+
+private fun Modifier.pageIndicatorDrag(
+    pageCount: Int,
+    layoutDirection: LayoutDirection,
+    onPageSelected: (Int) -> Unit,
+): Modifier =
+    if (pageCount <= 1) {
+        this
+    } else {
+        pointerInput(pageCount, layoutDirection, onPageSelected) {
+            var targetPageIndex = 0
+
+            detectHorizontalDragGestures(
+                onDragStart = { position ->
+                    targetPageIndex =
+                        pageIndicatorDragTargetIndex(
+                            dragPositionPx = position.x,
+                            trackWidthPx = size.width.toFloat(),
+                            pageCount = pageCount,
+                            layoutDirection = layoutDirection,
+                        )
+                },
+                onHorizontalDrag = { change, _ ->
+                    change.consume()
+                    targetPageIndex =
+                        pageIndicatorDragTargetIndex(
+                            dragPositionPx = change.position.x,
+                            trackWidthPx = size.width.toFloat(),
+                            pageCount = pageCount,
+                            layoutDirection = layoutDirection,
+                        )
+                },
+                onDragEnd = { onPageSelected(targetPageIndex) },
+            )
+        }
+    }
+
+internal fun pageIndicatorDragTargetIndex(
+    dragPositionPx: Float,
+    trackWidthPx: Float,
+    pageCount: Int,
+    layoutDirection: LayoutDirection = LayoutDirection.Ltr,
+): Int {
+    if (pageCount <= 1 || trackWidthPx <= 0f) return 0
+
+    val trackProgress = dragPositionPx / trackWidthPx
+    val logicalProgress = if (layoutDirection == LayoutDirection.Rtl) 1f - trackProgress else trackProgress
+    return (logicalProgress * (pageCount - 1))
+        .roundToInt()
+        .coerceIn(0, pageCount - 1)
+}
+
+internal fun pageIndicatorStateDescription(
+    selectedPageIndex: Int,
+    pageCount: Int,
+): String = "Page ${selectedPageIndex + 1} of $pageCount"
+
+private const val PAGE_INDICATOR_TOUCH_TARGET_HEIGHT_DP = 48
 
 @Composable
 private fun pageIndicatorColor(isSelected: Boolean) =

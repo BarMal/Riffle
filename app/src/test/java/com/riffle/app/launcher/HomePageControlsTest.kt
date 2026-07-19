@@ -1,5 +1,6 @@
 package com.riffle.app.launcher
 
+import androidx.compose.ui.unit.LayoutDirection
 import com.riffle.core.domain.launcher.apps.AppActivityName
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
@@ -19,6 +20,93 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class HomePageControlsTest {
+    @Test
+    fun pageIndicatorDragMapsTrackPositionToPageIndex() {
+        assertEquals(
+            0,
+            pageIndicatorDragTargetIndex(
+                dragPositionPx = 0f,
+                trackWidthPx = 100f,
+                pageCount = 5,
+            ),
+        )
+        assertEquals(
+            2,
+            pageIndicatorDragTargetIndex(
+                dragPositionPx = 50f,
+                trackWidthPx = 100f,
+                pageCount = 5,
+            ),
+        )
+        assertEquals(
+            4,
+            pageIndicatorDragTargetIndex(
+                dragPositionPx = 100f,
+                trackWidthPx = 100f,
+                pageCount = 5,
+            ),
+        )
+    }
+
+    @Test
+    fun pageIndicatorDragClampsOutOfBoundsAndDegenerateTracks() {
+        assertEquals(
+            0,
+            pageIndicatorDragTargetIndex(
+                dragPositionPx = -10f,
+                trackWidthPx = 100f,
+                pageCount = 3,
+            ),
+        )
+        assertEquals(
+            2,
+            pageIndicatorDragTargetIndex(
+                dragPositionPx = 200f,
+                trackWidthPx = 100f,
+                pageCount = 3,
+            ),
+        )
+        assertEquals(
+            0,
+            pageIndicatorDragTargetIndex(
+                dragPositionPx = 50f,
+                trackWidthPx = 0f,
+                pageCount = 3,
+            ),
+        )
+    }
+
+    @Test
+    fun pageIndicatorDragMapsPhysicalPositionsToVisualOrderInRtl() {
+        assertEquals(
+            4,
+            pageIndicatorDragTargetIndex(
+                dragPositionPx = 0f,
+                trackWidthPx = 100f,
+                pageCount = 5,
+                layoutDirection = LayoutDirection.Rtl,
+            ),
+        )
+        assertEquals(
+            2,
+            pageIndicatorDragTargetIndex(
+                dragPositionPx = 50f,
+                trackWidthPx = 100f,
+                pageCount = 5,
+                layoutDirection = LayoutDirection.Rtl,
+            ),
+        )
+        assertEquals(
+            0,
+            pageIndicatorDragTargetIndex(
+                dragPositionPx = 100f,
+                trackWidthPx = 100f,
+                pageCount = 5,
+                layoutDirection = LayoutDirection.Rtl,
+            ),
+        )
+    }
+
     @Test
     fun pageOverviewOnlyOffersPinningForGeneratedPages() {
         assertEquals(null, pageOverviewPinActionLabel(LauncherPageType.Home, isPinned = false))
