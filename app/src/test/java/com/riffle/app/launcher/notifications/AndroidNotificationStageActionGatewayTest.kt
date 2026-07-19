@@ -46,7 +46,10 @@ class AndroidNotificationStageActionGatewayTest {
         )
     }
 
-    private fun playbackState(state: Int, actions: Long): PlaybackState =
+    private fun playbackState(
+        state: Int,
+        actions: Long,
+    ): PlaybackState =
         PlaybackState.Builder()
             .setState(state, 0L, 1f)
             .setActions(actions)
