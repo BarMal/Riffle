@@ -7,6 +7,7 @@ import com.riffle.core.domain.launcher.apps.AppProfile
 import com.riffle.core.domain.launcher.cards.AppStageId
 import com.riffle.core.domain.launcher.cards.CardsChapterId
 import com.riffle.core.domain.launcher.cards.CardsChapterPreferences
+import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.HomeLayoutKey
 import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.home.WallpaperSettings
@@ -59,6 +60,20 @@ class LauncherSettingsTest {
         val updatedCards = migrated.copy(chapterPreferences = CardsChapterPreferences(listOf(calendar), calendar))
 
         assertEquals(migrated.stagePreferencesFor(key), updatedCards.stagePreferencesFor(key))
+    }
+
+    @Test
+    fun materializesIndependentStageIntentForEveryCompatibleVariant() {
+        val mail = CardsChapterId.App(AppPackageName("com.riffle.mail"), AppProfile.personal().id)
+        val phone = HomeLayoutKey(LauncherViewMode.CARD_INTERFACE, HomeLayoutDeviceClass.PHONE)
+        val tablet = HomeLayoutKey(LauncherViewMode.CARD_INTERFACE, HomeLayoutDeviceClass.TABLET)
+        val migrated =
+            CardsSettings(chapterPreferences = CardsChapterPreferences(listOf(mail), mail))
+                .withMigratedStagePreferences(listOf(phone, tablet))
+        val updatedCards = migrated.copy(chapterPreferences = CardsChapterPreferences())
+
+        assertEquals(migrated.stagePreferencesFor(phone), updatedCards.stagePreferencesFor(phone))
+        assertEquals(migrated.stagePreferencesFor(tablet), updatedCards.stagePreferencesFor(tablet))
     }
 
     @Test

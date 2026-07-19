@@ -27,11 +27,13 @@ import com.riffle.core.domain.launcher.home.FolderEngine
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
+import com.riffle.core.domain.launcher.home.HomeLayoutKey
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
 import com.riffle.core.domain.launcher.home.HomeLayoutSet
 import com.riffle.core.domain.launcher.home.HomeShortcutEngine
 import com.riffle.core.domain.launcher.home.HomeShortcutResult
 import com.riffle.core.domain.launcher.home.HostedWidgetId
+import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.home.LauncherViewModeAvailability
 import com.riffle.core.domain.launcher.home.PlacementRejectionReason
 import com.riffle.core.domain.launcher.home.WidgetEditResult
@@ -493,7 +495,7 @@ private fun createInitialState(
     val storedSettings = launcherSettingsRepository.loadLauncherSettings() ?: LauncherSettings()
     val launcherSettings =
         storedSettings.copy(
-            cards = storedSettings.cards.withMigratedStagePreferences(layoutSet.activeKey),
+            cards = storedSettings.cards.withMigratedStagePreferences(layoutSet.stagePreferenceLayoutKeys()),
         )
     if (launcherSettings != storedSettings) {
         launcherSettingsRepository.saveLauncherSettings(launcherSettings)
@@ -515,6 +517,11 @@ private fun createInitialState(
         setupCardDismissed = firstRunRepository.isSetupCardDismissed(),
     )
 }
+
+private fun HomeLayoutSet.stagePreferenceLayoutKeys(): Set<HomeLayoutKey> =
+    layouts.keys + HomeLayoutDeviceClass.entries.map { deviceClass ->
+        HomeLayoutKey(viewMode = LauncherViewMode.CARD_INTERFACE, deviceClass = deviceClass)
+    }
 
 private fun HomeLayoutSet.selectInitialDeviceClass(
     deviceClass: HomeLayoutDeviceClass,

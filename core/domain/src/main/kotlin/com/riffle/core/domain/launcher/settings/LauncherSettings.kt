@@ -44,6 +44,9 @@ fun CardsSettings.withMigratedStagePreferences(layoutKey: HomeLayoutKey): CardsS
         withStagePreferences(layoutKey, stagePreferencesFor(layoutKey))
     }
 
+fun CardsSettings.withMigratedStagePreferences(layoutKeys: Iterable<HomeLayoutKey>): CardsSettings =
+    layoutKeys.fold(this) { settings, layoutKey -> settings.withMigratedStagePreferences(layoutKey) }
+
 private fun CardsChapterPreferences.toStagePreferences(): AppStagePreferences =
     AppStagePreferences(
         pinnedStageIds = pinnedChapterIds.map(CardsChapterId.App::toAppStageId),
