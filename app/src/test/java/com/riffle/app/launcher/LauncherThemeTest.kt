@@ -100,7 +100,7 @@ class LauncherThemeTest {
     }
 
     @Test
-    fun selectedAccentAlsoThemesDockAndElevatedSurfaceRoles() {
+    fun selectedAccentAlsoThemesDockSurfaceAndOutlineRoles() {
         LauncherThemeAccent.entries
             .filterNot { accent -> accent == LauncherThemeAccent.DEFAULT }
             .forEach { accent ->
@@ -109,8 +109,12 @@ class LauncherThemeTest {
 
                 assertNotEquals(lightScheme.surfaceVariant, accentedLightScheme.surfaceVariant)
                 assertNotEquals(darkScheme.surfaceVariant, accentedDarkScheme.surfaceVariant)
+                assertNotEquals(lightScheme.outlineVariant, accentedLightScheme.outlineVariant)
+                assertNotEquals(darkScheme.outlineVariant, accentedDarkScheme.outlineVariant)
                 assertEquals(accentedLightScheme.surfaceVariant, accentedLightScheme.surfaceContainerHigh)
                 assertEquals(accentedDarkScheme.surfaceVariant, accentedDarkScheme.surfaceContainerHighest)
+                assertEquals(accentedLightScheme.secondary, accentedLightScheme.outlineVariant)
+                assertEquals(accentedDarkScheme.secondary, accentedDarkScheme.outlineVariant)
             }
     }
 
