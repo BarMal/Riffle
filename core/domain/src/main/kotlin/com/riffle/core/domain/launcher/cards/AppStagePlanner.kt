@@ -123,8 +123,10 @@ private fun originsFor(
         if (content.isNotEmpty() || retainEmptyDynamic) add(AppStageOrigin.DYNAMIC)
     }
 
-private fun selectedStageId(selection: AppStageId?, stages: List<AppStage>): AppStageId? =
-    selection.takeIf { selected -> stages.any { it.id == selected } } ?: stages.firstOrNull()?.id
+private fun selectedStageId(
+    selection: AppStageId?,
+    stages: List<AppStage>,
+): AppStageId? = selection.takeIf { selected -> stages.any { it.id == selected } } ?: stages.firstOrNull()?.id
 
 private fun normalize(content: List<AppStageContent>): List<AppStageContent> =
     content.groupBy(AppStageContent::id).values.map { duplicates ->

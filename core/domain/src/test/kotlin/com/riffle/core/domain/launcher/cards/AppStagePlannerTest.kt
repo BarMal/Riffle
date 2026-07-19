@@ -2,7 +2,6 @@ package com.riffle.core.domain.launcher.cards
 
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppProfile
-import com.riffle.core.domain.launcher.apps.AppProfileId
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -167,9 +166,11 @@ class AppStagePlannerTest {
             },
         )
 
-    private fun stage(name: String, profile: AppProfile = AppProfile.personal()) =
-        AppStageId(
-            packageName = AppPackageName("com.riffle.$name"),
-            profileId = profile.id,
-        )
+    private fun stage(
+        name: String,
+        profile: AppProfile = AppProfile.personal(),
+    ) = AppStageId(
+        packageName = AppPackageName("com.riffle.$name"),
+        profileId = profile.id,
+    )
 }

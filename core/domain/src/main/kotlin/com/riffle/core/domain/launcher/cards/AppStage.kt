@@ -76,10 +76,12 @@ data class AppStagePreferences(
     fun pin(stageId: AppStageId): AppStagePreferences =
         if (stageId in pinnedStageIds) this else copy(pinnedStageIds = pinnedStageIds + stageId)
 
-    fun unpin(stageId: AppStageId): AppStagePreferences =
-        copy(pinnedStageIds = pinnedStageIds - stageId)
+    fun unpin(stageId: AppStageId): AppStagePreferences = copy(pinnedStageIds = pinnedStageIds - stageId)
 
-    fun movePinnedStage(stageId: AppStageId, targetIndex: Int): AppStagePreferences {
+    fun movePinnedStage(
+        stageId: AppStageId,
+        targetIndex: Int,
+    ): AppStagePreferences {
         val sourceIndex = pinnedStageIds.indexOf(stageId)
         if (sourceIndex < 0) return this
         val reordered = pinnedStageIds.toMutableList()
