@@ -29,6 +29,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -48,13 +49,16 @@ import com.riffle.core.domain.launcher.cards.CardStackSurfaceLayoutPolicy
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroupKey
 import com.riffle.core.domain.launcher.notifications.LauncherNotification
+import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
 
 @Composable
-@Suppress("LongMethod")
+@Suppress("LongMethod", "LongParameterList")
 internal fun NotificationGroupPrototype(
     groups: List<AppNotificationGroup>,
     selectedGroupKey: AppNotificationGroupKey,
     presentation: NotificationOverviewPresentation,
+    focusedNotificationKeys: Map<AppNotificationGroupKey, LauncherNotificationKey>,
+    onFocusChanged: (AppNotificationGroupKey, LauncherNotificationKey) -> Unit,
     onBack: () -> Unit,
     onGroupChanged: (AppNotificationGroupKey) -> Unit,
     onAction: (LauncherShellAction) -> Unit,
@@ -65,8 +69,10 @@ internal fun NotificationGroupPrototype(
             initialPage = selectedGroupIndex,
             pageCount = { groups.size },
         )
-
-    LaunchedEffect(groups, pagerState.currentPage) {
+    LaunchedEffect(groups, selectedGroupKey) {
+        pagerState.scrollToPage(selectedGroupIndex)
+    }
+    LaunchedEffect(pagerState.currentPage) {
         groups.getOrNull(pagerState.currentPage)?.let { group ->
             onGroupChanged(group.key)
         }
@@ -79,83 +85,104 @@ internal fun NotificationGroupPrototype(
         key = { page -> "${groups[page].profileId.value}:${groups[page].packageName.value}" },
     ) { page ->
         val group = groups[page]
-        val app = presentation.apps.firstOrNull { installedApp -> installedApp.matches(group) }
-        val listState = rememberLazyListState()
-        val focusedNotification =
-            notificationOverviewFocusedNotification(
-                notifications = group.notifications,
-                firstVisibleItemIndex = listState.firstVisibleItemIndex,
-            ) ?: return@HorizontalPager
-        val upcomingNotification =
-            group.notifications.getOrNull(listState.firstVisibleItemIndex.coerceAtLeast(0) + 1)
-        val swipeProgress =
-            notificationOverviewScrollProgress(
-                firstVisibleItemScrollOffset = listState.firstVisibleItemScrollOffset,
-                firstVisibleItemSize = listState.firstVisibleItemSize,
-            )
-        val label = notificationOverviewGroupLabel(app = app, group = group)
-        val heroPresentation = NotificationPrototypeHeroPresentation(group, app, presentation)
-        val notificationList: @Composable (Modifier) -> Unit = { modifier ->
-            LazyColumn(
-                state = listState,
-                modifier = modifier.fillMaxWidth(),
-                contentPadding = PaddingValues(vertical = 4.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                items(
-                    items = group.notifications,
-                    key = { notification -> notification.key.value },
-                ) { notification ->
-                    NotificationPrototypeCard(
-                        notification = notification,
-                        label = label,
-                        onAction = onAction,
-                    )
+        if (group.notifications.isEmpty()) return@HorizontalPager
+        key(group.key) {
+            val app = presentation.apps.firstOrNull { installedApp -> installedApp.matches(group) }
+            val listState = rememberLazyListState()
+            val activeNotificationIndex =
+                group.notifications
+                    .indexOfFirst { notification -> notification.key == focusedNotificationKeys[group.key] }
+                    .takeIf { index -> index >= 0 }
+                    ?: 0
+            val focusedNotification =
+                group.notifications.getOrNull(activeNotificationIndex) ?: return@HorizontalPager
+            val upcomingNotification =
+                group.notifications.getOrNull(activeNotificationIndex + 1)
+            val focusControls =
+                NotificationFocusControls(
+                    focusedNotification = focusedNotification,
+                    focusedPosition = activeNotificationIndex + 1,
+                    notificationCount = group.notifications.size,
+                    canFocusPrevious = activeNotificationIndex > 0,
+                    canFocusNext = activeNotificationIndex < group.notifications.lastIndex,
+                    onFocusPrevious = {
+                        onFocusChanged(group.key, group.notifications[activeNotificationIndex - 1].key)
+                    },
+                    onFocusNext = {
+                        onFocusChanged(group.key, group.notifications[activeNotificationIndex + 1].key)
+                    },
+                )
+            val swipeProgress =
+                notificationOverviewScrollProgress(
+                    firstVisibleItemScrollOffset = listState.firstVisibleItemScrollOffset,
+                    firstVisibleItemSize = listState.firstVisibleItemSize,
+                )
+            val label = notificationOverviewGroupLabel(app = app, group = group)
+            val heroPresentation = NotificationPrototypeHeroPresentation(group, app, presentation)
+            val notificationList: @Composable (Modifier) -> Unit = { modifier ->
+                LazyColumn(
+                    state = listState,
+                    modifier = modifier.fillMaxWidth(),
+                    contentPadding = PaddingValues(vertical = 4.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    items(
+                        items = group.notifications,
+                        key = { notification -> notification.key.value },
+                    ) { notification ->
+                        NotificationPrototypeCard(
+                            notification = notification,
+                            label = label,
+                            onAction = onAction,
+                        )
+                    }
                 }
             }
-        }
 
-        Column(
-            modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            NotificationPrototypeActions(
-                group = group,
-                app = app,
-                onBack = onBack,
-                onAction = onAction,
-            )
-            when (CardStackSurfaceLayoutPolicy().layoutFor(presentation.deviceClass)) {
-                CardStackSurfaceLayout.CENTER_STAGE ->
-                    Column(
-                        modifier = Modifier.fillMaxSize().testTag(NOTIFICATION_PROTOTYPE_CENTER_STAGE_TEST_TAG),
-                        verticalArrangement = Arrangement.spacedBy(16.dp),
-                    ) {
-                        NotificationPrototypeHero(
-                            notification = focusedNotification,
-                            upcomingNotification = upcomingNotification,
-                            swipeProgress = swipeProgress,
-                            presentation = heroPresentation,
-                            modifier = Modifier.weight(1f),
-                        )
-                        notificationList(Modifier.weight(1f))
-                    }
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                NotificationPrototypeActions(
+                    group = group,
+                    app = app,
+                    onBack = onBack,
+                    onAction = onAction,
+                )
+                when (CardStackSurfaceLayoutPolicy().layoutFor(presentation.deviceClass)) {
+                    CardStackSurfaceLayout.CENTER_STAGE ->
+                        Column(
+                            modifier = Modifier.fillMaxSize().testTag(NOTIFICATION_PROTOTYPE_CENTER_STAGE_TEST_TAG),
+                            verticalArrangement = Arrangement.spacedBy(16.dp),
+                        ) {
+                            NotificationPrototypeHero(
+                                notification = focusedNotification,
+                                upcomingNotification = upcomingNotification,
+                                swipeProgress = swipeProgress,
+                                presentation = heroPresentation,
+                                focusControls = focusControls,
+                                modifier = Modifier.weight(1f),
+                            )
+                            notificationList(Modifier.weight(1f))
+                        }
 
-                CardStackSurfaceLayout.SIDE_BY_SIDE ->
-                    Row(
-                        modifier = Modifier.fillMaxSize().testTag(NOTIFICATION_PROTOTYPE_SIDE_BY_SIDE_TEST_TAG),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp),
-                    ) {
-                        NotificationPrototypeHero(
-                            notification = focusedNotification,
-                            upcomingNotification = upcomingNotification,
-                            swipeProgress = swipeProgress,
-                            presentation = heroPresentation,
-                            modifier = Modifier.weight(1f),
-                        )
-                        notificationList(Modifier.weight(1f))
-                    }
+                    CardStackSurfaceLayout.SIDE_BY_SIDE ->
+                        Row(
+                            modifier = Modifier.fillMaxSize().testTag(NOTIFICATION_PROTOTYPE_SIDE_BY_SIDE_TEST_TAG),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        ) {
+                            NotificationPrototypeHero(
+                                notification = focusedNotification,
+                                upcomingNotification = upcomingNotification,
+                                swipeProgress = swipeProgress,
+                                presentation = heroPresentation,
+                                focusControls = focusControls,
+                                modifier = Modifier.weight(1f),
+                            )
+                            notificationList(Modifier.weight(1f))
+                        }
+                }
             }
         }
     }
@@ -163,6 +190,10 @@ internal fun NotificationGroupPrototype(
 
 internal const val NOTIFICATION_PROTOTYPE_CENTER_STAGE_TEST_TAG = "notification-prototype-center-stage"
 internal const val NOTIFICATION_PROTOTYPE_SIDE_BY_SIDE_TEST_TAG = "notification-prototype-side-by-side"
+internal const val NOTIFICATION_PROTOTYPE_FOCUS_POSITION_TEST_TAG = "notification-prototype-focus-position"
+internal const val NOTIFICATION_PROTOTYPE_FOCUSED_TITLE_TEST_TAG = "notification-prototype-focused-title"
+internal const val NOTIFICATION_PROTOTYPE_PREVIOUS_FOCUS_TEST_TAG = "notification-prototype-previous-focus"
+internal const val NOTIFICATION_PROTOTYPE_NEXT_FOCUS_TEST_TAG = "notification-prototype-next-focus"
 
 internal fun notificationOverviewSelectedGroupIndex(
     groups: List<AppNotificationGroup>,
@@ -218,6 +249,7 @@ private fun NotificationPrototypeHero(
     upcomingNotification: LauncherNotification?,
     swipeProgress: Float,
     presentation: NotificationPrototypeHeroPresentation,
+    focusControls: NotificationFocusControls,
     modifier: Modifier = Modifier,
 ) {
     val label = notificationOverviewGroupLabel(app = presentation.app, group = presentation.group)
@@ -266,9 +298,10 @@ private fun NotificationPrototypeHero(
                     ),
         )
         NotificationPrototypeHeroDetails(
-            notification = featuredNotification,
+            notification = focusControls.focusedNotification,
             fallbackLabel = label,
             group = presentation.group,
+            focusControls = focusControls,
         )
     }
 }
@@ -279,12 +312,24 @@ private data class NotificationPrototypeHeroPresentation(
     val overviewPresentation: NotificationOverviewPresentation,
 )
 
+private data class NotificationFocusControls(
+    val focusedNotification: LauncherNotification,
+    val focusedPosition: Int,
+    val notificationCount: Int,
+    val canFocusPrevious: Boolean,
+    val canFocusNext: Boolean,
+    val onFocusPrevious: () -> Unit,
+    val onFocusNext: () -> Unit,
+)
+
 @Composable
 private fun BoxScope.NotificationPrototypeHeroDetails(
     notification: LauncherNotification,
     fallbackLabel: String,
     group: AppNotificationGroup,
+    focusControls: NotificationFocusControls,
 ) {
+    val groupTestTagSuffix = "${group.profileId.value}-${group.packageName.value}"
     Surface(
         modifier =
             Modifier
@@ -303,6 +348,10 @@ private fun BoxScope.NotificationPrototypeHeroDetails(
                 style = MaterialTheme.typography.headlineSmall,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
+                modifier =
+                    Modifier.testTag(
+                        "$NOTIFICATION_PROTOTYPE_FOCUSED_TITLE_TEST_TAG-$groupTestTagSuffix",
+                    ),
             )
             Text(
                 text = notification.text.ifBlank { group.notificationOverviewMetadataLabel(fallbackLabel) },
@@ -310,6 +359,36 @@ private fun BoxScope.NotificationPrototypeHeroDetails(
                 maxLines = 4,
                 overflow = TextOverflow.Ellipsis,
             )
+            Text(
+                text = "Focused notification ${focusControls.focusedPosition} of ${focusControls.notificationCount}",
+                style = MaterialTheme.typography.labelMedium,
+                modifier =
+                    Modifier.testTag(
+                        "$NOTIFICATION_PROTOTYPE_FOCUS_POSITION_TEST_TAG-$groupTestTagSuffix",
+                    ),
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                TextButton(
+                    onClick = focusControls.onFocusPrevious,
+                    enabled = focusControls.canFocusPrevious,
+                    modifier =
+                        Modifier.testTag(
+                            "$NOTIFICATION_PROTOTYPE_PREVIOUS_FOCUS_TEST_TAG-$groupTestTagSuffix",
+                        ),
+                ) {
+                    Text(text = "Previous notification")
+                }
+                TextButton(
+                    onClick = focusControls.onFocusNext,
+                    enabled = focusControls.canFocusNext,
+                    modifier =
+                        Modifier.testTag(
+                            "$NOTIFICATION_PROTOTYPE_NEXT_FOCUS_TEST_TAG-$groupTestTagSuffix",
+                        ),
+                ) {
+                    Text(text = "Next notification")
+                }
+            }
         }
     }
 }

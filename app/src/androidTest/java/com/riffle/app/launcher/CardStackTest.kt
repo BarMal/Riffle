@@ -3,11 +3,16 @@ package com.riffle.app.launcher
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.hasAnyDescendant
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -23,6 +28,7 @@ import com.riffle.core.domain.launcher.cards.CardStackLayoutEntry
 import com.riffle.core.domain.launcher.cards.CardStackLayoutPolicy
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
+import com.riffle.core.domain.launcher.notifications.AppNotificationGroupKey
 import com.riffle.core.domain.launcher.notifications.LauncherNotification
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
@@ -215,6 +221,197 @@ class CardStackTest {
         composeRule.onNodeWithTag(NOTIFICATION_PROTOTYPE_SIDE_BY_SIDE_TEST_TAG).assertExists()
     }
 
+    @Test
+    fun notificationCardFocusControlsExposeInitialPositionAndBoundaries() {
+        val group = notificationGroup()
+        composeRule.setContent {
+            MaterialTheme {
+                NotificationOverviewSurface(
+                    groups = listOf(group),
+                    categoryCounts = mapOf(NotificationCategory.MESSAGE to 2),
+                    notificationAccessStatus = NotificationAccessStatus.GRANTED,
+                    presentation =
+                        NotificationOverviewPresentation(
+                            apps = emptyList(),
+                            appIconLoader = EmptyAppIconLoader,
+                            reducedMotion = true,
+                        ),
+                    onAction = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("View card").performClick()
+        composeRule
+            .onNodeWithTag(focusPositionTestTag(group.key))
+            .assertTextEquals("Focused notification 1 of 2")
+        composeRule
+            .onNodeWithTag(previousFocusTestTag(group.key))
+            .assertIsNotEnabled()
+        composeRule.onNodeWithTag(nextFocusTestTag(group.key)).assertIsEnabled()
+    }
+
+    @Test
+    fun notificationFocusControlsUpdateAndRetainFocusForEachGroup() {
+        val messagesGroup = notificationGroup()
+        val calendarGroup =
+            notificationGroup(
+                packageName = "com.example.calendar",
+                notificationKeysAndTitles =
+                    listOf(
+                        "calendar-1" to "Today",
+                        "calendar-2" to "Tomorrow",
+                        "calendar-3" to "Next week",
+                    ),
+            )
+        var displayedGroup by mutableStateOf(messagesGroup)
+        val focusedNotificationKeys = mutableStateMapOf<AppNotificationGroupKey, LauncherNotificationKey>()
+
+        composeRule.setContent {
+            MaterialTheme {
+                NotificationGroupPrototype(
+                    groups = listOf(displayedGroup),
+                    selectedGroupKey = displayedGroup.key,
+                    presentation =
+                        NotificationOverviewPresentation(
+                            apps = emptyList(),
+                            appIconLoader = EmptyAppIconLoader,
+                            reducedMotion = true,
+                        ),
+                    focusedNotificationKeys = focusedNotificationKeys,
+                    onFocusChanged = { groupKey, notificationKey ->
+                        focusedNotificationKeys[groupKey] = notificationKey
+                    },
+                    onBack = {},
+                    onGroupChanged = {},
+                    onAction = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(nextFocusTestTag(messagesGroup.key)).performClick()
+        assertNotificationFocusPosition(messagesGroup.key, position = 2, count = 2)
+        composeRule.onNodeWithTag(previousFocusTestTag(messagesGroup.key)).performClick()
+        assertNotificationFocusPosition(messagesGroup.key, position = 1, count = 2)
+        composeRule.onNodeWithTag(nextFocusTestTag(messagesGroup.key)).performClick()
+        assertNotificationFocusPosition(messagesGroup.key, position = 2, count = 2)
+
+        composeRule.runOnIdle { displayedGroup = calendarGroup }
+        assertNotificationFocusPosition(calendarGroup.key, position = 1, count = 3)
+        composeRule.onNodeWithTag(nextFocusTestTag(calendarGroup.key)).performClick()
+        assertNotificationFocusPosition(calendarGroup.key, position = 2, count = 3)
+        composeRule.onNodeWithTag(previousFocusTestTag(calendarGroup.key)).performClick()
+        assertNotificationFocusPosition(calendarGroup.key, position = 1, count = 3)
+
+        composeRule.runOnIdle { displayedGroup = messagesGroup }
+        assertNotificationFocusPosition(messagesGroup.key, position = 2, count = 2)
+    }
+
+    @Test
+    fun notificationGroupRefreshKeepsPagerAndSelectionOnTheSameGroup() {
+        val messagesGroup = notificationGroup()
+        val calendarGroup =
+            notificationGroup(
+                packageName = "com.example.calendar",
+                notificationKeysAndTitles =
+                    listOf(
+                        "calendar-1" to "Today",
+                        "calendar-2" to "Tomorrow",
+                        "calendar-3" to "Next week",
+                    ),
+            )
+        var visibleGroups by mutableStateOf(listOf(messagesGroup, calendarGroup))
+        var selectedGroupKey by mutableStateOf(messagesGroup.key)
+        val focusedNotificationKeys = mutableStateMapOf<AppNotificationGroupKey, LauncherNotificationKey>()
+
+        composeRule.setContent {
+            MaterialTheme {
+                NotificationGroupPrototype(
+                    groups = visibleGroups,
+                    selectedGroupKey = selectedGroupKey,
+                    presentation =
+                        NotificationOverviewPresentation(
+                            apps = emptyList(),
+                            appIconLoader = EmptyAppIconLoader,
+                            reducedMotion = true,
+                        ),
+                    focusedNotificationKeys = focusedNotificationKeys,
+                    onFocusChanged = { groupKey, notificationKey ->
+                        focusedNotificationKeys[groupKey] = notificationKey
+                    },
+                    onBack = {},
+                    onGroupChanged = { groupKey -> selectedGroupKey = groupKey },
+                    onAction = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(nextFocusTestTag(messagesGroup.key)).performClick()
+        assertNotificationFocusPosition(messagesGroup.key, position = 2, count = 2)
+
+        composeRule.runOnIdle {
+            visibleGroups = listOf(calendarGroup, messagesGroup)
+        }
+        composeRule.waitForIdle()
+
+        composeRule.runOnIdle {
+            assertEquals(messagesGroup.key, selectedGroupKey)
+        }
+        composeRule
+            .onNodeWithTag(focusPositionTestTag(messagesGroup.key))
+            .assertIsDisplayed()
+            .assertTextEquals("Focused notification 2 of 2")
+    }
+
+    @Test
+    fun notificationRefreshRetainsFocusOnTheSameNotificationAfterReordering() {
+        val initialGroup = notificationGroup()
+        val refreshedGroup =
+            notificationGroup(
+                notificationKeysAndTitles =
+                    listOf(
+                        "message-2" to "Second",
+                        "message-1" to "First",
+                    ),
+            )
+        var visibleGroups by mutableStateOf(listOf(initialGroup))
+        val focusedNotificationKeys = mutableStateMapOf<AppNotificationGroupKey, LauncherNotificationKey>()
+
+        composeRule.setContent {
+            MaterialTheme {
+                NotificationGroupPrototype(
+                    groups = visibleGroups,
+                    selectedGroupKey = initialGroup.key,
+                    presentation =
+                        NotificationOverviewPresentation(
+                            apps = emptyList(),
+                            appIconLoader = EmptyAppIconLoader,
+                            reducedMotion = true,
+                        ),
+                    focusedNotificationKeys = focusedNotificationKeys,
+                    onFocusChanged = { groupKey, notificationKey ->
+                        focusedNotificationKeys[groupKey] = notificationKey
+                    },
+                    onBack = {},
+                    onGroupChanged = {},
+                    onAction = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(nextFocusTestTag(initialGroup.key)).performClick()
+        composeRule.runOnIdle {
+            assertEquals(LauncherNotificationKey("message-2"), focusedNotificationKeys[initialGroup.key])
+            visibleGroups = listOf(refreshedGroup)
+        }
+        composeRule.waitForIdle()
+
+        composeRule
+            .onNodeWithTag(focusedNotificationTitleTestTag(initialGroup.key))
+            .assertTextEquals("Second")
+        assertNotificationFocusPosition(initialGroup.key, position = 1, count = 2)
+    }
+
     private fun setContent(entries: List<CardStackLayoutEntry>) {
         composeRule.setContent {
             MaterialTheme {
@@ -243,26 +440,52 @@ class CardStackTest {
 
     private fun cardLabel(cardIndex: Int): String = "Card $cardIndex"
 
-    private fun notificationGroup(): AppNotificationGroup =
+    private fun focusPositionTestTag(groupKey: AppNotificationGroupKey): String =
+        "$NOTIFICATION_PROTOTYPE_FOCUS_POSITION_TEST_TAG-${groupKey.profileId.value}-${groupKey.packageName.value}"
+
+    private fun focusedNotificationTitleTestTag(groupKey: AppNotificationGroupKey): String =
+        "$NOTIFICATION_PROTOTYPE_FOCUSED_TITLE_TEST_TAG-${groupKey.profileId.value}-${groupKey.packageName.value}"
+
+    private fun previousFocusTestTag(groupKey: AppNotificationGroupKey): String =
+        "$NOTIFICATION_PROTOTYPE_PREVIOUS_FOCUS_TEST_TAG-${groupKey.profileId.value}-${groupKey.packageName.value}"
+
+    private fun nextFocusTestTag(groupKey: AppNotificationGroupKey): String =
+        "$NOTIFICATION_PROTOTYPE_NEXT_FOCUS_TEST_TAG-${groupKey.profileId.value}-${groupKey.packageName.value}"
+
+    private fun assertNotificationFocusPosition(
+        groupKey: AppNotificationGroupKey,
+        position: Int,
+        count: Int,
+    ) {
+        composeRule
+            .onNodeWithTag(focusPositionTestTag(groupKey))
+            .assertTextEquals("Focused notification $position of $count")
+    }
+
+    private fun notificationGroup(
+        packageName: String = "com.example.messages",
+        notificationKeysAndTitles: List<Pair<String, String>> =
+            listOf(
+                "message-1" to "First",
+                "message-2" to "Second",
+            ),
+    ): AppNotificationGroup =
         AppNotificationGroup(
-            packageName = AppPackageName("com.example.messages"),
+            packageName = AppPackageName(packageName),
             profileId = AppProfile.personal().id,
             latestCategory = NotificationCategory.MESSAGE,
             latestAgeBucket = NotificationAgeBucket.RECENT,
-            notifications =
-                listOf(
-                    notification("message-1", "First"),
-                    notification("message-2", "Second"),
-                ),
+            notifications = notificationKeysAndTitles.map { (key, title) -> notification(key, title, packageName) },
         )
 
     private fun notification(
         key: String,
         title: String,
+        packageName: String = "com.example.messages",
     ): LauncherNotification =
         LauncherNotification(
             key = LauncherNotificationKey(key),
-            packageName = AppPackageName("com.example.messages"),
+            packageName = AppPackageName(packageName),
             category = NotificationCategory.MESSAGE,
             title = title,
             text = "Body",
