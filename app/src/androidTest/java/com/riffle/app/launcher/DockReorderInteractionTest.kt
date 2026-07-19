@@ -28,11 +28,12 @@ class DockReorderInteractionTest {
     val composeRule = createComposeRule()
 
     @Test
-    fun completedLongPressDragCommitsTheCandidateIndex() {
+    fun crossingASlotBoundaryDuringPreviewStillCommitsTheDrag() {
         val camera = shortcut("camera")
         val mail = shortcut("mail")
+        val maps = shortcut("maps")
         val actions = mutableListOf<LauncherShellAction>()
-        setContent(camera, mail, actions)
+        setContent(camera, mail, maps, actions = actions)
 
         composeRule.onNodeWithTag(dockItemTestTag(camera.id)).performTouchInput {
             down(center)
@@ -51,7 +52,7 @@ class DockReorderInteractionTest {
         val camera = shortcut("camera")
         val mail = shortcut("mail")
         val actions = mutableListOf<LauncherShellAction>()
-        setContent(camera, mail, actions)
+        setContent(camera, mail, actions = actions)
 
         composeRule.onNodeWithTag(dockItemTestTag(camera.id)).performTouchInput {
             down(center)
@@ -64,15 +65,14 @@ class DockReorderInteractionTest {
     }
 
     private fun setContent(
-        first: AppShortcutItem,
-        second: AppShortcutItem,
+        vararg shortcuts: AppShortcutItem,
         actions: MutableList<LauncherShellAction>,
     ) {
         composeRule.setContent {
             MaterialTheme {
                 Box(modifier = Modifier.size(260.dp)) {
                     Dock(
-                        dock = DockModel(capacity = 2, items = listOf(first, second)),
+                        dock = DockModel(capacity = shortcuts.size, items = shortcuts.toList()),
                         isEditing = true,
                         notificationGroupsByApp = emptyList(),
                         appShortcutsByApp = emptyMap(),

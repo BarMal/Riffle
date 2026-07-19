@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -84,6 +85,7 @@ internal fun Dock(
     }
 }
 
+@Suppress("LongMethod")
 @Composable
 internal fun DockSlotsRow(
     dock: DockModel,
@@ -121,22 +123,29 @@ internal fun DockSlotsRow(
         ) {
             repeat(renderedSlotCount) { index ->
                 val previewItem = previewItems.getOrNull(index)
-                DockSlot(
-                    modifier = Modifier.requiredSize(slotMetrics.iconSizeDp.dp),
-                    state =
-                        DockSlotState(
-                            item = dockSlotItemState(previewItem),
-                            shortcutIndex = dock.items.indexOfFirst { item -> item.id == previewItem?.id },
-                            shortcutCount = dock.items.size,
-                            iconSizeDp = slotMetrics.iconSizeDp,
-                            itemSpacingDp = slotMetrics.itemSpacingDp,
-                            isEditing = isEditing,
-                        ),
-                    presentation = presentation,
-                    appIconLoader = appIconLoader,
-                    dragState = dragState.value,
-                    onDragStateChanged = { dragState.value = it },
-                )
+                // A preview reflow moves items between visual slots. Key actual items by their
+                // stable launcher ID so the dragged node keeps its pointer-input coroutine until
+                // the gesture commits or cancels.
+                key(previewItem?.id ?: "dock-placeholder:$index") {
+                    DockSlot(
+                        modifier = Modifier.requiredSize(slotMetrics.iconSizeDp.dp),
+                        state =
+                            DockSlotState(
+                                item = dockSlotItemState(previewItem),
+                                shortcutIndex = dock.items.indexOfFirst { item -> item.id == previewItem?.id },
+                                visualIndex = index,
+                                shortcutCount = dock.items.size,
+                                iconSizeDp = slotMetrics.iconSizeDp,
+                                itemSpacingDp = slotMetrics.itemSpacingDp,
+                                isEditing = isEditing,
+                            ),
+                        presentation = presentation,
+                        appIconLoader = appIconLoader,
+                        dragState = dragState.value,
+                        dragViewport = DockDragViewport(scrollState, contentViewportWidthDp),
+                        onDragStateChanged = { dragState.value = it },
+                    )
+                }
             }
         }
 
@@ -176,6 +185,8 @@ internal const val DOCK_VERTICAL_CHROME_DP = 32
 internal const val DOCK_HORIZONTAL_PADDING_DP = 14
 internal const val DOCK_VERTICAL_PADDING_DP = 10
 private const val DOCK_OVERFLOW_FADE_WIDTH_DP = 20
+private const val DOCK_EDGE_AUTO_SCROLL_ZONE_DP = 28
+private const val DOCK_EDGE_AUTO_SCROLL_MAX_PX_PER_EVENT = 24f
 
 internal fun dockHeightDp(iconSizeDp: Int): Int = iconSizeDp + DOCK_VERTICAL_CHROME_DP
 
@@ -275,6 +286,7 @@ internal data class DockInteractions(
 private data class DockSlotState(
     val item: DockSlotItemState?,
     val shortcutIndex: Int,
+    val visualIndex: Int,
     val shortcutCount: Int,
     val iconSizeDp: Int,
     val itemSpacingDp: Int,
@@ -285,6 +297,11 @@ internal data class DockDragState(
     val itemId: LauncherItemId,
     val originIndex: Int,
     val targetIndex: Int,
+)
+
+private data class DockDragViewport(
+    val scrollState: androidx.compose.foundation.ScrollState,
+    val contentViewportWidthDp: Int,
 )
 
 internal fun dockItemTestTag(itemId: LauncherItemId): String = "dock-item:${itemId.value}"
@@ -298,6 +315,28 @@ internal fun List<LauncherItem>.dockItemsForPreview(drag: DockDragState?): List<
     val sourceIndex = indexOfFirst { it.id == drag.itemId }
     val targetIndex = drag.targetIndex.coerceIn(0, lastIndex)
     return toMutableList().apply { add(targetIndex, removeAt(sourceIndex)) }
+}
+
+/**
+ * Returns a bounded content-scroll delta while a drag is inside either overflow edge zone.
+ * Callers apply the result to [androidx.compose.foundation.ScrollState.dispatchRawDelta], which
+ * additionally clamps it to the actual scroll range.
+ */
+internal fun dockEdgeAutoScrollDelta(
+    pointerX: Float,
+    viewportWidthPx: Float,
+    edgeZonePx: Float,
+): Float {
+    if (viewportWidthPx <= 0f || edgeZonePx <= 0f) return 0f
+
+    val edgePressure =
+        when {
+            pointerX < edgeZonePx -> (pointerX - edgeZonePx) / edgeZonePx
+            pointerX > viewportWidthPx - edgeZonePx -> (pointerX - (viewportWidthPx - edgeZonePx)) / edgeZonePx
+            else -> 0f
+        }
+    return (edgePressure * DOCK_EDGE_AUTO_SCROLL_MAX_PX_PER_EVENT)
+        .coerceIn(-DOCK_EDGE_AUTO_SCROLL_MAX_PX_PER_EVENT, DOCK_EDGE_AUTO_SCROLL_MAX_PX_PER_EVENT)
 }
 
 private data class DockShortcutState(
@@ -316,6 +355,7 @@ private fun DockSlot(
     presentation: DockPresentation,
     appIconLoader: AppIconLoader,
     dragState: DockDragState?,
+    dragViewport: DockDragViewport,
     onDragStateChanged: (DockDragState?) -> Unit,
 ) {
     val editingSlotColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.10f)
@@ -330,6 +370,7 @@ private fun DockSlot(
                     state = state,
                     slotWidthDp = state.iconSizeDp,
                     itemSpacingDp = state.itemSpacingDp,
+                    dragViewport = dragViewport,
                     onDragStateChanged = onDragStateChanged,
                     onAction = presentation.interactions.onAction,
                 )
@@ -390,6 +431,7 @@ private fun Modifier.dockItemDrag(
     state: DockSlotState,
     slotWidthDp: Int,
     itemSpacingDp: Int,
+    dragViewport: DockDragViewport,
     onDragStateChanged: (DockDragState?) -> Unit,
     onAction: (LauncherShellAction) -> Unit,
 ): Modifier {
@@ -400,18 +442,34 @@ private fun Modifier.dockItemDrag(
             pointerInput(itemId, state.shortcutIndex, state.shortcutCount, slotWidthDp, itemSpacingDp) {
                 var horizontalDrag = 0f
                 var targetIndex = state.shortcutIndex
+                var initialScrollOffset = 0
                 detectDragGesturesAfterLongPress(
                     onDragStart = {
                         horizontalDrag = 0f
                         targetIndex = state.shortcutIndex
+                        initialScrollOffset = dragViewport.scrollState.value
                         onDragStateChanged(DockDragState(itemId, state.shortcutIndex, state.shortcutIndex))
                     },
                     onDrag = { change, amount ->
                         change.consume()
                         horizontalDrag += amount.x
                         val slotWidthPx = density * (slotWidthDp + itemSpacingDp)
+                        val viewportWidthPx = density * dragViewport.contentViewportWidthDp
+                        val pointerX =
+                            (state.visualIndex * slotWidthPx) - dragViewport.scrollState.value + change.position.x
+                        val scrollDelta =
+                            dockEdgeAutoScrollDelta(
+                                pointerX = pointerX,
+                                viewportWidthPx = viewportWidthPx,
+                                edgeZonePx = density * DOCK_EDGE_AUTO_SCROLL_ZONE_DP,
+                            )
+                        dragViewport.scrollState.dispatchRawDelta(scrollDelta)
                         targetIndex =
-                            (state.shortcutIndex + (horizontalDrag / slotWidthPx).roundToInt())
+                            (
+                                state.shortcutIndex +
+                                    ((horizontalDrag + dragViewport.scrollState.value - initialScrollOffset) / slotWidthPx)
+                                        .roundToInt()
+                            )
                                 .coerceIn(0, state.shortcutCount - 1)
                         onDragStateChanged(DockDragState(itemId, state.shortcutIndex, targetIndex))
                     },
