@@ -10,12 +10,14 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipe
 import androidx.compose.ui.test.swipeUp
 import com.riffle.core.domain.launcher.cards.CardStackLayoutPolicy
 import org.junit.Assert.assertEquals
@@ -96,7 +98,12 @@ class CardStackGestureTest {
             }
         }
 
-        composeRule.onNodeWithTag("card-1").performTouchInput { swipeRight() }
+        composeRule.onNodeWithTag("card-1").performTouchInput {
+            swipe(
+                start = Offset(width / 2f, height / 2f),
+                end = Offset(width - 1f, height / 2f),
+            )
+        }
 
         composeRule.runOnIdle { assertTrue(horizontalDragWasUnconsumed) }
     }
