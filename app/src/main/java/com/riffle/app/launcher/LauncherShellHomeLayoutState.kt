@@ -171,7 +171,6 @@ internal fun LauncherShellState.withSettingsTargetLayout(
         )
     val currentLayoutSet =
         currentLayoutSet(homeLayoutRepository)
-            .withActiveLayout(homeLayout)
             .withLayout(key = key, layout = layout)
             .withPreferredMode(
                 deviceClass = settingsLayoutDeviceClass,
@@ -187,11 +186,7 @@ internal fun LauncherShellState.withSettingsTargetLayout(
     homeLayoutRepository.saveHomeLayoutSet(layoutSet)
 
     return copy(
-        homeLayout =
-            when (layoutSet.activeKey) {
-                key -> layoutSet.activeLayout
-                else -> homeLayout
-            },
+        homeLayout = layoutSet.activeLayout,
         homeLayoutSet = layoutSet,
     )
 }
