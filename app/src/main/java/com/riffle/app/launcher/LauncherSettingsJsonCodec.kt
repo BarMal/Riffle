@@ -4,8 +4,13 @@ package com.riffle.app.launcher
 
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppProfileId
+import com.riffle.core.domain.launcher.cards.AppStageId
+import com.riffle.core.domain.launcher.cards.AppStagePreferences
 import com.riffle.core.domain.launcher.cards.CardsChapterId
 import com.riffle.core.domain.launcher.cards.CardsChapterPreferences
+import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
+import com.riffle.core.domain.launcher.home.HomeLayoutKey
+import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.home.WallpaperScrollMode
 import com.riffle.core.domain.launcher.home.WallpaperSettings
 import com.riffle.core.domain.launcher.home.WallpaperSource
@@ -59,6 +64,17 @@ private fun encodeCardsSettings(settings: CardsSettings): JSONObject =
     JSONObject()
         .put("pinnedChapterIds", JSONArray(settings.chapterPreferences.pinnedChapterIds.map(::encodeCardsAppChapterId)))
         .put("selectedChapterId", encodeCardsChapterId(settings.chapterPreferences.selectedChapterId))
+        .put("stagePreferencesByLayout", JSONArray(settings.stagePreferencesByLayout.map(::encodeStagePreferences)))
+
+private fun encodeStagePreferences(entry: Map.Entry<HomeLayoutKey, AppStagePreferences>): JSONObject =
+    JSONObject()
+        .put("viewMode", entry.key.viewMode.name)
+        .put("deviceClass", entry.key.deviceClass.name)
+        .put("pinnedStageIds", JSONArray(entry.value.pinnedStageIds.map(::encodeAppStageId)))
+        .put("selectedStageId", entry.value.selectedStageId?.let(::encodeAppStageId))
+
+private fun encodeAppStageId(id: AppStageId): JSONObject =
+    JSONObject().put("packageName", id.packageName.value).put("profileId", id.profileId.value)
 
 private fun encodeCardsChapterId(id: CardsChapterId): JSONObject =
     when (id) {
@@ -80,8 +96,41 @@ private fun JSONObject.toCardsSettings(defaults: CardsSettings): CardsSettings {
             ?: defaults.chapterPreferences.pinnedChapterIds
     val selectedChapterId =
         optJSONObject("selectedChapterId")?.toCardsChapterId() ?: defaults.chapterPreferences.selectedChapterId
-    return CardsSettings(CardsChapterPreferences(pinnedChapterIds, selectedChapterId))
+    val stagePreferencesByLayout =
+        optJSONArray("stagePreferencesByLayout")
+            ?.let { entries ->
+                (0 until entries.length())
+                    .mapNotNull { index -> entries.optJSONObject(index)?.toStagePreferencesEntry() }
+                    .toMap()
+            }
+            ?: defaults.stagePreferencesByLayout
+    return CardsSettings(CardsChapterPreferences(pinnedChapterIds, selectedChapterId), stagePreferencesByLayout)
 }
+
+private fun JSONObject.toStagePreferencesEntry(): Pair<HomeLayoutKey, AppStagePreferences>? =
+    runCatching { LauncherViewMode.valueOf(optString("viewMode")) }.getOrNull()?.let { viewMode ->
+        runCatching { HomeLayoutDeviceClass.valueOf(optString("deviceClass")) }.getOrNull()?.let { deviceClass ->
+            HomeLayoutKey(viewMode, deviceClass) to
+                AppStagePreferences(
+                    pinnedStageIds =
+                        optJSONArray("pinnedStageIds")
+                            ?.let { ids ->
+                                (0 until ids.length())
+                                    .mapNotNull { index -> ids.optJSONObject(index)?.toAppStageId() }
+                                    .distinct()
+                            }
+                            .orEmpty(),
+                    selectedStageId = optJSONObject("selectedStageId")?.toAppStageId(),
+                )
+        }
+    }
+
+private fun JSONObject.toAppStageId(): AppStageId? =
+    optString("packageName").takeIf(String::isNotBlank)?.let { packageName ->
+        optString("profileId").takeIf(String::isNotBlank)?.let { profileId ->
+            AppStageId(AppPackageName(packageName), AppProfileId(profileId))
+        }
+    }
 
 private fun JSONObject.toCardsChapterId(): CardsChapterId? =
     when (optString("kind")) {
@@ -202,4 +251,4 @@ private fun JSONObject.toOverlayDock(defaults: OverlayDockSettings): OverlayDock
         showLabels = optBoolean("showLabels", defaults.showLabels),
     ).coerceOverlayDockSettings()
 
-internal const val LAUNCHER_SETTINGS_JSON_VERSION = 3
+internal const val LAUNCHER_SETTINGS_JSON_VERSION = 4

@@ -7,6 +7,11 @@ import com.riffle.core.domain.launcher.apps.AppSearchFilters
 import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.apps.AppShortcutsByApp
 import com.riffle.core.domain.launcher.apps.InstalledApp
+import com.riffle.core.domain.launcher.cards.AppStageId
+import com.riffle.core.domain.launcher.cards.AppStageIdentitySnapshot
+import com.riffle.core.domain.launcher.cards.AppStagePlanner
+import com.riffle.core.domain.launcher.cards.AppStageProfileState
+import com.riffle.core.domain.launcher.cards.AppStageSnapshot
 import com.riffle.core.domain.launcher.cards.CardsChapterPlanner
 import com.riffle.core.domain.launcher.cards.CardsChapterState
 import com.riffle.core.domain.launcher.home.HomeLayout
@@ -18,6 +23,7 @@ import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.notifications.NotificationCategory
 import com.riffle.core.domain.launcher.search.LauncherSearchResult
 import com.riffle.core.domain.launcher.settings.LauncherSettings
+import com.riffle.core.domain.launcher.settings.stagePreferencesFor
 import com.riffle.core.domain.launcher.widgets.InstalledWidgetProvider
 
 data class LauncherShellState(
@@ -75,6 +81,17 @@ data class LauncherShellState(
         }
     }
 
+    /** Reconciles optional TimeScape stages from the same installed-app/profile/settings snapshot. */
+    fun appStageSnapshot(planner: AppStagePlanner = AppStagePlanner()): AppStageSnapshot =
+        planner.reconcile(
+            identitySnapshot =
+                AppStageIdentitySnapshot(
+                    installedStageIds = installedApps.map(InstalledApp::toAppStageId).distinct(),
+                    profileStates = profileStatesForStages(),
+                ),
+            preferences = launcherSettings.cards.stagePreferencesFor(homeLayoutSet.activeKey),
+        )
+
     /**
      * Retained for callers migrating from the blocking first-run prompt. Preview-first setup
      * never blocks the launcher shell.
@@ -85,6 +102,22 @@ data class LauncherShellState(
 
     val shouldShowSetupCard: Boolean =
         !setupCardDismissed && homeRoleStatus != HomeRoleStatus.DEFAULT_HOME
+}
+
+private fun InstalledApp.toAppStageId(): AppStageId = AppStageId(identity.packageName, identity.profile.id)
+
+private fun LauncherShellState.profileStatesForStages(): Map<AppProfileId, AppStageProfileState> {
+    return profileContentVisibility.mapValues { (_, visibility) ->
+        when (visibility) {
+            AppProfileContentVisibility.VISIBLE,
+            AppProfileContentVisibility.REDACTED_QUIET,
+            -> AppStageProfileState.AVAILABLE
+
+            AppProfileContentVisibility.REDACTED_LOCKED,
+            AppProfileContentVisibility.REDACTED_UNAVAILABLE,
+            -> AppStageProfileState.LOCKED
+        }
+    }
 }
 
 enum class FirstRunStatus {
