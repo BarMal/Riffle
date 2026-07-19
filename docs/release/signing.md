@@ -57,3 +57,20 @@ Use the manual release workflows from the Actions tab:
 
 Both workflows also keep the raw build outputs as GitHub Actions artifacts for traceability.
 Release notes include APK and AAB sizes so growth is visible before a hard budget is enforced.
+
+### Publishing an Alpha Candidate
+
+`Alpha Release` never runs for a normal push to `main`. Start it manually with:
+
+- `candidate_sha`: the exact 40-character commit SHA to publish. The workflow rejects commits that
+  are not reachable from `main`.
+- `release_notes`: meaningful Markdown containing non-blank `Changed`, `Verification`, and
+  `Known Limitations` headings.
+- `evidence_manifest`: a repository-relative path to the complete candidate device-evidence
+  manifest required by [device validation](device-validation.md).
+
+The workflow checks the candidate's release-note contract, validates the evidence manifest against
+the exact candidate SHA, and runs `./gradlew verify` from that checkout before it decodes the
+signing keystore or builds artifacts. The candidate SHA is used for the verification checkout,
+evidence validation, release target, and artifact build. A release tag is derived from that SHA,
+so retrying a published candidate exits without creating a duplicate prerelease.

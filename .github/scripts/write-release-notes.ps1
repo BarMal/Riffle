@@ -5,22 +5,22 @@ param(
     [Parameter(Mandatory = $true)]
     [string] $CommitSha,
 
-    [Parameter(Mandatory = $true)]
-    [string] $ApkPath,
+    [string] $ApkPath = "",
 
-    [Parameter(Mandatory = $true)]
-    [string] $AabPath,
+    [string] $AabPath = "",
 
-    [Parameter(Mandatory = $true)]
-    [string] $NotesPath,
+    [string] $NotesPath = "",
 
     [string] $ChangelogPath = "",
 
-    [string] $ReleaseTitle = ""
-)
+    [string] $ReleaseTitle = "",
 
-$apk = Get-Item -LiteralPath $ApkPath
-$aab = Get-Item -LiteralPath $AabPath
+    [string] $ReleaseNotesPath = "",
+
+    [switch] $RequireReleaseNotes,
+
+    [switch] $ValidateOnly
+)
 
 function Format-Mib([long] $Bytes) {
     return "{0:N2}" -f ($Bytes / 1MB)
@@ -62,14 +62,55 @@ function Get-ChangelogSection([string] $Path, [string] $Title) {
     return ($section -join [Environment]::NewLine).Trim()
 }
 
-$changelogSection = Get-ChangelogSection -Path $ChangelogPath -Title $ReleaseTitle
+function Get-ReleaseNotes {
+    if (-not [string]::IsNullOrWhiteSpace($ReleaseNotesPath)) {
+        if (-not (Test-Path -LiteralPath $ReleaseNotesPath)) {
+            throw "Release notes file does not exist: $ReleaseNotesPath"
+        }
+        return (Get-Content -LiteralPath $ReleaseNotesPath -Raw).Trim()
+    }
+
+    return Get-ChangelogSection -Path $ChangelogPath -Title $ReleaseTitle
+}
+
+function Assert-RequiredReleaseNotesSections([string] $ReleaseNotes) {
+    foreach ($sectionName in @("Changed", "Verification", "Known Limitations")) {
+        $escapedSectionName = [regex]::Escape($sectionName)
+        $sectionPattern = "(?ms)^\s*#{2,6}\s+$escapedSectionName\s*$\r?\n(?<content>.*?)(?=^\s*#{1,6}\s+|\z)"
+        $section = [regex]::Match($ReleaseNotes, $sectionPattern)
+
+        if (-not $section.Success -or [string]::IsNullOrWhiteSpace($section.Groups["content"].Value)) {
+            throw "Release notes must contain a non-blank '$sectionName' section."
+        }
+    }
+}
+
+$releaseNotes = Get-ReleaseNotes
+if ($RequireReleaseNotes) {
+    if ([string]::IsNullOrWhiteSpace($releaseNotes)) {
+        throw "Release notes are required for this release."
+    }
+    Assert-RequiredReleaseNotesSections -ReleaseNotes $releaseNotes
+}
+
+if ($ValidateOnly) {
+    return
+}
+
+if ([string]::IsNullOrWhiteSpace($ApkPath) -or [string]::IsNullOrWhiteSpace($AabPath) -or [string]::IsNullOrWhiteSpace($NotesPath)) {
+    throw "ApkPath, AabPath, and NotesPath are required unless ValidateOnly is specified."
+}
+
+$apk = Get-Item -LiteralPath $ApkPath
+$aab = Get-Item -LiteralPath $AabPath
+
 $releaseNotesSection = ""
-if (-not [string]::IsNullOrWhiteSpace($changelogSection)) {
+if (-not [string]::IsNullOrWhiteSpace($releaseNotes)) {
     $releaseNotesSection = @"
 
 ## Release notes
 
-$changelogSection
+$releaseNotes
 "@
 }
 
