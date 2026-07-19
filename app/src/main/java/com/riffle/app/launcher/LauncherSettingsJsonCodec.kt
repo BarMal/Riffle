@@ -107,21 +107,23 @@ private fun JSONObject.toCardsSettings(defaults: CardsSettings): CardsSettings {
     return CardsSettings(CardsChapterPreferences(pinnedChapterIds, selectedChapterId), stagePreferencesByLayout)
 }
 
-private fun JSONObject.toStagePreferencesEntry(): Pair<HomeLayoutKey, AppStagePreferences>? {
-    val viewMode = runCatching { LauncherViewMode.valueOf(optString("viewMode")) }.getOrNull() ?: return null
-    val deviceClass = runCatching { HomeLayoutDeviceClass.valueOf(optString("deviceClass")) }.getOrNull() ?: return null
-    val pinnedStageIds =
-        optJSONArray("pinnedStageIds")
-            ?.let { ids ->
-                (0 until ids.length()).mapNotNull { index -> ids.optJSONObject(index)?.toAppStageId() }.distinct()
-            }
-            .orEmpty()
-    return HomeLayoutKey(viewMode, deviceClass) to
-        AppStagePreferences(
-            pinnedStageIds = pinnedStageIds,
-            selectedStageId = optJSONObject("selectedStageId")?.toAppStageId(),
-        )
-}
+private fun JSONObject.toStagePreferencesEntry(): Pair<HomeLayoutKey, AppStagePreferences>? =
+    runCatching { LauncherViewMode.valueOf(optString("viewMode")) }.getOrNull()?.let { viewMode ->
+        runCatching { HomeLayoutDeviceClass.valueOf(optString("deviceClass")) }.getOrNull()?.let { deviceClass ->
+            HomeLayoutKey(viewMode, deviceClass) to
+                AppStagePreferences(
+                    pinnedStageIds =
+                        optJSONArray("pinnedStageIds")
+                            ?.let { ids ->
+                                (0 until ids.length())
+                                    .mapNotNull { index -> ids.optJSONObject(index)?.toAppStageId() }
+                                    .distinct()
+                            }
+                            .orEmpty(),
+                    selectedStageId = optJSONObject("selectedStageId")?.toAppStageId(),
+                )
+        }
+    }
 
 private fun JSONObject.toAppStageId(): AppStageId? =
     optString("packageName").takeIf(String::isNotBlank)?.let { packageName ->
