@@ -56,4 +56,4 @@ jobs:
           api-level: 35
           arch: x86_64
           target: google_apis
-          script: ./gradlew verify
+          script: ./gradlew verify deviceVerify
