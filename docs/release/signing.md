@@ -50,7 +50,7 @@ export RIFFLE_SIGNING_KEY_PASSWORD=...
 
 ## GitHub Releases
 
-Use the manual release workflows from the Actions tab:
+Alpha releases follow successful `main` CI runs; use the Actions tab only to retry or override one:
 
 - `Alpha Release` publishes a GitHub prerelease with `riffle-alpha.apk` and `riffle-alpha.aab`.
 - `Stable Release` publishes a normal GitHub release with `riffle-stable.apk` and `riffle-stable.aab`.
@@ -60,17 +60,10 @@ Release notes include APK and AAB sizes so growth is visible before a hard budge
 
 ### Publishing an Alpha Candidate
 
-`Alpha Release` never runs for a normal push to `main`. Start it manually with:
+Every successful `CI` run for a push to `main` publishes that exact commit. The workflow derives
+the candidate SHA, changes since the previous alpha, and verification link from GitHub metadata.
 
-- `candidate_sha`: the exact 40-character commit SHA to publish. The workflow rejects commits that
-  are not reachable from `main`.
-- `release_notes`: meaningful Markdown containing non-blank `Changed`, `Verification`, and
-  `Known Limitations` headings.
-- `evidence_manifest`: a repository-relative path to the complete candidate device-evidence
-  manifest required by [device validation](device-validation.md).
-
-The workflow checks the candidate's release-note contract, validates the evidence manifest against
-the exact candidate SHA, and runs `./gradlew verify` from that checkout before it decodes the
-signing keystore or builds artifacts. The candidate SHA is used for the verification checkout,
-evidence validation, release target, and artifact build. A release tag is derived from that SHA,
-so retrying a published candidate exits without creating a duplicate prerelease.
+Manual dispatch remains available for retries. `candidate_sha` defaults to the selected ref and
+`release_notes` defaults to generated notes; an override must contain non-blank `Changed`,
+`Verification`, and `Known Limitations` headings. The workflow rejects commits that are not on
+`main` or do not have successful exact-SHA push CI. A SHA-derived tag makes retries idempotent.

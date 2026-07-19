@@ -1,76 +1,114 @@
 name: Alpha Release
 
 on:
+  workflow_run:
+    workflows:
+      - CI
+    types:
+      - completed
   workflow_dispatch:
     inputs:
       candidate_sha:
-        description: Full 40-character commit SHA reachable from main
-        required: true
+        description: Optional full commit SHA; defaults to the selected ref
+        required: false
         type: string
       release_notes:
-        description: Release notes with Changed, Verification, and Known Limitations sections
-        required: true
-        type: string
-      evidence_manifest:
-        description: Repository-relative path to the SHA-bound device evidence manifest
-        required: true
+        description: Optional structured release-note override
+        required: false
         type: string
 
 permissions:
+  actions: read
   contents: write
 
 concurrency:
-  group: alpha-release-${{ inputs.candidate_sha }}
+  group: alpha-release-${{ inputs.candidate_sha || github.event.workflow_run.head_sha || github.sha }}
   cancel-in-progress: false
 
 jobs:
   alpha-release:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.head_branch == 'main')
     name: Build verified alpha
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 30
 
     steps:
       - name: Check out candidate
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.candidate_sha }}
+          ref: ${{ inputs.candidate_sha || github.event.workflow_run.head_sha || github.sha }}
           fetch-depth: 0
 
-      - name: Validate candidate identity and notes
+      - name: Resolve verified release metadata
         env:
-          CANDIDATE_SHA: ${{ inputs.candidate_sha }}
-          RELEASE_NOTES: ${{ inputs.release_notes }}
-          EVIDENCE_MANIFEST: ${{ inputs.evidence_manifest }}
+          CANDIDATE_SHA_INPUT: ${{ inputs.candidate_sha || github.event.workflow_run.head_sha || github.sha }}
+          RELEASE_NOTES_INPUT: ${{ inputs.release_notes }}
+          CI_RUN_URL: ${{ github.event.workflow_run.html_url }}
+          GH_TOKEN: ${{ github.token }}
         run: |
-          if [[ ! "$CANDIDATE_SHA" =~ ^[0-9a-fA-F]{40}$ ]]; then
+          if [[ ! "$CANDIDATE_SHA_INPUT" =~ ^[0-9a-fA-F]{40}$ ]]; then
             echo "candidate_sha must be a full 40-character commit SHA." >&2
             exit 1
           fi
 
-          candidate_sha="$(git rev-parse "$CANDIDATE_SHA^{commit}")"
-          if [[ "$candidate_sha" != "${CANDIDATE_SHA,,}" ]]; then
-            echo "candidate_sha must identify the commit exactly." >&2
+          candidate_sha="$(git rev-parse HEAD)"
+          if [[ "$candidate_sha" != "${CANDIDATE_SHA_INPUT,,}" ]]; then
+            echo "The checkout does not match candidate_sha." >&2
             exit 1
           fi
 
           git fetch origin main
           git merge-base --is-ancestor "$candidate_sha" origin/main
 
-          if [[ "$EVIDENCE_MANIFEST" = /* || "$EVIDENCE_MANIFEST" == *".."* ]]; then
-            echo "evidence_manifest must be a repository-relative path without parent traversal." >&2
+          if [[ -z "$CI_RUN_URL" ]]; then
+            CI_RUN_URL="$(gh api \
+              "repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/runs?head_sha=$candidate_sha&event=push&status=success&per_page=1" \
+              --jq '.workflow_runs[0].html_url // empty')"
+          fi
+          if [[ -z "$CI_RUN_URL" ]]; then
+            echo "No successful main-push CI run exists for candidate $candidate_sha." >&2
             exit 1
           fi
-          evidence_path="$(realpath "$EVIDENCE_MANIFEST")"
-          if [[ "$evidence_path" != "$GITHUB_WORKSPACE"/* ]]; then
-            echo "evidence_manifest must resolve inside the candidate checkout." >&2
-            exit 1
-          fi
-          pwsh .github/scripts/validate-device-evidence.ps1 \
-            -EvidencePath "$evidence_path" \
-            -ExpectedCommitSha "$candidate_sha"
 
+          release_tag="alpha-$candidate_sha"
           notes_path="$RUNNER_TEMP/candidate-release-notes.md"
-          printf '%s\n' "$RELEASE_NOTES" > "$notes_path"
+          if [[ -n "$RELEASE_NOTES_INPUT" ]]; then
+            printf '%s\n' "$RELEASE_NOTES_INPUT" > "$notes_path"
+          else
+            previous_tag="$(git tag --merged "$candidate_sha" --list 'alpha-*' --sort=-creatordate | head -n 1)"
+            generate_args=(
+              --method POST
+              "repos/$GITHUB_REPOSITORY/releases/generate-notes"
+              -f "tag_name=$release_tag"
+              -f "target_commitish=$candidate_sha"
+            )
+            if [[ -n "$previous_tag" ]]; then
+              generate_args+=(-f "previous_tag_name=$previous_tag")
+            fi
+            generated_changes="$(gh api "${generate_args[@]}" --jq .body)"
+            comparison="${previous_tag:-the start of the repository}"
+            cat > "$notes_path" <<EOF
+          ## Changed
+
+          Changes since $comparison:
+
+          $generated_changes
+
+          ## Verification
+
+          - Exact candidate: \`$candidate_sha\`
+          - [Successful CI verification]($CI_RUN_URL)
+
+          ## Known Limitations
+
+          - No additional limitations were supplied; see the linked issues and pull requests above.
+          EOF
+          fi
+
           pwsh .github/scripts/write-release-notes.ps1 \
             -ReleaseChannel alpha \
             -CommitSha "$candidate_sha" \
@@ -79,14 +117,8 @@ jobs:
             -ValidateOnly
 
           echo "CANDIDATE_SHA=$candidate_sha" >> "$GITHUB_ENV"
-          echo "RELEASE_TAG=alpha-$candidate_sha" >> "$GITHUB_ENV"
+          echo "RELEASE_TAG=$release_tag" >> "$GITHUB_ENV"
           echo "RELEASE_NOTES_PATH=$notes_path" >> "$GITHUB_ENV"
-
-      - name: Run release contract tests
-        shell: pwsh
-        run: |
-          Install-Module Pester -Force -Scope CurrentUser -MinimumVersion 5.0.0
-          Invoke-Pester .github/scripts/test/write-release-notes.Tests.ps1 -CI -Output Detailed
 
       - name: Skip an already published candidate
         id: existing_release
@@ -112,25 +144,9 @@ jobs:
         with:
           packages: platform-tools
 
-      - name: Enable KVM
-        if: steps.existing_release.outputs.already_published != 'true'
-        run: |
-          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
-          sudo udevadm control --reload-rules
-          sudo udevadm trigger --name-match=kvm
-
       - name: Set up Gradle
         if: steps.existing_release.outputs.already_published != 'true'
         uses: gradle/actions/setup-gradle@v4
-
-      - name: Verify candidate
-        if: steps.existing_release.outputs.already_published != 'true'
-        uses: ReactiveCircus/android-emulator-runner@v2
-        with:
-          api-level: 35
-          arch: x86_64
-          target: google_apis
-          script: ./gradlew verify
 
       - name: Decode release keystore
         if: steps.existing_release.outputs.already_published != 'true'
@@ -156,7 +172,7 @@ jobs:
         if: steps.existing_release.outputs.already_published != 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: riffle-alpha-release-${{ inputs.candidate_sha }}
+          name: riffle-alpha-release-${{ github.run_id }}
           path: |
             app/build/outputs/apk/release/*.apk
             app/build/outputs/bundle/release/*.aab
