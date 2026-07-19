@@ -30,6 +30,19 @@ internal fun dockShelfGestureExpandedState(
         else -> null
     }
 
+internal fun dockShelfGestureClaimsDrag(
+    isExpanded: Boolean,
+    horizontalDragPx: Float,
+    verticalDragPx: Float,
+): Boolean =
+    abs(verticalDragPx) >= DOCK_SHELF_GESTURE_CLAIM_THRESHOLD_PX &&
+        abs(verticalDragPx) > abs(horizontalDragPx) &&
+        if (isExpanded) {
+            verticalDragPx > 0f
+        } else {
+            verticalDragPx < 0f
+        }
+
 internal fun dockShelfExpandedStateAfterBackgroundTap(isExpanded: Boolean): Boolean {
     return if (isExpanded) false else isExpanded
 }
@@ -75,12 +88,20 @@ private fun Modifier.dockShelfGestureInput(
                         handled = true
                     } else {
                         val drag = active.position - start
+                        if (
+                            dockShelfGestureClaimsDrag(
+                                isExpanded = isExpanded,
+                                horizontalDragPx = drag.x,
+                                verticalDragPx = drag.y,
+                            )
+                        ) {
+                            active.consume()
+                        }
                         dockShelfGestureExpandedState(
                             isExpanded = isExpanded,
                             horizontalDragPx = drag.x,
                             verticalDragPx = drag.y,
                         )?.let { expanded ->
-                            active.consume()
                             onExpandedChange(expanded)
                             handled = true
                         }
@@ -92,3 +113,4 @@ private fun Modifier.dockShelfGestureInput(
 }
 
 private const val DOCK_SHELF_GESTURE_THRESHOLD_PX = 80f
+private const val DOCK_SHELF_GESTURE_CLAIM_THRESHOLD_PX = 24f
