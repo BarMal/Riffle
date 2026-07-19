@@ -75,12 +75,10 @@ class GeneratedPageSurfaceInteractionTest {
 
         composeRule.onNodeWithTag(GENERATED_NOTIFICATION_CARD_STACK_TEST_TAG).performTouchInput { swipeUp() }
 
-        composeRule.runOnIdle {
-            assertEquals(1, hapticFeedbackCount)
-            composeRule
-                .onNodeWithTag(GENERATED_NOTIFICATION_CARD_STACK_TEST_TAG)
-                .assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "Card 2 of 2"))
-        }
+        composeRule.runOnIdle { assertEquals(1, hapticFeedbackCount) }
+        composeRule
+            .onNodeWithTag(GENERATED_NOTIFICATION_CARD_STACK_TEST_TAG)
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "Card 2 of 2"))
     }
 
     private fun notificationGroup(suffix: String) =
