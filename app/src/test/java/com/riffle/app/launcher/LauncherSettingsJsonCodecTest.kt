@@ -47,6 +47,10 @@ import com.riffle.core.domain.launcher.settings.MotionSettings
 import com.riffle.core.domain.launcher.settings.OverlayDockEdge
 import com.riffle.core.domain.launcher.settings.OverlayDockExpandedOrientation
 import com.riffle.core.domain.launcher.settings.OverlayDockSettings
+import com.riffle.core.domain.launcher.settings.TimeScapeAppearanceSettings
+import com.riffle.core.domain.launcher.settings.TimeScapeGeometry
+import com.riffle.core.domain.launcher.settings.TimeScapeMotion
+import com.riffle.core.domain.launcher.settings.TimeScapeSurface
 import com.riffle.core.domain.launcher.settings.homeSystemBars
 import com.riffle.core.domain.launcher.settings.withHomeSystemBars
 import org.json.JSONObject
@@ -82,6 +86,62 @@ class LauncherSettingsJsonCodecTest {
 
         assertEquals(settings.cards, decodeLauncherSettings(encodeLauncherSettings(settings)).cards)
         assertFalse(cardsJson.has("content"))
+    }
+
+    @Test
+    fun roundTripsTimeScapeAppearanceAndClampsImportedValues() {
+        val settings =
+            LauncherSettings(
+                cards =
+                    CardsSettings(
+                        timeScapeAppearance =
+                            TimeScapeAppearanceSettings(
+                                geometry = TimeScapeGeometry(visibleDepth = 5, rotationDegrees = 8),
+                                surface = TimeScapeSurface(blurStrengthPercent = 42),
+                                motion = TimeScapeMotion(reducedTransparency = true),
+                            ),
+                    ),
+            )
+
+        assertEquals(settings.cards, decodeLauncherSettings(encodeLauncherSettings(settings)).cards)
+
+        val imported =
+            decodeLauncherSettings(
+                """
+                {
+                  "cards": {
+                    "timeScapeAppearance": {
+                      "geometry": { "visibleDepth": 999 },
+                      "surface": { "blurStrengthPercent": -1 },
+                      "motion": { "settleDurationMillis": 9999 }
+                    }
+                  }
+                }
+                """.trimIndent(),
+            ).cards.timeScapeAppearance
+        assertEquals(6, imported.geometry.visibleDepth)
+        assertEquals(0, imported.surface.blurStrengthPercent)
+        assertEquals(600, imported.motion.settleDurationMillis)
+    }
+
+    @Test
+    fun defaultsMissingOrUnknownTimeScapeAppearanceValuesSafely() {
+        val decoded =
+            decodeLauncherSettings(
+                """
+                {
+                  "cards": {
+                    "timeScapeAppearance": {
+                      "preset": "FUTURE",
+                      "geometry": { "fanDirection": "FUTURE" },
+                      "surface": { "backgroundSource": "FUTURE" }
+                    }
+                  }
+                }
+                """.trimIndent(),
+            ).cards.timeScapeAppearance
+
+        assertEquals(TimeScapeAppearanceSettings.modern(), decoded)
     }
 
     @Test

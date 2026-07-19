@@ -36,6 +36,11 @@ class LauncherSettingsTest {
     }
 
     @Test
+    fun cardsDefaultToTheModernTimeScapeAppearanceIntent() {
+        assertEquals(TimeScapeAppearanceSettings.modern(), LauncherSettings().cards.timeScapeAppearance)
+    }
+
+    @Test
     fun migratesHistoricalCardsAppIntentToTheRequestedStageLayout() {
         val chapter = CardsChapterId.App(AppPackageName("com.riffle.mail"), AppProfile.personal().id)
         val cards = CardsSettings(chapterPreferences = CardsChapterPreferences(listOf(chapter), chapter))

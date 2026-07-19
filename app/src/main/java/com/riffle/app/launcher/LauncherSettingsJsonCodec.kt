@@ -27,6 +27,11 @@ import com.riffle.core.domain.launcher.settings.LauncherThemeTypography
 import com.riffle.core.domain.launcher.settings.OverlayDockEdge
 import com.riffle.core.domain.launcher.settings.OverlayDockExpandedOrientation
 import com.riffle.core.domain.launcher.settings.OverlayDockSettings
+import com.riffle.core.domain.launcher.settings.TimeScapeAppearanceSettings
+import com.riffle.core.domain.launcher.settings.TimeScapeGeometry
+import com.riffle.core.domain.launcher.settings.TimeScapeMotion
+import com.riffle.core.domain.launcher.settings.TimeScapeSurface
+import com.riffle.core.domain.launcher.settings.TimeScapeTypography
 import com.riffle.core.domain.launcher.settings.coerceOverlayDockSettings
 import com.riffle.core.domain.launcher.settings.homeSystemBars
 import com.riffle.core.domain.launcher.settings.withHomeSystemBars
@@ -65,6 +70,7 @@ private fun encodeCardsSettings(settings: CardsSettings): JSONObject =
         .put("pinnedChapterIds", JSONArray(settings.chapterPreferences.pinnedChapterIds.map(::encodeCardsAppChapterId)))
         .put("selectedChapterId", encodeCardsChapterId(settings.chapterPreferences.selectedChapterId))
         .put("stagePreferencesByLayout", JSONArray(settings.stagePreferencesByLayout.map(::encodeStagePreferences)))
+        .put("timeScapeAppearance", encodeTimeScapeAppearance(settings.timeScapeAppearance))
 
 private fun encodeStagePreferences(entry: Map.Entry<HomeLayoutKey, AppStagePreferences>): JSONObject =
     JSONObject()
@@ -104,8 +110,387 @@ private fun JSONObject.toCardsSettings(defaults: CardsSettings): CardsSettings {
                     .toMap()
             }
             ?: defaults.stagePreferencesByLayout
-    return CardsSettings(CardsChapterPreferences(pinnedChapterIds, selectedChapterId), stagePreferencesByLayout)
+    return CardsSettings(
+        chapterPreferences = CardsChapterPreferences(pinnedChapterIds, selectedChapterId),
+        stagePreferencesByLayout = stagePreferencesByLayout,
+        timeScapeAppearance =
+            optJSONObject("timeScapeAppearance")?.toTimeScapeAppearance(defaults.timeScapeAppearance)
+                ?: defaults.timeScapeAppearance,
+    )
 }
+
+private fun encodeTimeScapeAppearance(settings: TimeScapeAppearanceSettings): JSONObject =
+    settings.coerce().let { appearance ->
+        JSONObject()
+            .put("version", appearance.version)
+            .put("preset", appearance.preset.name)
+            .put(
+                "geometry",
+                JSONObject().put(
+                    "cardAspectRatioPercent",
+                    appearance.geometry.cardAspectRatioPercent,
+                ).put(
+                    "focusedScalePercent",
+                    appearance.geometry.focusedScalePercent,
+                ).put(
+                    "focusedGapDp",
+                    appearance.geometry.focusedGapDp,
+                ).put(
+                    "visibleDepth",
+                    appearance.geometry.visibleDepth,
+                ).put(
+                    "overlapPercent",
+                    appearance.geometry.overlapPercent,
+                ).put(
+                    "verticalSpacingDp",
+                    appearance.geometry.verticalSpacingDp,
+                ).put(
+                    "horizontalOffsetDp",
+                    appearance.geometry.horizontalOffsetDp,
+                ).put(
+                    "curveDp",
+                    appearance.geometry.curveDp,
+                ).put(
+                    "fanDirection",
+                    appearance.geometry.fanDirection.name,
+                ).put(
+                    "rotationDegrees",
+                    appearance.geometry.rotationDegrees,
+                ).put(
+                    "cornerRadiusDp",
+                    appearance.geometry.cornerRadiusDp,
+                ).put("clipContent", appearance.geometry.clipContent).put("contentPaddingDp", appearance.geometry.contentPaddingDp),
+            )
+            .put(
+                "surface",
+                JSONObject().put(
+                    "backgroundSource",
+                    appearance.surface.backgroundSource.name,
+                ).put(
+                    "customBackgroundArgb",
+                    appearance.surface.customBackgroundArgb,
+                ).put(
+                    "glassTransparencyPercent",
+                    appearance.surface.glassTransparencyPercent,
+                ).put(
+                    "glassTintArgb",
+                    appearance.surface.glassTintArgb,
+                ).put(
+                    "blurStrengthPercent",
+                    appearance.surface.blurStrengthPercent,
+                ).put(
+                    "saturationPercent",
+                    appearance.surface.saturationPercent,
+                ).put(
+                    "contrastPercent",
+                    appearance.surface.contrastPercent,
+                ).put(
+                    "outlineWidthDp",
+                    appearance.surface.outlineWidthDp,
+                ).put(
+                    "highlightPercent",
+                    appearance.surface.highlightPercent,
+                ).put(
+                    "shadowElevationDp",
+                    appearance.surface.shadowElevationDp,
+                ).put("textureIntensityPercent", appearance.surface.textureIntensityPercent),
+            )
+            .put(
+                "typography",
+                JSONObject().put(
+                    "accentSource",
+                    appearance.typography.accentSource.name,
+                ).put(
+                    "customAccentArgb",
+                    appearance.typography.customAccentArgb,
+                ).put(
+                    "automaticForegroundContrast",
+                    appearance.typography.automaticForegroundContrast,
+                ).put(
+                    "contentDensity",
+                    appearance.typography.contentDensity.name,
+                ).put("textScalePercent", appearance.typography.textScalePercent),
+            )
+            .put(
+                "motion",
+                JSONObject().put(
+                    "settleDurationMillis",
+                    appearance.motion.settleDurationMillis,
+                ).put(
+                    "reflowDurationMillis",
+                    appearance.motion.reflowDurationMillis,
+                ).put(
+                    "enterDurationMillis",
+                    appearance.motion.enterDurationMillis,
+                ).put(
+                    "exitDurationMillis",
+                    appearance.motion.exitDurationMillis,
+                ).put(
+                    "expandDurationMillis",
+                    appearance.motion.expandDurationMillis,
+                ).put(
+                    "easing",
+                    appearance.motion.easing.name,
+                ).put(
+                    "springBouncinessPercent",
+                    appearance.motion.springBouncinessPercent,
+                ).put(
+                    "travelIntensityPercent",
+                    appearance.motion.travelIntensityPercent,
+                ).put(
+                    "parallaxIntensityPercent",
+                    appearance.motion.parallaxIntensityPercent,
+                ).put(
+                    "rotationIntensityPercent",
+                    appearance.motion.rotationIntensityPercent,
+                ).put(
+                    "hapticStrength",
+                    appearance.motion.hapticStrength.name,
+                ).put("reducedMotion", appearance.motion.reducedMotion).put("reducedTransparency", appearance.motion.reducedTransparency),
+            )
+    }
+
+private fun JSONObject.toTimeScapeAppearance(defaults: TimeScapeAppearanceSettings): TimeScapeAppearanceSettings {
+    val geometry = optJSONObject("geometry")
+    val surface = optJSONObject("surface")
+    val typography = optJSONObject("typography")
+    val motion = optJSONObject("motion")
+    return TimeScapeAppearanceSettings(
+        version = optInt("version", defaults.version),
+        preset = enumOrDefault("preset", defaults.preset),
+        geometry =
+            TimeScapeGeometry(
+                cardAspectRatioPercent =
+                    geometry.optIntOrDefault(
+                        "cardAspectRatioPercent",
+                        defaults.geometry.cardAspectRatioPercent,
+                    ),
+                focusedScalePercent =
+                    geometry.optIntOrDefault(
+                        "focusedScalePercent",
+                        defaults.geometry.focusedScalePercent,
+                    ),
+                focusedGapDp =
+                    geometry.optIntOrDefault(
+                        "focusedGapDp",
+                        defaults.geometry.focusedGapDp,
+                    ),
+                visibleDepth =
+                    geometry.optIntOrDefault(
+                        "visibleDepth",
+                        defaults.geometry.visibleDepth,
+                    ),
+                overlapPercent =
+                    geometry.optIntOrDefault(
+                        "overlapPercent",
+                        defaults.geometry.overlapPercent,
+                    ),
+                verticalSpacingDp =
+                    geometry.optIntOrDefault(
+                        "verticalSpacingDp",
+                        defaults.geometry.verticalSpacingDp,
+                    ),
+                horizontalOffsetDp =
+                    geometry.optIntOrDefault(
+                        "horizontalOffsetDp",
+                        defaults.geometry.horizontalOffsetDp,
+                    ),
+                curveDp =
+                    geometry.optIntOrDefault(
+                        "curveDp",
+                        defaults.geometry.curveDp,
+                    ),
+                fanDirection =
+                    geometry.enumOrDefault(
+                        "fanDirection",
+                        defaults.geometry.fanDirection,
+                    ),
+                rotationDegrees =
+                    geometry.optIntOrDefault(
+                        "rotationDegrees",
+                        defaults.geometry.rotationDegrees,
+                    ),
+                cornerRadiusDp =
+                    geometry.optIntOrDefault(
+                        "cornerRadiusDp",
+                        defaults.geometry.cornerRadiusDp,
+                    ),
+                clipContent =
+                    geometry.optBooleanOrDefault(
+                        "clipContent",
+                        defaults.geometry.clipContent,
+                    ),
+                contentPaddingDp =
+                    geometry.optIntOrDefault(
+                        "contentPaddingDp",
+                        defaults.geometry.contentPaddingDp,
+                    ),
+            ),
+        surface =
+            TimeScapeSurface(
+                backgroundSource =
+                    surface.enumOrDefault(
+                        "backgroundSource",
+                        defaults.surface.backgroundSource,
+                    ),
+                customBackgroundArgb =
+                    surface.optLongOrDefault(
+                        "customBackgroundArgb",
+                        defaults.surface.customBackgroundArgb,
+                    ),
+                glassTransparencyPercent =
+                    surface.optIntOrDefault(
+                        "glassTransparencyPercent",
+                        defaults.surface.glassTransparencyPercent,
+                    ),
+                glassTintArgb =
+                    surface.optLongOrDefault(
+                        "glassTintArgb",
+                        defaults.surface.glassTintArgb,
+                    ),
+                blurStrengthPercent =
+                    surface.optIntOrDefault(
+                        "blurStrengthPercent",
+                        defaults.surface.blurStrengthPercent,
+                    ),
+                saturationPercent =
+                    surface.optIntOrDefault(
+                        "saturationPercent",
+                        defaults.surface.saturationPercent,
+                    ),
+                contrastPercent =
+                    surface.optIntOrDefault(
+                        "contrastPercent",
+                        defaults.surface.contrastPercent,
+                    ),
+                outlineWidthDp =
+                    surface.optIntOrDefault(
+                        "outlineWidthDp",
+                        defaults.surface.outlineWidthDp,
+                    ),
+                highlightPercent =
+                    surface.optIntOrDefault(
+                        "highlightPercent",
+                        defaults.surface.highlightPercent,
+                    ),
+                shadowElevationDp =
+                    surface.optIntOrDefault(
+                        "shadowElevationDp",
+                        defaults.surface.shadowElevationDp,
+                    ),
+                textureIntensityPercent =
+                    surface.optIntOrDefault(
+                        "textureIntensityPercent",
+                        defaults.surface.textureIntensityPercent,
+                    ),
+            ),
+        typography =
+            TimeScapeTypography(
+                accentSource = typography.enumOrDefault("accentSource", defaults.typography.accentSource),
+                customAccentArgb = typography.optLongOrDefault("customAccentArgb", defaults.typography.customAccentArgb),
+                automaticForegroundContrast =
+                    typography.optBooleanOrDefault(
+                        "automaticForegroundContrast",
+                        defaults.typography.automaticForegroundContrast,
+                    ),
+                contentDensity = typography.enumOrDefault("contentDensity", defaults.typography.contentDensity),
+                textScalePercent = typography.optIntOrDefault("textScalePercent", defaults.typography.textScalePercent),
+            ),
+        motion =
+            TimeScapeMotion(
+                settleDurationMillis =
+                    motion.optIntOrDefault(
+                        "settleDurationMillis",
+                        defaults.motion.settleDurationMillis,
+                    ),
+                reflowDurationMillis =
+                    motion.optIntOrDefault(
+                        "reflowDurationMillis",
+                        defaults.motion.reflowDurationMillis,
+                    ),
+                enterDurationMillis =
+                    motion.optIntOrDefault(
+                        "enterDurationMillis",
+                        defaults.motion.enterDurationMillis,
+                    ),
+                exitDurationMillis =
+                    motion.optIntOrDefault(
+                        "exitDurationMillis",
+                        defaults.motion.exitDurationMillis,
+                    ),
+                expandDurationMillis =
+                    motion.optIntOrDefault(
+                        "expandDurationMillis",
+                        defaults.motion.expandDurationMillis,
+                    ),
+                easing =
+                    motion.enumOrDefault(
+                        "easing",
+                        defaults.motion.easing,
+                    ),
+                springBouncinessPercent =
+                    motion.optIntOrDefault(
+                        "springBouncinessPercent",
+                        defaults.motion.springBouncinessPercent,
+                    ),
+                travelIntensityPercent =
+                    motion.optIntOrDefault(
+                        "travelIntensityPercent",
+                        defaults.motion.travelIntensityPercent,
+                    ),
+                parallaxIntensityPercent =
+                    motion.optIntOrDefault(
+                        "parallaxIntensityPercent",
+                        defaults.motion.parallaxIntensityPercent,
+                    ),
+                rotationIntensityPercent =
+                    motion.optIntOrDefault(
+                        "rotationIntensityPercent",
+                        defaults.motion.rotationIntensityPercent,
+                    ),
+                hapticStrength =
+                    motion.enumOrDefault(
+                        "hapticStrength",
+                        defaults.motion.hapticStrength,
+                    ),
+                reducedMotion =
+                    motion.optBooleanOrDefault(
+                        "reducedMotion",
+                        defaults.motion.reducedMotion,
+                    ),
+                reducedTransparency =
+                    motion.optBooleanOrDefault(
+                        "reducedTransparency",
+                        defaults.motion.reducedTransparency,
+                    ),
+            ),
+    ).coerce()
+}
+
+private fun JSONObject?.optIntOrDefault(
+    name: String,
+    default: Int,
+): Int = this?.optInt(name, default) ?: default
+
+private fun JSONObject?.optLongOrDefault(
+    name: String,
+    default: Long,
+): Long = this?.optLong(name, default) ?: default
+
+private fun JSONObject?.optBooleanOrDefault(
+    name: String,
+    default: Boolean,
+): Boolean = this?.optBoolean(name, default) ?: default
+
+private inline fun <reified T : Enum<T>> JSONObject?.enumOrDefault(
+    name: String,
+    default: T,
+): T =
+    this?.optString(name)?.let { value ->
+        enumValues<T>().firstOrNull {
+            it.name == value
+        }
+    } ?: default
 
 private fun JSONObject.toStagePreferencesEntry(): Pair<HomeLayoutKey, AppStagePreferences>? =
     runCatching { LauncherViewMode.valueOf(optString("viewMode")) }.getOrNull()?.let { viewMode ->
@@ -251,4 +636,4 @@ private fun JSONObject.toOverlayDock(defaults: OverlayDockSettings): OverlayDock
         showLabels = optBoolean("showLabels", defaults.showLabels),
     ).coerceOverlayDockSettings()
 
-internal const val LAUNCHER_SETTINGS_JSON_VERSION = 4
+internal const val LAUNCHER_SETTINGS_JSON_VERSION = 5

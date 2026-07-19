@@ -25,6 +25,8 @@ data class LauncherSettings(
 data class CardsSettings(
     val chapterPreferences: CardsChapterPreferences = CardsChapterPreferences(),
     val stagePreferencesByLayout: Map<HomeLayoutKey, AppStagePreferences> = emptyMap(),
+    /** Durable visual intent for the optional TimeScape presentation. */
+    val timeScapeAppearance: TimeScapeAppearanceSettings = TimeScapeAppearanceSettings.modern(),
 )
 
 /** Returns variant-specific TimeScape intent, migrating compatible historical Cards intent on read. */
