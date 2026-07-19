@@ -79,7 +79,7 @@ class CardStackTest {
                 CardStack(
                     entries = entries,
                     animationProfile = CardStackAnimationProfile.STACK_REFLOW,
-                ) { entry ->
+                ) { entry, _ ->
                     Text(cardLabel(entry.cardIndex))
                 }
             }
@@ -104,7 +104,7 @@ class CardStackTest {
                     entries = entries,
                     animationProfile = CardStackAnimationProfile.CARD_FLIGHT,
                     itemKey = { entry -> notifications[entry.cardIndex] },
-                ) { entry ->
+                ) { entry, _ ->
                     Text(notifications[entry.cardIndex])
                 }
             }
@@ -419,7 +419,7 @@ class CardStackTest {
                     entries = entries,
                     animationProfile = CardStackAnimationProfile.STACK_REFLOW,
                     reducedMotion = false,
-                ) { entry ->
+                ) { entry, _ ->
                     Text(cardLabel(entry.cardIndex))
                 }
             }
