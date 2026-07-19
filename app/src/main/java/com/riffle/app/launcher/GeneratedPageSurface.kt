@@ -142,6 +142,7 @@ internal fun GeneratedNotificationCardsPage(
                             GeneratedNotificationCard(
                                 card = state.cards[entry.cardIndex],
                                 onAction = onAction,
+                                isFocused = entry.cardIndex == activeCardIndex,
                                 modifier = pointerModifier.fillMaxSize(),
                             )
                         }
@@ -207,6 +208,7 @@ private fun GeneratedCardStackControls(
 private fun GeneratedNotificationCard(
     card: DockNotificationCardState,
     onAction: (LauncherShellAction) -> Unit,
+    isFocused: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val label = dockNotificationCardLabel(card)
@@ -218,7 +220,7 @@ private fun GeneratedNotificationCard(
                 .semantics {
                     contentDescription = generatedNotificationCardContentDescription(card)
                 }
-                .clickable(enabled = identity != null) {
+                .clickable(enabled = identity != null && isFocused) {
                     generatedNotificationCardLaunchAction(card)?.let(onAction)
                 },
         shape = LocalLauncherCardShape.current,
