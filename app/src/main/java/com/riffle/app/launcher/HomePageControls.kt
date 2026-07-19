@@ -47,8 +47,8 @@ import androidx.compose.ui.semantics.progressBarRangeInfo
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.setProgress
 import androidx.compose.ui.semantics.stateDescription
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.dp
 import com.riffle.app.launcher.widgets.HomeWidgetViewFactory
 import com.riffle.core.domain.launcher.home.GeneratedLauncherPageKind
 import com.riffle.core.domain.launcher.home.GridDimensions
@@ -595,8 +595,10 @@ internal fun pageIndicatorDragTargetIndex(
         .coerceIn(0, pageCount - 1)
 }
 
-internal fun pageIndicatorStateDescription(selectedPageIndex: Int, pageCount: Int): String =
-    "Page ${selectedPageIndex + 1} of $pageCount"
+internal fun pageIndicatorStateDescription(
+    selectedPageIndex: Int,
+    pageCount: Int,
+): String = "Page ${selectedPageIndex + 1} of $pageCount"
 
 @Composable
 private fun pageIndicatorColor(isSelected: Boolean) =
