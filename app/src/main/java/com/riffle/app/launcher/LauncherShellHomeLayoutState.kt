@@ -171,7 +171,6 @@ internal fun LauncherShellState.withSettingsTargetLayout(
         )
     val currentLayoutSet =
         currentLayoutSet(homeLayoutRepository)
-            .withActiveLayout(homeLayout)
             .withLayout(key = key, layout = layout)
             .withPreferredMode(
                 deviceClass = settingsLayoutDeviceClass,

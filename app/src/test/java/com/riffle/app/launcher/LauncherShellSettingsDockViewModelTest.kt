@@ -2,6 +2,9 @@ package com.riffle.app.launcher
 
 import com.riffle.core.domain.launcher.apps.InstalledAppRepository
 import com.riffle.core.domain.launcher.home.DockModel
+import com.riffle.core.domain.launcher.home.DockVisualEffect
+import com.riffle.core.domain.launcher.home.GridDimensions
+import com.riffle.core.domain.launcher.home.GridSettings
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
@@ -16,6 +19,49 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class LauncherShellSettingsDockViewModelTest {
+    @Test
+    fun changingDockEffectDoesNotOverwriteNewerDockAndGridSettingsInTheActiveProfile() {
+        val phoneKey = HomeLayoutKey(LauncherViewMode.STANDARD_APP_DRAWER, HomeLayoutDeviceClass.PHONE)
+        val foldableKey = HomeLayoutKey(LauncherViewMode.STANDARD_APP_DRAWER, HomeLayoutDeviceClass.FOLDABLE)
+        val initialFoldableLayout = HomeLayoutDefaults.standard(HomeLayoutDeviceClass.FOLDABLE)
+        val repository =
+            FakeHomeLayoutRepository().also { repo ->
+                repo.savedLayoutSet =
+                    HomeLayoutSet(
+                        activeKey = foldableKey,
+                        layouts =
+                            mapOf(
+                                phoneKey to HomeLayoutDefaults.standard(HomeLayoutDeviceClass.PHONE),
+                                foldableKey to initialFoldableLayout,
+                            ),
+                    )
+            }
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                installedAppRepository = InstalledAppRepository { emptyList() },
+                homeLayoutRepository = repository,
+            )
+        val persistedFoldableLayout =
+            initialFoldableLayout.copy(
+                settings =
+                    initialFoldableLayout.settings.copy(
+                        grid = GridSettings(dimensions = GridDimensions(columns = 8, rows = 5)),
+                    ),
+                dock = initialFoldableLayout.dock.copy(capacity = 7, iconSizeDp = 52),
+            )
+        repository.savedLayoutSet = checkNotNull(repository.savedLayoutSet).withLayout(foldableKey, persistedFoldableLayout)
+        val router = routerFor(viewModel)
+
+        assertTrue(router.handle(LauncherShellAction.OpenSettings))
+        assertTrue(router.handle(LauncherShellAction.SelectSettingsLayoutDeviceClass(HomeLayoutDeviceClass.PHONE)))
+        assertTrue(router.handle(LauncherShellAction.SelectDockVisualEffect(DockVisualEffect.ELEVATED)))
+
+        val savedLayoutSet = checkNotNull(repository.savedLayoutSet)
+        assertEquals(persistedFoldableLayout, savedLayoutSet.layoutFor(foldableKey))
+        assertEquals(DockVisualEffect.ELEVATED, savedLayoutSet.layoutFor(phoneKey).dock.visualEffect)
+    }
+
     @Test
     fun settingsDockEditsStayIndependentAcrossTabAndActiveDeviceSwitches() {
         val phoneKey = HomeLayoutKey(LauncherViewMode.STANDARD_APP_DRAWER, HomeLayoutDeviceClass.PHONE)
