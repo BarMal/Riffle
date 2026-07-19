@@ -14,8 +14,10 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -26,13 +28,21 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.cards.CardStackAnimationProfile
+import com.riffle.core.domain.launcher.cards.CardStackController
+import com.riffle.core.domain.launcher.cards.CardStackFocusResult
+import com.riffle.core.domain.launcher.cards.CardStackFocusState
+import com.riffle.core.domain.launcher.cards.CardStackKey
 import com.riffle.core.domain.launcher.cards.CardStackLayoutEntry
 import com.riffle.core.domain.launcher.cards.CardStackLayoutPolicy
+import com.riffle.core.domain.launcher.cards.CardStackNavigationDirection
+import com.riffle.core.domain.launcher.cards.CardStackSettleRequest
+import com.riffle.core.domain.launcher.cards.LauncherCardId
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroupKey
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 
 @Composable
+@Suppress("LongMethod")
 internal fun GeneratedNotificationCardsPage(
     groups: List<AppNotificationGroup>,
     notificationAccessStatus: NotificationAccessStatus,
@@ -51,17 +61,39 @@ internal fun GeneratedNotificationCardsPage(
                 Column(
                     modifier = Modifier.fillMaxSize().semantics { contentDescription = "Notification cards page" },
                 ) {
-                    var focusedCardIndex by rememberSaveable { mutableIntStateOf(0) }
-                    val activeCardIndex = focusedCardIndex.coerceIn(0, state.cards.lastIndex)
+                    val controller = remember { CardStackController() }
+                    val stackKey = remember { CardStackKey("generated-notification-cards") }
+                    val cardIds = state.cards.map(::generatedNotificationCardId)
+                    var focusedCardIdValue by rememberSaveable { mutableStateOf<String?>(null) }
+                    var previousCardIds by remember { mutableStateOf(cardIds) }
+                    val focusState = CardStackFocusState(stackKey, focusedCardIdValue?.let(::LauncherCardId))
+                    LaunchedEffect(cardIds) {
+                        val reconciled =
+                            if (focusState.focusedCardId == null) {
+                                controller.restore(focusState, cardIds)
+                            } else {
+                                controller.reconcile(focusState, previousCardIds, cardIds)
+                            }
+                        if (reconciled is CardStackFocusResult.Applied) {
+                            focusedCardIdValue = reconciled.state.focusedCardId?.value
+                        }
+                        previousCardIds = cardIds
+                    }
+                    val activeCardIndex = cardIds.indexOf(focusState.focusedCardId).takeIf { it >= 0 } ?: 0
+                    fun applyFocus(result: CardStackFocusResult) {
+                        if (result is CardStackFocusResult.Applied) {
+                            focusedCardIdValue = result.state.focusedCardId?.value
+                        }
+                    }
                     GeneratedCardsHeading()
                     GeneratedCardStackControls(
                         focusedCardIndex = activeCardIndex,
                         cardCount = state.cards.size,
                         onPrevious = {
-                            focusedCardIndex = (activeCardIndex - 1 + state.cards.size) % state.cards.size
+                            applyFocus(controller.navigate(focusState, cardIds, CardStackNavigationDirection.PREVIOUS))
                         },
                         onNext = {
-                            focusedCardIndex = (activeCardIndex + 1) % state.cards.size
+                            applyFocus(controller.navigate(focusState, cardIds, CardStackNavigationDirection.NEXT))
                         },
                     )
                     Box(modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp, vertical = 8.dp)) {
@@ -81,11 +113,33 @@ internal fun GeneratedNotificationCardsPage(
                             animationProfile = CardStackAnimationProfile.CARD_FLIGHT,
                             reducedMotion = reducedMotion,
                             itemKey = { entry -> generatedNotificationCardKey(state.cards[entry.cardIndex].group) },
-                        ) { entry ->
+                            interaction =
+                                CardStackInteraction(
+                                    focusedItemKey = generatedNotificationCardKey(state.cards[activeCardIndex].group),
+                                    onFocusRequest = { entry ->
+                                        applyFocus(controller.jumpTo(focusState, cardIds, cardIds[entry.cardIndex]))
+                                    },
+                                    onSettle = { drag, velocity ->
+                                        applyFocus(
+                                            controller.settle(
+                                                focusState,
+                                                cardIds,
+                                                CardStackSettleRequest(
+                                                    focusedCardId = focusState.focusedCardId,
+                                                    verticalDragPx = drag,
+                                                    verticalVelocityPxPerSecond = velocity,
+                                                    distanceThresholdPx = 48f,
+                                                    flingVelocityThresholdPxPerSecond = 1_000f,
+                                                ),
+                                            ),
+                                        )
+                                    },
+                                ),
+                        ) { entry, pointerModifier ->
                             GeneratedNotificationCard(
                                 card = state.cards[entry.cardIndex],
                                 onAction = onAction,
-                                modifier = Modifier.fillMaxSize(),
+                                modifier = pointerModifier.fillMaxSize(),
                             )
                         }
                     }
@@ -220,6 +274,9 @@ internal fun generatedNotificationCardsPageState(
 
 internal fun generatedNotificationCardKey(group: AppNotificationGroup): AppNotificationGroupKey =
     AppNotificationGroupKey(packageName = group.packageName, profileId = group.profileId)
+
+internal fun generatedNotificationCardId(card: DockNotificationCardState): LauncherCardId =
+    LauncherCardId("${card.group.packageName.value}:${card.group.profileId.value}")
 
 internal fun generatedNotificationCardClearContentDescription(card: DockNotificationCardState): String =
     dockNotificationClearContentDescription(

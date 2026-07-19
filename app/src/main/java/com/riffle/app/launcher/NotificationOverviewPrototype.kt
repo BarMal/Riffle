@@ -274,7 +274,7 @@ private fun NotificationPrototypeHero(
             animationProfile = CardStackAnimationProfile.CARD_FLIGHT,
             reducedMotion = presentation.overviewPresentation.reducedMotion,
             itemKey = { entry -> heroNotifications[entry.cardIndex].key.value },
-        ) { entry ->
+        ) { entry, _ ->
             NotificationPrototypeHeroArt(
                 notification = heroNotifications[entry.cardIndex],
                 label = label,

@@ -1,0 +1,46 @@
+package com.riffle.app.launcher
+
+import androidx.activity.ComponentActivity
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeUp
+import com.riffle.core.domain.launcher.cards.CardStackLayoutPolicy
+import org.junit.Assert.assertEquals
+import org.junit.Rule
+import org.junit.Test
+
+class CardStackGestureTest {
+    @get:Rule
+    val composeRule = createAndroidComposeRule<ComponentActivity>()
+
+    @Test
+    fun verticalDragSettlesTheFocusedCard() {
+        var focusedCard by mutableIntStateOf(0)
+        composeRule.setContent {
+            CardStack(
+                entries = CardStackLayoutPolicy().entries(cardCount = 2, activeIndex = focusedCard),
+                modifier = Modifier.fillMaxSize().testTag("stack"),
+                itemKey = { entry -> entry.cardIndex },
+                interaction =
+                    CardStackInteraction(
+                        focusedItemKey = focusedCard,
+                        onFocusRequest = { entry -> focusedCard = entry.cardIndex },
+                        onSettle = { drag, _ -> if (drag < -48f) focusedCard = 1 },
+                    ),
+            ) { _, modifier ->
+                Box(modifier.fillMaxSize())
+            }
+        }
+
+        composeRule.onNodeWithTag("stack").performTouchInput { swipeUp() }
+        composeRule.runOnIdle { assertEquals(1, focusedCard) }
+    }
+}

@@ -31,6 +31,7 @@ enum class CardStackNavigationDirection(
 enum class CardStackFocusRejection {
     DUPLICATE_CARD_IDS,
     UNKNOWN_CARD,
+    STALE_SETTLE,
 }
 
 sealed interface CardStackFocusResult {
@@ -46,10 +47,28 @@ sealed interface CardStackFocusResult {
 }
 
 /**
+ * A gesture snapshot deliberately carries the focused identity observed when the gesture began.
+ * A settle result is ignored when live content has changed that identity in the meantime.
+ */
+data class CardStackSettleRequest(
+    val focusedCardId: LauncherCardId?,
+    val verticalDragPx: Float,
+    val verticalVelocityPxPerSecond: Float,
+    val distanceThresholdPx: Float,
+    val flingVelocityThresholdPxPerSecond: Float,
+) {
+    init {
+        require(distanceThresholdPx >= 0f) { "Settle distance threshold must not be negative." }
+        require(flingVelocityThresholdPxPerSecond >= 0f) { "Fling velocity threshold must not be negative." }
+    }
+}
+
+/**
  * Pure stack-focus policy shared by card surfaces. Gesture and animation layers submit their
  * committed navigation outcome here; transient drag progress intentionally does not belong in
  * [CardStackFocusState].
  */
+@Suppress("TooManyFunctions")
 class CardStackController {
     fun initialize(
         stackKey: CardStackKey,
@@ -89,6 +108,50 @@ class CardStackController {
     ): CardStackFocusResult =
         cardIds.rejectDuplicateIds()
             ?: navigateValidStack(state, cardIds, direction)
+
+    /**
+     * Converts a completed vertical drag or fling into exactly one focus operation. Dragging up
+     * moves chronologically forward; dragging down moves back. Insufficient movement is a no-op.
+     *
+     * The focus captured by [CardStackSettleRequest] is checked before navigation so a delayed
+     * result cannot overwrite a focus selected by content reconciliation or another input source.
+     */
+    fun settle(
+        state: CardStackFocusState,
+        cardIds: List<LauncherCardId>,
+        request: CardStackSettleRequest,
+    ): CardStackFocusResult =
+        cardIds.rejectDuplicateIds()
+            ?: settleValidStack(state, cardIds, request)
+
+    private fun settleValidStack(
+        state: CardStackFocusState,
+        cardIds: List<LauncherCardId>,
+        request: CardStackSettleRequest,
+    ): CardStackFocusResult {
+        val motion =
+            if (abs(request.verticalVelocityPxPerSecond) >= request.flingVelocityThresholdPxPerSecond) {
+                request.verticalVelocityPxPerSecond
+            } else {
+                request.verticalDragPx
+            }
+        return when {
+            state.focusedCardId != request.focusedCardId ->
+                CardStackFocusResult.Rejected(CardStackFocusRejection.STALE_SETTLE)
+            abs(motion) < request.distanceThresholdPx -> apply(state, state.focusedCardId)
+            else ->
+                navigate(
+                    state = state,
+                    cardIds = cardIds,
+                    direction =
+                        if (motion < 0f) {
+                            CardStackNavigationDirection.NEXT
+                        } else {
+                            CardStackNavigationDirection.PREVIOUS
+                        },
+                )
+        }
+    }
 
     /**
      * Reconciles a live content update. If focus vanishes, the closest survivor in the prior
