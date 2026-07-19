@@ -139,6 +139,10 @@ class LauncherActivityRouteTest {
                     itemId = LauncherItemId("dock"),
                     direction = DockItemMoveDirection.RIGHT,
                 ),
+                LauncherShellAction.MoveDockShortcutToIndex(
+                    itemId = LauncherItemId("dock"),
+                    targetIndex = 2,
+                ),
             )
 
         actions.forEach { action ->

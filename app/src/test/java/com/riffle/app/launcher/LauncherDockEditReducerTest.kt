@@ -14,6 +14,7 @@ import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.HomeLayoutKey
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
 import com.riffle.core.domain.launcher.home.HomeLayoutSet
+import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.home.LauncherViewMode
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertSame
@@ -48,6 +49,29 @@ class LauncherDockEditReducerTest {
 
         assertSame(state, updatedState)
         assertEquals(null, repository.savedLayout)
+    }
+
+    @Test
+    fun persistsExactDockReorderOnTheActiveLayout() {
+        val repository = FakeHomeLayoutRepository()
+        val phoneShortcut = AppShortcutItem(LauncherItemId("phone"), phoneIdentity, "Phone")
+        val cameraShortcut = AppShortcutItem(LauncherItemId("camera"), phoneIdentity, "Camera")
+        val state =
+            LauncherShellState(
+                homeLayout =
+                    HomeLayoutDefaults.standard().copy(
+                        dock = HomeLayoutDefaults.standard().dock.copy(items = listOf(phoneShortcut, cameraShortcut)),
+                    ),
+            )
+
+        val updatedState =
+            reducer(repository).reduce(
+                state = state,
+                action = LauncherShellAction.MoveDockShortcutToIndex(cameraShortcut.id, targetIndex = 0),
+            )
+
+        assertEquals(listOf(cameraShortcut.id, phoneShortcut.id), updatedState.homeLayout.dock.items.map { it.id })
+        assertEquals(updatedState.homeLayout, repository.savedLayoutSet?.activeLayout)
     }
 
     @Test
