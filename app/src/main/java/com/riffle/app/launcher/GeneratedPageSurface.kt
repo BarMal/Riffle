@@ -80,6 +80,7 @@ internal fun GeneratedNotificationCardsPage(
                         previousCardIds = cardIds
                     }
                     val activeCardIndex = cardIds.indexOf(focusState.focusedCardId).takeIf { it >= 0 } ?: 0
+
                     fun applyFocus(result: CardStackFocusResult) {
                         if (result is CardStackFocusResult.Applied) {
                             focusedCardIdValue = result.state.focusedCardId?.value

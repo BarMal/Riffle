@@ -14,13 +14,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.PointerId
 import androidx.compose.ui.input.pointer.awaitFirstDown
 import androidx.compose.ui.input.pointer.awaitPointerEvent
 import androidx.compose.ui.input.pointer.consume
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.util.VelocityTracker
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.SemanticsPropertyKey
 import androidx.compose.ui.semantics.isTraversalGroup
@@ -255,8 +255,10 @@ private fun Modifier.cardStackPointerInput(
                 horizontalDrag += delta.x
                 if (
                     axis == null &&
-                    (abs(verticalDrag) > viewConfiguration.touchSlop ||
-                        abs(horizontalDrag) > viewConfiguration.touchSlop)
+                    (
+                        abs(verticalDrag) > viewConfiguration.touchSlop ||
+                            abs(horizontalDrag) > viewConfiguration.touchSlop
+                    )
                 ) {
                     axis =
                         if (abs(verticalDrag) > abs(horizontalDrag)) {
@@ -273,7 +275,10 @@ private fun Modifier.cardStackPointerInput(
                 cancelled -> Unit
                 axis == null -> interaction.onFocusRequest(entry)
                 axis == CardStackGestureAxis.VERTICAL ->
-                    interaction.onSettle(verticalDrag, velocityTracker.calculateVelocity().y)
+                    interaction.onSettle(
+                        verticalDrag,
+                        velocityTracker.calculateVelocity().y,
+                    )
                 // Horizontal gestures remain unconsumed for the owning page/stage surface.
                 else -> Unit
             }
