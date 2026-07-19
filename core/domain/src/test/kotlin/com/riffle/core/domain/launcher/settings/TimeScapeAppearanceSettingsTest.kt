@@ -226,4 +226,28 @@ class TimeScapeAppearanceSettingsTest {
         assertEquals(0f, entries.maxOf { kotlin.math.abs(it.offset) })
         assertEquals(0f, entries.maxOf { kotlin.math.abs(it.rotationDegrees) })
     }
+
+    @Test
+    fun globalReducedMotionUsesStaticTimeScapeTokensWithoutChangingStoredIntent() {
+        val storedAppearance = TimeScapeAppearanceSettings()
+        val resolution =
+            LauncherSettings(
+                cards = CardsSettings(timeScapeAppearance = storedAppearance),
+                motion = MotionSettings(reducedMotion = true),
+            ).resolveTimeScapeCardStack(TimeScapeViewportDp(widthDp = 800, heightDp = 1200))
+        val entries =
+            resolution.layoutPolicy.entries(
+                cardCount = 3,
+                activeIndex = 1,
+                reducedMotion = resolution.reducedMotion,
+            )
+
+        assertFalse(storedAppearance.motion.reducedMotion)
+        assertTrue(resolution.reducedMotion)
+        assertFalse(resolution.animation.reflowsStack)
+        assertFalse(resolution.animation.animatesScale)
+        assertFalse(resolution.animation.animatesRotation)
+        assertEquals(0f, entries.maxOf { kotlin.math.abs(it.offset) })
+        assertEquals(0f, entries.maxOf { kotlin.math.abs(it.rotationDegrees) })
+    }
 }

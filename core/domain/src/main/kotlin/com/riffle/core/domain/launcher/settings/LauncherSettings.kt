@@ -29,6 +29,17 @@ data class CardsSettings(
     val timeScapeAppearance: TimeScapeAppearanceSettings = TimeScapeAppearanceSettings.modern(),
 )
 
+/** Resolves TimeScape using the launcher-wide accessibility motion preference. */
+fun LauncherSettings.resolveTimeScapeCardStack(
+    viewport: TimeScapeViewportDp,
+    capabilities: TimeScapeRendererCapabilities = TimeScapeRendererCapabilities(),
+): TimeScapeCardStackResolution =
+    cards.timeScapeAppearance.resolveCardStack(
+        viewport = viewport,
+        capabilities = capabilities,
+        globalReducedMotion = motion.reducedMotion,
+    )
+
 /** Returns variant-specific TimeScape intent, migrating compatible historical Cards intent on read. */
 fun CardsSettings.stagePreferencesFor(layoutKey: HomeLayoutKey): AppStagePreferences =
     stagePreferencesByLayout[layoutKey] ?: chapterPreferences.toStagePreferences()

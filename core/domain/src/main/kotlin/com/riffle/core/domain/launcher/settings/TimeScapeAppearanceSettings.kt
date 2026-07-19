@@ -84,8 +84,9 @@ data class TimeScapeAppearanceSettings(
     fun resolveCardStack(
         viewport: TimeScapeViewportDp,
         capabilities: TimeScapeRendererCapabilities = TimeScapeRendererCapabilities(),
+        globalReducedMotion: Boolean = false,
     ): TimeScapeCardStackResolution {
-        val appearance = effectiveFor(capabilities)
+        val appearance = effectiveForResolution(capabilities, globalReducedMotion)
         val requestedPadding = appearance.geometry.contentPaddingDp
         val focusedScale = appearance.geometry.focusedScalePercent / 100f
         val stackBounds = resolveStackBounds(appearance.geometry, appearance.motion, focusedScale)
@@ -167,6 +168,13 @@ data class TimeScapeAppearanceSettings(
         fun modern(): TimeScapeAppearanceSettings = TimeScapeAppearancePreset.MODERN_TIMESCAPE.settings
     }
 }
+
+private fun TimeScapeAppearanceSettings.effectiveForResolution(
+    capabilities: TimeScapeRendererCapabilities,
+    globalReducedMotion: Boolean,
+): TimeScapeAppearanceSettings =
+    copy(motion = motion.copy(reducedMotion = motion.reducedMotion || globalReducedMotion))
+        .effectiveFor(capabilities)
 
 private fun resolveCardSize(
     viewport: TimeScapeViewportDp,
