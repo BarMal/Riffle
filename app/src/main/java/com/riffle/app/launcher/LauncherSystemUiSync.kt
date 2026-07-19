@@ -8,6 +8,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.ShellDestination
+import com.riffle.core.domain.launcher.settings.LauncherThemeMode
 import com.riffle.core.domain.launcher.settings.homeSystemBars
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -29,6 +30,13 @@ private fun ComponentActivity.applyLauncherSystemUiMode(mode: LauncherSystemUiMo
     val controller = WindowInsetsControllerCompat(window, window.decorView)
     controller.systemBarsBehavior =
         WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+    controller.isAppearanceLightStatusBars =
+        mode.usesLightStatusBarAppearance(
+            systemIsDarkTheme =
+                resources.configuration.uiMode and
+                    android.content.res.Configuration.UI_MODE_NIGHT_MASK ==
+                    android.content.res.Configuration.UI_MODE_NIGHT_YES,
+        )
 
     if (mode.shouldHideStatusBars) {
         controller.hide(WindowInsetsCompat.Type.statusBars())
@@ -49,6 +57,7 @@ internal fun launcherSystemUiMode(shellState: LauncherShellState): LauncherSyste
             hideStatusBarOnHome = homeSystemBars.statusBarHidden,
             hideNavigationBarOnHome = homeSystemBars.navigationBarHidden,
             destination = shellState.destination,
+            themeMode = shellState.launcherSettings.appearance.themeMode,
         )
     }
 
@@ -56,10 +65,18 @@ internal data class LauncherSystemUiMode(
     val hideStatusBarOnHome: Boolean,
     val hideNavigationBarOnHome: Boolean,
     val destination: ShellDestination,
+    val themeMode: LauncherThemeMode,
 ) {
     val shouldHideStatusBars: Boolean =
         destination == ShellDestination.HOME && hideStatusBarOnHome
 
     val shouldHideNavigationBars: Boolean =
         destination == ShellDestination.HOME && hideNavigationBarOnHome
+
+    fun usesLightStatusBarAppearance(systemIsDarkTheme: Boolean): Boolean =
+        when (themeMode) {
+            LauncherThemeMode.LIGHT -> true
+            LauncherThemeMode.DARK -> false
+            LauncherThemeMode.SYSTEM -> !systemIsDarkTheme
+        }
 }

@@ -5,6 +5,7 @@ import com.riffle.core.domain.launcher.ShellDestination
 import com.riffle.core.domain.launcher.settings.AppearanceSettings
 import com.riffle.core.domain.launcher.settings.HomeSystemBars
 import com.riffle.core.domain.launcher.settings.LauncherSettings
+import com.riffle.core.domain.launcher.settings.LauncherThemeMode
 import com.riffle.core.domain.launcher.settings.withHomeSystemBars
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -72,12 +73,14 @@ class LauncherSystemUiSyncTest {
                 hideStatusBarOnHome = true,
                 hideNavigationBarOnHome = false,
                 destination = ShellDestination.HOME,
+                themeMode = LauncherThemeMode.SYSTEM,
             )
         val navigationOnly =
             LauncherSystemUiMode(
                 hideStatusBarOnHome = false,
                 hideNavigationBarOnHome = true,
                 destination = ShellDestination.HOME,
+                themeMode = LauncherThemeMode.SYSTEM,
             )
 
         assertEquals(false, statusOnly == navigationOnly)
@@ -134,4 +137,34 @@ class LauncherSystemUiSyncTest {
         assertTrue(mode.shouldHideStatusBars)
         assertFalse(mode.shouldHideNavigationBars)
     }
+
+    @Test
+    fun lightThemeUsesDarkStatusBarIcons() {
+        val mode = launcherSystemUiMode(shellStateWithTheme(LauncherThemeMode.LIGHT))
+
+        assertTrue(mode.usesLightStatusBarAppearance(systemIsDarkTheme = true))
+    }
+
+    @Test
+    fun darkThemeUsesLightStatusBarIcons() {
+        val mode = launcherSystemUiMode(shellStateWithTheme(LauncherThemeMode.DARK))
+
+        assertFalse(mode.usesLightStatusBarAppearance(systemIsDarkTheme = false))
+    }
+
+    @Test
+    fun systemThemeFollowsSystemDarkModeForStatusBarIcons() {
+        val mode = launcherSystemUiMode(shellStateWithTheme(LauncherThemeMode.SYSTEM))
+
+        assertTrue(mode.usesLightStatusBarAppearance(systemIsDarkTheme = false))
+        assertFalse(mode.usesLightStatusBarAppearance(systemIsDarkTheme = true))
+    }
+
+    private fun shellStateWithTheme(themeMode: LauncherThemeMode): LauncherShellState =
+        LauncherShellState(
+            launcherSettings =
+                LauncherSettings(
+                    appearance = AppearanceSettings(themeMode = themeMode),
+                ),
+        )
 }
