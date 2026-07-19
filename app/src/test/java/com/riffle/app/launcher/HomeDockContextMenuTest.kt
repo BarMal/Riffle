@@ -14,6 +14,13 @@ import org.junit.Test
 
 class HomeDockContextMenuTest {
     @Test
+    fun directDockDragIsLimitedToShortcutsAndFolders() {
+        assertEquals(true, DockSlotItemState.Shortcut(shortcut()).isDirectDockDragEligible())
+        assertEquals(true, DockSlotItemState.Folder(folder()).isDirectDockDragEligible())
+        assertEquals(false, DockSlotItemState.Widget(widget()).isDirectDockDragEligible())
+    }
+
+    @Test
     fun dragPreviewReflowsItemsByStableIdWithoutMutatingTheSavedOrder() {
         val camera = shortcut()
         val weather = widget()

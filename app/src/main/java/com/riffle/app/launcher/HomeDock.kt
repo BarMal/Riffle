@@ -289,6 +289,8 @@ internal data class DockDragState(
 
 internal fun dockItemTestTag(itemId: LauncherItemId): String = "dock-item:${itemId.value}"
 
+internal fun DockSlotItemState.isDirectDockDragEligible(): Boolean = this is DockSlotItemState.Shortcut || this is DockSlotItemState.Folder
+
 internal fun List<LauncherItem>.dockItemsForPreview(drag: DockDragState?): List<LauncherItem> {
     if (drag == null || drag.itemId !in map { it.id }) return this
     val sourceIndex = indexOfFirst { it.id == drag.itemId }
@@ -389,8 +391,9 @@ private fun Modifier.dockItemDrag(
     onDragStateChanged: (DockDragState?) -> Unit,
     onAction: (LauncherShellAction) -> Unit,
 ): Modifier {
-    return state.item?.id
-        ?.takeIf { state.isEditing && state.shortcutCount > 1 }
+    return state.item
+        ?.takeIf { item -> state.isEditing && state.shortcutCount > 1 && item.isDirectDockDragEligible() }
+        ?.id
         ?.let { itemId ->
             pointerInput(itemId, state.shortcutIndex, state.shortcutCount, slotWidthDp, itemSpacingDp) {
                 var horizontalDrag = 0f
