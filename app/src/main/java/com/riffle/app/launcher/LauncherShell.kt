@@ -1,3 +1,5 @@
+@file:Suppress("TooManyFunctions")
+
 package com.riffle.app.launcher
 
 import androidx.activity.compose.BackHandler
@@ -20,7 +22,9 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -32,6 +36,7 @@ import com.riffle.core.domain.launcher.apps.AppActivityName
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.InstalledApp
+import com.riffle.core.domain.launcher.home.DockEditRejectionReason
 import com.riffle.core.domain.launcher.home.LauncherViewModeAvailability
 import com.riffle.core.domain.launcher.home.WallpaperSource
 import com.riffle.core.domain.launcher.search.LauncherSearchResult
@@ -126,9 +131,51 @@ fun LauncherShellContent(
                     onDismiss = onSetupCardDismissed,
                 )
             }
+            state.dockEditRejectionReason?.let { reason ->
+                DockEditRejectionMessage(
+                    reason = reason,
+                    modifier =
+                        Modifier
+                            .align(Alignment.BottomCenter)
+                            .windowInsetsPadding(WindowInsets.safeDrawing)
+                            .padding(16.dp),
+                )
+            }
         }
     }
 }
+
+@Composable
+private fun DockEditRejectionMessage(
+    reason: DockEditRejectionReason,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        modifier = modifier.semantics { liveRegion = LiveRegionMode.Assertive },
+        shape = MaterialTheme.shapes.medium,
+        color = MaterialTheme.colorScheme.errorContainer,
+        contentColor = MaterialTheme.colorScheme.onErrorContainer,
+        tonalElevation = 4.dp,
+    ) {
+        Text(
+            text = dockEditRejectionMessage(reason),
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+            style = MaterialTheme.typography.bodyMedium,
+        )
+    }
+}
+
+internal fun dockEditRejectionMessage(reason: DockEditRejectionReason): String =
+    when (reason) {
+        DockEditRejectionReason.NO_AVAILABLE_SLOT -> "Dock is full. Remove an item or increase capacity."
+        DockEditRejectionReason.DOCK_DISABLED -> "Enable Dock before moving items."
+        DockEditRejectionReason.UNSUPPORTED_ITEM -> "Only apps and folders can move between Home and Dock."
+        DockEditRejectionReason.GENERATED_HOME_PAGE -> "Choose a standard Home page."
+        DockEditRejectionReason.NO_AVAILABLE_HOME_CELL -> "The selected Home page has no available cells."
+        DockEditRejectionReason.INVALID_HOME_PLACEMENT -> "That Home cell is unavailable. Choose another cell."
+        DockEditRejectionReason.HOME_PAGE_NOT_FOUND -> "That Home page is no longer available."
+        else -> "Could not update Dock. Try again."
+    }
 
 data class LauncherShellAppInfo(
     val versionLabel: String = "",

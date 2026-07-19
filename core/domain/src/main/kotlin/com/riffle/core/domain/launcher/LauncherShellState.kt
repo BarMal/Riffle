@@ -18,6 +18,7 @@ import com.riffle.core.domain.launcher.cards.AppStageSnapshot
 import com.riffle.core.domain.launcher.cards.CardsChapterPlanner
 import com.riffle.core.domain.launcher.cards.CardsChapterState
 import com.riffle.core.domain.launcher.cards.LauncherCardId
+import com.riffle.core.domain.launcher.home.DockEditRejectionReason
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
@@ -60,6 +61,8 @@ data class LauncherShellState(
     val searchSettingsResults: List<LauncherSearchResult.Setting> = emptyList(),
     val installedWidgetProviders: List<InstalledWidgetProvider> = emptyList(),
     val isWidgetPickerOpen: Boolean = false,
+    /** The latest rejected Dock edit, retained until another Dock edit succeeds. */
+    val dockEditRejectionReason: DockEditRejectionReason? = null,
 ) {
     /** Rebuilds transient Cards content from the current notification snapshot and stored intent. */
     fun cardsChapterState(planner: CardsChapterPlanner = CardsChapterPlanner()): CardsChapterState =

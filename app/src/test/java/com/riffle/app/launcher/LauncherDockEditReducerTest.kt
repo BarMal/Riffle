@@ -7,6 +7,7 @@ import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.home.AppShortcutItem
+import com.riffle.core.domain.launcher.home.DockEditRejectionReason
 import com.riffle.core.domain.launcher.home.DockEngine
 import com.riffle.core.domain.launcher.home.GridCell
 import com.riffle.core.domain.launcher.home.GridPlacement
@@ -40,7 +41,7 @@ class LauncherDockEditReducerTest {
     }
 
     @Test
-    fun ignoresRejectedDockEdits() {
+    fun exposesRejectedDockEditsWithoutSavingTheLayout() {
         val repository = FakeHomeLayoutRepository()
         val state = LauncherShellState()
 
@@ -50,7 +51,33 @@ class LauncherDockEditReducerTest {
                 action = LauncherShellAction.OpenHome,
             )
 
-        assertSame(state, updatedState)
+        assertEquals(DockEditRejectionReason.ITEM_NOT_FOUND, updatedState.dockEditRejectionReason)
+        assertSame(state.homeLayout, updatedState.homeLayout)
+        assertEquals(null, repository.savedLayout)
+    }
+
+    @Test
+    fun exposesDisabledDockReasonForRejectedHomeToDockTransfer() {
+        val repository = FakeHomeLayoutRepository()
+        val shortcut = AppShortcutItem(LauncherItemId("phone"), phoneIdentity, "Phone")
+        val state =
+            LauncherShellState(
+                homeLayout =
+                    HomeLayoutDefaults.standard().copy(
+                        dock = HomeLayoutDefaults.standard().dock.copy(isEnabled = false),
+                        pages =
+                            listOf(
+                                HomeLayoutDefaults.standard().selectedPage.copy(
+                                    items = listOf(shortcut.copy(placement = GridPlacement(GridCell(0, 0)))),
+                                ),
+                            ),
+                    ),
+            )
+
+        val updatedState = reducer(repository).reduce(state, LauncherShellAction.MoveHomeItemToDock(shortcut.id))
+
+        assertEquals(DockEditRejectionReason.DOCK_DISABLED, updatedState.dockEditRejectionReason)
+        assertEquals(state.homeLayout, updatedState.homeLayout)
         assertEquals(null, repository.savedLayout)
     }
 
