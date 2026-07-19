@@ -61,6 +61,7 @@ class LauncherShellSettingsDockViewModelTest {
         val savedLayoutSet = checkNotNull(repository.savedLayoutSet)
         assertEquals(persistedFoldableLayout, savedLayoutSet.layoutFor(foldableKey))
         assertEquals(DockVisualEffect.ELEVATED, savedLayoutSet.layoutFor(phoneKey).dock.visualEffect)
+        assertEquals(persistedFoldableLayout, viewModel.state.value.homeLayout)
     }
 
     @Test
