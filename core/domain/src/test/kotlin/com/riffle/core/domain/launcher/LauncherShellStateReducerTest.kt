@@ -168,6 +168,25 @@ class LauncherShellStateReducerTest {
     }
 
     @Test
+    fun unresolvedHomeRoleAfterRequestPreservesThePreviewDestination() {
+        val settingsState =
+            reducer.navigationActionSelected(
+                currentState = LauncherShellState(),
+                action = ShellNavigationAction.OpenSettings,
+            )
+
+        val returnedState =
+            reducer.homeRoleChanged(
+                currentState = reducer.defaultHomeRequestStarted(settingsState),
+                homeRoleStatus = HomeRoleStatus.UNKNOWN,
+            )
+
+        assertEquals(ShellDestination.SETTINGS, returnedState.destination)
+        assertEquals(FirstRunStatus.REQUESTING_HOME_ROLE, returnedState.firstRunStatus)
+        assertFalse(returnedState.shouldShowDefaultHomePrompt)
+    }
+
+    @Test
     fun dismissedSetupCardDoesNotChangeLiveHomeStatus() {
         val state = reducer.setupCardDismissed(LauncherShellState(homeRoleStatus = HomeRoleStatus.NOT_DEFAULT_HOME))
 
