@@ -57,6 +57,19 @@ class OverlayDockShortcutsTest {
             listOf("overlay-recent:com.example.gallery", "overlay-recent:com.example.camera"),
             content.recentShortcuts.map { it.id.value },
         )
+        assertEquals(false, content.recentAppsAccessRequired)
+    }
+
+    @Test
+    fun reportsWhenUsageAccessIsRequiredForRecentApps() {
+        val content =
+            OverlayDockSettings().contentFor(
+                installedApps = emptyList(),
+                recentAppUsages = emptyList(),
+                canReadRecentApps = false,
+            )
+
+        assertEquals(true, content.recentAppsAccessRequired)
     }
 
     private fun shortcut(

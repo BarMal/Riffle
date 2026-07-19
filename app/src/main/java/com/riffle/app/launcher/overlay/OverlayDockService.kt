@@ -68,6 +68,15 @@ class OverlayDockService : Service() {
                         expanded = false
                         renderOverlay()
                     },
+                    onRequestUsageAccess = {
+                        startActivity(
+                            Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS).apply {
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            },
+                        )
+                        expanded = false
+                        renderOverlay()
+                    },
                 )
             } else {
                 viewFactory.collapsedHandleView(
@@ -91,6 +100,7 @@ class OverlayDockService : Service() {
         return settings.contentFor(
             installedApps = installedApps,
             recentAppUsages = recentAppRepository.recentAppUsages(),
+            canReadRecentApps = recentAppRepository.canReadRecentApps(),
         )
     }
 

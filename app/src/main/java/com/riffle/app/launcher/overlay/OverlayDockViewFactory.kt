@@ -57,6 +57,7 @@ internal class OverlayDockViewFactory(
         settings: OverlayDockSettings,
         onCollapse: () -> Unit,
         onLaunch: () -> Unit,
+        onRequestUsageAccess: () -> Unit,
     ): View =
         FrameLayout(context).apply {
             background = context.roundedBackground(alphaPercent = settings.handleAlphaPercent)
@@ -69,6 +70,7 @@ internal class OverlayDockViewFactory(
                     settings = settings,
                     onCollapse = onCollapse,
                     onLaunch = onLaunch,
+                    onRequestUsageAccess = onRequestUsageAccess,
                 ),
             )
         }
@@ -181,12 +183,13 @@ internal class OverlayDockViewFactory(
         settings: OverlayDockSettings,
         onCollapse: () -> Unit,
         onLaunch: () -> Unit,
+        onRequestUsageAccess: () -> Unit,
     ): View =
         when (settings.expandedOrientation) {
             OverlayDockExpandedOrientation.WIDE ->
                 HorizontalScrollView(context).apply {
                     isHorizontalScrollBarEnabled = false
-                    addView(expandedDockItems(content, settings, onCollapse, onLaunch))
+                    addView(expandedDockItems(content, settings, onCollapse, onLaunch, onRequestUsageAccess))
                 }
 
             OverlayDockExpandedOrientation.TALL ->
@@ -202,7 +205,7 @@ internal class OverlayDockViewFactory(
                                 ),
                             ),
                         )
-                    addView(expandedDockItems(content, settings, onCollapse, onLaunch))
+                    addView(expandedDockItems(content, settings, onCollapse, onLaunch, onRequestUsageAccess))
                 }
         }
 
@@ -211,6 +214,7 @@ internal class OverlayDockViewFactory(
         settings: OverlayDockSettings,
         onCollapse: () -> Unit,
         onLaunch: () -> Unit,
+        onRequestUsageAccess: () -> Unit,
     ): LinearLayout =
         LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
@@ -220,6 +224,8 @@ internal class OverlayDockViewFactory(
             }
             if (content.recentShortcuts.isNotEmpty()) {
                 addView(dockSection("Recent apps", content.recentShortcuts, settings, onLaunch))
+            } else if (content.recentAppsAccessRequired) {
+                addView(usageAccessButton(onRequestUsageAccess))
             }
             if (content.pinnedShortcuts.isEmpty() && content.recentShortcuts.isEmpty()) {
                 addView(emptyDockText())
@@ -268,6 +274,17 @@ internal class OverlayDockViewFactory(
             setTextColor(Color.WHITE)
             gravity = Gravity.CENTER
             setPadding(horizontal = context.dp(12), vertical = context.dp(8))
+        }
+
+    private fun usageAccessButton(onRequestUsageAccess: () -> Unit): TextView =
+        TextView(context).apply {
+            text = "Enable recent apps"
+            textSize = 14f
+            setTextColor(Color.WHITE)
+            gravity = Gravity.CENTER
+            setPadding(horizontal = context.dp(12), vertical = context.dp(8))
+            contentDescription = "Allow Usage Access to show recent apps"
+            setOnClickListener { onRequestUsageAccess() }
         }
 
     private fun collapseButton(onCollapse: () -> Unit): TextView =

@@ -9,6 +9,7 @@ import com.riffle.core.domain.launcher.settings.OverlayDockSettings
 internal data class OverlayDockShortcuts(
     val pinnedShortcuts: List<AppShortcutItem>,
     val recentShortcuts: List<AppShortcutItem>,
+    val recentAppsAccessRequired: Boolean,
 )
 
 internal fun OverlayDockSettings.visibleOverlayDockShortcuts(installedApps: List<InstalledApp>): List<AppShortcutItem> {
@@ -21,10 +22,12 @@ internal fun OverlayDockSettings.visibleOverlayDockShortcuts(installedApps: List
 internal fun OverlayDockSettings.contentFor(
     installedApps: List<InstalledApp>,
     recentAppUsages: List<RecentAppUsage>,
+    canReadRecentApps: Boolean = true,
 ): OverlayDockShortcuts =
     OverlayDockShortcuts(
         pinnedShortcuts = visibleOverlayDockShortcuts(installedApps),
         recentShortcuts = recentOverlayDockShortcuts(recentAppUsages, installedApps),
+        recentAppsAccessRequired = !canReadRecentApps,
     )
 
 private fun recentOverlayDockShortcuts(
