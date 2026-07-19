@@ -42,6 +42,7 @@ import com.riffle.app.launcher.failureMessage
 import com.riffle.app.launcher.fallbackWallpaperSourceAction
 import com.riffle.app.launcher.isLauncherHomeIntent
 import com.riffle.app.launcher.notifications.AndroidNotificationDismissalGateway
+import com.riffle.app.launcher.notifications.AndroidNotificationStageActionGateway
 import com.riffle.app.launcher.notifications.launchNotificationListenerSettings
 import com.riffle.app.launcher.refreshInstalledApps
 import com.riffle.app.launcher.refreshNotifications
@@ -264,6 +265,7 @@ class MainActivity : ComponentActivity() {
                 DefaultLauncherNotificationActionHandler(
                     notificationDismissalGateway = AndroidNotificationDismissalGateway,
                     refreshNotifications = { shellViewModel.refreshNotifications() },
+                    stageActionGateway = AndroidNotificationStageActionGateway,
                 ),
             settingsActionHandler =
                 DefaultLauncherSettingsActionHandler(

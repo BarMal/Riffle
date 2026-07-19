@@ -1,5 +1,6 @@
 package com.riffle.app.launcher
 
+import com.riffle.app.launcher.notifications.NotificationStageAction
 import com.riffle.core.domain.launcher.apps.AppActivityName
 import com.riffle.core.domain.launcher.apps.AppDrawerProfileFilter
 import com.riffle.core.domain.launcher.apps.AppIdentity
@@ -416,6 +417,13 @@ class LauncherActionDomainTest {
                 notification(
                     "DismissNotifications",
                     LauncherShellAction.DismissNotifications(listOf(LauncherNotificationKey("notification"))),
+                ),
+                notification(
+                    "PerformNotificationStageAction",
+                    LauncherShellAction.PerformNotificationStageAction(
+                        LauncherNotificationKey("notification"),
+                        NotificationStageAction.Open,
+                    ),
                 ),
             )
 
