@@ -53,10 +53,11 @@ internal class OverlayDockViewFactory(
         }
 
     fun expandedDockView(
-        shortcuts: List<AppShortcutItem>,
+        content: OverlayDockShortcuts,
         settings: OverlayDockSettings,
         onCollapse: () -> Unit,
         onLaunch: () -> Unit,
+        onRequestUsageAccess: () -> Unit,
     ): View =
         FrameLayout(context).apply {
             background = context.roundedBackground(alphaPercent = settings.handleAlphaPercent)
@@ -65,10 +66,11 @@ internal class OverlayDockViewFactory(
 
             addView(
                 expandedDockScrollView(
-                    shortcuts = shortcuts,
+                    content = content,
                     settings = settings,
                     onCollapse = onCollapse,
                     onLaunch = onLaunch,
+                    onRequestUsageAccess = onRequestUsageAccess,
                 ),
             )
         }
@@ -177,16 +179,17 @@ internal class OverlayDockViewFactory(
     }
 
     private fun expandedDockScrollView(
-        shortcuts: List<AppShortcutItem>,
+        content: OverlayDockShortcuts,
         settings: OverlayDockSettings,
         onCollapse: () -> Unit,
         onLaunch: () -> Unit,
+        onRequestUsageAccess: () -> Unit,
     ): View =
         when (settings.expandedOrientation) {
             OverlayDockExpandedOrientation.WIDE ->
                 HorizontalScrollView(context).apply {
                     isHorizontalScrollBarEnabled = false
-                    addView(expandedDockItems(shortcuts, settings, onCollapse, onLaunch))
+                    addView(expandedDockItems(content, settings, onCollapse, onLaunch, onRequestUsageAccess))
                 }
 
             OverlayDockExpandedOrientation.TALL ->
@@ -195,35 +198,73 @@ internal class OverlayDockViewFactory(
                     layoutParams =
                         FrameLayout.LayoutParams(
                             FrameLayout.LayoutParams.WRAP_CONTENT,
-                            context.dp(context.tallExpandedDockHeightDp(shortcuts, settings)),
+                            context.dp(
+                                context.tallExpandedDockHeightDp(
+                                    content.pinnedShortcuts + content.recentShortcuts,
+                                    settings,
+                                ),
+                            ),
                         )
-                    addView(expandedDockItems(shortcuts, settings, onCollapse, onLaunch))
+                    addView(expandedDockItems(content, settings, onCollapse, onLaunch, onRequestUsageAccess))
                 }
         }
 
     private fun expandedDockItems(
-        shortcuts: List<AppShortcutItem>,
+        content: OverlayDockShortcuts,
         settings: OverlayDockSettings,
         onCollapse: () -> Unit,
         onLaunch: () -> Unit,
+        onRequestUsageAccess: () -> Unit,
     ): LinearLayout =
         LinearLayout(context).apply {
-            orientation = settings.expandedOrientation.linearOrientation
+            orientation = LinearLayout.VERTICAL
             gravity = settings.expandedOrientation.itemGravity
-            shortcuts.forEach { shortcut ->
-                addView(
-                    shortcutButton(
-                        shortcut = shortcut,
-                        settings = settings,
-                        itemOrientation = settings.expandedOrientation,
-                        onLaunch = onLaunch,
-                    ),
-                )
+            if (content.pinnedShortcuts.isNotEmpty()) {
+                addView(dockSection("Docked apps", content.pinnedShortcuts, settings, onLaunch))
             }
-            if (shortcuts.isEmpty()) {
+            if (content.recentShortcuts.isNotEmpty()) {
+                addView(dockSection("Recent apps", content.recentShortcuts, settings, onLaunch))
+            } else if (content.recentAppsAccessRequired) {
+                addView(usageAccessButton(onRequestUsageAccess))
+            }
+            if (content.pinnedShortcuts.isEmpty() && content.recentShortcuts.isEmpty()) {
                 addView(emptyDockText())
             }
             addView(collapseButton(onCollapse))
+        }
+
+    private fun dockSection(
+        title: String,
+        shortcuts: List<AppShortcutItem>,
+        settings: OverlayDockSettings,
+        onLaunch: () -> Unit,
+    ): LinearLayout =
+        LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            addView(
+                TextView(context).apply {
+                    text = title
+                    textSize = 12f
+                    setTextColor(Color.WHITE)
+                    setPadding(horizontal = context.dp(4), vertical = context.dp(4))
+                },
+            )
+            addView(
+                LinearLayout(context).apply {
+                    orientation = settings.expandedOrientation.linearOrientation
+                    gravity = settings.expandedOrientation.itemGravity
+                    shortcuts.forEach { shortcut ->
+                        addView(
+                            shortcutButton(
+                                shortcut = shortcut,
+                                settings = settings,
+                                itemOrientation = settings.expandedOrientation,
+                                onLaunch = onLaunch,
+                            ),
+                        )
+                    }
+                },
+            )
         }
 
     private fun emptyDockText(): TextView =
@@ -233,6 +274,19 @@ internal class OverlayDockViewFactory(
             setTextColor(Color.WHITE)
             gravity = Gravity.CENTER
             setPadding(horizontal = context.dp(12), vertical = context.dp(8))
+        }
+
+    private fun usageAccessButton(onRequestUsageAccess: () -> Unit): TextView =
+        TextView(context).apply {
+            text = "Enable recent apps"
+            textSize = 14f
+            setTextColor(Color.WHITE)
+            gravity = Gravity.CENTER
+            setPadding(horizontal = context.dp(12), vertical = context.dp(8))
+            minHeight = context.dp(USAGE_ACCESS_ACTION_MIN_TOUCH_TARGET_DP)
+            minWidth = context.dp(USAGE_ACCESS_ACTION_MIN_TOUCH_TARGET_DP)
+            contentDescription = "Allow Usage Access to show recent apps"
+            setOnClickListener { onRequestUsageAccess() }
         }
 
     private fun collapseButton(onCollapse: () -> Unit): TextView =
@@ -246,3 +300,5 @@ internal class OverlayDockViewFactory(
             setOnClickListener { onCollapse() }
         }
 }
+
+internal const val USAGE_ACCESS_ACTION_MIN_TOUCH_TARGET_DP = 48

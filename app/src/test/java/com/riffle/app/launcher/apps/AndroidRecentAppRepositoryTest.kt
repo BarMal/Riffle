@@ -65,4 +65,16 @@ class AndroidRecentAppRepositoryTest {
             recentAppUsagesOrEmpty(Result.failure(SecurityException("Usage Access denied"))),
         )
     }
+
+    @Test
+    fun doesNotQueryRecentAppsWithoutUsageAccess() {
+        val repository =
+            AndroidRecentAppRepository(
+                usageStatsManager = null,
+                hasUsageAccess = { false },
+            )
+
+        assertEquals(false, repository.canReadRecentApps())
+        assertEquals(emptyList<RecentAppUsage>(), repository.recentAppUsages())
+    }
 }

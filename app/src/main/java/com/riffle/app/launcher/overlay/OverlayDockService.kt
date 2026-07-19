@@ -8,8 +8,8 @@ import android.view.View
 import android.view.WindowManager
 import com.riffle.app.launcher.DataStoreLauncherSettingsRepository
 import com.riffle.app.launcher.apps.AndroidAppLauncher
+import com.riffle.app.launcher.apps.AndroidRecentAppRepository
 import com.riffle.app.launcher.apps.PackageManagerInstalledAppRepository
-import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.OverlayDockSettings
 import com.riffle.core.domain.launcher.settings.coerceOverlayDockSettings
@@ -17,6 +17,8 @@ import com.riffle.core.domain.launcher.settings.coerceOverlayDockSettings
 class OverlayDockService : Service() {
     private val windowManager by lazy { getSystemService(WindowManager::class.java) }
     private val appLauncher by lazy { AndroidAppLauncher(this) }
+    private val recentAppRepository by lazy { AndroidRecentAppRepository(this) }
+    private val usageAccessSettingsAction by lazy { AndroidUsageAccessSettingsAction(this) }
     private val viewFactory by lazy { OverlayDockViewFactory(context = this, appLauncher = appLauncher) }
     private val launcherSettingsRepository by lazy { DataStoreLauncherSettingsRepository(this) }
     private var overlayView: View? = null
@@ -53,11 +55,11 @@ class OverlayDockService : Service() {
 
         val overlaySettings = loadLauncherSettings().overlayDock.coerceOverlayDockSettings()
         currentOverlaySettings = overlaySettings
-        val shortcuts = overlayDockShortcuts(overlaySettings)
+        val content = overlayDockContent(overlaySettings)
         val view =
             if (expanded) {
                 viewFactory.expandedDockView(
-                    shortcuts = shortcuts,
+                    content = content,
                     settings = overlaySettings,
                     onCollapse = {
                         expanded = false
@@ -66,6 +68,12 @@ class OverlayDockService : Service() {
                     onLaunch = {
                         expanded = false
                         renderOverlay()
+                    },
+                    onRequestUsageAccess = {
+                        if (usageAccessSettingsAction.open()) {
+                            expanded = false
+                            renderOverlay()
+                        }
                     },
                 )
             } else {
@@ -84,10 +92,14 @@ class OverlayDockService : Service() {
         windowManager.addView(view, viewFactory.overlayLayoutParams(overlaySettings, expanded = expanded))
     }
 
-    private fun overlayDockShortcuts(settings: OverlayDockSettings): List<AppShortcutItem> {
+    private fun overlayDockContent(settings: OverlayDockSettings): OverlayDockShortcuts {
         val installedApps = PackageManagerInstalledAppRepository(this).installedApps()
 
-        return settings.visibleOverlayDockShortcuts(installedApps)
+        return settings.contentFor(
+            installedApps = installedApps,
+            recentAppUsages = recentAppRepository.recentAppUsages(),
+            canReadRecentApps = recentAppRepository.canReadRecentApps(),
+        )
     }
 
     private fun loadLauncherSettings(): LauncherSettings {

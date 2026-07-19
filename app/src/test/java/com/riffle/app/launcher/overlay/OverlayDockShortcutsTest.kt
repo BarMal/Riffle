@@ -4,6 +4,7 @@ import com.riffle.core.domain.launcher.apps.AppActivityName
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.InstalledApp
+import com.riffle.core.domain.launcher.apps.RecentAppUsage
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.settings.OverlayDockSettings
@@ -23,6 +24,82 @@ class OverlayDockShortcutsTest {
             )
 
         assertEquals(listOf(cameraShortcut), visibleShortcuts)
+    }
+
+    @Test
+    fun resolvesRecentPackagesToDistinctLaunchableShortcutsInUsageOrder() {
+        val settings = OverlayDockSettings(items = listOf(shortcut("camera", cameraIdentity, "Camera")))
+        val galleryIdentity =
+            AppIdentity(
+                AppPackageName("com.example.gallery"),
+                AppActivityName(".GalleryActivity"),
+            )
+
+        val content =
+            settings.contentFor(
+                installedApps =
+                    listOf(
+                        InstalledApp(identity = cameraIdentity, label = "Camera"),
+                        InstalledApp(identity = galleryIdentity, label = "Gallery"),
+                    ),
+                recentAppUsages =
+                    listOf(
+                        RecentAppUsage(AppPackageName("com.example.gallery"), 300),
+                        RecentAppUsage(AppPackageName("com.example.camera"), 200),
+                        RecentAppUsage(AppPackageName("com.example.gallery"), 100),
+                        RecentAppUsage(AppPackageName("com.example.removed"), 50),
+                    ),
+            )
+
+        assertEquals(listOf("Camera"), content.pinnedShortcuts.map { it.label })
+        assertEquals(listOf("Gallery", "Camera"), content.recentShortcuts.map { it.label })
+        assertEquals(
+            listOf("overlay-recent:com.example.gallery", "overlay-recent:com.example.camera"),
+            content.recentShortcuts.map { it.id.value },
+        )
+        assertEquals(false, content.recentAppsAccessRequired)
+    }
+
+    @Test
+    fun limitsRecentShortcutsToTheNewestResolvedApps() {
+        val installedApps =
+            (0..MAX_RECENT_OVERLAY_DOCK_SHORTCUTS).map { index ->
+                InstalledApp(
+                    identity =
+                        AppIdentity(
+                            AppPackageName("com.example.recent$index"),
+                            AppActivityName(".Recent$index"),
+                        ),
+                    label = "Recent $index",
+                )
+            }
+
+        val content =
+            OverlayDockSettings().contentFor(
+                installedApps = installedApps,
+                recentAppUsages =
+                    installedApps.mapIndexed { index, app ->
+                        RecentAppUsage(app.identity.packageName, (installedApps.size - index).toLong())
+                    },
+            )
+
+        assertEquals(MAX_RECENT_OVERLAY_DOCK_SHORTCUTS, content.recentShortcuts.size)
+        assertEquals(
+            (0 until MAX_RECENT_OVERLAY_DOCK_SHORTCUTS).map { index -> "Recent $index" },
+            content.recentShortcuts.map { it.label },
+        )
+    }
+
+    @Test
+    fun reportsWhenUsageAccessIsRequiredForRecentApps() {
+        val content =
+            OverlayDockSettings().contentFor(
+                installedApps = emptyList(),
+                recentAppUsages = emptyList(),
+                canReadRecentApps = false,
+            )
+
+        assertEquals(true, content.recentAppsAccessRequired)
     }
 
     private fun shortcut(
