@@ -50,7 +50,8 @@ class LauncherShellSettingsDockViewModelTest {
                     ),
                 dock = initialFoldableLayout.dock.copy(capacity = 7, iconSizeDp = 52),
             )
-        repository.savedLayoutSet = checkNotNull(repository.savedLayoutSet).withLayout(foldableKey, persistedFoldableLayout)
+        repository.savedLayoutSet =
+            checkNotNull(repository.savedLayoutSet).withLayout(foldableKey, persistedFoldableLayout)
         val router = routerFor(viewModel)
 
         assertTrue(router.handle(LauncherShellAction.OpenSettings))
