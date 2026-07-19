@@ -143,6 +143,8 @@ class LauncherActivityRouteTest {
                     itemId = LauncherItemId("dock"),
                     targetIndex = 2,
                 ),
+                LauncherShellAction.MoveHomeItemToDock(LauncherItemId("home")),
+                LauncherShellAction.MoveDockItemToHome(LauncherItemId("dock"), GridCell(1, 2)),
             )
 
         actions.forEach { action ->

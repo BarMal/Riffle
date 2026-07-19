@@ -121,6 +121,13 @@ internal fun HomeFolder(
                 },
             )
             DropdownMenuItem(
+                text = { Text(text = "Move to dock") },
+                onClick = {
+                    isContextMenuExpanded.value = false
+                    actions.onAction(LauncherShellAction.MoveHomeItemToDock(folder.id))
+                },
+            )
+            DropdownMenuItem(
                 text = { Text(text = "Remove from home") },
                 onClick = {
                     isContextMenuExpanded.value = false

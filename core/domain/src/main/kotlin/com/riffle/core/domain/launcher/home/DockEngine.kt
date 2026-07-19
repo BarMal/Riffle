@@ -5,6 +5,8 @@ import com.riffle.core.domain.launcher.apps.InstalledApp
 
 @Suppress("TooManyFunctions")
 class DockEngine {
+    private val gridPlacementEngine = GridPlacementEngine()
+
     fun addAppToDock(
         layout: HomeLayout,
         app: InstalledApp,
@@ -129,6 +131,87 @@ class DockEngine {
                 )
         }
 
+    /** Transfers an app shortcut or folder from the selected Home page into a Dock slot atomically. */
+    fun moveHomeItemToDock(
+        layout: HomeLayout,
+        itemId: LauncherItemId,
+        targetIndex: Int? = null,
+    ): DockEditResult {
+        val item = layout.selectedPage.items.firstOrNull { it.id == itemId }
+
+        return when {
+            item == null -> DockEditResult.Rejected(DockEditRejectionReason.ITEM_NOT_FOUND)
+            item !is AppShortcutItem && item !is FolderItem ->
+                DockEditResult.Rejected(DockEditRejectionReason.UNSUPPORTED_ITEM)
+            !layout.dock.isEnabled -> DockEditResult.Rejected(DockEditRejectionReason.DOCK_DISABLED)
+            layout.dock.items.size >= layout.dock.capacity ->
+                DockEditResult.Rejected(DockEditRejectionReason.NO_AVAILABLE_SLOT)
+            layout.dock.items.any { it.id == itemId } ->
+                DockEditResult.Rejected(DockEditRejectionReason.DUPLICATE_ITEM_ID)
+            targetIndex != null && targetIndex !in 0..layout.dock.items.size ->
+                DockEditResult.Rejected(DockEditRejectionReason.INDEX_OUT_OF_BOUNDS)
+            else -> {
+                val dockItem = item.withoutHomePlacement()
+                val dockItems = layout.dock.items.toMutableList().apply { add(targetIndex ?: size, dockItem) }
+                val updatedPage = gridPlacementEngine.removeItem(layout.selectedPage, itemId)
+                DockEditResult.Updated(
+                    layout.copy(
+                        dock = layout.dock.copy(items = dockItems),
+                        pages = layout.pages.map { page -> if (page.id == updatedPage.id) updatedPage else page },
+                    ),
+                )
+            }
+        }
+    }
+
+    /** Transfers an app shortcut or folder from the Dock to a selected Home cell atomically. */
+    fun moveDockItemToHome(
+        layout: HomeLayout,
+        itemId: LauncherItemId,
+        cell: GridCell? = null,
+    ): DockEditResult {
+        val item = layout.dock.items.firstOrNull { it.id == itemId }
+
+        return when {
+            item == null -> DockEditResult.Rejected(DockEditRejectionReason.ITEM_NOT_FOUND)
+            item !is AppShortcutItem && item !is FolderItem ->
+                DockEditResult.Rejected(DockEditRejectionReason.UNSUPPORTED_ITEM)
+            layout.selectedPage.type is LauncherPageType.Generated ->
+                DockEditResult.Rejected(DockEditRejectionReason.GENERATED_HOME_PAGE)
+            else -> {
+                val homeItem = item.withoutHomePlacement()
+                val placement = cell?.let { GridPlacement(cell = it) }
+                val placementResult =
+                    if (placement == null) {
+                        gridPlacementEngine.placeItemInFirstAvailableCell(layout.selectedPage, homeItem)
+                    } else {
+                        gridPlacementEngine.placeItem(layout.selectedPage, homeItem.withPlacement(placement))
+                    }
+
+                when (placementResult) {
+                    is PlaceLauncherItemResult.Placed ->
+                        DockEditResult.Updated(
+                            layout.copy(
+                                dock = layout.dock.copy(items = layout.dock.items.filterNot { it.id == itemId }),
+                                pages =
+                                    layout.pages.map { page ->
+                                        if (page.id == placementResult.page.id) placementResult.page else page
+                                    },
+                            ),
+                        )
+
+                    is PlaceLauncherItemResult.Rejected ->
+                        DockEditResult.Rejected(
+                            when (placementResult.reason) {
+                                PlacementRejectionReason.NO_AVAILABLE_CELL -> DockEditRejectionReason.NO_AVAILABLE_HOME_CELL
+                                else -> DockEditRejectionReason.INVALID_HOME_PLACEMENT
+                            },
+                        )
+                }
+            }
+        }
+    }
+
     private fun appShortcutFor(
         app: InstalledApp,
         layout: HomeLayout,
@@ -138,6 +221,13 @@ class DockEngine {
             appIdentity = app.identity,
             label = app.label,
         )
+
+    private fun LauncherItem.withoutHomePlacement(): LauncherItem =
+        when (this) {
+            is AppShortcutItem -> copy(placement = null)
+            is FolderItem -> copy(placement = null)
+            is WidgetItem -> copy(placement = null)
+        }
 
     private fun HomeLayout.nextDockShortcutOrdinal(app: InstalledApp): Int =
         dock.items
@@ -195,6 +285,11 @@ enum class DockEditRejectionReason {
     INVALID_ICON_SIZE,
     INVALID_BACKGROUND_ALPHA,
     INVALID_ITEM_SPACING,
+    DOCK_DISABLED,
+    UNSUPPORTED_ITEM,
+    GENERATED_HOME_PAGE,
+    NO_AVAILABLE_HOME_CELL,
+    INVALID_HOME_PLACEMENT,
 }
 
 enum class DockItemMoveDirection(

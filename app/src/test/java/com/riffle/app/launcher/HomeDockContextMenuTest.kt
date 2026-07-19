@@ -90,6 +90,7 @@ class HomeDockContextMenuTest {
                 ShortcutContextMenuItem("App info", LauncherShellAction.OpenAppInfo(shortcut.appIdentity)),
                 ShortcutContextMenuItem("Hide app", LauncherShellAction.HideApp(shortcut.appIdentity)),
                 ShortcutContextMenuItem("Uninstall", LauncherShellAction.UninstallApp(shortcut.appIdentity)),
+                ShortcutContextMenuItem("Move to home", LauncherShellAction.MoveDockItemToHome(shortcut.id)),
                 ShortcutContextMenuItem("Remove from dock", LauncherShellAction.RemoveDockShortcut(shortcut.id)),
             ),
             items,
@@ -205,6 +206,10 @@ class HomeDockContextMenuTest {
                 ShortcutContextMenuItem(
                     label = "Move to end",
                     action = LauncherShellAction.MoveDockShortcutToIndex(folder.id, targetIndex = 2),
+                ),
+                ShortcutContextMenuItem(
+                    label = "Move to home",
+                    action = LauncherShellAction.MoveDockItemToHome(folder.id),
                 ),
                 ShortcutContextMenuItem(
                     label = "Remove from dock",

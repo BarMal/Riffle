@@ -8,6 +8,8 @@ import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.DockEngine
+import com.riffle.core.domain.launcher.home.GridCell
+import com.riffle.core.domain.launcher.home.GridPlacement
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
@@ -71,6 +73,35 @@ class LauncherDockEditReducerTest {
             )
 
         assertEquals(listOf(cameraShortcut.id, phoneShortcut.id), updatedState.homeLayout.dock.items.map { it.id })
+        assertEquals(updatedState.homeLayout, repository.savedLayoutSet?.activeLayout)
+    }
+
+    @Test
+    fun persistsHomeToDockTransferOnTheActiveLayout() {
+        val repository = FakeHomeLayoutRepository()
+        val shortcut = AppShortcutItem(LauncherItemId("phone"), phoneIdentity, "Phone")
+        val state =
+            LauncherShellState(
+                homeLayout =
+                    HomeLayoutDefaults.standard().copy(
+                        pages =
+                            listOf(
+                                HomeLayoutDefaults.standard().selectedPage.copy(
+                                    items =
+                                        listOf(
+                                            shortcut.copy(
+                                                placement = GridPlacement(GridCell(0, 0)),
+                                            ),
+                                        ),
+                                ),
+                            ),
+                    ),
+            )
+
+        val updatedState = reducer(repository).reduce(state, LauncherShellAction.MoveHomeItemToDock(shortcut.id))
+
+        assertEquals(listOf(shortcut.id), updatedState.homeLayout.dock.items.map { it.id })
+        assertEquals(emptyList(), updatedState.homeLayout.selectedPage.items)
         assertEquals(updatedState.homeLayout, repository.savedLayoutSet?.activeLayout)
     }
 

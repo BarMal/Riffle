@@ -25,10 +25,8 @@ class ShortcutContextMenuTest {
                 ShortcutContextMenuItem("Hide app", LauncherShellAction.HideApp(shortcut.appIdentity)),
                 ShortcutContextMenuItem("Uninstall", LauncherShellAction.UninstallApp(shortcut.appIdentity)),
                 ShortcutContextMenuItem(
-                    "Add to dock",
-                    LauncherShellAction.AddAppToDock(
-                        InstalledApp(identity = shortcut.appIdentity, label = shortcut.label),
-                    ),
+                    "Move to dock",
+                    LauncherShellAction.MoveHomeItemToDock(shortcut.id),
                 ),
                 ShortcutContextMenuItem(
                     "Add to floating dock",
@@ -48,7 +46,11 @@ class ShortcutContextMenuTest {
 
         val items = shortcutContextMenuItems(shortcut, ShortcutContextSurface.DOCK)
 
-        assertFalse(items.any { it.label == "Add to dock" })
+        assertFalse(items.any { it.label == "Move to dock" })
+        assertEquals(
+            ShortcutContextMenuItem("Move to home", LauncherShellAction.MoveDockItemToHome(shortcut.id)),
+            items[3],
+        )
         assertEquals(
             ShortcutContextMenuItem("Remove from dock", LauncherShellAction.RemoveDockShortcut(shortcut.id)),
             items.last(),
@@ -71,10 +73,8 @@ class ShortcutContextMenuTest {
                 ShortcutContextMenuItem("Hide app", LauncherShellAction.HideApp(shortcut.appIdentity)),
                 ShortcutContextMenuItem("Uninstall", LauncherShellAction.UninstallApp(shortcut.appIdentity)),
                 ShortcutContextMenuItem(
-                    "Add to dock",
-                    LauncherShellAction.AddAppToDock(
-                        InstalledApp(identity = shortcut.appIdentity, label = shortcut.label),
-                    ),
+                    "Move to dock",
+                    LauncherShellAction.MoveHomeItemToDock(shortcut.id),
                 ),
                 ShortcutContextMenuItem(
                     "Add to floating dock",
