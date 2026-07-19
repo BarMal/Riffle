@@ -8,6 +8,8 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeUp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppProfileId
@@ -15,6 +17,7 @@ import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.notifications.NotificationAgeBucket
 import com.riffle.core.domain.launcher.notifications.NotificationCategory
+import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -47,6 +50,37 @@ class GeneratedPageSurfaceInteractionTest {
         composeRule
             .onNodeWithTag(GENERATED_NOTIFICATION_CARD_STACK_TEST_TAG)
             .assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "Card 2 of 2"))
+    }
+
+    @Test
+    fun verticalCardSettleUsesConfiguredHapticsExactlyOnce() {
+        var hapticFeedbackCount = 0
+        composeRule.setContent {
+            MaterialTheme {
+                GeneratedNotificationCardsPage(
+                    groups = listOf(notificationGroup("one"), notificationGroup("two")),
+                    notificationAccessStatus = NotificationAccessStatus.GRANTED,
+                    apps = emptyList(),
+                    onAction = {},
+                    reducedMotion = true,
+                    haptics =
+                        object : LauncherHaptics {
+                            override fun longPress() {
+                                hapticFeedbackCount++
+                            }
+                        },
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(GENERATED_NOTIFICATION_CARD_STACK_TEST_TAG).performTouchInput { swipeUp() }
+
+        composeRule.runOnIdle {
+            assertEquals(1, hapticFeedbackCount)
+            composeRule
+                .onNodeWithTag(GENERATED_NOTIFICATION_CARD_STACK_TEST_TAG)
+                .assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "Card 2 of 2"))
+        }
     }
 
     private fun notificationGroup(suffix: String) =

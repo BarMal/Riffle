@@ -49,6 +49,7 @@ internal fun GeneratedNotificationCardsPage(
     apps: List<InstalledApp>,
     onAction: (LauncherShellAction) -> Unit,
     reducedMotion: Boolean,
+    haptics: LauncherHaptics = NoopLauncherHaptics,
     modifier: Modifier = Modifier,
 ) {
     val state = generatedNotificationCardsPageState(groups, notificationAccessStatus, apps)
@@ -135,6 +136,7 @@ internal fun GeneratedNotificationCardsPage(
                                             ),
                                         )
                                     },
+                                    onSettleHaptic = haptics::longPress,
                                 ),
                         ) { entry, pointerModifier ->
                             GeneratedNotificationCard(
