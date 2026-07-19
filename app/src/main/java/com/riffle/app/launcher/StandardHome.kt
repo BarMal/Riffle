@@ -307,8 +307,6 @@ private fun HomeBottomSearchArea(
                     Modifier
                         .height(HOME_SEARCH_PILL_HEIGHT_DP.dp)
                         .clip(RoundedCornerShape(HOME_SEARCH_PILL_HEIGHT_DP.dp))
-                        .semantics { contentDescription = "Search" }
-                        .clickable(onClick = { actions.onAction(LauncherShellAction.OpenSearch) })
                         .padding(horizontal = HOME_SEARCH_HORIZONTAL_PADDING_DP.dp),
             )
         } else {

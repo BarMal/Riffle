@@ -1,5 +1,6 @@
 package com.riffle.app.launcher
 
+import androidx.compose.ui.unit.LayoutDirection
 import com.riffle.core.domain.launcher.apps.AppActivityName
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
@@ -71,6 +72,37 @@ class HomePageControlsTest {
                 dragPositionPx = 50f,
                 trackWidthPx = 0f,
                 pageCount = 3,
+            ),
+        )
+    }
+
+    @Test
+    fun pageIndicatorDragMapsPhysicalPositionsToVisualOrderInRtl() {
+        assertEquals(
+            4,
+            pageIndicatorDragTargetIndex(
+                dragPositionPx = 0f,
+                trackWidthPx = 100f,
+                pageCount = 5,
+                layoutDirection = LayoutDirection.Rtl,
+            ),
+        )
+        assertEquals(
+            2,
+            pageIndicatorDragTargetIndex(
+                dragPositionPx = 50f,
+                trackWidthPx = 100f,
+                pageCount = 5,
+                layoutDirection = LayoutDirection.Rtl,
+            ),
+        )
+        assertEquals(
+            0,
+            pageIndicatorDragTargetIndex(
+                dragPositionPx = 100f,
+                trackWidthPx = 100f,
+                pageCount = 5,
+                layoutDirection = LayoutDirection.Rtl,
             ),
         )
     }

@@ -39,8 +39,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.ProgressBarRangeInfo
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.progressBarRangeInfo
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.setProgress
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.LayoutDirection
 import com.riffle.app.launcher.widgets.HomeWidgetViewFactory
 import com.riffle.core.domain.launcher.home.GeneratedLauncherPageKind
 import com.riffle.core.domain.launcher.home.GridDimensions
@@ -473,12 +481,19 @@ fun PageIndicator(
     onPageSelected: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val layoutDirection = LocalLayoutDirection.current
     Row(
         modifier =
-            modifier.pageIndicatorDrag(
-                pageCount = pageCount,
-                onPageSelected = onPageSelected,
-            ),
+            modifier
+                .pageIndicatorSemantics(
+                    pageCount = pageCount,
+                    selectedPageIndex = selectedPageIndex,
+                    onPageSelected = onPageSelected,
+                ).pageIndicatorDrag(
+                    pageCount = pageCount,
+                    layoutDirection = layoutDirection,
+                    onPageSelected = onPageSelected,
+                ),
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -507,14 +522,37 @@ fun PageIndicator(
     }
 }
 
+private fun Modifier.pageIndicatorSemantics(
+    pageCount: Int,
+    selectedPageIndex: Int,
+    onPageSelected: (Int) -> Unit,
+): Modifier =
+    semantics {
+        contentDescription = "Page selector"
+        stateDescription = pageIndicatorStateDescription(selectedPageIndex, pageCount)
+        progressBarRangeInfo =
+            ProgressBarRangeInfo(
+                current = selectedPageIndex.toFloat(),
+                range = 0f..(pageCount - 1).coerceAtLeast(0).toFloat(),
+                steps = (pageCount - 2).coerceAtLeast(0),
+            )
+        if (pageCount > 1) {
+            setProgress { targetValue ->
+                onPageSelected(targetValue.roundToInt().coerceIn(0, pageCount - 1))
+                true
+            }
+        }
+    }
+
 private fun Modifier.pageIndicatorDrag(
     pageCount: Int,
+    layoutDirection: LayoutDirection,
     onPageSelected: (Int) -> Unit,
 ): Modifier =
     if (pageCount <= 1) {
         this
     } else {
-        pointerInput(pageCount) {
+        pointerInput(pageCount, layoutDirection, onPageSelected) {
             var targetPageIndex = 0
 
             detectHorizontalDragGestures(
@@ -524,6 +562,7 @@ private fun Modifier.pageIndicatorDrag(
                             dragPositionPx = position.x,
                             trackWidthPx = size.width.toFloat(),
                             pageCount = pageCount,
+                            layoutDirection = layoutDirection,
                         )
                 },
                 onHorizontalDrag = { change, _ ->
@@ -533,6 +572,7 @@ private fun Modifier.pageIndicatorDrag(
                             dragPositionPx = change.position.x,
                             trackWidthPx = size.width.toFloat(),
                             pageCount = pageCount,
+                            layoutDirection = layoutDirection,
                         )
                 },
                 onDragEnd = { onPageSelected(targetPageIndex) },
@@ -544,13 +584,19 @@ internal fun pageIndicatorDragTargetIndex(
     dragPositionPx: Float,
     trackWidthPx: Float,
     pageCount: Int,
+    layoutDirection: LayoutDirection = LayoutDirection.Ltr,
 ): Int {
     if (pageCount <= 1 || trackWidthPx <= 0f) return 0
 
-    return ((dragPositionPx / trackWidthPx) * (pageCount - 1))
+    val trackProgress = dragPositionPx / trackWidthPx
+    val logicalProgress = if (layoutDirection == LayoutDirection.Rtl) 1f - trackProgress else trackProgress
+    return (logicalProgress * (pageCount - 1))
         .roundToInt()
         .coerceIn(0, pageCount - 1)
 }
+
+internal fun pageIndicatorStateDescription(selectedPageIndex: Int, pageCount: Int): String =
+    "Page ${selectedPageIndex + 1} of $pageCount"
 
 @Composable
 private fun pageIndicatorColor(isSelected: Boolean) =
