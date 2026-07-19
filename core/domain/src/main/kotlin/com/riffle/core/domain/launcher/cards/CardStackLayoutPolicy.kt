@@ -1,11 +1,14 @@
 package com.riffle.core.domain.launcher.cards
 
 import kotlin.math.abs
+import kotlin.math.sign
 
 data class CardStackLayoutPolicy(
     val maxVisibleDepth: Int = DEFAULT_CARD_STACK_MAX_VISIBLE_DEPTH,
     val scaleStep: Float = DEFAULT_CARD_STACK_SCALE_STEP,
     val offsetStep: Float = DEFAULT_CARD_STACK_OFFSET_STEP,
+    val focusedGap: Float = 0f,
+    val offsetDirection: Float = 1f,
     val alphaStep: Float = DEFAULT_CARD_STACK_ALPHA_STEP,
     val verticalOffsetStep: Float = DEFAULT_CARD_STACK_VERTICAL_OFFSET_STEP,
     val curveStep: Float = DEFAULT_CARD_STACK_CURVE_STEP,
@@ -17,6 +20,8 @@ data class CardStackLayoutPolicy(
         require(maxVisibleDepth >= 0) { "Maximum visible depth must not be negative." }
         require(scaleStep >= 0f) { "Scale step must not be negative." }
         require(offsetStep >= 0f) { "Offset step must not be negative." }
+        require(focusedGap >= 0f) { "Focused gap must not be negative." }
+        require(offsetDirection in -1f..1f) { "Offset direction must be between -1 and 1." }
         require(alphaStep >= 0f) { "Alpha step must not be negative." }
         require(verticalOffsetStep >= 0f) { "Vertical offset step must not be negative." }
         require(curveStep >= 0f) { "Curve step must not be negative." }
@@ -64,7 +69,14 @@ data class CardStackLayoutPolicy(
                 order = order,
                 depth = depth,
                 scale = (1f - activeScaleStep * depth).coerceAtLeast(0f),
-                offset = activeOffsetStep * signedDistance,
+                offset =
+                    if (signedDistance == 0) {
+                        0f
+                    } else {
+                        offsetDirection *
+                            (activeOffsetStep * abs(signedDistance) + if (reducedMotion) 0f else focusedGap) *
+                            signedDistance.sign
+                    },
                 verticalOffset = verticalOffsetStep * signedDistance + curveStep * signedDistance * signedDistance,
                 rotationDegrees = if (reducedMotion) 0f else rotationStep * signedDistance,
                 alpha = (1f - alphaStep * depth).coerceIn(0f, 1f),

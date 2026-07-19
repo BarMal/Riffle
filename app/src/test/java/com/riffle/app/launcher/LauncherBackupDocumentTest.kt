@@ -9,11 +9,14 @@ import com.riffle.core.domain.launcher.home.HomeLayoutSet
 import com.riffle.core.domain.launcher.home.WallpaperSettings
 import com.riffle.core.domain.launcher.home.WallpaperSource
 import com.riffle.core.domain.launcher.settings.AppearanceSettings
+import com.riffle.core.domain.launcher.settings.CardsSettings
 import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
 import com.riffle.core.domain.launcher.settings.HapticSettings
 import com.riffle.core.domain.launcher.settings.HomeSystemBars
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.MotionSettings
+import com.riffle.core.domain.launcher.settings.TimeScapeAppearancePreset
+import com.riffle.core.domain.launcher.settings.TimeScapeAppearanceSettings
 import com.riffle.core.domain.launcher.settings.homeSystemBars
 import com.riffle.core.domain.launcher.settings.withHomeSystemBars
 import org.json.JSONObject
@@ -35,6 +38,12 @@ class LauncherBackupDocumentTest {
                     ),
                 haptics = HapticSettings(feedbackStrength = HapticFeedbackStrength.STRONG),
                 motion = MotionSettings(reducedMotion = true),
+                cards =
+                    CardsSettings(
+                        timeScapeAppearance =
+                            TimeScapeAppearanceSettings()
+                                .applyPreset(TimeScapeAppearancePreset.FLAT_REDUCED_DEPTH),
+                    ),
             )
         val document =
             LauncherBackupDocument(
