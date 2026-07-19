@@ -73,4 +73,43 @@ class TimeScapeAppearanceSettingsTest {
         assertEquals(0, effective.motion.travelIntensityPercent)
         assertFalse(effective.surface.glassTransparencyPercent > 0)
     }
+
+    @Test
+    fun resolvesAppearanceIntoBoundedCardStackTokens() {
+        val viewport =
+            TimeScapeViewportDp(
+                widthDp = 800,
+                heightDp = 1200,
+                insets = TimeScapeInsetsDp(startDp = 24, topDp = 48, endDp = 24, bottomDp = 48),
+            )
+        val resolution = TimeScapeAppearanceSettings().resolveCardStack(viewport)
+        val entries = resolution.layoutPolicy.entries(cardCount = 9, activeIndex = 4)
+        val horizontalTravel = (viewport.safeWidthDp - resolution.cardWidthDp) / 2f
+        val verticalTravel = (viewport.safeHeightDp - resolution.cardHeightDp) / 2f
+
+        assertTrue(resolution.isUsable)
+        assertTrue(resolution.cardWidthDp <= viewport.safeWidthDp)
+        assertTrue(resolution.cardHeightDp <= viewport.safeHeightDp)
+        assertTrue(entries.all { entry -> kotlin.math.abs(entry.offset) <= horizontalTravel })
+        assertTrue(entries.all { entry -> kotlin.math.abs(entry.verticalOffset) <= verticalTravel })
+        assertTrue(resolution.animation.reflowsStack)
+    }
+
+    @Test
+    fun reducedMotionResolutionUsesStaticStackTokens() {
+        val resolution =
+            TimeScapeAppearanceSettings(motion = TimeScapeMotion(reducedMotion = true))
+                .resolveCardStack(TimeScapeViewportDp(widthDp = 800, heightDp = 1200))
+        val entries =
+            resolution.layoutPolicy.entries(
+                cardCount = 3,
+                activeIndex = 1,
+                reducedMotion = resolution.reducedMotion,
+            )
+
+        assertFalse(resolution.animation.animatesScale)
+        assertFalse(resolution.animation.animatesRotation)
+        assertEquals(0f, entries.maxOf { kotlin.math.abs(it.offset) })
+        assertEquals(0f, entries.maxOf { kotlin.math.abs(it.rotationDegrees) })
+    }
 }
