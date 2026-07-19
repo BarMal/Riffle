@@ -2,10 +2,10 @@ package com.riffle.core.domain.launcher.settings
 
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppShortcut
-import com.riffle.core.domain.launcher.cards.CardsChapterPreferences
 import com.riffle.core.domain.launcher.cards.AppStageId
 import com.riffle.core.domain.launcher.cards.AppStagePreferences
 import com.riffle.core.domain.launcher.cards.CardsChapterId
+import com.riffle.core.domain.launcher.cards.CardsChapterPreferences
 import com.riffle.core.domain.launcher.contextual.ContextualSettings
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.HomeLayoutKey

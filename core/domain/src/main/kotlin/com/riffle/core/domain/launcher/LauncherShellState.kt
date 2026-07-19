@@ -7,13 +7,13 @@ import com.riffle.core.domain.launcher.apps.AppSearchFilters
 import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.apps.AppShortcutsByApp
 import com.riffle.core.domain.launcher.apps.InstalledApp
-import com.riffle.core.domain.launcher.cards.CardsChapterPlanner
-import com.riffle.core.domain.launcher.cards.CardsChapterState
 import com.riffle.core.domain.launcher.cards.AppStageId
 import com.riffle.core.domain.launcher.cards.AppStageIdentitySnapshot
 import com.riffle.core.domain.launcher.cards.AppStagePlanner
 import com.riffle.core.domain.launcher.cards.AppStageProfileState
 import com.riffle.core.domain.launcher.cards.AppStageSnapshot
+import com.riffle.core.domain.launcher.cards.CardsChapterPlanner
+import com.riffle.core.domain.launcher.cards.CardsChapterState
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
@@ -104,11 +104,10 @@ data class LauncherShellState(
         !setupCardDismissed && homeRoleStatus != HomeRoleStatus.DEFAULT_HOME
 }
 
-private fun InstalledApp.toAppStageId(): AppStageId =
-    AppStageId(packageName = identity.packageName, profileId = identity.profile.id)
+private fun InstalledApp.toAppStageId(): AppStageId = AppStageId(identity.packageName, identity.profile.id)
 
-private fun LauncherShellState.profileStatesForStages(): Map<AppProfileId, AppStageProfileState> =
-    profileContentVisibility.mapValues { (_, visibility) ->
+private fun LauncherShellState.profileStatesForStages(): Map<AppProfileId, AppStageProfileState> {
+    return profileContentVisibility.mapValues { (_, visibility) ->
         when (visibility) {
             AppProfileContentVisibility.VISIBLE,
             AppProfileContentVisibility.REDACTED_QUIET,
@@ -119,6 +118,7 @@ private fun LauncherShellState.profileStatesForStages(): Map<AppProfileId, AppSt
             -> AppStageProfileState.LOCKED
         }
     }
+}
 
 enum class FirstRunStatus {
     NEEDS_HOME_ROLE,
