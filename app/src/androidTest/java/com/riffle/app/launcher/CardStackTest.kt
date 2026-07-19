@@ -9,6 +9,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertTextEquals
@@ -304,6 +305,62 @@ class CardStackTest {
 
         composeRule.runOnIdle { displayedGroup = messagesGroup }
         assertNotificationFocusPosition(messagesGroup.key, position = 2, count = 2)
+    }
+
+    @Test
+    fun notificationGroupRefreshKeepsPagerAndSelectionOnTheSameGroup() {
+        val messagesGroup = notificationGroup()
+        val calendarGroup =
+            notificationGroup(
+                packageName = "com.example.calendar",
+                notificationKeysAndTitles =
+                    listOf(
+                        "calendar-1" to "Today",
+                        "calendar-2" to "Tomorrow",
+                        "calendar-3" to "Next week",
+                    ),
+            )
+        var visibleGroups by mutableStateOf(listOf(messagesGroup, calendarGroup))
+        var selectedGroupKey by mutableStateOf(messagesGroup.key)
+        val focusedNotificationIndexes = mutableStateMapOf<AppNotificationGroupKey, Int>()
+
+        composeRule.setContent {
+            MaterialTheme {
+                NotificationGroupPrototype(
+                    groups = visibleGroups,
+                    selectedGroupKey = selectedGroupKey,
+                    presentation =
+                        NotificationOverviewPresentation(
+                            apps = emptyList(),
+                            appIconLoader = EmptyAppIconLoader,
+                            reducedMotion = true,
+                        ),
+                    focusedNotificationIndexes = focusedNotificationIndexes,
+                    onFocusChanged = { groupKey, index ->
+                        focusedNotificationIndexes[groupKey] = index
+                    },
+                    onBack = {},
+                    onGroupChanged = { groupKey -> selectedGroupKey = groupKey },
+                    onAction = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(nextFocusTestTag(messagesGroup.key)).performClick()
+        assertNotificationFocusPosition(messagesGroup.key, position = 2, count = 2)
+
+        composeRule.runOnIdle {
+            visibleGroups = listOf(calendarGroup, messagesGroup)
+        }
+        composeRule.waitForIdle()
+
+        composeRule.runOnIdle {
+            assertEquals(messagesGroup.key, selectedGroupKey)
+        }
+        composeRule
+            .onNodeWithTag(focusPositionTestTag(messagesGroup.key))
+            .assertIsDisplayed()
+            .assertTextEquals("Focused notification 2 of 2")
     }
 
     private fun setContent(entries: List<CardStackLayoutEntry>) {

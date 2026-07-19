@@ -68,6 +68,9 @@ internal fun NotificationGroupPrototype(
             initialPage = selectedGroupIndex,
             pageCount = { groups.size },
         )
+    LaunchedEffect(groups, selectedGroupKey) {
+        pagerState.scrollToPage(selectedGroupIndex)
+    }
     LaunchedEffect(pagerState.currentPage) {
         groups.getOrNull(pagerState.currentPage)?.let { group ->
             onGroupChanged(group.key)
