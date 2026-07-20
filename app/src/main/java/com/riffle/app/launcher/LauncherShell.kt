@@ -28,6 +28,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -211,6 +212,7 @@ data class LauncherShellAppInfo(
 )
 
 @Composable
+@Suppress("LongMethod")
 private fun PreviewSetupCard(
     modifier: Modifier = Modifier,
     homeRoleStatus: HomeRoleStatus,
@@ -218,19 +220,11 @@ private fun PreviewSetupCard(
     onSetHome: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val homeActionFocusRequester = remember { FocusRequester() }
-    var previousFirstRunStatus by remember { mutableStateOf(firstRunStatus) }
-    LaunchedEffect(firstRunStatus, homeRoleStatus) {
-        val shouldRestoreHomeActionFocus =
-            previousFirstRunStatus == FirstRunStatus.REQUESTING_HOME_ROLE &&
-                firstRunStatus == FirstRunStatus.NEEDS_HOME_ROLE &&
-                homeRoleStatus != HomeRoleStatus.DEFAULT_HOME
-        previousFirstRunStatus = firstRunStatus
-
-        if (shouldRestoreHomeActionFocus) {
-            homeActionFocusRequester.requestFocus()
-        }
-    }
+    val homeActionFocusRequester =
+        rememberRetryableHomeActionFocusRequester(
+            firstRunStatus = firstRunStatus,
+            homeRoleStatus = homeRoleStatus,
+        )
 
     BoxWithConstraints(modifier = modifier) {
         Surface(
@@ -308,6 +302,28 @@ private fun PreviewSetupCard(
             }
         }
     }
+}
+
+@Composable
+private fun rememberRetryableHomeActionFocusRequester(
+    firstRunStatus: FirstRunStatus,
+    homeRoleStatus: HomeRoleStatus,
+): FocusRequester {
+    val focusRequester = remember { FocusRequester() }
+    var previousFirstRunStatus by remember { mutableStateOf(firstRunStatus) }
+    LaunchedEffect(firstRunStatus, homeRoleStatus) {
+        val shouldRestoreHomeActionFocus =
+            previousFirstRunStatus == FirstRunStatus.REQUESTING_HOME_ROLE &&
+                firstRunStatus == FirstRunStatus.NEEDS_HOME_ROLE &&
+                homeRoleStatus != HomeRoleStatus.DEFAULT_HOME
+        previousFirstRunStatus = firstRunStatus
+
+        if (shouldRestoreHomeActionFocus) {
+            withFrameNanos { }
+            focusRequester.requestFocus()
+        }
+    }
+    return focusRequester
 }
 
 @Composable
