@@ -255,8 +255,10 @@ class PreviewFirstSetupTest {
 
     @Test
     fun legacyCompletedFirstRunMigratesToTheSetupCardDismissalMarker() {
-        firstRunPreferences()
+        val preferences = firstRunPreferences()
+        preferences
             .edit()
+            .clear()
             .putBoolean("first_run_complete", true)
             .commit()
 
@@ -266,7 +268,12 @@ class PreviewFirstSetupTest {
             )
 
         assertTrue(repository.isSetupCardDismissed())
-        assertTrue(firstRunPreferences().contains("setup_card_dismissed"))
+        assertTrue(preferences.getBoolean("setup_card_dismissed", false))
+        assertTrue(
+            SharedPreferencesFirstRunRepository(
+                InstrumentationRegistry.getInstrumentation().targetContext,
+            ).isSetupCardDismissed(),
+        )
     }
 
     private fun previewState(): LauncherShellState {
