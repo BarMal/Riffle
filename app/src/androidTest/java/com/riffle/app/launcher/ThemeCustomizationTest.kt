@@ -9,10 +9,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertHasClickAction
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -20,6 +24,7 @@ import com.riffle.core.domain.launcher.home.DockModel
 import com.riffle.core.domain.launcher.home.DockVisualEffect
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.settings.LauncherThemeAccent
+import com.riffle.core.domain.launcher.settings.LauncherThemeColorTarget
 import com.riffle.core.domain.launcher.settings.LauncherThemeCornerStyle
 import com.riffle.core.domain.launcher.settings.LauncherThemeMode
 import com.riffle.core.domain.launcher.settings.LauncherThemePreset
@@ -113,6 +118,37 @@ class ThemeCustomizationTest {
         composeRule.runOnIdle {
             assertEquals(listOf(DockVisualEffect.ELEVATED), selectedDockEffects)
         }
+    }
+
+    @Test
+    fun resetColorPickerUsesTheActiveDarkPresetColourAndExposesAdjustableControls() {
+        var selectedArgb: Int? by mutableStateOf(0xFFFF0000.toInt())
+        val expectedDefault = fallbackScheme(darkTheme = true, themePreset = LauncherThemePreset.RETRO).primary.toThemeHex()
+
+        composeRule.setContent {
+            RiffleLauncherTheme(
+                themeMode = LauncherThemeMode.DARK,
+                themePreset = LauncherThemePreset.RETRO,
+            ) {
+                ThemeColorPicker(
+                    target = LauncherThemeColorTarget.ACCENT,
+                    argb = selectedArgb,
+                    defaultColor = MaterialTheme.colorScheme.primary,
+                    onColorChanged = { selectedArgb = it },
+                    onReset = { selectedArgb = null },
+                )
+            }
+        }
+
+        composeRule.onNodeWithContentDescription("Hue colour control").performSemanticsAction(SemanticsActions.SetProgress) {
+                setProgress ->
+            setProgress(180f)
+        }
+        composeRule
+            .onNodeWithContentDescription("Saturation colour control")
+            .performSemanticsAction(SemanticsActions.SetProgress) { setProgress -> setProgress(0.5f) }
+        composeRule.onNodeWithText("Use theme default").performClick()
+        composeRule.onNodeWithContentDescription("Selected accent colour $expectedDefault").assertIsDisplayed()
     }
 
     @Composable

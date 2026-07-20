@@ -38,8 +38,10 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import com.riffle.core.domain.launcher.home.DockModel
 import com.riffle.core.domain.launcher.settings.LauncherThemeColorTarget
 import com.riffle.core.domain.launcher.settings.LauncherThemeColors
 import kotlin.math.atan2
@@ -48,6 +50,7 @@ import kotlin.math.hypot
 @Composable
 internal fun ThemeColorsSetting(
     colors: LauncherThemeColors,
+    dock: DockModel,
     onAction: (LauncherShellAction) -> Unit,
 ) {
     var selectedTarget by remember { mutableStateOf(LauncherThemeColorTarget.ACCENT) }
@@ -69,6 +72,7 @@ internal fun ThemeColorsSetting(
         ThemeColorPicker(
             target = selectedTarget,
             argb = colors.colorFor(selectedTarget),
+            defaultColor = themeDefaultColor(selectedTarget, dock),
             onColorChanged = { argb -> onAction(LauncherShellAction.SelectLauncherThemeColor(selectedTarget, argb)) },
             onReset = { onAction(LauncherShellAction.SelectLauncherThemeColor(selectedTarget, null)) },
         )
@@ -80,15 +84,16 @@ internal fun ThemeColorsSetting(
 internal fun ThemeColorPicker(
     target: LauncherThemeColorTarget,
     argb: Int?,
+    defaultColor: Color,
     onColorChanged: (Int) -> Unit,
     onReset: () -> Unit,
 ) {
-    val initial = Color(argb ?: defaultThemeColor(target))
-    var hue by remember(target, argb) { mutableFloatStateOf(initial.toHsv().first) }
-    var saturation by remember(target, argb) { mutableFloatStateOf(initial.toHsv().second) }
-    var value by remember(target, argb) { mutableFloatStateOf(initial.toHsv().third) }
-    var alpha by remember(target, argb) { mutableFloatStateOf(initial.alpha) }
-    var hexValue by remember(target, argb) { mutableStateOf(initial.toThemeHex()) }
+    val initial = argb?.let(::Color) ?: defaultColor
+    var hue by remember(target, argb, defaultColor) { mutableFloatStateOf(initial.toHsv().first) }
+    var saturation by remember(target, argb, defaultColor) { mutableFloatStateOf(initial.toHsv().second) }
+    var value by remember(target, argb, defaultColor) { mutableFloatStateOf(initial.toHsv().third) }
+    var alpha by remember(target, argb, defaultColor) { mutableFloatStateOf(initial.alpha) }
+    var hexValue by remember(target, argb, defaultColor) { mutableStateOf(initial.toThemeHex()) }
     var wheelSize by remember { mutableStateOf(IntSize.Zero) }
 
     fun publish() {
@@ -155,6 +160,19 @@ internal fun ThemeColorPicker(
                         },
             )
         }
+        ThemeColorSlider(
+            label = "Hue",
+            value = hue,
+            valueRange = 0f..360f,
+            valueLabel = "${hue.toInt()} degrees",
+        ) {
+            hue = it
+            publish()
+        }
+        ThemeColorSlider(label = "Saturation", value = saturation) {
+            saturation = it
+            publish()
+        }
         ThemeColorSlider(label = "Brightness", value = value) {
             value = it
             publish()
@@ -188,11 +206,22 @@ internal fun ThemeColorPicker(
 private fun ThemeColorSlider(
     label: String,
     value: Float,
+    valueRange: ClosedFloatingPointRange<Float> = 0f..1f,
+    valueLabel: String = "${(value * 100).toInt()}%",
     onValueChanged: (Float) -> Unit,
 ) {
     Column {
-        Text("$label ${(value * 100).toInt()}%", style = MaterialTheme.typography.labelLarge)
-        Slider(value = value, onValueChange = onValueChanged)
+        Text("$label $valueLabel", style = MaterialTheme.typography.labelLarge)
+        Slider(
+            modifier =
+                Modifier.semantics {
+                    contentDescription = "$label colour control"
+                    stateDescription = valueLabel
+                },
+            value = value,
+            onValueChange = onValueChanged,
+            valueRange = valueRange,
+        )
     }
 }
 
@@ -223,13 +252,17 @@ private fun Color.toHsv(): Triple<Float, Float, Float> {
     return Triple(hue, if (maximum == 0f) 0f else delta / maximum, maximum)
 }
 
-private fun defaultThemeColor(target: LauncherThemeColorTarget): Int =
+@Composable
+private fun themeDefaultColor(
+    target: LauncherThemeColorTarget,
+    dock: DockModel,
+): Color =
     when (target) {
-        LauncherThemeColorTarget.BACKGROUND -> 0xFFFFFBFF.toInt()
-        LauncherThemeColorTarget.ACCENT -> 0xFF4D5C92.toInt()
-        LauncherThemeColorTarget.DOCK -> 0xFFE2E1EC.toInt()
-        LauncherThemeColorTarget.LABEL -> 0xFFFFFFFF.toInt()
-        LauncherThemeColorTarget.LABEL_BACKGROUND -> 0xFF000000.toInt()
+        LauncherThemeColorTarget.BACKGROUND -> MaterialTheme.colorScheme.background
+        LauncherThemeColorTarget.ACCENT -> MaterialTheme.colorScheme.primary
+        LauncherThemeColorTarget.DOCK -> dockBaseSurfaceColor(dock)
+        LauncherThemeColorTarget.LABEL -> MaterialTheme.colorScheme.onSurface
+        LauncherThemeColorTarget.LABEL_BACKGROUND -> MaterialTheme.colorScheme.scrim
     }
 
 private fun themeColorTargetTitle(target: LauncherThemeColorTarget): String =
