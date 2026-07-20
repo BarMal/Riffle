@@ -33,6 +33,8 @@ import com.riffle.core.domain.launcher.widgets.InstalledWidgetProvider
 
 data class LauncherShellState(
     val firstRunStatus: FirstRunStatus = FirstRunStatus.NEEDS_HOME_ROLE,
+    /** A Home-role request was pending when this shell was recreated and needs live reconciliation. */
+    val hasRecoveredHomeRoleRequest: Boolean = false,
     /** Presentation-only state; the live [homeRoleStatus] remains authoritative. */
     val setupCardDismissed: Boolean = false,
     val homeRoleStatus: HomeRoleStatus = HomeRoleStatus.UNKNOWN,

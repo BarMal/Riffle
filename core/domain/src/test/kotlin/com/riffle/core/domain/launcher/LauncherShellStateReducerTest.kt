@@ -168,6 +168,23 @@ class LauncherShellStateReducerTest {
     }
 
     @Test
+    fun unresolvedRecoveredHomeRoleRequestReturnsToRetryAfterLiveReconciliation() {
+        val state =
+            reducer.homeRoleChanged(
+                currentState =
+                    LauncherShellState(
+                        firstRunStatus = FirstRunStatus.REQUESTING_HOME_ROLE,
+                        hasRecoveredHomeRoleRequest = true,
+                    ),
+                homeRoleStatus = HomeRoleStatus.UNKNOWN,
+            )
+
+        assertEquals(FirstRunStatus.NEEDS_HOME_ROLE, state.firstRunStatus)
+        assertFalse(state.hasRecoveredHomeRoleRequest)
+        assertTrue(state.shouldShowSetupCard)
+    }
+
+    @Test
     fun failedHomeRoleRequestReturnsToRecoverableState() {
         val state =
             reducer.defaultHomeRequestLaunchFailed(

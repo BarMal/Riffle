@@ -586,6 +586,8 @@ private fun createInitialState(
     platformDependencies: LauncherShellPlatformDependencies,
     viewModeAvailability: LauncherViewModeAvailability,
 ): LauncherShellState {
+    val hasRecoveredHomeRoleRequest = firstRunRepository.isHomeRoleRequestPending()
+
     val storedLayoutSet = homeLayoutRepository.loadHomeLayoutSet()
     val initialLayoutSet =
         storedLayoutSet?.let { layoutSet ->
@@ -618,11 +620,12 @@ private fun createInitialState(
         launcherSettings = launcherSettings,
     ).copy(
         firstRunStatus =
-            if (firstRunRepository.isHomeRoleRequestPending()) {
+            if (hasRecoveredHomeRoleRequest) {
                 FirstRunStatus.REQUESTING_HOME_ROLE
             } else {
                 FirstRunStatus.NEEDS_HOME_ROLE
             },
+        hasRecoveredHomeRoleRequest = hasRecoveredHomeRoleRequest,
         setupCardDismissed = firstRunRepository.isSetupCardDismissed(),
     )
 }

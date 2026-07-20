@@ -44,7 +44,7 @@ class LauncherShellEmptyStateEvidenceTest {
     }
 
     @Test
-    fun pendingHomeRoleRequestRestoresAsRecoverableState() {
+    fun pendingHomeRoleRequestWaitsForLiveReconciliationAfterProcessRecreation() {
         val repository = FakeFirstRunRepository(isComplete = false)
         LauncherShellViewModel(firstRunRepository = repository).onDefaultHomeRequestStarted()
 
@@ -53,10 +53,15 @@ class LauncherShellEmptyStateEvidenceTest {
         assertEquals(FirstRunStatus.REQUESTING_HOME_ROLE, restoredViewModel.state.value.firstRunStatus)
         assertTrue(repository.isHomeRoleRequestPending())
 
-        restoredViewModel.onHomeRoleStatusChanged(HomeRoleStatus.NOT_DEFAULT_HOME)
+        restoredViewModel.onHomeRoleStatusChanged(HomeRoleStatus.UNKNOWN)
 
         assertEquals(FirstRunStatus.NEEDS_HOME_ROLE, restoredViewModel.state.value.firstRunStatus)
         assertFalse(repository.isHomeRoleRequestPending())
+
+        restoredViewModel.onDefaultHomeRequestStarted()
+
+        assertEquals(FirstRunStatus.REQUESTING_HOME_ROLE, restoredViewModel.state.value.firstRunStatus)
+        assertTrue(repository.isHomeRoleRequestPending())
     }
 
     private class FakeFirstRunRepository(
