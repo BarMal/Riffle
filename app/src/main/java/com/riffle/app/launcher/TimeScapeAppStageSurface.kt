@@ -31,10 +31,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -331,13 +333,11 @@ internal fun TimeScapeContextShelf(
 ) {
     if (card.supportedActions.isEmpty() && onDetailRequested == null) return
     var detailControlLaidOut by remember { mutableStateOf(false) }
-    LaunchedEffect(restoreDetailFocus, detailFocusRequester, detailControlLaidOut) {
-        if (restoreDetailFocus && detailFocusRequester != null && detailControlLaidOut) {
-            detailFocusRequester.requestFocus()
-            onDetailFocusRestored?.invoke()
-            detailControlLaidOut = false
-        }
-    }
+    RestoreFocusAfterLayout(
+        enabled = restoreDetailFocus,
+        focusRequester = detailFocusRequester,
+        isLaidOut = detailControlLaidOut,
+    )
     Row(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -358,6 +358,11 @@ internal fun TimeScapeContextShelf(
                     detailFocusRequester?.let { requester ->
                         Modifier.focusRequester(requester).onGloballyPositioned {
                             if (restoreDetailFocus) detailControlLaidOut = true
+                        }.onFocusChanged { focusState ->
+                            if (restoreDetailFocus && focusState.isFocused) {
+                                onDetailFocusRestored?.invoke()
+                                detailControlLaidOut = false
+                            }
                         }
                     }
                         ?: Modifier,
@@ -420,19 +425,35 @@ private fun TimeScapeEmptyStage(
                 modifier =
                     Modifier.focusRequester(detailFocusRequester).onGloballyPositioned {
                         if (restoreDetailFocusForCardId == detailCardId) detailControlLaidOut = true
+                    }.onFocusChanged { focusState ->
+                        if (restoreDetailFocusForCardId == detailCardId && focusState.isFocused) {
+                            restoreDetailFocusForCardId = null
+                            detailControlLaidOut = false
+                        }
                     },
             ) {
                 Text("Details")
             }
-            LaunchedEffect(restoreDetailFocusForCardId, detailControlLaidOut) {
-                if (restoreDetailFocusForCardId == detailCardId && detailControlLaidOut) {
-                    detailFocusRequester.requestFocus()
-                    restoreDetailFocusForCardId = null
-                    detailControlLaidOut = false
-                }
-            }
+            RestoreFocusAfterLayout(
+                enabled = restoreDetailFocusForCardId == detailCardId,
+                focusRequester = detailFocusRequester,
+                isLaidOut = detailControlLaidOut,
+            )
         }
         TimeScapeDetailRecoveryMessage(detailState.sourceRemovalMessage)
+    }
+}
+
+@Composable
+private fun RestoreFocusAfterLayout(
+    enabled: Boolean,
+    focusRequester: FocusRequester?,
+    isLaidOut: Boolean,
+) {
+    LaunchedEffect(enabled, focusRequester, isLaidOut) {
+        if (!enabled || focusRequester == null || !isLaidOut) return@LaunchedEffect
+        withFrameNanos { }
+        focusRequester.requestFocus()
     }
 }
 
