@@ -277,13 +277,13 @@ internal fun dockRenderedSlotCount(
     isEditing: Boolean,
 ): Int =
     when {
-        capacity <= 0 -> 0
-        itemCount <= 0 && !isEditing -> 0
+        capacity <= 0 && isEditing -> 0
         isEditing -> capacity.coerceAtLeast(itemCount)
-        else -> capacity
+        // Browsing never renders vacant slots. This also keeps legacy capacity-zero layouts
+        // recoverable: their persisted items remain reachable for launch or removal.
+        else -> itemCount
     }
 
-@Suppress("UnusedParameter")
 internal fun dockBackgroundVisible(
     capacity: Int,
     itemCount: Int,
@@ -292,6 +292,7 @@ internal fun dockBackgroundVisible(
 ): Boolean =
     when {
         backgroundSizing == DockBackgroundSizing.FIXED -> true
+        !isEditing && itemCount > 0 -> true
         capacity <= 0 -> false
         // An empty app catalog can be a transient recovery state. Keep an enabled dynamic dock
         // visible so it does not disappear until app discovery completes.

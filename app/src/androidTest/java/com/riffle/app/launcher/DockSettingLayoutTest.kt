@@ -45,4 +45,24 @@ class DockSettingLayoutTest {
         composeRule.onNodeWithText("Elevated").assertIsDisplayed().assertHasClickAction()
         composeRule.onNodeWithText("Outlined").assertIsDisplayed().assertHasClickAction()
     }
+
+    @Test
+    fun simplifiedDockSettingsKeepHeightAndWidthControlsWithoutSlotPlaceholders() {
+        composeRule.setContent {
+            MaterialTheme {
+                DockSetting(
+                    dock = DockModel(capacity = 4),
+                    notificationAccessStatus = NotificationAccessStatus.GRANTED,
+                    onAction = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("Dock height").assertIsDisplayed()
+        composeRule.onNodeWithText("Dock width").assertIsDisplayed()
+        composeRule.onNodeWithText("Fit content").assertIsDisplayed()
+        composeRule.onNodeWithText("Full width").assertIsDisplayed().assertHasClickAction()
+        composeRule.onNodeWithText("Dock slots").assertDoesNotExist()
+        composeRule.onNodeWithText("Dock item spacing").assertDoesNotExist()
+    }
 }

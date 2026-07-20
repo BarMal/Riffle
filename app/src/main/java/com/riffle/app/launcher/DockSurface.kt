@@ -92,23 +92,18 @@ internal fun ExpandedDockSurface(
     val primaryDock = dock.primaryDock(showShelf = true)
     val overflowDock = dock.overflowShelfDock()
     val hasOverflow = dockHasOverflow(capacity = dock.capacity, itemCount = dock.items.size)
-    val presentation =
-        DockPresentation(
-            notificationGroupsByApp = notificationGroupsByApp,
-            appShortcutsByApp = appShortcutsByApp,
-            widgetViewFactory = widgetViewFactory,
-            interactions = interactions,
-        )
+    val presentation = DockPresentation(notificationGroupsByApp, appShortcutsByApp, widgetViewFactory, interactions)
 
     BoxWithConstraints(
         modifier = Modifier.dockShelfGestureInput(interactions),
         contentAlignment = Alignment.Center,
     ) {
+        val availableWidthDp = maxWidth.value.toInt()
         val surfaceMetrics =
             dockSurfaceMetrics(
                 dock = primaryDock,
                 isEditing = false,
-                availableWidthDp = maxWidth.value.toInt(),
+                availableWidthDp = availableWidthDp,
             ) ?: return@BoxWithConstraints
         HomeBackgroundContextMenu(
             haptics = interactions.haptics,
@@ -145,7 +140,12 @@ internal fun ExpandedDockSurface(
             if (hasOverflow) {
                 DockSurfaceRow(
                     dock = overflowDock,
-                    surfaceMetrics = surfaceMetrics,
+                    surfaceMetrics =
+                        expandedOverflowSurfaceMetrics(
+                            dock = overflowDock,
+                            availableWidthDp = availableWidthDp,
+                            mainSurfaceMetrics = surfaceMetrics,
+                        ),
                     isEditing = false,
                     presentation = presentation,
                     appIconLoader = appIconLoader,
@@ -164,6 +164,19 @@ internal fun ExpandedDockSurface(
         }
     }
 }
+
+private fun expandedOverflowSurfaceMetrics(
+    dock: DockModel,
+    availableWidthDp: Int,
+    mainSurfaceMetrics: DockSurfaceMetrics,
+): DockSurfaceMetrics =
+    checkNotNull(
+        dockSurfaceMetrics(
+            dock = dock,
+            isEditing = false,
+            availableWidthDp = availableWidthDp,
+        ),
+    ).copy(containerWidthDp = mainSurfaceMetrics.containerWidthDp)
 
 @Composable
 internal fun DockSurfaceRow(
