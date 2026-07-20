@@ -33,12 +33,17 @@ import com.riffle.core.domain.launcher.cards.AppStage
 import com.riffle.core.domain.launcher.cards.AppStageId
 import com.riffle.core.domain.launcher.cards.AppStageLifecycle
 import com.riffle.core.domain.launcher.cards.AppStageOrigin
+import com.riffle.core.domain.launcher.cards.AppStagePreferences
+import com.riffle.core.domain.launcher.home.HomeLayoutKey
+import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
 import com.riffle.core.domain.launcher.notifications.LauncherNotification
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.notifications.NotificationAgeBucket
 import com.riffle.core.domain.launcher.notifications.NotificationCategory
+import com.riffle.core.domain.launcher.settings.CardsSettings
+import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.TimeScapeAccentSource
 import com.riffle.core.domain.launcher.settings.TimeScapeAppearanceSettings
 import com.riffle.core.domain.launcher.settings.TimeScapeBackgroundSource
@@ -183,6 +188,57 @@ class TimeScapeCardSurfaceTest {
             .onNodeWithText("Notification access was revoked. Restore access to update stages.")
             .assertIsDisplayed()
         composeRule.onNodeWithText("Allow access").assertIsDisplayed()
+        composeRule.onNodeWithText("Nothing new").assertDoesNotExist()
+    }
+
+    @Test
+    fun appStageSurfaceShowsRevokedAccessForSelectedPinnedStage() {
+        val app =
+            InstalledApp(
+                identity =
+                    AppIdentity(
+                        packageName = AppPackageName("com.example.mail"),
+                        activityName = AppActivityName(".Main"),
+                        profile = AppProfile.personal(),
+                    ),
+                label = "Mail",
+            )
+        val stageId = AppStageId(app.identity.packageName, app.identity.profile.id)
+
+        composeRule.setContent {
+            MaterialTheme {
+                TimeScapeAppStageSurface(
+                    state =
+                        LauncherShellState(
+                            notificationAccessStatus = NotificationAccessStatus.REVOKED,
+                            installedApps = listOf(app),
+                            profileContentVisibility =
+                                mapOf(app.identity.profile.id to AppProfileContentVisibility.VISIBLE),
+                            launcherSettings =
+                                LauncherSettings(
+                                    cards =
+                                        CardsSettings(
+                                            stagePreferencesByLayout =
+                                                mapOf(
+                                                    HomeLayoutKey(LauncherViewMode.STANDARD_APP_DRAWER) to
+                                                        AppStagePreferences(
+                                                            pinnedStageIds = listOf(stageId),
+                                                            selectedStageId = stageId,
+                                                        ),
+                                                ),
+                                        ),
+                                ),
+                        ),
+                    onAction = {},
+                )
+            }
+        }
+
+        composeRule
+            .onNodeWithText("Notification access was revoked. Restore access to update stages.")
+            .assertIsDisplayed()
+        composeRule.onNodeWithText("Allow access").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Mail, selected. Open stage").assertIsDisplayed()
         composeRule.onNodeWithText("Nothing new").assertDoesNotExist()
     }
 

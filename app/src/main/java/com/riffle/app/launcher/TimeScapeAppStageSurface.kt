@@ -63,7 +63,7 @@ internal fun TimeScapeAppStageSurface(
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             TimeScapeStageHeader(selectedStage, state, onAction)
-            if (selectedStage == null) {
+            if (state.notificationAccessStatus != NotificationAccessStatus.GRANTED || selectedStage == null) {
                 TimeScapeUnavailableState(state.notificationAccessStatus, onAction, Modifier.weight(1f))
             } else {
                 TimeScapeStageContent(
