@@ -277,10 +277,10 @@ internal fun dockRenderedSlotCount(
     isEditing: Boolean,
 ): Int =
     when {
-        capacity <= 0 -> 0
+        capacity <= 0 && isEditing -> 0
         isEditing -> capacity.coerceAtLeast(itemCount)
-        // Browsing never renders vacant slots. They made an under-filled dock look like it had
-        // placeholder outlines instead of letting the persisted items reflow to their content.
+        // Browsing never renders vacant slots. This also keeps legacy capacity-zero layouts
+        // recoverable: their persisted items remain reachable for launch or removal.
         else -> itemCount
     }
 

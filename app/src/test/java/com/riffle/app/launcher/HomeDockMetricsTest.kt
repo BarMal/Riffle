@@ -281,9 +281,9 @@ class HomeDockMetricsTest {
     }
 
     @Test
-    fun zeroCapacityDockRendersNoSlots() {
+    fun zeroCapacityDockStillRendersPersistedItemsWhenBrowsing() {
         assertEquals(
-            0,
+            4,
             dockRenderedSlotCount(
                 capacity = 0,
                 itemCount = 4,
