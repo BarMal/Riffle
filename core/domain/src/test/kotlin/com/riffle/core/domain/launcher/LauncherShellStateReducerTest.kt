@@ -178,6 +178,23 @@ class LauncherShellStateReducerTest {
     }
 
     @Test
+    fun returnedHomeRoleRequestRestoresRetryWithoutAssumingLiveRoleTruth() {
+        val state =
+            reducer.defaultHomeRequestReturned(
+                reducer.defaultHomeRequestStarted(
+                    LauncherShellState(
+                        destination = ShellDestination.SETTINGS,
+                        homeRoleStatus = HomeRoleStatus.UNKNOWN,
+                    ),
+                ),
+            )
+
+        assertEquals(FirstRunStatus.NEEDS_HOME_ROLE, state.firstRunStatus)
+        assertEquals(HomeRoleStatus.UNKNOWN, state.homeRoleStatus)
+        assertEquals(ShellDestination.SETTINGS, state.destination)
+    }
+
+    @Test
     fun unresolvedHomeRoleAfterRequestPreservesThePreviewDestination() {
         val settingsState =
             reducer.navigationActionSelected(

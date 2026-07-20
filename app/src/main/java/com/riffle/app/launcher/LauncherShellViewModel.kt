@@ -222,6 +222,15 @@ class LauncherShellViewModel(
         firstRunRepository.setHomeRoleRequestPending(pending = false)
     }
 
+    /**
+     * Activity results only prove that Android returned from its UI. Live role truth is refreshed
+     * separately, but the presentation-only pending marker must not trap a cancelled request.
+     */
+    fun onDefaultHomeRequestReturned() {
+        mutableState.value = reducer.defaultHomeRequestReturned(mutableState.value)
+        firstRunRepository.setHomeRoleRequestPending(pending = false)
+    }
+
     fun onSetupCardDismissed() {
         mutableState.value = reducer.setupCardDismissed(mutableState.value)
         firstRunRepository.setSetupCardDismissed()

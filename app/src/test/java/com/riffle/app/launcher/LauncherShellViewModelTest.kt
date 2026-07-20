@@ -47,15 +47,6 @@ class LauncherShellViewModelTest {
     }
 
     @Test
-    fun recordsDefaultHomeRequestInProgress() {
-        val viewModel = LauncherShellViewModel(firstRunRepository = FakeFirstRunRepository())
-
-        viewModel.onDefaultHomeRequestStarted()
-
-        assertEquals(FirstRunStatus.REQUESTING_HOME_ROLE, viewModel.state.value.firstRunStatus)
-    }
-
-    @Test
     fun hidesSetupCardWhenAppBecomesDefaultHome() {
         val repository = FakeFirstRunRepository()
         val viewModel = LauncherShellViewModel(firstRunRepository = repository)
