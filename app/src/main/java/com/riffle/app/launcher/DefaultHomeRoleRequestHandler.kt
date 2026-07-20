@@ -15,6 +15,8 @@ internal class DefaultHomeRoleRequestHandler(
     fun request() {
         val intent = createRequestIntent()
         if (intent == null) {
+            onRequestLaunchFailed()
+            refreshPlatformStatuses()
             showUnavailable()
             return
         }
