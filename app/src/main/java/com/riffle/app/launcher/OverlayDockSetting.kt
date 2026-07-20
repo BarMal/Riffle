@@ -1,3 +1,5 @@
+@file:Suppress("TooManyFunctions")
+
 package com.riffle.app.launcher
 
 import androidx.compose.foundation.layout.Arrangement
@@ -9,6 +11,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.riffle.core.domain.launcher.OverlayDockPermissionStatus
 import com.riffle.core.domain.launcher.settings.MAX_OVERLAY_DOCK_EXPANDED_ICON_SIZE_DP
 import com.riffle.core.domain.launcher.settings.MAX_OVERLAY_DOCK_HANDLE_ALPHA_PERCENT
 import com.riffle.core.domain.launcher.settings.MAX_OVERLAY_DOCK_HANDLE_HEIGHT_DP
@@ -25,11 +28,13 @@ import com.riffle.core.domain.launcher.settings.OverlayDockSettings
 @Composable
 internal fun OverlayDockSetting(
     settings: OverlayDockSettings,
+    permissionStatus: OverlayDockPermissionStatus,
     onAction: (LauncherShellAction) -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         OverlayDockEnabledSetting(
             settings = settings,
+            permissionStatus = permissionStatus,
             onAction = onAction,
         )
         OverlayDockEdgeSetting(
@@ -74,15 +79,70 @@ internal fun OverlayDockSetting(
 @Composable
 private fun OverlayDockEnabledSetting(
     settings: OverlayDockSettings,
+    permissionStatus: OverlayDockPermissionStatus,
     onAction: (LauncherShellAction) -> Unit,
 ) {
-    SettingsSwitchRow(
-        title = "Floating dock",
-        subtitle = if (settings.enabled) "Edge handle visible over apps" else "Only use the home dock",
-        checked = settings.enabled,
-        onCheckedChange = { value -> onAction(LauncherShellAction.SelectOverlayDockEnabled(value)) },
-    )
+    val presentation = overlayDockAccessPresentation(settings.enabled, permissionStatus)
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        SettingsSwitchRow(
+            title = "Floating dock",
+            subtitle = presentation.subtitle,
+            checked = settings.enabled,
+            onCheckedChange = { value ->
+                overlayDockEnabledActions(
+                    enabled = value,
+                    wasEnabled = settings.enabled,
+                    permissionStatus = permissionStatus,
+                ).forEach(onAction)
+            },
+        )
+        presentation.retryLabel?.let { label ->
+            TextButton(onClick = { onAction(LauncherShellAction.RequestOverlayDockPermission) }) {
+                SettingsButtonText(text = label)
+            }
+        }
+    }
 }
+
+internal data class OverlayDockAccessPresentation(
+    val subtitle: String,
+    val retryLabel: String? = null,
+)
+
+internal fun overlayDockAccessPresentation(
+    enabled: Boolean,
+    permissionStatus: OverlayDockPermissionStatus,
+): OverlayDockAccessPresentation {
+    if (!enabled) return OverlayDockAccessPresentation(subtitle = "Only use the home dock")
+
+    return when (permissionStatus) {
+        OverlayDockPermissionStatus.GRANTED ->
+            OverlayDockAccessPresentation(subtitle = "Edge handle visible over apps")
+        OverlayDockPermissionStatus.NOT_GRANTED ->
+            OverlayDockAccessPresentation(
+                subtitle = "Overlay access is not allowed. Allow it to show the Floating dock.",
+                retryLabel = "Allow overlay access",
+            )
+
+        OverlayDockPermissionStatus.UNKNOWN ->
+            OverlayDockAccessPresentation(
+                subtitle = "Overlay access is still checking. Try again if it does not update.",
+                retryLabel = "Retry overlay access",
+            )
+    }
+}
+
+internal fun overlayDockEnabledActions(
+    enabled: Boolean,
+    wasEnabled: Boolean,
+    permissionStatus: OverlayDockPermissionStatus,
+): List<LauncherShellAction> =
+    buildList {
+        add(LauncherShellAction.SelectOverlayDockEnabled(enabled))
+        if (enabled && !wasEnabled && permissionStatus != OverlayDockPermissionStatus.GRANTED) {
+            add(LauncherShellAction.RequestOverlayDockPermission)
+        }
+    }
 
 @Composable
 private fun OverlayDockEdgeSetting(

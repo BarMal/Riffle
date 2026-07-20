@@ -152,7 +152,7 @@ class SettingsPagesTest {
 
         assertEquals("2 hidden apps", entries.single { entry -> entry.page == SettingsPage.HIDDEN_APPS }.subtitle)
         assertEquals(
-            "Home set, notifications allowed, overlay not allowed",
+            "Home set",
             entries.single { entry -> entry.page == SettingsPage.PERMISSIONS }.subtitle,
         )
     }
@@ -171,8 +171,8 @@ class SettingsPagesTest {
             settingsMainPageEntriesMatching(query = "3 hidden", status = status).map { entry -> entry.page },
         )
         assertEquals(
-            listOf(SettingsPage.PERMISSIONS),
-            settingsMainPageEntriesMatching(query = "overlay not allowed", status = status).map { entry -> entry.page },
+            emptyList<SettingsPageEntry>(),
+            settingsMainPageEntriesMatching(query = "overlay not allowed", status = status),
         )
     }
 
@@ -202,9 +202,6 @@ class SettingsPagesTest {
             listOf(
                 "default home",
                 "home app",
-                "notifications",
-                "notification access",
-                "overlay permission",
                 "Permissions",
             ),
             permissions.searchAliases,
@@ -236,7 +233,7 @@ class SettingsPagesTest {
                 .map { result -> result.title },
         )
         assertEquals(
-            listOf("Permissions"),
+            listOf("Dock"),
             LauncherSearchProvider()
                 .search(query = "notification access", apps = emptyList(), settingsEntries = entries)
                 .map { result -> result.title },

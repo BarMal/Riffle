@@ -278,6 +278,7 @@ private fun SettingsFloatingDockPageContent(
     SettingsSection(title = "Floating dock") {
         OverlayDockSetting(
             settings = state.settings.overlayDock,
+            permissionStatus = state.overlayDockPermissionStatus,
             onAction = onAction,
         )
     }

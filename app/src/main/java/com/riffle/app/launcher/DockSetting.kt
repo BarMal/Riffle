@@ -1,3 +1,5 @@
+@file:Suppress("TooManyFunctions")
+
 package com.riffle.app.launcher
 
 import androidx.compose.foundation.layout.Arrangement
@@ -211,9 +213,27 @@ private fun DockNotificationCardsSetting(
         title = "Expanded dock cards",
         subtitle = dockNotificationCardsSettingSubtitle(enabled, notificationAccessStatus),
         checked = enabled,
-        onCheckedChange = { value -> onAction(LauncherShellAction.SelectDockNotificationCardsEnabled(value)) },
+        onCheckedChange = { value ->
+            dockNotificationCardsEnabledActions(
+                enabled = value,
+                wasEnabled = enabled,
+                notificationAccessStatus = notificationAccessStatus,
+            ).forEach(onAction)
+        },
     )
 }
+
+internal fun dockNotificationCardsEnabledActions(
+    enabled: Boolean,
+    wasEnabled: Boolean,
+    notificationAccessStatus: NotificationAccessStatus,
+): List<LauncherShellAction> =
+    buildList {
+        add(LauncherShellAction.SelectDockNotificationCardsEnabled(enabled))
+        if (enabled && !wasEnabled && notificationAccessStatus != NotificationAccessStatus.GRANTED) {
+            add(LauncherShellAction.RequestNotificationAccess)
+        }
+    }
 
 internal fun dockNotificationCardsSettingSubtitle(
     enabled: Boolean,
