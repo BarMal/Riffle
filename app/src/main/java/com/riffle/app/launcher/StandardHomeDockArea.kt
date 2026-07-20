@@ -3,10 +3,13 @@ package com.riffle.app.launcher
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import com.riffle.core.domain.launcher.home.GridInsets
 import com.riffle.core.domain.launcher.home.HomeEditMode
 import com.riffle.core.domain.launcher.home.HomeLayout
 
@@ -43,10 +46,17 @@ internal fun StandardHomeDockArea(
             homeLayout = layout,
             onAction = actions.onAction,
         )
+    val margins = layout.settings.grid.margin.nonNegative()
 
     Column(
         modifier =
             Modifier
+                .padding(
+                    start = margins.start.dp,
+                    end = margins.end.dp,
+                    bottom = margins.bottom.dp,
+                )
+                .testTag(HOME_DOCK_TEST_TAG)
                 .dockShelfMotion(dockShelfMotionPolicy(presentation.reducedMotion))
                 .dockShelfFrameRatePreference(presentation.motionPerformanceTargetFps),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -76,6 +86,14 @@ internal fun StandardHomeDockArea(
     }
 }
 
+internal fun GridInsets.nonNegative(): GridInsets =
+    GridInsets(
+        start = start.coerceAtLeast(0),
+        top = top.coerceAtLeast(0),
+        end = end.coerceAtLeast(0),
+        bottom = bottom.coerceAtLeast(0),
+    )
+
 private fun HomeLayout.shouldShowDock(): Boolean =
     dock.isEnabled &&
         dockBackgroundVisible(
@@ -86,3 +104,4 @@ private fun HomeLayout.shouldShowDock(): Boolean =
         )
 
 private const val HOME_DOCK_TOP_SPACING_DP = 10
+internal const val HOME_DOCK_TEST_TAG = "home-dock"

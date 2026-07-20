@@ -133,7 +133,7 @@ private fun StandardHomeColumn(
         actions.copy(
             onBackgroundClick = dockShelf.dismiss,
         )
-    val margins = state.visibleLayout.settings.grid.margin
+    val margins = state.visibleLayout.settings.grid.margin.nonNegative()
 
     Column(
         modifier =
