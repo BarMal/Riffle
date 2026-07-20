@@ -1,5 +1,6 @@
 package com.riffle.app.launcher
 
+import com.riffle.core.domain.launcher.FirstRunStatus
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.ShellDestination
 import com.riffle.core.domain.launcher.home.DockModel
@@ -14,6 +15,15 @@ import org.junit.Assert.assertNotEquals
 import org.junit.Test
 
 class SettingsSurfaceStateProjectionTest {
+    @Test
+    fun projectsPendingHomeRoleRequestIntoSettings() {
+        val surfaceState =
+            LauncherShellState(firstRunStatus = FirstRunStatus.REQUESTING_HOME_ROLE)
+                .settingsSurfaceState()
+
+        assertEquals(FirstRunStatus.REQUESTING_HOME_ROLE, surfaceState.firstRunStatus)
+    }
+
     @Test
     fun defaultLayoutSettingsExposeCardMode() {
         val surfaceState = LauncherShellState().settingsSurfaceState()

@@ -1,5 +1,6 @@
 package com.riffle.app.launcher
 
+import com.riffle.core.domain.launcher.FirstRunStatus
 import com.riffle.core.domain.launcher.HomeRoleStatus
 import com.riffle.core.domain.launcher.OverlayDockPermissionStatus
 import com.riffle.core.domain.launcher.apps.AppShortcutsByApp
@@ -16,6 +17,7 @@ data class SettingsSurfaceState(
     val selectedLayoutDeviceClass: HomeLayoutDeviceClass,
     val availableLayoutDeviceClasses: Set<HomeLayoutDeviceClass>,
     val availableLauncherViewModes: List<LauncherViewMode>,
+    val firstRunStatus: FirstRunStatus,
     val homeRoleStatus: HomeRoleStatus,
     val overlayDockPermissionStatus: OverlayDockPermissionStatus,
     val notificationAccessStatus: NotificationAccessStatus,

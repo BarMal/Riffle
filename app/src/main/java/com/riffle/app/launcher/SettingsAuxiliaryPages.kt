@@ -38,6 +38,7 @@ internal fun SettingsPermissionsPageContent(
 ) {
     SettingsPermissionsSection(
         homeRoleStatus = state.homeRoleStatus,
+        firstRunStatus = state.firstRunStatus,
         onAction = onAction,
     )
 }

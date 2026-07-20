@@ -97,6 +97,7 @@ private fun SettingsMainPageContent(
 
     SettingsLauncherSection(
         status = state.homeRoleStatus,
+        firstRunStatus = state.firstRunStatus,
         onAction = onAction,
     )
     AppSearchField(

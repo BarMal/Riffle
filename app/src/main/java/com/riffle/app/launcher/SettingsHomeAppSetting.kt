@@ -7,11 +7,13 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.riffle.core.domain.launcher.FirstRunStatus
 import com.riffle.core.domain.launcher.HomeRoleStatus
 
 @Composable
 internal fun SettingsLauncherSection(
     status: HomeRoleStatus,
+    firstRunStatus: FirstRunStatus,
     onAction: (LauncherShellAction) -> Unit,
 ) {
     Surface(
@@ -32,6 +34,7 @@ internal fun SettingsLauncherSection(
     ) {
         SettingsHomeAppSetting(
             status = status,
+            firstRunStatus = firstRunStatus,
             onAction = onAction,
         )
     }
@@ -40,17 +43,45 @@ internal fun SettingsLauncherSection(
 @Composable
 internal fun SettingsHomeAppSetting(
     status: HomeRoleStatus,
+    firstRunStatus: FirstRunStatus,
     onAction: (LauncherShellAction) -> Unit,
 ) {
-    SettingsClickableRow(
-        title = "Default home app",
-        subtitle = status.settingsHomeAppStatusLabel(),
-        onClick = { onAction(LauncherShellAction.RequestDefaultHome) },
-        trailingContent = {
-            SettingsButtonText(text = status.settingsHomeAppActionLabel())
-        },
-    )
+    val presentation = homeAppSettingsPresentation(status, firstRunStatus)
+    if (presentation.actionLabel == null) {
+        SettingsListRow(
+            title = "Default home app",
+            subtitle = presentation.statusLabel,
+            trailingContent = { SettingsButtonText(text = "Checking") },
+        )
+    } else {
+        SettingsClickableRow(
+            title = "Default home app",
+            subtitle = presentation.statusLabel,
+            onClick = { onAction(LauncherShellAction.RequestDefaultHome) },
+            trailingContent = {
+                SettingsButtonText(text = presentation.actionLabel)
+            },
+        )
+    }
 }
+
+internal fun homeAppSettingsPresentation(
+    status: HomeRoleStatus,
+    firstRunStatus: FirstRunStatus,
+): HomeAppSettingsPresentation =
+    if (firstRunStatus == FirstRunStatus.REQUESTING_HOME_ROLE) {
+        HomeAppSettingsPresentation(statusLabel = "Checking whether Riffle is your Home app.")
+    } else {
+        HomeAppSettingsPresentation(
+            statusLabel = status.settingsHomeAppStatusLabel(),
+            actionLabel = status.settingsHomeAppActionLabel(),
+        )
+    }
+
+internal data class HomeAppSettingsPresentation(
+    val statusLabel: String,
+    val actionLabel: String? = null,
+)
 
 internal fun HomeRoleStatus.settingsHomeAppStatusLabel(): String =
     when (this) {
