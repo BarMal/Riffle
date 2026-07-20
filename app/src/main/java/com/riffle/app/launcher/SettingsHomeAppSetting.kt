@@ -51,7 +51,7 @@ internal fun SettingsHomeAppSetting(
         SettingsListRow(
             title = "Default home app",
             subtitle = presentation.statusLabel,
-            trailingContent = { SettingsButtonText(text = "Checking") },
+            trailingContent = { SettingsButtonText(text = presentation.trailingLabel) },
         )
     } else {
         SettingsClickableRow(
@@ -70,17 +70,22 @@ internal fun homeAppSettingsPresentation(
     firstRunStatus: FirstRunStatus,
 ): HomeAppSettingsPresentation =
     if (firstRunStatus == FirstRunStatus.REQUESTING_HOME_ROLE) {
-        HomeAppSettingsPresentation(statusLabel = "Checking whether Riffle is your Home app.")
+        HomeAppSettingsPresentation(
+            statusLabel = "Checking whether Riffle is your Home app.",
+            trailingLabel = "Checking",
+        )
     } else {
         HomeAppSettingsPresentation(
             statusLabel = status.settingsHomeAppStatusLabel(),
             actionLabel = status.settingsHomeAppActionLabel(),
+            trailingLabel = status.settingsHomeAppTrailingLabel(),
         )
     }
 
 internal data class HomeAppSettingsPresentation(
     val statusLabel: String,
     val actionLabel: String? = null,
+    val trailingLabel: String = actionLabel ?: "Default",
 )
 
 internal fun HomeRoleStatus.settingsHomeAppStatusLabel(): String =
@@ -90,9 +95,16 @@ internal fun HomeRoleStatus.settingsHomeAppStatusLabel(): String =
         HomeRoleStatus.UNKNOWN -> "Home app status unavailable"
     }
 
-internal fun HomeRoleStatus.settingsHomeAppActionLabel(): String =
+internal fun HomeRoleStatus.settingsHomeAppActionLabel(): String? =
     when (this) {
-        HomeRoleStatus.DEFAULT_HOME -> "Change home app"
+        HomeRoleStatus.DEFAULT_HOME -> null
+        HomeRoleStatus.NOT_DEFAULT_HOME -> "Set home"
+        HomeRoleStatus.UNKNOWN -> "Try again"
+    }
+
+private fun HomeRoleStatus.settingsHomeAppTrailingLabel(): String =
+    when (this) {
+        HomeRoleStatus.DEFAULT_HOME -> "Default"
         HomeRoleStatus.NOT_DEFAULT_HOME -> "Set home"
         HomeRoleStatus.UNKNOWN -> "Try again"
     }

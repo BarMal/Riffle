@@ -5,7 +5,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertHasNoClickAction
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
@@ -78,9 +77,7 @@ class SettingsPageContentTest {
     }
 
     @Test
-    fun defaultHomeStatusUsesAnExplicitChangeAction() {
-        val actions = mutableListOf<LauncherShellAction>()
-
+    fun defaultHomeStatusDoesNotRequestTheHomeRoleAgain() {
         composeRule.setContent {
             MaterialTheme {
                 SettingsPageContent(
@@ -91,17 +88,16 @@ class SettingsPageContentTest {
                         ).settingsSurfaceState(),
                     page = SettingsPage.PERMISSIONS,
                     onPageSelected = {},
-                    onAction = actions::add,
+                    onAction = {},
                 )
             }
         }
 
         composeRule
-            .onNodeWithText("Change home app")
-            .assertHasClickAction()
-            .performClick()
-
-        assertEquals(listOf(LauncherShellAction.RequestDefaultHome), actions)
+            .onNodeWithText("Default home app")
+            .assertHasNoClickAction()
+        composeRule.onNodeWithText("Riffle is default").assertExists()
+        composeRule.onNodeWithText("Default").assertExists()
     }
 
     @Test
