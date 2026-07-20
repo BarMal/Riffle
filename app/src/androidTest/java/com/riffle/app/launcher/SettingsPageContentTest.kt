@@ -1,6 +1,9 @@
 package com.riffle.app.launcher
 
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.assertHasNoClickAction
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -44,25 +47,27 @@ class SettingsPageContentTest {
 
     @Test
     fun pendingHomeRoleRequestSuppressesHomeRoleActionInEverySettingsEntryPoint() {
+        var currentPage by mutableStateOf(SettingsPage.MAIN)
         val pendingState =
             LauncherShellState(
                 firstRunStatus = FirstRunStatus.REQUESTING_HOME_ROLE,
                 homeRoleStatus = HomeRoleStatus.UNKNOWN,
             ).settingsSurfaceState()
 
-        listOf(SettingsPage.MAIN, SettingsPage.PERMISSIONS).forEach { page ->
-            composeRule.setContent {
-                MaterialTheme {
-                    SettingsPageContent(
-                        modifier = Modifier,
-                        state = pendingState,
-                        page = page,
-                        onPageSelected = {},
-                        onAction = {},
-                    )
-                }
+        composeRule.setContent {
+            MaterialTheme {
+                SettingsPageContent(
+                    modifier = Modifier,
+                    state = pendingState,
+                    page = currentPage,
+                    onPageSelected = {},
+                    onAction = {},
+                )
             }
+        }
 
+        listOf(SettingsPage.MAIN, SettingsPage.PERMISSIONS).forEach { page ->
+            composeRule.runOnIdle { currentPage = page }
             composeRule
                 .onNodeWithText("Default home app")
                 .assertHasNoClickAction()
