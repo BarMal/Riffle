@@ -65,6 +65,7 @@ class TimeScapeCardSurfaceTest {
 
         composeRule.onNodeWithText("Allow notification access to show your app stages.").assertIsDisplayed()
         composeRule.onNodeWithText("Allow access").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("More stage options").assertDoesNotExist()
     }
 
     @Test

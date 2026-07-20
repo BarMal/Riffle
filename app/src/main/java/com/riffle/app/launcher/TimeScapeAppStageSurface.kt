@@ -96,7 +96,6 @@ private fun TimeScapeStageHeader(
                 Text(if (selectedStage.isPinned) "Unpin" else "Pin")
             }
         }
-        Text(text = "⋮", modifier = Modifier.padding(12.dp).semantics { contentDescription = "More stage options" })
     }
 }
 
