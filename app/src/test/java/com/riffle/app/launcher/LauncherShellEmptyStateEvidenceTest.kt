@@ -1,7 +1,6 @@
 package com.riffle.app.launcher
 
 import com.riffle.core.domain.launcher.FirstRunStatus
-import com.riffle.core.domain.launcher.HomeRoleStatus
 import com.riffle.core.domain.launcher.ShellDestination
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.apps.InstalledAppRepository
@@ -44,19 +43,19 @@ class LauncherShellEmptyStateEvidenceTest {
     }
 
     @Test
-    fun pendingHomeRoleRequestRestoresAsRecoverableState() {
+    fun pendingHomeRoleRequestRestoresAsRetryableStateAfterProcessRecreation() {
         val repository = FakeFirstRunRepository(isComplete = false)
         LauncherShellViewModel(firstRunRepository = repository).onDefaultHomeRequestStarted()
 
         val restoredViewModel = LauncherShellViewModel(firstRunRepository = repository)
 
-        assertEquals(FirstRunStatus.REQUESTING_HOME_ROLE, restoredViewModel.state.value.firstRunStatus)
-        assertTrue(repository.isHomeRoleRequestPending())
-
-        restoredViewModel.onHomeRoleStatusChanged(HomeRoleStatus.NOT_DEFAULT_HOME)
-
         assertEquals(FirstRunStatus.NEEDS_HOME_ROLE, restoredViewModel.state.value.firstRunStatus)
         assertFalse(repository.isHomeRoleRequestPending())
+
+        restoredViewModel.onDefaultHomeRequestStarted()
+
+        assertEquals(FirstRunStatus.REQUESTING_HOME_ROLE, restoredViewModel.state.value.firstRunStatus)
+        assertTrue(repository.isHomeRoleRequestPending())
     }
 
     private class FakeFirstRunRepository(

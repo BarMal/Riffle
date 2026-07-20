@@ -9,14 +9,21 @@ import org.junit.Test
 
 class LauncherShellViewModelFirstRunTest {
     @Test
-    fun restoresPersistedHomeRoleRequestAsCheckingStateAfterRecreation() {
+    fun restoresPersistedHomeRoleRequestAsRetryablePreviewStateAfterRecreation() {
+        val repository = FakeFirstRunRepository(pendingHomeRoleRequest = true)
         val viewModel =
             LauncherShellViewModel(
-                firstRunRepository = FakeFirstRunRepository(pendingHomeRoleRequest = true),
+                firstRunRepository = repository,
             )
 
-        assertEquals(FirstRunStatus.REQUESTING_HOME_ROLE, viewModel.state.value.firstRunStatus)
+        assertEquals(FirstRunStatus.NEEDS_HOME_ROLE, viewModel.state.value.firstRunStatus)
         assertEquals(HomeRoleStatus.UNKNOWN, viewModel.state.value.homeRoleStatus)
+        assertFalse(repository.pendingHomeRoleRequest)
+
+        viewModel.onDefaultHomeRequestStarted()
+
+        assertEquals(FirstRunStatus.REQUESTING_HOME_ROLE, viewModel.state.value.firstRunStatus)
+        assertTrue(repository.pendingHomeRoleRequest)
     }
 
     @Test

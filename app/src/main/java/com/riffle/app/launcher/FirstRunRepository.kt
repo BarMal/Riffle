@@ -16,7 +16,8 @@ interface FirstRunRepository {
 
     /**
      * Presentation-only recovery state for a Home-role system request that may outlive an
-     * activity or process. The request is never relaunched from this value.
+     * activity. A recreated process clears this marker and returns to a retryable preview state;
+     * the request is never relaunched from this value.
      */
     fun isHomeRoleRequestPending(): Boolean = false
 
