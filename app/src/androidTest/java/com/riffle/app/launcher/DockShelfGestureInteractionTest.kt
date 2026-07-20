@@ -28,7 +28,7 @@ class DockShelfGestureInteractionTest {
     val composeRule = createComposeRule()
 
     @Test
-    fun dockOpeningDragIsClaimedBeforeTheHomeGestureThreshold() {
+    fun dockOpeningDragEndingOnReleaseExpandsBeforeTheHomeGestureThreshold() {
         val homeActions = mutableListOf<LauncherShellAction>()
         var isShelfExpanded by mutableStateOf(false)
         var openingDragWasConsumedBeforeHomeThreshold by mutableStateOf(false)
@@ -84,7 +84,7 @@ class DockShelfGestureInteractionTest {
         composeRule.onNodeWithTag("dock-shelf").performTouchInput {
             down(Offset(width / 2f, height - 1f))
             moveBy(Offset(0f, -24f))
-            moveBy(Offset(0f, -64f))
+            updatePointerBy(pointerId = 0, delta = Offset(0f, -64f))
             up()
         }
 
