@@ -15,11 +15,17 @@ class SharedPreferencesFirstRunRepository(
             .apply()
     }
 
-    override fun isSetupCardDismissed(): Boolean =
-        preferences.getBoolean(
-            KEY_SETUP_CARD_DISMISSED,
-            isFirstRunComplete(),
-        )
+    override fun isSetupCardDismissed(): Boolean {
+        if (preferences.contains(KEY_SETUP_CARD_DISMISSED)) {
+            return preferences.getBoolean(KEY_SETUP_CARD_DISMISSED, false)
+        }
+
+        return isFirstRunComplete().also { wasFirstRunComplete ->
+            if (wasFirstRunComplete) {
+                setSetupCardDismissed()
+            }
+        }
+    }
 
     override fun setSetupCardDismissed() {
         preferences.edit()

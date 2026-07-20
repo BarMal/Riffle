@@ -21,10 +21,12 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
 import com.riffle.core.domain.launcher.FirstRunStatus
 import com.riffle.core.domain.launcher.HomeRoleStatus
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.ShellDestination
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -36,6 +38,11 @@ import org.junit.runner.RunWith
 class PreviewFirstSetupTest {
     @get:Rule
     val composeRule = createComposeRule()
+
+    @After
+    fun clearFirstRunPreferences() {
+        firstRunPreferences().edit().clear().commit()
+    }
 
     @Test
     fun setupCardTitleIsAnAccessibleHeading() {
@@ -246,9 +253,38 @@ class PreviewFirstSetupTest {
         )
     }
 
+    @Test
+    fun legacyCompletedFirstRunMigratesToTheSetupCardDismissalMarker() {
+        val preferences = firstRunPreferences()
+        preferences
+            .edit()
+            .clear()
+            .putBoolean("first_run_complete", true)
+            .commit()
+
+        val repository =
+            SharedPreferencesFirstRunRepository(
+                InstrumentationRegistry.getInstrumentation().targetContext,
+            )
+
+        assertTrue(repository.isSetupCardDismissed())
+        assertTrue(preferences.getBoolean("setup_card_dismissed", false))
+        assertTrue(
+            SharedPreferencesFirstRunRepository(
+                InstrumentationRegistry.getInstrumentation().targetContext,
+            ).isSetupCardDismissed(),
+        )
+    }
+
     private fun previewState(): LauncherShellState {
         return LauncherShellState(homeRoleStatus = HomeRoleStatus.NOT_DEFAULT_HOME)
     }
+
+    private fun firstRunPreferences() =
+        InstrumentationRegistry
+            .getInstrumentation()
+            .targetContext
+            .getSharedPreferences("riffle_first_run", android.content.Context.MODE_PRIVATE)
 
     private class FakeFirstRunRepository : FirstRunRepository {
         private var setupCardDismissed = false
