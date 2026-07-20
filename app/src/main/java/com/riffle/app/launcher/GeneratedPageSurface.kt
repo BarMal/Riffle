@@ -202,15 +202,6 @@ internal fun GeneratedNotificationCardsPage(
                                     GeneratedNotificationCard(
                                         card = state.cards[entry.cardIndex],
                                         onAction = onAction,
-                                        onFocusRequest = {
-                                            applyFocus(
-                                                controller.jumpTo(
-                                                    focusState,
-                                                    cardIds,
-                                                    cardIds[entry.cardIndex],
-                                                ),
-                                            )
-                                        },
                                         isFocused = entry.cardIndex == activeCardIndex,
                                         appearance = timeScapeAppearance,
                                         cardWidth = resolution.cardWidthDp.dp,
@@ -359,7 +350,6 @@ private fun GeneratedCardStackControls(
 private fun GeneratedNotificationCard(
     card: DockNotificationCardState,
     onAction: (LauncherShellAction) -> Unit,
-    onFocusRequest: () -> Unit,
     isFocused: Boolean,
     appearance: TimeScapeAppearanceSettings,
     cardWidth: androidx.compose.ui.unit.Dp,
@@ -392,12 +382,8 @@ private fun GeneratedNotificationCard(
                         Modifier
                             .semantics {
                                 contentDescription = generatedNotificationCardContentDescription(card)
-                            }.clickable(enabled = identity != null) {
-                                if (isFocused) {
-                                    generatedNotificationCardLaunchAction(card)?.let(onAction)
-                                } else {
-                                    onFocusRequest()
-                                }
+                            }.clickable(enabled = identity != null && isFocused) {
+                                generatedNotificationCardLaunchAction(card)?.let(onAction)
                             },
                     ),
             contentPadding = contentPadding,

@@ -84,7 +84,7 @@ class GeneratedPageSurfaceInteractionTest {
 
         composeRule
             .onNodeWithContentDescription(generatedNotificationCardContentDescription(secondCard))
-            .performTouchInput { click(Offset(width - 1f, height / 2f)) }
+            .performTouchInput { click(Offset(width / 2f, height - 1f)) }
 
         composeRule
             .onNodeWithTag(GENERATED_NOTIFICATION_CARD_STACK_TEST_TAG)
