@@ -207,7 +207,7 @@ internal fun GeneratedNotificationCardsPage(
                                         cardWidth = resolution.cardWidthDp.dp,
                                         cardHeight = resolution.cardHeightDp.dp,
                                         contentPadding = generatedNotificationCardContentPadding(resolution),
-                                        modifier = pointerModifier.fillMaxSize(),
+                                        modifier = pointerModifier,
                                     )
                                 }
                             } else {
