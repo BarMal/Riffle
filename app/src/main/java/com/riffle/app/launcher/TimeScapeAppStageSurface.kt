@@ -233,9 +233,12 @@ private fun TimeScapeNotificationStack(
     val activeCard = focusedCard ?: return
     val availableCardIds = cards.map { card -> card.content.id }.toSet()
     val detailFocusRequester = remember { FocusRequester() }
-    var restoreDetailFocus by remember { mutableStateOf(false) }
+    var restoreDetailFocusForCardId by remember { mutableStateOf<LauncherCardId?>(null) }
 
-    LaunchedEffect(availableCardIds) { detailState.reconcile(availableCardIds) }
+    LaunchedEffect(availableCardIds) {
+        detailState.reconcile(availableCardIds)
+        if (restoreDetailFocusForCardId !in availableCardIds) restoreDetailFocusForCardId = null
+    }
 
     BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
         val resolution =
@@ -250,7 +253,7 @@ private fun TimeScapeNotificationStack(
                         card = card,
                         detailState = detailState,
                         onAction = onAction,
-                        onClose = { restoreDetailFocus = true },
+                        onClose = { restoreDetailFocusForCardId = card.content.id },
                         modifier = Modifier.fillMaxSize(),
                     )
                 }
@@ -307,8 +310,8 @@ private fun TimeScapeNotificationStack(
                     onAction = onAction,
                     onDetailRequested = { detailState.expand(activeCard.content.id) },
                     detailFocusRequester = detailFocusRequester,
-                    restoreDetailFocus = restoreDetailFocus,
-                    onDetailFocusRestored = { restoreDetailFocus = false },
+                    restoreDetailFocus = restoreDetailFocusForCardId == activeCard.content.id,
+                    onDetailFocusRestored = { restoreDetailFocusForCardId = null },
                 )
                 TimeScapeDetailRecoveryMessage(detailState.sourceRemovalMessage)
             }
@@ -370,14 +373,17 @@ private fun TimeScapeEmptyStage(
     val detailCardId = LauncherCardId("stage-empty:${stage.id.profileId.value}:${stage.id.packageName.value}")
     val availableCardIds = if (emptyCard == null) emptySet() else setOf(detailCardId)
     val detailFocusRequester = remember { FocusRequester() }
-    var restoreDetailFocus by remember { mutableStateOf(false) }
-    LaunchedEffect(availableCardIds) { detailState.reconcile(availableCardIds) }
+    var restoreDetailFocusForCardId by remember { mutableStateOf<LauncherCardId?>(null) }
+    LaunchedEffect(availableCardIds) {
+        detailState.reconcile(availableCardIds)
+        if (restoreDetailFocusForCardId !in availableCardIds) restoreDetailFocusForCardId = null
+    }
     if (detailState.expansionState.isVisible && emptyCard != null) {
         TimeScapeEmptyAppDetailSurface(
             card = emptyCard,
             detailState = detailState,
             onAction = onAction,
-            onClose = { restoreDetailFocus = true },
+            onClose = { restoreDetailFocusForCardId = detailCardId },
             modifier = modifier,
         )
         return
@@ -405,9 +411,9 @@ private fun TimeScapeEmptyStage(
                 onClick = { detailState.expand(detailCardId) },
                 modifier =
                     Modifier.focusRequester(detailFocusRequester).onGloballyPositioned {
-                        if (restoreDetailFocus) {
+                        if (restoreDetailFocusForCardId == detailCardId) {
                             detailFocusRequester.requestFocus()
-                            restoreDetailFocus = false
+                            restoreDetailFocusForCardId = null
                         }
                     },
             ) {

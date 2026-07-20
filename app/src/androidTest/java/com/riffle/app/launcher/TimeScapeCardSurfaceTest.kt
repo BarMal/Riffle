@@ -264,6 +264,53 @@ class TimeScapeCardSurfaceTest {
     }
 
     @Test
+    fun removingSourceDuringBackCloseDoesNotFocusRemainingCardDetails() {
+        val app = timeScapeTestApp()
+        val source = timeScapeTestNotification(app).copy(key = LauncherNotificationKey("source"), postedAtEpochMillis = 20)
+        val remaining =
+            timeScapeTestNotification(app).copy(
+                key = LauncherNotificationKey("remaining"),
+                title = "Remaining notification",
+                postedAtEpochMillis = 10,
+            )
+        var state by
+            mutableStateOf(
+                timeScapeTestState(app, source).copy(
+                    notificationGroupsByApp =
+                        listOf(
+                            AppNotificationGroup(
+                                packageName = app.identity.packageName,
+                                profileId = app.identity.profile.id,
+                                latestCategory = NotificationCategory.MESSAGE,
+                                latestAgeBucket = NotificationAgeBucket.RECENT,
+                                notifications = listOf(source, remaining),
+                            ),
+                        ),
+                ),
+            )
+        composeRule.setContent {
+            MaterialTheme { TimeScapeAppStageSurface(state = state, onAction = {}) }
+        }
+
+        composeRule.onNodeWithText("Details").performClick()
+        composeRule.onNodeWithText("Notification details").assertIsDisplayed()
+        composeRule.onNodeWithText("Back").performClick()
+        composeRule.runOnIdle {
+            state =
+                state.copy(
+                    notificationGroupsByApp =
+                        state.notificationGroupsByApp.map { group ->
+                            group.copy(notifications = listOf(remaining))
+                        },
+                )
+        }
+        composeRule.mainClock.advanceTimeBy(200)
+
+        composeRule.onNodeWithText("The selected card is no longer available.").assertIsDisplayed()
+        composeRule.onNodeWithText("Details").assertIsNotFocused()
+    }
+
+    @Test
     fun initialEmptyAppStageDoesNotMoveFocusToDetails() {
         composeRule.setContent {
             MaterialTheme {
