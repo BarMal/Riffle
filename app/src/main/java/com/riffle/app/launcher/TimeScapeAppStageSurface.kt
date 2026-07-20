@@ -1,4 +1,4 @@
-@file:Suppress("LongMethod", "LongParameterList", "TooManyFunctions")
+@file:Suppress("CyclomaticComplexMethod", "LongMethod", "LongParameterList", "TooManyFunctions")
 
 package com.riffle.app.launcher
 
@@ -232,11 +232,15 @@ private fun TimeScapeNotificationStack(
     val activeCard = focusedCard ?: return
     val availableCardIds = cards.map { card -> card.content.id }.toSet()
     val detailFocusRequester = remember { FocusRequester() }
+    var wasDetailVisible by remember { mutableStateOf(false) }
 
     LaunchedEffect(availableCardIds) { detailState.reconcile(availableCardIds) }
 
     LaunchedEffect(detailState.expansionState.isVisible) {
-        if (!detailState.expansionState.isVisible) detailFocusRequester.requestFocus()
+        if (wasDetailVisible && !detailState.expansionState.isVisible) {
+            detailFocusRequester.requestFocus()
+        }
+        wasDetailVisible = detailState.expansionState.isVisible
     }
 
     BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
@@ -361,10 +365,14 @@ private fun TimeScapeEmptyStage(
     val detailCardId = LauncherCardId("stage-empty:${stage.id.profileId.value}:${stage.id.packageName.value}")
     val availableCardIds = if (emptyCard == null) emptySet() else setOf(detailCardId)
     val detailFocusRequester = remember { FocusRequester() }
+    var wasDetailVisible by remember { mutableStateOf(false) }
     LaunchedEffect(availableCardIds) { detailState.reconcile(availableCardIds) }
 
     LaunchedEffect(detailState.expansionState.isVisible) {
-        if (!detailState.expansionState.isVisible) detailFocusRequester.requestFocus()
+        if (wasDetailVisible && !detailState.expansionState.isVisible) {
+            detailFocusRequester.requestFocus()
+        }
+        wasDetailVisible = detailState.expansionState.isVisible
     }
     if (detailState.expansionState.isVisible && emptyCard != null) {
         TimeScapeEmptyAppDetailSurface(

@@ -17,6 +17,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
@@ -156,6 +157,21 @@ class TimeScapeCardSurfaceTest {
     }
 
     @Test
+    fun initialNotificationStageDoesNotMoveFocusToDetails() {
+        val app = timeScapeTestApp()
+        composeRule.setContent {
+            MaterialTheme {
+                TimeScapeAppStageSurface(
+                    state = timeScapeTestState(app, timeScapeTestNotification(app)),
+                    onAction = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("Details").assertIsNotFocused()
+    }
+
+    @Test
     fun emptyAppDetailsBackRestoresFocusToItsDetailsControl() {
         val app = timeScapeTestApp()
         composeRule.setContent {
@@ -169,6 +185,20 @@ class TimeScapeCardSurfaceTest {
         composeRule.mainClock.advanceTimeBy(200)
 
         composeRule.onNodeWithText("Details").assertIsFocused()
+    }
+
+    @Test
+    fun initialEmptyAppStageDoesNotMoveFocusToDetails() {
+        composeRule.setContent {
+            MaterialTheme {
+                TimeScapeAppStageSurface(
+                    state = emptyPinnedStageState(timeScapeTestApp()),
+                    onAction = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("Details").assertIsNotFocused()
     }
 
     @Test
