@@ -30,11 +30,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
@@ -234,9 +234,10 @@ private fun TimeScapeNotificationStack(
     val activeCard = focusedCard ?: return
     val availableCardIds = cards.map { card -> card.content.id }.toSet()
     val detailFocusRequester = remember { FocusRequester() }
+    var restoreDetailFocus by remember { mutableStateOf(false) }
 
     LaunchedEffect(availableCardIds) { detailState.reconcile(availableCardIds) }
-    RestoreDetailOriginFocus(detailState.expansionState, availableCardIds, detailFocusRequester)
+    RestoreDetailOriginFocus(detailState.expansionState, availableCardIds) { restoreDetailFocus = true }
 
     BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
         val resolution =
@@ -307,6 +308,8 @@ private fun TimeScapeNotificationStack(
                     onAction = onAction,
                     onDetailRequested = { detailState.expand(activeCard.content.id) },
                     detailFocusRequester = detailFocusRequester,
+                    restoreDetailFocus = restoreDetailFocus,
+                    onDetailFocusRestored = { restoreDetailFocus = false },
                 )
                 TimeScapeDetailRecoveryMessage(detailState.sourceRemovalMessage)
             }
@@ -320,6 +323,8 @@ internal fun TimeScapeContextShelf(
     onAction: (LauncherShellAction) -> Unit,
     onDetailRequested: (() -> Unit)? = null,
     detailFocusRequester: FocusRequester? = null,
+    restoreDetailFocus: Boolean = false,
+    onDetailFocusRestored: (() -> Unit)? = null,
 ) {
     if (card.supportedActions.isEmpty() && onDetailRequested == null) return
     Row(
@@ -339,8 +344,14 @@ internal fun TimeScapeContextShelf(
             TextButton(
                 onClick = requestDetail,
                 modifier =
-                    detailFocusRequester?.let { requester -> Modifier.focusRequester(requester) }
-                        ?: Modifier,
+                    detailFocusRequester?.let { requester ->
+                        Modifier.focusRequester(requester).onGloballyPositioned {
+                            if (restoreDetailFocus) {
+                                requester.requestFocus()
+                                onDetailFocusRestored?.invoke()
+                            }
+                        }
+                    } ?: Modifier,
             ) {
                 Text("Details")
             }
@@ -360,8 +371,9 @@ private fun TimeScapeEmptyStage(
     val detailCardId = LauncherCardId("stage-empty:${stage.id.profileId.value}:${stage.id.packageName.value}")
     val availableCardIds = if (emptyCard == null) emptySet() else setOf(detailCardId)
     val detailFocusRequester = remember { FocusRequester() }
+    var restoreDetailFocus by remember { mutableStateOf(false) }
     LaunchedEffect(availableCardIds) { detailState.reconcile(availableCardIds) }
-    RestoreDetailOriginFocus(detailState.expansionState, availableCardIds, detailFocusRequester)
+    RestoreDetailOriginFocus(detailState.expansionState, availableCardIds) { restoreDetailFocus = true }
     if (detailState.expansionState.isVisible && emptyCard != null) {
         TimeScapeEmptyAppDetailSurface(
             card = emptyCard,
@@ -392,7 +404,13 @@ private fun TimeScapeEmptyStage(
             }
             TextButton(
                 onClick = { detailState.expand(detailCardId) },
-                modifier = Modifier.focusRequester(detailFocusRequester),
+                modifier =
+                    Modifier.focusRequester(detailFocusRequester).onGloballyPositioned {
+                        if (restoreDetailFocus) {
+                            detailFocusRequester.requestFocus()
+                            restoreDetailFocus = false
+                        }
+                    },
             ) {
                 Text("Details")
             }
@@ -405,16 +423,14 @@ private fun TimeScapeEmptyStage(
 private fun RestoreDetailOriginFocus(
     expansionState: CardExpansionState,
     availableCardIds: Set<LauncherCardId>,
-    focusRequester: FocusRequester,
+    onFocusRestoreRequested: () -> Unit,
 ) {
     var originCardId by remember { mutableStateOf<LauncherCardId?>(null) }
     LaunchedEffect(expansionState, availableCardIds) {
         if (expansionState.isVisible) {
             originCardId = expansionState.cardId
         } else {
-            originCardId?.takeIf { it in availableCardIds }?.let {
-                withFrameNanos { focusRequester.requestFocus() }
-            }
+            originCardId?.takeIf { it in availableCardIds }?.let { onFocusRestoreRequested() }
             originCardId = null
         }
     }

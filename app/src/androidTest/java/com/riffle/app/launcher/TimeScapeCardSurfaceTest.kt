@@ -258,7 +258,7 @@ class TimeScapeCardSurfaceTest {
 
         composeRule.onNodeWithText("App details").assertIsDisplayed()
         composeRule.onNodeWithText("Back").performClick()
-        composeRule.mainClock.advanceTimeBy(200)
+        composeRule.mainClock.advanceTimeBy(250)
 
         composeRule.onNodeWithText("Details").assertIsFocused()
     }
