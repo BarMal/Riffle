@@ -20,6 +20,18 @@ class DefaultHomeRoleRequestHandlerTest {
     }
 
     @Test
+    fun requestIntentCreationFailureRefreshesStatusAndShowsRecovery() {
+        val calls = mutableListOf<String>()
+
+        handler(
+            createRequestIntent = { throw IllegalStateException("unavailable") },
+            calls = calls,
+        ).request()
+
+        assertEquals(listOf("failure", "cleared", "refresh", "unavailable"), calls)
+    }
+
+    @Test
     fun launchFailureRefreshesStatusAndShowsRecovery() {
         val calls = mutableListOf<String>()
 

@@ -13,11 +13,16 @@ internal class DefaultHomeRoleRequestHandler(
 ) {
     @Suppress("TooGenericExceptionCaught")
     fun request() {
-        val intent = createRequestIntent()
+        val intent =
+            try {
+                createRequestIntent()
+            } catch (failure: Exception) {
+                logLaunchFailure(failure)
+                recoverUnavailableRequest()
+                return
+            }
         if (intent == null) {
-            onRequestLaunchFailed()
-            refreshPlatformStatuses()
-            showUnavailable()
+            recoverUnavailableRequest()
             return
         }
 
@@ -26,9 +31,13 @@ internal class DefaultHomeRoleRequestHandler(
             launchRequest(intent)
         } catch (failure: Exception) {
             logLaunchFailure(failure)
-            onRequestLaunchFailed()
-            refreshPlatformStatuses()
-            showUnavailable()
+            recoverUnavailableRequest()
         }
+    }
+
+    private fun recoverUnavailableRequest() {
+        onRequestLaunchFailed()
+        refreshPlatformStatuses()
+        showUnavailable()
     }
 }
