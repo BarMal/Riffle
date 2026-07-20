@@ -8,7 +8,7 @@ import org.junit.Test
 
 class DefaultHomeRoleRequestHandlerTest {
     @Test
-    fun unavailableRequestShowsRecoveryWithoutStartingSetup() {
+    fun unavailableRequestClearsPendingRecoveryStateAndRefreshesStatus() {
         val calls = mutableListOf<String>()
 
         handler(
@@ -16,7 +16,7 @@ class DefaultHomeRoleRequestHandlerTest {
             calls = calls,
         ).request()
 
-        assertEquals(listOf("unavailable"), calls)
+        assertEquals(listOf("cleared", "refresh", "unavailable"), calls)
     }
 
     @Test
