@@ -132,6 +132,54 @@ class TimeScapeCardSurfaceTest {
     }
 
     @Test
+    fun mixedArtworkUsesAnOpaqueContentScrimForContrast() {
+        val artwork =
+            Bitmap.createBitmap(40, 40, Bitmap.Config.ARGB_8888).apply {
+                for (x in 0 until width) {
+                    val color = if (x < width / 2) android.graphics.Color.WHITE else android.graphics.Color.BLACK
+                    for (y in 0 until height) setPixel(x, y, color)
+                }
+            }.asImageBitmap()
+        val appearance =
+            TimeScapeAppearanceSettings(
+                surface =
+                    TimeScapeSurface(
+                        backgroundSource = TimeScapeBackgroundSource.NOTIFICATION_ARTWORK,
+                        glassTintArgb = 0xFFFFFFFFL,
+                        glassTransparencyPercent = 95,
+                        blurStrengthPercent = 0,
+                    ),
+            )
+
+        composeRule.setContent {
+            MaterialTheme {
+                TimeScapeCardSurface(
+                    appearance = appearance,
+                    background = TimeScapeCardBackground(artwork = artwork),
+                    modifier = Modifier.requiredSize(160.dp).testTag("mixed-artwork-card"),
+                ) {}
+            }
+        }
+
+        val rendered = composeRule.onNodeWithTag("mixed-artwork-card").captureToImage()
+        val pixels = rendered.toPixelMap()
+        val left = pixels[rendered.width / 4, rendered.height / 2]
+        val right = pixels[rendered.width * 3 / 4, rendered.height / 2]
+        val colors =
+            resolveTimeScapeCardColors(
+                appearance = appearance,
+                background = TimeScapeCardBackground(artwork = artwork),
+                materialBackground = Color.Black,
+                materialAccent = Color.Blue,
+            )
+
+        assertEquals(left.red, right.red, 0.03f)
+        assertEquals(left.green, right.green, 0.03f)
+        assertEquals(left.blue, right.blue, 0.03f)
+        assertTrue(contrastRatio(colors.foreground, colors.glass) >= 4.5f)
+    }
+
+    @Test
     fun saturationAndContrastAdjustFallbackBackgrounds() {
         val original = Color(0.8f, 0.2f, 0.1f)
 

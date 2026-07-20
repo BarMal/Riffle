@@ -268,6 +268,7 @@ internal fun TimeScapeCardSurface(
                 .fillMaxSize()
                 .then(if (effective.geometry.clipContent) Modifier.clip(shape) else Modifier)
                 .padding(adjustedPadding)
+                .background(colors.glass, shape)
         MaterialTheme(
             colorScheme =
                 MaterialTheme.colorScheme.copy(
