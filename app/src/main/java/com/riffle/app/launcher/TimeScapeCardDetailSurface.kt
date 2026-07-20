@@ -112,9 +112,10 @@ internal fun TimeScapeCardDetailSurface(
     card: AppStageNotificationCard,
     detailState: TimeScapeCardDetailState,
     onAction: (LauncherShellAction) -> Unit,
+    onClose: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
-    TimeScapeDetailContainer(detailState = detailState, modifier = modifier) {
+    TimeScapeDetailContainer(detailState = detailState, onClose = onClose, modifier = modifier) {
         Text(detailTitle(card), style = MaterialTheme.typography.headlineSmall)
         Text(detailKindLabel(card.content.kind), style = MaterialTheme.typography.labelLarge)
         Text(card.text, style = MaterialTheme.typography.bodyLarge)
@@ -127,9 +128,10 @@ internal fun TimeScapeEmptyAppDetailSurface(
     card: AppStageEmptyAppCard,
     detailState: TimeScapeCardDetailState,
     onAction: (LauncherShellAction) -> Unit,
+    onClose: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
-    TimeScapeDetailContainer(detailState = detailState, modifier = modifier) {
+    TimeScapeDetailContainer(detailState = detailState, onClose = onClose, modifier = modifier) {
         Text("${card.app.label} details", style = MaterialTheme.typography.headlineSmall)
         Text("App details", style = MaterialTheme.typography.labelLarge)
         Text("No current notification content for this app.", style = MaterialTheme.typography.bodyLarge)
@@ -147,6 +149,7 @@ internal fun TimeScapeEmptyAppDetailSurface(
 @Composable
 private fun TimeScapeDetailContainer(
     detailState: TimeScapeCardDetailState,
+    onClose: () -> Unit,
     modifier: Modifier,
     content: @Composable () -> Unit,
 ) {
@@ -158,7 +161,11 @@ private fun TimeScapeDetailContainer(
             label = "timescape-card-detail-alpha",
         )
 
-    BackHandler(enabled = detailState.expansionState.isVisible) { detailState.close() }
+    val closeDetail = {
+        onClose()
+        detailState.close()
+    }
+    BackHandler(enabled = detailState.expansionState.isVisible, onBack = closeDetail)
 
     LaunchedEffect(phase, detailState.reducedMotion) {
         if (phase == CardExpansionPhase.EXPANDING || phase == CardExpansionPhase.COLLAPSING) {
@@ -176,7 +183,7 @@ private fun TimeScapeDetailContainer(
                 .padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        TextButton(onClick = detailState::close) { Text("Back") }
+        TextButton(onClick = closeDetail) { Text("Back") }
         content()
     }
 }

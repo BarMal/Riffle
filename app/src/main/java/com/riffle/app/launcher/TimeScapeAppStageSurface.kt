@@ -45,7 +45,6 @@ import com.riffle.app.launcher.notifications.NotificationStageAction
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.cards.AppStage
 import com.riffle.core.domain.launcher.cards.AppStageId
-import com.riffle.core.domain.launcher.cards.CardExpansionState
 import com.riffle.core.domain.launcher.cards.LauncherCardId
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.settings.TimeScapeViewportDp
@@ -237,7 +236,6 @@ private fun TimeScapeNotificationStack(
     var restoreDetailFocus by remember { mutableStateOf(false) }
 
     LaunchedEffect(availableCardIds) { detailState.reconcile(availableCardIds) }
-    RestoreDetailOriginFocus(detailState.expansionState, availableCardIds) { restoreDetailFocus = true }
 
     BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
         val resolution =
@@ -252,6 +250,7 @@ private fun TimeScapeNotificationStack(
                         card = card,
                         detailState = detailState,
                         onAction = onAction,
+                        onClose = { restoreDetailFocus = true },
                         modifier = Modifier.fillMaxSize(),
                     )
                 }
@@ -373,12 +372,12 @@ private fun TimeScapeEmptyStage(
     val detailFocusRequester = remember { FocusRequester() }
     var restoreDetailFocus by remember { mutableStateOf(false) }
     LaunchedEffect(availableCardIds) { detailState.reconcile(availableCardIds) }
-    RestoreDetailOriginFocus(detailState.expansionState, availableCardIds) { restoreDetailFocus = true }
     if (detailState.expansionState.isVisible && emptyCard != null) {
         TimeScapeEmptyAppDetailSurface(
             card = emptyCard,
             detailState = detailState,
             onAction = onAction,
+            onClose = { restoreDetailFocus = true },
             modifier = modifier,
         )
         return
@@ -416,23 +415,6 @@ private fun TimeScapeEmptyStage(
             }
         }
         TimeScapeDetailRecoveryMessage(detailState.sourceRemovalMessage)
-    }
-}
-
-@Composable
-private fun RestoreDetailOriginFocus(
-    expansionState: CardExpansionState,
-    availableCardIds: Set<LauncherCardId>,
-    onFocusRestoreRequested: () -> Unit,
-) {
-    var originCardId by remember { mutableStateOf<LauncherCardId?>(null) }
-    LaunchedEffect(expansionState, availableCardIds) {
-        if (expansionState.isVisible) {
-            originCardId = expansionState.cardId
-        } else {
-            originCardId?.takeIf { it in availableCardIds }?.let { onFocusRestoreRequested() }
-            originCardId = null
-        }
     }
 }
 
