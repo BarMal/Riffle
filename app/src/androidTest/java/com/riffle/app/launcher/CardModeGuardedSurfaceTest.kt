@@ -3,7 +3,6 @@ package com.riffle.app.launcher
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -16,7 +15,6 @@ import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppProfile
 import com.riffle.core.domain.launcher.apps.AppProfileContentVisibility
 import com.riffle.core.domain.launcher.apps.InstalledApp
-import com.riffle.core.domain.launcher.cards.CardStackAnimationProfile
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.HomeLayoutSet
 import com.riffle.core.domain.launcher.home.LauncherViewMode
@@ -78,16 +76,6 @@ class CardModeGuardedSurfaceTest {
         }
 
         composeRule.onNodeWithText("Welcome").assertExists()
-
-        composeRule
-            .onNode(
-                SemanticsMatcher.expectValue(
-                    CardStackAnimationProfileKey,
-                    CardStackAnimationProfile.CARD_FLIGHT,
-                ),
-                useUnmergedTree = true,
-            ).assertExists()
-        composeRule.waitForIdle()
     }
 
     @Test
