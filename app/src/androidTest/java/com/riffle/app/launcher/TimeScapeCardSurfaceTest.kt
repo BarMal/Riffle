@@ -294,6 +294,7 @@ class TimeScapeCardSurfaceTest {
 
         composeRule.onNodeWithText("Details").performClick()
         composeRule.onNodeWithText("Notification details").assertIsDisplayed()
+        composeRule.mainClock.autoAdvance = false
         composeRule.onNodeWithText("Back").performClick()
         composeRule.runOnIdle {
             state =
@@ -305,6 +306,7 @@ class TimeScapeCardSurfaceTest {
                 )
         }
         composeRule.mainClock.advanceTimeBy(200)
+        composeRule.mainClock.autoAdvance = true
         composeRule.waitForIdle()
 
         composeRule.onNodeWithText("The selected card is no longer available.").assertIsDisplayed()
