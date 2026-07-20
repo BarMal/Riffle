@@ -88,6 +88,22 @@ class PreviewFirstSetupTest {
     }
 
     @Test
+    fun setupCardExplainsTheHomeRoleBenefitBeforeItsPrimaryAction() {
+        composeRule.setContent {
+            LauncherShellContent(
+                state = previewState(),
+                onAction = {},
+            )
+        }
+
+        composeRule
+            .onNodeWithText(
+                "Set Riffle as your Home app to open it when you press the device Home button.",
+            ).assertExists()
+        composeRule.onNodeWithText("Set as Home app").assertHasClickAction()
+    }
+
+    @Test
     fun setupCardKeepsOptionalCapabilityAccessInFeatureContexts() {
         val actions = mutableListOf<LauncherShellAction>()
 
