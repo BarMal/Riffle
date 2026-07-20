@@ -77,6 +77,30 @@ class SettingsPageContentTest {
     }
 
     @Test
+    fun defaultHomeStatusDoesNotRequestTheHomeRoleAgain() {
+        composeRule.setContent {
+            MaterialTheme {
+                SettingsPageContent(
+                    modifier = Modifier,
+                    state =
+                        LauncherShellState(
+                            homeRoleStatus = HomeRoleStatus.DEFAULT_HOME,
+                        ).settingsSurfaceState(),
+                    page = SettingsPage.PERMISSIONS,
+                    onPageSelected = {},
+                    onAction = {},
+                )
+            }
+        }
+
+        composeRule
+            .onNodeWithText("Default home app")
+            .assertHasNoClickAction()
+        composeRule.onNodeWithText("Riffle is default").assertExists()
+        composeRule.onNodeWithText("Default").assertExists()
+    }
+
+    @Test
     fun deniedFloatingDockAccessShowsAContextualRetry() {
         val actions = mutableListOf<LauncherShellAction>()
 

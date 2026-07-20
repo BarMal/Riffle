@@ -4,6 +4,7 @@ import com.riffle.core.domain.launcher.FirstRunStatus
 import com.riffle.core.domain.launcher.HomeRoleStatus
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -16,10 +17,24 @@ class SettingsHomeAppStatusTest {
     }
 
     @Test
-    fun usesAHomeSettingsActionForEveryLiveStatus() {
-        assertEquals("Default", HomeRoleStatus.DEFAULT_HOME.settingsHomeAppActionLabel())
+    fun onlyOffersHomeRoleRequestActionsWhenRiffleIsNotAlreadyDefault() {
+        assertNull(HomeRoleStatus.DEFAULT_HOME.settingsHomeAppActionLabel())
         assertEquals("Set home", HomeRoleStatus.NOT_DEFAULT_HOME.settingsHomeAppActionLabel())
         assertEquals("Try again", HomeRoleStatus.UNKNOWN.settingsHomeAppActionLabel())
+    }
+
+    @Test
+    fun defaultHomePresentationIsAStatusNotAHomeRoleRequestAction() {
+        assertEquals(
+            HomeAppSettingsPresentation(
+                statusLabel = "Riffle is default",
+                trailingLabel = "Default",
+            ),
+            homeAppSettingsPresentation(
+                status = HomeRoleStatus.DEFAULT_HOME,
+                firstRunStatus = FirstRunStatus.COMPLETE,
+            ),
+        )
     }
 
     @Test
@@ -27,6 +42,7 @@ class SettingsHomeAppStatusTest {
         assertEquals(
             HomeAppSettingsPresentation(
                 statusLabel = "Checking whether Riffle is your Home app.",
+                trailingLabel = "Checking",
             ),
             homeAppSettingsPresentation(
                 status = HomeRoleStatus.UNKNOWN,
