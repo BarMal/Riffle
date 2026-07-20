@@ -51,4 +51,28 @@ class SettingsPermissionsSectionTest {
             ),
         )
     }
+
+    @Test
+    fun keepsFloatingDockRecoverableAfterOverlayAccessIsDeniedOrUnknown() {
+        assertEquals(
+            OverlayDockAccessPresentation(
+                subtitle = "Overlay access is not allowed. Allow it to show the Floating dock.",
+                retryLabel = "Allow overlay access",
+            ),
+            overlayDockAccessPresentation(
+                enabled = true,
+                permissionStatus = OverlayDockPermissionStatus.NOT_GRANTED,
+            ),
+        )
+        assertEquals(
+            OverlayDockAccessPresentation(
+                subtitle = "Overlay access is still checking. Try again if it does not update.",
+                retryLabel = "Retry overlay access",
+            ),
+            overlayDockAccessPresentation(
+                enabled = true,
+                permissionStatus = OverlayDockPermissionStatus.UNKNOWN,
+            ),
+        )
+    }
 }

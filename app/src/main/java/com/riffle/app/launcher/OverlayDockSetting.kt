@@ -82,18 +82,54 @@ private fun OverlayDockEnabledSetting(
     permissionStatus: OverlayDockPermissionStatus,
     onAction: (LauncherShellAction) -> Unit,
 ) {
-    SettingsSwitchRow(
-        title = "Floating dock",
-        subtitle = if (settings.enabled) "Edge handle visible over apps" else "Only use the home dock",
-        checked = settings.enabled,
-        onCheckedChange = { value ->
-            overlayDockEnabledActions(
-                enabled = value,
-                wasEnabled = settings.enabled,
-                permissionStatus = permissionStatus,
-            ).forEach(onAction)
-        },
-    )
+    val presentation = overlayDockAccessPresentation(settings.enabled, permissionStatus)
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        SettingsSwitchRow(
+            title = "Floating dock",
+            subtitle = presentation.subtitle,
+            checked = settings.enabled,
+            onCheckedChange = { value ->
+                overlayDockEnabledActions(
+                    enabled = value,
+                    wasEnabled = settings.enabled,
+                    permissionStatus = permissionStatus,
+                ).forEach(onAction)
+            },
+        )
+        presentation.retryLabel?.let { label ->
+            TextButton(onClick = { onAction(LauncherShellAction.RequestOverlayDockPermission) }) {
+                SettingsButtonText(text = label)
+            }
+        }
+    }
+}
+
+internal data class OverlayDockAccessPresentation(
+    val subtitle: String,
+    val retryLabel: String? = null,
+)
+
+internal fun overlayDockAccessPresentation(
+    enabled: Boolean,
+    permissionStatus: OverlayDockPermissionStatus,
+): OverlayDockAccessPresentation {
+    if (!enabled) return OverlayDockAccessPresentation(subtitle = "Only use the home dock")
+
+    return when (permissionStatus) {
+        OverlayDockPermissionStatus.GRANTED ->
+            OverlayDockAccessPresentation(subtitle = "Edge handle visible over apps")
+        OverlayDockPermissionStatus.NOT_GRANTED ->
+            OverlayDockAccessPresentation(
+                subtitle = "Overlay access is not allowed. Allow it to show the Floating dock.",
+                retryLabel = "Allow overlay access",
+            )
+
+        OverlayDockPermissionStatus.UNKNOWN ->
+            OverlayDockAccessPresentation(
+                subtitle = "Overlay access is still checking. Try again if it does not update.",
+                retryLabel = "Retry overlay access",
+            )
+    }
 }
 
 internal fun overlayDockEnabledActions(
