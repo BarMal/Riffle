@@ -14,6 +14,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.unit.dp
@@ -115,6 +116,83 @@ class TimeScapeCardSurfaceTest {
         composeRule.onNodeWithText("Mail").assertIsDisplayed()
         composeRule.onNodeWithText("New message").assertIsDisplayed()
         composeRule.onNodeWithText("Hello from TimeScape").assertIsDisplayed()
+    }
+
+    @Test
+    fun appStageSurfaceLabelsSamePackageProfilesIndependently() {
+        val personal =
+            InstalledApp(
+                identity =
+                    AppIdentity(
+                        packageName = AppPackageName("com.example.mail"),
+                        activityName = AppActivityName(".Main"),
+                        profile = AppProfile.personal(),
+                    ),
+                label = "Mail",
+            )
+        val work =
+            personal.copy(
+                identity = personal.identity.copy(profile = AppProfile.work()),
+            )
+        val personalNotification =
+            LauncherNotification(
+                key = LauncherNotificationKey("personal"),
+                packageName = personal.identity.packageName,
+                profileId = personal.identity.profile.id,
+                title = "Personal message",
+                text = "Personal content",
+                postedAtEpochMillis = 10,
+            )
+        val workNotification =
+            LauncherNotification(
+                key = LauncherNotificationKey("work"),
+                packageName = work.identity.packageName,
+                profileId = work.identity.profile.id,
+                title = "Work message",
+                text = "Work content",
+                postedAtEpochMillis = 20,
+            )
+
+        composeRule.setContent {
+            MaterialTheme {
+                TimeScapeAppStageSurface(
+                    state =
+                        LauncherShellState(
+                            notificationAccessStatus = NotificationAccessStatus.GRANTED,
+                            installedApps = listOf(personal, work),
+                            profileContentVisibility =
+                                mapOf(
+                                    personal.identity.profile.id to AppProfileContentVisibility.VISIBLE,
+                                    work.identity.profile.id to AppProfileContentVisibility.VISIBLE,
+                                ),
+                            notificationGroupsByApp =
+                                listOf(
+                                    AppNotificationGroup(
+                                        packageName = personal.identity.packageName,
+                                        profileId = personal.identity.profile.id,
+                                        latestCategory = NotificationCategory.MESSAGE,
+                                        latestAgeBucket = NotificationAgeBucket.RECENT,
+                                        notifications = listOf(personalNotification),
+                                    ),
+                                    AppNotificationGroup(
+                                        packageName = work.identity.packageName,
+                                        profileId = work.identity.profile.id,
+                                        latestCategory = NotificationCategory.MESSAGE,
+                                        latestAgeBucket = NotificationAgeBucket.RECENT,
+                                        notifications = listOf(workNotification),
+                                    ),
+                                ),
+                        ),
+                    onAction = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("Mail").assertIsDisplayed()
+        composeRule.onNodeWithText("Work - Mail").assertIsDisplayed()
+        composeRule
+            .onNodeWithContentDescription("Work - Mail, selected. Open stage")
+            .assertIsDisplayed()
     }
 
     @Test

@@ -316,7 +316,9 @@ private fun stageLabel(
 ): String =
     state.installedApps.firstOrNull { app ->
         app.identity.packageName == id.packageName && app.identity.profile.id == id.profileId
-    }?.label ?: id.packageName.value
+    }?.let { app ->
+        app.identity.profile.profileDisplayLabel(app.label)
+    } ?: "${id.packageName.value} (${id.profileId.value})"
 
 private fun NotificationStageAction.label(): String =
     when (this) {
