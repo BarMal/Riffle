@@ -26,6 +26,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.traversalIndex
 import androidx.compose.ui.zIndex
 import com.riffle.core.domain.launcher.cards.CardStackAnimationProfile
+import com.riffle.core.domain.launcher.cards.CardStackAnimationSpec
 import com.riffle.core.domain.launcher.cards.CardStackLayoutEntry
 import kotlin.math.abs
 
@@ -38,10 +39,12 @@ internal data class CardStackInteraction(
 )
 
 @Composable
+@Suppress("LongParameterList")
 internal fun CardStack(
     entries: List<CardStackLayoutEntry>,
     modifier: Modifier = Modifier,
     animationProfile: CardStackAnimationProfile = CardStackAnimationProfile.STACK_REFLOW,
+    animationSpec: CardStackAnimationSpec = animationProfile.spec,
     reducedMotion: Boolean = false,
     itemKey: (CardStackLayoutEntry) -> Any = { entry -> entry.cardIndex },
     interaction: CardStackInteraction? = null,
@@ -66,7 +69,7 @@ internal fun CardStack(
                 AnimatedCardStackEntry(
                     entry = entry,
                     stableItemKey = stableItemKey,
-                    animationProfile = animationProfile,
+                    animationSpec = animationSpec,
                     motionMode = motionMode,
                     content = { entry, modifier ->
                         content(
@@ -115,8 +118,10 @@ internal fun cardStackMotionMode(reducedMotion: Boolean): CardStackMotionMode =
     }
 
 internal fun cardStackTransitionPose(animationProfile: CardStackAnimationProfile): CardStackTransitionPose {
-    val spec = animationProfile.spec
+    return cardStackTransitionPose(animationProfile.spec)
+}
 
+internal fun cardStackTransitionPose(spec: CardStackAnimationSpec): CardStackTransitionPose {
     return CardStackTransitionPose(
         alpha = spec.enteringAlpha,
         horizontalTravelFraction = spec.horizontalTravelFraction,
@@ -131,8 +136,18 @@ internal fun cardStackRenderedPose(
     width: Float,
     height: Float,
 ): CardStackRenderedPose {
+    return cardStackRenderedPose(entry, animationProfile.spec, entering, width, height)
+}
+
+internal fun cardStackRenderedPose(
+    entry: CardStackLayoutEntry,
+    animationSpec: CardStackAnimationSpec,
+    entering: Boolean,
+    width: Float,
+    height: Float,
+): CardStackRenderedPose {
     if (!entering) return CardStackRenderedPose(entry.alpha, entry.offset, entry.verticalOffset)
-    val pose = cardStackTransitionPose(animationProfile)
+    val pose = cardStackTransitionPose(animationSpec)
     return CardStackRenderedPose(
         alpha = entry.alpha * pose.alpha,
         offset = entry.offset + width * pose.horizontalTravelFraction,
@@ -144,11 +159,11 @@ internal fun cardStackRenderedPose(
 private fun AnimatedCardStackEntry(
     entry: CardStackLayoutEntry,
     stableItemKey: Any,
-    animationProfile: CardStackAnimationProfile,
+    animationSpec: CardStackAnimationSpec,
     motionMode: CardStackMotionMode,
     content: @Composable (CardStackLayoutEntry, Modifier) -> Unit,
 ) {
-    val spec = animationProfile.spec
+    val spec = animationSpec
     var hasEntered by remember(stableItemKey) { mutableStateOf(motionMode == CardStackMotionMode.SNAP) }
     LaunchedEffect(stableItemKey, motionMode) { hasEntered = true }
     val density = LocalDensity.current
@@ -156,7 +171,7 @@ private fun AnimatedCardStackEntry(
         val renderedPose =
             cardStackRenderedPose(
                 entry = entry,
-                animationProfile = animationProfile,
+                animationSpec = animationSpec,
                 entering = !hasEntered,
                 width = with(density) { maxWidth.toPx() },
                 height = with(density) { maxHeight.toPx() },

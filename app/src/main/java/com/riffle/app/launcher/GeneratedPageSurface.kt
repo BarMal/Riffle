@@ -5,10 +5,13 @@ package com.riffle.app.launcher
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredHeight
+import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -20,6 +23,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
@@ -40,15 +44,18 @@ import com.riffle.core.domain.launcher.cards.LauncherCardId
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroupKey
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
+import com.riffle.core.domain.launcher.settings.TimeScapeAppearanceSettings
+import com.riffle.core.domain.launcher.settings.TimeScapeViewportDp
 
 @Composable
-@Suppress("LongMethod")
+@Suppress("LongMethod", "LongParameterList")
 internal fun GeneratedNotificationCardsPage(
     groups: List<AppNotificationGroup>,
     notificationAccessStatus: NotificationAccessStatus,
     apps: List<InstalledApp>,
     onAction: (LauncherShellAction) -> Unit,
     reducedMotion: Boolean,
+    timeScapeAppearance: TimeScapeAppearanceSettings = TimeScapeAppearanceSettings.modern(),
     haptics: LauncherHaptics = NoopLauncherHaptics,
     modifier: Modifier = Modifier,
 ) {
@@ -98,9 +105,24 @@ internal fun GeneratedNotificationCardsPage(
                             applyFocus(controller.navigate(focusState, cardIds, CardStackNavigationDirection.NEXT))
                         },
                     )
-                    Box(modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp, vertical = 8.dp)) {
+                    BoxWithConstraints(modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp, vertical = 8.dp)) {
+                        val resolution =
+                            timeScapeAppearance.resolveCardStack(
+                                viewport =
+                                    TimeScapeViewportDp(
+                                        widthDp = maxWidth.value.toInt(),
+                                        heightDp = maxHeight.value.toInt(),
+                                    ),
+                                capabilities = timeScapeRendererCapabilities(),
+                                globalReducedMotion = reducedMotion,
+                            )
                         CardStack(
-                            entries = generatedNotificationCardStackEntries(state.cards, activeCardIndex),
+                            entries =
+                                resolution.layoutPolicy.entries(
+                                    cardCount = state.cards.size,
+                                    activeIndex = activeCardIndex,
+                                    reducedMotion = resolution.reducedMotion,
+                                ),
                             modifier =
                                 Modifier
                                     .fillMaxSize()
@@ -113,7 +135,8 @@ internal fun GeneratedNotificationCardsPage(
                                             )
                                     },
                             animationProfile = CardStackAnimationProfile.CARD_FLIGHT,
-                            reducedMotion = reducedMotion,
+                            animationSpec = resolution.animation,
+                            reducedMotion = resolution.reducedMotion,
                             itemKey = { entry -> generatedNotificationCardKey(state.cards[entry.cardIndex].group) },
                             interaction =
                                 CardStackInteraction(
@@ -143,6 +166,9 @@ internal fun GeneratedNotificationCardsPage(
                                 card = state.cards[entry.cardIndex],
                                 onAction = onAction,
                                 isFocused = entry.cardIndex == activeCardIndex,
+                                appearance = timeScapeAppearance,
+                                cardWidth = resolution.cardWidthDp.dp,
+                                cardHeight = resolution.cardHeightDp.dp,
                                 modifier = pointerModifier.fillMaxSize(),
                             )
                         }
@@ -209,38 +235,57 @@ private fun GeneratedNotificationCard(
     card: DockNotificationCardState,
     onAction: (LauncherShellAction) -> Unit,
     isFocused: Boolean,
+    appearance: TimeScapeAppearanceSettings,
+    cardWidth: androidx.compose.ui.unit.Dp,
+    cardHeight: androidx.compose.ui.unit.Dp,
     modifier: Modifier = Modifier,
 ) {
     val label = dockNotificationCardLabel(card)
     val identity = card.app?.identity
-    Surface(
-        modifier =
-            Modifier
-                .then(modifier)
-                .semantics {
-                    contentDescription = generatedNotificationCardContentDescription(card)
-                }
-                .clickable(enabled = identity != null && isFocused) {
-                    generatedNotificationCardLaunchAction(card)?.let(onAction)
-                },
-        shape = LocalLauncherCardShape.current,
-        color = MaterialTheme.colorScheme.surfaceVariant,
-    ) {
-        Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text(text = label, style = MaterialTheme.typography.titleMedium)
-            Text(
-                text = dockNotificationCardSummary(card.group, canLaunchApp = card.app != null),
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            card.clearAction?.let { action ->
-                TextButton(
-                    onClick = { onAction(action) },
-                    modifier =
-                        Modifier.semantics {
-                            contentDescription = generatedNotificationCardClearContentDescription(card)
-                        },
-                ) {
-                    Text(text = "Clear")
+    val artwork =
+        remember(card.group.notifications) {
+            card.group.notifications
+                .maxByOrNull { notification -> notification.postedAtEpochMillis }
+                ?.largeIconPngBase64
+                .let(::decodeTimeScapeArtwork)
+        }
+    Box(modifier = modifier, contentAlignment = Alignment.Center) {
+        TimeScapeCardSurface(
+            appearance = appearance,
+            background =
+                TimeScapeCardBackground(
+                    artwork = artwork,
+                    appSeed = card.app?.identity?.packageName?.value ?: card.group.packageName.value,
+                ),
+            modifier =
+                Modifier
+                    .requiredWidth(cardWidth)
+                    .requiredHeight(cardHeight)
+                    .then(
+                        Modifier
+                            .semantics {
+                                contentDescription = generatedNotificationCardContentDescription(card)
+                            }.clickable(enabled = identity != null && isFocused) {
+                                generatedNotificationCardLaunchAction(card)?.let(onAction)
+                            },
+                    ),
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(text = label, style = MaterialTheme.typography.titleMedium)
+                Text(
+                    text = dockNotificationCardSummary(card.group, canLaunchApp = card.app != null),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                card.clearAction?.takeIf { isFocused }?.let { action ->
+                    TextButton(
+                        onClick = { onAction(action) },
+                        modifier =
+                            Modifier.semantics {
+                                contentDescription = generatedNotificationCardClearContentDescription(card)
+                            },
+                    ) {
+                        Text(text = "Clear")
+                    }
                 }
             }
         }
