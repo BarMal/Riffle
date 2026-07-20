@@ -6,12 +6,16 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -213,67 +217,72 @@ private fun PreviewSetupCard(
     onSetHome: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    Surface(
-        modifier = modifier,
-        shape = MaterialTheme.shapes.extraLarge,
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-        contentColor = MaterialTheme.colorScheme.onSurface,
-        tonalElevation = 6.dp,
-    ) {
-        Column(
-            modifier = Modifier.padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+    BoxWithConstraints(modifier = modifier) {
+        Surface(
+            modifier = Modifier.heightIn(max = maxHeight),
+            shape = MaterialTheme.shapes.extraLarge,
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            contentColor = MaterialTheme.colorScheme.onSurface,
+            tonalElevation = 6.dp,
         ) {
-            val presentation =
-                when (homeRoleStatus) {
-                    HomeRoleStatus.DEFAULT_HOME ->
-                        PreviewHomeSetupPresentation(
-                            statusMessage = "Riffle is your Home app.",
-                            actionLabel = "Open Home settings",
-                        )
-                    HomeRoleStatus.NOT_DEFAULT_HOME ->
-                        PreviewHomeSetupPresentation(
-                            statusMessage = "Riffle is not your Home app yet.",
-                            actionLabel = "Set as Home app",
-                        )
-                    HomeRoleStatus.UNKNOWN ->
-                        PreviewHomeSetupPresentation(
-                            statusMessage = "Home app status is unavailable right now.",
-                            actionLabel = "Try again",
-                        )
+            Column(
+                modifier =
+                    Modifier
+                        .verticalScroll(rememberScrollState())
+                        .padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                val presentation =
+                    when (homeRoleStatus) {
+                        HomeRoleStatus.DEFAULT_HOME ->
+                            PreviewHomeSetupPresentation(
+                                statusMessage = "Riffle is your Home app.",
+                                actionLabel = "Open Home settings",
+                            )
+                        HomeRoleStatus.NOT_DEFAULT_HOME ->
+                            PreviewHomeSetupPresentation(
+                                statusMessage = "Riffle is not your Home app yet.",
+                                actionLabel = "Set as Home app",
+                            )
+                        HomeRoleStatus.UNKNOWN ->
+                            PreviewHomeSetupPresentation(
+                                statusMessage = "Home app status is unavailable right now.",
+                                actionLabel = "Try again",
+                            )
+                    }
+                Text(
+                    text = "Set up Riffle",
+                    modifier = Modifier.semantics { heading() },
+                    style = MaterialTheme.typography.titleLarge,
+                )
+                Text(
+                    text =
+                        "Explore your apps and settings first. While previewing, pressing your device Home " +
+                            "button may return to your current default launcher.",
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                PreviewSetupStatusRow(
+                    label = "Home app",
+                    status = presentation.statusMessage,
+                )
+                PreviewSetupStatusRow(
+                    label = "Cards (optional)",
+                    status = notificationAccessStatus.previewSetupStatus(),
+                )
+                PreviewSetupStatusRow(
+                    label = "Floating dock (optional)",
+                    status = overlayDockPermissionStatus.previewSetupStatus(),
+                )
+                Text(
+                    text = "Cards and Floating dock are optional. Riffle asks only when you choose one.",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                Button(onClick = onSetHome) {
+                    Text(text = presentation.actionLabel)
                 }
-            Text(
-                text = "Set up Riffle",
-                modifier = Modifier.semantics { heading() },
-                style = MaterialTheme.typography.titleLarge,
-            )
-            Text(
-                text =
-                    "Explore your apps and settings first. While previewing, pressing your device Home " +
-                        "button may return to your current default launcher.",
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            PreviewSetupStatusRow(
-                label = "Home app",
-                status = presentation.statusMessage,
-            )
-            PreviewSetupStatusRow(
-                label = "Cards (optional)",
-                status = notificationAccessStatus.previewSetupStatus(),
-            )
-            PreviewSetupStatusRow(
-                label = "Floating dock (optional)",
-                status = overlayDockPermissionStatus.previewSetupStatus(),
-            )
-            Text(
-                text = "Cards and Floating dock are optional. Riffle asks only when you choose one.",
-                style = MaterialTheme.typography.bodySmall,
-            )
-            Button(onClick = onSetHome) {
-                Text(text = presentation.actionLabel)
-            }
-            TextButton(onClick = onDismiss) {
-                Text(text = "Not now")
+                TextButton(onClick = onDismiss) {
+                    Text(text = "Not now")
+                }
             }
         }
     }
