@@ -1,23 +1,29 @@
 package com.riffle.app.launcher
 
+import com.riffle.core.domain.launcher.HomeRoleStatus
 import com.riffle.core.domain.launcher.apps.AppActivityName
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppProfile
+import com.riffle.core.domain.launcher.apps.AppProfileContentVisibility
 import com.riffle.core.domain.launcher.apps.AppProfileId
 import com.riffle.core.domain.launcher.apps.AppVisibilityRepository
 import com.riffle.core.domain.launcher.apps.InstalledApp
+import com.riffle.core.domain.launcher.apps.InstalledAppRefreshResult
 import com.riffle.core.domain.launcher.apps.InstalledAppRepository
+import com.riffle.core.domain.launcher.cards.AppStageId
 import com.riffle.core.domain.launcher.cards.CardsChapterId
 import com.riffle.core.domain.launcher.cards.CardsChapterPreferences
 import com.riffle.core.domain.launcher.notifications.LauncherNotification
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationRepository
+import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.notifications.NotificationAgeBucket
 import com.riffle.core.domain.launcher.notifications.NotificationCategory
 import com.riffle.core.domain.launcher.settings.CardsSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettingsRepository
+import com.riffle.core.domain.launcher.settings.stagePreferencesFor
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
@@ -25,6 +31,72 @@ import org.junit.Test
 import kotlin.coroutines.CoroutineContext
 
 class LauncherShellNotificationStateTest {
+    @Test
+    fun previousAndNextKeepNavigationValidAfterTheFocusedStageIsRetainedEmpty() {
+        val newer = app(label = "Newer", packageName = "com.riffle.newer")
+        val older = app(label = "Older", packageName = "com.riffle.older")
+
+        val nextHarness =
+            timeScapeHarness(
+                apps = listOf(newer, older),
+                notifications =
+                    listOf(
+                        notification(
+                            key = "newer",
+                            packageName = newer.identity.packageName.value,
+                            postedAtEpochMillis = 2_000L,
+                        ),
+                        notification(
+                            key = "older",
+                            packageName = older.identity.packageName.value,
+                            postedAtEpochMillis = 1_000L,
+                        ),
+                    ),
+                selectedStage = newer,
+            )
+        nextHarness.notificationRepository.notifications =
+            listOf(notification(key = "older", packageName = older.identity.packageName.value))
+        runBlocking { nextHarness.viewModel.refreshNotifications().join() }
+        nextHarness.viewModel.onHomePageEdited(LauncherShellAction.SelectNextAppStage)
+
+        assertEquals(
+            AppStageId(newer.identity.packageName, newer.identity.profile.id),
+            nextHarness.viewModel.state.value.launcherSettings.cards
+                .stagePreferencesFor(nextHarness.viewModel.state.value.homeLayoutSet.activeKey)
+                .selectedStageId,
+        )
+
+        val previousHarness =
+            timeScapeHarness(
+                apps = listOf(newer, older),
+                notifications =
+                    listOf(
+                        notification(
+                            key = "newer",
+                            packageName = newer.identity.packageName.value,
+                            postedAtEpochMillis = 2_000L,
+                        ),
+                        notification(
+                            key = "older",
+                            packageName = older.identity.packageName.value,
+                            postedAtEpochMillis = 1_000L,
+                        ),
+                    ),
+                selectedStage = older,
+            )
+        previousHarness.notificationRepository.notifications =
+            listOf(notification(key = "newer", packageName = newer.identity.packageName.value))
+        runBlocking { previousHarness.viewModel.refreshNotifications().join() }
+        previousHarness.viewModel.onHomePageEdited(LauncherShellAction.SelectPreviousAppStage)
+
+        assertEquals(
+            AppStageId(newer.identity.packageName, newer.identity.profile.id),
+            previousHarness.viewModel.state.value.launcherSettings.cards
+                .stagePreferencesFor(previousHarness.viewModel.state.value.homeLayoutSet.activeKey)
+                .selectedStageId,
+        )
+    }
+
     @Test
     fun refreshPersistsOverviewWhenTheSelectedTransientChapterDisappears() {
         val mail = CardsChapterId.App(AppPackageName("com.riffle.mail"), AppProfile.personal().id)
@@ -344,6 +416,50 @@ class LauncherShellNotificationStateTest {
         override fun setFirstRunComplete() = Unit
     }
 
+    private data class TimeScapeHarness(
+        val viewModel: LauncherShellViewModel,
+        val notificationRepository: FakeNotificationRepository,
+    )
+
+    private fun timeScapeHarness(
+        apps: List<InstalledApp>,
+        notifications: List<LauncherNotification>,
+        selectedStage: InstalledApp,
+    ): TimeScapeHarness {
+        val notificationRepository = FakeNotificationRepository(notifications)
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                installedAppRepository =
+                    FakeInstalledAppRepository(
+                        apps = apps,
+                        profileContentVisibility =
+                            apps.associate { app ->
+                                app.identity.profile.id to AppProfileContentVisibility.VISIBLE
+                            },
+                    ),
+                platformDependencies =
+                    LauncherShellPlatformDependencies(
+                        notificationRepository = notificationRepository,
+                        epochMillisProvider = FixedEpochMillisProvider(nowEpochMillis = 10_000L),
+                    ),
+            )
+        viewModel.onHomeRoleStatusChanged(
+            homeRoleStatus = HomeRoleStatus.UNKNOWN,
+            notificationAccessStatus = NotificationAccessStatus.GRANTED,
+        )
+        runBlocking {
+            viewModel.refreshInstalledApps().join()
+            viewModel.refreshNotifications().join()
+        }
+        viewModel.onHomePageEdited(
+            LauncherShellAction.SelectAppStage(
+                AppStageId(selectedStage.identity.packageName, selectedStage.identity.profile.id),
+            ),
+        )
+        return TimeScapeHarness(viewModel, notificationRepository)
+    }
+
     private class FakeNotificationRepository(
         var notifications: List<LauncherNotification> = emptyList(),
     ) : LauncherNotificationRepository {
@@ -357,8 +473,16 @@ class LauncherShellNotificationStateTest {
 
     private class FakeInstalledAppRepository(
         var apps: List<InstalledApp> = emptyList(),
+        private val profileContentVisibility: Map<AppProfileId, AppProfileContentVisibility> = emptyMap(),
     ) : InstalledAppRepository {
         override fun installedApps(): List<InstalledApp> = apps
+
+        override fun refreshResult(): InstalledAppRefreshResult {
+            return InstalledAppRefreshResult.Authoritative(
+                apps = apps,
+                profileContentVisibility = profileContentVisibility,
+            )
+        }
     }
 
     private class FakeAppVisibilityRepository(

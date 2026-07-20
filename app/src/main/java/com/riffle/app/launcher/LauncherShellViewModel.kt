@@ -4,6 +4,7 @@ package com.riffle.app.launcher
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.riffle.app.launcher.notifications.AppStageShellStateReconciler
 import com.riffle.core.domain.launcher.FirstRunStatus
 import com.riffle.core.domain.launcher.HomeRoleStatus
 import com.riffle.core.domain.launcher.LauncherShellState
@@ -125,6 +126,9 @@ class LauncherShellViewModel(
         )
     private val widgetEngine = WidgetEngine()
 
+    /** Keeps navigation aligned with the retained empty stage rendered by the TimeScape surface. */
+    private val appStageStateReconciler = AppStageShellStateReconciler()
+
     private val mutableState =
         MutableStateFlow(
             createInitialState(
@@ -143,7 +147,9 @@ class LauncherShellViewModel(
             currentState = { mutableState.value },
             updateState = { state ->
                 val previousState = mutableState.value
+                appStageStateReconciler.reconcile(previousState)
                 mutableState.value = state
+                appStageStateReconciler.reconcile(state)
                 if (state.launcherSettings != previousState.launcherSettings) {
                     launcherSettingsRepository.saveLauncherSettings(state.launcherSettings)
                 }
@@ -297,7 +303,15 @@ class LauncherShellViewModel(
             return
         }
         if (action.isAppStageAction()) {
-            mutableState.value = mutableState.value.withAppStageAction(action, launcherSettingsRepository)
+            val currentState = mutableState.value
+            val snapshot = appStageStateReconciler.reconcile(currentState).snapshot
+            mutableState.value =
+                currentState.withAppStageAction(
+                    action = action,
+                    launcherSettingsRepository = launcherSettingsRepository,
+                    snapshot = snapshot,
+                )
+            appStageStateReconciler.reconcile(mutableState.value)
             return
         }
 
@@ -416,9 +430,9 @@ private fun LauncherShellState.withCardsChapterAction(
 private fun LauncherShellState.withAppStageAction(
     action: LauncherShellAction,
     launcherSettingsRepository: LauncherSettingsRepository,
+    snapshot: com.riffle.core.domain.launcher.cards.AppStageSnapshot,
 ): LauncherShellState {
     val layoutKey = homeLayoutSet.activeKey
-    val snapshot = appStageSnapshot()
     val preferences = launcherSettings.cards.stagePreferencesFor(layoutKey)
     val updatedPreferences =
         when (action) {
