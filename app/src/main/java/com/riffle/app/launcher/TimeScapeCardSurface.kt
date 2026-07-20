@@ -100,12 +100,13 @@ internal fun resolveTimeScapeCardColors(
     val glass =
         glassTint
             .compositeOver(adjustedBase)
-    val foreground =
+    val requestedForeground =
         if (effective.typography.automaticForegroundContrast) {
             timeScapeAccessibleForeground(glass)
         } else {
             materialBackground
         }
+    val foreground = timeScapeForeground(requestedForeground, glass)
     val accent =
         when (effective.typography.accentSource) {
             TimeScapeAccentSource.APP_DERIVED -> adjustedBase
@@ -148,6 +149,13 @@ internal fun timeScapeAccessibleForeground(background: Color): Color =
     } else {
         Color.White
     }
+
+private fun timeScapeForeground(
+    preferred: Color,
+    background: Color,
+): Color =
+    preferred.takeIf { contrastRatio(it, background) >= MINIMUM_FOREGROUND_CONTRAST_RATIO }
+        ?: timeScapeAccessibleForeground(background)
 
 internal fun contrastRatio(
     first: Color,
@@ -382,4 +390,5 @@ private fun timeScapeSeedColor(seed: String): Color {
 
 private const val MAX_TIMESCAPE_ARTWORK_BASE64_CHARS = 2_800_000
 private const val MAX_TIMESCAPE_ARTWORK_DIMENSION_PX = 768
-private const val MINIMUM_ACTION_CONTRAST_RATIO = 4.5f
+private const val MINIMUM_FOREGROUND_CONTRAST_RATIO = 4.5f
+private const val MINIMUM_ACTION_CONTRAST_RATIO = MINIMUM_FOREGROUND_CONTRAST_RATIO

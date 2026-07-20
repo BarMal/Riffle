@@ -93,6 +93,40 @@ class TimeScapeCardSurfaceTest {
     }
 
     @Test
+    fun foregroundMaintainsContrastForAutomaticAndMaterialTypographyModes() {
+        val modes =
+            listOf(
+                false to 0xFFFFFFFFL,
+                true to 0xFF000000L,
+            )
+
+        modes.forEach { (automaticForegroundContrast, backgroundArgb) ->
+            val colors =
+                resolveTimeScapeCardColors(
+                    appearance =
+                        TimeScapeAppearanceSettings(
+                            surface =
+                                TimeScapeSurface(
+                                    backgroundSource = TimeScapeBackgroundSource.CUSTOM_SOLID,
+                                    customBackgroundArgb = backgroundArgb,
+                                    glassTintArgb = backgroundArgb,
+                                    glassTransparencyPercent = 0,
+                                ),
+                            typography =
+                                TimeScapeTypography(
+                                    automaticForegroundContrast = automaticForegroundContrast,
+                                ),
+                        ),
+                    background = TimeScapeCardBackground(),
+                    materialBackground = Color.White,
+                    materialAccent = Color.Blue,
+                )
+
+            assertTrue(contrastRatio(colors.foreground, colors.glass) >= 4.5f)
+        }
+    }
+
+    @Test
     fun artworkRemainsVisuallyRepresentedBelowTranslucentGlassTint() {
         val artwork =
             Bitmap.createBitmap(40, 40, Bitmap.Config.ARGB_8888).apply {
