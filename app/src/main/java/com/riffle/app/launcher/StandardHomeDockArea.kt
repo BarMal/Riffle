@@ -3,6 +3,7 @@ package com.riffle.app.launcher
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -45,10 +46,16 @@ internal fun StandardHomeDockArea(
             homeLayout = layout,
             onAction = actions.onAction,
         )
+    val margins = layout.settings.grid.margin.nonNegative()
 
     Column(
         modifier =
             Modifier
+                .padding(
+                    start = margins.start.dp,
+                    end = margins.end.dp,
+                    bottom = margins.bottom.dp,
+                )
                 .testTag(HOME_DOCK_TEST_TAG)
                 .dockShelfMotion(dockShelfMotionPolicy(presentation.reducedMotion))
                 .dockShelfFrameRatePreference(presentation.motionPerformanceTargetFps),

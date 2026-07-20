@@ -155,7 +155,8 @@ private fun StandardHomeColumn(
                 HomeGridState(
                     isEditing = state.visibleLayout.editMode is HomeEditMode.EditingPage,
                     pageCount = state.visibleLayout.pages.size,
-                    selectedPageIndex = state.visibleLayout.selectedPageIndex, dragSession = state.dragSession,
+                    selectedPageIndex = state.visibleLayout.selectedPageIndex,
+                    dragSession = state.dragSession,
                 ),
             presentation = state.homeGridPresentation(actions),
             appIconLoader = appIconLoader,
@@ -181,17 +182,15 @@ private fun StandardHomeColumn(
             widgetViewFactory = state.presentation.widgetViewFactory,
             actions = homeActions,
         )
-        Box(modifier = Modifier.padding(start = margins.start.dp, end = margins.end.dp, bottom = margins.bottom.dp)) {
-            StandardHomeDockArea(
-                layout = state.visibleLayout,
-                presentation = state.presentation,
-                notificationShelfState = notificationShelfState,
-                isDockShelfExpanded = dockShelf.isExpanded,
-                onDockShelfExpandedChange = dockShelf.onExpandedChange,
-                appIconLoader = appIconLoader,
-                actions = actions,
-            )
-        }
+        StandardHomeDockArea(
+            layout = state.visibleLayout,
+            presentation = state.presentation,
+            notificationShelfState = notificationShelfState,
+            isDockShelfExpanded = dockShelf.isExpanded,
+            onDockShelfExpandedChange = dockShelf.onExpandedChange,
+            appIconLoader = appIconLoader,
+            actions = actions,
+        )
     }
 }
 
