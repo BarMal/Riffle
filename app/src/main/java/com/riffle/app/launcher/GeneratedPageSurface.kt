@@ -5,10 +5,15 @@ package com.riffle.app.launcher
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredHeight
+import androidx.compose.foundation.layout.requiredWidth
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -20,6 +25,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
@@ -40,15 +46,19 @@ import com.riffle.core.domain.launcher.cards.LauncherCardId
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroupKey
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
+import com.riffle.core.domain.launcher.settings.MIN_TIMESCAPE_REACHABLE_CARD_HEIGHT_DP
+import com.riffle.core.domain.launcher.settings.TimeScapeAppearanceSettings
+import com.riffle.core.domain.launcher.settings.TimeScapeViewportDp
 
 @Composable
-@Suppress("LongMethod")
+@Suppress("LongMethod", "LongParameterList")
 internal fun GeneratedNotificationCardsPage(
     groups: List<AppNotificationGroup>,
     notificationAccessStatus: NotificationAccessStatus,
     apps: List<InstalledApp>,
     onAction: (LauncherShellAction) -> Unit,
     reducedMotion: Boolean,
+    timeScapeAppearance: TimeScapeAppearanceSettings = TimeScapeAppearanceSettings.modern(),
     haptics: LauncherHaptics = NoopLauncherHaptics,
     modifier: Modifier = Modifier,
 ) {
@@ -59,9 +69,8 @@ internal fun GeneratedNotificationCardsPage(
     ) {
         when (state) {
             is GeneratedNotificationCardsPageState.Content ->
-                Column(
-                    modifier = Modifier.fillMaxSize().semantics { contentDescription = "Notification cards page" },
-                ) {
+                BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+                    val showCardHeader = maxHeight >= MIN_TIMESCAPE_REACHABLE_CARD_HEIGHT_DP.dp
                     val controller = remember { CardStackController() }
                     val stackKey = remember { CardStackKey("generated-notification-cards") }
                     val cardIds = state.cards.map(::generatedNotificationCardId)
@@ -87,64 +96,128 @@ internal fun GeneratedNotificationCardsPage(
                             focusedCardIdValue = result.state.focusedCardId?.value
                         }
                     }
-                    GeneratedCardsHeading()
-                    GeneratedCardStackControls(
-                        focusedCardIndex = activeCardIndex,
-                        cardCount = state.cards.size,
-                        onPrevious = {
-                            applyFocus(controller.navigate(focusState, cardIds, CardStackNavigationDirection.PREVIOUS))
-                        },
-                        onNext = {
-                            applyFocus(controller.navigate(focusState, cardIds, CardStackNavigationDirection.NEXT))
-                        },
-                    )
-                    Box(modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp, vertical = 8.dp)) {
-                        CardStack(
-                            entries = generatedNotificationCardStackEntries(state.cards, activeCardIndex),
+                    Column(
+                        modifier = Modifier.fillMaxSize().semantics { contentDescription = "Notification cards page" },
+                    ) {
+                        if (showCardHeader) {
+                            GeneratedCardsHeading()
+                            GeneratedCardStackControls(
+                                focusedCardIndex = activeCardIndex,
+                                cardCount = state.cards.size,
+                                onPrevious = {
+                                    applyFocus(
+                                        controller.navigate(
+                                            focusState,
+                                            cardIds,
+                                            CardStackNavigationDirection.PREVIOUS,
+                                        ),
+                                    )
+                                },
+                                onNext = {
+                                    applyFocus(
+                                        controller.navigate(
+                                            focusState,
+                                            cardIds,
+                                            CardStackNavigationDirection.NEXT,
+                                        ),
+                                    )
+                                },
+                            )
+                        }
+                        BoxWithConstraints(
                             modifier =
                                 Modifier
-                                    .fillMaxSize()
-                                    .testTag(GENERATED_NOTIFICATION_CARD_STACK_TEST_TAG)
-                                    .semantics {
-                                        stateDescription =
-                                            generatedNotificationCardFocusDescription(
-                                                activeCardIndex,
-                                                state.cards.size,
-                                            )
+                                    .weight(1f)
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                        ) {
+                            val resolution =
+                                timeScapeAppearance.resolveCardStack(
+                                    viewport =
+                                        TimeScapeViewportDp(
+                                            widthDp = maxWidth.value.toInt(),
+                                            heightDp = maxHeight.value.toInt(),
+                                        ),
+                                    capabilities = timeScapeRendererCapabilities(),
+                                    globalReducedMotion = reducedMotion,
+                                )
+                            if (resolution.isUsable) {
+                                CardStack(
+                                    entries =
+                                        resolution.layoutPolicy.entries(
+                                            cardCount = state.cards.size,
+                                            activeIndex = activeCardIndex,
+                                            reducedMotion = resolution.reducedMotion,
+                                        ),
+                                    modifier =
+                                        Modifier
+                                            .fillMaxSize()
+                                            .testTag(GENERATED_NOTIFICATION_CARD_STACK_TEST_TAG)
+                                            .semantics {
+                                                stateDescription =
+                                                    generatedNotificationCardFocusDescription(
+                                                        activeCardIndex,
+                                                        state.cards.size,
+                                                    )
+                                            },
+                                    animationProfile = CardStackAnimationProfile.CARD_FLIGHT,
+                                    animationSpec = resolution.animation,
+                                    reducedMotion = resolution.reducedMotion,
+                                    itemKey = { entry ->
+                                        generatedNotificationCardKey(state.cards[entry.cardIndex].group)
                                     },
-                            animationProfile = CardStackAnimationProfile.CARD_FLIGHT,
-                            reducedMotion = reducedMotion,
-                            itemKey = { entry -> generatedNotificationCardKey(state.cards[entry.cardIndex].group) },
-                            interaction =
-                                CardStackInteraction(
-                                    focusedItemKey = generatedNotificationCardKey(state.cards[activeCardIndex].group),
-                                    onFocusRequest = { entry ->
-                                        applyFocus(controller.jumpTo(focusState, cardIds, cardIds[entry.cardIndex]))
-                                    },
-                                    onSettle = { drag, velocity ->
-                                        applyFocus(
-                                            controller.settle(
-                                                focusState,
-                                                cardIds,
-                                                CardStackSettleRequest(
-                                                    focusedCardId = focusState.focusedCardId,
-                                                    verticalDragPx = drag,
-                                                    verticalVelocityPxPerSecond = velocity,
-                                                    distanceThresholdPx = 48f,
-                                                    flingVelocityThresholdPxPerSecond = 1_000f,
+                                    interaction =
+                                        CardStackInteraction(
+                                            focusedItemKey =
+                                                generatedNotificationCardKey(
+                                                    state.cards[activeCardIndex].group,
                                                 ),
-                                            ),
-                                        )
-                                    },
-                                    onSettleHaptic = haptics::longPress,
-                                ),
-                        ) { entry, pointerModifier ->
-                            GeneratedNotificationCard(
-                                card = state.cards[entry.cardIndex],
-                                onAction = onAction,
-                                isFocused = entry.cardIndex == activeCardIndex,
-                                modifier = pointerModifier.fillMaxSize(),
-                            )
+                                            onFocusRequest = { entry ->
+                                                applyFocus(
+                                                    controller.jumpTo(
+                                                        focusState,
+                                                        cardIds,
+                                                        cardIds[entry.cardIndex],
+                                                    ),
+                                                )
+                                            },
+                                            onSettle = { drag, velocity ->
+                                                applyFocus(
+                                                    controller.settle(
+                                                        focusState,
+                                                        cardIds,
+                                                        CardStackSettleRequest(
+                                                            focusedCardId = focusState.focusedCardId,
+                                                            verticalDragPx = drag,
+                                                            verticalVelocityPxPerSecond = velocity,
+                                                            distanceThresholdPx = 48f,
+                                                            flingVelocityThresholdPxPerSecond = 1_000f,
+                                                        ),
+                                                    ),
+                                                )
+                                            },
+                                            onSettleHaptic = haptics::longPress,
+                                        ),
+                                ) { entry, pointerModifier ->
+                                    GeneratedNotificationCard(
+                                        card = state.cards[entry.cardIndex],
+                                        onAction = onAction,
+                                        isFocused = entry.cardIndex == activeCardIndex,
+                                        appearance = timeScapeAppearance,
+                                        cardWidth = resolution.cardWidthDp.dp,
+                                        cardHeight = resolution.cardHeightDp.dp,
+                                        contentPadding = generatedNotificationCardContentPadding(resolution),
+                                        modifier = Modifier.fillMaxSize(),
+                                        cardPointerModifier = pointerModifier,
+                                    )
+                                }
+                            } else {
+                                GeneratedNotificationCardsFallback(
+                                    cards = state.cards,
+                                    onAction = onAction,
+                                    appearance = timeScapeAppearance,
+                                )
+                            }
                         }
                     }
                 }
@@ -162,6 +235,75 @@ internal fun GeneratedNotificationCardsPage(
                         }
                     }
                 }
+        }
+    }
+}
+
+@Composable
+private fun GeneratedNotificationCardsFallback(
+    cards: List<DockNotificationCardState>,
+    onAction: (LauncherShellAction) -> Unit,
+    appearance: TimeScapeAppearanceSettings,
+) {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize().testTag(GENERATED_NOTIFICATION_CARD_LIST_TEST_TAG),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        items(cards, key = { card -> generatedNotificationCardId(card).value }) { card ->
+            GeneratedNotificationCardFallback(card, onAction, appearance)
+        }
+    }
+}
+
+@Composable
+private fun GeneratedNotificationCardFallback(
+    card: DockNotificationCardState,
+    onAction: (LauncherShellAction) -> Unit,
+    appearance: TimeScapeAppearanceSettings,
+) {
+    val label = dockNotificationCardLabel(card)
+    val artwork =
+        remember(card.group.notifications) {
+            card.group.notifications
+                .maxByOrNull { notification -> notification.postedAtEpochMillis }
+                ?.largeIconPngBase64
+                .let(::decodeTimeScapeArtwork)
+        }
+    TimeScapeCardSurface(
+        appearance = appearance,
+        background =
+            TimeScapeCardBackground(
+                artwork = artwork,
+                appSeed = card.app?.identity?.packageName?.value ?: card.group.packageName.value,
+            ),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .semantics { contentDescription = generatedNotificationCardContentDescription(card) },
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(text = label, style = MaterialTheme.typography.titleMedium)
+            Text(
+                text = dockNotificationCardSummary(card.group, canLaunchApp = card.app != null),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            card.app?.identity?.let { identity ->
+                TextButton(onClick = { onAction(LauncherShellAction.LaunchApp(identity)) }) {
+                    Text(text = "Open app")
+                }
+            }
+            card.clearAction?.let { action ->
+                TextButton(
+                    onClick = { onAction(action) },
+                    modifier =
+                        Modifier.semantics {
+                            contentDescription = generatedNotificationCardClearContentDescription(card)
+                        },
+                ) {
+                    Text(text = "Clear")
+                }
+            }
         }
     }
 }
@@ -205,42 +347,66 @@ private fun GeneratedCardStackControls(
 }
 
 @Composable
+@Suppress("LongParameterList")
 private fun GeneratedNotificationCard(
     card: DockNotificationCardState,
     onAction: (LauncherShellAction) -> Unit,
     isFocused: Boolean,
+    appearance: TimeScapeAppearanceSettings,
+    cardWidth: androidx.compose.ui.unit.Dp,
+    cardHeight: androidx.compose.ui.unit.Dp,
+    contentPadding: androidx.compose.ui.unit.Dp,
     modifier: Modifier = Modifier,
+    cardPointerModifier: Modifier = Modifier,
 ) {
     val label = dockNotificationCardLabel(card)
     val identity = card.app?.identity
-    Surface(
-        modifier =
-            Modifier
-                .then(modifier)
-                .semantics {
-                    contentDescription = generatedNotificationCardContentDescription(card)
-                }
-                .clickable(enabled = identity != null && isFocused) {
-                    generatedNotificationCardLaunchAction(card)?.let(onAction)
-                },
-        shape = LocalLauncherCardShape.current,
-        color = MaterialTheme.colorScheme.surfaceVariant,
-    ) {
-        Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text(text = label, style = MaterialTheme.typography.titleMedium)
-            Text(
-                text = dockNotificationCardSummary(card.group, canLaunchApp = card.app != null),
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            card.clearAction?.let { action ->
-                TextButton(
-                    onClick = { onAction(action) },
-                    modifier =
-                        Modifier.semantics {
-                            contentDescription = generatedNotificationCardClearContentDescription(card)
-                        },
-                ) {
-                    Text(text = "Clear")
+    val artwork =
+        remember(card.group.notifications) {
+            card.group.notifications
+                .maxByOrNull { notification -> notification.postedAtEpochMillis }
+                ?.largeIconPngBase64
+                .let(::decodeTimeScapeArtwork)
+        }
+    Box(modifier = modifier, contentAlignment = Alignment.Center) {
+        TimeScapeCardSurface(
+            appearance = appearance,
+            background =
+                TimeScapeCardBackground(
+                    artwork = artwork,
+                    appSeed = card.app?.identity?.packageName?.value ?: card.group.packageName.value,
+                ),
+            modifier =
+                Modifier
+                    .requiredWidth(cardWidth)
+                    .requiredHeight(cardHeight)
+                    .then(cardPointerModifier)
+                    .then(
+                        Modifier
+                            .semantics {
+                                contentDescription = generatedNotificationCardContentDescription(card)
+                            }.clickable(enabled = identity != null && isFocused) {
+                                generatedNotificationCardLaunchAction(card)?.let(onAction)
+                            },
+                    ),
+            contentPadding = contentPadding,
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(text = label, style = MaterialTheme.typography.titleMedium)
+                Text(
+                    text = dockNotificationCardSummary(card.group, canLaunchApp = card.app != null),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                card.clearAction?.takeIf { isFocused }?.let { action ->
+                    TextButton(
+                        onClick = { onAction(action) },
+                        modifier =
+                            Modifier.semantics {
+                                contentDescription = generatedNotificationCardClearContentDescription(card)
+                            },
+                    ) {
+                        Text(text = "Clear")
+                    }
                 }
             }
         }
@@ -309,7 +475,12 @@ internal fun generatedNotificationCardFocusDescription(
     cardCount: Int,
 ): String = "Card ${focusedCardIndex + 1} of $cardCount"
 
+internal fun generatedNotificationCardContentPadding(
+    resolution: com.riffle.core.domain.launcher.settings.TimeScapeCardStackResolution,
+): androidx.compose.ui.unit.Dp = resolution.contentPaddingDp.dp
+
 internal const val GENERATED_NOTIFICATION_CARD_STACK_TEST_TAG = "generated-notification-card-stack"
+internal const val GENERATED_NOTIFICATION_CARD_LIST_TEST_TAG = "generated-notification-card-list"
 
 internal fun generatedNotificationCardLaunchAction(card: DockNotificationCardState): LauncherShellAction.LaunchApp? =
     card.app?.identity?.let(LauncherShellAction::LaunchApp)

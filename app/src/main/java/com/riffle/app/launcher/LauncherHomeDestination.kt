@@ -54,6 +54,7 @@ fun HomeDestination(
                                 isOpen = state.isWidgetPickerOpen,
                             ),
                         homeInsetPolicy = homeInsetPolicy(state.launcherSettings.appearance),
+                        timeScapeAppearance = state.launcherSettings.cards.timeScapeAppearance,
                     ),
                 appIconLoader = appIconLoader,
                 widgetPreviewImageLoader = widgetRenderers.previewImageLoader,

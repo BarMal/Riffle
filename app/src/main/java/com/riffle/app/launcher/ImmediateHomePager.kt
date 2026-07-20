@@ -226,6 +226,7 @@ internal fun ImmediateWorkspacePager(
                         apps = presentation.generatedPage.installedApps,
                         onAction = presentation.generatedPage.onAction,
                         reducedMotion = presentation.reducedMotion,
+                        timeScapeAppearance = presentation.generatedPage.timeScapeAppearance,
                         haptics = actions.haptics,
                         modifier = pageModifier,
                     )

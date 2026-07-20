@@ -225,6 +225,34 @@ class TimeScapeAppearanceSettingsTest {
         assertFalse(resolution.animation.animatesRotation)
         assertEquals(0f, entries.maxOf { kotlin.math.abs(it.offset) })
         assertEquals(0f, entries.maxOf { kotlin.math.abs(it.rotationDegrees) })
+        assertTrue(entries.any { it.verticalOffset != 0f })
+    }
+
+    @Test
+    fun reducedMotionWideShortViewportReservesReachableBackgroundCardSeparation() {
+        val resolution =
+            TimeScapeAppearanceSettings(motion = TimeScapeMotion(reducedMotion = true))
+                .resolveCardStack(TimeScapeViewportDp(widthDp = 1_200, heightDp = 800))
+        val entries =
+            resolution.layoutPolicy.entries(
+                cardCount = 3,
+                activeIndex = 1,
+                reducedMotion = resolution.reducedMotion,
+            )
+
+        assertTrue(resolution.isUsable)
+        assertTrue(entries.any { it.verticalOffset != 0f })
+    }
+
+    @Test
+    fun reducedMotionZeroSpacingUsesTheReachableListFallback() {
+        val resolution =
+            TimeScapeAppearanceSettings(
+                geometry = TimeScapeGeometry(verticalSpacingDp = 0),
+                motion = TimeScapeMotion(reducedMotion = true),
+            ).resolveCardStack(TimeScapeViewportDp(widthDp = 1_200, heightDp = 800))
+
+        assertFalse(resolution.isUsable)
     }
 
     @Test
@@ -249,5 +277,6 @@ class TimeScapeAppearanceSettingsTest {
         assertFalse(resolution.animation.animatesRotation)
         assertEquals(0f, entries.maxOf { kotlin.math.abs(it.offset) })
         assertEquals(0f, entries.maxOf { kotlin.math.abs(it.rotationDegrees) })
+        assertTrue(entries.any { it.verticalOffset != 0f })
     }
 }

@@ -87,16 +87,16 @@ data class TimeScapeAppearanceSettings(
         globalReducedMotion: Boolean = false,
     ): TimeScapeCardStackResolution {
         val appearance = effectiveForResolution(capabilities, globalReducedMotion)
-        val requestedPadding = appearance.geometry.contentPaddingDp
         val focusedScale = appearance.geometry.focusedScalePercent / 100f
         val stackBounds = resolveStackBounds(appearance.geometry, appearance.motion, focusedScale)
-        val cardSize = resolveCardSize(viewport, requestedPadding, appearance.geometry, stackBounds)
-        val isUsable = cardSize.isUsable
+        val cardSize = appearance.resolveCardSize(viewport, stackBounds)
+        val requestedPadding = appearance.geometry.contentPaddingDp
+        val isUsable = cardSize.isUsable && appearance.hasReachableStackLayout()
         val depth = if (isUsable) appearance.geometry.visibleDepth else 1
         val horizontalTravel =
             ((viewport.safeWidthDp - cardSize.widthDp * stackBounds.maxWidthScale) / 2f).coerceAtLeast(0f)
         val verticalTravel =
-            ((viewport.safeHeightDp - cardSize.heightDp * stackBounds.maxHeightScale) / 2f).coerceAtLeast(0f)
+            ((viewport.safeHeightDp - cardSize.widthDp * stackBounds.maxHeightScale) / 2f).coerceAtLeast(0f)
         val motionScale = appearance.motion.travelIntensityPercent / 100f
         val offsetDirection =
             when (appearance.geometry.fanDirection) {
@@ -115,9 +115,12 @@ data class TimeScapeAppearanceSettings(
                 appearance.geometry.horizontalOffsetDp * motionScale,
                 (horizontalTravel - focusedGap).coerceAtLeast(0f) / depth,
             )
+        // Reduced motion removes animated travel, but cards still need a static
+        // separation so every visible card remains reachable by touch.
+        val verticalLayoutScale = if (appearance.motion.reducedMotion) 1f else motionScale
         val verticalStep =
             min(
-                appearance.geometry.verticalSpacingDp * motionScale,
+                appearance.geometry.verticalSpacingDp * verticalLayoutScale,
                 verticalTravel / depth,
             )
         val remainingVerticalTravel = (verticalTravel - verticalStep * depth).coerceAtLeast(0f)
@@ -176,14 +179,39 @@ private fun TimeScapeAppearanceSettings.effectiveForResolution(
     copy(motion = motion.copy(reducedMotion = motion.reducedMotion || globalReducedMotion))
         .effectiveFor(capabilities)
 
+private fun TimeScapeAppearanceSettings.staticVerticalSeparationDp(): Int =
+    if (motion.reducedMotion) {
+        geometry.verticalSpacingDp * geometry.visibleDepth
+    } else {
+        0
+    }
+
+private fun TimeScapeAppearanceSettings.hasReachableStackLayout(): Boolean {
+    return !motion.reducedMotion || geometry.verticalSpacingDp > 0
+}
+
+private fun TimeScapeAppearanceSettings.resolveCardSize(
+    viewport: TimeScapeViewportDp,
+    stackBounds: ResolvedTimeScapeStackBounds,
+): ResolvedTimeScapeCardSize =
+    resolveCardSize(
+        viewport = viewport,
+        requestedPadding = geometry.contentPaddingDp,
+        geometry = geometry,
+        stackBounds = stackBounds,
+        reservedVerticalSpaceDp = staticVerticalSeparationDp(),
+    )
+
 private fun resolveCardSize(
     viewport: TimeScapeViewportDp,
     requestedPadding: Int,
     geometry: TimeScapeGeometry,
     stackBounds: ResolvedTimeScapeStackBounds,
+    reservedVerticalSpaceDp: Int = 0,
 ): ResolvedTimeScapeCardSize {
     val availableWidth = (viewport.safeWidthDp - requestedPadding * 2).coerceAtLeast(0)
-    val availableHeight = (viewport.safeHeightDp - requestedPadding * 2).coerceAtLeast(0)
+    val availableHeight =
+        (viewport.safeHeightDp - requestedPadding * 2 - reservedVerticalSpaceDp).coerceAtLeast(0)
     val aspectRatio = geometry.cardAspectRatioPercent / 100f
     val width = min(availableWidth / stackBounds.maxWidthScale, availableHeight / stackBounds.maxHeightScale).toInt()
     val height = if (aspectRatio == 0f) 0 else (width / aspectRatio).toInt()
