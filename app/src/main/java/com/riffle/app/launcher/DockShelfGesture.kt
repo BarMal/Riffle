@@ -83,11 +83,11 @@ private fun Modifier.dockShelfGestureInput(
                 var handled = false
                 while (!handled) {
                     val event = awaitPointerEvent(PointerEventPass.Initial)
-                    val active = event.changes.firstOrNull { change -> change.id == down.id && change.pressed }
-                    if (active == null) {
+                    val trackedChange = event.changes.firstOrNull { change -> change.id == down.id }
+                    if (trackedChange == null) {
                         handled = true
                     } else {
-                        val drag = active.position - start
+                        val drag = trackedChange.position - start
                         if (
                             dockShelfGestureClaimsDrag(
                                 isExpanded = isExpanded,
@@ -95,7 +95,7 @@ private fun Modifier.dockShelfGestureInput(
                                 verticalDragPx = drag.y,
                             )
                         ) {
-                            active.consume()
+                            trackedChange.consume()
                         }
                         dockShelfGestureExpandedState(
                             isExpanded = isExpanded,
@@ -103,6 +103,9 @@ private fun Modifier.dockShelfGestureInput(
                             verticalDragPx = drag.y,
                         )?.let { expanded ->
                             onExpandedChange(expanded)
+                            handled = true
+                        }
+                        if (!trackedChange.pressed) {
                             handled = true
                         }
                     }
