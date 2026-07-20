@@ -23,6 +23,19 @@ class SettingsHomeAppStatusTest {
     }
 
     @Test
+    fun pendingHomeRoleRequestShowsCheckingWithoutAnotherHomeAction() {
+        assertEquals(
+            HomeAppSettingsPresentation(
+                statusLabel = "Checking whether Riffle is your Home app.",
+            ),
+            homeAppSettingsPresentation(
+                status = HomeRoleStatus.UNKNOWN,
+                firstRunStatus = FirstRunStatus.REQUESTING_HOME_ROLE,
+            ),
+        )
+    }
+
+    @Test
     fun unresolvedHomeRoleAfterRequestDoesNotRepeatOnboarding() {
         val repository = FakeFirstRunRepository()
         val viewModel = LauncherShellViewModel(firstRunRepository = repository)

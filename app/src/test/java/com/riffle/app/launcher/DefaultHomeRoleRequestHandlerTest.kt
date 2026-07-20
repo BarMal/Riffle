@@ -76,15 +76,45 @@ class DefaultHomeRoleRequestHandlerTest {
         assertEquals(listOf("started", "launch"), calls)
     }
 
+    @Test
+    fun repeatedRequestWhilePendingLaunchesOnlyOnce() {
+        val calls = mutableListOf<String>()
+        var requestPending = false
+        val handler =
+            handler(
+                createRequestIntent = {
+                    calls += "create"
+                    Intent("request-home-role")
+                },
+                calls = calls,
+                canStartRequest = { !requestPending },
+                onRequestStarted = {
+                    calls += "started"
+                    requestPending = true
+                },
+            )
+
+        handler.request()
+        handler.request()
+
+        assertEquals(listOf("create", "started", "launch"), calls)
+    }
+
     private fun handler(
         createRequestIntent: () -> Intent?,
         calls: MutableList<String>,
         launchRequest: (Intent) -> Unit = {},
+        canStartRequest: () -> Boolean = { true },
+        onRequestStarted: () -> Unit = { calls += "started" },
     ): DefaultHomeRoleRequestHandler =
         DefaultHomeRoleRequestHandler(
+            requestStateCallbacks =
+                HomeRoleRequestStateCallbacks(
+                    canStartRequest = canStartRequest,
+                    onRequestStarted = onRequestStarted,
+                    onRequestLaunchFailed = { calls += "cleared" },
+                ),
             createRequestIntent = createRequestIntent,
-            onRequestStarted = { calls += "started" },
-            onRequestLaunchFailed = { calls += "cleared" },
             launchRequest = { intent ->
                 calls += "launch"
                 launchRequest(intent)

@@ -21,6 +21,7 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.riffle.core.domain.launcher.FirstRunStatus
 import com.riffle.core.domain.launcher.HomeRoleStatus
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.ShellDestination
@@ -154,6 +155,32 @@ class PreviewFirstSetupTest {
         composeRule.onNodeWithText("Try again").performClick()
 
         assertEquals(listOf(LauncherShellAction.RequestDefaultHome), actions)
+    }
+
+    @Test
+    fun pendingHomeRoleRequestShowsCheckingStateWithoutAnotherRoleRequestAction() {
+        val actions = mutableListOf<LauncherShellAction>()
+
+        composeRule.setContent {
+            LauncherShellContent(
+                state =
+                    LauncherShellState(
+                        firstRunStatus = FirstRunStatus.REQUESTING_HOME_ROLE,
+                        homeRoleStatus = HomeRoleStatus.UNKNOWN,
+                    ),
+                onAction = { action -> actions.add(action) },
+            )
+        }
+
+        composeRule.onNodeWithText("Checking whether Riffle is your Home app.").assertExists()
+        composeRule
+            .onNodeWithText(
+                "Riffle is checking the result of your Home app request. " +
+                    "You can keep exploring while this updates.",
+            ).assertExists()
+        composeRule.onNodeWithText("Try again").assertDoesNotExist()
+        composeRule.onNodeWithText("Set as Home app").assertDoesNotExist()
+        assertTrue(actions.isEmpty())
     }
 
     @Test

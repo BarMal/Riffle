@@ -19,6 +19,7 @@ import com.riffle.app.launcher.DefaultHomeRoleRequestHandler
 import com.riffle.app.launcher.DefaultLauncherNotificationActionHandler
 import com.riffle.app.launcher.DefaultLauncherSettingsActionHandler
 import com.riffle.app.launcher.HomeLayoutDeviceClassEvent
+import com.riffle.app.launcher.HomeRoleRequestStateCallbacks
 import com.riffle.app.launcher.HostedWidgetAddAction
 import com.riffle.app.launcher.HostedWidgetAddCompletionResult
 import com.riffle.app.launcher.LauncherActionRouter
@@ -54,6 +55,7 @@ import com.riffle.app.launcher.widgets.PendingWidgetAddStep
 import com.riffle.app.launcher.widgets.WidgetAddRecoveryResult
 import com.riffle.app.launcher.widgets.WidgetBindPermissionResult
 import com.riffle.app.launcher.widgets.WidgetConfigurationResult
+import com.riffle.core.domain.launcher.FirstRunStatus
 import com.riffle.core.domain.launcher.HomeRoleStatus
 import com.riffle.core.domain.launcher.home.HostedWidgetId
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
@@ -246,9 +248,15 @@ class MainActivity : ComponentActivity() {
 
     private val defaultHomeRoleRequestHandler by lazy {
         DefaultHomeRoleRequestHandler(
+            requestStateCallbacks =
+                HomeRoleRequestStateCallbacks(
+                    canStartRequest = {
+                        shellViewModel.state.value.firstRunStatus != FirstRunStatus.REQUESTING_HOME_ROLE
+                    },
+                    onRequestStarted = shellViewModel::onDefaultHomeRequestStarted,
+                    onRequestLaunchFailed = shellViewModel::onDefaultHomeRequestLaunchFailed,
+                ),
             createRequestIntent = homeRoleGateway::createResolvableHomeRoleRequestIntent,
-            onRequestStarted = shellViewModel::onDefaultHomeRequestStarted,
-            onRequestLaunchFailed = shellViewModel::onDefaultHomeRequestLaunchFailed,
             launchRequest = requestHomeRole::launch,
             refreshPlatformStatuses = ::refreshPlatformStatuses,
             showUnavailable = {

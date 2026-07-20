@@ -20,6 +20,7 @@ internal fun LauncherShellState.settingsSurfaceState(
         selectedLayoutDeviceClass = settingsLayoutDeviceClass,
         availableLayoutDeviceClasses = availableLayoutDeviceClasses,
         availableLauncherViewModes = viewModeAvailability.availableModes(settingsLayoutDeviceClass),
+        firstRunStatus = firstRunStatus,
         homeRoleStatus = homeRoleStatus,
         overlayDockPermissionStatus = overlayDockPermissionStatus,
         notificationAccessStatus = notificationAccessStatus,
