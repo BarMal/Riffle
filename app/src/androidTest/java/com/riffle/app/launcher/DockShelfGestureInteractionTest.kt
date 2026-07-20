@@ -84,7 +84,7 @@ class DockShelfGestureInteractionTest {
         composeRule.onNodeWithTag("dock-shelf").performTouchInput {
             down(Offset(width / 2f, height - 1f))
             moveBy(Offset(0f, -24f))
-            updatePointerBy(Offset(0f, -64f))
+            updatePointerBy(pointerId = 0, delta = Offset(0f, -64f))
             up()
         }
 
