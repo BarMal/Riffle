@@ -293,6 +293,20 @@ class HomeDockMetricsTest {
     }
 
     @Test
+    fun zeroCapacityDockWithPersistedItemsStillBuildsABrowsingSurface() {
+        val metrics =
+            checkNotNull(
+                dockSurfaceMetrics(
+                    dock = DockModel(capacity = 0, items = listOf(widget("weather", 1))),
+                    isEditing = false,
+                    availableWidthDp = 320,
+                ),
+            )
+
+        assertEquals(1, metrics.renderedSlotCount)
+    }
+
+    @Test
     fun emptyDynamicDockShowsBackgroundDuringRecovery() {
         assertEquals(
             true,
