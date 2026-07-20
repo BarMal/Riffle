@@ -14,9 +14,11 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -130,6 +132,43 @@ class TimeScapeCardSurfaceTest {
         composeRule.onNodeWithContentDescription("Mail, selected. Open stage").assertIsDisplayed()
         composeRule.onNodeWithText("New message").assertIsDisplayed()
         composeRule.onNodeWithText("Hello from TimeScape").assertIsDisplayed()
+    }
+
+    @Test
+    fun explicitDetailsOpensAndBackReturnsToTheFocusedCard() {
+        val app = timeScapeTestApp()
+        val notification = timeScapeTestNotification(app)
+        composeRule.setContent {
+            MaterialTheme {
+                TimeScapeAppStageSurface(state = timeScapeTestState(app, notification), onAction = {})
+            }
+        }
+
+        composeRule.onNodeWithText("Details").performClick()
+
+        composeRule.onNodeWithText("Notification details").assertIsDisplayed()
+        composeRule.onNodeWithText("Back").performClick()
+        composeRule.mainClock.advanceTimeBy(200)
+
+        composeRule.onAllNodesWithText("Notification details").assertCountEquals(0)
+        composeRule.onNodeWithText("Details").assertIsDisplayed()
+    }
+
+    @Test
+    fun removedExpandedContentReturnsToTheStageWithAnExplanation() {
+        val app = timeScapeTestApp()
+        val notification = timeScapeTestNotification(app)
+        var state by mutableStateOf(timeScapeTestState(app, notification))
+        composeRule.setContent {
+            MaterialTheme { TimeScapeAppStageSurface(state = state, onAction = {}) }
+        }
+
+        composeRule.onNodeWithText("Details").performClick()
+        composeRule.onNodeWithText("Notification details").assertIsDisplayed()
+        composeRule.runOnIdle { state = state.copy(notificationGroupsByApp = emptyList()) }
+
+        composeRule.onNodeWithText("The selected card is no longer available.").assertIsDisplayed()
+        composeRule.onAllNodesWithText("Notification details").assertCountEquals(0)
     }
 
     @Test
@@ -765,4 +804,45 @@ class TimeScapeCardSurfaceTest {
         assertEquals(1, entries.maxBy { entry -> entry.order }.cardIndex)
         assertTrue(entries.all { entry -> entry.rotationDegrees == 0f })
     }
+
+    private fun timeScapeTestApp(): InstalledApp =
+        InstalledApp(
+            identity =
+                AppIdentity(
+                    packageName = AppPackageName("com.example.mail"),
+                    activityName = AppActivityName(".Main"),
+                    profile = AppProfile.personal(),
+                ),
+            label = "Mail",
+        )
+
+    private fun timeScapeTestNotification(app: InstalledApp): LauncherNotification =
+        LauncherNotification(
+            key = LauncherNotificationKey("mail"),
+            packageName = app.identity.packageName,
+            profileId = app.identity.profile.id,
+            title = "New message",
+            text = "Hello from TimeScape",
+            postedAtEpochMillis = 10,
+        )
+
+    private fun timeScapeTestState(
+        app: InstalledApp,
+        notification: LauncherNotification,
+    ): LauncherShellState =
+        LauncherShellState(
+            notificationAccessStatus = NotificationAccessStatus.GRANTED,
+            installedApps = listOf(app),
+            profileContentVisibility = mapOf(app.identity.profile.id to AppProfileContentVisibility.VISIBLE),
+            notificationGroupsByApp =
+                listOf(
+                    AppNotificationGroup(
+                        packageName = app.identity.packageName,
+                        profileId = app.identity.profile.id,
+                        latestCategory = NotificationCategory.MESSAGE,
+                        latestAgeBucket = NotificationAgeBucket.RECENT,
+                        notifications = listOf(notification),
+                    ),
+                ),
+        )
 }
