@@ -1,6 +1,7 @@
 package com.riffle.app.launcher
 
 import com.riffle.core.domain.launcher.FirstRunStatus
+import com.riffle.core.domain.launcher.HomeRoleStatus
 import com.riffle.core.domain.launcher.ShellDestination
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.apps.InstalledAppRepository
@@ -12,7 +13,7 @@ import org.junit.Test
 
 class LauncherShellEmptyStateEvidenceTest {
     @Test
-    fun completedFirstRunShellBuildsRenderableEmptyHomeState() {
+    fun migratedFirstRunShellBuildsRenderableEmptyHomeState() {
         val viewModel =
             LauncherShellViewModel(
                 firstRunRepository = FakeFirstRunRepository(isComplete = true),
@@ -24,7 +25,7 @@ class LauncherShellEmptyStateEvidenceTest {
         val state = viewModel.state.value
         val visibleHomeLayout = state.homeLayout.visibleTo(state.installedApps)
 
-        assertEquals(FirstRunStatus.COMPLETE, state.firstRunStatus)
+        assertEquals(FirstRunStatus.NEEDS_HOME_ROLE, state.firstRunStatus)
         assertEquals(ShellDestination.HOME, state.destination)
         assertFalse(state.shouldShowDefaultHomePrompt)
         assertTrue(state.shouldShowEmptyHome)
@@ -42,12 +43,36 @@ class LauncherShellEmptyStateEvidenceTest {
         assertTrue(visibleHomeLayout.dock.items.isEmpty())
     }
 
+    @Test
+    fun pendingHomeRoleRequestRestoresAsRecoverableState() {
+        val repository = FakeFirstRunRepository(isComplete = false)
+        LauncherShellViewModel(firstRunRepository = repository).onDefaultHomeRequestStarted()
+
+        val restoredViewModel = LauncherShellViewModel(firstRunRepository = repository)
+
+        assertEquals(FirstRunStatus.REQUESTING_HOME_ROLE, restoredViewModel.state.value.firstRunStatus)
+        assertTrue(repository.isHomeRoleRequestPending())
+
+        restoredViewModel.onHomeRoleStatusChanged(HomeRoleStatus.NOT_DEFAULT_HOME)
+
+        assertEquals(FirstRunStatus.NEEDS_HOME_ROLE, restoredViewModel.state.value.firstRunStatus)
+        assertFalse(repository.isHomeRoleRequestPending())
+    }
+
     private class FakeFirstRunRepository(
         private val isComplete: Boolean,
     ) : FirstRunRepository {
+        private var homeRoleRequestPending = false
+
         override fun isFirstRunComplete(): Boolean = isComplete
 
         override fun setFirstRunComplete() = Unit
+
+        override fun isHomeRoleRequestPending(): Boolean = homeRoleRequestPending
+
+        override fun setHomeRoleRequestPending(pending: Boolean) {
+            homeRoleRequestPending = pending
+        }
     }
 
     private object EmptyInstalledAppRepository : InstalledAppRepository {

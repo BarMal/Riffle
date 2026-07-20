@@ -196,11 +196,17 @@ class LauncherShellViewModel(
                 overlayDockPermissionStatus = overlayDockPermissionStatus,
             ).let { state ->
                 state.copy(searchSettingsResults = state.searchSettingsResults(state.searchQuery))
-            }.also { state -> persistSetupCardDismissal(state, firstRunRepository) }
+            }.also { state ->
+                firstRunRepository.setHomeRoleRequestPending(
+                    state.firstRunStatus == FirstRunStatus.REQUESTING_HOME_ROLE,
+                )
+                persistSetupCardDismissal(state, firstRunRepository)
+            }
     }
 
     fun onDefaultHomeRequestStarted() {
         mutableState.value = reducer.defaultHomeRequestStarted(mutableState.value)
+        firstRunRepository.setHomeRoleRequestPending(pending = true)
     }
 
     fun onSetupCardDismissed() {
@@ -522,8 +528,8 @@ private fun createInitialState(
         launcherSettings = launcherSettings,
     ).copy(
         firstRunStatus =
-            if (firstRunRepository.isFirstRunComplete()) {
-                FirstRunStatus.COMPLETE
+            if (firstRunRepository.isHomeRoleRequestPending()) {
+                FirstRunStatus.REQUESTING_HOME_ROLE
             } else {
                 FirstRunStatus.NEEDS_HOME_ROLE
             },
