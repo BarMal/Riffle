@@ -139,6 +139,7 @@ fun LauncherShellContent(
                             .windowInsetsPadding(WindowInsets.safeDrawing)
                             .padding(16.dp),
                     homeRoleStatus = state.homeRoleStatus,
+                    firstRunStatus = state.firstRunStatus,
                     onSetHome = { onAction(LauncherShellAction.RequestDefaultHome) },
                     onDismiss = onSetupCardDismissed,
                 )
@@ -208,6 +209,7 @@ data class LauncherShellAppInfo(
 private fun PreviewSetupCard(
     modifier: Modifier = Modifier,
     homeRoleStatus: HomeRoleStatus,
+    firstRunStatus: FirstRunStatus,
     onSetHome: () -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -227,22 +229,31 @@ private fun PreviewSetupCard(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 val presentation =
-                    when (homeRoleStatus) {
-                        HomeRoleStatus.DEFAULT_HOME ->
-                            PreviewHomeSetupPresentation(
-                                statusMessage = "Riffle is your Home app.",
-                                actionLabel = "Open Home settings",
-                            )
-                        HomeRoleStatus.NOT_DEFAULT_HOME ->
-                            PreviewHomeSetupPresentation(
-                                statusMessage = "Riffle is not your Home app yet.",
-                                actionLabel = "Set as Home app",
-                            )
-                        HomeRoleStatus.UNKNOWN ->
-                            PreviewHomeSetupPresentation(
-                                statusMessage = "Home app status is unavailable right now.",
-                                actionLabel = "Try again",
-                            )
+                    if (firstRunStatus == FirstRunStatus.REQUESTING_HOME_ROLE) {
+                        PreviewHomeSetupPresentation(
+                            statusMessage = "Checking whether Riffle is your Home app.",
+                            detailMessage =
+                                "Riffle is checking the result of your Home app request. " +
+                                    "You can keep exploring while this updates.",
+                        )
+                    } else {
+                        when (homeRoleStatus) {
+                            HomeRoleStatus.DEFAULT_HOME ->
+                                PreviewHomeSetupPresentation(
+                                    statusMessage = "Riffle is your Home app.",
+                                    actionLabel = "Open Home settings",
+                                )
+                            HomeRoleStatus.NOT_DEFAULT_HOME ->
+                                PreviewHomeSetupPresentation(
+                                    statusMessage = "Riffle is not your Home app yet.",
+                                    actionLabel = "Set as Home app",
+                                )
+                            HomeRoleStatus.UNKNOWN ->
+                                PreviewHomeSetupPresentation(
+                                    statusMessage = "Home app status is unavailable right now.",
+                                    actionLabel = "Try again",
+                                )
+                        }
                     }
                 Text(
                     text = "Set up Riffle",
@@ -251,8 +262,9 @@ private fun PreviewSetupCard(
                 )
                 Text(
                     text =
-                        "Explore your apps and settings first. While previewing, pressing your device Home " +
-                            "button may return to your current default launcher.",
+                        presentation.detailMessage
+                            ?: "Explore your apps and settings first. While previewing, pressing your device " +
+                            "Home button may return to your current default launcher.",
                     style = MaterialTheme.typography.bodyMedium,
                 )
                 PreviewSetupStatusRow(
@@ -263,8 +275,10 @@ private fun PreviewSetupCard(
                     text = "Optional features ask for access only when you turn them on.",
                     style = MaterialTheme.typography.bodySmall,
                 )
-                Button(onClick = onSetHome) {
-                    Text(text = presentation.actionLabel)
+                presentation.actionLabel?.let { actionLabel ->
+                    Button(onClick = onSetHome) {
+                        Text(text = actionLabel)
+                    }
                 }
                 TextButton(onClick = onDismiss) {
                     Text(text = "Not now")
@@ -293,7 +307,8 @@ private fun PreviewSetupStatusRow(
 
 private data class PreviewHomeSetupPresentation(
     val statusMessage: String,
-    val actionLabel: String,
+    val actionLabel: String? = null,
+    val detailMessage: String? = null,
 )
 
 @Suppress("LongMethod")
