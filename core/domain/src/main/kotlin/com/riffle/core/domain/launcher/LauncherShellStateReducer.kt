@@ -11,21 +11,31 @@ class LauncherShellStateReducer {
                     currentState = currentState,
                     homeRoleStatus = homeRoleStatus,
                 ),
+            hasRecoveredHomeRoleRequest = false,
             homeRoleStatus = homeRoleStatus,
         )
     }
 
     fun defaultHomeRequestStarted(currentState: LauncherShellState): LauncherShellState =
-        currentState.copy(firstRunStatus = FirstRunStatus.REQUESTING_HOME_ROLE)
+        currentState.copy(
+            firstRunStatus = FirstRunStatus.REQUESTING_HOME_ROLE,
+            hasRecoveredHomeRoleRequest = false,
+        )
 
     fun defaultHomeRequestLaunchFailed(currentState: LauncherShellState): LauncherShellState =
-        currentState.copy(firstRunStatus = FirstRunStatus.NEEDS_HOME_ROLE)
+        currentState.copy(
+            firstRunStatus = FirstRunStatus.NEEDS_HOME_ROLE,
+            hasRecoveredHomeRoleRequest = false,
+        )
 
     fun defaultHomeRequestReturned(currentState: LauncherShellState): LauncherShellState =
         if (currentState.firstRunStatus == FirstRunStatus.REQUESTING_HOME_ROLE) {
-            currentState.copy(firstRunStatus = FirstRunStatus.NEEDS_HOME_ROLE)
+            currentState.copy(
+                firstRunStatus = FirstRunStatus.NEEDS_HOME_ROLE,
+                hasRecoveredHomeRoleRequest = false,
+            )
         } else {
-            currentState
+            currentState.copy(hasRecoveredHomeRoleRequest = false)
         }
 
     fun setupCardDismissed(currentState: LauncherShellState): LauncherShellState {
@@ -46,6 +56,8 @@ class LauncherShellStateReducer {
     ): FirstRunStatus =
         when {
             homeRoleStatus == HomeRoleStatus.DEFAULT_HOME -> FirstRunStatus.COMPLETE
+            currentState.hasRecoveredHomeRoleRequest && homeRoleStatus == HomeRoleStatus.UNKNOWN ->
+                FirstRunStatus.NEEDS_HOME_ROLE
             currentState.firstRunStatus == FirstRunStatus.REQUESTING_HOME_ROLE &&
                 homeRoleStatus == HomeRoleStatus.UNKNOWN -> FirstRunStatus.REQUESTING_HOME_ROLE
             else -> FirstRunStatus.NEEDS_HOME_ROLE

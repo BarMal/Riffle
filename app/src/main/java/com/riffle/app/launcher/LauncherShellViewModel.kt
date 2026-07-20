@@ -586,12 +586,7 @@ private fun createInitialState(
     platformDependencies: LauncherShellPlatformDependencies,
     viewModeAvailability: LauncherViewModeAvailability,
 ): LauncherShellState {
-    // An activity result cannot be recovered after process death. Keep the preview usable by
-    // clearing the stale presentation marker instead of restoring a non-interactive checking
-    // state or relaunching Android system UI.
-    if (firstRunRepository.isHomeRoleRequestPending()) {
-        firstRunRepository.setHomeRoleRequestPending(pending = false)
-    }
+    val hasRecoveredHomeRoleRequest = firstRunRepository.isHomeRoleRequestPending()
 
     val storedLayoutSet = homeLayoutRepository.loadHomeLayoutSet()
     val initialLayoutSet =
@@ -624,7 +619,13 @@ private fun createInitialState(
         availableLayoutDeviceClasses = setOf(layoutSet.activeKey.deviceClass),
         launcherSettings = launcherSettings,
     ).copy(
-        firstRunStatus = FirstRunStatus.NEEDS_HOME_ROLE,
+        firstRunStatus =
+            if (hasRecoveredHomeRoleRequest) {
+                FirstRunStatus.REQUESTING_HOME_ROLE
+            } else {
+                FirstRunStatus.NEEDS_HOME_ROLE
+            },
+        hasRecoveredHomeRoleRequest = hasRecoveredHomeRoleRequest,
         setupCardDismissed = firstRunRepository.isSetupCardDismissed(),
     )
 }
