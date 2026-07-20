@@ -8,12 +8,15 @@ import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.riffle.core.domain.launcher.HomeRoleStatus
 import com.riffle.core.domain.launcher.LauncherShellState
+import com.riffle.core.domain.launcher.OverlayDockPermissionStatus
 import com.riffle.core.domain.launcher.ShellDestination
+import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -33,7 +36,7 @@ class PreviewFirstSetupTest {
         }
 
         composeRule
-            .onNodeWithText("Preview Riffle")
+            .onNodeWithText("Set up Riffle")
             .assert(SemanticsMatcher.expectValue(SemanticsProperties.Heading, Unit))
     }
 
@@ -74,6 +77,54 @@ class PreviewFirstSetupTest {
         composeRule.onNodeWithText("Set as Home app").performClick()
 
         assertEquals(listOf(LauncherShellAction.RequestDefaultHome), actions)
+    }
+
+    @Test
+    fun setupCardExplainsOptionalCardsAndFloatingDockWithoutRequestingAccess() {
+        val actions = mutableListOf<LauncherShellAction>()
+
+        composeRule.setContent {
+            LauncherShellContent(
+                state =
+                    previewState().copy(
+                        notificationAccessStatus = NotificationAccessStatus.NOT_GRANTED,
+                        overlayDockPermissionStatus = OverlayDockPermissionStatus.NOT_GRANTED,
+                    ),
+                onAction = { action -> actions.add(action) },
+            )
+        }
+
+        composeRule.onNodeWithText("Cards (optional)").assertExists()
+        composeRule.onNodeWithText("You'll be asked when you turn on Cards.").assertExists()
+        composeRule.onNodeWithText("Floating dock (optional)").assertExists()
+        composeRule.onNodeWithText("You'll be asked when you turn on Floating dock.").assertExists()
+        composeRule
+            .onNodeWithText("Cards and Floating dock are optional. Riffle asks only when you choose one.")
+            .assertExists()
+        assertTrue(actions.isEmpty())
+    }
+
+    @Test
+    fun setupCardExposesStatusDescriptionsForAssistiveTechnology() {
+        composeRule.setContent {
+            LauncherShellContent(
+                state =
+                    previewState().copy(
+                        notificationAccessStatus = NotificationAccessStatus.REVOKED,
+                        overlayDockPermissionStatus = OverlayDockPermissionStatus.GRANTED,
+                    ),
+                onAction = {},
+            )
+        }
+
+        composeRule
+            .onNodeWithContentDescription(
+                "Cards (optional): Access was removed. Restore it from Cards when needed.",
+            ).assertExists()
+        composeRule
+            .onNodeWithContentDescription(
+                "Floating dock (optional): Ready when you turn on Floating dock.",
+            ).assertExists()
     }
 
     @Test
