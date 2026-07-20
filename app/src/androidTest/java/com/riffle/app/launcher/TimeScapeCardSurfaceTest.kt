@@ -26,6 +26,10 @@ import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppProfile
 import com.riffle.core.domain.launcher.apps.AppProfileContentVisibility
 import com.riffle.core.domain.launcher.apps.InstalledApp
+import com.riffle.core.domain.launcher.cards.AppStage
+import com.riffle.core.domain.launcher.cards.AppStageId
+import com.riffle.core.domain.launcher.cards.AppStageLifecycle
+import com.riffle.core.domain.launcher.cards.AppStageOrigin
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
 import com.riffle.core.domain.launcher.notifications.LauncherNotification
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
@@ -251,6 +255,25 @@ class TimeScapeCardSurfaceTest {
         composeRule
             .onNodeWithContentDescription("Work - Mail, selected. Open stage")
             .assertIsDisplayed()
+    }
+
+    @Test
+    fun stageSelectorUsesStableSaveableKeysForProfileScopedStages() {
+        val personal = AppStageId(AppPackageName("com.example.mail"), AppProfile.personal().id)
+        val work = AppStageId(AppPackageName("com.example.mail"), AppProfile.work().id)
+
+        assertEquals(
+            "personal:com.example.mail",
+            timeScapeStageSelectorItemKey(
+                AppStage(personal, setOf(AppStageOrigin.DYNAMIC), AppStageLifecycle.EMPTY),
+            ),
+        )
+        assertEquals(
+            "work:com.example.mail",
+            timeScapeStageSelectorItemKey(
+                AppStage(work, setOf(AppStageOrigin.DYNAMIC), AppStageLifecycle.EMPTY),
+            ),
+        )
     }
 
     @Test

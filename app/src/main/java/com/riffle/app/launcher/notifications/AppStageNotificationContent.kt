@@ -6,15 +6,20 @@ import com.riffle.core.domain.launcher.apps.AppProfileId
 import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.apps.AppShortcutsByApp
 import com.riffle.core.domain.launcher.apps.InstalledApp
+import com.riffle.core.domain.launcher.cards.AppStage
 import com.riffle.core.domain.launcher.cards.AppStageContent
 import com.riffle.core.domain.launcher.cards.AppStageContentKind
 import com.riffle.core.domain.launcher.cards.AppStageContentSnapshot
 import com.riffle.core.domain.launcher.cards.AppStageId
+import com.riffle.core.domain.launcher.cards.AppStageLifecycle
+import com.riffle.core.domain.launcher.cards.AppStageOrigin
+import com.riffle.core.domain.launcher.cards.AppStagePreferences
 import com.riffle.core.domain.launcher.cards.AppStageSnapshot
 import com.riffle.core.domain.launcher.cards.LauncherCardId
 import com.riffle.core.domain.launcher.notifications.LauncherNotification
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
+import com.riffle.core.domain.launcher.settings.stagePreferencesFor
 
 /** Process-only card data for one notification or media item in an app stage. */
 data class AppStageNotificationCard(
@@ -75,9 +80,49 @@ class AppStageShellStateReconciler(
     fun reconcile(state: LauncherShellState): AppStageShellState =
         state
             .appStageShellState(
-                previous = previous,
+                previous =
+                    previous?.takeIf { snapshot -> snapshot.retains(state) }
+                        ?: state.restoredSelectedDynamicStageSnapshot(),
                 actionAvailability = actionAvailability,
             ).also { shellState -> previous = shellState.snapshot }
+}
+
+private fun AppStageSnapshot.retains(state: LauncherShellState): Boolean {
+    val selectedStageId =
+        state.launcherSettings.cards.stagePreferencesFor(state.homeLayoutSet.activeKey).selectedStageId
+    return selectedStageId != null &&
+        preferences.selectedStageId == selectedStageId &&
+        stages.any { stage -> stage.id == selectedStageId && !stage.isPinned }
+}
+
+/**
+ * Rehydrates the single empty dynamic stage selected before process recreation.
+ *
+ * The planner deliberately needs a prior snapshot before retaining an empty dynamic stage. The
+ * durable selection supplies that prior intent after a process restart; the installed-app check
+ * prevents restoring stale or removed identities.
+ */
+private fun LauncherShellState.restoredSelectedDynamicStageSnapshot(): AppStageSnapshot? {
+    val preferences = launcherSettings.cards.stagePreferencesFor(homeLayoutSet.activeKey)
+    return preferences.selectedStageId?.takeIf { selectedStageId ->
+        selectedStageId !in preferences.pinnedStageIds &&
+            installedApps.any { app ->
+                app.identity.packageName == selectedStageId.packageName &&
+                    app.identity.profile.id == selectedStageId.profileId
+            }
+    }?.let { selectedStageId ->
+        AppStageSnapshot(
+            stages =
+                listOf(
+                    AppStage(
+                        id = selectedStageId,
+                        origins = setOf(AppStageOrigin.DYNAMIC),
+                        lifecycle = AppStageLifecycle.EMPTY,
+                    ),
+                ),
+            preferences = AppStagePreferences(selectedStageId = selectedStageId),
+        )
+    }
 }
 
 /** Builds stable, privacy-aware dynamic input for the app-stage planner. */

@@ -1,4 +1,4 @@
-@file:Suppress("LongMethod", "LongParameterList")
+@file:Suppress("LongMethod", "LongParameterList", "TooManyFunctions")
 
 package com.riffle.app.launcher
 
@@ -86,7 +86,9 @@ private fun TimeScapeStageHeader(
     onAction: (LauncherShellAction) -> Unit,
 ) {
     val label = selectedStage?.let { stageLabel(it.id, state) } ?: "TimeScape"
-    var overflowExpanded by rememberSaveable(selectedStage?.id) { mutableStateOf(false) }
+    var overflowExpanded by rememberSaveable(selectedStage?.let(::timeScapeStageSelectorItemKey)) {
+        mutableStateOf(false)
+    }
     val selectedApp =
         selectedStage?.let { stage ->
             state.installedApps.firstOrNull { app ->
@@ -336,7 +338,7 @@ private fun TimeScapeStageSelector(
             contentPadding = PaddingValues(horizontal = 4.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            items(stages, key = { stage -> stage.id }) { stage ->
+            items(stages, key = ::timeScapeStageSelectorItemKey) { stage ->
                 TextButton(
                     onClick = { onAction(LauncherShellAction.SelectAppStage(stage.id)) },
                     modifier =
@@ -354,6 +356,11 @@ private fun TimeScapeStageSelector(
         }
         TextButton(onClick = { onAction(LauncherShellAction.SelectNextAppStage) }) { Text("Next") }
     }
+}
+
+/** Lazy layouts require item keys that Android can store in a Bundle across recreation. */
+internal fun timeScapeStageSelectorItemKey(stage: AppStage): String {
+    return "${stage.id.profileId.value}:${stage.id.packageName.value}"
 }
 
 private fun stageLabel(

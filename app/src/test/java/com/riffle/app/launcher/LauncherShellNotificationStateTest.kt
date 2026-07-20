@@ -12,8 +12,11 @@ import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.apps.InstalledAppRefreshResult
 import com.riffle.core.domain.launcher.apps.InstalledAppRepository
 import com.riffle.core.domain.launcher.cards.AppStageId
+import com.riffle.core.domain.launcher.cards.AppStagePreferences
 import com.riffle.core.domain.launcher.cards.CardsChapterId
 import com.riffle.core.domain.launcher.cards.CardsChapterPreferences
+import com.riffle.core.domain.launcher.home.HomeLayoutKey
+import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.notifications.LauncherNotification
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationRepository
@@ -31,6 +34,70 @@ import org.junit.Test
 import kotlin.coroutines.CoroutineContext
 
 class LauncherShellNotificationStateTest {
+    @Test
+    fun recreatedViewModelKeepsSelectedEmptyDynamicStageForNavigation() {
+        val newer = app(label = "Newer", packageName = "com.riffle.newer")
+        val older = app(label = "Older", packageName = "com.riffle.older")
+        val newerStageId = AppStageId(newer.identity.packageName, newer.identity.profile.id)
+        val settingsRepository =
+            FakeLauncherSettingsRepository(
+                LauncherSettings(
+                    cards =
+                        CardsSettings(
+                            stagePreferencesByLayout =
+                                mapOf(
+                                    HomeLayoutKey(LauncherViewMode.STANDARD_APP_DRAWER) to
+                                        AppStagePreferences(selectedStageId = newerStageId),
+                                ),
+                        ),
+                ),
+            )
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                installedAppRepository =
+                    FakeInstalledAppRepository(
+                        apps = listOf(newer, older),
+                        profileContentVisibility =
+                            mapOf(
+                                newer.identity.profile.id to AppProfileContentVisibility.VISIBLE,
+                                older.identity.profile.id to AppProfileContentVisibility.VISIBLE,
+                            ),
+                    ),
+                launcherSettingsRepository = settingsRepository,
+                platformDependencies =
+                    LauncherShellPlatformDependencies(
+                        notificationRepository =
+                            FakeNotificationRepository(
+                                notifications =
+                                    listOf(
+                                        notification(
+                                            key = "older",
+                                            packageName = older.identity.packageName.value,
+                                        ),
+                                    ),
+                            ),
+                    ),
+            )
+
+        viewModel.onHomeRoleStatusChanged(
+            homeRoleStatus = HomeRoleStatus.UNKNOWN,
+            notificationAccessStatus = NotificationAccessStatus.GRANTED,
+        )
+        runBlocking {
+            viewModel.refreshInstalledApps().join()
+            viewModel.refreshNotifications().join()
+        }
+        viewModel.onHomePageEdited(LauncherShellAction.SelectPreviousAppStage)
+
+        assertEquals(
+            AppStageId(older.identity.packageName, older.identity.profile.id),
+            settingsRepository.settings.cards
+                .stagePreferencesFor(HomeLayoutKey(LauncherViewMode.STANDARD_APP_DRAWER))
+                .selectedStageId,
+        )
+    }
+
     @Test
     fun previousAndNextKeepNavigationValidAfterTheFocusedStageIsRetainedEmpty() {
         val newer = app(label = "Newer", packageName = "com.riffle.newer")

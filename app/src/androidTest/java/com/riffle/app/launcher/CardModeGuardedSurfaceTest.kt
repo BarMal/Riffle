@@ -6,7 +6,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.riffle.core.domain.launcher.FirstRunStatus
 import com.riffle.core.domain.launcher.HomeRoleStatus
@@ -36,7 +35,7 @@ class CardModeGuardedSurfaceTest {
     val composeRule = createComposeRule()
 
     @Test
-    fun launcherShellRoutesCardModeToTheGuardedCardsSurfaceAndRecoversToStandard() {
+    fun launcherShellRoutesCardModeToTimeScapeAndRecoversToStandard() {
         var state by mutableStateOf(cardsState(NotificationAccessStatus.GRANTED))
 
         composeRule.setContent {
@@ -47,25 +46,25 @@ class CardModeGuardedSurfaceTest {
             )
         }
 
-        composeRule.onNodeWithText("No active notifications").assertExists()
+        composeRule.onNodeWithText("No active stages yet. New notifications will appear here.").assertExists()
 
         composeRule.runOnIdle {
             state = cardsState(NotificationAccessStatus.REVOKED)
         }
 
-        composeRule.onNodeWithText("Notification access was revoked").assertExists()
-        composeRule.onNodeWithText("Open notification access").assertExists()
+        composeRule.onNodeWithText("Notification access was revoked. Restore access to update stages.").assertExists()
+        composeRule.onNodeWithText("Allow access").assertExists()
 
         composeRule.runOnIdle {
             state = standardState()
         }
 
-        composeRule.onNodeWithText("Notification access was revoked").assertDoesNotExist()
-        composeRule.onNodeWithText("Open notification access").assertDoesNotExist()
+        composeRule.onNodeWithText("Notification access was revoked. Restore access to update stages.").assertDoesNotExist()
+        composeRule.onNodeWithText("Allow access").assertDoesNotExist()
     }
 
     @Test
-    fun launcherShellCardModeShowsAVisibleCardThatExpandsIntoTheCardStackDetail() {
+    fun launcherShellCardModeShowsTheFocusedTimeScapeCardStack() {
         composeRule.setContent {
             LauncherShellContent(
                 state = cardsState(NotificationAccessStatus.GRANTED, groups = listOf(notificationGroup())),
@@ -74,8 +73,7 @@ class CardModeGuardedSurfaceTest {
             )
         }
 
-        composeRule.onNodeWithText("Messages").assertExists()
-        composeRule.onNodeWithText("View card").performClick()
+        composeRule.onNodeWithText("Welcome").assertExists()
 
         composeRule
             .onNode(
