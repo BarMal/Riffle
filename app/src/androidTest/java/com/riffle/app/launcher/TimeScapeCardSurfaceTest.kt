@@ -1,13 +1,18 @@
 package com.riffle.app.launcher
 
+import android.graphics.Bitmap
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -83,7 +88,47 @@ class TimeScapeCardSurfaceTest {
             )
 
         assertEquals(1f, colors.glass.alpha)
+        assertEquals(1f, colors.glassTint.alpha)
         assertTrue(contrastRatio(colors.foreground, colors.glass) >= 4.5f)
+    }
+
+    @Test
+    fun artworkRemainsVisuallyRepresentedBelowTranslucentGlassTint() {
+        val artwork =
+            Bitmap.createBitmap(40, 40, Bitmap.Config.ARGB_8888).apply {
+                for (x in 0 until width) {
+                    val color = if (x < width / 2) android.graphics.Color.BLUE else android.graphics.Color.RED
+                    for (y in 0 until height) setPixel(x, y, color)
+                }
+            }.asImageBitmap()
+        val appearance =
+            TimeScapeAppearanceSettings(
+                surface =
+                    TimeScapeSurface(
+                        backgroundSource = TimeScapeBackgroundSource.NOTIFICATION_ARTWORK,
+                        glassTintArgb = 0xFFFFFFFFL,
+                        glassTransparencyPercent = 50,
+                        blurStrengthPercent = 0,
+                    ),
+            )
+
+        composeRule.setContent {
+            MaterialTheme {
+                TimeScapeCardSurface(
+                    appearance = appearance,
+                    background = TimeScapeCardBackground(artwork = artwork),
+                    modifier = Modifier.requiredSize(120.dp).testTag("artwork-card"),
+                ) {}
+            }
+        }
+
+        val rendered = composeRule.onNodeWithTag("artwork-card").captureToImage()
+        val pixels = rendered.toPixelMap()
+        val left = pixels[rendered.width / 4, rendered.height / 2]
+        val right = pixels[rendered.width * 3 / 4, rendered.height / 2]
+
+        assertTrue(left.blue > left.red)
+        assertTrue(right.red > right.blue)
     }
 
     @Test

@@ -55,6 +55,8 @@ internal data class TimeScapeCardColors(
     val background: Color,
     val foreground: Color,
     val accent: Color,
+    /** The configured translucent paint layer, retained separately from the resolved opaque surface. */
+    val glassTint: Color,
     val glass: Color,
     val outline: Color,
 )
@@ -92,9 +94,11 @@ internal fun resolveTimeScapeCardColors(
             TimeScapeBackgroundSource.CUSTOM_SOLID -> Color(surface.customBackgroundArgb.toInt())
         }
     val adjustedBase = timeScapeAdjustedColor(base, surface.saturationPercent, surface.contrastPercent)
-    val glass =
+    val glassTint =
         Color(surface.glassTintArgb.toInt())
             .copy(alpha = 1f - surface.glassTransparencyPercent / 100f)
+    val glass =
+        glassTint
             .compositeOver(adjustedBase)
     val foreground =
         if (effective.typography.automaticForegroundContrast) {
@@ -112,6 +116,7 @@ internal fun resolveTimeScapeCardColors(
         background = adjustedBase,
         foreground = foreground,
         accent = accent,
+        glassTint = glassTint,
         glass = glass,
         outline = accent.copy(alpha = surface.highlightPercent / 100f),
     )
@@ -252,7 +257,7 @@ internal fun TimeScapeCardSurface(
                     colorFilter = artworkColorFilter,
                 )
             }
-            Box(modifier = Modifier.fillMaxSize().background(colors.glass))
+            Box(modifier = Modifier.fillMaxSize().background(colors.glassTint))
             TimeScapeTexture(
                 color = colors.accent,
                 intensityPercent = effective.surface.textureIntensityPercent,
