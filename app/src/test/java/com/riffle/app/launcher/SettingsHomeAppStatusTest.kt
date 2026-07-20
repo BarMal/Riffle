@@ -16,8 +16,8 @@ class SettingsHomeAppStatusTest {
     }
 
     @Test
-    fun usesAHomeSettingsActionForEveryLiveStatus() {
-        assertEquals("Default", HomeRoleStatus.DEFAULT_HOME.settingsHomeAppActionLabel())
+    fun usesAnExplicitHomeSettingsActionForEveryLiveStatus() {
+        assertEquals("Change home app", HomeRoleStatus.DEFAULT_HOME.settingsHomeAppActionLabel())
         assertEquals("Set home", HomeRoleStatus.NOT_DEFAULT_HOME.settingsHomeAppActionLabel())
         assertEquals("Try again", HomeRoleStatus.UNKNOWN.settingsHomeAppActionLabel())
     }

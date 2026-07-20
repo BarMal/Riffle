@@ -5,6 +5,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertHasNoClickAction
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
@@ -74,6 +75,33 @@ class SettingsPageContentTest {
             composeRule.onNodeWithText("Checking whether Riffle is your Home app.").assertExists()
             composeRule.onNodeWithText("Checking").assertExists()
         }
+    }
+
+    @Test
+    fun defaultHomeStatusUsesAnExplicitChangeAction() {
+        val actions = mutableListOf<LauncherShellAction>()
+
+        composeRule.setContent {
+            MaterialTheme {
+                SettingsPageContent(
+                    modifier = Modifier,
+                    state =
+                        LauncherShellState(
+                            homeRoleStatus = HomeRoleStatus.DEFAULT_HOME,
+                        ).settingsSurfaceState(),
+                    page = SettingsPage.PERMISSIONS,
+                    onPageSelected = {},
+                    onAction = actions::add,
+                )
+            }
+        }
+
+        composeRule
+            .onNodeWithText("Change home app")
+            .assertHasClickAction()
+            .performClick()
+
+        assertEquals(listOf(LauncherShellAction.RequestDefaultHome), actions)
     }
 
     @Test

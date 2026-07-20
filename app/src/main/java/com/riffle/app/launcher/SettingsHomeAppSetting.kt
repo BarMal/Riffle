@@ -92,7 +92,7 @@ internal fun HomeRoleStatus.settingsHomeAppStatusLabel(): String =
 
 internal fun HomeRoleStatus.settingsHomeAppActionLabel(): String =
     when (this) {
-        HomeRoleStatus.DEFAULT_HOME -> "Default"
+        HomeRoleStatus.DEFAULT_HOME -> "Change home app"
         HomeRoleStatus.NOT_DEFAULT_HOME -> "Set home"
         HomeRoleStatus.UNKNOWN -> "Try again"
     }
