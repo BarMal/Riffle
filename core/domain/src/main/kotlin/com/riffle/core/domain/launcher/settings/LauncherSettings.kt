@@ -19,7 +19,18 @@ data class LauncherSettings(
     val haptics: HapticSettings = HapticSettings(),
     val motion: MotionSettings = MotionSettings(),
     val overlayDock: OverlayDockSettings = OverlayDockSettings(),
+    val search: SearchSettings = SearchSettings(),
 )
+
+/** Durable presentation preference for launcher search results. */
+data class SearchSettings(
+    val resultPresentation: SearchResultPresentation = SearchResultPresentation.ICONS,
+)
+
+enum class SearchResultPresentation {
+    ICONS,
+    LIST,
+}
 
 /** Stored user intent for Cards chapters. Notification content remains transient. */
 data class CardsSettings(

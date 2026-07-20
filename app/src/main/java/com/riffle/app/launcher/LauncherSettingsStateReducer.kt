@@ -19,6 +19,7 @@ internal class LauncherSettingsStateReducer(
             else -> state
         }
 
+    @Suppress("LongMethod")
     private fun reduceSettingsStateAction(
         state: LauncherShellState,
         action: LauncherShellAction,
@@ -69,6 +70,15 @@ internal class LauncherSettingsStateReducer(
                 is LauncherShellAction.SelectContextualEnabled ->
                     state.withContextualSettingsAction(
                         action = action,
+                        launcherSettingsRepository = launcherSettingsRepository,
+                    )
+
+                is LauncherShellAction.SelectSearchResultPresentation ->
+                    state.withLauncherSettings(
+                        settings =
+                            state.launcherSettings.copy(
+                                search = state.launcherSettings.search.copy(resultPresentation = action.presentation),
+                            ),
                         launcherSettingsRepository = launcherSettingsRepository,
                     )
 

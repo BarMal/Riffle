@@ -103,6 +103,7 @@ internal fun LauncherShellAction.launcherSettingsActionRoute(): LauncherSettings
         is LauncherShellAction.MoveFloatingDockShortcut,
         is LauncherShellAction.SelectSettingsLayoutDeviceClass,
         is LauncherShellAction.ImportLauncherBackup,
+        is LauncherShellAction.SelectSearchResultPresentation,
         -> LauncherSettingsActionRoute.SettingsState(this)
 
         LauncherShellAction.RequestNotificationAccess -> LauncherSettingsActionRoute.RequestNotificationAccess

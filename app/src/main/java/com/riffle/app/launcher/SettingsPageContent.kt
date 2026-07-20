@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -15,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.home.WallpaperSource
 import com.riffle.core.domain.launcher.settings.HomeSystemBar
+import com.riffle.core.domain.launcher.settings.SearchResultPresentation
 import com.riffle.core.domain.launcher.settings.homeSystemBars
 
 @Composable
@@ -48,11 +50,36 @@ internal fun SettingsPageContent(
             SettingsPage.HAPTICS -> SettingsHapticsPageContent(state = state, onAction = onAction)
             SettingsPage.PERMISSIONS -> SettingsPermissionsPageContent(state = state, onAction = onAction)
             SettingsPage.APPS ->
-                SettingsAppsPageContent(
-                    state = state,
-                    onPageSelected = onPageSelected,
-                    onAction = onAction,
-                )
+                {
+                    SettingsSection(title = "Search") {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            SettingsTextColumn(
+                                title = "Search results",
+                                subtitle = "Choose compact app icons or a detailed list",
+                            )
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                SearchResultPresentation.entries.forEach { presentation ->
+                                    FilterChip(
+                                        selected = presentation == state.settings.search.resultPresentation,
+                                        onClick = {
+                                            onAction(LauncherShellAction.SelectSearchResultPresentation(presentation))
+                                        },
+                                        label = {
+                                            Text(
+                                                if (presentation == SearchResultPresentation.ICONS) "Icons" else "List",
+                                            )
+                                        },
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    SettingsAppsPageContent(
+                        state = state,
+                        onPageSelected = onPageSelected,
+                        onAction = onAction,
+                    )
+                }
             SettingsPage.BACKUP -> SettingsBackupPageContent(onAction = onAction)
             SettingsPage.HIDDEN_APPS -> SettingsHiddenAppsPageContent(state = state, onAction = onAction)
             SettingsPage.VERSION -> SettingsVersionPageContent(state = state)
