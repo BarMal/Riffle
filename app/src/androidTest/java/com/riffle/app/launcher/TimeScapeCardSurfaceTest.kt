@@ -3,6 +3,7 @@ package com.riffle.app.launcher
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
@@ -128,6 +129,71 @@ class TimeScapeCardSurfaceTest {
             assertEquals(1.3f, observedFontScale, 0.001f)
             assertEquals(1.2f, timeScapeContentDensityScale(TimeScapeContentDensity.EXPANDED), 0.001f)
             assertEquals(0.8f, timeScapeContentDensityScale(TimeScapeContentDensity.COMPACT), 0.001f)
+        }
+    }
+
+    @Test
+    fun cardActionsRemainLegibleForLowContrastCustomAccents() {
+        val actionColors = mutableMapOf<Int, Pair<Color, Color>>()
+        val appearances =
+            listOf(
+                TimeScapeAppearanceSettings(
+                    surface =
+                        TimeScapeSurface(
+                            backgroundSource = TimeScapeBackgroundSource.CUSTOM_SOLID,
+                            customBackgroundArgb = 0xFFFFFFFFL,
+                            glassTintArgb = 0xFFFFFFFFL,
+                            glassTransparencyPercent = 0,
+                        ),
+                    typography =
+                        TimeScapeTypography(
+                            accentSource = TimeScapeAccentSource.CUSTOM,
+                            customAccentArgb = 0xFFFFFFFFL,
+                        ),
+                ),
+                TimeScapeAppearanceSettings(
+                    surface =
+                        TimeScapeSurface(
+                            backgroundSource = TimeScapeBackgroundSource.CUSTOM_SOLID,
+                            customBackgroundArgb = 0xFF000000L,
+                            glassTintArgb = 0xFF000000L,
+                            glassTransparencyPercent = 0,
+                        ),
+                    typography =
+                        TimeScapeTypography(
+                            accentSource = TimeScapeAccentSource.CUSTOM,
+                            customAccentArgb = 0xFF000000L,
+                        ),
+                ),
+            )
+
+        composeRule.setContent {
+            MaterialTheme {
+                appearances.forEachIndexed { index, appearance ->
+                    TimeScapeCardSurface(appearance, TimeScapeCardBackground()) {
+                        actionColors[index] = MaterialTheme.colorScheme.primary to MaterialTheme.colorScheme.onPrimary
+                        TextButton(onClick = {}) { Text("Action $index") }
+                    }
+                }
+            }
+        }
+
+        composeRule.onNodeWithText("Action 0").assertIsDisplayed()
+        composeRule.onNodeWithText("Action 1").assertIsDisplayed()
+        composeRule.runOnIdle {
+            assertEquals(2, actionColors.size)
+            appearances.indices.forEach { index ->
+                val colors =
+                    resolveTimeScapeCardColors(
+                        appearance = appearances[index],
+                        background = TimeScapeCardBackground(),
+                        materialBackground = Color.Black,
+                        materialAccent = Color.Blue,
+                    )
+                val (action, onAction) = requireNotNull(actionColors[index])
+                assertTrue(contrastRatio(action, colors.glass) >= 4.5f)
+                assertTrue(contrastRatio(onAction, action) >= 4.5f)
+            }
         }
     }
 

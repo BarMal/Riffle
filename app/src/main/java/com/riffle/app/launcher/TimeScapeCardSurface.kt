@@ -59,6 +59,11 @@ internal data class TimeScapeCardColors(
     val outline: Color,
 )
 
+internal data class TimeScapeCardActionColors(
+    val action: Color,
+    val onAction: Color,
+)
+
 internal fun timeScapeRendererCapabilities(sdkInt: Int = Build.VERSION.SDK_INT): TimeScapeRendererCapabilities =
     TimeScapeRendererCapabilities(supportsBlur = sdkInt >= Build.VERSION_CODES.S)
 
@@ -149,6 +154,19 @@ internal fun contrastRatio(
         (minOf(firstLuminance, secondLuminance) + 0.05f)
 }
 
+internal fun resolveTimeScapeCardActionColors(
+    accent: Color,
+    surface: Color,
+): TimeScapeCardActionColors {
+    val action =
+        accent.takeIf { contrastRatio(it, surface) >= MINIMUM_ACTION_CONTRAST_RATIO }
+            ?: timeScapeAccessibleForeground(surface)
+    return TimeScapeCardActionColors(
+        action = action,
+        onAction = timeScapeAccessibleForeground(action),
+    )
+}
+
 @Composable
 @Suppress("LongMethod")
 internal fun TimeScapeCardSurface(
@@ -167,6 +185,7 @@ internal fun TimeScapeCardSurface(
             materialAccent = MaterialTheme.colorScheme.primary,
         )
     val shape = RoundedCornerShape(effective.geometry.cornerRadiusDp.dp)
+    val actionColors = resolveTimeScapeCardActionColors(colors.accent, colors.glass)
     val density = LocalDensity.current
     val contentDensityScale = timeScapeContentDensityScale(effective.typography.contentDensity)
     val adjustedPadding = contentPadding * contentDensityScale
@@ -247,9 +266,15 @@ internal fun TimeScapeCardSurface(
         MaterialTheme(
             colorScheme =
                 MaterialTheme.colorScheme.copy(
-                    primary = colors.accent,
-                    secondary = colors.accent,
-                    surfaceTint = colors.accent,
+                    primary = actionColors.action,
+                    onPrimary = actionColors.onAction,
+                    primaryContainer = actionColors.action,
+                    onPrimaryContainer = actionColors.onAction,
+                    secondary = actionColors.action,
+                    onSecondary = actionColors.onAction,
+                    secondaryContainer = actionColors.action,
+                    onSecondaryContainer = actionColors.onAction,
+                    surfaceTint = actionColors.action,
                 ),
         ) {
             CompositionLocalProvider(
@@ -351,3 +376,4 @@ private fun timeScapeSeedColor(seed: String): Color {
 
 private const val MAX_TIMESCAPE_ARTWORK_BASE64_CHARS = 2_800_000
 private const val MAX_TIMESCAPE_ARTWORK_DIMENSION_PX = 768
+private const val MINIMUM_ACTION_CONTRAST_RATIO = 4.5f
