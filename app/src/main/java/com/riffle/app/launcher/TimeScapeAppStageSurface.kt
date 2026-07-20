@@ -44,6 +44,7 @@ import com.riffle.app.launcher.notifications.NotificationStageAction
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.cards.AppStage
 import com.riffle.core.domain.launcher.cards.AppStageId
+import com.riffle.core.domain.launcher.cards.CardExpansionState
 import com.riffle.core.domain.launcher.cards.LauncherCardId
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.settings.TimeScapeViewportDp
@@ -232,16 +233,9 @@ private fun TimeScapeNotificationStack(
     val activeCard = focusedCard ?: return
     val availableCardIds = cards.map { card -> card.content.id }.toSet()
     val detailFocusRequester = remember { FocusRequester() }
-    var wasDetailVisible by remember { mutableStateOf(false) }
 
     LaunchedEffect(availableCardIds) { detailState.reconcile(availableCardIds) }
-
-    LaunchedEffect(detailState.expansionState.isVisible) {
-        if (wasDetailVisible && !detailState.expansionState.isVisible) {
-            detailFocusRequester.requestFocus()
-        }
-        wasDetailVisible = detailState.expansionState.isVisible
-    }
+    RestoreDetailOriginFocus(detailState.expansionState, availableCardIds, detailFocusRequester)
 
     BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
         val resolution =
@@ -365,15 +359,8 @@ private fun TimeScapeEmptyStage(
     val detailCardId = LauncherCardId("stage-empty:${stage.id.profileId.value}:${stage.id.packageName.value}")
     val availableCardIds = if (emptyCard == null) emptySet() else setOf(detailCardId)
     val detailFocusRequester = remember { FocusRequester() }
-    var wasDetailVisible by remember { mutableStateOf(false) }
     LaunchedEffect(availableCardIds) { detailState.reconcile(availableCardIds) }
-
-    LaunchedEffect(detailState.expansionState.isVisible) {
-        if (wasDetailVisible && !detailState.expansionState.isVisible) {
-            detailFocusRequester.requestFocus()
-        }
-        wasDetailVisible = detailState.expansionState.isVisible
-    }
+    RestoreDetailOriginFocus(detailState.expansionState, availableCardIds, detailFocusRequester)
     if (detailState.expansionState.isVisible && emptyCard != null) {
         TimeScapeEmptyAppDetailSurface(
             card = emptyCard,
@@ -410,6 +397,23 @@ private fun TimeScapeEmptyStage(
             }
         }
         TimeScapeDetailRecoveryMessage(detailState.sourceRemovalMessage)
+    }
+}
+
+@Composable
+private fun RestoreDetailOriginFocus(
+    expansionState: CardExpansionState,
+    availableCardIds: Set<LauncherCardId>,
+    focusRequester: FocusRequester,
+) {
+    var originCardId by remember { mutableStateOf<LauncherCardId?>(null) }
+    LaunchedEffect(expansionState, availableCardIds) {
+        if (expansionState.isVisible) {
+            originCardId = expansionState.cardId
+        } else {
+            originCardId?.takeIf { it in availableCardIds }?.let { focusRequester.requestFocus() }
+            originCardId = null
+        }
     }
 }
 

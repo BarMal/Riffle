@@ -202,6 +202,23 @@ class TimeScapeCardSurfaceTest {
     }
 
     @Test
+    fun removedExpandedEmptyAppRecoversWithoutFocusingDetachedDetailsControl() {
+        val app = timeScapeTestApp()
+        var state by mutableStateOf(emptyPinnedStageState(app))
+        composeRule.setContent {
+            MaterialTheme { TimeScapeAppStageSurface(state = state, onAction = {}) }
+        }
+
+        composeRule.onNodeWithText("Details").performClick()
+        composeRule.onNodeWithText("App details").assertIsDisplayed()
+        composeRule.runOnIdle { state = state.copy(installedApps = emptyList()) }
+
+        composeRule.onNodeWithText("The selected card is no longer available.").assertIsDisplayed()
+        composeRule.onAllNodesWithText("App details").assertCountEquals(0)
+        composeRule.onAllNodesWithText("Details").assertCountEquals(0)
+    }
+
+    @Test
     fun removedExpandedContentReturnsToTheStageWithAnExplanation() {
         val app = timeScapeTestApp()
         val notification = timeScapeTestNotification(app)
