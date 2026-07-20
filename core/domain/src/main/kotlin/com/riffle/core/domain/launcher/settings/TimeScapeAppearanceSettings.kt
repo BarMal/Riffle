@@ -91,7 +91,7 @@ data class TimeScapeAppearanceSettings(
         val stackBounds = resolveStackBounds(appearance.geometry, appearance.motion, focusedScale)
         val cardSize = appearance.resolveCardSize(viewport, stackBounds)
         val requestedPadding = appearance.geometry.contentPaddingDp
-        val isUsable = cardSize.isUsable
+        val isUsable = cardSize.isUsable && appearance.hasReachableStackLayout()
         val depth = if (isUsable) appearance.geometry.visibleDepth else 1
         val horizontalTravel =
             ((viewport.safeWidthDp - cardSize.widthDp * stackBounds.maxWidthScale) / 2f).coerceAtLeast(0f)
@@ -185,6 +185,10 @@ private fun TimeScapeAppearanceSettings.staticVerticalSeparationDp(): Int =
     } else {
         0
     }
+
+private fun TimeScapeAppearanceSettings.hasReachableStackLayout(): Boolean {
+    return !motion.reducedMotion || geometry.verticalSpacingDp > 0
+}
 
 private fun TimeScapeAppearanceSettings.resolveCardSize(
     viewport: TimeScapeViewportDp,

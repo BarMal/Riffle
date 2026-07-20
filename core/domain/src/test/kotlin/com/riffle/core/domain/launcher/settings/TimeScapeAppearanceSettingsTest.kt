@@ -245,6 +245,17 @@ class TimeScapeAppearanceSettingsTest {
     }
 
     @Test
+    fun reducedMotionZeroSpacingUsesTheReachableListFallback() {
+        val resolution =
+            TimeScapeAppearanceSettings(
+                geometry = TimeScapeGeometry(verticalSpacingDp = 0),
+                motion = TimeScapeMotion(reducedMotion = true),
+            ).resolveCardStack(TimeScapeViewportDp(widthDp = 1_200, heightDp = 800))
+
+        assertFalse(resolution.isUsable)
+    }
+
+    @Test
     fun globalReducedMotionUsesStaticTimeScapeTokensWithoutChangingStoredIntent() {
         val storedAppearance = TimeScapeAppearanceSettings()
         val resolution =
