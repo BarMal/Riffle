@@ -124,8 +124,9 @@ class TimeScapeCardSurfaceTest {
 
         val rendered = composeRule.onNodeWithTag("artwork-card").captureToImage()
         val pixels = rendered.toPixelMap()
-        val left = pixels[rendered.width / 4, rendered.height / 2]
-        val right = pixels[rendered.width * 3 / 4, rendered.height / 2]
+        // The 20dp content scrim protects the centre; sample the exposed artwork band instead.
+        val left = pixels[rendered.width / 10, rendered.height / 2]
+        val right = pixels[rendered.width * 9 / 10, rendered.height / 2]
 
         assertTrue(left.blue > left.red)
         assertTrue(right.red > right.blue)
