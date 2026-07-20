@@ -1,8 +1,11 @@
+@file:Suppress("TooManyFunctions")
+
 package com.riffle.app.launcher
 
 import android.graphics.BitmapFactory
 import android.os.Build
 import android.util.Base64
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -18,19 +21,25 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.settings.TimeScapeAccentSource
 import com.riffle.core.domain.launcher.settings.TimeScapeAppearanceSettings
 import com.riffle.core.domain.launcher.settings.TimeScapeBackgroundSource
+import com.riffle.core.domain.launcher.settings.TimeScapeContentDensity
 import com.riffle.core.domain.launcher.settings.TimeScapeRendererCapabilities
 import kotlin.math.max
 
@@ -77,10 +86,11 @@ internal fun resolveTimeScapeCardColors(
             TimeScapeBackgroundSource.SYSTEM_WALLPAPER_ACCENT -> background.wallpaperAccent ?: materialAccent
             TimeScapeBackgroundSource.CUSTOM_SOLID -> Color(surface.customBackgroundArgb.toInt())
         }
+    val adjustedBase = timeScapeAdjustedColor(base, surface.saturationPercent, surface.contrastPercent)
     val glass =
         Color(surface.glassTintArgb.toInt())
             .copy(alpha = 1f - surface.glassTransparencyPercent / 100f)
-            .compositeOver(base)
+            .compositeOver(adjustedBase)
     val foreground =
         if (effective.typography.automaticForegroundContrast) {
             timeScapeAccessibleForeground(glass)
@@ -89,17 +99,32 @@ internal fun resolveTimeScapeCardColors(
         }
     val accent =
         when (effective.typography.accentSource) {
-            TimeScapeAccentSource.APP_DERIVED -> base
+            TimeScapeAccentSource.APP_DERIVED -> adjustedBase
             TimeScapeAccentSource.SYSTEM_WALLPAPER -> background.wallpaperAccent ?: materialAccent
             TimeScapeAccentSource.CUSTOM -> Color(effective.typography.customAccentArgb.toInt())
         }
     return TimeScapeCardColors(
-        background = base,
+        background = adjustedBase,
         foreground = foreground,
         accent = accent,
         glass = glass,
-        outline = Color.White.copy(alpha = surface.highlightPercent / 250f),
+        outline = accent.copy(alpha = surface.highlightPercent / 100f),
     )
+}
+
+internal fun timeScapeAdjustedColor(
+    color: Color,
+    saturationPercent: Int,
+    contrastPercent: Int,
+): Color {
+    val saturation = saturationPercent / 100f
+    val contrast = contrastPercent / 100f
+    val luminance = color.red * 0.213f + color.green * 0.715f + color.blue * 0.072f
+
+    fun adjusted(component: Float): Float =
+        (((luminance + (component - luminance) * saturation) - 0.5f) * contrast + 0.5f)
+            .coerceIn(0f, 1f)
+    return Color(adjusted(color.red), adjusted(color.green), adjusted(color.blue), color.alpha)
 }
 
 private fun timeScapeArtworkColor(artwork: ImageBitmap): Color? =
@@ -125,6 +150,7 @@ internal fun contrastRatio(
 }
 
 @Composable
+@Suppress("LongMethod")
 internal fun TimeScapeCardSurface(
     appearance: TimeScapeAppearanceSettings,
     background: TimeScapeCardBackground,
@@ -141,6 +167,14 @@ internal fun TimeScapeCardSurface(
             materialAccent = MaterialTheme.colorScheme.primary,
         )
     val shape = RoundedCornerShape(effective.geometry.cornerRadiusDp.dp)
+    val density = LocalDensity.current
+    val contentDensityScale = timeScapeContentDensityScale(effective.typography.contentDensity)
+    val adjustedPadding = contentPadding * contentDensityScale
+    val adjustedDensity =
+        Density(
+            density = density.density,
+            fontScale = density.fontScale * effective.typography.textScalePercent / 100f,
+        )
     val artworkEnabled =
         background.artwork != null &&
             effective.surface.backgroundSource in
@@ -158,25 +192,105 @@ internal fun TimeScapeCardSurface(
                     Modifier.blur((effective.surface.blurStrengthPercent * 0.24f).dp)
                 },
             )
+    val artworkColorFilter =
+        ColorFilter.colorMatrix(
+            ColorMatrix().apply {
+                setToSaturation(effective.surface.saturationPercent / 100f)
+                val contrast = effective.surface.contrastPercent / 100f
+                val translation = (1f - contrast) * 127.5f
+                timesAssign(
+                    ColorMatrix(
+                        floatArrayOf(
+                            contrast, 0f, 0f, 0f, translation,
+                            0f, contrast, 0f, 0f, translation,
+                            0f, 0f, contrast, 0f, translation,
+                            0f, 0f, 0f, 1f, 0f,
+                        ),
+                    ),
+                )
+            },
+        )
 
     Box(
         modifier =
             modifier
-                .clip(shape)
-                .background(timeScapeBackgroundBrush(effective, colors.background))
-                .border(effective.surface.outlineWidthDp.dp, colors.outline, shape),
+                .shadow(effective.surface.shadowElevationDp.dp, shape, clip = false),
     ) {
-        if (artworkEnabled) {
-            Image(
-                bitmap = requireNotNull(background.artwork),
-                contentDescription = null,
-                modifier = artworkModifier,
-                contentScale = ContentScale.Crop,
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .clip(shape)
+                    .background(timeScapeBackgroundBrush(effective, colors.background))
+                    .border(effective.surface.outlineWidthDp.dp, colors.outline, shape),
+        ) {
+            if (artworkEnabled) {
+                Image(
+                    bitmap = requireNotNull(background.artwork),
+                    contentDescription = null,
+                    modifier = artworkModifier,
+                    contentScale = ContentScale.Crop,
+                    colorFilter = artworkColorFilter,
+                )
+            }
+            Box(modifier = Modifier.fillMaxSize().background(colors.glass))
+            TimeScapeTexture(
+                color = colors.accent,
+                intensityPercent = effective.surface.textureIntensityPercent,
             )
         }
-        Box(modifier = Modifier.fillMaxSize().background(colors.glass))
-        CompositionLocalProvider(LocalContentColor provides colors.foreground) {
-            Box(modifier = Modifier.fillMaxSize().padding(contentPadding), content = content)
+        val contentModifier =
+            Modifier
+                .fillMaxSize()
+                .then(if (effective.geometry.clipContent) Modifier.clip(shape) else Modifier)
+                .padding(adjustedPadding)
+        MaterialTheme(
+            colorScheme =
+                MaterialTheme.colorScheme.copy(
+                    primary = colors.accent,
+                    secondary = colors.accent,
+                    surfaceTint = colors.accent,
+                ),
+        ) {
+            CompositionLocalProvider(
+                LocalContentColor provides colors.foreground,
+                LocalDensity provides adjustedDensity,
+            ) {
+                Box(modifier = contentModifier, content = content)
+            }
+        }
+    }
+}
+
+internal fun timeScapeContentDensityScale(density: TimeScapeContentDensity): Float =
+    when (density) {
+        TimeScapeContentDensity.COMPACT -> 0.8f
+        TimeScapeContentDensity.COMFORTABLE -> 1f
+        TimeScapeContentDensity.EXPANDED -> 1.2f
+    }
+
+@Composable
+private fun TimeScapeTexture(
+    color: Color,
+    intensityPercent: Int,
+) {
+    if (intensityPercent == 0) return
+    Canvas(modifier = Modifier.fillMaxSize()) {
+        val alpha = intensityPercent / 500f
+        val spacing = 12.dp.toPx()
+        val radius = 0.7.dp.toPx()
+        var y = spacing / 2f
+        while (y < size.height) {
+            var x = spacing / 2f
+            while (x < size.width) {
+                drawCircle(
+                    color = color.copy(alpha = alpha),
+                    radius = radius,
+                    center = androidx.compose.ui.geometry.Offset(x, y),
+                )
+                x += spacing
+            }
+            y += spacing
         }
     }
 }
