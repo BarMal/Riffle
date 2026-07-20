@@ -1,15 +1,25 @@
 package com.riffle.app.launcher
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertHasClickAction
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.riffle.core.domain.launcher.HomeRoleStatus
 import com.riffle.core.domain.launcher.LauncherShellState
@@ -33,7 +43,7 @@ class PreviewFirstSetupTest {
         }
 
         composeRule
-            .onNodeWithText("Preview Riffle")
+            .onNodeWithText("Set up Riffle")
             .assert(SemanticsMatcher.expectValue(SemanticsProperties.Heading, Unit))
     }
 
@@ -74,6 +84,59 @@ class PreviewFirstSetupTest {
         composeRule.onNodeWithText("Set as Home app").performClick()
 
         assertEquals(listOf(LauncherShellAction.RequestDefaultHome), actions)
+    }
+
+    @Test
+    fun setupCardKeepsOptionalCapabilityAccessInFeatureContexts() {
+        val actions = mutableListOf<LauncherShellAction>()
+
+        composeRule.setContent {
+            LauncherShellContent(
+                state = previewState(),
+                onAction = { action -> actions.add(action) },
+            )
+        }
+
+        composeRule.onNodeWithText("Cards (optional)").assertDoesNotExist()
+        composeRule.onNodeWithText("You'll be asked when you turn on Cards.").assertDoesNotExist()
+        composeRule.onNodeWithText("Floating dock (optional)").assertDoesNotExist()
+        composeRule.onNodeWithText("You'll be asked when you turn on Floating dock.").assertDoesNotExist()
+        composeRule
+            .onNodeWithText("Optional features ask for access only when you turn them on.")
+            .assertExists()
+        assertTrue(actions.isEmpty())
+    }
+
+    @Test
+    fun setupCardExposesHomeStatusDescriptionForAssistiveTechnology() {
+        composeRule.setContent {
+            LauncherShellContent(
+                state = previewState(),
+                onAction = {},
+            )
+        }
+
+        composeRule
+            .onNodeWithContentDescription(
+                "Home app: Riffle is not your Home app yet.",
+            ).assertExists()
+    }
+
+    @Test
+    fun setupCardKeepsActionsReachableInCompactLargeFontLayout() {
+        composeRule.setContent {
+            CompositionLocalProvider(LocalDensity provides Density(density = 1f, fontScale = 1.8f)) {
+                Box(modifier = Modifier.size(width = 320.dp, height = 280.dp)) {
+                    LauncherShellContent(
+                        state = previewState(),
+                        onAction = {},
+                    )
+                }
+            }
+        }
+
+        composeRule.onNodeWithText("Set as Home app").performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText("Not now").performScrollTo().assertIsDisplayed()
     }
 
     @Test
