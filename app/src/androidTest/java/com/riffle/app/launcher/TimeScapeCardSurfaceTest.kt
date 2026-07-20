@@ -1,11 +1,23 @@
 package com.riffle.app.launcher
 
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.unit.dp
+import com.riffle.core.domain.launcher.apps.AppPackageName
+import com.riffle.core.domain.launcher.apps.AppProfile
+import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
+import com.riffle.core.domain.launcher.notifications.LauncherNotification
+import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
+import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
+import com.riffle.core.domain.launcher.notifications.NotificationAgeBucket
+import com.riffle.core.domain.launcher.notifications.NotificationCategory
 import com.riffle.core.domain.launcher.settings.TimeScapeAppearanceSettings
 import com.riffle.core.domain.launcher.settings.TimeScapeBackgroundSource
 import com.riffle.core.domain.launcher.settings.TimeScapeMotion
@@ -81,6 +93,43 @@ class TimeScapeCardSurfaceTest {
         assertNull(decodeTimeScapeArtwork("a".repeat(2_800_001)))
         assertEquals(2, timeScapeArtworkSampleSize(width = 1_024, height = 600))
         assertEquals(4, timeScapeArtworkSampleSize(width = 3_000, height = 900))
+    }
+
+    @Test
+    fun constrainedViewportUsesTheReachableNotificationListFallback() {
+        val profile = AppProfile.personal()
+        val group =
+            AppNotificationGroup(
+                packageName = AppPackageName("com.riffle.mail"),
+                profileId = profile.id,
+                latestCategory = NotificationCategory.EMAIL,
+                latestAgeBucket = NotificationAgeBucket.RECENT,
+                notifications =
+                    listOf(
+                        LauncherNotification(
+                            key = LauncherNotificationKey("mail-1"),
+                            packageName = AppPackageName("com.riffle.mail"),
+                            profileId = profile.id,
+                            title = "Mail",
+                            postedAtEpochMillis = 1L,
+                        ),
+                    ),
+            )
+
+        composeRule.setContent {
+            MaterialTheme {
+                GeneratedNotificationCardsPage(
+                    groups = listOf(group),
+                    notificationAccessStatus = NotificationAccessStatus.GRANTED,
+                    apps = emptyList(),
+                    onAction = {},
+                    reducedMotion = false,
+                    modifier = Modifier.requiredSize(80.dp),
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(GENERATED_NOTIFICATION_CARD_LIST_TEST_TAG).assertIsDisplayed()
     }
 
     @Test
