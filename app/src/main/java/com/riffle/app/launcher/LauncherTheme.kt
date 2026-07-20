@@ -1,3 +1,5 @@
+@file:Suppress("CyclomaticComplexMethod", "TooManyFunctions")
+
 package com.riffle.app.launcher
 
 import android.os.Build
@@ -15,10 +17,12 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.settings.LauncherThemeAccent
+import com.riffle.core.domain.launcher.settings.LauncherThemeColors
 import com.riffle.core.domain.launcher.settings.LauncherThemeCornerStyle
 import com.riffle.core.domain.launcher.settings.LauncherThemeMode
 import com.riffle.core.domain.launcher.settings.LauncherThemePreset
@@ -29,6 +33,7 @@ fun RiffleLauncherTheme(
     themeMode: LauncherThemeMode = LauncherThemeMode.SYSTEM,
     themePreset: LauncherThemePreset = LauncherThemePreset.MATERIAL,
     themeAccent: LauncherThemeAccent = LauncherThemeAccent.DEFAULT,
+    themeColors: LauncherThemeColors = LauncherThemeColors(),
     themeCornerStyle: LauncherThemeCornerStyle = LauncherThemeCornerStyle.PRESET,
     themeTypography: LauncherThemeTypography = LauncherThemeTypography.PRESET,
     content: @Composable () -> Unit,
@@ -50,11 +55,12 @@ fun RiffleLauncherTheme(
                 Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> dynamicLightColorScheme(context)
             else -> fallbackScheme(darkTheme = darkTheme, themePreset = themePreset)
         }
-    val colorScheme = baseColorScheme.withThemeAccent(themeAccent, darkTheme)
+    val colorScheme = baseColorScheme.withThemeAccent(themeAccent, darkTheme).withThemeColors(themeColors)
 
     CompositionLocalProvider(
         LocalLauncherCardShape provides launcherCardShape(themePreset, themeCornerStyle),
         LocalLauncherPanelShape provides launcherPanelShape(themePreset, themeCornerStyle),
+        LocalLauncherThemeColorOverrides provides themeColors.toColorOverrides(),
     ) {
         MaterialTheme(
             colorScheme = colorScheme,
@@ -66,6 +72,13 @@ fun RiffleLauncherTheme(
 
 internal val LocalLauncherCardShape = staticCompositionLocalOf<Shape> { RoundedCornerShape(24.dp) }
 internal val LocalLauncherPanelShape = staticCompositionLocalOf<Shape> { RoundedCornerShape(32.dp) }
+internal val LocalLauncherThemeColorOverrides = staticCompositionLocalOf { LauncherThemeColorOverrides() }
+
+internal data class LauncherThemeColorOverrides(
+    val dock: Color? = null,
+    val label: Color? = null,
+    val labelBackground: Color? = null,
+)
 
 internal fun launcherCardShape(
     themePreset: LauncherThemePreset,
@@ -181,6 +194,43 @@ internal fun ColorScheme.withThemeAccent(
             inversePrimary = roles.inversePrimary,
         )
     } ?: this
+
+internal fun ColorScheme.withThemeColors(colors: LauncherThemeColors): ColorScheme {
+    val background = colors.backgroundArgb?.let(::Color)
+    val accent = colors.accentArgb?.let(::Color)
+    return copy(
+        background = background ?: this.background,
+        onBackground = background?.contentColor(onBackground) ?: onBackground,
+        surface = background ?: surface,
+        onSurface = background?.contentColor(onSurface) ?: onSurface,
+        surfaceVariant = background ?: surfaceVariant,
+        onSurfaceVariant = background?.contentColor(onSurfaceVariant) ?: onSurfaceVariant,
+        primary = accent ?: primary,
+        onPrimary = accent?.contentColor(onPrimary) ?: onPrimary,
+        primaryContainer = accent ?: primaryContainer,
+        onPrimaryContainer = accent?.contentColor(onPrimaryContainer) ?: onPrimaryContainer,
+        secondary = accent ?: secondary,
+        tertiary = accent ?: tertiary,
+        surfaceTint = accent ?: surfaceTint,
+        inversePrimary = accent ?: inversePrimary,
+    )
+}
+
+private fun LauncherThemeColors.toColorOverrides(): LauncherThemeColorOverrides =
+    LauncherThemeColorOverrides(
+        dock = dockArgb?.let(::Color),
+        label = labelArgb?.let(::Color),
+        labelBackground = labelBackgroundArgb?.let(::Color),
+    )
+
+private fun Color.contentColor(fallback: Color): Color =
+    if (alpha < 0.5f) {
+        fallback
+    } else if (luminance() > 0.45f) {
+        Color.Black
+    } else {
+        Color.White
+    }
 
 private data class LauncherAccentColorRoles(
     val primary: Color,

@@ -75,10 +75,53 @@ data class AppearanceSettings(
     val themeAccent: LauncherThemeAccent = LauncherThemeAccent.DEFAULT,
     val themeCornerStyle: LauncherThemeCornerStyle = LauncherThemeCornerStyle.PRESET,
     val themeTypography: LauncherThemeTypography = LauncherThemeTypography.PRESET,
+    /** Optional ARGB overrides for the launcher surfaces that are visible on Home. */
+    val themeColors: LauncherThemeColors = LauncherThemeColors(),
     val fullscreenHome: Boolean = false,
     val hideStatusBarOnHome: Boolean = false,
     val hideNavigationBarOnHome: Boolean = false,
 )
+
+/**
+ * Renderer-independent custom colour intent. A null value leaves the corresponding theme role intact.
+ * Values use Android's packed ARGB representation so alpha survives backup and restore.
+ */
+data class LauncherThemeColors(
+    val backgroundArgb: Int? = null,
+    val accentArgb: Int? = null,
+    val dockArgb: Int? = null,
+    val labelArgb: Int? = null,
+    val labelBackgroundArgb: Int? = null,
+) {
+    fun colorFor(target: LauncherThemeColorTarget): Int? =
+        when (target) {
+            LauncherThemeColorTarget.BACKGROUND -> backgroundArgb
+            LauncherThemeColorTarget.ACCENT -> accentArgb
+            LauncherThemeColorTarget.DOCK -> dockArgb
+            LauncherThemeColorTarget.LABEL -> labelArgb
+            LauncherThemeColorTarget.LABEL_BACKGROUND -> labelBackgroundArgb
+        }
+
+    fun withColor(
+        target: LauncherThemeColorTarget,
+        argb: Int?,
+    ): LauncherThemeColors =
+        when (target) {
+            LauncherThemeColorTarget.BACKGROUND -> copy(backgroundArgb = argb)
+            LauncherThemeColorTarget.ACCENT -> copy(accentArgb = argb)
+            LauncherThemeColorTarget.DOCK -> copy(dockArgb = argb)
+            LauncherThemeColorTarget.LABEL -> copy(labelArgb = argb)
+            LauncherThemeColorTarget.LABEL_BACKGROUND -> copy(labelBackgroundArgb = argb)
+        }
+}
+
+enum class LauncherThemeColorTarget {
+    BACKGROUND,
+    ACCENT,
+    DOCK,
+    LABEL,
+    LABEL_BACKGROUND,
+}
 
 enum class LauncherThemeMode {
     SYSTEM,

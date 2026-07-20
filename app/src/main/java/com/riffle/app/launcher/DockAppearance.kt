@@ -25,14 +25,17 @@ internal fun dockAppearanceSpec(effect: DockVisualEffect): DockAppearance =
     }
 
 @Composable
+internal fun dockBaseSurfaceColor(dock: DockModel): Color =
+    when (dock.visualEffect) {
+        DockVisualEffect.ELEVATED -> MaterialTheme.colorScheme.surfaceContainerHigh
+        else -> MaterialTheme.colorScheme.surfaceVariant
+    }
+
+@Composable
 internal fun dockSurfaceColor(dock: DockModel): Color {
-    val baseColor =
-        if (dock.visualEffect == DockVisualEffect.ELEVATED) {
-            MaterialTheme.colorScheme.surfaceContainerHigh
-        } else {
-            MaterialTheme.colorScheme.surfaceVariant
-        }
-    return baseColor.copy(alpha = dock.backgroundAlphaPercent / 100f)
+    val baseColor = dockBaseSurfaceColor(dock)
+    val selectedColor = LocalLauncherThemeColorOverrides.current.dock ?: baseColor
+    return selectedColor.copy(alpha = selectedColor.alpha * dock.backgroundAlphaPercent / 100f)
 }
 
 @Composable

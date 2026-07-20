@@ -4,6 +4,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.settings.LauncherThemeAccent
+import com.riffle.core.domain.launcher.settings.LauncherThemeColors
 import com.riffle.core.domain.launcher.settings.LauncherThemeCornerStyle
 import com.riffle.core.domain.launcher.settings.LauncherThemePreset
 import com.riffle.core.domain.launcher.settings.LauncherThemeTypography
@@ -116,6 +117,25 @@ class LauncherThemeTest {
                 assertEquals(accentedLightScheme.secondary, accentedLightScheme.outlineVariant)
                 assertEquals(accentedDarkScheme.secondary, accentedDarkScheme.outlineVariant)
             }
+    }
+
+    @Test
+    fun customThemeColoursOverrideUserReachableBackgroundAndAccentRoles() {
+        val colors = LauncherThemeColors(backgroundArgb = 0xFF102030.toInt(), accentArgb = 0xFF405060.toInt())
+
+        val scheme = lightScheme.withThemeColors(colors)
+
+        assertEquals(androidx.compose.ui.graphics.Color(0xFF102030), scheme.background)
+        assertEquals(androidx.compose.ui.graphics.Color(0xFF102030), scheme.surface)
+        assertEquals(androidx.compose.ui.graphics.Color(0xFF405060), scheme.primary)
+        assertEquals(androidx.compose.ui.graphics.Color(0xFF405060), scheme.secondary)
+    }
+
+    @Test
+    fun parsesRgbAndArgbThemeHexValues() {
+        assertEquals(androidx.compose.ui.graphics.Color(0xFF102030), parseThemeColorHex("#102030"))
+        assertEquals(androidx.compose.ui.graphics.Color(0x80102030), parseThemeColorHex("#80102030"))
+        assertEquals(null, parseThemeColorHex("#12345"))
     }
 
     @Test

@@ -208,6 +208,11 @@ private fun SettingsAppearancePageContent(
         ThemeAccentSetting(selectedAccent = appearance.themeAccent, onAction = onAction)
         ThemeCornerStyleSetting(selectedStyle = appearance.themeCornerStyle, onAction = onAction)
         ThemeTypographySetting(selectedTypography = appearance.themeTypography, onAction = onAction)
+        ThemeColorsSetting(
+            colors = appearance.themeColors,
+            dock = state.homeLayout.dock,
+            onAction = onAction,
+        )
     }
     SettingsSection(title = "Wallpaper") {
         WallpaperSourceSetting(

@@ -22,6 +22,18 @@ class LauncherSettingsTest {
     }
 
     @Test
+    fun customThemeColoursKeepIndependentOverridesPerSurface() {
+        val colors =
+            LauncherThemeColors()
+                .withColor(LauncherThemeColorTarget.DOCK, 0x80445566.toInt())
+                .withColor(LauncherThemeColorTarget.LABEL, 0xFF112233.toInt())
+
+        assertEquals(0x80445566.toInt(), colors.dockArgb)
+        assertEquals(0xFF112233.toInt(), colors.labelArgb)
+        assertEquals(null, colors.backgroundArgb)
+    }
+
+    @Test
     fun defaultsThemeOverridesToPresetTokens() {
         assertEquals(LauncherThemeCornerStyle.PRESET, LauncherSettings().appearance.themeCornerStyle)
         assertEquals(LauncherThemeTypography.PRESET, LauncherSettings().appearance.themeTypography)
