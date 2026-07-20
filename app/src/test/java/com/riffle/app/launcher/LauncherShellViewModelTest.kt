@@ -74,7 +74,7 @@ class LauncherShellViewModelTest {
                 firstRunRepository = FakeFirstRunRepository(isComplete = true),
             )
 
-        assertEquals(FirstRunStatus.COMPLETE, viewModel.state.value.firstRunStatus)
+        assertEquals(FirstRunStatus.NEEDS_HOME_ROLE, viewModel.state.value.firstRunStatus)
         assertEquals(HomeRoleStatus.UNKNOWN, viewModel.state.value.homeRoleStatus)
         assertFalse(viewModel.state.value.shouldShowSetupCard)
         assertTrue(viewModel.state.value.shouldShowEmptyHome)

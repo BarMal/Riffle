@@ -168,6 +168,16 @@ class LauncherShellStateReducerTest {
     }
 
     @Test
+    fun failedHomeRoleRequestReturnsToRecoverableState() {
+        val state =
+            reducer.defaultHomeRequestLaunchFailed(
+                reducer.defaultHomeRequestStarted(LauncherShellState()),
+            )
+
+        assertEquals(FirstRunStatus.NEEDS_HOME_ROLE, state.firstRunStatus)
+    }
+
+    @Test
     fun unresolvedHomeRoleAfterRequestPreservesThePreviewDestination() {
         val settingsState =
             reducer.navigationActionSelected(
