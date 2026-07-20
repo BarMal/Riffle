@@ -197,9 +197,9 @@ class HomeDockMetricsTest {
     }
 
     @Test
-    fun normalDockRendersConfiguredCapacitySoDockSettingsAffectWidth() {
+    fun normalDockRendersOnlyOccupiedSlotsSoEmptySlotsDoNotShowPlaceholders() {
         assertEquals(
-            5,
+            4,
             dockRenderedSlotCount(
                 capacity = 5,
                 itemCount = 4,
@@ -209,9 +209,9 @@ class HomeDockMetricsTest {
     }
 
     @Test
-    fun normalDockRespectsConfiguredCapacityWhenItemsOverflow() {
+    fun normalDockRendersAllPersistedItemsWhenItemsOverflowCapacity() {
         assertEquals(
-            5,
+            6,
             dockRenderedSlotCount(
                 capacity = 5,
                 itemCount = 6,
@@ -269,9 +269,9 @@ class HomeDockMetricsTest {
     }
 
     @Test
-    fun fixedDockRendersConfiguredCapacityWhenNotEditing() {
+    fun fixedDockRendersOnlyOccupiedSlotsWhenNotEditing() {
         assertEquals(
-            5,
+            2,
             dockRenderedSlotCount(
                 capacity = 5,
                 itemCount = 2,
@@ -565,11 +565,11 @@ class HomeDockMetricsTest {
         val dock = DockModel(capacity = 5, items = items)
 
         assertEquals(items, dock.primaryDock(showShelf = false).items)
-        assertEquals(5, dockRenderedSlotCount(capacity = dock.capacity, itemCount = dock.items.size, isEditing = false))
+        assertEquals(7, dockRenderedSlotCount(capacity = dock.capacity, itemCount = dock.items.size, isEditing = false))
     }
 
     @Test
-    fun expandedDockRowsShareSurfaceMetricsForGridAlignment() {
+    fun expandedDockRowsKeepTheirOwnOccupiedSlotCounts() {
         val items = (1..7).map { index -> widget("widget:$index", index) }
         val dock = DockModel(capacity = 5, items = items)
         val primaryDock = dock.primaryDock(showShelf = true)
@@ -587,7 +587,8 @@ class HomeDockMetricsTest {
                 isEditing = false,
             )
 
-        assertEquals(primaryRenderedSlotCount, overflowRenderedSlotCount)
+        assertEquals(5, primaryRenderedSlotCount)
+        assertEquals(2, overflowRenderedSlotCount)
 
         val primaryWidth =
             dockContainerWidthDp(
@@ -620,22 +621,10 @@ class HomeDockMetricsTest {
                 availableDockWidthDp = overflowWidth,
             )
 
-        assertEquals(primaryWidth, overflowWidth)
-        assertEquals(primaryViewportWidth, overflowViewportWidth)
-        assertEquals(
-            dockSlotRenderMetrics(
-                slotCount = primaryRenderedSlotCount,
-                iconSizeDp = primaryDock.iconSizeDp,
-                itemSpacingDp = primaryDock.itemSpacingDp,
-                availableContentWidthDp = primaryViewportWidth,
-            ),
-            dockSlotRenderMetrics(
-                slotCount = overflowRenderedSlotCount,
-                iconSizeDp = overflowDock.iconSizeDp,
-                itemSpacingDp = overflowDock.itemSpacingDp,
-                availableContentWidthDp = overflowViewportWidth,
-            ),
-        )
+        assertEquals(308, primaryWidth)
+        assertEquals(134, overflowWidth)
+        assertEquals(280, primaryViewportWidth)
+        assertEquals(106, overflowViewportWidth)
     }
 
     @Test

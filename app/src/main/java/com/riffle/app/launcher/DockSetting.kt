@@ -16,10 +16,8 @@ import com.riffle.core.domain.launcher.home.DockModel
 import com.riffle.core.domain.launcher.home.DockVisualEffect
 import com.riffle.core.domain.launcher.home.MAX_DOCK_BACKGROUND_ALPHA_PERCENT
 import com.riffle.core.domain.launcher.home.MAX_DOCK_ICON_SIZE_DP
-import com.riffle.core.domain.launcher.home.MAX_DOCK_ITEM_SPACING_DP
 import com.riffle.core.domain.launcher.home.MIN_DOCK_BACKGROUND_ALPHA_PERCENT
 import com.riffle.core.domain.launcher.home.MIN_DOCK_ICON_SIZE_DP
-import com.riffle.core.domain.launcher.home.MIN_DOCK_ITEM_SPACING_DP
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 
 @Composable
@@ -38,10 +36,6 @@ internal fun DockSetting(
             notificationAccessStatus = notificationAccessStatus,
             onAction = onAction,
         )
-        DockCapacitySetting(
-            capacity = dock.capacity,
-            onAction = onAction,
-        )
         DockIconSizeSetting(
             sizeDp = dock.iconSizeDp,
             onAction = onAction,
@@ -56,10 +50,6 @@ internal fun DockSetting(
         )
         DockBackgroundSizingSetting(
             sizing = dock.backgroundSizing,
-            onAction = onAction,
-        )
-        DockItemSpacingSetting(
-            spacingDp = dock.itemSpacingDp,
             onAction = onAction,
         )
     }
@@ -94,7 +84,7 @@ private fun DockIconSizeSetting(
     sizeDp: Int,
     onAction: (LauncherShellAction) -> Unit,
 ) = DiscreteSettingSlider(
-    title = "Dock icon size",
+    title = "Dock height",
     value = sizeDp,
     valueRange = MIN_DOCK_ICON_SIZE_DP..MAX_DOCK_ICON_SIZE_DP,
     valueLabel = { "$it dp" },
@@ -125,11 +115,11 @@ private fun DockBackgroundSizingSetting(
     ) {
         SettingsTextColumn(
             modifier = Modifier.weight(1f),
-            title = "Dock background size",
+            title = "Dock width",
             subtitle =
                 when (sizing) {
-                    DockBackgroundSizing.DYNAMIC -> "Dynamic"
-                    DockBackgroundSizing.FIXED -> "Fixed"
+                    DockBackgroundSizing.DYNAMIC -> "Fits dock items"
+                    DockBackgroundSizing.FIXED -> "Uses available width"
                 },
         )
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -137,29 +127,17 @@ private fun DockBackgroundSizingSetting(
                 enabled = sizing != DockBackgroundSizing.DYNAMIC,
                 onClick = { onAction(LauncherShellAction.SelectDockBackgroundSizing(DockBackgroundSizing.DYNAMIC)) },
             ) {
-                SettingsButtonText(text = "Dynamic")
+                SettingsButtonText(text = "Fit content")
             }
             TextButton(
                 enabled = sizing != DockBackgroundSizing.FIXED,
                 onClick = { onAction(LauncherShellAction.SelectDockBackgroundSizing(DockBackgroundSizing.FIXED)) },
             ) {
-                SettingsButtonText(text = "Fixed")
+                SettingsButtonText(text = "Full width")
             }
         }
     }
 }
-
-@Composable
-private fun DockItemSpacingSetting(
-    spacingDp: Int,
-    onAction: (LauncherShellAction) -> Unit,
-) = DiscreteSettingSlider(
-    title = "Dock item spacing",
-    value = spacingDp,
-    valueRange = MIN_DOCK_ITEM_SPACING_DP..MAX_DOCK_ITEM_SPACING_DP,
-    valueLabel = { "$it dp" },
-    onValueChange = { value -> onAction(LauncherShellAction.SelectDockItemSpacing(value)) },
-)
 
 @Composable
 private fun DockVisibilitySetting(
@@ -172,35 +150,6 @@ private fun DockVisibilitySetting(
         checked = enabled,
         onCheckedChange = { value -> onAction(LauncherShellAction.SelectDockEnabled(value)) },
     )
-}
-
-@Composable
-private fun DockCapacitySetting(
-    capacity: Int,
-    onAction: (LauncherShellAction) -> Unit,
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        SettingsTextColumn(
-            modifier = Modifier.weight(1f),
-            title = "Dock slots",
-            subtitle = capacity.toString(),
-        )
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            TextButton(
-                enabled = capacity > 0,
-                onClick = { onAction(LauncherShellAction.SelectDockCapacity(capacity - 1)) },
-            ) {
-                SettingsButtonText(text = "-")
-            }
-            TextButton(onClick = { onAction(LauncherShellAction.SelectDockCapacity(capacity + 1)) }) {
-                SettingsButtonText(text = "+")
-            }
-        }
-    }
 }
 
 @Composable
