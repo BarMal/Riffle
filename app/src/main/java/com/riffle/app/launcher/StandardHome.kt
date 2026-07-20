@@ -154,8 +154,8 @@ private fun StandardHomeColumn(
             gridState =
                 HomeGridState(
                     isEditing = state.visibleLayout.editMode is HomeEditMode.EditingPage,
-                    pageCount = state.visibleLayout.pages.size, selectedPageIndex = state.visibleLayout.selectedPageIndex,
-                    dragSession = state.dragSession,
+                    pageCount = state.visibleLayout.pages.size,
+                    selectedPageIndex = state.visibleLayout.selectedPageIndex, dragSession = state.dragSession,
                 ),
             presentation = state.homeGridPresentation(actions),
             appIconLoader = appIconLoader,

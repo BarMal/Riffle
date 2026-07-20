@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.home.GridInsets
 import com.riffle.core.domain.launcher.home.HomeEditMode
@@ -48,6 +49,7 @@ internal fun StandardHomeDockArea(
     Column(
         modifier =
             Modifier
+                .testTag(HOME_DOCK_TEST_TAG)
                 .dockShelfMotion(dockShelfMotionPolicy(presentation.reducedMotion))
                 .dockShelfFrameRatePreference(presentation.motionPerformanceTargetFps),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -95,3 +97,4 @@ private fun HomeLayout.shouldShowDock(): Boolean =
         )
 
 private const val HOME_DOCK_TOP_SPACING_DP = 10
+internal const val HOME_DOCK_TEST_TAG = "home-dock"
