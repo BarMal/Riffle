@@ -41,7 +41,9 @@ import com.riffle.core.domain.launcher.home.WidgetEngine
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettingsRepository
+import com.riffle.core.domain.launcher.settings.stagePreferencesFor
 import com.riffle.core.domain.launcher.settings.withMigratedStagePreferences
+import com.riffle.core.domain.launcher.settings.withStagePreferences
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -294,6 +296,10 @@ class LauncherShellViewModel(
             mutableState.value = mutableState.value.withCardsChapterAction(action, launcherSettingsRepository)
             return
         }
+        if (action.isAppStageAction()) {
+            mutableState.value = mutableState.value.withAppStageAction(action, launcherSettingsRepository)
+            return
+        }
 
         val previousState = mutableState.value
         val removedHostedWidgetIds =
@@ -367,6 +373,17 @@ private fun LauncherShellAction.isCardsChapterAction(): Boolean =
         else -> false
     }
 
+private fun LauncherShellAction.isAppStageAction(): Boolean =
+    when (this) {
+        is LauncherShellAction.SelectAppStage,
+        is LauncherShellAction.ToggleAppStagePinned,
+        LauncherShellAction.SelectPreviousAppStage,
+        LauncherShellAction.SelectNextAppStage,
+        -> true
+
+        else -> false
+    }
+
 private fun LauncherShellState.withCardsChapterAction(
     action: LauncherShellAction,
     launcherSettingsRepository: LauncherSettingsRepository,
@@ -392,6 +409,51 @@ private fun LauncherShellState.withCardsChapterAction(
                 ),
         )
             .withReconciledCardsChapterSelection()
+    launcherSettingsRepository.saveLauncherSettings(updatedState.launcherSettings)
+    return updatedState
+}
+
+private fun LauncherShellState.withAppStageAction(
+    action: LauncherShellAction,
+    launcherSettingsRepository: LauncherSettingsRepository,
+): LauncherShellState {
+    val layoutKey = homeLayoutSet.activeKey
+    val snapshot = appStageSnapshot()
+    val preferences = launcherSettings.cards.stagePreferencesFor(layoutKey)
+    val updatedPreferences =
+        when (action) {
+            is LauncherShellAction.SelectAppStage ->
+                action.stageId.takeIf { it in snapshot.stages.map { stage -> stage.id } }
+                    ?.let(preferences::select)
+                    ?: preferences
+
+            is LauncherShellAction.ToggleAppStagePinned ->
+                if (action.stageId in preferences.pinnedStageIds) {
+                    preferences.unpin(action.stageId)
+                } else {
+                    preferences.pin(action.stageId)
+                }
+
+            LauncherShellAction.SelectPreviousAppStage,
+            LauncherShellAction.SelectNextAppStage,
+            -> {
+                val selectedIndex =
+                    snapshot.stages.indexOfFirst { stage -> stage.id == snapshot.preferences.selectedStageId }
+                val offset = if (action == LauncherShellAction.SelectPreviousAppStage) -1 else 1
+                snapshot.stages.getOrNull(selectedIndex + offset)?.let { stage -> preferences.select(stage.id) }
+                    ?: preferences
+            }
+
+            else -> preferences
+        }
+    if (updatedPreferences == preferences) return this
+    val updatedState =
+        copy(
+            launcherSettings =
+                launcherSettings.copy(
+                    cards = launcherSettings.cards.withStagePreferences(layoutKey, updatedPreferences),
+                ),
+        )
     launcherSettingsRepository.saveLauncherSettings(updatedState.launcherSettings)
     return updatedState
 }

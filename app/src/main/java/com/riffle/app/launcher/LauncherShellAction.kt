@@ -7,6 +7,7 @@ import com.riffle.core.domain.launcher.apps.AppProfileType
 import com.riffle.core.domain.launcher.apps.AppSearchContentFilter
 import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.apps.InstalledApp
+import com.riffle.core.domain.launcher.cards.AppStageId
 import com.riffle.core.domain.launcher.cards.CardsChapterId
 import com.riffle.core.domain.launcher.home.DockBackgroundSizing
 import com.riffle.core.domain.launcher.home.DockItemMoveDirection
@@ -94,6 +95,16 @@ sealed interface LauncherShellAction {
     data class SelectCardsChapter(val chapterId: CardsChapterId) : LauncherShellAction
 
     data class ToggleCardsChapterPinned(val chapterId: CardsChapterId.App) : LauncherShellAction
+
+    /** Selects the visible TimeScape app stage without launching its app. */
+    data class SelectAppStage(val stageId: AppStageId) : LauncherShellAction
+
+    /** Keeps a stage available when it has no live notification content. */
+    data class ToggleAppStagePinned(val stageId: AppStageId) : LauncherShellAction
+
+    data object SelectPreviousAppStage : LauncherShellAction
+
+    data object SelectNextAppStage : LauncherShellAction
 
     data object SelectPreviousHomePage : LauncherShellAction
 

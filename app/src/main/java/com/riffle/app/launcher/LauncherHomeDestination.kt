@@ -13,18 +13,8 @@ fun HomeDestination(
 ) {
     when (state.homeLayout.viewMode.homeSurfaceKind()) {
         HomeSurfaceKind.CARDS ->
-            NotificationOverviewSurface(
-                title = "Cards",
-                groups = state.notificationGroupsByApp,
-                categoryCounts = state.notificationCountsByCategory,
-                notificationAccessStatus = state.notificationAccessStatus,
-                presentation =
-                    NotificationOverviewPresentation(
-                        apps = state.installedApps,
-                        appIconLoader = appIconLoader,
-                        reducedMotion = state.launcherSettings.motion.reducedMotion,
-                        deviceClass = state.homeLayoutSet.activeKey.deviceClass,
-                    ),
+            TimeScapeAppStageSurface(
+                state = state,
                 windowInsets =
                     cardsPanelInsetPolicy(state).safeDrawingPanelInsets(),
                 onAction = onAction,

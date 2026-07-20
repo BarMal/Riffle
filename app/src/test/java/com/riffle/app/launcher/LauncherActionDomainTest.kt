@@ -10,6 +10,7 @@ import com.riffle.core.domain.launcher.apps.AppSearchContentFilter
 import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.apps.AppShortcutId
 import com.riffle.core.domain.launcher.apps.InstalledApp
+import com.riffle.core.domain.launcher.cards.AppStageId
 import com.riffle.core.domain.launcher.cards.CardsChapterId
 import com.riffle.core.domain.launcher.home.DockBackgroundSizing
 import com.riffle.core.domain.launcher.home.DockItemMoveDirection
@@ -173,6 +174,20 @@ class LauncherActionDomainTest {
                         CardsChapterId.App(AppPackageName("com.example.app"), appIdentity.profile.id),
                     ),
                 ),
+                activity(
+                    "SelectAppStage",
+                    LauncherShellAction.SelectAppStage(
+                        AppStageId(AppPackageName("com.example.app"), appIdentity.profile.id),
+                    ),
+                ),
+                activity(
+                    "ToggleAppStagePinned",
+                    LauncherShellAction.ToggleAppStagePinned(
+                        AppStageId(AppPackageName("com.example.app"), appIdentity.profile.id),
+                    ),
+                ),
+                activity("SelectPreviousAppStage", LauncherShellAction.SelectPreviousAppStage),
+                activity("SelectNextAppStage", LauncherShellAction.SelectNextAppStage),
                 activity("SelectPreviousHomePage", LauncherShellAction.SelectPreviousHomePage),
                 activity("SelectNextHomePage", LauncherShellAction.SelectNextHomePage),
                 activity("MoveSelectedHomePageLeft", LauncherShellAction.MoveSelectedHomePageLeft),

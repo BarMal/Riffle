@@ -17,8 +17,13 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.unit.dp
+import com.riffle.core.domain.launcher.LauncherShellState
+import com.riffle.core.domain.launcher.apps.AppActivityName
+import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppProfile
+import com.riffle.core.domain.launcher.apps.AppProfileContentVisibility
+import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
 import com.riffle.core.domain.launcher.notifications.LauncherNotification
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
@@ -45,6 +50,72 @@ import org.junit.Test
 class TimeScapeCardSurfaceTest {
     @get:Rule
     val composeRule = createComposeRule()
+
+    @Test
+    fun appStageSurfaceExplainsMissingNotificationAccess() {
+        composeRule.setContent {
+            MaterialTheme {
+                TimeScapeAppStageSurface(
+                    state = LauncherShellState(notificationAccessStatus = NotificationAccessStatus.NOT_GRANTED),
+                    onAction = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("Allow notification access to show your app stages.").assertIsDisplayed()
+        composeRule.onNodeWithText("Allow access").assertIsDisplayed()
+    }
+
+    @Test
+    fun appStageSurfaceRendersTheFocusedAppStage() {
+        val app =
+            InstalledApp(
+                identity =
+                    AppIdentity(
+                        packageName = AppPackageName("com.example.mail"),
+                        activityName = AppActivityName(".Main"),
+                        profile = AppProfile.personal(),
+                    ),
+                label = "Mail",
+            )
+        val notification =
+            LauncherNotification(
+                key = LauncherNotificationKey("mail"),
+                packageName = app.identity.packageName,
+                profileId = app.identity.profile.id,
+                title = "New message",
+                text = "Hello from TimeScape",
+                postedAtEpochMillis = 10,
+            )
+        composeRule.setContent {
+            MaterialTheme {
+                TimeScapeAppStageSurface(
+                    state =
+                        LauncherShellState(
+                            notificationAccessStatus = NotificationAccessStatus.GRANTED,
+                            installedApps = listOf(app),
+                            profileContentVisibility =
+                                mapOf(app.identity.profile.id to AppProfileContentVisibility.VISIBLE),
+                            notificationGroupsByApp =
+                                listOf(
+                                    AppNotificationGroup(
+                                        packageName = app.identity.packageName,
+                                        profileId = app.identity.profile.id,
+                                        latestCategory = NotificationCategory.MESSAGE,
+                                        latestAgeBucket = NotificationAgeBucket.RECENT,
+                                        notifications = listOf(notification),
+                                    ),
+                                ),
+                        ),
+                    onAction = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("Mail").assertIsDisplayed()
+        composeRule.onNodeWithText("New message").assertIsDisplayed()
+        composeRule.onNodeWithText("Hello from TimeScape").assertIsDisplayed()
+    }
 
     @Test
     fun everyBackgroundSourceRendersCardContentWithAFallback() {
