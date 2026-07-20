@@ -207,7 +207,8 @@ internal fun GeneratedNotificationCardsPage(
                                         cardWidth = resolution.cardWidthDp.dp,
                                         cardHeight = resolution.cardHeightDp.dp,
                                         contentPadding = generatedNotificationCardContentPadding(resolution),
-                                        modifier = pointerModifier,
+                                        modifier = Modifier.fillMaxSize(),
+                                        cardPointerModifier = pointerModifier,
                                     )
                                 }
                             } else {
@@ -356,6 +357,7 @@ private fun GeneratedNotificationCard(
     cardHeight: androidx.compose.ui.unit.Dp,
     contentPadding: androidx.compose.ui.unit.Dp,
     modifier: Modifier = Modifier,
+    cardPointerModifier: Modifier = Modifier,
 ) {
     val label = dockNotificationCardLabel(card)
     val identity = card.app?.identity
@@ -378,6 +380,7 @@ private fun GeneratedNotificationCard(
                 Modifier
                     .requiredWidth(cardWidth)
                     .requiredHeight(cardHeight)
+                    .then(cardPointerModifier)
                     .then(
                         Modifier
                             .semantics {
