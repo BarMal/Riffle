@@ -7,6 +7,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -26,6 +27,9 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.unit.dp
+import com.riffle.app.launcher.notifications.AppStageNotificationCard
+import com.riffle.app.launcher.notifications.MediaCommand
+import com.riffle.app.launcher.notifications.NotificationStageAction
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.apps.AppActivityName
 import com.riffle.core.domain.launcher.apps.AppIdentity
@@ -34,10 +38,14 @@ import com.riffle.core.domain.launcher.apps.AppProfile
 import com.riffle.core.domain.launcher.apps.AppProfileContentVisibility
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.cards.AppStage
+import com.riffle.core.domain.launcher.cards.AppStageContent
+import com.riffle.core.domain.launcher.cards.AppStageContentKind
 import com.riffle.core.domain.launcher.cards.AppStageId
 import com.riffle.core.domain.launcher.cards.AppStageLifecycle
 import com.riffle.core.domain.launcher.cards.AppStageOrigin
 import com.riffle.core.domain.launcher.cards.AppStagePreferences
+import com.riffle.core.domain.launcher.cards.CardExpansionState
+import com.riffle.core.domain.launcher.cards.LauncherCardId
 import com.riffle.core.domain.launcher.home.HomeLayoutKey
 import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
@@ -157,6 +165,74 @@ class TimeScapeCardSurfaceTest {
     }
 
     @Test
+    fun detailActionsRouteEverySupportedActionToTheFocusedNotificationKey() {
+        val app = timeScapeTestApp()
+        val key = LauncherNotificationKey("focused-notification")
+        val card =
+            AppStageNotificationCard(
+                content =
+                    AppStageContent(
+                        id = LauncherCardId("focused-card"),
+                        stageId = AppStageId(app.identity.packageName, app.identity.profile.id),
+                        kind = AppStageContentKind.NOTIFICATION,
+                        meaningfulActivityAtEpochMillis = 10,
+                    ),
+                notificationKey = key,
+                title = "Focused notification",
+                text = "Actions route to this notification",
+                isRedacted = false,
+                supportedActions =
+                    setOf(
+                        NotificationStageAction.Open,
+                        NotificationStageAction.ProviderAction("reply"),
+                        NotificationStageAction.MediaControl(MediaCommand.PLAY),
+                        NotificationStageAction.Dismiss,
+                    ),
+            )
+        val actions = mutableListOf<LauncherShellAction>()
+
+        composeRule.setContent {
+            var expansion by remember { mutableStateOf(CardExpansionState().expand(card.content.id, true)) }
+            val detailState =
+                remember {
+                    TimeScapeCardDetailState(
+                        currentExpansion = { expansion },
+                        updateExpansion = { expansion = it },
+                        currentRecoveryMessage = { null },
+                        updateRecoveryMessage = { _ -> },
+                        reducedMotion = true,
+                    )
+                }
+            MaterialTheme {
+                TimeScapeCardDetailSurface(card = card, detailState = detailState, onAction = actions::add)
+            }
+        }
+
+        composeRule.onNodeWithText("Action").performClick()
+        composeRule.onNodeWithText("Dismiss").performClick()
+        composeRule.onNodeWithText("Open").performClick()
+        composeRule.onNodeWithText("Play").performClick()
+
+        composeRule.runOnIdle {
+            assertEquals(
+                listOf(
+                    LauncherShellAction.PerformNotificationStageAction(
+                        key,
+                        NotificationStageAction.ProviderAction("reply"),
+                    ),
+                    LauncherShellAction.PerformNotificationStageAction(key, NotificationStageAction.Dismiss),
+                    LauncherShellAction.PerformNotificationStageAction(key, NotificationStageAction.Open),
+                    LauncherShellAction.PerformNotificationStageAction(
+                        key,
+                        NotificationStageAction.MediaControl(MediaCommand.PLAY),
+                    ),
+                ),
+                actions,
+            )
+        }
+    }
+
+    @Test
     fun initialNotificationStageDoesNotMoveFocusToDetails() {
         val app = timeScapeTestApp()
         composeRule.setContent {
@@ -231,6 +307,26 @@ class TimeScapeCardSurfaceTest {
         composeRule.onNodeWithText("Notification details").assertIsDisplayed()
         composeRule.runOnIdle { state = state.copy(notificationGroupsByApp = emptyList()) }
 
+        composeRule.onNodeWithText("The selected card is no longer available.").assertIsDisplayed()
+        composeRule.onAllNodesWithText("Notification details").assertCountEquals(0)
+    }
+
+    @Test
+    fun revokingNotificationAccessWhileDetailIsOpenClosesItWithAnExplanation() {
+        val app = timeScapeTestApp()
+        val notification = timeScapeTestNotification(app)
+        var state by mutableStateOf(timeScapeTestState(app, notification))
+        composeRule.setContent {
+            MaterialTheme { TimeScapeAppStageSurface(state = state, onAction = {}) }
+        }
+
+        composeRule.onNodeWithText("Details").performClick()
+        composeRule.onNodeWithText("Notification details").assertIsDisplayed()
+        composeRule.runOnIdle { state = state.copy(notificationAccessStatus = NotificationAccessStatus.REVOKED) }
+
+        composeRule
+            .onNodeWithText("Notification access was revoked. Restore access to update stages.")
+            .assertIsDisplayed()
         composeRule.onNodeWithText("The selected card is no longer available.").assertIsDisplayed()
         composeRule.onAllNodesWithText("Notification details").assertCountEquals(0)
     }
