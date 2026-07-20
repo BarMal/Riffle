@@ -21,7 +21,6 @@ import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.notifications.NotificationAgeBucket
 import com.riffle.core.domain.launcher.notifications.NotificationCategory
-import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -90,14 +89,6 @@ class GeneratedPageSurfaceInteractionTest {
         composeRule
             .onNodeWithTag(GENERATED_NOTIFICATION_CARD_STACK_TEST_TAG)
             .assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "Card 2 of 2"))
-        val stackBounds = composeRule.onNodeWithTag(GENERATED_NOTIFICATION_CARD_STACK_TEST_TAG).fetchSemanticsNode().boundsInRoot
-        val focusedCardBounds =
-            composeRule
-                .onNodeWithContentDescription(generatedNotificationCardContentDescription(secondCard))
-                .fetchSemanticsNode()
-                .boundsInRoot
-        assertEquals(stackBounds.center.x, focusedCardBounds.center.x, 1f)
-        assertEquals(stackBounds.center.y, focusedCardBounds.center.y, 1f)
         composeRule.runOnIdle { assertTrue(actions.isEmpty()) }
     }
 

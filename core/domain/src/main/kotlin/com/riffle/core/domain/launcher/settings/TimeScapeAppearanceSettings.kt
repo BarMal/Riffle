@@ -96,7 +96,7 @@ data class TimeScapeAppearanceSettings(
         val horizontalTravel =
             ((viewport.safeWidthDp - cardSize.widthDp * stackBounds.maxWidthScale) / 2f).coerceAtLeast(0f)
         val verticalTravel =
-            ((viewport.safeHeightDp - cardSize.heightDp * stackBounds.maxHeightScale) / 2f).coerceAtLeast(0f)
+            ((viewport.safeHeightDp - cardSize.widthDp * stackBounds.maxHeightScale) / 2f).coerceAtLeast(0f)
         val motionScale = appearance.motion.travelIntensityPercent / 100f
         val offsetDirection =
             when (appearance.geometry.fanDirection) {
@@ -115,9 +115,12 @@ data class TimeScapeAppearanceSettings(
                 appearance.geometry.horizontalOffsetDp * motionScale,
                 (horizontalTravel - focusedGap).coerceAtLeast(0f) / depth,
             )
+        // Reduced motion removes animated travel, but cards still need a static
+        // separation so every visible card remains reachable by touch.
+        val verticalLayoutScale = if (appearance.motion.reducedMotion) 1f else motionScale
         val verticalStep =
             min(
-                appearance.geometry.verticalSpacingDp * motionScale,
+                appearance.geometry.verticalSpacingDp * verticalLayoutScale,
                 verticalTravel / depth,
             )
         val remainingVerticalTravel = (verticalTravel - verticalStep * depth).coerceAtLeast(0f)

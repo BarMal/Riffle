@@ -225,6 +225,7 @@ class TimeScapeAppearanceSettingsTest {
         assertFalse(resolution.animation.animatesRotation)
         assertEquals(0f, entries.maxOf { kotlin.math.abs(it.offset) })
         assertEquals(0f, entries.maxOf { kotlin.math.abs(it.rotationDegrees) })
+        assertTrue(entries.any { it.verticalOffset != 0f })
     }
 
     @Test
@@ -249,5 +250,6 @@ class TimeScapeAppearanceSettingsTest {
         assertFalse(resolution.animation.animatesRotation)
         assertEquals(0f, entries.maxOf { kotlin.math.abs(it.offset) })
         assertEquals(0f, entries.maxOf { kotlin.math.abs(it.rotationDegrees) })
+        assertTrue(entries.any { it.verticalOffset != 0f })
     }
 }
