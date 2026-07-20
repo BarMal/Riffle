@@ -201,6 +201,8 @@ class PreviewFirstSetupTest {
         composeRule.runOnIdle {
             state = state.copy(firstRunStatus = FirstRunStatus.NEEDS_HOME_ROLE)
         }
+        composeRule.mainClock.advanceTimeBy(16L)
+        composeRule.waitForIdle()
 
         composeRule.onNodeWithText("Set as Home app").assertIsFocused()
     }
