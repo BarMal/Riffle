@@ -20,8 +20,10 @@ import com.riffle.core.domain.launcher.notifications.NotificationAgeBucket
 import com.riffle.core.domain.launcher.notifications.NotificationCategory
 import com.riffle.core.domain.launcher.settings.TimeScapeAppearanceSettings
 import com.riffle.core.domain.launcher.settings.TimeScapeBackgroundSource
+import com.riffle.core.domain.launcher.settings.TimeScapeGeometry
 import com.riffle.core.domain.launcher.settings.TimeScapeMotion
 import com.riffle.core.domain.launcher.settings.TimeScapeSurface
+import com.riffle.core.domain.launcher.settings.TimeScapeViewportDp
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -130,6 +132,24 @@ class TimeScapeCardSurfaceTest {
         }
 
         composeRule.onNodeWithTag(GENERATED_NOTIFICATION_CARD_LIST_TEST_TAG).assertIsDisplayed()
+    }
+
+    @Test
+    fun stackedCardsUseTheResolutionCappedContentPadding() {
+        val resolution =
+            TimeScapeAppearanceSettings(
+                geometry = TimeScapeGeometry(contentPaddingDp = 64),
+            ).resolveCardStack(
+                viewport = TimeScapeViewportDp(widthDp = 288, heightDp = 420),
+            )
+
+        assertTrue(resolution.isUsable)
+        assertEquals(
+            resolution.contentPaddingDp.dp,
+            generatedNotificationCardContentPadding(resolution),
+        )
+        assertTrue(resolution.contentPaddingDp <= resolution.cardWidthDp / 4)
+        assertTrue(resolution.contentPaddingDp <= resolution.cardHeightDp / 4)
     }
 
     @Test

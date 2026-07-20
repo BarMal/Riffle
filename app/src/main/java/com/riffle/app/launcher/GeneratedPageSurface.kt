@@ -175,6 +175,7 @@ internal fun GeneratedNotificationCardsPage(
                                     appearance = timeScapeAppearance,
                                     cardWidth = resolution.cardWidthDp.dp,
                                     cardHeight = resolution.cardHeightDp.dp,
+                                    contentPadding = generatedNotificationCardContentPadding(resolution),
                                     modifier = pointerModifier.fillMaxSize(),
                                 )
                             }
@@ -313,6 +314,7 @@ private fun GeneratedCardStackControls(
 }
 
 @Composable
+@Suppress("LongParameterList")
 private fun GeneratedNotificationCard(
     card: DockNotificationCardState,
     onAction: (LauncherShellAction) -> Unit,
@@ -320,6 +322,7 @@ private fun GeneratedNotificationCard(
     appearance: TimeScapeAppearanceSettings,
     cardWidth: androidx.compose.ui.unit.Dp,
     cardHeight: androidx.compose.ui.unit.Dp,
+    contentPadding: androidx.compose.ui.unit.Dp,
     modifier: Modifier = Modifier,
 ) {
     val label = dockNotificationCardLabel(card)
@@ -351,6 +354,7 @@ private fun GeneratedNotificationCard(
                                 generatedNotificationCardLaunchAction(card)?.let(onAction)
                             },
                     ),
+            contentPadding = contentPadding,
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(text = label, style = MaterialTheme.typography.titleMedium)
@@ -435,6 +439,10 @@ internal fun generatedNotificationCardFocusDescription(
     focusedCardIndex: Int,
     cardCount: Int,
 ): String = "Card ${focusedCardIndex + 1} of $cardCount"
+
+internal fun generatedNotificationCardContentPadding(
+    resolution: com.riffle.core.domain.launcher.settings.TimeScapeCardStackResolution,
+): androidx.compose.ui.unit.Dp = resolution.contentPaddingDp.dp
 
 internal const val GENERATED_NOTIFICATION_CARD_STACK_TEST_TAG = "generated-notification-card-stack"
 internal const val GENERATED_NOTIFICATION_CARD_LIST_TEST_TAG = "generated-notification-card-list"
