@@ -5,6 +5,9 @@ import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
@@ -122,6 +125,65 @@ class TimeScapeCardSurfaceTest {
         composeRule.onNodeWithText("Mail").assertIsDisplayed()
         composeRule.onNodeWithText("New message").assertIsDisplayed()
         composeRule.onNodeWithText("Hello from TimeScape").assertIsDisplayed()
+    }
+
+    @Test
+    fun appStageSurfaceShowsRevokedAccessAfterRetainedDynamicStage() {
+        val app =
+            InstalledApp(
+                identity =
+                    AppIdentity(
+                        packageName = AppPackageName("com.example.mail"),
+                        activityName = AppActivityName(".Main"),
+                        profile = AppProfile.personal(),
+                    ),
+                label = "Mail",
+            )
+        val notification =
+            LauncherNotification(
+                key = LauncherNotificationKey("mail"),
+                packageName = app.identity.packageName,
+                profileId = app.identity.profile.id,
+                title = "New message",
+                text = "Hello from TimeScape",
+                postedAtEpochMillis = 10,
+            )
+        var state by
+            mutableStateOf(
+                LauncherShellState(
+                    notificationAccessStatus = NotificationAccessStatus.GRANTED,
+                    installedApps = listOf(app),
+                    profileContentVisibility =
+                        mapOf(app.identity.profile.id to AppProfileContentVisibility.VISIBLE),
+                    notificationGroupsByApp =
+                        listOf(
+                            AppNotificationGroup(
+                                packageName = app.identity.packageName,
+                                profileId = app.identity.profile.id,
+                                latestCategory = NotificationCategory.MESSAGE,
+                                latestAgeBucket = NotificationAgeBucket.RECENT,
+                                notifications = listOf(notification),
+                            ),
+                        ),
+                ),
+            )
+
+        composeRule.setContent {
+            MaterialTheme {
+                TimeScapeAppStageSurface(state = state, onAction = {})
+            }
+        }
+        composeRule.onNodeWithText("New message").assertIsDisplayed()
+
+        composeRule.runOnIdle {
+            state = state.copy(notificationAccessStatus = NotificationAccessStatus.REVOKED)
+        }
+
+        composeRule
+            .onNodeWithText("Notification access was revoked. Restore access to update stages.")
+            .assertIsDisplayed()
+        composeRule.onNodeWithText("Allow access").assertIsDisplayed()
+        composeRule.onNodeWithText("Nothing new").assertDoesNotExist()
     }
 
     @Test

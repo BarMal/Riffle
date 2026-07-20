@@ -90,7 +90,8 @@ class AppStageShellStateReconciler(
 private fun AppStageSnapshot.retains(state: LauncherShellState): Boolean {
     val selectedStageId =
         state.launcherSettings.cards.stagePreferencesFor(state.homeLayoutSet.activeKey).selectedStageId
-    return selectedStageId != null &&
+    return state.notificationAccessStatus == NotificationAccessStatus.GRANTED &&
+        selectedStageId != null &&
         preferences.selectedStageId == selectedStageId &&
         stages.any { stage -> stage.id == selectedStageId && !stage.isPinned }
 }
@@ -103,6 +104,7 @@ private fun AppStageSnapshot.retains(state: LauncherShellState): Boolean {
  * prevents restoring stale or removed identities.
  */
 private fun LauncherShellState.restoredSelectedDynamicStageSnapshot(): AppStageSnapshot? {
+    if (notificationAccessStatus != NotificationAccessStatus.GRANTED) return null
     val preferences = launcherSettings.cards.stagePreferencesFor(homeLayoutSet.activeKey)
     return preferences.selectedStageId?.takeIf { selectedStageId ->
         selectedStageId !in preferences.pinnedStageIds &&
