@@ -248,6 +248,7 @@ class MainActivity : ComponentActivity() {
         DefaultHomeRoleRequestHandler(
             createRequestIntent = homeRoleGateway::createResolvableHomeRoleRequestIntent,
             onRequestStarted = shellViewModel::onDefaultHomeRequestStarted,
+            onRequestLaunchFailed = shellViewModel::onDefaultHomeRequestLaunchFailed,
             launchRequest = requestHomeRole::launch,
             refreshPlatformStatuses = ::refreshPlatformStatuses,
             showUnavailable = {

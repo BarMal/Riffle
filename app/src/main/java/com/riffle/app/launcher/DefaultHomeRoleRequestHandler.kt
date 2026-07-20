@@ -5,6 +5,7 @@ import android.content.Intent
 internal class DefaultHomeRoleRequestHandler(
     private val createRequestIntent: () -> Intent?,
     private val onRequestStarted: () -> Unit,
+    private val onRequestLaunchFailed: () -> Unit,
     private val launchRequest: (Intent) -> Unit,
     private val refreshPlatformStatuses: () -> Unit,
     private val showUnavailable: () -> Unit,
@@ -23,6 +24,7 @@ internal class DefaultHomeRoleRequestHandler(
             launchRequest(intent)
         } catch (failure: Exception) {
             logLaunchFailure(failure)
+            onRequestLaunchFailed()
             refreshPlatformStatuses()
             showUnavailable()
         }

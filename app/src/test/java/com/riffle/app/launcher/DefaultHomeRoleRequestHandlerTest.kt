@@ -29,7 +29,7 @@ class DefaultHomeRoleRequestHandlerTest {
             launchRequest = { throw IllegalStateException("unavailable") },
         ).request()
 
-        assertEquals(listOf("started", "launch", "failure", "refresh", "unavailable"), calls)
+        assertEquals(listOf("started", "launch", "failure", "cleared", "refresh", "unavailable"), calls)
     }
 
     @Test
@@ -72,6 +72,7 @@ class DefaultHomeRoleRequestHandlerTest {
         DefaultHomeRoleRequestHandler(
             createRequestIntent = createRequestIntent,
             onRequestStarted = { calls += "started" },
+            onRequestLaunchFailed = { calls += "cleared" },
             launchRequest = { intent ->
                 calls += "launch"
                 launchRequest(intent)

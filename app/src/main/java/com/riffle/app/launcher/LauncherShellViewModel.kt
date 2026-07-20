@@ -209,6 +209,11 @@ class LauncherShellViewModel(
         firstRunRepository.setHomeRoleRequestPending(pending = true)
     }
 
+    fun onDefaultHomeRequestLaunchFailed() {
+        mutableState.value = reducer.defaultHomeRequestLaunchFailed(mutableState.value)
+        firstRunRepository.setHomeRoleRequestPending(pending = false)
+    }
+
     fun onSetupCardDismissed() {
         mutableState.value = reducer.setupCardDismissed(mutableState.value)
         firstRunRepository.setSetupCardDismissed()
