@@ -37,7 +37,6 @@ import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.FirstRunStatus
 import com.riffle.core.domain.launcher.HomeRoleStatus
 import com.riffle.core.domain.launcher.LauncherShellState
-import com.riffle.core.domain.launcher.OverlayDockPermissionStatus
 import com.riffle.core.domain.launcher.ShellDestination
 import com.riffle.core.domain.launcher.apps.AppActivityName
 import com.riffle.core.domain.launcher.apps.AppIdentity
@@ -46,7 +45,6 @@ import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.home.DockEditRejectionReason
 import com.riffle.core.domain.launcher.home.LauncherViewModeAvailability
 import com.riffle.core.domain.launcher.home.WallpaperSource
-import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.search.LauncherSearchResult
 import kotlinx.coroutines.delay
 
@@ -141,8 +139,6 @@ fun LauncherShellContent(
                             .windowInsetsPadding(WindowInsets.safeDrawing)
                             .padding(16.dp),
                     homeRoleStatus = state.homeRoleStatus,
-                    notificationAccessStatus = state.notificationAccessStatus,
-                    overlayDockPermissionStatus = state.overlayDockPermissionStatus,
                     onSetHome = { onAction(LauncherShellAction.RequestDefaultHome) },
                     onDismiss = onSetupCardDismissed,
                 )
@@ -212,8 +208,6 @@ data class LauncherShellAppInfo(
 private fun PreviewSetupCard(
     modifier: Modifier = Modifier,
     homeRoleStatus: HomeRoleStatus,
-    notificationAccessStatus: NotificationAccessStatus,
-    overlayDockPermissionStatus: OverlayDockPermissionStatus,
     onSetHome: () -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -265,16 +259,8 @@ private fun PreviewSetupCard(
                     label = "Home app",
                     status = presentation.statusMessage,
                 )
-                PreviewSetupStatusRow(
-                    label = "Cards (optional)",
-                    status = notificationAccessStatus.previewSetupStatus(),
-                )
-                PreviewSetupStatusRow(
-                    label = "Floating dock (optional)",
-                    status = overlayDockPermissionStatus.previewSetupStatus(),
-                )
                 Text(
-                    text = "Cards and Floating dock are optional. Riffle asks only when you choose one.",
+                    text = "Optional features ask for access only when you turn them on.",
                     style = MaterialTheme.typography.bodySmall,
                 )
                 Button(onClick = onSetHome) {
@@ -304,21 +290,6 @@ private fun PreviewSetupStatusRow(
         Text(text = status, style = MaterialTheme.typography.bodySmall)
     }
 }
-
-private fun NotificationAccessStatus.previewSetupStatus(): String =
-    when (this) {
-        NotificationAccessStatus.GRANTED -> "Ready when you use Cards."
-        NotificationAccessStatus.NOT_GRANTED -> "You'll be asked when you turn on Cards."
-        NotificationAccessStatus.REVOKED -> "Access was removed. Restore it from Cards when needed."
-        NotificationAccessStatus.UNKNOWN -> "Status is still checking."
-    }
-
-private fun OverlayDockPermissionStatus.previewSetupStatus(): String =
-    when (this) {
-        OverlayDockPermissionStatus.GRANTED -> "Ready when you turn on Floating dock."
-        OverlayDockPermissionStatus.NOT_GRANTED -> "You'll be asked when you turn on Floating dock."
-        OverlayDockPermissionStatus.UNKNOWN -> "Status is still checking."
-    }
 
 private data class PreviewHomeSetupPresentation(
     val statusMessage: String,
