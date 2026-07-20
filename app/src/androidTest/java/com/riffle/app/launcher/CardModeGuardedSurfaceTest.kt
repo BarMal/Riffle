@@ -10,8 +10,12 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.riffle.core.domain.launcher.FirstRunStatus
 import com.riffle.core.domain.launcher.HomeRoleStatus
 import com.riffle.core.domain.launcher.LauncherShellState
+import com.riffle.core.domain.launcher.apps.AppActivityName
+import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppProfile
+import com.riffle.core.domain.launcher.apps.AppProfileContentVisibility
+import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.cards.CardStackAnimationProfile
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.HomeLayoutSet
@@ -135,6 +139,22 @@ class CardModeGuardedSurfaceTest {
             homeLayout = layout,
             homeLayoutSet = HomeLayoutSet.fromLayout(layout),
             notificationAccessStatus = notificationAccessStatus,
+            installedApps =
+                groups.map { group ->
+                    InstalledApp(
+                        identity =
+                            AppIdentity(
+                                packageName = group.packageName,
+                                activityName = AppActivityName(".Main"),
+                                profile = AppProfile.personal(),
+                            ),
+                        label = "Messages",
+                    )
+                },
+            profileContentVisibility =
+                groups.associate { group ->
+                    group.profileId to AppProfileContentVisibility.VISIBLE
+                },
             notificationGroupsByApp = groups,
             notificationCountsByCategory = mapOf(NotificationCategory.MESSAGE to groups.sumOf { group -> group.count }),
             launcherSettings =

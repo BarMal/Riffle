@@ -127,7 +127,7 @@ class TimeScapeCardSurfaceTest {
             }
         }
 
-        composeRule.onNodeWithText("Mail").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Mail, selected. Open stage").assertIsDisplayed()
         composeRule.onNodeWithText("New message").assertIsDisplayed()
         composeRule.onNodeWithText("Hello from TimeScape").assertIsDisplayed()
     }
@@ -368,8 +368,6 @@ class TimeScapeCardSurfaceTest {
             }
         }
 
-        composeRule.onNodeWithText("Mail").assertIsDisplayed()
-        composeRule.onNodeWithText("Work - Mail").assertIsDisplayed()
         composeRule
             .onNodeWithContentDescription("Work - Mail, selected. Open stage")
             .assertIsDisplayed()
