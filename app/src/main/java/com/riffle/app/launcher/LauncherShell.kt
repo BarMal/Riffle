@@ -25,8 +25,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
@@ -213,6 +218,20 @@ private fun PreviewSetupCard(
     onSetHome: () -> Unit,
     onDismiss: () -> Unit,
 ) {
+    val homeActionFocusRequester = remember { FocusRequester() }
+    var previousFirstRunStatus by remember { mutableStateOf(firstRunStatus) }
+    LaunchedEffect(firstRunStatus, homeRoleStatus) {
+        val shouldRestoreHomeActionFocus =
+            previousFirstRunStatus == FirstRunStatus.REQUESTING_HOME_ROLE &&
+                firstRunStatus == FirstRunStatus.NEEDS_HOME_ROLE &&
+                homeRoleStatus != HomeRoleStatus.DEFAULT_HOME
+        previousFirstRunStatus = firstRunStatus
+
+        if (shouldRestoreHomeActionFocus) {
+            homeActionFocusRequester.requestFocus()
+        }
+    }
+
     BoxWithConstraints(modifier = modifier) {
         Surface(
             modifier = Modifier.heightIn(max = maxHeight),
@@ -276,7 +295,10 @@ private fun PreviewSetupCard(
                     style = MaterialTheme.typography.bodySmall,
                 )
                 presentation.actionLabel?.let { actionLabel ->
-                    Button(onClick = onSetHome) {
+                    Button(
+                        modifier = Modifier.focusRequester(homeActionFocusRequester),
+                        onClick = onSetHome,
+                    ) {
                         Text(text = actionLabel)
                     }
                 }

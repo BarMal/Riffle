@@ -13,6 +13,7 @@ import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
@@ -181,6 +182,27 @@ class PreviewFirstSetupTest {
         composeRule.onNodeWithText("Try again").assertDoesNotExist()
         composeRule.onNodeWithText("Set as Home app").assertDoesNotExist()
         assertTrue(actions.isEmpty())
+    }
+
+    @Test
+    fun restoredHomeActionReceivesFocusAfterPendingRequestBecomesRetryable() {
+        var state by
+            mutableStateOf(
+                LauncherShellState(
+                    firstRunStatus = FirstRunStatus.REQUESTING_HOME_ROLE,
+                    homeRoleStatus = HomeRoleStatus.NOT_DEFAULT_HOME,
+                ),
+            )
+
+        composeRule.setContent {
+            LauncherShellContent(state = state, onAction = {})
+        }
+
+        composeRule.runOnIdle {
+            state = state.copy(firstRunStatus = FirstRunStatus.NEEDS_HOME_ROLE)
+        }
+
+        composeRule.onNodeWithText("Set as Home app").assertIsFocused()
     }
 
     @Test
