@@ -140,6 +140,7 @@ class MainActivity : ComponentActivity() {
         registerForActivityResult(
             ActivityResultContracts.StartActivityForResult(),
         ) {
+            shellViewModel.onDefaultHomeRequestReturned()
             refreshPlatformStatuses()
         }
 
