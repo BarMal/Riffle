@@ -217,7 +217,7 @@ private fun GeneratedNotificationCardsFallback(
         contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        items(cards, key = { card -> generatedNotificationCardKey(card.group) }) { card ->
+        items(cards, key = { card -> generatedNotificationCardId(card).value }) { card ->
             GeneratedNotificationCardFallback(card, onAction, appearance)
         }
     }

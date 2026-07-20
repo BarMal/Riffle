@@ -194,7 +194,7 @@ class TimeScapeCardSurfaceTest {
 
     @Test
     fun typographyProjectsAccentTextScaleAndContentDensity() {
-        var observedAccent = Color.Unspecified
+        var observedAction = Color.Unspecified
         var observedFontScale = 0f
         val appearance =
             TimeScapeAppearanceSettings(
@@ -210,7 +210,7 @@ class TimeScapeCardSurfaceTest {
         composeRule.setContent {
             MaterialTheme {
                 TimeScapeCardSurface(appearance, TimeScapeCardBackground()) {
-                    observedAccent = MaterialTheme.colorScheme.primary
+                    observedAction = MaterialTheme.colorScheme.primary
                     observedFontScale = LocalDensity.current.fontScale
                     Text("Styled card")
                 }
@@ -219,7 +219,15 @@ class TimeScapeCardSurfaceTest {
 
         composeRule.onNodeWithText("Styled card").assertIsDisplayed()
         composeRule.runOnIdle {
-            assertEquals(Color(0xFF336699), observedAccent)
+            val colors =
+                resolveTimeScapeCardColors(
+                    appearance = appearance,
+                    background = TimeScapeCardBackground(),
+                    materialBackground = Color.Black,
+                    materialAccent = Color.Blue,
+                )
+            assertEquals(Color(0xFF336699), colors.accent)
+            assertTrue(contrastRatio(observedAction, colors.glass) >= 4.5f)
             assertEquals(1.3f, observedFontScale, 0.001f)
             assertEquals(1.2f, timeScapeContentDensityScale(TimeScapeContentDensity.EXPANDED), 0.001f)
             assertEquals(0.8f, timeScapeContentDensityScale(TimeScapeContentDensity.COMPACT), 0.001f)
@@ -351,7 +359,7 @@ class TimeScapeCardSurfaceTest {
             TimeScapeAppearanceSettings(
                 geometry = TimeScapeGeometry(contentPaddingDp = 64),
             ).resolveCardStack(
-                viewport = TimeScapeViewportDp(widthDp = 288, heightDp = 420),
+                viewport = TimeScapeViewportDp(widthDp = 600, heightDp = 900),
             )
 
         assertTrue(resolution.isUsable)
