@@ -133,7 +133,7 @@ private fun StandardHomeColumn(
         actions.copy(
             onBackgroundClick = dockShelf.dismiss,
         )
-    val margins = state.visibleLayout.settings.grid.margin
+    val margins = state.visibleLayout.settings.grid.margin.nonNegative()
 
     Column(
         modifier =
@@ -154,8 +154,7 @@ private fun StandardHomeColumn(
             gridState =
                 HomeGridState(
                     isEditing = state.visibleLayout.editMode is HomeEditMode.EditingPage,
-                    pageCount = state.visibleLayout.pages.size,
-                    selectedPageIndex = state.visibleLayout.selectedPageIndex,
+                    pageCount = state.visibleLayout.pages.size, selectedPageIndex = state.visibleLayout.selectedPageIndex,
                     dragSession = state.dragSession,
                 ),
             presentation = state.homeGridPresentation(actions),
@@ -182,15 +181,17 @@ private fun StandardHomeColumn(
             widgetViewFactory = state.presentation.widgetViewFactory,
             actions = homeActions,
         )
-        StandardHomeDockArea(
-            layout = state.visibleLayout,
-            presentation = state.presentation,
-            notificationShelfState = notificationShelfState,
-            isDockShelfExpanded = dockShelf.isExpanded,
-            onDockShelfExpandedChange = dockShelf.onExpandedChange,
-            appIconLoader = appIconLoader,
-            actions = actions,
-        )
+        Box(modifier = Modifier.padding(start = margins.start.dp, end = margins.end.dp, bottom = margins.bottom.dp)) {
+            StandardHomeDockArea(
+                layout = state.visibleLayout,
+                presentation = state.presentation,
+                notificationShelfState = notificationShelfState,
+                isDockShelfExpanded = dockShelf.isExpanded,
+                onDockShelfExpandedChange = dockShelf.onExpandedChange,
+                appIconLoader = appIconLoader,
+                actions = actions,
+            )
+        }
     }
 }
 

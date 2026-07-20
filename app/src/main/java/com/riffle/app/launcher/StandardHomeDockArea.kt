@@ -7,6 +7,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.riffle.core.domain.launcher.home.GridInsets
 import com.riffle.core.domain.launcher.home.HomeEditMode
 import com.riffle.core.domain.launcher.home.HomeLayout
 
@@ -75,6 +76,14 @@ internal fun StandardHomeDockArea(
         }
     }
 }
+
+internal fun GridInsets.nonNegative(): GridInsets =
+    GridInsets(
+        start = start.coerceAtLeast(0),
+        top = top.coerceAtLeast(0),
+        end = end.coerceAtLeast(0),
+        bottom = bottom.coerceAtLeast(0),
+    )
 
 private fun HomeLayout.shouldShowDock(): Boolean =
     dock.isEnabled &&
