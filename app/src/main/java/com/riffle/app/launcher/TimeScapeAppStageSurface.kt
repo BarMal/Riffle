@@ -16,6 +16,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -83,6 +86,14 @@ private fun TimeScapeStageHeader(
     onAction: (LauncherShellAction) -> Unit,
 ) {
     val label = selectedStage?.let { stageLabel(it.id, state) } ?: "TimeScape"
+    var overflowExpanded by rememberSaveable(selectedStage?.id) { mutableStateOf(false) }
+    val selectedApp =
+        selectedStage?.let { stage ->
+            state.installedApps.firstOrNull { app ->
+                app.identity.packageName == stage.id.packageName &&
+                    app.identity.profile.id == stage.id.profileId
+            }
+        }
     Row(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -94,6 +105,42 @@ private fun TimeScapeStageHeader(
         if (selectedStage != null) {
             TextButton(onClick = { onAction(LauncherShellAction.ToggleAppStagePinned(selectedStage.id)) }) {
                 Text(if (selectedStage.isPinned) "Unpin" else "Pin")
+            }
+            Box {
+                IconButton(
+                    onClick = { overflowExpanded = true },
+                    modifier = Modifier.semantics { contentDescription = "More stage options" },
+                ) {
+                    Text(text = "⋮")
+                }
+                DropdownMenu(
+                    expanded = overflowExpanded,
+                    onDismissRequest = { overflowExpanded = false },
+                ) {
+                    DropdownMenuItem(
+                        text = { Text(if (selectedStage.isPinned) "Unpin stage" else "Pin stage") },
+                        onClick = {
+                            overflowExpanded = false
+                            onAction(LauncherShellAction.ToggleAppStagePinned(selectedStage.id))
+                        },
+                    )
+                    selectedApp?.let { app ->
+                        DropdownMenuItem(
+                            text = { Text("Open ${app.label}") },
+                            onClick = {
+                                overflowExpanded = false
+                                onAction(LauncherShellAction.LaunchApp(app.identity))
+                            },
+                        )
+                        DropdownMenuItem(
+                            text = { Text("App info") },
+                            onClick = {
+                                overflowExpanded = false
+                                onAction(LauncherShellAction.OpenAppInfo(app.identity))
+                            },
+                        )
+                    }
+                }
             }
         }
     }

@@ -17,6 +17,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.apps.AppActivityName
@@ -117,6 +118,62 @@ class TimeScapeCardSurfaceTest {
         composeRule.onNodeWithText("Mail").assertIsDisplayed()
         composeRule.onNodeWithText("New message").assertIsDisplayed()
         composeRule.onNodeWithText("Hello from TimeScape").assertIsDisplayed()
+    }
+
+    @Test
+    fun appStageHeaderOverflowExposesFunctionalStageActions() {
+        val app =
+            InstalledApp(
+                identity =
+                    AppIdentity(
+                        packageName = AppPackageName("com.example.mail"),
+                        activityName = AppActivityName(".Main"),
+                        profile = AppProfile.personal(),
+                    ),
+                label = "Mail",
+            )
+        val notification =
+            LauncherNotification(
+                key = LauncherNotificationKey("mail"),
+                packageName = app.identity.packageName,
+                profileId = app.identity.profile.id,
+                title = "New message",
+                text = "Hello from TimeScape",
+                postedAtEpochMillis = 10,
+            )
+        val actions = mutableListOf<LauncherShellAction>()
+        composeRule.setContent {
+            MaterialTheme {
+                TimeScapeAppStageSurface(
+                    state =
+                        LauncherShellState(
+                            notificationAccessStatus = NotificationAccessStatus.GRANTED,
+                            installedApps = listOf(app),
+                            profileContentVisibility =
+                                mapOf(app.identity.profile.id to AppProfileContentVisibility.VISIBLE),
+                            notificationGroupsByApp =
+                                listOf(
+                                    AppNotificationGroup(
+                                        packageName = app.identity.packageName,
+                                        profileId = app.identity.profile.id,
+                                        latestCategory = NotificationCategory.MESSAGE,
+                                        latestAgeBucket = NotificationAgeBucket.RECENT,
+                                        notifications = listOf(notification),
+                                    ),
+                                ),
+                        ),
+                    onAction = actions::add,
+                )
+            }
+        }
+
+        composeRule.onNodeWithContentDescription("More stage options").performClick()
+        composeRule.onNodeWithText("Pin stage").assertIsDisplayed()
+        composeRule.onNodeWithText("Open Mail").performClick()
+
+        composeRule.runOnIdle {
+            assertEquals(listOf(LauncherShellAction.LaunchApp(app.identity)), actions)
+        }
     }
 
     @Test
