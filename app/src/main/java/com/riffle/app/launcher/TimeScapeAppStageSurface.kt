@@ -360,7 +360,12 @@ private fun TimeScapeEmptyStage(
     val emptyCard = shellState.emptyAppCards[stage.id]
     val detailCardId = LauncherCardId("stage-empty:${stage.id.profileId.value}:${stage.id.packageName.value}")
     val availableCardIds = if (emptyCard == null) emptySet() else setOf(detailCardId)
+    val detailFocusRequester = remember { FocusRequester() }
     LaunchedEffect(availableCardIds) { detailState.reconcile(availableCardIds) }
+
+    LaunchedEffect(detailState.expansionState.isVisible) {
+        if (!detailState.expansionState.isVisible) detailFocusRequester.requestFocus()
+    }
     if (detailState.expansionState.isVisible && emptyCard != null) {
         TimeScapeEmptyAppDetailSurface(
             card = emptyCard,
@@ -389,7 +394,12 @@ private fun TimeScapeEmptyStage(
                     Text(shortcut.shortLabel)
                 }
             }
-            TextButton(onClick = { detailState.expand(detailCardId) }) { Text("Details") }
+            TextButton(
+                onClick = { detailState.expand(detailCardId) },
+                modifier = Modifier.focusRequester(detailFocusRequester),
+            ) {
+                Text("Details")
+            }
         }
         TimeScapeDetailRecoveryMessage(detailState.sourceRemovalMessage)
     }

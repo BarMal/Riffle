@@ -16,6 +16,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
@@ -152,6 +153,22 @@ class TimeScapeCardSurfaceTest {
 
         composeRule.onAllNodesWithText("Notification details").assertCountEquals(0)
         composeRule.onNodeWithText("Details").assertIsDisplayed()
+    }
+
+    @Test
+    fun emptyAppDetailsBackRestoresFocusToItsDetailsControl() {
+        val app = timeScapeTestApp()
+        composeRule.setContent {
+            MaterialTheme { TimeScapeAppStageSurface(state = emptyPinnedStageState(app), onAction = {}) }
+        }
+
+        composeRule.onNodeWithText("Details").performClick()
+
+        composeRule.onNodeWithText("App details").assertIsDisplayed()
+        composeRule.onNodeWithText("Back").performClick()
+        composeRule.mainClock.advanceTimeBy(200)
+
+        composeRule.onNodeWithText("Details").assertIsFocused()
     }
 
     @Test
@@ -845,4 +862,27 @@ class TimeScapeCardSurfaceTest {
                     ),
                 ),
         )
+
+    private fun emptyPinnedStageState(app: InstalledApp): LauncherShellState {
+        val stageId = AppStageId(app.identity.packageName, app.identity.profile.id)
+        return LauncherShellState(
+            notificationAccessStatus = NotificationAccessStatus.GRANTED,
+            installedApps = listOf(app),
+            profileContentVisibility = mapOf(app.identity.profile.id to AppProfileContentVisibility.VISIBLE),
+            launcherSettings =
+                LauncherSettings(
+                    cards =
+                        CardsSettings(
+                            stagePreferencesByLayout =
+                                mapOf(
+                                    HomeLayoutKey(LauncherViewMode.STANDARD_APP_DRAWER) to
+                                        AppStagePreferences(
+                                            pinnedStageIds = listOf(stageId),
+                                            selectedStageId = stageId,
+                                        ),
+                                ),
+                        ),
+                ),
+        )
+    }
 }
