@@ -305,6 +305,7 @@ class TimeScapeCardSurfaceTest {
                 )
         }
         composeRule.mainClock.advanceTimeBy(200)
+        composeRule.waitForIdle()
 
         composeRule.onNodeWithText("The selected card is no longer available.").assertIsDisplayed()
         composeRule.onNodeWithText("Details").assertIsNotFocused()

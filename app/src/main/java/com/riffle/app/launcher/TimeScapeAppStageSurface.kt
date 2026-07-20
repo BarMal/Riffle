@@ -30,11 +30,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
@@ -329,6 +329,12 @@ internal fun TimeScapeContextShelf(
     onDetailFocusRestored: (() -> Unit)? = null,
 ) {
     if (card.supportedActions.isEmpty() && onDetailRequested == null) return
+    if (restoreDetailFocus && detailFocusRequester != null) {
+        LaunchedEffect(restoreDetailFocus, detailFocusRequester) {
+            withFrameNanos { detailFocusRequester.requestFocus() }
+            onDetailFocusRestored?.invoke()
+        }
+    }
     Row(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -346,14 +352,8 @@ internal fun TimeScapeContextShelf(
             TextButton(
                 onClick = requestDetail,
                 modifier =
-                    detailFocusRequester?.let { requester ->
-                        Modifier.focusRequester(requester).onGloballyPositioned {
-                            if (restoreDetailFocus) {
-                                requester.requestFocus()
-                                onDetailFocusRestored?.invoke()
-                            }
-                        }
-                    } ?: Modifier,
+                    detailFocusRequester?.let { requester -> Modifier.focusRequester(requester) }
+                        ?: Modifier,
             ) {
                 Text("Details")
             }
@@ -409,15 +409,15 @@ private fun TimeScapeEmptyStage(
             }
             TextButton(
                 onClick = { detailState.expand(detailCardId) },
-                modifier =
-                    Modifier.focusRequester(detailFocusRequester).onGloballyPositioned {
-                        if (restoreDetailFocusForCardId == detailCardId) {
-                            detailFocusRequester.requestFocus()
-                            restoreDetailFocusForCardId = null
-                        }
-                    },
+                modifier = Modifier.focusRequester(detailFocusRequester),
             ) {
                 Text("Details")
+            }
+            if (restoreDetailFocusForCardId == detailCardId) {
+                LaunchedEffect(restoreDetailFocusForCardId) {
+                    withFrameNanos { detailFocusRequester.requestFocus() }
+                    restoreDetailFocusForCardId = null
+                }
             }
         }
         TimeScapeDetailRecoveryMessage(detailState.sourceRemovalMessage)
