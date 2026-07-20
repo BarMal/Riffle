@@ -2,31 +2,44 @@ package com.riffle.app.launcher
 
 import android.content.Intent
 
+internal data class HomeRoleRequestStateCallbacks(
+    val canStartRequest: () -> Boolean,
+    val onRequestStarted: () -> Unit,
+    val onRequestLaunchFailed: () -> Unit,
+)
+
 internal class DefaultHomeRoleRequestHandler(
+    private val requestStateCallbacks: HomeRoleRequestStateCallbacks,
     private val createRequestIntent: () -> Intent?,
-    private val onRequestStarted: () -> Unit,
-    private val onRequestLaunchFailed: () -> Unit,
     private val launchRequest: (Intent) -> Unit,
     private val refreshPlatformStatuses: () -> Unit,
     private val showUnavailable: () -> Unit,
     private val logLaunchFailure: (Throwable) -> Unit,
 ) {
-    @Suppress("TooGenericExceptionCaught")
     fun request() {
-        val intent =
-            try {
-                createRequestIntent()
-            } catch (failure: Exception) {
-                logLaunchFailure(failure)
-                recoverUnavailableRequest()
-                return
+        if (requestStateCallbacks.canStartRequest()) {
+            createRequestIntentOrRecover()?.let { intent ->
+                requestStateCallbacks.onRequestStarted()
+                launchRequestOrRecover(intent)
             }
-        if (intent == null) {
+        }
+    }
+
+    @Suppress("TooGenericExceptionCaught")
+    private fun createRequestIntentOrRecover(): Intent? =
+        try {
+            createRequestIntent() ?: run {
+                recoverUnavailableRequest()
+                null
+            }
+        } catch (failure: Exception) {
+            logLaunchFailure(failure)
             recoverUnavailableRequest()
-            return
+            null
         }
 
-        onRequestStarted()
+    @Suppress("TooGenericExceptionCaught")
+    private fun launchRequestOrRecover(intent: Intent) {
         try {
             launchRequest(intent)
         } catch (failure: Exception) {
@@ -36,7 +49,7 @@ internal class DefaultHomeRoleRequestHandler(
     }
 
     private fun recoverUnavailableRequest() {
-        onRequestLaunchFailed()
+        requestStateCallbacks.onRequestLaunchFailed()
         refreshPlatformStatuses()
         showUnavailable()
     }
