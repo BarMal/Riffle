@@ -9,7 +9,7 @@ import org.junit.Test
 
 class LauncherShellViewModelPermissionStatusTest {
     @Test
-    fun refreshesPermissionSettingSearchSummaryWhenPlatformStatusesChange() {
+    fun refreshesHomeSettingSearchSummaryWhenPlatformStatusesChange() {
         val viewModel = LauncherShellViewModel(firstRunRepository = FakeFirstRunRepository())
 
         viewModel.onAppActionSelected(LauncherShellAction.SearchQueryChanged("permission"))
@@ -24,7 +24,7 @@ class LauncherShellViewModelPermissionStatusTest {
                 .filterIsInstance<LauncherSearchResult.Setting>()
                 .single { result -> result.title == "Permissions" }
 
-        assertEquals("Home set, notifications allowed, overlay allowed", permissionsResult.subtitle)
+        assertEquals("Home set", permissionsResult.subtitle)
     }
 
     private class FakeFirstRunRepository : FirstRunRepository {

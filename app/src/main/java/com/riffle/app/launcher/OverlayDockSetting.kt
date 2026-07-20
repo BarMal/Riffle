@@ -1,3 +1,5 @@
+@file:Suppress("TooManyFunctions")
+
 package com.riffle.app.launcher
 
 import androidx.compose.foundation.layout.Arrangement
@@ -9,6 +11,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.riffle.core.domain.launcher.OverlayDockPermissionStatus
 import com.riffle.core.domain.launcher.settings.MAX_OVERLAY_DOCK_EXPANDED_ICON_SIZE_DP
 import com.riffle.core.domain.launcher.settings.MAX_OVERLAY_DOCK_HANDLE_ALPHA_PERCENT
 import com.riffle.core.domain.launcher.settings.MAX_OVERLAY_DOCK_HANDLE_HEIGHT_DP
@@ -25,11 +28,13 @@ import com.riffle.core.domain.launcher.settings.OverlayDockSettings
 @Composable
 internal fun OverlayDockSetting(
     settings: OverlayDockSettings,
+    permissionStatus: OverlayDockPermissionStatus,
     onAction: (LauncherShellAction) -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         OverlayDockEnabledSetting(
             settings = settings,
+            permissionStatus = permissionStatus,
             onAction = onAction,
         )
         OverlayDockEdgeSetting(
@@ -74,15 +79,34 @@ internal fun OverlayDockSetting(
 @Composable
 private fun OverlayDockEnabledSetting(
     settings: OverlayDockSettings,
+    permissionStatus: OverlayDockPermissionStatus,
     onAction: (LauncherShellAction) -> Unit,
 ) {
     SettingsSwitchRow(
         title = "Floating dock",
         subtitle = if (settings.enabled) "Edge handle visible over apps" else "Only use the home dock",
         checked = settings.enabled,
-        onCheckedChange = { value -> onAction(LauncherShellAction.SelectOverlayDockEnabled(value)) },
+        onCheckedChange = { value ->
+            overlayDockEnabledActions(
+                enabled = value,
+                wasEnabled = settings.enabled,
+                permissionStatus = permissionStatus,
+            ).forEach(onAction)
+        },
     )
 }
+
+internal fun overlayDockEnabledActions(
+    enabled: Boolean,
+    wasEnabled: Boolean,
+    permissionStatus: OverlayDockPermissionStatus,
+): List<LauncherShellAction> =
+    buildList {
+        add(LauncherShellAction.SelectOverlayDockEnabled(enabled))
+        if (enabled && !wasEnabled && permissionStatus != OverlayDockPermissionStatus.GRANTED) {
+            add(LauncherShellAction.RequestOverlayDockPermission)
+        }
+    }
 
 @Composable
 private fun OverlayDockEdgeSetting(

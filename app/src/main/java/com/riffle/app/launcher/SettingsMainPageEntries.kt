@@ -38,6 +38,7 @@ private fun homeSettingsPageEntries(): List<SettingsPageEntry> =
                 listOf(
                     "show dock",
                     "notification cards",
+                    "notification access",
                     "dock cards",
                     "expanded dock cards",
                     "notification shelf",
@@ -74,6 +75,7 @@ private fun homeSettingsPageEntries(): List<SettingsPageEntry> =
             searchAliases =
                 listOf(
                     "overlay dock",
+                    "overlay permission",
                     "floating shortcuts",
                     "handle edge",
                     "handle thickness",
@@ -160,16 +162,13 @@ private fun systemSettingsPageEntries(status: SettingsOverviewStatus): List<Sett
     listOf(
         SettingsPageEntry(
             label = "Permissions",
-            subtitle = status.permissionsSummary(),
+            subtitle = status.homeRoleStatus.settingsOverviewLabel(),
             page = SettingsPage.PERMISSIONS,
             group = SettingsPageGroup.SYSTEM,
             searchAliases =
                 listOf(
                     "default home",
                     "home app",
-                    "notifications",
-                    "notification access",
-                    "overlay permission",
                 ),
         ),
         SettingsPageEntry(
@@ -193,13 +192,6 @@ private fun SettingsOverviewStatus.hiddenAppsSummary(): String =
         1 -> "1 hidden app"
         else -> "$hiddenAppCount hidden apps"
     }
-
-private fun SettingsOverviewStatus.permissionsSummary(): String =
-    listOf(
-        homeRoleStatus.settingsOverviewLabel(),
-        "notifications ${notificationAccessStatus.settingsNotificationAccessLabel().lowercase()}",
-        "overlay ${overlayDockPermissionStatus.settingsOverlayDockPermissionLabel().lowercase()}",
-    ).joinToString(separator = ", ")
 
 private fun HomeRoleStatus.settingsOverviewLabel(): String =
     when (this) {

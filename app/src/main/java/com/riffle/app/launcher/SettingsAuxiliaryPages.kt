@@ -38,8 +38,6 @@ internal fun SettingsPermissionsPageContent(
 ) {
     SettingsPermissionsSection(
         homeRoleStatus = state.homeRoleStatus,
-        notificationAccessStatus = state.notificationAccessStatus,
-        overlayDockPermissionStatus = state.overlayDockPermissionStatus,
         onAction = onAction,
     )
 }

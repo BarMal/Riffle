@@ -7,17 +7,48 @@ import org.junit.Test
 
 class SettingsPermissionsSectionTest {
     @Test
-    fun labelsNotificationAccessStatus() {
-        assertEquals("Allowed", NotificationAccessStatus.GRANTED.settingsNotificationAccessLabel())
-        assertEquals("Not allowed", NotificationAccessStatus.NOT_GRANTED.settingsNotificationAccessLabel())
-        assertEquals("Revoked", NotificationAccessStatus.REVOKED.settingsNotificationAccessLabel())
-        assertEquals("Unknown", NotificationAccessStatus.UNKNOWN.settingsNotificationAccessLabel())
+    fun requestsNotificationAccessOnlyWhenEnablingNotificationCardsWithoutAccess() {
+        assertEquals(
+            listOf(
+                LauncherShellAction.SelectDockNotificationCardsEnabled(true),
+                LauncherShellAction.RequestNotificationAccess,
+            ),
+            dockNotificationCardsEnabledActions(
+                enabled = true,
+                wasEnabled = false,
+                notificationAccessStatus = NotificationAccessStatus.NOT_GRANTED,
+            ),
+        )
+        assertEquals(
+            listOf(LauncherShellAction.SelectDockNotificationCardsEnabled(true)),
+            dockNotificationCardsEnabledActions(
+                enabled = true,
+                wasEnabled = false,
+                notificationAccessStatus = NotificationAccessStatus.GRANTED,
+            ),
+        )
     }
 
     @Test
-    fun labelsOverlayDockPermissionStatus() {
-        assertEquals("Allowed", OverlayDockPermissionStatus.GRANTED.settingsOverlayDockPermissionLabel())
-        assertEquals("Not allowed", OverlayDockPermissionStatus.NOT_GRANTED.settingsOverlayDockPermissionLabel())
-        assertEquals("Unknown", OverlayDockPermissionStatus.UNKNOWN.settingsOverlayDockPermissionLabel())
+    fun requestsOverlayAccessOnlyWhenEnablingFloatingDockWithoutAccess() {
+        assertEquals(
+            listOf(
+                LauncherShellAction.SelectOverlayDockEnabled(true),
+                LauncherShellAction.RequestOverlayDockPermission,
+            ),
+            overlayDockEnabledActions(
+                enabled = true,
+                wasEnabled = false,
+                permissionStatus = OverlayDockPermissionStatus.NOT_GRANTED,
+            ),
+        )
+        assertEquals(
+            listOf(LauncherShellAction.SelectOverlayDockEnabled(true)),
+            overlayDockEnabledActions(
+                enabled = true,
+                wasEnabled = false,
+                permissionStatus = OverlayDockPermissionStatus.GRANTED,
+            ),
+        )
     }
 }
