@@ -272,6 +272,10 @@ private fun PreviewSetupCard(
                     status = presentation.statusMessage,
                 )
                 Text(
+                    text = "Set Riffle as your Home app to open it when you press the device Home button.",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                Text(
                     text = "Optional features ask for access only when you turn them on.",
                     style = MaterialTheme.typography.bodySmall,
                 )
