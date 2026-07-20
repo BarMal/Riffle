@@ -5,6 +5,9 @@ import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
@@ -14,17 +17,33 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
 import androidx.compose.ui.unit.dp
+import com.riffle.core.domain.launcher.LauncherShellState
+import com.riffle.core.domain.launcher.apps.AppActivityName
+import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppProfile
+import com.riffle.core.domain.launcher.apps.AppProfileContentVisibility
+import com.riffle.core.domain.launcher.apps.InstalledApp
+import com.riffle.core.domain.launcher.cards.AppStage
+import com.riffle.core.domain.launcher.cards.AppStageId
+import com.riffle.core.domain.launcher.cards.AppStageLifecycle
+import com.riffle.core.domain.launcher.cards.AppStageOrigin
+import com.riffle.core.domain.launcher.cards.AppStagePreferences
+import com.riffle.core.domain.launcher.home.HomeLayoutKey
+import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
 import com.riffle.core.domain.launcher.notifications.LauncherNotification
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.notifications.NotificationAgeBucket
 import com.riffle.core.domain.launcher.notifications.NotificationCategory
+import com.riffle.core.domain.launcher.settings.CardsSettings
+import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.TimeScapeAccentSource
 import com.riffle.core.domain.launcher.settings.TimeScapeAppearanceSettings
 import com.riffle.core.domain.launcher.settings.TimeScapeBackgroundSource
@@ -45,6 +64,333 @@ import org.junit.Test
 class TimeScapeCardSurfaceTest {
     @get:Rule
     val composeRule = createComposeRule()
+
+    @Test
+    fun appStageSurfaceExplainsMissingNotificationAccess() {
+        composeRule.setContent {
+            MaterialTheme {
+                TimeScapeAppStageSurface(
+                    state = LauncherShellState(notificationAccessStatus = NotificationAccessStatus.NOT_GRANTED),
+                    onAction = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("Allow notification access to show your app stages.").assertIsDisplayed()
+        composeRule.onNodeWithText("Allow access").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("More stage options").assertDoesNotExist()
+    }
+
+    @Test
+    fun appStageSurfaceRendersTheFocusedAppStage() {
+        val app =
+            InstalledApp(
+                identity =
+                    AppIdentity(
+                        packageName = AppPackageName("com.example.mail"),
+                        activityName = AppActivityName(".Main"),
+                        profile = AppProfile.personal(),
+                    ),
+                label = "Mail",
+            )
+        val notification =
+            LauncherNotification(
+                key = LauncherNotificationKey("mail"),
+                packageName = app.identity.packageName,
+                profileId = app.identity.profile.id,
+                title = "New message",
+                text = "Hello from TimeScape",
+                postedAtEpochMillis = 10,
+            )
+        composeRule.setContent {
+            MaterialTheme {
+                TimeScapeAppStageSurface(
+                    state =
+                        LauncherShellState(
+                            notificationAccessStatus = NotificationAccessStatus.GRANTED,
+                            installedApps = listOf(app),
+                            profileContentVisibility =
+                                mapOf(app.identity.profile.id to AppProfileContentVisibility.VISIBLE),
+                            notificationGroupsByApp =
+                                listOf(
+                                    AppNotificationGroup(
+                                        packageName = app.identity.packageName,
+                                        profileId = app.identity.profile.id,
+                                        latestCategory = NotificationCategory.MESSAGE,
+                                        latestAgeBucket = NotificationAgeBucket.RECENT,
+                                        notifications = listOf(notification),
+                                    ),
+                                ),
+                        ),
+                    onAction = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithContentDescription("Mail, selected. Open stage").assertIsDisplayed()
+        composeRule.onNodeWithText("New message").assertIsDisplayed()
+        composeRule.onNodeWithText("Hello from TimeScape").assertIsDisplayed()
+    }
+
+    @Test
+    fun appStageSurfaceShowsRevokedAccessAfterRetainedDynamicStage() {
+        val app =
+            InstalledApp(
+                identity =
+                    AppIdentity(
+                        packageName = AppPackageName("com.example.mail"),
+                        activityName = AppActivityName(".Main"),
+                        profile = AppProfile.personal(),
+                    ),
+                label = "Mail",
+            )
+        val notification =
+            LauncherNotification(
+                key = LauncherNotificationKey("mail"),
+                packageName = app.identity.packageName,
+                profileId = app.identity.profile.id,
+                title = "New message",
+                text = "Hello from TimeScape",
+                postedAtEpochMillis = 10,
+            )
+        var state by
+            mutableStateOf(
+                LauncherShellState(
+                    notificationAccessStatus = NotificationAccessStatus.GRANTED,
+                    installedApps = listOf(app),
+                    profileContentVisibility =
+                        mapOf(app.identity.profile.id to AppProfileContentVisibility.VISIBLE),
+                    notificationGroupsByApp =
+                        listOf(
+                            AppNotificationGroup(
+                                packageName = app.identity.packageName,
+                                profileId = app.identity.profile.id,
+                                latestCategory = NotificationCategory.MESSAGE,
+                                latestAgeBucket = NotificationAgeBucket.RECENT,
+                                notifications = listOf(notification),
+                            ),
+                        ),
+                ),
+            )
+
+        composeRule.setContent {
+            MaterialTheme {
+                TimeScapeAppStageSurface(state = state, onAction = {})
+            }
+        }
+        composeRule.onNodeWithText("New message").assertIsDisplayed()
+
+        composeRule.runOnIdle {
+            state = state.copy(notificationAccessStatus = NotificationAccessStatus.REVOKED)
+        }
+
+        composeRule
+            .onNodeWithText("Notification access was revoked. Restore access to update stages.")
+            .assertIsDisplayed()
+        composeRule.onNodeWithText("Allow access").assertIsDisplayed()
+        composeRule.onNodeWithText("Nothing new").assertDoesNotExist()
+    }
+
+    @Test
+    fun appStageSurfaceShowsRevokedAccessForSelectedPinnedStage() {
+        val app =
+            InstalledApp(
+                identity =
+                    AppIdentity(
+                        packageName = AppPackageName("com.example.mail"),
+                        activityName = AppActivityName(".Main"),
+                        profile = AppProfile.personal(),
+                    ),
+                label = "Mail",
+            )
+        val stageId = AppStageId(app.identity.packageName, app.identity.profile.id)
+
+        composeRule.setContent {
+            MaterialTheme {
+                TimeScapeAppStageSurface(
+                    state =
+                        LauncherShellState(
+                            notificationAccessStatus = NotificationAccessStatus.REVOKED,
+                            installedApps = listOf(app),
+                            profileContentVisibility =
+                                mapOf(app.identity.profile.id to AppProfileContentVisibility.VISIBLE),
+                            launcherSettings =
+                                LauncherSettings(
+                                    cards =
+                                        CardsSettings(
+                                            stagePreferencesByLayout =
+                                                mapOf(
+                                                    HomeLayoutKey(LauncherViewMode.STANDARD_APP_DRAWER) to
+                                                        AppStagePreferences(
+                                                            pinnedStageIds = listOf(stageId),
+                                                            selectedStageId = stageId,
+                                                        ),
+                                                ),
+                                        ),
+                                ),
+                        ),
+                    onAction = {},
+                )
+            }
+        }
+
+        composeRule
+            .onNodeWithText("Notification access was revoked. Restore access to update stages.")
+            .assertIsDisplayed()
+        composeRule.onNodeWithText("Allow access").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Mail, selected. Open stage").assertIsDisplayed()
+        composeRule.onNodeWithText("Nothing new").assertDoesNotExist()
+    }
+
+    @Test
+    fun appStageHeaderOverflowExposesFunctionalStageActions() {
+        val app =
+            InstalledApp(
+                identity =
+                    AppIdentity(
+                        packageName = AppPackageName("com.example.mail"),
+                        activityName = AppActivityName(".Main"),
+                        profile = AppProfile.personal(),
+                    ),
+                label = "Mail",
+            )
+        val notification =
+            LauncherNotification(
+                key = LauncherNotificationKey("mail"),
+                packageName = app.identity.packageName,
+                profileId = app.identity.profile.id,
+                title = "New message",
+                text = "Hello from TimeScape",
+                postedAtEpochMillis = 10,
+            )
+        val actions = mutableListOf<LauncherShellAction>()
+        composeRule.setContent {
+            MaterialTheme {
+                TimeScapeAppStageSurface(
+                    state =
+                        LauncherShellState(
+                            notificationAccessStatus = NotificationAccessStatus.GRANTED,
+                            installedApps = listOf(app),
+                            profileContentVisibility =
+                                mapOf(app.identity.profile.id to AppProfileContentVisibility.VISIBLE),
+                            notificationGroupsByApp =
+                                listOf(
+                                    AppNotificationGroup(
+                                        packageName = app.identity.packageName,
+                                        profileId = app.identity.profile.id,
+                                        latestCategory = NotificationCategory.MESSAGE,
+                                        latestAgeBucket = NotificationAgeBucket.RECENT,
+                                        notifications = listOf(notification),
+                                    ),
+                                ),
+                        ),
+                    onAction = actions::add,
+                )
+            }
+        }
+
+        composeRule.onNodeWithContentDescription("More stage options").performClick()
+        composeRule.onNodeWithText("Pin stage").assertIsDisplayed()
+        composeRule.onNodeWithText("Open Mail").performClick()
+
+        composeRule.runOnIdle {
+            assertEquals(listOf(LauncherShellAction.LaunchApp(app.identity)), actions)
+        }
+    }
+
+    @Test
+    fun appStageSurfaceLabelsSamePackageProfilesIndependently() {
+        val personal =
+            InstalledApp(
+                identity =
+                    AppIdentity(
+                        packageName = AppPackageName("com.example.mail"),
+                        activityName = AppActivityName(".Main"),
+                        profile = AppProfile.personal(),
+                    ),
+                label = "Mail",
+            )
+        val work =
+            personal.copy(
+                identity = personal.identity.copy(profile = AppProfile.work()),
+            )
+        val personalNotification =
+            LauncherNotification(
+                key = LauncherNotificationKey("personal"),
+                packageName = personal.identity.packageName,
+                profileId = personal.identity.profile.id,
+                title = "Personal message",
+                text = "Personal content",
+                postedAtEpochMillis = 10,
+            )
+        val workNotification =
+            LauncherNotification(
+                key = LauncherNotificationKey("work"),
+                packageName = work.identity.packageName,
+                profileId = work.identity.profile.id,
+                title = "Work message",
+                text = "Work content",
+                postedAtEpochMillis = 20,
+            )
+
+        composeRule.setContent {
+            MaterialTheme {
+                TimeScapeAppStageSurface(
+                    state =
+                        LauncherShellState(
+                            notificationAccessStatus = NotificationAccessStatus.GRANTED,
+                            installedApps = listOf(personal, work),
+                            profileContentVisibility =
+                                mapOf(
+                                    personal.identity.profile.id to AppProfileContentVisibility.VISIBLE,
+                                    work.identity.profile.id to AppProfileContentVisibility.VISIBLE,
+                                ),
+                            notificationGroupsByApp =
+                                listOf(
+                                    AppNotificationGroup(
+                                        packageName = personal.identity.packageName,
+                                        profileId = personal.identity.profile.id,
+                                        latestCategory = NotificationCategory.MESSAGE,
+                                        latestAgeBucket = NotificationAgeBucket.RECENT,
+                                        notifications = listOf(personalNotification),
+                                    ),
+                                    AppNotificationGroup(
+                                        packageName = work.identity.packageName,
+                                        profileId = work.identity.profile.id,
+                                        latestCategory = NotificationCategory.MESSAGE,
+                                        latestAgeBucket = NotificationAgeBucket.RECENT,
+                                        notifications = listOf(workNotification),
+                                    ),
+                                ),
+                        ),
+                    onAction = {},
+                )
+            }
+        }
+
+        composeRule
+            .onNodeWithContentDescription("Work - Mail, selected. Open stage")
+            .assertIsDisplayed()
+    }
+
+    @Test
+    fun stageSelectorUsesStableSaveableKeysForProfileScopedStages() {
+        val personal = AppStageId(AppPackageName("com.example.mail"), AppProfile.personal().id)
+        val work = AppStageId(AppPackageName("com.example.mail"), AppProfile.work().id)
+
+        assertEquals(
+            "personal:com.example.mail",
+            timeScapeStageSelectorItemKey(
+                AppStage(personal, setOf(AppStageOrigin.DYNAMIC), AppStageLifecycle.EMPTY),
+            ),
+        )
+        assertEquals(
+            "work:com.example.mail",
+            timeScapeStageSelectorItemKey(
+                AppStage(work, setOf(AppStageOrigin.DYNAMIC), AppStageLifecycle.EMPTY),
+            ),
+        )
+    }
 
     @Test
     fun everyBackgroundSourceRendersCardContentWithAFallback() {

@@ -25,6 +25,7 @@ internal fun LauncherShellAction.launcherActivityRoute(): LauncherActivityRoute?
         navigationAction() != null -> LauncherActivityRoute.Navigation(checkNotNull(navigationAction()))
         isHomePageEditAction() -> LauncherActivityRoute.HomePageEdit
         isCardsChapterAction() -> LauncherActivityRoute.HomePageEdit
+        isAppStageAction() -> LauncherActivityRoute.HomePageEdit
         isHomeShortcutEditAction() -> LauncherActivityRoute.HomeShortcutEdit
         isDockEditAction() -> LauncherActivityRoute.DockEdit
         else -> null
@@ -34,6 +35,17 @@ private fun LauncherShellAction.isCardsChapterAction(): Boolean =
     when (this) {
         is LauncherShellAction.SelectCardsChapter,
         is LauncherShellAction.ToggleCardsChapterPinned,
+        -> true
+
+        else -> false
+    }
+
+private fun LauncherShellAction.isAppStageAction(): Boolean =
+    when (this) {
+        is LauncherShellAction.SelectAppStage,
+        is LauncherShellAction.ToggleAppStagePinned,
+        LauncherShellAction.SelectPreviousAppStage,
+        LauncherShellAction.SelectNextAppStage,
         -> true
 
         else -> false

@@ -7,6 +7,7 @@ import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.apps.AppShortcutId
 import com.riffle.core.domain.launcher.apps.InstalledApp
+import com.riffle.core.domain.launcher.cards.AppStageId
 import com.riffle.core.domain.launcher.home.DockBackgroundSizing
 import com.riffle.core.domain.launcher.home.DockItemMoveDirection
 import com.riffle.core.domain.launcher.home.DockVisualEffect
@@ -64,6 +65,22 @@ class LauncherActivityRouteTest {
             LauncherShellAction.SelectSelectedHomePageGridDimensions(GridDimensions(columns = 5, rows = 6))
                 .launcherActivityRoute(),
         )
+    }
+
+    @Test
+    fun routesTimeScapeStageActionsAsHomeActions() {
+        val stage = AppStageId(AppPackageName("com.example.stage"), appIdentity.profile.id)
+        val actions =
+            listOf(
+                LauncherShellAction.SelectAppStage(stage),
+                LauncherShellAction.ToggleAppStagePinned(stage),
+                LauncherShellAction.SelectPreviousAppStage,
+                LauncherShellAction.SelectNextAppStage,
+            )
+
+        actions.forEach { action ->
+            assertEquals(LauncherActivityRoute.HomePageEdit, action.launcherActivityRoute())
+        }
     }
 
     @Test
