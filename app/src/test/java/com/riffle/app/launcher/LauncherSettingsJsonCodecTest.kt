@@ -28,6 +28,7 @@ import com.riffle.core.domain.launcher.settings.HomeSystemBars
 import com.riffle.core.domain.launcher.settings.LauncherGestureAction
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.LauncherThemeAccent
+import com.riffle.core.domain.launcher.settings.LauncherThemeColors
 import com.riffle.core.domain.launcher.settings.LauncherThemeCornerStyle
 import com.riffle.core.domain.launcher.settings.LauncherThemeMode
 import com.riffle.core.domain.launcher.settings.LauncherThemePreset
@@ -299,6 +300,25 @@ class LauncherSettingsJsonCodecTest {
             LauncherThemeAccent.TEAL,
             decodeLauncherSettings(encodeLauncherSettings(settings)).appearance.themeAccent,
         )
+    }
+
+    @Test
+    fun roundTripsCustomThemeColoursIncludingAlpha() {
+        val colors =
+            LauncherThemeColors(
+                backgroundArgb = 0xCC102030.toInt(),
+                accentArgb = 0xFF405060.toInt(),
+                dockArgb = 0x80405060.toInt(),
+                labelArgb = 0xFFE0E0E0.toInt(),
+                labelBackgroundArgb = 0x99000000.toInt(),
+            )
+
+        val decoded =
+            decodeLauncherSettings(
+                encodeLauncherSettings(LauncherSettings(appearance = AppearanceSettings(themeColors = colors))),
+            )
+
+        assertEquals(colors, decoded.appearance.themeColors)
     }
 
     @Test

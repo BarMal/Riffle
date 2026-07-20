@@ -20,6 +20,7 @@ import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
 import com.riffle.core.domain.launcher.settings.HapticSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.LauncherThemeAccent
+import com.riffle.core.domain.launcher.settings.LauncherThemeColors
 import com.riffle.core.domain.launcher.settings.LauncherThemeCornerStyle
 import com.riffle.core.domain.launcher.settings.LauncherThemeMode
 import com.riffle.core.domain.launcher.settings.LauncherThemePreset
@@ -541,6 +542,7 @@ private fun encodeAppearance(settings: AppearanceSettings): JSONObject =
         .put("themeAccent", settings.themeAccent.name)
         .put("themeCornerStyle", settings.themeCornerStyle.name)
         .put("themeTypography", settings.themeTypography.name)
+        .put("themeColors", encodeThemeColors(settings.themeColors))
         .put("wallpaper", encodeWallpaper(settings.wallpaper))
 
 private fun JSONObject.toAppearance(defaults: AppearanceSettings): AppearanceSettings {
@@ -568,9 +570,39 @@ private fun JSONObject.toAppearance(defaults: AppearanceSettings): AppearanceSet
             themeTypography =
                 runCatching { LauncherThemeTypography.valueOf(optString("themeTypography")) }
                     .getOrDefault(defaults.themeTypography),
+            themeColors = optJSONObject("themeColors")?.toThemeColors(defaults.themeColors) ?: defaults.themeColors,
             wallpaper = optJSONObject("wallpaper")?.toWallpaper(defaults.wallpaper) ?: defaults.wallpaper,
         ).withHomeSystemBars(homeSystemBars)
 }
+
+private fun encodeThemeColors(colors: LauncherThemeColors): JSONObject =
+    JSONObject()
+        .put("backgroundArgb", colors.backgroundArgb)
+        .put("accentArgb", colors.accentArgb)
+        .put("dockArgb", colors.dockArgb)
+        .put("labelArgb", colors.labelArgb)
+        .put("labelBackgroundArgb", colors.labelBackgroundArgb)
+
+private fun JSONObject.toThemeColors(defaults: LauncherThemeColors): LauncherThemeColors =
+    defaults.copy(
+        backgroundArgb = optNullableInt("backgroundArgb", defaults.backgroundArgb),
+        accentArgb = optNullableInt("accentArgb", defaults.accentArgb),
+        dockArgb = optNullableInt("dockArgb", defaults.dockArgb),
+        labelArgb = optNullableInt("labelArgb", defaults.labelArgb),
+        labelBackgroundArgb = optNullableInt("labelBackgroundArgb", defaults.labelBackgroundArgb),
+    )
+
+private fun JSONObject.optNullableInt(
+    name: String,
+    default: Int?,
+): Int? =
+    if (!has(name)) {
+        default
+    } else if (isNull(name)) {
+        null
+    } else {
+        optInt(name)
+    }
 
 private fun encodeWallpaper(settings: WallpaperSettings): JSONObject =
     JSONObject()

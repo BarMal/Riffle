@@ -36,6 +36,7 @@ import com.riffle.core.domain.launcher.settings.HomeSwipeGestureDirection
 import com.riffle.core.domain.launcher.settings.LauncherGestureAction
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.LauncherThemeAccent
+import com.riffle.core.domain.launcher.settings.LauncherThemeColorTarget
 import com.riffle.core.domain.launcher.settings.LauncherThemeCornerStyle
 import com.riffle.core.domain.launcher.settings.LauncherThemeTypography
 import com.riffle.core.domain.launcher.settings.MotionPerformanceTargetFps
@@ -339,6 +340,13 @@ class LauncherActionDomainTest {
                 settings(
                     "SelectLauncherThemeAccent",
                     LauncherShellAction.SelectLauncherThemeAccent(LauncherThemeAccent.TEAL),
+                ),
+                settings(
+                    "SelectLauncherThemeColor",
+                    LauncherShellAction.SelectLauncherThemeColor(
+                        LauncherThemeColorTarget.ACCENT,
+                        0xFF405060.toInt(),
+                    ),
                 ),
                 settings(
                     "SelectLauncherThemeCornerStyle",

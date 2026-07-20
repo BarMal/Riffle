@@ -33,6 +33,7 @@ import com.riffle.core.domain.launcher.settings.HomeSwipeGestureDirection
 import com.riffle.core.domain.launcher.settings.LauncherGestureAction
 import com.riffle.core.domain.launcher.settings.LauncherGestureLaunchTarget
 import com.riffle.core.domain.launcher.settings.LauncherThemeAccent
+import com.riffle.core.domain.launcher.settings.LauncherThemeColorTarget
 import com.riffle.core.domain.launcher.settings.LauncherThemeCornerStyle
 import com.riffle.core.domain.launcher.settings.LauncherThemeMode
 import com.riffle.core.domain.launcher.settings.LauncherThemePreset
@@ -327,6 +328,11 @@ sealed interface LauncherShellAction {
     data class SelectLauncherThemePreset(val preset: LauncherThemePreset) : LauncherShellAction
 
     data class SelectLauncherThemeAccent(val accent: LauncherThemeAccent) : LauncherShellAction
+
+    data class SelectLauncherThemeColor(
+        val target: LauncherThemeColorTarget,
+        val argb: Int?,
+    ) : LauncherShellAction
 
     data class SelectLauncherThemeCornerStyle(val style: LauncherThemeCornerStyle) : LauncherShellAction
 

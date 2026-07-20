@@ -32,7 +32,8 @@ internal fun dockSurfaceColor(dock: DockModel): Color {
         } else {
             MaterialTheme.colorScheme.surfaceVariant
         }
-    return baseColor.copy(alpha = dock.backgroundAlphaPercent / 100f)
+    val selectedColor = LocalLauncherThemeColorOverrides.current.dock ?: baseColor
+    return selectedColor.copy(alpha = selectedColor.alpha * dock.backgroundAlphaPercent / 100f)
 }
 
 @Composable

@@ -13,7 +13,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -44,14 +43,17 @@ fun WallpaperReadableLabel(
                 )
                 .height(metrics.homeLabelContainerHeightDp(settings).dp)
                 .clip(RoundedCornerShape(6.dp))
-                .background(MaterialTheme.colorScheme.scrim.copy(alpha = settings.backgroundAlphaPercent / 100f))
+                .background(
+                    (LocalLauncherThemeColorOverrides.current.labelBackground ?: MaterialTheme.colorScheme.scrim)
+                        .let { color -> color.copy(alpha = color.alpha * settings.backgroundAlphaPercent / 100f) },
+                )
                 .padding(horizontal = 6.dp, vertical = 2.dp),
         contentAlignment = Alignment.Center,
     ) {
         Text(
             text = text,
             style = MaterialTheme.typography.labelSmall.copy(fontSize = settings.textSizeSp.sp),
-            color = Color.White,
+            color = LocalLauncherThemeColorOverrides.current.label ?: MaterialTheme.colorScheme.onSurface,
             maxLines = settings.maxLines,
             overflow = TextOverflow.Ellipsis,
             softWrap = true,

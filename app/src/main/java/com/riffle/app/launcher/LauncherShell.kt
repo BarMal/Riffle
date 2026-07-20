@@ -94,10 +94,13 @@ fun LauncherShellContent(
         themeMode = state.launcherSettings.appearance.themeMode,
         themePreset = state.launcherSettings.appearance.themePreset,
         themeAccent = state.launcherSettings.appearance.themeAccent,
+        themeColors = state.launcherSettings.appearance.themeColors,
         themeCornerStyle = state.launcherSettings.appearance.themeCornerStyle,
         themeTypography = state.launcherSettings.appearance.themeTypography,
     ) {
-        val usesSystemWallpaper = state.launcherSettings.appearance.wallpaper.source == WallpaperSource.SYSTEM
+        val usesSystemWallpaper =
+            state.launcherSettings.appearance.wallpaper.source == WallpaperSource.SYSTEM &&
+                state.launcherSettings.appearance.themeColors.backgroundArgb == null
         val rootModifier =
             if (usesSystemWallpaper) {
                 Modifier.fillMaxSize()

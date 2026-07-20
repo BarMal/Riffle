@@ -3,6 +3,7 @@ package com.riffle.app.launcher
 import com.riffle.core.domain.launcher.home.WallpaperScrollMode
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettingsRepository
+import com.riffle.core.domain.launcher.settings.LauncherThemeColorTarget
 import com.riffle.core.domain.launcher.settings.LauncherThemeCornerStyle
 import com.riffle.core.domain.launcher.settings.LauncherThemeTypography
 import org.junit.Assert.assertEquals
@@ -74,6 +75,26 @@ class LauncherShellAppearanceSettingsTest {
             LauncherThemeTypography.MONOSPACE,
             viewModel.state.value.launcherSettings.appearance.themeTypography,
         )
+        assertEquals(viewModel.state.value.launcherSettings, repository.savedSettings)
+    }
+
+    @Test
+    fun savesCustomThemeColourForTheLiveLauncherTheme() {
+        val repository = FakeLauncherSettingsRepository()
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                launcherSettingsRepository = repository,
+            )
+
+        viewModel.onLauncherSettingsActionSelected(
+            LauncherShellAction.SelectLauncherThemeColor(
+                target = LauncherThemeColorTarget.DOCK,
+                argb = 0x80445566.toInt(),
+            ),
+        )
+
+        assertEquals(0x80445566.toInt(), viewModel.state.value.launcherSettings.appearance.themeColors.dockArgb)
         assertEquals(viewModel.state.value.launcherSettings, repository.savedSettings)
     }
 
