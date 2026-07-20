@@ -42,6 +42,7 @@ import com.riffle.core.domain.launcher.settings.MotionPerformanceTargetFps
 import com.riffle.core.domain.launcher.settings.OverlayDockEdge
 import com.riffle.core.domain.launcher.settings.OverlayDockExpandedOrientation
 import com.riffle.core.domain.launcher.settings.OverlayDockItemMoveDirection
+import com.riffle.core.domain.launcher.settings.SearchResultPresentation
 import com.riffle.core.domain.launcher.widgets.WidgetProviderDimensions
 import com.riffle.core.domain.launcher.widgets.WidgetProviderIdentity
 
@@ -320,6 +321,10 @@ sealed interface LauncherShellAction {
     ) : LauncherShellAction
 
     data object ResetSearchFilters : LauncherShellAction
+
+    data class SelectSearchResultPresentation(
+        val presentation: SearchResultPresentation,
+    ) : LauncherShellAction
 
     data class SelectWallpaperSource(val source: WallpaperSource) : LauncherShellAction
 

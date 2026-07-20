@@ -28,6 +28,8 @@ import com.riffle.core.domain.launcher.settings.LauncherThemeTypography
 import com.riffle.core.domain.launcher.settings.OverlayDockEdge
 import com.riffle.core.domain.launcher.settings.OverlayDockExpandedOrientation
 import com.riffle.core.domain.launcher.settings.OverlayDockSettings
+import com.riffle.core.domain.launcher.settings.SearchResultPresentation
+import com.riffle.core.domain.launcher.settings.SearchSettings
 import com.riffle.core.domain.launcher.settings.TimeScapeAppearanceSettings
 import com.riffle.core.domain.launcher.settings.TimeScapeGeometry
 import com.riffle.core.domain.launcher.settings.TimeScapeMotion
@@ -49,6 +51,7 @@ fun encodeLauncherSettings(settings: LauncherSettings): String =
         .put("haptics", encodeHaptics(settings.haptics))
         .put("motion", encodeMotionSettings(settings.motion))
         .put("overlayDock", encodeOverlayDock(settings.overlayDock))
+        .put("search", encodeSearchSettings(settings.search))
         .toString()
 
 fun decodeLauncherSettings(value: String): LauncherSettings =
@@ -63,8 +66,21 @@ fun decodeLauncherSettings(value: String): LauncherSettings =
             motion = json.optJSONObject("motion")?.toMotionSettings(defaults.motion) ?: defaults.motion,
             overlayDock =
                 json.optJSONObject("overlayDock")?.toOverlayDock(defaults.overlayDock) ?: defaults.overlayDock,
+            search = json.optJSONObject("search")?.toSearchSettings(defaults.search) ?: defaults.search,
         )
     }
+
+private fun encodeSearchSettings(settings: SearchSettings): JSONObject =
+    JSONObject().put("resultPresentation", settings.resultPresentation.name)
+
+private fun JSONObject.toSearchSettings(defaults: SearchSettings): SearchSettings =
+    SearchSettings(
+        resultPresentation =
+            optString("resultPresentation")
+                .takeIf(String::isNotEmpty)
+                ?.let { name -> SearchResultPresentation.entries.firstOrNull { it.name == name } }
+                ?: defaults.resultPresentation,
+    )
 
 private fun encodeCardsSettings(settings: CardsSettings): JSONObject =
     JSONObject()

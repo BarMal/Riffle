@@ -40,6 +40,11 @@ class LauncherSettingsTest {
     }
 
     @Test
+    fun defaultsSearchResultsToIconPresentation() {
+        assertEquals(SearchResultPresentation.ICONS, LauncherSettings().search.resultPresentation)
+    }
+
+    @Test
     fun cardsChapterIntentDefaultsToOverviewWithoutPins() {
         val cards = LauncherSettings().cards.chapterPreferences
 

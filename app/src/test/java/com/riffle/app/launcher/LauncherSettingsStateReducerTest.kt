@@ -11,6 +11,7 @@ import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
 import com.riffle.core.domain.launcher.settings.HomeSystemBars
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettingsRepository
+import com.riffle.core.domain.launcher.settings.SearchResultPresentation
 import com.riffle.core.domain.launcher.settings.homeSystemBars
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertSame
@@ -30,6 +31,20 @@ class LauncherSettingsStateReducerTest {
             )
 
         assertEquals(HapticFeedbackStrength.STRONG, updatedState.launcherSettings.haptics.feedbackStrength)
+        assertEquals(updatedState.launcherSettings, repository.savedSettings)
+    }
+
+    @Test
+    fun persistsSearchResultPresentationSelection() {
+        val repository = FakeLauncherSettingsRepository()
+
+        val updatedState =
+            reducer(launcherSettingsRepository = repository).reduce(
+                state = LauncherShellState(),
+                action = LauncherShellAction.SelectSearchResultPresentation(SearchResultPresentation.LIST),
+            )
+
+        assertEquals(SearchResultPresentation.LIST, updatedState.launcherSettings.search.resultPresentation)
         assertEquals(updatedState.launcherSettings, repository.savedSettings)
     }
 

@@ -42,6 +42,17 @@ class SearchScopeFilterChipsTest {
         )
     }
 
+    @Test
+    fun hidesEmptyUnselectedProfilesToKeepSearchControlsCompact() {
+        assertEquals(
+            listOf(AppProfileType.PERSONAL),
+            searchProfileFilterOptionsFor(
+                apps = listOf(app("Camera", profile = AppProfile.personal())),
+                selectedProfiles = setOf(AppProfileType.PERSONAL),
+            ).map { option -> option.profileType },
+        )
+    }
+
     private fun app(
         label: String,
         profile: AppProfile,

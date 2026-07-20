@@ -139,7 +139,7 @@ private fun appSettingsPageEntries(status: SettingsOverviewStatus): List<Setting
     listOf(
         SettingsPageEntry(
             label = "App drawer",
-            subtitle = "Refresh installed apps",
+            subtitle = "Apps and search results",
             page = SettingsPage.APPS,
             group = SettingsPageGroup.APPS,
             searchAliases =
@@ -148,6 +148,9 @@ private fun appSettingsPageEntries(status: SettingsOverviewStatus): List<Setting
                     "installed apps",
                     "refresh apps",
                     "refetch apps",
+                    "search result layout",
+                    "search icons",
+                    "search list",
                 ),
         ),
         SettingsPageEntry(

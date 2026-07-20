@@ -48,6 +48,8 @@ import com.riffle.core.domain.launcher.settings.MotionSettings
 import com.riffle.core.domain.launcher.settings.OverlayDockEdge
 import com.riffle.core.domain.launcher.settings.OverlayDockExpandedOrientation
 import com.riffle.core.domain.launcher.settings.OverlayDockSettings
+import com.riffle.core.domain.launcher.settings.SearchResultPresentation
+import com.riffle.core.domain.launcher.settings.SearchSettings
 import com.riffle.core.domain.launcher.settings.TimeScapeAppearanceSettings
 import com.riffle.core.domain.launcher.settings.TimeScapeGeometry
 import com.riffle.core.domain.launcher.settings.TimeScapeMotion
@@ -61,6 +63,18 @@ import org.junit.Test
 
 @Suppress("LargeClass")
 class LauncherSettingsJsonCodecTest {
+    @Test
+    fun roundTripsSearchResultPresentationAndDefaultsMissingValuesToIcons() {
+        val settings = LauncherSettings(search = SearchSettings(SearchResultPresentation.LIST))
+
+        assertEquals(settings.search, decodeLauncherSettings(encodeLauncherSettings(settings)).search)
+        assertEquals(SearchResultPresentation.ICONS, decodeLauncherSettings("{}").search.resultPresentation)
+        assertEquals(
+            SearchResultPresentation.ICONS,
+            decodeLauncherSettings("{\"search\": {\"resultPresentation\": \"UNKNOWN\"}}").search.resultPresentation,
+        )
+    }
+
     @Test
     fun roundTripsCardsChapterIntent() {
         val mail = CardsChapterId.App(AppPackageName("com.riffle.mail"), AppProfile.personal().id)
