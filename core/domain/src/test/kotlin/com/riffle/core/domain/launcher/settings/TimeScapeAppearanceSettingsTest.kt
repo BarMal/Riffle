@@ -229,6 +229,22 @@ class TimeScapeAppearanceSettingsTest {
     }
 
     @Test
+    fun reducedMotionWideShortViewportReservesReachableBackgroundCardSeparation() {
+        val resolution =
+            TimeScapeAppearanceSettings(motion = TimeScapeMotion(reducedMotion = true))
+                .resolveCardStack(TimeScapeViewportDp(widthDp = 1_200, heightDp = 800))
+        val entries =
+            resolution.layoutPolicy.entries(
+                cardCount = 3,
+                activeIndex = 1,
+                reducedMotion = resolution.reducedMotion,
+            )
+
+        assertTrue(resolution.isUsable)
+        assertTrue(entries.any { it.verticalOffset != 0f })
+    }
+
+    @Test
     fun globalReducedMotionUsesStaticTimeScapeTokensWithoutChangingStoredIntent() {
         val storedAppearance = TimeScapeAppearanceSettings()
         val resolution =

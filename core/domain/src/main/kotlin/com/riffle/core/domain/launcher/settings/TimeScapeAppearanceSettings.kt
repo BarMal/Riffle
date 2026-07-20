@@ -87,10 +87,10 @@ data class TimeScapeAppearanceSettings(
         globalReducedMotion: Boolean = false,
     ): TimeScapeCardStackResolution {
         val appearance = effectiveForResolution(capabilities, globalReducedMotion)
-        val requestedPadding = appearance.geometry.contentPaddingDp
         val focusedScale = appearance.geometry.focusedScalePercent / 100f
         val stackBounds = resolveStackBounds(appearance.geometry, appearance.motion, focusedScale)
-        val cardSize = resolveCardSize(viewport, requestedPadding, appearance.geometry, stackBounds)
+        val cardSize = appearance.resolveCardSize(viewport, stackBounds)
+        val requestedPadding = appearance.geometry.contentPaddingDp
         val isUsable = cardSize.isUsable
         val depth = if (isUsable) appearance.geometry.visibleDepth else 1
         val horizontalTravel =
@@ -179,14 +179,35 @@ private fun TimeScapeAppearanceSettings.effectiveForResolution(
     copy(motion = motion.copy(reducedMotion = motion.reducedMotion || globalReducedMotion))
         .effectiveFor(capabilities)
 
+private fun TimeScapeAppearanceSettings.staticVerticalSeparationDp(): Int =
+    if (motion.reducedMotion) {
+        geometry.verticalSpacingDp * geometry.visibleDepth
+    } else {
+        0
+    }
+
+private fun TimeScapeAppearanceSettings.resolveCardSize(
+    viewport: TimeScapeViewportDp,
+    stackBounds: ResolvedTimeScapeStackBounds,
+): ResolvedTimeScapeCardSize =
+    resolveCardSize(
+        viewport = viewport,
+        requestedPadding = geometry.contentPaddingDp,
+        geometry = geometry,
+        stackBounds = stackBounds,
+        reservedVerticalSpaceDp = staticVerticalSeparationDp(),
+    )
+
 private fun resolveCardSize(
     viewport: TimeScapeViewportDp,
     requestedPadding: Int,
     geometry: TimeScapeGeometry,
     stackBounds: ResolvedTimeScapeStackBounds,
+    reservedVerticalSpaceDp: Int = 0,
 ): ResolvedTimeScapeCardSize {
     val availableWidth = (viewport.safeWidthDp - requestedPadding * 2).coerceAtLeast(0)
-    val availableHeight = (viewport.safeHeightDp - requestedPadding * 2).coerceAtLeast(0)
+    val availableHeight =
+        (viewport.safeHeightDp - requestedPadding * 2 - reservedVerticalSpaceDp).coerceAtLeast(0)
     val aspectRatio = geometry.cardAspectRatioPercent / 100f
     val width = min(availableWidth / stackBounds.maxWidthScale, availableHeight / stackBounds.maxHeightScale).toInt()
     val height = if (aspectRatio == 0f) 0 else (width / aspectRatio).toInt()
