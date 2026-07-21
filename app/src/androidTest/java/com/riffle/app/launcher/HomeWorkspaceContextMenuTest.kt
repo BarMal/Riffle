@@ -13,6 +13,9 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.riffle.core.domain.launcher.home.FolderItem
+import com.riffle.core.domain.launcher.home.LauncherItemId
+import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -74,5 +77,38 @@ class HomeWorkspaceContextMenuTest {
         composeRule.onNodeWithText("Compose").performClick()
         composeRule.runOnIdle { menuExpanded.value = true }
         composeRule.onNodeWithText("App shortcuts (1)").assertExists()
+    }
+
+    @Test
+    fun folderContextMenuPreservesFolderActionsOnTheSharedMenuSurface() {
+        val folder = FolderItem(id = LauncherItemId("folder"), label = "Folder", items = emptyList())
+        val menuExpanded = mutableStateOf(true)
+        val actions = mutableListOf<LauncherShellAction>()
+
+        composeRule.setContent {
+            MaterialTheme {
+                Box(modifier = Modifier.fillMaxSize()) {
+                    HomeFolderContextMenu(
+                        folder = folder,
+                        expanded = menuExpanded.value,
+                        onDismissRequest = { menuExpanded.value = false },
+                        actions =
+                            HomeWorkspaceActions(
+                                onFolderOpen = {},
+                                onDragSessionChanged = {},
+                                haptics = NoopLauncherHaptics,
+                                onAction = actions::add,
+                            ),
+                    )
+                }
+            }
+        }
+
+        composeRule.onNodeWithText("Move to dock").performClick()
+
+        composeRule.runOnIdle {
+            assertEquals(listOf(LauncherShellAction.MoveHomeItemToDock(folder.id)), actions)
+            assertEquals(false, menuExpanded.value)
+        }
     }
 }
