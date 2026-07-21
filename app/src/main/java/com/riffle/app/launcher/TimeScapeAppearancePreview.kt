@@ -67,7 +67,7 @@ internal fun TimeScapeAppearancePreview(
                         Modifier
                             .requiredWidth(resolution.cardWidthDp.dp)
                             .requiredHeight(resolution.cardHeightDp.dp),
-                    contentPadding = resolution.contentPaddingDp.dp,
+                    contentPadding = timeScapeResolvedContentPadding(resolution),
                     rendererCapabilities = rendererCapabilities,
                 ) {
                     Text(

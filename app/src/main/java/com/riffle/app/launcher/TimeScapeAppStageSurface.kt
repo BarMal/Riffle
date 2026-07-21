@@ -596,6 +596,7 @@ private fun TimeScapeNotificationStack(
                                     width = resolution.cardWidthDp.dp,
                                     height = resolution.cardHeightDp.dp,
                                 ),
+                            contentPadding = timeScapeResolvedContentPadding(resolution),
                         ) {
                             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                 Text(card.title, style = MaterialTheme.typography.titleMedium)

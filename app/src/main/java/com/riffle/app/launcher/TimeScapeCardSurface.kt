@@ -44,6 +44,7 @@ import com.riffle.core.domain.launcher.notifications.LauncherNotification
 import com.riffle.core.domain.launcher.settings.TimeScapeAccentSource
 import com.riffle.core.domain.launcher.settings.TimeScapeAppearanceSettings
 import com.riffle.core.domain.launcher.settings.TimeScapeBackgroundSource
+import com.riffle.core.domain.launcher.settings.TimeScapeCardStackResolution
 import com.riffle.core.domain.launcher.settings.TimeScapeContentDensity
 import com.riffle.core.domain.launcher.settings.TimeScapeRendererCapabilities
 import java.security.MessageDigest
@@ -149,6 +150,10 @@ private fun String.sha256Revision(): String {
         }
     }
 }
+
+/** Keeps all TimeScape card renderers aligned with the reachability-capped stack resolution. */
+@Suppress("MaxLineLength")
+internal fun timeScapeResolvedContentPadding(resolution: TimeScapeCardStackResolution): Dp = resolution.contentPaddingDp.dp
 
 internal fun timeScapeRendererCapabilities(sdkInt: Int = Build.VERSION.SDK_INT): TimeScapeRendererCapabilities =
     TimeScapeRendererCapabilities(supportsBlur = sdkInt >= Build.VERSION_CODES.S)

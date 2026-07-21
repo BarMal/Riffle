@@ -1072,21 +1072,20 @@ class TimeScapeCardSurfaceTest {
     }
 
     @Test
-    fun stackedCardsUseTheResolutionCappedContentPadding() {
+    fun previewAndProductionCardsUseTheSameCappedContentPaddingOnConstrainedViewports() {
         val resolution =
             TimeScapeAppearanceSettings(
                 geometry = TimeScapeGeometry(contentPaddingDp = 64),
             ).resolveCardStack(
-                viewport = TimeScapeViewportDp(widthDp = 600, heightDp = 900),
+                viewport = TimeScapeViewportDp(widthDp = 240, heightDp = 400),
             )
 
         assertTrue(resolution.isUsable)
         assertEquals(
             resolution.contentPaddingDp.dp,
-            generatedNotificationCardContentPadding(resolution),
+            timeScapeResolvedContentPadding(resolution),
         )
-        assertTrue(resolution.contentPaddingDp <= resolution.cardWidthDp / 4)
-        assertTrue(resolution.contentPaddingDp <= resolution.cardHeightDp / 4)
+        assertTrue(resolution.contentPaddingDp < 64)
     }
 
     @Test

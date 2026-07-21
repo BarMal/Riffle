@@ -7,6 +7,7 @@ import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -51,9 +52,18 @@ class TimeScapeAppearanceEditorTest {
             "Stack and spline",
             "Surface and glass",
             "Colour and content",
-            "Motion and haptics",
+            "Motion",
             "Accessibility fallbacks",
         ).forEach { title -> composeRule.onNodeWithText(title).assertExists() }
+        listOf(
+            "Settle duration",
+            "Enter duration",
+            "Exit duration",
+            "Expand duration",
+            "Easing",
+            "Spring bounciness",
+            "Haptic strength",
+        ).forEach { label -> composeRule.onAllNodesWithText(label).assertCountEquals(0) }
     }
 
     @Test
