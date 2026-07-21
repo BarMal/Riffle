@@ -127,8 +127,12 @@ class LauncherThemeTest {
 
         assertEquals(androidx.compose.ui.graphics.Color(0xFF102030), scheme.background)
         assertEquals(androidx.compose.ui.graphics.Color(0xFF102030), scheme.surface)
+        assertEquals(androidx.compose.ui.graphics.Color(0xFF102030), scheme.surfaceContainerLow)
+        assertEquals(androidx.compose.ui.graphics.Color(0xFF102030), scheme.surfaceContainerHigh)
         assertEquals(androidx.compose.ui.graphics.Color(0xFF405060), scheme.primary)
         assertEquals(androidx.compose.ui.graphics.Color(0xFF405060), scheme.secondary)
+        assertEquals(androidx.compose.ui.graphics.Color(0xFF405060), scheme.secondaryContainer)
+        assertEquals(androidx.compose.ui.graphics.Color(0xFF405060), scheme.tertiaryContainer)
     }
 
     @Test
