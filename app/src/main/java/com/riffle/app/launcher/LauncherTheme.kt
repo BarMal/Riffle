@@ -236,7 +236,7 @@ private fun LauncherThemeColors.toColorOverrides(): LauncherThemeColorOverrides 
         labelBackground = labelBackgroundArgb?.let(::Color),
     )
 
-private fun Color.contentColor(fallback: Color): Color =
+internal fun Color.contentColor(fallback: Color): Color =
     if (alpha < 0.5f) {
         fallback
     } else {

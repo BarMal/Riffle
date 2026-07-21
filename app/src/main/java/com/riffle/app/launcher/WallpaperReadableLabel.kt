@@ -7,12 +7,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -30,6 +32,7 @@ fun WallpaperReadableLabel(
 
     val metrics = HomeGridLayoutMetrics()
     val fixedWidthDp = metrics.fixedHomeLabelContainerWidthDp(settings)
+    val colors = wallpaperReadableLabelColors(LocalLauncherThemeColorOverrides.current, MaterialTheme.colorScheme)
 
     Box(
         modifier =
@@ -44,7 +47,7 @@ fun WallpaperReadableLabel(
                 .height(metrics.homeLabelContainerHeightDp(settings).dp)
                 .clip(RoundedCornerShape(6.dp))
                 .background(
-                    (LocalLauncherThemeColorOverrides.current.labelBackground ?: MaterialTheme.colorScheme.scrim)
+                    colors.background
                         .let { color -> color.copy(alpha = color.alpha * settings.backgroundAlphaPercent / 100f) },
                 )
                 .padding(horizontal = 6.dp, vertical = 2.dp),
@@ -53,11 +56,27 @@ fun WallpaperReadableLabel(
         Text(
             text = text,
             style = MaterialTheme.typography.labelSmall.copy(fontSize = settings.textSizeSp.sp),
-            color = LocalLauncherThemeColorOverrides.current.label ?: MaterialTheme.colorScheme.onSurface,
+            color = colors.text,
             maxLines = settings.maxLines,
             overflow = TextOverflow.Ellipsis,
             softWrap = true,
             textAlign = TextAlign.Center,
         )
     }
+}
+
+internal data class WallpaperReadableLabelColors(
+    val text: Color,
+    val background: Color,
+)
+
+internal fun wallpaperReadableLabelColors(
+    overrides: LauncherThemeColorOverrides,
+    colorScheme: ColorScheme,
+): WallpaperReadableLabelColors {
+    val background = overrides.labelBackground ?: colorScheme.scrim
+    return WallpaperReadableLabelColors(
+        text = overrides.label ?: background.contentColor(Color.White),
+        background = background,
+    )
 }

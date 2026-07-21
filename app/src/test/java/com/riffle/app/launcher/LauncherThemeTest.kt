@@ -136,6 +136,16 @@ class LauncherThemeTest {
     }
 
     @Test
+    fun defaultHomeLabelTextContrastsWithItsScrimBackgroundAfterBackgroundCustomisation() {
+        val scheme = lightScheme.withThemeColors(LauncherThemeColors(backgroundArgb = 0xFFF0F0F0.toInt()))
+
+        assertEquals(
+            androidx.compose.ui.graphics.Color.White,
+            wallpaperReadableLabelColors(LauncherThemeColorOverrides(), scheme).text,
+        )
+    }
+
+    @Test
     fun midToneCustomAccentUsesReadableForegroundsForSecondaryAndTertiaryContainers() {
         val scheme = lightScheme.withThemeColors(LauncherThemeColors(accentArgb = 0xFF808080.toInt()))
 
