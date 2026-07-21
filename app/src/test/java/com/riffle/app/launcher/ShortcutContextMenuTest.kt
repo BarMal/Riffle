@@ -108,8 +108,14 @@ class ShortcutContextMenuTest {
 
         assertEquals(
             ShortcutContextMenuItem(
-                label = "Compose message",
-                action = LauncherShellAction.LaunchAppShortcut(platformShortcut),
+                label = "App shortcuts (1)",
+                submenuItems =
+                    listOf(
+                        ShortcutContextMenuItem(
+                            label = "Compose message",
+                            action = LauncherShellAction.LaunchAppShortcut(platformShortcut),
+                        ),
+                    ),
             ),
             items.first(),
         )
@@ -135,9 +141,15 @@ class ShortcutContextMenuTest {
 
         assertEquals(
             ShortcutContextMenuItem(
-                label = "Compose",
-                action = LauncherShellAction.LaunchAppShortcut(platformShortcut),
-                enabled = false,
+                label = "App shortcuts (1)",
+                submenuItems =
+                    listOf(
+                        ShortcutContextMenuItem(
+                            label = "Compose",
+                            action = LauncherShellAction.LaunchAppShortcut(platformShortcut),
+                            enabled = false,
+                        ),
+                    ),
             ),
             items.first(),
         )

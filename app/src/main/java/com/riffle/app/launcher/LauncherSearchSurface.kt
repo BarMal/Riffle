@@ -27,7 +27,6 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -439,7 +438,7 @@ private fun SearchResultContextMenu(
     onExpandedChange: (Boolean) -> Unit,
 ) {
     if (result is SearchGridResult.Setting) return
-    DropdownMenu(expanded = expanded, onDismissRequest = { onExpandedChange(false) }) {
+    RiffleContextMenu(expanded = expanded, onDismissRequest = { onExpandedChange(false) }) {
         when (result) {
             is SearchGridResult.App -> {
                 DropdownMenuItem(

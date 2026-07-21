@@ -14,7 +14,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -275,75 +274,120 @@ private fun AppDrawerRowOverflowMenu(
     showButton: Boolean,
     onAction: (LauncherShellAction) -> Unit,
 ) {
+    val isShortcutMenuExpanded = remember(state.app.identity) { mutableStateOf(false) }
+
     Box {
         if (showButton) {
             IconButton(onClick = { onExpandedChange(true) }) {
                 Text(text = "...")
             }
         }
-        DropdownMenu(
+        RiffleContextMenu(
             expanded = isExpanded,
-            onDismissRequest = { onExpandedChange(false) },
+            onDismissRequest = {
+                isShortcutMenuExpanded.value = false
+                onExpandedChange(false)
+            },
         ) {
-            AppDrawerRowMenuItem(
-                text = if (state.isOnHome) "Added to home" else "Add to home",
-                enabled = !state.isOnHome,
-                onClick = { onAction(LauncherShellAction.AddAppToHome(state.app)) },
-                onExpandedChange = onExpandedChange,
-            )
-            AppDrawerRowMenuItem(
-                text = if (state.dockItemId == null) "Add to dock" else "Remove from dock",
-                onClick = {
-                    when (state.dockItemId) {
-                        null -> onAction(LauncherShellAction.AddAppToDock(state.app))
-                        else -> onAction(LauncherShellAction.RemoveDockShortcut(state.dockItemId))
-                    }
-                },
-                onExpandedChange = onExpandedChange,
-            )
-            AppDrawerRowMenuItem(
-                text =
-                    if (state.floatingDockItemId == null) {
-                        "Add to floating dock"
-                    } else {
-                        "Remove from floating dock"
-                    },
-                onClick = {
-                    when (state.floatingDockItemId) {
-                        null -> onAction(LauncherShellAction.AddAppToFloatingDock(state.app))
-                        else -> onAction(LauncherShellAction.RemoveFloatingDockShortcut(state.floatingDockItemId))
-                    }
-                },
-                onExpandedChange = onExpandedChange,
-            )
-            state.shortcutItems.forEach { item ->
+            if (isShortcutMenuExpanded.value) {
                 AppDrawerShortcutMenuItems(
-                    item = item,
+                    items = state.shortcutItems,
                     onAction = onAction,
+                    onBack = { isShortcutMenuExpanded.value = false },
+                    onExpandedChange = { expanded ->
+                        if (!expanded) {
+                            isShortcutMenuExpanded.value = false
+                        }
+                        onExpandedChange(expanded)
+                    },
+                )
+            } else {
+                AppDrawerMainMenuItems(
+                    state = state,
+                    onAction = onAction,
+                    onOpenShortcuts = { isShortcutMenuExpanded.value = true },
                     onExpandedChange = onExpandedChange,
                 )
             }
-            AppDrawerRowMenuItem(
-                text = "App info",
-                onClick = { onAction(LauncherShellAction.OpenAppInfo(state.app.identity)) },
-                onExpandedChange = onExpandedChange,
-            )
-            AppDrawerRowMenuItem(
-                text = "Hide",
-                onClick = { onAction(LauncherShellAction.HideApp(state.app.identity)) },
-                onExpandedChange = onExpandedChange,
-            )
-            AppDrawerRowMenuItem(
-                text = "Uninstall",
-                onClick = { onAction(LauncherShellAction.UninstallApp(state.app.identity)) },
-                onExpandedChange = onExpandedChange,
-            )
         }
     }
 }
 
 @Composable
+private fun AppDrawerMainMenuItems(
+    state: AppDrawerRowState,
+    onAction: (LauncherShellAction) -> Unit,
+    onOpenShortcuts: () -> Unit,
+    onExpandedChange: (Boolean) -> Unit,
+) {
+    AppDrawerRowMenuItem(
+        text = if (state.isOnHome) "Added to home" else "Add to home",
+        enabled = !state.isOnHome,
+        onClick = { onAction(LauncherShellAction.AddAppToHome(state.app)) },
+        onExpandedChange = onExpandedChange,
+    )
+    AppDrawerRowMenuItem(
+        text = if (state.dockItemId == null) "Add to dock" else "Remove from dock",
+        onClick = {
+            when (state.dockItemId) {
+                null -> onAction(LauncherShellAction.AddAppToDock(state.app))
+                else -> onAction(LauncherShellAction.RemoveDockShortcut(state.dockItemId))
+            }
+        },
+        onExpandedChange = onExpandedChange,
+    )
+    AppDrawerRowMenuItem(
+        text = if (state.floatingDockItemId == null) "Add to floating dock" else "Remove from floating dock",
+        onClick = {
+            when (state.floatingDockItemId) {
+                null -> onAction(LauncherShellAction.AddAppToFloatingDock(state.app))
+                else -> onAction(LauncherShellAction.RemoveFloatingDockShortcut(state.floatingDockItemId))
+            }
+        },
+        onExpandedChange = onExpandedChange,
+    )
+    if (state.shortcutItems.isNotEmpty()) {
+        DropdownMenuItem(
+            text = { Text(text = "App shortcuts (${state.shortcutItems.size})") },
+            trailingIcon = { Text(text = "›") },
+            onClick = onOpenShortcuts,
+        )
+    }
+    AppDrawerRowMenuItem(
+        text = "App info",
+        onClick = { onAction(LauncherShellAction.OpenAppInfo(state.app.identity)) },
+        onExpandedChange = onExpandedChange,
+    )
+    AppDrawerRowMenuItem(
+        text = "Hide",
+        onClick = { onAction(LauncherShellAction.HideApp(state.app.identity)) },
+        onExpandedChange = onExpandedChange,
+    )
+    AppDrawerRowMenuItem(
+        text = "Uninstall",
+        onClick = { onAction(LauncherShellAction.UninstallApp(state.app.identity)) },
+        onExpandedChange = onExpandedChange,
+    )
+}
+
+@Composable
 private fun AppDrawerShortcutMenuItems(
+    items: List<AppDrawerShortcutMenuItem>,
+    onAction: (LauncherShellAction) -> Unit,
+    onBack: () -> Unit,
+    onExpandedChange: (Boolean) -> Unit,
+) {
+    DropdownMenuItem(
+        text = { Text(text = "Back") },
+        onClick = onBack,
+    )
+    items.forEach { item ->
+        AppDrawerShortcutMenuItemActions(item, onAction, onExpandedChange)
+    }
+}
+
+@Composable
+private fun AppDrawerShortcutMenuItemActions(
     item: AppDrawerShortcutMenuItem,
     onAction: (LauncherShellAction) -> Unit,
     onExpandedChange: (Boolean) -> Unit,

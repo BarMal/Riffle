@@ -19,7 +19,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -119,13 +118,13 @@ internal fun HomeFolder(
 }
 
 @Composable
-private fun HomeFolderContextMenu(
+internal fun HomeFolderContextMenu(
     folder: FolderItem,
     expanded: Boolean,
     onDismissRequest: () -> Unit,
     actions: HomeWorkspaceActions,
 ) {
-    DropdownMenu(
+    RiffleContextMenu(
         expanded = expanded,
         onDismissRequest = onDismissRequest,
     ) {
