@@ -86,13 +86,14 @@ internal fun ShortcutContextMenu(
 ) {
     var submenuItems by remember(items) { mutableStateOf<List<ShortcutContextMenuItem>?>(null) }
     val visibleItems = submenuItems ?: items
+    val dismissMenu = {
+        submenuItems = null
+        onDismissRequest()
+    }
 
     RiffleContextMenu(
         expanded = expanded,
-        onDismissRequest = {
-            submenuItems = null
-            onDismissRequest()
-        },
+        onDismissRequest = dismissMenu,
         offset = offset,
     ) {
         if (submenuItems != null) {
@@ -113,7 +114,7 @@ internal fun ShortcutContextMenu(
                     if (item.submenuItems.isNotEmpty()) {
                         submenuItems = item.submenuItems
                     } else {
-                        onDismissRequest()
+                        dismissMenu()
                         onAction(requireNotNull(item.action))
                     }
                 },
