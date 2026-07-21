@@ -2,6 +2,7 @@
 
 package com.riffle.app.launcher
 
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -358,12 +359,13 @@ internal fun TimeScapeContextShelf(
                     detailFocusRequester?.let { requester ->
                         Modifier.focusRequester(requester).onGloballyPositioned {
                             if (restoreDetailFocus) detailControlLaidOut = true
-                        }.onFocusChanged { focusState ->
-                            if (restoreDetailFocus && focusState.isFocused) {
-                                onDetailFocusRestored?.invoke()
-                                detailControlLaidOut = false
-                            }
                         }
+                            .onFocusChanged { focusState ->
+                                if (restoreDetailFocus && focusState.isFocused) {
+                                    onDetailFocusRestored?.invoke()
+                                    detailControlLaidOut = false
+                                }
+                            }.focusable()
                     }
                         ?: Modifier,
             ) {
@@ -425,12 +427,13 @@ private fun TimeScapeEmptyStage(
                 modifier =
                     Modifier.focusRequester(detailFocusRequester).onGloballyPositioned {
                         if (restoreDetailFocusForCardId == detailCardId) detailControlLaidOut = true
-                    }.onFocusChanged { focusState ->
-                        if (restoreDetailFocusForCardId == detailCardId && focusState.isFocused) {
-                            restoreDetailFocusForCardId = null
-                            detailControlLaidOut = false
-                        }
-                    },
+                    }
+                        .onFocusChanged { focusState ->
+                            if (restoreDetailFocusForCardId == detailCardId && focusState.isFocused) {
+                                restoreDetailFocusForCardId = null
+                                detailControlLaidOut = false
+                            }
+                        }.focusable(),
             ) {
                 Text("Details")
             }
