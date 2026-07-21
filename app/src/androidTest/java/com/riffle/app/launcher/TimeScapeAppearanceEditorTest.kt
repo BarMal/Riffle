@@ -1,19 +1,25 @@
 package com.riffle.app.launcher
 
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performSemanticsAction
+import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.MotionSettings
 import com.riffle.core.domain.launcher.settings.TimeScapeAppearancePreset
+import com.riffle.core.domain.launcher.settings.TimeScapeAppearanceSettings
 import com.riffle.core.domain.launcher.settings.TimeScapeRendererCapabilities
+import com.riffle.core.domain.launcher.settings.TimeScapeSurface
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -132,5 +138,23 @@ class TimeScapeAppearanceEditorTest {
         composeRule
             .onNodeWithText("Blur is unavailable on this device; the preview shows the opaque fallback.")
             .assertExists()
+    }
+
+    @Test
+    fun previewAppliesItsInjectedBlurFallbackToEveryRenderedCard() {
+        composeRule.setContent {
+            MaterialTheme {
+                TimeScapeAppearancePreview(
+                    appearance = TimeScapeAppearanceSettings(surface = TimeScapeSurface(blurStrengthPercent = 72)),
+                    globalReducedMotion = false,
+                    rendererCapabilities = TimeScapeRendererCapabilities(supportsBlur = false),
+                    modifier = Modifier.requiredSize(360.dp),
+                )
+            }
+        }
+
+        composeRule
+            .onAllNodes(SemanticsMatcher.expectValue(TimeScapeCardBlurStrengthKey, 0))
+            .assertCountEquals(3)
     }
 }

@@ -38,6 +38,7 @@ internal fun TimeScapeAppearancePreview(
                 capabilities = rendererCapabilities,
                 globalReducedMotion = globalReducedMotion,
             )
+        val effectiveAppearance = appearance.effectiveFor(rendererCapabilities)
         if (!resolution.isUsable) {
             Text(
                 text = "Preview needs more space for reachable cards",
@@ -55,7 +56,7 @@ internal fun TimeScapeAppearancePreview(
         ) { entry, _ ->
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 TimeScapeCardSurface(
-                    appearance = appearance,
+                    appearance = effectiveAppearance,
                     background =
                         TimeScapeCardBackground(
                             appSeed = PREVIEW_APP_SEEDS[entry.cardIndex],
@@ -67,6 +68,7 @@ internal fun TimeScapeAppearancePreview(
                             .requiredWidth(resolution.cardWidthDp.dp)
                             .requiredHeight(resolution.cardHeightDp.dp),
                     contentPadding = resolution.contentPaddingDp.dp,
+                    rendererCapabilities = rendererCapabilities,
                 ) {
                     Text(
                         text = if (entry.cardIndex == 0) "Focus mode" else "Earlier activity",
