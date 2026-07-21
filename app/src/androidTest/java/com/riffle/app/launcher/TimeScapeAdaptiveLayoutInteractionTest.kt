@@ -46,7 +46,8 @@ class TimeScapeAdaptiveLayoutInteractionTest {
     @Test
     fun largeWindowKeepsSupportingDetailPaneInsideSafeInsets() {
         setContent(
-            widthDp = 1_200,
+            widthDp = INSET_TEST_WINDOW_WIDTH_DP,
+            testDensity = INSET_TEST_DENSITY,
             windowInsets = WindowInsets(SAFE_START_PX, SAFE_TOP_PX, SAFE_END_PX, SAFE_BOTTOM_PX),
         )
 
@@ -62,11 +63,12 @@ class TimeScapeAdaptiveLayoutInteractionTest {
 
     private fun setContent(
         widthDp: Int,
+        testDensity: Float = TEST_WINDOW_DENSITY,
         windowInsets: WindowInsets = WindowInsets(0, 0, 0, 0),
     ) {
         composeRule.setContent {
             // Make the physical test host represent the requested adaptive dp window.
-            CompositionLocalProvider(LocalDensity provides Density(TEST_WINDOW_DENSITY)) {
+            CompositionLocalProvider(LocalDensity provides Density(testDensity)) {
                 MaterialTheme {
                     Box(
                         modifier =
@@ -90,6 +92,8 @@ class TimeScapeAdaptiveLayoutInteractionTest {
     private companion object {
         const val TEST_WINDOW_DENSITY = 0.3f
         const val TEST_WINDOW_HEIGHT_DP = 800
+        const val INSET_TEST_WINDOW_WIDTH_DP = 1_400
+        const val INSET_TEST_DENSITY = 0.25f
         const val SAFE_START_PX = 24
         const val SAFE_TOP_PX = 16
         const val SAFE_END_PX = 48
