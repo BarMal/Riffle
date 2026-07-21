@@ -74,6 +74,7 @@ internal fun TimeScapeAppStageSurface(
     val shellState = reconciler.reconcile(state)
     val selectedStage = shellState.snapshot.selectedStage
     var detailOrigin by remember { mutableStateOf<TimeScapeDetailOrigin?>(null) }
+    var focusedCardId by remember { mutableStateOf<LauncherCardId?>(null) }
     var detailRecoveryMessage by rememberSaveable { mutableStateOf<String?>(null) }
 
     LaunchedEffect(detailOrigin, selectedStage) {
@@ -126,6 +127,7 @@ internal fun TimeScapeAppStageSurface(
                                     selectedStage?.id?.let { stageId -> cardId?.let { TimeScapeDetailOrigin(stageId, it) } }
                                 if (cardId != null) detailRecoveryMessage = null
                             },
+                            onFocusedCardChanged = { focusedCardId = it },
                             onAction = onAction,
                             modifier = Modifier.weight(1f),
                         )
@@ -133,6 +135,7 @@ internal fun TimeScapeAppStageSurface(
                     if (paneLayout.showsDetailPane) {
                         TimeScapeSupportingPane(
                             stage = selectedStage,
+                            selectedCardId = detailOrigin?.cardId ?: focusedCardId,
                             state = state,
                             modifier = Modifier.width(paneLayout.detailWidthDp.dp).fillMaxSize(),
                         )
@@ -150,6 +153,7 @@ private fun TimeScapeCompactContent(
     shellState: com.riffle.app.launcher.notifications.AppStageShellState,
     detailRecoveryMessage: String?,
     onDetailVisibilityChanged: (LauncherCardId?) -> Unit,
+    onFocusedCardChanged: (LauncherCardId?) -> Unit = {},
     onAction: (LauncherShellAction) -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -160,6 +164,7 @@ private fun TimeScapeCompactContent(
             shellState,
             detailRecoveryMessage,
             onDetailVisibilityChanged,
+            onFocusedCardChanged,
             onAction,
             Modifier.weight(1f),
         )
@@ -174,13 +179,14 @@ private fun TimeScapeStageBody(
     shellState: com.riffle.app.launcher.notifications.AppStageShellState,
     detailRecoveryMessage: String?,
     onDetailVisibilityChanged: (LauncherCardId?) -> Unit,
+    onFocusedCardChanged: (LauncherCardId?) -> Unit = {},
     onAction: (LauncherShellAction) -> Unit,
     modifier: Modifier,
 ) {
     if (state.notificationAccessStatus != NotificationAccessStatus.GRANTED || selectedStage == null) {
         TimeScapeUnavailableState(state.notificationAccessStatus, detailRecoveryMessage, onAction, modifier)
     } else {
-        TimeScapeStageContent(selectedStage, state, shellState, onDetailVisibilityChanged, onAction, modifier)
+        TimeScapeStageContent(selectedStage, state, shellState, onDetailVisibilityChanged, onFocusedCardChanged, onAction, modifier)
     }
 }
 
@@ -207,12 +213,13 @@ private fun TimeScapeStageRail(
 @Composable
 private fun TimeScapeSupportingPane(
     stage: AppStage?,
+    selectedCardId: LauncherCardId?,
     state: LauncherShellState,
     modifier: Modifier,
 ) {
     Column(modifier = modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text("Details", style = MaterialTheme.typography.titleMedium)
-        val content = stage?.content?.firstOrNull()
+        val content = stage?.content?.firstOrNull { it.id == selectedCardId } ?: stage?.content?.firstOrNull()
         if (content == null) {
             Text("Select a card to keep its context visible here.")
         } else {
@@ -298,6 +305,7 @@ private fun TimeScapeStageContent(
     state: LauncherShellState,
     shellState: com.riffle.app.launcher.notifications.AppStageShellState,
     onDetailVisibilityChanged: (LauncherCardId?) -> Unit,
+    onFocusedCardChanged: (LauncherCardId?) -> Unit = {},
     onAction: (LauncherShellAction) -> Unit,
     modifier: Modifier,
 ) {
@@ -320,6 +328,7 @@ private fun TimeScapeStageContent(
                 state = state,
                 notificationCards = shellState.notificationCards,
                 detailState = detailState,
+                onFocusedCardChanged = onFocusedCardChanged,
                 onAction = onAction,
                 modifier = modifier,
             )
@@ -332,6 +341,7 @@ private fun TimeScapeNotificationStack(
     state: LauncherShellState,
     notificationCards: List<AppStageNotificationCard>,
     detailState: TimeScapeCardDetailState,
+    onFocusedCardChanged: (LauncherCardId?) -> Unit,
     onAction: (LauncherShellAction) -> Unit,
     modifier: Modifier,
 ) {
@@ -353,6 +363,7 @@ private fun TimeScapeNotificationStack(
     var restoreDetailFocusForCardId by remember { mutableStateOf<LauncherCardId?>(null) }
 
     SideEffect {
+        onFocusedCardChanged(activeCard.content.id)
         detailState.reconcile(availableCardIds)
         if (restoreDetailFocusForCardId !in availableCardIds) restoreDetailFocusForCardId = null
     }

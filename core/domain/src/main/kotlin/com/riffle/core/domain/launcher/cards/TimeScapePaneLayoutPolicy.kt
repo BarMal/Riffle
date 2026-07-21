@@ -38,6 +38,8 @@ data class TimeScapePaneLayout(
     val splineWidthDp: Int,
     val detailWidthDp: Int,
     val hingeGapDp: Int = 0,
+    val leadingRegionWidthDp: Int = 0,
+    val trailingRegionWidthDp: Int = 0,
 ) {
     val showsRail: Boolean get() = mode != TimeScapePaneMode.COMPACT
     val showsDetailPane: Boolean get() = mode == TimeScapePaneMode.THREE_PANE
@@ -50,10 +52,24 @@ class TimeScapePaneLayoutPolicy {
         val verticalHinge = window.separatingHinges.firstOrNull { hinge -> hinge.isVertical }
         val hingeGap = verticalHinge?.widthDp ?: 0
         val usableWidth = (safeWidth - hingeGap).coerceAtLeast(0)
+        val leadingWidth = verticalHinge?.let { (it.leftDp - window.safeStartDp).coerceAtLeast(0) } ?: usableWidth
+        val trailingWidth = verticalHinge?.let { (safeWidth - it.rightDp).coerceAtLeast(0) } ?: 0
+
+        if (verticalHinge != null && leadingWidth >= RAIL_WIDTH_DP + MIN_SPLINE_WIDTH_DP && trailingWidth >= DETAIL_WIDTH_DP) {
+            return TimeScapePaneLayout(
+                mode = TimeScapePaneMode.THREE_PANE,
+                railWidthDp = RAIL_WIDTH_DP,
+                splineWidthDp = (leadingWidth - RAIL_WIDTH_DP).coerceAtMost(MAX_SPLINE_WIDTH_DP),
+                detailWidthDp = trailingWidth.coerceAtMost(DETAIL_WIDTH_DP),
+                hingeGapDp = hingeGap,
+                leadingRegionWidthDp = leadingWidth,
+                trailingRegionWidthDp = trailingWidth,
+            )
+        }
 
         return when {
             usableWidth < MIN_TWO_PANE_WIDTH_DP ->
-                TimeScapePaneLayout(TimeScapePaneMode.COMPACT, 0, usableWidth, 0, hingeGap)
+                TimeScapePaneLayout(TimeScapePaneMode.COMPACT, 0, usableWidth, 0, hingeGap, leadingWidth, trailingWidth)
 
             usableWidth < MIN_THREE_PANE_WIDTH_DP ->
                 TimeScapePaneLayout(
@@ -62,6 +78,8 @@ class TimeScapePaneLayoutPolicy {
                     splineWidthDp = (usableWidth - RAIL_WIDTH_DP).coerceIn(MIN_SPLINE_WIDTH_DP, MAX_SPLINE_WIDTH_DP),
                     detailWidthDp = 0,
                     hingeGapDp = hingeGap,
+                    leadingRegionWidthDp = leadingWidth,
+                    trailingRegionWidthDp = trailingWidth,
                 )
 
             else ->
@@ -73,6 +91,8 @@ class TimeScapePaneLayoutPolicy {
                             .coerceIn(MIN_SPLINE_WIDTH_DP, MAX_SPLINE_WIDTH_DP),
                     detailWidthDp = DETAIL_WIDTH_DP,
                     hingeGapDp = hingeGap,
+                    leadingRegionWidthDp = leadingWidth,
+                    trailingRegionWidthDp = trailingWidth,
                 )
         }
     }
