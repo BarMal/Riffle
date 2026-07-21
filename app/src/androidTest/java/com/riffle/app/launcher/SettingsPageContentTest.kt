@@ -6,6 +6,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.assertHasNoClickAction
+import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -14,6 +16,7 @@ import com.riffle.core.domain.launcher.FirstRunStatus
 import com.riffle.core.domain.launcher.HomeRoleStatus
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.OverlayDockPermissionStatus
+import com.riffle.core.domain.launcher.settings.AppearanceSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.OverlayDockSettings
 import org.junit.Assert.assertEquals
@@ -25,6 +28,41 @@ import org.junit.runner.RunWith
 class SettingsPageContentTest {
     @get:Rule
     val composeRule = createComposeRule()
+
+    @Test
+    fun legacyFullscreenUsesCheckedIndependentBarControls() {
+        val actions = mutableListOf<LauncherShellAction>()
+
+        composeRule.setContent {
+            MaterialTheme {
+                SettingsPageContent(
+                    modifier = Modifier,
+                    state =
+                        LauncherShellState(
+                            launcherSettings =
+                                LauncherSettings(
+                                    appearance = AppearanceSettings(fullscreenHome = true),
+                                ),
+                        ).settingsSurfaceState(),
+                    page = SettingsPage.APPEARANCE,
+                    onPageSelected = {},
+                    onAction = actions::add,
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("Fullscreen home").assertDoesNotExist()
+        composeRule.onNodeWithText("Hide status bar").assertIsEnabled().assertIsOn().performClick()
+        composeRule.onNodeWithText("Hide navigation bar").assertIsEnabled().assertIsOn().performClick()
+
+        assertEquals(
+            listOf(
+                LauncherShellAction.SelectHomeStatusBarHidden(hidden = false),
+                LauncherShellAction.SelectHomeNavigationBarHidden(hidden = false),
+            ),
+            actions,
+        )
+    }
 
     @Test
     fun permissionsPageKeepsOptionalAccessInFeatureContexts() {
