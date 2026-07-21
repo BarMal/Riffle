@@ -74,6 +74,15 @@ internal fun TimeScapeAppStageSurface(
     windowInsets: WindowInsets = WindowInsets(0, 0, 0, 0),
     windowLayout: TimeScapeWindowLayout? = null,
 ) {
+    val density = LocalDensity.current
+    val layoutDirection = LocalLayoutDirection.current
+    val safeInsets =
+        TimeScapeSafeInsetsDp(
+            start = with(density) { windowInsets.getLeft(this, layoutDirection).toDp().value.toInt() },
+            top = with(density) { windowInsets.getTop(this).toDp().value.toInt() },
+            end = with(density) { windowInsets.getRight(this, layoutDirection).toDp().value.toInt() },
+            bottom = with(density) { windowInsets.getBottom(this).toDp().value.toInt() },
+        )
     val reconciler = remember { AppStageShellStateReconciler(AndroidNotificationStageActionGateway) }
     val shellState = reconciler.reconcile(state)
     val selectedStage = shellState.snapshot.selectedStage
@@ -104,25 +113,9 @@ internal fun TimeScapeAppStageSurface(
 
     Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.surface) {
         BoxWithConstraints(modifier = Modifier.fillMaxSize().windowInsetsPadding(windowInsets)) {
-            val density = LocalDensity.current
-            val layoutDirection = LocalLayoutDirection.current
-            val insetStartDp =
-                with(density) {
-                    windowInsets.getLeft(this, layoutDirection).toDp().value.toInt()
-                }
-            val insetTopDp = with(density) { windowInsets.getTop(this).toDp().value.toInt() }
-            val insetEndDp =
-                with(density) {
-                    windowInsets.getRight(this, layoutDirection).toDp().value.toInt()
-                }
-            val insetBottomDp = with(density) { windowInsets.getBottom(this).toDp().value.toInt() }
             val adaptiveWindow =
-                windowLayout?.copy(
-                    safeStartDp = maxOf(windowLayout.safeStartDp, insetStartDp),
-                    safeTopDp = maxOf(windowLayout.safeTopDp, insetTopDp),
-                    safeEndDp = maxOf(windowLayout.safeEndDp, insetEndDp),
-                    safeBottomDp = maxOf(windowLayout.safeBottomDp, insetBottomDp),
-                ) ?: TimeScapeWindowLayout(maxWidth.value.toInt(), maxHeight.value.toInt())
+                windowLayout?.insetLocal(safeInsets)
+                    ?: TimeScapeWindowLayout(maxWidth.value.toInt(), maxHeight.value.toInt())
             val paneLayout = remember(adaptiveWindow) { TimeScapePaneLayoutPolicy().layoutFor(adaptiveWindow) }
             Box(
                 modifier =
@@ -701,6 +694,33 @@ private data class TimeScapeDetailOrigin(
     val stageId: AppStageId,
     val cardId: LauncherCardId,
 )
+
+private data class TimeScapeSafeInsetsDp(
+    val start: Int,
+    val top: Int,
+    val end: Int,
+    val bottom: Int,
+)
+
+/** Converts full-window hinge coordinates into the inset content coordinates used by the surface. */
+private fun TimeScapeWindowLayout.insetLocal(insets: TimeScapeSafeInsetsDp): TimeScapeWindowLayout =
+    copy(
+        widthDp = (widthDp - insets.start - insets.end).coerceAtLeast(0),
+        heightDp = (heightDp - insets.top - insets.bottom).coerceAtLeast(0),
+        safeStartDp = 0,
+        safeTopDp = 0,
+        safeEndDp = 0,
+        safeBottomDp = 0,
+        separatingHinges =
+            separatingHinges.map { hinge ->
+                hinge.copy(
+                    leftDp = hinge.leftDp - insets.start,
+                    topDp = hinge.topDp - insets.top,
+                    rightDp = hinge.rightDp - insets.start,
+                    bottomDp = hinge.bottomDp - insets.top,
+                )
+            },
+    )
 
 @Composable
 private fun TimeScapeStageSelector(

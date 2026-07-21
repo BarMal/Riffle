@@ -1,6 +1,7 @@
 package com.riffle.app.launcher
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
@@ -39,7 +40,17 @@ class TimeScapeAdaptiveLayoutInteractionTest {
         composeRule.onNodeWithText("Details").assertIsDisplayed()
     }
 
-    private fun setContent(widthDp: Int) {
+    @Test
+    fun largeWindowKeepsSupportingDetailPaneInsideSafeInsets() {
+        setContent(widthDp = 1_200, windowInsets = WindowInsets(24, 16, 48, 32))
+
+        composeRule.onNodeWithText("Details").assertIsDisplayed()
+    }
+
+    private fun setContent(
+        widthDp: Int,
+        windowInsets: WindowInsets = WindowInsets(0, 0, 0, 0),
+    ) {
         composeRule.setContent {
             // Make the physical test host represent the requested adaptive dp window.
             CompositionLocalProvider(LocalDensity provides Density(TEST_WINDOW_DENSITY)) {
@@ -52,6 +63,7 @@ class TimeScapeAdaptiveLayoutInteractionTest {
                     ) {
                         TimeScapeAppStageSurface(
                             state = LauncherShellState(notificationAccessStatus = NotificationAccessStatus.NOT_GRANTED),
+                            windowInsets = windowInsets,
                             windowLayout = TimeScapeWindowLayout(widthDp = widthDp, heightDp = TEST_WINDOW_HEIGHT_DP),
                             onAction = {},
                         )
