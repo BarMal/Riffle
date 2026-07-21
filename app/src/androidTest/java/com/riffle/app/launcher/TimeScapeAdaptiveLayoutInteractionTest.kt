@@ -9,6 +9,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -46,16 +47,17 @@ class TimeScapeAdaptiveLayoutInteractionTest {
     fun largeWindowKeepsSupportingDetailPaneInsideSafeInsets() {
         setContent(
             widthDp = 1_200,
-            windowInsets = WindowInsets(SAFE_START_DP, SAFE_TOP_DP, SAFE_END_DP, SAFE_BOTTOM_DP),
+            windowInsets = WindowInsets(SAFE_START_PX, SAFE_TOP_PX, SAFE_END_PX, SAFE_BOTTOM_PX),
         )
 
         composeRule.onNodeWithText("Details").assertIsDisplayed()
         val paneBounds = composeRule.onNodeWithTag(TIME_SCAPE_SUPPORTING_PANE_TEST_TAG).fetchSemanticsNode().boundsInRoot
+        val windowBounds = composeRule.onNodeWithTag(TIME_SCAPE_ADAPTIVE_TEST_WINDOW_TAG).fetchSemanticsNode().boundsInRoot
 
-        assertTrue(paneBounds.left >= SAFE_START_DP.toPx() - PIXEL_TOLERANCE)
-        assertTrue(paneBounds.top >= SAFE_TOP_DP.toPx() - PIXEL_TOLERANCE)
-        assertTrue(paneBounds.right <= (1_200 - SAFE_END_DP).toPx() + PIXEL_TOLERANCE)
-        assertTrue(paneBounds.bottom <= (TEST_WINDOW_HEIGHT_DP - SAFE_BOTTOM_DP).toPx() + PIXEL_TOLERANCE)
+        assertTrue(paneBounds.left >= windowBounds.left + SAFE_START_PX - PIXEL_TOLERANCE)
+        assertTrue(paneBounds.top >= windowBounds.top + SAFE_TOP_PX - PIXEL_TOLERANCE)
+        assertTrue(paneBounds.right <= windowBounds.right - SAFE_END_PX + PIXEL_TOLERANCE)
+        assertTrue(paneBounds.bottom <= windowBounds.bottom - SAFE_BOTTOM_PX + PIXEL_TOLERANCE)
     }
 
     private fun setContent(
@@ -70,7 +72,8 @@ class TimeScapeAdaptiveLayoutInteractionTest {
                         modifier =
                             Modifier.width(widthDp.dp)
                                 .height(TEST_WINDOW_HEIGHT_DP.dp)
-                                .clipToBounds(),
+                                .clipToBounds()
+                                .testTag(TIME_SCAPE_ADAPTIVE_TEST_WINDOW_TAG),
                     ) {
                         TimeScapeAppStageSurface(
                             state = LauncherShellState(notificationAccessStatus = NotificationAccessStatus.NOT_GRANTED),
@@ -87,12 +90,11 @@ class TimeScapeAdaptiveLayoutInteractionTest {
     private companion object {
         const val TEST_WINDOW_DENSITY = 0.3f
         const val TEST_WINDOW_HEIGHT_DP = 800
-        const val SAFE_START_DP = 24
-        const val SAFE_TOP_DP = 16
-        const val SAFE_END_DP = 48
-        const val SAFE_BOTTOM_DP = 32
+        const val SAFE_START_PX = 24
+        const val SAFE_TOP_PX = 16
+        const val SAFE_END_PX = 48
+        const val SAFE_BOTTOM_PX = 32
         const val PIXEL_TOLERANCE = 1f
+        const val TIME_SCAPE_ADAPTIVE_TEST_WINDOW_TAG = "timescape-adaptive-test-window"
     }
-
-    private fun Int.toPx(): Float = this * TEST_WINDOW_DENSITY
 }
