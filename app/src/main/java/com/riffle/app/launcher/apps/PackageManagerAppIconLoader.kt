@@ -12,6 +12,15 @@ import kotlin.math.roundToInt
 
 class PackageManagerAppIconLoader(
     private val packageManager: PackageManager,
+    private val activityIconFor: (AppIdentity) -> Drawable? = { identity ->
+        packageManager.getActivityIcon(identity.componentName)
+    },
+    private val displayDensityFor: (AppIdentity) -> Float = { identity ->
+        packageManager
+            .getResourcesForApplication(identity.packageName.value)
+            .displayMetrics
+            .density
+    },
 ) : AppIconLoader {
     private val icons = BoundedIconCache<AppIdentity, ImageBitmap>(MAX_CACHED_LAUNCHER_ICONS)
 
@@ -26,18 +35,13 @@ class PackageManagerAppIconLoader(
 
     private fun loadIcon(identity: AppIdentity): ImageBitmap? =
         runCatching {
-            packageManager
-                .getActivityIcon(identity.componentName)
-                .toLauncherImageBitmap(iconBitmapSizePx(identity))
+            activityIconFor(identity)?.toLauncherImageBitmap(iconBitmapSizePx(identity))
         }.getOrNull()
 
     private fun iconBitmapSizePx(identity: AppIdentity): Int =
-        runCatching {
-            packageManager
-                .getResourcesForApplication(identity.packageName.value)
-                .displayMetrics
-                .density
-        }.getOrDefault(DEFAULT_DISPLAY_DENSITY).let(::launcherIconBitmapSizePx)
+        runCatching { displayDensityFor(identity) }
+            .getOrDefault(DEFAULT_DISPLAY_DENSITY)
+            .let(::launcherIconBitmapSizePx)
 }
 
 private val AppIdentity.componentName: ComponentName
