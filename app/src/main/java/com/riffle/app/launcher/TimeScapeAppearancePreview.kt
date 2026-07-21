@@ -23,6 +23,7 @@ import com.riffle.core.domain.launcher.settings.TimeScapeViewportDp
 @Composable
 internal fun TimeScapeAppearancePreview(
     appearance: TimeScapeAppearanceSettings,
+    globalReducedMotion: Boolean,
     modifier: Modifier = Modifier,
 ) {
     BoxWithConstraints(
@@ -33,6 +34,7 @@ internal fun TimeScapeAppearancePreview(
             appearance.resolveCardStack(
                 viewport = TimeScapeViewportDp(maxWidth.value.toInt(), maxHeight.value.toInt()),
                 capabilities = timeScapeRendererCapabilities(),
+                globalReducedMotion = globalReducedMotion,
             )
         if (!resolution.isUsable) {
             Text(

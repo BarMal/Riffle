@@ -1,12 +1,15 @@
 package com.riffle.app.launcher
 
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.riffle.core.domain.launcher.LauncherShellState
+import com.riffle.core.domain.launcher.settings.LauncherSettings
+import com.riffle.core.domain.launcher.settings.MotionSettings
 import com.riffle.core.domain.launcher.settings.TimeScapeAppearancePreset
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -65,5 +68,24 @@ class TimeScapeAppearanceEditorTest {
             val action = actions.last() as LauncherShellAction.UpdateTimeScapeAppearance
             assertEquals(TimeScapeAppearancePreset.MODERN_TIMESCAPE, action.appearance.preset)
         }
+    }
+
+    @Test
+    fun previewUsesTheLauncherWideReducedMotionPreference() {
+        composeRule.setContent {
+            MaterialTheme {
+                TimeScapeAppearancePageContent(
+                    state =
+                        LauncherShellState(
+                            launcherSettings = LauncherSettings(motion = MotionSettings(reducedMotion = true)),
+                        ).settingsSurfaceState(),
+                    onAction = {},
+                )
+            }
+        }
+
+        composeRule
+            .onNode(SemanticsMatcher.expectValue(CardStackMotionModeKey, CardStackMotionMode.SNAP))
+            .assertExists()
     }
 }

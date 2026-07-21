@@ -101,6 +101,7 @@ internal fun TimeScapeAppearancePageContent(
     SettingsSection(title = "Preview") {
         TimeScapeAppearancePreview(
             appearance = appearance,
+            globalReducedMotion = state.settings.motion.reducedMotion,
             modifier = Modifier.fillMaxWidth().heightIn(min = 340.dp, max = 460.dp),
         )
         timeScapeFallbackMessage(appearance)?.let { message ->
