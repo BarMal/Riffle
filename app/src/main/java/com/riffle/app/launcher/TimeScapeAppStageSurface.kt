@@ -32,7 +32,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -59,6 +58,11 @@ import com.riffle.app.launcher.notifications.NotificationStageAction
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.cards.AppStage
 import com.riffle.core.domain.launcher.cards.AppStageId
+import com.riffle.core.domain.launcher.cards.CardStackController
+import com.riffle.core.domain.launcher.cards.CardStackFocusResult
+import com.riffle.core.domain.launcher.cards.CardStackFocusState
+import com.riffle.core.domain.launcher.cards.CardStackKey
+import com.riffle.core.domain.launcher.cards.CardStackSettleRequest
 import com.riffle.core.domain.launcher.cards.LauncherCardId
 import com.riffle.core.domain.launcher.cards.TimeScapePaneLayoutPolicy
 import com.riffle.core.domain.launcher.cards.TimeScapePaneMode
@@ -413,10 +417,17 @@ private fun TimeScapeStageContent(
     onAction: (LauncherShellAction) -> Unit,
     modifier: Modifier,
 ) {
+    val availableCardIds = stage.content.map { content -> content.id }.toSet()
     LaunchedEffect(detailState.expansionState) {
         onDetailVisibilityChanged(
             detailState.expansionState.cardId.takeIf { detailState.expansionState.isVisible },
         )
+    }
+    // Reconcile before selecting the empty-stage fallback so a removal during detail or drag
+    // closes the transient presentation deterministically. Empty pinned stages reconcile their
+    // synthetic detail card below, after that card has been projected.
+    if (stage.content.isNotEmpty()) {
+        LaunchedEffect(availableCardIds) { detailState.reconcile(availableCardIds) }
     }
     when {
         stage.content.isEmpty() ->
@@ -449,27 +460,52 @@ private fun TimeScapeNotificationStack(
     modifier: Modifier,
 ) {
     val cards =
-        stage.content.mapNotNull { content ->
-            notificationCards.firstOrNull { it.content.id == content.id }
+        remember(stage.content, notificationCards) {
+            val cardsById = notificationCards.associateBy { card -> card.content.id }
+            stage.content.mapNotNull { content -> cardsById[content.id] }
         }
-    val focusedCard =
-        cards.firstOrNull { it.content.id == focusedCardId } ?: cards.firstOrNull()
+    val cardIds = cards.map { card -> card.content.id }
+    val controller = remember(stage.id) { CardStackController() }
+    val stackKey =
+        remember(stage.id) {
+            CardStackKey("timescape:${stage.id.profileId.value}:${stage.id.packageName.value}")
+        }
+    var previousCardIds by remember(stage.id) { mutableStateOf(emptyList<LauncherCardId>()) }
+    val focusState = CardStackFocusState(stackKey, focusedCardId)
+    LaunchedEffect(cardIds) {
+        val reconciliation =
+            if (focusState.focusedCardId == null) {
+                controller.restore(focusState, cardIds)
+            } else {
+                controller.reconcile(focusState, previousCardIds, cardIds)
+            }
+        if (reconciliation is CardStackFocusResult.Applied) {
+            onFocusedCardChanged(reconciliation.state.focusedCardId)
+        }
+        previousCardIds = cardIds
+    }
+    val activeCardIndex = cardIds.indexOf(focusState.focusedCardId).takeIf { index -> index >= 0 } ?: 0
+    val focusedCard = cards.getOrNull(activeCardIndex)
     val activeCard = focusedCard ?: return
-    val availableCardIds = cards.map { card -> card.content.id }.toSet()
     val detailFocusRequester = remember { FocusRequester() }
     var restoreDetailFocusForCardId by remember { mutableStateOf<LauncherCardId?>(null) }
 
-    SideEffect {
+    LaunchedEffect(activeCard.content.id) {
         onFocusedCardChanged(activeCard.content.id)
-        detailState.reconcile(availableCardIds)
-        if (restoreDetailFocusForCardId !in availableCardIds) restoreDetailFocusForCardId = null
+    }
+    LaunchedEffect(cardIds) {
+        if (restoreDetailFocusForCardId !in cardIds) restoreDetailFocusForCardId = null
     }
 
     BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
+        val viewport = TimeScapeViewportDp(maxWidth.value.toInt(), maxHeight.value.toInt())
         val resolution =
-            state.launcherSettings.resolveTimeScapeCardStack(
-                TimeScapeViewportDp(maxWidth.value.toInt(), maxHeight.value.toInt()),
-            )
+            remember(state.launcherSettings, viewport) {
+                state.launcherSettings.resolveTimeScapeCardStack(
+                    viewport = viewport,
+                    capabilities = timeScapeRendererCapabilities(),
+                )
+            }
         if (detailState.expansionState.isVisible && showDetailInline) {
             cards
                 .firstOrNull { card -> card.content.id == detailState.expansionState.cardId }
@@ -489,7 +525,12 @@ private fun TimeScapeNotificationStack(
                     contentAlignment = Alignment.Center,
                 ) {
                     CardStack(
-                        entries = resolution.layoutPolicy.entries(cards.size, cards.indexOf(activeCard)),
+                        entries =
+                            resolution.layoutPolicy.entries(
+                                cards.size,
+                                activeCardIndex,
+                                resolution.reducedMotion,
+                            ),
                         animationSpec = resolution.animation,
                         reducedMotion = resolution.reducedMotion,
                         itemKey = { entry -> cards[entry.cardIndex].content.id },
@@ -497,19 +538,31 @@ private fun TimeScapeNotificationStack(
                             CardStackInteraction(
                                 focusedItemKey = activeCard.content.id,
                                 onFocusRequest = { entry ->
-                                    onFocusedCardChanged(cards[entry.cardIndex].content.id)
+                                    controller
+                                        .jumpTo(focusState, cardIds, cardIds[entry.cardIndex])
+                                        .let { result ->
+                                            if (result is CardStackFocusResult.Applied) {
+                                                onFocusedCardChanged(result.state.focusedCardId)
+                                            }
+                                        }
                                 },
                                 onSettle = { drag, velocity ->
-                                    val currentIndex = cards.indexOfFirst { it.content.id == activeCard.content.id }
-                                    val targetIndex =
-                                        when {
-                                            velocity < -500f || drag < -64f -> currentIndex + 1
-                                            velocity > 500f || drag > 64f -> currentIndex - 1
-                                            else -> currentIndex
+                                    controller
+                                        .settle(
+                                            focusState,
+                                            cardIds,
+                                            CardStackSettleRequest(
+                                                focusedCardId = activeCard.content.id,
+                                                verticalDragPx = drag,
+                                                verticalVelocityPxPerSecond = velocity,
+                                                distanceThresholdPx = 64f,
+                                                flingVelocityThresholdPxPerSecond = 500f,
+                                            ),
+                                        ).let { result ->
+                                            if (result is CardStackFocusResult.Applied) {
+                                                onFocusedCardChanged(result.state.focusedCardId)
+                                            }
                                         }
-                                    cards.getOrNull(targetIndex)?.let { card ->
-                                        onFocusedCardChanged(card.content.id)
-                                    }
                                 },
                             ),
                     ) { entry, cardModifier ->
@@ -611,7 +664,7 @@ private fun TimeScapeEmptyStage(
     val detailFocusRequester = remember { FocusRequester() }
     var restoreDetailFocusForCardId by remember { mutableStateOf<LauncherCardId?>(null) }
     var detailControlLaidOut by remember { mutableStateOf(false) }
-    SideEffect {
+    LaunchedEffect(availableCardIds) {
         detailState.reconcile(availableCardIds)
         if (restoreDetailFocusForCardId !in availableCardIds) restoreDetailFocusForCardId = null
     }

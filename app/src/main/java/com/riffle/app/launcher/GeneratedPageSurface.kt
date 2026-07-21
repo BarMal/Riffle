@@ -27,6 +27,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -72,6 +73,10 @@ internal fun GeneratedNotificationCardsPage(
                 BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
                     val showCardHeader = maxHeight >= MIN_TIMESCAPE_REACHABLE_CARD_HEIGHT_DP.dp
                     val controller = remember { CardStackController() }
+                    val artworkCache =
+                        remember {
+                            TimeScapeArtworkCache<ImageBitmap>(decode = ::decodeTimeScapeArtwork)
+                        }
                     val stackKey = remember { CardStackKey("generated-notification-cards") }
                     val cardIds = state.cards.map(::generatedNotificationCardId)
                     var focusedCardIdValue by rememberSaveable { mutableStateOf<String?>(null) }
@@ -204,6 +209,7 @@ internal fun GeneratedNotificationCardsPage(
                                         onAction = onAction,
                                         isFocused = entry.cardIndex == activeCardIndex,
                                         appearance = timeScapeAppearance,
+                                        artworkCache = artworkCache,
                                         cardWidth = resolution.cardWidthDp.dp,
                                         cardHeight = resolution.cardHeightDp.dp,
                                         contentPadding = generatedNotificationCardContentPadding(resolution),
@@ -216,6 +222,7 @@ internal fun GeneratedNotificationCardsPage(
                                     cards = state.cards,
                                     onAction = onAction,
                                     appearance = timeScapeAppearance,
+                                    artworkCache = artworkCache,
                                 )
                             }
                         }
@@ -244,6 +251,7 @@ private fun GeneratedNotificationCardsFallback(
     cards: List<DockNotificationCardState>,
     onAction: (LauncherShellAction) -> Unit,
     appearance: TimeScapeAppearanceSettings,
+    artworkCache: TimeScapeArtworkCache<ImageBitmap>,
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize().testTag(GENERATED_NOTIFICATION_CARD_LIST_TEST_TAG),
@@ -251,7 +259,7 @@ private fun GeneratedNotificationCardsFallback(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         items(cards, key = { card -> generatedNotificationCardId(card).value }) { card ->
-            GeneratedNotificationCardFallback(card, onAction, appearance)
+            GeneratedNotificationCardFallback(card, onAction, appearance, artworkCache)
         }
     }
 }
@@ -261,15 +269,10 @@ private fun GeneratedNotificationCardFallback(
     card: DockNotificationCardState,
     onAction: (LauncherShellAction) -> Unit,
     appearance: TimeScapeAppearanceSettings,
+    artworkCache: TimeScapeArtworkCache<ImageBitmap>,
 ) {
     val label = dockNotificationCardLabel(card)
-    val artwork =
-        remember(card.group.notifications) {
-            card.group.notifications
-                .maxByOrNull { notification -> notification.postedAtEpochMillis }
-                ?.largeIconPngBase64
-                .let(::decodeTimeScapeArtwork)
-        }
+    val artwork = generatedNotificationArtwork(card, artworkCache)
     TimeScapeCardSurface(
         appearance = appearance,
         background =
@@ -353,6 +356,7 @@ private fun GeneratedNotificationCard(
     onAction: (LauncherShellAction) -> Unit,
     isFocused: Boolean,
     appearance: TimeScapeAppearanceSettings,
+    artworkCache: TimeScapeArtworkCache<ImageBitmap>,
     cardWidth: androidx.compose.ui.unit.Dp,
     cardHeight: androidx.compose.ui.unit.Dp,
     contentPadding: androidx.compose.ui.unit.Dp,
@@ -361,13 +365,7 @@ private fun GeneratedNotificationCard(
 ) {
     val label = dockNotificationCardLabel(card)
     val identity = card.app?.identity
-    val artwork =
-        remember(card.group.notifications) {
-            card.group.notifications
-                .maxByOrNull { notification -> notification.postedAtEpochMillis }
-                ?.largeIconPngBase64
-                .let(::decodeTimeScapeArtwork)
-        }
+    val artwork = generatedNotificationArtwork(card, artworkCache)
     Box(modifier = modifier, contentAlignment = Alignment.Center) {
         TimeScapeCardSurface(
             appearance = appearance,
@@ -460,6 +458,18 @@ internal fun generatedNotificationCardContentDescription(card: DockNotificationC
         card = card,
         label = dockNotificationCardLabel(card),
     )
+
+/** Resolves only the currently composed card's artwork and caches both valid and corrupt input. */
+internal fun generatedNotificationArtwork(
+    card: DockNotificationCardState,
+    artworkCache: TimeScapeArtworkCache<ImageBitmap>,
+): ImageBitmap? {
+    val notification = card.group.notifications.maxByOrNull { item -> item.postedAtEpochMillis }
+    val artwork = notification?.largeIconPngBase64
+    val sourceKey =
+        "${generatedNotificationCardId(card).value}:${notification?.key?.value.orEmpty()}:${artwork?.hashCode() ?: 0}"
+    return artworkCache.getOrDecode(sourceKey, artwork)
+}
 
 internal fun generatedNotificationCardStackEntries(
     cards: List<DockNotificationCardState>,

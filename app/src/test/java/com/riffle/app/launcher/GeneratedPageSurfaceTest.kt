@@ -103,6 +103,29 @@ class GeneratedPageSurfaceTest {
         assertEquals(1, entries.maxBy { entry -> entry.order }.cardIndex)
     }
 
+    @Test
+    fun artworkCacheCachesDecodeFailuresAndEvictsLeastRecentlyUsedArtwork() {
+        var decodeCalls = 0
+        val cache =
+            TimeScapeArtworkCache<Int>(maxEntries = 2) {
+                decodeCalls += 1
+                if (it == "corrupt") null else it?.length
+            }
+
+        assertEquals(null, cache.getOrDecode("corrupt-card", "corrupt"))
+        assertEquals(null, cache.getOrDecode("corrupt-card", "corrupt"))
+        assertEquals(1, decodeCalls)
+
+        assertEquals(1, cache.getOrDecode("a", "a"))
+        assertEquals(2, cache.getOrDecode("bb", "bb"))
+        assertEquals(1, cache.getOrDecode("a", "a"))
+        assertEquals(3, cache.getOrDecode("ccc", "ccc"))
+        assertEquals(2, cache.getOrDecode("bb", "bb"))
+
+        assertEquals(5, decodeCalls)
+        assertEquals(2, cache.sizeForTest())
+    }
+
     private fun notificationGroup(
         packageName: String,
         profileId: String,

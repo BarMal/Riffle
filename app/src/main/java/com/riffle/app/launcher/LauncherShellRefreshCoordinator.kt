@@ -10,7 +10,9 @@ import com.riffle.core.domain.launcher.widgets.WidgetProviderCatalog
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
+import kotlin.coroutines.coroutineContext
 
 internal class LauncherShellRefreshCoordinator(
     private val installedAppDependencies: InstalledAppRefreshDependencies,
@@ -96,11 +98,11 @@ internal class LauncherShellRefreshActions(
         val job =
             coroutineScope.launch(refreshDispatcher) {
                 val fallbackState = currentState()
-                updateState(
-                    runCatching {
-                        refreshState()
-                    }.getOrElse { fallbackState },
-                )
+                val refreshedState = runCatching { refreshState() }.getOrElse { fallbackState }
+                // Synchronous repository reads cannot be interrupted; a cancelled result must
+                // not overwrite a newer snapshot after it returns.
+                coroutineContext.ensureActive()
+                updateState(refreshedState)
             }
         registerJob(job)
         return job
