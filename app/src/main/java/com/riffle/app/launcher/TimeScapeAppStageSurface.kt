@@ -178,10 +178,9 @@ internal fun TimeScapeAppStageSurface(
                                 modifier = Modifier.weight(1f),
                             )
                         }
-                        val leadingRemainder =
-                            (paneLayout.leadingRegionWidthDp - paneLayout.railWidthDp - paneLayout.splineWidthDp)
-                                .coerceAtLeast(0)
-                        if (leadingRemainder > 0) Spacer(modifier = Modifier.width(leadingRemainder.dp))
+                        if (paneLayout.leadingRemainderDp > 0) {
+                            Spacer(modifier = Modifier.width(paneLayout.leadingRemainderDp.dp))
+                        }
                         if (paneLayout.hingeGapDp > 0) Spacer(modifier = Modifier.width(paneLayout.hingeGapDp.dp))
                         if (paneLayout.showsDetailPane) {
                             TimeScapeSupportingPane(

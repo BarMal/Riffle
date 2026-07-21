@@ -40,6 +40,8 @@ data class TimeScapePaneLayout(
     val hingeGapDp: Int = 0,
     val leadingRegionWidthDp: Int = 0,
     val trailingRegionWidthDp: Int = 0,
+    /** Empty leading-side space before a vertical separating hinge. */
+    val leadingRemainderDp: Int = 0,
     val contentStartDp: Int = 0,
     val contentWidthDp: Int = 0,
     val contentTopDp: Int = 0,
@@ -108,6 +110,9 @@ class TimeScapePaneLayoutPolicy {
                 hingeGapDp = hingeGap,
                 leadingRegionWidthDp = leadingWidth,
                 trailingRegionWidthDp = trailingWidth,
+                leadingRemainderDp =
+                    (leadingWidth - RAIL_WIDTH_DP - (leadingWidth - RAIL_WIDTH_DP).coerceAtMost(MAX_SPLINE_WIDTH_DP))
+                        .coerceAtLeast(0),
                 contentWidthDp = safeWidth,
                 contentTopDp = contentTop,
                 contentHeightDp = contentHeight,
@@ -123,6 +128,9 @@ class TimeScapePaneLayoutPolicy {
                 hingeGapDp = hingeGap,
                 leadingRegionWidthDp = leadingWidth,
                 trailingRegionWidthDp = trailingWidth,
+                leadingRemainderDp =
+                    (leadingWidth - RAIL_WIDTH_DP - (leadingWidth - RAIL_WIDTH_DP).coerceAtMost(MAX_SPLINE_WIDTH_DP))
+                        .coerceAtLeast(0),
                 contentWidthDp = safeWidth,
                 contentTopDp = contentTop,
                 contentHeightDp = contentHeight,
@@ -132,17 +140,16 @@ class TimeScapePaneLayoutPolicy {
         return when {
             usableWidth < MIN_TWO_PANE_WIDTH_DP ->
                 TimeScapePaneLayout(
-                    TimeScapePaneMode.COMPACT,
-                    0,
-                    usableWidth,
-                    0,
-                    hingeGap,
-                    leadingWidth,
-                    trailingWidth,
-                    0,
-                    safeWidth,
-                    contentTop,
-                    contentHeight,
+                    mode = TimeScapePaneMode.COMPACT,
+                    railWidthDp = 0,
+                    splineWidthDp = usableWidth,
+                    detailWidthDp = 0,
+                    hingeGapDp = hingeGap,
+                    leadingRegionWidthDp = leadingWidth,
+                    trailingRegionWidthDp = trailingWidth,
+                    contentWidthDp = safeWidth,
+                    contentTopDp = contentTop,
+                    contentHeightDp = contentHeight,
                 )
 
             usableWidth < MIN_THREE_PANE_WIDTH_DP ->

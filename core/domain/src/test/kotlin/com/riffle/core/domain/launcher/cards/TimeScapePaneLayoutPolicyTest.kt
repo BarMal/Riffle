@@ -27,6 +27,9 @@ class TimeScapePaneLayoutPolicyTest {
         assertEquals(TimeScapePaneMode.THREE_PANE, layout.mode)
         assertEquals(360, layout.detailWidthDp)
         assertEquals(560, layout.splineWidthDp)
+        assertEquals(0, layout.leadingRemainderDp)
+        assertEquals(1_024, layout.railWidthDp + layout.splineWidthDp + layout.detailWidthDp)
+        assertEquals(1_300, layout.contentWidthDp)
     }
 
     @Test
