@@ -2,6 +2,7 @@ package com.riffle.app.launcher
 
 import androidx.compose.runtime.Composable
 import com.riffle.core.domain.launcher.LauncherShellState
+import com.riffle.core.domain.launcher.cards.TimeScapeWindowLayout
 
 @Composable
 fun HomeDestination(
@@ -9,6 +10,7 @@ fun HomeDestination(
     appIconLoader: AppIconLoader,
     widgetRenderers: LauncherWidgetRenderers = LauncherWidgetRenderers(),
     haptics: LauncherHaptics = NoopLauncherHaptics,
+    timeScapeWindowLayout: TimeScapeWindowLayout? = null,
     onAction: (LauncherShellAction) -> Unit,
 ) {
     when (state.homeLayout.viewMode.homeSurfaceKind()) {
@@ -17,6 +19,7 @@ fun HomeDestination(
                 state = state,
                 windowInsets =
                     cardsPanelInsetPolicy(state).safeDrawingPanelInsets(),
+                windowLayout = timeScapeWindowLayout,
                 onAction = onAction,
             )
 

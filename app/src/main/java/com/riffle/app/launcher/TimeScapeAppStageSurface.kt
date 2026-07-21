@@ -9,14 +9,18 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.IconButton
@@ -50,17 +54,21 @@ import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.cards.AppStage
 import com.riffle.core.domain.launcher.cards.AppStageId
 import com.riffle.core.domain.launcher.cards.LauncherCardId
+import com.riffle.core.domain.launcher.cards.TimeScapePaneLayoutPolicy
+import com.riffle.core.domain.launcher.cards.TimeScapePaneMode
+import com.riffle.core.domain.launcher.cards.TimeScapeWindowLayout
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.settings.TimeScapeViewportDp
 import com.riffle.core.domain.launcher.settings.resolveTimeScapeCardStack
 
-/** The single reachable Cards home surface for compact TimeScape mode. */
+/** The Cards home surface, compact by default and pane-adaptive for the current launcher window. */
 @Composable
 internal fun TimeScapeAppStageSurface(
     state: LauncherShellState,
     onAction: (LauncherShellAction) -> Unit,
     modifier: Modifier = Modifier,
     windowInsets: WindowInsets = WindowInsets(0, 0, 0, 0),
+    windowLayout: TimeScapeWindowLayout? = null,
 ) {
     val reconciler = remember { AppStageShellStateReconciler(AndroidNotificationStageActionGateway) }
     val shellState = reconciler.reconcile(state)
@@ -80,32 +88,137 @@ internal fun TimeScapeAppStageSurface(
     }
 
     Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.surface) {
-        Column(
-            modifier = Modifier.fillMaxSize().windowInsetsPadding(windowInsets),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            TimeScapeStageHeader(selectedStage, state, onAction)
-            if (state.notificationAccessStatus != NotificationAccessStatus.GRANTED || selectedStage == null) {
-                TimeScapeUnavailableState(
-                    access = state.notificationAccessStatus,
-                    recoveryMessage = detailRecoveryMessage,
-                    onAction = onAction,
-                    modifier = Modifier.weight(1f),
-                )
-            } else {
-                TimeScapeStageContent(
-                    stage = selectedStage,
+        BoxWithConstraints(modifier = Modifier.fillMaxSize().windowInsetsPadding(windowInsets)) {
+            val adaptiveWindow = windowLayout ?: TimeScapeWindowLayout(maxWidth.value.toInt(), maxHeight.value.toInt())
+            val paneLayout = remember(adaptiveWindow) { TimeScapePaneLayoutPolicy().layoutFor(adaptiveWindow) }
+            if (paneLayout.mode == TimeScapePaneMode.COMPACT) {
+                TimeScapeCompactContent(
+                    selectedStage = selectedStage,
                     state = state,
                     shellState = shellState,
+                    detailRecoveryMessage = detailRecoveryMessage,
                     onDetailVisibilityChanged = { cardId ->
-                        detailOrigin = cardId?.let { TimeScapeDetailOrigin(selectedStage.id, it) }
+                        detailOrigin =
+                            selectedStage?.id?.let { stageId -> cardId?.let { TimeScapeDetailOrigin(stageId, it) } }
                         if (cardId != null) detailRecoveryMessage = null
                     },
                     onAction = onAction,
-                    modifier = Modifier.weight(1f),
                 )
+            } else {
+                Row(modifier = Modifier.fillMaxSize()) {
+                    TimeScapeStageRail(
+                        stages = shellState.snapshot.stages,
+                        selectedStageId = selectedStage?.id,
+                        state = state,
+                        onAction = onAction,
+                        modifier = Modifier.width(paneLayout.railWidthDp.dp),
+                    )
+                    if (paneLayout.hingeGapDp > 0) Spacer(modifier = Modifier.width(paneLayout.hingeGapDp.dp))
+                    Column(modifier = Modifier.width(paneLayout.splineWidthDp.dp).fillMaxSize()) {
+                        TimeScapeStageHeader(selectedStage, state, onAction)
+                        TimeScapeStageBody(
+                            selectedStage = selectedStage,
+                            state = state,
+                            shellState = shellState,
+                            detailRecoveryMessage = detailRecoveryMessage,
+                            onDetailVisibilityChanged = { cardId ->
+                                detailOrigin =
+                                    selectedStage?.id?.let { stageId -> cardId?.let { TimeScapeDetailOrigin(stageId, it) } }
+                                if (cardId != null) detailRecoveryMessage = null
+                            },
+                            onAction = onAction,
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+                    if (paneLayout.showsDetailPane) {
+                        TimeScapeSupportingPane(
+                            stage = selectedStage,
+                            state = state,
+                            modifier = Modifier.width(paneLayout.detailWidthDp.dp).fillMaxSize(),
+                        )
+                    }
+                }
             }
-            TimeScapeStageSelector(shellState.snapshot.stages, selectedStage?.id, state, onAction)
+        }
+    }
+}
+
+@Composable
+private fun TimeScapeCompactContent(
+    selectedStage: AppStage?,
+    state: LauncherShellState,
+    shellState: com.riffle.app.launcher.notifications.AppStageShellState,
+    detailRecoveryMessage: String?,
+    onDetailVisibilityChanged: (LauncherCardId?) -> Unit,
+    onAction: (LauncherShellAction) -> Unit,
+) {
+    Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        TimeScapeStageHeader(selectedStage, state, onAction)
+        TimeScapeStageBody(
+            selectedStage,
+            state,
+            shellState,
+            detailRecoveryMessage,
+            onDetailVisibilityChanged,
+            onAction,
+            Modifier.weight(1f),
+        )
+        TimeScapeStageSelector(shellState.snapshot.stages, selectedStage?.id, state, onAction)
+    }
+}
+
+@Composable
+private fun TimeScapeStageBody(
+    selectedStage: AppStage?,
+    state: LauncherShellState,
+    shellState: com.riffle.app.launcher.notifications.AppStageShellState,
+    detailRecoveryMessage: String?,
+    onDetailVisibilityChanged: (LauncherCardId?) -> Unit,
+    onAction: (LauncherShellAction) -> Unit,
+    modifier: Modifier,
+) {
+    if (state.notificationAccessStatus != NotificationAccessStatus.GRANTED || selectedStage == null) {
+        TimeScapeUnavailableState(state.notificationAccessStatus, detailRecoveryMessage, onAction, modifier)
+    } else {
+        TimeScapeStageContent(selectedStage, state, shellState, onDetailVisibilityChanged, onAction, modifier)
+    }
+}
+
+@Composable
+private fun TimeScapeStageRail(
+    stages: List<AppStage>,
+    selectedStageId: AppStageId?,
+    state: LauncherShellState,
+    onAction: (LauncherShellAction) -> Unit,
+    modifier: Modifier,
+) {
+    Column(modifier = modifier.padding(8.dp).verticalScroll(rememberScrollState())) {
+        Text("Stages", style = MaterialTheme.typography.labelLarge)
+        TextButton(onClick = { onAction(LauncherShellAction.SelectPreviousAppStage) }) { Text("Previous") }
+        stages.forEach { stage ->
+            TextButton(onClick = { onAction(LauncherShellAction.SelectAppStage(stage.id)) }) {
+                Text(if (stage.id == selectedStageId) "${stageLabel(stage.id, state)} •" else stageLabel(stage.id, state))
+            }
+        }
+        TextButton(onClick = { onAction(LauncherShellAction.SelectNextAppStage) }) { Text("Next") }
+    }
+}
+
+@Composable
+private fun TimeScapeSupportingPane(
+    stage: AppStage?,
+    state: LauncherShellState,
+    modifier: Modifier,
+) {
+    Column(modifier = modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text("Details", style = MaterialTheme.typography.titleMedium)
+        val content = stage?.content?.firstOrNull()
+        if (content == null) {
+            Text("Select a card to keep its context visible here.")
+        } else {
+            Text(stageLabel(stage.id, state), style = MaterialTheme.typography.labelLarge)
+            Text(content.kind.name.lowercase().replaceFirstChar { it.titlecase() })
+            Text("Open card details from the focused card actions.")
         }
     }
 }
