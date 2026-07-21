@@ -197,7 +197,7 @@ class TimeScapeCardSurfaceTest {
             )
         var widthDp by mutableIntStateOf(500)
         composeRule.setContent {
-            CompositionLocalProvider(LocalDensity provides Density(0.3f)) {
+            CompositionLocalProvider(LocalDensity provides Density(timeScapeResizeTestDensity(widthDp))) {
                 MaterialTheme {
                     Box(modifier = Modifier.width(widthDp.dp).height(800.dp).clipToBounds()) {
                         TimeScapeAppStageSurface(
@@ -326,7 +326,7 @@ class TimeScapeCardSurfaceTest {
         val app = timeScapeTestApp()
         var widthDp by mutableIntStateOf(500)
         composeRule.setContent {
-            CompositionLocalProvider(LocalDensity provides Density(0.3f)) {
+            CompositionLocalProvider(LocalDensity provides Density(timeScapeResizeTestDensity(widthDp))) {
                 MaterialTheme {
                     Box(modifier = Modifier.width(widthDp.dp).height(800.dp).clipToBounds()) {
                         TimeScapeAppStageSurface(
@@ -1166,3 +1166,5 @@ class TimeScapeCardSurfaceTest {
         )
     }
 }
+
+private fun timeScapeResizeTestDensity(widthDp: Int): Float = if (widthDp < 840) 0.6f else 0.25f
