@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.apps.AppActivityName
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
+import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.DockModel
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
@@ -119,7 +120,7 @@ class DockShelfGestureInteractionTest {
                 Box(modifier = Modifier.size(400.dp)) {
                     StandardHome(
                         layout = layout,
-                        installedApps = emptyList(),
+                        installedApps = listOf(primary.installedApp(), overflow.installedApp()),
                         interactions = StandardHomeInteractions(),
                         presentation = StandardHomePresentation(appShortcutsByApp = emptyMap()),
                         appIconLoader = EmptyAppIconLoader,
@@ -213,5 +214,11 @@ class DockShelfGestureInteractionTest {
                     activityName = AppActivityName(".MainActivity"),
                 ),
             label = name,
+        )
+
+    private fun AppShortcutItem.installedApp(): InstalledApp =
+        InstalledApp(
+            identity = appIdentity,
+            label = label,
         )
 }
