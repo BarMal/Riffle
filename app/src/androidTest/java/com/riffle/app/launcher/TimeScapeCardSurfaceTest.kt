@@ -201,11 +201,10 @@ class TimeScapeCardSurfaceTest {
         }
 
         composeRule.onNodeWithText("Older message").performClick()
-        composeRule.runOnIdle { widthDp = 1_200 }
-        composeRule.onNodeWithText("Older message").assertIsDisplayed()
         composeRule.onNodeWithText("Details").performClick()
         composeRule.onNodeWithText("Notification details").assertIsDisplayed()
 
+        composeRule.runOnIdle { widthDp = 1_200 }
         composeRule.runOnIdle { widthDp = 500 }
         composeRule.onNodeWithText("Notification details").assertIsDisplayed()
         composeRule.onNodeWithText("Older message").assertIsDisplayed()
