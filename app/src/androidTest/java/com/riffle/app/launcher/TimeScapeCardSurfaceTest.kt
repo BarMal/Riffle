@@ -197,7 +197,7 @@ class TimeScapeCardSurfaceTest {
             )
         var widthDp by mutableIntStateOf(500)
         composeRule.setContent {
-            CompositionLocalProvider(LocalDensity provides Density(timeScapeResizeTestDensity(widthDp))) {
+            CompositionLocalProvider(LocalDensity provides Density(0.3f)) {
                 MaterialTheme {
                     Box(modifier = Modifier.width(widthDp.dp).height(800.dp).clipToBounds()) {
                         TimeScapeAppStageSurface(
@@ -219,6 +219,8 @@ class TimeScapeCardSurfaceTest {
         composeRule.onNodeWithText("Notification details").assertExists()
         composeRule.runOnIdle { widthDp = 500 }
         composeRule.onNodeWithText("Notification details").assertIsDisplayed()
+        composeRule.onNodeWithText("Back").performClick()
+        composeRule.mainClock.advanceTimeBy(200)
         composeRule.onNodeWithText("Older message").assertIsDisplayed()
     }
 
@@ -326,7 +328,7 @@ class TimeScapeCardSurfaceTest {
         val app = timeScapeTestApp()
         var widthDp by mutableIntStateOf(500)
         composeRule.setContent {
-            CompositionLocalProvider(LocalDensity provides Density(timeScapeResizeTestDensity(widthDp))) {
+            CompositionLocalProvider(LocalDensity provides Density(0.3f)) {
                 MaterialTheme {
                     Box(modifier = Modifier.width(widthDp.dp).height(800.dp).clipToBounds()) {
                         TimeScapeAppStageSurface(
@@ -1166,5 +1168,3 @@ class TimeScapeCardSurfaceTest {
         )
     }
 }
-
-private fun timeScapeResizeTestDensity(widthDp: Int): Float = 320f / widthDp
