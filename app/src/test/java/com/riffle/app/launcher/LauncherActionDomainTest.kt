@@ -46,6 +46,7 @@ import com.riffle.core.domain.launcher.settings.OverlayDockEdge
 import com.riffle.core.domain.launcher.settings.OverlayDockExpandedOrientation
 import com.riffle.core.domain.launcher.settings.OverlayDockItemMoveDirection
 import com.riffle.core.domain.launcher.settings.SearchResultPresentation
+import com.riffle.core.domain.launcher.settings.TimeScapeAppearanceSettings
 import com.riffle.core.domain.launcher.widgets.WidgetProviderClassName
 import com.riffle.core.domain.launcher.widgets.WidgetProviderDimensions
 import com.riffle.core.domain.launcher.widgets.WidgetProviderIdentity
@@ -427,6 +428,10 @@ class LauncherActionDomainTest {
                     LauncherShellAction.SelectMotionPerformanceTargetFps(MotionPerformanceTargetFps.FPS_120),
                 ),
                 settings("SelectContextualEnabled", LauncherShellAction.SelectContextualEnabled(enabled = true)),
+                settings(
+                    "UpdateTimeScapeAppearance",
+                    LauncherShellAction.UpdateTimeScapeAppearance(TimeScapeAppearanceSettings.modern()),
+                ),
                 settings("SelectOverlayDockEnabled", LauncherShellAction.SelectOverlayDockEnabled(enabled = true)),
                 settings("SelectOverlayDockEdge", LauncherShellAction.SelectOverlayDockEdge(OverlayDockEdge.START)),
                 settings(

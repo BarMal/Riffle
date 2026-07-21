@@ -13,6 +13,7 @@ import com.riffle.core.domain.launcher.settings.HomeSystemBars
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettingsRepository
 import com.riffle.core.domain.launcher.settings.SearchResultPresentation
+import com.riffle.core.domain.launcher.settings.TimeScapeAppearanceSettings
 import com.riffle.core.domain.launcher.settings.homeSystemBars
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertSame
@@ -67,6 +68,26 @@ class LauncherSettingsStateReducerTest {
 
         assertEquals(AppDrawerPresentation.ICONS, updatedState.launcherSettings.appDrawer.presentation)
         assertEquals(6, updatedState.launcherSettings.appDrawer.iconGridColumns)
+        assertEquals(updatedState.launcherSettings, repository.savedSettings)
+    }
+
+    @Test
+    fun replacesAndCoercesTheCompleteTimeScapeProfileAtomically() {
+        val repository = FakeLauncherSettingsRepository()
+        val requested =
+            TimeScapeAppearanceSettings.modern().copy(
+                geometry = TimeScapeAppearanceSettings.modern().geometry.copy(visibleDepth = 99),
+                surface = TimeScapeAppearanceSettings.modern().surface.copy(blurStrengthPercent = -5),
+            )
+
+        val updatedState =
+            reducer(launcherSettingsRepository = repository).reduce(
+                state = LauncherShellState(),
+                action = LauncherShellAction.UpdateTimeScapeAppearance(requested),
+            )
+
+        assertEquals(6, updatedState.launcherSettings.cards.timeScapeAppearance.geometry.visibleDepth)
+        assertEquals(0, updatedState.launcherSettings.cards.timeScapeAppearance.surface.blurStrengthPercent)
         assertEquals(updatedState.launcherSettings, repository.savedSettings)
     }
 

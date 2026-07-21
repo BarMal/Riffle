@@ -88,6 +88,7 @@ internal fun LauncherShellAction.launcherSettingsActionRoute(): LauncherSettings
         is LauncherShellAction.SelectReducedMotionEnabled,
         is LauncherShellAction.SelectMotionPerformanceTargetFps,
         is LauncherShellAction.SelectContextualEnabled,
+        is LauncherShellAction.UpdateTimeScapeAppearance,
         is LauncherShellAction.SelectOverlayDockEnabled,
         is LauncherShellAction.SelectOverlayDockEdge,
         is LauncherShellAction.SelectOverlayDockHandleThickness,
