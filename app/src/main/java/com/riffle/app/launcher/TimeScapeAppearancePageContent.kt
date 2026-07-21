@@ -117,7 +117,9 @@ internal fun TimeScapeAppearancePageContent(
             values = TimeScapeAppearancePreset.entries,
             selected = appearance.preset,
             label = TimeScapeAppearancePreset::label,
-            onSelected = { preset -> update { it.applyPreset(preset) } },
+            onSelected = { preset ->
+                onAction(LauncherShellAction.UpdateTimeScapeAppearance(appearance.applyPreset(preset).coerce()))
+            },
         )
         SettingsClickableRow(
             title = "Reset TimeScape appearance",
