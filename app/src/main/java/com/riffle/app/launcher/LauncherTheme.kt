@@ -239,11 +239,15 @@ private fun LauncherThemeColors.toColorOverrides(): LauncherThemeColorOverrides 
 private fun Color.contentColor(fallback: Color): Color =
     if (alpha < 0.5f) {
         fallback
-    } else if (luminance() > 0.45f) {
-        Color.Black
     } else {
-        Color.White
+        listOf(Color.Black, Color.White).maxBy { candidate -> candidate.contrastRatioAgainst(this) }
     }
+
+private fun Color.contrastRatioAgainst(background: Color): Float {
+    val lighter = maxOf(luminance(), background.luminance())
+    val darker = minOf(luminance(), background.luminance())
+    return (lighter + 0.05f) / (darker + 0.05f)
+}
 
 private data class LauncherAccentColorRoles(
     val primary: Color,

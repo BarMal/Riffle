@@ -136,6 +136,16 @@ class LauncherThemeTest {
     }
 
     @Test
+    fun midToneCustomAccentUsesReadableForegroundsForSecondaryAndTertiaryContainers() {
+        val scheme = lightScheme.withThemeColors(LauncherThemeColors(accentArgb = 0xFF808080.toInt()))
+
+        assertEquals(androidx.compose.ui.graphics.Color.Black, scheme.onSecondary)
+        assertEquals(androidx.compose.ui.graphics.Color.Black, scheme.onSecondaryContainer)
+        assertEquals(androidx.compose.ui.graphics.Color.Black, scheme.onTertiary)
+        assertEquals(androidx.compose.ui.graphics.Color.Black, scheme.onTertiaryContainer)
+    }
+
+    @Test
     fun parsesRgbAndArgbThemeHexValues() {
         assertEquals(androidx.compose.ui.graphics.Color(0xFF102030), parseThemeColorHex("#102030"))
         assertEquals(androidx.compose.ui.graphics.Color(0x80102030), parseThemeColorHex("#80102030"))
