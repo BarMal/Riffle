@@ -59,6 +59,8 @@ private fun homeSettingsPageEntries(): List<SettingsPageEntry> =
                     "change wallpaper",
                     "wallpaper picker",
                     "wallpaper scroll",
+                    "theme colours",
+                    "color picker",
                     "status bar",
                     "navigation bar",
                     "fullscreen",
