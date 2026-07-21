@@ -7,6 +7,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -14,14 +15,21 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.unit.dp
+import com.riffle.app.launcher.notifications.AppStageNotificationCard
+import com.riffle.app.launcher.notifications.MediaCommand
+import com.riffle.app.launcher.notifications.NotificationStageAction
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.apps.AppActivityName
 import com.riffle.core.domain.launcher.apps.AppIdentity
@@ -30,10 +38,14 @@ import com.riffle.core.domain.launcher.apps.AppProfile
 import com.riffle.core.domain.launcher.apps.AppProfileContentVisibility
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.cards.AppStage
+import com.riffle.core.domain.launcher.cards.AppStageContent
+import com.riffle.core.domain.launcher.cards.AppStageContentKind
 import com.riffle.core.domain.launcher.cards.AppStageId
 import com.riffle.core.domain.launcher.cards.AppStageLifecycle
 import com.riffle.core.domain.launcher.cards.AppStageOrigin
 import com.riffle.core.domain.launcher.cards.AppStagePreferences
+import com.riffle.core.domain.launcher.cards.CardExpansionState
+import com.riffle.core.domain.launcher.cards.LauncherCardId
 import com.riffle.core.domain.launcher.home.HomeLayoutKey
 import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
@@ -130,6 +142,243 @@ class TimeScapeCardSurfaceTest {
         composeRule.onNodeWithContentDescription("Mail, selected. Open stage").assertIsDisplayed()
         composeRule.onNodeWithText("New message").assertIsDisplayed()
         composeRule.onNodeWithText("Hello from TimeScape").assertIsDisplayed()
+    }
+
+    @Test
+    fun explicitDetailsOpensAndBackReturnsToTheFocusedCard() {
+        val app = timeScapeTestApp()
+        val notification = timeScapeTestNotification(app)
+        composeRule.setContent {
+            MaterialTheme {
+                TimeScapeAppStageSurface(state = timeScapeTestState(app, notification), onAction = {})
+            }
+        }
+
+        composeRule.onNodeWithText("Details").performClick()
+
+        composeRule.onNodeWithText("Notification details").assertIsDisplayed()
+        composeRule.onNodeWithText("Back").performClick()
+        composeRule.mainClock.advanceTimeBy(200)
+
+        composeRule.onAllNodesWithText("Notification details").assertCountEquals(0)
+        composeRule.onNodeWithText("Details").assertIsDisplayed()
+    }
+
+    @Test
+    fun detailActionsRouteEverySupportedActionToTheFocusedNotificationKey() {
+        val app = timeScapeTestApp()
+        val key = LauncherNotificationKey("focused-notification")
+        val card =
+            AppStageNotificationCard(
+                content =
+                    AppStageContent(
+                        id = LauncherCardId("focused-card"),
+                        stageId = AppStageId(app.identity.packageName, app.identity.profile.id),
+                        kind = AppStageContentKind.NOTIFICATION,
+                        meaningfulActivityAtEpochMillis = 10,
+                    ),
+                notificationKey = key,
+                title = "Focused notification",
+                text = "Actions route to this notification",
+                isRedacted = false,
+                supportedActions =
+                    setOf(
+                        NotificationStageAction.Open,
+                        NotificationStageAction.ProviderAction("reply"),
+                        NotificationStageAction.MediaControl(MediaCommand.PLAY),
+                        NotificationStageAction.Dismiss,
+                    ),
+            )
+        val actions = mutableListOf<LauncherShellAction>()
+
+        composeRule.setContent {
+            var expansion by remember { mutableStateOf(CardExpansionState().expand(card.content.id, true)) }
+            val detailState =
+                remember {
+                    TimeScapeCardDetailState(
+                        currentExpansion = { expansion },
+                        updateExpansion = { expansion = it },
+                        currentRecoveryMessage = { null },
+                        updateRecoveryMessage = { _ -> },
+                        reducedMotion = true,
+                    )
+                }
+            MaterialTheme {
+                TimeScapeCardDetailSurface(card = card, detailState = detailState, onAction = actions::add)
+            }
+        }
+
+        composeRule.onNodeWithText("Action").performClick()
+        composeRule.onNodeWithText("Dismiss").performClick()
+        composeRule.onNodeWithText("Open").performClick()
+        composeRule.onNodeWithText("Play").performClick()
+
+        composeRule.runOnIdle {
+            assertEquals(
+                listOf(
+                    LauncherShellAction.PerformNotificationStageAction(
+                        key,
+                        NotificationStageAction.ProviderAction("reply"),
+                    ),
+                    LauncherShellAction.PerformNotificationStageAction(key, NotificationStageAction.Dismiss),
+                    LauncherShellAction.PerformNotificationStageAction(key, NotificationStageAction.Open),
+                    LauncherShellAction.PerformNotificationStageAction(
+                        key,
+                        NotificationStageAction.MediaControl(MediaCommand.PLAY),
+                    ),
+                ),
+                actions,
+            )
+        }
+    }
+
+    @Test
+    fun initialNotificationStageDoesNotMoveFocusToDetails() {
+        val app = timeScapeTestApp()
+        composeRule.setContent {
+            MaterialTheme {
+                TimeScapeAppStageSurface(
+                    state = timeScapeTestState(app, timeScapeTestNotification(app)),
+                    onAction = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("Details").assertIsNotFocused()
+    }
+
+    @Test
+    fun emptyAppDetailsBackRestoresFocusToItsDetailsControl() {
+        val app = timeScapeTestApp()
+        composeRule.setContent {
+            MaterialTheme { TimeScapeAppStageSurface(state = emptyPinnedStageState(app), onAction = {}) }
+        }
+
+        composeRule.onNodeWithText("Details").performClick()
+
+        composeRule.onNodeWithText("App details").assertIsDisplayed()
+        composeRule.onNodeWithText("Back").performClick()
+        composeRule.mainClock.advanceTimeBy(200)
+
+        composeRule.onNodeWithText("Details").assertIsFocused()
+    }
+
+    @Test
+    fun removingSourceDuringBackCloseDoesNotFocusRemainingCardDetails() {
+        val app = timeScapeTestApp()
+        val source = timeScapeTestNotification(app).copy(key = LauncherNotificationKey("source"), postedAtEpochMillis = 20)
+        val remaining =
+            timeScapeTestNotification(app).copy(
+                key = LauncherNotificationKey("remaining"),
+                title = "Remaining notification",
+                postedAtEpochMillis = 10,
+            )
+        var state by
+            mutableStateOf(
+                timeScapeTestState(app, source).copy(
+                    notificationGroupsByApp =
+                        listOf(
+                            AppNotificationGroup(
+                                packageName = app.identity.packageName,
+                                profileId = app.identity.profile.id,
+                                latestCategory = NotificationCategory.MESSAGE,
+                                latestAgeBucket = NotificationAgeBucket.RECENT,
+                                notifications = listOf(source, remaining),
+                            ),
+                        ),
+                ),
+            )
+        composeRule.setContent {
+            MaterialTheme { TimeScapeAppStageSurface(state = state, onAction = {}) }
+        }
+
+        composeRule.onNodeWithText("Details").performClick()
+        composeRule.onNodeWithText("Notification details").assertIsDisplayed()
+        composeRule.mainClock.autoAdvance = false
+        composeRule.onNodeWithText("Back").performClick()
+        composeRule.runOnIdle {
+            state =
+                state.copy(
+                    notificationGroupsByApp =
+                        state.notificationGroupsByApp.map { group ->
+                            group.copy(notifications = listOf(remaining))
+                        },
+                )
+        }
+        composeRule.mainClock.advanceTimeBy(200)
+        composeRule.mainClock.autoAdvance = true
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithText("The selected card is no longer available.").assertIsDisplayed()
+        composeRule.onNodeWithText("Details").assertIsNotFocused()
+    }
+
+    @Test
+    fun initialEmptyAppStageDoesNotMoveFocusToDetails() {
+        composeRule.setContent {
+            MaterialTheme {
+                TimeScapeAppStageSurface(
+                    state = emptyPinnedStageState(timeScapeTestApp()),
+                    onAction = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("Details").assertIsNotFocused()
+    }
+
+    @Test
+    fun removedExpandedEmptyAppRecoversWithoutFocusingDetachedDetailsControl() {
+        val app = timeScapeTestApp()
+        var state by mutableStateOf(emptyPinnedStageState(app))
+        composeRule.setContent {
+            MaterialTheme { TimeScapeAppStageSurface(state = state, onAction = {}) }
+        }
+
+        composeRule.onNodeWithText("Details").performClick()
+        composeRule.onNodeWithText("App details").assertIsDisplayed()
+        composeRule.runOnIdle { state = state.copy(installedApps = emptyList()) }
+
+        composeRule.onNodeWithText("The selected card is no longer available.").assertIsDisplayed()
+        composeRule.onAllNodesWithText("App details").assertCountEquals(0)
+        composeRule.onAllNodesWithText("Details").assertCountEquals(0)
+    }
+
+    @Test
+    fun removedExpandedContentReturnsToTheStageWithAnExplanation() {
+        val app = timeScapeTestApp()
+        val notification = timeScapeTestNotification(app)
+        var state by mutableStateOf(timeScapeTestState(app, notification))
+        composeRule.setContent {
+            MaterialTheme { TimeScapeAppStageSurface(state = state, onAction = {}) }
+        }
+
+        composeRule.onNodeWithText("Details").performClick()
+        composeRule.onNodeWithText("Notification details").assertIsDisplayed()
+        composeRule.runOnIdle { state = state.copy(notificationGroupsByApp = emptyList()) }
+
+        composeRule.onNodeWithText("The selected card is no longer available.").assertIsDisplayed()
+        composeRule.onAllNodesWithText("Notification details").assertCountEquals(0)
+    }
+
+    @Test
+    fun revokingNotificationAccessWhileDetailIsOpenClosesItWithAnExplanation() {
+        val app = timeScapeTestApp()
+        val notification = timeScapeTestNotification(app)
+        var state by mutableStateOf(timeScapeTestState(app, notification))
+        composeRule.setContent {
+            MaterialTheme { TimeScapeAppStageSurface(state = state, onAction = {}) }
+        }
+
+        composeRule.onNodeWithText("Details").performClick()
+        composeRule.onNodeWithText("Notification details").assertIsDisplayed()
+        composeRule.runOnIdle { state = state.copy(notificationAccessStatus = NotificationAccessStatus.REVOKED) }
+
+        composeRule
+            .onNodeWithText("Notification access was revoked. Restore access to update stages.")
+            .assertIsDisplayed()
+        composeRule.onNodeWithText("The selected card is no longer available.").assertIsDisplayed()
+        composeRule.onAllNodesWithText("Notification details").assertCountEquals(0)
     }
 
     @Test
@@ -764,5 +1013,69 @@ class TimeScapeCardSurfaceTest {
 
         assertEquals(1, entries.maxBy { entry -> entry.order }.cardIndex)
         assertTrue(entries.all { entry -> entry.rotationDegrees == 0f })
+    }
+
+    private fun timeScapeTestApp(): InstalledApp =
+        InstalledApp(
+            identity =
+                AppIdentity(
+                    packageName = AppPackageName("com.example.mail"),
+                    activityName = AppActivityName(".Main"),
+                    profile = AppProfile.personal(),
+                ),
+            label = "Mail",
+        )
+
+    private fun timeScapeTestNotification(app: InstalledApp): LauncherNotification =
+        LauncherNotification(
+            key = LauncherNotificationKey("mail"),
+            packageName = app.identity.packageName,
+            profileId = app.identity.profile.id,
+            title = "New message",
+            text = "Hello from TimeScape",
+            postedAtEpochMillis = 10,
+        )
+
+    private fun timeScapeTestState(
+        app: InstalledApp,
+        notification: LauncherNotification,
+    ): LauncherShellState =
+        LauncherShellState(
+            notificationAccessStatus = NotificationAccessStatus.GRANTED,
+            installedApps = listOf(app),
+            profileContentVisibility = mapOf(app.identity.profile.id to AppProfileContentVisibility.VISIBLE),
+            notificationGroupsByApp =
+                listOf(
+                    AppNotificationGroup(
+                        packageName = app.identity.packageName,
+                        profileId = app.identity.profile.id,
+                        latestCategory = NotificationCategory.MESSAGE,
+                        latestAgeBucket = NotificationAgeBucket.RECENT,
+                        notifications = listOf(notification),
+                    ),
+                ),
+        )
+
+    private fun emptyPinnedStageState(app: InstalledApp): LauncherShellState {
+        val stageId = AppStageId(app.identity.packageName, app.identity.profile.id)
+        return LauncherShellState(
+            notificationAccessStatus = NotificationAccessStatus.GRANTED,
+            installedApps = listOf(app),
+            profileContentVisibility = mapOf(app.identity.profile.id to AppProfileContentVisibility.VISIBLE),
+            launcherSettings =
+                LauncherSettings(
+                    cards =
+                        CardsSettings(
+                            stagePreferencesByLayout =
+                                mapOf(
+                                    HomeLayoutKey(LauncherViewMode.STANDARD_APP_DRAWER) to
+                                        AppStagePreferences(
+                                            pinnedStageIds = listOf(stageId),
+                                            selectedStageId = stageId,
+                                        ),
+                                ),
+                        ),
+                ),
+        )
     }
 }

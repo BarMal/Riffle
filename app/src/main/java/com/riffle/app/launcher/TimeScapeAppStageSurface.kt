@@ -1,7 +1,8 @@
-@file:Suppress("LongMethod", "LongParameterList", "TooManyFunctions")
+@file:Suppress("CyclomaticComplexMethod", "LongMethod", "LongParameterList", "TooManyFunctions")
 
 package com.riffle.app.launcher
 
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -24,13 +25,20 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
@@ -41,6 +49,7 @@ import com.riffle.app.launcher.notifications.NotificationStageAction
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.cards.AppStage
 import com.riffle.core.domain.launcher.cards.AppStageId
+import com.riffle.core.domain.launcher.cards.LauncherCardId
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.settings.TimeScapeViewportDp
 import com.riffle.core.domain.launcher.settings.resolveTimeScapeCardStack
@@ -56,6 +65,19 @@ internal fun TimeScapeAppStageSurface(
     val reconciler = remember { AppStageShellStateReconciler(AndroidNotificationStageActionGateway) }
     val shellState = reconciler.reconcile(state)
     val selectedStage = shellState.snapshot.selectedStage
+    var detailOrigin by remember { mutableStateOf<TimeScapeDetailOrigin?>(null) }
+    var detailRecoveryMessage by rememberSaveable { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(detailOrigin, selectedStage) {
+        detailOrigin?.let { origin ->
+            val isStillAvailable =
+                selectedStage?.id == origin.stageId && selectedStage.content.any { it.id == origin.cardId }
+            if (!isStillAvailable) {
+                detailOrigin = null
+                detailRecoveryMessage = "The selected card is no longer available."
+            }
+        }
+    }
 
     Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.surface) {
         Column(
@@ -64,12 +86,21 @@ internal fun TimeScapeAppStageSurface(
         ) {
             TimeScapeStageHeader(selectedStage, state, onAction)
             if (state.notificationAccessStatus != NotificationAccessStatus.GRANTED || selectedStage == null) {
-                TimeScapeUnavailableState(state.notificationAccessStatus, onAction, Modifier.weight(1f))
+                TimeScapeUnavailableState(
+                    access = state.notificationAccessStatus,
+                    recoveryMessage = detailRecoveryMessage,
+                    onAction = onAction,
+                    modifier = Modifier.weight(1f),
+                )
             } else {
                 TimeScapeStageContent(
                     stage = selectedStage,
                     state = state,
                     shellState = shellState,
+                    onDetailVisibilityChanged = { cardId ->
+                        detailOrigin = cardId?.let { TimeScapeDetailOrigin(selectedStage.id, it) }
+                        if (cardId != null) detailRecoveryMessage = null
+                    },
                     onAction = onAction,
                     modifier = Modifier.weight(1f),
                 )
@@ -153,14 +184,32 @@ private fun TimeScapeStageContent(
     stage: AppStage,
     state: LauncherShellState,
     shellState: com.riffle.app.launcher.notifications.AppStageShellState,
+    onDetailVisibilityChanged: (LauncherCardId?) -> Unit,
     onAction: (LauncherShellAction) -> Unit,
     modifier: Modifier,
 ) {
+    val detailState =
+        rememberTimeScapeCardDetailState(
+            stageId = stage.id,
+            reducedMotion = state.launcherSettings.motion.reducedMotion,
+        )
+    LaunchedEffect(detailState.expansionState) {
+        onDetailVisibilityChanged(
+            detailState.expansionState.cardId.takeIf { detailState.expansionState.isVisible },
+        )
+    }
     when {
         stage.content.isEmpty() ->
-            TimeScapeEmptyStage(stage, shellState, onAction, modifier)
+            TimeScapeEmptyStage(stage, shellState, detailState, onAction, modifier)
         else ->
-            TimeScapeNotificationStack(stage, state, shellState.notificationCards, onAction, modifier)
+            TimeScapeNotificationStack(
+                stage = stage,
+                state = state,
+                notificationCards = shellState.notificationCards,
+                detailState = detailState,
+                onAction = onAction,
+                modifier = modifier,
+            )
     }
 }
 
@@ -169,6 +218,7 @@ private fun TimeScapeNotificationStack(
     stage: AppStage,
     state: LauncherShellState,
     notificationCards: List<AppStageNotificationCard>,
+    detailState: TimeScapeCardDetailState,
     onAction: (LauncherShellAction) -> Unit,
     modifier: Modifier,
 ) {
@@ -185,70 +235,110 @@ private fun TimeScapeNotificationStack(
         focusedCardIdValue = focusedCard.content.id.value
     }
     val activeCard = focusedCard ?: return
+    val availableCardIds = cards.map { card -> card.content.id }.toSet()
+    val detailFocusRequester = remember { FocusRequester() }
+    var restoreDetailFocusForCardId by remember { mutableStateOf<LauncherCardId?>(null) }
+
+    SideEffect {
+        detailState.reconcile(availableCardIds)
+        if (restoreDetailFocusForCardId !in availableCardIds) restoreDetailFocusForCardId = null
+    }
 
     BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
         val resolution =
             state.launcherSettings.resolveTimeScapeCardStack(
                 TimeScapeViewportDp(maxWidth.value.toInt(), maxHeight.value.toInt()),
             )
-        Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Box(
-                modifier = Modifier.fillMaxWidth().weight(1f),
-                contentAlignment = Alignment.Center,
-            ) {
-                CardStack(
-                    entries = resolution.layoutPolicy.entries(cards.size, cards.indexOf(activeCard)),
-                    animationSpec = resolution.animation,
-                    reducedMotion = resolution.reducedMotion,
-                    itemKey = { entry -> cards[entry.cardIndex].content.id },
-                    interaction =
-                        CardStackInteraction(
-                            focusedItemKey = activeCard.content.id,
-                            onFocusRequest = { entry ->
-                                focusedCardIdValue = cards[entry.cardIndex].content.id.value
-                            },
-                            onSettle = { drag, velocity ->
-                                val currentIndex = cards.indexOfFirst { it.content.id == activeCard.content.id }
-                                val targetIndex =
-                                    when {
-                                        velocity < -500f || drag < -64f -> currentIndex + 1
-                                        velocity > 500f || drag > 64f -> currentIndex - 1
-                                        else -> currentIndex
+        if (detailState.expansionState.isVisible) {
+            cards
+                .firstOrNull { card -> card.content.id == detailState.expansionState.cardId }
+                ?.let { card ->
+                    TimeScapeCardDetailSurface(
+                        card = card,
+                        detailState = detailState,
+                        onAction = onAction,
+                        onClose = { restoreDetailFocusForCardId = card.content.id },
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                }
+        } else {
+            Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Box(
+                    modifier = Modifier.fillMaxWidth().weight(1f),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    CardStack(
+                        entries = resolution.layoutPolicy.entries(cards.size, cards.indexOf(activeCard)),
+                        animationSpec = resolution.animation,
+                        reducedMotion = resolution.reducedMotion,
+                        itemKey = { entry -> cards[entry.cardIndex].content.id },
+                        interaction =
+                            CardStackInteraction(
+                                focusedItemKey = activeCard.content.id,
+                                onFocusRequest = { entry ->
+                                    focusedCardIdValue = cards[entry.cardIndex].content.id.value
+                                },
+                                onSettle = { drag, velocity ->
+                                    val currentIndex = cards.indexOfFirst { it.content.id == activeCard.content.id }
+                                    val targetIndex =
+                                        when {
+                                            velocity < -500f || drag < -64f -> currentIndex + 1
+                                            velocity > 500f || drag > 64f -> currentIndex - 1
+                                            else -> currentIndex
+                                        }
+                                    cards.getOrNull(targetIndex)?.let { card ->
+                                        focusedCardIdValue = card.content.id.value
                                     }
-                                cards.getOrNull(targetIndex)?.let { card ->
-                                    focusedCardIdValue = card.content.id.value
-                                }
-                            },
-                        ),
-                ) { entry, cardModifier ->
-                    val card = cards[entry.cardIndex]
-                    TimeScapeCardSurface(
-                        appearance = state.launcherSettings.cards.timeScapeAppearance,
-                        background = TimeScapeCardBackground(appSeed = stage.id.packageName.value),
-                        modifier =
-                            cardModifier.size(
-                                width = resolution.cardWidthDp.dp,
-                                height = resolution.cardHeightDp.dp,
+                                },
                             ),
-                    ) {
-                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text(card.title, style = MaterialTheme.typography.titleMedium)
-                            Text(card.text, style = MaterialTheme.typography.bodyMedium)
+                    ) { entry, cardModifier ->
+                        val card = cards[entry.cardIndex]
+                        TimeScapeCardSurface(
+                            appearance = state.launcherSettings.cards.timeScapeAppearance,
+                            background = TimeScapeCardBackground(appSeed = stage.id.packageName.value),
+                            modifier =
+                                cardModifier.size(
+                                    width = resolution.cardWidthDp.dp,
+                                    height = resolution.cardHeightDp.dp,
+                                ),
+                        ) {
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Text(card.title, style = MaterialTheme.typography.titleMedium)
+                                Text(card.text, style = MaterialTheme.typography.bodyMedium)
+                            }
                         }
                     }
                 }
+                TimeScapeContextShelf(
+                    card = activeCard,
+                    onAction = onAction,
+                    onDetailRequested = { detailState.expand(activeCard.content.id) },
+                    detailFocusRequester = detailFocusRequester,
+                    restoreDetailFocus = restoreDetailFocusForCardId == activeCard.content.id,
+                    onDetailFocusRestored = { restoreDetailFocusForCardId = null },
+                )
+                TimeScapeDetailRecoveryMessage(detailState.sourceRemovalMessage)
             }
-            TimeScapeContextShelf(activeCard, onAction)
         }
     }
 }
 
 @Composable
-private fun TimeScapeContextShelf(
+internal fun TimeScapeContextShelf(
     card: AppStageNotificationCard,
     onAction: (LauncherShellAction) -> Unit,
+    onDetailRequested: (() -> Unit)? = null,
+    detailFocusRequester: FocusRequester? = null,
+    restoreDetailFocus: Boolean = false,
+    onDetailFocusRestored: (() -> Unit)? = null,
 ) {
-    if (card.supportedActions.isEmpty()) return
+    if (card.supportedActions.isEmpty() && onDetailRequested == null) return
+    var detailControlLaidOut by remember { mutableStateOf(false) }
+    RestoreFocusAfterLayout(
+        enabled = restoreDetailFocus,
+        focusRequester = detailFocusRequester,
+        isLaidOut = detailControlLaidOut,
+    )
     Row(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -262,6 +352,26 @@ private fun TimeScapeContextShelf(
                 Text(action.label())
             }
         }
+        onDetailRequested?.let { requestDetail ->
+            TextButton(
+                onClick = requestDetail,
+                modifier =
+                    detailFocusRequester?.let { requester ->
+                        Modifier.focusRequester(requester).onGloballyPositioned {
+                            if (restoreDetailFocus) detailControlLaidOut = true
+                        }
+                            .onFocusChanged { focusState ->
+                                if (restoreDetailFocus && focusState.isFocused) {
+                                    onDetailFocusRestored?.invoke()
+                                    detailControlLaidOut = false
+                                }
+                            }.focusable()
+                    }
+                        ?: Modifier,
+            ) {
+                Text("Details")
+            }
+        }
     }
 }
 
@@ -269,10 +379,30 @@ private fun TimeScapeContextShelf(
 private fun TimeScapeEmptyStage(
     stage: AppStage,
     shellState: com.riffle.app.launcher.notifications.AppStageShellState,
+    detailState: TimeScapeCardDetailState,
     onAction: (LauncherShellAction) -> Unit,
     modifier: Modifier,
 ) {
     val emptyCard = shellState.emptyAppCards[stage.id]
+    val detailCardId = LauncherCardId("stage-empty:${stage.id.profileId.value}:${stage.id.packageName.value}")
+    val availableCardIds = if (emptyCard == null) emptySet() else setOf(detailCardId)
+    val detailFocusRequester = remember { FocusRequester() }
+    var restoreDetailFocusForCardId by remember { mutableStateOf<LauncherCardId?>(null) }
+    var detailControlLaidOut by remember { mutableStateOf(false) }
+    SideEffect {
+        detailState.reconcile(availableCardIds)
+        if (restoreDetailFocusForCardId !in availableCardIds) restoreDetailFocusForCardId = null
+    }
+    if (detailState.expansionState.isVisible && emptyCard != null) {
+        TimeScapeEmptyAppDetailSurface(
+            card = emptyCard,
+            detailState = detailState,
+            onAction = onAction,
+            onClose = { restoreDetailFocusForCardId = detailCardId },
+            modifier = modifier,
+        )
+        return
+    }
     Column(
         modifier = modifier.fillMaxSize().padding(24.dp),
         verticalArrangement = Arrangement.Center,
@@ -292,13 +422,48 @@ private fun TimeScapeEmptyStage(
                     Text(shortcut.shortLabel)
                 }
             }
+            TextButton(
+                onClick = { detailState.expand(detailCardId) },
+                modifier =
+                    Modifier.focusRequester(detailFocusRequester).onGloballyPositioned {
+                        if (restoreDetailFocusForCardId == detailCardId) detailControlLaidOut = true
+                    }
+                        .onFocusChanged { focusState ->
+                            if (restoreDetailFocusForCardId == detailCardId && focusState.isFocused) {
+                                restoreDetailFocusForCardId = null
+                                detailControlLaidOut = false
+                            }
+                        }.focusable(),
+            ) {
+                Text("Details")
+            }
+            RestoreFocusAfterLayout(
+                enabled = restoreDetailFocusForCardId == detailCardId,
+                focusRequester = detailFocusRequester,
+                isLaidOut = detailControlLaidOut,
+            )
         }
+        TimeScapeDetailRecoveryMessage(detailState.sourceRemovalMessage)
+    }
+}
+
+@Composable
+private fun RestoreFocusAfterLayout(
+    enabled: Boolean,
+    focusRequester: FocusRequester?,
+    isLaidOut: Boolean,
+) {
+    LaunchedEffect(enabled, focusRequester, isLaidOut) {
+        if (!enabled || focusRequester == null || !isLaidOut) return@LaunchedEffect
+        withFrameNanos { }
+        focusRequester.requestFocus()
     }
 }
 
 @Composable
 private fun TimeScapeUnavailableState(
     access: NotificationAccessStatus,
+    recoveryMessage: String?,
     onAction: (LauncherShellAction) -> Unit,
     modifier: Modifier,
 ) {
@@ -315,6 +480,7 @@ private fun TimeScapeUnavailableState(
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(message, style = MaterialTheme.typography.bodyLarge)
+        TimeScapeDetailRecoveryMessage(recoveryMessage)
         if (access == NotificationAccessStatus.NOT_GRANTED || access == NotificationAccessStatus.REVOKED) {
             TextButton(onClick = { onAction(LauncherShellAction.RequestNotificationAccess) }) {
                 Text("Allow access")
@@ -322,6 +488,11 @@ private fun TimeScapeUnavailableState(
         }
     }
 }
+
+private data class TimeScapeDetailOrigin(
+    val stageId: AppStageId,
+    val cardId: LauncherCardId,
+)
 
 @Composable
 private fun TimeScapeStageSelector(

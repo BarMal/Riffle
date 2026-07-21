@@ -28,6 +28,27 @@ class CardExpansionStateTest {
     }
 
     @Test
+    fun replacingAnExpansionUsesTheLatestCardIdentity() {
+        val replacement =
+            CardExpansionState()
+                .expand(cardId)
+                .expand(LauncherCardId("replacement"))
+
+        assertEquals(
+            CardExpansionState(CardExpansionPhase.EXPANDING, LauncherCardId("replacement")),
+            replacement,
+        )
+    }
+
+    @Test
+    fun contentRemovalClosesTheExpandedCard() {
+        val expanded = CardExpansionState().expand(cardId, reducedMotion = true)
+
+        assertEquals(CardExpansionState(), expanded.reconcile(emptySet(), reducedMotion = true))
+        assertEquals(expanded, expanded.reconcile(setOf(cardId)))
+    }
+
+    @Test
     fun rejectsCardlessNonCollapsedStates() {
         assertFailsWith<IllegalArgumentException> {
             CardExpansionState(phase = CardExpansionPhase.EXPANDED)

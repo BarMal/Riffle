@@ -19,6 +19,21 @@ data class CardExpansionState(
             cardId = cardId,
         )
 
+    /**
+     * Reconciles transient expansion against the live cards rendered by its owner.
+     *
+     * Detail payloads are deliberately process-only, so removal must close the detail rather
+     * than retaining an identity that can no longer be acted on.
+     */
+    fun reconcile(
+        availableCardIds: Set<LauncherCardId>,
+        reducedMotion: Boolean = false,
+    ): CardExpansionState =
+        cardId
+            ?.takeIf { it !in availableCardIds }
+            ?.let { collapse(reducedMotion).complete() }
+            ?: this
+
     fun collapse(reducedMotion: Boolean = false): CardExpansionState =
         when (phase) {
             CardExpansionPhase.COLLAPSED -> this
@@ -36,6 +51,9 @@ data class CardExpansionState(
             CardExpansionPhase.EXPANDING -> copy(phase = CardExpansionPhase.EXPANDED)
             CardExpansionPhase.COLLAPSING -> CardExpansionState()
         }
+
+    val isVisible: Boolean
+        get() = phase != CardExpansionPhase.COLLAPSED
 }
 
 enum class CardExpansionPhase {
