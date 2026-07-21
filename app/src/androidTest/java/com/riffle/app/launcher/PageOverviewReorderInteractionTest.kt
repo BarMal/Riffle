@@ -41,10 +41,6 @@ class PageOverviewReorderInteractionTest {
     private fun verifyOffScreenPageDrag(containerWidth: Dp) {
         val actions = mutableListOf<LauncherShellAction>()
         setContent(width = containerWidth, onAction = actions::add)
-        // Complete the initial Compose layout observation before instrumentation starts injecting
-        // scroll input. This keeps the first gesture on the same synchronized test boundary as
-        // subsequent LazyRow gestures.
-        composeRule.waitForIdle()
 
         scrollToPageOverviewCard(pageId = "page-7")
         composeRule.onNodeWithTag(pageOverviewCardTestTag("page-7")).assertIsDisplayed()
