@@ -165,19 +165,14 @@ internal fun Modifier.homeItemDrag(
                 },
                 onDragEnd = {
                     actions.onDragSessionChanged(null)
-                    dragState.dropCell(dragX = dragX, dragY = dragY)
-                        .let { targetCell ->
-                            if (targetCell == null) {
-                                onStationaryLongPress?.invoke()
-                            } else {
-                                actions.onAction(
-                                    LauncherShellAction.MoveHomeShortcutToCell(
-                                        itemId = item.id,
-                                        cell = targetCell,
-                                    ),
-                                )
-                            }
-                        }
+                    homeItemDragDropAction(
+                        item = item,
+                        dragState = dragState,
+                        dragX = dragX,
+                        dragY = dragY,
+                    )
+                        ?.let(actions.onAction)
+                        ?: onStationaryLongPress?.invoke()
                 },
                 onDragCancel = {
                     actions.onDragSessionChanged(null)
@@ -257,6 +252,30 @@ private fun HomeItemDragState.dropCell(
             ).coerceIn(grid)
     }
 }
+
+internal fun homeItemDragDropAction(
+    item: LauncherItem,
+    dragState: HomeItemDragState,
+    dragX: Float,
+    dragY: Float,
+): LauncherShellAction? =
+    when {
+        item.isDockTransferable && dragState.isDraggedBelowGrid(dragY) ->
+            LauncherShellAction.MoveHomeItemToDock(item.id)
+
+        else ->
+            dragState.dropCell(dragX = dragX, dragY = dragY)?.let { targetCell ->
+                LauncherShellAction.MoveHomeShortcutToCell(
+                    itemId = item.id,
+                    cell = targetCell,
+                )
+            }
+    }
+
+private val LauncherItem.isDockTransferable: Boolean
+    get() = this is AppShortcutItem || this is FolderItem
+
+private fun HomeItemDragState.isDraggedBelowGrid(dragY: Float): Boolean = dragY >= (grid.rows - cell.row) * cellSizePx
 
 private val LauncherItem.dragLabel: String
     get() =
