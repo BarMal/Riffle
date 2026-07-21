@@ -616,9 +616,7 @@ private fun timeScapeFallbackMessage(
     }
 }
 
-internal fun timeScapeAppearancePresetAction(
-    preset: TimeScapeAppearancePreset,
-): LauncherShellAction.UpdateTimeScapeAppearance =
+internal fun timeScapeAppearancePresetAction(preset: TimeScapeAppearancePreset): LauncherShellAction.UpdateTimeScapeAppearance =
     LauncherShellAction.UpdateTimeScapeAppearance(
         TimeScapeAppearanceSettings.modern().applyPreset(preset).coerce(),
     )
