@@ -86,11 +86,13 @@ import com.riffle.core.domain.launcher.settings.TimeScapeContentDensity
 import com.riffle.core.domain.launcher.settings.TimeScapeEasing
 import com.riffle.core.domain.launcher.settings.TimeScapeFanDirection
 import com.riffle.core.domain.launcher.settings.TimeScapeHapticStrength
+import com.riffle.core.domain.launcher.settings.TimeScapeRendererCapabilities
 
 @Composable
 internal fun TimeScapeAppearancePageContent(
     state: SettingsSurfaceState,
     onAction: (LauncherShellAction) -> Unit,
+    rendererCapabilities: TimeScapeRendererCapabilities = timeScapeRendererCapabilities(),
 ) {
     val appearance = state.settings.cards.timeScapeAppearance
     var resetConfirmationVisible by rememberSaveable { mutableStateOf(false) }
@@ -102,9 +104,10 @@ internal fun TimeScapeAppearancePageContent(
         TimeScapeAppearancePreview(
             appearance = appearance,
             globalReducedMotion = state.settings.motion.reducedMotion,
+            rendererCapabilities = rendererCapabilities,
             modifier = Modifier.fillMaxWidth().heightIn(min = 340.dp, max = 460.dp),
         )
-        timeScapeFallbackMessage(appearance)?.let { message ->
+        timeScapeFallbackMessage(appearance, rendererCapabilities)?.let { message ->
             SettingsListRow(title = "Effective fallback", subtitle = message)
         }
     }
@@ -583,8 +586,11 @@ private fun TimeScapeColorChoices(
     TimeScapeEnumChoices(title, colors, selected, { color -> "#${color.toString(16).takeLast(6).uppercase()}" }, onSelected)
 }
 
-private fun timeScapeFallbackMessage(appearance: TimeScapeAppearanceSettings): String? {
-    val effective = appearance.effectiveFor(timeScapeRendererCapabilities())
+private fun timeScapeFallbackMessage(
+    appearance: TimeScapeAppearanceSettings,
+    rendererCapabilities: TimeScapeRendererCapabilities,
+): String? {
+    val effective = appearance.effectiveFor(rendererCapabilities)
     return when {
         appearance.motion.reducedTransparency -> "Reduced transparency is on: glass and blur are disabled."
         appearance.surface.blurStrengthPercent != effective.surface.blurStrengthPercent ->

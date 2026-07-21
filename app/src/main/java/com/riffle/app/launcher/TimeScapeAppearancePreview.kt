@@ -17,6 +17,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.cards.CardStackAnimationProfile
 import com.riffle.core.domain.launcher.settings.TimeScapeAppearanceSettings
+import com.riffle.core.domain.launcher.settings.TimeScapeRendererCapabilities
 import com.riffle.core.domain.launcher.settings.TimeScapeViewportDp
 
 /** Stable, non-sensitive content rendered through the same card surface and stack projection as Home. */
@@ -24,6 +25,7 @@ import com.riffle.core.domain.launcher.settings.TimeScapeViewportDp
 internal fun TimeScapeAppearancePreview(
     appearance: TimeScapeAppearanceSettings,
     globalReducedMotion: Boolean,
+    rendererCapabilities: TimeScapeRendererCapabilities = timeScapeRendererCapabilities(),
     modifier: Modifier = Modifier,
 ) {
     BoxWithConstraints(
@@ -33,7 +35,7 @@ internal fun TimeScapeAppearancePreview(
         val resolution =
             appearance.resolveCardStack(
                 viewport = TimeScapeViewportDp(maxWidth.value.toInt(), maxHeight.value.toInt()),
-                capabilities = timeScapeRendererCapabilities(),
+                capabilities = rendererCapabilities,
                 globalReducedMotion = globalReducedMotion,
             )
         if (!resolution.isUsable) {

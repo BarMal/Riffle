@@ -1,17 +1,21 @@
 package com.riffle.app.launcher
 
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.MotionSettings
 import com.riffle.core.domain.launcher.settings.TimeScapeAppearancePreset
+import com.riffle.core.domain.launcher.settings.TimeScapeRendererCapabilities
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -86,6 +90,47 @@ class TimeScapeAppearanceEditorTest {
 
         composeRule
             .onNode(SemanticsMatcher.expectValue(CardStackMotionModeKey, CardStackMotionMode.SNAP))
+            .assertExists()
+    }
+
+    @Test
+    fun mapsAccessibleSliderValuesToThePersistedProfileBoundary() {
+        val actions = mutableListOf<LauncherShellAction>()
+        composeRule.setContent {
+            MaterialTheme {
+                TimeScapeAppearancePageContent(
+                    state = LauncherShellState().settingsSurfaceState(),
+                    onAction = actions::add,
+                )
+            }
+        }
+
+        composeRule
+            .onNodeWithContentDescription("Card aspect ratio")
+            .performSemanticsAction(SemanticsActions.SetProgress) { setProgress ->
+                assertTrue(setProgress(100f))
+            }
+
+        composeRule.runOnIdle {
+            val action = actions.last() as LauncherShellAction.UpdateTimeScapeAppearance
+            assertEquals(100, action.appearance.geometry.cardAspectRatioPercent)
+        }
+    }
+
+    @Test
+    fun displaysTheActualUnavailableBlurFallbackInThePreview() {
+        composeRule.setContent {
+            MaterialTheme {
+                TimeScapeAppearancePageContent(
+                    state = LauncherShellState().settingsSurfaceState(),
+                    onAction = {},
+                    rendererCapabilities = TimeScapeRendererCapabilities(supportsBlur = false),
+                )
+            }
+        }
+
+        composeRule
+            .onNodeWithText("Blur is unavailable on this device; the preview shows the opaque fallback.")
             .assertExists()
     }
 }
