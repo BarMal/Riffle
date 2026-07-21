@@ -23,6 +23,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
@@ -117,6 +118,7 @@ internal fun TimeScapeAppearancePageContent(
             values = TimeScapeAppearancePreset.entries,
             selected = appearance.preset,
             label = TimeScapeAppearancePreset::label,
+            testTag = { preset -> "timescape-preset-${preset.name}" },
             onSelected = { preset ->
                 onAction(LauncherShellAction.UpdateTimeScapeAppearance(appearance.applyPreset(preset).coerce()))
             },
@@ -562,6 +564,7 @@ private fun <T> TimeScapeEnumChoices(
     values: Iterable<T>,
     selected: T,
     label: (T) -> String,
+    testTag: ((T) -> String)? = null,
     onSelected: (T) -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -571,7 +574,10 @@ private fun <T> TimeScapeEnumChoices(
                 FilterChip(
                     selected = value == selected,
                     onClick = { onSelected(value) },
-                    modifier = Modifier.semantics { contentDescription = "$title: ${label(value)}" },
+                    modifier =
+                        Modifier
+                            .semantics { contentDescription = "$title: ${label(value)}" }
+                            .then(testTag?.let { Modifier.testTag(it(value)) } ?: Modifier),
                     label = { Text(label(value)) },
                 )
             }
@@ -586,7 +592,13 @@ private fun TimeScapeColorChoices(
     onSelected: (Long) -> Unit,
 ) {
     val colors = listOf(0xFF1B1B1FL, 0xFF355C7DL, 0xFF6C5B7BL, 0xFFC06C84L, 0xFFFFFFFFL)
-    TimeScapeEnumChoices(title, colors, selected, { color -> "#${color.toString(16).takeLast(6).uppercase()}" }, onSelected)
+    TimeScapeEnumChoices(
+        title = title,
+        values = colors,
+        selected = selected,
+        label = { color -> "#${color.toString(16).takeLast(6).uppercase()}" },
+        onSelected = onSelected,
+    )
 }
 
 private fun timeScapeFallbackMessage(

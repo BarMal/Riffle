@@ -8,6 +8,7 @@ import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performSemanticsAction
@@ -66,7 +67,8 @@ class TimeScapeAppearanceEditorTest {
             }
         }
 
-        composeRule.onNodeWithContentDescription("Appearance preset: Flat").performClick()
+        composeRule.runOnIdle { actions.clear() }
+        composeRule.onNodeWithTag("timescape-preset-FLAT_REDUCED_DEPTH").performClick()
         composeRule.runOnIdle {
             val action = actions.single() as LauncherShellAction.UpdateTimeScapeAppearance
             assertEquals(TimeScapeAppearancePreset.FLAT_REDUCED_DEPTH, action.appearance.preset)
