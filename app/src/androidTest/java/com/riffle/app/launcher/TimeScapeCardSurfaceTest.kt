@@ -322,6 +322,35 @@ class TimeScapeCardSurfaceTest {
     }
 
     @Test
+    fun emptyAppDetailMovesToSupportingPaneAndBackAcrossResize() {
+        val app = timeScapeTestApp()
+        var widthDp by mutableIntStateOf(500)
+        composeRule.setContent {
+            CompositionLocalProvider(LocalDensity provides Density(0.3f)) {
+                MaterialTheme {
+                    Box(modifier = Modifier.width(widthDp.dp).height(800.dp).clipToBounds()) {
+                        TimeScapeAppStageSurface(
+                            state = emptyPinnedStageState(app),
+                            windowLayout = TimeScapeWindowLayout(widthDp, 800),
+                            onAction = {},
+                        )
+                    }
+                }
+            }
+        }
+
+        composeRule.onNodeWithText("Details").performClick()
+        composeRule.onNodeWithText("App details").assertIsDisplayed()
+
+        composeRule.runOnIdle { widthDp = 1_200 }
+        composeRule.onNodeWithTag(TIME_SCAPE_SUPPORTING_PANE_TEST_TAG).assertIsDisplayed()
+        composeRule.onNodeWithText("App details").assertExists()
+
+        composeRule.runOnIdle { widthDp = 500 }
+        composeRule.onNodeWithText("App details").assertIsDisplayed()
+    }
+
+    @Test
     fun removingSourceDuringBackCloseDoesNotFocusRemainingCardDetails() {
         val app = timeScapeTestApp()
         val source = timeScapeTestNotification(app).copy(key = LauncherNotificationKey("source"), postedAtEpochMillis = 20)

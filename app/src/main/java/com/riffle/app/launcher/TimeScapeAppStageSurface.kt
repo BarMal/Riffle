@@ -52,6 +52,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.riffle.app.launcher.notifications.AndroidNotificationStageActionGateway
+import com.riffle.app.launcher.notifications.AppStageEmptyAppCard
 import com.riffle.app.launcher.notifications.AppStageNotificationCard
 import com.riffle.app.launcher.notifications.AppStageShellStateReconciler
 import com.riffle.app.launcher.notifications.NotificationStageAction
@@ -104,7 +105,11 @@ internal fun TimeScapeAppStageSurface(
     LaunchedEffect(detailOrigin, selectedStage) {
         detailOrigin?.let { origin ->
             val isStillAvailable =
-                selectedStage?.id == origin.stageId && selectedStage.content.any { it.id == origin.cardId }
+                selectedStage?.id == origin.stageId &&
+                    (
+                        selectedStage.content.any { it.id == origin.cardId } ||
+                            origin.cardId == timeScapeEmptyDetailCardId(selectedStage.id)
+                    )
             if (!isStillAvailable) {
                 detailOrigin = null
                 detailRecoveryMessage = "The selected card is no longer available."
@@ -182,6 +187,7 @@ internal fun TimeScapeAppStageSurface(
                                 selectedCardId = detailOrigin?.cardId ?: focusedCardIdValue?.let(::LauncherCardId),
                                 state = state,
                                 notificationCards = shellState.notificationCards,
+                                emptyCard = selectedStage?.let { shellState.emptyAppCards[it.id] },
                                 detailState = detailState,
                                 onAction = onAction,
                                 modifier = Modifier.width(paneLayout.detailWidthDp.dp).fillMaxSize(),
@@ -283,12 +289,21 @@ private fun TimeScapeSupportingPane(
     selectedCardId: LauncherCardId?,
     state: LauncherShellState,
     notificationCards: List<AppStageNotificationCard>,
+    emptyCard: AppStageEmptyAppCard?,
     detailState: TimeScapeCardDetailState?,
     onAction: (LauncherShellAction) -> Unit,
     modifier: Modifier,
 ) {
     val card = notificationCards.firstOrNull { it.content.id == selectedCardId }
     val paneModifier = modifier.testTag(TIME_SCAPE_SUPPORTING_PANE_TEST_TAG)
+    if (
+        emptyCard != null &&
+        selectedCardId == stage?.id?.let(::timeScapeEmptyDetailCardId) &&
+        detailState?.expansionState?.isVisible == true
+    ) {
+        TimeScapeEmptyAppDetailSurface(emptyCard, detailState, onAction, modifier = paneModifier)
+        return
+    }
     if (card != null && detailState?.expansionState?.isVisible == true) {
         TimeScapeCardDetailSurface(card, detailState, onAction, modifier = paneModifier)
         return
@@ -405,7 +420,7 @@ private fun TimeScapeStageContent(
     }
     when {
         stage.content.isEmpty() ->
-            TimeScapeEmptyStage(stage, shellState, detailState, onAction, modifier)
+            TimeScapeEmptyStage(stage, shellState, detailState, showDetailInline, onAction, modifier)
         else ->
             TimeScapeNotificationStack(
                 stage = stage,
@@ -586,11 +601,12 @@ private fun TimeScapeEmptyStage(
     stage: AppStage,
     shellState: com.riffle.app.launcher.notifications.AppStageShellState,
     detailState: TimeScapeCardDetailState,
+    showDetailInline: Boolean,
     onAction: (LauncherShellAction) -> Unit,
     modifier: Modifier,
 ) {
     val emptyCard = shellState.emptyAppCards[stage.id]
-    val detailCardId = LauncherCardId("stage-empty:${stage.id.profileId.value}:${stage.id.packageName.value}")
+    val detailCardId = timeScapeEmptyDetailCardId(stage.id)
     val availableCardIds = if (emptyCard == null) emptySet() else setOf(detailCardId)
     val detailFocusRequester = remember { FocusRequester() }
     var restoreDetailFocusForCardId by remember { mutableStateOf<LauncherCardId?>(null) }
@@ -599,7 +615,7 @@ private fun TimeScapeEmptyStage(
         detailState.reconcile(availableCardIds)
         if (restoreDetailFocusForCardId !in availableCardIds) restoreDetailFocusForCardId = null
     }
-    if (detailState.expansionState.isVisible && emptyCard != null) {
+    if (detailState.expansionState.isVisible && showDetailInline && emptyCard != null) {
         TimeScapeEmptyAppDetailSurface(
             card = emptyCard,
             detailState = detailState,
@@ -699,6 +715,9 @@ private data class TimeScapeDetailOrigin(
     val stageId: AppStageId,
     val cardId: LauncherCardId,
 )
+
+private fun timeScapeEmptyDetailCardId(stageId: AppStageId): LauncherCardId =
+    LauncherCardId("stage-empty:${stageId.profileId.value}:${stageId.packageName.value}")
 
 internal const val TIME_SCAPE_SUPPORTING_PANE_TEST_TAG = "timescape-supporting-pane"
 
