@@ -53,6 +53,11 @@ class AppListContextMenuTest {
         composeRule.onNodeWithText("App shortcuts (2)").performClick()
         composeRule.onNodeWithText("Compose message").assertExists()
         composeRule.onNodeWithText("Scan document").assertExists()
+
+        composeRule.onNodeWithText("Compose message").performClick()
+        composeRule.onNodeWithText("Back").assertDoesNotExist()
+        composeRule.onNodeWithText(camera.label).performTouchInput { longClick() }
+        composeRule.onNodeWithText("Add to home").assertExists()
     }
 
     private companion object {

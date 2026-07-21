@@ -294,7 +294,12 @@ private fun AppDrawerRowOverflowMenu(
                     items = state.shortcutItems,
                     onAction = onAction,
                     onBack = { isShortcutMenuExpanded.value = false },
-                    onExpandedChange = onExpandedChange,
+                    onExpandedChange = { expanded ->
+                        if (!expanded) {
+                            isShortcutMenuExpanded.value = false
+                        }
+                        onExpandedChange(expanded)
+                    },
                 )
             } else {
                 AppDrawerMainMenuItems(
