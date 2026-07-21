@@ -288,14 +288,14 @@ private fun TimeScapeSupportingPane(
     modifier: Modifier,
 ) {
     val card = notificationCards.firstOrNull { it.content.id == selectedCardId }
+    val paneModifier = modifier.testTag(TIME_SCAPE_SUPPORTING_PANE_TEST_TAG)
     if (card != null && detailState?.expansionState?.isVisible == true) {
-        TimeScapeCardDetailSurface(card, detailState, onAction, modifier = modifier)
+        TimeScapeCardDetailSurface(card, detailState, onAction, modifier = paneModifier)
         return
     }
     Column(
         modifier =
-            modifier
-                .testTag(TIME_SCAPE_SUPPORTING_PANE_TEST_TAG)
+            paneModifier
                 .verticalScroll(rememberScrollState())
                 .padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),

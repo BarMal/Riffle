@@ -215,7 +215,8 @@ class TimeScapeCardSurfaceTest {
         composeRule.onNodeWithText("Notification details").assertIsDisplayed()
 
         composeRule.runOnIdle { widthDp = 1_200 }
-        composeRule.onNodeWithText("Notification details").assertIsDisplayed()
+        composeRule.onNodeWithTag(TIME_SCAPE_SUPPORTING_PANE_TEST_TAG).assertIsDisplayed()
+        composeRule.onNodeWithText("Notification details").assertExists()
         composeRule.runOnIdle { widthDp = 500 }
         composeRule.onNodeWithText("Notification details").assertIsDisplayed()
         composeRule.onNodeWithText("Older message").assertIsDisplayed()
