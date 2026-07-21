@@ -230,18 +230,6 @@ private fun SettingsAppearancePageContent(
     val statusBarSetting = homeSystemBars.setting(HomeSystemBar.STATUS)
     val navigationBarSetting = homeSystemBars.setting(HomeSystemBar.NAVIGATION)
 
-    SettingsSection(title = "Theme") {
-        ThemeModeSetting(selectedMode = appearance.themeMode, onAction = onAction)
-        ThemePresetSetting(selectedPreset = appearance.themePreset, onAction = onAction)
-        ThemeAccentSetting(selectedAccent = appearance.themeAccent, onAction = onAction)
-        ThemeCornerStyleSetting(selectedStyle = appearance.themeCornerStyle, onAction = onAction)
-        ThemeTypographySetting(selectedTypography = appearance.themeTypography, onAction = onAction)
-        ThemeColorsSetting(
-            colors = appearance.themeColors,
-            dock = state.homeLayout.dock,
-            onAction = onAction,
-        )
-    }
     SettingsSection(title = "Wallpaper") {
         WallpaperSourceSetting(
             selectedSource = appearance.wallpaper.source,

@@ -8,6 +8,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.StateRestorationTester
+import androidx.compose.ui.test.assertDoesNotExist
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
@@ -64,6 +65,26 @@ class SettingsSurfaceNavigationTest {
             assertSame(pageScrollStates.getValue(SettingsPage.MAIN), restoredMainScrollState)
             assertNotSame(restoredMainScrollState, currentAppearanceScrollState)
         }
+    }
+
+    @Test
+    fun appearancePageKeepsWallpaperAndSystemUiWithoutRedundantThemeControls() {
+        composeRule.setContent {
+            MaterialTheme {
+                Box(modifier = Modifier.height(480.dp)) {
+                    SettingsSurface(
+                        state = LauncherShellState().settingsSurfaceState(),
+                        onAction = {},
+                    )
+                }
+            }
+        }
+
+        composeRule.onNodeWithText("Appearance").performScrollTo().performClick()
+
+        composeRule.onNodeWithText("Wallpaper").assertIsDisplayed()
+        composeRule.onNodeWithText("System UI").performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText("Theme").assertDoesNotExist()
     }
 }
 

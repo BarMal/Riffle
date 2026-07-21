@@ -80,6 +80,10 @@ class SettingsPagesTest {
             listOf(SettingsPage.APPEARANCE),
             settingsMainPageEntriesMatching("fullscreen").map { entry -> entry.page },
         )
+        assertEquals(
+            emptyList<SettingsPageEntry>(),
+            settingsMainPageEntriesMatching("theme colours"),
+        )
     }
 
     @Test
