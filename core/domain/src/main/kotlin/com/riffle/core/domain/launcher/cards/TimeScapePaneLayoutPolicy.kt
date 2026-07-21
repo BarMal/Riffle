@@ -40,6 +40,10 @@ data class TimeScapePaneLayout(
     val hingeGapDp: Int = 0,
     val leadingRegionWidthDp: Int = 0,
     val trailingRegionWidthDp: Int = 0,
+    val contentStartDp: Int = 0,
+    val contentWidthDp: Int = 0,
+    val contentTopDp: Int = 0,
+    val contentHeightDp: Int = 0,
 ) {
     val showsRail: Boolean get() = mode != TimeScapePaneMode.COMPACT
     val showsDetailPane: Boolean get() = mode == TimeScapePaneMode.THREE_PANE
@@ -47,13 +51,53 @@ data class TimeScapePaneLayout(
 
 /** Chooses TimeScape panes from the current usable window, never a device-name classification. */
 class TimeScapePaneLayoutPolicy {
+    @Suppress("CyclomaticComplexMethod", "LongMethod", "MaxLineLength", "ReturnCount")
     fun layoutFor(window: TimeScapeWindowLayout): TimeScapePaneLayout {
         val safeWidth = (window.widthDp - window.safeStartDp - window.safeEndDp).coerceAtLeast(0)
-        val verticalHinge = window.separatingHinges.firstOrNull { hinge -> hinge.isVertical }
+        val safeHeight = (window.heightDp - window.safeTopDp - window.safeBottomDp).coerceAtLeast(0)
+        val verticalHinge =
+            window.separatingHinges.firstOrNull { hinge ->
+                hinge.isVertical && hinge.rightDp > window.safeStartDp && hinge.leftDp < window.widthDp - window.safeEndDp
+            }
+        val horizontalHinge =
+            window.separatingHinges.firstOrNull { hinge ->
+                !hinge.isVertical && hinge.bottomDp > window.safeTopDp && hinge.topDp < window.heightDp - window.safeBottomDp
+            }
         val hingeGap = verticalHinge?.widthDp ?: 0
         val usableWidth = (safeWidth - hingeGap).coerceAtLeast(0)
-        val leadingWidth = verticalHinge?.let { (it.leftDp - window.safeStartDp).coerceAtLeast(0) } ?: usableWidth
-        val trailingWidth = verticalHinge?.let { (safeWidth - it.rightDp).coerceAtLeast(0) } ?: 0
+        val leadingWidth =
+            verticalHinge?.let { (it.leftDp - window.safeStartDp).coerceIn(0, safeWidth) } ?: usableWidth
+        val trailingWidth =
+            verticalHinge?.let { (window.widthDp - window.safeEndDp - it.rightDp).coerceIn(0, safeWidth) } ?: 0
+        val topRegionHeight = horizontalHinge?.let { (it.topDp - window.safeTopDp).coerceIn(0, safeHeight) }
+        val bottomRegionHeight =
+            horizontalHinge?.let { (window.heightDp - window.safeBottomDp - it.bottomDp).coerceIn(0, safeHeight) }
+        val useBottomRegion = horizontalHinge != null && (bottomRegionHeight ?: 0) > (topRegionHeight ?: 0)
+        val contentTop = if (useBottomRegion) horizontalHinge!!.bottomDp - window.safeTopDp else 0
+        val contentHeight =
+            when {
+                horizontalHinge == null -> safeHeight
+                useBottomRegion -> bottomRegionHeight ?: 0
+                else -> topRegionHeight ?: 0
+            }
+
+        if (verticalHinge != null && leadingWidth < RAIL_WIDTH_DP + MIN_SPLINE_WIDTH_DP) {
+            val useTrailingRegion = trailingWidth > leadingWidth
+            val compactWidth = if (useTrailingRegion) trailingWidth else leadingWidth
+            return TimeScapePaneLayout(
+                mode = TimeScapePaneMode.COMPACT,
+                railWidthDp = 0,
+                splineWidthDp = compactWidth,
+                detailWidthDp = 0,
+                hingeGapDp = 0,
+                leadingRegionWidthDp = leadingWidth,
+                trailingRegionWidthDp = trailingWidth,
+                contentStartDp = if (useTrailingRegion) verticalHinge.rightDp - window.safeStartDp else 0,
+                contentWidthDp = compactWidth,
+                contentTopDp = contentTop,
+                contentHeightDp = contentHeight,
+            )
+        }
 
         if (verticalHinge != null && leadingWidth >= RAIL_WIDTH_DP + MIN_SPLINE_WIDTH_DP && trailingWidth >= DETAIL_WIDTH_DP) {
             return TimeScapePaneLayout(
@@ -64,12 +108,42 @@ class TimeScapePaneLayoutPolicy {
                 hingeGapDp = hingeGap,
                 leadingRegionWidthDp = leadingWidth,
                 trailingRegionWidthDp = trailingWidth,
+                contentWidthDp = safeWidth,
+                contentTopDp = contentTop,
+                contentHeightDp = contentHeight,
+            )
+        }
+
+        if (verticalHinge != null) {
+            return TimeScapePaneLayout(
+                mode = TimeScapePaneMode.TWO_PANE,
+                railWidthDp = RAIL_WIDTH_DP,
+                splineWidthDp = (leadingWidth - RAIL_WIDTH_DP).coerceAtMost(MAX_SPLINE_WIDTH_DP),
+                detailWidthDp = 0,
+                hingeGapDp = hingeGap,
+                leadingRegionWidthDp = leadingWidth,
+                trailingRegionWidthDp = trailingWidth,
+                contentWidthDp = safeWidth,
+                contentTopDp = contentTop,
+                contentHeightDp = contentHeight,
             )
         }
 
         return when {
             usableWidth < MIN_TWO_PANE_WIDTH_DP ->
-                TimeScapePaneLayout(TimeScapePaneMode.COMPACT, 0, usableWidth, 0, hingeGap, leadingWidth, trailingWidth)
+                TimeScapePaneLayout(
+                    TimeScapePaneMode.COMPACT,
+                    0,
+                    usableWidth,
+                    0,
+                    hingeGap,
+                    leadingWidth,
+                    trailingWidth,
+                    0,
+                    safeWidth,
+                    contentTop,
+                    contentHeight,
+                )
 
             usableWidth < MIN_THREE_PANE_WIDTH_DP ->
                 TimeScapePaneLayout(
@@ -80,6 +154,9 @@ class TimeScapePaneLayoutPolicy {
                     hingeGapDp = hingeGap,
                     leadingRegionWidthDp = leadingWidth,
                     trailingRegionWidthDp = trailingWidth,
+                    contentWidthDp = safeWidth,
+                    contentTopDp = contentTop,
+                    contentHeightDp = contentHeight,
                 )
 
             else ->
@@ -93,6 +170,9 @@ class TimeScapePaneLayoutPolicy {
                     hingeGapDp = hingeGap,
                     leadingRegionWidthDp = leadingWidth,
                     trailingRegionWidthDp = trailingWidth,
+                    contentWidthDp = safeWidth,
+                    contentTopDp = contentTop,
+                    contentHeightDp = contentHeight,
                 )
         }
     }

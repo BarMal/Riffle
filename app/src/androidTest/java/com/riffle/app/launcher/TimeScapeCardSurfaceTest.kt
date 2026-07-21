@@ -6,6 +6,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -46,6 +47,7 @@ import com.riffle.core.domain.launcher.cards.AppStageOrigin
 import com.riffle.core.domain.launcher.cards.AppStagePreferences
 import com.riffle.core.domain.launcher.cards.CardExpansionState
 import com.riffle.core.domain.launcher.cards.LauncherCardId
+import com.riffle.core.domain.launcher.cards.TimeScapeWindowLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutKey
 import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
@@ -162,6 +164,51 @@ class TimeScapeCardSurfaceTest {
 
         composeRule.onAllNodesWithText("Notification details").assertCountEquals(0)
         composeRule.onNodeWithText("Details").assertIsDisplayed()
+    }
+
+    @Test
+    fun focusedCardAndOpenDetailSurviveCompactAndSupportingPaneChanges() {
+        val app = timeScapeTestApp()
+        val newest =
+            timeScapeTestNotification(app).copy(
+                key = LauncherNotificationKey("newest"),
+                title = "Newest message",
+                text = "Selected card context",
+                postedAtEpochMillis = 20,
+            )
+        val older =
+            timeScapeTestNotification(app).copy(
+                key = LauncherNotificationKey("older"),
+                title = "Older message",
+                postedAtEpochMillis = 10,
+            )
+        val testState =
+            timeScapeTestState(app, newest).copy(
+                notificationGroupsByApp =
+                    timeScapeTestState(app, newest).notificationGroupsByApp.map { group ->
+                        group.copy(notifications = listOf(newest, older))
+                    },
+            )
+        var widthDp by mutableIntStateOf(500)
+        composeRule.setContent {
+            MaterialTheme {
+                TimeScapeAppStageSurface(
+                    state = testState,
+                    windowLayout = TimeScapeWindowLayout(widthDp, 800),
+                    onAction = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("Older message").performClick()
+        composeRule.runOnIdle { widthDp = 1_200 }
+        composeRule.onNodeWithText("Older message").assertIsDisplayed()
+        composeRule.onNodeWithText("Details").performClick()
+        composeRule.onNodeWithText("Notification details").assertIsDisplayed()
+
+        composeRule.runOnIdle { widthDp = 500 }
+        composeRule.onNodeWithText("Notification details").assertIsDisplayed()
+        composeRule.onNodeWithText("Older message").assertIsDisplayed()
     }
 
     @Test
