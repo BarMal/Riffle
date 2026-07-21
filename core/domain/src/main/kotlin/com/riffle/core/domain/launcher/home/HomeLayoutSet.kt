@@ -39,9 +39,10 @@ data class HomeLayoutSet(
     fun selectMode(mode: LauncherViewMode): HomeLayoutSet =
         activeKey.copy(viewMode = mode)
             .let { key ->
+                val layout = layouts[key] ?: defaultLayout(key).copy(dock = activeLayout.dock)
                 copy(
                     activeKey = key,
-                    layouts = layouts + (key to layoutFor(key)),
+                    layouts = layouts + (key to layout),
                     preferredModesByDeviceClass = preferredModesByDeviceClass + (key.deviceClass to mode),
                 )
             }
