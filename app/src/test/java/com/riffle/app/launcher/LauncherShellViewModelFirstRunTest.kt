@@ -46,12 +46,33 @@ class LauncherShellViewModelFirstRunTest {
         assertFalse(repository.pendingHomeRoleRequest)
     }
 
+    @Test
+    fun switchingAwayAfterBecomingDefaultKeepsSetupCardDismissed() {
+        val repository = FakeFirstRunRepository()
+        val viewModel = LauncherShellViewModel(firstRunRepository = repository)
+
+        viewModel.onHomeRoleStatusChanged(HomeRoleStatus.DEFAULT_HOME)
+        viewModel.onHomeRoleStatusChanged(HomeRoleStatus.NOT_DEFAULT_HOME)
+
+        assertEquals(FirstRunStatus.NEEDS_HOME_ROLE, viewModel.state.value.firstRunStatus)
+        assertFalse(viewModel.state.value.shouldShowSetupCard)
+        assertTrue(repository.isSetupCardDismissed())
+    }
+
     private class FakeFirstRunRepository(
         var pendingHomeRoleRequest: Boolean = false,
     ) : FirstRunRepository {
+        private var setupCardDismissed = false
+
         override fun isFirstRunComplete(): Boolean = false
 
         override fun setFirstRunComplete() = Unit
+
+        override fun isSetupCardDismissed(): Boolean = setupCardDismissed
+
+        override fun setSetupCardDismissed() {
+            setupCardDismissed = true
+        }
 
         override fun isHomeRoleRequestPending(): Boolean = pendingHomeRoleRequest
 

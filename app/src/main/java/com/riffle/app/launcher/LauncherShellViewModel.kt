@@ -203,7 +203,10 @@ class LauncherShellViewModel(
                 notificationAccessStatus = notificationAccessStatus,
                 overlayDockPermissionStatus = overlayDockPermissionStatus,
             ).let { state ->
-                state.copy(searchSettingsResults = state.searchSettingsResults(state.searchQuery))
+                state.copy(
+                    searchSettingsResults = state.searchSettingsResults(state.searchQuery),
+                    setupCardDismissed = state.setupCardDismissed || state.firstRunStatus == FirstRunStatus.COMPLETE,
+                )
             }.also { state ->
                 firstRunRepository.setHomeRoleRequestPending(
                     state.firstRunStatus == FirstRunStatus.REQUESTING_HOME_ROLE,
