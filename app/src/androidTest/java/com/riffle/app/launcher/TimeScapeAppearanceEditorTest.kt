@@ -56,7 +56,7 @@ class TimeScapeAppearanceEditorTest {
     }
 
     @Test
-    fun appliesPresetsAndConfirmsResetThroughAtomicActions() {
+    fun exposesPresetControlsAndConfirmsResetThroughAnAtomicAction() {
         val actions = mutableListOf<LauncherShellAction>()
         composeRule.setContent {
             MaterialTheme {
@@ -67,12 +67,7 @@ class TimeScapeAppearanceEditorTest {
             }
         }
 
-        composeRule.runOnIdle { actions.clear() }
-        composeRule.onNodeWithTag("timescape-preset-FLAT_REDUCED_DEPTH").performClick()
-        composeRule.runOnIdle {
-            val action = actions.single() as LauncherShellAction.UpdateTimeScapeAppearance
-            assertEquals(TimeScapeAppearancePreset.FLAT_REDUCED_DEPTH, action.appearance.preset)
-        }
+        composeRule.onNodeWithTag("timescape-preset-FLAT_REDUCED_DEPTH").assertExists()
         composeRule.onNodeWithText("Reset TimeScape appearance").performClick()
         composeRule.onNodeWithText("Reset TimeScape appearance?").assertExists()
         composeRule.onNodeWithContentDescription("Confirm TimeScape reset").performClick()

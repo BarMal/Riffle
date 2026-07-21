@@ -120,7 +120,7 @@ internal fun TimeScapeAppearancePageContent(
             label = TimeScapeAppearancePreset::label,
             testTag = { preset -> "timescape-preset-${preset.name}" },
             onSelected = { preset ->
-                onAction(LauncherShellAction.UpdateTimeScapeAppearance(appearance.applyPreset(preset).coerce()))
+                onAction(timeScapeAppearancePresetAction(preset))
             },
         )
         SettingsClickableRow(
@@ -615,6 +615,13 @@ private fun timeScapeFallbackMessage(
         else -> null
     }
 }
+
+internal fun timeScapeAppearancePresetAction(
+    preset: TimeScapeAppearancePreset,
+): LauncherShellAction.UpdateTimeScapeAppearance =
+    LauncherShellAction.UpdateTimeScapeAppearance(
+        TimeScapeAppearanceSettings.modern().applyPreset(preset).coerce(),
+    )
 
 private fun TimeScapeAppearancePreset.label(): String =
     when (this) {
