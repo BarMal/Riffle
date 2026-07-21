@@ -5,10 +5,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performTouchInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.riffle.core.domain.launcher.apps.AppActivityName
 import com.riffle.core.domain.launcher.apps.AppIdentity
@@ -28,7 +26,7 @@ class AppListContextMenuTest {
     val composeRule = createComposeRule()
 
     @Test
-    fun appLongPressKeepsPlatformShortcutsInTheirOwnMenu() {
+    fun appContextMenuKeepsPlatformShortcutsInTheirOwnMenu() {
         composeRule.setContent {
             MaterialTheme {
                 Box(modifier = Modifier.fillMaxSize()) {
@@ -49,14 +47,14 @@ class AppListContextMenuTest {
             }
         }
 
-        composeRule.onNodeWithText(camera.label).performTouchInput { longClick() }
+        composeRule.onNodeWithText("...").performClick()
         composeRule.onNodeWithText("App shortcuts (2)").performClick()
         composeRule.onNodeWithText("Compose message").assertExists()
         composeRule.onNodeWithText("Scan document").assertExists()
 
         composeRule.onNodeWithText("Compose message").performClick()
         composeRule.onNodeWithText("Back").assertDoesNotExist()
-        composeRule.onNodeWithText(camera.label).performTouchInput { longClick() }
+        composeRule.onNodeWithText("...").performClick()
         composeRule.onNodeWithText("Add to home").assertExists()
     }
 
