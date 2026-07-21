@@ -162,10 +162,36 @@ class GeneratedPageSurfaceTest {
                     ),
             )
 
-        assertNotEquals(
-            generatedNotificationArtworkSourceKey(first),
-            generatedNotificationArtworkSourceKey(second),
-        )
+        val revisions = TimeScapeArtworkRevisionStore()
+        revisions.replace(listOf(first.group))
+        val firstKey = generatedNotificationArtworkSourceKey(first, revisions)
+        revisions.replace(listOf(second.group))
+        val secondKey = generatedNotificationArtworkSourceKey(second, revisions)
+
+        assertNotEquals(firstKey, secondKey)
+    }
+
+    @Test
+    fun artworkRevisionsArePreparedForARefreshBurstBeforeCardRendering() {
+        val groups =
+            (1..100).map { index ->
+                notificationGroup("com.example.burst$index", "personal").copy(
+                    notifications =
+                        listOf(
+                            notification(
+                                packageName = "com.example.burst$index",
+                                key = "burst-$index",
+                                artwork = "artwork-$index",
+                            ),
+                        ),
+                )
+            }
+        val revisions = TimeScapeArtworkRevisionStore()
+
+        revisions.replace(groups)
+
+        val card = DockNotificationCardState(app = null, group = groups.last())
+        assertNotEquals(null, generatedNotificationArtworkSourceKey(card, revisions))
     }
 
     private fun notificationGroup(

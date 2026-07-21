@@ -37,11 +37,14 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
+import com.riffle.core.domain.launcher.notifications.LauncherNotification
 import com.riffle.core.domain.launcher.settings.TimeScapeAccentSource
 import com.riffle.core.domain.launcher.settings.TimeScapeAppearanceSettings
 import com.riffle.core.domain.launcher.settings.TimeScapeBackgroundSource
 import com.riffle.core.domain.launcher.settings.TimeScapeContentDensity
 import com.riffle.core.domain.launcher.settings.TimeScapeRendererCapabilities
+import java.security.MessageDigest
 import java.util.LinkedHashMap
 import kotlin.math.max
 
@@ -98,6 +101,49 @@ internal class TimeScapeArtworkCache<Value>(
             }
 
     internal fun sizeForTest(): Int = values.size
+}
+
+/** Immutable revision lookup consumed by card composition without hashing artwork payloads. */
+internal fun interface TimeScapeArtworkRevisionLookup {
+    fun revisionFor(notification: LauncherNotification): String?
+}
+
+/**
+ * Process-only revision cache populated while notification state is refreshed off the UI thread.
+ * The volatile map replacement makes each UI lookup observe either the prior complete snapshot or
+ * the next complete snapshot, never a partially calculated burst.
+ */
+internal class TimeScapeArtworkRevisionStore : TimeScapeArtworkRevisionLookup {
+    @Volatile
+    private var revisionsByNotificationId: Map<String, String> = emptyMap()
+
+    fun replace(groups: List<AppNotificationGroup>) {
+        revisionsByNotificationId =
+            groups
+                .asSequence()
+                .flatMap { group -> group.notifications.asSequence() }
+                .mapNotNull { notification ->
+                    notification.largeIconPngBase64
+                        ?.takeIf(String::isNotBlank)
+                        ?.let { artwork -> notification.artworkRevisionId() to artwork.sha256Revision() }
+                }.toMap()
+    }
+
+    override fun revisionFor(notification: LauncherNotification): String? = revisionsByNotificationId[notification.artworkRevisionId()]
+}
+
+internal val timeScapeArtworkRevisions = TimeScapeArtworkRevisionStore()
+
+private fun LauncherNotification.artworkRevisionId(): String = "${profileId.value}:${packageName.value}:${key.value}"
+
+private fun String.sha256Revision(): String {
+    val digest = MessageDigest.getInstance("SHA-256").digest(toByteArray(Charsets.UTF_8))
+    return buildString(digest.size * 2) {
+        digest.forEach { byte ->
+            append(ARTWORK_REVISION_HEX[(byte.toInt() ushr 4) and 0x0f])
+            append(ARTWORK_REVISION_HEX[byte.toInt() and 0x0f])
+        }
+    }
 }
 
 internal fun timeScapeRendererCapabilities(sdkInt: Int = Build.VERSION.SDK_INT): TimeScapeRendererCapabilities =
@@ -433,6 +479,7 @@ private fun timeScapeSeedColor(seed: String): Color {
 private const val MAX_TIMESCAPE_ARTWORK_BASE64_CHARS = 2_800_000
 private const val MAX_TIMESCAPE_ARTWORK_DIMENSION_PX = 768
 private const val DEFAULT_TIMESCAPE_ARTWORK_CACHE_ENTRIES = 12
+private const val ARTWORK_REVISION_HEX = "0123456789abcdef"
 private const val MINIMUM_FOREGROUND_CONTRAST_RATIO = 4.5f
 private const val MINIMUM_ACTION_CONTRAST_RATIO = MINIMUM_FOREGROUND_CONTRAST_RATIO
 

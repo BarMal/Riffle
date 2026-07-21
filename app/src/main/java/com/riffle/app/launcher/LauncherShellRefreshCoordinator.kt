@@ -22,15 +22,20 @@ internal class LauncherShellRefreshCoordinator(
     fun refreshInstalledApps(currentState: LauncherShellState): LauncherShellState =
         currentState.withRefreshedInstalledApps(installedAppDependencies)
 
-    fun refreshNotifications(currentState: LauncherShellState): LauncherShellState =
-        currentState.withNotificationState(
-            notificationRepository = notificationDependencies.notificationRepository,
-            appNotificationCounter = notificationDependencies.appNotificationCounter,
-            appNotificationGrouper = notificationDependencies.appNotificationGrouper,
-            notificationStaleFilter = notificationDependencies.notificationStaleFilter,
-            nowEpochMillis = notificationDependencies.epochMillisProvider.nowEpochMillis(),
-        ).withReconciledCardsChapterSelection()
+    fun refreshNotifications(currentState: LauncherShellState): LauncherShellState {
+        val refreshedState =
+            currentState.withNotificationState(
+                notificationRepository = notificationDependencies.notificationRepository,
+                appNotificationCounter = notificationDependencies.appNotificationCounter,
+                appNotificationGrouper = notificationDependencies.appNotificationGrouper,
+                notificationStaleFilter = notificationDependencies.notificationStaleFilter,
+                nowEpochMillis = notificationDependencies.epochMillisProvider.nowEpochMillis(),
+            )
+        timeScapeArtworkRevisions.replace(refreshedState.notificationGroupsByApp)
+        return refreshedState
+            .withReconciledCardsChapterSelection()
             .withRefreshedGeneratedPages(installedAppDependencies.homeLayoutRepository)
+    }
 
     fun refreshWidgetProviders(currentState: LauncherShellState): LauncherShellState =
         currentState.copy(
