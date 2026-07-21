@@ -47,6 +47,7 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
@@ -292,7 +293,11 @@ private fun TimeScapeSupportingPane(
         return
     }
     Column(
-        modifier = modifier.verticalScroll(rememberScrollState()).padding(20.dp),
+        modifier =
+            modifier
+                .testTag(TIME_SCAPE_SUPPORTING_PANE_TEST_TAG)
+                .verticalScroll(rememberScrollState())
+                .padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Text("Details", style = MaterialTheme.typography.titleMedium)
@@ -694,6 +699,8 @@ private data class TimeScapeDetailOrigin(
     val stageId: AppStageId,
     val cardId: LauncherCardId,
 )
+
+internal const val TIME_SCAPE_SUPPORTING_PANE_TEST_TAG = "timescape-supporting-pane"
 
 private data class TimeScapeSafeInsetsDp(
     val start: Int,

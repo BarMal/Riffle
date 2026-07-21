@@ -11,12 +11,14 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.cards.TimeScapeWindowLayout
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
@@ -42,9 +44,18 @@ class TimeScapeAdaptiveLayoutInteractionTest {
 
     @Test
     fun largeWindowKeepsSupportingDetailPaneInsideSafeInsets() {
-        setContent(widthDp = 1_200, windowInsets = WindowInsets(24, 16, 48, 32))
+        setContent(
+            widthDp = 1_200,
+            windowInsets = WindowInsets(SAFE_START_DP, SAFE_TOP_DP, SAFE_END_DP, SAFE_BOTTOM_DP),
+        )
 
         composeRule.onNodeWithText("Details").assertIsDisplayed()
+        val paneBounds = composeRule.onNodeWithTag(TIME_SCAPE_SUPPORTING_PANE_TEST_TAG).fetchSemanticsNode().boundsInRoot
+
+        assertTrue(paneBounds.left >= SAFE_START_DP.toPx() - PIXEL_TOLERANCE)
+        assertTrue(paneBounds.top >= SAFE_TOP_DP.toPx() - PIXEL_TOLERANCE)
+        assertTrue(paneBounds.right <= (1_200 - SAFE_END_DP).toPx() + PIXEL_TOLERANCE)
+        assertTrue(paneBounds.bottom <= (TEST_WINDOW_HEIGHT_DP - SAFE_BOTTOM_DP).toPx() + PIXEL_TOLERANCE)
     }
 
     private fun setContent(
@@ -76,5 +87,12 @@ class TimeScapeAdaptiveLayoutInteractionTest {
     private companion object {
         const val TEST_WINDOW_DENSITY = 0.3f
         const val TEST_WINDOW_HEIGHT_DP = 800
+        const val SAFE_START_DP = 24
+        const val SAFE_TOP_DP = 16
+        const val SAFE_END_DP = 48
+        const val SAFE_BOTTOM_DP = 32
+        const val PIXEL_TOLERANCE = 1f
     }
+
+    private fun Int.toPx(): Float = this * TEST_WINDOW_DENSITY
 }
