@@ -1167,4 +1167,4 @@ class TimeScapeCardSurfaceTest {
     }
 }
 
-private fun timeScapeResizeTestDensity(widthDp: Int): Float = if (widthDp < 840) 0.6f else 0.25f
+private fun timeScapeResizeTestDensity(widthDp: Int): Float = 320f / widthDp
