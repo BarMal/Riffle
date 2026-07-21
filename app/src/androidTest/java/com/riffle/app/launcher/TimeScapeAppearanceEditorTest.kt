@@ -60,7 +60,7 @@ class TimeScapeAppearanceEditorTest {
             }
         }
 
-        composeRule.onNodeWithText("Flat").performClick()
+        composeRule.onNodeWithContentDescription("Appearance preset: Flat").performClick()
         composeRule.runOnIdle {
             val action = actions.single() as LauncherShellAction.UpdateTimeScapeAppearance
             assertEquals(TimeScapeAppearancePreset.FLAT_REDUCED_DEPTH, action.appearance.preset)

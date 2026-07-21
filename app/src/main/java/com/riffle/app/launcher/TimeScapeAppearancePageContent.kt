@@ -569,6 +569,7 @@ private fun <T> TimeScapeEnumChoices(
                 FilterChip(
                     selected = value == selected,
                     onClick = { onSelected(value) },
+                    modifier = Modifier.semantics { contentDescription = "$title: ${label(value)}" },
                     label = { Text(label(value)) },
                 )
             }
