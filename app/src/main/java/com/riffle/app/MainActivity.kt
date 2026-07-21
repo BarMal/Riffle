@@ -12,6 +12,9 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
@@ -57,6 +60,7 @@ import com.riffle.app.launcher.widgets.WidgetBindPermissionResult
 import com.riffle.app.launcher.widgets.WidgetConfigurationResult
 import com.riffle.core.domain.launcher.FirstRunStatus
 import com.riffle.core.domain.launcher.HomeRoleStatus
+import com.riffle.core.domain.launcher.cards.TimeScapeWindowLayout
 import com.riffle.core.domain.launcher.home.HostedWidgetId
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.widgets.WidgetProviderIdentity
@@ -68,6 +72,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
+    private var timeScapeWindowLayout by mutableStateOf<TimeScapeWindowLayout?>(null)
     private val dependencies by lazy { MainActivityDependencies(this) }
     private val homeLayoutRepository get() = dependencies.homeLayoutRepository
     private val launcherSettingsRepository get() = dependencies.launcherSettingsRepository
@@ -438,6 +443,7 @@ class MainActivity : ComponentActivity() {
                         viewFactory = widgetHostGateway,
                         previewImageLoader = dependencies.widgetPreviewImageLoader,
                     ),
+                timeScapeWindowLayout = timeScapeWindowLayout,
                 onAction = launcherActionRouter::handle,
             )
         }
@@ -519,6 +525,7 @@ class MainActivity : ComponentActivity() {
 
     private fun applyHomeLayoutDeviceClassEvent(event: HomeLayoutDeviceClassEvent) {
         Log.i(FOLDABLE_LAYOUT_LOG_TAG, event.logText)
+        timeScapeWindowLayout = event.timeScapeWindowLayout
         shellViewModel.onHomePageEdited(
             LauncherShellAction.SelectHomeLayoutDeviceClass(
                 deviceClass = event.selection.activeDeviceClass,

@@ -42,6 +42,7 @@ import com.riffle.core.domain.launcher.apps.AppActivityName
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.InstalledApp
+import com.riffle.core.domain.launcher.cards.TimeScapeWindowLayout
 import com.riffle.core.domain.launcher.home.DockEditRejectionReason
 import com.riffle.core.domain.launcher.home.LauncherViewModeAvailability
 import com.riffle.core.domain.launcher.home.WallpaperSource
@@ -55,6 +56,7 @@ fun LauncherShell(
     appBuildIdentityLabel: String,
     appIconLoader: AppIconLoader = EmptyAppIconLoader,
     widgetRenderers: LauncherWidgetRenderers = LauncherWidgetRenderers(),
+    timeScapeWindowLayout: TimeScapeWindowLayout? = null,
     onAction: (LauncherShellAction) -> Unit,
 ) {
     val state by viewModel.state.collectAsState()
@@ -66,6 +68,7 @@ fun LauncherShell(
             appInfo = LauncherShellAppInfo(appVersionLabel, appBuildIdentityLabel),
             appIconLoader = appIconLoader,
             widgetRenderers = widgetRenderers,
+            timeScapeWindowLayout = timeScapeWindowLayout,
             onAction = onAction,
             onSetupCardDismissed = viewModel::onSetupCardDismissed,
             onDockEditFeedbackDismissed = viewModel::onDockEditFeedbackDismissed,
@@ -80,6 +83,7 @@ fun LauncherShellContent(
     appInfo: LauncherShellAppInfo = LauncherShellAppInfo(),
     appIconLoader: AppIconLoader = EmptyAppIconLoader,
     widgetRenderers: LauncherWidgetRenderers = LauncherWidgetRenderers(),
+    timeScapeWindowLayout: TimeScapeWindowLayout? = null,
     onAction: (LauncherShellAction) -> Unit,
     onSetupCardDismissed: () -> Unit = {},
     onDockEditFeedbackDismissed: () -> Unit = {},
@@ -128,6 +132,7 @@ fun LauncherShellContent(
                     ),
                 appIconLoader = appIconLoader,
                 widgetRenderers = widgetRenderers,
+                timeScapeWindowLayout = timeScapeWindowLayout,
                 haptics = haptics,
                 onAction = onAction,
             )
@@ -322,6 +327,7 @@ private fun LauncherDestination(
     settingsState: SettingsSurfaceState,
     appIconLoader: AppIconLoader,
     widgetRenderers: LauncherWidgetRenderers,
+    timeScapeWindowLayout: TimeScapeWindowLayout?,
     haptics: LauncherHaptics,
     onAction: (LauncherShellAction) -> Unit,
 ) {
@@ -333,6 +339,7 @@ private fun LauncherDestination(
                 state = state,
                 appIconLoader = appIconLoader,
                 widgetRenderers = widgetRenderers,
+                timeScapeWindowLayout = timeScapeWindowLayout,
                 haptics = haptics,
                 onAction = settingsPageActionRouter.onAction,
             )

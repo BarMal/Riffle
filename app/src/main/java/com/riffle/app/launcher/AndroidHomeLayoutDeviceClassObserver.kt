@@ -4,6 +4,7 @@ import android.app.Activity
 import androidx.window.layout.FoldingFeature
 import androidx.window.layout.WindowInfoTracker
 import androidx.window.layout.WindowMetricsCalculator
+import com.riffle.core.domain.launcher.cards.TimeScapeWindowLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -77,6 +78,16 @@ internal class AndroidHomeLayoutDeviceClassObserver(
                         isSeparating = feature.isSeparating,
                     )
                 },
+            timeScapeWindowLayout =
+                timeScapeWindowLayoutFromPixels(
+                    widthPx = windowMetricsCalculator.computeCurrentWindowMetrics(activity).bounds.width(),
+                    heightPx = windowMetricsCalculator.computeCurrentWindowMetrics(activity).bounds.height(),
+                    density = activity.resources.displayMetrics.density,
+                    separatingHingeBounds =
+                        foldingFeatures
+                            .filter { feature -> feature.isSeparating }
+                            .map { feature -> feature.bounds },
+                ),
         )
     }
 
@@ -98,6 +109,7 @@ internal data class HomeLayoutDeviceClassEvent(
     val configurationClass: HomeLayoutDeviceClass?,
     val foldablePosture: HomeLayoutFoldablePosture,
     val foldingFeatures: List<HomeLayoutFoldingFeatureDebug>,
+    val timeScapeWindowLayout: TimeScapeWindowLayout = TimeScapeWindowLayout(widthDp = 0, heightDp = 0),
 ) {
     val logText: String
         get() =
