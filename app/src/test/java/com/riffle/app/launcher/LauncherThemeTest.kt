@@ -1,6 +1,7 @@
 package com.riffle.app.launcher
 
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.settings.LauncherThemeAccent
@@ -160,6 +161,11 @@ class LauncherThemeTest {
         assertEquals(androidx.compose.ui.graphics.Color(0xFF102030), parseThemeColorHex("#102030"))
         assertEquals(androidx.compose.ui.graphics.Color(0x80102030), parseThemeColorHex("#80102030"))
         assertEquals(null, parseThemeColorHex("#12345"))
+    }
+
+    @Test
+    fun formatsThemeColoursUsingAndroidArgbIncludingAlpha() {
+        assertEquals("#80102030", Color(0x80102030).toThemeHex())
     }
 
     @Test

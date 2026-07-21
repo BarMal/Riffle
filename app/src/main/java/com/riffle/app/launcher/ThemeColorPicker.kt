@@ -34,6 +34,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.semantics.contentDescription
@@ -99,7 +100,7 @@ internal fun ThemeColorPicker(
     fun publish() {
         val selected = Color.hsv(hue, saturation, value, alpha)
         hexValue = selected.toThemeHex()
-        onColorChanged(selected.value.toInt())
+        onColorChanged(selected.toArgb())
     }
 
     fun selectAt(position: Offset) {
@@ -192,7 +193,7 @@ internal fun ThemeColorPicker(
                     saturation = hsv.second
                     value = hsv.third
                     alpha = color.alpha
-                    onColorChanged(color.value.toInt())
+                    onColorChanged(color.toArgb())
                 }
             },
             singleLine = true,
@@ -236,7 +237,7 @@ internal fun parseThemeColorHex(value: String): Color? {
     return normalized.toLongOrNull(16)?.takeIf { it <= 0xFFFF_FFFFL }?.let { Color(it.toInt()) }
 }
 
-internal fun Color.toThemeHex(): String = "#%08X".format(value.toInt())
+internal fun Color.toThemeHex(): String = "#%08X".format(toArgb())
 
 private fun Color.toHsv(): Triple<Float, Float, Float> {
     val maximum = maxOf(red, green, blue)
