@@ -1,17 +1,20 @@
 package com.riffle.app.launcher
 
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.onLongClick
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.DpOffset
 
 @Composable
-@OptIn(ExperimentalFoundationApi::class)
 internal fun HomeBackgroundContextMenu(
     haptics: LauncherHaptics,
     onAction: (LauncherShellAction) -> Unit,
@@ -19,28 +22,54 @@ internal fun HomeBackgroundContextMenu(
     onClick: () -> Unit = {},
 ) {
     val isMenuExpanded = remember { mutableStateOf(false) }
-    val interactionSource = remember { MutableInteractionSource() }
+    val menuOffset = remember { mutableStateOf(DpOffset.Zero) }
+    val density = LocalDensity.current
+    val showMenu = { offset: DpOffset ->
+        haptics.longPress()
+        menuOffset.value = offset
+        isMenuExpanded.value = true
+    }
 
     Box(
         modifier =
             modifier
                 .fillMaxSize()
-                .combinedClickable(
-                    interactionSource = interactionSource,
-                    indication = null,
-                    onClick = onClick,
-                    onLongClick = {
-                        haptics.longPress()
-                        isMenuExpanded.value = true
-                    },
-                    onLongClickLabel = "Show home actions",
-                ),
+                .pointerInput(onClick, density) {
+                    detectTapGestures(
+                        onTap = { onClick() },
+                        onLongPress = { pressOffset ->
+                            showMenu(
+                                DpOffset(
+                                    x = with(density) { pressOffset.x.toDp() },
+                                    y = with(density) { pressOffset.y.toDp() },
+                                ),
+                            )
+                        },
+                    )
+                }
+                .semantics {
+                    onClick(action = {
+                        onClick()
+                        true
+                    })
+                    onLongClick(
+                        label = "Show home actions",
+                        action = {
+                            showMenu(DpOffset.Zero)
+                            true
+                        },
+                    )
+                },
     ) {
         ShortcutContextMenu(
             expanded = isMenuExpanded.value,
             items = homeWorkspaceContextMenuItems(),
-            onDismissRequest = { isMenuExpanded.value = false },
+            onDismissRequest = {
+                isMenuExpanded.value = false
+                menuOffset.value = DpOffset.Zero
+            },
             onAction = onAction,
+            offset = menuOffset.value,
         )
     }
 }

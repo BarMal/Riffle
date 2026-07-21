@@ -1,9 +1,20 @@
 package com.riffle.app.launcher
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.DpOffset
+import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.home.AppShortcutItem
@@ -15,8 +26,9 @@ internal enum class ShortcutContextSurface {
 
 internal data class ShortcutContextMenuItem(
     val label: String,
-    val action: LauncherShellAction,
+    val action: LauncherShellAction? = null,
     val enabled: Boolean = true,
+    val submenuItems: List<ShortcutContextMenuItem> = emptyList(),
 )
 
 internal fun shortcutContextMenuItems(
@@ -53,7 +65,15 @@ internal fun shortcutContextMenuItems(
                 action = surface.removeAction(shortcut),
             )
 
-    return platformShortcutItems + managementItems
+    val appShortcutMenu =
+        platformShortcutItems.takeIf(List<ShortcutContextMenuItem>::isNotEmpty)?.let { shortcutItems ->
+            ShortcutContextMenuItem(
+                label = "App shortcuts (${shortcutItems.size})",
+                submenuItems = shortcutItems,
+            )
+        }
+
+    return listOfNotNull(appShortcutMenu) + managementItems
 }
 
 @Composable
@@ -62,22 +82,66 @@ internal fun ShortcutContextMenu(
     items: List<ShortcutContextMenuItem>,
     onDismissRequest: () -> Unit,
     onAction: (LauncherShellAction) -> Unit,
+    offset: DpOffset = DpOffset.Zero,
 ) {
-    DropdownMenu(
+    var submenuItems by remember(items) { mutableStateOf<List<ShortcutContextMenuItem>?>(null) }
+    val visibleItems = submenuItems ?: items
+
+    RiffleContextMenu(
         expanded = expanded,
-        onDismissRequest = onDismissRequest,
+        onDismissRequest = {
+            submenuItems = null
+            onDismissRequest()
+        },
+        offset = offset,
     ) {
-        items.forEach { item ->
+        if (submenuItems != null) {
+            DropdownMenuItem(
+                text = { Text(text = "Back") },
+                onClick = { submenuItems = null },
+            )
+        }
+        visibleItems.forEach { item ->
             DropdownMenuItem(
                 text = { Text(text = item.label) },
                 enabled = item.enabled,
+                trailingIcon =
+                    item.submenuItems.takeIf(List<ShortcutContextMenuItem>::isNotEmpty)?.let {
+                        { Text(text = "›") }
+                    },
                 onClick = {
-                    onDismissRequest()
-                    onAction(item.action)
+                    if (item.submenuItems.isNotEmpty()) {
+                        submenuItems = item.submenuItems
+                    } else {
+                        onDismissRequest()
+                        onAction(requireNotNull(item.action))
+                    }
                 },
             )
         }
     }
+}
+
+@Composable
+internal fun RiffleContextMenu(
+    expanded: Boolean,
+    onDismissRequest: () -> Unit,
+    modifier: Modifier = Modifier,
+    offset: DpOffset = DpOffset.Zero,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    DropdownMenu(
+        expanded = expanded,
+        onDismissRequest = onDismissRequest,
+        modifier = modifier,
+        offset = offset,
+        shape = RoundedCornerShape(24.dp),
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+        tonalElevation = 6.dp,
+        shadowElevation = 8.dp,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        content = content,
+    )
 }
 
 private val ShortcutContextSurface.removeLabel: String
