@@ -571,12 +571,13 @@ private fun Modifier.dockItemDrag(
     onAction: (LauncherShellAction) -> Unit,
 ): Modifier {
     return state.item
-        ?.takeIf { item -> state.isEditing && state.shortcutCount > 1 && item.isDirectDockDragEligible() }
+        ?.takeIf { item -> state.isEditing && item.isDirectDockDragEligible() }
         ?.id
         ?.let { itemId ->
             pointerInput(itemId, state.shortcutIndex, state.shortcutCount, slotWidthDp, itemSpacingDp) {
                 coroutineScope {
                     var horizontalDrag = 0f
+                    var verticalDrag = 0f
                     var targetIndex = state.shortcutIndex
                     var initialScrollOffset = 0
                     var edgeAutoScrollDelta = 0f
@@ -616,6 +617,7 @@ private fun Modifier.dockItemDrag(
                     detectDragGesturesAfterLongPress(
                         onDragStart = {
                             horizontalDrag = 0f
+                            verticalDrag = 0f
                             targetIndex = state.shortcutIndex
                             initialScrollOffset = dragViewport.scrollState.value
                             edgeAutoScrollDelta = 0f
@@ -624,6 +626,7 @@ private fun Modifier.dockItemDrag(
                         onDrag = { change, amount ->
                             change.consume()
                             horizontalDrag += amount.x
+                            verticalDrag += amount.y
                             val slotWidthPx = density * (slotWidthDp + itemSpacingDp)
                             val viewportWidthPx = density * dragViewport.contentViewportWidthDp
                             val pointerX =
@@ -639,9 +642,13 @@ private fun Modifier.dockItemDrag(
                         },
                         onDragEnd = {
                             autoScrollJob?.cancel()
-                            if (targetIndex != state.shortcutIndex) {
-                                onAction(LauncherShellAction.MoveDockShortcutToIndex(itemId, targetIndex))
-                            }
+                            dockDragDropAction(
+                                itemId = itemId,
+                                originIndex = state.shortcutIndex,
+                                targetIndex = targetIndex,
+                                verticalDragPx = verticalDrag,
+                                dockItemSizePx = density * slotWidthDp,
+                            )?.let(onAction)
                             onDragStateChanged(null)
                         },
                         onDragCancel = {
@@ -653,6 +660,19 @@ private fun Modifier.dockItemDrag(
             }
         } ?: this
 }
+
+internal fun dockDragDropAction(
+    itemId: LauncherItemId,
+    originIndex: Int,
+    targetIndex: Int,
+    verticalDragPx: Float,
+    dockItemSizePx: Float,
+): LauncherShellAction? =
+    when {
+        verticalDragPx <= -dockItemSizePx -> LauncherShellAction.MoveDockItemToHome(itemId)
+        targetIndex != originIndex -> LauncherShellAction.MoveDockShortcutToIndex(itemId, targetIndex)
+        else -> null
+    }
 
 @Composable
 @OptIn(ExperimentalFoundationApi::class)

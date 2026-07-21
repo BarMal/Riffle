@@ -65,6 +65,24 @@ class DockReorderInteractionTest {
     }
 
     @Test
+    fun draggingADockItemAboveTheDockMovesItToHome() {
+        val camera = shortcut("camera")
+        val actions = mutableListOf<LauncherShellAction>()
+        setContent(camera, actions = actions)
+
+        composeRule.onNodeWithTag(dockItemTestTag(camera.id)).performTouchInput {
+            down(center)
+            advanceEventTime(viewConfiguration.longPressTimeoutMillis + 50L)
+            moveBy(Offset(0f, -height.toFloat() * 1.2f))
+            up()
+        }
+
+        composeRule.runOnIdle {
+            assertEquals(listOf(LauncherShellAction.MoveDockItemToHome(camera.id)), actions)
+        }
+    }
+
+    @Test
     fun holdingAtOverflowEdgeMovesToAnOffScreenDockTarget() {
         val shortcuts = (0 until 10).map { shortcut("app$it") }.toTypedArray()
         val actions = mutableListOf<LauncherShellAction>()
