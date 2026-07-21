@@ -14,7 +14,7 @@ import org.junit.Test
 
 class ShortcutContextMenuTest {
     @Test
-    fun homeShortcutMenuContainsStandardLauncherActions() {
+    fun homeShortcutMenuAddsToDockWithoutRemovingTheHomeShortcut() {
         val shortcut = shortcut()
 
         val items = shortcutContextMenuItems(shortcut, ShortcutContextSurface.HOME)
@@ -25,8 +25,10 @@ class ShortcutContextMenuTest {
                 ShortcutContextMenuItem("Hide app", LauncherShellAction.HideApp(shortcut.appIdentity)),
                 ShortcutContextMenuItem("Uninstall", LauncherShellAction.UninstallApp(shortcut.appIdentity)),
                 ShortcutContextMenuItem(
-                    "Move to dock",
-                    LauncherShellAction.MoveHomeItemToDock(shortcut.id),
+                    "Add to dock",
+                    LauncherShellAction.AddAppToDock(
+                        InstalledApp(identity = shortcut.appIdentity, label = shortcut.label),
+                    ),
                 ),
                 ShortcutContextMenuItem(
                     "Add to floating dock",
@@ -73,8 +75,10 @@ class ShortcutContextMenuTest {
                 ShortcutContextMenuItem("Hide app", LauncherShellAction.HideApp(shortcut.appIdentity)),
                 ShortcutContextMenuItem("Uninstall", LauncherShellAction.UninstallApp(shortcut.appIdentity)),
                 ShortcutContextMenuItem(
-                    "Move to dock",
-                    LauncherShellAction.MoveHomeItemToDock(shortcut.id),
+                    "Add to dock",
+                    LauncherShellAction.AddAppToDock(
+                        InstalledApp(identity = shortcut.appIdentity, label = shortcut.label),
+                    ),
                 ),
                 ShortcutContextMenuItem(
                     "Add to floating dock",
