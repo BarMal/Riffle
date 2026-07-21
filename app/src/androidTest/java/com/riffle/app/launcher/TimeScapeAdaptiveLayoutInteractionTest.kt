@@ -1,9 +1,12 @@
 package com.riffle.app.launcher
 
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.unit.Density
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.cards.TimeScapeWindowLayout
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
@@ -27,20 +30,25 @@ class TimeScapeAdaptiveLayoutInteractionTest {
     fun largeWindowAddsSupportingDetailPane() {
         setContent(widthDp = 1_200)
 
-        // The test host is phone-sized; this verifies the modeled supporting pane is composed.
-        // Physical bounds are covered by the policy regression using the 1,200dp window input.
-        composeRule.onNodeWithText("Details").assertExists()
+        composeRule.onNodeWithText("Details").assertIsDisplayed()
     }
 
     private fun setContent(widthDp: Int) {
         composeRule.setContent {
-            MaterialTheme {
-                TimeScapeAppStageSurface(
-                    state = LauncherShellState(notificationAccessStatus = NotificationAccessStatus.NOT_GRANTED),
-                    windowLayout = TimeScapeWindowLayout(widthDp = widthDp, heightDp = 800),
-                    onAction = {},
-                )
+            // Make the physical test host represent the requested adaptive dp window.
+            CompositionLocalProvider(LocalDensity provides Density(TEST_WINDOW_DENSITY)) {
+                MaterialTheme {
+                    TimeScapeAppStageSurface(
+                        state = LauncherShellState(notificationAccessStatus = NotificationAccessStatus.NOT_GRANTED),
+                        windowLayout = TimeScapeWindowLayout(widthDp = widthDp, heightDp = 800),
+                        onAction = {},
+                    )
+                }
             }
         }
+    }
+
+    private companion object {
+        const val TEST_WINDOW_DENSITY = 0.3f
     }
 }

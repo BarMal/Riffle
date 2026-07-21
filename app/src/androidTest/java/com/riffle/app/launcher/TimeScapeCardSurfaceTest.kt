@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -27,6 +28,7 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import com.riffle.app.launcher.notifications.AppStageNotificationCard
 import com.riffle.app.launcher.notifications.MediaCommand
@@ -191,12 +193,14 @@ class TimeScapeCardSurfaceTest {
             )
         var widthDp by mutableIntStateOf(500)
         composeRule.setContent {
-            MaterialTheme {
-                TimeScapeAppStageSurface(
-                    state = testState,
-                    windowLayout = TimeScapeWindowLayout(widthDp, 800),
-                    onAction = {},
-                )
+            CompositionLocalProvider(LocalDensity provides Density(0.3f)) {
+                MaterialTheme {
+                    TimeScapeAppStageSurface(
+                        state = testState,
+                        windowLayout = TimeScapeWindowLayout(widthDp, 800),
+                        onAction = {},
+                    )
+                }
             }
         }
 
@@ -205,6 +209,7 @@ class TimeScapeCardSurfaceTest {
         composeRule.onNodeWithText("Notification details").assertIsDisplayed()
 
         composeRule.runOnIdle { widthDp = 1_200 }
+        composeRule.onNodeWithText("Notification details").assertIsDisplayed()
         composeRule.runOnIdle { widthDp = 500 }
         composeRule.onNodeWithText("Notification details").assertIsDisplayed()
         composeRule.onNodeWithText("Older message").assertIsDisplayed()
