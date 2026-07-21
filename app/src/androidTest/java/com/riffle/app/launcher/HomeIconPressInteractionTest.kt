@@ -55,6 +55,27 @@ class HomeIconPressInteractionTest {
         verifyFolderPressInteractions(reducedMotion = true)
     }
 
+    @Test
+    fun draggingAHomeShortcutBelowTheGridTransfersItToTheDock() {
+        val shortcut = shortcut(label = "Camera")
+
+        val action =
+            homeItemDragDropAction(
+                item = shortcut,
+                dragState =
+                    HomeItemDragState(
+                        cell = GridCell(column = 0, row = 0),
+                        cellSizePx = 100f,
+                        grid = GridDimensions(columns = 1, rows = 1),
+                        pageItems = listOf(shortcut),
+                    ),
+                dragX = 0f,
+                dragY = 100f,
+            )
+
+        assertEquals(LauncherShellAction.MoveHomeItemToDock(shortcut.id), action)
+    }
+
     private fun verifyShortcutPressInteractions(reducedMotion: Boolean) {
         val shortcut = shortcut(label = "Camera")
         val actions = mutableListOf<LauncherShellAction>()
