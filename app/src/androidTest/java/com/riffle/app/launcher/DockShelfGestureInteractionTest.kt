@@ -145,6 +145,55 @@ class DockShelfGestureInteractionTest {
     }
 
     @Test
+    fun productionDockDoesNotReuseTheOpeningPointerAfterExpanding() {
+        val primary = shortcut("primary")
+        val overflow = shortcut("overflow")
+        val layout =
+            HomeLayoutDefaults.standard().let { standardLayout ->
+                standardLayout.copy(
+                    dock = standardLayout.dock.copy(capacity = 1, items = listOf(primary, overflow)),
+                )
+            }
+        composeRule.setContent {
+            MaterialTheme {
+                Box(modifier = Modifier.size(400.dp)) {
+                    StandardHome(
+                        layout = layout,
+                        installedApps = listOf(primary.installedApp(), overflow.installedApp()),
+                        interactions = StandardHomeInteractions(),
+                        presentation = StandardHomePresentation(appShortcutsByApp = emptyMap()),
+                        appIconLoader = EmptyAppIconLoader,
+                        onAction = {},
+                    )
+                }
+            }
+        }
+
+        composeRule.onNodeWithTag(dockItemTestTag(primary.id)).performTouchInput {
+            down(center)
+            moveBy(Offset(0f, -24f))
+            // This crosses the expansion threshold while the pointer remains pressed. StandardHome
+            // replaces the collapsed Dock with ExpandedDockSurface before the same pointer releases.
+            moveBy(Offset(0f, -64f))
+            advanceEventTime(100)
+            // A rebound must not be interpreted as a new expanded-shelf collapse gesture by the
+            // restarted production pointer handler. The second movement reaches the collapse
+            // threshold relative to the first rebound, which is the origin the old free-running
+            // handler incorrectly adopted after the collapsed Dock was replaced.
+            moveBy(Offset(0f, 1f))
+            advanceEventTime(100)
+            moveBy(Offset(0f, 100f))
+            up()
+        }
+
+        composeRule.waitForIdle()
+        val primaryBounds = composeRule.onNodeWithTag(dockItemTestTag(primary.id)).fetchSemanticsNode().boundsInRoot
+        val overflowBounds = composeRule.onNodeWithTag(dockItemTestTag(overflow.id)).fetchSemanticsNode().boundsInRoot
+
+        assertTrue(overflowBounds.center.y < primaryBounds.center.y)
+    }
+
+    @Test
     fun productionDockRetainsAnOpeningSwipeAcrossCallbackRecomposition() {
         val primary = shortcut("primary")
         val overflow = shortcut("overflow")

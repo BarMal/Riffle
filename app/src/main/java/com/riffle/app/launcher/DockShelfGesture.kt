@@ -1,5 +1,7 @@
 package com.riffle.app.launcher
 
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberUpdatedState
@@ -77,42 +79,36 @@ private fun Modifier.dockShelfGestureInput(
     return composed {
         val currentOnExpandedChange by rememberUpdatedState(onExpandedChange)
         pointerInput(isExpanded) {
-            awaitPointerEventScope {
-                while (true) {
-                    val down =
-                        awaitPointerEvent(PointerEventPass.Initial)
-                            .changes
-                            .firstOrNull { change -> change.pressed }
-                            ?: continue
-                    val start = down.position
-                    var handled = false
-                    while (!handled) {
-                        val event = awaitPointerEvent(PointerEventPass.Initial)
-                        val trackedChange = event.changes.firstOrNull { change -> change.id == down.id }
-                        if (trackedChange == null) {
-                            handled = true
-                        } else {
-                            val drag = trackedChange.position - start
-                            if (
-                                dockShelfGestureClaimsDrag(
-                                    isExpanded = isExpanded,
-                                    horizontalDragPx = drag.x,
-                                    verticalDragPx = drag.y,
-                                )
-                            ) {
-                                trackedChange.consume()
-                            }
-                            dockShelfGestureExpandedState(
+            awaitEachGesture {
+                val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+                val start = down.position
+                var handled = false
+                while (!handled) {
+                    val event = awaitPointerEvent(PointerEventPass.Initial)
+                    val trackedChange = event.changes.firstOrNull { change -> change.id == down.id }
+                    if (trackedChange == null) {
+                        handled = true
+                    } else {
+                        val drag = trackedChange.position - start
+                        if (
+                            dockShelfGestureClaimsDrag(
                                 isExpanded = isExpanded,
                                 horizontalDragPx = drag.x,
                                 verticalDragPx = drag.y,
-                            )?.let { expanded ->
-                                currentOnExpandedChange(expanded)
-                                handled = true
-                            }
-                            if (!trackedChange.pressed) {
-                                handled = true
-                            }
+                            )
+                        ) {
+                            trackedChange.consume()
+                        }
+                        dockShelfGestureExpandedState(
+                            isExpanded = isExpanded,
+                            horizontalDragPx = drag.x,
+                            verticalDragPx = drag.y,
+                        )?.let { expanded ->
+                            currentOnExpandedChange(expanded)
+                            handled = true
+                        }
+                        if (!trackedChange.pressed) {
+                            handled = true
                         }
                     }
                 }
