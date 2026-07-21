@@ -203,6 +203,13 @@ internal fun ColorScheme.withThemeColors(colors: LauncherThemeColors): ColorSche
         onBackground = background?.contentColor(onBackground) ?: onBackground,
         surface = background ?: surface,
         onSurface = background?.contentColor(onSurface) ?: onSurface,
+        surfaceDim = background ?: surfaceDim,
+        surfaceBright = background ?: surfaceBright,
+        surfaceContainerLowest = background ?: surfaceContainerLowest,
+        surfaceContainerLow = background ?: surfaceContainerLow,
+        surfaceContainer = background ?: surfaceContainer,
+        surfaceContainerHigh = background ?: surfaceContainerHigh,
+        surfaceContainerHighest = background ?: surfaceContainerHighest,
         surfaceVariant = background ?: surfaceVariant,
         onSurfaceVariant = background?.contentColor(onSurfaceVariant) ?: onSurfaceVariant,
         primary = accent ?: primary,
@@ -210,7 +217,13 @@ internal fun ColorScheme.withThemeColors(colors: LauncherThemeColors): ColorSche
         primaryContainer = accent ?: primaryContainer,
         onPrimaryContainer = accent?.contentColor(onPrimaryContainer) ?: onPrimaryContainer,
         secondary = accent ?: secondary,
+        onSecondary = accent?.contentColor(onSecondary) ?: onSecondary,
+        secondaryContainer = accent ?: secondaryContainer,
+        onSecondaryContainer = accent?.contentColor(onSecondaryContainer) ?: onSecondaryContainer,
         tertiary = accent ?: tertiary,
+        onTertiary = accent?.contentColor(onTertiary) ?: onTertiary,
+        tertiaryContainer = accent ?: tertiaryContainer,
+        onTertiaryContainer = accent?.contentColor(onTertiaryContainer) ?: onTertiaryContainer,
         surfaceTint = accent ?: surfaceTint,
         inversePrimary = accent ?: inversePrimary,
     )
@@ -226,11 +239,15 @@ private fun LauncherThemeColors.toColorOverrides(): LauncherThemeColorOverrides 
 private fun Color.contentColor(fallback: Color): Color =
     if (alpha < 0.5f) {
         fallback
-    } else if (luminance() > 0.45f) {
-        Color.Black
     } else {
-        Color.White
+        listOf(Color.Black, Color.White).maxBy { candidate -> candidate.contrastRatioAgainst(this) }
     }
+
+private fun Color.contrastRatioAgainst(background: Color): Float {
+    val lighter = maxOf(luminance(), background.luminance())
+    val darker = minOf(luminance(), background.luminance())
+    return (lighter + 0.05f) / (darker + 0.05f)
+}
 
 private data class LauncherAccentColorRoles(
     val primary: Color,
