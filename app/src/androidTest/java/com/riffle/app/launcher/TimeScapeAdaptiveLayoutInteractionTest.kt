@@ -1,12 +1,18 @@
 package com.riffle.app.launcher
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.cards.TimeScapeWindowLayout
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
@@ -38,11 +44,18 @@ class TimeScapeAdaptiveLayoutInteractionTest {
             // Make the physical test host represent the requested adaptive dp window.
             CompositionLocalProvider(LocalDensity provides Density(TEST_WINDOW_DENSITY)) {
                 MaterialTheme {
-                    TimeScapeAppStageSurface(
-                        state = LauncherShellState(notificationAccessStatus = NotificationAccessStatus.NOT_GRANTED),
-                        windowLayout = TimeScapeWindowLayout(widthDp = widthDp, heightDp = 800),
-                        onAction = {},
-                    )
+                    Box(
+                        modifier =
+                            Modifier.width(widthDp.dp)
+                                .height(TEST_WINDOW_HEIGHT_DP.dp)
+                                .clipToBounds(),
+                    ) {
+                        TimeScapeAppStageSurface(
+                            state = LauncherShellState(notificationAccessStatus = NotificationAccessStatus.NOT_GRANTED),
+                            windowLayout = TimeScapeWindowLayout(widthDp = widthDp, heightDp = TEST_WINDOW_HEIGHT_DP),
+                            onAction = {},
+                        )
+                    }
                 }
             }
         }
@@ -50,5 +63,6 @@ class TimeScapeAdaptiveLayoutInteractionTest {
 
     private companion object {
         const val TEST_WINDOW_DENSITY = 0.3f
+        const val TEST_WINDOW_HEIGHT_DP = 800
     }
 }
