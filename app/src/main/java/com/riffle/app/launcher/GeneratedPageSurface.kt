@@ -50,6 +50,7 @@ import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.settings.MIN_TIMESCAPE_REACHABLE_CARD_HEIGHT_DP
 import com.riffle.core.domain.launcher.settings.TimeScapeAppearanceSettings
 import com.riffle.core.domain.launcher.settings.TimeScapeViewportDp
+import java.security.MessageDigest
 
 @Composable
 @Suppress("LongMethod", "LongParameterList")
@@ -272,7 +273,10 @@ private fun GeneratedNotificationCardFallback(
     artworkCache: TimeScapeArtworkCache<ImageBitmap>,
 ) {
     val label = dockNotificationCardLabel(card)
-    val artwork = generatedNotificationArtwork(card, artworkCache)
+    val artwork =
+        remember(card.group.notifications, artworkCache) {
+            generatedNotificationArtwork(card, artworkCache)
+        }
     TimeScapeCardSurface(
         appearance = appearance,
         background =
@@ -365,7 +369,10 @@ private fun GeneratedNotificationCard(
 ) {
     val label = dockNotificationCardLabel(card)
     val identity = card.app?.identity
-    val artwork = generatedNotificationArtwork(card, artworkCache)
+    val artwork =
+        remember(card.group.notifications, artworkCache) {
+            generatedNotificationArtwork(card, artworkCache)
+        }
     Box(modifier = modifier, contentAlignment = Alignment.Center) {
         TimeScapeCardSurface(
             appearance = appearance,
@@ -466,10 +473,29 @@ internal fun generatedNotificationArtwork(
 ): ImageBitmap? {
     val notification = card.group.notifications.maxByOrNull { item -> item.postedAtEpochMillis }
     val artwork = notification?.largeIconPngBase64
-    val sourceKey =
-        "${generatedNotificationCardId(card).value}:${notification?.key?.value.orEmpty()}:${artwork?.hashCode() ?: 0}"
-    return artworkCache.getOrDecode(sourceKey, artwork)
+    return artworkCache.getOrDecode(generatedNotificationArtworkSourceKey(card), artwork)
 }
+
+/** Content-addressed revision prevents distinct untrusted payloads from sharing artwork cache entries. */
+internal fun generatedNotificationArtworkSourceKey(card: DockNotificationCardState): String {
+    val notification = card.group.notifications.maxByOrNull { item -> item.postedAtEpochMillis }
+    return "${generatedNotificationCardId(card).value}:${notification?.key?.value.orEmpty()}:" +
+        timeScapeArtworkContentRevision(notification?.largeIconPngBase64)
+}
+
+private fun timeScapeArtworkContentRevision(artwork: String?): String =
+    artwork
+        ?.let { value ->
+            val digest = MessageDigest.getInstance("SHA-256").digest(value.toByteArray(Charsets.UTF_8))
+            buildString(digest.size * 2) {
+                digest.forEach { byte ->
+                    append(ARTWORK_REVISION_HEX[(byte.toInt() ushr 4) and 0x0f])
+                    append(ARTWORK_REVISION_HEX[byte.toInt() and 0x0f])
+                }
+            }
+        }.orEmpty()
+
+private const val ARTWORK_REVISION_HEX = "0123456789abcdef"
 
 internal fun generatedNotificationCardStackEntries(
     cards: List<DockNotificationCardState>,

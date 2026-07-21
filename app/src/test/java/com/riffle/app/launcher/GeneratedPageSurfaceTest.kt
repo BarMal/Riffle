@@ -126,6 +126,48 @@ class GeneratedPageSurfaceTest {
         assertEquals(2, cache.sizeForTest())
     }
 
+    @Test
+    fun artworkSourceKeysSeparatePayloadsWithTheSameStringHashCode() {
+        val firstPayload = "Aa"
+        val secondPayload = "BB"
+        assertEquals(firstPayload.hashCode(), secondPayload.hashCode())
+
+        val first =
+            DockNotificationCardState(
+                app = null,
+                group =
+                    notificationGroup("com.example.artwork", "personal").copy(
+                        notifications =
+                            listOf(
+                                notification(
+                                    packageName = "com.example.artwork",
+                                    key = "artwork",
+                                    artwork = firstPayload,
+                                ),
+                            ),
+                    ),
+            )
+        val second =
+            first.copy(
+                group =
+                    first.group.copy(
+                        notifications =
+                            listOf(
+                                notification(
+                                    packageName = "com.example.artwork",
+                                    key = "artwork",
+                                    artwork = secondPayload,
+                                ),
+                            ),
+                    ),
+            )
+
+        assertNotEquals(
+            generatedNotificationArtworkSourceKey(first),
+            generatedNotificationArtworkSourceKey(second),
+        )
+    }
+
     private fun notificationGroup(
         packageName: String,
         profileId: String,
@@ -140,10 +182,12 @@ class GeneratedPageSurfaceTest {
     private fun notification(
         packageName: String,
         key: String,
+        artwork: String? = null,
     ) = LauncherNotification(
         key = LauncherNotificationKey(key),
         packageName = AppPackageName(packageName),
         canDismiss = true,
+        largeIconPngBase64 = artwork,
         postedAtEpochMillis = 1L,
     )
 
