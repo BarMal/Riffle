@@ -9,6 +9,7 @@ import androidx.core.graphics.drawable.toBitmap
 import com.riffle.app.launcher.AppIconLoader
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.math.roundToInt
 
 class PackageManagerAppIconLoader(
     private val packageManager: PackageManager,
@@ -28,17 +29,33 @@ class PackageManagerAppIconLoader(
         runCatching {
             packageManager
                 .getActivityIcon(identity.componentName)
-                .toLauncherImageBitmap()
+                .toLauncherImageBitmap(iconBitmapSizePx(identity))
         }.getOrNull()
+
+    private fun iconBitmapSizePx(identity: AppIdentity): Int =
+        runCatching {
+            packageManager
+                .getResourcesForApplication(identity.packageName.value)
+                .displayMetrics
+                .density
+        }.getOrDefault(DEFAULT_DISPLAY_DENSITY).let(::launcherIconBitmapSizePx)
 }
 
 private val AppIdentity.componentName: ComponentName
     get() = ComponentName(packageName.value, activityName.value)
 
-private fun Drawable.toLauncherImageBitmap(): ImageBitmap =
+private fun Drawable.toLauncherImageBitmap(sizePx: Int): ImageBitmap =
     toBitmap(
-        width = LAUNCHER_ICON_BITMAP_SIZE,
-        height = LAUNCHER_ICON_BITMAP_SIZE,
+        width = sizePx,
+        height = sizePx,
     ).asImageBitmap()
 
-private const val LAUNCHER_ICON_BITMAP_SIZE = 96
+internal fun launcherIconBitmapSizePx(displayDensity: Float): Int =
+    (MAX_LAUNCHER_ICON_SIZE_DP * displayDensity)
+        .roundToInt()
+        .coerceIn(MIN_LAUNCHER_ICON_BITMAP_SIZE_PX, MAX_LAUNCHER_ICON_BITMAP_SIZE_PX)
+
+private const val MAX_LAUNCHER_ICON_SIZE_DP = 80
+private const val DEFAULT_DISPLAY_DENSITY = 1f
+private const val MIN_LAUNCHER_ICON_BITMAP_SIZE_PX = 96
+private const val MAX_LAUNCHER_ICON_BITMAP_SIZE_PX = 320
