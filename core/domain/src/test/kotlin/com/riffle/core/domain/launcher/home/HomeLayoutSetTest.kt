@@ -1,5 +1,8 @@
 package com.riffle.core.domain.launcher.home
 
+import com.riffle.core.domain.launcher.apps.AppActivityName
+import com.riffle.core.domain.launcher.apps.AppIdentity
+import com.riffle.core.domain.launcher.apps.AppPackageName
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -62,6 +65,39 @@ class HomeLayoutSetTest {
             LauncherViewMode.HOME_SCREEN_LIBRARY,
             layoutSet.preferredModesByDeviceClass[HomeLayoutDeviceClass.PHONE],
         )
+    }
+
+    @Test
+    fun selectingNewModesForFoldablePreservesDockedApps() {
+        val foldableKey =
+            HomeLayoutKey(
+                viewMode = LauncherViewMode.STANDARD_APP_DRAWER,
+                deviceClass = HomeLayoutDeviceClass.FOLDABLE,
+            )
+        val dockedApps = listOf(appShortcut("phone"), appShortcut("camera"))
+        val layoutSet =
+            HomeLayoutSet(
+                activeKey = foldableKey,
+                layouts =
+                    mapOf(
+                        foldableKey to
+                            HomeLayoutDefaults
+                                .standard(HomeLayoutDeviceClass.FOLDABLE)
+                                .copy(
+                                    dock =
+                                        HomeLayoutDefaults
+                                            .standard(HomeLayoutDeviceClass.FOLDABLE)
+                                            .dock
+                                            .copy(items = dockedApps),
+                                ),
+                    ),
+            )
+
+        val cards = layoutSet.selectMode(LauncherViewMode.CARD_INTERFACE)
+        val library = cards.selectMode(LauncherViewMode.HOME_SCREEN_LIBRARY)
+
+        assertEquals(dockedApps, cards.activeLayout.dock.items)
+        assertEquals(dockedApps, library.activeLayout.dock.items)
     }
 
     @Test
@@ -214,4 +250,15 @@ class HomeLayoutSetTest {
     }
 
     private val standardKey = HomeLayoutKey(LauncherViewMode.STANDARD_APP_DRAWER)
+
+    private fun appShortcut(id: String): AppShortcutItem =
+        AppShortcutItem(
+            id = LauncherItemId(id),
+            appIdentity =
+                AppIdentity(
+                    packageName = AppPackageName("com.riffle.$id"),
+                    activityName = AppActivityName(".MainActivity"),
+                ),
+            label = id,
+        )
 }
