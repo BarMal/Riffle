@@ -80,6 +80,24 @@ emulator run and the required physical Honor rows from the device-evidence contr
    and detail transitions must snap without spring, rotation, parallax, or long travel. Repeat
    with reduced transparency and high contrast; the hierarchy must remain opaque and legible.
 
+## Performance acceptance checks
+
+1. Use the [TimeScape card update target](performance-budgets.md#initial-targets) as the pass
+   criterion: no visible missed frames while a focused card settles through a 100-notification
+   burst, with composition bounded to the configured visible stack depth.
+2. On representative compact and expanded/foldable hardware, grant notification access and create
+   a burst containing notifications and active media with valid and invalid artwork. During the
+   burst, repeatedly drag or fling between cards, let a card settle, open and close details, run a
+   focused contextual action, dismiss the focused notification, and background and return to the
+   launcher. Record the configured performance target, device, window mode, workload, and whether
+   the target passed in the candidate's evidence or release record.
+3. If the target is not met, record a failed or blocked outcome rather than a pass. Enable each
+   documented effect fallback that applies to the device or workload (including reduced motion and
+   the no-blur/reduced-transparency path), repeat the same churn and card/detail motion workload,
+   and record whether the fallback restores a legible, responsive experience without changing the
+   saved appearance preference. The candidate remains blocked until the representative target is
+   met or the performance defect is resolved and revalidated.
+
 ## Accessibility and alternate input checks
 
 1. Enable TalkBack. Enter Cards mode and confirm one focused card is announced with its type,
