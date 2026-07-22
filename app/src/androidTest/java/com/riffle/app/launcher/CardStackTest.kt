@@ -17,6 +17,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
@@ -183,7 +184,9 @@ class CardStackTest {
             assertEquals(1, focusedCard)
             assertEquals(2, boundaryKeyEvents)
         }
-        composeRule.onNodeWithText(cardLabel(0)).assertDoesNotExist()
+        composeRule
+            .onNodeWithText(cardLabel(0))
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.InvisibleToUser, Unit))
         composeRule.onNodeWithText(cardLabel(1)).assertExists()
     }
 

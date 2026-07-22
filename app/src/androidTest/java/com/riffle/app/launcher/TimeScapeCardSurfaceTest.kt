@@ -221,7 +221,7 @@ class TimeScapeCardSurfaceTest {
 
         composeRule.onAllNodes(focusedCardLiveRegion).assertCountEquals(1)
         composeRule
-            .onNodeWithText("Older message")
+            .onNode(focusedCardLiveRegion)
             .assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "Card 2 of 2"))
     }
 
