@@ -30,6 +30,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.captureToImage
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -206,16 +207,19 @@ class TimeScapeCardSurfaceTest {
                         group.copy(notifications = listOf(newest, older))
                     },
             )
-        val liveRegion = SemanticsMatcher.expectValue(SemanticsProperties.LiveRegion, LiveRegionMode.Polite)
+        val focusedCardLiveRegion =
+            SemanticsMatcher
+                .expectValue(SemanticsProperties.LiveRegion, LiveRegionMode.Polite)
+                .and(hasContentDescription("Focused", substring = true))
 
         composeRule.setContent {
             MaterialTheme { TimeScapeAppStageSurface(state = state, onAction = {}) }
         }
 
-        composeRule.onAllNodes(liveRegion).assertCountEquals(1)
+        composeRule.onAllNodes(focusedCardLiveRegion).assertCountEquals(1)
         composeRule.onNodeWithText("Older message").performClick()
 
-        composeRule.onAllNodes(liveRegion).assertCountEquals(1)
+        composeRule.onAllNodes(focusedCardLiveRegion).assertCountEquals(1)
         composeRule
             .onNodeWithText("Older message")
             .assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "Card 2 of 2"))
