@@ -1,7 +1,10 @@
 package com.riffle.app.launcher
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
@@ -50,11 +53,13 @@ class DockSettingLayoutTest {
     fun simplifiedDockSettingsKeepHeightAndWidthControlsWithoutSlotPlaceholders() {
         composeRule.setContent {
             MaterialTheme {
-                DockSetting(
-                    dock = DockModel(capacity = 4),
-                    notificationAccessStatus = NotificationAccessStatus.GRANTED,
-                    onAction = {},
-                )
+                Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                    DockSetting(
+                        dock = DockModel(capacity = 4),
+                        notificationAccessStatus = NotificationAccessStatus.GRANTED,
+                        onAction = {},
+                    )
+                }
             }
         }
 

@@ -40,6 +40,7 @@ import com.riffle.app.launcher.widgets.HomeWidgetViewFactory
 import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.apps.AppShortcutsByApp
 import com.riffle.core.domain.launcher.home.AppShortcutItem
+import com.riffle.core.domain.launcher.home.DockAlignment
 import com.riffle.core.domain.launcher.home.DockBackgroundSizing
 import com.riffle.core.domain.launcher.home.DockItemMoveDirection
 import com.riffle.core.domain.launcher.home.DockModel
@@ -73,7 +74,7 @@ internal fun Dock(
 
     BoxWithConstraints(
         modifier = Modifier.dockShelfGestureInput(interactions),
-        contentAlignment = Alignment.Center,
+        contentAlignment = dock.alignment.toBoxAlignment(),
     ) {
         val surfaceMetrics =
             dockSurfaceMetrics(
@@ -329,6 +330,13 @@ internal data class DockInteractions(
     val homeLayout: HomeLayout? = null,
     val onAction: (LauncherShellAction) -> Unit,
 )
+
+internal fun DockAlignment.toBoxAlignment(): Alignment =
+    when (this) {
+        DockAlignment.START -> Alignment.CenterStart
+        DockAlignment.CENTER -> Alignment.Center
+        DockAlignment.END -> Alignment.CenterEnd
+    }
 
 internal fun dockMoveToHomeAction(
     itemId: LauncherItemId,
