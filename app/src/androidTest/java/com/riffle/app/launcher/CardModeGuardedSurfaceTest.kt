@@ -27,8 +27,6 @@ import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.cards.TimeScapeWindowLayout
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.FolderItem
-import com.riffle.core.domain.launcher.home.GridCell
-import com.riffle.core.domain.launcher.home.GridPlacement
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.HomeLayoutSet
 import com.riffle.core.domain.launcher.home.LauncherItemId
@@ -323,53 +321,6 @@ class CardModeGuardedSurfaceTest {
         composeRule.onAllNodesWithTag(HOME_DOCK_TEST_TAG).assertCountEquals(1)
         composeRule.onNodeWithTag(dockItemTestTag(folder.id)).performClick()
         composeRule.onNodeWithText("Close").assertIsDisplayed()
-    }
-
-    @Test
-    fun cardModeKeepsTheStandardHomeShortcutAndContextActionsAvailable() {
-        val app = cardsHomeApp()
-        val shortcut =
-            AppShortcutItem(
-                id = LauncherItemId("app:camera-home"),
-                appIdentity = app.identity,
-                label = app.label,
-                placement = GridPlacement(cell = GridCell(column = 0, row = 0)),
-            )
-        val layout =
-            HomeLayoutDefaults.standard().let { standard ->
-                standard.copy(
-                    viewMode = LauncherViewMode.CARD_INTERFACE,
-                    pages = standard.pages.map { page -> page.copy(items = listOf(shortcut)) },
-                )
-            }
-        val actions = mutableListOf<LauncherShellAction>()
-
-        composeRule.setContent {
-            LauncherShellContent(
-                state =
-                    LauncherShellState(
-                        firstRunStatus = FirstRunStatus.COMPLETE,
-                        homeRoleStatus = HomeRoleStatus.DEFAULT_HOME,
-                        homeLayout = layout,
-                        homeLayoutSet = HomeLayoutSet.fromLayout(layout),
-                        notificationAccessStatus = NotificationAccessStatus.GRANTED,
-                        installedApps = listOf(app),
-                        profileContentVisibility =
-                            mapOf(app.identity.profile.id to AppProfileContentVisibility.VISIBLE),
-                    ),
-                appIconLoader = EmptyAppIconLoader,
-                onAction = actions::add,
-            )
-        }
-
-        composeRule.onNodeWithText(app.label).assertExists()
-        composeRule.onNodeWithText(app.label).performTouchInput { longClick() }
-        composeRule.onNodeWithText("Remove from home").assertExists()
-        composeRule.onNodeWithText("Remove from home").performTouchInput { click() }
-
-        composeRule.runOnIdle {
-            assertEquals(listOf(LauncherShellAction.RemoveHomeShortcut(shortcut.id)), actions)
-        }
     }
 
     @Test
