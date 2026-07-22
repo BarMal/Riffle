@@ -38,7 +38,10 @@ internal enum class DockShelfMotionPolicy {
     ReducedShortTween,
 }
 
-internal fun dockShelfGesturePolicy(isDockVisible: Boolean): DockShelfGesturePolicy =
+internal fun dockShelfGesturePolicy(
+    isDockVisible: Boolean,
+    @Suppress("UnusedParameter") homeInsetPolicy: HomeInsetPolicy,
+): DockShelfGesturePolicy =
     DockShelfGesturePolicy(
         enabled = isDockVisible,
         // The dock must never claim Android's bottom edge: doing so can block the system Home
@@ -193,12 +196,11 @@ private tailrec fun Context.findActivity(): Activity? =
         else -> null
     }
 
-internal fun Modifier.dockShelfPolicies(
-    @Suppress("UnusedParameter") interactions: DockInteractions,
-): Modifier =
+internal fun Modifier.dockShelfPolicies(interactions: DockInteractions): Modifier =
     dockShelfSystemGestureExclusion(
         dockShelfGesturePolicy(
             isDockVisible = true,
+            homeInsetPolicy = interactions.homeInsetPolicy,
         ),
     )
 

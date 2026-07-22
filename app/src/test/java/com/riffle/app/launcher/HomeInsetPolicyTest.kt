@@ -90,6 +90,7 @@ class HomeInsetPolicyTest {
             ),
             dockShelfGesturePolicy(
                 isDockVisible = true,
+                homeInsetPolicy = HomeInsetPolicy(reserveNavigationBar = true),
             ),
         )
     }
@@ -103,6 +104,7 @@ class HomeInsetPolicyTest {
             ),
             dockShelfGesturePolicy(
                 isDockVisible = true,
+                homeInsetPolicy = HomeInsetPolicy(reserveNavigationBar = false),
             ),
         )
     }
@@ -116,6 +118,7 @@ class HomeInsetPolicyTest {
             ),
             dockShelfGesturePolicy(
                 isDockVisible = false,
+                homeInsetPolicy = HomeInsetPolicy(reserveNavigationBar = false),
             ),
         )
     }
