@@ -5,7 +5,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.longClick
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTouchInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.riffle.core.domain.launcher.FirstRunStatus
 import com.riffle.core.domain.launcher.HomeRoleStatus
@@ -17,8 +21,12 @@ import com.riffle.core.domain.launcher.apps.AppProfile
 import com.riffle.core.domain.launcher.apps.AppProfileContentVisibility
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.cards.TimeScapeWindowLayout
+import com.riffle.core.domain.launcher.home.AppShortcutItem
+import com.riffle.core.domain.launcher.home.GridCell
+import com.riffle.core.domain.launcher.home.GridPlacement
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.HomeLayoutSet
+import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
 import com.riffle.core.domain.launcher.notifications.LauncherNotification
@@ -116,6 +124,102 @@ class CardModeGuardedSurfaceTest {
         }
 
         composeRule.onNodeWithText("Welcome").assertExists()
+    }
+
+    @Test
+    fun cardModeKeepsTheStandardDockAndContextActionsAvailable() {
+        val app = cardsHomeApp()
+        val shortcut =
+            AppShortcutItem(
+                id = LauncherItemId("app:camera"),
+                appIdentity = app.identity,
+                label = app.label,
+            )
+        val layout =
+            HomeLayoutDefaults.standard().let { standard ->
+                standard.copy(
+                    viewMode = LauncherViewMode.CARD_INTERFACE,
+                    dock = standard.dock.copy(items = listOf(shortcut)),
+                )
+            }
+        val state =
+            LauncherShellState(
+                firstRunStatus = FirstRunStatus.COMPLETE,
+                homeRoleStatus = HomeRoleStatus.DEFAULT_HOME,
+                homeLayout = layout,
+                homeLayoutSet = HomeLayoutSet.fromLayout(layout),
+                notificationAccessStatus = NotificationAccessStatus.GRANTED,
+                installedApps = listOf(app),
+                profileContentVisibility = mapOf(app.identity.profile.id to AppProfileContentVisibility.VISIBLE),
+            )
+
+        composeRule.setContent {
+            LauncherShellContent(
+                state = state,
+                appIconLoader = EmptyAppIconLoader,
+                onAction = {},
+            )
+        }
+
+        composeRule.onNodeWithTag(dockItemTestTag(shortcut.id)).assertIsDisplayed()
+        composeRule.onNodeWithTag(dockItemTestTag(shortcut.id)).performTouchInput { longClick() }
+        composeRule.onNodeWithText("Remove from dock").assertIsDisplayed()
+    }
+
+    @Test
+    fun cardModeKeepsTheStandardHomeShortcutAndContextActionsAvailable() {
+        val app = cardsHomeApp()
+        val shortcut =
+            AppShortcutItem(
+                id = LauncherItemId("app:camera-home"),
+                appIdentity = app.identity,
+                label = app.label,
+                placement = GridPlacement(cell = GridCell(column = 0, row = 0)),
+            )
+        val layout =
+            HomeLayoutDefaults.standard().let { standard ->
+                standard.copy(
+                    viewMode = LauncherViewMode.CARD_INTERFACE,
+                    pages = standard.pages.map { page -> page.copy(items = listOf(shortcut)) },
+                )
+            }
+
+        composeRule.setContent {
+            LauncherShellContent(
+                state =
+                    LauncherShellState(
+                        firstRunStatus = FirstRunStatus.COMPLETE,
+                        homeRoleStatus = HomeRoleStatus.DEFAULT_HOME,
+                        homeLayout = layout,
+                        homeLayoutSet = HomeLayoutSet.fromLayout(layout),
+                        notificationAccessStatus = NotificationAccessStatus.GRANTED,
+                        installedApps = listOf(app),
+                        profileContentVisibility =
+                            mapOf(app.identity.profile.id to AppProfileContentVisibility.VISIBLE),
+                    ),
+                appIconLoader = EmptyAppIconLoader,
+                onAction = {},
+            )
+        }
+
+        composeRule.onNodeWithText(app.label).assertIsDisplayed()
+        composeRule.onNodeWithText(app.label).performTouchInput { longClick() }
+        composeRule.onNodeWithText("Remove from home").assertIsDisplayed()
+    }
+
+    @Test
+    fun cardModeKeepsTimeScapeCardDetailsInteractiveAlongsideTheDock() {
+        composeRule.setContent {
+            LauncherShellContent(
+                state = cardsState(NotificationAccessStatus.GRANTED, groups = listOf(notificationGroup())),
+                appIconLoader = EmptyAppIconLoader,
+                onAction = {},
+            )
+        }
+
+        composeRule.onNodeWithText("Details").performClick()
+
+        composeRule.onNodeWithText("Notification details").assertIsDisplayed()
     }
 
     @Test
@@ -223,5 +327,16 @@ class CardModeGuardedSurfaceTest {
                         postedAtEpochMillis = 1L,
                     ),
                 ),
+        )
+
+    private fun cardsHomeApp(): InstalledApp =
+        InstalledApp(
+            identity =
+                AppIdentity(
+                    packageName = AppPackageName("com.example.camera"),
+                    activityName = AppActivityName(".Camera"),
+                    profile = AppProfile.personal(),
+                ),
+            label = "Camera",
         )
 }
