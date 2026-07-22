@@ -20,7 +20,7 @@ internal class LauncherSettingsStateReducer(
             else -> state
         }
 
-    @Suppress("LongMethod")
+    @Suppress("CyclomaticComplexMethod", "LongMethod")
     private fun reduceSettingsStateAction(
         state: LauncherShellState,
         action: LauncherShellAction,
