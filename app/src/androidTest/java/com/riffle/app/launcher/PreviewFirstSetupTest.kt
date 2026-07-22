@@ -277,26 +277,29 @@ class PreviewFirstSetupTest {
     }
 
     @Test
-    fun pendingHomeRoleRequestDestinationSurvivesRepositoryRecreation() {
+    fun pendingHomeRoleRequestContextSurvivesRepositoryRecreation() {
         val repository =
             SharedPreferencesFirstRunRepository(
                 InstrumentationRegistry.getInstrumentation().targetContext,
             )
 
-        repository.setHomeRoleRequestPending(pending = true)
-        repository.setHomeRoleRequestDestination(ShellDestination.SETTINGS)
+        repository.setHomeRoleRequestContext(
+            HomeRoleRequestContext(destination = ShellDestination.SETTINGS),
+        )
 
         val recreatedRepository =
             SharedPreferencesFirstRunRepository(
                 InstrumentationRegistry.getInstrumentation().targetContext,
             )
 
-        assertTrue(recreatedRepository.isHomeRoleRequestPending())
-        assertEquals(ShellDestination.SETTINGS, recreatedRepository.homeRoleRequestDestination())
+        assertEquals(
+            HomeRoleRequestContext(destination = ShellDestination.SETTINGS),
+            recreatedRepository.homeRoleRequestContext(),
+        )
 
-        recreatedRepository.setHomeRoleRequestDestination(destination = null)
+        recreatedRepository.setHomeRoleRequestContext(context = null)
 
-        assertEquals(null, recreatedRepository.homeRoleRequestDestination())
+        assertEquals(null, recreatedRepository.homeRoleRequestContext())
     }
 
     private fun previewState(): LauncherShellState {

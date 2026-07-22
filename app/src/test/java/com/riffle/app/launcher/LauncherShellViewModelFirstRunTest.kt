@@ -5,14 +5,15 @@ import com.riffle.core.domain.launcher.HomeRoleStatus
 import com.riffle.core.domain.launcher.ShellDestination
 import com.riffle.core.domain.launcher.ShellNavigationAction
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class LauncherShellViewModelFirstRunTest {
     @Test
     fun preservesPersistedHomeRoleRequestUntilLiveStatusReconciliation() {
-        val repository = FakeFirstRunRepository(pendingHomeRoleRequest = true)
+        val repository =
+            FakeFirstRunRepository(
+                storedHomeRoleRequestContext = HomeRoleRequestContext(ShellDestination.HOME),
+            )
         val viewModel =
             LauncherShellViewModel(
                 firstRunRepository = repository,
@@ -20,17 +21,17 @@ class LauncherShellViewModelFirstRunTest {
 
         assertEquals(FirstRunStatus.REQUESTING_HOME_ROLE, viewModel.state.value.firstRunStatus)
         assertEquals(HomeRoleStatus.UNKNOWN, viewModel.state.value.homeRoleStatus)
-        assertTrue(repository.pendingHomeRoleRequest)
+        assertEquals(HomeRoleRequestContext(ShellDestination.HOME), repository.storedHomeRoleRequestContext)
 
         viewModel.onHomeRoleStatusChanged(HomeRoleStatus.UNKNOWN)
 
         assertEquals(FirstRunStatus.NEEDS_HOME_ROLE, viewModel.state.value.firstRunStatus)
-        assertFalse(repository.pendingHomeRoleRequest)
+        assertEquals(null, repository.storedHomeRoleRequestContext)
 
         viewModel.onDefaultHomeRequestStarted()
 
         assertEquals(FirstRunStatus.REQUESTING_HOME_ROLE, viewModel.state.value.firstRunStatus)
-        assertTrue(repository.pendingHomeRoleRequest)
+        assertEquals(HomeRoleRequestContext(ShellDestination.HOME), repository.storedHomeRoleRequestContext)
     }
 
     @Test
@@ -39,13 +40,13 @@ class LauncherShellViewModelFirstRunTest {
         val viewModel = LauncherShellViewModel(firstRunRepository = repository)
 
         viewModel.onDefaultHomeRequestStarted()
-        assertTrue(repository.pendingHomeRoleRequest)
+        assertEquals(HomeRoleRequestContext(ShellDestination.HOME), repository.storedHomeRoleRequestContext)
 
         viewModel.onDefaultHomeRequestReturned()
 
         assertEquals(FirstRunStatus.NEEDS_HOME_ROLE, viewModel.state.value.firstRunStatus)
         assertEquals(HomeRoleStatus.UNKNOWN, viewModel.state.value.homeRoleStatus)
-        assertFalse(repository.pendingHomeRoleRequest)
+        assertEquals(null, repository.storedHomeRoleRequestContext)
     }
 
     @Test
@@ -57,8 +58,10 @@ class LauncherShellViewModelFirstRunTest {
                 onDefaultHomeRequestStarted()
             }
 
-        assertTrue(repository.pendingHomeRoleRequest)
-        assertEquals(ShellDestination.SETTINGS, repository.storedHomeRoleRequestDestination)
+        assertEquals(
+            HomeRoleRequestContext(destination = ShellDestination.SETTINGS),
+            repository.storedHomeRoleRequestContext,
+        )
 
         val recreatedViewModel = LauncherShellViewModel(firstRunRepository = repository)
 
@@ -69,28 +72,20 @@ class LauncherShellViewModelFirstRunTest {
 
         assertEquals(FirstRunStatus.NEEDS_HOME_ROLE, recreatedViewModel.state.value.firstRunStatus)
         assertEquals(ShellDestination.SETTINGS, recreatedViewModel.state.value.destination)
-        assertFalse(repository.pendingHomeRoleRequest)
-        assertEquals(null, repository.storedHomeRoleRequestDestination)
+        assertEquals(null, repository.storedHomeRoleRequestContext)
     }
 
     private class FakeFirstRunRepository(
-        var pendingHomeRoleRequest: Boolean = false,
-        var storedHomeRoleRequestDestination: ShellDestination? = null,
+        var storedHomeRoleRequestContext: HomeRoleRequestContext? = null,
     ) : FirstRunRepository {
         override fun isFirstRunComplete(): Boolean = false
 
         override fun setFirstRunComplete() = Unit
 
-        override fun isHomeRoleRequestPending(): Boolean = pendingHomeRoleRequest
+        override fun homeRoleRequestContext(): HomeRoleRequestContext? = storedHomeRoleRequestContext
 
-        override fun setHomeRoleRequestPending(pending: Boolean) {
-            pendingHomeRoleRequest = pending
-        }
-
-        override fun homeRoleRequestDestination(): ShellDestination? = storedHomeRoleRequestDestination
-
-        override fun setHomeRoleRequestDestination(destination: ShellDestination?) {
-            storedHomeRoleRequestDestination = destination
+        override fun setHomeRoleRequestContext(context: HomeRoleRequestContext?) {
+            storedHomeRoleRequestContext = context
         }
     }
 }

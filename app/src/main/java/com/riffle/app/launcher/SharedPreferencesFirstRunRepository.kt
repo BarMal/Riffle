@@ -34,7 +34,8 @@ class SharedPreferencesFirstRunRepository(
             .apply()
     }
 
-    override fun isHomeRoleRequestPending(): Boolean = preferences.getBoolean(KEY_HOME_ROLE_REQUEST_PENDING, false)
+    override fun isHomeRoleRequestPending(): Boolean =
+        homeRoleRequestContext() != null || preferences.getBoolean(KEY_HOME_ROLE_REQUEST_PENDING, false)
 
     override fun setHomeRoleRequestPending(pending: Boolean) {
         preferences.edit()
@@ -60,11 +61,34 @@ class SharedPreferencesFirstRunRepository(
             }.apply()
     }
 
+    override fun homeRoleRequestContext(): HomeRoleRequestContext? =
+        preferences
+            .getString(KEY_HOME_ROLE_REQUEST_CONTEXT, null)
+            ?.let { storedValue ->
+                ShellDestination.entries
+                    .firstOrNull { destination -> destination.name == storedValue }
+                    ?.let(::HomeRoleRequestContext)
+            }
+
+    override fun setHomeRoleRequestContext(context: HomeRoleRequestContext?) {
+        preferences.edit()
+            .apply {
+                if (context == null) {
+                    remove(KEY_HOME_ROLE_REQUEST_CONTEXT)
+                } else {
+                    putString(KEY_HOME_ROLE_REQUEST_CONTEXT, context.destination.name)
+                }
+                remove(KEY_HOME_ROLE_REQUEST_PENDING)
+                remove(KEY_HOME_ROLE_REQUEST_DESTINATION)
+            }.apply()
+    }
+
     private companion object {
         const val PREFERENCES_NAME = "riffle_first_run"
         const val KEY_FIRST_RUN_COMPLETE = "first_run_complete"
         const val KEY_SETUP_CARD_DISMISSED = "setup_card_dismissed"
         const val KEY_HOME_ROLE_REQUEST_PENDING = "home_role_request_pending"
         const val KEY_HOME_ROLE_REQUEST_DESTINATION = "home_role_request_destination"
+        const val KEY_HOME_ROLE_REQUEST_CONTEXT = "home_role_request_context"
     }
 }
