@@ -1,5 +1,7 @@
 package com.riffle.app.launcher
 
+import com.riffle.core.domain.launcher.ShellDestination
+
 interface FirstRunRepository {
     /**
      * Legacy onboarding completion marker, retained only to migrate the setup-card presentation
@@ -22,4 +24,13 @@ interface FirstRunRepository {
     fun isHomeRoleRequestPending(): Boolean = false
 
     fun setHomeRoleRequestPending(pending: Boolean) = Unit
+
+    /**
+     * Presentation-only return context for a pending Home-role request. It lets a recreated
+     * process return to the destination the person was exploring without treating the request
+     * itself as granted or launching Android UI again.
+     */
+    fun homeRoleRequestDestination(): ShellDestination? = null
+
+    fun setHomeRoleRequestDestination(destination: ShellDestination?) = Unit
 }

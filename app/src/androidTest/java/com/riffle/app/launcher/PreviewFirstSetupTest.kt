@@ -276,6 +276,29 @@ class PreviewFirstSetupTest {
         )
     }
 
+    @Test
+    fun pendingHomeRoleRequestDestinationSurvivesRepositoryRecreation() {
+        val repository =
+            SharedPreferencesFirstRunRepository(
+                InstrumentationRegistry.getInstrumentation().targetContext,
+            )
+
+        repository.setHomeRoleRequestPending(pending = true)
+        repository.setHomeRoleRequestDestination(ShellDestination.SETTINGS)
+
+        val recreatedRepository =
+            SharedPreferencesFirstRunRepository(
+                InstrumentationRegistry.getInstrumentation().targetContext,
+            )
+
+        assertTrue(recreatedRepository.isHomeRoleRequestPending())
+        assertEquals(ShellDestination.SETTINGS, recreatedRepository.homeRoleRequestDestination())
+
+        recreatedRepository.setHomeRoleRequestDestination(destination = null)
+
+        assertEquals(null, recreatedRepository.homeRoleRequestDestination())
+    }
+
     private fun previewState(): LauncherShellState {
         return LauncherShellState(homeRoleStatus = HomeRoleStatus.NOT_DEFAULT_HOME)
     }

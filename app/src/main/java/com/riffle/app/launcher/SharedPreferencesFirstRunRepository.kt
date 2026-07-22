@@ -1,6 +1,7 @@
 package com.riffle.app.launcher
 
 import android.content.Context
+import com.riffle.core.domain.launcher.ShellDestination
 
 class SharedPreferencesFirstRunRepository(
     context: Context,
@@ -41,10 +42,29 @@ class SharedPreferencesFirstRunRepository(
             .apply()
     }
 
+    override fun homeRoleRequestDestination(): ShellDestination? =
+        preferences
+            .getString(KEY_HOME_ROLE_REQUEST_DESTINATION, null)
+            ?.let { storedValue ->
+                ShellDestination.entries.firstOrNull { destination -> destination.name == storedValue }
+            }
+
+    override fun setHomeRoleRequestDestination(destination: ShellDestination?) {
+        preferences.edit()
+            .apply {
+                if (destination == null) {
+                    remove(KEY_HOME_ROLE_REQUEST_DESTINATION)
+                } else {
+                    putString(KEY_HOME_ROLE_REQUEST_DESTINATION, destination.name)
+                }
+            }.apply()
+    }
+
     private companion object {
         const val PREFERENCES_NAME = "riffle_first_run"
         const val KEY_FIRST_RUN_COMPLETE = "first_run_complete"
         const val KEY_SETUP_CARD_DISMISSED = "setup_card_dismissed"
         const val KEY_HOME_ROLE_REQUEST_PENDING = "home_role_request_pending"
+        const val KEY_HOME_ROLE_REQUEST_DESTINATION = "home_role_request_destination"
     }
 }

@@ -2,6 +2,8 @@ package com.riffle.app.launcher
 
 import com.riffle.core.domain.launcher.FirstRunStatus
 import com.riffle.core.domain.launcher.HomeRoleStatus
+import com.riffle.core.domain.launcher.ShellDestination
+import com.riffle.core.domain.launcher.ShellNavigationAction
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -46,8 +48,34 @@ class LauncherShellViewModelFirstRunTest {
         assertFalse(repository.pendingHomeRoleRequest)
     }
 
+    @Test
+    fun restoresPendingHomeRoleRequestToTheOriginatingDestinationAfterProcessRecreation() {
+        val repository = FakeFirstRunRepository()
+        LauncherShellViewModel(firstRunRepository = repository)
+            .apply {
+                onNavigationActionSelected(ShellNavigationAction.OpenSettings)
+                onDefaultHomeRequestStarted()
+            }
+
+        assertTrue(repository.pendingHomeRoleRequest)
+        assertEquals(ShellDestination.SETTINGS, repository.storedHomeRoleRequestDestination)
+
+        val recreatedViewModel = LauncherShellViewModel(firstRunRepository = repository)
+
+        assertEquals(FirstRunStatus.REQUESTING_HOME_ROLE, recreatedViewModel.state.value.firstRunStatus)
+        assertEquals(ShellDestination.SETTINGS, recreatedViewModel.state.value.destination)
+
+        recreatedViewModel.onHomeRoleStatusChanged(HomeRoleStatus.UNKNOWN)
+
+        assertEquals(FirstRunStatus.NEEDS_HOME_ROLE, recreatedViewModel.state.value.firstRunStatus)
+        assertEquals(ShellDestination.SETTINGS, recreatedViewModel.state.value.destination)
+        assertFalse(repository.pendingHomeRoleRequest)
+        assertEquals(null, repository.storedHomeRoleRequestDestination)
+    }
+
     private class FakeFirstRunRepository(
         var pendingHomeRoleRequest: Boolean = false,
+        var storedHomeRoleRequestDestination: ShellDestination? = null,
     ) : FirstRunRepository {
         override fun isFirstRunComplete(): Boolean = false
 
@@ -57,6 +85,12 @@ class LauncherShellViewModelFirstRunTest {
 
         override fun setHomeRoleRequestPending(pending: Boolean) {
             pendingHomeRoleRequest = pending
+        }
+
+        override fun homeRoleRequestDestination(): ShellDestination? = storedHomeRoleRequestDestination
+
+        override fun setHomeRoleRequestDestination(destination: ShellDestination?) {
+            storedHomeRoleRequestDestination = destination
         }
     }
 }

@@ -208,6 +208,9 @@ class LauncherShellViewModel(
                 firstRunRepository.setHomeRoleRequestPending(
                     state.firstRunStatus == FirstRunStatus.REQUESTING_HOME_ROLE,
                 )
+                if (state.firstRunStatus != FirstRunStatus.REQUESTING_HOME_ROLE) {
+                    firstRunRepository.setHomeRoleRequestDestination(destination = null)
+                }
                 persistSetupCardDismissal(state, firstRunRepository)
             }
     }
@@ -215,11 +218,13 @@ class LauncherShellViewModel(
     fun onDefaultHomeRequestStarted() {
         mutableState.value = reducer.defaultHomeRequestStarted(mutableState.value)
         firstRunRepository.setHomeRoleRequestPending(pending = true)
+        firstRunRepository.setHomeRoleRequestDestination(mutableState.value.destination)
     }
 
     fun onDefaultHomeRequestLaunchFailed() {
         mutableState.value = reducer.defaultHomeRequestLaunchFailed(mutableState.value)
         firstRunRepository.setHomeRoleRequestPending(pending = false)
+        firstRunRepository.setHomeRoleRequestDestination(destination = null)
     }
 
     /**
@@ -229,6 +234,7 @@ class LauncherShellViewModel(
     fun onDefaultHomeRequestReturned() {
         mutableState.value = reducer.defaultHomeRequestReturned(mutableState.value)
         firstRunRepository.setHomeRoleRequestPending(pending = false)
+        firstRunRepository.setHomeRoleRequestDestination(destination = null)
     }
 
     fun onSetupCardDismissed() {
@@ -588,6 +594,8 @@ private fun createInitialState(
     viewModeAvailability: LauncherViewModeAvailability,
 ): LauncherShellState {
     val hasRecoveredHomeRoleRequest = firstRunRepository.isHomeRoleRequestPending()
+    val recoveredHomeRoleRequestDestination =
+        firstRunRepository.homeRoleRequestDestination().takeIf { hasRecoveredHomeRoleRequest }
 
     val storedLayoutSet = homeLayoutRepository.loadHomeLayoutSet()
     val initialLayoutSet =
@@ -614,6 +622,7 @@ private fun createInitialState(
     }
 
     return LauncherShellState(
+        destination = recoveredHomeRoleRequestDestination ?: ShellDestination.HOME,
         homeLayout = layoutSet.activeLayout,
         homeLayoutSet = layoutSet,
         settingsLayoutDeviceClass = layoutSet.activeKey.deviceClass,
