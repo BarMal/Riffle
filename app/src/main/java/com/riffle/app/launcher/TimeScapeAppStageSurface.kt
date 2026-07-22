@@ -526,6 +526,7 @@ private fun TimeScapeNotificationStack(
     LaunchedEffect(cardIds) {
         if (restoreDetailFocusForCardId !in cardIds) restoreDetailFocusForCardId = null
     }
+
     fun navigate(direction: CardStackNavigationDirection): Boolean {
         val result = controller.navigate(focusState, cardIds, direction)
         if (result is CardStackFocusResult.Applied) {
@@ -707,7 +708,6 @@ private fun TimeScapeCardNavigationControls(
                 Modifier.weight(1f).semantics {
                     contentDescription = "Focused card position"
                     stateDescription = "Card $position of $count"
-                    liveRegion = LiveRegionMode.Polite
                 },
             style = MaterialTheme.typography.labelLarge,
         )
