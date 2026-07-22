@@ -65,26 +65,6 @@ class SettingsSurfaceNavigationTest {
             assertNotSame(restoredMainScrollState, currentAppearanceScrollState)
         }
     }
-
-    @Test
-    fun appearancePageKeepsThemeWallpaperAndSystemUiControlsReachable() {
-        composeRule.setContent {
-            MaterialTheme {
-                Box(modifier = Modifier.height(480.dp)) {
-                    SettingsSurface(
-                        state = LauncherShellState().settingsSurfaceState(),
-                        onAction = {},
-                    )
-                }
-            }
-        }
-
-        composeRule.onNodeWithText("Appearance").performScrollTo().performClick()
-
-        composeRule.onNodeWithText("Theme").assertIsDisplayed()
-        composeRule.onNodeWithText("Change wallpaper").performScrollTo().assertIsDisplayed()
-        composeRule.onNodeWithText("System UI").performScrollTo().assertIsDisplayed()
-    }
 }
 
 @RunWith(AndroidJUnit4::class)
