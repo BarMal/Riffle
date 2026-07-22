@@ -42,7 +42,14 @@ actual form factor and window mode on every run.
 
 Each artifact has one exact 40-character candidate SHA, build identity, and UTC generation time.
 Every run records its evidence type, result, validator, timestamp, manufacturer/model/API/build,
-form factor, window mode, install type, and any known limitation.
+form factor, fullscreen/split-screen window mode, install type, and any known limitation. Runs may
+also record window size class, orientation, and fold posture; the TimeScape MVP profile requires
+them for the scenarios that depend on them.
+
+Schema version 1 historically also accepted `compact`, `medium`, and `expanded` in `windowMode`.
+Those legacy manifests remain valid, but new evidence must record the actual `fullscreen` or
+`split-screen` mode and use `windowSizeClass` for layout size. The TimeScape MVP profile requires
+that canonical representation.
 
 - `pass` means the named scenario completed on the recorded candidate and device.
 - `fail` blocks the candidate. A retry may add evidence but cannot erase the original failed row;
@@ -53,6 +60,23 @@ form factor, window mode, install type, and any known limitation.
 The validator rejects missing rows, blank identity fields, a different candidate SHA, failed or
 blocked baseline runs, missing Honor coverage, and missing automated-emulator coverage. This
 makes stale evidence unusable for another candidate.
+
+## TimeScape MVP closeout profile
+
+For #894, validate the candidate with `-RequireTimeScapeMvp`. This opt-in profile keeps the
+baseline contract reusable while requiring these additional passing rows:
+
+| ID | Required coverage |
+| --- | --- |
+| `feature-timescape-mvp-compact-portrait` | `phone` + `compact` size class + `fullscreen` + `portrait`; focus-first tap, vertical Spline, stage selection, contextual actions, detail/Back, and Standard Home mode return. |
+| `feature-timescape-mvp-compact-landscape` | `phone` + `compact` size class + `fullscreen` + `landscape` with the same card and stage behavior. |
+| `feature-timescape-mvp-folded-cover` | `foldable` + `compact` size class + `fullscreen` + `cover` posture. |
+| `feature-timescape-mvp-expanded-adaptive` | A `foldable` + `expanded` size class + actual fullscreen/split-screen mode in `flat`, `book`, or `tabletop`, and a separate `tablet` or `desktop` + `expanded` size-class run. |
+| `feature-timescape-mvp-appearance-fallbacks` | Light/dark, difficult artwork or wallpaper, minimum/default/maximum values, presets, Reset, persistence, and effect fallbacks. |
+| `feature-timescape-mvp-notification-lifecycle` | Checking/granted/revoked/unavailable access; zero/one/many cards and stages; pinned/dynamic lifecycle; profile lock/removal; process death; and notification/media churn. |
+| `feature-timescape-mvp-accessibility-input` | TalkBack, touch, keyboard/D-pad/mouse, reduced motion/transparency, large font/display scale, RTL, and high contrast. |
+| `feature-timescape-mvp-performance` | Separate compact-size fullscreen phone and expanded-size foldable/tablet/desktop runs meet the TimeScape card-update target, or a failed/blocked result documents the fallback and blocks closeout. |
+| `feature-timescape-mvp-standard-home` | Standard Home remains the independent default with layout, Dock, widgets, selected page, and wallpaper unchanged. |
 
 Do not include screenshots, device serials, account identifiers, app lists, notification content,
 system tokens, or secrets. On failure, retain sanitized logs outside the manifest and link only a
@@ -79,12 +103,21 @@ privacy-safe JSON artifact. It does not claim UI behavior passed on its own.
 ```
 
 Merge the individual run objects into the candidate manifest, preserve each attempt, then validate
-it against the exact selected SHA:
+the generic launcher baseline against the exact selected SHA:
 
 ```powershell
 pwsh .github/scripts/validate-device-evidence.ps1 `
   -EvidencePath evidence/candidate.json `
   -ExpectedCommitSha 0123456789abcdef0123456789abcdef01234567
+```
+
+For the #894 TimeScape MVP closeout, validate the same manifest with the additional profile:
+
+```powershell
+pwsh .github/scripts/validate-device-evidence.ps1 `
+  -EvidencePath evidence/candidate.json `
+  -ExpectedCommitSha 0123456789abcdef0123456789abcdef01234567 `
+  -RequireTimeScapeMvp
 ```
 
 The release operator must publish the exact same SHA that appears in this manifest, the build, and

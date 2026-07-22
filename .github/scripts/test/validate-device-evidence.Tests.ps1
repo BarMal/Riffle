@@ -46,6 +46,102 @@ Describe "validate-device-evidence" {
                 runs = @($runs)
             }
         }
+
+        function Add-TimeScapeMvpEvidence([object] $evidence) {
+            $scenarioIds = @(
+                "feature-timescape-mvp-compact-portrait",
+                "feature-timescape-mvp-compact-landscape",
+                "feature-timescape-mvp-folded-cover",
+                "feature-timescape-mvp-expanded-adaptive",
+                "feature-timescape-mvp-appearance-fallbacks",
+                "feature-timescape-mvp-notification-lifecycle",
+                "feature-timescape-mvp-accessibility-input",
+                "feature-timescape-mvp-performance",
+                "feature-timescape-mvp-standard-home"
+            )
+            foreach ($scenarioId in $scenarioIds) {
+                $device = [ordered]@{
+                    manufacturer = "Google"
+                    model = "Test device"
+                    androidApi = 35
+                    build = "test-build"
+                    formFactor = "phone"
+                    windowMode = "fullscreen"
+                    windowSizeClass = "compact"
+                    orientation = "portrait"
+                    installType = "release"
+                }
+                switch ($scenarioId) {
+                    "feature-timescape-mvp-compact-landscape" { $device.orientation = "landscape" }
+                    "feature-timescape-mvp-folded-cover" {
+                        $device.formFactor = "foldable"
+                        $device["posture"] = "cover"
+                    }
+                    "feature-timescape-mvp-expanded-adaptive" {
+                        $device.formFactor = "foldable"
+                        $device.windowSizeClass = "expanded"
+                        $device.orientation = "landscape"
+                        $device["posture"] = "flat"
+                    }
+                    "feature-timescape-mvp-performance" {
+                        $device.orientation = "landscape"
+                    }
+                }
+                $evidence.runs += [ordered]@{
+                    scenarioId = $scenarioId
+                    evidenceType = "manual-device"
+                    result = "pass"
+                    validator = "TimeScape MVP validation"
+                    timestamp = "2026-07-18T12:00:00Z"
+                    knownLimitation = ""
+                    device = $device
+                }
+                if ($scenarioId -eq "feature-timescape-mvp-expanded-adaptive") {
+                    $evidence.runs += [ordered]@{
+                        scenarioId = $scenarioId
+                        evidenceType = "manual-device"
+                        result = "pass"
+                        validator = "TimeScape MVP validation"
+                        timestamp = "2026-07-18T12:00:00Z"
+                        knownLimitation = ""
+                        device = [ordered]@{
+                            manufacturer = "Google"
+                            model = "Large test device"
+                            androidApi = 35
+                            build = "test-build"
+                            formFactor = "tablet"
+                            windowMode = "fullscreen"
+                            windowSizeClass = "expanded"
+                            orientation = "landscape"
+                            installType = "release"
+                        }
+                    }
+                }
+                if ($scenarioId -eq "feature-timescape-mvp-performance") {
+                    $evidence.runs += [ordered]@{
+                        scenarioId = $scenarioId
+                        evidenceType = "manual-device"
+                        result = "pass"
+                        validator = "TimeScape MVP validation"
+                        timestamp = "2026-07-18T12:00:00Z"
+                        knownLimitation = ""
+                        device = [ordered]@{
+                            manufacturer = "Google"
+                            model = "Expanded test device"
+                            androidApi = 35
+                            build = "test-build"
+                            formFactor = "foldable"
+                            windowMode = "split-screen"
+                            windowSizeClass = "expanded"
+                            orientation = "landscape"
+                            posture = "flat"
+                            installType = "release"
+                        }
+                    }
+                }
+            }
+            return $evidence
+        }
     }
 
     BeforeEach {
@@ -54,6 +150,16 @@ Describe "validate-device-evidence" {
 
     It "accepts complete SHA-bound emulator and Honor evidence" {
         New-CompleteEvidence | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $evidencePath
+
+        & $scriptPath -EvidencePath $evidencePath -ExpectedCommitSha $candidateSha
+    }
+
+    It "keeps legacy V1 window size values valid outside the TimeScape profile" {
+        $evidence = New-CompleteEvidence
+        $evidence.runs[0].device.windowMode = "compact"
+        $evidence.runs[1].device.windowMode = "medium"
+        $evidence.runs[2].device.windowMode = "expanded"
+        $evidence | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $evidencePath
 
         & $scriptPath -EvidencePath $evidencePath -ExpectedCommitSha $candidateSha
     }
@@ -97,5 +203,92 @@ Describe "validate-device-evidence" {
         $evidence | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $evidencePath
 
         { & $scriptPath -EvidencePath $evidencePath -ExpectedCommitSha $candidateSha } | Should -Throw "*timestamp must be an RFC3339 date-time*"
+    }
+
+    It "requires every TimeScape MVP scenario when requested" {
+        New-CompleteEvidence | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $evidencePath
+
+        { & $scriptPath -EvidencePath $evidencePath -ExpectedCommitSha $candidateSha -RequireTimeScapeMvp } | Should -Throw "*feature-timescape-mvp-compact-portrait*"
+    }
+
+    It "accepts complete TimeScape MVP evidence when requested" {
+        Add-TimeScapeMvpEvidence (New-CompleteEvidence) |
+            ConvertTo-Json -Depth 10 |
+            Set-Content -LiteralPath $evidencePath
+
+        & $scriptPath -EvidencePath $evidencePath -ExpectedCommitSha $candidateSha -RequireTimeScapeMvp
+    }
+
+    It "rejects identical expanded metadata for the TimeScape matrix" {
+        $evidence = Add-TimeScapeMvpEvidence (New-CompleteEvidence)
+        foreach ($run in $evidence.runs | Where-Object { $_.scenarioId -like "feature-timescape-mvp-*" }) {
+            $run.device.formFactor = "foldable"
+            $run.device.windowMode = "fullscreen"
+            $run.device.windowSizeClass = "expanded"
+            $run.device.orientation = "landscape"
+            $run.device["posture"] = "flat"
+        }
+        $evidence | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $evidencePath
+
+        { & $scriptPath -EvidencePath $evidencePath -ExpectedCommitSha $candidateSha -RequireTimeScapeMvp } | Should -Throw "*compact-portrait requires a passing phone/compact/fullscreen/portrait*"
+    }
+
+    It "rejects TimeScape performance evidence without compact coverage" {
+        $evidence = Add-TimeScapeMvpEvidence (New-CompleteEvidence)
+        foreach ($run in $evidence.runs | Where-Object { $_.scenarioId -eq "feature-timescape-mvp-performance" }) {
+            $run.device.formFactor = "foldable"
+            $run.device.windowMode = "split-screen"
+            $run.device.windowSizeClass = "expanded"
+            $run.device.orientation = "landscape"
+            $run.device["posture"] = "flat"
+        }
+        $evidence | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $evidencePath
+
+        { & $scriptPath -EvidencePath $evidencePath -ExpectedCommitSha $candidateSha -RequireTimeScapeMvp } | Should -Throw "*performance requires a passing compact performance*"
+    }
+
+    It "validates window size class independently from fullscreen mode" {
+        $evidence = Add-TimeScapeMvpEvidence (New-CompleteEvidence)
+        $compactRun = $evidence.runs | Where-Object { $_.scenarioId -eq "feature-timescape-mvp-compact-portrait" }
+        $tabletRun = $evidence.runs | Where-Object {
+            $_.scenarioId -eq "feature-timescape-mvp-expanded-adaptive" -and $_.device.formFactor -eq "tablet"
+        }
+
+        $compactRun.device.windowMode | Should -Be "fullscreen"
+        $compactRun.device.windowSizeClass | Should -Be "compact"
+        $tabletRun.device.windowMode | Should -Be "fullscreen"
+        $tabletRun.device.windowSizeClass | Should -Be "expanded"
+
+        $evidence | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $evidencePath
+        & $scriptPath -EvidencePath $evidencePath -ExpectedCommitSha $candidateSha -RequireTimeScapeMvp
+    }
+
+    It "rejects a compact scenario with an expanded size class even when fullscreen" {
+        $evidence = Add-TimeScapeMvpEvidence (New-CompleteEvidence)
+        ($evidence.runs | Where-Object {
+            $_.scenarioId -eq "feature-timescape-mvp-compact-portrait"
+        }).device.windowSizeClass = "expanded"
+        $evidence | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $evidencePath
+
+        { & $scriptPath -EvidencePath $evidencePath -ExpectedCommitSha $candidateSha -RequireTimeScapeMvp } | Should -Throw "*compact-portrait requires a passing phone/compact/fullscreen/portrait*"
+    }
+
+    It "rejects legacy window size values in the TimeScape profile" {
+        $evidence = Add-TimeScapeMvpEvidence (New-CompleteEvidence)
+        ($evidence.runs | Where-Object {
+            $_.scenarioId -eq "feature-timescape-mvp-compact-portrait"
+        }).device.windowMode = "compact"
+        $evidence | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $evidencePath
+
+        { & $scriptPath -EvidencePath $evidencePath -ExpectedCommitSha $candidateSha -RequireTimeScapeMvp } | Should -Throw "*compact-portrait requires a passing phone/compact/fullscreen/portrait*"
+    }
+
+    It "rejects blocked TimeScape MVP evidence when requested" {
+        $evidence = Add-TimeScapeMvpEvidence (New-CompleteEvidence)
+        $evidence.runs[-1].result = "blocked"
+        $evidence.runs[-1].knownLimitation = "Performance validation is pending."
+        $evidence | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $evidencePath
+
+        { & $scriptPath -EvidencePath $evidencePath -ExpectedCommitSha $candidateSha -RequireTimeScapeMvp } | Should -Throw "*feature-timescape-mvp-standard-home*"
     }
 }
