@@ -106,6 +106,9 @@ internal fun StandardHome(
                 widgetPickerDragInProgress.value = true
                 onAction(LauncherShellAction.CloseWidgetPicker)
             },
+            onWidgetDragCancelled = {
+                widgetPickerDragInProgress.value = false
+            },
             onWidgetDropped = { provider, position, rootSize ->
                 val selectedPage = visibleLayout.selectedPage
                 val cell = widgetPickerDropCell(position, rootSize, selectedPage.grid)

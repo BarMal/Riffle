@@ -46,9 +46,6 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.positionInRoot
-import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -64,6 +61,7 @@ fun WidgetPickerSurface(
     previewImageLoader: WidgetPreviewImageLoader = EmptyWidgetPreviewImageLoader,
     isDragHandoffActive: Boolean = false,
     onWidgetDragStarted: (InstalledWidgetProvider) -> Unit = {},
+    onWidgetDragCancelled: (InstalledWidgetProvider) -> Unit = {},
     onWidgetDropped: (InstalledWidgetProvider, Offset, IntSize) -> Unit = { _, _, _ -> },
     onAction: (LauncherShellAction) -> Unit,
 ) {
@@ -71,11 +69,14 @@ fun WidgetPickerSurface(
     var collapsedSectionTitles by rememberSaveable { mutableStateOf("") }
     val filteredProviders = providers.filteredWidgetProviders(query)
     val providerSections = widgetPickerSectionsFor(filteredProviders)
+    var rootCoordinates: LayoutCoordinates? by remember { mutableStateOf(null) }
 
     Surface(
         modifier =
             Modifier
                 .fillMaxSize()
+                .testTag(WIDGET_PICKER_ROOT_TEST_TAG)
+                .onGloballyPositioned { coordinates -> rootCoordinates = coordinates }
                 .windowInsetsPadding(WindowInsets.safeDrawing),
         color =
             if (isDragHandoffActive) {
@@ -131,7 +132,9 @@ fun WidgetPickerSurface(
                 previewImageLoader = previewImageLoader,
                 onAction = onAction,
                 onWidgetDragStarted = onWidgetDragStarted,
+                onWidgetDragCancelled = onWidgetDragCancelled,
                 onWidgetDropped = onWidgetDropped,
+                rootCoordinates = rootCoordinates,
             )
         }
     }
@@ -158,7 +161,9 @@ private fun WidgetPickerContent(
     previewImageLoader: WidgetPreviewImageLoader,
     onAction: (LauncherShellAction) -> Unit,
     onWidgetDragStarted: (InstalledWidgetProvider) -> Unit,
+    onWidgetDragCancelled: (InstalledWidgetProvider) -> Unit,
     onWidgetDropped: (InstalledWidgetProvider, Offset, IntSize) -> Unit,
+    rootCoordinates: LayoutCoordinates?,
 ) {
     when {
         providers.isEmpty() ->
@@ -205,7 +210,9 @@ private fun WidgetPickerContent(
                                 previewImageLoader = previewImageLoader,
                                 onAction = onAction,
                                 onWidgetDragStarted = onWidgetDragStarted,
+                                onWidgetDragCancelled = onWidgetDragCancelled,
                                 onWidgetDropped = onWidgetDropped,
+                                rootCoordinates = rootCoordinates,
                             )
                         }
                     }
@@ -220,25 +227,24 @@ private fun WidgetProviderTile(
     previewImageLoader: WidgetPreviewImageLoader,
     onAction: (LauncherShellAction) -> Unit,
     onWidgetDragStarted: (InstalledWidgetProvider) -> Unit,
+    onWidgetDragCancelled: (InstalledWidgetProvider) -> Unit,
     onWidgetDropped: (InstalledWidgetProvider, Offset, IntSize) -> Unit,
+    rootCoordinates: LayoutCoordinates?,
 ) {
     val summary = provider.widgetPickerSummary()
     val currentOnWidgetDragStarted by rememberUpdatedState(onWidgetDragStarted)
+    val currentOnWidgetDragCancelled by rememberUpdatedState(onWidgetDragCancelled)
     val currentOnWidgetDropped by rememberUpdatedState(onWidgetDropped)
+    val currentRootCoordinates by rememberUpdatedState(rootCoordinates)
     var coordinates: LayoutCoordinates? by remember { mutableStateOf(null) }
     var dropPosition by remember { mutableStateOf(Offset.Zero) }
-    val configuration = LocalConfiguration.current
-    val density = LocalDensity.current
-    val rootSize =
-        with(density) {
-            IntSize(configuration.screenWidthDp.dp.roundToPx(), configuration.screenHeightDp.dp.roundToPx())
-        }
 
     Column(
         modifier =
             Modifier
                 .fillMaxWidth()
                 .padding(bottom = 2.dp)
+                .testTag(WIDGET_PROVIDER_TILE_TEST_TAG)
                 .onGloballyPositioned { layoutCoordinates -> coordinates = layoutCoordinates }
                 .pointerInput(provider.widgetPickerKey) {
                     detectDragGesturesAfterLongPress(
@@ -251,13 +257,20 @@ private fun WidgetProviderTile(
                             dropPosition = change.position
                         },
                         onDragEnd = {
-                            coordinates?.let { layoutCoordinates ->
+                            val tileCoordinates = coordinates
+                            val dragRootCoordinates = currentRootCoordinates
+                            if (tileCoordinates != null && dragRootCoordinates != null) {
                                 currentOnWidgetDropped(
                                     provider,
-                                    layoutCoordinates.positionInRoot() + dropPosition,
-                                    rootSize,
+                                    dragRootCoordinates.localPositionOf(tileCoordinates, dropPosition),
+                                    dragRootCoordinates.size,
                                 )
+                            } else {
+                                currentOnWidgetDragCancelled(provider)
                             }
+                        },
+                        onDragCancel = {
+                            currentOnWidgetDragCancelled(provider)
                         },
                     )
                 },
@@ -416,6 +429,8 @@ private const val WIDGET_TILE_MIN_WIDTH_DP = 144
 private const val WIDGET_PREVIEW_MIN_HEIGHT_DP = 72
 private const val WIDGET_PREVIEW_MAX_HEIGHT_DP = 240
 internal const val WIDGET_PICKER_PREVIEW_TEST_TAG = "widget-picker-preview"
+internal const val WIDGET_PICKER_ROOT_TEST_TAG = "widget-picker-root"
+internal const val WIDGET_PROVIDER_TILE_TEST_TAG = "widget-provider-tile"
 private const val WIDGET_PICKER_SECTION_STATE_SEPARATOR = "\u001f"
 
 private fun String.toCollapsedWidgetPickerSections(): Set<String> =
