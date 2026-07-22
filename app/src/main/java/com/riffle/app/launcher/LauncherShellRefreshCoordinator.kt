@@ -10,7 +10,9 @@ import com.riffle.core.domain.launcher.widgets.WidgetProviderCatalog
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
+import kotlin.coroutines.coroutineContext
 
 internal class LauncherShellRefreshCoordinator(
     private val installedAppDependencies: InstalledAppRefreshDependencies,
@@ -20,15 +22,19 @@ internal class LauncherShellRefreshCoordinator(
     fun refreshInstalledApps(currentState: LauncherShellState): LauncherShellState =
         currentState.withRefreshedInstalledApps(installedAppDependencies)
 
-    fun refreshNotifications(currentState: LauncherShellState): LauncherShellState =
-        currentState.withNotificationState(
-            notificationRepository = notificationDependencies.notificationRepository,
-            appNotificationCounter = notificationDependencies.appNotificationCounter,
-            appNotificationGrouper = notificationDependencies.appNotificationGrouper,
-            notificationStaleFilter = notificationDependencies.notificationStaleFilter,
-            nowEpochMillis = notificationDependencies.epochMillisProvider.nowEpochMillis(),
-        ).withReconciledCardsChapterSelection()
+    fun refreshNotifications(currentState: LauncherShellState): LauncherShellState {
+        val refreshedState =
+            currentState.withNotificationState(
+                notificationRepository = notificationDependencies.notificationRepository,
+                appNotificationCounter = notificationDependencies.appNotificationCounter,
+                appNotificationGrouper = notificationDependencies.appNotificationGrouper,
+                notificationStaleFilter = notificationDependencies.notificationStaleFilter,
+                nowEpochMillis = notificationDependencies.epochMillisProvider.nowEpochMillis(),
+            )
+        return refreshedState
+            .withReconciledCardsChapterSelection()
             .withRefreshedGeneratedPages(installedAppDependencies.homeLayoutRepository)
+    }
 
     fun refreshWidgetProviders(currentState: LauncherShellState): LauncherShellState =
         currentState.copy(
@@ -58,10 +64,14 @@ internal class LauncherShellRefreshActions(
     private val currentState: () -> LauncherShellState,
     private val updateState: (LauncherShellState) -> Unit,
     private val refreshCoordinator: LauncherShellRefreshCoordinator,
+    private val artworkRevisionStore: TimeScapeArtworkRevisionStore = timeScapeArtworkRevisions,
+    private val beforeNotificationCommit: () -> Unit = {},
 ) {
     private var installedAppRefreshJob: Job? = null
     private var notificationRefreshJob: Job? = null
     private var widgetProviderRefreshJob: Job? = null
+    private val notificationRefreshLock = Any()
+    private var notificationRefreshGeneration = 0L
 
     fun refreshInstalledApps(beforeRefresh: () -> Unit = {}): Job =
         launchRefresh(
@@ -71,36 +81,58 @@ internal class LauncherShellRefreshActions(
                 beforeRefresh()
                 refreshCoordinator.refreshInstalledApps(currentState())
             },
+            commitState = { state, context ->
+                context.ensureActive()
+                updateState(state)
+            },
         )
 
-    fun refreshNotifications(): Job =
-        launchRefresh(
+    fun refreshNotifications(): Job {
+        val generation =
+            synchronized(notificationRefreshLock) {
+                ++notificationRefreshGeneration
+            }
+        return launchRefresh(
             cancelExisting = { notificationRefreshJob?.cancel() },
             registerJob = { job -> notificationRefreshJob = job },
             refreshState = { refreshCoordinator.refreshNotifications(currentState()) },
+            commitState = { state, context ->
+                context.ensureActive()
+                beforeNotificationCommit()
+                synchronized(notificationRefreshLock) {
+                    context.ensureActive()
+                    if (generation == notificationRefreshGeneration) {
+                        artworkRevisionStore.replace(state.notificationGroupsByApp)
+                        updateState(state)
+                    }
+                }
+            },
         )
+    }
 
     fun refreshWidgetProviders(): Job =
         launchRefresh(
             cancelExisting = { widgetProviderRefreshJob?.cancel() },
             registerJob = { job -> widgetProviderRefreshJob = job },
             refreshState = { refreshCoordinator.refreshWidgetProviders(currentState()) },
+            commitState = { state, context ->
+                context.ensureActive()
+                updateState(state)
+            },
         )
 
     private fun launchRefresh(
         cancelExisting: () -> Unit,
         registerJob: (Job) -> Unit,
         refreshState: () -> LauncherShellState,
+        commitState: (LauncherShellState, kotlin.coroutines.CoroutineContext) -> Unit,
     ): Job {
         cancelExisting()
         val job =
             coroutineScope.launch(refreshDispatcher) {
                 val fallbackState = currentState()
-                updateState(
-                    runCatching {
-                        refreshState()
-                    }.getOrElse { fallbackState },
-                )
+                val refreshedState = runCatching { refreshState() }.getOrElse { fallbackState }
+                commitState(refreshedState, coroutineContext)
             }
         registerJob(job)
         return job

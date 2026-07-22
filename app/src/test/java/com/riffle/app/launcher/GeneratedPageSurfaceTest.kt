@@ -103,6 +103,97 @@ class GeneratedPageSurfaceTest {
         assertEquals(1, entries.maxBy { entry -> entry.order }.cardIndex)
     }
 
+    @Test
+    fun artworkCacheCachesDecodeFailuresAndEvictsLeastRecentlyUsedArtwork() {
+        var decodeCalls = 0
+        val cache =
+            TimeScapeArtworkCache<Int>(maxEntries = 2) {
+                decodeCalls += 1
+                if (it == "corrupt") null else it?.length
+            }
+
+        assertEquals(null, cache.getOrDecode("corrupt-card", "corrupt"))
+        assertEquals(null, cache.getOrDecode("corrupt-card", "corrupt"))
+        assertEquals(1, decodeCalls)
+
+        assertEquals(1, cache.getOrDecode("a", "a"))
+        assertEquals(2, cache.getOrDecode("bb", "bb"))
+        assertEquals(1, cache.getOrDecode("a", "a"))
+        assertEquals(3, cache.getOrDecode("ccc", "ccc"))
+        assertEquals(2, cache.getOrDecode("bb", "bb"))
+
+        assertEquals(5, decodeCalls)
+        assertEquals(2, cache.sizeForTest())
+    }
+
+    @Test
+    fun artworkSourceKeysSeparatePayloadsWithTheSameStringHashCode() {
+        val firstPayload = "Aa"
+        val secondPayload = "BB"
+        assertEquals(firstPayload.hashCode(), secondPayload.hashCode())
+
+        val first =
+            DockNotificationCardState(
+                app = null,
+                group =
+                    notificationGroup("com.example.artwork", "personal").copy(
+                        notifications =
+                            listOf(
+                                notification(
+                                    packageName = "com.example.artwork",
+                                    key = "artwork",
+                                    artwork = firstPayload,
+                                ),
+                            ),
+                    ),
+            )
+        val second =
+            first.copy(
+                group =
+                    first.group.copy(
+                        notifications =
+                            listOf(
+                                notification(
+                                    packageName = "com.example.artwork",
+                                    key = "artwork",
+                                    artwork = secondPayload,
+                                ),
+                            ),
+                    ),
+            )
+
+        val revisions = TimeScapeArtworkRevisionStore()
+        revisions.replace(listOf(first.group))
+        val firstKey = generatedNotificationArtworkSourceKey(first, revisions)
+        revisions.replace(listOf(second.group))
+        val secondKey = generatedNotificationArtworkSourceKey(second, revisions)
+
+        assertNotEquals(firstKey, secondKey)
+    }
+
+    @Test
+    fun artworkRevisionsArePreparedForARefreshBurstBeforeCardRendering() {
+        val groups =
+            (1..100).map { index ->
+                notificationGroup("com.example.burst$index", "personal").copy(
+                    notifications =
+                        listOf(
+                            notification(
+                                packageName = "com.example.burst$index",
+                                key = "burst-$index",
+                                artwork = "artwork-$index",
+                            ),
+                        ),
+                )
+            }
+        val revisions = TimeScapeArtworkRevisionStore()
+
+        revisions.replace(groups)
+
+        val card = DockNotificationCardState(app = null, group = groups.last())
+        assertNotEquals(null, generatedNotificationArtworkSourceKey(card, revisions))
+    }
+
     private fun notificationGroup(
         packageName: String,
         profileId: String,
@@ -117,10 +208,12 @@ class GeneratedPageSurfaceTest {
     private fun notification(
         packageName: String,
         key: String,
+        artwork: String? = null,
     ) = LauncherNotification(
         key = LauncherNotificationKey(key),
         packageName = AppPackageName(packageName),
         canDismiss = true,
+        largeIconPngBase64 = artwork,
         postedAtEpochMillis = 1L,
     )
 

@@ -18,6 +18,7 @@ import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
@@ -36,11 +37,15 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
+import com.riffle.core.domain.launcher.notifications.LauncherNotification
 import com.riffle.core.domain.launcher.settings.TimeScapeAccentSource
 import com.riffle.core.domain.launcher.settings.TimeScapeAppearanceSettings
 import com.riffle.core.domain.launcher.settings.TimeScapeBackgroundSource
 import com.riffle.core.domain.launcher.settings.TimeScapeContentDensity
 import com.riffle.core.domain.launcher.settings.TimeScapeRendererCapabilities
+import java.security.MessageDigest
+import java.util.LinkedHashMap
 import kotlin.math.max
 
 /** Transient visual inputs. Every source has a colour fallback when platform artwork is unavailable. */
@@ -65,6 +70,83 @@ internal data class TimeScapeCardActionColors(
     val action: Color,
     val onAction: Color,
 )
+
+/**
+ * Small process-only LRU cache for bounded notification artwork. Cache keys are stable card
+ * identities plus a source revision, not artwork payloads, so private base64 data is not retained
+ * as cache metadata.
+ */
+internal class TimeScapeArtworkCache<Value>(
+    private val maxEntries: Int = DEFAULT_TIMESCAPE_ARTWORK_CACHE_ENTRIES,
+    private val decode: (String?) -> Value?,
+) {
+    init {
+        require(maxEntries > 0) { "Artwork cache size must be positive." }
+    }
+
+    private val values =
+        object : LinkedHashMap<String, Value?>(maxEntries, 0.75f, true) {
+            override fun removeEldestEntry(eldest: ArtworkCacheEntry<Value>?): Boolean = size > maxEntries
+        }
+
+    fun getOrDecode(
+        sourceKey: String,
+        artwork: String?,
+    ): Value? =
+        values[sourceKey]
+            ?: if (values.containsKey(sourceKey)) {
+                null
+            } else {
+                decode(artwork).also { decoded -> values[sourceKey] = decoded }
+            }
+
+    internal fun sizeForTest(): Int = values.size
+}
+
+/** Immutable revision lookup consumed by card composition without hashing artwork payloads. */
+internal fun interface TimeScapeArtworkRevisionLookup {
+    fun revisionFor(notification: LauncherNotification): String?
+}
+
+/**
+ * Process-only revision cache populated while notification state is refreshed off the UI thread.
+ * The volatile map replacement makes each UI lookup observe either the prior complete snapshot or
+ * the next complete snapshot, never a partially calculated burst.
+ */
+internal class TimeScapeArtworkRevisionStore : TimeScapeArtworkRevisionLookup {
+    @Volatile
+    private var revisionsByNotificationId: Map<String, String> = emptyMap()
+
+    fun replace(groups: List<AppNotificationGroup>) {
+        revisionsByNotificationId =
+            groups
+                .asSequence()
+                .flatMap { group -> group.notifications.asSequence() }
+                .mapNotNull { notification ->
+                    notification.largeIconPngBase64
+                        ?.takeIf(String::isNotBlank)
+                        ?.let { artwork -> notification.artworkRevisionId() to artwork.sha256Revision() }
+                }.toMap()
+    }
+
+    override fun revisionFor(notification: LauncherNotification): String? {
+        return revisionsByNotificationId[notification.artworkRevisionId()]
+    }
+}
+
+internal val timeScapeArtworkRevisions = TimeScapeArtworkRevisionStore()
+
+private fun LauncherNotification.artworkRevisionId(): String = "${profileId.value}:${packageName.value}:${key.value}"
+
+private fun String.sha256Revision(): String {
+    val digest = MessageDigest.getInstance("SHA-256").digest(toByteArray(Charsets.UTF_8))
+    return buildString(digest.size * 2) {
+        digest.forEach { byte ->
+            append(ARTWORK_REVISION_HEX[(byte.toInt() ushr 4) and 0x0f])
+            append(ARTWORK_REVISION_HEX[byte.toInt() and 0x0f])
+        }
+    }
+}
 
 internal fun timeScapeRendererCapabilities(sdkInt: Int = Build.VERSION.SDK_INT): TimeScapeRendererCapabilities =
     TimeScapeRendererCapabilities(supportsBlur = sdkInt >= Build.VERSION_CODES.S)
@@ -189,16 +271,20 @@ internal fun TimeScapeCardSurface(
     contentPadding: Dp = appearance.geometry.contentPaddingDp.dp,
     content: @Composable BoxScope.() -> Unit,
 ) {
-    val effective = appearance.effectiveFor(timeScapeRendererCapabilities())
+    val effective = remember(appearance) { appearance.effectiveFor(timeScapeRendererCapabilities()) }
+    val materialBackground = MaterialTheme.colorScheme.onSurface
+    val materialAccent = MaterialTheme.colorScheme.primary
     val colors =
-        resolveTimeScapeCardColors(
-            appearance = effective,
-            background = background,
-            materialBackground = MaterialTheme.colorScheme.onSurface,
-            materialAccent = MaterialTheme.colorScheme.primary,
-        )
-    val shape = RoundedCornerShape(effective.geometry.cornerRadiusDp.dp)
-    val actionColors = resolveTimeScapeCardActionColors(colors.accent, colors.glass)
+        remember(effective, background, materialBackground, materialAccent) {
+            resolveTimeScapeCardColors(
+                appearance = effective,
+                background = background,
+                materialBackground = materialBackground,
+                materialAccent = materialAccent,
+            )
+        }
+    val shape = remember(effective.geometry.cornerRadiusDp) { RoundedCornerShape(effective.geometry.cornerRadiusDp.dp) }
+    val actionColors = remember(colors) { resolveTimeScapeCardActionColors(colors.accent, colors.glass) }
     val density = LocalDensity.current
     val contentDensityScale = timeScapeContentDensityScale(effective.typography.contentDensity)
     val adjustedPadding = contentPadding * contentDensityScale
@@ -215,33 +301,37 @@ internal fun TimeScapeCardSurface(
                 TimeScapeBackgroundSource.APP_ICON_TREATMENT,
             )
     val artworkModifier =
-        Modifier
-            .fillMaxSize()
-            .then(
-                if (effective.surface.blurStrengthPercent == 0) {
-                    Modifier
-                } else {
-                    Modifier.blur((effective.surface.blurStrengthPercent * 0.24f).dp)
+        remember(effective.surface.blurStrengthPercent) {
+            Modifier
+                .fillMaxSize()
+                .then(
+                    if (effective.surface.blurStrengthPercent == 0) {
+                        Modifier
+                    } else {
+                        Modifier.blur((effective.surface.blurStrengthPercent * 0.24f).dp)
+                    },
+                )
+        }
+    val artworkColorFilter =
+        remember(effective.surface.saturationPercent, effective.surface.contrastPercent) {
+            ColorFilter.colorMatrix(
+                ColorMatrix().apply {
+                    setToSaturation(effective.surface.saturationPercent / 100f)
+                    val contrast = effective.surface.contrastPercent / 100f
+                    val translation = (1f - contrast) * 127.5f
+                    timesAssign(
+                        ColorMatrix(
+                            floatArrayOf(
+                                contrast, 0f, 0f, 0f, translation,
+                                0f, contrast, 0f, 0f, translation,
+                                0f, 0f, contrast, 0f, translation,
+                                0f, 0f, 0f, 1f, 0f,
+                            ),
+                        ),
+                    )
                 },
             )
-    val artworkColorFilter =
-        ColorFilter.colorMatrix(
-            ColorMatrix().apply {
-                setToSaturation(effective.surface.saturationPercent / 100f)
-                val contrast = effective.surface.contrastPercent / 100f
-                val translation = (1f - contrast) * 127.5f
-                timesAssign(
-                    ColorMatrix(
-                        floatArrayOf(
-                            contrast, 0f, 0f, 0f, translation,
-                            0f, contrast, 0f, 0f, translation,
-                            0f, 0f, contrast, 0f, translation,
-                            0f, 0f, 0f, 1f, 0f,
-                        ),
-                    ),
-                )
-            },
-        )
+        }
 
     Box(
         modifier =
@@ -390,5 +480,9 @@ private fun timeScapeSeedColor(seed: String): Color {
 
 private const val MAX_TIMESCAPE_ARTWORK_BASE64_CHARS = 2_800_000
 private const val MAX_TIMESCAPE_ARTWORK_DIMENSION_PX = 768
+private const val DEFAULT_TIMESCAPE_ARTWORK_CACHE_ENTRIES = 12
+private const val ARTWORK_REVISION_HEX = "0123456789abcdef"
 private const val MINIMUM_FOREGROUND_CONTRAST_RATIO = 4.5f
 private const val MINIMUM_ACTION_CONTRAST_RATIO = MINIMUM_FOREGROUND_CONTRAST_RATIO
+
+private typealias ArtworkCacheEntry<Value> = MutableMap.MutableEntry<String, Value?>

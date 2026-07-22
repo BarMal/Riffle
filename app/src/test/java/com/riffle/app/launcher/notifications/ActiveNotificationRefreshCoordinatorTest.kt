@@ -50,6 +50,35 @@ class ActiveNotificationRefreshCoordinatorTest {
         assertEquals(2, dispatchedActions.size)
     }
 
+    @Test
+    fun coalescesBurstCallbacksAndDropsQueuedWorkAfterStop() {
+        val source = FakeNotificationChangeSource()
+        val queuedActions = mutableListOf<() -> Unit>()
+        var refreshes = 0
+        val coordinator =
+            ActiveNotificationRefreshCoordinator(
+                notificationChangeSource = source,
+                connectionChangeSource = FakeConnectionChangeSource(),
+                dispatchOnMainThread = { action -> queuedActions += action },
+                refreshNotifications = { refreshes += 1 },
+                refreshPlatformStatuses = {},
+            )
+
+        coordinator.start()
+        source.emitChanged()
+        source.emitChanged()
+
+        assertEquals(1, queuedActions.size)
+        queuedActions.single().invoke()
+        assertEquals(1, refreshes)
+
+        source.emitChanged()
+        coordinator.stop()
+        queuedActions.last().invoke()
+
+        assertEquals(1, refreshes)
+    }
+
     private class FakeNotificationChangeSource : ActiveNotificationChangeSource {
         private var onChanged: (() -> Unit)? = null
 
