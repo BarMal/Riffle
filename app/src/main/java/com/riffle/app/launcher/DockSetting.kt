@@ -19,8 +19,12 @@ import com.riffle.core.domain.launcher.home.DockBackgroundSizing
 import com.riffle.core.domain.launcher.home.DockModel
 import com.riffle.core.domain.launcher.home.DockVisualEffect
 import com.riffle.core.domain.launcher.home.MAX_DOCK_BACKGROUND_ALPHA_PERCENT
+import com.riffle.core.domain.launcher.home.MAX_DOCK_CORNER_RADIUS_DP
+import com.riffle.core.domain.launcher.home.MAX_DOCK_HOME_CONTROLS_SPACING_DP
 import com.riffle.core.domain.launcher.home.MAX_DOCK_ICON_SIZE_DP
 import com.riffle.core.domain.launcher.home.MIN_DOCK_BACKGROUND_ALPHA_PERCENT
+import com.riffle.core.domain.launcher.home.MIN_DOCK_CORNER_RADIUS_DP
+import com.riffle.core.domain.launcher.home.MIN_DOCK_HOME_CONTROLS_SPACING_DP
 import com.riffle.core.domain.launcher.home.MIN_DOCK_ICON_SIZE_DP
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 
@@ -54,6 +58,14 @@ internal fun DockSetting(
         )
         DockBackgroundSizingSetting(
             sizing = dock.backgroundSizing,
+            onAction = onAction,
+        )
+        DockCornerRadiusSetting(
+            cornerRadiusDp = dock.cornerRadiusDp,
+            onAction = onAction,
+        )
+        DockHomeControlsSpacingSetting(
+            spacingDp = dock.homeControlsSpacingDp,
             onAction = onAction,
         )
         DockAlignmentSetting(
@@ -146,6 +158,30 @@ private fun DockBackgroundSizingSetting(
         }
     }
 }
+
+@Composable
+private fun DockCornerRadiusSetting(
+    cornerRadiusDp: Int,
+    onAction: (LauncherShellAction) -> Unit,
+) = DiscreteSettingSlider(
+    title = "Dock corner radius",
+    value = cornerRadiusDp,
+    valueRange = MIN_DOCK_CORNER_RADIUS_DP..MAX_DOCK_CORNER_RADIUS_DP,
+    valueLabel = { "$it dp" },
+    onValueChange = { value -> onAction(LauncherShellAction.SelectDockCornerRadius(value)) },
+)
+
+@Composable
+private fun DockHomeControlsSpacingSetting(
+    spacingDp: Int,
+    onAction: (LauncherShellAction) -> Unit,
+) = DiscreteSettingSlider(
+    title = "Grid to dock controls spacing",
+    value = spacingDp,
+    valueRange = MIN_DOCK_HOME_CONTROLS_SPACING_DP..MAX_DOCK_HOME_CONTROLS_SPACING_DP,
+    valueLabel = { "$it dp" },
+    onValueChange = { value -> onAction(LauncherShellAction.SelectDockHomeControlsSpacing(value)) },
+)
 
 @Composable
 private fun DockAlignmentSetting(

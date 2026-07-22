@@ -78,6 +78,8 @@ private fun encodeDock(dock: DockModel): JSONObject =
         .put("backgroundSizing", dock.backgroundSizing.name)
         .put("alignment", dock.alignment.name)
         .put("itemSpacingDp", dock.itemSpacingDp)
+        .put("cornerRadiusDp", dock.cornerRadiusDp)
+        .put("homeControlsSpacingDp", dock.homeControlsSpacingDp)
         .put("capacity", dock.capacity)
         .put("items", JSONArray(dock.items.map(::encodeLauncherItem)))
 
@@ -107,6 +109,8 @@ private fun JSONObject.toDock(defaults: DockModel): DockModel =
                 ?.let { value -> runCatching { DockAlignment.valueOf(value) }.getOrNull() }
                 ?: defaults.alignment,
         itemSpacingDp = optInt("itemSpacingDp", defaults.itemSpacingDp),
+        cornerRadiusDp = optInt("cornerRadiusDp", defaults.cornerRadiusDp),
+        homeControlsSpacingDp = optInt("homeControlsSpacingDp", defaults.homeControlsSpacingDp),
         capacity = optInt("capacity", defaults.capacity),
         items = optJSONArray("items")?.toLauncherItems().orEmpty(),
     )

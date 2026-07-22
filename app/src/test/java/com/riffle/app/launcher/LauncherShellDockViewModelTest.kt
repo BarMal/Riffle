@@ -221,6 +221,23 @@ class LauncherShellDockViewModelTest {
         assertEquals(viewModel.state.value.homeLayout, repository.savedLayout)
     }
 
+    @Test
+    fun updatesDockShapeAndGridControlsSpacingAndSavesLayout() {
+        val repository = FakeHomeLayoutRepository()
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                homeLayoutRepository = repository,
+            )
+
+        viewModel.onDockEdited(LauncherShellAction.SelectDockCornerRadius(cornerRadiusDp = 18))
+        viewModel.onDockEdited(LauncherShellAction.SelectDockHomeControlsSpacing(spacingDp = 20))
+
+        assertEquals(18, viewModel.state.value.homeLayout.dock.cornerRadiusDp)
+        assertEquals(20, viewModel.state.value.homeLayout.dock.homeControlsSpacingDp)
+        assertEquals(viewModel.state.value.homeLayout, repository.savedLayout)
+    }
+
     private class FakeFirstRunRepository : FirstRunRepository {
         override fun isFirstRunComplete(): Boolean = false
 

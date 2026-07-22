@@ -160,6 +160,22 @@ class DockConfigurationEngineTest {
     }
 
     @Test
+    fun updatesDockCornerRadius() {
+        val result = engine.setDockCornerRadius(layout = HomeLayoutDefaults.standard(), cornerRadiusDp = 20)
+
+        val updated = assertIs<DockEditResult.Updated>(result)
+        assertEquals(20, updated.layout.dock.cornerRadiusDp)
+    }
+
+    @Test
+    fun updatesGridToDockControlsSpacing() {
+        val result = engine.setDockHomeControlsSpacing(layout = HomeLayoutDefaults.standard(), spacingDp = 16)
+
+        val updated = assertIs<DockEditResult.Updated>(result)
+        assertEquals(16, updated.layout.dock.homeControlsSpacingDp)
+    }
+
+    @Test
     fun rejectsDockItemSpacingBelowMinimum() {
         val result =
             engine.setDockItemSpacing(

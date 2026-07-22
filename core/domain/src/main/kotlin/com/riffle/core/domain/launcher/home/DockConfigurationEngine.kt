@@ -1,5 +1,6 @@
 package com.riffle.core.domain.launcher.home
 
+@Suppress("TooManyFunctions")
 class DockConfigurationEngine {
     fun setDockEnabled(
         layout: HomeLayout,
@@ -103,6 +104,32 @@ class DockConfigurationEngine {
                     layout.copy(
                         dock = layout.dock.copy(itemSpacingDp = spacingDp),
                     ),
+                )
+
+            else -> DockEditResult.Rejected(DockEditRejectionReason.INVALID_ITEM_SPACING)
+        }
+
+    fun setDockCornerRadius(
+        layout: HomeLayout,
+        cornerRadiusDp: Int,
+    ): DockEditResult =
+        when (cornerRadiusDp) {
+            in MIN_DOCK_CORNER_RADIUS_DP..MAX_DOCK_CORNER_RADIUS_DP ->
+                DockEditResult.Updated(
+                    layout.copy(dock = layout.dock.copy(cornerRadiusDp = cornerRadiusDp)),
+                )
+
+            else -> DockEditResult.Rejected(DockEditRejectionReason.INVALID_ITEM_SPACING)
+        }
+
+    fun setDockHomeControlsSpacing(
+        layout: HomeLayout,
+        spacingDp: Int,
+    ): DockEditResult =
+        when (spacingDp) {
+            in MIN_DOCK_HOME_CONTROLS_SPACING_DP..MAX_DOCK_HOME_CONTROLS_SPACING_DP ->
+                DockEditResult.Updated(
+                    layout.copy(dock = layout.dock.copy(homeControlsSpacingDp = spacingDp)),
                 )
 
             else -> DockEditResult.Rejected(DockEditRejectionReason.INVALID_ITEM_SPACING)
