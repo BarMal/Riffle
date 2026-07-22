@@ -83,6 +83,16 @@ class DockConfigurationEngine {
             ),
         )
 
+    fun setDockAlignment(
+        layout: HomeLayout,
+        alignment: DockAlignment,
+    ): DockEditResult =
+        DockEditResult.Updated(
+            layout.copy(
+                dock = layout.dock.copy(alignment = alignment),
+            ),
+        )
+
     fun setDockItemSpacing(
         layout: HomeLayout,
         spacingDp: Int,

@@ -43,6 +43,9 @@ fun DockEngine.applyEdit(
         is LauncherShellAction.SelectDockBackgroundSizing ->
             DockConfigurationEngine().setDockBackgroundSizing(layout = layout, sizing = action.sizing)
 
+        is LauncherShellAction.SelectDockAlignment ->
+            DockConfigurationEngine().setDockAlignment(layout = layout, alignment = action.alignment)
+
         is LauncherShellAction.SelectDockItemSpacing ->
             DockConfigurationEngine().setDockItemSpacing(layout = layout, spacingDp = action.spacingDp)
 
@@ -91,6 +94,7 @@ internal fun LauncherShellAction.isDockConfigurationAction(): Boolean =
         is LauncherShellAction.SelectDockBackgroundAlpha,
         is LauncherShellAction.SelectDockVisualEffect,
         is LauncherShellAction.SelectDockBackgroundSizing,
+        is LauncherShellAction.SelectDockAlignment,
         is LauncherShellAction.SelectDockItemSpacing,
         -> true
 

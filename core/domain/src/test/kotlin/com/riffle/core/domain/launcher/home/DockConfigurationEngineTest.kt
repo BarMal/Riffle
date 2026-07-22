@@ -116,6 +116,18 @@ class DockConfigurationEngineTest {
     }
 
     @Test
+    fun updatesDockAlignment() {
+        val result =
+            engine.setDockAlignment(
+                layout = HomeLayoutDefaults.standard(),
+                alignment = DockAlignment.END,
+            )
+
+        val updated = assertIs<DockEditResult.Updated>(result)
+        assertEquals(DockAlignment.END, updated.layout.dock.alignment)
+    }
+
+    @Test
     fun rejectsDockBackgroundAlphaBelowMinimum() {
         val result =
             engine.setDockBackgroundAlpha(

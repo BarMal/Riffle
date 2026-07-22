@@ -1,6 +1,7 @@
 package com.riffle.app.launcher
 
 import com.riffle.core.domain.launcher.apps.InstalledAppRepository
+import com.riffle.core.domain.launcher.home.DockAlignment
 import com.riffle.core.domain.launcher.home.DockModel
 import com.riffle.core.domain.launcher.home.DockVisualEffect
 import com.riffle.core.domain.launcher.home.GridDimensions
@@ -87,11 +88,24 @@ class LauncherShellSettingsDockViewModelTest {
                 homeLayoutRepository = repository,
             )
         val router = routerFor(viewModel)
-        val foldedDock = DockModel(capacity = 4, iconSizeDp = 36, itemSpacingDp = 4)
-        val unfoldedDock = DockModel(capacity = 8, iconSizeDp = 56, itemSpacingDp = 18)
+        val foldedDock =
+            DockModel(
+                capacity = 4,
+                iconSizeDp = 36,
+                alignment = DockAlignment.START,
+                itemSpacingDp = 4,
+            )
+        val unfoldedDock =
+            DockModel(
+                capacity = 8,
+                iconSizeDp = 56,
+                alignment = DockAlignment.END,
+                itemSpacingDp = 18,
+            )
 
         assertTrue(router.handle(LauncherShellAction.OpenSettings))
         assertTrue(router.handle(LauncherShellAction.SelectDockIconSize(foldedDock.iconSizeDp)))
+        assertTrue(router.handle(LauncherShellAction.SelectDockAlignment(foldedDock.alignment)))
         assertTrue(router.handle(LauncherShellAction.SelectDockItemSpacing(foldedDock.itemSpacingDp)))
         assertTrue(router.handle(LauncherShellAction.SelectDockCapacity(foldedDock.capacity)))
         assertEquals(foldedDock, viewModel.state.value.settingsSurfaceState().homeLayout.dock)
@@ -102,6 +116,7 @@ class LauncherShellSettingsDockViewModelTest {
             viewModel.state.value.settingsSurfaceState().homeLayout.dock,
         )
         assertTrue(router.handle(LauncherShellAction.SelectDockIconSize(unfoldedDock.iconSizeDp)))
+        assertTrue(router.handle(LauncherShellAction.SelectDockAlignment(unfoldedDock.alignment)))
         assertTrue(router.handle(LauncherShellAction.SelectDockItemSpacing(unfoldedDock.itemSpacingDp)))
         assertTrue(router.handle(LauncherShellAction.SelectDockCapacity(unfoldedDock.capacity)))
         assertEquals(unfoldedDock, viewModel.state.value.settingsSurfaceState().homeLayout.dock)
