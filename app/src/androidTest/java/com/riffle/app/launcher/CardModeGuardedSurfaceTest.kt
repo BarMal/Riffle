@@ -280,12 +280,12 @@ class CardModeGuardedSurfaceTest {
         }
         composeRule.waitForIdle()
 
-        composeRule.onNodeWithTag(dockItemTestTag(primaryShortcut.id)).performTouchInput {
+        composeRule.onNodeWithTag(dockItemTestTag(overflowShortcut.id)).performTouchInput {
             click(Offset(width / 2f, 1f))
         }
 
         composeRule.runOnIdle {
-            assertEquals(listOf(LauncherShellAction.LaunchApp(primary.identity)), actions)
+            assertEquals(listOf(LauncherShellAction.LaunchApp(overflow.identity)), actions)
         }
     }
 
