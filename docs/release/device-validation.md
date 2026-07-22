@@ -46,6 +46,11 @@ form factor, fullscreen/split-screen window mode, install type, and any known li
 also record window size class, orientation, and fold posture; the TimeScape MVP profile requires
 them for the scenarios that depend on them.
 
+Schema version 1 historically also accepted `compact`, `medium`, and `expanded` in `windowMode`.
+Those legacy manifests remain valid, but new evidence must record the actual `fullscreen` or
+`split-screen` mode and use `windowSizeClass` for layout size. The TimeScape MVP profile requires
+that canonical representation.
+
 - `pass` means the named scenario completed on the recorded candidate and device.
 - `fail` blocks the candidate. A retry may add evidence but cannot erase the original failed row;
   include a non-empty `failureResolution` describing its disposition.

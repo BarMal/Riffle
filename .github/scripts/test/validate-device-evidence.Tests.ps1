@@ -154,6 +154,16 @@ Describe "validate-device-evidence" {
         & $scriptPath -EvidencePath $evidencePath -ExpectedCommitSha $candidateSha
     }
 
+    It "keeps legacy V1 window size values valid outside the TimeScape profile" {
+        $evidence = New-CompleteEvidence
+        $evidence.runs[0].device.windowMode = "compact"
+        $evidence.runs[1].device.windowMode = "medium"
+        $evidence.runs[2].device.windowMode = "expanded"
+        $evidence | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $evidencePath
+
+        & $scriptPath -EvidencePath $evidencePath -ExpectedCommitSha $candidateSha
+    }
+
     It "rejects evidence for a different candidate SHA" {
         $evidence = New-CompleteEvidence
         $evidence.candidate.commitSha = "fedcba9876543210fedcba9876543210fedcba98"
@@ -258,6 +268,16 @@ Describe "validate-device-evidence" {
         ($evidence.runs | Where-Object {
             $_.scenarioId -eq "feature-timescape-mvp-compact-portrait"
         }).device.windowSizeClass = "expanded"
+        $evidence | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $evidencePath
+
+        { & $scriptPath -EvidencePath $evidencePath -ExpectedCommitSha $candidateSha -RequireTimeScapeMvp } | Should -Throw "*compact-portrait requires a passing phone/compact/fullscreen/portrait*"
+    }
+
+    It "rejects legacy window size values in the TimeScape profile" {
+        $evidence = Add-TimeScapeMvpEvidence (New-CompleteEvidence)
+        ($evidence.runs | Where-Object {
+            $_.scenarioId -eq "feature-timescape-mvp-compact-portrait"
+        }).device.windowMode = "compact"
         $evidence | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $evidencePath
 
         { & $scriptPath -EvidencePath $evidencePath -ExpectedCommitSha $candidateSha -RequireTimeScapeMvp } | Should -Throw "*compact-portrait requires a passing phone/compact/fullscreen/portrait*"

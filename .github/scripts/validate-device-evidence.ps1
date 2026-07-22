@@ -205,7 +205,9 @@ foreach ($run in $runs) {
     Require-PositiveInteger (Require-Property $device "androidApi") "run.device.androidApi"
     Require-String (Require-Property $device "build") "run.device.build"
     Require-Enum (Require-Property $device "formFactor") "run.device.formFactor" @("phone", "tablet", "foldable", "desktop")
-    Require-Enum (Require-Property $device "windowMode") "run.device.windowMode" @("fullscreen", "split-screen")
+    # V1 admitted width classes in windowMode. Keep accepting existing SHA-bound manifests;
+    # the TimeScape profile below requires the canonical actual window mode plus size class.
+    Require-Enum (Require-Property $device "windowMode") "run.device.windowMode" @("compact", "medium", "expanded", "split-screen", "fullscreen")
     Optional-DeviceEnum $device "windowSizeClass" @("compact", "medium", "expanded") | Out-Null
     Optional-DeviceEnum $device "orientation" @("portrait", "landscape") | Out-Null
     Optional-DeviceEnum $device "posture" @("cover", "flat", "book", "tabletop") | Out-Null

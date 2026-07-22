@@ -42,7 +42,7 @@
               "androidApi": { "type": "integer", "minimum": 1 },
               "build": { "type": "string", "minLength": 1 },
               "formFactor": { "enum": ["phone", "tablet", "foldable", "desktop"] },
-              "windowMode": { "enum": ["fullscreen", "split-screen"] },
+              "windowMode": { "enum": ["compact", "medium", "expanded", "split-screen", "fullscreen"] },
               "windowSizeClass": { "enum": ["compact", "medium", "expanded"] },
               "orientation": { "enum": ["portrait", "landscape"] },
               "posture": { "enum": ["cover", "flat", "book", "tabletop"] },
