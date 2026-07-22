@@ -29,21 +29,39 @@ emulator run and the required physical Honor rows from the device-evidence contr
 2. With zero, one, and many stages, confirm stage order is deterministic: pinned stages retain
    their user order, followed by active dynamic stages. Select a stage using the visible selector
    and the named previous/next actions; stage navigation must not move the classic Dock.
-3. Pin an empty app stage and verify its launch and shortcut actions remain usable. Remove the
+3. Independently test zero cards, one card, and many cards in a selected stage. Confirm the empty
+   app stage exposes launch and shortcuts, the single card has no unsafe previous/next transition,
+   and a many-card stack keeps exactly one focused card and correct position/count through refresh.
+4. Pin an empty app stage and verify its launch and shortcut actions remain usable. Remove the
    last notification from a focused dynamic stage, then select another stage: it stays visible and
    empty while focused, then retires after focus leaves.
-4. Exercise a first tap on a background card, vertical drag, fling, reverse, cancellation, and
+5. Exercise a first tap on a background card, vertical drag, fling, reverse, cancellation, and
    boundary snap. The first tap changes focus only, horizontal gestures are not stolen, and the
    settled card is the only card whose contextual actions can run.
-5. Open details from the focused card, use Back, then remove the selected notification, revoke
+6. Open details from the focused card, use Back, then remove the selected notification, revoke
    notification access, and switch modes. Confirm details close or recover with an explanation
    and focus returns to the originating control when it still exists.
-6. Rapidly add, remove, and reorder notifications while dragging, while details are open, and
+7. Rapidly add, remove, and reorder notifications while dragging, while details are open, and
    after backgrounding and returning. The latest valid focused card or deterministic survivor
    remains selected; no duplicate stack, listener, or refresh is visible.
-7. Lock or remove the Work profile and uninstall an app. Personal and Work stages must remain
+8. Force-stop the launcher, relaunch it from Home, and repeat after rotation, fold/resize, and a
+   background/return cycle. Confirm the selected mode, durable pin order, selected stage, and any
+   still-valid focus restore without persisting notification or media payloads.
+9. Lock or remove the Work profile and uninstall an app. Personal and Work stages must remain
    separate, unavailable data must not be exposed, and removed identities must recover without
    corrupting the remaining selection.
+
+## Notification-access state checks
+
+1. Before the notification listener reports a final result, verify the checking/unknown state
+   explains that access is being checked, remains usable, and does not replace the selected mode
+   or stage intent.
+2. With access denied, revoked, or unavailable on the device, verify the unavailable state names
+   the limitation, offers only the contextual permission/settings affordance, and does not expose
+   stale notification, Work-profile, or media content.
+3. Grant access with zero notifications, then with one and many notifications. Revoke it while a
+   card is focused and while details are open, then grant it again. Each transition must converge
+   to the current source data without focus theft, a navigation trap, or duplicate cards.
 
 ## Appearance, motion, and adaptive checks
 
