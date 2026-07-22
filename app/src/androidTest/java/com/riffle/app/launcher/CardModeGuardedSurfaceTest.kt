@@ -342,6 +342,7 @@ class CardModeGuardedSurfaceTest {
                     pages = standard.pages.map { page -> page.copy(items = listOf(shortcut)) },
                 )
             }
+        val actions = mutableListOf<LauncherShellAction>()
 
         composeRule.setContent {
             LauncherShellContent(
@@ -357,13 +358,18 @@ class CardModeGuardedSurfaceTest {
                             mapOf(app.identity.profile.id to AppProfileContentVisibility.VISIBLE),
                     ),
                 appIconLoader = EmptyAppIconLoader,
-                onAction = {},
+                onAction = actions::add,
             )
         }
 
         composeRule.onNodeWithText(app.label).assertExists()
         composeRule.onNodeWithText(app.label).performTouchInput { longClick() }
         composeRule.onNodeWithText("Remove from home").assertExists()
+        composeRule.onNodeWithText("Remove from home").performTouchInput { click() }
+
+        composeRule.runOnIdle {
+            assertEquals(listOf(LauncherShellAction.RemoveHomeShortcut(shortcut.id)), actions)
+        }
     }
 
     @Test
