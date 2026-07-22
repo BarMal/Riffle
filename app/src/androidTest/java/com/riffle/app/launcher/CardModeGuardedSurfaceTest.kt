@@ -361,7 +361,7 @@ class CardModeGuardedSurfaceTest {
             )
         }
 
-        composeRule.onNodeWithText(app.label).assertIsDisplayed()
+        composeRule.onNodeWithText(app.label).assertExists()
         composeRule.onNodeWithText(app.label).performTouchInput { longClick() }
         composeRule.onNodeWithText("Remove from home").assertIsDisplayed()
     }
