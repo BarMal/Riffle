@@ -42,6 +42,7 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicReference
 
 class LauncherShellRefreshCoordinatorTest {
     @Test
@@ -226,6 +227,60 @@ class LauncherShellRefreshCoordinatorTest {
             assertEquals(expected.revisionFor(newer), revisions.revisionFor(newer))
         } finally {
             releaseOlderRead.countDown()
+            dispatcher.close()
+        }
+    }
+
+    @Test
+    fun cancelledNotificationRefreshCannotCommitAfterPassingCancellationCheck() {
+        val olderCommitReached = CountDownLatch(1)
+        val releaseOlderCommit = CountDownLatch(1)
+        val commitCount = AtomicInteger()
+        val older = notification(key = "mail-1", packageName = "com.riffle.mail", artwork = "older")
+        val newer = notification(key = "mail-1", packageName = "com.riffle.mail", artwork = "newer")
+        val repository =
+            object : LauncherNotificationRepository {
+                private val readCount = AtomicInteger()
+
+                override fun activeNotifications(): List<LauncherNotification> =
+                    if (readCount.getAndIncrement() == 0) listOf(older) else listOf(newer)
+            }
+        val coordinator = coordinator(notificationRepository = repository)
+        val revisions = TimeScapeArtworkRevisionStore()
+        val latestState = AtomicReference<LauncherShellState>()
+        val dispatcher = Executors.newFixedThreadPool(2).asCoroutineDispatcher()
+        try {
+            runBlocking {
+                val actions =
+                    LauncherShellRefreshActions(
+                        coroutineScope = this,
+                        refreshDispatcher = dispatcher,
+                        currentState = { LauncherShellState() },
+                        updateState = latestState::set,
+                        refreshCoordinator = coordinator,
+                        artworkRevisionStore = revisions,
+                        beforeNotificationCommit = {
+                            if (commitCount.getAndIncrement() == 0) {
+                                olderCommitReached.countDown()
+                                check(releaseOlderCommit.await(5, TimeUnit.SECONDS))
+                            }
+                        },
+                    )
+
+                val olderJob = actions.refreshNotifications()
+                check(olderCommitReached.await(5, TimeUnit.SECONDS))
+                actions.refreshNotifications().join()
+                releaseOlderCommit.countDown()
+                olderJob.join()
+            }
+
+            val expected = TimeScapeArtworkRevisionStore()
+            val expectedState = coordinator.refreshNotifications(LauncherShellState())
+            expected.replace(expectedState.notificationGroupsByApp)
+            assertEquals(expected.revisionFor(newer), revisions.revisionFor(newer))
+            assertEquals(expectedState.notificationGroupsByApp, latestState.get().notificationGroupsByApp)
+        } finally {
+            releaseOlderCommit.countDown()
             dispatcher.close()
         }
     }

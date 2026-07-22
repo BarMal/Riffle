@@ -65,10 +65,13 @@ internal class LauncherShellRefreshActions(
     private val updateState: (LauncherShellState) -> Unit,
     private val refreshCoordinator: LauncherShellRefreshCoordinator,
     private val artworkRevisionStore: TimeScapeArtworkRevisionStore = timeScapeArtworkRevisions,
+    private val beforeNotificationCommit: () -> Unit = {},
 ) {
     private var installedAppRefreshJob: Job? = null
     private var notificationRefreshJob: Job? = null
     private var widgetProviderRefreshJob: Job? = null
+    private val notificationRefreshLock = Any()
+    private var notificationRefreshGeneration = 0L
 
     fun refreshInstalledApps(beforeRefresh: () -> Unit = {}): Job =
         launchRefresh(
@@ -78,39 +81,58 @@ internal class LauncherShellRefreshActions(
                 beforeRefresh()
                 refreshCoordinator.refreshInstalledApps(currentState())
             },
+            commitState = { state, context ->
+                context.ensureActive()
+                updateState(state)
+            },
         )
 
-    fun refreshNotifications(): Job =
-        launchRefresh(
+    fun refreshNotifications(): Job {
+        val generation =
+            synchronized(notificationRefreshLock) {
+                ++notificationRefreshGeneration
+            }
+        return launchRefresh(
             cancelExisting = { notificationRefreshJob?.cancel() },
             registerJob = { job -> notificationRefreshJob = job },
             refreshState = { refreshCoordinator.refreshNotifications(currentState()) },
-            publishState = { state -> artworkRevisionStore.replace(state.notificationGroupsByApp) },
+            commitState = { state, context ->
+                context.ensureActive()
+                beforeNotificationCommit()
+                synchronized(notificationRefreshLock) {
+                    context.ensureActive()
+                    if (generation == notificationRefreshGeneration) {
+                        artworkRevisionStore.replace(state.notificationGroupsByApp)
+                        updateState(state)
+                    }
+                }
+            },
         )
+    }
 
     fun refreshWidgetProviders(): Job =
         launchRefresh(
             cancelExisting = { widgetProviderRefreshJob?.cancel() },
             registerJob = { job -> widgetProviderRefreshJob = job },
             refreshState = { refreshCoordinator.refreshWidgetProviders(currentState()) },
+            commitState = { state, context ->
+                context.ensureActive()
+                updateState(state)
+            },
         )
 
     private fun launchRefresh(
         cancelExisting: () -> Unit,
         registerJob: (Job) -> Unit,
         refreshState: () -> LauncherShellState,
-        publishState: (LauncherShellState) -> Unit = {},
+        commitState: (LauncherShellState, kotlin.coroutines.CoroutineContext) -> Unit,
     ): Job {
         cancelExisting()
         val job =
             coroutineScope.launch(refreshDispatcher) {
                 val fallbackState = currentState()
                 val refreshedState = runCatching { refreshState() }.getOrElse { fallbackState }
-                // Synchronous repository reads cannot be interrupted; a cancelled result must
-                // not overwrite a newer snapshot after it returns.
-                coroutineContext.ensureActive()
-                publishState(refreshedState)
-                updateState(refreshedState)
+                commitState(refreshedState, coroutineContext)
             }
         registerJob(job)
         return job
