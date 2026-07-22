@@ -276,6 +276,32 @@ class PreviewFirstSetupTest {
         )
     }
 
+    @Test
+    fun pendingHomeRoleRequestContextSurvivesRepositoryRecreation() {
+        val repository =
+            SharedPreferencesFirstRunRepository(
+                InstrumentationRegistry.getInstrumentation().targetContext,
+            )
+
+        repository.setHomeRoleRequestContext(
+            HomeRoleRequestContext(destination = ShellDestination.SETTINGS),
+        )
+
+        val recreatedRepository =
+            SharedPreferencesFirstRunRepository(
+                InstrumentationRegistry.getInstrumentation().targetContext,
+            )
+
+        assertEquals(
+            HomeRoleRequestContext(destination = ShellDestination.SETTINGS),
+            recreatedRepository.homeRoleRequestContext(),
+        )
+
+        recreatedRepository.setHomeRoleRequestContext(context = null)
+
+        assertEquals(null, recreatedRepository.homeRoleRequestContext())
+    }
+
     private fun previewState(): LauncherShellState {
         return LauncherShellState(homeRoleStatus = HomeRoleStatus.NOT_DEFAULT_HOME)
     }
