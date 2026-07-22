@@ -19,9 +19,9 @@ Run the applicable scenarios on:
 - light/dark themes with both difficult wallpaper or artwork and the minimum/default/maximum
   TimeScape appearance values.
 
-For every device, record its actual form factor, window mode, orientation, and applicable fold
-posture. Include at least one automated emulator run and the required physical Honor rows from the
-device-evidence contract.
+For every device, record its actual form factor, fullscreen/split-screen window mode, window size
+class, orientation, and applicable fold posture. Include at least one automated emulator run and
+the required physical Honor rows from the device-evidence contract.
 Use the `feature-timescape-mvp-*` scenario IDs in the TimeScape MVP closeout profile and validate
 the completed manifest with `-RequireTimeScapeMvp`.
 

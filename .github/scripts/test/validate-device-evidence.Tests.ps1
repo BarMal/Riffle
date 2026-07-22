@@ -66,7 +66,8 @@ Describe "validate-device-evidence" {
                     androidApi = 35
                     build = "test-build"
                     formFactor = "phone"
-                    windowMode = "compact"
+                    windowMode = "fullscreen"
+                    windowSizeClass = "compact"
                     orientation = "portrait"
                     installType = "release"
                 }
@@ -78,7 +79,7 @@ Describe "validate-device-evidence" {
                     }
                     "feature-timescape-mvp-expanded-adaptive" {
                         $device.formFactor = "foldable"
-                        $device.windowMode = "expanded"
+                        $device.windowSizeClass = "expanded"
                         $device.orientation = "landscape"
                         $device["posture"] = "flat"
                     }
@@ -109,7 +110,8 @@ Describe "validate-device-evidence" {
                             androidApi = 35
                             build = "test-build"
                             formFactor = "tablet"
-                            windowMode = "expanded"
+                            windowMode = "fullscreen"
+                            windowSizeClass = "expanded"
                             orientation = "landscape"
                             installType = "release"
                         }
@@ -129,7 +131,8 @@ Describe "validate-device-evidence" {
                             androidApi = 35
                             build = "test-build"
                             formFactor = "foldable"
-                            windowMode = "expanded"
+                            windowMode = "split-screen"
+                            windowSizeClass = "expanded"
                             orientation = "landscape"
                             posture = "flat"
                             installType = "release"
@@ -210,26 +213,54 @@ Describe "validate-device-evidence" {
         $evidence = Add-TimeScapeMvpEvidence (New-CompleteEvidence)
         foreach ($run in $evidence.runs | Where-Object { $_.scenarioId -like "feature-timescape-mvp-*" }) {
             $run.device.formFactor = "foldable"
-            $run.device.windowMode = "expanded"
+            $run.device.windowMode = "fullscreen"
+            $run.device.windowSizeClass = "expanded"
             $run.device.orientation = "landscape"
             $run.device["posture"] = "flat"
         }
         $evidence | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $evidencePath
 
-        { & $scriptPath -EvidencePath $evidencePath -ExpectedCommitSha $candidateSha -RequireTimeScapeMvp } | Should -Throw "*compact-portrait requires a passing phone/compact/portrait*"
+        { & $scriptPath -EvidencePath $evidencePath -ExpectedCommitSha $candidateSha -RequireTimeScapeMvp } | Should -Throw "*compact-portrait requires a passing phone/compact/fullscreen/portrait*"
     }
 
     It "rejects TimeScape performance evidence without compact coverage" {
         $evidence = Add-TimeScapeMvpEvidence (New-CompleteEvidence)
         foreach ($run in $evidence.runs | Where-Object { $_.scenarioId -eq "feature-timescape-mvp-performance" }) {
             $run.device.formFactor = "foldable"
-            $run.device.windowMode = "expanded"
+            $run.device.windowMode = "split-screen"
+            $run.device.windowSizeClass = "expanded"
             $run.device.orientation = "landscape"
             $run.device["posture"] = "flat"
         }
         $evidence | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $evidencePath
 
         { & $scriptPath -EvidencePath $evidencePath -ExpectedCommitSha $candidateSha -RequireTimeScapeMvp } | Should -Throw "*performance requires a passing compact performance*"
+    }
+
+    It "validates window size class independently from fullscreen mode" {
+        $evidence = Add-TimeScapeMvpEvidence (New-CompleteEvidence)
+        $compactRun = $evidence.runs | Where-Object { $_.scenarioId -eq "feature-timescape-mvp-compact-portrait" }
+        $tabletRun = $evidence.runs | Where-Object {
+            $_.scenarioId -eq "feature-timescape-mvp-expanded-adaptive" -and $_.device.formFactor -eq "tablet"
+        }
+
+        $compactRun.device.windowMode | Should -Be "fullscreen"
+        $compactRun.device.windowSizeClass | Should -Be "compact"
+        $tabletRun.device.windowMode | Should -Be "fullscreen"
+        $tabletRun.device.windowSizeClass | Should -Be "expanded"
+
+        $evidence | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $evidencePath
+        & $scriptPath -EvidencePath $evidencePath -ExpectedCommitSha $candidateSha -RequireTimeScapeMvp
+    }
+
+    It "rejects a compact scenario with an expanded size class even when fullscreen" {
+        $evidence = Add-TimeScapeMvpEvidence (New-CompleteEvidence)
+        ($evidence.runs | Where-Object {
+            $_.scenarioId -eq "feature-timescape-mvp-compact-portrait"
+        }).device.windowSizeClass = "expanded"
+        $evidence | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $evidencePath
+
+        { & $scriptPath -EvidencePath $evidencePath -ExpectedCommitSha $candidateSha -RequireTimeScapeMvp } | Should -Throw "*compact-portrait requires a passing phone/compact/fullscreen/portrait*"
     }
 
     It "rejects blocked TimeScape MVP evidence when requested" {

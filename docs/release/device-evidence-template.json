@@ -19,7 +19,8 @@
         "androidApi": 0,
         "build": "replace-with-build",
         "formFactor": "phone",
-        "windowMode": "compact",
+        "windowMode": "fullscreen",
+        "windowSizeClass": "compact",
         "orientation": "portrait",
         "installType": "clean"
       }

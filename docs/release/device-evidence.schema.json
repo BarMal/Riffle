@@ -42,7 +42,8 @@
               "androidApi": { "type": "integer", "minimum": 1 },
               "build": { "type": "string", "minLength": 1 },
               "formFactor": { "enum": ["phone", "tablet", "foldable", "desktop"] },
-              "windowMode": { "enum": ["compact", "medium", "expanded", "split-screen", "fullscreen"] },
+              "windowMode": { "enum": ["fullscreen", "split-screen"] },
+              "windowSizeClass": { "enum": ["compact", "medium", "expanded"] },
               "orientation": { "enum": ["portrait", "landscape"] },
               "posture": { "enum": ["cover", "flat", "book", "tabletop"] },
               "installType": { "enum": ["clean", "upgrade", "debug", "release"] }
