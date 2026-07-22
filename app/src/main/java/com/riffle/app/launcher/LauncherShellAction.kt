@@ -271,6 +271,7 @@ sealed interface LauncherShellAction {
     data class MoveHomeItemToDock(
         val itemId: LauncherItemId,
         val targetIndex: Int? = null,
+        val pageId: LauncherPageId? = null,
     ) : LauncherShellAction
 
     data class MoveDockItemToHome(
@@ -281,6 +282,13 @@ sealed interface LauncherShellAction {
 
     data class MoveHomeShortcutToCell(
         val itemId: LauncherItemId,
+        val cell: GridCell,
+    ) : LauncherShellAction
+
+    data class MoveHomeItemToPage(
+        val itemId: LauncherItemId,
+        val sourcePageId: LauncherPageId,
+        val targetPageId: LauncherPageId,
         val cell: GridCell,
     ) : LauncherShellAction
 
@@ -300,6 +308,8 @@ sealed interface LauncherShellAction {
         val supportsHorizontalResize: Boolean? = null,
         val supportsVerticalResize: Boolean? = null,
         val target: WidgetAddTarget = WidgetAddTarget.HOME,
+        val targetPageId: LauncherPageId? = null,
+        val targetCell: GridCell? = null,
     ) : LauncherShellAction
 
     data class AddHostedWidgetToHome(
@@ -308,6 +318,7 @@ sealed interface LauncherShellAction {
         val preferredSpan: GridSpan = GridSpan(),
         val resizeConstraints: WidgetResizeConstraints = WidgetResizeConstraints(),
         val targetCell: GridCell? = null,
+        val targetPageId: LauncherPageId? = null,
     ) : LauncherShellAction,
         HostedWidgetAddAction
 

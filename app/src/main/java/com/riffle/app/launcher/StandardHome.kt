@@ -1,3 +1,5 @@
+@file:Suppress("TooManyFunctions")
+
 package com.riffle.app.launcher
 
 import androidx.compose.animation.AnimatedContent
@@ -33,8 +35,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.riffle.app.launcher.widgets.EmptyHomeWidgetViewFactory
 import com.riffle.app.launcher.widgets.HomeWidgetViewFactory
@@ -71,10 +75,12 @@ internal fun StandardHome(
     val visibleLayout = layout.visibleTo(installedApps)
     val openedFolderId = remember { mutableStateOf<LauncherItemId?>(null) }
     val homeDragSession = remember { mutableStateOf<HomeDragSession?>(null) }
+    val widgetPickerDragInProgress = remember { mutableStateOf(false) }
     val actions =
         HomeWorkspaceActions(
             onFolderOpen = { folder -> openedFolderId.value = folder.id },
             onDragSessionChanged = { session -> homeDragSession.value = session },
+            currentDragSession = { homeDragSession.value },
             haptics = interactions.haptics,
             onBackgroundClick = {},
             onAction = onAction,
@@ -91,10 +97,39 @@ internal fun StandardHome(
         appIconLoader = appIconLoader,
         actions = actions,
     )
-    if (presentation.widgetPicker.isOpen) {
+    if (presentation.widgetPicker.isOpen || widgetPickerDragInProgress.value) {
         WidgetPickerSurface(
             providers = presentation.widgetPicker.providers,
             previewImageLoader = widgetPreviewImageLoader,
+            isDragHandoffActive = widgetPickerDragInProgress.value,
+            onWidgetDragStarted = {
+                widgetPickerDragInProgress.value = true
+                onAction(LauncherShellAction.CloseWidgetPicker)
+            },
+            onWidgetDragCancelled = {
+                widgetPickerDragInProgress.value = false
+            },
+            onWidgetDropped = { provider, position, rootSize ->
+                val selectedPage = visibleLayout.selectedPage
+                val cell = widgetPickerDropCell(position, rootSize, selectedPage.grid)
+                val target =
+                    if (position.y >= rootSize.height * WIDGET_PICKER_DOCK_DROP_FRACTION) {
+                        WidgetAddTarget.DOCK
+                    } else {
+                        WidgetAddTarget.HOME
+                    }
+                onAction(
+                    LauncherShellAction.RequestAddWidget(
+                        provider = provider.identity,
+                        label = provider.label,
+                        dimensions = provider.dimensions,
+                        target = target,
+                        targetPageId = selectedPage.id.takeIf { target == WidgetAddTarget.HOME },
+                        targetCell = cell.takeIf { target == WidgetAddTarget.HOME },
+                    ),
+                )
+                widgetPickerDragInProgress.value = false
+            },
             onAction = onAction,
         )
     }
@@ -110,6 +145,7 @@ internal fun StandardHome(
     }
 }
 
+@Suppress("LongMethod")
 @Composable
 private fun StandardHomeColumn(
     state: StandardHomeContentState,
@@ -162,6 +198,15 @@ private fun StandardHomeColumn(
             presentation = state.homeGridPresentation(actions),
             appIconLoader = appIconLoader,
             actions = homeActions,
+            activeDragSession = state.dragSession,
+            onDragPageTargetChanged = { pageId ->
+                state.dragSession?.let { session ->
+                    if (session.targetPageId != pageId) {
+                        actions.onDragSessionChanged(session.copy(targetPageId = pageId))
+                        actions.onAction(LauncherShellAction.SelectHomePage(pageId))
+                    }
+                }
+            },
             modifier =
                 Modifier
                     .weight(1f)
@@ -411,7 +456,10 @@ private fun StandardHomeContentState.homeGridPresentation(actions: HomeWorkspace
 
 internal data class HomeDragSession(
     val item: LauncherItem,
+    val originPageId: com.riffle.core.domain.launcher.home.LauncherPageId =
+        com.riffle.core.domain.launcher.home.LauncherPageId("home"),
     val originCell: GridCell,
+    val targetPageId: com.riffle.core.domain.launcher.home.LauncherPageId = originPageId,
     val dragOffsetX: Float = 0f,
     val dragOffsetY: Float = 0f,
     val projectedCell: GridCell,
@@ -481,6 +529,7 @@ internal data class GeneratedPagePresentation(
 )
 
 internal data class HomeItemDragState(
+    val pageId: com.riffle.core.domain.launcher.home.LauncherPageId,
     val cell: GridCell,
     val cellSizePx: Float,
     val grid: GridDimensions,
@@ -490,12 +539,14 @@ internal data class HomeItemDragState(
 internal data class HomeWorkspaceActions(
     val onFolderOpen: (FolderItem) -> Unit,
     val onDragSessionChanged: (HomeDragSession?) -> Unit,
+    val currentDragSession: () -> HomeDragSession? = { null },
     val haptics: LauncherHaptics,
     val onBackgroundClick: () -> Unit = {},
     val onAction: (LauncherShellAction) -> Unit,
 )
 
 private const val HOME_BOTTOM_CONTROLS_TOP_SPACING_DP = 8
+private const val WIDGET_PICKER_DOCK_DROP_FRACTION = 0.84f
 private const val HOME_SEARCH_AREA_HEIGHT_DP = 48
 private const val HOME_SEARCH_PILL_HEIGHT_DP = 30
 private const val HOME_PAGE_INDICATOR_TOUCH_TARGET_HEIGHT_DP = 48
@@ -503,3 +554,18 @@ private const val HOME_SEARCH_HORIZONTAL_PADDING_DP = 14
 private const val HOME_SEARCH_SURFACE_ALPHA = 0.82f
 private const val HOME_SEARCH_BORDER_ALPHA = 0.38f
 private const val PAGE_INDICATOR_SETTLED_VISIBLE_MS = 250L
+
+internal fun widgetPickerDropCell(
+    position: Offset,
+    rootSize: IntSize,
+    grid: GridDimensions,
+): GridCell =
+    GridCell(
+        column = ((position.x / rootSize.width.coerceAtLeast(1)) * grid.columns).toInt(),
+        row = ((position.y / rootSize.height.coerceAtLeast(1)) * grid.rows).toInt(),
+    ).let { cell ->
+        GridCell(
+            column = cell.column.coerceIn(0, grid.columns - 1),
+            row = cell.row.coerceIn(0, grid.rows - 1),
+        )
+    }

@@ -144,6 +144,7 @@ internal fun Modifier.homeItemDrag(
                     actions.onDragSessionChanged(
                         HomeDragSession(
                             item = item,
+                            originPageId = dragState.pageId,
                             originCell = dragState.cell,
                             projectedCell = dragState.cell,
                         ),
@@ -154,22 +155,24 @@ internal fun Modifier.homeItemDrag(
                     dragX += dragAmount.x
                     dragY += dragAmount.y
                     actions.onDragSessionChanged(
-                        HomeDragSession(
+                        homeDragSessionForUpdate(
+                            previousSession = actions.currentDragSession(),
                             item = item,
-                            originCell = dragState.cell,
+                            dragState = dragState,
                             dragOffsetX = dragX,
                             dragOffsetY = dragY,
-                            projectedCell = dragState.projectedCell(dragX = dragX, dragY = dragY),
                         ),
                     )
                 },
                 onDragEnd = {
+                    val targetPageId = actions.currentDragSession()?.targetPageId ?: dragState.pageId
                     actions.onDragSessionChanged(null)
                     homeItemDragDropAction(
                         item = item,
                         dragState = dragState,
                         dragX = dragX,
                         dragY = dragY,
+                        targetPageId = targetPageId,
                     )
                         ?.let(actions.onAction)
                         ?: onStationaryLongPress?.invoke()
@@ -180,6 +183,27 @@ internal fun Modifier.homeItemDrag(
             )
         }
     }
+
+internal fun homeDragSessionForUpdate(
+    previousSession: HomeDragSession?,
+    item: LauncherItem,
+    dragState: HomeItemDragState,
+    dragOffsetX: Float,
+    dragOffsetY: Float,
+): HomeDragSession =
+    HomeDragSession(
+        item = item,
+        originPageId = dragState.pageId,
+        originCell = dragState.cell,
+        targetPageId =
+            previousSession
+                ?.takeIf { session -> session.item.id == item.id && session.originPageId == dragState.pageId }
+                ?.targetPageId
+                ?: dragState.pageId,
+        dragOffsetX = dragOffsetX,
+        dragOffsetY = dragOffsetY,
+        projectedCell = dragState.projectedCell(dragX = dragOffsetX, dragY = dragOffsetY),
+    )
 
 @Composable
 private fun HomeDraggedItemContent(
@@ -258,17 +282,24 @@ internal fun homeItemDragDropAction(
     dragState: HomeItemDragState,
     dragX: Float,
     dragY: Float,
+    targetPageId: com.riffle.core.domain.launcher.home.LauncherPageId = dragState.pageId,
 ): LauncherShellAction? =
     when {
         item.isDockTransferable && dragState.isDraggedBelowGrid(dragY) ->
-            LauncherShellAction.MoveHomeItemToDock(item.id)
+            LauncherShellAction.MoveHomeItemToDock(item.id, pageId = dragState.pageId)
 
         else ->
             dragState.dropCell(dragX = dragX, dragY = dragY)?.let { targetCell ->
-                LauncherShellAction.MoveHomeShortcutToCell(
-                    itemId = item.id,
-                    cell = targetCell,
-                )
+                if (targetPageId == dragState.pageId) {
+                    LauncherShellAction.MoveHomeShortcutToCell(itemId = item.id, cell = targetCell)
+                } else {
+                    LauncherShellAction.MoveHomeItemToPage(
+                        itemId = item.id,
+                        sourcePageId = dragState.pageId,
+                        targetPageId = targetPageId,
+                        cell = targetCell,
+                    )
+                }
             }
     }
 

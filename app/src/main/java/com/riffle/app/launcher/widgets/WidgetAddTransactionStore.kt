@@ -7,8 +7,10 @@ import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppProfile
 import com.riffle.core.domain.launcher.apps.AppProfileId
 import com.riffle.core.domain.launcher.apps.AppProfileType
+import com.riffle.core.domain.launcher.home.GridCell
 import com.riffle.core.domain.launcher.home.GridSpan
 import com.riffle.core.domain.launcher.home.HostedWidgetId
+import com.riffle.core.domain.launcher.home.LauncherPageId
 import com.riffle.core.domain.launcher.home.WidgetResizeConstraints
 import com.riffle.core.domain.launcher.widgets.WidgetProviderClassName
 import com.riffle.core.domain.launcher.widgets.WidgetProviderIdentity
@@ -21,6 +23,8 @@ data class PendingWidgetAddTransaction(
     val preferredSpan: GridSpan,
     val resizeConstraints: WidgetResizeConstraints = WidgetResizeConstraints(),
     val target: WidgetAddTarget,
+    val targetPageId: LauncherPageId? = null,
+    val targetCell: GridCell? = null,
     val step: PendingWidgetAddStep,
     val createdAtEpochMillis: Long,
     val version: Int = CURRENT_WIDGET_ADD_TRANSACTION_VERSION,
@@ -105,6 +109,9 @@ internal fun encodeWidgetAddTransaction(transaction: PendingWidgetAddTransaction
         .put("supportsHorizontalResize", transaction.resizeConstraints.supportsHorizontalResize)
         .put("supportsVerticalResize", transaction.resizeConstraints.supportsVerticalResize)
         .put("target", transaction.target.name)
+        .put("targetPageId", transaction.targetPageId?.value)
+        .put("targetColumn", transaction.targetCell?.column)
+        .put("targetRow", transaction.targetCell?.row)
         .put("step", transaction.step.name)
         .put("createdAtEpochMillis", transaction.createdAtEpochMillis)
         .toString()
@@ -141,9 +148,16 @@ internal fun decodeWidgetAddTransaction(value: String): PendingWidgetAddTransact
                         supportsVerticalResize = json.optBoolean("supportsVerticalResize", true),
                     ),
                 target = WidgetAddTarget.valueOf(json.getString("target")),
+                targetPageId = json.optString("targetPageId").takeIf(String::isNotBlank)?.let(::LauncherPageId),
+                targetCell =
+                    if (json.has("targetColumn") && json.has("targetRow")) {
+                        GridCell(json.getInt("targetColumn"), json.getInt("targetRow"))
+                    } else {
+                        null
+                    },
                 step = PendingWidgetAddStep.valueOf(json.getString("step")),
                 createdAtEpochMillis = json.getLong("createdAtEpochMillis").also { require(it >= 0) },
-                version = json.getInt("version").also { require(it == CURRENT_WIDGET_ADD_TRANSACTION_VERSION) },
+                version = json.getInt("version").also { require(it in 1..CURRENT_WIDGET_ADD_TRANSACTION_VERSION) },
             )
         }
     }.getOrNull()
@@ -153,6 +167,6 @@ internal fun decodeInvalidWidgetAddTransactionHostedId(value: String): HostedWid
         HostedWidgetId(JSONObject(value).getInt("hostedWidgetId").also { require(it > 0) })
     }.getOrNull()
 
-private const val CURRENT_WIDGET_ADD_TRANSACTION_VERSION = 1
+private const val CURRENT_WIDGET_ADD_TRANSACTION_VERSION = 2
 private const val WIDGET_ADD_TRANSACTION_PREFERENCES = "widget_add_transaction"
 private const val WIDGET_ADD_TRANSACTION_KEY = "pending"

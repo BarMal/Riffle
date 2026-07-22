@@ -10,9 +10,13 @@ class WidgetEngine(
         preferredSpan: GridSpan = GridSpan(),
         resizeConstraints: WidgetResizeConstraints = WidgetResizeConstraints(),
         targetCell: GridCell? = null,
+        targetPageId: LauncherPageId? = null,
     ): WidgetEditResult =
         when {
-            layout.selectedPage.type is LauncherPageType.Generated ->
+            targetPageId != null && layout.pages.none { it.id == targetPageId } ->
+                WidgetEditResult.Rejected(PlacementRejectionReason.ITEM_NOT_FOUND)
+
+            targetPage(layout = layout, targetPageId = targetPageId).type is LauncherPageType.Generated ->
                 WidgetEditResult.Rejected(PlacementRejectionReason.GENERATED_PAGE)
 
             layout.hasHostedWidget(hostedWidgetId) ->
@@ -25,31 +29,30 @@ class WidgetEngine(
                     label = label.ifBlank { DEFAULT_WIDGET_LABEL },
                     resizeConstraints = resizeConstraints,
                 ).let { widget ->
+                    val targetPage = targetPage(layout = layout, targetPageId = targetPageId)
                     preferredSpan
                         .placementCandidates(resizeConstraints)
                         .map { span ->
-                            span to
+                            val result =
                                 if (targetCell == null) {
                                     gridPlacementEngine.placeItemInFirstAvailableCell(
-                                        page = layout.selectedPage,
+                                        page = targetPage,
                                         item = widget,
                                         span = span,
                                     )
                                 } else {
                                     gridPlacementEngine.placeItem(
-                                        page = layout.selectedPage,
-                                        item =
-                                            widget.withPlacement(
-                                                GridPlacement(cell = targetCell, span = span),
-                                            ),
+                                        page = targetPage,
+                                        item = widget.withPlacement(GridPlacement(cell = targetCell, span = span)),
                                     )
                                 }
+                            span to result
                         }
                         .firstOrNull { (_, result) -> result is PlaceLauncherItemResult.Placed }
                         ?.let { (span, result) ->
                             WidgetEditResult.Updated(
                                 layout =
-                                    layout.withUpdatedSelectedPage(
+                                    layout.withUpdatedPage(
                                         (result as PlaceLauncherItemResult.Placed).page,
                                     ),
                                 placedSpan = span,
@@ -80,7 +83,7 @@ class WidgetEngine(
                             )
                     ) {
                         is PlaceLauncherItemResult.Placed ->
-                            WidgetEditResult.Updated(layout.withUpdatedSelectedPage(result.page))
+                            WidgetEditResult.Updated(layout.withUpdatedPage(result.page))
 
                         is PlaceLauncherItemResult.Rejected ->
                             WidgetEditResult.Rejected(result.reason)
@@ -88,7 +91,7 @@ class WidgetEngine(
                 }
         }
 
-    private fun HomeLayout.withUpdatedSelectedPage(page: LauncherPage): HomeLayout =
+    private fun HomeLayout.withUpdatedPage(page: LauncherPage): HomeLayout =
         copy(
             pages =
                 pages.map { existingPage ->
@@ -98,6 +101,12 @@ class WidgetEngine(
                     }
                 },
         )
+
+    @Suppress("MaxLineLength")
+    private fun targetPage(
+        layout: HomeLayout,
+        targetPageId: LauncherPageId?,
+    ): LauncherPage = targetPageId?.let { pageId -> layout.pages.firstOrNull { it.id == pageId } } ?: layout.selectedPage
 }
 
 private fun GridSpan.coerceAtLeastOneCell(): GridSpan =

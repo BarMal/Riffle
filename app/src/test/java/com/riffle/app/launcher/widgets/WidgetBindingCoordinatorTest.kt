@@ -4,9 +4,11 @@ import android.content.Intent
 import com.riffle.app.launcher.LauncherShellAction
 import com.riffle.app.launcher.WidgetAddTarget
 import com.riffle.core.domain.launcher.apps.AppPackageName
+import com.riffle.core.domain.launcher.home.GridCell
 import com.riffle.core.domain.launcher.home.GridDimensions
 import com.riffle.core.domain.launcher.home.GridSpan
 import com.riffle.core.domain.launcher.home.HostedWidgetId
+import com.riffle.core.domain.launcher.home.LauncherPageId
 import com.riffle.core.domain.launcher.home.WidgetResizeConstraints
 import com.riffle.core.domain.launcher.widgets.WidgetProviderClassName
 import com.riffle.core.domain.launcher.widgets.WidgetProviderDimensions
@@ -14,6 +16,7 @@ import com.riffle.core.domain.launcher.widgets.WidgetProviderIdentity
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
+@Suppress("LargeClass")
 class WidgetBindingCoordinatorTest {
     @Test
     fun boundWidgetReturnsAddHostedWidgetAction() {
@@ -40,6 +43,39 @@ class WidgetBindingCoordinatorTest {
         )
         assertEquals(listOf(HostedWidgetId(1)), gateway.boundHostedWidgetIds)
         assertEquals(emptyList<HostedWidgetId>(), gateway.deletedHostedWidgetIds)
+    }
+
+    @Test
+    fun boundWidgetPreservesDroppedHomeCell() {
+        val gateway = FakeWidgetHostGateway(bindingResult = WidgetBindingResult.Bound)
+        val coordinator = WidgetBindingCoordinator(gateway)
+        val pageId = LauncherPageId("page-2")
+        val cell = GridCell(column = 2, row = 3)
+
+        val result =
+            coordinator.requestAddWidget(
+                action =
+                    requestAddWidget(label = "Weather").copy(
+                        targetPageId = pageId,
+                        targetCell = cell,
+                    ),
+                grid = GridDimensions(columns = 4, rows = 5),
+                availableWidthDp = 400,
+                availableHeightDp = 1000,
+            )
+
+        assertEquals(
+            WidgetAddRequestResult.Bound(
+                LauncherShellAction.AddHostedWidgetToHome(
+                    hostedWidgetId = HostedWidgetId(1),
+                    label = "Weather",
+                    preferredSpan = GridSpan(columns = 2, rows = 1),
+                    targetPageId = pageId,
+                    targetCell = cell,
+                ),
+            ),
+            result,
+        )
     }
 
     @Test

@@ -170,6 +170,29 @@ class WidgetEngineTest {
     }
 
     @Test
+    fun addsWidgetToRequestedPageRatherThanCurrentPage() {
+        val current = HomeLayoutDefaults.standard().selectedPage.copy(id = LauncherPageId("current"))
+        val target = current.copy(id = LauncherPageId("target"), items = emptyList())
+        val layout = HomeLayoutDefaults.standard().copy(pages = listOf(current, target), selectedPageId = current.id)
+
+        val result =
+            engine.addWidgetToSelectedPage(
+                layout = layout,
+                hostedWidgetId = HostedWidgetId(42),
+                label = "Weather",
+                targetPageId = target.id,
+                targetCell = GridCell(column = 1, row = 2),
+            )
+
+        val updated = assertIs<WidgetEditResult.Updated>(result).layout
+        assertEquals(emptyList(), updated.pages.first { it.id == current.id }.items)
+        assertEquals(
+            GridPlacement(cell = GridCell(column = 1, row = 2)),
+            updated.pages.first { it.id == target.id }.items.single().placement,
+        )
+    }
+
+    @Test
     fun fallsBackToSmallerSpanAtRequestedCellWhenPreferredSpanDoesNotFit() {
         val result =
             engine.addWidgetToSelectedPage(

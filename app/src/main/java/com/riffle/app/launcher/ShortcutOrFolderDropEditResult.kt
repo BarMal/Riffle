@@ -23,6 +23,16 @@ internal fun applyShortcutOrFolderDropEdit(
                 ?.toShortcutOrFolderDropEditResult()
                 ?: shortcutEngine.applyEdit(action = action, layout = layout).toShortcutOrFolderDropEditResult()
 
+        is LauncherShellAction.MoveHomeItemToPage ->
+            shortcutEngine
+                .moveItemToPage(
+                    layout = layout,
+                    itemId = action.itemId,
+                    sourcePageId = action.sourcePageId,
+                    targetPageId = action.targetPageId,
+                    cell = action.cell,
+                ).toShortcutOrFolderDropEditResult()
+
         else -> shortcutEngine.applyEdit(action = action, layout = layout).toShortcutOrFolderDropEditResult()
     }
 

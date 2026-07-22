@@ -3,8 +3,10 @@ package com.riffle.app.launcher.widgets
 import com.riffle.app.launcher.WidgetAddTarget
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppProfile
+import com.riffle.core.domain.launcher.home.GridCell
 import com.riffle.core.domain.launcher.home.GridSpan
 import com.riffle.core.domain.launcher.home.HostedWidgetId
+import com.riffle.core.domain.launcher.home.LauncherPageId
 import com.riffle.core.domain.launcher.widgets.WidgetProviderClassName
 import com.riffle.core.domain.launcher.widgets.WidgetProviderIdentity
 import org.junit.Assert.assertEquals
@@ -26,6 +28,8 @@ class WidgetAddTransactionStoreTest {
                 label = "Weather",
                 preferredSpan = GridSpan(columns = 3, rows = 2),
                 target = WidgetAddTarget.HOME,
+                targetPageId = LauncherPageId("home-2"),
+                targetCell = GridCell(column = 2, row = 3),
                 step = PendingWidgetAddStep.CONFIGURATION,
                 createdAtEpochMillis = 1234L,
             )

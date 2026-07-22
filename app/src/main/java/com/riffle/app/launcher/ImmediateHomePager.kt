@@ -32,6 +32,7 @@ import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.LauncherPage
 import com.riffle.core.domain.launcher.home.LauncherPageType
 import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.roundToInt
@@ -176,6 +177,7 @@ internal class ImmediateHomePagerState(
     }
 }
 
+@Suppress("LongParameterList", "CyclomaticComplexMethod")
 @Composable
 internal fun ImmediateWorkspacePager(
     layout: HomeLayout,
@@ -184,6 +186,8 @@ internal fun ImmediateWorkspacePager(
     presentation: HomeGridPresentation,
     appIconLoader: AppIconLoader,
     actions: HomeWorkspaceActions,
+    activeDragSession: HomeDragSession? = null,
+    onDragPageTargetChanged: (com.riffle.core.domain.launcher.home.LauncherPageId) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val coroutineScope = rememberCoroutineScope()
@@ -200,7 +204,7 @@ internal fun ImmediateWorkspacePager(
                 Modifier
                     .fillMaxSize()
                     .immediateHomePageDrag(
-                        enabled = layout.pages.size > 1,
+                        enabled = layout.pages.size > 1 && activeDragSession == null,
                         pageWidthPx = pageWidthPx,
                         layout = layout,
                         pagerState = pagerState,
@@ -210,6 +214,28 @@ internal fun ImmediateWorkspacePager(
                         },
                     ),
         ) {
+            val sourcePageIndex =
+                activeDragSession?.let { session -> layout.pages.indexOfFirst { it.id == session.originPageId } }
+                    ?: -1
+            val nextTargetIndex =
+                if (activeDragSession != null && sourcePageIndex >= 0) {
+                    when {
+                        activeDragSession.dragOffsetX <= -(pageWidthPx * DRAG_PAGE_EDGE_FRACTION) -> sourcePageIndex + 1
+                        activeDragSession.dragOffsetX >= pageWidthPx * DRAG_PAGE_EDGE_FRACTION -> sourcePageIndex - 1
+                        else -> -1
+                    }
+                } else {
+                    -1
+                }
+            LaunchedEffect(activeDragSession?.originPageId, activeDragSession?.targetPageId, nextTargetIndex) {
+                if (activeDragSession != null &&
+                    activeDragSession.targetPageId == activeDragSession.originPageId &&
+                    nextTargetIndex in layout.pages.indices
+                ) {
+                    delay(DRAG_PAGE_EDGE_HOVER_MILLIS)
+                    layout.pages.getOrNull(nextTargetIndex)?.let { page -> onDragPageTargetChanged(page.id) }
+                }
+            }
             layout.pages.forEachIndexed { index, page ->
                 val pageModifier =
                     Modifier
@@ -424,3 +450,5 @@ private const val PAGE_WIDTH_FRACTION = 1f
 private const val HORIZONTAL_DRAG_INTENT_PX = 18f
 private const val PAGE_CHANGE_DISTANCE_THRESHOLD = 0.22f
 private const val PAGE_FLING_VELOCITY_THRESHOLD_PX_PER_SECOND = 900f
+private const val DRAG_PAGE_EDGE_FRACTION = 0.42f
+private const val DRAG_PAGE_EDGE_HOVER_MILLIS = 180L

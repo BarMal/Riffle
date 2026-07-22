@@ -511,6 +511,7 @@ private fun reduceHomeShortcutEdit(
                         preferredSpan = action.preferredSpan,
                         resizeConstraints = action.resizeConstraints,
                         targetCell = action.targetCell,
+                        targetPageId = action.targetPageId,
                     )
             ) {
                 is WidgetEditResult.Updated ->
