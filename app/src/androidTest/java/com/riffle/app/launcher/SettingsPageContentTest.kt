@@ -8,6 +8,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.assertHasNoClickAction
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsOn
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isToggleable
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -52,8 +55,16 @@ class SettingsPageContentTest {
         }
 
         composeRule.onNodeWithText("Fullscreen home").assertDoesNotExist()
-        composeRule.onNodeWithText("Hide status bar").assertIsEnabled().assertIsOn().performClick()
-        composeRule.onNodeWithText("Hide navigation bar").assertIsEnabled().assertIsOn().performClick()
+        composeRule.onNodeWithText("Hide status bar").assertIsEnabled()
+        composeRule
+            .onNode(isToggleable() and hasAnyAncestor(hasText("Hide status bar")))
+            .assertIsOn()
+            .performClick()
+        composeRule.onNodeWithText("Hide navigation bar").assertIsEnabled()
+        composeRule
+            .onNode(isToggleable() and hasAnyAncestor(hasText("Hide navigation bar")))
+            .assertIsOn()
+            .performClick()
 
         assertEquals(
             listOf(

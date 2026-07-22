@@ -82,7 +82,7 @@ class SettingsSurfaceNavigationTest {
         composeRule.onNodeWithText("Appearance").performScrollTo().performClick()
 
         composeRule.onNodeWithText("Theme").assertIsDisplayed()
-        composeRule.onNodeWithText("Wallpaper").performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText("Change wallpaper").performScrollTo().assertIsDisplayed()
         composeRule.onNodeWithText("System UI").performScrollTo().assertIsDisplayed()
     }
 }
