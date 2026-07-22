@@ -872,7 +872,11 @@ private fun TimeScapeUnavailableState(
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text(message, style = MaterialTheme.typography.bodyLarge)
+        Text(
+            text = message,
+            modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+            style = MaterialTheme.typography.bodyLarge,
+        )
         TimeScapeDetailRecoveryMessage(recoveryMessage)
         if (access == NotificationAccessStatus.NOT_GRANTED || access == NotificationAccessStatus.REVOKED) {
             TextButton(onClick = { onAction(LauncherShellAction.RequestNotificationAccess) }) {
@@ -979,6 +983,7 @@ private fun AppStage.timeScapeStageStateDescription(): String =
                 .joinToString(" + ") { origin -> origin.name.lowercase().replaceFirstChar(Char::uppercase) },
         )
         add("Profile ${id.profileId.value}")
+        add(if (isPinned) "Pinned" else "Dynamic")
         add(
             when (lifecycle) {
                 com.riffle.core.domain.launcher.cards.AppStageLifecycle.ACTIVE -> "Active"
