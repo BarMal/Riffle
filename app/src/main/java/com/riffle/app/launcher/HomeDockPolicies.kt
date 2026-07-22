@@ -24,7 +24,6 @@ import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.settings.MotionPerformanceTargetFps
 import kotlin.math.abs
 
-private const val DOCK_SHELF_SYSTEM_GESTURE_ZONE_DP = 24
 internal const val REDUCED_MOTION_DOCK_SHELF_DURATION_MILLIS = 80
 
 internal fun dockShelfMotionPolicy(reducedMotion: Boolean): DockShelfMotionPolicy =
@@ -39,18 +38,12 @@ internal enum class DockShelfMotionPolicy {
     ReducedShortTween,
 }
 
-internal fun dockShelfGesturePolicy(
-    isDockVisible: Boolean,
-    homeInsetPolicy: HomeInsetPolicy,
-): DockShelfGesturePolicy =
+internal fun dockShelfGesturePolicy(isDockVisible: Boolean): DockShelfGesturePolicy =
     DockShelfGesturePolicy(
         enabled = isDockVisible,
-        bottomSystemGestureExclusionDp =
-            if (homeInsetPolicy.reserveNavigationBar) {
-                0
-            } else {
-                DOCK_SHELF_SYSTEM_GESTURE_ZONE_DP
-            },
+        // The dock must never claim Android's bottom edge: doing so can block the system Home
+        // gesture after the navigation bar is hidden or restored during an app update.
+        bottomSystemGestureExclusionDp = 0,
     )
 
 internal data class DockShelfGesturePolicy(
@@ -200,11 +193,12 @@ private tailrec fun Context.findActivity(): Activity? =
         else -> null
     }
 
-internal fun Modifier.dockShelfPolicies(interactions: DockInteractions): Modifier =
+internal fun Modifier.dockShelfPolicies(
+    @Suppress("UnusedParameter") interactions: DockInteractions,
+): Modifier =
     dockShelfSystemGestureExclusion(
         dockShelfGesturePolicy(
             isDockVisible = true,
-            homeInsetPolicy = interactions.homeInsetPolicy,
         ),
     )
 
