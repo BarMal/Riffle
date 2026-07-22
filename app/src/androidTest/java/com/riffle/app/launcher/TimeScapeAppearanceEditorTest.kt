@@ -170,12 +170,20 @@ class TimeScapeAppearanceEditorTest {
             val action = actions.last() as LauncherShellAction.UpdateTimeScapeAppearance
             assertEquals(600, action.appearance.motion.settleDurationMillis)
         }
-        composeRule.onNodeWithContentDescription("Easing: Standard").performScrollTo().performClick()
+        composeRule
+            .onNodeWithContentDescription("Easing: Standard")
+            .performSemanticsAction(SemanticsActions.OnClick) { click ->
+                assertTrue(click())
+            }
         composeRule.runOnIdle {
             val action = actions.last() as LauncherShellAction.UpdateTimeScapeAppearance
             assertEquals(TimeScapeEasing.STANDARD, action.appearance.motion.easing)
         }
-        composeRule.onNodeWithContentDescription("Haptic strength: Strong").performScrollTo().performClick()
+        composeRule
+            .onNodeWithContentDescription("Haptic strength: Strong")
+            .performSemanticsAction(SemanticsActions.OnClick) { click ->
+                assertTrue(click())
+            }
 
         composeRule.runOnIdle {
             val action = actions.last() as LauncherShellAction.UpdateTimeScapeAppearance
