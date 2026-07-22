@@ -100,7 +100,7 @@ class AppStageNotificationContentTest {
     }
 
     @Test
-    fun `redacted cards retain artwork cache identity but not notification text`() {
+    fun `redacted cards omit artwork payload and cache identity`() {
         val notification =
             notification(key = "quiet-artwork", postedAt = 1).copy(largeIconPngBase64 = "encoded-artwork")
         val cards =
@@ -115,7 +115,8 @@ class AppStageNotificationContentTest {
         val card = cards.single()
         assertEquals("Hidden notification", card.title)
         assertEquals("Content hidden for this profile", card.text)
-        assertEquals("stage-notification:personal:quiet-artwork:revision-1", card.artworkSourceKey)
+        assertEquals(null, card.artworkBase64)
+        assertEquals(null, card.artworkSourceKey)
     }
 
     @Test

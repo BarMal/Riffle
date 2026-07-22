@@ -210,7 +210,7 @@ private fun LauncherNotification.toAppStageCard(
             kind = contentKind,
             meaningfulActivityAtEpochMillis = postedAtEpochMillis.coerceAtLeast(0L),
         )
-    val artworkRevision = artworkRevisions.revisionFor(this)
+    val artworkRevision = artworkRevisions.revisionFor(this).takeUnless { isRedacted }
     return AppStageNotificationCard(
         content = content,
         notificationKey = key,
@@ -218,7 +218,7 @@ private fun LauncherNotification.toAppStageCard(
         text = if (isRedacted) "Content hidden for this profile" else text,
         isRedacted = isRedacted,
         supportedActions = actions,
-        artworkBase64 = largeIconPngBase64,
+        artworkBase64 = largeIconPngBase64.takeUnless { isRedacted },
         artworkSourceKey = artworkRevision?.let { revision -> "${content.id.value}:$revision" },
     )
 }
