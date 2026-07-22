@@ -3,9 +3,17 @@ package com.riffle.app.launcher
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.click
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.longClick
+import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTouchInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.riffle.core.domain.launcher.FirstRunStatus
 import com.riffle.core.domain.launcher.HomeRoleStatus
@@ -17,8 +25,11 @@ import com.riffle.core.domain.launcher.apps.AppProfile
 import com.riffle.core.domain.launcher.apps.AppProfileContentVisibility
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.cards.TimeScapeWindowLayout
+import com.riffle.core.domain.launcher.home.AppShortcutItem
+import com.riffle.core.domain.launcher.home.FolderItem
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.HomeLayoutSet
+import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
 import com.riffle.core.domain.launcher.notifications.LauncherNotification
@@ -116,6 +127,215 @@ class CardModeGuardedSurfaceTest {
         }
 
         composeRule.onNodeWithText("Welcome").assertExists()
+    }
+
+    @Test
+    fun cardModeKeepsTheStandardDockAndContextActionsAvailable() {
+        val app = cardsHomeApp()
+        val shortcut =
+            AppShortcutItem(
+                id = LauncherItemId("app:camera"),
+                appIdentity = app.identity,
+                label = app.label,
+            )
+        val layout =
+            HomeLayoutDefaults.standard().let { standard ->
+                standard.copy(
+                    viewMode = LauncherViewMode.CARD_INTERFACE,
+                    dock = standard.dock.copy(items = listOf(shortcut)),
+                )
+            }
+        val state =
+            LauncherShellState(
+                firstRunStatus = FirstRunStatus.COMPLETE,
+                homeRoleStatus = HomeRoleStatus.DEFAULT_HOME,
+                homeLayout = layout,
+                homeLayoutSet = HomeLayoutSet.fromLayout(layout),
+                notificationAccessStatus = NotificationAccessStatus.GRANTED,
+                installedApps = listOf(app),
+                profileContentVisibility = mapOf(app.identity.profile.id to AppProfileContentVisibility.VISIBLE),
+            )
+
+        composeRule.setContent {
+            LauncherShellContent(
+                state = state,
+                appIconLoader = EmptyAppIconLoader,
+                onAction = {},
+            )
+        }
+
+        composeRule.onNodeWithTag(dockItemTestTag(shortcut.id)).assertIsDisplayed()
+        composeRule.onNodeWithTag(dockItemTestTag(shortcut.id)).performTouchInput { longClick() }
+        composeRule.onNodeWithText("Remove from dock").assertIsDisplayed()
+    }
+
+    @Test
+    fun cardModeDockReceivesPhysicalTapWithAnActiveTimeScapeStage() {
+        val app = cardsHomeApp()
+        val shortcut =
+            AppShortcutItem(
+                id = LauncherItemId("app:camera"),
+                appIdentity = app.identity,
+                label = app.label,
+            )
+        val layout =
+            HomeLayoutDefaults.standard().let { standard ->
+                standard.copy(
+                    viewMode = LauncherViewMode.CARD_INTERFACE,
+                    dock = standard.dock.copy(items = listOf(shortcut)),
+                )
+            }
+        val actions = mutableListOf<LauncherShellAction>()
+        val stageState = cardsState(NotificationAccessStatus.GRANTED, groups = listOf(notificationGroup()))
+        val state =
+            stageState.copy(
+                homeLayout = layout,
+                homeLayoutSet = HomeLayoutSet.fromLayout(layout),
+                installedApps = stageState.installedApps + app,
+                profileContentVisibility =
+                    stageState.profileContentVisibility +
+                        (app.identity.profile.id to AppProfileContentVisibility.VISIBLE),
+            )
+
+        composeRule.setContent {
+            LauncherShellContent(
+                state = state,
+                appIconLoader = EmptyAppIconLoader,
+                timeScapeWindowLayout = TimeScapeWindowLayout(widthDp = 360, heightDp = 640),
+                onAction = actions::add,
+            )
+        }
+
+        composeRule.onNodeWithText("Previous").assertIsDisplayed()
+        composeRule.onNodeWithTag(dockItemTestTag(shortcut.id)).performTouchInput { click() }
+
+        composeRule.runOnIdle {
+            assertEquals(listOf(LauncherShellAction.LaunchApp(app.identity)), actions)
+        }
+    }
+
+    @Test
+    fun cardModeExpandedDockShelfWithBottomMarginReceivesPhysicalTapWithAnActiveTimeScapeStage() {
+        val primary = cardsHomeApp(packageName = "com.example.camera")
+        val overflow = cardsHomeApp(packageName = "com.example.photos")
+        val primaryShortcut =
+            AppShortcutItem(
+                id = LauncherItemId("app:camera"),
+                appIdentity = primary.identity,
+                label = primary.label,
+            )
+        val overflowShortcut =
+            AppShortcutItem(
+                id = LauncherItemId("app:photos"),
+                appIdentity = overflow.identity,
+                label = overflow.label,
+            )
+        val layout =
+            HomeLayoutDefaults.standard().let { standard ->
+                standard.copy(
+                    viewMode = LauncherViewMode.CARD_INTERFACE,
+                    settings =
+                        standard.settings.copy(
+                            grid =
+                                standard.settings.grid.copy(
+                                    margin = standard.settings.grid.margin.copy(bottom = 48),
+                                ),
+                        ),
+                    dock =
+                        standard.dock.copy(
+                            capacity = 1,
+                            items = listOf(primaryShortcut, overflowShortcut),
+                        ),
+                )
+            }
+        val actions = mutableListOf<LauncherShellAction>()
+        val stageState = cardsState(NotificationAccessStatus.GRANTED, groups = listOf(notificationGroup()))
+        val state =
+            stageState.copy(
+                homeLayout = layout,
+                homeLayoutSet = HomeLayoutSet.fromLayout(layout),
+                installedApps = stageState.installedApps + listOf(primary, overflow),
+                profileContentVisibility =
+                    stageState.profileContentVisibility +
+                        (primary.identity.profile.id to AppProfileContentVisibility.VISIBLE),
+            )
+
+        composeRule.setContent {
+            LauncherShellContent(
+                state = state,
+                appIconLoader = EmptyAppIconLoader,
+                timeScapeWindowLayout = TimeScapeWindowLayout(widthDp = 360, heightDp = 640),
+                onAction = actions::add,
+            )
+        }
+
+        composeRule.onNodeWithText("Previous").assertIsDisplayed()
+        composeRule.onNodeWithTag(dockItemTestTag(primaryShortcut.id)).performTouchInput {
+            down(center)
+            moveBy(Offset(0f, -24f))
+            updatePointerBy(pointerId = 0, delta = Offset(0f, -64f))
+            up()
+        }
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithTag(dockItemTestTag(overflowShortcut.id)).performTouchInput {
+            click(Offset(width / 2f, 1f))
+        }
+
+        composeRule.runOnIdle {
+            assertEquals(listOf(LauncherShellAction.LaunchApp(overflow.identity)), actions)
+        }
+    }
+
+    @Test
+    fun cardModeRendersOneDockAndOpensDockFolders() {
+        val folder =
+            FolderItem(
+                id = LauncherItemId("folder:tools"),
+                label = "Tools",
+                items = emptyList(),
+            )
+        val layout =
+            HomeLayoutDefaults.standard().let { standard ->
+                standard.copy(
+                    viewMode = LauncherViewMode.CARD_INTERFACE,
+                    dock = standard.dock.copy(items = listOf(folder)),
+                )
+            }
+
+        composeRule.setContent {
+            LauncherShellContent(
+                state =
+                    LauncherShellState(
+                        firstRunStatus = FirstRunStatus.COMPLETE,
+                        homeRoleStatus = HomeRoleStatus.DEFAULT_HOME,
+                        homeLayout = layout,
+                        homeLayoutSet = HomeLayoutSet.fromLayout(layout),
+                        notificationAccessStatus = NotificationAccessStatus.GRANTED,
+                    ),
+                appIconLoader = EmptyAppIconLoader,
+                onAction = {},
+            )
+        }
+
+        composeRule.onAllNodesWithTag(HOME_DOCK_TEST_TAG).assertCountEquals(1)
+        composeRule.onNodeWithTag(dockItemTestTag(folder.id)).performClick()
+        composeRule.onNodeWithText("Close").assertIsDisplayed()
+    }
+
+    @Test
+    fun cardModeKeepsTimeScapeCardDetailsInteractiveAlongsideTheDock() {
+        composeRule.setContent {
+            LauncherShellContent(
+                state = cardsState(NotificationAccessStatus.GRANTED, groups = listOf(notificationGroup())),
+                appIconLoader = EmptyAppIconLoader,
+                onAction = {},
+            )
+        }
+
+        composeRule.onNodeWithText("Details").performClick()
+
+        composeRule.onNodeWithText("Notification details").assertIsDisplayed()
     }
 
     @Test
@@ -223,5 +443,16 @@ class CardModeGuardedSurfaceTest {
                         postedAtEpochMillis = 1L,
                     ),
                 ),
+        )
+
+    private fun cardsHomeApp(packageName: String = "com.example.camera"): InstalledApp =
+        InstalledApp(
+            identity =
+                AppIdentity(
+                    packageName = AppPackageName(packageName),
+                    activityName = AppActivityName(".Camera"),
+                    profile = AppProfile.personal(),
+                ),
+            label = packageName.substringAfterLast('.').replaceFirstChar(Char::uppercase),
         )
 }

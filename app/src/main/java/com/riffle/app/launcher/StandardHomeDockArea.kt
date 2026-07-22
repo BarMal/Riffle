@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.home.DockAlignment
@@ -55,6 +56,7 @@ internal fun StandardHomeDockArea(
         modifier =
             Modifier
                 .fillMaxWidth()
+                .onSizeChanged { size -> actions.onDockInteractionHeightChanged(size.height) }
                 .padding(
                     start = margins.start.dp,
                     end = margins.end.dp,
@@ -106,7 +108,7 @@ internal fun GridInsets.nonNegative(): GridInsets =
         bottom = bottom.coerceAtLeast(0),
     )
 
-private fun HomeLayout.shouldShowDock(): Boolean =
+internal fun HomeLayout.shouldShowDock(): Boolean =
     dock.isEnabled &&
         dockBackgroundVisible(
             capacity = dock.capacity,
@@ -114,6 +116,14 @@ private fun HomeLayout.shouldShowDock(): Boolean =
             isEditing = false,
             backgroundSizing = dock.backgroundSizing,
         )
+
+/** Bottom region that Cards mode leaves to the standard dock for physical input. */
+internal fun HomeLayout.dockInteractionRegionHeightDp(): Int =
+    if (!shouldShowDock()) {
+        0
+    } else {
+        settings.grid.margin.nonNegative().bottom + HOME_DOCK_TOP_SPACING_DP + dockHeightDp(dock.iconSizeDp)
+    }
 
 private const val HOME_DOCK_TOP_SPACING_DP = 10
 internal const val HOME_DOCK_TEST_TAG = "home-dock"
