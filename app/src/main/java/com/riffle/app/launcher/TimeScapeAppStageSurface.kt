@@ -43,6 +43,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -466,6 +467,10 @@ private fun TimeScapeNotificationStack(
         }
     val cardIds = cards.map { card -> card.content.id }
     val controller = remember(stage.id) { CardStackController() }
+    val artworkCache =
+        remember(stage.id) {
+            TimeScapeArtworkCache<ImageBitmap>(decode = ::decodeTimeScapeArtwork)
+        }
     val stackKey =
         remember(stage.id) {
             CardStackKey("timescape:${stage.id.profileId.value}:${stage.id.packageName.value}")
@@ -567,9 +572,19 @@ private fun TimeScapeNotificationStack(
                             ),
                     ) { entry, cardModifier ->
                         val card = cards[entry.cardIndex]
+                        val artwork =
+                            remember(card.artworkSourceKey, card.artworkBase64, artworkCache) {
+                                card.artworkSourceKey?.let { sourceKey ->
+                                    artworkCache.getOrDecode(sourceKey, card.artworkBase64)
+                                }
+                            }
                         TimeScapeCardSurface(
                             appearance = state.launcherSettings.cards.timeScapeAppearance,
-                            background = TimeScapeCardBackground(appSeed = stage.id.packageName.value),
+                            background =
+                                TimeScapeCardBackground(
+                                    artwork = artwork,
+                                    appSeed = stage.id.packageName.value,
+                                ),
                             modifier =
                                 cardModifier.size(
                                     width = resolution.cardWidthDp.dp,

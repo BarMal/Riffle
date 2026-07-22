@@ -1,5 +1,7 @@
 package com.riffle.app.launcher.notifications
 
+import com.riffle.app.launcher.TimeScapeArtworkRevisionLookup
+import com.riffle.app.launcher.timeScapeArtworkRevisions
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.apps.AppProfileContentVisibility
 import com.riffle.core.domain.launcher.apps.AppProfileId
@@ -29,6 +31,10 @@ data class AppStageNotificationCard(
     val text: String,
     val isRedacted: Boolean,
     val supportedActions: Set<NotificationStageAction>,
+    /** Process-only artwork payload; it is never persisted with stage preferences. */
+    val artworkBase64: String? = null,
+    /** Revision-keyed cache identity prepared during notification refresh. */
+    val artworkSourceKey: String? = null,
 )
 
 /** Fixed content for a pinned stage that currently has no dynamic cards. */
@@ -128,11 +134,12 @@ private fun LauncherShellState.restoredSelectedDynamicStageSnapshot(): AppStageS
 }
 
 /** Builds stable, privacy-aware dynamic input for the app-stage planner. */
-fun appStageNotificationCards(
+internal fun appStageNotificationCards(
     notifications: List<LauncherNotification>,
     notificationAccessStatus: NotificationAccessStatus,
     profileContentVisibility: Map<AppProfileId, AppProfileContentVisibility>,
     actionAvailability: NotificationStageActionAvailability = NotificationStageActionAvailability.None,
+    artworkRevisions: TimeScapeArtworkRevisionLookup = timeScapeArtworkRevisions,
 ): List<AppStageNotificationCard> {
     if (notificationAccessStatus != NotificationAccessStatus.GRANTED) return emptyList()
     return notifications.mapNotNull { notification ->
@@ -150,6 +157,7 @@ fun appStageNotificationCards(
                 notification.toAppStageCard(
                     isRedacted = visibility != AppProfileContentVisibility.VISIBLE,
                     actionAvailability = actionAvailability,
+                    artworkRevisions = artworkRevisions,
                 )
         }
     }.sortedWith(
@@ -184,6 +192,7 @@ fun appStageEmptyAppCard(
 private fun LauncherNotification.toAppStageCard(
     isRedacted: Boolean,
     actionAvailability: NotificationStageActionAvailability,
+    artworkRevisions: TimeScapeArtworkRevisionLookup,
 ): AppStageNotificationCard {
     val contentKind = if (isMediaSession) AppStageContentKind.MEDIA else AppStageContentKind.NOTIFICATION
     val actions =
@@ -194,18 +203,22 @@ private fun LauncherNotification.toAppStageCard(
                 if (canDismiss) add(NotificationStageAction.Dismiss)
             }
         }
+    val content =
+        AppStageContent(
+            id = LauncherCardId("stage-notification:${profileId.value}:${key.value}"),
+            stageId = AppStageId(packageName, profileId),
+            kind = contentKind,
+            meaningfulActivityAtEpochMillis = postedAtEpochMillis.coerceAtLeast(0L),
+        )
+    val artworkRevision = artworkRevisions.revisionFor(this)
     return AppStageNotificationCard(
-        content =
-            AppStageContent(
-                id = LauncherCardId("stage-notification:${profileId.value}:${key.value}"),
-                stageId = AppStageId(packageName, profileId),
-                kind = contentKind,
-                meaningfulActivityAtEpochMillis = postedAtEpochMillis.coerceAtLeast(0L),
-            ),
+        content = content,
         notificationKey = key,
         title = if (isRedacted) "Hidden notification" else title,
         text = if (isRedacted) "Content hidden for this profile" else text,
         isRedacted = isRedacted,
         supportedActions = actions,
+        artworkBase64 = largeIconPngBase64,
+        artworkSourceKey = artworkRevision?.let { revision -> "${content.id.value}:$revision" },
     )
 }

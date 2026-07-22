@@ -1,5 +1,6 @@
 package com.riffle.app.launcher.notifications
 
+import com.riffle.app.launcher.TimeScapeArtworkRevisionLookup
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.apps.AppActivityName
 import com.riffle.core.domain.launcher.apps.AppIdentity
@@ -78,6 +79,43 @@ class AppStageNotificationContentTest {
             )
 
         assertTrue(cards.isEmpty())
+    }
+
+    @Test
+    fun `projects revision-keyed artwork without persisting it in stage content`() {
+        val notification =
+            notification(key = "artwork", postedAt = 1).copy(largeIconPngBase64 = "encoded-artwork")
+        val cards =
+            appStageNotificationCards(
+                notifications = listOf(notification),
+                notificationAccessStatus = NotificationAccessStatus.GRANTED,
+                profileContentVisibility = mapOf(AppProfile.personal().id to AppProfileContentVisibility.VISIBLE),
+                artworkRevisions = TimeScapeArtworkRevisionLookup { "revision-1" },
+            )
+
+        val card = cards.single()
+        assertEquals("encoded-artwork", card.artworkBase64)
+        assertEquals("stage-notification:personal:artwork:revision-1", card.artworkSourceKey)
+        assertEquals("stage-notification:personal:artwork", card.content.id.value)
+    }
+
+    @Test
+    fun `redacted cards retain artwork cache identity but not notification text`() {
+        val notification =
+            notification(key = "quiet-artwork", postedAt = 1).copy(largeIconPngBase64 = "encoded-artwork")
+        val cards =
+            appStageNotificationCards(
+                notifications = listOf(notification),
+                notificationAccessStatus = NotificationAccessStatus.GRANTED,
+                profileContentVisibility =
+                    mapOf(AppProfile.personal().id to AppProfileContentVisibility.REDACTED_QUIET),
+                artworkRevisions = TimeScapeArtworkRevisionLookup { "revision-1" },
+            )
+
+        val card = cards.single()
+        assertEquals("Hidden notification", card.title)
+        assertEquals("Content hidden for this profile", card.text)
+        assertEquals("stage-notification:personal:quiet-artwork:revision-1", card.artworkSourceKey)
     }
 
     @Test
