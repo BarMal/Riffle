@@ -8,9 +8,14 @@ import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
@@ -23,8 +28,6 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.keyDown
-import androidx.compose.ui.test.keyUp
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.requestFocus
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -111,8 +114,10 @@ class CardStackTest {
     }
 
     @Test
+    @OptIn(ExperimentalTestApi::class)
     fun focusedCardAcceptsDpadNavigationAndHidesDecorativeCardsFromAccessibility() {
         var focusedCard by mutableStateOf(0)
+        var boundaryKeyEvents by mutableStateOf(0)
 
         composeRule.setContent {
             MaterialTheme {
@@ -124,17 +129,31 @@ class CardStackTest {
                             onFocusRequest = { entry -> focusedCard = entry.cardIndex },
                             onSettle = { _, _ -> },
                             onNavigate = { direction ->
-                                focusedCard =
+                                val target =
                                     when (direction) {
-                                        com.riffle.core.domain.launcher.cards.CardStackNavigationDirection.PREVIOUS -> 0
-                                        com.riffle.core.domain.launcher.cards.CardStackNavigationDirection.NEXT -> 1
+                                        com.riffle.core.domain.launcher.cards.CardStackNavigationDirection.PREVIOUS ->
+                                            focusedCard - 1
+                                        com.riffle.core.domain.launcher.cards.CardStackNavigationDirection.NEXT ->
+                                            focusedCard + 1
                                     }
+                                if (target !in 0..1) {
+                                    false
+                                } else {
+                                    focusedCard = target
+                                    true
+                                }
                             },
                         ),
                 ) { entry, modifier ->
                     Text(
                         text = cardLabel(entry.cardIndex),
-                        modifier = modifier.focusable().testTag("card-${entry.cardIndex}"),
+                        modifier =
+                            modifier
+                                .focusable()
+                                .onKeyEvent { event ->
+                                    if (event.type == KeyEventType.KeyDown) boundaryKeyEvents++
+                                    false
+                                }.testTag("card-${entry.cardIndex}"),
                     )
                 }
             }
@@ -142,11 +161,28 @@ class CardStackTest {
 
         composeRule.onNodeWithTag("card-0").requestFocus()
         composeRule.onNodeWithTag("card-0").performKeyInput {
+            keyDown(Key.DirectionUp)
+            keyUp(Key.DirectionUp)
+        }
+        composeRule.runOnIdle {
+            assertEquals(0, focusedCard)
+            assertEquals(1, boundaryKeyEvents)
+        }
+        composeRule.onNodeWithTag("card-0").performKeyInput {
             keyDown(Key.DirectionDown)
             keyUp(Key.DirectionDown)
         }
 
         composeRule.runOnIdle { assertEquals(1, focusedCard) }
+        composeRule.onNodeWithTag("card-1").requestFocus()
+        composeRule.onNodeWithTag("card-1").performKeyInput {
+            keyDown(Key.DirectionDown)
+            keyUp(Key.DirectionDown)
+        }
+        composeRule.runOnIdle {
+            assertEquals(1, focusedCard)
+            assertEquals(2, boundaryKeyEvents)
+        }
         composeRule.onNodeWithText(cardLabel(0)).assertDoesNotExist()
         composeRule.onNodeWithText(cardLabel(1)).assertExists()
     }

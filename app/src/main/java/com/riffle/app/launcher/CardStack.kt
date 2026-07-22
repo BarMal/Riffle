@@ -51,7 +51,7 @@ internal data class CardStackInteraction(
     val onSettle: (verticalDragPx: Float, verticalVelocityPxPerSecond: Float) -> Unit,
     val onSettleHaptic: () -> Unit = {},
     /** Alternate-input navigation commits one focused-card change without emulating a drag. */
-    val onNavigate: ((CardStackNavigationDirection) -> Unit)? = null,
+    val onNavigate: ((CardStackNavigationDirection) -> Boolean)? = null,
     /** Opens the focused card's detail surface for keyboard, D-pad, rotary and switch users. */
     val onExpand: (() -> Unit)? = null,
     /** Increments only when a gesture settles to a new focused card. */
@@ -272,11 +272,11 @@ private fun AnimatedCardStackEntry(
                                     when (event.key) {
                                         Key.DirectionUp,
                                         Key.PageUp,
-                                        -> interaction?.onNavigate?.invoke(CardStackNavigationDirection.PREVIOUS) != null
+                                        -> interaction?.onNavigate?.invoke(CardStackNavigationDirection.PREVIOUS) ?: false
 
                                         Key.DirectionDown,
                                         Key.PageDown,
-                                        -> interaction?.onNavigate?.invoke(CardStackNavigationDirection.NEXT) != null
+                                        -> interaction?.onNavigate?.invoke(CardStackNavigationDirection.NEXT) ?: false
 
                                         Key.DirectionCenter,
                                         Key.Enter,
