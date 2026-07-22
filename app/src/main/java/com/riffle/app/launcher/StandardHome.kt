@@ -82,6 +82,7 @@ internal fun StandardHome(
             onDragSessionChanged = { session -> homeDragSession.value = session },
             currentDragSession = { homeDragSession.value },
             haptics = interactions.haptics,
+            onDockInteractionHeightChanged = interactions.onDockInteractionHeightChanged,
             onBackgroundClick = {},
             onAction = onAction,
         )
@@ -467,6 +468,7 @@ internal data class HomeDragSession(
 
 internal data class StandardHomeInteractions(
     val haptics: LauncherHaptics = NoopLauncherHaptics,
+    val onDockInteractionHeightChanged: (Int) -> Unit = {},
 )
 
 internal data class StandardHomePresentation(
@@ -541,6 +543,7 @@ internal data class HomeWorkspaceActions(
     val onDragSessionChanged: (HomeDragSession?) -> Unit,
     val currentDragSession: () -> HomeDragSession? = { null },
     val haptics: LauncherHaptics,
+    val onDockInteractionHeightChanged: (Int) -> Unit = {},
     val onBackgroundClick: () -> Unit = {},
     val onAction: (LauncherShellAction) -> Unit,
 )

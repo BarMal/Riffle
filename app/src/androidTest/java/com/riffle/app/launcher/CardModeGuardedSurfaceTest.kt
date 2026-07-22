@@ -3,6 +3,7 @@ package com.riffle.app.launcher
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.click
@@ -216,6 +217,70 @@ class CardModeGuardedSurfaceTest {
     }
 
     @Test
+    fun cardModeExpandedDockShelfReceivesPhysicalTapWithAnActiveTimeScapeStage() {
+        val primary = cardsHomeApp(packageName = "com.example.camera")
+        val overflow = cardsHomeApp(packageName = "com.example.photos")
+        val primaryShortcut =
+            AppShortcutItem(
+                id = LauncherItemId("app:camera"),
+                appIdentity = primary.identity,
+                label = primary.label,
+            )
+        val overflowShortcut =
+            AppShortcutItem(
+                id = LauncherItemId("app:photos"),
+                appIdentity = overflow.identity,
+                label = overflow.label,
+            )
+        val layout =
+            HomeLayoutDefaults.standard().let { standard ->
+                standard.copy(
+                    viewMode = LauncherViewMode.CARD_INTERFACE,
+                    dock =
+                        standard.dock.copy(
+                            capacity = 1,
+                            items = listOf(primaryShortcut, overflowShortcut),
+                        ),
+                )
+            }
+        val actions = mutableListOf<LauncherShellAction>()
+        val stageState = cardsState(NotificationAccessStatus.GRANTED, groups = listOf(notificationGroup()))
+        val state =
+            stageState.copy(
+                homeLayout = layout,
+                homeLayoutSet = HomeLayoutSet.fromLayout(layout),
+                installedApps = stageState.installedApps + listOf(primary, overflow),
+                profileContentVisibility =
+                    stageState.profileContentVisibility +
+                        (primary.identity.profile.id to AppProfileContentVisibility.VISIBLE),
+            )
+
+        composeRule.setContent {
+            LauncherShellContent(
+                state = state,
+                appIconLoader = EmptyAppIconLoader,
+                timeScapeWindowLayout = TimeScapeWindowLayout(widthDp = 360, heightDp = 640),
+                onAction = actions::add,
+            )
+        }
+
+        composeRule.onNodeWithText("Previous").assertIsDisplayed()
+        composeRule.onNodeWithTag(dockItemTestTag(primaryShortcut.id)).performTouchInput {
+            down(center)
+            moveBy(Offset(0f, -24f))
+            updatePointerBy(pointerId = 0, delta = Offset(0f, -64f))
+            up()
+        }
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithTag(dockItemTestTag(overflowShortcut.id)).performTouchInput { click() }
+
+        composeRule.runOnIdle {
+            assertEquals(listOf(LauncherShellAction.LaunchApp(overflow.identity)), actions)
+        }
+    }
+
+    @Test
     fun cardModeRendersOneDockAndOpensDockFolders() {
         val folder =
             FolderItem(
@@ -414,14 +479,14 @@ class CardModeGuardedSurfaceTest {
                 ),
         )
 
-    private fun cardsHomeApp(): InstalledApp =
+    private fun cardsHomeApp(packageName: String = "com.example.camera"): InstalledApp =
         InstalledApp(
             identity =
                 AppIdentity(
-                    packageName = AppPackageName("com.example.camera"),
+                    packageName = AppPackageName(packageName),
                     activityName = AppActivityName(".Camera"),
                     profile = AppProfile.personal(),
                 ),
-            label = "Camera",
+            label = packageName.substringAfterLast('.').replaceFirstChar(Char::uppercase),
         )
 }

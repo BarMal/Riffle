@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.home.DockAlignment
@@ -60,6 +61,7 @@ internal fun StandardHomeDockArea(
                     end = margins.end.dp,
                     bottom = margins.bottom.dp,
                 )
+                .onSizeChanged { size -> actions.onDockInteractionHeightChanged(size.height) }
                 .dockShelfMotion(dockShelfMotionPolicy(presentation.reducedMotion))
                 .dockShelfFrameRatePreference(presentation.motionPerformanceTargetFps),
         horizontalAlignment = layout.dock.alignment.toHorizontalAlignment(),

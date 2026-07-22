@@ -4,7 +4,10 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.cards.TimeScapeWindowLayout
@@ -20,24 +23,14 @@ fun HomeDestination(
 ) {
     when (state.homeLayout.viewMode.homeSurfaceKind()) {
         HomeSurfaceKind.CARDS ->
-            Box(modifier = Modifier.fillMaxSize()) {
-                StandardHomeSurface(
-                    state = state,
-                    appIconLoader = appIconLoader,
-                    widgetRenderers = widgetRenderers,
-                    haptics = haptics,
-                    onAction = onAction,
-                )
-                TimeScapeAppStageSurface(
-                    state = state,
-                    modifier =
-                        Modifier.padding(bottom = state.homeLayout.dockInteractionRegionHeightDp().dp),
-                    windowInsets =
-                        cardsPanelInsetPolicy(state).safeDrawingPanelInsets(),
-                    windowLayout = timeScapeWindowLayout,
-                    onAction = onAction,
-                )
-            }
+            CardsHomeSurface(
+                state = state,
+                appIconLoader = appIconLoader,
+                widgetRenderers = widgetRenderers,
+                haptics = haptics,
+                timeScapeWindowLayout = timeScapeWindowLayout,
+                onAction = onAction,
+            )
 
         HomeSurfaceKind.GRID ->
             StandardHomeSurface(
@@ -51,11 +44,52 @@ fun HomeDestination(
 }
 
 @Composable
+private fun CardsHomeSurface(
+    state: LauncherShellState,
+    appIconLoader: AppIconLoader,
+    widgetRenderers: LauncherWidgetRenderers,
+    haptics: LauncherHaptics,
+    timeScapeWindowLayout: TimeScapeWindowLayout?,
+    onAction: (LauncherShellAction) -> Unit,
+) {
+    val dockInteractionHeightPx = remember { mutableIntStateOf(0) }
+    val density = LocalDensity.current
+    val dockInteractionHeight =
+        maxOf(
+            state.homeLayout.dockInteractionRegionHeightDp().dp,
+            with(density) { dockInteractionHeightPx.intValue.toDp() },
+        )
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        StandardHomeSurface(
+            state = state,
+            appIconLoader = appIconLoader,
+            widgetRenderers = widgetRenderers,
+            haptics = haptics,
+            onDockInteractionHeightChanged = { heightPx ->
+                dockInteractionHeightPx.intValue = heightPx
+            },
+            onAction = onAction,
+        )
+        TimeScapeAppStageSurface(
+            state = state,
+            modifier =
+                Modifier.padding(bottom = dockInteractionHeight),
+            windowInsets =
+                cardsPanelInsetPolicy(state).safeDrawingPanelInsets(),
+            windowLayout = timeScapeWindowLayout,
+            onAction = onAction,
+        )
+    }
+}
+
+@Composable
 private fun StandardHomeSurface(
     state: LauncherShellState,
     appIconLoader: AppIconLoader,
     widgetRenderers: LauncherWidgetRenderers,
     haptics: LauncherHaptics,
+    onDockInteractionHeightChanged: (Int) -> Unit = {},
     onAction: (LauncherShellAction) -> Unit,
 ) {
     StandardHome(
@@ -64,6 +98,7 @@ private fun StandardHomeSurface(
         interactions =
             StandardHomeInteractions(
                 haptics = haptics,
+                onDockInteractionHeightChanged = onDockInteractionHeightChanged,
             ),
         presentation =
             StandardHomePresentation(
