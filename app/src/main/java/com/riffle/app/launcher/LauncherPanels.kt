@@ -27,13 +27,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.apps.AppDrawerProfileFilter
 import com.riffle.core.domain.launcher.apps.InstalledApp
+import com.riffle.core.domain.launcher.settings.AppDrawerPresentation
 
 @Composable
-fun AppDrawer(
-    query: String,
-    profileFilter: AppDrawerProfileFilter,
-    installedApps: List<InstalledApp>,
-    apps: List<InstalledApp>,
+internal fun AppDrawer(
+    state: AppDrawerState,
     appListContext: AppListContext,
     onAction: (LauncherShellAction) -> Unit,
 ) {
@@ -41,37 +39,37 @@ fun AppDrawer(
         title =
             appPanelTitle(
                 baseTitle = "Apps",
-                resultCount = apps.size,
-                query = query,
-                profileFilter = profileFilter,
+                resultCount = state.apps.size,
+                query = state.query,
+                profileFilter = state.profileFilter,
             ),
         onAction = onAction,
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
             AppSearchField(
                 modifier = Modifier.fillMaxWidth(),
-                query = query,
+                query = state.query,
                 onQueryChanged = { value -> onAction(LauncherShellAction.AppDrawerQueryChanged(value)) },
             )
             Spacer(modifier = Modifier.height(12.dp))
             AppProfileFilterChips(
-                selectedFilter = profileFilter,
+                selectedFilter = state.profileFilter,
                 onFilterSelected = { filter -> onAction(LauncherShellAction.AppDrawerProfileFilterSelected(filter)) },
-                apps = installedApps,
+                apps = state.installedApps,
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text =
                     appListSummaryText(
-                        totalAppCount = installedApps.size,
-                        resultCount = apps.size,
-                        query = query,
-                        profileFilter = profileFilter,
+                        totalAppCount = state.installedApps.size,
+                        resultCount = state.apps.size,
+                        query = state.query,
+                        profileFilter = state.profileFilter,
                     ),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            if (shouldShowAppDrawerClearFilters(query = query, profileFilter = profileFilter)) {
+            if (shouldShowAppDrawerClearFilters(query = state.query, profileFilter = state.profileFilter)) {
                 TextButton(
                     onClick = {
                         appDrawerClearFilterActions().forEach(onAction)
@@ -81,21 +79,48 @@ fun AppDrawer(
                 }
             }
             Spacer(modifier = Modifier.height(12.dp))
-            AppList(
-                modifier = Modifier.weight(1f),
-                apps = apps,
-                emptyText =
-                    appListEmptyText(
-                        surface = AppListSurface.DRAWER,
-                        query = query,
-                        profileFilter = profileFilter,
-                    ),
-                context = appListContext,
-                showSections = true,
-            )
+            when (state.presentation) {
+                AppDrawerPresentation.LIST ->
+                    AppList(
+                        modifier = Modifier.weight(1f),
+                        apps = state.apps,
+                        emptyText =
+                            appListEmptyText(
+                                surface = AppListSurface.DRAWER,
+                                query = state.query,
+                                profileFilter = state.profileFilter,
+                            ),
+                        context = appListContext,
+                        showSections = true,
+                        showInlineActions = false,
+                    )
+
+                AppDrawerPresentation.ICONS ->
+                    AppIconGrid(
+                        modifier = Modifier.weight(1f),
+                        apps = state.apps,
+                        columns = state.iconGridColumns,
+                        emptyText =
+                            appListEmptyText(
+                                surface = AppListSurface.DRAWER,
+                                query = state.query,
+                                profileFilter = state.profileFilter,
+                            ),
+                        context = appListContext,
+                    )
+            }
         }
     }
 }
+
+internal data class AppDrawerState(
+    val query: String,
+    val profileFilter: AppDrawerProfileFilter,
+    val installedApps: List<InstalledApp>,
+    val apps: List<InstalledApp>,
+    val presentation: AppDrawerPresentation,
+    val iconGridColumns: Int,
+)
 
 internal fun shouldShowAppDrawerClearFilters(
     query: String,

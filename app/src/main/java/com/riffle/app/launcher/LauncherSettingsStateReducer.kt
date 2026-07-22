@@ -4,6 +4,7 @@ import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.apps.AppVisibilityRepository
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
 import com.riffle.core.domain.launcher.settings.LauncherSettingsRepository
+import com.riffle.core.domain.launcher.settings.coerced
 
 internal class LauncherSettingsStateReducer(
     private val homeLayoutRepository: HomeLayoutRepository,
@@ -30,7 +31,7 @@ internal class LauncherSettingsStateReducer(
                 launcherSettingsRepository = launcherSettingsRepository,
             )
         } else {
-            when (action) {
+            state.withAppDrawerSettingsAction(action, launcherSettingsRepository) ?: when (action) {
                 is LauncherShellAction.SelectHomeSwipeGestureAction ->
                     state.withHomeSwipeGestureAction(action.direction, action.action, launcherSettingsRepository)
 
@@ -119,6 +120,32 @@ internal class LauncherSettingsStateReducer(
             }
         }
 }
+
+private fun LauncherShellState.withAppDrawerSettingsAction(
+    action: LauncherShellAction,
+    launcherSettingsRepository: LauncherSettingsRepository,
+): LauncherShellState? =
+    when (action) {
+        is LauncherShellAction.SelectAppDrawerPresentation ->
+            withLauncherSettings(
+                settings =
+                    launcherSettings.copy(
+                        appDrawer = launcherSettings.appDrawer.copy(presentation = action.presentation),
+                    ),
+                launcherSettingsRepository = launcherSettingsRepository,
+            )
+
+        is LauncherShellAction.SelectAppDrawerIconGridColumns ->
+            withLauncherSettings(
+                settings =
+                    launcherSettings.copy(
+                        appDrawer = launcherSettings.appDrawer.copy(iconGridColumns = action.columns).coerced(),
+                    ),
+                launcherSettingsRepository = launcherSettingsRepository,
+            )
+
+        else -> null
+    }
 
 private val LauncherShellAction.isAppearanceSettingsAction: Boolean
     get() =

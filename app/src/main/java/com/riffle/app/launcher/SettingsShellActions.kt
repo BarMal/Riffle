@@ -104,6 +104,8 @@ internal fun LauncherShellAction.launcherSettingsActionRoute(): LauncherSettings
         is LauncherShellAction.SelectSettingsLayoutDeviceClass,
         is LauncherShellAction.ImportLauncherBackup,
         is LauncherShellAction.SelectSearchResultPresentation,
+        is LauncherShellAction.SelectAppDrawerPresentation,
+        is LauncherShellAction.SelectAppDrawerIconGridColumns,
         -> LauncherSettingsActionRoute.SettingsState(this)
 
         LauncherShellAction.RequestNotificationAccess -> LauncherSettingsActionRoute.RequestNotificationAccess

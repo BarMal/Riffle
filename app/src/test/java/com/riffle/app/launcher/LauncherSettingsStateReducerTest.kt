@@ -6,6 +6,7 @@ import com.riffle.core.domain.launcher.apps.AppVisibilityRepository
 import com.riffle.core.domain.launcher.contextual.ContextualSettings
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
+import com.riffle.core.domain.launcher.settings.AppDrawerPresentation
 import com.riffle.core.domain.launcher.settings.AppearanceSettings
 import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
 import com.riffle.core.domain.launcher.settings.HomeSystemBars
@@ -45,6 +46,27 @@ class LauncherSettingsStateReducerTest {
             )
 
         assertEquals(SearchResultPresentation.LIST, updatedState.launcherSettings.search.resultPresentation)
+        assertEquals(updatedState.launcherSettings, repository.savedSettings)
+    }
+
+    @Test
+    fun persistsAppDrawerPresentationAndCoercesGridColumns() {
+        val repository = FakeLauncherSettingsRepository()
+        val reducer = reducer(launcherSettingsRepository = repository)
+
+        val iconState =
+            reducer.reduce(
+                state = LauncherShellState(),
+                action = LauncherShellAction.SelectAppDrawerPresentation(AppDrawerPresentation.ICONS),
+            )
+        val updatedState =
+            reducer.reduce(
+                state = iconState,
+                action = LauncherShellAction.SelectAppDrawerIconGridColumns(columns = 99),
+            )
+
+        assertEquals(AppDrawerPresentation.ICONS, updatedState.launcherSettings.appDrawer.presentation)
+        assertEquals(6, updatedState.launcherSettings.appDrawer.iconGridColumns)
         assertEquals(updatedState.launcherSettings, repository.savedSettings)
     }
 

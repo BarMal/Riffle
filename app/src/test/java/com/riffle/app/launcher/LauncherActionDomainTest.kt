@@ -31,6 +31,7 @@ import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.home.WallpaperScrollMode
 import com.riffle.core.domain.launcher.home.WallpaperSource
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
+import com.riffle.core.domain.launcher.settings.AppDrawerPresentation
 import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
 import com.riffle.core.domain.launcher.settings.HomeGesture
 import com.riffle.core.domain.launcher.settings.HomeSwipeGestureDirection
@@ -344,6 +345,14 @@ class LauncherActionDomainTest {
                 settings(
                     "SelectSearchResultPresentation",
                     LauncherShellAction.SelectSearchResultPresentation(SearchResultPresentation.LIST),
+                ),
+                settings(
+                    "SelectAppDrawerPresentation",
+                    LauncherShellAction.SelectAppDrawerPresentation(AppDrawerPresentation.ICONS),
+                ),
+                settings(
+                    "SelectAppDrawerIconGridColumns",
+                    LauncherShellAction.SelectAppDrawerIconGridColumns(columns = 5),
                 ),
                 settings(
                     "SelectWallpaperSource",

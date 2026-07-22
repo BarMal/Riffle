@@ -28,6 +28,7 @@ import com.riffle.core.domain.launcher.home.WallpaperScrollMode
 import com.riffle.core.domain.launcher.home.WallpaperSource
 import com.riffle.core.domain.launcher.home.WidgetResizeConstraints
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
+import com.riffle.core.domain.launcher.settings.AppDrawerPresentation
 import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
 import com.riffle.core.domain.launcher.settings.HomeGesture
 import com.riffle.core.domain.launcher.settings.HomeSwipeGestureDirection
@@ -346,6 +347,14 @@ sealed interface LauncherShellAction {
 
     data class SelectSearchResultPresentation(
         val presentation: SearchResultPresentation,
+    ) : LauncherShellAction
+
+    data class SelectAppDrawerPresentation(
+        val presentation: AppDrawerPresentation,
+    ) : LauncherShellAction
+
+    data class SelectAppDrawerIconGridColumns(
+        val columns: Int,
     ) : LauncherShellAction
 
     data class SelectWallpaperSource(val source: WallpaperSource) : LauncherShellAction

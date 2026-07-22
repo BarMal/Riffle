@@ -17,6 +17,8 @@ import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.home.WallpaperScrollMode
 import com.riffle.core.domain.launcher.home.WallpaperSettings
 import com.riffle.core.domain.launcher.home.WallpaperSource
+import com.riffle.core.domain.launcher.settings.AppDrawerPresentation
+import com.riffle.core.domain.launcher.settings.AppDrawerSettings
 import com.riffle.core.domain.launcher.settings.AppearanceSettings
 import com.riffle.core.domain.launcher.settings.CardsSettings
 import com.riffle.core.domain.launcher.settings.GestureSettings
@@ -63,6 +65,22 @@ import org.junit.Test
 
 @Suppress("LargeClass")
 class LauncherSettingsJsonCodecTest {
+    @Test
+    fun roundTripsAppDrawerSettingsAndCoercesMalformedGridColumns() {
+        val settings =
+            LauncherSettings(
+                appDrawer = AppDrawerSettings(AppDrawerPresentation.ICONS, iconGridColumns = 6),
+            )
+
+        assertEquals(settings.appDrawer, decodeLauncherSettings(encodeLauncherSettings(settings)).appDrawer)
+        assertEquals(
+            AppDrawerSettings(AppDrawerPresentation.LIST, iconGridColumns = 3),
+            decodeLauncherSettings(
+                "{\"appDrawer\": {\"presentation\": \"UNKNOWN\", \"iconGridColumns\": 1}}",
+            ).appDrawer,
+        )
+    }
+
     @Test
     fun roundTripsSearchResultPresentationAndDefaultsMissingValuesToIcons() {
         val settings = LauncherSettings(search = SearchSettings(SearchResultPresentation.LIST))
