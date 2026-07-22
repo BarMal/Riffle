@@ -44,7 +44,9 @@ import com.riffle.core.domain.launcher.settings.MAX_TIMESCAPE_PARALLAX_INTENSITY
 import com.riffle.core.domain.launcher.settings.MAX_TIMESCAPE_ROTATION_DEGREES
 import com.riffle.core.domain.launcher.settings.MAX_TIMESCAPE_ROTATION_INTENSITY_PERCENT
 import com.riffle.core.domain.launcher.settings.MAX_TIMESCAPE_SATURATION_PERCENT
+import com.riffle.core.domain.launcher.settings.MAX_TIMESCAPE_SETTLE_DURATION_MILLIS
 import com.riffle.core.domain.launcher.settings.MAX_TIMESCAPE_SHADOW_ELEVATION_DP
+import com.riffle.core.domain.launcher.settings.MAX_TIMESCAPE_SPRING_BOUNCINESS_PERCENT
 import com.riffle.core.domain.launcher.settings.MAX_TIMESCAPE_TEXTURE_INTENSITY_PERCENT
 import com.riffle.core.domain.launcher.settings.MAX_TIMESCAPE_TEXT_SCALE_PERCENT
 import com.riffle.core.domain.launcher.settings.MAX_TIMESCAPE_TRANSITION_DURATION_MILLIS
@@ -68,7 +70,9 @@ import com.riffle.core.domain.launcher.settings.MIN_TIMESCAPE_PARALLAX_INTENSITY
 import com.riffle.core.domain.launcher.settings.MIN_TIMESCAPE_ROTATION_DEGREES
 import com.riffle.core.domain.launcher.settings.MIN_TIMESCAPE_ROTATION_INTENSITY_PERCENT
 import com.riffle.core.domain.launcher.settings.MIN_TIMESCAPE_SATURATION_PERCENT
+import com.riffle.core.domain.launcher.settings.MIN_TIMESCAPE_SETTLE_DURATION_MILLIS
 import com.riffle.core.domain.launcher.settings.MIN_TIMESCAPE_SHADOW_ELEVATION_DP
+import com.riffle.core.domain.launcher.settings.MIN_TIMESCAPE_SPRING_BOUNCINESS_PERCENT
 import com.riffle.core.domain.launcher.settings.MIN_TIMESCAPE_TEXTURE_INTENSITY_PERCENT
 import com.riffle.core.domain.launcher.settings.MIN_TIMESCAPE_TEXT_SCALE_PERCENT
 import com.riffle.core.domain.launcher.settings.MIN_TIMESCAPE_TRANSITION_DURATION_MILLIS
@@ -80,7 +84,9 @@ import com.riffle.core.domain.launcher.settings.TimeScapeAppearancePreset
 import com.riffle.core.domain.launcher.settings.TimeScapeAppearanceSettings
 import com.riffle.core.domain.launcher.settings.TimeScapeBackgroundSource
 import com.riffle.core.domain.launcher.settings.TimeScapeContentDensity
+import com.riffle.core.domain.launcher.settings.TimeScapeEasing
 import com.riffle.core.domain.launcher.settings.TimeScapeFanDirection
+import com.riffle.core.domain.launcher.settings.TimeScapeHapticStrength
 import com.riffle.core.domain.launcher.settings.TimeScapeRendererCapabilities
 
 @Composable
@@ -404,6 +410,16 @@ internal fun TimeScapeAppearancePageContent(
     }
     SettingsSection(title = "Motion") {
         TimeScapeSlider(
+            "Settle duration",
+            appearance.motion.settleDurationMillis,
+            MIN_TIMESCAPE_SETTLE_DURATION_MILLIS..MAX_TIMESCAPE_SETTLE_DURATION_MILLIS,
+            "ms",
+        ) { value ->
+            update {
+                it.copy(motion = it.motion.copy(settleDurationMillis = value))
+            }
+        }
+        TimeScapeSlider(
             "Reflow duration",
             appearance.motion.reflowDurationMillis,
             MIN_TIMESCAPE_TRANSITION_DURATION_MILLIS..MAX_TIMESCAPE_TRANSITION_DURATION_MILLIS,
@@ -411,6 +427,56 @@ internal fun TimeScapeAppearancePageContent(
         ) { value ->
             update {
                 it.copy(motion = it.motion.copy(reflowDurationMillis = value))
+            }
+        }
+        TimeScapeSlider(
+            "Enter duration",
+            appearance.motion.enterDurationMillis,
+            MIN_TIMESCAPE_TRANSITION_DURATION_MILLIS..MAX_TIMESCAPE_TRANSITION_DURATION_MILLIS,
+            "ms",
+        ) { value ->
+            update {
+                it.copy(motion = it.motion.copy(enterDurationMillis = value))
+            }
+        }
+        TimeScapeSlider(
+            "Exit duration",
+            appearance.motion.exitDurationMillis,
+            MIN_TIMESCAPE_TRANSITION_DURATION_MILLIS..MAX_TIMESCAPE_TRANSITION_DURATION_MILLIS,
+            "ms",
+        ) { value ->
+            update {
+                it.copy(motion = it.motion.copy(exitDurationMillis = value))
+            }
+        }
+        TimeScapeSlider(
+            "Expand duration",
+            appearance.motion.expandDurationMillis,
+            MIN_TIMESCAPE_TRANSITION_DURATION_MILLIS..MAX_TIMESCAPE_TRANSITION_DURATION_MILLIS,
+            "ms",
+        ) { value ->
+            update {
+                it.copy(motion = it.motion.copy(expandDurationMillis = value))
+            }
+        }
+        TimeScapeEnumChoices(
+            "Easing",
+            TimeScapeEasing.entries,
+            appearance.motion.easing,
+            TimeScapeEasing::label,
+        ) { value ->
+            update {
+                it.copy(motion = it.motion.copy(easing = value))
+            }
+        }
+        TimeScapeSlider(
+            "Spring bounciness",
+            appearance.motion.springBouncinessPercent,
+            MIN_TIMESCAPE_SPRING_BOUNCINESS_PERCENT..MAX_TIMESCAPE_SPRING_BOUNCINESS_PERCENT,
+            "%",
+        ) { value ->
+            update {
+                it.copy(motion = it.motion.copy(springBouncinessPercent = value))
             }
         }
         TimeScapeSlider(
@@ -441,6 +507,16 @@ internal fun TimeScapeAppearancePageContent(
         ) { value ->
             update {
                 it.copy(motion = it.motion.copy(rotationIntensityPercent = value))
+            }
+        }
+        TimeScapeEnumChoices(
+            "Haptic strength",
+            TimeScapeHapticStrength.entries,
+            appearance.motion.hapticStrength,
+            TimeScapeHapticStrength::label,
+        ) { value ->
+            update {
+                it.copy(motion = it.motion.copy(hapticStrength = value))
             }
         }
     }
@@ -563,3 +639,7 @@ private fun TimeScapeAccentSource.label(): String = name.lowercase().replace('_'
 private fun TimeScapeContentDensity.label(): String = name.lowercase().replaceFirstChar(Char::uppercase)
 
 private fun TimeScapeFanDirection.label(): String = name.lowercase().replaceFirstChar(Char::uppercase)
+
+private fun TimeScapeEasing.label(): String = name.lowercase().replace('_', ' ').replaceFirstChar(Char::uppercase)
+
+private fun TimeScapeHapticStrength.label(): String = name.lowercase().replaceFirstChar(Char::uppercase)
