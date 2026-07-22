@@ -3,9 +3,11 @@ package com.riffle.app.launcher
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.longClick
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -22,6 +24,7 @@ import com.riffle.core.domain.launcher.apps.AppProfileContentVisibility
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.cards.TimeScapeWindowLayout
 import com.riffle.core.domain.launcher.home.AppShortcutItem
+import com.riffle.core.domain.launcher.home.FolderItem
 import com.riffle.core.domain.launcher.home.GridCell
 import com.riffle.core.domain.launcher.home.GridPlacement
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
@@ -164,6 +167,42 @@ class CardModeGuardedSurfaceTest {
         composeRule.onNodeWithTag(dockItemTestTag(shortcut.id)).assertIsDisplayed()
         composeRule.onNodeWithTag(dockItemTestTag(shortcut.id)).performTouchInput { longClick() }
         composeRule.onNodeWithText("Remove from dock").assertIsDisplayed()
+    }
+
+    @Test
+    fun cardModeRendersOneDockAndOpensDockFolders() {
+        val folder =
+            FolderItem(
+                id = LauncherItemId("folder:tools"),
+                label = "Tools",
+                items = emptyList(),
+            )
+        val layout =
+            HomeLayoutDefaults.standard().let { standard ->
+                standard.copy(
+                    viewMode = LauncherViewMode.CARD_INTERFACE,
+                    dock = standard.dock.copy(items = listOf(folder)),
+                )
+            }
+
+        composeRule.setContent {
+            LauncherShellContent(
+                state =
+                    LauncherShellState(
+                        firstRunStatus = FirstRunStatus.COMPLETE,
+                        homeRoleStatus = HomeRoleStatus.DEFAULT_HOME,
+                        homeLayout = layout,
+                        homeLayoutSet = HomeLayoutSet.fromLayout(layout),
+                        notificationAccessStatus = NotificationAccessStatus.GRANTED,
+                    ),
+                appIconLoader = EmptyAppIconLoader,
+                onAction = {},
+            )
+        }
+
+        composeRule.onAllNodesWithTag(HOME_DOCK_TEST_TAG).assertCountEquals(1)
+        composeRule.onNodeWithTag(dockItemTestTag(folder.id)).performClick()
+        composeRule.onNodeWithText("Close").assertIsDisplayed()
     }
 
     @Test
