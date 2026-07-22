@@ -31,7 +31,6 @@ internal class LauncherShellRefreshCoordinator(
                 notificationStaleFilter = notificationDependencies.notificationStaleFilter,
                 nowEpochMillis = notificationDependencies.epochMillisProvider.nowEpochMillis(),
             )
-        timeScapeArtworkRevisions.replace(refreshedState.notificationGroupsByApp)
         return refreshedState
             .withReconciledCardsChapterSelection()
             .withRefreshedGeneratedPages(installedAppDependencies.homeLayoutRepository)
@@ -65,6 +64,7 @@ internal class LauncherShellRefreshActions(
     private val currentState: () -> LauncherShellState,
     private val updateState: (LauncherShellState) -> Unit,
     private val refreshCoordinator: LauncherShellRefreshCoordinator,
+    private val artworkRevisionStore: TimeScapeArtworkRevisionStore = timeScapeArtworkRevisions,
 ) {
     private var installedAppRefreshJob: Job? = null
     private var notificationRefreshJob: Job? = null
@@ -85,6 +85,7 @@ internal class LauncherShellRefreshActions(
             cancelExisting = { notificationRefreshJob?.cancel() },
             registerJob = { job -> notificationRefreshJob = job },
             refreshState = { refreshCoordinator.refreshNotifications(currentState()) },
+            publishState = { state -> artworkRevisionStore.replace(state.notificationGroupsByApp) },
         )
 
     fun refreshWidgetProviders(): Job =
@@ -98,6 +99,7 @@ internal class LauncherShellRefreshActions(
         cancelExisting: () -> Unit,
         registerJob: (Job) -> Unit,
         refreshState: () -> LauncherShellState,
+        publishState: (LauncherShellState) -> Unit = {},
     ): Job {
         cancelExisting()
         val job =
@@ -107,6 +109,7 @@ internal class LauncherShellRefreshActions(
                 // Synchronous repository reads cannot be interrupted; a cancelled result must
                 // not overwrite a newer snapshot after it returns.
                 coroutineContext.ensureActive()
+                publishState(refreshedState)
                 updateState(refreshedState)
             }
         registerJob(job)

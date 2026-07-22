@@ -34,8 +34,14 @@ import com.riffle.core.domain.launcher.widgets.InstalledWidgetProviderRepository
 import com.riffle.core.domain.launcher.widgets.WidgetProviderClassName
 import com.riffle.core.domain.launcher.widgets.WidgetProviderDimensions
 import com.riffle.core.domain.launcher.widgets.WidgetProviderIdentity
+import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Test
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
 
 class LauncherShellRefreshCoordinatorTest {
     @Test
@@ -176,6 +182,55 @@ class LauncherShellRefreshCoordinatorTest {
     }
 
     @Test
+    fun cancelledNotificationRefreshDoesNotPublishArtworkAfterNewerRefresh() {
+        val olderReadStarted = CountDownLatch(1)
+        val releaseOlderRead = CountDownLatch(1)
+        val readCount = AtomicInteger()
+        val older = notification(key = "mail-1", packageName = "com.riffle.mail", artwork = "older")
+        val newer = notification(key = "mail-1", packageName = "com.riffle.mail", artwork = "newer")
+        val repository =
+            object : LauncherNotificationRepository {
+                override fun activeNotifications(): List<LauncherNotification> =
+                    if (readCount.getAndIncrement() == 0) {
+                        olderReadStarted.countDown()
+                        check(releaseOlderRead.await(5, TimeUnit.SECONDS))
+                        listOf(older)
+                    } else {
+                        listOf(newer)
+                    }
+            }
+        val coordinator = coordinator(notificationRepository = repository)
+        val revisions = TimeScapeArtworkRevisionStore()
+        val dispatcher = Executors.newFixedThreadPool(2).asCoroutineDispatcher()
+        try {
+            runBlocking {
+                val actions =
+                    LauncherShellRefreshActions(
+                        coroutineScope = this,
+                        refreshDispatcher = dispatcher,
+                        currentState = { LauncherShellState() },
+                        updateState = {},
+                        refreshCoordinator = coordinator,
+                        artworkRevisionStore = revisions,
+                    )
+
+                val olderJob = actions.refreshNotifications()
+                check(olderReadStarted.await(5, TimeUnit.SECONDS))
+                actions.refreshNotifications().join()
+                releaseOlderRead.countDown()
+                olderJob.join()
+            }
+
+            val expected = TimeScapeArtworkRevisionStore()
+            expected.replace(coordinator.refreshNotifications(LauncherShellState()).notificationGroupsByApp)
+            assertEquals(expected.revisionFor(newer), revisions.revisionFor(newer))
+        } finally {
+            releaseOlderRead.countDown()
+            dispatcher.close()
+        }
+    }
+
+    @Test
     fun refreshNotificationsSelectsConfiguredCardsPageAheadOfConfiguredProfilePages() {
         val defaults = HomeLayoutDefaults.standard()
         val workPage =
@@ -252,7 +307,7 @@ class LauncherShellRefreshCoordinatorTest {
 
     private fun coordinator(
         installedAppRepository: FakeInstalledAppRepository = FakeInstalledAppRepository(),
-        notificationRepository: FakeNotificationRepository = FakeNotificationRepository(),
+        notificationRepository: LauncherNotificationRepository = FakeNotificationRepository(),
         widgetProviderRepository: FakeWidgetProviderRepository = FakeWidgetProviderRepository(),
         homeLayoutRepository: FakeHomeLayoutRepository = FakeHomeLayoutRepository(),
     ): LauncherShellRefreshCoordinator =
@@ -395,12 +450,14 @@ class LauncherShellRefreshCoordinatorTest {
         key: String,
         packageName: String,
         category: NotificationCategory = NotificationCategory.UNKNOWN,
+        artwork: String? = null,
     ): LauncherNotification =
         LauncherNotification(
             key = LauncherNotificationKey(key),
             packageName = AppPackageName(packageName),
             category = category,
             postedAtEpochMillis = 1_000L,
+            largeIconPngBase64 = artwork,
         )
 
     private fun widgetProvider(

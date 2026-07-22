@@ -129,7 +129,9 @@ internal class TimeScapeArtworkRevisionStore : TimeScapeArtworkRevisionLookup {
                 }.toMap()
     }
 
-    override fun revisionFor(notification: LauncherNotification): String? = revisionsByNotificationId[notification.artworkRevisionId()]
+    override fun revisionFor(notification: LauncherNotification): String? {
+        return revisionsByNotificationId[notification.artworkRevisionId()]
+    }
 }
 
 internal val timeScapeArtworkRevisions = TimeScapeArtworkRevisionStore()
