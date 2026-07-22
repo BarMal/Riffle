@@ -124,9 +124,15 @@ internal fun TimeScapeAppStageSurface(
 
     Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.surface) {
         BoxWithConstraints(modifier = Modifier.fillMaxSize().windowInsetsPadding(windowInsets)) {
+            val measuredWindow = TimeScapeWindowLayout(maxWidth.value.toInt(), maxHeight.value.toInt())
+            // Window metrics arrive independently of the Cards-mode selection. Until Android has
+            // reported a usable window, keep the recovery body in the measured Compose bounds
+            // instead of laying out a zero-sized adaptive pane beneath the header.
             val adaptiveWindow =
-                windowLayout?.insetLocal(safeInsets)
-                    ?: TimeScapeWindowLayout(maxWidth.value.toInt(), maxHeight.value.toInt())
+                windowLayout
+                    ?.insetLocal(safeInsets)
+                    ?.takeIf(TimeScapeWindowLayout::hasUsableBounds)
+                    ?: measuredWindow
             val paneLayout = remember(adaptiveWindow) { TimeScapePaneLayoutPolicy().layoutFor(adaptiveWindow) }
             Box(
                 modifier =
@@ -815,6 +821,8 @@ private fun TimeScapeWindowLayout.insetLocal(insets: TimeScapeSafeInsetsDp): Tim
                 )
             },
     )
+
+private fun TimeScapeWindowLayout.hasUsableBounds(): Boolean = widthDp > 0 && heightDp > 0
 
 @Composable
 private fun TimeScapeStageSelector(

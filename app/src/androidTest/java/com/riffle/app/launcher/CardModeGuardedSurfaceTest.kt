@@ -3,6 +3,7 @@ package com.riffle.app.launcher
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -15,6 +16,7 @@ import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppProfile
 import com.riffle.core.domain.launcher.apps.AppProfileContentVisibility
 import com.riffle.core.domain.launcher.apps.InstalledApp
+import com.riffle.core.domain.launcher.cards.TimeScapeWindowLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.HomeLayoutSet
 import com.riffle.core.domain.launcher.home.LauncherViewMode
@@ -44,25 +46,63 @@ class CardModeGuardedSurfaceTest {
             LauncherShellContent(
                 state = state,
                 appIconLoader = EmptyAppIconLoader,
+                timeScapeWindowLayout = TimeScapeWindowLayout(widthDp = 0, heightDp = 0),
                 onAction = {},
             )
         }
 
-        composeRule.onNodeWithText("No active stages yet. New notifications will appear here.").assertExists()
+        composeRule
+            .onNodeWithText("No active stages yet. New notifications will appear here.")
+            .assertIsDisplayed()
 
         composeRule.runOnIdle {
             state = cardsState(NotificationAccessStatus.REVOKED)
         }
 
-        composeRule.onNodeWithText("Notification access was revoked. Restore access to update stages.").assertExists()
-        composeRule.onNodeWithText("Allow access").assertExists()
+        composeRule
+            .onNodeWithText("Notification access was revoked. Restore access to update stages.")
+            .assertIsDisplayed()
+        composeRule.onNodeWithText("Allow access").assertIsDisplayed()
 
         composeRule.runOnIdle {
             state = standardState()
         }
 
-        composeRule.onNodeWithText("Notification access was revoked. Restore access to update stages.").assertDoesNotExist()
+        composeRule
+            .onNodeWithText("Notification access was revoked. Restore access to update stages.")
+            .assertDoesNotExist()
         composeRule.onNodeWithText("Allow access").assertDoesNotExist()
+    }
+
+    @Test
+    fun enteringCardsShowsMissingAccessRecoveryWhenPlatformWindowMetricsAreNotReady() {
+        var state by mutableStateOf(standardState().copy(notificationAccessStatus = NotificationAccessStatus.NOT_GRANTED))
+
+        composeRule.setContent {
+            LauncherShellContent(
+                state = state,
+                appIconLoader = EmptyAppIconLoader,
+                timeScapeWindowLayout = TimeScapeWindowLayout(widthDp = 0, heightDp = 0),
+                onAction = {},
+            )
+        }
+
+        composeRule.runOnIdle {
+            state = cardsState(NotificationAccessStatus.UNKNOWN)
+        }
+
+        composeRule
+            .onNodeWithText("Checking notification access.")
+            .assertIsDisplayed()
+
+        composeRule.runOnIdle {
+            state = cardsState(NotificationAccessStatus.NOT_GRANTED)
+        }
+
+        composeRule
+            .onNodeWithText("Allow notification access to show your app stages.")
+            .assertIsDisplayed()
+        composeRule.onNodeWithText("Allow access").assertIsDisplayed()
     }
 
     @Test
