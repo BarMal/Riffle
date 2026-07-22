@@ -626,7 +626,7 @@ private fun TimeScapeNotificationStack(
                             }
                         val focusedCardSemantics =
                             if (entry.cardIndex == activeCardIndex) {
-                                Modifier.semantics(mergeDescendants = true) {
+                                Modifier.semantics {
                                     contentDescription =
                                         "Focused ${timeScapeCardKindLabel(card)} card: ${card.title}. ${card.text}"
                                     stateDescription = "Card ${entry.cardIndex + 1} of ${cards.size}"

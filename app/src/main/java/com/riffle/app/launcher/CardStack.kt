@@ -193,6 +193,9 @@ internal val CardStackAnimationSpecKey = SemanticsPropertyKey<CardStackAnimation
 
 internal val CardStackMotionModeKey = SemanticsPropertyKey<CardStackMotionMode>("CardStackMotionMode")
 
+/** Stable card identity exposed on the focus-owning semantic entry. */
+internal val CardStackItemKey = SemanticsPropertyKey<Any>("CardStackItemKey")
+
 internal fun cardStackMotionMode(reducedMotion: Boolean): CardStackMotionMode =
     if (reducedMotion) {
         CardStackMotionMode.SNAP
@@ -302,8 +305,9 @@ private fun AnimatedCardStackEntry(
                     // The visually focused card is the highest-order entry. Make it the
                     // first card reached by accessibility traversal without changing its
                     // deterministic back-to-front composition order.
-                    .semantics {
+                    .semantics(mergeDescendants = isFocused) {
                         traversalIndex = -entry.order.toFloat()
+                        this[CardStackItemKey] = stableItemKey
                         if (!isFocused) invisibleToUser()
                     }
                     .then(

@@ -1,6 +1,5 @@
 package com.riffle.app.launcher
 
-import androidx.compose.foundation.focusable
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.getValue
@@ -154,13 +153,13 @@ class CardStackTest {
                 ) { entry, modifier ->
                     Text(
                         text = cardLabel(entry.cardIndex),
-                        modifier = modifier.focusable().testTag("card-${entry.cardIndex}"),
+                        modifier = modifier.testTag("card-${entry.cardIndex}"),
                     )
                 }
             }
         }
 
-        composeRule.onNodeWithTag("card-0").requestFocus()
+        composeRule.onNode(SemanticsMatcher.expectValue(CardStackItemKey, 0)).requestFocus()
         composeRule.onRoot().performKeyInput {
             keyDown(Key.DirectionUp)
             keyUp(Key.DirectionUp)
@@ -175,6 +174,11 @@ class CardStackTest {
         }
 
         composeRule.runOnIdle { assertEquals(1, focusedCard) }
+        composeRule
+            .onNode(
+                SemanticsMatcher.expectValue(CardStackItemKey, 1) and
+                    SemanticsMatcher.expectValue(SemanticsProperties.Focused, true),
+            ).assertExists()
         composeRule.onRoot().performKeyInput {
             keyDown(Key.DirectionDown)
             keyUp(Key.DirectionDown)
