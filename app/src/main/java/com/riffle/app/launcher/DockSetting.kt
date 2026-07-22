@@ -163,9 +163,9 @@ private fun DockAlignmentSetting(
                 SettingsButtonText(
                     text =
                         when (candidate) {
-                            DockAlignment.START -> "Left"
+                            DockAlignment.START -> "Start"
                             DockAlignment.CENTER -> "Center"
-                            DockAlignment.END -> "Right"
+                            DockAlignment.END -> "End"
                         },
                 )
             }

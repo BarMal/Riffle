@@ -63,9 +63,9 @@ class DockSettingLayoutTest {
         composeRule.onNodeWithText("Fit content").assertIsDisplayed()
         composeRule.onNodeWithText("Full width").assertIsDisplayed().assertHasClickAction()
         composeRule.onNodeWithText("Dock alignment").assertIsDisplayed()
-        composeRule.onNodeWithText("Left").assertIsDisplayed().assertHasClickAction()
+        composeRule.onNodeWithText("Start").assertIsDisplayed().assertHasClickAction()
         composeRule.onNodeWithText("Center").assertIsDisplayed()
-        composeRule.onNodeWithText("Right").assertIsDisplayed().assertHasClickAction()
+        composeRule.onNodeWithText("End").assertIsDisplayed().assertHasClickAction()
         composeRule.onNodeWithText("Dock slots").assertDoesNotExist()
         composeRule.onNodeWithText("Dock item spacing").assertDoesNotExist()
     }
