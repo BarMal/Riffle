@@ -46,6 +46,40 @@ Describe "validate-device-evidence" {
                 runs = @($runs)
             }
         }
+
+        function Add-TimeScapeMvpEvidence([object] $evidence) {
+            $scenarioIds = @(
+                "feature-timescape-mvp-compact-portrait",
+                "feature-timescape-mvp-compact-landscape",
+                "feature-timescape-mvp-folded-cover",
+                "feature-timescape-mvp-expanded-adaptive",
+                "feature-timescape-mvp-appearance-fallbacks",
+                "feature-timescape-mvp-notification-lifecycle",
+                "feature-timescape-mvp-accessibility-input",
+                "feature-timescape-mvp-performance",
+                "feature-timescape-mvp-standard-home"
+            )
+            foreach ($scenarioId in $scenarioIds) {
+                $evidence.runs += [ordered]@{
+                    scenarioId = $scenarioId
+                    evidenceType = "manual-device"
+                    result = "pass"
+                    validator = "TimeScape MVP validation"
+                    timestamp = "2026-07-18T12:00:00Z"
+                    knownLimitation = ""
+                    device = [ordered]@{
+                        manufacturer = "Google"
+                        model = "Test device"
+                        androidApi = 35
+                        build = "test-build"
+                        formFactor = "foldable"
+                        windowMode = "expanded"
+                        installType = "release"
+                    }
+                }
+            }
+            return $evidence
+        }
     }
 
     BeforeEach {
@@ -97,5 +131,28 @@ Describe "validate-device-evidence" {
         $evidence | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $evidencePath
 
         { & $scriptPath -EvidencePath $evidencePath -ExpectedCommitSha $candidateSha } | Should -Throw "*timestamp must be an RFC3339 date-time*"
+    }
+
+    It "requires every TimeScape MVP scenario when requested" {
+        New-CompleteEvidence | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $evidencePath
+
+        { & $scriptPath -EvidencePath $evidencePath -ExpectedCommitSha $candidateSha -RequireTimeScapeMvp } | Should -Throw "*feature-timescape-mvp-compact-portrait*"
+    }
+
+    It "accepts complete TimeScape MVP evidence when requested" {
+        Add-TimeScapeMvpEvidence (New-CompleteEvidence) |
+            ConvertTo-Json -Depth 10 |
+            Set-Content -LiteralPath $evidencePath
+
+        & $scriptPath -EvidencePath $evidencePath -ExpectedCommitSha $candidateSha -RequireTimeScapeMvp
+    }
+
+    It "rejects blocked TimeScape MVP evidence when requested" {
+        $evidence = Add-TimeScapeMvpEvidence (New-CompleteEvidence)
+        $evidence.runs[-1].result = "blocked"
+        $evidence.runs[-1].knownLimitation = "Performance validation is pending."
+        $evidence | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $evidencePath
+
+        { & $scriptPath -EvidencePath $evidencePath -ExpectedCommitSha $candidateSha -RequireTimeScapeMvp } | Should -Throw "*feature-timescape-mvp-standard-home*"
     }
 }

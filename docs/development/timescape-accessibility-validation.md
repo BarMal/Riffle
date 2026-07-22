@@ -21,6 +21,8 @@ Run the applicable scenarios on:
 
 For every device, record its actual form factor and window mode. Include at least one automated
 emulator run and the required physical Honor rows from the device-evidence contract.
+Use the `feature-timescape-mvp-*` scenario IDs in the TimeScape MVP closeout profile and validate
+the completed manifest with `-RequireTimeScapeMvp`.
 
 ## Stage, card, and lifecycle checks
 

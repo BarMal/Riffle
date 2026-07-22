@@ -54,6 +54,23 @@ The validator rejects missing rows, blank identity fields, a different candidate
 blocked baseline runs, missing Honor coverage, and missing automated-emulator coverage. This
 makes stale evidence unusable for another candidate.
 
+## TimeScape MVP closeout profile
+
+For #894, validate the candidate with `-RequireTimeScapeMvp`. This opt-in profile keeps the
+baseline contract reusable while requiring these additional passing rows:
+
+| ID | Required coverage |
+| --- | --- |
+| `feature-timescape-mvp-compact-portrait` | Compact phone portrait, focus-first tap, vertical Spline, stage selection, contextual actions, detail/Back, and Standard Home mode return. |
+| `feature-timescape-mvp-compact-landscape` | Compact phone landscape with the same card and stage behavior. |
+| `feature-timescape-mvp-folded-cover` | Folded cover display, including the available cover posture. |
+| `feature-timescape-mvp-expanded-adaptive` | Unfolded flat/book/tabletop where available, plus tablet or desktop/resizable behavior. |
+| `feature-timescape-mvp-appearance-fallbacks` | Light/dark, difficult artwork or wallpaper, minimum/default/maximum values, presets, Reset, persistence, and effect fallbacks. |
+| `feature-timescape-mvp-notification-lifecycle` | Checking/granted/revoked/unavailable access; zero/one/many cards and stages; pinned/dynamic lifecycle; profile lock/removal; process death; and notification/media churn. |
+| `feature-timescape-mvp-accessibility-input` | TalkBack, touch, keyboard/D-pad/mouse, reduced motion/transparency, large font/display scale, RTL, and high contrast. |
+| `feature-timescape-mvp-performance` | Representative compact and expanded hardware meets the TimeScape card-update target, or a failed/blocked result documents the fallback and blocks closeout. |
+| `feature-timescape-mvp-standard-home` | Standard Home remains the independent default with layout, Dock, widgets, selected page, and wallpaper unchanged. |
+
 Do not include screenshots, device serials, account identifiers, app lists, notification content,
 system tokens, or secrets. On failure, retain sanitized logs outside the manifest and link only a
 non-sensitive artifact reference in the release operator's record.
@@ -84,7 +101,8 @@ it against the exact selected SHA:
 ```powershell
 pwsh .github/scripts/validate-device-evidence.ps1 `
   -EvidencePath evidence/candidate.json `
-  -ExpectedCommitSha 0123456789abcdef0123456789abcdef01234567
+  -ExpectedCommitSha 0123456789abcdef0123456789abcdef01234567 `
+  -RequireTimeScapeMvp
 ```
 
 The release operator must publish the exact same SHA that appears in this manifest, the build, and

@@ -7,19 +7,19 @@
   },
   "runs": [
     {
-      "scenarioId": "home-role-lifecycle",
-      "evidenceType": "physical-device",
+      "scenarioId": "feature-timescape-mvp-compact-portrait",
+      "evidenceType": "manual-device",
       "result": "blocked",
       "validator": "replace-with-validator",
       "timestamp": "replace-with-utc-rfc3339-timestamp",
       "knownLimitation": "Replace with the reason until this required run passes.",
       "device": {
-        "manufacturer": "Honor",
+        "manufacturer": "replace-with-manufacturer",
         "model": "replace-with-model",
         "androidApi": 0,
         "build": "replace-with-build",
         "formFactor": "phone",
-        "windowMode": "fullscreen",
+        "windowMode": "compact",
         "installType": "clean"
       }
     }

@@ -3,7 +3,9 @@ param(
     [string] $EvidencePath,
 
     [Parameter(Mandatory = $true)]
-    [string] $ExpectedCommitSha
+    [string] $ExpectedCommitSha,
+
+    [switch] $RequireTimeScapeMvp
 )
 
 $ErrorActionPreference = "Stop"
@@ -21,6 +23,17 @@ $requiredScenarioIds = @(
     "release-upgrade"
 )
 $honorScenarioIds = @("home-role-lifecycle", "notification-access", "widget-hosting")
+$timeScapeMvpScenarioIds = @(
+    "feature-timescape-mvp-compact-portrait",
+    "feature-timescape-mvp-compact-landscape",
+    "feature-timescape-mvp-folded-cover",
+    "feature-timescape-mvp-expanded-adaptive",
+    "feature-timescape-mvp-appearance-fallbacks",
+    "feature-timescape-mvp-notification-lifecycle",
+    "feature-timescape-mvp-accessibility-input",
+    "feature-timescape-mvp-performance",
+    "feature-timescape-mvp-standard-home"
+)
 
 function Require-NonBlank([object] $Value, [string] $Name) {
     if ($null -eq $Value -or [string]::IsNullOrWhiteSpace([string] $Value)) {
@@ -169,6 +182,18 @@ foreach ($scenarioId in $honorScenarioIds) {
             $_.evidenceType -eq "physical-device" -and $_.device.manufacturer -match "(?i)^honor$"
     }).Count -eq 0) {
         throw "Missing passing physical Honor evidence for $scenarioId."
+    }
+}
+
+if ($RequireTimeScapeMvp) {
+    foreach ($scenarioId in $timeScapeMvpScenarioIds) {
+        $scenarioRuns = @($runs | Where-Object { $_.scenarioId -eq $scenarioId })
+        if ($scenarioRuns.Count -eq 0) {
+            throw "Missing required TimeScape MVP evidence: $scenarioId"
+        }
+        if (@($scenarioRuns | Where-Object { $_.result -ne "pass" }).Count -gt 0) {
+            throw "Required TimeScape MVP evidence must pass without blocked or not-applicable runs: $scenarioId"
+        }
     }
 }
 
