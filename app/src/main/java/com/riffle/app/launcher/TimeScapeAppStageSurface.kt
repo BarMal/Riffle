@@ -49,8 +49,13 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import com.riffle.app.launcher.notifications.AndroidNotificationStageActionGateway
 import com.riffle.app.launcher.notifications.AppStageEmptyAppCard
@@ -64,6 +69,7 @@ import com.riffle.core.domain.launcher.cards.CardStackController
 import com.riffle.core.domain.launcher.cards.CardStackFocusResult
 import com.riffle.core.domain.launcher.cards.CardStackFocusState
 import com.riffle.core.domain.launcher.cards.CardStackKey
+import com.riffle.core.domain.launcher.cards.CardStackNavigationDirection
 import com.riffle.core.domain.launcher.cards.CardStackSettleRequest
 import com.riffle.core.domain.launcher.cards.LauncherCardId
 import com.riffle.core.domain.launcher.cards.TimeScapePaneLayoutPolicy
@@ -365,7 +371,14 @@ private fun TimeScapeStageHeader(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Column(modifier = Modifier.weight(1f)) {
+        Column(
+            modifier =
+                Modifier.weight(1f).semantics {
+                    contentDescription = "TimeScape stage: $label"
+                    stateDescription = selectedStage?.timeScapeStageStateDescription() ?: "No stage selected"
+                    liveRegion = LiveRegionMode.Polite
+                },
+        ) {
             Text(text = label, style = MaterialTheme.typography.titleLarge)
             Text(text = "TimeScape", style = MaterialTheme.typography.labelMedium)
         }
@@ -513,6 +526,15 @@ private fun TimeScapeNotificationStack(
     LaunchedEffect(cardIds) {
         if (restoreDetailFocusForCardId !in cardIds) restoreDetailFocusForCardId = null
     }
+    fun navigate(direction: CardStackNavigationDirection): Boolean {
+        val result = controller.navigate(focusState, cardIds, direction)
+        if (result is CardStackFocusResult.Applied) {
+            if (result.focusChanged) settleTransitionId++
+            onFocusedCardChanged(result.state.focusedCardId)
+            return !result.boundaryReached
+        }
+        return false
+    }
 
     BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
         val viewport = TimeScapeViewportDp(maxWidth.value.toInt(), maxHeight.value.toInt())
@@ -590,6 +612,8 @@ private fun TimeScapeNotificationStack(
                                         state.launcherSettings.cards.timeScapeAppearance.motion.hapticStrength,
                                     )
                                 },
+                                onNavigate = ::navigate,
+                                onExpand = { detailState.expand(activeCard.content.id) },
                             ),
                     ) { entry, cardModifier ->
                         val card = cards[entry.cardIndex]
@@ -598,6 +622,30 @@ private fun TimeScapeNotificationStack(
                                 card.artworkSourceKey?.let { sourceKey ->
                                     artworkCache.getOrDecode(sourceKey, card.artworkBase64)
                                 }
+                            }
+                        val focusedCardSemantics =
+                            if (entry.cardIndex == activeCardIndex) {
+                                Modifier.semantics(mergeDescendants = true) {
+                                    contentDescription =
+                                        "Focused ${timeScapeCardKindLabel(card)} card: ${card.title}. ${card.text}"
+                                    stateDescription = "Card ${entry.cardIndex + 1} of ${cards.size}"
+                                    liveRegion = LiveRegionMode.Polite
+                                    customActions =
+                                        listOf(
+                                            CustomAccessibilityAction("Previous card") {
+                                                navigate(CardStackNavigationDirection.PREVIOUS)
+                                            },
+                                            CustomAccessibilityAction("Next card") {
+                                                navigate(CardStackNavigationDirection.NEXT)
+                                            },
+                                            CustomAccessibilityAction("Show details") {
+                                                detailState.expand(card.content.id)
+                                                true
+                                            },
+                                        )
+                                }
+                            } else {
+                                Modifier
                             }
                         TimeScapeCardSurface(
                             appearance = state.launcherSettings.cards.timeScapeAppearance,
@@ -610,7 +658,7 @@ private fun TimeScapeNotificationStack(
                                 cardModifier.size(
                                     width = resolution.cardWidthDp.dp,
                                     height = resolution.cardHeightDp.dp,
-                                ),
+                                ).then(focusedCardSemantics),
                             contentPadding = timeScapeResolvedContentPadding(resolution),
                         ) {
                             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -620,6 +668,12 @@ private fun TimeScapeNotificationStack(
                         }
                     }
                 }
+                TimeScapeCardNavigationControls(
+                    position = activeCardIndex + 1,
+                    count = cards.size,
+                    onPrevious = { navigate(CardStackNavigationDirection.PREVIOUS) },
+                    onNext = { navigate(CardStackNavigationDirection.NEXT) },
+                )
                 TimeScapeContextShelf(
                     card = activeCard,
                     onAction = onAction,
@@ -631,6 +685,33 @@ private fun TimeScapeNotificationStack(
                 TimeScapeDetailRecoveryMessage(detailState.sourceRemovalMessage)
             }
         }
+    }
+}
+
+@Composable
+private fun TimeScapeCardNavigationControls(
+    position: Int,
+    count: Int,
+    onPrevious: () -> Unit,
+    onNext: () -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        TextButton(onClick = onPrevious, enabled = position > 1) { Text("Previous card") }
+        Text(
+            text = "Card $position of $count",
+            modifier =
+                Modifier.weight(1f).semantics {
+                    contentDescription = "Focused card position"
+                    stateDescription = "Card $position of $count"
+                    liveRegion = LiveRegionMode.Polite
+                },
+            style = MaterialTheme.typography.labelLarge,
+        )
+        TextButton(onClick = onNext, enabled = position < count) { Text("Next card") }
     }
 }
 
@@ -889,6 +970,30 @@ private fun stageLabel(
     }?.let { app ->
         app.identity.profile.profileDisplayLabel(app.label)
     } ?: "${id.packageName.value} (${id.profileId.value})"
+
+private fun AppStage.timeScapeStageStateDescription(): String =
+    buildList {
+        add(
+            origins
+                .sortedBy { origin -> origin.name }
+                .joinToString(" + ") { origin -> origin.name.lowercase().replaceFirstChar(Char::uppercase) },
+        )
+        add("Profile ${id.profileId.value}")
+        add(
+            when (lifecycle) {
+                com.riffle.core.domain.launcher.cards.AppStageLifecycle.ACTIVE -> "Active"
+                com.riffle.core.domain.launcher.cards.AppStageLifecycle.EMPTY -> "Empty"
+                com.riffle.core.domain.launcher.cards.AppStageLifecycle.PROFILE_LOCKED -> "Profile unavailable"
+            },
+        )
+        add("${content.size} ${if (content.size == 1) "card" else "cards"}")
+    }.joinToString(", ")
+
+private fun timeScapeCardKindLabel(card: AppStageNotificationCard): String =
+    when (card.content.kind) {
+        com.riffle.core.domain.launcher.cards.AppStageContentKind.NOTIFICATION -> "notification"
+        com.riffle.core.domain.launcher.cards.AppStageContentKind.MEDIA -> "media"
+    }
 
 private fun NotificationStageAction.label(): String =
     when (this) {

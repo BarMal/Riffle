@@ -28,6 +28,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import com.riffle.app.launcher.notifications.AppStageEmptyAppCard
 import com.riffle.app.launcher.notifications.AppStageNotificationCard
@@ -191,6 +192,10 @@ private fun TimeScapeDetailContainer(
                 .fillMaxSize()
                 .graphicsLayer { this.alpha = alpha }
                 .verticalScroll(rememberScrollState())
+                .semantics {
+                    stateDescription = "Card details open"
+                    liveRegion = LiveRegionMode.Polite
+                }
                 .padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {

@@ -10,6 +10,7 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.runtime.Composable
@@ -24,8 +25,14 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.PointerId
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.util.VelocityTracker
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.SemanticsPropertyKey
+import androidx.compose.ui.semantics.invisibleToUser
 import androidx.compose.ui.semantics.isTraversalGroup
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.traversalIndex
@@ -34,6 +41,7 @@ import com.riffle.core.domain.launcher.cards.CardStackAnimationEasing
 import com.riffle.core.domain.launcher.cards.CardStackAnimationProfile
 import com.riffle.core.domain.launcher.cards.CardStackAnimationSpec
 import com.riffle.core.domain.launcher.cards.CardStackLayoutEntry
+import com.riffle.core.domain.launcher.cards.CardStackNavigationDirection
 import kotlin.math.abs
 
 /** Callbacks supplied by a surface that owns durable card focus. */
@@ -42,6 +50,10 @@ internal data class CardStackInteraction(
     val onFocusRequest: (CardStackLayoutEntry) -> Unit,
     val onSettle: (verticalDragPx: Float, verticalVelocityPxPerSecond: Float) -> Unit,
     val onSettleHaptic: () -> Unit = {},
+    /** Alternate-input navigation commits one focused-card change without emulating a drag. */
+    val onNavigate: ((CardStackNavigationDirection) -> Unit)? = null,
+    /** Opens the focused card's detail surface for keyboard, D-pad, rotary and switch users. */
+    val onExpand: (() -> Unit)? = null,
     /** Increments only when a gesture settles to a new focused card. */
     val settleTransitionId: Int = 0,
 )
@@ -94,6 +106,8 @@ internal fun CardStack(
                     animationSpec = animationSpec,
                     motionMode = motionMode,
                     timing = timing,
+                    isFocused = interaction?.let { stableItemKey == it.focusedItemKey } ?: true,
+                    interaction = interaction,
                     content = { entry, modifier ->
                         content(
                             entry,
@@ -189,6 +203,8 @@ private fun AnimatedCardStackEntry(
     animationSpec: CardStackAnimationSpec,
     motionMode: CardStackMotionMode,
     timing: CardStackAnimationTiming,
+    isFocused: Boolean,
+    interaction: CardStackInteraction?,
     content: @Composable (CardStackLayoutEntry, Modifier) -> Unit,
 ) {
     val spec = animationSpec
@@ -245,7 +261,39 @@ private fun AnimatedCardStackEntry(
                     // deterministic back-to-front composition order.
                     .semantics {
                         traversalIndex = -entry.order.toFloat()
+                        if (!isFocused) invisibleToUser()
                     }
+                    .then(
+                        if (isFocused) {
+                            Modifier
+                                .focusable()
+                                .onPreviewKeyEvent { event ->
+                                    if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+                                    when (event.key) {
+                                        Key.DirectionUp,
+                                        Key.PageUp,
+                                        -> interaction?.onNavigate?.invoke(CardStackNavigationDirection.PREVIOUS) != null
+
+                                        Key.DirectionDown,
+                                        Key.PageDown,
+                                        -> interaction?.onNavigate?.invoke(CardStackNavigationDirection.NEXT) != null
+
+                                        Key.DirectionCenter,
+                                        Key.Enter,
+                                        Key.NumPadEnter,
+                                        Key.Spacebar,
+                                        -> interaction?.onExpand?.let { expand ->
+                                            expand()
+                                            true
+                                        } ?: false
+
+                                        else -> false
+                                    }
+                                }
+                        } else {
+                            Modifier
+                        },
+                    )
                     .graphicsLayer {
                         translationX = offset
                         translationY = verticalOffset
