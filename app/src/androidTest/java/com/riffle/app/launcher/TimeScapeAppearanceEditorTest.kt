@@ -1,6 +1,9 @@
 package com.riffle.app.launcher
 
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.requiredSize
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.SemanticsActions
@@ -72,10 +75,17 @@ class TimeScapeAppearanceEditorTest {
         val actions = mutableListOf<LauncherShellAction>()
         composeRule.setContent {
             MaterialTheme {
-                TimeScapeAppearancePageContent(
-                    state = LauncherShellState().settingsSurfaceState(),
-                    onAction = actions::add,
-                )
+                Column(
+                    modifier =
+                        Modifier
+                            .requiredSize(360.dp)
+                            .verticalScroll(rememberScrollState()),
+                ) {
+                    TimeScapeAppearancePageContent(
+                        state = LauncherShellState().settingsSurfaceState(),
+                        onAction = actions::add,
+                    )
+                }
             }
         }
 
@@ -113,10 +123,17 @@ class TimeScapeAppearanceEditorTest {
         val actions = mutableListOf<LauncherShellAction>()
         composeRule.setContent {
             MaterialTheme {
-                TimeScapeAppearancePageContent(
-                    state = LauncherShellState().settingsSurfaceState(),
-                    onAction = actions::add,
-                )
+                Column(
+                    modifier =
+                        Modifier
+                            .requiredSize(360.dp)
+                            .verticalScroll(rememberScrollState()),
+                ) {
+                    TimeScapeAppearancePageContent(
+                        state = LauncherShellState().settingsSurfaceState(),
+                        onAction = actions::add,
+                    )
+                }
             }
         }
 
@@ -153,12 +170,12 @@ class TimeScapeAppearanceEditorTest {
             val action = actions.last() as LauncherShellAction.UpdateTimeScapeAppearance
             assertEquals(600, action.appearance.motion.settleDurationMillis)
         }
-        composeRule.onNodeWithContentDescription("Easing: Standard").performClick()
+        composeRule.onNodeWithContentDescription("Easing: Standard").performScrollTo().performClick()
         composeRule.runOnIdle {
             val action = actions.last() as LauncherShellAction.UpdateTimeScapeAppearance
             assertEquals(TimeScapeEasing.STANDARD, action.appearance.motion.easing)
         }
-        composeRule.onNodeWithContentDescription("Haptic strength: Strong").performClick()
+        composeRule.onNodeWithContentDescription("Haptic strength: Strong").performScrollTo().performClick()
 
         composeRule.runOnIdle {
             val action = actions.last() as LauncherShellAction.UpdateTimeScapeAppearance

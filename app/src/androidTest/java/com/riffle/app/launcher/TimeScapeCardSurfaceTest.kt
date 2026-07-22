@@ -1106,7 +1106,7 @@ class TimeScapeCardSurfaceTest {
             TimeScapeAppearanceSettings(
                 geometry = TimeScapeGeometry(contentPaddingDp = 64),
             ).resolveCardStack(
-                viewport = TimeScapeViewportDp(widthDp = 240, heightDp = 400),
+                viewport = TimeScapeViewportDp(widthDp = 500, heightDp = 475),
             )
 
         assertTrue(resolution.isUsable)
