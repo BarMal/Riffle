@@ -20,6 +20,7 @@
         "build": "replace-with-build",
         "formFactor": "phone",
         "windowMode": "compact",
+        "orientation": "portrait",
         "installType": "clean"
       }
     }

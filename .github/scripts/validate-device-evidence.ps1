@@ -94,6 +94,52 @@ function Require-PositiveInteger([object] $Value, [string] $Name) {
     }
 }
 
+function Optional-DeviceEnum([object] $Device, [string] $Name, [string[]] $Values) {
+    $property = $Device.PSObject.Properties[$Name]
+    if ($null -eq $property) {
+        return $null
+    }
+    Require-Enum $property.Value "run.device.$Name" $Values
+    return $property.Value
+}
+
+function Test-TimeScapeDeviceCoverage(
+    [object] $Run,
+    [string[]] $FormFactors,
+    [string[]] $WindowModes,
+    [string[]] $Orientations = @(),
+    [string[]] $Postures = @()
+) {
+    $device = $Run.device
+    if ($device.formFactor -notin $FormFactors -or $device.windowMode -notin $WindowModes) {
+        return $false
+    }
+    if ($Orientations.Count -gt 0 -and $device.orientation -notin $Orientations) {
+        return $false
+    }
+    if ($Postures.Count -gt 0 -and $device.posture -notin $Postures) {
+        return $false
+    }
+    return $true
+}
+
+function Require-TimeScapeDeviceCoverage(
+    [object[]] $Runs,
+    [string] $ScenarioId,
+    [string] $Description,
+    [string[]] $FormFactors,
+    [string[]] $WindowModes,
+    [string[]] $Orientations = @(),
+    [string[]] $Postures = @()
+) {
+    if (@($Runs | Where-Object {
+        $_.result -eq "pass" -and
+            (Test-TimeScapeDeviceCoverage $_ $FormFactors $WindowModes $Orientations $Postures)
+    }).Count -eq 0) {
+        throw "TimeScape MVP evidence $ScenarioId requires a passing $Description run."
+    }
+}
+
 if ($ExpectedCommitSha -notmatch "^[0-9a-f]{40}$") {
     throw "ExpectedCommitSha must be a lowercase 40-character Git SHA."
 }
@@ -149,13 +195,15 @@ foreach ($run in $runs) {
     Require-Rfc3339Timestamp (Require-Property $run "timestamp") "run.timestamp"
     Require-String (Require-Property $run "knownLimitation") "run.knownLimitation" $true
     $device = Require-Property $run "device"
-    Assert-OnlyProperties $device @("manufacturer", "model", "androidApi", "build", "formFactor", "windowMode", "installType") "run.device"
+    Assert-OnlyProperties $device @("manufacturer", "model", "androidApi", "build", "formFactor", "windowMode", "orientation", "posture", "installType") "run.device"
     Require-String (Require-Property $device "manufacturer") "run.device.manufacturer"
     Require-String (Require-Property $device "model") "run.device.model"
     Require-PositiveInteger (Require-Property $device "androidApi") "run.device.androidApi"
     Require-String (Require-Property $device "build") "run.device.build"
     Require-Enum (Require-Property $device "formFactor") "run.device.formFactor" @("phone", "tablet", "foldable", "desktop")
     Require-Enum (Require-Property $device "windowMode") "run.device.windowMode" @("compact", "medium", "expanded", "split-screen", "fullscreen")
+    Optional-DeviceEnum $device "orientation" @("portrait", "landscape") | Out-Null
+    Optional-DeviceEnum $device "posture" @("cover", "flat", "book", "tabletop") | Out-Null
     Require-Enum (Require-Property $device "installType") "run.device.installType" @("clean", "upgrade", "debug", "release")
     if ($result -eq "fail") {
         Require-String (Require-Property $run "failureResolution") "run.failureResolution"
@@ -195,6 +243,17 @@ if ($RequireTimeScapeMvp) {
             throw "Required TimeScape MVP evidence must pass without blocked or not-applicable runs: $scenarioId"
         }
     }
+    $timeScapeRunsById = @{}
+    foreach ($scenarioId in $timeScapeMvpScenarioIds) {
+        $timeScapeRunsById[$scenarioId] = @($runs | Where-Object { $_.scenarioId -eq $scenarioId })
+    }
+    Require-TimeScapeDeviceCoverage $timeScapeRunsById["feature-timescape-mvp-compact-portrait"] "feature-timescape-mvp-compact-portrait" "phone/compact/portrait" @("phone") @("compact") @("portrait")
+    Require-TimeScapeDeviceCoverage $timeScapeRunsById["feature-timescape-mvp-compact-landscape"] "feature-timescape-mvp-compact-landscape" "phone/compact/landscape" @("phone") @("compact") @("landscape")
+    Require-TimeScapeDeviceCoverage $timeScapeRunsById["feature-timescape-mvp-folded-cover"] "feature-timescape-mvp-folded-cover" "foldable/compact/cover" @("foldable") @("compact") @() @("cover")
+    Require-TimeScapeDeviceCoverage $timeScapeRunsById["feature-timescape-mvp-expanded-adaptive"] "feature-timescape-mvp-expanded-adaptive" "foldable expanded flat, book, or tabletop" @("foldable") @("expanded", "split-screen") @() @("flat", "book", "tabletop")
+    Require-TimeScapeDeviceCoverage $timeScapeRunsById["feature-timescape-mvp-expanded-adaptive"] "feature-timescape-mvp-expanded-adaptive" "tablet or desktop expanded/resizable" @("tablet", "desktop") @("expanded", "split-screen")
+    Require-TimeScapeDeviceCoverage $timeScapeRunsById["feature-timescape-mvp-performance"] "feature-timescape-mvp-performance" "compact performance" @("phone") @("compact") @("portrait", "landscape")
+    Require-TimeScapeDeviceCoverage $timeScapeRunsById["feature-timescape-mvp-performance"] "feature-timescape-mvp-performance" "expanded performance" @("foldable", "tablet", "desktop") @("expanded", "split-screen")
 }
 
 Write-Output "Device evidence is complete for candidate $ExpectedCommitSha."

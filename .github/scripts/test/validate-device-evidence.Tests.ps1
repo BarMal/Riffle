@@ -60,6 +60,32 @@ Describe "validate-device-evidence" {
                 "feature-timescape-mvp-standard-home"
             )
             foreach ($scenarioId in $scenarioIds) {
+                $device = [ordered]@{
+                    manufacturer = "Google"
+                    model = "Test device"
+                    androidApi = 35
+                    build = "test-build"
+                    formFactor = "phone"
+                    windowMode = "compact"
+                    orientation = "portrait"
+                    installType = "release"
+                }
+                switch ($scenarioId) {
+                    "feature-timescape-mvp-compact-landscape" { $device.orientation = "landscape" }
+                    "feature-timescape-mvp-folded-cover" {
+                        $device.formFactor = "foldable"
+                        $device["posture"] = "cover"
+                    }
+                    "feature-timescape-mvp-expanded-adaptive" {
+                        $device.formFactor = "foldable"
+                        $device.windowMode = "expanded"
+                        $device.orientation = "landscape"
+                        $device["posture"] = "flat"
+                    }
+                    "feature-timescape-mvp-performance" {
+                        $device.orientation = "landscape"
+                    }
+                }
                 $evidence.runs += [ordered]@{
                     scenarioId = $scenarioId
                     evidenceType = "manual-device"
@@ -67,14 +93,47 @@ Describe "validate-device-evidence" {
                     validator = "TimeScape MVP validation"
                     timestamp = "2026-07-18T12:00:00Z"
                     knownLimitation = ""
-                    device = [ordered]@{
-                        manufacturer = "Google"
-                        model = "Test device"
-                        androidApi = 35
-                        build = "test-build"
-                        formFactor = "foldable"
-                        windowMode = "expanded"
-                        installType = "release"
+                    device = $device
+                }
+                if ($scenarioId -eq "feature-timescape-mvp-expanded-adaptive") {
+                    $evidence.runs += [ordered]@{
+                        scenarioId = $scenarioId
+                        evidenceType = "manual-device"
+                        result = "pass"
+                        validator = "TimeScape MVP validation"
+                        timestamp = "2026-07-18T12:00:00Z"
+                        knownLimitation = ""
+                        device = [ordered]@{
+                            manufacturer = "Google"
+                            model = "Large test device"
+                            androidApi = 35
+                            build = "test-build"
+                            formFactor = "tablet"
+                            windowMode = "expanded"
+                            orientation = "landscape"
+                            installType = "release"
+                        }
+                    }
+                }
+                if ($scenarioId -eq "feature-timescape-mvp-performance") {
+                    $evidence.runs += [ordered]@{
+                        scenarioId = $scenarioId
+                        evidenceType = "manual-device"
+                        result = "pass"
+                        validator = "TimeScape MVP validation"
+                        timestamp = "2026-07-18T12:00:00Z"
+                        knownLimitation = ""
+                        device = [ordered]@{
+                            manufacturer = "Google"
+                            model = "Expanded test device"
+                            androidApi = 35
+                            build = "test-build"
+                            formFactor = "foldable"
+                            windowMode = "expanded"
+                            orientation = "landscape"
+                            posture = "flat"
+                            installType = "release"
+                        }
                     }
                 }
             }
@@ -145,6 +204,32 @@ Describe "validate-device-evidence" {
             Set-Content -LiteralPath $evidencePath
 
         & $scriptPath -EvidencePath $evidencePath -ExpectedCommitSha $candidateSha -RequireTimeScapeMvp
+    }
+
+    It "rejects identical expanded metadata for the TimeScape matrix" {
+        $evidence = Add-TimeScapeMvpEvidence (New-CompleteEvidence)
+        foreach ($run in $evidence.runs | Where-Object { $_.scenarioId -like "feature-timescape-mvp-*" }) {
+            $run.device.formFactor = "foldable"
+            $run.device.windowMode = "expanded"
+            $run.device.orientation = "landscape"
+            $run.device["posture"] = "flat"
+        }
+        $evidence | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $evidencePath
+
+        { & $scriptPath -EvidencePath $evidencePath -ExpectedCommitSha $candidateSha -RequireTimeScapeMvp } | Should -Throw "*compact-portrait requires a passing phone/compact/portrait*"
+    }
+
+    It "rejects TimeScape performance evidence without compact coverage" {
+        $evidence = Add-TimeScapeMvpEvidence (New-CompleteEvidence)
+        foreach ($run in $evidence.runs | Where-Object { $_.scenarioId -eq "feature-timescape-mvp-performance" }) {
+            $run.device.formFactor = "foldable"
+            $run.device.windowMode = "expanded"
+            $run.device.orientation = "landscape"
+            $run.device["posture"] = "flat"
+        }
+        $evidence | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $evidencePath
+
+        { & $scriptPath -EvidencePath $evidencePath -ExpectedCommitSha $candidateSha -RequireTimeScapeMvp } | Should -Throw "*performance requires a passing compact performance*"
     }
 
     It "rejects blocked TimeScape MVP evidence when requested" {
