@@ -1,7 +1,12 @@
 package com.riffle.app.launcher
 
+import androidx.compose.animation.core.AnimationSpec
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -25,6 +30,7 @@ import androidx.compose.ui.semantics.isTraversalGroup
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.traversalIndex
 import androidx.compose.ui.zIndex
+import com.riffle.core.domain.launcher.cards.CardStackAnimationEasing
 import com.riffle.core.domain.launcher.cards.CardStackAnimationProfile
 import com.riffle.core.domain.launcher.cards.CardStackAnimationSpec
 import com.riffle.core.domain.launcher.cards.CardStackLayoutEntry
@@ -58,6 +64,7 @@ internal fun CardStack(
                 isTraversalGroup = true
                 this[CardStackAnimationProfileKey] = animationProfile
                 this[CardStackMotionModeKey] = motionMode
+                this[CardStackAnimationSpecKey] = animationSpec
             },
     ) {
         entries.forEach { entry ->
@@ -71,6 +78,7 @@ internal fun CardStack(
                     stableItemKey = stableItemKey,
                     animationSpec = animationSpec,
                     motionMode = motionMode,
+                    usesSettleDuration = interaction != null,
                     content = { entry, modifier ->
                         content(
                             entry,
@@ -107,6 +115,8 @@ internal enum class CardStackMotionMode {
 
 internal val CardStackAnimationProfileKey =
     SemanticsPropertyKey<CardStackAnimationProfile>("CardStackAnimationProfile")
+
+internal val CardStackAnimationSpecKey = SemanticsPropertyKey<CardStackAnimationSpec>("CardStackAnimationSpec")
 
 internal val CardStackMotionModeKey = SemanticsPropertyKey<CardStackMotionMode>("CardStackMotionMode")
 
@@ -161,6 +171,7 @@ private fun AnimatedCardStackEntry(
     stableItemKey: Any,
     animationSpec: CardStackAnimationSpec,
     motionMode: CardStackMotionMode,
+    usesSettleDuration: Boolean,
     content: @Composable (CardStackLayoutEntry, Modifier) -> Unit,
 ) {
     val spec = animationSpec
@@ -176,12 +187,7 @@ private fun AnimatedCardStackEntry(
                 width = with(density) { maxWidth.toPx() },
                 height = with(density) { maxHeight.toPx() },
             )
-        val animationSpec =
-            if (motionMode == CardStackMotionMode.SNAP) {
-                snap()
-            } else {
-                tween<Float>(durationMillis = spec.durationMillis)
-            }
+        val animationSpec = cardStackAnimationSpec(spec, motionMode, hasEntered, usesSettleDuration)
         val alpha by animateFloatAsState(
             targetValue = renderedPose.alpha,
             animationSpec = if (spec.animatesAlpha) animationSpec else snap(),
@@ -231,6 +237,34 @@ private fun AnimatedCardStackEntry(
         }
     }
 }
+
+internal fun cardStackAnimationSpec(
+    spec: CardStackAnimationSpec,
+    motionMode: CardStackMotionMode,
+    hasEntered: Boolean,
+    usesSettleDuration: Boolean,
+): AnimationSpec<Float> {
+    if (motionMode == CardStackMotionMode.SNAP) return snap()
+    val durationMillis =
+        when {
+            !hasEntered -> spec.enterDurationMillis
+            usesSettleDuration -> spec.settleDurationMillis
+            else -> spec.durationMillis
+        }
+    return when (spec.easing) {
+        CardStackAnimationEasing.STANDARD -> tween(durationMillis = durationMillis, easing = LinearOutSlowInEasing)
+        CardStackAnimationEasing.EMPHASIZED -> tween(durationMillis = durationMillis, easing = FastOutSlowInEasing)
+        CardStackAnimationEasing.GENTLE_SPRING ->
+            spring(
+                dampingRatio = (1f - spec.springBouncinessPercent / 100f * 0.55f).coerceAtLeast(0.45f),
+                stiffness =
+                    Spring.StiffnessMedium *
+                        (DEFAULT_CARD_STACK_ANIMATION_DURATION_MILLIS.toFloat() / durationMillis).coerceIn(0.2f, 3f),
+            )
+    }
+}
+
+private const val DEFAULT_CARD_STACK_ANIMATION_DURATION_MILLIS = 220
 
 @Suppress("CyclomaticComplexMethod", "LoopWithTooManyJumpStatements")
 private fun Modifier.cardStackPointerInput(

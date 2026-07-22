@@ -201,7 +201,9 @@ internal fun GeneratedNotificationCardsPage(
                                                     ),
                                                 )
                                             },
-                                            onSettleHaptic = haptics::longPress,
+                                            onSettleHaptic = {
+                                                haptics.timeScapeSettle(timeScapeAppearance.motion.hapticStrength)
+                                            },
                                         ),
                                 ) { entry, pointerModifier ->
                                     GeneratedNotificationCard(

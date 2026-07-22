@@ -1,5 +1,6 @@
 package com.riffle.core.domain.launcher.settings
 
+import com.riffle.core.domain.launcher.cards.CardStackAnimationEasing
 import com.riffle.core.domain.launcher.cards.CardStackAnimationSpec
 import com.riffle.core.domain.launcher.cards.CardStackLayoutPolicy
 import kotlin.math.abs
@@ -81,6 +82,7 @@ data class TimeScapeAppearanceSettings(
      * viewport- and inset-aware; callers must use [isUsable] to choose a non-stack fallback on a
      * space-constrained surface.
      */
+    @Suppress("LongMethod")
     fun resolveCardStack(
         viewport: TimeScapeViewportDp,
         capabilities: TimeScapeRendererCapabilities = TimeScapeRendererCapabilities(),
@@ -163,6 +165,10 @@ data class TimeScapeAppearanceSettings(
                     animatesScale = animated,
                     animatesRotation = animated,
                     durationMillis = maxOf(1, appearance.motion.reflowDurationMillis),
+                    enterDurationMillis = maxOf(1, appearance.motion.enterDurationMillis),
+                    settleDurationMillis = maxOf(1, appearance.motion.settleDurationMillis),
+                    easing = appearance.motion.easing.cardStackEasing(),
+                    springBouncinessPercent = appearance.motion.springBouncinessPercent,
                 ),
         )
     }
@@ -171,6 +177,13 @@ data class TimeScapeAppearanceSettings(
         fun modern(): TimeScapeAppearanceSettings = TimeScapeAppearancePreset.MODERN_TIMESCAPE.settings
     }
 }
+
+private fun TimeScapeEasing.cardStackEasing(): CardStackAnimationEasing =
+    when (this) {
+        TimeScapeEasing.STANDARD -> CardStackAnimationEasing.STANDARD
+        TimeScapeEasing.EMPHASIZED -> CardStackAnimationEasing.EMPHASIZED
+        TimeScapeEasing.GENTLE_SPRING -> CardStackAnimationEasing.GENTLE_SPRING
+    }
 
 private fun TimeScapeAppearanceSettings.effectiveForResolution(
     capabilities: TimeScapeRendererCapabilities,

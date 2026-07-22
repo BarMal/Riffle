@@ -57,14 +57,24 @@ data class CardStackAnimationSpec(
     val animatesScale: Boolean = false,
     val animatesRotation: Boolean = false,
     val durationMillis: Int = DEFAULT_CARD_STACK_ANIMATION_DURATION_MILLIS,
+    val enterDurationMillis: Int = durationMillis,
+    val settleDurationMillis: Int = durationMillis,
+    val easing: CardStackAnimationEasing = CardStackAnimationEasing.STANDARD,
+    val springBouncinessPercent: Int = 0,
 ) {
     init {
         require(enteringAlpha in 0f..1f) { "Entering alpha must be between zero and one." }
         require(horizontalTravelFraction >= 0f) { "Horizontal travel must not be negative." }
         require(verticalTravelFraction >= 0f) { "Vertical travel must not be negative." }
         require(durationMillis > 0) { "Animation duration must be positive." }
+        require(enterDurationMillis > 0) { "Enter animation duration must be positive." }
+        require(settleDurationMillis > 0) { "Settle animation duration must be positive." }
+        require(springBouncinessPercent in 0..100) { "Spring bounciness must be a percentage." }
     }
 }
+
+/** Renderer-neutral interpolation intent used by card stack implementations. */
+enum class CardStackAnimationEasing { STANDARD, EMPHASIZED, GENTLE_SPRING }
 
 const val DEFAULT_CARD_STACK_ANIMATION_DURATION_MILLIS = 220
 const val CARD_FLIGHT_ALPHA = 0.65f

@@ -51,6 +51,7 @@ import com.riffle.core.domain.launcher.cards.AppStageId
 import com.riffle.core.domain.launcher.cards.AppStageLifecycle
 import com.riffle.core.domain.launcher.cards.AppStageOrigin
 import com.riffle.core.domain.launcher.cards.AppStagePreferences
+import com.riffle.core.domain.launcher.cards.CardExpansionPhase
 import com.riffle.core.domain.launcher.cards.CardExpansionState
 import com.riffle.core.domain.launcher.cards.LauncherCardId
 import com.riffle.core.domain.launcher.cards.TimeScapeWindowLayout
@@ -69,6 +70,7 @@ import com.riffle.core.domain.launcher.settings.TimeScapeAppearanceSettings
 import com.riffle.core.domain.launcher.settings.TimeScapeBackgroundSource
 import com.riffle.core.domain.launcher.settings.TimeScapeContentDensity
 import com.riffle.core.domain.launcher.settings.TimeScapeGeometry
+import com.riffle.core.domain.launcher.settings.TimeScapeHapticStrength
 import com.riffle.core.domain.launcher.settings.TimeScapeMotion
 import com.riffle.core.domain.launcher.settings.TimeScapeSurface
 import com.riffle.core.domain.launcher.settings.TimeScapeTypography
@@ -84,6 +86,32 @@ import org.junit.Test
 class TimeScapeCardSurfaceTest {
     @get:Rule
     val composeRule = createComposeRule()
+
+    @Test
+    fun detailTransitionsUseThePersistedExpandAndExitDurations() {
+        val motion = TimeScapeMotion(expandDurationMillis = 440, exitDurationMillis = 190)
+        val detailState =
+            TimeScapeCardDetailState(
+                currentExpansion = { CardExpansionState() },
+                updateExpansion = {},
+                currentRecoveryMessage = { null },
+                updateRecoveryMessage = {},
+                motion = motion,
+                globalReducedMotion = false,
+            )
+
+        assertEquals(440, detailState.transitionDurationMillis(CardExpansionPhase.EXPANDING))
+        assertEquals(190, detailState.transitionDurationMillis(CardExpansionPhase.COLLAPSING))
+    }
+
+    @Test
+    fun mapsTimeScapeHapticStrengthToDistinctSettleFeedback() {
+        assertNull(TimeScapeHapticStrength.OFF.timeScapeSettleHapticFeedbackConstant())
+        assertNotEquals(
+            TimeScapeHapticStrength.LIGHT.timeScapeSettleHapticFeedbackConstant(),
+            TimeScapeHapticStrength.STRONG.timeScapeSettleHapticFeedbackConstant(),
+        )
+    }
 
     @Test
     fun appStageSurfaceExplainsMissingNotificationAccess() {
@@ -260,7 +288,8 @@ class TimeScapeCardSurfaceTest {
                         updateExpansion = { expansion = it },
                         currentRecoveryMessage = { null },
                         updateRecoveryMessage = { _ -> },
-                        reducedMotion = true,
+                        motion = TimeScapeMotion(reducedMotion = true),
+                        globalReducedMotion = false,
                     )
                 }
             MaterialTheme {

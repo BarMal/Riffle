@@ -103,7 +103,8 @@ internal fun TimeScapeAppStageSurface(
         selectedStage?.let { stage ->
             rememberTimeScapeCardDetailState(
                 stageId = stage.id,
-                reducedMotion = state.launcherSettings.motion.reducedMotion,
+                motion = state.launcherSettings.cards.timeScapeAppearance.motion,
+                globalReducedMotion = state.launcherSettings.motion.reducedMotion,
             )
         }
 
@@ -466,6 +467,7 @@ private fun TimeScapeNotificationStack(
     onAction: (LauncherShellAction) -> Unit,
     modifier: Modifier,
 ) {
+    val haptics = rememberLauncherHaptics(state.launcherSettings.haptics.feedbackStrength)
     val cards =
         remember(stage.content, notificationCards) {
             val cardsById = notificationCards.associateBy { card -> card.content.id }
@@ -574,6 +576,11 @@ private fun TimeScapeNotificationStack(
                                                 onFocusedCardChanged(result.state.focusedCardId)
                                             }
                                         }
+                                },
+                                onSettleHaptic = {
+                                    haptics.timeScapeSettle(
+                                        state.launcherSettings.cards.timeScapeAppearance.motion.hapticStrength,
+                                    )
                                 },
                             ),
                     ) { entry, cardModifier ->
