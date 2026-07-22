@@ -10,6 +10,7 @@ import androidx.compose.ui.test.click
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -210,6 +211,9 @@ class CardModeGuardedSurfaceTest {
         }
 
         composeRule.onNodeWithText(app.label).assertIsDisplayed()
+        composeRule
+            .onAllNodesWithText("No active stages yet. New notifications will appear here.")
+            .assertCountEquals(0)
         composeRule.onNodeWithText(app.label).performTouchInput {
             down(center)
             advanceEventTime(viewConfiguration.longPressTimeoutMillis + 50L)
