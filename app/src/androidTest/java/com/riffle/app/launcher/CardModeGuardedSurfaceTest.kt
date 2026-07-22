@@ -10,6 +10,7 @@ import androidx.compose.ui.test.click
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -27,6 +28,8 @@ import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.cards.TimeScapeWindowLayout
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.FolderItem
+import com.riffle.core.domain.launcher.home.GridCell
+import com.riffle.core.domain.launcher.home.GridPlacement
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.HomeLayoutSet
 import com.riffle.core.domain.launcher.home.LauncherItemId
@@ -40,6 +43,7 @@ import com.riffle.core.domain.launcher.notifications.NotificationCategory
 import com.riffle.core.domain.launcher.settings.AppearanceSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -167,6 +171,67 @@ class CardModeGuardedSurfaceTest {
         composeRule.onNodeWithTag(dockItemTestTag(shortcut.id)).assertIsDisplayed()
         composeRule.onNodeWithTag(dockItemTestTag(shortcut.id)).performTouchInput { longClick() }
         composeRule.onNodeWithText("Remove from dock").assertIsDisplayed()
+    }
+
+    @Test
+    fun cardModeWithoutStagesKeepsHomeShortcutLongPressAndDragAvailable() {
+        val app = cardsHomeApp()
+        val shortcut =
+            AppShortcutItem(
+                id = LauncherItemId("app:camera-home"),
+                appIdentity = app.identity,
+                label = app.label,
+                placement = GridPlacement(cell = GridCell(column = 0, row = 0)),
+            )
+        val layout =
+            HomeLayoutDefaults.standard().let { standard ->
+                standard.copy(
+                    viewMode = LauncherViewMode.CARD_INTERFACE,
+                    pages = standard.pages.map { page -> page.copy(items = listOf(shortcut)) },
+                )
+            }
+        val actions = mutableListOf<LauncherShellAction>()
+
+        composeRule.setContent {
+            LauncherShellContent(
+                state =
+                    LauncherShellState(
+                        firstRunStatus = FirstRunStatus.COMPLETE,
+                        homeRoleStatus = HomeRoleStatus.DEFAULT_HOME,
+                        homeLayout = layout,
+                        homeLayoutSet = HomeLayoutSet.fromLayout(layout),
+                        notificationAccessStatus = NotificationAccessStatus.GRANTED,
+                        installedApps = listOf(app),
+                        profileContentVisibility =
+                            mapOf(app.identity.profile.id to AppProfileContentVisibility.VISIBLE),
+                    ),
+                appIconLoader = EmptyAppIconLoader,
+                onAction = actions::add,
+            )
+        }
+
+        composeRule.onNodeWithText(app.label).assertIsDisplayed()
+        composeRule
+            .onAllNodesWithText("No active stages yet. New notifications will appear here.")
+            .assertCountEquals(0)
+        composeRule.onNodeWithText(app.label).performTouchInput {
+            down(center)
+            advanceEventTime(viewConfiguration.longPressTimeoutMillis + 50L)
+            moveBy(Offset(160f, 0f))
+            up()
+        }
+
+        composeRule.runOnIdle {
+            assertTrue(actions.single() is LauncherShellAction.MoveHomeShortcutToCell)
+            actions.clear()
+        }
+
+        composeRule.onNodeWithText(app.label).performTouchInput { longClick() }
+        composeRule.onNodeWithText("Remove from home").performClick()
+
+        composeRule.runOnIdle {
+            assertEquals(listOf(LauncherShellAction.RemoveHomeShortcut(shortcut.id)), actions)
+        }
     }
 
     @Test
