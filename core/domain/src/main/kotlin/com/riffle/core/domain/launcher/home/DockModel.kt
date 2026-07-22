@@ -9,6 +9,7 @@ data class DockModel(
     val backgroundAlphaPercent: Int = DEFAULT_DOCK_BACKGROUND_ALPHA_PERCENT,
     val visualEffect: DockVisualEffect = DockVisualEffect.FLAT,
     val backgroundSizing: DockBackgroundSizing = DockBackgroundSizing.DYNAMIC,
+    val alignment: DockAlignment = DockAlignment.CENTER,
     val itemSpacingDp: Int = DEFAULT_DOCK_ITEM_SPACING_DP,
 ) {
     val availableSlots: Int = (capacity - items.size).coerceAtLeast(0)
@@ -17,6 +18,13 @@ data class DockModel(
 enum class DockBackgroundSizing {
     DYNAMIC,
     FIXED,
+}
+
+/** Horizontal placement for a dock that does not consume the available home width. */
+enum class DockAlignment {
+    START,
+    CENTER,
+    END,
 }
 
 /** Material treatment for the Dock container; colour always comes from the active launcher theme. */

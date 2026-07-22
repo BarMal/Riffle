@@ -96,7 +96,7 @@ internal fun ExpandedDockSurface(
 
     BoxWithConstraints(
         modifier = Modifier.dockShelfGestureInput(interactions),
-        contentAlignment = Alignment.Center,
+        contentAlignment = dock.alignment.toBoxAlignment(),
     ) {
         val availableWidthDp = maxWidth.value.toInt()
         val surfaceMetrics =

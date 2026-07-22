@@ -6,11 +6,15 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import com.riffle.core.domain.launcher.home.DockAlignment
 import com.riffle.core.domain.launcher.home.DockBackgroundSizing
 import com.riffle.core.domain.launcher.home.DockModel
 import com.riffle.core.domain.launcher.home.DockVisualEffect
@@ -50,6 +54,10 @@ internal fun DockSetting(
         )
         DockBackgroundSizingSetting(
             sizing = dock.backgroundSizing,
+            onAction = onAction,
+        )
+        DockAlignmentSetting(
+            alignment = dock.alignment,
             onAction = onAction,
         )
     }
@@ -134,6 +142,41 @@ private fun DockBackgroundSizingSetting(
                 onClick = { onAction(LauncherShellAction.SelectDockBackgroundSizing(DockBackgroundSizing.FIXED)) },
             ) {
                 SettingsButtonText(text = "Full width")
+            }
+        }
+    }
+}
+
+@Composable
+private fun DockAlignmentSetting(
+    alignment: DockAlignment,
+    onAction: (LauncherShellAction) -> Unit,
+) {
+    Column(
+        modifier = Modifier.selectableGroup(),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        SettingsTextColumn(
+            title = "Dock alignment",
+            subtitle = "Places a content-sized dock on the home screen",
+        )
+        DockAlignment.entries.forEach { candidate ->
+            TextButton(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .semantics { selected = candidate == alignment },
+                enabled = candidate != alignment,
+                onClick = { onAction(LauncherShellAction.SelectDockAlignment(candidate)) },
+            ) {
+                SettingsButtonText(
+                    text =
+                        when (candidate) {
+                            DockAlignment.START -> "Start"
+                            DockAlignment.CENTER -> "Center"
+                            DockAlignment.END -> "End"
+                        },
+                )
             }
         }
     }

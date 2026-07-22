@@ -12,6 +12,7 @@ import com.riffle.core.domain.launcher.apps.AppShortcutId
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.cards.AppStageId
 import com.riffle.core.domain.launcher.cards.CardsChapterId
+import com.riffle.core.domain.launcher.home.DockAlignment
 import com.riffle.core.domain.launcher.home.DockBackgroundSizing
 import com.riffle.core.domain.launcher.home.DockItemMoveDirection
 import com.riffle.core.domain.launcher.home.DockVisualEffect
@@ -279,6 +280,7 @@ class LauncherActionDomainTest {
                     "SelectDockBackgroundSizing",
                     LauncherShellAction.SelectDockBackgroundSizing(DockBackgroundSizing.FIXED),
                 ),
+                activity("SelectDockAlignment", LauncherShellAction.SelectDockAlignment(DockAlignment.END)),
                 activity("SelectDockItemSpacing", LauncherShellAction.SelectDockItemSpacing(spacingDp = 12)),
                 app("AppDrawerQueryChanged", LauncherShellAction.AppDrawerQueryChanged("query")),
                 app("RefreshInstalledApps", LauncherShellAction.RefreshInstalledApps),

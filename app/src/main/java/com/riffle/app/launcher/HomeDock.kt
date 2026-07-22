@@ -40,6 +40,7 @@ import com.riffle.app.launcher.widgets.HomeWidgetViewFactory
 import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.apps.AppShortcutsByApp
 import com.riffle.core.domain.launcher.home.AppShortcutItem
+import com.riffle.core.domain.launcher.home.DockAlignment
 import com.riffle.core.domain.launcher.home.DockBackgroundSizing
 import com.riffle.core.domain.launcher.home.DockItemMoveDirection
 import com.riffle.core.domain.launcher.home.DockModel
@@ -73,7 +74,7 @@ internal fun Dock(
 
     BoxWithConstraints(
         modifier = Modifier.dockShelfGestureInput(interactions),
-        contentAlignment = Alignment.Center,
+        contentAlignment = dock.alignment.toBoxAlignment(),
     ) {
         val surfaceMetrics =
             dockSurfaceMetrics(
@@ -89,7 +90,8 @@ internal fun Dock(
         DockSurfaceRow(
             modifier =
                 Modifier
-                    .dockShelfPolicies(interactions),
+                    .dockShelfPolicies(interactions)
+                    .testTag(HOME_DOCK_SURFACE_TEST_TAG),
             dock = dock,
             surfaceMetrics = surfaceMetrics,
             isEditing = isEditing,
@@ -232,6 +234,7 @@ private const val DOCK_EDGE_AUTO_SCROLL_ZONE_DP = 28
 private const val DOCK_EDGE_AUTO_SCROLL_MAX_PX_PER_EVENT = 24f
 private const val DOCK_DRAG_SLOT_HYSTERESIS = 0.15f
 private const val DOCK_EDGE_AUTO_SCROLL_FRAME_DELAY_MILLIS = 16L
+internal const val HOME_DOCK_SURFACE_TEST_TAG = "home-dock-surface"
 
 internal fun dockHeightDp(iconSizeDp: Int): Int = iconSizeDp + DOCK_VERTICAL_CHROME_DP
 
@@ -329,6 +332,13 @@ internal data class DockInteractions(
     val homeLayout: HomeLayout? = null,
     val onAction: (LauncherShellAction) -> Unit,
 )
+
+internal fun DockAlignment.toBoxAlignment(): Alignment =
+    when (this) {
+        DockAlignment.START -> Alignment.CenterStart
+        DockAlignment.CENTER -> Alignment.Center
+        DockAlignment.END -> Alignment.CenterEnd
+    }
 
 internal fun dockMoveToHomeAction(
     itemId: LauncherItemId,

@@ -1,15 +1,21 @@
 package com.riffle.app.launcher
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotSelected
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -50,11 +56,13 @@ class DockSettingLayoutTest {
     fun simplifiedDockSettingsKeepHeightAndWidthControlsWithoutSlotPlaceholders() {
         composeRule.setContent {
             MaterialTheme {
-                DockSetting(
-                    dock = DockModel(capacity = 4),
-                    notificationAccessStatus = NotificationAccessStatus.GRANTED,
-                    onAction = {},
-                )
+                Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                    DockSetting(
+                        dock = DockModel(capacity = 4),
+                        notificationAccessStatus = NotificationAccessStatus.GRANTED,
+                        onAction = {},
+                    )
+                }
             }
         }
 
@@ -62,6 +70,15 @@ class DockSettingLayoutTest {
         composeRule.onNodeWithText("Dock width").assertIsDisplayed()
         composeRule.onNodeWithText("Fit content").assertIsDisplayed()
         composeRule.onNodeWithText("Full width").assertIsDisplayed().assertHasClickAction()
+        composeRule.onNodeWithText("Dock alignment").performScrollTo().assertIsDisplayed()
+        composeRule
+            .onNodeWithText("Start")
+            .performScrollTo()
+            .assertIsDisplayed()
+            .assertHasClickAction()
+            .assertIsNotSelected()
+        composeRule.onNodeWithText("Center").performScrollTo().assertIsDisplayed().assertIsSelected()
+        composeRule.onNodeWithText("End").performScrollTo().assertIsDisplayed().assertHasClickAction()
         composeRule.onNodeWithText("Dock slots").assertDoesNotExist()
         composeRule.onNodeWithText("Dock item spacing").assertDoesNotExist()
     }

@@ -9,6 +9,7 @@ import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.cards.AppStageId
 import com.riffle.core.domain.launcher.cards.CardsChapterId
+import com.riffle.core.domain.launcher.home.DockAlignment
 import com.riffle.core.domain.launcher.home.DockBackgroundSizing
 import com.riffle.core.domain.launcher.home.DockItemMoveDirection
 import com.riffle.core.domain.launcher.home.DockVisualEffect
@@ -210,6 +211,8 @@ sealed interface LauncherShellAction {
     data class SelectDockVisualEffect(val effect: DockVisualEffect) : LauncherShellAction
 
     data class SelectDockBackgroundSizing(val sizing: DockBackgroundSizing) : LauncherShellAction
+
+    data class SelectDockAlignment(val alignment: DockAlignment) : LauncherShellAction
 
     data class SelectDockItemSpacing(val spacingDp: Int) : LauncherShellAction
 

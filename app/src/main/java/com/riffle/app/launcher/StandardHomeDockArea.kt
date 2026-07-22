@@ -1,7 +1,9 @@
 package com.riffle.app.launcher
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
@@ -9,6 +11,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import com.riffle.core.domain.launcher.home.DockAlignment
 import com.riffle.core.domain.launcher.home.GridInsets
 import com.riffle.core.domain.launcher.home.HomeEditMode
 import com.riffle.core.domain.launcher.home.HomeLayout
@@ -51,40 +54,49 @@ internal fun StandardHomeDockArea(
     Column(
         modifier =
             Modifier
+                .fillMaxWidth()
                 .padding(
                     start = margins.start.dp,
                     end = margins.end.dp,
                     bottom = margins.bottom.dp,
                 )
-                .testTag(HOME_DOCK_TEST_TAG)
                 .dockShelfMotion(dockShelfMotionPolicy(presentation.reducedMotion))
                 .dockShelfFrameRatePreference(presentation.motionPerformanceTargetFps),
-        horizontalAlignment = Alignment.CenterHorizontally,
+        horizontalAlignment = layout.dock.alignment.toHorizontalAlignment(),
     ) {
         Spacer(modifier = Modifier.height(HOME_DOCK_TOP_SPACING_DP.dp))
-        if (showDockShelf) {
-            ExpandedDockSurface(
-                dock = layout.dock,
-                notificationShelfState = notificationShelfState,
-                notificationGroupsByApp = presentation.notificationGroupsByApp,
-                appShortcutsByApp = presentation.appShortcutsByApp,
-                appIconLoader = appIconLoader,
-                widgetViewFactory = presentation.widgetViewFactory,
-                interactions = dockInteractions,
-            )
-        } else {
-            Dock(
-                dock = layout.dock.primaryDock(showShelf = false),
-                isEditing = layout.editMode is HomeEditMode.EditingPage,
-                notificationGroupsByApp = presentation.notificationGroupsByApp,
-                appShortcutsByApp = presentation.appShortcutsByApp,
-                appIconLoader = appIconLoader,
-                widgetViewFactory = presentation.widgetViewFactory,
-                interactions = dockInteractions,
-            )
+        Box(modifier = Modifier.testTag(HOME_DOCK_TEST_TAG)) {
+            if (showDockShelf) {
+                ExpandedDockSurface(
+                    dock = layout.dock,
+                    notificationShelfState = notificationShelfState,
+                    notificationGroupsByApp = presentation.notificationGroupsByApp,
+                    appShortcutsByApp = presentation.appShortcutsByApp,
+                    appIconLoader = appIconLoader,
+                    widgetViewFactory = presentation.widgetViewFactory,
+                    interactions = dockInteractions,
+                )
+            } else {
+                Dock(
+                    dock = layout.dock.primaryDock(showShelf = false),
+                    isEditing = layout.editMode is HomeEditMode.EditingPage,
+                    notificationGroupsByApp = presentation.notificationGroupsByApp,
+                    appShortcutsByApp = presentation.appShortcutsByApp,
+                    appIconLoader = appIconLoader,
+                    widgetViewFactory = presentation.widgetViewFactory,
+                    interactions = dockInteractions,
+                )
+            }
         }
     }
 }
+
+private fun DockAlignment.toHorizontalAlignment(): Alignment.Horizontal =
+    when (this) {
+        DockAlignment.START -> Alignment.Start
+        DockAlignment.CENTER -> Alignment.CenterHorizontally
+        DockAlignment.END -> Alignment.End
+    }
 
 internal fun GridInsets.nonNegative(): GridInsets =
     GridInsets(
