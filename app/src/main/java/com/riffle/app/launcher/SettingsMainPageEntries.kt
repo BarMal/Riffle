@@ -63,7 +63,6 @@ private fun homeSettingsPageEntries(): List<SettingsPageEntry> =
                     "color picker",
                     "status bar",
                     "navigation bar",
-                    "fullscreen",
                     "system UI",
                 ),
         ),

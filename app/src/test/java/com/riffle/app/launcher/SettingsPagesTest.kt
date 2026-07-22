@@ -77,8 +77,12 @@ class SettingsPagesTest {
             settingsMainPageEntriesMatching("restore").map { entry -> entry.page },
         )
         assertEquals(
+            emptyList<SettingsPageEntry>(),
+            settingsMainPageEntriesMatching("fullscreen"),
+        )
+        assertEquals(
             listOf(SettingsPage.APPEARANCE),
-            settingsMainPageEntriesMatching("fullscreen").map { entry -> entry.page },
+            settingsMainPageEntriesMatching("theme colours").map { entry -> entry.page },
         )
     }
 

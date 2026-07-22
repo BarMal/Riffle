@@ -15,7 +15,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.home.WallpaperSource
-import com.riffle.core.domain.launcher.settings.HomeSystemBar
 import com.riffle.core.domain.launcher.settings.SearchResultPresentation
 import com.riffle.core.domain.launcher.settings.homeSystemBars
 
@@ -227,8 +226,6 @@ private fun SettingsAppearancePageContent(
 ) {
     val appearance = state.settings.appearance
     val homeSystemBars = appearance.homeSystemBars
-    val statusBarSetting = homeSystemBars.setting(HomeSystemBar.STATUS)
-    val navigationBarSetting = homeSystemBars.setting(HomeSystemBar.NAVIGATION)
 
     SettingsSection(title = "Theme") {
         ThemeModeSetting(selectedMode = appearance.themeMode, onAction = onAction)
@@ -260,37 +257,17 @@ private fun SettingsAppearancePageContent(
     }
     SettingsSection(title = "System UI") {
         SettingsSwitchRow(
-            title = "Fullscreen home",
-            subtitle = "Hide status and navigation bars on home",
-            checked = appearance.fullscreenHome,
-            onCheckedChange = { enabled ->
-                onAction(LauncherShellAction.SelectFullscreenHomeEnabled(enabled))
-            },
-        )
-        SettingsSwitchRow(
             title = "Hide status bar",
-            subtitle =
-                if (statusBarSetting.enabled) {
-                    "Hide the top system bar on home"
-                } else {
-                    "Turn off Fullscreen home to choose bars separately"
-                },
-            checked = statusBarSetting.checked,
-            enabled = statusBarSetting.enabled,
+            subtitle = "Hide the top system bar on home",
+            checked = homeSystemBars.statusBarHidden,
             onCheckedChange = { hidden ->
                 onAction(LauncherShellAction.SelectHomeStatusBarHidden(hidden))
             },
         )
         SettingsSwitchRow(
             title = "Hide navigation bar",
-            subtitle =
-                if (navigationBarSetting.enabled) {
-                    "Hide the bottom system bar on home"
-                } else {
-                    "Turn off Fullscreen home to choose bars separately"
-                },
-            checked = navigationBarSetting.checked,
-            enabled = navigationBarSetting.enabled,
+            subtitle = "Hide the bottom system bar on home",
+            checked = homeSystemBars.navigationBarHidden,
             onCheckedChange = { hidden ->
                 onAction(LauncherShellAction.SelectHomeNavigationBarHidden(hidden))
             },
