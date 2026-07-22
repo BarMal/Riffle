@@ -144,6 +144,7 @@ internal fun Modifier.homeItemDrag(
                     actions.onDragSessionChanged(
                         HomeDragSession(
                             item = item,
+                            originPageId = dragState.pageId,
                             originCell = dragState.cell,
                             projectedCell = dragState.cell,
                         ),
@@ -156,6 +157,7 @@ internal fun Modifier.homeItemDrag(
                     actions.onDragSessionChanged(
                         HomeDragSession(
                             item = item,
+                            originPageId = dragState.pageId,
                             originCell = dragState.cell,
                             dragOffsetX = dragX,
                             dragOffsetY = dragY,
@@ -164,12 +166,14 @@ internal fun Modifier.homeItemDrag(
                     )
                 },
                 onDragEnd = {
+                    val targetPageId = actions.currentDragSession()?.targetPageId ?: dragState.pageId
                     actions.onDragSessionChanged(null)
                     homeItemDragDropAction(
                         item = item,
                         dragState = dragState,
                         dragX = dragX,
                         dragY = dragY,
+                        targetPageId = targetPageId,
                     )
                         ?.let(actions.onAction)
                         ?: onStationaryLongPress?.invoke()
@@ -258,17 +262,24 @@ internal fun homeItemDragDropAction(
     dragState: HomeItemDragState,
     dragX: Float,
     dragY: Float,
+    targetPageId: com.riffle.core.domain.launcher.home.LauncherPageId = dragState.pageId,
 ): LauncherShellAction? =
     when {
         item.isDockTransferable && dragState.isDraggedBelowGrid(dragY) ->
-            LauncherShellAction.MoveHomeItemToDock(item.id)
+            LauncherShellAction.MoveHomeItemToDock(item.id, pageId = dragState.pageId)
 
         else ->
             dragState.dropCell(dragX = dragX, dragY = dragY)?.let { targetCell ->
-                LauncherShellAction.MoveHomeShortcutToCell(
-                    itemId = item.id,
-                    cell = targetCell,
-                )
+                if (targetPageId == dragState.pageId) {
+                    LauncherShellAction.MoveHomeShortcutToCell(itemId = item.id, cell = targetCell)
+                } else {
+                    LauncherShellAction.MoveHomeItemToPage(
+                        itemId = item.id,
+                        sourcePageId = dragState.pageId,
+                        targetPageId = targetPageId,
+                        cell = targetCell,
+                    )
+                }
             }
     }
 

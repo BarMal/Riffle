@@ -1,11 +1,27 @@
 package com.riffle.app.launcher
 
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.unit.IntSize
+import com.riffle.core.domain.launcher.home.GridCell
+import com.riffle.core.domain.launcher.home.GridDimensions
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ImmediateHomePagerTest {
+    @Test
+    fun mapsWidgetPickerDropPositionToBoundedGridCell() {
+        assertEquals(
+            GridCell(column = 3, row = 4),
+            widgetPickerDropCell(
+                position = Offset(500f, 900f),
+                rootSize = IntSize(width = 400, height = 800),
+                grid = GridDimensions(columns = 4, rows = 5),
+            ),
+        )
+    }
+
     @Test
     fun appliesExternalHomePageSelectionWhenPagerIsIdleAndPositionIsStale() {
         assertTrue(

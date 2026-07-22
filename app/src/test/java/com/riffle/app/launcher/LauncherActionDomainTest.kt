@@ -304,6 +304,10 @@ class LauncherActionDomainTest {
                 activity("MoveHomeItemToDock", LauncherShellAction.MoveHomeItemToDock(itemId)),
                 activity("MoveDockItemToHome", LauncherShellAction.MoveDockItemToHome(itemId, GridCell(1, 2))),
                 activity("MoveHomeShortcutToCell", LauncherShellAction.MoveHomeShortcutToCell(itemId, GridCell(1, 2))),
+                activity(
+                    "MoveHomeItemToPage",
+                    LauncherShellAction.MoveHomeItemToPage(itemId, pageId, LauncherPageId("page-2"), GridCell(1, 2)),
+                ),
                 activity("ResizeHomeWidget", LauncherShellAction.ResizeHomeWidget(itemId, GridSpan(2, 2))),
                 app("OpenWidgetPicker", LauncherShellAction.OpenWidgetPicker),
                 app("CloseWidgetPicker", LauncherShellAction.CloseWidgetPicker),

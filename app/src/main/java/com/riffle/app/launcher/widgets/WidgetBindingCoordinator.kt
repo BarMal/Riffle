@@ -74,6 +74,8 @@ class WidgetBindingCoordinator(
                         preferredSpan = preferredSpan,
                         resizeConstraints = resizeConstraints,
                         target = action.target,
+                        targetPageId = action.targetPageId,
+                        targetCell = action.targetCell,
                         step = PendingWidgetAddStep.CONFIGURATION,
                         createdAtEpochMillis = epochMillisProvider(),
                     )
@@ -104,6 +106,8 @@ class WidgetBindingCoordinator(
                         preferredSpan = preferredSpan,
                         resizeConstraints = resizeConstraints,
                         target = action.target,
+                        targetPageId = action.targetPageId,
+                        targetCell = action.targetCell,
                         step = PendingWidgetAddStep.PERMISSION,
                         createdAtEpochMillis = epochMillisProvider(),
                     ),
@@ -236,6 +240,8 @@ class WidgetBindingCoordinator(
                     label = label,
                     preferredSpan = preferredSpan,
                     resizeConstraints = resizeConstraints,
+                    targetPageId = targetPageId,
+                    targetCell = targetCell,
                 )
 
             WidgetAddTarget.DOCK ->

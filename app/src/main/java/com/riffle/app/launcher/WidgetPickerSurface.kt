@@ -4,6 +4,7 @@ package com.riffle.app.launcher
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -32,16 +33,26 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.widgets.InstalledWidgetProvider
 import kotlinx.coroutines.Dispatchers
@@ -51,6 +62,9 @@ import kotlinx.coroutines.withContext
 fun WidgetPickerSurface(
     providers: List<InstalledWidgetProvider>,
     previewImageLoader: WidgetPreviewImageLoader = EmptyWidgetPreviewImageLoader,
+    isDragHandoffActive: Boolean = false,
+    onWidgetDragStarted: (InstalledWidgetProvider) -> Unit = {},
+    onWidgetDropped: (InstalledWidgetProvider, Offset, IntSize) -> Unit = { _, _, _ -> },
     onAction: (LauncherShellAction) -> Unit,
 ) {
     var query by rememberSaveable { mutableStateOf("") }
@@ -63,13 +77,19 @@ fun WidgetPickerSurface(
             Modifier
                 .fillMaxSize()
                 .windowInsetsPadding(WindowInsets.safeDrawing),
-        color = MaterialTheme.colorScheme.surface,
+        color =
+            if (isDragHandoffActive) {
+                androidx.compose.ui.graphics.Color.Transparent
+            } else {
+                MaterialTheme.colorScheme.surface
+            },
         contentColor = MaterialTheme.colorScheme.onSurface,
     ) {
         Column(
             modifier =
                 Modifier
                     .fillMaxSize()
+                    .alpha(if (isDragHandoffActive) 0f else 1f)
                     .padding(WIDGET_PICKER_SCREEN_PADDING_DP.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
@@ -110,6 +130,8 @@ fun WidgetPickerSurface(
                 onCollapsedSectionTitlesChange = { value -> collapsedSectionTitles = value },
                 previewImageLoader = previewImageLoader,
                 onAction = onAction,
+                onWidgetDragStarted = onWidgetDragStarted,
+                onWidgetDropped = onWidgetDropped,
             )
         }
     }
@@ -125,6 +147,7 @@ private fun WidgetPickerEmptyMessage(text: String) {
     )
 }
 
+@Suppress("LongParameterList")
 @Composable
 private fun WidgetPickerContent(
     providers: List<InstalledWidgetProvider>,
@@ -134,6 +157,8 @@ private fun WidgetPickerContent(
     onCollapsedSectionTitlesChange: (String) -> Unit,
     previewImageLoader: WidgetPreviewImageLoader,
     onAction: (LauncherShellAction) -> Unit,
+    onWidgetDragStarted: (InstalledWidgetProvider) -> Unit,
+    onWidgetDropped: (InstalledWidgetProvider, Offset, IntSize) -> Unit,
 ) {
     when {
         providers.isEmpty() ->
@@ -179,6 +204,8 @@ private fun WidgetPickerContent(
                                 provider = provider,
                                 previewImageLoader = previewImageLoader,
                                 onAction = onAction,
+                                onWidgetDragStarted = onWidgetDragStarted,
+                                onWidgetDropped = onWidgetDropped,
                             )
                         }
                     }
@@ -192,14 +219,48 @@ private fun WidgetProviderTile(
     provider: InstalledWidgetProvider,
     previewImageLoader: WidgetPreviewImageLoader,
     onAction: (LauncherShellAction) -> Unit,
+    onWidgetDragStarted: (InstalledWidgetProvider) -> Unit,
+    onWidgetDropped: (InstalledWidgetProvider, Offset, IntSize) -> Unit,
 ) {
     val summary = provider.widgetPickerSummary()
+    val currentOnWidgetDragStarted by rememberUpdatedState(onWidgetDragStarted)
+    val currentOnWidgetDropped by rememberUpdatedState(onWidgetDropped)
+    var coordinates: LayoutCoordinates? by remember { mutableStateOf(null) }
+    var dropPosition by remember { mutableStateOf(Offset.Zero) }
+    val configuration = LocalConfiguration.current
+    val density = LocalDensity.current
+    val rootSize =
+        with(density) {
+            IntSize(configuration.screenWidthDp.dp.roundToPx(), configuration.screenHeightDp.dp.roundToPx())
+        }
 
     Column(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .padding(bottom = 2.dp),
+                .padding(bottom = 2.dp)
+                .onGloballyPositioned { layoutCoordinates -> coordinates = layoutCoordinates }
+                .pointerInput(provider.widgetPickerKey) {
+                    detectDragGesturesAfterLongPress(
+                        onDragStart = { offset ->
+                            dropPosition = offset
+                            currentOnWidgetDragStarted(provider)
+                        },
+                        onDrag = { change, _ ->
+                            change.consume()
+                            dropPosition = change.position
+                        },
+                        onDragEnd = {
+                            coordinates?.let { layoutCoordinates ->
+                                currentOnWidgetDropped(
+                                    provider,
+                                    layoutCoordinates.positionInRoot() + dropPosition,
+                                    rootSize,
+                                )
+                            }
+                        },
+                    )
+                },
         verticalArrangement = Arrangement.spacedBy(6.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {

@@ -118,6 +118,52 @@ class HomeShortcutEngine(
                 },
             )
 
+    /** Moves any placed Home item between editable pages without relying on transient UI state. */
+    @Suppress("ReturnCount")
+    fun moveItemToPage(
+        layout: HomeLayout,
+        itemId: LauncherItemId,
+        sourcePageId: LauncherPageId,
+        targetPageId: LauncherPageId,
+        cell: GridCell,
+    ): HomeShortcutResult {
+        val missingItem = HomeShortcutResult.Rejected(PlacementRejectionReason.ITEM_NOT_FOUND)
+        val sourcePage = layout.pages.firstOrNull { it.id == sourcePageId } ?: return missingItem
+        val targetPage = layout.pages.firstOrNull { it.id == targetPageId } ?: return missingItem
+        if (sourcePage.type is LauncherPageType.Generated || targetPage.type is LauncherPageType.Generated) {
+            return HomeShortcutResult.Rejected(PlacementRejectionReason.GENERATED_PAGE)
+        }
+        val item = sourcePage.items.firstOrNull { it.id == itemId } ?: return missingItem
+        val placement = item.placement ?: return HomeShortcutResult.Rejected(PlacementRejectionReason.MISSING_PLACEMENT)
+
+        val sourceWithoutItem = gridPlacementEngine.removeItem(sourcePage, itemId)
+        val destination = if (sourcePageId == targetPageId) sourceWithoutItem else targetPage
+        return when (
+            val result =
+                gridPlacementEngine.placeItem(
+                    page = destination,
+                    item = item.withPlacement(placement.copy(cell = cell)),
+                )
+        ) {
+            is PlaceLauncherItemResult.Placed ->
+                HomeShortcutResult.Updated(
+                    layout.copy(
+                        pages =
+                            layout.pages.map { page ->
+                                when (page.id) {
+                                    sourcePageId ->
+                                        if (sourcePageId == targetPageId) result.page else sourceWithoutItem
+                                    targetPageId -> result.page
+                                    else -> page
+                                }
+                            },
+                    ),
+                )
+
+            is PlaceLauncherItemResult.Rejected -> HomeShortcutResult.Rejected(result.reason)
+        }
+    }
+
     private fun appShortcutFor(
         app: InstalledApp,
         layout: HomeLayout,

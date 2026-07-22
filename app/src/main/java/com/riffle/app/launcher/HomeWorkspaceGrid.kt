@@ -67,7 +67,7 @@ internal fun WorkspaceGrid(
         val previewItems = page.itemsForDragPreview(gridState.dragSession)
         val activeDragSession =
             gridState.dragSession
-                ?.takeIf { session -> page.items.any { item -> item.id == session.item.id } }
+                ?.takeIf { session -> session.originPageId == page.id || session.targetPageId == page.id }
 
         Column(
             modifier = Modifier.fillMaxSize(),
@@ -128,7 +128,9 @@ private fun RowScope.HomeGridCell(
     ) {
         val activeDragSession = state.activeDragSession
         val activeDragSource =
-            activeDragSession?.takeIf { session -> session.originCell == state.cell }?.item
+            activeDragSession
+                ?.takeIf { session -> session.originPageId == state.page.id && session.originCell == state.cell }
+                ?.item
         val visibleItem = activeDragSource ?: state.previewItems.itemAt(cell = state.cell)
 
         HomeBackgroundContextMenu(
@@ -166,6 +168,7 @@ private fun RowScope.HomeGridCell(
                                 cellSize = state.cellSize,
                                 cellSizePx = state.cellSizePx,
                                 grid = state.page.grid,
+                                pageId = state.page.id,
                                 pageItems = state.page.items,
                                 isEditing = state.gridState.isEditing,
                                 activeDragSession = activeDragSession?.takeIf { session -> session.item.id == item.id },
@@ -205,6 +208,7 @@ private fun HomeGridItem(
                 shortcut = item,
                 dragState =
                     HomeItemDragState(
+                        pageId = state.pageId,
                         cell = state.cell,
                         cellSizePx = state.cellSizePx,
                         grid = state.grid,
@@ -229,6 +233,7 @@ private fun HomeGridItem(
                     folder = item,
                     dragState =
                         HomeItemDragState(
+                            pageId = state.pageId,
                             cell = state.cell,
                             cellSizePx = state.cellSizePx,
                             grid = state.grid,
@@ -265,6 +270,7 @@ private fun HomeGridItem(
                     widgetViewFactory = presentation.widgetViewFactory,
                     dragState =
                         HomeItemDragState(
+                            pageId = state.pageId,
                             cell = state.cell,
                             cellSizePx = state.cellSizePx,
                             grid = state.grid,
@@ -376,6 +382,7 @@ internal data class HomeGridState(
 )
 
 internal data class HomeGridItemState(
+    val pageId: com.riffle.core.domain.launcher.home.LauncherPageId,
     val cell: GridCell,
     val cellSize: Dp,
     val cellSizePx: Float,

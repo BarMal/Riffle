@@ -333,6 +333,42 @@ class HomeShortcutEngineTest {
         assertEquals(PlacementRejectionReason.COLLISION, rejected.reason)
     }
 
+    @Test
+    fun movesWidgetToRequestedDifferentHomePage() {
+        val widget =
+            widget(
+                id = "clock",
+                placement = GridPlacement(cell = GridCell(column = 0, row = 0)),
+            )
+        val source =
+            HomeLayoutDefaults.standard().selectedPage.copy(
+                id = LauncherPageId("source"),
+                items = listOf(widget),
+            )
+        val destination = source.copy(id = LauncherPageId("destination"), items = emptyList())
+        val layout =
+            HomeLayoutDefaults.standard().copy(
+                pages = listOf(source, destination),
+                selectedPageId = source.id,
+            )
+
+        val result =
+            engine.moveItemToPage(
+                layout = layout,
+                itemId = widget.id,
+                sourcePageId = source.id,
+                targetPageId = destination.id,
+                cell = GridCell(column = 2, row = 1),
+            )
+
+        val updated = assertIs<HomeShortcutResult.Updated>(result).layout
+        assertEquals(emptyList(), updated.pages.first { it.id == source.id }.items)
+        assertEquals(
+            GridPlacement(cell = GridCell(column = 2, row = 1)),
+            updated.pages.first { it.id == destination.id }.items.single().placement,
+        )
+    }
+
     private fun layoutWith(vararg shortcuts: LauncherItem): HomeLayout =
         HomeLayoutDefaults.standard().copy(
             pages = listOf(HomeLayoutDefaults.standard().selectedPage.copy(items = shortcuts.toList())),

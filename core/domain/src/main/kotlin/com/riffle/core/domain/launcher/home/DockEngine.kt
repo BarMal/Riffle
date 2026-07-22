@@ -131,16 +131,21 @@ class DockEngine {
                 )
         }
 
-    /** Transfers an app shortcut or folder from the selected Home page into a Dock slot atomically. */
+    /** Transfers an app shortcut or folder from a Home page into a Dock slot atomically. */
+    @Suppress("CyclomaticComplexMethod")
     fun moveHomeItemToDock(
         layout: HomeLayout,
         itemId: LauncherItemId,
         targetIndex: Int? = null,
+        pageId: LauncherPageId? = null,
     ): DockEditResult {
-        val item = layout.selectedPage.items.firstOrNull { it.id == itemId }
+        val sourcePage = pageId?.let { requestedPageId -> layout.pageForId(requestedPageId) } ?: layout.selectedPage
+        val item = sourcePage.items.firstOrNull { it.id == itemId }
 
         return when {
             item == null -> DockEditResult.Rejected(DockEditRejectionReason.ITEM_NOT_FOUND)
+            pageId != null && sourcePage.id != pageId ->
+                DockEditResult.Rejected(DockEditRejectionReason.HOME_PAGE_NOT_FOUND)
             item !is AppShortcutItem && item !is FolderItem ->
                 DockEditResult.Rejected(DockEditRejectionReason.UNSUPPORTED_ITEM)
             !layout.dock.isEnabled -> DockEditResult.Rejected(DockEditRejectionReason.DOCK_DISABLED)
@@ -153,7 +158,7 @@ class DockEngine {
             else -> {
                 val dockItem = item.withoutHomePlacement()
                 val dockItems = layout.dock.items.toMutableList().apply { add(targetIndex ?: size, dockItem) }
-                val updatedPage = gridPlacementEngine.removeItem(layout.selectedPage, itemId)
+                val updatedPage = gridPlacementEngine.removeItem(sourcePage, itemId)
                 DockEditResult.Updated(
                     layout.copy(
                         dock = layout.dock.copy(items = dockItems),
@@ -240,6 +245,9 @@ class DockEngine {
         dock.items
             .filterIsInstance<AppShortcutItem>()
             .count { item -> item.appIdentity == app.identity } + 1
+
+    @Suppress("MaxLineLength")
+    private fun HomeLayout.pageForId(pageId: LauncherPageId): LauncherPage? = pages.firstOrNull { page -> page.id == pageId }
 
     private fun DockModel.capacityAfterAddingAppShortcut(): Int =
         if (isEnabled) {

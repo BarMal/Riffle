@@ -27,7 +27,7 @@ private fun LauncherShellViewModel.completeHomeWidgetAdd(
     onHomeShortcutEdited(fittedAction)
     val wasPlaced =
         !hadHostedWidgetBeforeAdd &&
-            state.value.homeLayout.selectedPageHasHostedWidget(action.hostedWidgetId)
+            state.value.homeLayout.pageHasHostedWidget(action.hostedWidgetId, action.targetPageId)
     val adjustmentMessage =
         state.value.homeLayout.hostedWidgetSpanAdjustmentMessage(
             label = action.label,
@@ -109,8 +109,11 @@ private fun HomeLayout.hasHostedWidget(hostedWidgetId: HostedWidgetId): Boolean 
         .filterIsInstance<WidgetItem>()
         .any { widget -> widget.appWidgetId == hostedWidgetId }
 
-private fun HomeLayout.selectedPageHasHostedWidget(hostedWidgetId: HostedWidgetId): Boolean =
-    selectedPage.items
+private fun HomeLayout.pageHasHostedWidget(
+    hostedWidgetId: HostedWidgetId,
+    pageId: com.riffle.core.domain.launcher.home.LauncherPageId?,
+): Boolean =
+    (pageId?.let { requestedPageId -> pages.firstOrNull { it.id == requestedPageId } } ?: selectedPage).items
         .filterIsInstance<WidgetItem>()
         .any { widget -> widget.appWidgetId == hostedWidgetId }
 

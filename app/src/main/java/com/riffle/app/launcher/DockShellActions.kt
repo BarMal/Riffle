@@ -68,6 +68,7 @@ fun DockEngine.applyEdit(
                 layout = layout,
                 itemId = action.itemId,
                 targetIndex = action.targetIndex,
+                pageId = action.pageId,
             )
 
         is LauncherShellAction.MoveDockItemToHome ->
