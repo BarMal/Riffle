@@ -5,6 +5,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertHasNoClickAction
 import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.hasAnyAncestor
@@ -13,6 +14,7 @@ import androidx.compose.ui.test.isToggleable
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.riffle.core.domain.launcher.FirstRunStatus
 import com.riffle.core.domain.launcher.HomeRoleStatus
@@ -57,11 +59,11 @@ class SettingsPageContentTest {
         composeRule
             .onNode(isToggleable() and hasAnyAncestor(hasText("Hide status bar")))
             .assertIsOn()
-            .performClick()
+            .performSemanticsAction(SemanticsActions.OnClick) { onClick -> onClick() }
         composeRule
             .onNode(isToggleable() and hasAnyAncestor(hasText("Hide navigation bar")))
             .assertIsOn()
-            .performClick()
+            .performSemanticsAction(SemanticsActions.OnClick) { onClick -> onClick() }
 
         composeRule.runOnIdle {
             assertEquals(
