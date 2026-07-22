@@ -7,6 +7,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -14,8 +15,8 @@ import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.SemanticsProperties
-import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
@@ -27,6 +28,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.requestFocus
@@ -123,6 +125,11 @@ class CardStackTest {
             MaterialTheme {
                 CardStack(
                     entries = CardStackLayoutPolicy().entries(cardCount = 2, activeIndex = focusedCard),
+                    modifier =
+                        Modifier.onKeyEvent { event ->
+                            if (event.type == KeyEventType.KeyDown) boundaryKeyEvents++
+                            false
+                        },
                     interaction =
                         CardStackInteraction(
                             focusedItemKey = focusedCard,
@@ -147,20 +154,14 @@ class CardStackTest {
                 ) { entry, modifier ->
                     Text(
                         text = cardLabel(entry.cardIndex),
-                        modifier =
-                            modifier
-                                .focusable()
-                                .onKeyEvent { event ->
-                                    if (event.type == KeyEventType.KeyDown) boundaryKeyEvents++
-                                    false
-                                }.testTag("card-${entry.cardIndex}"),
+                        modifier = modifier.focusable().testTag("card-${entry.cardIndex}"),
                     )
                 }
             }
         }
 
         composeRule.onNodeWithTag("card-0").requestFocus()
-        composeRule.onNodeWithTag("card-0").performKeyInput {
+        composeRule.onRoot().performKeyInput {
             keyDown(Key.DirectionUp)
             keyUp(Key.DirectionUp)
         }
@@ -168,14 +169,13 @@ class CardStackTest {
             assertEquals(0, focusedCard)
             assertEquals(1, boundaryKeyEvents)
         }
-        composeRule.onNodeWithTag("card-0").performKeyInput {
+        composeRule.onRoot().performKeyInput {
             keyDown(Key.DirectionDown)
             keyUp(Key.DirectionDown)
         }
 
         composeRule.runOnIdle { assertEquals(1, focusedCard) }
-        composeRule.onNodeWithTag("card-1").requestFocus()
-        composeRule.onNodeWithTag("card-1").performKeyInput {
+        composeRule.onRoot().performKeyInput {
             keyDown(Key.DirectionDown)
             keyUp(Key.DirectionDown)
         }

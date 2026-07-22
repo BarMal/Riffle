@@ -1,3 +1,5 @@
+@file:Suppress("TooManyFunctions")
+
 package com.riffle.app.launcher
 
 import androidx.compose.animation.core.AnimationSpec
@@ -8,9 +10,9 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.runtime.Composable
@@ -20,16 +22,19 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.input.pointer.PointerId
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.pointer.PointerId
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.SemanticsPropertyKey
 import androidx.compose.ui.semantics.invisibleToUser
@@ -56,6 +61,8 @@ internal data class CardStackInteraction(
     val onExpand: (() -> Unit)? = null,
     /** Increments only when a gesture settles to a new focused card. */
     val settleTransitionId: Int = 0,
+    /** Requester owned by the currently focused rendered entry. */
+    val keyboardFocusRequester: FocusRequester? = null,
 )
 
 @Composable
@@ -71,6 +78,9 @@ internal fun CardStack(
     content: @Composable (CardStackLayoutEntry, Modifier) -> Unit,
 ) {
     val motionMode = cardStackMotionMode(reducedMotion)
+    val focusRequesters = remember { mutableMapOf<Any, FocusRequester>() }
+    var restoreKeyboardFocus by remember { mutableStateOf(false) }
+    var keyboardFocusOriginKey by remember { mutableStateOf<Any?>(null) }
     var consumedSettleTransitionId by remember { mutableStateOf(interaction?.settleTransitionId ?: 0) }
     val timing =
         if (
@@ -83,6 +93,32 @@ internal fun CardStack(
         }
     LaunchedEffect(interaction?.settleTransitionId) {
         consumedSettleTransitionId = interaction?.settleTransitionId ?: 0
+    }
+    LaunchedEffect(interaction?.focusedItemKey, restoreKeyboardFocus) {
+        val focusedItemKey = interaction?.focusedItemKey
+        if (
+            !restoreKeyboardFocus ||
+            focusedItemKey == null ||
+            focusedItemKey == keyboardFocusOriginKey
+        ) {
+            return@LaunchedEffect
+        }
+        withFrameNanos { }
+        focusRequesters[focusedItemKey]?.requestFocus()
+        restoreKeyboardFocus = false
+        keyboardFocusOriginKey = null
+    }
+
+    fun navigateFromKeyboard(direction: CardStackNavigationDirection): Boolean {
+        val focusedItemKey = interaction?.focusedItemKey
+        val moved = interaction?.onNavigate?.invoke(direction) ?: false
+        if (moved) {
+            // Keep the request pending until the owner publishes a different durable
+            // focused key. This also supports owners that commit navigation asynchronously.
+            keyboardFocusOriginKey = focusedItemKey
+            restoreKeyboardFocus = true
+        }
+        return moved
     }
 
     Box(
@@ -99,6 +135,8 @@ internal fun CardStack(
             // interpolate that card's prior pose into its new pose without composing a
             // second, outgoing stack.
             val stableItemKey = itemKey(entry)
+            val focusRequester =
+                focusRequesters.getOrPut(stableItemKey) { FocusRequester() }
             key(stableItemKey) {
                 AnimatedCardStackEntry(
                     entry = entry,
@@ -107,7 +145,11 @@ internal fun CardStack(
                     motionMode = motionMode,
                     timing = timing,
                     isFocused = interaction?.let { stableItemKey == it.focusedItemKey } ?: true,
-                    interaction = interaction,
+                    interaction =
+                        interaction?.copy(
+                            onNavigate = ::navigateFromKeyboard,
+                            keyboardFocusRequester = focusRequester,
+                        ),
                     content = { entry, modifier ->
                         content(
                             entry,
@@ -197,6 +239,7 @@ internal fun cardStackRenderedPose(
 }
 
 @Composable
+@Suppress("LongParameterList")
 private fun AnimatedCardStackEntry(
     entry: CardStackLayoutEntry,
     stableItemKey: Any,
@@ -265,31 +308,7 @@ private fun AnimatedCardStackEntry(
                     }
                     .then(
                         if (isFocused) {
-                            Modifier
-                                .focusable()
-                                .onPreviewKeyEvent { event ->
-                                    if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
-                                    when (event.key) {
-                                        Key.DirectionUp,
-                                        Key.PageUp,
-                                        -> interaction?.onNavigate?.invoke(CardStackNavigationDirection.PREVIOUS) ?: false
-
-                                        Key.DirectionDown,
-                                        Key.PageDown,
-                                        -> interaction?.onNavigate?.invoke(CardStackNavigationDirection.NEXT) ?: false
-
-                                        Key.DirectionCenter,
-                                        Key.Enter,
-                                        Key.NumPadEnter,
-                                        Key.Spacebar,
-                                        -> interaction?.onExpand?.let { expand ->
-                                            expand()
-                                            true
-                                        } ?: false
-
-                                        else -> false
-                                    }
-                                }
+                            Modifier.cardStackKeyboardInput(interaction)
                         } else {
                             Modifier
                         },
@@ -306,6 +325,36 @@ private fun AnimatedCardStackEntry(
             content(entry, Modifier)
         }
     }
+}
+
+private fun Modifier.cardStackKeyboardInput(interaction: CardStackInteraction?): Modifier {
+    val focusRequester = interaction?.keyboardFocusRequester ?: return this
+    return focusRequester(focusRequester)
+        .focusable()
+        .onPreviewKeyEvent { event ->
+            if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+            when (event.key) {
+                Key.DirectionUp,
+                Key.PageUp,
+                -> interaction.onNavigate?.invoke(CardStackNavigationDirection.PREVIOUS) ?: false
+
+                Key.DirectionDown,
+                Key.PageDown,
+                -> interaction.onNavigate?.invoke(CardStackNavigationDirection.NEXT) ?: false
+
+                Key.DirectionCenter,
+                Key.Enter,
+                Key.NumPadEnter,
+                Key.Spacebar,
+                ->
+                    interaction.onExpand?.let { expand ->
+                        expand()
+                        true
+                    } ?: false
+
+                else -> false
+            }
+        }
 }
 
 internal fun cardStackAnimationSpec(
