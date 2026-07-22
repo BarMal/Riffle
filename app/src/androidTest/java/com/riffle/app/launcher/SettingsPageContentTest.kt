@@ -59,20 +59,22 @@ class SettingsPageContentTest {
         composeRule
             .onNode(isToggleable() and hasAnyAncestor(hasText("Hide status bar")))
             .assertIsOn()
-            .performClick()
+        composeRule.onNodeWithText("Hide status bar").performClick()
         composeRule.onNodeWithText("Hide navigation bar").assertIsEnabled()
         composeRule
             .onNode(isToggleable() and hasAnyAncestor(hasText("Hide navigation bar")))
             .assertIsOn()
-            .performClick()
+        composeRule.onNodeWithText("Hide navigation bar").performClick()
 
-        assertEquals(
-            listOf(
-                LauncherShellAction.SelectHomeStatusBarHidden(hidden = false),
-                LauncherShellAction.SelectHomeNavigationBarHidden(hidden = false),
-            ),
-            actions,
-        )
+        composeRule.runOnIdle {
+            assertEquals(
+                listOf(
+                    LauncherShellAction.SelectHomeStatusBarHidden(hidden = false),
+                    LauncherShellAction.SelectHomeNavigationBarHidden(hidden = false),
+                ),
+                actions,
+            )
+        }
     }
 
     @Test
