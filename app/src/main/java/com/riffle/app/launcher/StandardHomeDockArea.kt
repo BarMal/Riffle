@@ -56,12 +56,12 @@ internal fun StandardHomeDockArea(
         modifier =
             Modifier
                 .fillMaxWidth()
+                .onSizeChanged { size -> actions.onDockInteractionHeightChanged(size.height) }
                 .padding(
                     start = margins.start.dp,
                     end = margins.end.dp,
                     bottom = margins.bottom.dp,
                 )
-                .onSizeChanged { size -> actions.onDockInteractionHeightChanged(size.height) }
                 .dockShelfMotion(dockShelfMotionPolicy(presentation.reducedMotion))
                 .dockShelfFrameRatePreference(presentation.motionPerformanceTargetFps),
         horizontalAlignment = layout.dock.alignment.toHorizontalAlignment(),

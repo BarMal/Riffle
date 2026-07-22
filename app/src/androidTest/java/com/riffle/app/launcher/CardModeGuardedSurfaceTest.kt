@@ -217,7 +217,7 @@ class CardModeGuardedSurfaceTest {
     }
 
     @Test
-    fun cardModeExpandedDockShelfReceivesPhysicalTapWithAnActiveTimeScapeStage() {
+    fun cardModeExpandedDockShelfWithBottomMarginReceivesPhysicalTapWithAnActiveTimeScapeStage() {
         val primary = cardsHomeApp(packageName = "com.example.camera")
         val overflow = cardsHomeApp(packageName = "com.example.photos")
         val primaryShortcut =
@@ -236,6 +236,13 @@ class CardModeGuardedSurfaceTest {
             HomeLayoutDefaults.standard().let { standard ->
                 standard.copy(
                     viewMode = LauncherViewMode.CARD_INTERFACE,
+                    settings =
+                        standard.settings.copy(
+                            grid =
+                                standard.settings.grid.copy(
+                                    margin = standard.settings.grid.margin.copy(bottom = 48),
+                                ),
+                        ),
                     dock =
                         standard.dock.copy(
                             capacity = 1,
@@ -273,10 +280,12 @@ class CardModeGuardedSurfaceTest {
         }
         composeRule.waitForIdle()
 
-        composeRule.onNodeWithTag(dockItemTestTag(overflowShortcut.id)).performTouchInput { click() }
+        composeRule.onNodeWithTag(dockItemTestTag(primaryShortcut.id)).performTouchInput {
+            click(Offset(width / 2f, 1f))
+        }
 
         composeRule.runOnIdle {
-            assertEquals(listOf(LauncherShellAction.LaunchApp(overflow.identity)), actions)
+            assertEquals(listOf(LauncherShellAction.LaunchApp(primary.identity)), actions)
         }
     }
 
