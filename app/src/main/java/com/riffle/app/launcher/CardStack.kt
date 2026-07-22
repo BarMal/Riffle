@@ -328,8 +328,8 @@ private fun AnimatedCardStackEntry(
 }
 
 private fun Modifier.cardStackKeyboardInput(interaction: CardStackInteraction?): Modifier {
-    val focusRequester = interaction?.keyboardFocusRequester ?: return this
-    return focusRequester(focusRequester)
+    val requester = interaction?.keyboardFocusRequester ?: return this
+    return focusRequester(requester)
         .focusable()
         .onPreviewKeyEvent { event ->
             if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
