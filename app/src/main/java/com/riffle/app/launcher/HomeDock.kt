@@ -90,7 +90,8 @@ internal fun Dock(
         DockSurfaceRow(
             modifier =
                 Modifier
-                    .dockShelfPolicies(interactions),
+                    .dockShelfPolicies(interactions)
+                    .testTag(HOME_DOCK_SURFACE_TEST_TAG),
             dock = dock,
             surfaceMetrics = surfaceMetrics,
             isEditing = isEditing,
@@ -233,6 +234,7 @@ private const val DOCK_EDGE_AUTO_SCROLL_ZONE_DP = 28
 private const val DOCK_EDGE_AUTO_SCROLL_MAX_PX_PER_EVENT = 24f
 private const val DOCK_DRAG_SLOT_HYSTERESIS = 0.15f
 private const val DOCK_EDGE_AUTO_SCROLL_FRAME_DELAY_MILLIS = 16L
+internal const val HOME_DOCK_SURFACE_TEST_TAG = "home-dock-surface"
 
 internal fun dockHeightDp(iconSizeDp: Int): Int = iconSizeDp + DOCK_VERTICAL_CHROME_DP
 

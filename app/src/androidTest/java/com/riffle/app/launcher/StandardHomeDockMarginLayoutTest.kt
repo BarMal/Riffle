@@ -66,7 +66,7 @@ class StandardHomeDockMarginLayoutTest {
         }
 
         val rootBounds = composeRule.onNodeWithTag(HOME_ROOT_TEST_TAG).fetchSemanticsNode().boundsInRoot
-        val dockBounds = composeRule.onNodeWithTag(HOME_DOCK_TEST_TAG).fetchSemanticsNode().boundsInRoot
+        val dockBounds = composeRule.onNodeWithTag(HOME_DOCK_SURFACE_TEST_TAG).fetchSemanticsNode().boundsInRoot
         val density = composeRule.density
 
         with(density) {
@@ -117,7 +117,7 @@ class StandardHomeDockMarginLayoutTest {
         }
 
         val rootBounds = composeRule.onNodeWithTag(HOME_ROOT_TEST_TAG).fetchSemanticsNode().boundsInRoot
-        val dockBounds = composeRule.onNodeWithTag(HOME_DOCK_TEST_TAG).fetchSemanticsNode().boundsInRoot
+        val dockBounds = composeRule.onNodeWithTag(HOME_DOCK_SURFACE_TEST_TAG).fetchSemanticsNode().boundsInRoot
 
         with(composeRule.density) {
             assertTrue(dockBounds.right >= rootBounds.right - horizontalMargin.toPx())

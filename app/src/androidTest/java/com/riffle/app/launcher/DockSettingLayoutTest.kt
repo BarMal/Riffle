@@ -13,6 +13,7 @@ import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -67,10 +68,10 @@ class DockSettingLayoutTest {
         composeRule.onNodeWithText("Dock width").assertIsDisplayed()
         composeRule.onNodeWithText("Fit content").assertIsDisplayed()
         composeRule.onNodeWithText("Full width").assertIsDisplayed().assertHasClickAction()
-        composeRule.onNodeWithText("Dock alignment").assertIsDisplayed()
-        composeRule.onNodeWithText("Start").assertIsDisplayed().assertHasClickAction()
-        composeRule.onNodeWithText("Center").assertIsDisplayed()
-        composeRule.onNodeWithText("End").assertIsDisplayed().assertHasClickAction()
+        composeRule.onNodeWithText("Dock alignment").performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText("Start").performScrollTo().assertIsDisplayed().assertHasClickAction()
+        composeRule.onNodeWithText("Center").performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText("End").performScrollTo().assertIsDisplayed().assertHasClickAction()
         composeRule.onNodeWithText("Dock slots").assertDoesNotExist()
         composeRule.onNodeWithText("Dock item spacing").assertDoesNotExist()
     }
