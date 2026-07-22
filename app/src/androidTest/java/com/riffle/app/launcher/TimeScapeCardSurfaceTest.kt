@@ -30,8 +30,10 @@ import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.hasContentDescription
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNode
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -129,6 +131,12 @@ class TimeScapeCardSurfaceTest {
         }
 
         composeRule.onNodeWithText("Allow notification access to show your app stages.").assertIsDisplayed()
+        composeRule
+            .onNode(
+                SemanticsMatcher
+                    .expectValue(SemanticsProperties.LiveRegion, LiveRegionMode.Polite)
+                    .and(hasText("Allow notification access to show your app stages.")),
+            ).assertIsDisplayed()
         composeRule.onNodeWithText("Allow access").assertIsDisplayed()
         composeRule.onNodeWithContentDescription("More stage options").assertDoesNotExist()
     }
@@ -647,6 +655,14 @@ class TimeScapeCardSurfaceTest {
             .assertIsDisplayed()
         composeRule.onNodeWithText("Allow access").assertIsDisplayed()
         composeRule.onNodeWithContentDescription("Mail, selected. Open stage").assertIsDisplayed()
+        composeRule
+            .onNode(
+                SemanticsMatcher("selected pinned stage exposes pin state") { node ->
+                    node.config
+                        .getOrNull(SemanticsProperties.StateDescription)
+                        ?.contains("Pinned") == true
+                }.and(hasContentDescription("TimeScape stage: Mail")),
+            ).assertIsDisplayed()
         composeRule.onNodeWithText("Nothing new").assertDoesNotExist()
     }
 
