@@ -346,10 +346,15 @@ private fun LauncherDestination(
 
         ShellDestination.APP_DRAWER ->
             AppDrawer(
-                query = state.appDrawerQuery,
-                profileFilter = state.appDrawerProfileFilter,
-                installedApps = state.installedApps,
-                apps = state.appDrawerApps,
+                state =
+                    AppDrawerState(
+                        query = state.appDrawerQuery,
+                        profileFilter = state.appDrawerProfileFilter,
+                        installedApps = state.installedApps,
+                        apps = state.appDrawerApps,
+                        presentation = state.launcherSettings.appDrawer.presentation,
+                        iconGridColumns = state.launcherSettings.appDrawer.iconGridColumns,
+                    ),
                 appListContext =
                     AppListContext(
                         homeLayout = state.homeLayout,

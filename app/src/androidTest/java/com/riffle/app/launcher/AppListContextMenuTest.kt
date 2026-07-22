@@ -5,8 +5,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.longClick
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTouchInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.riffle.core.domain.launcher.apps.AppActivityName
 import com.riffle.core.domain.launcher.apps.AppIdentity
@@ -55,6 +58,31 @@ class AppListContextMenuTest {
         composeRule.onNodeWithText("Compose message").performClick()
         composeRule.onNodeWithText("Back").assertDoesNotExist()
         composeRule.onNodeWithText("...").performClick()
+        composeRule.onNodeWithText("Add to home").assertExists()
+    }
+
+    @Test
+    fun iconGridLaunchesAppsAndKeepsActionsInTheLongPressMenu() {
+        composeRule.setContent {
+            MaterialTheme {
+                AppIconGrid(
+                    apps = listOf(camera),
+                    columns = 4,
+                    emptyText = "No apps",
+                    context =
+                        AppListContext(
+                            homeLayout = HomeLayoutDefaults.standard(),
+                            overlayDock = OverlayDockSettings(),
+                            notificationGroupsByApp = emptyList(),
+                            appIconLoader = EmptyAppIconLoader,
+                            onAction = {},
+                        ),
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(APP_DRAWER_ICON_GRID_TEST_TAG).assertExists()
+        composeRule.onNodeWithText(camera.label).performTouchInput { longClick() }
         composeRule.onNodeWithText("Add to home").assertExists()
     }
 

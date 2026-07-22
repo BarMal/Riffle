@@ -50,6 +50,7 @@ internal fun SettingsPageContent(
             SettingsPage.PERMISSIONS -> SettingsPermissionsPageContent(state = state, onAction = onAction)
             SettingsPage.APPS ->
                 {
+                    SettingsAppDrawerSection(state = state, onAction = onAction)
                     SettingsSection(title = "Search") {
                         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             SettingsTextColumn(

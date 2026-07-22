@@ -150,6 +150,11 @@ private fun appSettingsPageEntries(status: SettingsOverviewStatus): List<Setting
                     "search result layout",
                     "search icons",
                     "search list",
+                    "app drawer",
+                    "app list",
+                    "app icons",
+                    "app grid",
+                    "app grid columns",
                 ),
         ),
         SettingsPageEntry(

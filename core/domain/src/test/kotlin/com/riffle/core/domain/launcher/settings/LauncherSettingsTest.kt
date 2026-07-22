@@ -45,6 +45,12 @@ class LauncherSettingsTest {
     }
 
     @Test
+    fun defaultsAppDrawerToListPresentationWithFourIconColumns() {
+        assertEquals(AppDrawerPresentation.LIST, LauncherSettings().appDrawer.presentation)
+        assertEquals(DEFAULT_APP_DRAWER_ICON_GRID_COLUMNS, LauncherSettings().appDrawer.iconGridColumns)
+    }
+
+    @Test
     fun cardsChapterIntentDefaultsToOverviewWithoutPins() {
         val cards = LauncherSettings().cards.chapterPreferences
 

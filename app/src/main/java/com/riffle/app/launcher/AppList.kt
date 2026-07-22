@@ -29,9 +29,6 @@ import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.home.LauncherItemId
-import com.riffle.core.domain.launcher.home.containsHomeApp
-import com.riffle.core.domain.launcher.home.containsHomeAppShortcut
-import com.riffle.core.domain.launcher.home.dockShortcutIdFor
 
 @Composable
 fun AppList(
@@ -88,40 +85,8 @@ private fun LazyListScope.appRows(
         items = apps,
         key = { app -> app.drawerKey },
     ) { app ->
-        val shortcutItems =
-            context.appShortcutsByApp[app.identity]
-                .orEmpty()
-                .map { shortcut ->
-                    AppDrawerShortcutMenuItem(
-                        shortcut = shortcut,
-                        isOnHome =
-                            context.homeLayout.containsHomeAppShortcut(
-                                identity = shortcut.appIdentity,
-                                shortcutId = shortcut.id,
-                            ),
-                        floatingDockItemId =
-                            context.overlayDock.items
-                                .firstOrNull { item ->
-                                    item.appIdentity == shortcut.appIdentity && item.appShortcutId == shortcut.id
-                                }
-                                ?.id,
-                    )
-                }
         AppDrawerRow(
-            state =
-                AppDrawerRowState(
-                    app = app,
-                    isOnHome = context.homeLayout.containsHomeApp(app.identity),
-                    dockItemId = context.homeLayout.dock.dockShortcutIdFor(app.identity),
-                    floatingDockItemId =
-                        context.overlayDock.items
-                            .firstOrNull { item -> item.appIdentity == app.identity && item.appShortcutId == null }
-                            ?.id,
-                    notificationCount = context.notificationCountFor(app.identity),
-                    shortcutItems = shortcutItems,
-                    showInlineActions = showInlineActions,
-                    haptics = context.haptics,
-                ),
+            state = app.drawerRowState(context, showInlineActions),
             appIconLoader = context.appIconLoader,
             onAction = context.onAction,
         )
@@ -267,7 +232,7 @@ private fun AppDrawerRowActions(
 }
 
 @Composable
-private fun AppDrawerRowOverflowMenu(
+internal fun AppDrawerRowOverflowMenu(
     state: AppDrawerRowState,
     isExpanded: Boolean,
     onExpandedChange: (Boolean) -> Unit,
@@ -434,13 +399,13 @@ private fun AppDrawerRowMenuItem(
     )
 }
 
-private val InstalledApp.drawerKey: String
+internal val InstalledApp.drawerKey: String
     get() = "${identity.profile.id.value}:${identity.packageName.value}/${identity.activityName.value}"
 
 private val AppShortcut.menuLabel: String
     get() = longLabel ?: shortLabel
 
-private data class AppDrawerShortcutMenuItem(
+internal data class AppDrawerShortcutMenuItem(
     val shortcut: AppShortcut,
     val isOnHome: Boolean,
     val floatingDockItemId: LauncherItemId?,
@@ -457,7 +422,7 @@ private data class AppDrawerShortcutMenuItem(
             }
 }
 
-private data class AppDrawerRowState(
+internal data class AppDrawerRowState(
     val app: InstalledApp,
     val isOnHome: Boolean,
     val dockItemId: LauncherItemId?,

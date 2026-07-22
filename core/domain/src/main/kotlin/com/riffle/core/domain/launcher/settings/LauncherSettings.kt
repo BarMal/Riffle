@@ -12,6 +12,7 @@ import com.riffle.core.domain.launcher.home.HomeLayoutKey
 import com.riffle.core.domain.launcher.home.WallpaperSettings
 
 data class LauncherSettings(
+    val appDrawer: AppDrawerSettings = AppDrawerSettings(),
     val appearance: AppearanceSettings = AppearanceSettings(),
     val cards: CardsSettings = CardsSettings(),
     val contextual: ContextualSettings = ContextualSettings(),
@@ -21,6 +22,24 @@ data class LauncherSettings(
     val overlayDock: OverlayDockSettings = OverlayDockSettings(),
     val search: SearchSettings = SearchSettings(),
 )
+
+/** Durable presentation preferences for the launcher app drawer. */
+data class AppDrawerSettings(
+    val presentation: AppDrawerPresentation = AppDrawerPresentation.LIST,
+    val iconGridColumns: Int = DEFAULT_APP_DRAWER_ICON_GRID_COLUMNS,
+)
+
+enum class AppDrawerPresentation {
+    LIST,
+    ICONS,
+}
+
+const val MIN_APP_DRAWER_ICON_GRID_COLUMNS = 3
+const val MAX_APP_DRAWER_ICON_GRID_COLUMNS = 6
+const val DEFAULT_APP_DRAWER_ICON_GRID_COLUMNS = 4
+
+fun AppDrawerSettings.coerced(): AppDrawerSettings =
+    copy(iconGridColumns = iconGridColumns.coerceIn(MIN_APP_DRAWER_ICON_GRID_COLUMNS, MAX_APP_DRAWER_ICON_GRID_COLUMNS))
 
 /** Durable presentation preference for launcher search results. */
 data class SearchSettings(

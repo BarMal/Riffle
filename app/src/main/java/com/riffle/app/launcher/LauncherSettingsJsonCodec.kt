@@ -14,6 +14,8 @@ import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.home.WallpaperScrollMode
 import com.riffle.core.domain.launcher.home.WallpaperSettings
 import com.riffle.core.domain.launcher.home.WallpaperSource
+import com.riffle.core.domain.launcher.settings.AppDrawerPresentation
+import com.riffle.core.domain.launcher.settings.AppDrawerSettings
 import com.riffle.core.domain.launcher.settings.AppearanceSettings
 import com.riffle.core.domain.launcher.settings.CardsSettings
 import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
@@ -36,6 +38,7 @@ import com.riffle.core.domain.launcher.settings.TimeScapeMotion
 import com.riffle.core.domain.launcher.settings.TimeScapeSurface
 import com.riffle.core.domain.launcher.settings.TimeScapeTypography
 import com.riffle.core.domain.launcher.settings.coerceOverlayDockSettings
+import com.riffle.core.domain.launcher.settings.coerced
 import com.riffle.core.domain.launcher.settings.homeSystemBars
 import com.riffle.core.domain.launcher.settings.withHomeSystemBars
 import org.json.JSONArray
@@ -44,6 +47,7 @@ import org.json.JSONObject
 fun encodeLauncherSettings(settings: LauncherSettings): String =
     JSONObject()
         .put("version", LAUNCHER_SETTINGS_JSON_VERSION)
+        .put("appDrawer", encodeAppDrawerSettings(settings.appDrawer))
         .put("appearance", encodeAppearance(settings.appearance))
         .put("cards", encodeCardsSettings(settings.cards))
         .put("contextual", encodeContextual(settings.contextual))
@@ -58,6 +62,7 @@ fun decodeLauncherSettings(value: String): LauncherSettings =
     JSONObject(value).let { json ->
         val defaults = LauncherSettings()
         defaults.copy(
+            appDrawer = json.optJSONObject("appDrawer")?.toAppDrawerSettings(defaults.appDrawer) ?: defaults.appDrawer,
             appearance = json.optJSONObject("appearance")?.toAppearance(defaults.appearance) ?: defaults.appearance,
             cards = json.optJSONObject("cards")?.toCardsSettings(defaults.cards) ?: defaults.cards,
             contextual = json.optJSONObject("contextual")?.toContextual(defaults.contextual) ?: defaults.contextual,
@@ -69,6 +74,21 @@ fun decodeLauncherSettings(value: String): LauncherSettings =
             search = json.optJSONObject("search")?.toSearchSettings(defaults.search) ?: defaults.search,
         )
     }
+
+private fun encodeAppDrawerSettings(settings: AppDrawerSettings): JSONObject =
+    JSONObject()
+        .put("presentation", settings.presentation.name)
+        .put("iconGridColumns", settings.iconGridColumns)
+
+private fun JSONObject.toAppDrawerSettings(defaults: AppDrawerSettings): AppDrawerSettings =
+    AppDrawerSettings(
+        presentation =
+            optString("presentation")
+                .takeIf(String::isNotEmpty)
+                ?.let { name -> AppDrawerPresentation.entries.firstOrNull { it.name == name } }
+                ?: defaults.presentation,
+        iconGridColumns = optInt("iconGridColumns", defaults.iconGridColumns),
+    ).coerced()
 
 private fun encodeSearchSettings(settings: SearchSettings): JSONObject =
     JSONObject().put("resultPresentation", settings.resultPresentation.name)
