@@ -11,6 +11,8 @@ data class DockModel(
     val backgroundSizing: DockBackgroundSizing = DockBackgroundSizing.DYNAMIC,
     val alignment: DockAlignment = DockAlignment.CENTER,
     val itemSpacingDp: Int = DEFAULT_DOCK_ITEM_SPACING_DP,
+    val cornerRadiusDp: Int = DEFAULT_DOCK_CORNER_RADIUS_DP,
+    val homeControlsSpacingDp: Int = DEFAULT_DOCK_HOME_CONTROLS_SPACING_DP,
 ) {
     val availableSlots: Int = (capacity - items.size).coerceAtLeast(0)
 }
@@ -43,3 +45,9 @@ const val MAX_DOCK_BACKGROUND_ALPHA_PERCENT = 100
 const val DEFAULT_DOCK_ITEM_SPACING_DP = 10
 const val MIN_DOCK_ITEM_SPACING_DP = 0
 const val MAX_DOCK_ITEM_SPACING_DP = 24
+const val DEFAULT_DOCK_CORNER_RADIUS_DP = 32
+const val MIN_DOCK_CORNER_RADIUS_DP = 0
+const val MAX_DOCK_CORNER_RADIUS_DP = 48
+const val DEFAULT_DOCK_HOME_CONTROLS_SPACING_DP = 8
+const val MIN_DOCK_HOME_CONTROLS_SPACING_DP = 0
+const val MAX_DOCK_HOME_CONTROLS_SPACING_DP = 48

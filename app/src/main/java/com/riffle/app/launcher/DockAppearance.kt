@@ -2,6 +2,7 @@ package com.riffle.app.launcher
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -15,13 +16,20 @@ import com.riffle.core.domain.launcher.home.DockVisualEffect
 internal data class DockAppearance(
     val elevationDp: Int,
     val outlineWidthDp: Int,
+    val cornerRadiusDp: Int,
 )
 
-internal fun dockAppearanceSpec(effect: DockVisualEffect): DockAppearance =
+internal fun dockAppearanceSpec(
+    effect: DockVisualEffect,
+    cornerRadiusDp: Int,
+): DockAppearance =
     when (effect) {
-        DockVisualEffect.FLAT -> DockAppearance(elevationDp = 0, outlineWidthDp = 0)
-        DockVisualEffect.ELEVATED -> DockAppearance(elevationDp = 6, outlineWidthDp = 0)
-        DockVisualEffect.OUTLINED -> DockAppearance(elevationDp = 0, outlineWidthDp = 1)
+        DockVisualEffect.FLAT ->
+            DockAppearance(elevationDp = 0, outlineWidthDp = 0, cornerRadiusDp = cornerRadiusDp)
+        DockVisualEffect.ELEVATED ->
+            DockAppearance(elevationDp = 6, outlineWidthDp = 0, cornerRadiusDp = cornerRadiusDp)
+        DockVisualEffect.OUTLINED ->
+            DockAppearance(elevationDp = 0, outlineWidthDp = 1, cornerRadiusDp = cornerRadiusDp)
     }
 
 @Composable
@@ -40,8 +48,8 @@ internal fun dockSurfaceColor(dock: DockModel): Color {
 
 @Composable
 internal fun Modifier.dockSurfaceAppearance(dock: DockModel): Modifier {
-    val shape = LocalLauncherPanelShape.current
-    val spec = dockAppearanceSpec(dock.visualEffect)
+    val spec = dockAppearanceSpec(dock.visualEffect, dock.cornerRadiusDp)
+    val shape = RoundedCornerShape(spec.cornerRadiusDp.dp)
     var result = this
     if (spec.elevationDp > 0) result = result.shadow(spec.elevationDp.dp, shape)
     result = result.clip(shape).background(dockSurfaceColor(dock))

@@ -171,7 +171,7 @@ private fun StandardHomeColumn(
         actions.copy(
             onBackgroundClick = dockShelf.dismiss,
         )
-    val margins = state.visibleLayout.settings.grid.margin.nonNegative()
+    val margins = state.visibleLayout.settings.grid.margin.centered()
 
     Column(
         modifier =
@@ -219,7 +219,7 @@ private fun StandardHomeColumn(
                         bottom = margins.bottom.coerceAtLeast(0).dp,
                     ),
         )
-        Spacer(modifier = Modifier.height(HOME_BOTTOM_CONTROLS_TOP_SPACING_DP.dp))
+        Spacer(modifier = Modifier.height(state.visibleLayout.dock.homeControlsSpacingDp.dp))
         HomeBottomControls(
             layout = state.visibleLayout,
             selectedPageIndex = pagerState.visualSelectedPageIndex,
@@ -548,7 +548,6 @@ internal data class HomeWorkspaceActions(
     val onAction: (LauncherShellAction) -> Unit,
 )
 
-private const val HOME_BOTTOM_CONTROLS_TOP_SPACING_DP = 8
 private const val WIDGET_PICKER_DOCK_DROP_FRACTION = 0.84f
 private const val HOME_SEARCH_AREA_HEIGHT_DP = 48
 private const val HOME_SEARCH_PILL_HEIGHT_DP = 30

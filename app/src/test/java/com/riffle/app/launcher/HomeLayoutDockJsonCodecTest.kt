@@ -16,4 +16,21 @@ class HomeLayoutDockJsonCodecTest {
 
         assertEquals(false, decodedLayout.dock.showNotificationCards)
     }
+
+    @Test
+    fun roundTripsDockShapeAndGridControlsSpacing() {
+        val layout =
+            HomeLayoutDefaults.standard().copy(
+                dock =
+                    HomeLayoutDefaults.standard().dock.copy(
+                        cornerRadiusDp = 18,
+                        homeControlsSpacingDp = 20,
+                    ),
+            )
+
+        val decodedLayout = decodeHomeLayout(encodeHomeLayout(layout))
+
+        assertEquals(18, decodedLayout.dock.cornerRadiusDp)
+        assertEquals(20, decodedLayout.dock.homeControlsSpacingDp)
+    }
 }

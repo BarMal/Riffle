@@ -216,6 +216,10 @@ sealed interface LauncherShellAction {
 
     data class SelectDockItemSpacing(val spacingDp: Int) : LauncherShellAction
 
+    data class SelectDockCornerRadius(val cornerRadiusDp: Int) : LauncherShellAction
+
+    data class SelectDockHomeControlsSpacing(val spacingDp: Int) : LauncherShellAction
+
     data class AppDrawerQueryChanged(val query: String) : LauncherShellAction
 
     data object RefreshInstalledApps : LauncherShellAction

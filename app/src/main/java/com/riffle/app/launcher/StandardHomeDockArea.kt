@@ -50,7 +50,7 @@ internal fun StandardHomeDockArea(
             homeLayout = layout,
             onAction = actions.onAction,
         )
-    val margins = layout.settings.grid.margin.nonNegative()
+    val margins = layout.settings.grid.margin.centered()
 
     Column(
         modifier =
@@ -108,6 +108,14 @@ internal fun GridInsets.nonNegative(): GridInsets =
         bottom = bottom.coerceAtLeast(0),
     )
 
+/** Settings expose margins per axis, so malformed or legacy asymmetric values stay centered. */
+internal fun GridInsets.centered(): GridInsets {
+    val nonNegative = nonNegative()
+    val horizontal = maxOf(nonNegative.start, nonNegative.end)
+    val vertical = maxOf(nonNegative.top, nonNegative.bottom)
+    return GridInsets(start = horizontal, top = vertical, end = horizontal, bottom = vertical)
+}
+
 internal fun HomeLayout.shouldShowDock(): Boolean =
     dock.isEnabled &&
         dockBackgroundVisible(
@@ -122,7 +130,7 @@ internal fun HomeLayout.dockInteractionRegionHeightDp(): Int =
     if (!shouldShowDock()) {
         0
     } else {
-        settings.grid.margin.nonNegative().bottom + HOME_DOCK_TOP_SPACING_DP + dockHeightDp(dock.iconSizeDp)
+        settings.grid.margin.centered().bottom + HOME_DOCK_TOP_SPACING_DP + dockHeightDp(dock.iconSizeDp)
     }
 
 private const val HOME_DOCK_TOP_SPACING_DP = 10

@@ -282,6 +282,11 @@ class LauncherActionDomainTest {
                 ),
                 activity("SelectDockAlignment", LauncherShellAction.SelectDockAlignment(DockAlignment.END)),
                 activity("SelectDockItemSpacing", LauncherShellAction.SelectDockItemSpacing(spacingDp = 12)),
+                activity("SelectDockCornerRadius", LauncherShellAction.SelectDockCornerRadius(cornerRadiusDp = 20)),
+                activity(
+                    "SelectDockHomeControlsSpacing",
+                    LauncherShellAction.SelectDockHomeControlsSpacing(spacingDp = 16),
+                ),
                 app("AppDrawerQueryChanged", LauncherShellAction.AppDrawerQueryChanged("query")),
                 app("RefreshInstalledApps", LauncherShellAction.RefreshInstalledApps),
                 app(

@@ -124,6 +124,43 @@ class StandardHomeDockMarginLayoutTest {
         }
         assertTrue(dockBounds.left > rootBounds.center.x)
     }
+
+    @Test
+    fun centerAlignedDockUsesSymmetricMarginsForLegacyAsymmetricLayouts() {
+        val layout =
+            HomeLayoutDefaults.standard().let { standardLayout ->
+                standardLayout.copy(
+                    settings =
+                        standardLayout.settings.copy(
+                            grid =
+                                standardLayout.settings.grid.copy(
+                                    margin = GridInsets(start = 72, top = 16, end = 12, bottom = 16),
+                                ),
+                        ),
+                    dock = standardLayout.dock.copy(backgroundSizing = DockBackgroundSizing.FIXED),
+                )
+            }
+
+        composeRule.setContent {
+            MaterialTheme {
+                Box(modifier = Modifier.size(400.dp).testTag(HOME_ROOT_TEST_TAG)) {
+                    StandardHome(
+                        layout = layout,
+                        installedApps = emptyList(),
+                        interactions = StandardHomeInteractions(),
+                        presentation = StandardHomePresentation(appShortcutsByApp = emptyMap()),
+                        appIconLoader = EmptyAppIconLoader,
+                        onAction = {},
+                    )
+                }
+            }
+        }
+
+        val rootBounds = composeRule.onNodeWithTag(HOME_ROOT_TEST_TAG).fetchSemanticsNode().boundsInRoot
+        val dockBounds = composeRule.onNodeWithTag(HOME_DOCK_SURFACE_TEST_TAG).fetchSemanticsNode().boundsInRoot
+
+        assertTrue(kotlin.math.abs(dockBounds.center.x - rootBounds.center.x) < 1f)
+    }
 }
 
 private const val HOME_ROOT_TEST_TAG = "home-root"

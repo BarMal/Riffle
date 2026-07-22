@@ -508,8 +508,13 @@ private fun DockSlot(
     Box(
         modifier =
             modifier
-                .clip(LocalLauncherCardShape.current)
-                .then(if (state.isEditing) Modifier.background(editingSlotColor) else Modifier)
+                .then(
+                    if (state.isEditing) {
+                        Modifier.clip(LocalLauncherCardShape.current).background(editingSlotColor)
+                    } else {
+                        Modifier
+                    },
+                )
                 .then(state.item?.let { item -> Modifier.testTag(dockItemTestTag(item.id)) } ?: Modifier)
                 .dockItemDrag(
                     state = state,
