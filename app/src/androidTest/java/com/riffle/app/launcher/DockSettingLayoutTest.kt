@@ -68,8 +68,8 @@ class DockSettingLayoutTest {
 
         composeRule.onNodeWithText("Dock height").assertIsDisplayed()
         composeRule.onNodeWithText("Dock width").assertIsDisplayed()
-        composeRule.onNodeWithText("Dock corner radius").assertIsDisplayed()
-        composeRule.onNodeWithText("Grid to dock controls spacing").assertIsDisplayed()
+        composeRule.onNodeWithText("Dock corner radius").performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText("Grid to dock controls spacing").performScrollTo().assertIsDisplayed()
         composeRule.onNodeWithText("Fit content").assertIsDisplayed()
         composeRule.onNodeWithText("Full width").assertIsDisplayed().assertHasClickAction()
         composeRule.onNodeWithText("Dock alignment").performScrollTo().assertIsDisplayed()
