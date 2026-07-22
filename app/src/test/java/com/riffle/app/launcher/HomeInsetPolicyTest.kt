@@ -96,11 +96,11 @@ class HomeInsetPolicyTest {
     }
 
     @Test
-    fun dockShelfGestureReservesBottomSystemGestureZoneWhenNavigationBarIsNotReserved() {
+    fun dockShelfGestureDoesNotReserveBottomSystemGestureZoneWhenNavigationBarIsHidden() {
         assertEquals(
             DockShelfGesturePolicy(
                 enabled = true,
-                bottomSystemGestureExclusionDp = 24,
+                bottomSystemGestureExclusionDp = 0,
             ),
             dockShelfGesturePolicy(
                 isDockVisible = true,
@@ -114,7 +114,7 @@ class HomeInsetPolicyTest {
         assertEquals(
             DockShelfGesturePolicy(
                 enabled = false,
-                bottomSystemGestureExclusionDp = 24,
+                bottomSystemGestureExclusionDp = 0,
             ),
             dockShelfGesturePolicy(
                 isDockVisible = false,
