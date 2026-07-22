@@ -155,13 +155,12 @@ internal fun Modifier.homeItemDrag(
                     dragX += dragAmount.x
                     dragY += dragAmount.y
                     actions.onDragSessionChanged(
-                        HomeDragSession(
+                        homeDragSessionForUpdate(
+                            previousSession = actions.currentDragSession(),
                             item = item,
-                            originPageId = dragState.pageId,
-                            originCell = dragState.cell,
+                            dragState = dragState,
                             dragOffsetX = dragX,
                             dragOffsetY = dragY,
-                            projectedCell = dragState.projectedCell(dragX = dragX, dragY = dragY),
                         ),
                     )
                 },
@@ -184,6 +183,27 @@ internal fun Modifier.homeItemDrag(
             )
         }
     }
+
+internal fun homeDragSessionForUpdate(
+    previousSession: HomeDragSession?,
+    item: LauncherItem,
+    dragState: HomeItemDragState,
+    dragOffsetX: Float,
+    dragOffsetY: Float,
+): HomeDragSession =
+    HomeDragSession(
+        item = item,
+        originPageId = dragState.pageId,
+        originCell = dragState.cell,
+        targetPageId =
+            previousSession
+                ?.takeIf { session -> session.item.id == item.id && session.originPageId == dragState.pageId }
+                ?.targetPageId
+                ?: dragState.pageId,
+        dragOffsetX = dragOffsetX,
+        dragOffsetY = dragOffsetY,
+        projectedCell = dragState.projectedCell(dragX = dragOffsetX, dragY = dragOffsetY),
+    )
 
 @Composable
 private fun HomeDraggedItemContent(

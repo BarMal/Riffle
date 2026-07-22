@@ -80,6 +80,55 @@ class HomeIconPressInteractionTest {
         )
     }
 
+    @Test
+    fun continuedDragAfterPageHoverKeepsTheCrossPageDropTarget() {
+        val shortcut = shortcut(label = "Camera")
+        val sourcePageId = LauncherPageId("home")
+        val targetPageId = LauncherPageId("next")
+        val dragState =
+            HomeItemDragState(
+                pageId = sourcePageId,
+                cell = GridCell(column = 0, row = 0),
+                cellSizePx = 100f,
+                grid = GridDimensions(columns = 2, rows = 1),
+                pageItems = listOf(shortcut),
+            )
+        val hoveredSession =
+            HomeDragSession(
+                item = shortcut,
+                originPageId = sourcePageId,
+                originCell = dragState.cell,
+                targetPageId = targetPageId,
+                projectedCell = dragState.cell,
+            )
+
+        val continuedSession =
+            homeDragSessionForUpdate(
+                previousSession = hoveredSession,
+                item = shortcut,
+                dragState = dragState,
+                dragOffsetX = -120f,
+                dragOffsetY = 0f,
+            )
+
+        assertEquals(targetPageId, continuedSession.targetPageId)
+        assertEquals(
+            LauncherShellAction.MoveHomeItemToPage(
+                itemId = shortcut.id,
+                sourcePageId = sourcePageId,
+                targetPageId = targetPageId,
+                cell = GridCell(column = 0, row = 0),
+            ),
+            homeItemDragDropAction(
+                item = shortcut,
+                dragState = dragState,
+                dragX = -120f,
+                dragY = 0f,
+                targetPageId = continuedSession.targetPageId,
+            ),
+        )
+    }
+
     private fun verifyShortcutPressInteractions(reducedMotion: Boolean) {
         val shortcut = shortcut(label = "Camera")
         val actions = mutableListOf<LauncherShellAction>()
