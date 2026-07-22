@@ -64,6 +64,7 @@ class HomeIconPressInteractionTest {
                 item = shortcut,
                 dragState =
                     HomeItemDragState(
+                        pageId = LauncherPageId("home"),
                         cell = GridCell(column = 0, row = 0),
                         cellSizePx = 100f,
                         grid = GridDimensions(columns = 1, rows = 1),
@@ -73,7 +74,10 @@ class HomeIconPressInteractionTest {
                 dragY = 100f,
             )
 
-        assertEquals(LauncherShellAction.MoveHomeItemToDock(shortcut.id), action)
+        assertEquals(
+            LauncherShellAction.MoveHomeItemToDock(shortcut.id, pageId = LauncherPageId("home")),
+            action,
+        )
     }
 
     private fun verifyShortcutPressInteractions(reducedMotion: Boolean) {
