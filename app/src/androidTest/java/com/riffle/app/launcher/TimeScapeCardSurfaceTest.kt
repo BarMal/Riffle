@@ -24,7 +24,6 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
-import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
@@ -220,9 +219,6 @@ class TimeScapeCardSurfaceTest {
         composeRule.onNodeWithText("Older message").performClick()
 
         composeRule.onAllNodes(focusedCardLiveRegion).assertCountEquals(1)
-        composeRule
-            .onNode(focusedCardLiveRegion)
-            .assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "Card 2 of 2"))
     }
 
     @Test

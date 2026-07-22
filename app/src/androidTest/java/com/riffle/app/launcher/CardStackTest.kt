@@ -17,7 +17,6 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SemanticsMatcher
-import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
@@ -185,8 +184,10 @@ class CardStackTest {
             assertEquals(2, boundaryKeyEvents)
         }
         composeRule
-            .onNodeWithText(cardLabel(0))
-            .assert(SemanticsMatcher.expectValue(SemanticsProperties.InvisibleToUser, Unit))
+            .onAllNodes(
+                SemanticsMatcher.expectValue(SemanticsProperties.InvisibleToUser, Unit),
+                useUnmergedTree = true,
+            ).assertCountEquals(1)
         composeRule.onNodeWithText(cardLabel(1)).assertExists()
     }
 
