@@ -21,11 +21,15 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.captureToImage
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -178,6 +182,43 @@ class TimeScapeCardSurfaceTest {
         composeRule.onNodeWithContentDescription("Mail, selected. Open stage").assertIsDisplayed()
         composeRule.onNodeWithText("New message").assertIsDisplayed()
         composeRule.onNodeWithText("Hello from TimeScape").assertIsDisplayed()
+    }
+
+    @Test
+    fun cardNavigationUsesOnePoliteLiveRegionForTheSettledFocusedCard() {
+        val app = timeScapeTestApp()
+        val newest =
+            timeScapeTestNotification(app).copy(
+                key = LauncherNotificationKey("newest"),
+                title = "Newest message",
+                postedAtEpochMillis = 20,
+            )
+        val older =
+            timeScapeTestNotification(app).copy(
+                key = LauncherNotificationKey("older"),
+                title = "Older message",
+                postedAtEpochMillis = 10,
+            )
+        val state =
+            timeScapeTestState(app, newest).copy(
+                notificationGroupsByApp =
+                    timeScapeTestState(app, newest).notificationGroupsByApp.map { group ->
+                        group.copy(notifications = listOf(newest, older))
+                    },
+            )
+        val focusedCardLiveRegion =
+            SemanticsMatcher
+                .expectValue(SemanticsProperties.LiveRegion, LiveRegionMode.Polite)
+                .and(hasContentDescription("Focused", substring = true))
+
+        composeRule.setContent {
+            MaterialTheme { TimeScapeAppStageSurface(state = state, onAction = {}) }
+        }
+
+        composeRule.onAllNodes(focusedCardLiveRegion).assertCountEquals(1)
+        composeRule.onNodeWithText("Older message").performClick()
+
+        composeRule.onAllNodes(focusedCardLiveRegion).assertCountEquals(1)
     }
 
     @Test
