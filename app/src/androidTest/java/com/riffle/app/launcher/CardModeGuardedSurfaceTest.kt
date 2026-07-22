@@ -5,6 +5,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.click
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.onAllNodesWithTag
@@ -167,6 +168,51 @@ class CardModeGuardedSurfaceTest {
         composeRule.onNodeWithTag(dockItemTestTag(shortcut.id)).assertIsDisplayed()
         composeRule.onNodeWithTag(dockItemTestTag(shortcut.id)).performTouchInput { longClick() }
         composeRule.onNodeWithText("Remove from dock").assertIsDisplayed()
+    }
+
+    @Test
+    fun cardModeDockReceivesPhysicalTapWithAnActiveTimeScapeStage() {
+        val app = cardsHomeApp()
+        val shortcut =
+            AppShortcutItem(
+                id = LauncherItemId("app:camera"),
+                appIdentity = app.identity,
+                label = app.label,
+            )
+        val layout =
+            HomeLayoutDefaults.standard().let { standard ->
+                standard.copy(
+                    viewMode = LauncherViewMode.CARD_INTERFACE,
+                    dock = standard.dock.copy(items = listOf(shortcut)),
+                )
+            }
+        val actions = mutableListOf<LauncherShellAction>()
+        val stageState = cardsState(NotificationAccessStatus.GRANTED, groups = listOf(notificationGroup()))
+        val state =
+            stageState.copy(
+                homeLayout = layout,
+                homeLayoutSet = HomeLayoutSet.fromLayout(layout),
+                installedApps = stageState.installedApps + app,
+                profileContentVisibility =
+                    stageState.profileContentVisibility +
+                        (app.identity.profile.id to AppProfileContentVisibility.VISIBLE),
+            )
+
+        composeRule.setContent {
+            LauncherShellContent(
+                state = state,
+                appIconLoader = EmptyAppIconLoader,
+                timeScapeWindowLayout = TimeScapeWindowLayout(widthDp = 360, heightDp = 640),
+                onAction = actions::add,
+            )
+        }
+
+        composeRule.onNodeWithText("Previous").assertIsDisplayed()
+        composeRule.onNodeWithTag(dockItemTestTag(shortcut.id)).performTouchInput { click() }
+
+        composeRule.runOnIdle {
+            assertEquals(listOf(LauncherShellAction.LaunchApp(app.identity)), actions)
+        }
     }
 
     @Test

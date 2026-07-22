@@ -2,8 +2,10 @@ package com.riffle.app.launcher
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.cards.TimeScapeWindowLayout
 
@@ -28,6 +30,8 @@ fun HomeDestination(
                 )
                 TimeScapeAppStageSurface(
                     state = state,
+                    modifier =
+                        Modifier.padding(bottom = state.homeLayout.dockInteractionRegionHeightDp().dp),
                     windowInsets =
                         cardsPanelInsetPolicy(state).safeDrawingPanelInsets(),
                     windowLayout = timeScapeWindowLayout,
