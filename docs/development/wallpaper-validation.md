@@ -32,7 +32,7 @@ Run these checks on at least one API 29-30 device or emulator and one API 31+ de
 11. Set Wallpaper motion to Scroll, move between home pages, and confirm the wallpaper offset changes with the selected page when the active wallpaper supports offsets.
 12. Switch Wallpaper to Solid and confirm page movement no longer sends visible wallpaper motion.
 13. Rotate the device and confirm home content, dock content, folders, app drawer, search, and settings remain readable over the wallpaper.
-14. Toggle Settings > Appearance > Fullscreen home, Hide status bar, and Hide navigation bar while System wallpaper is selected.
+14. Toggle Settings > Appearance > Hide status bar and Hide navigation bar independently while System wallpaper is selected.
 15. Confirm system bars hide only on Home and reappear on app drawer, search, notifications, and settings.
 16. Repeat with Solid selected and confirm system bar behavior does not depend on wallpaper source.
 17. On API 31+, repeat System and Solid checks in both system light and dark theme modes to validate Material dynamic color contrast.
