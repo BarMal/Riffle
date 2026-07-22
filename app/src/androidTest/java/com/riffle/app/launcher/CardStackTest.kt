@@ -24,6 +24,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppProfile
 import com.riffle.core.domain.launcher.cards.CardStackAnimationProfile
+import com.riffle.core.domain.launcher.cards.CardStackAnimationSpec
 import com.riffle.core.domain.launcher.cards.CardStackLayoutEntry
 import com.riffle.core.domain.launcher.cards.CardStackLayoutPolicy
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
@@ -43,6 +44,15 @@ import org.junit.runner.RunWith
 class CardStackTest {
     @get:Rule
     val composeRule = createComposeRule()
+
+    @Test
+    fun selectsReflowAndSettleTimingIndependently() {
+        val spec = CardStackAnimationSpec(durationMillis = 310, enterDurationMillis = 180, settleDurationMillis = 470)
+
+        assertEquals(180, cardStackAnimationDuration(spec, CardStackAnimationTiming.ENTER))
+        assertEquals(310, cardStackAnimationDuration(spec, CardStackAnimationTiming.REFLOW))
+        assertEquals(470, cardStackAnimationDuration(spec, CardStackAnimationTiming.SETTLE))
+    }
 
     @Test
     fun rendersEveryVisibleCardAndPutsTheFocusedCardFirstInAccessibilityTraversal() {

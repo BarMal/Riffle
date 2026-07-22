@@ -33,6 +33,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -484,6 +485,9 @@ private fun TimeScapeNotificationStack(
             CardStackKey("timescape:${stage.id.profileId.value}:${stage.id.packageName.value}")
         }
     var previousCardIds by remember(stage.id) { mutableStateOf(emptyList<LauncherCardId>()) }
+    var settleTransitionId by rememberSaveable(stage.id.profileId.value, stage.id.packageName.value) {
+        mutableIntStateOf(0)
+    }
     val focusState = CardStackFocusState(stackKey, focusedCardId)
     LaunchedEffect(cardIds) {
         val reconciliation =
@@ -550,6 +554,7 @@ private fun TimeScapeNotificationStack(
                         interaction =
                             CardStackInteraction(
                                 focusedItemKey = activeCard.content.id,
+                                settleTransitionId = settleTransitionId,
                                 onFocusRequest = { entry ->
                                     controller
                                         .jumpTo(focusState, cardIds, cardIds[entry.cardIndex])
@@ -573,6 +578,9 @@ private fun TimeScapeNotificationStack(
                                             ),
                                         ).let { result ->
                                             if (result is CardStackFocusResult.Applied) {
+                                                if (result.state.focusedCardId != focusState.focusedCardId) {
+                                                    settleTransitionId++
+                                                }
                                                 onFocusedCardChanged(result.state.focusedCardId)
                                             }
                                         }

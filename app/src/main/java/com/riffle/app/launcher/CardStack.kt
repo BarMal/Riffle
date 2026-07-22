@@ -42,6 +42,8 @@ internal data class CardStackInteraction(
     val onFocusRequest: (CardStackLayoutEntry) -> Unit,
     val onSettle: (verticalDragPx: Float, verticalVelocityPxPerSecond: Float) -> Unit,
     val onSettleHaptic: () -> Unit = {},
+    /** Increments only when a gesture settles to a new focused card. */
+    val settleTransitionId: Int = 0,
 )
 
 @Composable
@@ -57,6 +59,19 @@ internal fun CardStack(
     content: @Composable (CardStackLayoutEntry, Modifier) -> Unit,
 ) {
     val motionMode = cardStackMotionMode(reducedMotion)
+    var consumedSettleTransitionId by remember { mutableStateOf(interaction?.settleTransitionId ?: 0) }
+    val timing =
+        if (
+            interaction?.settleTransitionId != null &&
+            interaction.settleTransitionId != consumedSettleTransitionId
+        ) {
+            CardStackAnimationTiming.SETTLE
+        } else {
+            CardStackAnimationTiming.REFLOW
+        }
+    LaunchedEffect(interaction?.settleTransitionId) {
+        consumedSettleTransitionId = interaction?.settleTransitionId ?: 0
+    }
 
     Box(
         modifier =
@@ -78,7 +93,7 @@ internal fun CardStack(
                     stableItemKey = stableItemKey,
                     animationSpec = animationSpec,
                     motionMode = motionMode,
-                    usesSettleDuration = interaction != null,
+                    timing = timing,
                     content = { entry, modifier ->
                         content(
                             entry,
@@ -112,6 +127,8 @@ internal enum class CardStackMotionMode {
     ANIMATED,
     SNAP,
 }
+
+internal enum class CardStackAnimationTiming { ENTER, REFLOW, SETTLE }
 
 internal val CardStackAnimationProfileKey =
     SemanticsPropertyKey<CardStackAnimationProfile>("CardStackAnimationProfile")
@@ -171,7 +188,7 @@ private fun AnimatedCardStackEntry(
     stableItemKey: Any,
     animationSpec: CardStackAnimationSpec,
     motionMode: CardStackMotionMode,
-    usesSettleDuration: Boolean,
+    timing: CardStackAnimationTiming,
     content: @Composable (CardStackLayoutEntry, Modifier) -> Unit,
 ) {
     val spec = animationSpec
@@ -187,7 +204,12 @@ private fun AnimatedCardStackEntry(
                 width = with(density) { maxWidth.toPx() },
                 height = with(density) { maxHeight.toPx() },
             )
-        val animationSpec = cardStackAnimationSpec(spec, motionMode, hasEntered, usesSettleDuration)
+        val animationSpec =
+            cardStackAnimationSpec(
+                spec = spec,
+                motionMode = motionMode,
+                timing = if (hasEntered) timing else CardStackAnimationTiming.ENTER,
+            )
         val alpha by animateFloatAsState(
             targetValue = renderedPose.alpha,
             animationSpec = if (spec.animatesAlpha) animationSpec else snap(),
@@ -241,16 +263,10 @@ private fun AnimatedCardStackEntry(
 internal fun cardStackAnimationSpec(
     spec: CardStackAnimationSpec,
     motionMode: CardStackMotionMode,
-    hasEntered: Boolean,
-    usesSettleDuration: Boolean,
+    timing: CardStackAnimationTiming,
 ): AnimationSpec<Float> {
     if (motionMode == CardStackMotionMode.SNAP) return snap()
-    val durationMillis =
-        when {
-            !hasEntered -> spec.enterDurationMillis
-            usesSettleDuration -> spec.settleDurationMillis
-            else -> spec.durationMillis
-        }
+    val durationMillis = cardStackAnimationDuration(spec, timing)
     return when (spec.easing) {
         CardStackAnimationEasing.STANDARD -> tween(durationMillis = durationMillis, easing = LinearOutSlowInEasing)
         CardStackAnimationEasing.EMPHASIZED -> tween(durationMillis = durationMillis, easing = FastOutSlowInEasing)
@@ -263,6 +279,16 @@ internal fun cardStackAnimationSpec(
             )
     }
 }
+
+internal fun cardStackAnimationDuration(
+    spec: CardStackAnimationSpec,
+    timing: CardStackAnimationTiming,
+): Int =
+    when (timing) {
+        CardStackAnimationTiming.ENTER -> spec.enterDurationMillis
+        CardStackAnimationTiming.REFLOW -> spec.durationMillis
+        CardStackAnimationTiming.SETTLE -> spec.settleDurationMillis
+    }
 
 private const val DEFAULT_CARD_STACK_ANIMATION_DURATION_MILLIS = 220
 
