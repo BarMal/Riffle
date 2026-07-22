@@ -1,7 +1,12 @@
 package com.riffle.app.launcher
 
+import androidx.compose.animation.core.AnimationSpec
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -25,6 +30,7 @@ import androidx.compose.ui.semantics.isTraversalGroup
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.traversalIndex
 import androidx.compose.ui.zIndex
+import com.riffle.core.domain.launcher.cards.CardStackAnimationEasing
 import com.riffle.core.domain.launcher.cards.CardStackAnimationProfile
 import com.riffle.core.domain.launcher.cards.CardStackAnimationSpec
 import com.riffle.core.domain.launcher.cards.CardStackLayoutEntry
@@ -36,6 +42,8 @@ internal data class CardStackInteraction(
     val onFocusRequest: (CardStackLayoutEntry) -> Unit,
     val onSettle: (verticalDragPx: Float, verticalVelocityPxPerSecond: Float) -> Unit,
     val onSettleHaptic: () -> Unit = {},
+    /** Increments only when a gesture settles to a new focused card. */
+    val settleTransitionId: Int = 0,
 )
 
 @Composable
@@ -51,6 +59,19 @@ internal fun CardStack(
     content: @Composable (CardStackLayoutEntry, Modifier) -> Unit,
 ) {
     val motionMode = cardStackMotionMode(reducedMotion)
+    var consumedSettleTransitionId by remember { mutableStateOf(interaction?.settleTransitionId ?: 0) }
+    val timing =
+        if (
+            interaction?.settleTransitionId != null &&
+            interaction.settleTransitionId != consumedSettleTransitionId
+        ) {
+            CardStackAnimationTiming.SETTLE
+        } else {
+            CardStackAnimationTiming.REFLOW
+        }
+    LaunchedEffect(interaction?.settleTransitionId) {
+        consumedSettleTransitionId = interaction?.settleTransitionId ?: 0
+    }
 
     Box(
         modifier =
@@ -58,6 +79,7 @@ internal fun CardStack(
                 isTraversalGroup = true
                 this[CardStackAnimationProfileKey] = animationProfile
                 this[CardStackMotionModeKey] = motionMode
+                this[CardStackAnimationSpecKey] = animationSpec
             },
     ) {
         entries.forEach { entry ->
@@ -71,6 +93,7 @@ internal fun CardStack(
                     stableItemKey = stableItemKey,
                     animationSpec = animationSpec,
                     motionMode = motionMode,
+                    timing = timing,
                     content = { entry, modifier ->
                         content(
                             entry,
@@ -105,8 +128,12 @@ internal enum class CardStackMotionMode {
     SNAP,
 }
 
+internal enum class CardStackAnimationTiming { ENTER, REFLOW, SETTLE }
+
 internal val CardStackAnimationProfileKey =
     SemanticsPropertyKey<CardStackAnimationProfile>("CardStackAnimationProfile")
+
+internal val CardStackAnimationSpecKey = SemanticsPropertyKey<CardStackAnimationSpec>("CardStackAnimationSpec")
 
 internal val CardStackMotionModeKey = SemanticsPropertyKey<CardStackMotionMode>("CardStackMotionMode")
 
@@ -161,6 +188,7 @@ private fun AnimatedCardStackEntry(
     stableItemKey: Any,
     animationSpec: CardStackAnimationSpec,
     motionMode: CardStackMotionMode,
+    timing: CardStackAnimationTiming,
     content: @Composable (CardStackLayoutEntry, Modifier) -> Unit,
 ) {
     val spec = animationSpec
@@ -177,11 +205,11 @@ private fun AnimatedCardStackEntry(
                 height = with(density) { maxHeight.toPx() },
             )
         val animationSpec =
-            if (motionMode == CardStackMotionMode.SNAP) {
-                snap()
-            } else {
-                tween<Float>(durationMillis = spec.durationMillis)
-            }
+            cardStackAnimationSpec(
+                spec = spec,
+                motionMode = motionMode,
+                timing = if (hasEntered) timing else CardStackAnimationTiming.ENTER,
+            )
         val alpha by animateFloatAsState(
             targetValue = renderedPose.alpha,
             animationSpec = if (spec.animatesAlpha) animationSpec else snap(),
@@ -231,6 +259,38 @@ private fun AnimatedCardStackEntry(
         }
     }
 }
+
+internal fun cardStackAnimationSpec(
+    spec: CardStackAnimationSpec,
+    motionMode: CardStackMotionMode,
+    timing: CardStackAnimationTiming,
+): AnimationSpec<Float> {
+    if (motionMode == CardStackMotionMode.SNAP) return snap()
+    val durationMillis = cardStackAnimationDuration(spec, timing)
+    return when (spec.easing) {
+        CardStackAnimationEasing.STANDARD -> tween(durationMillis = durationMillis, easing = LinearOutSlowInEasing)
+        CardStackAnimationEasing.EMPHASIZED -> tween(durationMillis = durationMillis, easing = FastOutSlowInEasing)
+        CardStackAnimationEasing.GENTLE_SPRING ->
+            spring(
+                dampingRatio = (1f - spec.springBouncinessPercent / 100f * 0.55f).coerceAtLeast(0.45f),
+                stiffness =
+                    Spring.StiffnessMedium *
+                        (DEFAULT_CARD_STACK_ANIMATION_DURATION_MILLIS.toFloat() / durationMillis).coerceIn(0.2f, 3f),
+            )
+    }
+}
+
+internal fun cardStackAnimationDuration(
+    spec: CardStackAnimationSpec,
+    timing: CardStackAnimationTiming,
+): Int =
+    when (timing) {
+        CardStackAnimationTiming.ENTER -> spec.enterDurationMillis
+        CardStackAnimationTiming.REFLOW -> spec.durationMillis
+        CardStackAnimationTiming.SETTLE -> spec.settleDurationMillis
+    }
+
+private const val DEFAULT_CARD_STACK_ANIMATION_DURATION_MILLIS = 220
 
 @Suppress("CyclomaticComplexMethod", "LoopWithTooManyJumpStatements")
 private fun Modifier.cardStackPointerInput(

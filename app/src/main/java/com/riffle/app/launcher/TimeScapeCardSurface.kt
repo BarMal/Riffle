@@ -34,6 +34,8 @@ import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.SemanticsPropertyKey
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -42,6 +44,7 @@ import com.riffle.core.domain.launcher.notifications.LauncherNotification
 import com.riffle.core.domain.launcher.settings.TimeScapeAccentSource
 import com.riffle.core.domain.launcher.settings.TimeScapeAppearanceSettings
 import com.riffle.core.domain.launcher.settings.TimeScapeBackgroundSource
+import com.riffle.core.domain.launcher.settings.TimeScapeCardStackResolution
 import com.riffle.core.domain.launcher.settings.TimeScapeContentDensity
 import com.riffle.core.domain.launcher.settings.TimeScapeRendererCapabilities
 import java.security.MessageDigest
@@ -148,6 +151,10 @@ private fun String.sha256Revision(): String {
     }
 }
 
+/** Keeps all TimeScape card renderers aligned with the reachability-capped stack resolution. */
+@Suppress("MaxLineLength")
+internal fun timeScapeResolvedContentPadding(resolution: TimeScapeCardStackResolution): Dp = resolution.contentPaddingDp.dp
+
 internal fun timeScapeRendererCapabilities(sdkInt: Int = Build.VERSION.SDK_INT): TimeScapeRendererCapabilities =
     TimeScapeRendererCapabilities(supportsBlur = sdkInt >= Build.VERSION_CODES.S)
 
@@ -156,8 +163,9 @@ internal fun resolveTimeScapeCardColors(
     background: TimeScapeCardBackground,
     materialBackground: Color,
     materialAccent: Color,
+    rendererCapabilities: TimeScapeRendererCapabilities = timeScapeRendererCapabilities(),
 ): TimeScapeCardColors {
-    val effective = appearance.effectiveFor(timeScapeRendererCapabilities())
+    val effective = appearance.effectiveFor(rendererCapabilities)
     val surface = effective.surface
     val base =
         when (surface.backgroundSource) {
@@ -269,18 +277,20 @@ internal fun TimeScapeCardSurface(
     background: TimeScapeCardBackground,
     modifier: Modifier = Modifier,
     contentPadding: Dp = appearance.geometry.contentPaddingDp.dp,
+    rendererCapabilities: TimeScapeRendererCapabilities = timeScapeRendererCapabilities(),
     content: @Composable BoxScope.() -> Unit,
 ) {
-    val effective = remember(appearance) { appearance.effectiveFor(timeScapeRendererCapabilities()) }
+    val effective = remember(appearance, rendererCapabilities) { appearance.effectiveFor(rendererCapabilities) }
     val materialBackground = MaterialTheme.colorScheme.onSurface
     val materialAccent = MaterialTheme.colorScheme.primary
     val colors =
-        remember(effective, background, materialBackground, materialAccent) {
+        remember(effective, background, materialBackground, materialAccent, rendererCapabilities) {
             resolveTimeScapeCardColors(
                 appearance = effective,
                 background = background,
                 materialBackground = materialBackground,
                 materialAccent = materialAccent,
+                rendererCapabilities = rendererCapabilities,
             )
         }
     val shape = remember(effective.geometry.cornerRadiusDp) { RoundedCornerShape(effective.geometry.cornerRadiusDp.dp) }
@@ -336,7 +346,8 @@ internal fun TimeScapeCardSurface(
     Box(
         modifier =
             modifier
-                .shadow(effective.surface.shadowElevationDp.dp, shape, clip = false),
+                .shadow(effective.surface.shadowElevationDp.dp, shape, clip = false)
+                .semantics { this[TimeScapeCardBlurStrengthKey] = effective.surface.blurStrengthPercent },
     ) {
         Box(
             modifier =
@@ -390,6 +401,9 @@ internal fun TimeScapeCardSurface(
         }
     }
 }
+
+/** Exposes the rendered blur state for accessibility-aware Compose regression coverage. */
+internal val TimeScapeCardBlurStrengthKey = SemanticsPropertyKey<Int>("TimeScapeCardBlurStrength")
 
 internal fun timeScapeContentDensityScale(density: TimeScapeContentDensity): Float =
     when (density) {

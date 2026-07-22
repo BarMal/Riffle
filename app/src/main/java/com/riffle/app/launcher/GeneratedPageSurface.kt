@@ -21,6 +21,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -80,6 +81,7 @@ internal fun GeneratedNotificationCardsPage(
                     val stackKey = remember { CardStackKey("generated-notification-cards") }
                     val cardIds = state.cards.map(::generatedNotificationCardId)
                     var focusedCardIdValue by rememberSaveable { mutableStateOf<String?>(null) }
+                    var settleTransitionId by rememberSaveable { mutableIntStateOf(0) }
                     var previousCardIds by remember { mutableStateOf(cardIds) }
                     val focusState = CardStackFocusState(stackKey, focusedCardIdValue?.let(::LauncherCardId))
                     LaunchedEffect(cardIds) {
@@ -177,6 +179,7 @@ internal fun GeneratedNotificationCardsPage(
                                                 generatedNotificationCardKey(
                                                     state.cards[activeCardIndex].group,
                                                 ),
+                                            settleTransitionId = settleTransitionId,
                                             onFocusRequest = { entry ->
                                                 applyFocus(
                                                     controller.jumpTo(
@@ -187,7 +190,7 @@ internal fun GeneratedNotificationCardsPage(
                                                 )
                                             },
                                             onSettle = { drag, velocity ->
-                                                applyFocus(
+                                                val result =
                                                     controller.settle(
                                                         focusState,
                                                         cardIds,
@@ -198,10 +201,18 @@ internal fun GeneratedNotificationCardsPage(
                                                             distanceThresholdPx = 48f,
                                                             flingVelocityThresholdPxPerSecond = 1_000f,
                                                         ),
-                                                    ),
-                                                )
+                                                    )
+                                                if (
+                                                    result is CardStackFocusResult.Applied &&
+                                                    result.state.focusedCardId != focusState.focusedCardId
+                                                ) {
+                                                    settleTransitionId++
+                                                }
+                                                applyFocus(result)
                                             },
-                                            onSettleHaptic = haptics::longPress,
+                                            onSettleHaptic = {
+                                                haptics.timeScapeSettle(timeScapeAppearance.motion.hapticStrength)
+                                            },
                                         ),
                                 ) { entry, pointerModifier ->
                                     GeneratedNotificationCard(

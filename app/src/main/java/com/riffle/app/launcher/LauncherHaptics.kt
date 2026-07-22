@@ -6,13 +6,18 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalView
 import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
+import com.riffle.core.domain.launcher.settings.TimeScapeHapticStrength
 
 interface LauncherHaptics {
     fun longPress()
+
+    fun timeScapeSettle(strength: TimeScapeHapticStrength)
 }
 
 object NoopLauncherHaptics : LauncherHaptics {
     override fun longPress() = Unit
+
+    override fun timeScapeSettle(strength: TimeScapeHapticStrength) = Unit
 }
 
 @Composable
@@ -36,6 +41,12 @@ private class ViewLauncherHaptics(
             view.performHapticFeedback(constant)
         }
     }
+
+    override fun timeScapeSettle(strength: TimeScapeHapticStrength) {
+        strength.timeScapeSettleHapticFeedbackConstant()?.let { constant ->
+            view.performHapticFeedback(constant)
+        }
+    }
 }
 
 internal fun HapticFeedbackStrength.longPressHapticFeedbackConstant(): Int? =
@@ -44,4 +55,12 @@ internal fun HapticFeedbackStrength.longPressHapticFeedbackConstant(): Int? =
         HapticFeedbackStrength.LIGHT -> HapticFeedbackConstants.CLOCK_TICK
         HapticFeedbackStrength.MEDIUM -> HapticFeedbackConstants.CONTEXT_CLICK
         HapticFeedbackStrength.STRONG -> HapticFeedbackConstants.LONG_PRESS
+    }
+
+internal fun TimeScapeHapticStrength.timeScapeSettleHapticFeedbackConstant(): Int? =
+    when (this) {
+        TimeScapeHapticStrength.OFF -> null
+        TimeScapeHapticStrength.LIGHT -> HapticFeedbackConstants.CLOCK_TICK
+        TimeScapeHapticStrength.MEDIUM -> HapticFeedbackConstants.CONTEXT_CLICK
+        TimeScapeHapticStrength.STRONG -> HapticFeedbackConstants.LONG_PRESS
     }

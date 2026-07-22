@@ -20,7 +20,7 @@ internal class LauncherSettingsStateReducer(
             else -> state
         }
 
-    @Suppress("LongMethod")
+    @Suppress("CyclomaticComplexMethod", "LongMethod")
     private fun reduceSettingsStateAction(
         state: LauncherShellState,
         action: LauncherShellAction,
@@ -71,6 +71,18 @@ internal class LauncherSettingsStateReducer(
                 is LauncherShellAction.SelectContextualEnabled ->
                     state.withContextualSettingsAction(
                         action = action,
+                        launcherSettingsRepository = launcherSettingsRepository,
+                    )
+
+                is LauncherShellAction.UpdateTimeScapeAppearance ->
+                    state.withLauncherSettings(
+                        settings =
+                            state.launcherSettings.copy(
+                                cards =
+                                    state.launcherSettings.cards.copy(
+                                        timeScapeAppearance = action.appearance.coerce(),
+                                    ),
+                            ),
                         launcherSettingsRepository = launcherSettingsRepository,
                     )
 

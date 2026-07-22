@@ -1,5 +1,6 @@
 package com.riffle.core.domain.launcher.settings
 
+import com.riffle.core.domain.launcher.cards.CardStackAnimationEasing
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -93,6 +94,27 @@ class TimeScapeAppearanceSettingsTest {
         assertTrue(entries.all { entry -> kotlin.math.abs(entry.offset) <= horizontalTravel })
         assertTrue(entries.all { entry -> kotlin.math.abs(entry.verticalOffset) <= verticalTravel })
         assertTrue(resolution.animation.reflowsStack)
+    }
+
+    @Test
+    fun projectsPersistedMotionIntoTheCardStackRendererTokens() {
+        val resolution =
+            TimeScapeAppearanceSettings(
+                motion =
+                    TimeScapeMotion(
+                        settleDurationMillis = 410,
+                        reflowDurationMillis = 360,
+                        enterDurationMillis = 300,
+                        easing = TimeScapeEasing.EMPHASIZED,
+                        springBouncinessPercent = 35,
+                    ),
+            ).resolveCardStack(TimeScapeViewportDp(widthDp = 800, heightDp = 1200))
+
+        assertEquals(360, resolution.animation.durationMillis)
+        assertEquals(300, resolution.animation.enterDurationMillis)
+        assertEquals(410, resolution.animation.settleDurationMillis)
+        assertEquals(CardStackAnimationEasing.EMPHASIZED, resolution.animation.easing)
+        assertEquals(35, resolution.animation.springBouncinessPercent)
     }
 
     @Test

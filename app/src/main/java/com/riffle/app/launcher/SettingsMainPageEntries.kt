@@ -8,6 +8,7 @@ internal fun settingsMainPageEntries(status: SettingsOverviewStatus = SettingsOv
         appSettingsPageEntries(status) +
         systemSettingsPageEntries(status)
 
+@Suppress("LongMethod")
 private fun homeSettingsPageEntries(): List<SettingsPageEntry> =
     listOf(
         SettingsPageEntry(
@@ -64,6 +65,26 @@ private fun homeSettingsPageEntries(): List<SettingsPageEntry> =
                     "status bar",
                     "navigation bar",
                     "system UI",
+                ),
+        ),
+        SettingsPageEntry(
+            label = "TimeScape appearance",
+            subtitle = "Cards, glass, colour, motion, and accessibility",
+            page = SettingsPage.TIMESCAPE_APPEARANCE,
+            group = SettingsPageGroup.HOME,
+            searchAliases =
+                listOf(
+                    "timescape",
+                    "card geometry",
+                    "card stack",
+                    "glass",
+                    "blur",
+                    "card colour",
+                    "card color",
+                    "card typography",
+                    "card motion",
+                    "reduced transparency",
+                    "timescape preset",
                 ),
         ),
         SettingsPageEntry(

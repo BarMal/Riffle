@@ -36,6 +36,7 @@ import com.riffle.core.domain.launcher.cards.AppStageId
 import com.riffle.core.domain.launcher.cards.CardExpansionPhase
 import com.riffle.core.domain.launcher.cards.CardExpansionState
 import com.riffle.core.domain.launcher.cards.LauncherCardId
+import com.riffle.core.domain.launcher.settings.TimeScapeMotion
 import kotlinx.coroutines.delay
 
 /**
@@ -49,8 +50,11 @@ internal class TimeScapeCardDetailState(
     private val updateExpansion: (CardExpansionState) -> Unit,
     private val currentRecoveryMessage: () -> String?,
     private val updateRecoveryMessage: (String?) -> Unit,
-    val reducedMotion: Boolean,
+    val motion: TimeScapeMotion,
+    val globalReducedMotion: Boolean,
 ) {
+    val reducedMotion: Boolean
+        get() = motion.reducedMotion || globalReducedMotion
     val expansionState: CardExpansionState
         get() = currentExpansion()
 
@@ -83,7 +87,8 @@ internal class TimeScapeCardDetailState(
 @Composable
 internal fun rememberTimeScapeCardDetailState(
     stageId: AppStageId,
-    reducedMotion: Boolean,
+    motion: TimeScapeMotion,
+    globalReducedMotion: Boolean = false,
 ): TimeScapeCardDetailState {
     var expansion by
         rememberSaveable(
@@ -96,13 +101,14 @@ internal fun rememberTimeScapeCardDetailState(
     var recoveryMessage by rememberSaveable(stageId.profileId.value, stageId.packageName.value) {
         mutableStateOf<String?>(null)
     }
-    return remember(stageId, reducedMotion) {
+    return remember(stageId, motion, globalReducedMotion) {
         TimeScapeCardDetailState(
             currentExpansion = { expansion },
             updateExpansion = { expansion = it },
             currentRecoveryMessage = { recoveryMessage },
             updateRecoveryMessage = { recoveryMessage = it },
-            reducedMotion = reducedMotion,
+            motion = motion,
+            globalReducedMotion = globalReducedMotion,
         )
     }
 }
@@ -157,7 +163,12 @@ private fun TimeScapeDetailContainer(
     val alpha by
         animateFloatAsState(
             targetValue = if (phase == CardExpansionPhase.COLLAPSING) 0f else 1f,
-            animationSpec = if (detailState.reducedMotion) snap() else tween(DETAIL_TRANSITION_MILLIS),
+            animationSpec =
+                if (detailState.reducedMotion) {
+                    snap()
+                } else {
+                    tween(detailState.transitionDurationMillis(phase))
+                },
             label = "timescape-card-detail-alpha",
         )
 
@@ -169,7 +180,7 @@ private fun TimeScapeDetailContainer(
 
     LaunchedEffect(phase, detailState.reducedMotion) {
         if (phase == CardExpansionPhase.EXPANDING || phase == CardExpansionPhase.COLLAPSING) {
-            if (!detailState.reducedMotion) delay(DETAIL_TRANSITION_MILLIS.toLong())
+            if (!detailState.reducedMotion) delay(detailState.transitionDurationMillis(phase).toLong())
             detailState.completeTransition()
         }
     }
@@ -187,6 +198,15 @@ private fun TimeScapeDetailContainer(
         content()
     }
 }
+
+internal fun TimeScapeCardDetailState.transitionDurationMillis(phase: CardExpansionPhase): Int =
+    when (phase) {
+        CardExpansionPhase.EXPANDING -> motion.expandDurationMillis
+        CardExpansionPhase.COLLAPSING -> motion.exitDurationMillis
+        CardExpansionPhase.COLLAPSED,
+        CardExpansionPhase.EXPANDED,
+        -> motion.expandDurationMillis
+    }
 
 @Composable
 internal fun TimeScapeDetailRecoveryMessage(
@@ -225,5 +245,3 @@ private val CardExpansionStateSaver =
                 }
         },
     )
-
-private const val DETAIL_TRANSITION_MILLIS = 150

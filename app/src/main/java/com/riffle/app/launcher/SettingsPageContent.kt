@@ -42,6 +42,7 @@ internal fun SettingsPageContent(
             SettingsPage.LAYOUT -> SettingsLayoutPageContent(state = state, onAction = onAction)
             SettingsPage.DOCK -> SettingsDockPageContent(state = state, onAction = onAction)
             SettingsPage.APPEARANCE -> SettingsAppearancePageContent(state = state, onAction = onAction)
+            SettingsPage.TIMESCAPE_APPEARANCE -> TimeScapeAppearancePageContent(state = state, onAction = onAction)
             SettingsPage.FLOATING_DOCK -> SettingsFloatingDockPageContent(state = state, onAction = onAction)
             SettingsPage.GESTURES -> SettingsGesturesPageContent(state = state, onAction = onAction)
             SettingsPage.CONTEXTUAL -> SettingsContextualPageContent(state = state, onAction = onAction)

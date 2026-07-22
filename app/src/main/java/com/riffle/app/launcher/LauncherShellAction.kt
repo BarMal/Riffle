@@ -45,6 +45,7 @@ import com.riffle.core.domain.launcher.settings.OverlayDockEdge
 import com.riffle.core.domain.launcher.settings.OverlayDockExpandedOrientation
 import com.riffle.core.domain.launcher.settings.OverlayDockItemMoveDirection
 import com.riffle.core.domain.launcher.settings.SearchResultPresentation
+import com.riffle.core.domain.launcher.settings.TimeScapeAppearanceSettings
 import com.riffle.core.domain.launcher.widgets.WidgetProviderDimensions
 import com.riffle.core.domain.launcher.widgets.WidgetProviderIdentity
 
@@ -408,6 +409,11 @@ sealed interface LauncherShellAction {
     ) : LauncherShellAction
 
     data class SelectContextualEnabled(val enabled: Boolean) : LauncherShellAction
+
+    /** Replaces the complete TimeScape profile in one persisted, atomic update. */
+    data class UpdateTimeScapeAppearance(
+        val appearance: TimeScapeAppearanceSettings,
+    ) : LauncherShellAction
 
     data class SelectOverlayDockEnabled(val enabled: Boolean) : LauncherShellAction
 

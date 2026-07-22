@@ -23,6 +23,7 @@ class SettingsPagesTest {
                 "Layout" to SettingsPage.LAYOUT,
                 "Dock" to SettingsPage.DOCK,
                 "Appearance" to SettingsPage.APPEARANCE,
+                "TimeScape appearance" to SettingsPage.TIMESCAPE_APPEARANCE,
                 "Floating dock" to SettingsPage.FLOATING_DOCK,
                 "Gestures" to SettingsPage.GESTURES,
                 "Contextual" to SettingsPage.CONTEXTUAL,
