@@ -4,9 +4,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.longClick
-import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performTouchInput
@@ -55,7 +55,7 @@ class LauncherSearchSurfaceTest {
     }
 
     @Test
-    fun webExamplesUseDescriptiveSourceIconsInsteadOfTextAbbreviations() {
+    fun webSearchUsesOneCompactThemedPill() {
         composeRule.setContent {
             MaterialTheme {
                 SearchWebPanel(
@@ -65,12 +65,11 @@ class LauncherSearchSurfaceTest {
             }
         }
 
-        composeRule.onNodeWithContentDescription("Images search icon").assertExists()
-        composeRule.onNodeWithContentDescription("News search icon").assertExists()
-        composeRule.onNodeWithContentDescription("Videos search icon").assertExists()
-        composeRule.onNodeWithText("IMG").assertDoesNotExist()
-        composeRule.onNodeWithText("NEW").assertDoesNotExist()
-        composeRule.onNodeWithText("VID").assertDoesNotExist()
+        composeRule.onNodeWithTag(SEARCH_WEB_PILL_TEST_TAG).assertHasClickAction()
+        composeRule.onNodeWithText("Search web").assertExists()
+        composeRule.onNodeWithText("Images").assertDoesNotExist()
+        composeRule.onNodeWithText("News").assertDoesNotExist()
+        composeRule.onNodeWithText("Videos").assertDoesNotExist()
     }
 
     private fun searchContext(): AppListContext =
