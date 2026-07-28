@@ -1,4 +1,4 @@
-@file:Suppress("TooManyFunctions")
+@file:Suppress("LongMethod", "TooManyFunctions")
 
 package com.riffle.app.launcher
 
@@ -82,7 +82,7 @@ fun WidgetPickerSurface(
             if (isDragHandoffActive) {
                 androidx.compose.ui.graphics.Color.Transparent
             } else {
-                MaterialTheme.colorScheme.surface
+                MaterialTheme.colorScheme.surface.copy(alpha = WIDGET_PICKER_SURFACE_ALPHA)
             },
         contentColor = MaterialTheme.colorScheme.onSurface,
     ) {
@@ -120,6 +120,16 @@ fun WidgetPickerSurface(
                         resultCount = filteredProviders.size,
                         query = query,
                     ),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                text =
+                    if (isDragHandoffActive) {
+                        "Release on Home or Dock to place this widget"
+                    } else {
+                        "Long-press a widget to drag it to Home or Dock"
+                    },
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -389,7 +399,7 @@ private fun WidgetProviderPreviewFallback(
         modifier =
             Modifier
                 .widgetPickerPreviewBounds(previewAspectRatio)
-                .background(MaterialTheme.colorScheme.secondaryContainer),
+                .background(MaterialTheme.colorScheme.surfaceVariant),
         contentAlignment = Alignment.Center,
     ) {
         Text(
@@ -425,7 +435,8 @@ internal fun InstalledWidgetProvider.requestAddWidgetAction(
     )
 
 private const val WIDGET_PICKER_SCREEN_PADDING_DP = 20
-private const val WIDGET_TILE_MIN_WIDTH_DP = 144
+private const val WIDGET_TILE_MIN_WIDTH_DP = 220
+private const val WIDGET_PICKER_SURFACE_ALPHA = 0.88f
 private const val WIDGET_PREVIEW_MIN_HEIGHT_DP = 72
 private const val WIDGET_PREVIEW_MAX_HEIGHT_DP = 240
 internal const val WIDGET_PICKER_PREVIEW_TEST_TAG = "widget-picker-preview"

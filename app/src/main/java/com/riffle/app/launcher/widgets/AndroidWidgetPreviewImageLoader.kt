@@ -39,13 +39,36 @@ private fun AppWidgetProviderInfo.matches(identity: WidgetProviderIdentity): Boo
         (profile?.toAppProfile() ?: AppProfile.personal()) == identity.profile
 
 private fun Drawable.toWidgetPreviewBitmap(): ImageBitmap {
-    val width = intrinsicWidth.takeIf { value -> value > 0 } ?: WIDGET_PREVIEW_BITMAP_WIDTH
-    val height = intrinsicHeight.takeIf { value -> value > 0 } ?: WIDGET_PREVIEW_BITMAP_HEIGHT
+    val size = widgetPreviewBitmapSize(intrinsicWidth = intrinsicWidth, intrinsicHeight = intrinsicHeight)
 
     return toBitmap(
-        width = width.coerceAtMost(WIDGET_PREVIEW_BITMAP_WIDTH),
-        height = height.coerceAtMost(WIDGET_PREVIEW_BITMAP_HEIGHT),
+        width = size.width,
+        height = size.height,
     ).asImageBitmap()
+}
+
+internal data class WidgetPreviewBitmapSize(
+    val width: Int,
+    val height: Int,
+)
+
+internal fun widgetPreviewBitmapSize(
+    intrinsicWidth: Int,
+    intrinsicHeight: Int,
+): WidgetPreviewBitmapSize {
+    val width = intrinsicWidth.takeIf { value -> value > 0 } ?: WIDGET_PREVIEW_BITMAP_WIDTH
+    val height = intrinsicHeight.takeIf { value -> value > 0 } ?: WIDGET_PREVIEW_BITMAP_HEIGHT
+    val scale =
+        minOf(
+            1f,
+            WIDGET_PREVIEW_BITMAP_WIDTH / width.toFloat(),
+            WIDGET_PREVIEW_BITMAP_HEIGHT / height.toFloat(),
+        )
+
+    return WidgetPreviewBitmapSize(
+        width = (width * scale).toInt().coerceAtLeast(1),
+        height = (height * scale).toInt().coerceAtLeast(1),
+    )
 }
 
 private const val WIDGET_PREVIEW_DENSITY = 0
