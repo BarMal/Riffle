@@ -1,5 +1,6 @@
 package com.riffle.app.launcher
 
+import com.riffle.app.launcher.widgets.widgetPreviewBitmapSize
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppProfile
 import com.riffle.core.domain.launcher.widgets.InstalledWidgetProvider
@@ -163,7 +164,7 @@ class WidgetPickerDialogTest {
     }
 
     @Test
-    fun previewLabelPrefersTargetCellSizeWhenAvailable() {
+    fun previewFallbackLabelDoesNotExposeRawProviderPixels() {
         val provider =
             widgetProvider(label = "Clock", packageName = "com.example.clock", className = ".ClockWidget").copy(
                 dimensions =
@@ -175,14 +176,26 @@ class WidgetPickerDialogTest {
                     ),
             )
 
-        assertEquals("3 x 2", provider.widgetPickerPreviewLabel())
+        assertEquals("Preview unavailable", provider.widgetPickerPreviewLabel())
     }
 
     @Test
-    fun previewLabelFallsBackToMinimumDimensions() {
+    fun previewFallbackLabelDoesNotExposeMinimumDimensions() {
         val provider = widgetProvider(label = "Clock", packageName = "com.example.clock", className = ".ClockWidget")
 
-        assertEquals("120 x 80", provider.widgetPickerPreviewLabel())
+        assertEquals("Preview unavailable", provider.widgetPickerPreviewLabel())
+    }
+
+    @Test
+    fun previewBitmapBoundsPreserveExtremeProviderAspectRatio() {
+        assertEquals(
+            320 to 42,
+            widgetPreviewBitmapSize(intrinsicWidth = 1350, intrinsicHeight = 180).let { it.width to it.height },
+        )
+        assertEquals(
+            2 to 180,
+            widgetPreviewBitmapSize(intrinsicWidth = 4, intrinsicHeight = 300).let { it.width to it.height },
+        )
     }
 
     @Test
