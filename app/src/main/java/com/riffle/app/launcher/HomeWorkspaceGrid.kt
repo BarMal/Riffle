@@ -91,6 +91,9 @@ internal fun WorkspaceGrid(
                                     page = page,
                                     previewItems = previewItems,
                                     activeDragSession = activeDragSession,
+                                    widgetPickerDragPreview =
+                                        gridState.widgetPickerDragPreview
+                                            ?.takeIf { preview -> preview.targetPageId == page.id },
                                     gridState = gridState,
                                 ),
                             presentation = presentation,
@@ -179,6 +182,12 @@ private fun RowScope.HomeGridCell(
                     )
                 }
             }
+
+            state.widgetPickerDragPreview
+                ?.takeIf { preview -> preview.cell == state.cell }
+                ?.let { preview ->
+                    WidgetPickerDragPlaceholder(preview = preview, cellSize = state.cellSize)
+                }
         }
     }
 }
@@ -190,6 +199,7 @@ internal data class HomeGridCellState(
     val page: LauncherPage,
     val previewItems: List<LauncherItem>,
     val activeDragSession: HomeDragSession?,
+    val widgetPickerDragPreview: WidgetPickerDragPlacementPreview?,
     val gridState: HomeGridState,
 )
 
@@ -379,6 +389,7 @@ internal data class HomeGridState(
     val pageCount: Int,
     val selectedPageIndex: Int,
     val dragSession: HomeDragSession?,
+    val widgetPickerDragPreview: WidgetPickerDragPlacementPreview? = null,
 )
 
 internal data class HomeGridItemState(

@@ -1,4 +1,4 @@
-@file:Suppress("TooManyFunctions")
+@file:Suppress("LongMethod", "TooManyFunctions")
 
 package com.riffle.app.launcher
 
@@ -76,6 +76,7 @@ internal fun StandardHome(
     val openedFolderId = remember { mutableStateOf<LauncherItemId?>(null) }
     val homeDragSession = remember { mutableStateOf<HomeDragSession?>(null) }
     val widgetPickerDragInProgress = remember { mutableStateOf(false) }
+    val widgetPickerDragPreview = remember { mutableStateOf<WidgetPickerDragPlacementPreview?>(null) }
     val actions =
         HomeWorkspaceActions(
             onFolderOpen = { folder -> openedFolderId.value = folder.id },
@@ -93,6 +94,7 @@ internal fun StandardHome(
                 layout = layout,
                 visibleLayout = visibleLayout,
                 dragSession = homeDragSession.value,
+                widgetPickerDragPreview = widgetPickerDragPreview.value,
                 presentation = presentation,
             ),
         appIconLoader = appIconLoader,
@@ -105,10 +107,24 @@ internal fun StandardHome(
             isDragHandoffActive = widgetPickerDragInProgress.value,
             onWidgetDragStarted = {
                 widgetPickerDragInProgress.value = true
+                widgetPickerDragPreview.value = null
                 onAction(LauncherShellAction.CloseWidgetPicker)
+            },
+            onWidgetDragMoved = { provider, position, rootSize ->
+                widgetPickerDragPreview.value =
+                    if (position.y >= rootSize.height * WIDGET_PICKER_DOCK_DROP_FRACTION) {
+                        null
+                    } else {
+                        widgetPickerDragPlacementPreviewFor(
+                            page = visibleLayout.selectedPage,
+                            provider = provider,
+                            cell = widgetPickerDropCell(position, rootSize, visibleLayout.selectedPage.grid),
+                        )
+                    }
             },
             onWidgetDragCancelled = {
                 widgetPickerDragInProgress.value = false
+                widgetPickerDragPreview.value = null
             },
             onWidgetDropped = { provider, position, rootSize ->
                 val selectedPage = visibleLayout.selectedPage
@@ -119,17 +135,26 @@ internal fun StandardHome(
                     } else {
                         WidgetAddTarget.HOME
                     }
-                onAction(
-                    LauncherShellAction.RequestAddWidget(
-                        provider = provider.identity,
-                        label = provider.label,
-                        dimensions = provider.dimensions,
-                        target = target,
-                        targetPageId = selectedPage.id.takeIf { target == WidgetAddTarget.HOME },
-                        targetCell = cell.takeIf { target == WidgetAddTarget.HOME },
-                    ),
-                )
+                val preview =
+                    widgetPickerDragPlacementPreviewFor(
+                        page = selectedPage,
+                        provider = provider,
+                        cell = cell,
+                    )
+                if (target == WidgetAddTarget.DOCK || preview.isValid) {
+                    onAction(
+                        LauncherShellAction.RequestAddWidget(
+                            provider = provider.identity,
+                            label = provider.label,
+                            dimensions = provider.dimensions,
+                            target = target,
+                            targetPageId = selectedPage.id.takeIf { target == WidgetAddTarget.HOME },
+                            targetCell = cell.takeIf { target == WidgetAddTarget.HOME },
+                        ),
+                    )
+                }
                 widgetPickerDragInProgress.value = false
+                widgetPickerDragPreview.value = null
             },
             onAction = onAction,
         )
@@ -195,6 +220,7 @@ private fun StandardHomeColumn(
                     pageCount = state.visibleLayout.pages.size,
                     selectedPageIndex = state.visibleLayout.selectedPageIndex,
                     dragSession = state.dragSession,
+                    widgetPickerDragPreview = state.widgetPickerDragPreview,
                 ),
             presentation = state.homeGridPresentation(actions),
             appIconLoader = appIconLoader,
@@ -429,6 +455,7 @@ private data class StandardHomeContentState(
     val layout: HomeLayout,
     val visibleLayout: HomeLayout,
     val dragSession: HomeDragSession?,
+    val widgetPickerDragPreview: WidgetPickerDragPlacementPreview?,
     val presentation: StandardHomePresentation,
 )
 
