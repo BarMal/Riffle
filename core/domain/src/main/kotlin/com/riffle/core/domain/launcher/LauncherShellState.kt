@@ -15,8 +15,6 @@ import com.riffle.core.domain.launcher.cards.AppStageIdentitySnapshot
 import com.riffle.core.domain.launcher.cards.AppStagePlanner
 import com.riffle.core.domain.launcher.cards.AppStageProfileState
 import com.riffle.core.domain.launcher.cards.AppStageSnapshot
-import com.riffle.core.domain.launcher.cards.CardsChapterPlanner
-import com.riffle.core.domain.launcher.cards.CardsChapterState
 import com.riffle.core.domain.launcher.cards.LauncherCardId
 import com.riffle.core.domain.launcher.home.DockEditRejectionReason
 import com.riffle.core.domain.launcher.home.HomeLayout
@@ -66,29 +64,8 @@ data class LauncherShellState(
     /** The latest rejected Dock edit, retained until another Dock edit succeeds. */
     val dockEditRejectionReason: DockEditRejectionReason? = null,
 ) {
-    /** Rebuilds transient Cards content from the current notification snapshot and stored intent. */
-    fun cardsChapterState(planner: CardsChapterPlanner = CardsChapterPlanner()): CardsChapterState =
-        planner.state(
-            notificationGroups = notificationGroupsByApp,
-            preferences = launcherSettings.cards.chapterPreferences,
-        )
-
     /** Profile content policy used by Cards surfaces; profiles without an app-state decision are redacted. */
     fun cardsProfileContentVisibility(): Map<AppProfileId, AppProfileContentVisibility> = profileContentVisibility
-
-    fun withReconciledCardsChapterSelection(): LauncherShellState {
-        val preferences = cardsChapterState().preferences
-        return if (preferences == launcherSettings.cards.chapterPreferences) {
-            this
-        } else {
-            copy(
-                launcherSettings =
-                    launcherSettings.copy(
-                        cards = launcherSettings.cards.copy(chapterPreferences = preferences),
-                    ),
-            )
-        }
-    }
 
     /** Reconciles optional TimeScape stages from the same installed-app/profile/settings snapshot. */
     fun appStageSnapshot(

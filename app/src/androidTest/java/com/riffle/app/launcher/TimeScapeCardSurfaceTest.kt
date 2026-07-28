@@ -367,6 +367,89 @@ class TimeScapeCardSurfaceTest {
     }
 
     @Test
+    fun notificationRefreshKeepsFocusedCardByStableIdentity() {
+        val app = timeScapeTestApp()
+        val initial =
+            timeScapeTestState(
+                app,
+                timeScapeTestNotification(app).copy(text = "Before refresh"),
+            )
+        var state by mutableStateOf(initial)
+
+        composeRule.setContent {
+            MaterialTheme { TimeScapeAppStageSurface(state = state, onAction = {}) }
+        }
+
+        composeRule.onNodeWithText("Before refresh").performClick()
+        composeRule.runOnIdle {
+            state =
+                initial.copy(
+                    notificationGroupsByApp =
+                        initial.notificationGroupsByApp.map { group ->
+                            group.copy(
+                                notifications =
+                                    group.notifications.map { notification ->
+                                        notification.copy(text = "After refresh")
+                                    },
+                            )
+                        },
+                )
+        }
+
+        composeRule.onNodeWithText("After refresh").assertIsDisplayed()
+    }
+
+    @Test
+    fun compactStageSelectorRoutesNamedPreviousAndNextActions() {
+        val first = timeScapeTestApp()
+        val second =
+            first.copy(
+                identity =
+                    first.identity.copy(
+                        packageName = AppPackageName("com.example.calendar"),
+                    ),
+                label = "Calendar",
+            )
+        val firstNotification = timeScapeTestNotification(first)
+        val secondNotification =
+            firstNotification.copy(
+                key = LauncherNotificationKey("calendar"),
+                packageName = second.identity.packageName,
+                title = "Calendar event",
+            )
+        val actions = mutableListOf<LauncherShellAction>()
+        val state =
+            LauncherShellState(
+                notificationAccessStatus = NotificationAccessStatus.GRANTED,
+                installedApps = listOf(first, second),
+                profileContentVisibility =
+                    mapOf(
+                        first.identity.profile.id to AppProfileContentVisibility.VISIBLE,
+                    ),
+                notificationGroupsByApp =
+                    listOf(
+                        notificationGroup(first, firstNotification),
+                        notificationGroup(second, secondNotification),
+                    ),
+            )
+
+        composeRule.setContent {
+            MaterialTheme { TimeScapeAppStageSurface(state = state, onAction = actions::add) }
+        }
+
+        composeRule.onNodeWithText("Next").performClick()
+        composeRule.onNodeWithText("Previous").performClick()
+
+        assertEquals(
+            listOf(
+                LauncherShellAction.SelectNextAppStage,
+                LauncherShellAction.SelectPreviousAppStage,
+            ),
+            actions,
+        )
+    }
+
+    @Test
     fun detailActionsRouteEverySupportedActionToTheFocusedNotificationKey() {
         val app = timeScapeTestApp()
         val key = LauncherNotificationKey("focused-notification")
@@ -1290,6 +1373,18 @@ class TimeScapeCardSurfaceTest {
             title = "New message",
             text = "Hello from TimeScape",
             postedAtEpochMillis = 10,
+        )
+
+    private fun notificationGroup(
+        app: InstalledApp,
+        notification: LauncherNotification,
+    ): AppNotificationGroup =
+        AppNotificationGroup(
+            packageName = app.identity.packageName,
+            profileId = app.identity.profile.id,
+            latestCategory = NotificationCategory.MESSAGE,
+            latestAgeBucket = NotificationAgeBucket.RECENT,
+            notifications = listOf(notification),
         )
 
     private fun timeScapeTestState(

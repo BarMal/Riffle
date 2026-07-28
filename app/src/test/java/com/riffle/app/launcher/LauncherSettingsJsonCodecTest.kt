@@ -6,8 +6,6 @@ import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppProfile
 import com.riffle.core.domain.launcher.cards.AppStageId
 import com.riffle.core.domain.launcher.cards.AppStagePreferences
-import com.riffle.core.domain.launcher.cards.CardsChapterId
-import com.riffle.core.domain.launcher.cards.CardsChapterPreferences
 import com.riffle.core.domain.launcher.contextual.ContextualSettings
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
@@ -57,6 +55,7 @@ import com.riffle.core.domain.launcher.settings.TimeScapeGeometry
 import com.riffle.core.domain.launcher.settings.TimeScapeMotion
 import com.riffle.core.domain.launcher.settings.TimeScapeSurface
 import com.riffle.core.domain.launcher.settings.homeSystemBars
+import com.riffle.core.domain.launcher.settings.stagePreferencesFor
 import com.riffle.core.domain.launcher.settings.withHomeSystemBars
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
@@ -94,17 +93,39 @@ class LauncherSettingsJsonCodecTest {
     }
 
     @Test
-    fun roundTripsCardsChapterIntent() {
-        val mail = CardsChapterId.App(AppPackageName("com.riffle.mail"), AppProfile.personal().id)
+    fun roundTripsTimeScapeStageIntent() {
+        val mail = AppStageId(AppPackageName("com.riffle.mail"), AppProfile.personal().id)
+        val key = HomeLayoutKey(LauncherViewMode.CARD_INTERFACE)
         val settings =
             LauncherSettings(
-                cards =
-                    CardsSettings(
-                        CardsChapterPreferences(pinnedChapterIds = listOf(mail), selectedChapterId = mail),
-                    ),
+                cards = CardsSettings(stagePreferencesByLayout = mapOf(key to AppStagePreferences(listOf(mail), mail))),
             )
 
         assertEquals(settings.cards, decodeLauncherSettings(encodeLauncherSettings(settings)).cards)
+    }
+
+    @Test
+    fun migratesLegacyCardsChapterJsonToTimeScapeStageIntent() {
+        val legacyJson =
+            """
+            {
+              "cards": {
+                "pinnedChapterIds": [{"packageName":"com.riffle.mail","profileId":"personal"}],
+                "selectedChapterId": {
+                  "kind":"app",
+                  "packageName":"com.riffle.mail",
+                  "profileId":"personal"
+                }
+              }
+            }
+            """.trimIndent()
+        val stageId = AppStageId(AppPackageName("com.riffle.mail"), AppProfile.personal().id)
+
+        val stagePreferences =
+            decodeLauncherSettings(legacyJson).cards.stagePreferencesFor(HomeLayoutKey(LauncherViewMode.CARD_INTERFACE))
+
+        assertEquals(listOf(stageId), stagePreferences.pinnedStageIds)
+        assertEquals(stageId, stagePreferences.selectedStageId)
     }
 
     @Test

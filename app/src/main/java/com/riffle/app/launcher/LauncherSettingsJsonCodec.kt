@@ -6,8 +6,6 @@ import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppProfileId
 import com.riffle.core.domain.launcher.cards.AppStageId
 import com.riffle.core.domain.launcher.cards.AppStagePreferences
-import com.riffle.core.domain.launcher.cards.CardsChapterId
-import com.riffle.core.domain.launcher.cards.CardsChapterPreferences
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.HomeLayoutKey
 import com.riffle.core.domain.launcher.home.LauncherViewMode
@@ -104,8 +102,6 @@ private fun JSONObject.toSearchSettings(defaults: SearchSettings): SearchSetting
 
 private fun encodeCardsSettings(settings: CardsSettings): JSONObject =
     JSONObject()
-        .put("pinnedChapterIds", JSONArray(settings.chapterPreferences.pinnedChapterIds.map(::encodeCardsAppChapterId)))
-        .put("selectedChapterId", encodeCardsChapterId(settings.chapterPreferences.selectedChapterId))
         .put("stagePreferencesByLayout", JSONArray(settings.stagePreferencesByLayout.map(::encodeStagePreferences)))
         .put("timeScapeAppearance", encodeTimeScapeAppearance(settings.timeScapeAppearance))
 
@@ -119,26 +115,7 @@ private fun encodeStagePreferences(entry: Map.Entry<HomeLayoutKey, AppStagePrefe
 private fun encodeAppStageId(id: AppStageId): JSONObject =
     JSONObject().put("packageName", id.packageName.value).put("profileId", id.profileId.value)
 
-private fun encodeCardsChapterId(id: CardsChapterId): JSONObject =
-    when (id) {
-        CardsChapterId.Overview -> JSONObject().put("kind", "overview")
-        is CardsChapterId.App -> encodeCardsAppChapterId(id).put("kind", "app")
-    }
-
-private fun encodeCardsAppChapterId(id: CardsChapterId.App): JSONObject =
-    JSONObject().put("packageName", id.packageName.value).put("profileId", id.profileId.value)
-
 private fun JSONObject.toCardsSettings(defaults: CardsSettings): CardsSettings {
-    val pinnedChapterIds =
-        optJSONArray("pinnedChapterIds")
-            ?.let { ids ->
-                (0 until ids.length())
-                    .mapNotNull { index -> ids.optJSONObject(index)?.toCardsAppChapterId() }
-                    .distinct()
-            }
-            ?: defaults.chapterPreferences.pinnedChapterIds
-    val selectedChapterId =
-        optJSONObject("selectedChapterId")?.toCardsChapterId() ?: defaults.chapterPreferences.selectedChapterId
     val stagePreferencesByLayout =
         optJSONArray("stagePreferencesByLayout")
             ?.let { entries ->
@@ -146,9 +123,11 @@ private fun JSONObject.toCardsSettings(defaults: CardsSettings): CardsSettings {
                     .mapNotNull { index -> entries.optJSONObject(index)?.toStagePreferencesEntry() }
                     .toMap()
             }
+            ?: legacyStagePreferences()?.let { preferences ->
+                mapOf(HomeLayoutKey(LauncherViewMode.CARD_INTERFACE) to preferences)
+            }
             ?: defaults.stagePreferencesByLayout
     return CardsSettings(
-        chapterPreferences = CardsChapterPreferences(pinnedChapterIds, selectedChapterId),
         stagePreferencesByLayout = stagePreferencesByLayout,
         timeScapeAppearance =
             optJSONObject("timeScapeAppearance")?.toTimeScapeAppearance(defaults.timeScapeAppearance)
@@ -554,19 +533,20 @@ private fun JSONObject.toAppStageId(): AppStageId? =
         }
     }
 
-private fun JSONObject.toCardsChapterId(): CardsChapterId? =
-    when (optString("kind")) {
-        "overview" -> CardsChapterId.Overview
-        "app" -> toCardsAppChapterId()
-        else -> null
-    }
-
-private fun JSONObject.toCardsAppChapterId(): CardsChapterId.App? =
-    optString("packageName").takeIf(String::isNotBlank)?.let { packageName ->
-        optString("profileId").takeIf(String::isNotBlank)?.let { profileId ->
-            CardsChapterId.App(AppPackageName(packageName), AppProfileId(profileId))
-        }
-    }
+private fun JSONObject.legacyStagePreferences(): AppStagePreferences? {
+    val pinnedStageIds =
+        optJSONArray("pinnedChapterIds")
+            ?.let { ids ->
+                (0 until ids.length())
+                    .mapNotNull { index -> ids.optJSONObject(index)?.toAppStageId() }
+                    .distinct()
+            } ?: return null
+    val selectedStageId =
+        optJSONObject("selectedChapterId")
+            ?.takeIf { selected -> selected.optString("kind") == "app" }
+            ?.toAppStageId()
+    return AppStagePreferences(pinnedStageIds = pinnedStageIds, selectedStageId = selectedStageId)
+}
 
 private fun encodeAppearance(settings: AppearanceSettings): JSONObject =
     JSONObject()

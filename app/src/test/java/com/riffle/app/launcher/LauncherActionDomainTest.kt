@@ -11,7 +11,6 @@ import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.apps.AppShortcutId
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.cards.AppStageId
-import com.riffle.core.domain.launcher.cards.CardsChapterId
 import com.riffle.core.domain.launcher.home.DockAlignment
 import com.riffle.core.domain.launcher.home.DockBackgroundSizing
 import com.riffle.core.domain.launcher.home.DockItemMoveDirection
@@ -170,13 +169,6 @@ class LauncherActionDomainTest {
                 activity("AddHomePage", LauncherShellAction.AddHomePage),
                 activity("DuplicateSelectedHomePage", LauncherShellAction.DuplicateSelectedHomePage),
                 activity("SelectHomePage", LauncherShellAction.SelectHomePage(pageId)),
-                activity("SelectCardsChapter", LauncherShellAction.SelectCardsChapter(CardsChapterId.Overview)),
-                activity(
-                    "ToggleCardsChapterPinned",
-                    LauncherShellAction.ToggleCardsChapterPinned(
-                        CardsChapterId.App(AppPackageName("com.example.app"), appIdentity.profile.id),
-                    ),
-                ),
                 activity(
                     "SelectAppStage",
                     LauncherShellAction.SelectAppStage(
