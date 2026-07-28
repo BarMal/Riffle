@@ -11,7 +11,6 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.cards.TimeScapeWindowLayout
-import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 
 @Composable
 fun HomeDestination(
@@ -72,17 +71,13 @@ private fun CardsHomeSurface(
             },
             onAction = onAction,
         )
-        if (state.shouldRenderTimeScapeOverlay()) {
-            TimeScapeAppStageSurface(
-                state = state,
-                modifier =
-                    Modifier.padding(bottom = dockInteractionHeight),
-                windowInsets =
-                    cardsPanelInsetPolicy(state).safeDrawingPanelInsets(),
-                windowLayout = timeScapeWindowLayout,
-                onAction = onAction,
-            )
-        }
+        TimeScapeAppStageSurface(
+            state = state,
+            modifier = Modifier.padding(bottom = dockInteractionHeight),
+            windowInsets = cardsPanelInsetPolicy(state).safeDrawingPanelInsets(),
+            windowLayout = timeScapeWindowLayout,
+            onAction = onAction,
+        )
     }
 }
 
@@ -130,8 +125,3 @@ private fun StandardHomeSurface(
 internal fun cardsPanelInsetPolicy(state: LauncherShellState): HomeInsetPolicy {
     return homeInsetPolicy(state.launcherSettings.appearance)
 }
-
-private fun LauncherShellState.shouldRenderTimeScapeOverlay(): Boolean =
-    notificationGroupsByApp.isNotEmpty() ||
-        notificationAccessStatus != NotificationAccessStatus.GRANTED ||
-        homeLayout.visibleTo(installedApps).pages.all { page -> page.items.isEmpty() }

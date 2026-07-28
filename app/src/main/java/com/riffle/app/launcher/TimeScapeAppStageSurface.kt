@@ -270,8 +270,14 @@ private fun TimeScapeStageBody(
     onAction: (LauncherShellAction) -> Unit,
     modifier: Modifier,
 ) {
-    if (state.notificationAccessStatus != NotificationAccessStatus.GRANTED || selectedStage == null) {
-        TimeScapeUnavailableState(state.notificationAccessStatus, detailRecoveryMessage, onAction, modifier)
+    if (selectedStage == null) {
+        TimeScapeUnavailableState(
+            access = state.notificationAccessStatus,
+            recoveryMessage = detailRecoveryMessage,
+            installedApps = state.installedApps,
+            onAction = onAction,
+            modifier = modifier,
+        )
     } else {
         TimeScapeStageContent(
             selectedStage,
@@ -878,6 +884,7 @@ private fun RestoreFocusAfterLayout(
 private fun TimeScapeUnavailableState(
     access: NotificationAccessStatus,
     recoveryMessage: String?,
+    installedApps: List<com.riffle.core.domain.launcher.apps.InstalledApp>,
     onAction: (LauncherShellAction) -> Unit,
     modifier: Modifier,
 ) {
@@ -902,6 +909,38 @@ private fun TimeScapeUnavailableState(
         if (access == NotificationAccessStatus.NOT_GRANTED || access == NotificationAccessStatus.REVOKED) {
             TextButton(onClick = { onAction(LauncherShellAction.RequestNotificationAccess) }) {
                 Text("Allow access")
+            }
+        }
+        if (installedApps.isEmpty()) {
+            Text("Install an app to create your first stage.", style = MaterialTheme.typography.bodyMedium)
+        } else {
+            Text("Choose an app to keep as a stage.", style = MaterialTheme.typography.bodyMedium)
+            val stageApps =
+                installedApps
+                    .distinctBy { app -> "${app.identity.profile.id.value}:${app.identity.packageName.value}" }
+                    .sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { app -> app.label })
+            LazyRow(
+                contentPadding = PaddingValues(horizontal = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                items(
+                    items = stageApps,
+                    key = { app ->
+                        "${app.identity.profile.id.value}:${app.identity.packageName.value}"
+                    },
+                ) { app ->
+                    TextButton(
+                        onClick = {
+                            onAction(
+                                LauncherShellAction.ToggleAppStagePinned(
+                                    AppStageId(app.identity.packageName, app.identity.profile.id),
+                                ),
+                            )
+                        },
+                    ) {
+                        Text("Pin ${app.label}")
+                    }
+                }
             }
         }
     }

@@ -141,6 +141,72 @@ class TimeScapeCardSurfaceTest {
     }
 
     @Test
+    fun appStageSurfaceOffersInstalledAppsBeforeNotificationsExist() {
+        val app = timeScapeTestApp()
+        val actions = mutableListOf<LauncherShellAction>()
+
+        composeRule.setContent {
+            MaterialTheme {
+                TimeScapeAppStageSurface(
+                    state =
+                        LauncherShellState(
+                            notificationAccessStatus = NotificationAccessStatus.GRANTED,
+                            installedApps = listOf(app),
+                        ),
+                    onAction = actions::add,
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("Choose an app to keep as a stage.").assertIsDisplayed()
+        composeRule.onNodeWithText("Pin ${app.label}").performClick()
+        assertEquals(
+            LauncherShellAction.ToggleAppStagePinned(
+                AppStageId(app.identity.packageName, app.identity.profile.id),
+            ),
+            actions.single(),
+        )
+    }
+
+    @Test
+    fun emptyPinnedStageKeepsLaunchAffordanceWithoutNotificationAccess() {
+        val app = timeScapeTestApp()
+        val stageId = AppStageId(app.identity.packageName, app.identity.profile.id)
+        val actions = mutableListOf<LauncherShellAction>()
+
+        composeRule.setContent {
+            MaterialTheme {
+                TimeScapeAppStageSurface(
+                    state =
+                        LauncherShellState(
+                            notificationAccessStatus = NotificationAccessStatus.NOT_GRANTED,
+                            installedApps = listOf(app),
+                            launcherSettings =
+                                LauncherSettings(
+                                    cards =
+                                        CardsSettings(
+                                            stagePreferencesByLayout =
+                                                mapOf(
+                                                    HomeLayoutKey(LauncherViewMode.STANDARD_APP_DRAWER) to
+                                                        AppStagePreferences(
+                                                            pinnedStageIds = listOf(stageId),
+                                                            selectedStageId = stageId,
+                                                        ),
+                                                ),
+                                        ),
+                                ),
+                        ),
+                    onAction = actions::add,
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("Nothing new").assertIsDisplayed()
+        composeRule.onNodeWithText("Open ${app.label}").performClick()
+        assertEquals(LauncherShellAction.LaunchApp(app.identity), actions.single())
+    }
+
+    @Test
     fun appStageSurfaceRendersTheFocusedAppStage() {
         val app =
             InstalledApp(
