@@ -62,6 +62,7 @@ fun SearchSurface(
     state: SearchSurfaceState,
     appListContext: AppListContext,
     onAction: (LauncherShellAction) -> Unit,
+    imeInsets: WindowInsets = WindowInsets.ime,
 ) {
     val focusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -86,6 +87,7 @@ fun SearchSurface(
             Modifier
                 .fillMaxSize()
                 .windowInsetsPadding(WindowInsets.systemBars)
+                .windowInsetsPadding(imeInsets)
                 .padding(horizontal = 12.dp, vertical = 12.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
