@@ -124,7 +124,9 @@ private fun JSONObject.toCardsSettings(defaults: CardsSettings): CardsSettings {
                     .toMap()
             }
             ?: legacyStagePreferences()?.let { preferences ->
-                mapOf(HomeLayoutKey(LauncherViewMode.CARD_INTERFACE) to preferences)
+                HomeLayoutDeviceClass.entries.associate { deviceClass ->
+                    HomeLayoutKey(LauncherViewMode.CARD_INTERFACE, deviceClass) to preferences
+                }
             }
             ?: defaults.stagePreferencesByLayout
     return CardsSettings(

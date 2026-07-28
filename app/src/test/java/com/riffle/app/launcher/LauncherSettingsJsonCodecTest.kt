@@ -129,6 +129,32 @@ class LauncherSettingsJsonCodecTest {
     }
 
     @Test
+    fun migratesLegacyCardsChapterJsonToNonPhoneTimeScapeStageIntent() {
+        val legacyJson =
+            """
+            {
+              "cards": {
+                "pinnedChapterIds": [{"packageName":"com.riffle.mail","profileId":"personal"}],
+                "selectedChapterId": {
+                  "kind":"app",
+                  "packageName":"com.riffle.mail",
+                  "profileId":"personal"
+                }
+              }
+            }
+            """.trimIndent()
+        val stageId = AppStageId(AppPackageName("com.riffle.mail"), AppProfile.personal().id)
+
+        val stagePreferences =
+            decodeLauncherSettings(legacyJson).cards.stagePreferencesFor(
+                HomeLayoutKey(LauncherViewMode.CARD_INTERFACE, HomeLayoutDeviceClass.TABLET),
+            )
+
+        assertEquals(listOf(stageId), stagePreferences.pinnedStageIds)
+        assertEquals(stageId, stagePreferences.selectedStageId)
+    }
+
+    @Test
     fun roundTripsLayoutSpecificStageIntentWithoutTransientContent() {
         val mail = AppStageId(AppPackageName("com.riffle.mail"), AppProfile.personal().id)
         val key = HomeLayoutKey(LauncherViewMode.CARD_INTERFACE, HomeLayoutDeviceClass.TABLET)
