@@ -1187,6 +1187,24 @@ class TimeScapeCardSurfaceTest {
         assertTrue(entries.all { entry -> entry.rotationDegrees == 0f })
     }
 
+    @Test
+    fun notificationStackKeepsEveryAvailableCardReachableBeyondConfiguredVisualDepth() {
+        val resolution =
+            TimeScapeAppearanceSettings().resolveCardStack(
+                viewport = TimeScapeViewportDp(widthDp = 800, heightDp = 1_200),
+            )
+
+        val entries =
+            timeScapeNotificationStackEntries(
+                resolution = resolution,
+                cardCount = 11,
+                activeCardIndex = 5,
+            )
+
+        assertEquals(11, entries.size)
+        assertEquals((0..10).toSet(), entries.map { entry -> entry.cardIndex }.toSet())
+    }
+
     private fun timeScapeTestApp(): InstalledApp =
         InstalledApp(
             identity =

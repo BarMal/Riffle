@@ -70,6 +70,7 @@ import com.riffle.core.domain.launcher.cards.CardStackController
 import com.riffle.core.domain.launcher.cards.CardStackFocusResult
 import com.riffle.core.domain.launcher.cards.CardStackFocusState
 import com.riffle.core.domain.launcher.cards.CardStackKey
+import com.riffle.core.domain.launcher.cards.CardStackLayoutEntry
 import com.riffle.core.domain.launcher.cards.CardStackNavigationDirection
 import com.riffle.core.domain.launcher.cards.CardStackSettleRequest
 import com.riffle.core.domain.launcher.cards.LauncherCardId
@@ -77,6 +78,7 @@ import com.riffle.core.domain.launcher.cards.TimeScapePaneLayoutPolicy
 import com.riffle.core.domain.launcher.cards.TimeScapePaneMode
 import com.riffle.core.domain.launcher.cards.TimeScapeWindowLayout
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
+import com.riffle.core.domain.launcher.settings.TimeScapeCardStackResolution
 import com.riffle.core.domain.launcher.settings.TimeScapeViewportDp
 import com.riffle.core.domain.launcher.settings.resolveTimeScapeCardStack
 
@@ -571,10 +573,10 @@ private fun TimeScapeNotificationStack(
                 ) {
                     CardStack(
                         entries =
-                            resolution.layoutPolicy.entries(
-                                cards.size,
-                                activeCardIndex,
-                                resolution.reducedMotion,
+                            timeScapeNotificationStackEntries(
+                                resolution = resolution,
+                                cardCount = cards.size,
+                                activeCardIndex = activeCardIndex,
                             ),
                         animationSpec = resolution.animation,
                         reducedMotion = resolution.reducedMotion,
@@ -693,6 +695,20 @@ private fun TimeScapeNotificationStack(
         }
     }
 }
+
+/** Keeps every active notification reachable even when the visual stack depth is smaller. */
+internal fun timeScapeNotificationStackEntries(
+    resolution: TimeScapeCardStackResolution,
+    cardCount: Int,
+    activeCardIndex: Int,
+): List<CardStackLayoutEntry> =
+    resolution.layoutPolicy
+        .copy(maxVisibleDepth = maxOf(resolution.layoutPolicy.maxVisibleDepth, cardCount - 1))
+        .entries(
+            cardCount = cardCount,
+            activeIndex = activeCardIndex,
+            reducedMotion = resolution.reducedMotion,
+        )
 
 @Composable
 private fun TimeScapeCardNavigationControls(
