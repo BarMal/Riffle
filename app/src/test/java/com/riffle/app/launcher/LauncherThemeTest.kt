@@ -137,6 +137,19 @@ class LauncherThemeTest {
     }
 
     @Test
+    fun glassPresetProvidesTranslucentLauncherOverlayTokens() {
+        val glassTokens = launcherThemeSurfaceTokens(LauncherThemePreset.GLASS, lightScheme)
+        val materialTokens = launcherThemeSurfaceTokens(LauncherThemePreset.MATERIAL, lightScheme)
+
+        assertEquals(0.78f, glassTokens.overlayAlpha)
+        assertEquals(glassTokens.overlayAlpha, glassTokens.panelColor.alpha, 0.01f)
+        assertEquals(glassTokens.overlayAlpha, glassTokens.menuColor.alpha, 0.01f)
+        assertEquals(1f, materialTokens.overlayAlpha)
+        assertEquals(1f, materialTokens.panelColor.alpha)
+        assertEquals(1f, materialTokens.menuColor.alpha)
+    }
+
+    @Test
     fun defaultHomeLabelTextContrastsWithItsScrimBackgroundAfterBackgroundCustomisation() {
         val scheme = lightScheme.withThemeColors(LauncherThemeColors(backgroundArgb = 0xFFF0F0F0.toInt()))
 

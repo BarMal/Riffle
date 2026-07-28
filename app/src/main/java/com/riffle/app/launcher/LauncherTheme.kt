@@ -60,6 +60,7 @@ fun RiffleLauncherTheme(
     CompositionLocalProvider(
         LocalLauncherCardShape provides launcherCardShape(themePreset, themeCornerStyle),
         LocalLauncherPanelShape provides launcherPanelShape(themePreset, themeCornerStyle),
+        LocalLauncherThemeSurfaceTokens provides launcherThemeSurfaceTokens(themePreset, colorScheme),
         LocalLauncherThemeColorOverrides provides themeColors.toColorOverrides(),
     ) {
         MaterialTheme(
@@ -72,13 +73,49 @@ fun RiffleLauncherTheme(
 
 internal val LocalLauncherCardShape = staticCompositionLocalOf<Shape> { RoundedCornerShape(24.dp) }
 internal val LocalLauncherPanelShape = staticCompositionLocalOf<Shape> { RoundedCornerShape(32.dp) }
+internal val LocalLauncherThemeSurfaceTokens =
+    staticCompositionLocalOf { LauncherThemeSurfaceTokens() }
 internal val LocalLauncherThemeColorOverrides = staticCompositionLocalOf { LauncherThemeColorOverrides() }
+
+internal data class LauncherThemeSurfaceTokens(
+    val panelColor: Color = Color.Unspecified,
+    val menuColor: Color = Color.Unspecified,
+    val overlayAlpha: Float = 1f,
+)
 
 internal data class LauncherThemeColorOverrides(
     val dock: Color? = null,
     val label: Color? = null,
     val labelBackground: Color? = null,
 )
+
+internal fun launcherThemeSurfaceTokens(
+    themePreset: LauncherThemePreset,
+    colorScheme: ColorScheme,
+): LauncherThemeSurfaceTokens {
+    val overlayAlpha =
+        when (themePreset) {
+            LauncherThemePreset.GLASS -> 0.78f
+            else -> 1f
+        }
+    return LauncherThemeSurfaceTokens(
+        panelColor = colorScheme.surface.copy(alpha = overlayAlpha),
+        menuColor = colorScheme.surfaceContainerHigh.copy(alpha = overlayAlpha),
+        overlayAlpha = overlayAlpha,
+    )
+}
+
+@Composable
+internal fun launcherPanelSurfaceColor(): Color {
+    val color = LocalLauncherThemeSurfaceTokens.current.panelColor
+    return if (color == Color.Unspecified) MaterialTheme.colorScheme.surface else color
+}
+
+@Composable
+internal fun launcherMenuSurfaceColor(): Color {
+    val color = LocalLauncherThemeSurfaceTokens.current.menuColor
+    return if (color == Color.Unspecified) MaterialTheme.colorScheme.surfaceContainerHigh else color
+}
 
 internal fun launcherCardShape(
     themePreset: LauncherThemePreset,

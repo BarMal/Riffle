@@ -124,6 +124,23 @@ class WidgetPickerSurfaceTest {
     }
 
     @Test
+    fun widgetPickerAddMenuUsesTheSharedLauncherOverlay() {
+        composeRule.setContent {
+            RiffleLauncherTheme(
+                themePreset = com.riffle.core.domain.launcher.settings.LauncherThemePreset.GLASS,
+            ) {
+                WidgetPickerSurface(
+                    providers = listOf(widgetProvider()),
+                    onAction = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("Add Clock").performClick()
+        composeRule.onNodeWithTag(RIFFLE_CONTEXT_MENU_TEST_TAG).assertIsDisplayed()
+    }
+
+    @Test
     fun accessiblePlacementCanBeCancelledWithoutEmittingAnAddRequest() {
         var cancelled = false
         val emittedActions = mutableListOf<LauncherShellAction>()
