@@ -201,7 +201,7 @@ class TimeScapeCardSurfaceTest {
             }
         }
 
-        composeRule.onNodeWithText("Nothing new").assertIsDisplayed()
+        composeRule.onNodeWithText("Stage ready").assertIsDisplayed()
         composeRule.onNodeWithText("Open ${app.label}").performClick()
         assertEquals(LauncherShellAction.LaunchApp(app.identity), actions.single())
     }

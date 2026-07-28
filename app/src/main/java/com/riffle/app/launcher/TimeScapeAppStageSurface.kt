@@ -466,7 +466,15 @@ private fun TimeScapeStageContent(
     }
     when {
         stage.content.isEmpty() ->
-            TimeScapeEmptyStage(stage, shellState, detailState, showDetailInline, onAction, modifier)
+            TimeScapeEmptyStage(
+                stage = stage,
+                shellState = shellState,
+                detailState = detailState,
+                showDetailInline = showDetailInline,
+                notificationAccessStatus = state.notificationAccessStatus,
+                onAction = onAction,
+                modifier = modifier,
+            )
         else ->
             TimeScapeNotificationStack(
                 stage = stage,
@@ -800,6 +808,7 @@ private fun TimeScapeEmptyStage(
     shellState: com.riffle.app.launcher.notifications.AppStageShellState,
     detailState: TimeScapeCardDetailState,
     showDetailInline: Boolean,
+    notificationAccessStatus: NotificationAccessStatus,
     onAction: (LauncherShellAction) -> Unit,
     modifier: Modifier,
 ) {
@@ -828,8 +837,27 @@ private fun TimeScapeEmptyStage(
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
+        if (notificationAccessStatus != NotificationAccessStatus.GRANTED) {
+            Text(
+                text = notificationAccessStatus.timeScapeAccessMessage,
+                modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+                style = MaterialTheme.typography.bodyLarge,
+            )
+            if (
+                notificationAccessStatus == NotificationAccessStatus.NOT_GRANTED ||
+                notificationAccessStatus == NotificationAccessStatus.REVOKED
+            ) {
+                TextButton(onClick = { onAction(LauncherShellAction.RequestNotificationAccess) }) {
+                    Text("Allow access")
+                }
+            }
+        }
         Text(
-            if (stage.lifecycle.name == "PROFILE_LOCKED") "Profile unavailable" else "Nothing new",
+            when {
+                stage.lifecycle.name == "PROFILE_LOCKED" -> "Profile unavailable"
+                notificationAccessStatus == NotificationAccessStatus.GRANTED -> "Nothing new"
+                else -> "Stage ready"
+            },
             style = MaterialTheme.typography.titleMedium,
         )
         Text("This stage stays available so you can return to it.", style = MaterialTheme.typography.bodyMedium)
@@ -888,20 +916,13 @@ private fun TimeScapeUnavailableState(
     onAction: (LauncherShellAction) -> Unit,
     modifier: Modifier,
 ) {
-    val message =
-        when (access) {
-            NotificationAccessStatus.GRANTED -> "No active stages yet. New notifications will appear here."
-            NotificationAccessStatus.NOT_GRANTED -> "Allow notification access to show your app stages."
-            NotificationAccessStatus.REVOKED -> "Notification access was revoked. Restore access to update stages."
-            NotificationAccessStatus.UNKNOWN -> "Checking notification access."
-        }
     Column(
         modifier = modifier.fillMaxWidth().padding(24.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(
-            text = message,
+            text = access.timeScapeAccessMessage,
             modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
             style = MaterialTheme.typography.bodyLarge,
         )
@@ -945,6 +966,15 @@ private fun TimeScapeUnavailableState(
         }
     }
 }
+
+private val NotificationAccessStatus.timeScapeAccessMessage: String
+    get() =
+        when (this) {
+            NotificationAccessStatus.GRANTED -> "No active stages yet. New notifications will appear here."
+            NotificationAccessStatus.NOT_GRANTED -> "Allow notification access to show your app stages."
+            NotificationAccessStatus.REVOKED -> "Notification access was revoked. Restore access to update stages."
+            NotificationAccessStatus.UNKNOWN -> "Checking notification access."
+        }
 
 private data class TimeScapeDetailOrigin(
     val stageId: AppStageId,
