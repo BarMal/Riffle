@@ -14,6 +14,7 @@ import java.io.ByteArrayInputStream
 import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
+import java.nio.charset.Charset
 
 class AndroidFeedTransportTest {
     @Test
@@ -47,6 +48,30 @@ class AndroidFeedTransportTest {
             transport(connection).fetch(request()),
         )
         assertTrue(!connection.inputStreamRequested)
+    }
+
+    @Test
+    fun decodesHttpAndXmlDeclaredCharacterEncodings() {
+        val httpXml = "<rss><channel><title>café</title></channel></rss>"
+        val httpConnection =
+            FakeHttpURLConnection(URL("https://example.com/feed")).apply {
+                status = 200
+                body = httpXml.toByteArray(Charset.forName("ISO-8859-1"))
+                contentTypeHeader = "application/rss+xml; charset=ISO-8859-1"
+            }
+        assertTrue(
+            (transport(httpConnection).fetch(request()) as FeedTransportResult.Content).body.contains("café"),
+        )
+
+        val xmlBody = "<?xml version=\"1.0\" encoding=\"ISO-8859-1\"?><rss><channel><title>café</title></channel></rss>"
+        val xmlConnection =
+            FakeHttpURLConnection(URL("https://example.com/feed")).apply {
+                status = 200
+                body = xmlBody.toByteArray(Charset.forName("ISO-8859-1"))
+            }
+        assertTrue(
+            (transport(xmlConnection).fetch(request()) as FeedTransportResult.Content).body.contains("café"),
+        )
     }
 
     @Test
@@ -130,6 +155,7 @@ class AndroidFeedTransportTest {
         var responseFailure: IOException? = null
         val headers = mutableMapOf<String, String>()
         val sentProperties = mutableMapOf<String, String>()
+        var contentTypeHeader: String? = null
         var inputStreamRequested = false
 
         override fun connect() = Unit
@@ -144,6 +170,8 @@ class AndroidFeedTransportTest {
         }
 
         override fun getHeaderField(name: String): String? = headers[name]
+
+        override fun getContentType(): String? = contentTypeHeader
 
         override fun setRequestProperty(
             key: String,

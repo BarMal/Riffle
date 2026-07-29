@@ -13,6 +13,9 @@ import java.net.SocketTimeoutException
 import java.net.URI
 import java.net.URL
 import java.net.URLConnection
+import java.nio.charset.Charset
+import java.nio.charset.StandardCharsets
+import kotlin.math.min
 
 private const val MAX_REDIRECTS = 5
 private const val MAX_RESPONSE_BYTES = 1_048_576
@@ -31,7 +34,7 @@ class AndroidFeedTransport(
         require(readTimeoutMillis > 0) { "Read timeout must be positive." }
     }
 
-    @Suppress("NestedBlockDepth", "ReturnCount")
+    @Suppress("CyclomaticComplexMethod", "NestedBlockDepth", "ReturnCount")
     override fun fetch(request: FeedFetchRequest): FeedTransportResult {
         var currentUrl = request.configuration.url.value
         var redirectCount = 0
@@ -75,9 +78,12 @@ class AndroidFeedTransport(
                 if (status !in 200..299) {
                     return FeedTransportResult.Failure(FeedSourceError.HTTP)
                 }
-                val body =
+                val bytes =
                     connection.readBoundedBody(maxResponseBytes)
                         ?: return FeedTransportResult.Failure(FeedSourceError.RESPONSE_TOO_LARGE)
+                val body =
+                    decodeFeedBody(bytes, connection.contentType)
+                        ?: return FeedTransportResult.Failure(FeedSourceError.INVALID_ENCODING)
                 return FeedTransportResult.Content(body, validators)
             } catch (_: SocketTimeoutException) {
                 return FeedTransportResult.Failure(FeedSourceError.TIMEOUT)
@@ -110,7 +116,7 @@ private fun HttpURLConnection.feedValidators(): FeedValidators =
         lastModified = getHeaderField("Last-Modified"),
     )
 
-private fun HttpURLConnection.readBoundedBody(maxBytes: Int): String? {
+private fun HttpURLConnection.readBoundedBody(maxBytes: Int): ByteArray? {
     val output = ByteArrayOutputStream(minOf(maxBytes, 8192))
     inputStream.use { input ->
         val buffer = ByteArray(8192)
@@ -121,5 +127,43 @@ private fun HttpURLConnection.readBoundedBody(maxBytes: Int): String? {
             output.write(buffer, 0, count)
         }
     }
-    return output.toByteArray().toString(Charsets.UTF_8)
+    return output.toByteArray()
 }
+
+private fun decodeFeedBody(
+    bytes: ByteArray,
+    contentType: String?,
+): String? =
+    runCatching {
+        val charset =
+            declaredHttpCharset(contentType)
+                ?: declaredXmlCharset(bytes)
+                ?: bomCharset(bytes)
+                ?: StandardCharsets.UTF_8
+        String(bytes, charset)
+    }.getOrNull()
+
+private fun declaredHttpCharset(contentType: String?): Charset? =
+    contentType
+        ?.let { value -> HTTP_CHARSET_PATTERN.find(value)?.groupValues?.get(1) }
+        ?.let { value -> Charset.forName(value) }
+
+private fun declaredXmlCharset(bytes: ByteArray): Charset? =
+    String(bytes, 0, min(bytes.size, XML_DECLARATION_SCAN_BYTES), StandardCharsets.US_ASCII)
+        .let { prefix -> XML_CHARSET_PATTERN.find(prefix)?.groupValues?.get(1) }
+        ?.let { value -> Charset.forName(value) }
+
+private fun bomCharset(bytes: ByteArray): Charset? =
+    when {
+        bytes.startsWith(byteArrayOf(0xFE.toByte(), 0xFF.toByte())) -> StandardCharsets.UTF_16
+        bytes.startsWith(byteArrayOf(0xFF.toByte(), 0xFE.toByte())) -> StandardCharsets.UTF_16
+        bytes.startsWith(byteArrayOf(0xEF.toByte(), 0xBB.toByte(), 0xBF.toByte())) -> StandardCharsets.UTF_8
+        else -> null
+    }
+
+private fun ByteArray.startsWith(prefix: ByteArray): Boolean =
+    size >= prefix.size && prefix.indices.all { index -> this[index] == prefix[index] }
+
+private const val XML_DECLARATION_SCAN_BYTES = 512
+private val HTTP_CHARSET_PATTERN = Regex("charset\\s*=\\s*[\\\"']?([^;\\s\\\"']+)", RegexOption.IGNORE_CASE)
+private val XML_CHARSET_PATTERN = Regex("encoding\\s*=\\s*[\\\"']([^\\\"']+)[\\\"']", RegexOption.IGNORE_CASE)

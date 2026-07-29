@@ -176,14 +176,19 @@ class AndroidFeedParser : FeedParser {
         maxLength: Int,
     ): String? {
         val output = StringBuilder()
+        var depth = 1
         var event = parser.next()
-        while (event != XmlPullParser.END_TAG && event != XmlPullParser.END_DOCUMENT) {
-            if (event == XmlPullParser.TEXT || event == XmlPullParser.CDSECT) {
-                if (output.length + parser.text.length > maxLength) {
-                    skipElementRemainder(parser)
-                    return null
+        while (depth > 0 && event != XmlPullParser.END_DOCUMENT) {
+            when (event) {
+                XmlPullParser.START_TAG -> depth += 1
+                XmlPullParser.END_TAG -> depth -= 1
+                XmlPullParser.TEXT, XmlPullParser.CDSECT -> {
+                    if (output.length + parser.text.length > maxLength) {
+                        skipElementRemainder(parser, depth)
+                        return null
+                    }
+                    output.append(parser.text)
                 }
-                output.append(parser.text)
             }
             event = parser.next()
         }
@@ -195,8 +200,11 @@ class AndroidFeedParser : FeedParser {
         skipElementRemainder(parser)
     }
 
-    private fun skipElementRemainder(parser: XmlPullParser) {
-        var depth = 1
+    private fun skipElementRemainder(
+        parser: XmlPullParser,
+        initialDepth: Int = 1,
+    ) {
+        var depth = initialDepth
         while (depth > 0) {
             when (parser.next()) {
                 XmlPullParser.START_TAG -> depth += 1

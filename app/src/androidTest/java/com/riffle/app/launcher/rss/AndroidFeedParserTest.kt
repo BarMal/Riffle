@@ -41,6 +41,31 @@ class AndroidFeedParserTest {
     }
 
     @Test
+    fun preservesFieldsAfterNestedAtomXhtmlAndRssMarkup() {
+        val atom =
+            parser.parse(
+                """
+                <feed xmlns="http://www.w3.org/2005/Atom">
+                  <title type="xhtml"><div xmlns="http://www.w3.org/1999/xhtml">Atom <b>News</b> Feed</div></title>
+                  <entry><id>atom-1</id><title>Entry</title><summary type="xhtml"><div><p>First</p><p>Second</p></div></summary><author><name>Ada</name></author></entry>
+                </feed>
+                """.trimIndent(),
+            ).getOrThrow()
+        assertEquals("Atom News Feed", atom.title)
+        assertEquals("Ada", atom.items.single().author)
+        assertEquals("FirstSecond", atom.items.single().summary)
+
+        val rss =
+            parser.parse(
+                """
+                <rss><channel><title>RSS</title><item><guid>rss-1</guid><title>Entry</title><description><div>First <b>part</b></div> second</description><author>Ada</author></item></channel></rss>
+                """.trimIndent(),
+            ).getOrThrow()
+        assertEquals("Ada", rss.items.single().author)
+        assertEquals("First part second", rss.items.single().summary)
+    }
+
+    @Test
     fun skipsEntriesAfterInputCapAndOversizedText() {
         val entries =
             buildString {
@@ -56,5 +81,11 @@ class AndroidFeedParserTest {
 
         val oversized = parser.parse("<rss><channel><item><title>${"x".repeat(257)}</title></item></channel></rss>").getOrThrow()
         assertTrue(oversized.items.isEmpty())
+
+        val oversizedNested =
+            parser.parse(
+                "<feed><title><div>${"x".repeat(257)}</div></title><entry><id>kept</id><title>Kept</title></entry></feed>",
+            ).getOrThrow()
+        assertEquals("Kept", oversizedNested.items.single().title)
     }
 }

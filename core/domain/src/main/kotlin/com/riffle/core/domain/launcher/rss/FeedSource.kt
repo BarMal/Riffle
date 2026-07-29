@@ -22,6 +22,7 @@ enum class FeedSourceError {
     REDIRECT_LIMIT,
     TIMEOUT,
     RESPONSE_TOO_LARGE,
+    INVALID_ENCODING,
     NETWORK,
     HTTP,
 }
