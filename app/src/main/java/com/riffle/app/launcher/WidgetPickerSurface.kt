@@ -404,8 +404,13 @@ private fun WidgetProviderPreview(
                 maxWidth = maxWidth,
                 preferredAspectRatio = provider.widgetPickerPreviewAspectRatio(),
             )
+        val previewIsConstrained =
+            widgetPickerPreviewIsConstrained(
+                maxWidth = maxWidth,
+                preferredAspectRatio = provider.widgetPickerPreviewAspectRatio(),
+            )
 
-        if (preview != null) {
+        if (preview != null && !previewIsConstrained) {
             Image(
                 bitmap = preview,
                 contentDescription = "${provider.label} widget preview",
@@ -416,6 +421,7 @@ private fun WidgetProviderPreview(
             WidgetProviderPreviewFallback(
                 provider = provider,
                 previewSize = previewSize,
+                isConstrained = previewIsConstrained,
             )
         }
     }
@@ -445,6 +451,7 @@ private fun rememberWidgetPreview(
 private fun WidgetProviderPreviewFallback(
     provider: InstalledWidgetProvider,
     previewSize: DpSize,
+    isConstrained: Boolean,
 ) {
     Box(
         modifier =
@@ -454,7 +461,12 @@ private fun WidgetProviderPreviewFallback(
         contentAlignment = Alignment.Center,
     ) {
         Text(
-            text = provider.widgetPickerPreviewLabel(),
+            text =
+                if (isConstrained) {
+                    "Preview ratio unavailable"
+                } else {
+                    provider.widgetPickerPreviewLabel()
+                },
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.onSecondaryContainer,
         )
@@ -474,11 +486,29 @@ internal fun widgetPickerPreviewSize(
     val aspectRatio = preferredAspectRatio.takeIf { it.isFinite() && it > 0f } ?: 1f
     val width = maxWidth
     val height = width / aspectRatio
+    if (widgetPickerPreviewIsConstrained(maxWidth, aspectRatio, maxHeight)) {
+        return DpSize(
+            width = width.coerceAtMost(WIDGET_PREVIEW_CONSTRAINED_WIDTH_DP.dp),
+            height = maxHeight.coerceAtMost(WIDGET_PREVIEW_CONSTRAINED_HEIGHT_DP.dp),
+        )
+    }
     return if (height <= maxHeight) {
         DpSize(width = width, height = height)
     } else {
         DpSize(width = maxHeight * aspectRatio, height = maxHeight)
     }
+}
+
+internal fun widgetPickerPreviewIsConstrained(
+    maxWidth: Dp,
+    preferredAspectRatio: Float,
+    maxHeight: Dp = WIDGET_PREVIEW_MAX_HEIGHT_DP.dp,
+    minimumDimension: Dp = WIDGET_PREVIEW_MIN_LEGIBLE_DIMENSION_DP.dp,
+): Boolean {
+    val aspectRatio = preferredAspectRatio.takeIf { it.isFinite() && it > 0f } ?: 1f
+    val naturalHeight = maxWidth / aspectRatio
+    val naturalWidth = if (naturalHeight <= maxHeight) maxWidth else maxHeight * aspectRatio
+    return naturalWidth < minimumDimension || naturalHeight < minimumDimension
 }
 
 internal fun InstalledWidgetProvider.requestAddWidgetAction(
@@ -499,6 +529,9 @@ private const val WIDGET_PICKER_MAX_WIDTH_DP = 840
 private const val WIDGET_TILE_MIN_WIDTH_DP = 220
 private const val WIDGET_PICKER_SURFACE_ALPHA = 0.88f
 private const val WIDGET_PREVIEW_MAX_HEIGHT_DP = 240
+private const val WIDGET_PREVIEW_MIN_LEGIBLE_DIMENSION_DP = 48
+private const val WIDGET_PREVIEW_CONSTRAINED_WIDTH_DP = 180
+private const val WIDGET_PREVIEW_CONSTRAINED_HEIGHT_DP = 96
 internal const val WIDGET_PICKER_PREVIEW_TEST_TAG = "widget-picker-preview"
 internal const val WIDGET_PICKER_ROOT_TEST_TAG = "widget-picker-root"
 internal const val WIDGET_PICKER_PANEL_TEST_TAG = "widget-picker-panel"

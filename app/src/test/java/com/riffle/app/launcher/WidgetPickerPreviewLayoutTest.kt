@@ -7,6 +7,7 @@ import com.riffle.core.domain.launcher.widgets.WidgetProviderClassName
 import com.riffle.core.domain.launcher.widgets.WidgetProviderDimensions
 import com.riffle.core.domain.launcher.widgets.WidgetProviderIdentity
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class WidgetPickerPreviewLayoutTest {
@@ -41,15 +42,33 @@ class WidgetPickerPreviewLayoutTest {
     @Test
     fun previewSizePreservesExtremeProviderShapesWithinTheHeightBound() {
         assertEquals(
-            300.dp to 37.5.dp,
-            widgetPickerPreviewSize(maxWidth = 300.dp, preferredAspectRatio = 8f).let { it.width to it.height },
+            300.dp to 75.dp,
+            widgetPickerPreviewSize(maxWidth = 300.dp, preferredAspectRatio = 4f).let { it.width to it.height },
         )
         assertEquals(
-            30.dp to 240.dp,
+            180.dp to 96.dp,
             widgetPickerPreviewSize(maxWidth = 300.dp, preferredAspectRatio = 0.125f).let {
                 it.width to it.height
             },
         )
+    }
+
+    @Test
+    fun previewSizeUsesALegibleConstrainedStateForExtremeProviderRatios() {
+        assertEquals(
+            180.dp to 96.dp,
+            widgetPickerPreviewSize(maxWidth = 300.dp, preferredAspectRatio = 0.0001f).let {
+                it.width to it.height
+            },
+        )
+        assertEquals(
+            180.dp to 96.dp,
+            widgetPickerPreviewSize(maxWidth = 300.dp, preferredAspectRatio = 10_000f).let {
+                it.width to it.height
+            },
+        )
+        assertTrue(widgetPickerPreviewIsConstrained(maxWidth = 300.dp, preferredAspectRatio = 0.0001f))
+        assertTrue(widgetPickerPreviewIsConstrained(maxWidth = 300.dp, preferredAspectRatio = 10_000f))
     }
 
     @Test
