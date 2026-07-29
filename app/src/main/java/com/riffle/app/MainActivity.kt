@@ -60,6 +60,8 @@ import com.riffle.app.launcher.widgets.WidgetBindPermissionResult
 import com.riffle.app.launcher.widgets.WidgetConfigurationResult
 import com.riffle.core.domain.launcher.FirstRunStatus
 import com.riffle.core.domain.launcher.HomeRoleStatus
+import com.riffle.core.domain.launcher.apps.AppPackageName
+import com.riffle.core.domain.launcher.apps.AppProfile
 import com.riffle.core.domain.launcher.cards.TimeScapeWindowLayout
 import com.riffle.core.domain.launcher.home.HostedWidgetId
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
@@ -109,11 +111,13 @@ class MainActivity : ComponentActivity() {
     private val appIconLoader get() = dependencies.appIconLoader
     private val packageChangeObserver by lazy {
         dependencies.packageChangeObserver { change ->
-            when (change) {
-                AppCatalogChange.Refresh -> shellViewModel.refreshInstalledApps()
-                is AppCatalogChange.PackageRemoved ->
-                    shellViewModel.onConfirmedPackageRemoved(change.packageName, change.profile)
-            }
+            handleAppCatalogChange(
+                change = change,
+                invalidateWidgetPreviews = dependencies.widgetPreviewImageLoader::invalidatePreviews,
+                refreshInstalledApps = { shellViewModel.refreshInstalledApps() },
+                refreshWidgetProviders = { shellViewModel.refreshWidgetProviders() },
+                onConfirmedPackageRemoved = shellViewModel::onConfirmedPackageRemoved,
+            )
         }
     }
     private val wallpaperController get() = dependencies.wallpaperController
@@ -608,6 +612,21 @@ internal fun <Value> startupPlatformValueOrNull(read: () -> Value?): Value? =
     }
 
 internal fun <Value> startupPlatformFlow(read: () -> Flow<Value>): Flow<Value> = flow { emitAll(read()) }.catch { }
+
+internal fun handleAppCatalogChange(
+    change: AppCatalogChange,
+    invalidateWidgetPreviews: () -> Unit,
+    refreshInstalledApps: () -> Unit,
+    refreshWidgetProviders: () -> Unit,
+    onConfirmedPackageRemoved: (AppPackageName, AppProfile) -> Unit,
+) {
+    invalidateWidgetPreviews()
+    when (change) {
+        AppCatalogChange.Refresh -> refreshInstalledApps()
+        is AppCatalogChange.PackageRemoved -> onConfirmedPackageRemoved(change.packageName, change.profile)
+    }
+    refreshWidgetProviders()
+}
 
 private fun String.launcherBuildTypeLabel(): String =
     when {

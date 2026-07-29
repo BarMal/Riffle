@@ -29,8 +29,12 @@ class AndroidWidgetPreviewImageLoader(
 ) : WidgetPreviewImageLoader {
     private val previewCache = WidgetPreviewCache<ImageBitmap>()
 
+    override val previewRevision: Long
+        get() = previewCache.revision
+
     override suspend fun previewFor(identity: WidgetProviderIdentity): ImageBitmap? {
         previewCache[identity]?.let { return it }
+        val expectedRevision = previewCache.revision
         val preview =
             try {
                 loadPreview(identity)
@@ -39,12 +43,17 @@ class AndroidWidgetPreviewImageLoader(
             } catch (_: RuntimeException) {
                 null
             }
-        preview?.let { previewCache[identity] = it }
-        return preview
+        return preview?.takeIf {
+            previewCache.putIfRevision(identity, it, expectedRevision)
+        }
     }
 
     override fun cachedPreviewFor(identity: WidgetProviderIdentity): ImageBitmap? {
         return previewCache[identity]
+    }
+
+    override fun invalidatePreviews() {
+        previewCache.invalidate()
     }
 
     private suspend fun loadPreview(identity: WidgetProviderIdentity): ImageBitmap? {
@@ -130,6 +139,7 @@ internal class WidgetPreviewCache<T>(
     private val maxEntries: Int = MAX_PREVIEW_CACHE_ENTRIES,
 ) {
     private val lock = Any()
+    private var currentRevision = 0L
     private val previews =
         object : LinkedHashMap<WidgetProviderIdentity, T>(maxEntries.coerceAtLeast(1), 0.75f, true) {
             override fun removeEldestEntry(eldest: MutableMap.MutableEntry<WidgetProviderIdentity, T>?): Boolean =
@@ -149,6 +159,30 @@ internal class WidgetPreviewCache<T>(
             previews[identity] = preview
         }
     }
+
+    fun putIfRevision(
+        identity: WidgetProviderIdentity,
+        preview: T,
+        expectedRevision: Long,
+    ): Boolean =
+        synchronized(lock) {
+            if (expectedRevision == currentRevision) {
+                previews[identity] = preview
+                true
+            } else {
+                false
+            }
+        }
+
+    fun invalidate() {
+        synchronized(lock) {
+            previews.clear()
+            currentRevision += 1
+        }
+    }
+
+    val revision: Long
+        get() = synchronized(lock) { currentRevision }
 
     internal val size: Int
         get() = synchronized(lock) { previews.size }
