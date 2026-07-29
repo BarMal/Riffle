@@ -9,7 +9,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
-import androidx.compose.ui.test.performScrollToKey
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -61,7 +60,17 @@ class PageOverviewReorderInteractionTest {
     }
 
     private fun scrollToPageOverviewCard(pageId: String) {
-        composeRule.onNodeWithTag(PAGE_OVERVIEW_STRIP_TEST_TAG).performScrollToKey(pageId)
+        repeat(8) {
+            composeRule.onNodeWithTag(PAGE_OVERVIEW_STRIP_TEST_TAG).performTouchInput {
+                down(center)
+                moveBy(Offset(x = -width.toFloat(), y = 0f))
+                up()
+            }
+            // Let LazyRow finish applying each gesture before dispatching the next one. Without
+            // this boundary, rapid test input can overlap the previous layout observation.
+            composeRule.waitForIdle()
+        }
+
         composeRule.onNodeWithTag(pageOverviewCardTestTag(pageId)).assertIsDisplayed()
     }
 

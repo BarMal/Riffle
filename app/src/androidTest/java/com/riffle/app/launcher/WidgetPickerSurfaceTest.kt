@@ -21,6 +21,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.requestFocus
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -162,32 +163,37 @@ class WidgetPickerSurfaceTest {
     @Test
     fun accessiblePlacementTakesFocusAndRestoresItToTheSourceAddControl() {
         val provider = widgetProvider()
-        var placement: WidgetPickerAccessiblePlacement? by mutableStateOf(
-            WidgetPickerAccessiblePlacement(
-                provider = provider,
-                target = WidgetAddTarget.HOME,
-                initialPageId = LauncherPageId("home"),
-                candidates =
-                    listOf(
-                        WidgetPickerPlacementCandidate(
-                            pageId = LauncherPageId("home"),
-                            cell = GridCell(column = 0, row = 0),
-                            span = GridSpan(columns = 2, rows = 1),
-                        ),
-                    ),
-            ),
-        )
+        var placement: WidgetPickerAccessiblePlacement? by mutableStateOf(null)
         composeRule.setContent {
             MaterialTheme {
                 WidgetPickerSurface(
                     providers = listOf(provider),
                     accessiblePlacement = placement,
+                    onAccessiblePlacementRequested = { requestedProvider, target ->
+                        placement =
+                            WidgetPickerAccessiblePlacement(
+                                provider = requestedProvider,
+                                target = target,
+                                initialPageId = LauncherPageId("home"),
+                                candidates =
+                                    listOf(
+                                        WidgetPickerPlacementCandidate(
+                                            pageId = LauncherPageId("home"),
+                                            cell = GridCell(column = 0, row = 0),
+                                            span = GridSpan(columns = 2, rows = 1),
+                                        ),
+                                    ),
+                            )
+                    },
                     onAccessiblePlacementCancelled = { placement = null },
                     onAction = {},
                 )
             }
         }
 
+        composeRule.onNodeWithText("Add Clock").requestFocus()
+        composeRule.onNodeWithText("Add Clock").performClick()
+        composeRule.onNodeWithText("Choose Home position").performClick()
         composeRule.onNodeWithText("Cancel").assertIsFocused()
         composeRule.onNodeWithText("Cancel").performClick()
         composeRule.onNodeWithText("Add Clock").assertIsFocused()

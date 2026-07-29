@@ -102,15 +102,7 @@ fun WidgetPickerSurface(
     val providerSections = widgetPickerSectionsFor(filteredProviders, profileContentVisibility)
     var rootCoordinates: LayoutCoordinates? by remember { mutableStateOf(null) }
     val providerFocusRequesters = remember { mutableMapOf<String, FocusRequester>() }
-    val placementProviderKey = accessiblePlacement?.provider?.widgetPickerKey
-    var previousPlacementProviderKey by remember { mutableStateOf(placementProviderKey) }
     var pendingProviderFocusKey by remember { mutableStateOf<String?>(null) }
-    LaunchedEffect(placementProviderKey) {
-        if (placementProviderKey == null) {
-            pendingProviderFocusKey = previousPlacementProviderKey
-        }
-        previousPlacementProviderKey = placementProviderKey
-    }
 
     Box(
         modifier =
@@ -220,9 +212,13 @@ fun WidgetPickerSurface(
                         onWidgetDragMoved = onWidgetDragMoved,
                         onWidgetDragCancelled = onWidgetDragCancelled,
                         onWidgetDropped = onWidgetDropped,
-                        onAccessiblePlacementRequested = onAccessiblePlacementRequested,
+                        onAccessiblePlacementRequested = { provider, target ->
+                            pendingProviderFocusKey = provider.widgetPickerKey
+                            onAccessiblePlacementRequested(provider, target)
+                        },
                         providerFocusRequesters = providerFocusRequesters,
-                        pendingProviderFocusKey = pendingProviderFocusKey,
+                        pendingProviderFocusKey =
+                            pendingProviderFocusKey.takeIf { accessiblePlacement == null },
                         onProviderFocusRestored = { pendingProviderFocusKey = null },
                         rootCoordinates = rootCoordinates,
                         onRetryRequested = onRetryRequested,
