@@ -120,7 +120,7 @@ fun WidgetPickerSurface(
                 .windowInsetsPadding(WindowInsets.safeDrawing),
         contentAlignment = Alignment.Center,
     ) {
-        Box(
+        BoxWithConstraints(
             modifier =
                 Modifier
                     .widthIn(max = WIDGET_PICKER_MAX_WIDTH_DP.dp)
@@ -128,6 +128,9 @@ fun WidgetPickerSurface(
                     .fillMaxHeight()
                     .padding(WIDGET_PICKER_PANEL_MARGIN_DP.dp),
         ) {
+            val panelPadding = widgetPickerPanelPadding(maxWidth)
+            val tileMinWidth = widgetPickerTileMinWidth(maxWidth)
+
             Surface(
                 modifier =
                     Modifier
@@ -138,23 +141,23 @@ fun WidgetPickerSurface(
                     if (isDragHandoffActive) {
                         androidx.compose.ui.graphics.Color.Transparent
                     } else {
-                        MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = WIDGET_PICKER_SURFACE_ALPHA)
+                        MaterialTheme.colorScheme.surface.copy(alpha = WIDGET_PICKER_SURFACE_ALPHA)
                     },
                 contentColor = MaterialTheme.colorScheme.onSurface,
                 border =
                     if (isDragHandoffActive) {
                         null
                     } else {
-                        BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.56f))
+                        BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.48f))
                     },
-                tonalElevation = if (isDragHandoffActive) 0.dp else 6.dp,
+                tonalElevation = 0.dp,
             ) {
                 Column(
                     modifier =
                         Modifier
                             .fillMaxSize()
                             .alpha(if (isDragHandoffActive) 0f else 1f)
-                            .padding(WIDGET_PICKER_SCREEN_PADDING_DP.dp),
+                            .padding(panelPadding),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
                     Row(
@@ -226,6 +229,7 @@ fun WidgetPickerSurface(
                         providerFocusRequesters = providerFocusRequesters,
                         rootCoordinates = rootCoordinates,
                         onRetryRequested = onRetryRequested,
+                        tileMinWidth = tileMinWidth,
                         modifier = Modifier.weight(1f),
                     )
                 }
@@ -262,6 +266,7 @@ private fun WidgetPickerContent(
     providerFocusRequesters: MutableMap<String, FocusRequester>,
     rootCoordinates: LayoutCoordinates?,
     onRetryRequested: () -> Unit,
+    tileMinWidth: Dp,
     modifier: Modifier,
 ) {
     when {
@@ -280,7 +285,7 @@ private fun WidgetPickerContent(
         else ->
             LazyVerticalGrid(
                 modifier = modifier.fillMaxSize(),
-                columns = GridCells.Adaptive(WIDGET_TILE_MIN_WIDTH_DP.dp),
+                columns = GridCells.Adaptive(tileMinWidth),
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
                 verticalArrangement = Arrangement.spacedBy(18.dp),
             ) {
@@ -820,11 +825,9 @@ internal fun InstalledWidgetProvider.requestAddWidgetAction(
         target = target,
     )
 
-private const val WIDGET_PICKER_SCREEN_PADDING_DP = 20
 private const val WIDGET_PICKER_PANEL_MARGIN_DP = 12
-private const val WIDGET_PICKER_MAX_WIDTH_DP = 840
-private const val WIDGET_TILE_MIN_WIDTH_DP = 220
-private const val WIDGET_PICKER_SURFACE_ALPHA = 0.76f
+private const val WIDGET_PICKER_MAX_WIDTH_DP = 960
+private const val WIDGET_PICKER_SURFACE_ALPHA = 0.68f
 private const val WIDGET_PREVIEW_MAX_HEIGHT_DP = 240
 private const val WIDGET_PREVIEW_MIN_LEGIBLE_DIMENSION_DP = 48
 private const val WIDGET_PREVIEW_CONSTRAINED_WIDTH_DP = 180
@@ -835,6 +838,20 @@ internal const val WIDGET_PICKER_PANEL_TEST_TAG = "widget-picker-panel"
 internal const val WIDGET_PROVIDER_TILE_TEST_TAG = "widget-provider-tile"
 internal const val WIDGET_PICKER_ACCESSIBLE_PLACEMENT_TEST_TAG = "widget-picker-accessible-placement"
 private const val WIDGET_PICKER_SECTION_STATE_SEPARATOR = "\u001f"
+
+private fun widgetPickerPanelPadding(maxWidth: Dp): Dp =
+    when {
+        maxWidth < 480.dp -> 16.dp
+        maxWidth < 720.dp -> 20.dp
+        else -> 28.dp
+    }
+
+private fun widgetPickerTileMinWidth(maxWidth: Dp): Dp =
+    when {
+        maxWidth < 480.dp -> 164.dp
+        maxWidth < 720.dp -> 208.dp
+        else -> 260.dp
+    }
 
 private fun String.toCollapsedWidgetPickerSections(): Set<String> =
     split(WIDGET_PICKER_SECTION_STATE_SEPARATOR)
