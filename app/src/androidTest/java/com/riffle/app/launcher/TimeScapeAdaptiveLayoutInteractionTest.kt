@@ -20,6 +20,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.LauncherShellState
+import com.riffle.core.domain.launcher.cards.TimeScapePosture
 import com.riffle.core.domain.launcher.cards.TimeScapeWindowLayout
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import org.junit.Assert.assertTrue
@@ -79,7 +80,8 @@ class TimeScapeAdaptiveLayoutInteractionTest {
                     ) {
                         TimeScapeAppStageSurface(
                             state = LauncherShellState(notificationAccessStatus = NotificationAccessStatus.NOT_GRANTED),
-                            windowLayout = TimeScapeWindowLayout(widthDp, heightDp),
+                            windowLayout =
+                                TimeScapeWindowLayout(widthDp, heightDp, posture = TimeScapePosture.UNFOLDED),
                             onAction = {},
                         )
                     }
@@ -115,7 +117,12 @@ class TimeScapeAdaptiveLayoutInteractionTest {
                         TimeScapeAppStageSurface(
                             state = LauncherShellState(notificationAccessStatus = NotificationAccessStatus.NOT_GRANTED),
                             windowInsets = windowInsets,
-                            windowLayout = TimeScapeWindowLayout(widthDp = widthDp, heightDp = TEST_WINDOW_HEIGHT_DP),
+                            windowLayout =
+                                TimeScapeWindowLayout(
+                                    widthDp = widthDp,
+                                    heightDp = TEST_WINDOW_HEIGHT_DP,
+                                    posture = TimeScapePosture.UNFOLDED,
+                                ),
                             onAction = {},
                         )
                     }

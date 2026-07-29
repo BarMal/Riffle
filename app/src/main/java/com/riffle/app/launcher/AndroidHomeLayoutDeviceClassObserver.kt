@@ -91,7 +91,6 @@ internal class AndroidHomeLayoutDeviceClassObserver(
                     posture =
                         foldingFeatures.timeScapePosture(
                             hasFoldableHardware = hasFoldableHardware,
-                            configurationClass = configurationClass,
                         ),
                 ),
         )
@@ -107,10 +106,7 @@ internal class AndroidHomeLayoutDeviceClassObserver(
     }
 }
 
-private fun List<FoldingFeature>.timeScapePosture(
-    hasFoldableHardware: Boolean,
-    configurationClass: HomeLayoutDeviceClass?,
-): TimeScapePosture =
+private fun List<FoldingFeature>.timeScapePosture(hasFoldableHardware: Boolean): TimeScapePosture =
     when {
         any { feature ->
             feature.state == FoldingFeature.State.HALF_OPENED &&
@@ -119,11 +115,9 @@ private fun List<FoldingFeature>.timeScapePosture(
             TimeScapePosture.TABLETOP
         any { feature -> feature.state == FoldingFeature.State.HALF_OPENED } ->
             TimeScapePosture.PARTIALLY_FOLDED
-        any { feature -> feature.state == FoldingFeature.State.FLAT || feature.isSeparating } ->
+        any { feature -> feature.state == FoldingFeature.State.FLAT } ->
             TimeScapePosture.UNFOLDED
         isNotEmpty() -> TimeScapePosture.COMPACT
-        hasFoldableHardware && configurationClass != HomeLayoutDeviceClass.PHONE ->
-            TimeScapePosture.UNFOLDED
         hasFoldableHardware -> TimeScapePosture.COMPACT
         else -> TimeScapePosture.UNKNOWN
     }

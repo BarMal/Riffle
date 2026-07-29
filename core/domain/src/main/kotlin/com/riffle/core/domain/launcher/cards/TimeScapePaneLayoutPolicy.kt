@@ -86,10 +86,7 @@ class TimeScapePaneLayoutPolicy {
 
         // A half-open or tabletop device must remain a usable compact surface even when the
         // reported bounds are large. Stage Manager is reserved for a confirmed flat posture.
-        if (window.posture == TimeScapePosture.COMPACT ||
-            window.posture == TimeScapePosture.PARTIALLY_FOLDED ||
-            window.posture == TimeScapePosture.TABLETOP
-        ) {
+        if (window.posture.isCompactFallback()) {
             val useTrailingRegion = verticalHinge != null && trailingWidth > leadingWidth
             val compactWidth =
                 if (verticalHinge == null) {
@@ -224,3 +221,13 @@ class TimeScapePaneLayoutPolicy {
         const val DETAIL_WIDTH_DP = 360
     }
 }
+
+private fun TimeScapePosture.isCompactFallback(): Boolean =
+    when (this) {
+        TimeScapePosture.UNKNOWN,
+        TimeScapePosture.COMPACT,
+        TimeScapePosture.PARTIALLY_FOLDED,
+        TimeScapePosture.TABLETOP,
+        -> true
+        TimeScapePosture.UNFOLDED -> false
+    }

@@ -32,6 +32,13 @@ class TimeScapePaneLayoutPolicyTest {
     }
 
     @Test
+    fun unknownWideWindowRemainsCompactUntilPostureIsConfirmed() {
+        val layout = policy.layoutFor(TimeScapeWindowLayout(1_200, 900))
+
+        assertEquals(TimeScapePaneMode.COMPACT, layout.mode)
+    }
+
+    @Test
     fun foldedPostureKeepsCompactSurfaceOnOneSideOfVerticalHinge() {
         val layout =
             policy.layoutFor(
@@ -51,7 +58,10 @@ class TimeScapePaneLayoutPolicyTest {
 
     @Test
     fun expandedWindowShowsRailWithoutStretchingTheSpline() {
-        val layout = policy.layoutFor(TimeScapeWindowLayout(800, 900))
+        val layout =
+            policy.layoutFor(
+                TimeScapeWindowLayout(800, 900, posture = TimeScapePosture.UNFOLDED),
+            )
 
         assertEquals(TimeScapePaneMode.TWO_PANE, layout.mode)
         assertEquals(104, layout.railWidthDp)
@@ -60,7 +70,10 @@ class TimeScapePaneLayoutPolicyTest {
 
     @Test
     fun desktopWindowShowsSupportingDetailPane() {
-        val layout = policy.layoutFor(TimeScapeWindowLayout(1_300, 900))
+        val layout =
+            policy.layoutFor(
+                TimeScapeWindowLayout(1_300, 900, posture = TimeScapePosture.UNFOLDED),
+            )
 
         assertEquals(TimeScapePaneMode.THREE_PANE, layout.mode)
         assertEquals(360, layout.detailWidthDp)
@@ -78,6 +91,7 @@ class TimeScapePaneLayoutPolicyTest {
                     widthDp = 1_050,
                     heightDp = 800,
                     separatingHinges = listOf(TimeScapeHingeBounds(510, 0, 540, 800)),
+                    posture = TimeScapePosture.UNFOLDED,
                 ),
             )
 
@@ -98,6 +112,7 @@ class TimeScapePaneLayoutPolicyTest {
                     safeStartDp = 20,
                     safeEndDp = 30,
                     separatingHinges = listOf(TimeScapeHingeBounds(520, 0, 550, 800)),
+                    posture = TimeScapePosture.UNFOLDED,
                 ),
             )
 
@@ -117,6 +132,7 @@ class TimeScapePaneLayoutPolicyTest {
                     safeTopDp = 24,
                     safeBottomDp = 16,
                     separatingHinges = listOf(TimeScapeHingeBounds(0, 380, 800, 420)),
+                    posture = TimeScapePosture.UNFOLDED,
                 ),
             )
 

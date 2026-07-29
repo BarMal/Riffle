@@ -59,6 +59,7 @@ import com.riffle.core.domain.launcher.cards.AppStagePreferences
 import com.riffle.core.domain.launcher.cards.CardExpansionPhase
 import com.riffle.core.domain.launcher.cards.CardExpansionState
 import com.riffle.core.domain.launcher.cards.LauncherCardId
+import com.riffle.core.domain.launcher.cards.TimeScapePosture
 import com.riffle.core.domain.launcher.cards.TimeScapeWindowLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutKey
 import com.riffle.core.domain.launcher.home.LauncherViewMode
@@ -344,7 +345,7 @@ class TimeScapeCardSurfaceTest {
                     Box(modifier = Modifier.width(widthDp.dp).height(800.dp).clipToBounds()) {
                         TimeScapeAppStageSurface(
                             state = testState,
-                            windowLayout = TimeScapeWindowLayout(widthDp, 800),
+                            windowLayout = TimeScapeWindowLayout(widthDp, 800, posture = TimeScapePosture.UNFOLDED),
                             onAction = {},
                         )
                     }
@@ -559,7 +560,7 @@ class TimeScapeCardSurfaceTest {
                     Box(modifier = Modifier.width(widthDp.dp).height(800.dp).clipToBounds()) {
                         TimeScapeAppStageSurface(
                             state = emptyPinnedStageState(app),
-                            windowLayout = TimeScapeWindowLayout(widthDp, 800),
+                            windowLayout = TimeScapeWindowLayout(widthDp, 800, posture = TimeScapePosture.UNFOLDED),
                             onAction = {},
                         )
                     }
