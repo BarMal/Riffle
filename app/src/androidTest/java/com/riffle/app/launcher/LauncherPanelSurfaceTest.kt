@@ -28,7 +28,6 @@ class LauncherPanelSurfaceTest {
     @Test
     fun launcherPanelUsesSharedGlassSurfaceToken() {
         val wallpaper = Color.Red
-        val panel = Color.Blue
         composeRule.setContent {
             Box(modifier = Modifier.fillMaxSize().background(wallpaper)) {
                 RiffleLauncherTheme(
@@ -48,7 +47,11 @@ class LauncherPanelSurfaceTest {
 
         val image = composeRule.onRoot().captureToImage().toPixelMap()
         val actual = image[image.width / 2, image.height / 2]
-        val expected = panel.copy(alpha = 0.78f).compositeOver(wallpaper)
+        val expected =
+            launcherThemeSurfaceTokens(
+                themePreset = LauncherThemePreset.GLASS,
+                colorScheme = lightScheme.withThemeColors(LauncherThemeColors(backgroundArgb = 0xFF0000FF.toInt())),
+            ).panelColor.compositeOver(wallpaper)
 
         assertColorClose(expected, actual)
     }

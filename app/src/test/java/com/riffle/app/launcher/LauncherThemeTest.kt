@@ -165,13 +165,47 @@ class LauncherThemeTest {
     }
 
     @Test
-    fun translucentSurfaceChoosesReadableForegroundForDarkTransparentCustomColour() {
-        val customSurface = Color(0x00101010)
-        val foreground = translucentSurfaceContentColor(customSurface, overlayAlpha = 0.78f, fallback = Color.Black)
-        val renderedSurface = customSurface.copy(alpha = 0.78f).compositeOver(Color.Black)
+    fun glassSurfacesKeepSearchWidgetAndMenuContentReadableOverDarkAndLightWallpapers() {
+        val scheme = lightScheme.withThemeColors(LauncherThemeColors(backgroundArgb = 0xFF808080.toInt()))
+        val tokens = launcherThemeSurfaceTokens(LauncherThemePreset.GLASS, scheme)
+        val overlays =
+            listOf(
+                "search" to (tokens.panelColor to tokens.panelContentColor),
+                "widget" to (tokens.panelColor to tokens.panelContentColor),
+                "menu" to (tokens.menuColor to tokens.menuContentColor),
+            )
 
-        assertEquals(Color.White, foreground)
-        assertTrue(contrastRatio(foreground, renderedSurface) >= 4.5f)
+        overlays.forEach { (name, surfaceAndContent) ->
+            val (surface, content) = surfaceAndContent
+            listOf(Color.Black, Color.White).forEach { wallpaper ->
+                val renderedSurface = surface.compositeOver(wallpaper)
+                assertTrue(
+                    "$name content must contrast over $wallpaper",
+                    contrastRatio(content, renderedSurface) >= 4.5f,
+                )
+            }
+        }
+    }
+
+    @Test
+    fun reducedTransparencyUsesOpaqueSurfacesWithoutGlassScrims() {
+        val scheme = lightScheme.withThemeColors(LauncherThemeColors(backgroundArgb = 0xFF808080.toInt()))
+        val tokens = launcherThemeSurfaceTokens(LauncherThemePreset.GLASS, scheme, reducedTransparency = true)
+
+        assertEquals(scheme.surface, tokens.panelColor)
+        assertEquals(scheme.surfaceContainerHigh, tokens.menuColor)
+        assertEquals(Color.Black, tokens.panelContentColor)
+        assertEquals(Color.Black, tokens.menuContentColor)
+    }
+
+    @Test
+    fun wallpaperAwareGlassSurfaceAddsAScrimWhenForegroundAloneWouldFail() {
+        val customSurface = Color(0x00101010)
+        val surface = wallpaperAwareSurface(customSurface, overlayAlpha = 0.78f, fallback = Color.Black)
+        val renderedSurface = surface.color.compositeOver(Color.Black)
+
+        assertEquals(Color.White, surface.contentColor)
+        assertTrue(contrastRatio(surface.contentColor, renderedSurface) >= 4.5f)
     }
 
     @Test

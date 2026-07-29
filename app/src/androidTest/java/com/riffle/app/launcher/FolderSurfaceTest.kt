@@ -29,7 +29,6 @@ class FolderSurfaceTest {
     @Test
     fun folderSurfaceUsesTheSharedGlassPanelTreatment() {
         val wallpaper = Color.Red
-        val panel = Color.Blue
         composeRule.setContent {
             Box(modifier = Modifier.fillMaxSize().background(wallpaper)) {
                 RiffleLauncherTheme(
@@ -58,7 +57,11 @@ class FolderSurfaceTest {
         // transparent and shows the wallpaper. Sample the interior instead.
         val actual = image[image.width / 2, image.height / 2]
         val corner = image[0, 0]
-        val expected = panel.copy(alpha = 0.78f).compositeOver(wallpaper)
+        val expected =
+            launcherThemeSurfaceTokens(
+                themePreset = LauncherThemePreset.GLASS,
+                colorScheme = lightScheme.withThemeColors(LauncherThemeColors(backgroundArgb = 0xFF0000FF.toInt())),
+            ).panelColor.compositeOver(wallpaper)
 
         assertColorClose(expected, actual)
         assertColorClose(wallpaper, corner)

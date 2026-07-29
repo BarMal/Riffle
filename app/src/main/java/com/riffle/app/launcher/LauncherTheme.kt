@@ -109,16 +109,13 @@ internal fun launcherThemeSurfaceTokens(
         } else {
             1f
         }
+    val panelSurface = wallpaperAwareSurface(colorScheme.surface, overlayAlpha, colorScheme.onSurface)
+    val menuSurface = wallpaperAwareSurface(colorScheme.surfaceContainerHigh, overlayAlpha, colorScheme.onSurface)
     return LauncherThemeSurfaceTokens(
-        panelColor = colorScheme.surface.copy(alpha = overlayAlpha),
-        menuColor = colorScheme.surfaceContainerHigh.copy(alpha = overlayAlpha),
-        panelContentColor = translucentSurfaceContentColor(colorScheme.surface, overlayAlpha, colorScheme.onSurface),
-        menuContentColor =
-            translucentSurfaceContentColor(
-                colorScheme.surfaceContainerHigh,
-                overlayAlpha,
-                colorScheme.onSurface,
-            ),
+        panelColor = panelSurface.color,
+        menuColor = menuSurface.color,
+        panelContentColor = panelSurface.contentColor,
+        menuContentColor = menuSurface.contentColor,
         overlayAlpha = overlayAlpha,
     )
 }
@@ -147,22 +144,67 @@ internal fun launcherMenuContentColor(): Color {
     return if (color == Color.Unspecified) MaterialTheme.colorScheme.onSurface else color
 }
 
-internal fun translucentSurfaceContentColor(
+internal data class WallpaperAwareSurface(
+    val color: Color,
+    val contentColor: Color,
+)
+
+/**
+ * Keeps Glass content readable over the full wallpaper luminance range.
+ *
+ * A translucent mid-tone surface can make black text unreadable over a dark wallpaper and white
+ * text unreadable over a light one.  Choose the foreground requiring the least opposing scrim,
+ * then fold that scrim into the surface color so every overlay sharing this token has the same
+ * contrast guarantee.
+ */
+internal fun wallpaperAwareSurface(
     surface: Color,
     overlayAlpha: Float,
     fallback: Color,
-): Color {
-    if (overlayAlpha >= 1f) return surface.contentColor(fallback)
-
-    val darkestBackdrop = surface.copy(alpha = overlayAlpha).compositeOver(Color.Black)
-    val lightestBackdrop = surface.copy(alpha = overlayAlpha).compositeOver(Color.White)
-    return listOf(Color.Black, Color.White).maxBy { candidate ->
-        minOf(
-            candidate.contrastRatioAgainst(darkestBackdrop),
-            candidate.contrastRatioAgainst(lightestBackdrop),
-        )
+): WallpaperAwareSurface {
+    val overlay = surface.copy(alpha = overlayAlpha)
+    if (overlayAlpha >= 1f) {
+        return WallpaperAwareSurface(color = overlay, contentColor = surface.contentColor(fallback))
     }
+
+    return listOf(Color.Black, Color.White)
+        .map { foreground ->
+            val scrim = if (foreground == Color.Black) Color.White else Color.Black
+            val scrimAlpha = minimumScrimAlpha(overlay, foreground, scrim)
+            WallpaperAwareSurface(
+                color = scrim.copy(alpha = scrimAlpha).compositeOver(overlay),
+                contentColor = foreground,
+            ) to scrimAlpha
+        }.minBy { (_, scrimAlpha) -> scrimAlpha }
+        .first
 }
+
+private fun minimumScrimAlpha(
+    overlay: Color,
+    foreground: Color,
+    scrim: Color,
+): Float {
+    val worstCaseWallpaper = if (foreground == Color.Black) Color.Black else Color.White
+    if (foreground.contrastRatioAgainst(overlay.compositeOver(worstCaseWallpaper)) >= MINIMUM_TEXT_CONTRAST) {
+        return 0f
+    }
+
+    var low = 0f
+    var high = 1f
+    repeat(SCRIM_ALPHA_SEARCH_STEPS) {
+        val candidate = (low + high) / 2f
+        val renderedSurface = scrim.copy(alpha = candidate).compositeOver(overlay).compositeOver(worstCaseWallpaper)
+        if (foreground.contrastRatioAgainst(renderedSurface) >= MINIMUM_TEXT_CONTRAST) {
+            high = candidate
+        } else {
+            low = candidate
+        }
+    }
+    return high
+}
+
+private const val MINIMUM_TEXT_CONTRAST = 4.5f
+private const val SCRIM_ALPHA_SEARCH_STEPS = 24
 
 internal fun launcherCardShape(
     themePreset: LauncherThemePreset,
