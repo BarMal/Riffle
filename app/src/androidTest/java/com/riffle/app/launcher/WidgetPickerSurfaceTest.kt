@@ -85,11 +85,11 @@ class WidgetPickerSurfaceTest {
 
         val rootBounds = composeRule.onNodeWithTag(WIDGET_PICKER_ROOT_TEST_TAG).fetchSemanticsNode().boundsInRoot
         val panelBounds = composeRule.onNodeWithTag(WIDGET_PICKER_PANEL_TEST_TAG).fetchSemanticsNode().boundsInRoot
-        val expectedMaxWidth = with(composeRule.density) { 840.dp.toPx() }
+        val expectedPanelWidth = with(composeRule.density) { (840 - (12 * 2)).dp.toPx() }
         val leftMargin = panelBounds.left - rootBounds.left
         val rightMargin = rootBounds.right - panelBounds.right
 
-        assertEquals(expectedMaxWidth, panelBounds.width, 1f)
+        assertEquals(expectedPanelWidth, panelBounds.width, 1f)
         assertEquals(leftMargin, rightMargin, 1f)
         assertTrue(leftMargin > 0f)
     }
