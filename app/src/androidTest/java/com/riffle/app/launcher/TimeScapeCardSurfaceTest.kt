@@ -169,6 +169,58 @@ class TimeScapeCardSurfaceTest {
     }
 
     @Test
+    fun pinnedStageOffersAnotherInstalledAppForPinning() {
+        val first = timeScapeTestApp()
+        val second =
+            first.copy(
+                identity =
+                    first.identity.copy(
+                        packageName = AppPackageName("com.example.calendar"),
+                    ),
+                label = "Calendar",
+            )
+        val firstStageId = AppStageId(first.identity.packageName, first.identity.profile.id)
+        val actions = mutableListOf<LauncherShellAction>()
+
+        composeRule.setContent {
+            MaterialTheme {
+                TimeScapeAppStageSurface(
+                    state =
+                        LauncherShellState(
+                            notificationAccessStatus = NotificationAccessStatus.GRANTED,
+                            installedApps = listOf(first, second),
+                            launcherSettings =
+                                LauncherSettings(
+                                    cards =
+                                        CardsSettings(
+                                            stagePreferencesByLayout =
+                                                mapOf(
+                                                    HomeLayoutKey(LauncherViewMode.STANDARD_APP_DRAWER) to
+                                                        AppStagePreferences(
+                                                            pinnedStageIds = listOf(firstStageId),
+                                                            selectedStageId = firstStageId,
+                                                        ),
+                                                ),
+                                        ),
+                                ),
+                        ),
+                    onAction = actions::add,
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("Add stage").performClick()
+        composeRule.onNodeWithText("Pin ${second.label}").performClick()
+
+        assertEquals(
+            LauncherShellAction.ToggleAppStagePinned(
+                AppStageId(second.identity.packageName, second.identity.profile.id),
+            ),
+            actions.single(),
+        )
+    }
+
+    @Test
     fun emptyPinnedStageKeepsLaunchAffordanceWithoutNotificationAccess() {
         val app = timeScapeTestApp()
         val stageId = AppStageId(app.identity.packageName, app.identity.profile.id)

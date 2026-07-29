@@ -182,7 +182,12 @@ internal fun TimeScapeAppStageSurface(
                             modifier = Modifier.width(paneLayout.railWidthDp.dp),
                         )
                         Column(modifier = Modifier.width(paneLayout.splineWidthDp.dp).fillMaxSize()) {
-                            TimeScapeStageHeader(selectedStage, state, onAction)
+                            TimeScapeStageHeader(
+                                selectedStage = selectedStage,
+                                stages = shellState.snapshot.stages,
+                                state = state,
+                                onAction = onAction,
+                            )
                             TimeScapeStageBody(
                                 selectedStage = selectedStage,
                                 state = state,
@@ -239,7 +244,12 @@ private fun TimeScapeCompactContent(
     onAction: (LauncherShellAction) -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        TimeScapeStageHeader(selectedStage, state, onAction)
+        TimeScapeStageHeader(
+            selectedStage = selectedStage,
+            stages = shellState.snapshot.stages,
+            state = state,
+            onAction = onAction,
+        )
         TimeScapeStageBody(
             selectedStage = selectedStage,
             state = state,
@@ -366,6 +376,7 @@ private fun TimeScapeSupportingPane(
 @Composable
 private fun TimeScapeStageHeader(
     selectedStage: AppStage?,
+    stages: List<AppStage>,
     state: LauncherShellState,
     onAction: (LauncherShellAction) -> Unit,
 ) {
@@ -373,6 +384,17 @@ private fun TimeScapeStageHeader(
     var overflowExpanded by rememberSaveable(selectedStage?.let(::timeScapeStageSelectorItemKey)) {
         mutableStateOf(false)
     }
+    var addStageExpanded by rememberSaveable(selectedStage?.let(::timeScapeStageSelectorItemKey)) {
+        mutableStateOf(false)
+    }
+    val pinnedStageIds = stages.filter(AppStage::isPinned).map(AppStage::id).toSet()
+    val addableApps =
+        state.installedApps
+            .filterNot { app ->
+                AppStageId(app.identity.packageName, app.identity.profile.id) in pinnedStageIds
+            }
+            .distinctBy { app -> "${app.identity.profile.id.value}:${app.identity.packageName.value}" }
+            .sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { app -> app.label })
     val selectedApp =
         selectedStage?.let { stage ->
             state.installedApps.firstOrNull { app ->
@@ -396,6 +418,29 @@ private fun TimeScapeStageHeader(
             Text(text = "TimeScape", style = MaterialTheme.typography.labelMedium)
         }
         if (selectedStage != null) {
+            if (addableApps.isNotEmpty()) {
+                Box {
+                    TextButton(onClick = { addStageExpanded = true }) { Text("Add stage") }
+                    DropdownMenu(
+                        expanded = addStageExpanded,
+                        onDismissRequest = { addStageExpanded = false },
+                    ) {
+                        addableApps.forEach { app ->
+                            DropdownMenuItem(
+                                text = { Text("Pin ${app.label}") },
+                                onClick = {
+                                    addStageExpanded = false
+                                    onAction(
+                                        LauncherShellAction.ToggleAppStagePinned(
+                                            AppStageId(app.identity.packageName, app.identity.profile.id),
+                                        ),
+                                    )
+                                },
+                            )
+                        }
+                    }
+                }
+            }
             TextButton(onClick = { onAction(LauncherShellAction.ToggleAppStagePinned(selectedStage.id)) }) {
                 Text(if (selectedStage.isPinned) "Unpin" else "Pin")
             }
