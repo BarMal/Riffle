@@ -188,7 +188,7 @@ class WidgetPickerSurfaceTest {
             }
         }
 
-        composeRule.onNodeWithTag(WIDGET_PICKER_ACCESSIBLE_PLACEMENT_TEST_TAG).assertIsFocused()
+        composeRule.onNodeWithText("Cancel").assertIsFocused()
         composeRule.onNodeWithText("Cancel").performClick()
         composeRule.onNodeWithText("Add Clock").assertIsFocused()
     }

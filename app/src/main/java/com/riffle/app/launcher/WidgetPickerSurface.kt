@@ -5,7 +5,6 @@ package com.riffle.app.launcher
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -509,7 +508,7 @@ private fun WidgetPickerAccessiblePlacementControls(
     onConfirm: () -> Unit,
     onCancel: () -> Unit,
 ) {
-    val focusRequester = remember { FocusRequester() }
+    val cancelFocusRequester = remember { FocusRequester() }
     var pageMenuExpanded by remember { mutableStateOf(false) }
     var positionMenuExpanded by remember { mutableStateOf(false) }
     val selected = placement.selectedCandidate
@@ -519,15 +518,13 @@ private fun WidgetPickerAccessiblePlacementControls(
             placement.target == WidgetAddTarget.DOCK || candidate.pageId == selected?.pageId
         }
     LaunchedEffect(placement.provider.identity) {
-        focusRequester.requestFocusAcrossFrames()
+        cancelFocusRequester.requestFocusAcrossFrames()
     }
     Surface(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .testTag(WIDGET_PICKER_ACCESSIBLE_PLACEMENT_TEST_TAG)
-                .focusRequester(focusRequester)
-                .focusable(),
+                .testTag(WIDGET_PICKER_ACCESSIBLE_PLACEMENT_TEST_TAG),
         shape = RoundedCornerShape(16.dp),
         color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.72f),
         tonalElevation = 2.dp,
@@ -589,7 +586,10 @@ private fun WidgetPickerAccessiblePlacementControls(
                 Button(onClick = onConfirm, enabled = placement.isValid) {
                     Text("Place")
                 }
-                TextButton(onClick = onCancel) {
+                TextButton(
+                    modifier = Modifier.focusRequester(cancelFocusRequester),
+                    onClick = onCancel,
+                ) {
                     Text("Cancel")
                 }
             }
