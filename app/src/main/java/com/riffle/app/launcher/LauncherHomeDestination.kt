@@ -111,6 +111,7 @@ private fun StandardHomeSurface(
                 widgetPicker =
                     StandardHomeWidgetPickerState(
                         providers = state.installedWidgetProviders,
+                        catalogStatus = state.widgetProviderCatalogStatus,
                         isOpen = state.isWidgetPickerOpen,
                     ),
                 homeInsetPolicy = homeInsetPolicy(state.launcherSettings.appearance),

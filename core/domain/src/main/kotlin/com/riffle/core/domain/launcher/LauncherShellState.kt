@@ -60,6 +60,7 @@ data class LauncherShellState(
     val searchShortcutResults: List<AppShortcut> = emptyList(),
     val searchSettingsResults: List<LauncherSearchResult.Setting> = emptyList(),
     val installedWidgetProviders: List<InstalledWidgetProvider> = emptyList(),
+    val widgetProviderCatalogStatus: WidgetProviderCatalogStatus = WidgetProviderCatalogStatus.READY,
     val isWidgetPickerOpen: Boolean = false,
     /** The latest rejected Dock edit, retained until another Dock edit succeeds. */
     val dockEditRejectionReason: DockEditRejectionReason? = null,
@@ -104,6 +105,12 @@ data class LauncherShellState(
 
     val shouldShowSetupCard: Boolean =
         !setupCardDismissed && homeRoleStatus != HomeRoleStatus.DEFAULT_HOME
+}
+
+enum class WidgetProviderCatalogStatus {
+    LOADING,
+    READY,
+    FAILED,
 }
 
 private fun InstalledApp.toAppStageId(): AppStageId = AppStageId(identity.packageName, identity.profile.id)

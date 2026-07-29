@@ -1,6 +1,7 @@
 package com.riffle.app.launcher
 
 import com.riffle.core.domain.launcher.LauncherShellState
+import com.riffle.core.domain.launcher.WidgetProviderCatalogStatus
 import com.riffle.core.domain.launcher.apps.AppActivityName
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
@@ -358,6 +359,54 @@ class LauncherShellRefreshCoordinatorTest {
         assertEquals(listOf("Calendar", "Clock"), state.installedWidgetProviders.map { provider -> provider.label })
         assertEquals(0, installedAppRepository.installedAppReadCount)
         assertEquals(0, notificationRepository.activeNotificationReadCount)
+        assertEquals(WidgetProviderCatalogStatus.READY, state.widgetProviderCatalogStatus)
+    }
+
+    @Test
+    fun failedWidgetProviderRefreshPreservesLastCatalogAndExposesRetryableFailure() {
+        val clock = widgetProvider("Clock")
+        val repository =
+            object : InstalledWidgetProviderRepository {
+                override fun installedWidgetProviders(): List<InstalledWidgetProvider> = error("profile unavailable")
+            }
+        val coordinator =
+            LauncherShellRefreshCoordinator(
+                installedAppDependencies =
+                    InstalledAppRefreshDependencies(
+                        installedAppRepository = FakeInstalledAppRepository(),
+                        appVisibilityRepository = FakeAppVisibilityRepository(),
+                        appCatalog = InstalledAppCatalog(),
+                        homeLayoutRepository = FakeHomeLayoutRepository(),
+                        appShortcutRepository = NoopAppShortcutRepository,
+                    ),
+                notificationDependencies =
+                    LauncherNotificationRefreshDependencies(
+                        notificationRepository = FakeNotificationRepository(),
+                        epochMillisProvider = FixedEpochMillisProvider(nowEpochMillis = 0L),
+                    ),
+                widgetProviderDependencies = LauncherWidgetProviderRefreshDependencies(repository),
+            )
+        var state = LauncherShellState(installedWidgetProviders = listOf(clock))
+        val dispatcher = Executors.newSingleThreadExecutor().asCoroutineDispatcher()
+        try {
+            runBlocking {
+                val actions =
+                    LauncherShellRefreshActions(
+                        coroutineScope = this,
+                        refreshDispatcher = dispatcher,
+                        currentState = { state },
+                        updateState = { state = it },
+                        refreshCoordinator = coordinator,
+                    )
+
+                actions.refreshWidgetProviders().join()
+            }
+
+            assertEquals(listOf(clock), state.installedWidgetProviders)
+            assertEquals(WidgetProviderCatalogStatus.FAILED, state.widgetProviderCatalogStatus)
+        } finally {
+            dispatcher.close()
+        }
     }
 
     private fun coordinator(

@@ -4,6 +4,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.ImageBitmap
@@ -17,6 +20,7 @@ import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.riffle.core.domain.launcher.WidgetProviderCatalogStatus
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.home.GridCell
 import com.riffle.core.domain.launcher.home.GridSpan
@@ -35,6 +39,28 @@ import org.junit.runner.RunWith
 class WidgetPickerSurfaceTest {
     @get:Rule
     val composeRule = createComposeRule()
+
+    @Test
+    fun distinguishesLoadingAndRetryableProviderReadFailureFromAnEmptyCatalog() {
+        var retryCount = 0
+        var status by mutableStateOf(WidgetProviderCatalogStatus.LOADING)
+        composeRule.setContent {
+            MaterialTheme {
+                WidgetPickerSurface(
+                    providers = emptyList(),
+                    catalogStatus = status,
+                    onRetryRequested = { retryCount += 1 },
+                    onAction = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("Loading widgets…").assertIsDisplayed()
+        composeRule.runOnIdle { status = WidgetProviderCatalogStatus.FAILED }
+        composeRule.onNodeWithText("Widgets couldn’t be loaded").assertIsDisplayed()
+        composeRule.onNodeWithText("Try again").performClick()
+        composeRule.runOnIdle { assertEquals(1, retryCount) }
+    }
 
     @Test
     fun accessibleAddActionsSelectTargetsWithoutEmittingAnAddRequest() {
