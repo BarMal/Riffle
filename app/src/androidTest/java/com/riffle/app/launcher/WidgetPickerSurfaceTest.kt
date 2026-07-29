@@ -345,5 +345,5 @@ class WidgetPickerSurfaceTest {
 }
 
 private object ThrowingWidgetPreviewImageLoader : WidgetPreviewImageLoader {
-    override fun previewFor(identity: WidgetProviderIdentity): ImageBitmap? = error("Preview provider failed")
+    override suspend fun previewFor(identity: WidgetProviderIdentity): ImageBitmap? = error("Preview provider failed")
 }

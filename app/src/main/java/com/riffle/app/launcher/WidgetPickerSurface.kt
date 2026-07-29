@@ -65,8 +65,6 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.WidgetProviderCatalogStatus
 import com.riffle.core.domain.launcher.widgets.InstalledWidgetProvider
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 
 @Composable
 fun WidgetPickerSurface(
@@ -617,9 +615,7 @@ private fun rememberWidgetPreview(
     LaunchedEffect(provider.identity, previewImageLoader) {
         val cachedPreview = previewImageLoader.cachedPreviewForOrNull(provider.identity)
         preview =
-            cachedPreview ?: withContext(Dispatchers.Default) {
-                previewImageLoader.previewForOrNull(provider.identity)
-            }
+            cachedPreview ?: previewImageLoader.previewForOrNull(provider.identity)
     }
 
     return preview
