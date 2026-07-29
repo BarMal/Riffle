@@ -13,14 +13,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.requestFocus
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -162,35 +163,50 @@ class WidgetPickerSurfaceTest {
     @Test
     fun accessiblePlacementTakesFocusAndRestoresItToTheSourceAddControl() {
         val provider = widgetProvider()
-        var placement: WidgetPickerAccessiblePlacement? by mutableStateOf(
-            WidgetPickerAccessiblePlacement(
-                provider = provider,
-                target = WidgetAddTarget.HOME,
-                initialPageId = LauncherPageId("home"),
-                candidates =
-                    listOf(
-                        WidgetPickerPlacementCandidate(
-                            pageId = LauncherPageId("home"),
-                            cell = GridCell(column = 0, row = 0),
-                            span = GridSpan(columns = 2, rows = 1),
-                        ),
-                    ),
-            ),
-        )
+        var placement: WidgetPickerAccessiblePlacement? by mutableStateOf(null)
         composeRule.setContent {
             MaterialTheme {
                 WidgetPickerSurface(
                     providers = listOf(provider),
                     accessiblePlacement = placement,
+                    onAccessiblePlacementRequested = { requestedProvider, target ->
+                        placement =
+                            WidgetPickerAccessiblePlacement(
+                                provider = requestedProvider,
+                                target = target,
+                                initialPageId = LauncherPageId("home"),
+                                candidates =
+                                    listOf(
+                                        WidgetPickerPlacementCandidate(
+                                            pageId = LauncherPageId("home"),
+                                            cell = GridCell(column = 0, row = 0),
+                                            span = GridSpan(columns = 2, rows = 1),
+                                        ),
+                                    ),
+                            )
+                    },
                     onAccessiblePlacementCancelled = { placement = null },
                     onAction = {},
                 )
             }
         }
 
-        composeRule.onNodeWithTag(WIDGET_PICKER_ACCESSIBLE_PLACEMENT_TEST_TAG).assertIsFocused()
+        composeRule.onNodeWithText("Add Clock").requestFocus()
+        composeRule.onNodeWithText("Add Clock").performClick()
+        composeRule.onNodeWithText("Choose Home position").performClick()
+        composeRule.waitUntil {
+            composeRule
+                .onNodeWithText("Cancel")
+                .fetchSemanticsNode()
+                .config[SemanticsProperties.Focused]
+        }
         composeRule.onNodeWithText("Cancel").performClick()
-        composeRule.onNodeWithText("Add Clock").assertIsFocused()
+        composeRule.waitUntil {
+            composeRule
+                .onNodeWithText("Add Clock")
+                .fetchSemanticsNode()
+                .config[SemanticsProperties.Focused]
+        }
     }
 
     @Test

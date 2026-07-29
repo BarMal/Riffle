@@ -102,16 +102,13 @@ fun WidgetPickerSurface(
     val providerSections = widgetPickerSectionsFor(filteredProviders, profileContentVisibility)
     var rootCoordinates: LayoutCoordinates? by remember { mutableStateOf(null) }
     val providerFocusRequesters = remember { mutableMapOf<String, FocusRequester>() }
-    val placementProviderKey = accessiblePlacement?.provider?.widgetPickerKey
-    var previousPlacementProviderKey by remember { mutableStateOf(placementProviderKey) }
-    LaunchedEffect(placementProviderKey) {
-        if (placementProviderKey == null) {
-            previousPlacementProviderKey?.let { key ->
-                withFrameNanos { }
-                providerFocusRequesters[key]?.requestFocus()
-            }
-        }
-        previousPlacementProviderKey = placementProviderKey
+    var pendingProviderFocusKey by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(accessiblePlacement, pendingProviderFocusKey) {
+        val providerKey = pendingProviderFocusKey ?: return@LaunchedEffect
+        if (accessiblePlacement != null) return@LaunchedEffect
+        withFrameNanos { }
+        providerFocusRequesters[providerKey]?.requestFocus()
+        pendingProviderFocusKey = null
     }
 
     Box(
@@ -222,7 +219,10 @@ fun WidgetPickerSurface(
                         onWidgetDragMoved = onWidgetDragMoved,
                         onWidgetDragCancelled = onWidgetDragCancelled,
                         onWidgetDropped = onWidgetDropped,
-                        onAccessiblePlacementRequested = onAccessiblePlacementRequested,
+                        onAccessiblePlacementRequested = { provider, target ->
+                            pendingProviderFocusKey = provider.widgetPickerKey
+                            onAccessiblePlacementRequested(provider, target)
+                        },
                         providerFocusRequesters = providerFocusRequesters,
                         rootCoordinates = rootCoordinates,
                         onRetryRequested = onRetryRequested,
@@ -510,7 +510,7 @@ private fun WidgetPickerAccessiblePlacementControls(
     onConfirm: () -> Unit,
     onCancel: () -> Unit,
 ) {
-    val focusRequester = remember { FocusRequester() }
+    val cancelFocusRequester = remember { FocusRequester() }
     var pageMenuExpanded by remember { mutableStateOf(false) }
     var positionMenuExpanded by remember { mutableStateOf(false) }
     val selected = placement.selectedCandidate
@@ -521,15 +521,13 @@ private fun WidgetPickerAccessiblePlacementControls(
         }
     LaunchedEffect(placement.provider.identity) {
         withFrameNanos { }
-        focusRequester.requestFocus()
+        cancelFocusRequester.requestFocus()
     }
     Surface(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .testTag(WIDGET_PICKER_ACCESSIBLE_PLACEMENT_TEST_TAG)
-                .focusRequester(focusRequester)
-                .focusable(),
+                .testTag(WIDGET_PICKER_ACCESSIBLE_PLACEMENT_TEST_TAG),
         shape = RoundedCornerShape(16.dp),
         color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.72f),
         tonalElevation = 2.dp,
@@ -591,7 +589,13 @@ private fun WidgetPickerAccessiblePlacementControls(
                 Button(onClick = onConfirm, enabled = placement.isValid) {
                     Text("Place")
                 }
-                TextButton(onClick = onCancel) {
+                TextButton(
+                    modifier =
+                        Modifier
+                            .focusRequester(cancelFocusRequester)
+                            .focusable(),
+                    onClick = onCancel,
+                ) {
                     Text("Cancel")
                 }
             }
@@ -645,7 +649,10 @@ private fun WidgetProviderAddMenu(
 
     Box {
         TextButton(
-            modifier = Modifier.focusRequester(focusRequester),
+            modifier =
+                Modifier
+                    .focusRequester(focusRequester)
+                    .focusable(),
             onClick = { menuExpanded = true },
             enabled = enabled,
         ) {
