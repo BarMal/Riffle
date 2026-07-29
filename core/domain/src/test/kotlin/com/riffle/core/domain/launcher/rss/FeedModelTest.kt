@@ -70,6 +70,61 @@ class FeedModelTest {
     }
 
     @Test
+    fun normalizerCapsInputBeforeProcessingAndCapsRequestedOutput() {
+        val lateItem =
+            FeedItemInput(
+                sourceId = "late-item",
+                title = "Late item must not be processed",
+                publishedAt = "2026-07-30T00:00:00Z",
+            )
+        val items =
+            List(MAX_FEED_INPUT_ITEMS) { index ->
+                FeedItemInput(sourceId = "item-$index", title = "Item $index")
+            } + lateItem
+
+        val result =
+            FeedItemNormalizer.normalize(
+                format = FeedFormat.RSS_2,
+                feedTitle = "Feed",
+                items = items,
+                maxItems = Int.MAX_VALUE,
+            )
+
+        assertEquals(MAX_FEED_ITEM_LIMIT, result.items.size)
+        assertTrue(result.items.none { item -> item.identity == lateItem.sourceId })
+    }
+
+    @Test
+    fun normalizerRejectsOversizedTitleAndBoundsOtherUntrustedFields() {
+        val oversizedUrl = "https://example.com/" + "x".repeat(MAX_FEED_URL_LENGTH)
+        val result =
+            FeedItemNormalizer.normalize(
+                format = FeedFormat.ATOM,
+                feedTitle = "F".repeat(MAX_FEED_TITLE_LENGTH + 1),
+                items =
+                    listOf(
+                        FeedItemInput(
+                            sourceId = "S".repeat(MAX_FEED_SOURCE_ID_LENGTH + 1),
+                            canonicalUrl = oversizedUrl,
+                            title = "Valid title",
+                            author = "A".repeat(MAX_FEED_AUTHOR_LENGTH + 1),
+                            summary = "M".repeat(MAX_FEED_SUMMARY_LENGTH + 1),
+                            imageUrl = oversizedUrl,
+                        ),
+                        FeedItemInput(title = "T".repeat(MAX_FEED_TITLE_LENGTH + 1)),
+                    ),
+            )
+
+        val item = result.items.single()
+        assertEquals("", result.title)
+        assertEquals(null, item.canonicalUrl)
+        assertEquals(null, item.author)
+        assertEquals(null, item.summary)
+        assertEquals(null, item.imageUrl)
+        assertTrue(item.identity.length <= MAX_FEED_SOURCE_ID_LENGTH)
+    }
+
+    @Test
     fun datedItemsSortNewestFirstAndUndatedItemsKeepSourceOrder() {
         val result =
             FeedItemNormalizer.normalize(

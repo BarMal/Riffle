@@ -9,6 +9,13 @@ import java.time.format.DateTimeFormatter
 
 private const val SHA_256_HEX_LENGTH = 64
 const val DEFAULT_FEED_ITEM_LIMIT = 50
+const val MAX_FEED_INPUT_ITEMS = 500
+const val MAX_FEED_ITEM_LIMIT = 100
+const val MAX_FEED_TITLE_LENGTH = 256
+const val MAX_FEED_AUTHOR_LENGTH = 256
+const val MAX_FEED_SUMMARY_LENGTH = 4096
+const val MAX_FEED_SOURCE_ID_LENGTH = 512
+const val MAX_FEED_URL_LENGTH = 2048
 
 @JvmInline
 value class FeedId(val value: String) {
@@ -24,6 +31,7 @@ class FeedUrl private constructor(val value: String) {
             runCatching {
                 val input = raw.trim()
                 require(input.isNotEmpty()) { "Feed URLs must not be blank." }
+                require(input.length <= MAX_FEED_URL_LENGTH) { "Feed URLs are too long." }
                 val uri = URI(input)
                 require(uri.scheme.equals("https", ignoreCase = true)) {
                     "Feed URLs must use HTTPS."
@@ -48,6 +56,7 @@ class FeedUrl private constructor(val value: String) {
                         append(path)
                         if (query != null) append('?').append(query)
                     }
+                require(normalized.length <= MAX_FEED_URL_LENGTH) { "Feed URLs are too long." }
                 FeedUrl(normalized)
             }
 
@@ -146,7 +155,11 @@ object FeedItemNormalizer {
         maxItems: Int = DEFAULT_FEED_ITEM_LIMIT,
     ): NormalizedFeed {
         require(maxItems > 0) { "Feed item limit must be positive." }
-        val normalized = items.mapIndexedNotNull { index, input -> normalizeItem(input, index) }
+        val boundedMaxItems = maxItems.coerceAtMost(MAX_FEED_ITEM_LIMIT)
+        val normalized =
+            items
+                .take(MAX_FEED_INPUT_ITEMS)
+                .mapIndexedNotNull { index, input -> normalizeItem(input, index) }
         val deduplicated =
             normalized
                 .groupBy(FeedItem::identity)
@@ -154,8 +167,8 @@ object FeedItemNormalizer {
                 .map { duplicates -> duplicates.minWith(itemDuplicateOrder) }
         return NormalizedFeed(
             format = format,
-            title = normalizeText(feedTitle).orEmpty(),
-            items = deduplicated.sortedWith(itemDisplayOrder).take(maxItems),
+            title = normalizeText(feedTitle, MAX_FEED_TITLE_LENGTH).orEmpty(),
+            items = deduplicated.sortedWith(itemDisplayOrder).take(boundedMaxItems),
         )
     }
 
@@ -163,11 +176,11 @@ object FeedItemNormalizer {
         input: FeedItemInput,
         sourceOrder: Int,
     ): FeedItem? {
-        val title = normalizeText(input.title) ?: return null
+        val title = normalizeText(input.title, MAX_FEED_TITLE_LENGTH) ?: return null
         val canonicalUrl = normalizeOptionalUrl(input.canonicalUrl)
-        val sourceId = normalizeText(input.sourceId)
-        val author = normalizeText(input.author)
-        val summary = normalizeText(input.summary)
+        val sourceId = normalizeText(input.sourceId, MAX_FEED_SOURCE_ID_LENGTH)
+        val author = normalizeText(input.author, MAX_FEED_AUTHOR_LENGTH)
+        val summary = normalizeText(input.summary, MAX_FEED_SUMMARY_LENGTH)
         val imageUrl = normalizeOptionalUrl(input.imageUrl)
         val publishedAt = parseDate(input.publishedAt)
         val identity =
@@ -188,7 +201,14 @@ object FeedItemNormalizer {
                 ?: runCatching { DateTimeFormatter.RFC_1123_DATE_TIME.parse(value, Instant::from) }.getOrNull()
         }
 
-    private fun normalizeText(raw: String?): String? = raw?.replace(WHITESPACE, " ")?.trim()?.takeIf(String::isNotEmpty)
+    private fun normalizeText(
+        raw: String?,
+        maxLength: Int,
+    ): String? =
+        raw
+            ?.replace(WHITESPACE, " ")
+            ?.trim()
+            ?.takeIf { value -> value.isNotEmpty() && value.length <= maxLength }
 
     private val itemDuplicateOrder =
         compareBy<FeedItem> { it.sourceOrder }
