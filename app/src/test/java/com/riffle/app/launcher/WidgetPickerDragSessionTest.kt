@@ -29,6 +29,8 @@ class WidgetPickerDragSessionTest {
                 page = page(),
                 provider = provider(targetCellWidth = 2, targetCellHeight = 2),
                 cell = GridCell(column = 1, row = 1),
+                availableWidthDp = 400,
+                availableHeightDp = 500,
             )
 
         assertTrue(preview.isValid)
@@ -50,6 +52,8 @@ class WidgetPickerDragSessionTest {
                 page = page(items = listOf(existing)),
                 provider = provider(targetCellWidth = 2, targetCellHeight = 2),
                 cell = GridCell(column = 1, row = 1),
+                availableWidthDp = 400,
+                availableHeightDp = 500,
             )
 
         assertFalse(preview.isValid)
@@ -63,6 +67,8 @@ class WidgetPickerDragSessionTest {
                 page = page(),
                 provider = provider(targetCellWidth = 2, targetCellHeight = 2),
                 cell = GridCell(column = 3, row = 4),
+                availableWidthDp = 400,
+                availableHeightDp = 500,
             )
 
         assertFalse(preview.isValid)
@@ -76,6 +82,8 @@ class WidgetPickerDragSessionTest {
                 page = page(),
                 provider = provider(targetCellWidth = 5, targetCellHeight = 2),
                 cell = GridCell(column = 0, row = 0),
+                availableWidthDp = 400,
+                availableHeightDp = 500,
             )
 
         assertEquals(GridSpan(columns = 5, rows = 2), preview.span)
@@ -89,6 +97,8 @@ class WidgetPickerDragSessionTest {
                 page = page(),
                 provider = provider(targetCellWidth = Int.MAX_VALUE, targetCellHeight = Int.MAX_VALUE),
                 cell = GridCell(column = 0, row = 0),
+                availableWidthDp = 400,
+                availableHeightDp = 500,
             )
 
         assertEquals(GridSpan(columns = Int.MAX_VALUE, rows = Int.MAX_VALUE), preview.span)
@@ -103,10 +113,35 @@ class WidgetPickerDragSessionTest {
                 page = page(type = LauncherPageType.Generated(GeneratedLauncherPageKind.APP)),
                 provider = provider(targetCellWidth = 1, targetCellHeight = 1),
                 cell = GridCell(column = 0, row = 0),
+                availableWidthDp = 400,
+                availableHeightDp = 500,
             )
 
         assertFalse(preview.isValid)
         assertTrue(preview.conflictingItemIds.isEmpty())
+    }
+
+    @Test
+    fun derivesPreviewSpanFromMinimumDimensionsWhenTargetCellsAreMissing() {
+        val existing =
+            WidgetItem(
+                id = LauncherItemId("existing"),
+                appWidgetId = HostedWidgetId(2),
+                label = "Existing",
+                placement = GridPlacement(cell = GridCell(column = 1, row = 0)),
+            )
+        val preview =
+            widgetPickerDragPlacementPreviewFor(
+                page = page(items = listOf(existing)),
+                provider = provider(targetCellWidth = null, targetCellHeight = null),
+                cell = GridCell(column = 0, row = 0),
+                availableWidthDp = 400,
+                availableHeightDp = 500,
+            )
+
+        assertEquals(GridSpan(columns = 2, rows = 1), preview.span)
+        assertFalse(preview.isValid)
+        assertEquals(setOf(existing.id), preview.conflictingItemIds)
     }
 
     private fun page(
@@ -121,8 +156,8 @@ class WidgetPickerDragSessionTest {
         )
 
     private fun provider(
-        targetCellWidth: Int,
-        targetCellHeight: Int,
+        targetCellWidth: Int?,
+        targetCellHeight: Int?,
     ): InstalledWidgetProvider =
         InstalledWidgetProvider(
             identity =

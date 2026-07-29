@@ -36,9 +36,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.riffle.app.launcher.widgets.EmptyHomeWidgetViewFactory
 import com.riffle.app.launcher.widgets.HomeWidgetViewFactory
@@ -52,6 +53,7 @@ import com.riffle.core.domain.launcher.home.HomeLabelSettings
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.LauncherItem
 import com.riffle.core.domain.launcher.home.LauncherItemId
+import com.riffle.core.domain.launcher.home.LauncherPageId
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.settings.AppearanceSettings
@@ -61,6 +63,7 @@ import com.riffle.core.domain.launcher.settings.TimeScapeAppearanceSettings
 import com.riffle.core.domain.launcher.settings.homeSystemBars
 import com.riffle.core.domain.launcher.widgets.InstalledWidgetProvider
 import kotlinx.coroutines.delay
+import kotlin.math.roundToInt
 
 @Composable
 internal fun StandardHome(
@@ -77,6 +80,8 @@ internal fun StandardHome(
     val homeDragSession = remember { mutableStateOf<HomeDragSession?>(null) }
     val widgetPickerDragInProgress = remember { mutableStateOf(false) }
     val widgetPickerDragPreview = remember { mutableStateOf<WidgetPickerDragPlacementPreview?>(null) }
+    val workspaceGridBounds = remember { mutableStateOf<Rect?>(null) }
+    val density = LocalDensity.current.density
     val actions =
         HomeWorkspaceActions(
             onFolderOpen = { folder -> openedFolderId.value = folder.id },
@@ -84,6 +89,11 @@ internal fun StandardHome(
             currentDragSession = { homeDragSession.value },
             haptics = interactions.haptics,
             onDockInteractionHeightChanged = interactions.onDockInteractionHeightChanged,
+            onWorkspaceGridBoundsChanged = { pageId, bounds ->
+                if (pageId == visibleLayout.selectedPageId) {
+                    workspaceGridBounds.value = bounds
+                }
+            },
             onBackgroundClick = {},
             onAction = onAction,
         )
@@ -111,14 +121,17 @@ internal fun StandardHome(
                 onAction(LauncherShellAction.CloseWidgetPicker)
             },
             onWidgetDragMoved = { provider, position, rootSize ->
+                val bounds = workspaceGridBounds.value
                 widgetPickerDragPreview.value =
-                    if (position.y >= rootSize.height * WIDGET_PICKER_DOCK_DROP_FRACTION) {
+                    if (bounds == null || widgetPickerDropTarget(position, bounds) != WidgetAddTarget.HOME) {
                         null
                     } else {
                         widgetPickerDragPlacementPreviewFor(
                             page = visibleLayout.selectedPage,
                             provider = provider,
-                            cell = widgetPickerDropCell(position, rootSize, visibleLayout.selectedPage.grid),
+                            cell = widgetPickerDropCell(position, bounds, visibleLayout.selectedPage.grid),
+                            availableWidthDp = (rootSize.width / density).roundToInt(),
+                            availableHeightDp = (rootSize.height / density).roundToInt(),
                         )
                     }
             },
@@ -128,20 +141,20 @@ internal fun StandardHome(
             },
             onWidgetDropped = { provider, position, rootSize ->
                 val selectedPage = visibleLayout.selectedPage
-                val cell = widgetPickerDropCell(position, rootSize, selectedPage.grid)
-                val target =
-                    if (position.y >= rootSize.height * WIDGET_PICKER_DOCK_DROP_FRACTION) {
-                        WidgetAddTarget.DOCK
-                    } else {
-                        WidgetAddTarget.HOME
-                    }
+                val bounds = workspaceGridBounds.value
+                val target = bounds?.let { widgetPickerDropTarget(position, it) }
+                val cell = bounds?.let { widgetPickerDropCell(position, it, selectedPage.grid) }
                 val preview =
-                    widgetPickerDragPlacementPreviewFor(
-                        page = selectedPage,
-                        provider = provider,
-                        cell = cell,
-                    )
-                if (target == WidgetAddTarget.DOCK || preview.isValid) {
+                    cell?.let {
+                        widgetPickerDragPlacementPreviewFor(
+                            page = selectedPage,
+                            provider = provider,
+                            cell = it,
+                            availableWidthDp = (rootSize.width / density).roundToInt(),
+                            availableHeightDp = (rootSize.height / density).roundToInt(),
+                        )
+                    }
+                if (target == WidgetAddTarget.DOCK || (target == WidgetAddTarget.HOME && preview?.isValid == true)) {
                     onAction(
                         LauncherShellAction.RequestAddWidget(
                             provider = provider.identity,
@@ -571,11 +584,11 @@ internal data class HomeWorkspaceActions(
     val currentDragSession: () -> HomeDragSession? = { null },
     val haptics: LauncherHaptics,
     val onDockInteractionHeightChanged: (Int) -> Unit = {},
+    val onWorkspaceGridBoundsChanged: (LauncherPageId, Rect) -> Unit = { _, _ -> },
     val onBackgroundClick: () -> Unit = {},
     val onAction: (LauncherShellAction) -> Unit,
 )
 
-private const val WIDGET_PICKER_DOCK_DROP_FRACTION = 0.84f
 private const val HOME_SEARCH_AREA_HEIGHT_DP = 48
 private const val HOME_SEARCH_PILL_HEIGHT_DP = 30
 private const val HOME_PAGE_INDICATOR_TOUCH_TARGET_HEIGHT_DP = 48
@@ -586,15 +599,25 @@ private const val PAGE_INDICATOR_SETTLED_VISIBLE_MS = 250L
 
 internal fun widgetPickerDropCell(
     position: Offset,
-    rootSize: IntSize,
+    gridBounds: Rect,
     grid: GridDimensions,
 ): GridCell =
     GridCell(
-        column = ((position.x / rootSize.width.coerceAtLeast(1)) * grid.columns).toInt(),
-        row = ((position.y / rootSize.height.coerceAtLeast(1)) * grid.rows).toInt(),
+        column = (((position.x - gridBounds.left) / gridBounds.width.coerceAtLeast(1f)) * grid.columns).toInt(),
+        row = (((position.y - gridBounds.top) / gridBounds.height.coerceAtLeast(1f)) * grid.rows).toInt(),
     ).let { cell ->
         GridCell(
             column = cell.column.coerceIn(0, grid.columns - 1),
             row = cell.row.coerceIn(0, grid.rows - 1),
         )
+    }
+
+internal fun widgetPickerDropTarget(
+    position: Offset,
+    gridBounds: Rect,
+): WidgetAddTarget? =
+    when {
+        gridBounds.contains(position) -> WidgetAddTarget.HOME
+        position.y >= gridBounds.bottom -> WidgetAddTarget.DOCK
+        else -> null
     }

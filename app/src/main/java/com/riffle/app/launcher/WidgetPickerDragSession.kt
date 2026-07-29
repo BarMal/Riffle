@@ -1,5 +1,6 @@
 package com.riffle.app.launcher
 
+import com.riffle.app.launcher.widgets.preferredGridSpan
 import com.riffle.core.domain.launcher.home.GridCell
 import com.riffle.core.domain.launcher.home.GridDimensions
 import com.riffle.core.domain.launcher.home.GridSpan
@@ -28,8 +29,15 @@ internal fun widgetPickerDragPlacementPreviewFor(
     page: LauncherPage,
     provider: InstalledWidgetProvider,
     cell: GridCell,
+    availableWidthDp: Int,
+    availableHeightDp: Int,
 ): WidgetPickerDragPlacementPreview {
-    val span = provider.widgetPickerDragSpan()
+    val span =
+        provider.dimensions.preferredGridSpan(
+            grid = page.grid,
+            availableWidthDp = availableWidthDp,
+            availableHeightDp = availableHeightDp,
+        )
     val isInBounds = page.grid.contains(origin = cell, span = span)
     val candidateCells = if (isInBounds) span.cellsAt(cell) else emptyList()
     val conflictingItems =
@@ -47,12 +55,6 @@ internal fun widgetPickerDragPlacementPreviewFor(
         conflictingItemIds = conflictingItems,
     )
 }
-
-private fun InstalledWidgetProvider.widgetPickerDragSpan(): GridSpan =
-    GridSpan(
-        columns = (dimensions.targetCellWidth ?: 1).coerceAtLeast(1),
-        rows = (dimensions.targetCellHeight ?: 1).coerceAtLeast(1),
-    )
 
 private fun GridSpan.cellsAt(origin: GridCell): List<GridCell> =
     (origin.column until origin.column + columns.coerceAtLeast(1)).flatMap { column ->

@@ -27,6 +27,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -53,7 +55,10 @@ internal fun WorkspaceGrid(
     modifier: Modifier = Modifier,
 ) {
     BoxWithConstraints(
-        modifier = modifier,
+        modifier =
+            modifier.onGloballyPositioned { coordinates ->
+                actions.onWorkspaceGridBoundsChanged(page.id, coordinates.boundsInRoot())
+            },
         contentAlignment = Alignment.Center,
     ) {
         val metrics = HomeGridLayoutMetrics()
