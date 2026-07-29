@@ -5,6 +5,7 @@ package com.riffle.app.launcher
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -40,10 +41,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
@@ -97,6 +101,18 @@ fun WidgetPickerSurface(
     val filteredProviders = providers.filteredWidgetProviders(query)
     val providerSections = widgetPickerSectionsFor(filteredProviders, profileContentVisibility)
     var rootCoordinates: LayoutCoordinates? by remember { mutableStateOf(null) }
+    val providerFocusRequesters = remember { mutableMapOf<String, FocusRequester>() }
+    val placementProviderKey = accessiblePlacement?.provider?.widgetPickerKey
+    var previousPlacementProviderKey by remember { mutableStateOf(placementProviderKey) }
+    LaunchedEffect(placementProviderKey) {
+        if (placementProviderKey == null) {
+            previousPlacementProviderKey?.let { key ->
+                withFrameNanos { }
+                providerFocusRequesters[key]?.requestFocus()
+            }
+        }
+        previousPlacementProviderKey = placementProviderKey
+    }
 
     Box(
         modifier =
@@ -207,6 +223,7 @@ fun WidgetPickerSurface(
                         onWidgetDragCancelled = onWidgetDragCancelled,
                         onWidgetDropped = onWidgetDropped,
                         onAccessiblePlacementRequested = onAccessiblePlacementRequested,
+                        providerFocusRequesters = providerFocusRequesters,
                         rootCoordinates = rootCoordinates,
                         onRetryRequested = onRetryRequested,
                         modifier = Modifier.weight(1f),
@@ -242,6 +259,7 @@ private fun WidgetPickerContent(
     onWidgetDragCancelled: (InstalledWidgetProvider) -> Unit,
     onWidgetDropped: (InstalledWidgetProvider, Offset, IntSize) -> Unit,
     onAccessiblePlacementRequested: (InstalledWidgetProvider, WidgetAddTarget) -> Unit,
+    providerFocusRequesters: MutableMap<String, FocusRequester>,
     rootCoordinates: LayoutCoordinates?,
     onRetryRequested: () -> Unit,
     modifier: Modifier,
@@ -303,6 +321,10 @@ private fun WidgetPickerContent(
                             WidgetProviderTile(
                                 provider = provider,
                                 contentVisibility = section.contentVisibility,
+                                addFocusRequester =
+                                    providerFocusRequesters.getOrPut(provider.widgetPickerKey) {
+                                        FocusRequester()
+                                    },
                                 previewImageLoader = previewImageLoader,
                                 onWidgetDragStarted = onWidgetDragStarted,
                                 onWidgetDragMoved = onWidgetDragMoved,
@@ -366,6 +388,7 @@ internal fun widgetPickerProfileStateText(contentVisibility: AppProfileContentVi
 private fun WidgetProviderTile(
     provider: InstalledWidgetProvider,
     contentVisibility: AppProfileContentVisibility,
+    addFocusRequester: FocusRequester,
     previewImageLoader: WidgetPreviewImageLoader,
     onWidgetDragStarted: (InstalledWidgetProvider) -> Unit,
     onWidgetDragMoved: (InstalledWidgetProvider, Offset, IntSize) -> Unit,
@@ -474,6 +497,7 @@ private fun WidgetProviderTile(
         WidgetProviderAddMenu(
             provider = provider,
             enabled = isAvailable,
+            focusRequester = addFocusRequester,
             onAccessiblePlacementRequested = onAccessiblePlacementRequested,
         )
     }
@@ -486,6 +510,7 @@ private fun WidgetPickerAccessiblePlacementControls(
     onConfirm: () -> Unit,
     onCancel: () -> Unit,
 ) {
+    val focusRequester = remember { FocusRequester() }
     var pageMenuExpanded by remember { mutableStateOf(false) }
     var positionMenuExpanded by remember { mutableStateOf(false) }
     val selected = placement.selectedCandidate
@@ -494,8 +519,17 @@ private fun WidgetPickerAccessiblePlacementControls(
         placement.candidates.filter { candidate ->
             placement.target == WidgetAddTarget.DOCK || candidate.pageId == selected?.pageId
         }
+    LaunchedEffect(placement.provider.identity) {
+        withFrameNanos { }
+        focusRequester.requestFocus()
+    }
     Surface(
-        modifier = Modifier.fillMaxWidth(),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .testTag(WIDGET_PICKER_ACCESSIBLE_PLACEMENT_TEST_TAG)
+                .focusRequester(focusRequester)
+                .focusable(),
         shape = RoundedCornerShape(16.dp),
         color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.72f),
         tonalElevation = 2.dp,
@@ -574,25 +608,47 @@ private fun WidgetPickerPlacementCandidate.placementPositionLabel(): String =
 
 internal fun WidgetPickerAccessiblePlacement.accessiblePlacementAnnouncement(): String =
     when {
-        !isValid -> "${provider.label} cannot be placed at the selected ${target.name.lowercase()} target."
+        !isValid ->
+            "${accessibleWidgetLabel()} cannot be placed at the selected " +
+                "${target.name.lowercase()} target."
+
         target == WidgetAddTarget.HOME && selectedCandidate?.pageId != null ->
-            "${provider.label} on Home page ${selectedCandidate?.pageId?.value}, " +
+            "${accessibleWidgetLabel()} on Home page ${selectedCandidate?.pageId?.value}, " +
                 "${selectedCandidate?.placementPositionLabel()}; placement is ready."
+
         target == WidgetAddTarget.DOCK ->
-            "${provider.label} in the Dock at ${selectedCandidate?.placementPositionLabel()}; placement is ready."
-        else -> "${provider.label} placement is ready."
+            "${accessibleWidgetLabel()} in the Dock at " +
+                "${selectedCandidate?.placementPositionLabel()}; placement is ready."
+
+        else -> "${accessibleWidgetLabel()} placement is ready."
     }
+
+private fun WidgetPickerAccessiblePlacement.accessibleWidgetLabel(): String =
+    (
+        selectedCandidate
+            ?.span
+            ?.let { span -> "${span.columns} by ${span.rows} cells" }
+            ?: provider.widgetPickerSummary()
+    )
+        .takeIf(String::isNotBlank)
+        ?.let { summary -> "${provider.label}, $summary" }
+        ?: provider.label
 
 @Composable
 private fun WidgetProviderAddMenu(
     provider: InstalledWidgetProvider,
     enabled: Boolean,
+    focusRequester: FocusRequester,
     onAccessiblePlacementRequested: (InstalledWidgetProvider, WidgetAddTarget) -> Unit,
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
 
     Box {
-        TextButton(onClick = { menuExpanded = true }, enabled = enabled) {
+        TextButton(
+            modifier = Modifier.focusRequester(focusRequester),
+            onClick = { menuExpanded = true },
+            enabled = enabled,
+        ) {
             Text(text = "Add ${provider.label}")
         }
         DropdownMenu(
@@ -770,6 +826,7 @@ internal const val WIDGET_PICKER_PREVIEW_TEST_TAG = "widget-picker-preview"
 internal const val WIDGET_PICKER_ROOT_TEST_TAG = "widget-picker-root"
 internal const val WIDGET_PICKER_PANEL_TEST_TAG = "widget-picker-panel"
 internal const val WIDGET_PROVIDER_TILE_TEST_TAG = "widget-provider-tile"
+internal const val WIDGET_PICKER_ACCESSIBLE_PLACEMENT_TEST_TAG = "widget-picker-accessible-placement"
 private const val WIDGET_PICKER_SECTION_STATE_SEPARATOR = "\u001f"
 
 private fun String.toCollapsedWidgetPickerSections(): Set<String> =

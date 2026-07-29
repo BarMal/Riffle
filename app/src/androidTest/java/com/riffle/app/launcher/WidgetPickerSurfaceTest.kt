@@ -14,6 +14,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -156,6 +157,40 @@ class WidgetPickerSurfaceTest {
             assertTrue(cancelled)
             assertTrue(emittedActions.isEmpty())
         }
+    }
+
+    @Test
+    fun accessiblePlacementTakesFocusAndRestoresItToTheSourceAddControl() {
+        val provider = widgetProvider()
+        var placement: WidgetPickerAccessiblePlacement? by mutableStateOf(
+            WidgetPickerAccessiblePlacement(
+                provider = provider,
+                target = WidgetAddTarget.HOME,
+                initialPageId = LauncherPageId("home"),
+                candidates =
+                    listOf(
+                        WidgetPickerPlacementCandidate(
+                            pageId = LauncherPageId("home"),
+                            cell = GridCell(column = 0, row = 0),
+                            span = GridSpan(columns = 2, rows = 1),
+                        ),
+                    ),
+            ),
+        )
+        composeRule.setContent {
+            MaterialTheme {
+                WidgetPickerSurface(
+                    providers = listOf(provider),
+                    accessiblePlacement = placement,
+                    onAccessiblePlacementCancelled = { placement = null },
+                    onAction = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(WIDGET_PICKER_ACCESSIBLE_PLACEMENT_TEST_TAG).assertIsFocused()
+        composeRule.onNodeWithText("Cancel").performClick()
+        composeRule.onNodeWithText("Add Clock").assertIsFocused()
     }
 
     @Test
