@@ -60,7 +60,9 @@ import com.riffle.core.domain.launcher.cards.CardExpansionPhase
 import com.riffle.core.domain.launcher.cards.CardExpansionState
 import com.riffle.core.domain.launcher.cards.LauncherCardId
 import com.riffle.core.domain.launcher.cards.TimeScapeWindowLayout
+import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.HomeLayoutKey
+import com.riffle.core.domain.launcher.home.HomeLayoutSet
 import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
 import com.riffle.core.domain.launcher.notifications.LauncherNotification
@@ -180,6 +182,8 @@ class TimeScapeCardSurfaceTest {
                 label = "Calendar",
             )
         val firstStageId = AppStageId(first.identity.packageName, first.identity.profile.id)
+        val cardLayout = HomeLayoutDefaults.standard().copy(viewMode = LauncherViewMode.CARD_INTERFACE)
+        val cardLayoutSet = HomeLayoutSet.fromLayout(cardLayout)
         val actions = mutableListOf<LauncherShellAction>()
 
         composeRule.setContent {
@@ -187,6 +191,8 @@ class TimeScapeCardSurfaceTest {
                 TimeScapeAppStageSurface(
                     state =
                         LauncherShellState(
+                            homeLayout = cardLayout,
+                            homeLayoutSet = cardLayoutSet,
                             notificationAccessStatus = NotificationAccessStatus.GRANTED,
                             installedApps = listOf(first, second),
                             launcherSettings =
@@ -195,7 +201,7 @@ class TimeScapeCardSurfaceTest {
                                         CardsSettings(
                                             stagePreferencesByLayout =
                                                 mapOf(
-                                                    HomeLayoutKey(LauncherViewMode.STANDARD_APP_DRAWER) to
+                                                    HomeLayoutKey(LauncherViewMode.CARD_INTERFACE) to
                                                         AppStagePreferences(
                                                             pinnedStageIds = listOf(firstStageId),
                                                             selectedStageId = firstStageId,
