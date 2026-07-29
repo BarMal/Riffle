@@ -37,6 +37,17 @@ class MainActivityStartupTest {
     }
 
     @Test
+    fun homeIntentWithDefaultCategoryRequestsTheStandardHomeDestination() {
+        assertEquals(
+            true,
+            shouldOpenDefaultHomeOnLaunch(
+                action = Intent.ACTION_MAIN,
+                categories = setOf(Intent.CATEGORY_HOME, Intent.CATEGORY_DEFAULT),
+            ),
+        )
+    }
+
+    @Test
     fun platformStatusReadUsesFallbackWhenPlatformCallFails() {
         assertEquals(
             HomeRoleStatus.UNKNOWN,
