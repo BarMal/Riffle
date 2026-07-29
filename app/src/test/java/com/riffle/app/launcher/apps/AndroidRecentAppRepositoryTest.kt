@@ -61,6 +61,21 @@ class AndroidRecentAppRepositoryTest {
     }
 
     @Test
+    fun ignoresInvalidDuplicateRecordsBeforeCoalescingPackages() {
+        val usages =
+            listOf(
+                PlatformRecentAppUsage(packageName = "com.riffle.mail", lastUsedAtMillis = 300),
+                PlatformRecentAppUsage(packageName = "com.riffle.mail", lastUsedAtMillis = 0),
+                PlatformRecentAppUsage(packageName = "", lastUsedAtMillis = 500),
+            ).toRecentAppUsages()
+
+        assertEquals(
+            listOf(RecentAppUsage(AppPackageName("com.riffle.mail"), 300)),
+            usages,
+        )
+    }
+
+    @Test
     fun excludesBlankPackagesAndRecordsWithoutForegroundUse() {
         val usages =
             listOf(
