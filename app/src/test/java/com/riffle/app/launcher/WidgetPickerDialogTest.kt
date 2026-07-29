@@ -126,7 +126,7 @@ class WidgetPickerDialogTest {
         assertEquals(secondPage.id, emittedRequest?.targetPageId)
         assertEquals(selected.selectedCandidate?.cell, emittedRequest?.targetCell)
         assertEquals(
-            "Weather on Home page second, Column 2, row 1; placement is ready.",
+            "Weather, 1 by 1 cells on Home page second, Column 2, row 1; placement is ready.",
             selected.accessiblePlacementAnnouncement(),
         )
     }
