@@ -165,7 +165,7 @@ class SettingsPagesTest {
             )
 
         assertEquals(
-            "Home set · Notifications allowed · Floating dock not allowed",
+            "Notifications allowed · Home set · Floating dock not allowed",
             entries.single { entry -> entry.page == SettingsPage.PERMISSIONS }.subtitle,
         )
         assertEquals(

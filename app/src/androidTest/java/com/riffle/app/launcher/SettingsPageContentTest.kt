@@ -134,6 +134,27 @@ class SettingsPageContentTest {
     }
 
     @Test
+    fun mainPageMakesNotificationAccessDiscoverable() {
+        composeRule.setContent {
+            MaterialTheme {
+                SettingsPageContent(
+                    modifier = Modifier,
+                    state =
+                        LauncherShellState(
+                            notificationAccessStatus = NotificationAccessStatus.NOT_GRANTED,
+                        ).settingsSurfaceState(),
+                    page = SettingsPage.MAIN,
+                    onPageSelected = {},
+                    onAction = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("Permissions").assertExists()
+        composeRule.onNodeWithText("Notifications not allowed").assertExists()
+    }
+
+    @Test
     fun motionPageKeepsHapticsWithAccessibilityControls() {
         composeRule.setContent {
             MaterialTheme {

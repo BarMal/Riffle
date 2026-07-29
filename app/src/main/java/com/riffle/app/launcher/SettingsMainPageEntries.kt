@@ -217,8 +217,8 @@ private fun SettingsOverviewStatus.permissionsSummary(): String =
         homeRoleStatus.settingsOverviewLabel()
     } else {
         listOf(
-            homeRoleStatus.settingsOverviewLabel(),
             notificationAccessStatus.settingsOverviewLabel("Notifications"),
+            homeRoleStatus.settingsOverviewLabel(),
             overlayDockPermissionStatus.settingsOverviewLabel("Floating dock"),
         ).joinToString(separator = " · ")
     }
