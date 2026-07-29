@@ -393,8 +393,8 @@ private fun TimeScapeTemplateStaticCanvas(
     gridRows: Int,
 ) {
     if (gridColumns <= 0 || gridRows <= 0) return
-    val cellWidthDp = canvasWidthDp / gridColumns
-    val cellHeightDp = canvasHeightDp / gridRows
+    val cellWidthDp = canvasWidthDp.toFloat() / gridColumns
+    val cellHeightDp = canvasHeightDp.toFloat() / gridRows
     elements.forEach { element ->
         val placement = element.placement
         val x = cellWidthDp * placement.cell.column
