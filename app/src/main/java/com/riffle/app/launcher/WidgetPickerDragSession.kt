@@ -29,7 +29,7 @@ internal fun widgetPickerDragPlacementPreviewFor(
     provider: InstalledWidgetProvider,
     cell: GridCell,
 ): WidgetPickerDragPlacementPreview {
-    val span = provider.widgetPickerDragSpan(page.grid)
+    val span = provider.widgetPickerDragSpan()
     val candidateCells = span.cellsAt(cell)
     val conflictingItems =
         page.items
@@ -49,10 +49,10 @@ internal fun widgetPickerDragPlacementPreviewFor(
     )
 }
 
-private fun InstalledWidgetProvider.widgetPickerDragSpan(grid: GridDimensions): GridSpan =
+private fun InstalledWidgetProvider.widgetPickerDragSpan(): GridSpan =
     GridSpan(
-        columns = (dimensions.targetCellWidth ?: 1).coerceIn(1, grid.columns.coerceAtLeast(1)),
-        rows = (dimensions.targetCellHeight ?: 1).coerceIn(1, grid.rows.coerceAtLeast(1)),
+        columns = (dimensions.targetCellWidth ?: 1).coerceAtLeast(1),
+        rows = (dimensions.targetCellHeight ?: 1).coerceAtLeast(1),
     )
 
 private fun GridSpan.cellsAt(origin: GridCell): List<GridCell> =

@@ -70,6 +70,19 @@ class WidgetPickerDragSessionTest {
     }
 
     @Test
+    fun preservesAnOversizedProviderSpanWhileRejectingTheHomeDrop() {
+        val preview =
+            widgetPickerDragPlacementPreviewFor(
+                page = page(),
+                provider = provider(targetCellWidth = 5, targetCellHeight = 2),
+                cell = GridCell(column = 0, row = 0),
+            )
+
+        assertEquals(GridSpan(columns = 5, rows = 2), preview.span)
+        assertFalse(preview.isValid)
+    }
+
+    @Test
     fun rejectsGeneratedPagesWithoutReportingAFalseCollision() {
         val preview =
             widgetPickerDragPlacementPreviewFor(
