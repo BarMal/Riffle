@@ -146,13 +146,11 @@ private fun SearchTopControls(
         modifier =
             Modifier
                 .widthIn(max = SEARCH_CONTROLS_MAX_WIDTH_DP.dp)
-                .fillMaxWidth(),
+                .fillMaxWidth()
+                .testTag(SEARCH_CONTROLS_TEST_TAG),
         shape = LocalLauncherPanelShape.current,
         contentColor = launcherPanelContentColor(),
-        color =
-            launcherPanelSurfaceColor().copy(
-                alpha = minOf(LocalLauncherThemeSurfaceTokens.current.overlayAlpha, SEARCH_CONTROLS_ALPHA),
-            ),
+        color = launcherPanelSurfaceColor(),
         tonalElevation = 4.dp,
     ) {
         Column(
@@ -548,7 +546,7 @@ private fun AppSearchFilters.searchResultTypeNoun(): String =
     }
 
 private const val SEARCH_CONTROLS_MAX_WIDTH_DP = 840
-private const val SEARCH_CONTROLS_ALPHA = 0.96f
+internal const val SEARCH_CONTROLS_TEST_TAG = "search-controls"
 private const val SEARCH_GRID_MAX_WIDTH_DP = 840
 private const val SEARCH_RESULT_BOTTOM_PADDING_DP = 32
 private const val SEARCH_RESULT_MIN_HEIGHT_DP = 64
