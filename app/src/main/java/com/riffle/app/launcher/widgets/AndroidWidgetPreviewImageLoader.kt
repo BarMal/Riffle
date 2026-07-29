@@ -18,30 +18,16 @@ class AndroidWidgetPreviewImageLoader(
     private val context: Context,
     private val appWidgetManager: AppWidgetManager = AppWidgetManager.getInstance(context),
 ) : WidgetPreviewImageLoader {
-    private val previews = ConcurrentHashMap<WidgetProviderIdentity, ImageBitmap>()
-    private val previewOrder = ConcurrentLinkedDeque<WidgetProviderIdentity>()
+    private val previewCache = WidgetPreviewCache<ImageBitmap>()
 
     override fun previewFor(identity: WidgetProviderIdentity): ImageBitmap? =
-        previews[identity]?.also { touch(identity) }
+        previewCache[identity]
             ?: runCatching { loadPreview(identity) }.getOrNull()?.also { preview ->
-                previews[identity] = preview
-                touch(identity)
-                trimCache()
+                previewCache[identity] = preview
             }
 
     override fun cachedPreviewFor(identity: WidgetProviderIdentity): ImageBitmap? {
-        return previews[identity]?.also { touch(identity) }
-    }
-
-    private fun touch(identity: WidgetProviderIdentity) {
-        previewOrder.remove(identity)
-        previewOrder.addLast(identity)
-    }
-
-    private fun trimCache() {
-        while (previewOrder.size > MAX_PREVIEW_CACHE_ENTRIES) {
-            previewOrder.pollFirst()?.let(previews::remove)
-        }
+        return previewCache[identity]
     }
 
     private fun loadPreview(identity: WidgetProviderIdentity): ImageBitmap? =
@@ -49,6 +35,38 @@ class AndroidWidgetPreviewImageLoader(
             .firstOrNull { provider -> provider.matches(identity) }
             ?.loadPreviewImage(context, WIDGET_PREVIEW_DENSITY)
             ?.toWidgetPreviewBitmap()
+}
+
+internal class WidgetPreviewCache<T>(
+    private val maxEntries: Int = MAX_PREVIEW_CACHE_ENTRIES,
+) {
+    private val previews = ConcurrentHashMap<WidgetProviderIdentity, T>()
+    private val previewOrder = ConcurrentLinkedDeque<WidgetProviderIdentity>()
+
+    operator fun get(identity: WidgetProviderIdentity): T? = previews[identity]?.also { touch(identity) }
+
+    operator fun set(
+        identity: WidgetProviderIdentity,
+        preview: T,
+    ) {
+        previews[identity] = preview
+        touch(identity)
+        trimCache()
+    }
+
+    private fun trimCache() {
+        while (previewOrder.size > maxEntries.coerceAtLeast(0)) {
+            previewOrder.pollFirst()?.let(previews::remove)
+        }
+    }
+
+    internal val size: Int
+        get() = previews.size
+
+    private fun touch(identity: WidgetProviderIdentity) {
+        previewOrder.remove(identity)
+        previewOrder.addLast(identity)
+    }
 }
 
 private fun AppWidgetProviderInfo.matches(identity: WidgetProviderIdentity): Boolean =

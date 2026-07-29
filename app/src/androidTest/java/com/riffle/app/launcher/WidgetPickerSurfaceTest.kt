@@ -7,15 +7,20 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.riffle.core.domain.launcher.apps.AppPackageName
+import com.riffle.core.domain.launcher.home.GridCell
+import com.riffle.core.domain.launcher.home.GridSpan
+import com.riffle.core.domain.launcher.home.LauncherPageId
 import com.riffle.core.domain.launcher.widgets.InstalledWidgetProvider
 import com.riffle.core.domain.launcher.widgets.WidgetProviderClassName
 import com.riffle.core.domain.launcher.widgets.WidgetProviderDimensions
@@ -30,6 +35,62 @@ import org.junit.runner.RunWith
 class WidgetPickerSurfaceTest {
     @get:Rule
     val composeRule = createComposeRule()
+
+    @Test
+    fun accessibleAddActionsSelectTargetsWithoutEmittingAnAddRequest() {
+        val selectedTargets = mutableListOf<WidgetAddTarget>()
+        val emittedActions = mutableListOf<LauncherShellAction>()
+        composeRule.setContent {
+            MaterialTheme {
+                WidgetPickerSurface(
+                    providers = listOf(widgetProvider()),
+                    onAccessiblePlacementRequested = { _, target -> selectedTargets += target },
+                    onAction = { action -> emittedActions += action },
+                )
+            }
+        }
+
+        val actions = composeRule.onNodeWithTag(WIDGET_PROVIDER_TILE_TEST_TAG).fetchSemanticsNode().config[SemanticsActions.CustomActions]
+        actions.first { action -> action.label == "Add Clock to Home" }.action()
+        actions.first { action -> action.label == "Add Clock to Dock" }.action()
+
+        composeRule.runOnIdle {
+            assertEquals(listOf(WidgetAddTarget.HOME, WidgetAddTarget.DOCK), selectedTargets)
+            assertTrue(emittedActions.isEmpty())
+        }
+    }
+
+    @Test
+    fun accessiblePlacementCanBeCancelledWithoutEmittingAnAddRequest() {
+        var cancelled = false
+        val emittedActions = mutableListOf<LauncherShellAction>()
+        composeRule.setContent {
+            MaterialTheme {
+                WidgetPickerSurface(
+                    providers = listOf(widgetProvider()),
+                    accessiblePlacement =
+                        WidgetPickerAccessiblePlacement(
+                            provider = widgetProvider(),
+                            target = WidgetAddTarget.HOME,
+                            targetPageId = LauncherPageId("home"),
+                            targetCell = GridCell(column = 0, row = 0),
+                            span = GridSpan(columns = 2, rows = 1),
+                            isValid = true,
+                        ),
+                    onAccessiblePlacementCancelled = { cancelled = true },
+                    onAction = { action -> emittedActions += action },
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("Placement preview").assertIsDisplayed()
+        composeRule.onNodeWithText("Cancel").performClick()
+
+        composeRule.runOnIdle {
+            assertTrue(cancelled)
+            assertTrue(emittedActions.isEmpty())
+        }
+    }
 
     @Test
     fun keepsThePickerAvailableWhenAProviderPreviewFails() {

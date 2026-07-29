@@ -25,6 +25,15 @@ internal data class WidgetPickerDragPlacementPreview(
     val conflictingItemIds: Set<LauncherItemId> = emptySet(),
 )
 
+data class WidgetPickerAccessiblePlacement(
+    val provider: InstalledWidgetProvider,
+    val target: WidgetAddTarget,
+    val targetPageId: LauncherPageId? = null,
+    val targetCell: GridCell? = null,
+    val span: GridSpan? = null,
+    val isValid: Boolean,
+)
+
 internal fun widgetPickerDragPlacementPreviewFor(
     page: LauncherPage,
     provider: InstalledWidgetProvider,
@@ -54,6 +63,26 @@ internal fun widgetPickerDragPlacementPreviewFor(
         isValid = page.type !is LauncherPageType.Generated && isInBounds && conflictingItems.isEmpty(),
         conflictingItemIds = conflictingItems,
     )
+}
+
+internal fun firstValidWidgetPickerPlacementPreviewFor(
+    page: LauncherPage,
+    provider: InstalledWidgetProvider,
+    availableWidthDp: Int,
+    availableHeightDp: Int,
+): WidgetPickerDragPlacementPreview? {
+    for (row in 0 until page.grid.rows.coerceAtLeast(0)) {
+        for (column in 0 until page.grid.columns.coerceAtLeast(0)) {
+            widgetPickerDragPlacementPreviewFor(
+                page = page,
+                provider = provider,
+                cell = GridCell(column = column, row = row),
+                availableWidthDp = availableWidthDp,
+                availableHeightDp = availableHeightDp,
+            ).takeIf { preview -> preview.isValid }?.let { preview -> return preview }
+        }
+    }
+    return null
 }
 
 private fun GridSpan.cellsAt(origin: GridCell): List<GridCell> =

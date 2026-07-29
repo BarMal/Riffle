@@ -1,5 +1,6 @@
 package com.riffle.app.launcher
 
+import com.riffle.app.launcher.widgets.WidgetPreviewCache
 import com.riffle.app.launcher.widgets.widgetPreviewBitmapSize
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppProfile
@@ -12,6 +13,30 @@ import org.junit.Assert.assertNull
 import org.junit.Test
 
 class WidgetPickerDialogTest {
+    @Test
+    fun previewCacheBoundsEntriesAndEvictsLeastRecentlyUsed() {
+        val cache = WidgetPreviewCache<String>(maxEntries = 2)
+        val baseIdentity =
+            widgetProvider(
+                label = "First",
+                packageName = "com.example.cache",
+                className = ".First",
+            ).identity
+        val first = baseIdentity
+        val second = baseIdentity.copy(className = WidgetProviderClassName(".Second"))
+        val third = baseIdentity.copy(className = WidgetProviderClassName(".Third"))
+
+        cache[first] = "first"
+        cache[second] = "second"
+        assertEquals("first", cache[first])
+        cache[third] = "third"
+
+        assertNull(cache[second])
+        assertEquals("first", cache[first])
+        assertEquals("third", cache[third])
+        assertEquals(2, cache.size)
+    }
+
     @Test
     fun previewLoaderFailuresFallBackToNoPreview() {
         val identity =

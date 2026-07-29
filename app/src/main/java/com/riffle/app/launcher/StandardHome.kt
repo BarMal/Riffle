@@ -1,4 +1,4 @@
-@file:Suppress("LongMethod", "TooManyFunctions")
+@file:Suppress("CyclomaticComplexMethod", "LongMethod", "TooManyFunctions")
 
 package com.riffle.app.launcher
 
@@ -53,6 +53,7 @@ import com.riffle.core.domain.launcher.home.HomeLabelSettings
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.LauncherItem
 import com.riffle.core.domain.launcher.home.LauncherItemId
+import com.riffle.core.domain.launcher.home.LauncherPage
 import com.riffle.core.domain.launcher.home.LauncherPageId
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
@@ -80,6 +81,7 @@ internal fun StandardHome(
     val homeDragSession = remember { mutableStateOf<HomeDragSession?>(null) }
     val widgetPickerDragInProgress = remember { mutableStateOf(false) }
     val widgetPickerDragPreview = remember { mutableStateOf<WidgetPickerDragPlacementPreview?>(null) }
+    val accessibleWidgetPlacement = remember { mutableStateOf<WidgetPickerAccessiblePlacement?>(null) }
     val workspaceGridBounds = remember { mutableStateOf<Rect?>(null) }
     val dockBounds = remember { mutableStateOf<Rect?>(null) }
     val density = LocalDensity.current.density
@@ -116,8 +118,10 @@ internal fun StandardHome(
         WidgetPickerSurface(
             providers = presentation.widgetPicker.providers,
             previewImageLoader = widgetPreviewImageLoader,
+            accessiblePlacement = accessibleWidgetPlacement.value,
             isDragHandoffActive = widgetPickerDragInProgress.value,
             onWidgetDragStarted = {
+                accessibleWidgetPlacement.value = null
                 widgetPickerDragInProgress.value = true
                 widgetPickerDragPreview.value = null
                 onAction(LauncherShellAction.CloseWidgetPicker)
@@ -148,6 +152,36 @@ internal fun StandardHome(
                 widgetPickerDragInProgress.value = false
                 widgetPickerDragPreview.value = null
             },
+            onAccessiblePlacementRequested = { provider, target ->
+                accessibleWidgetPlacement.value =
+                    accessibleWidgetPlacementFor(
+                        provider = provider,
+                        target = target,
+                        page = visibleLayout.selectedPage,
+                        dockAvailable = visibleLayout.dock.isEnabled && visibleLayout.dock.availableSlots > 0,
+                        availableWidthDp = workspaceGridBounds.value?.width?.div(density)?.roundToInt() ?: 0,
+                        availableHeightDp = workspaceGridBounds.value?.height?.div(density)?.roundToInt() ?: 0,
+                    )
+            },
+            onAccessiblePlacementConfirmed = {
+                accessibleWidgetPlacement.value?.takeIf { placement -> placement.isValid }?.let { placement ->
+                    onAction(
+                        LauncherShellAction.RequestAddWidget(
+                            provider = placement.provider.identity,
+                            label = placement.provider.label,
+                            dimensions = placement.provider.dimensions,
+                            supportsHorizontalResize = placement.provider.supportsHorizontalResize,
+                            supportsVerticalResize = placement.provider.supportsVerticalResize,
+                            target = placement.target,
+                            targetPageId = placement.targetPageId,
+                            targetCell = placement.targetCell,
+                        ),
+                    )
+                    accessibleWidgetPlacement.value = null
+                    onAction(LauncherShellAction.CloseWidgetPicker)
+                }
+            },
+            onAccessiblePlacementCancelled = { accessibleWidgetPlacement.value = null },
             onWidgetDropped = { provider, position, rootSize ->
                 val selectedPage = visibleLayout.selectedPage
                 val bounds = workspaceGridBounds.value
@@ -194,6 +228,39 @@ internal fun StandardHome(
             onAction = onAction,
         )
     }
+}
+
+internal fun accessibleWidgetPlacementFor(
+    provider: InstalledWidgetProvider,
+    target: WidgetAddTarget,
+    page: LauncherPage,
+    dockAvailable: Boolean,
+    availableWidthDp: Int,
+    availableHeightDp: Int,
+): WidgetPickerAccessiblePlacement {
+    if (target == WidgetAddTarget.DOCK) {
+        return WidgetPickerAccessiblePlacement(
+            provider = provider,
+            target = target,
+            isValid = dockAvailable,
+        )
+    }
+
+    val preview =
+        firstValidWidgetPickerPlacementPreviewFor(
+            page = page,
+            provider = provider,
+            availableWidthDp = availableWidthDp,
+            availableHeightDp = availableHeightDp,
+        )
+    return WidgetPickerAccessiblePlacement(
+        provider = provider,
+        target = target,
+        targetPageId = page.id,
+        targetCell = preview?.cell,
+        span = preview?.span,
+        isValid = preview != null,
+    )
 }
 
 @Suppress("LongMethod")

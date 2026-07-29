@@ -25,6 +25,7 @@ import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
@@ -68,11 +69,15 @@ import kotlinx.coroutines.withContext
 fun WidgetPickerSurface(
     providers: List<InstalledWidgetProvider>,
     previewImageLoader: WidgetPreviewImageLoader = EmptyWidgetPreviewImageLoader,
+    accessiblePlacement: WidgetPickerAccessiblePlacement? = null,
     isDragHandoffActive: Boolean = false,
     onWidgetDragStarted: (InstalledWidgetProvider) -> Unit = {},
     onWidgetDragMoved: (InstalledWidgetProvider, Offset, IntSize) -> Unit = { _, _, _ -> },
     onWidgetDragCancelled: (InstalledWidgetProvider) -> Unit = {},
     onWidgetDropped: (InstalledWidgetProvider, Offset, IntSize) -> Unit = { _, _, _ -> },
+    onAccessiblePlacementRequested: (InstalledWidgetProvider, WidgetAddTarget) -> Unit = { _, _ -> },
+    onAccessiblePlacementConfirmed: () -> Unit = {},
+    onAccessiblePlacementCancelled: () -> Unit = {},
     onAction: (LauncherShellAction) -> Unit,
 ) {
     var query by rememberSaveable { mutableStateOf("") }
@@ -166,6 +171,13 @@ fun WidgetPickerSurface(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+                    accessiblePlacement?.let { placement ->
+                        WidgetPickerAccessiblePlacementControls(
+                            placement = placement,
+                            onConfirm = onAccessiblePlacementConfirmed,
+                            onCancel = onAccessiblePlacementCancelled,
+                        )
+                    }
                     WidgetPickerContent(
                         providers = providers,
                         providerSections = providerSections,
@@ -178,7 +190,9 @@ fun WidgetPickerSurface(
                         onWidgetDragMoved = onWidgetDragMoved,
                         onWidgetDragCancelled = onWidgetDragCancelled,
                         onWidgetDropped = onWidgetDropped,
+                        onAccessiblePlacementRequested = onAccessiblePlacementRequested,
                         rootCoordinates = rootCoordinates,
+                        modifier = Modifier.weight(1f),
                     )
                 }
             }
@@ -210,7 +224,9 @@ private fun WidgetPickerContent(
     onWidgetDragMoved: (InstalledWidgetProvider, Offset, IntSize) -> Unit,
     onWidgetDragCancelled: (InstalledWidgetProvider) -> Unit,
     onWidgetDropped: (InstalledWidgetProvider, Offset, IntSize) -> Unit,
+    onAccessiblePlacementRequested: (InstalledWidgetProvider, WidgetAddTarget) -> Unit,
     rootCoordinates: LayoutCoordinates?,
+    modifier: Modifier,
 ) {
     when {
         providers.isEmpty() ->
@@ -221,7 +237,7 @@ private fun WidgetPickerContent(
 
         else ->
             LazyVerticalGrid(
-                modifier = Modifier.fillMaxSize(),
+                modifier = modifier.fillMaxSize(),
                 columns = GridCells.Adaptive(WIDGET_TILE_MIN_WIDTH_DP.dp),
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
                 verticalArrangement = Arrangement.spacedBy(18.dp),
@@ -260,6 +276,7 @@ private fun WidgetPickerContent(
                                 onWidgetDragMoved = onWidgetDragMoved,
                                 onWidgetDragCancelled = onWidgetDragCancelled,
                                 onWidgetDropped = onWidgetDropped,
+                                onAccessiblePlacementRequested = onAccessiblePlacementRequested,
                                 rootCoordinates = rootCoordinates,
                             )
                         }
@@ -278,6 +295,7 @@ private fun WidgetProviderTile(
     onWidgetDragMoved: (InstalledWidgetProvider, Offset, IntSize) -> Unit,
     onWidgetDragCancelled: (InstalledWidgetProvider) -> Unit,
     onWidgetDropped: (InstalledWidgetProvider, Offset, IntSize) -> Unit,
+    onAccessiblePlacementRequested: (InstalledWidgetProvider, WidgetAddTarget) -> Unit,
     rootCoordinates: LayoutCoordinates?,
 ) {
     val summary = provider.widgetPickerSummary()
@@ -300,11 +318,11 @@ private fun WidgetProviderTile(
                     customActions =
                         listOf(
                             CustomAccessibilityAction("Add ${provider.label} to Home") {
-                                onAction(provider.requestAddWidgetAction(WidgetAddTarget.HOME))
+                                onAccessiblePlacementRequested(provider, WidgetAddTarget.HOME)
                                 true
                             },
                             CustomAccessibilityAction("Add ${provider.label} to Dock") {
-                                onAction(provider.requestAddWidgetAction(WidgetAddTarget.DOCK))
+                                onAccessiblePlacementRequested(provider, WidgetAddTarget.DOCK)
                                 true
                             },
                         )
@@ -373,6 +391,47 @@ private fun WidgetProviderTile(
         WidgetProviderAddMenu(provider = provider, onAction = onAction)
     }
 }
+
+@Composable
+private fun WidgetPickerAccessiblePlacementControls(
+    placement: WidgetPickerAccessiblePlacement,
+    onConfirm: () -> Unit,
+    onCancel: () -> Unit,
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.72f),
+        tonalElevation = 2.dp,
+    ) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(text = "Placement preview", style = MaterialTheme.typography.titleMedium)
+            Text(
+                text = placement.accessiblePlacementDescription(),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(onClick = onConfirm, enabled = placement.isValid) {
+                    Text("Place")
+                }
+                TextButton(onClick = onCancel) {
+                    Text("Cancel")
+                }
+            }
+        }
+    }
+}
+
+private fun WidgetPickerAccessiblePlacement.accessiblePlacementDescription(): String =
+    when {
+        !isValid -> "${provider.label} cannot be placed at the selected ${target.name.lowercase()} target."
+        target == WidgetAddTarget.HOME && targetPageId != null && targetCell != null ->
+            "${provider.label} on Home page ${targetPageId.value}, " +
+                "starting at column ${targetCell.column + 1}, row ${targetCell.row + 1}."
+        target == WidgetAddTarget.DOCK -> "${provider.label} in the Dock at the next available position."
+        else -> "${provider.label} placement is ready."
+    }
 
 @Composable
 private fun WidgetProviderAddMenu(
