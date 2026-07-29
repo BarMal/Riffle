@@ -120,6 +120,9 @@ internal fun TimeScapeAppStageSurface(
     val shellState = reconciler.reconcile(state)
     val selectedStage = shellState.snapshot.selectedStage
     var detailCardKey by rememberSaveable { mutableStateOf(context.detailCardKey) }
+    var detailStageKey by rememberSaveable {
+        mutableStateOf(context.selectedStageKey.takeIf { context.detailCardKey != null })
+    }
     var focusedCardIdValue by
         rememberSaveable(selectedStage?.id?.profileId?.value, selectedStage?.id?.packageName?.value) {
             mutableStateOf(context.focusedCardKey)
@@ -165,8 +168,8 @@ internal fun TimeScapeAppStageSurface(
     }
 
     val detailOrigin =
-        selectedStage?.id?.let { stageId ->
-            detailCardKey?.let { cardKey -> TimeScapeDetailOrigin(stageId, LauncherCardId(cardKey)) }
+        detailCardKey?.let { cardKey ->
+            TimeScapeDetailOrigin(detailStageKey, LauncherCardId(cardKey))
         }
     LaunchedEffect(context.selectedStageKey, shellState.snapshot.stages) {
         shellState.snapshot.stages
@@ -177,13 +180,16 @@ internal fun TimeScapeAppStageSurface(
     LaunchedEffect(detailOrigin, selectedStage) {
         detailOrigin?.let { origin ->
             val isStillAvailable =
-                selectedStage?.id == origin.stageId &&
-                    (
-                        selectedStage.content.any { it.id == origin.cardId } ||
-                            origin.cardId == timeScapeEmptyDetailCardId(selectedStage.id)
-                    )
+                selectedStage?.let { stage ->
+                    timeScapeStageKey(stage.id) == origin.stageKey &&
+                        (
+                            stage.content.any { it.id == origin.cardId } ||
+                                origin.cardId == timeScapeEmptyDetailCardId(stage.id)
+                        )
+                } == true
             if (!isStillAvailable) {
                 detailCardKey = null
+                detailStageKey = null
                 onContextChanged(context.copy(detailCardKey = null))
                 detailRecoveryMessage = "The selected card is no longer available."
             }
@@ -272,6 +278,7 @@ internal fun TimeScapeAppStageSurface(
                         },
                         onDetailVisibilityChanged = { cardId ->
                             detailCardKey = cardId?.value
+                            detailStageKey = cardId?.let { selectedStage?.id?.let(::timeScapeStageKey) }
                             onContextChanged(context.copy(detailCardKey = cardId?.value))
                             if (cardId != null) detailRecoveryMessage = null
                         },
@@ -300,6 +307,7 @@ internal fun TimeScapeAppStageSurface(
                                 focusedCardId = focusedCardIdValue?.let(::LauncherCardId),
                                 onDetailVisibilityChanged = { cardId ->
                                     detailCardKey = cardId?.value
+                                    detailStageKey = cardId?.let { selectedStage?.id?.let(::timeScapeStageKey) }
                                     onContextChanged(context.copy(detailCardKey = cardId?.value))
                                     if (cardId != null) detailRecoveryMessage = null
                                 },
@@ -1160,7 +1168,7 @@ private val NotificationAccessStatus.timeScapeAccessMessage: String
         }
 
 private data class TimeScapeDetailOrigin(
-    val stageId: AppStageId,
+    val stageKey: String?,
     val cardId: LauncherCardId,
 )
 
