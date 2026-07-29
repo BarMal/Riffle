@@ -6,6 +6,8 @@ import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppProfile
 import com.riffle.core.domain.launcher.cards.AppStageId
 import com.riffle.core.domain.launcher.cards.AppStagePreferences
+import com.riffle.core.domain.launcher.cards.TimeScapeRailSide
+import com.riffle.core.domain.launcher.cards.TimeScapeTemplateCatalogDefaults
 import com.riffle.core.domain.launcher.contextual.ContextualSettings
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
@@ -102,6 +104,23 @@ class LauncherSettingsJsonCodecTest {
             )
 
         assertEquals(settings.cards, decodeLauncherSettings(encodeLauncherSettings(settings)).cards)
+    }
+
+    @Test
+    fun roundTripsConfiguredTimeScapeTemplateAndRailSide() {
+        val settings =
+            LauncherSettings(
+                cards =
+                    CardsSettings(
+                        timeScapeTemplateId = TimeScapeTemplateCatalogDefaults.sharedCanvasId,
+                        timeScapeRailSide = TimeScapeRailSide.TRAILING,
+                    ),
+            )
+
+        val decoded = decodeLauncherSettings(encodeLauncherSettings(settings))
+
+        assertEquals(settings.cards.timeScapeTemplateId, decoded.cards.timeScapeTemplateId)
+        assertEquals(settings.cards.timeScapeRailSide, decoded.cards.timeScapeRailSide)
     }
 
     @Test

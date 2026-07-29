@@ -1,3 +1,5 @@
+@file:Suppress("LongParameterList")
+
 package com.riffle.app.launcher
 
 import androidx.compose.foundation.layout.Box
@@ -10,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.LauncherShellState
+import com.riffle.core.domain.launcher.cards.TimeScapeInteractionContext
 import com.riffle.core.domain.launcher.cards.TimeScapeWindowLayout
 
 @Composable
@@ -19,6 +22,8 @@ fun HomeDestination(
     widgetRenderers: LauncherWidgetRenderers = LauncherWidgetRenderers(),
     haptics: LauncherHaptics = NoopLauncherHaptics,
     timeScapeWindowLayout: TimeScapeWindowLayout? = null,
+    timeScapeContext: TimeScapeInteractionContext = TimeScapeInteractionContext(),
+    onTimeScapeContextChanged: (TimeScapeInteractionContext) -> Unit = {},
     onAction: (LauncherShellAction) -> Unit,
 ) {
     when (state.homeLayout.viewMode.homeSurfaceKind()) {
@@ -29,6 +34,8 @@ fun HomeDestination(
                 widgetRenderers = widgetRenderers,
                 haptics = haptics,
                 timeScapeWindowLayout = timeScapeWindowLayout,
+                timeScapeContext = timeScapeContext,
+                onTimeScapeContextChanged = onTimeScapeContextChanged,
                 onAction = onAction,
             )
 
@@ -50,6 +57,8 @@ private fun CardsHomeSurface(
     widgetRenderers: LauncherWidgetRenderers,
     haptics: LauncherHaptics,
     timeScapeWindowLayout: TimeScapeWindowLayout?,
+    timeScapeContext: TimeScapeInteractionContext,
+    onTimeScapeContextChanged: (TimeScapeInteractionContext) -> Unit,
     onAction: (LauncherShellAction) -> Unit,
 ) {
     val dockInteractionHeightPx = remember { mutableIntStateOf(0) }
@@ -76,6 +85,8 @@ private fun CardsHomeSurface(
             modifier = Modifier.padding(bottom = dockInteractionHeight),
             windowInsets = cardsPanelInsetPolicy(state).safeDrawingPanelInsets(),
             windowLayout = timeScapeWindowLayout,
+            context = timeScapeContext,
+            onContextChanged = onTimeScapeContextChanged,
             onAction = onAction,
         )
     }

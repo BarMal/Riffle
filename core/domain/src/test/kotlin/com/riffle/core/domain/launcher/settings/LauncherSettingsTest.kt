@@ -49,6 +49,14 @@ class LauncherSettingsTest {
     }
 
     @Test
+    fun defaultsReserveThreeFingerSwipesForTimeScapeModeChanges() {
+        val gestures = LauncherSettings().gestures.homeGestures
+
+        assertEquals(LauncherGestureAction.ENTER_TIMESCAPE, gestures.actionFor(HomeGesture.THREE_FINGER_UP))
+        assertEquals(LauncherGestureAction.EXIT_TIMESCAPE, gestures.actionFor(HomeGesture.THREE_FINGER_DOWN))
+    }
+
+    @Test
     fun replacesLaunchTargetWhenGestureActionChanges() {
         val identity =
             AppIdentity(

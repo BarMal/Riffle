@@ -3,6 +3,9 @@ package com.riffle.core.domain.launcher.settings
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.cards.AppStagePreferences
+import com.riffle.core.domain.launcher.cards.TimeScapeRailSide
+import com.riffle.core.domain.launcher.cards.TimeScapeTemplateCatalogDefaults
+import com.riffle.core.domain.launcher.cards.TimeScapeTemplateId
 import com.riffle.core.domain.launcher.contextual.ContextualSettings
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.HomeLayoutKey
@@ -53,6 +56,8 @@ data class CardsSettings(
     val stagePreferencesByLayout: Map<HomeLayoutKey, AppStagePreferences> = emptyMap(),
     /** Durable visual intent for the optional TimeScape presentation. */
     val timeScapeAppearance: TimeScapeAppearanceSettings = TimeScapeAppearanceSettings.modern(),
+    val timeScapeTemplateId: TimeScapeTemplateId = TimeScapeTemplateCatalogDefaults.sharedCanvasId,
+    val timeScapeRailSide: TimeScapeRailSide = TimeScapeRailSide.LEADING,
 )
 
 /** Resolves TimeScape using the launcher-wide accessibility motion preference. */
@@ -257,8 +262,9 @@ val defaultHomeGestureActions: Map<HomeGesture, LauncherGestureAction> =
         HomeGesture.TWO_FINGER_DOWN to LauncherGestureAction.OPEN_SETTINGS,
         HomeGesture.TWO_FINGER_LEFT to LauncherGestureAction.NONE,
         HomeGesture.TWO_FINGER_RIGHT to LauncherGestureAction.NONE,
-        HomeGesture.THREE_FINGER_UP to LauncherGestureAction.NONE,
-        HomeGesture.THREE_FINGER_DOWN to LauncherGestureAction.NONE,
+        // Three fingers avoid the platform back/home edges and the one-finger card stack.
+        HomeGesture.THREE_FINGER_UP to LauncherGestureAction.ENTER_TIMESCAPE,
+        HomeGesture.THREE_FINGER_DOWN to LauncherGestureAction.EXIT_TIMESCAPE,
         HomeGesture.THREE_FINGER_LEFT to LauncherGestureAction.NONE,
         HomeGesture.THREE_FINGER_RIGHT to LauncherGestureAction.NONE,
         HomeGesture.PINCH_IN to LauncherGestureAction.ENTER_HOME_EDIT_MODE,
@@ -376,6 +382,10 @@ enum class LauncherGestureAction {
     ENTER_FULLSCREEN_HOME,
     SELECT_NEXT_HOME_PAGE,
     SELECT_PREVIOUS_HOME_PAGE,
+    ENTER_TIMESCAPE,
+    EXIT_TIMESCAPE,
+    SELECT_NEXT_APP_STAGE,
+    SELECT_PREVIOUS_APP_STAGE,
     LAUNCH_APP,
     LAUNCH_APP_SHORTCUT,
 }

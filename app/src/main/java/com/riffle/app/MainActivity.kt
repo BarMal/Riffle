@@ -60,6 +60,7 @@ import com.riffle.app.launcher.widgets.WidgetBindPermissionResult
 import com.riffle.app.launcher.widgets.WidgetConfigurationResult
 import com.riffle.core.domain.launcher.FirstRunStatus
 import com.riffle.core.domain.launcher.HomeRoleStatus
+import com.riffle.core.domain.launcher.OverlayDockPermissionStatus
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppProfile
 import com.riffle.core.domain.launcher.cards.TimeScapeWindowLayout
@@ -436,20 +437,28 @@ class MainActivity : ComponentActivity() {
             wallpaperController = wallpaperController,
         )
 
-        setContent {
-            LauncherShell(
-                viewModel = shellViewModel,
-                appVersionLabel = appVersionLabel,
-                appBuildIdentityLabel = appBuildIdentityLabel,
-                appIconLoader = appIconLoader,
-                widgetRenderers =
-                    LauncherWidgetRenderers(
-                        viewFactory = widgetHostGateway,
-                        previewImageLoader = dependencies.widgetPreviewImageLoader,
-                    ),
-                timeScapeWindowLayout = timeScapeWindowLayout,
-                onAction = launcherActionRouter::handle,
-            )
+        composeLauncherShellAfterStatusRefresh(
+            refreshStatuses = ::refreshPlatformStatuses,
+            compose = {
+                setContent {
+                    LauncherShell(
+                        viewModel = shellViewModel,
+                        appVersionLabel = appVersionLabel,
+                        appBuildIdentityLabel = appBuildIdentityLabel,
+                        appIconLoader = appIconLoader,
+                        widgetRenderers =
+                            LauncherWidgetRenderers(
+                                viewFactory = widgetHostGateway,
+                                previewImageLoader = dependencies.widgetPreviewImageLoader,
+                            ),
+                        timeScapeWindowLayout = timeScapeWindowLayout,
+                        onAction = launcherActionRouter::handle,
+                    )
+                }
+            },
+        )
+        if (shouldOpenDefaultHomeOnLaunch(intent.action, intent.categories)) {
+            launcherActionRouter.handle(LauncherShellAction.OpenDefaultHome)
         }
     }
 
@@ -471,7 +480,7 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         refreshPlatformStatuses()
-        if (intent.isLauncherHomeIntent()) {
+        if (shouldOpenDefaultHomeOnLaunch(intent.action, intent.categories)) {
             launcherActionRouter.handle(LauncherShellAction.OpenDefaultHome)
         }
     }
@@ -485,14 +494,11 @@ class MainActivity : ComponentActivity() {
         val notificationAccessStatus = notificationAccessGateway.getNotificationAccessStatus()
         val notificationAccessWasRevoked =
             shellViewModel.state.value.notificationAccessStatus == NotificationAccessStatus.REVOKED
-        shellViewModel.onHomeRoleStatusChanged(
-            homeRoleStatus =
-                startupPlatformValue(
-                    fallback = HomeRoleStatus.UNKNOWN,
-                    read = homeRoleGateway::getHomeRoleStatus,
-                ),
+        refreshLauncherPlatformStatuses(
+            readHomeRoleStatus = homeRoleGateway::getHomeRoleStatus,
             notificationAccessStatus = notificationAccessStatus,
             overlayDockPermissionStatus = overlayDockPermissionGateway.getOverlayDockPermissionStatus(),
+            publishStatuses = shellViewModel::onHomeRoleStatusChanged,
         )
         if (
             notificationAccessStatus == NotificationAccessStatus.REVOKED &&
@@ -576,6 +582,43 @@ class MainActivity : ComponentActivity() {
     private val showWidgetAddRecoveryMessage = {
         Toast.makeText(this, "Widget setup was cancelled. Try again.", Toast.LENGTH_SHORT).show()
     }
+}
+
+internal fun shouldOpenDefaultHomeOnLaunch(
+    action: String?,
+    categories: Set<String>?,
+): Boolean =
+    isLauncherHomeIntent(
+        action = action,
+        categories = categories,
+    )
+
+internal fun composeLauncherShellAfterStatusRefresh(
+    refreshStatuses: () -> Unit,
+    compose: () -> Unit,
+) {
+    refreshStatuses()
+    compose()
+}
+
+internal fun refreshLauncherPlatformStatuses(
+    readHomeRoleStatus: () -> HomeRoleStatus,
+    notificationAccessStatus: NotificationAccessStatus,
+    overlayDockPermissionStatus: OverlayDockPermissionStatus,
+    publishStatuses: (
+        homeRoleStatus: HomeRoleStatus,
+        notificationAccessStatus: NotificationAccessStatus,
+        overlayDockPermissionStatus: OverlayDockPermissionStatus,
+    ) -> Unit,
+) {
+    publishStatuses(
+        startupPlatformValue(
+            fallback = HomeRoleStatus.UNKNOWN,
+            read = readHomeRoleStatus,
+        ),
+        notificationAccessStatus,
+        overlayDockPermissionStatus,
+    )
 }
 
 private const val BACKUP_DOCUMENT_MIME_TYPE = "application/json"

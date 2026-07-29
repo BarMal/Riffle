@@ -9,18 +9,20 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.requestFocus
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -123,6 +125,23 @@ class WidgetPickerSurfaceTest {
     }
 
     @Test
+    fun widgetPickerAddMenuUsesTheSharedLauncherOverlay() {
+        composeRule.setContent {
+            RiffleLauncherTheme(
+                themePreset = com.riffle.core.domain.launcher.settings.LauncherThemePreset.GLASS,
+            ) {
+                WidgetPickerSurface(
+                    providers = listOf(widgetProvider()),
+                    onAction = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("Add Clock").performClick()
+        composeRule.onNodeWithTag(RIFFLE_CONTEXT_MENU_TEST_TAG).assertIsDisplayed()
+    }
+
+    @Test
     fun accessiblePlacementCanBeCancelledWithoutEmittingAnAddRequest() {
         var cancelled = false
         val emittedActions = mutableListOf<LauncherShellAction>()
@@ -162,35 +181,50 @@ class WidgetPickerSurfaceTest {
     @Test
     fun accessiblePlacementTakesFocusAndRestoresItToTheSourceAddControl() {
         val provider = widgetProvider()
-        var placement: WidgetPickerAccessiblePlacement? by mutableStateOf(
-            WidgetPickerAccessiblePlacement(
-                provider = provider,
-                target = WidgetAddTarget.HOME,
-                initialPageId = LauncherPageId("home"),
-                candidates =
-                    listOf(
-                        WidgetPickerPlacementCandidate(
-                            pageId = LauncherPageId("home"),
-                            cell = GridCell(column = 0, row = 0),
-                            span = GridSpan(columns = 2, rows = 1),
-                        ),
-                    ),
-            ),
-        )
+        var placement: WidgetPickerAccessiblePlacement? by mutableStateOf(null)
         composeRule.setContent {
             MaterialTheme {
                 WidgetPickerSurface(
                     providers = listOf(provider),
                     accessiblePlacement = placement,
+                    onAccessiblePlacementRequested = { requestedProvider, target ->
+                        placement =
+                            WidgetPickerAccessiblePlacement(
+                                provider = requestedProvider,
+                                target = target,
+                                initialPageId = LauncherPageId("home"),
+                                candidates =
+                                    listOf(
+                                        WidgetPickerPlacementCandidate(
+                                            pageId = LauncherPageId("home"),
+                                            cell = GridCell(column = 0, row = 0),
+                                            span = GridSpan(columns = 2, rows = 1),
+                                        ),
+                                    ),
+                            )
+                    },
                     onAccessiblePlacementCancelled = { placement = null },
                     onAction = {},
                 )
             }
         }
 
-        composeRule.onNodeWithTag(WIDGET_PICKER_ACCESSIBLE_PLACEMENT_TEST_TAG).assertIsFocused()
+        composeRule.onNodeWithText("Add Clock").requestFocus()
+        composeRule.onNodeWithText("Add Clock").performClick()
+        composeRule.onNodeWithText("Choose Home position").performClick()
+        composeRule.waitUntil {
+            composeRule
+                .onNodeWithText("Cancel")
+                .fetchSemanticsNode()
+                .config[SemanticsProperties.Focused]
+        }
         composeRule.onNodeWithText("Cancel").performClick()
-        composeRule.onNodeWithText("Add Clock").assertIsFocused()
+        composeRule.waitUntil {
+            composeRule
+                .onNodeWithText("Add Clock")
+                .fetchSemanticsNode()
+                .config[SemanticsProperties.Focused]
+        }
     }
 
     @Test
@@ -373,7 +407,7 @@ class WidgetPickerSurfaceTest {
 
         val rootBounds = composeRule.onNodeWithTag(WIDGET_PICKER_ROOT_TEST_TAG).fetchSemanticsNode().boundsInRoot
         val panelBounds = composeRule.onNodeWithTag(WIDGET_PICKER_PANEL_TEST_TAG).fetchSemanticsNode().boundsInRoot
-        val expectedPanelWidth = with(composeRule.density) { (840 - (12 * 2)).dp.toPx() }
+        val expectedPanelWidth = with(composeRule.density) { (960 - (12 * 2)).dp.toPx() }
         val leftMargin = panelBounds.left - rootBounds.left
         val rightMargin = rootBounds.right - panelBounds.right
 
@@ -437,37 +471,102 @@ class WidgetPickerSurfaceTest {
     }
 
     @Test
-    fun providerDropUsesThePickerRootCoordinateSpaceAndBounds() {
+    fun cancellingProviderDragRestoresTheStandardHomePicker() {
+        var widgetPickerOpen by mutableStateOf(true)
+        val actions = mutableListOf<LauncherShellAction>()
+        composeRule.setContent {
+            MaterialTheme {
+                Box(modifier = Modifier.size(width = 300.dp, height = 500.dp)) {
+                    StandardHome(
+                        layout = com.riffle.core.domain.launcher.home.HomeLayoutDefaults.standard(),
+                        installedApps = emptyList(),
+                        interactions = StandardHomeInteractions(),
+                        presentation =
+                            StandardHomePresentation(
+                                appShortcutsByApp = emptyMap(),
+                                widgetPicker =
+                                    StandardHomeWidgetPickerState(
+                                        providers = listOf(widgetProvider()),
+                                        isOpen = widgetPickerOpen,
+                                    ),
+                            ),
+                        appIconLoader = EmptyAppIconLoader,
+                        onAction = { action ->
+                            actions += action
+                            when (action) {
+                                LauncherShellAction.CloseWidgetPicker -> widgetPickerOpen = false
+                                LauncherShellAction.OpenWidgetPicker -> widgetPickerOpen = true
+                                else -> Unit
+                            }
+                        },
+                    )
+                }
+            }
+        }
+
+        composeRule.onNodeWithTag(WIDGET_PROVIDER_TILE_TEST_TAG).performTouchInput {
+            down(center)
+            advanceEventTime(viewConfiguration.longPressTimeoutMillis + 50L)
+            moveBy(Offset(8f, 8f))
+            cancel()
+        }
+
+        composeRule.runOnIdle {
+            assertEquals(
+                listOf(LauncherShellAction.CloseWidgetPicker, LauncherShellAction.OpenWidgetPicker),
+                actions.filter {
+                    it == LauncherShellAction.CloseWidgetPicker || it == LauncherShellAction.OpenWidgetPicker
+                },
+            )
+            assertTrue(widgetPickerOpen)
+        }
+        composeRule.onNodeWithText("Widgets").assertIsDisplayed()
+    }
+
+    @Test
+    fun providerDropUsesTheOffsetPickerRootCoordinateSpaceAndBounds() {
         var droppedPosition: Offset? = null
         var droppedRootSize: IntSize? = null
         composeRule.setContent {
             MaterialTheme {
-                Box(modifier = Modifier.size(width = 300.dp, height = 500.dp)) {
-                    WidgetPickerSurface(
-                        providers = listOf(widgetProvider()),
-                        onWidgetDropped = { _, position, rootSize ->
-                            droppedPosition = position
-                            droppedRootSize = rootSize
-                        },
-                        onAction = {},
-                    )
+                Box(modifier = Modifier.size(width = 400.dp, height = 600.dp)) {
+                    Box(
+                        modifier =
+                            Modifier
+                                .align(Alignment.BottomEnd)
+                                .size(width = 300.dp, height = 500.dp),
+                    ) {
+                        WidgetPickerSurface(
+                            providers = listOf(widgetProvider()),
+                            onWidgetDropped = { _, position, rootSize ->
+                                droppedPosition = position
+                                droppedRootSize = rootSize
+                            },
+                            onAction = {},
+                        )
+                    }
                 }
             }
         }
         val rootBounds =
             composeRule.onNodeWithTag(WIDGET_PICKER_ROOT_TEST_TAG).fetchSemanticsNode().boundsInRoot
+        val tileBounds =
+            composeRule.onNodeWithTag(WIDGET_PROVIDER_TILE_TEST_TAG).fetchSemanticsNode().boundsInRoot
+        val dragDelta = Offset(12f, 16f)
 
         composeRule.onNodeWithTag(WIDGET_PROVIDER_TILE_TEST_TAG).performTouchInput {
             down(center)
             advanceEventTime(viewConfiguration.longPressTimeoutMillis + 50L)
-            moveBy(Offset(12f, 16f))
+            moveBy(dragDelta)
             up()
         }
 
         composeRule.runOnIdle {
             assertEquals(IntSize(rootBounds.width.toInt(), rootBounds.height.toInt()), droppedRootSize)
-            assertTrue(droppedPosition!!.x in 0f..rootBounds.width)
-            assertTrue(droppedPosition!!.y in 0f..rootBounds.height)
+            assertTrue(rootBounds.left > 0f)
+            assertTrue(rootBounds.top > 0f)
+            assertEquals(tileBounds.center.x - rootBounds.left + dragDelta.x, droppedPosition!!.x, 1f)
+            assertEquals(tileBounds.center.y - rootBounds.top + dragDelta.y, droppedPosition!!.y, 1f)
         }
     }
 

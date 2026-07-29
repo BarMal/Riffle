@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.requiredHeight
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -30,6 +31,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
@@ -55,61 +57,74 @@ internal fun WorkspaceGrid(
     modifier: Modifier = Modifier,
 ) {
     BoxWithConstraints(
-        modifier =
-            modifier.onGloballyPositioned { coordinates ->
-                actions.onWorkspaceGridBoundsChanged(page.id, coordinates.boundsInRoot())
-            },
-        contentAlignment = Alignment.Center,
+        modifier = modifier,
     ) {
-        val metrics = HomeGridLayoutMetrics()
-        val cellSizePx =
-            metrics.cellSizePx(
-                grid = page.grid,
-                maxWidthPx = with(LocalDensity.current) { maxWidth.toPx() },
-                maxHeightPx = with(LocalDensity.current) { maxHeight.toPx() },
-            )
-        val cellSize = with(LocalDensity.current) { cellSizePx.toDp() }
-        val previewItems = page.itemsForDragPreview(gridState.dragSession)
-        val activeDragSession =
-            gridState.dragSession
-                ?.takeIf { session -> session.originPageId == page.id || session.targetPageId == page.id }
+        Column(modifier = Modifier.fillMaxSize()) {
+            BoxWithConstraints(
+                modifier = Modifier.fillMaxWidth().weight(1f),
+                contentAlignment = Alignment.Center,
+            ) {
+                val metrics = HomeGridLayoutMetrics()
+                val gridSize =
+                    metrics.gridSizePx(
+                        grid = page.grid,
+                        maxWidthPx = with(LocalDensity.current) { maxWidth.toPx() },
+                        maxHeightPx = with(LocalDensity.current) { maxHeight.toPx() },
+                    )
+                val cellSizePx = gridSize.cellSizePx
+                val density = LocalDensity.current
+                val cellSize = with(density) { cellSizePx.toDp() }
+                val gridWidth = with(density) { gridSize.widthPx.toDp() }
+                val gridHeight = with(density) { gridSize.heightPx.toDp() }
+                val previewItems = page.itemsForDragPreview(gridState.dragSession)
+                val activeDragSession =
+                    gridState.dragSession
+                        ?.takeIf { session -> session.originPageId == page.id || session.targetPageId == page.id }
 
-        Column(
-            modifier = Modifier.fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            repeat(page.grid.rows) { row ->
-                Row(
+                Column(
                     modifier =
                         Modifier
-                            .fillMaxWidth()
-                            .weight(1f),
-                    verticalAlignment = Alignment.CenterVertically,
+                            .requiredSize(gridWidth, gridHeight)
+                            .onGloballyPositioned { coordinates ->
+                                actions.onWorkspaceGridBoundsChanged(page.id, coordinates.boundsInRoot())
+                            }
+                            .testTag(HOME_WORKSPACE_GRID_TEST_TAG),
+                    horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    repeat(page.grid.columns) { column ->
-                        HomeGridCell(
-                            state =
-                                HomeGridCellState(
-                                    cell = GridCell(column = column, row = row),
-                                    cellSize = cellSize,
-                                    cellSizePx = cellSizePx,
-                                    page = page,
-                                    previewItems = previewItems,
-                                    activeDragSession = activeDragSession,
-                                    widgetPickerDragPreview =
-                                        gridState.widgetPickerDragPreview
-                                            ?.takeIf { preview -> preview.targetPageId == page.id },
-                                    gridState = gridState,
-                                ),
-                            presentation = presentation,
-                            appIconLoader = appIconLoader,
-                            actions = actions,
-                        )
+                    repeat(page.grid.rows) { row ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth().weight(1f),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            repeat(page.grid.columns) { column ->
+                                HomeGridCell(
+                                    state =
+                                        HomeGridCellState(
+                                            cell = GridCell(column = column, row = row),
+                                            cellSize = cellSize,
+                                            cellSizePx = cellSizePx,
+                                            page = page,
+                                            previewItems = previewItems,
+                                            activeDragSession = activeDragSession,
+                                            widgetPickerDragPreview =
+                                                gridState.widgetPickerDragPreview
+                                                    ?.takeIf { preview -> preview.targetPageId == page.id },
+                                            gridState = gridState,
+                                        ),
+                                    presentation = presentation,
+                                    appIconLoader = appIconLoader,
+                                    actions = actions,
+                                )
+                            }
+                        }
                     }
                 }
             }
             if (page.hasGeneratedContentOverflowAffordance) {
-                TextButton(onClick = { actions.onAction(LauncherShellAction.OpenAppDrawer) }) {
+                TextButton(
+                    modifier = Modifier.fillMaxWidth().testTag(HOME_WORKSPACE_GRID_OVERFLOW_TEST_TAG),
+                    onClick = { actions.onAction(LauncherShellAction.OpenAppDrawer) },
+                ) {
                     Text(text = "More apps (${page.generatedContentOverflowCount} more)")
                 }
             }
@@ -119,6 +134,9 @@ internal fun WorkspaceGrid(
 
 private val LauncherPage.hasGeneratedContentOverflowAffordance: Boolean
     get() = type is LauncherPageType.Generated && generatedContentOverflowCount > 0
+
+internal const val HOME_WORKSPACE_GRID_TEST_TAG = "home-workspace-grid"
+internal const val HOME_WORKSPACE_GRID_OVERFLOW_TEST_TAG = "home-workspace-grid-overflow"
 
 @Composable
 private fun RowScope.HomeGridCell(

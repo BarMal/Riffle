@@ -22,7 +22,13 @@ data class TimeScapeTemplateVariant(
     val paneMode: TimeScapePaneMode,
     val canvas: TimeScapeCanvas,
     val dynamicSlots: List<TimeScapeDynamicSlot>,
+    val railSide: TimeScapeRailSide = TimeScapeRailSide.LEADING,
 )
+
+enum class TimeScapeRailSide {
+    LEADING,
+    TRAILING,
+}
 
 data class TimeScapeCanvas(
     val grid: GridDimensions,

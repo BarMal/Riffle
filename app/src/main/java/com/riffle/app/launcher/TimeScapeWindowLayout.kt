@@ -2,6 +2,7 @@ package com.riffle.app.launcher
 
 import android.graphics.Rect
 import com.riffle.core.domain.launcher.cards.TimeScapeHingeBounds
+import com.riffle.core.domain.launcher.cards.TimeScapePosture
 import com.riffle.core.domain.launcher.cards.TimeScapeWindowLayout
 import kotlin.math.roundToInt
 
@@ -11,6 +12,7 @@ internal fun timeScapeWindowLayoutFromPixels(
     heightPx: Int,
     density: Float,
     separatingHingeBounds: List<Rect>,
+    posture: TimeScapePosture = TimeScapePosture.UNKNOWN,
 ): TimeScapeWindowLayout {
     val safeDensity = density.takeIf { value -> value > 0f } ?: 1f
 
@@ -28,5 +30,6 @@ internal fun timeScapeWindowLayoutFromPixels(
                     bottomDp = bounds.bottom.toDp(),
                 )
             },
+        posture = posture,
     )
 }

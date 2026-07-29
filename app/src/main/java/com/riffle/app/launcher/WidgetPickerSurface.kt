@@ -27,7 +27,6 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -102,16 +101,13 @@ fun WidgetPickerSurface(
     val providerSections = widgetPickerSectionsFor(filteredProviders, profileContentVisibility)
     var rootCoordinates: LayoutCoordinates? by remember { mutableStateOf(null) }
     val providerFocusRequesters = remember { mutableMapOf<String, FocusRequester>() }
-    val placementProviderKey = accessiblePlacement?.provider?.widgetPickerKey
-    var previousPlacementProviderKey by remember { mutableStateOf(placementProviderKey) }
-    LaunchedEffect(placementProviderKey) {
-        if (placementProviderKey == null) {
-            previousPlacementProviderKey?.let { key ->
-                withFrameNanos { }
-                providerFocusRequesters[key]?.requestFocus()
-            }
-        }
-        previousPlacementProviderKey = placementProviderKey
+    var pendingProviderFocusKey by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(accessiblePlacement, pendingProviderFocusKey) {
+        val providerKey = pendingProviderFocusKey ?: return@LaunchedEffect
+        if (accessiblePlacement != null) return@LaunchedEffect
+        withFrameNanos { }
+        providerFocusRequesters[providerKey]?.requestFocus()
+        pendingProviderFocusKey = null
     }
 
     Box(
@@ -123,7 +119,7 @@ fun WidgetPickerSurface(
                 .windowInsetsPadding(WindowInsets.safeDrawing),
         contentAlignment = Alignment.Center,
     ) {
-        Box(
+        BoxWithConstraints(
             modifier =
                 Modifier
                     .widthIn(max = WIDGET_PICKER_MAX_WIDTH_DP.dp)
@@ -131,6 +127,9 @@ fun WidgetPickerSurface(
                     .fillMaxHeight()
                     .padding(WIDGET_PICKER_PANEL_MARGIN_DP.dp),
         ) {
+            val panelPadding = widgetPickerPanelPadding(maxWidth)
+            val tileMinWidth = widgetPickerTileMinWidth(maxWidth)
+
             Surface(
                 modifier =
                     Modifier
@@ -141,23 +140,23 @@ fun WidgetPickerSurface(
                     if (isDragHandoffActive) {
                         androidx.compose.ui.graphics.Color.Transparent
                     } else {
-                        MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = WIDGET_PICKER_SURFACE_ALPHA)
+                        launcherPanelSurfaceColor()
                     },
-                contentColor = MaterialTheme.colorScheme.onSurface,
+                contentColor = launcherPanelContentColor(),
                 border =
                     if (isDragHandoffActive) {
                         null
                     } else {
-                        BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.56f))
+                        BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.48f))
                     },
-                tonalElevation = if (isDragHandoffActive) 0.dp else 6.dp,
+                tonalElevation = 0.dp,
             ) {
                 Column(
                     modifier =
                         Modifier
                             .fillMaxSize()
                             .alpha(if (isDragHandoffActive) 0f else 1f)
-                            .padding(WIDGET_PICKER_SCREEN_PADDING_DP.dp),
+                            .padding(panelPadding),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
                     Row(
@@ -222,10 +221,14 @@ fun WidgetPickerSurface(
                         onWidgetDragMoved = onWidgetDragMoved,
                         onWidgetDragCancelled = onWidgetDragCancelled,
                         onWidgetDropped = onWidgetDropped,
-                        onAccessiblePlacementRequested = onAccessiblePlacementRequested,
+                        onAccessiblePlacementRequested = { provider, target ->
+                            pendingProviderFocusKey = provider.widgetPickerKey
+                            onAccessiblePlacementRequested(provider, target)
+                        },
                         providerFocusRequesters = providerFocusRequesters,
                         rootCoordinates = rootCoordinates,
                         onRetryRequested = onRetryRequested,
+                        tileMinWidth = tileMinWidth,
                         modifier = Modifier.weight(1f),
                     )
                 }
@@ -262,6 +265,7 @@ private fun WidgetPickerContent(
     providerFocusRequesters: MutableMap<String, FocusRequester>,
     rootCoordinates: LayoutCoordinates?,
     onRetryRequested: () -> Unit,
+    tileMinWidth: Dp,
     modifier: Modifier,
 ) {
     when {
@@ -280,7 +284,7 @@ private fun WidgetPickerContent(
         else ->
             LazyVerticalGrid(
                 modifier = modifier.fillMaxSize(),
-                columns = GridCells.Adaptive(WIDGET_TILE_MIN_WIDTH_DP.dp),
+                columns = GridCells.Adaptive(tileMinWidth),
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
                 verticalArrangement = Arrangement.spacedBy(18.dp),
             ) {
@@ -510,7 +514,7 @@ private fun WidgetPickerAccessiblePlacementControls(
     onConfirm: () -> Unit,
     onCancel: () -> Unit,
 ) {
-    val focusRequester = remember { FocusRequester() }
+    val cancelFocusRequester = remember { FocusRequester() }
     var isLaidOut by remember { mutableStateOf(false) }
     var pageMenuExpanded by remember { mutableStateOf(false) }
     var positionMenuExpanded by remember { mutableStateOf(false) }
@@ -522,18 +526,16 @@ private fun WidgetPickerAccessiblePlacementControls(
         }
     LaunchedEffect(placement.provider.identity, isLaidOut) {
         if (!isLaidOut) return@LaunchedEffect
-        focusRequester.requestFocus()
+        cancelFocusRequester.requestFocus()
     }
     Surface(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .testTag(WIDGET_PICKER_ACCESSIBLE_PLACEMENT_TEST_TAG)
-                .focusRequester(focusRequester)
-                .focusable()
-                .onGloballyPositioned { isLaidOut = true },
+                .testTag(WIDGET_PICKER_ACCESSIBLE_PLACEMENT_TEST_TAG),
         shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.72f),
+        color = launcherPanelSurfaceColor(),
+        contentColor = launcherPanelContentColor(),
         tonalElevation = 2.dp,
     ) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -550,7 +552,7 @@ private fun WidgetPickerAccessiblePlacementControls(
                         TextButton(onClick = { pageMenuExpanded = true }) {
                             Text("Page ${selected?.pageId?.value ?: "unavailable"}")
                         }
-                        DropdownMenu(
+                        RiffleContextMenu(
                             expanded = pageMenuExpanded,
                             onDismissRequest = { pageMenuExpanded = false },
                         ) {
@@ -573,7 +575,7 @@ private fun WidgetPickerAccessiblePlacementControls(
                     ) {
                         Text(selected?.placementPositionLabel() ?: "Position unavailable")
                     }
-                    DropdownMenu(
+                    RiffleContextMenu(
                         expanded = positionMenuExpanded,
                         onDismissRequest = { positionMenuExpanded = false },
                     ) {
@@ -593,7 +595,14 @@ private fun WidgetPickerAccessiblePlacementControls(
                 Button(onClick = onConfirm, enabled = placement.isValid) {
                     Text("Place")
                 }
-                TextButton(onClick = onCancel) {
+                TextButton(
+                    modifier =
+                        Modifier
+                            .focusRequester(cancelFocusRequester)
+                            .focusable()
+                            .onGloballyPositioned { isLaidOut = true },
+                    onClick = onCancel,
+                ) {
                     Text("Cancel")
                 }
             }
@@ -647,13 +656,16 @@ private fun WidgetProviderAddMenu(
 
     Box {
         TextButton(
-            modifier = Modifier.focusRequester(focusRequester),
+            modifier =
+                Modifier
+                    .focusRequester(focusRequester)
+                    .focusable(),
             onClick = { menuExpanded = true },
             enabled = enabled,
         ) {
             Text(text = "Add ${provider.label}")
         }
-        DropdownMenu(
+        RiffleContextMenu(
             expanded = menuExpanded,
             onDismissRequest = { menuExpanded = false },
         ) {
@@ -815,11 +827,8 @@ internal fun InstalledWidgetProvider.requestAddWidgetAction(
         target = target,
     )
 
-private const val WIDGET_PICKER_SCREEN_PADDING_DP = 20
 private const val WIDGET_PICKER_PANEL_MARGIN_DP = 12
-private const val WIDGET_PICKER_MAX_WIDTH_DP = 840
-private const val WIDGET_TILE_MIN_WIDTH_DP = 220
-private const val WIDGET_PICKER_SURFACE_ALPHA = 0.76f
+private const val WIDGET_PICKER_MAX_WIDTH_DP = 960
 private const val WIDGET_PREVIEW_MAX_HEIGHT_DP = 240
 private const val WIDGET_PREVIEW_MIN_LEGIBLE_DIMENSION_DP = 48
 private const val WIDGET_PREVIEW_CONSTRAINED_WIDTH_DP = 180
@@ -830,6 +839,20 @@ internal const val WIDGET_PICKER_PANEL_TEST_TAG = "widget-picker-panel"
 internal const val WIDGET_PROVIDER_TILE_TEST_TAG = "widget-provider-tile"
 internal const val WIDGET_PICKER_ACCESSIBLE_PLACEMENT_TEST_TAG = "widget-picker-accessible-placement"
 private const val WIDGET_PICKER_SECTION_STATE_SEPARATOR = "\u001f"
+
+private fun widgetPickerPanelPadding(maxWidth: Dp): Dp =
+    when {
+        maxWidth < 480.dp -> 16.dp
+        maxWidth < 720.dp -> 20.dp
+        else -> 28.dp
+    }
+
+private fun widgetPickerTileMinWidth(maxWidth: Dp): Dp =
+    when {
+        maxWidth < 480.dp -> 164.dp
+        maxWidth < 720.dp -> 208.dp
+        else -> 260.dp
+    }
 
 private fun String.toCollapsedWidgetPickerSections(): Set<String> =
     split(WIDGET_PICKER_SECTION_STATE_SEPARATOR)
