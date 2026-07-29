@@ -1,6 +1,8 @@
 package com.riffle.app.launcher
 
+import android.appwidget.AppWidgetProviderInfo
 import com.riffle.app.launcher.widgets.WidgetPreviewCache
+import com.riffle.app.launcher.widgets.canLoadGeneratedWidgetPreview
 import com.riffle.app.launcher.widgets.widgetPreviewBitmapSize
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppProfile
@@ -12,7 +14,10 @@ import com.riffle.core.domain.launcher.widgets.InstalledWidgetProvider
 import com.riffle.core.domain.launcher.widgets.WidgetProviderClassName
 import com.riffle.core.domain.launcher.widgets.WidgetProviderDimensions
 import com.riffle.core.domain.launcher.widgets.WidgetProviderIdentity
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -260,11 +265,53 @@ class WidgetPickerDialogTest {
             )
         val loader =
             object : WidgetPreviewImageLoader {
-                override fun previewFor(identity: WidgetProviderIdentity) = error("Preview provider failed")
+                override suspend fun previewFor(identity: WidgetProviderIdentity) = error("Preview provider failed")
             }
 
         assertNull(loader.cachedPreviewForOrNull(identity))
-        assertNull(loader.previewForOrNull(identity))
+        assertNull(runBlocking { loader.previewForOrNull(identity) })
+    }
+
+    @Test
+    fun previewLoaderPreservesCoroutineCancellation() {
+        val identity =
+            WidgetProviderIdentity(
+                packageName = AppPackageName("com.example.clock"),
+                className = WidgetProviderClassName(".ClockWidget"),
+            )
+        val loader =
+            object : WidgetPreviewImageLoader {
+                override suspend fun previewFor(identity: WidgetProviderIdentity): Nothing =
+                    throw CancellationException("Picker item left composition")
+            }
+
+        val failure = runCatching { runBlocking { loader.previewForOrNull(identity) } }.exceptionOrNull()
+
+        assertTrue(failure is CancellationException)
+    }
+
+    @Test
+    fun generatedPreviewRequiresAndroid15AndHomeScreenContent() {
+        assertFalse(
+            canLoadGeneratedWidgetPreview(
+                sdkInt = 34,
+                generatedPreviewCategories = AppWidgetProviderInfo.WIDGET_CATEGORY_HOME_SCREEN,
+            ),
+        )
+        assertFalse(
+            canLoadGeneratedWidgetPreview(
+                sdkInt = 35,
+                generatedPreviewCategories = AppWidgetProviderInfo.WIDGET_CATEGORY_KEYGUARD,
+            ),
+        )
+        assertTrue(
+            canLoadGeneratedWidgetPreview(
+                sdkInt = 35,
+                generatedPreviewCategories =
+                    AppWidgetProviderInfo.WIDGET_CATEGORY_HOME_SCREEN or
+                        AppWidgetProviderInfo.WIDGET_CATEGORY_KEYGUARD,
+            ),
+        )
     }
 
     @Test
