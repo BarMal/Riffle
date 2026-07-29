@@ -1,5 +1,7 @@
 package com.riffle.app.launcher
 
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.home.GeneratedLauncherPageKind
 import com.riffle.core.domain.launcher.home.GridCell
@@ -144,12 +146,119 @@ class WidgetPickerDragSessionTest {
         assertEquals(setOf(existing.id), preview.conflictingItemIds)
     }
 
+    @Test
+    fun edgeHoverSelectsTheAdjacentEditablePage() {
+        val pages =
+            listOf(
+                page(id = "first"),
+                page(id = "second"),
+                page(id = "third"),
+            )
+
+        assertEquals(
+            LauncherPageId("first"),
+            widgetPickerEdgeHoverPageId(
+                position = Offset(5f, 100f),
+                workspaceBounds = Rect(0f, 0f, 400f, 500f),
+                edgeZonePx = 40f,
+                pages = pages,
+                selectedPageId = LauncherPageId("second"),
+            ),
+        )
+        assertEquals(
+            LauncherPageId("third"),
+            widgetPickerEdgeHoverPageId(
+                position = Offset(395f, 100f),
+                workspaceBounds = Rect(0f, 0f, 400f, 500f),
+                edgeZonePx = 40f,
+                pages = pages,
+                selectedPageId = LauncherPageId("second"),
+            ),
+        )
+    }
+
+    @Test
+    fun edgeHoverUsesVisualPageDirectionInRtl() {
+        val pages = listOf(page(id = "first"), page(id = "second"), page(id = "third"))
+
+        assertEquals(
+            LauncherPageId("third"),
+            widgetPickerEdgeHoverPageId(
+                position = Offset(5f, 100f),
+                workspaceBounds = Rect(0f, 0f, 400f, 500f),
+                edgeZonePx = 40f,
+                pages = pages,
+                selectedPageId = LauncherPageId("second"),
+                isRtl = true,
+            ),
+        )
+    }
+
+    @Test
+    fun edgeHoverDoesNotCrossGeneratedPageBoundary() {
+        val pages =
+            listOf(
+                page(id = "home"),
+                page(id = "generated", type = LauncherPageType.Generated(GeneratedLauncherPageKind.APP)),
+                page(id = "other-home"),
+            )
+
+        assertEquals(
+            null,
+            widgetPickerEdgeHoverPageId(
+                position = Offset(395f, 100f),
+                workspaceBounds = Rect(0f, 0f, 400f, 500f),
+                edgeZonePx = 40f,
+                pages = pages,
+                selectedPageId = LauncherPageId("home"),
+            ),
+        )
+    }
+
+    @Test
+    fun edgeHoverIgnoresInteriorOutsideAndTerminalTargets() {
+        val pages = listOf(page(id = "first"), page(id = "second"))
+        val bounds = Rect(0f, 0f, 400f, 500f)
+
+        assertEquals(
+            null,
+            widgetPickerEdgeHoverPageId(
+                position = Offset(200f, 100f),
+                workspaceBounds = bounds,
+                edgeZonePx = 40f,
+                pages = pages,
+                selectedPageId = LauncherPageId("first"),
+            ),
+        )
+        assertEquals(
+            null,
+            widgetPickerEdgeHoverPageId(
+                position = Offset(405f, 100f),
+                workspaceBounds = bounds,
+                edgeZonePx = 40f,
+                pages = pages,
+                selectedPageId = LauncherPageId("first"),
+            ),
+        )
+        assertEquals(
+            null,
+            widgetPickerEdgeHoverPageId(
+                position = Offset(5f, 100f),
+                workspaceBounds = bounds,
+                edgeZonePx = 40f,
+                pages = pages,
+                selectedPageId = LauncherPageId("first"),
+            ),
+        )
+    }
+
     private fun page(
+        id: String = "home",
         type: LauncherPageType = LauncherPageType.Home,
         items: List<WidgetItem> = emptyList(),
     ): LauncherPage =
         LauncherPage(
-            id = LauncherPageId("home"),
+            id = LauncherPageId(id),
             type = type,
             grid = GridDimensions(columns = 4, rows = 5),
             items = items,

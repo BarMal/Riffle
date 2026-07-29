@@ -1,5 +1,7 @@
 package com.riffle.app.launcher
 
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import com.riffle.app.launcher.widgets.preferredGridSpan
 import com.riffle.core.domain.launcher.home.GridCell
 import com.riffle.core.domain.launcher.home.GridDimensions
@@ -24,6 +26,11 @@ internal data class WidgetPickerDragPlacementPreview(
     val isValid: Boolean,
     val conflictingItemIds: Set<LauncherItemId> = emptySet(),
 )
+
+internal enum class WidgetPickerEdgeHoverSide {
+    LEFT,
+    RIGHT,
+}
 
 data class WidgetPickerPlacementCandidate(
     val pageId: LauncherPageId? = null,
@@ -98,6 +105,67 @@ internal fun firstValidWidgetPickerPlacementPreviewFor(
         }
     }
     return null
+}
+
+internal fun widgetPickerEdgeHoverPageId(
+    position: Offset,
+    workspaceBounds: Rect,
+    edgeZonePx: Float,
+    pages: List<LauncherPage>,
+    selectedPageId: LauncherPageId,
+    isRtl: Boolean = false,
+): LauncherPageId? =
+    widgetPickerEdgeHoverSide(
+        position = position,
+        workspaceBounds = workspaceBounds,
+        edgeZonePx = edgeZonePx,
+    )?.let { side ->
+        widgetPickerEdgeHoverPageId(
+            side = side,
+            pages = pages,
+            selectedPageId = selectedPageId,
+            isRtl = isRtl,
+        )
+    }
+
+internal fun widgetPickerEdgeHoverSide(
+    position: Offset,
+    workspaceBounds: Rect,
+    edgeZonePx: Float,
+): WidgetPickerEdgeHoverSide? {
+    if (
+        edgeZonePx <= 0f ||
+        workspaceBounds.width <= 0f ||
+        !workspaceBounds.contains(position)
+    ) {
+        return null
+    }
+
+    val boundedEdgeZone = edgeZonePx.coerceAtMost(workspaceBounds.width / 2f)
+    return when {
+        position.x <= workspaceBounds.left + boundedEdgeZone -> WidgetPickerEdgeHoverSide.LEFT
+        position.x >= workspaceBounds.right - boundedEdgeZone -> WidgetPickerEdgeHoverSide.RIGHT
+        else -> null
+    }
+}
+
+internal fun widgetPickerEdgeHoverPageId(
+    side: WidgetPickerEdgeHoverSide,
+    pages: List<LauncherPage>,
+    selectedPageId: LauncherPageId,
+    isRtl: Boolean = false,
+): LauncherPageId? {
+    val selectedPageIndex = pages.indexOfFirst { page -> page.id == selectedPageId }
+    val physicalDirection = if (side == WidgetPickerEdgeHoverSide.LEFT) -1 else 1
+    val pageDirection = if (isRtl) -physicalDirection else physicalDirection
+    val selectedPage = pages.getOrNull(selectedPageIndex)
+    val adjacentPage = pages.getOrNull(selectedPageIndex + pageDirection)
+    return adjacentPage
+        ?.takeIf {
+            selectedPage != null &&
+                selectedPage.type !is LauncherPageType.Generated &&
+                adjacentPage.type !is LauncherPageType.Generated
+        }?.id
 }
 
 private fun GridSpan.cellsAt(origin: GridCell): List<GridCell> =
