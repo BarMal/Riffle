@@ -207,11 +207,12 @@ private fun DockEditRejectionMessage(
 
 private const val DOCK_EDIT_REJECTION_TIMEOUT_MILLIS = 5_000L
 
-private val TimeScapeInteractionContextSaver =
+internal val TimeScapeInteractionContextSaver =
     Saver<TimeScapeInteractionContext, List<String>>(
         save = { context ->
             listOf(
                 context.selectedStageKey.orEmpty(),
+                context.detailStageKey.orEmpty(),
                 context.focusedCardKey.orEmpty(),
                 context.detailCardKey.orEmpty(),
                 context.templateId.orEmpty(),
@@ -219,13 +220,24 @@ private val TimeScapeInteractionContextSaver =
             )
         },
         restore = { saved ->
-            TimeScapeInteractionContext(
-                selectedStageKey = saved.getOrNull(0)?.takeIf(String::isNotBlank),
-                focusedCardKey = saved.getOrNull(1)?.takeIf(String::isNotBlank),
-                detailCardKey = saved.getOrNull(2)?.takeIf(String::isNotBlank),
-                templateId = saved.getOrNull(3)?.takeIf(String::isNotBlank),
-                scrollOffsetPx = saved.getOrNull(4)?.toIntOrNull() ?: 0,
-            )
+            if (saved.size >= 6) {
+                TimeScapeInteractionContext(
+                    selectedStageKey = saved.getOrNull(0)?.takeIf(String::isNotBlank),
+                    detailStageKey = saved.getOrNull(1)?.takeIf(String::isNotBlank),
+                    focusedCardKey = saved.getOrNull(2)?.takeIf(String::isNotBlank),
+                    detailCardKey = saved.getOrNull(3)?.takeIf(String::isNotBlank),
+                    templateId = saved.getOrNull(4)?.takeIf(String::isNotBlank),
+                    scrollOffsetPx = saved.getOrNull(5)?.toIntOrNull() ?: 0,
+                )
+            } else {
+                TimeScapeInteractionContext(
+                    selectedStageKey = saved.getOrNull(0)?.takeIf(String::isNotBlank),
+                    focusedCardKey = saved.getOrNull(1)?.takeIf(String::isNotBlank),
+                    detailCardKey = saved.getOrNull(2)?.takeIf(String::isNotBlank),
+                    templateId = saved.getOrNull(3)?.takeIf(String::isNotBlank),
+                    scrollOffsetPx = saved.getOrNull(4)?.toIntOrNull() ?: 0,
+                )
+            }
         },
     )
 

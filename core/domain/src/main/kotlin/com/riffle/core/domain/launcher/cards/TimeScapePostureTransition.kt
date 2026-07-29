@@ -34,6 +34,7 @@ data class TimeScapePostureTransitionState(
 /** Stable interaction identity retained while the launcher moves between Home destinations. */
 data class TimeScapeInteractionContext(
     val selectedStageKey: String? = null,
+    val detailStageKey: String? = null,
     val focusedCardKey: String? = null,
     val detailCardKey: String? = null,
     val templateId: String? = null,
@@ -45,6 +46,7 @@ data class TimeScapeInteractionContext(
     ): TimeScapeInteractionContext =
         copy(
             selectedStageKey = selectedStageKey?.takeIf(availableStageKeys::contains),
+            detailStageKey = detailStageKey?.takeIf(availableStageKeys::contains),
             focusedCardKey = focusedCardKey?.takeIf(availableCardKeys::contains),
             detailCardKey = detailCardKey?.takeIf(availableCardKeys::contains),
         )
