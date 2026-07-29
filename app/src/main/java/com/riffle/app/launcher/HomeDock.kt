@@ -641,7 +641,7 @@ private fun Modifier.dockItemDrag(
     onAction: (LauncherShellAction) -> Unit,
 ): Modifier {
     return state.item
-        ?.takeIf { item -> state.isEditing && item.isDirectDockDragEligible() }
+        ?.takeIf { item -> item.isDirectDockDragEligible() }
         ?.id
         ?.let { itemId ->
             pointerInput(itemId, state.shortcutIndex, state.shortcutCount, slotWidthDp, itemSpacingDp) {

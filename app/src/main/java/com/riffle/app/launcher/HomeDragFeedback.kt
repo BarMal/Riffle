@@ -310,7 +310,7 @@ internal fun homeItemDragDropAction(
     }
 
 private val LauncherItem.isDockTransferable: Boolean
-    get() = this is AppShortcutItem || this is FolderItem
+    get() = this is AppShortcutItem || this is FolderItem || this is WidgetItem
 
 private fun HomeItemDragState.isDraggedBelowGrid(dragY: Float): Boolean = dragY >= (grid.rows - cell.row) * cellSizePx
 

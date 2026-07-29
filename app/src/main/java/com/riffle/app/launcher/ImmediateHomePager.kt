@@ -243,7 +243,9 @@ internal fun ImmediateWorkspacePager(
                         .fillMaxHeight()
                         .graphicsLayer {
                             translationX = pageCenterOffsetPx + ((index - pagerState.pagePosition) * pageWidthPx)
-                            clip = true
+                            // Let an active item remain visible while it crosses from the
+                            // workspace into the Dock below the pager.
+                            clip = activeDragSession == null
                         }
                 if (page.isNotificationCardsPage) {
                     GeneratedNotificationCardsPage(
