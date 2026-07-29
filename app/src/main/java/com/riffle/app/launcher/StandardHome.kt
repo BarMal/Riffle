@@ -157,28 +157,29 @@ internal fun StandardHome(
                     accessibleWidgetPlacementFor(
                         provider = provider,
                         target = target,
-                        page = visibleLayout.selectedPage,
-                        dockAvailable = visibleLayout.dock.isEnabled && visibleLayout.dock.availableSlots > 0,
+                        pages = visibleLayout.pages,
+                        selectedPageId = visibleLayout.selectedPageId,
+                        dockAvailableSlots =
+                            visibleLayout.dock.availableSlots.takeIf { visibleLayout.dock.isEnabled } ?: 0,
                         availableWidthDp = workspaceGridBounds.value?.width?.div(density)?.roundToInt() ?: 0,
                         availableHeightDp = workspaceGridBounds.value?.height?.div(density)?.roundToInt() ?: 0,
                     )
             },
+            onAccessiblePlacementSelected = { placement ->
+                accessibleWidgetPlacement.value = placement
+                placement.selectedCandidate?.pageId?.let { pageId ->
+                    if (pageId != visibleLayout.selectedPageId) {
+                        onAction(LauncherShellAction.SelectHomePage(pageId))
+                    }
+                }
+            },
             onAccessiblePlacementConfirmed = {
                 accessibleWidgetPlacement.value?.takeIf { placement -> placement.isValid }?.let { placement ->
-                    onAction(
-                        LauncherShellAction.RequestAddWidget(
-                            provider = placement.provider.identity,
-                            label = placement.provider.label,
-                            dimensions = placement.provider.dimensions,
-                            supportsHorizontalResize = placement.provider.supportsHorizontalResize,
-                            supportsVerticalResize = placement.provider.supportsVerticalResize,
-                            target = placement.target,
-                            targetPageId = placement.targetPageId,
-                            targetCell = placement.targetCell,
-                        ),
-                    )
-                    accessibleWidgetPlacement.value = null
-                    onAction(LauncherShellAction.CloseWidgetPicker)
+                    accessibleWidgetAddActionFor(placement)?.let { action ->
+                        onAction(action)
+                        accessibleWidgetPlacement.value = null
+                        onAction(LauncherShellAction.CloseWidgetPicker)
+                    }
                 }
             },
             onAccessiblePlacementCancelled = { accessibleWidgetPlacement.value = null },
@@ -230,11 +231,27 @@ internal fun StandardHome(
     }
 }
 
+@Suppress("MaxLineLength")
+internal fun accessibleWidgetAddActionFor(placement: WidgetPickerAccessiblePlacement): LauncherShellAction.RequestAddWidget? {
+    val candidate = placement.selectedCandidate ?: return null
+    return LauncherShellAction.RequestAddWidget(
+        provider = placement.provider.identity,
+        label = placement.provider.label,
+        dimensions = placement.provider.dimensions,
+        supportsHorizontalResize = placement.provider.supportsHorizontalResize,
+        supportsVerticalResize = placement.provider.supportsVerticalResize,
+        target = placement.target,
+        targetPageId = candidate.pageId,
+        targetCell = candidate.cell,
+    )
+}
+
 internal fun accessibleWidgetPlacementFor(
     provider: InstalledWidgetProvider,
     target: WidgetAddTarget,
-    page: LauncherPage,
-    dockAvailable: Boolean,
+    pages: List<LauncherPage>,
+    selectedPageId: LauncherPageId,
+    dockAvailableSlots: Int,
     availableWidthDp: Int,
     availableHeightDp: Int,
 ): WidgetPickerAccessiblePlacement {
@@ -242,24 +259,45 @@ internal fun accessibleWidgetPlacementFor(
         return WidgetPickerAccessiblePlacement(
             provider = provider,
             target = target,
-            isValid = dockAvailable,
+            candidates =
+                if (dockAvailableSlots > 0) {
+                    (0 until dockAvailableSlots).map { index ->
+                        WidgetPickerPlacementCandidate(dockIndex = index)
+                    }
+                } else {
+                    emptyList()
+                },
         )
     }
 
-    val preview =
-        firstValidWidgetPickerPlacementPreviewFor(
-            page = page,
-            provider = provider,
-            availableWidthDp = availableWidthDp,
-            availableHeightDp = availableHeightDp,
-        )
+    val orderedPages =
+        pages.sortedBy { page ->
+            if (page.id == selectedPageId) 0 else 1
+        }
+    val candidates =
+        orderedPages.flatMap { page ->
+            (0 until page.grid.rows.coerceAtLeast(0)).flatMap { row ->
+                (0 until page.grid.columns.coerceAtLeast(0)).mapNotNull { column ->
+                    widgetPickerDragPlacementPreviewFor(
+                        page = page,
+                        provider = provider,
+                        cell = GridCell(column = column, row = row),
+                        availableWidthDp = availableWidthDp,
+                        availableHeightDp = availableHeightDp,
+                    ).takeIf { preview -> preview.isValid }?.let { preview ->
+                        WidgetPickerPlacementCandidate(
+                            pageId = page.id,
+                            cell = preview.cell,
+                            span = preview.span,
+                        )
+                    }
+                }
+            }
+        }
     return WidgetPickerAccessiblePlacement(
         provider = provider,
         target = target,
-        targetPageId = page.id,
-        targetCell = preview?.cell,
-        span = preview?.span,
-        isValid = preview != null,
+        candidates = candidates,
     )
 }
 

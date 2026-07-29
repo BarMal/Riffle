@@ -76,6 +76,7 @@ fun WidgetPickerSurface(
     onWidgetDragCancelled: (InstalledWidgetProvider) -> Unit = {},
     onWidgetDropped: (InstalledWidgetProvider, Offset, IntSize) -> Unit = { _, _, _ -> },
     onAccessiblePlacementRequested: (InstalledWidgetProvider, WidgetAddTarget) -> Unit = { _, _ -> },
+    onAccessiblePlacementSelected: (WidgetPickerAccessiblePlacement) -> Unit = {},
     onAccessiblePlacementConfirmed: () -> Unit = {},
     onAccessiblePlacementCancelled: () -> Unit = {},
     onAction: (LauncherShellAction) -> Unit,
@@ -174,6 +175,7 @@ fun WidgetPickerSurface(
                     accessiblePlacement?.let { placement ->
                         WidgetPickerAccessiblePlacementControls(
                             placement = placement,
+                            onSelect = onAccessiblePlacementSelected,
                             onConfirm = onAccessiblePlacementConfirmed,
                             onCancel = onAccessiblePlacementCancelled,
                         )
@@ -185,7 +187,6 @@ fun WidgetPickerSurface(
                         collapsedSectionTitles = collapsedSectionTitles,
                         onCollapsedSectionTitlesChange = { value -> collapsedSectionTitles = value },
                         previewImageLoader = previewImageLoader,
-                        onAction = onAction,
                         onWidgetDragStarted = onWidgetDragStarted,
                         onWidgetDragMoved = onWidgetDragMoved,
                         onWidgetDragCancelled = onWidgetDragCancelled,
@@ -219,7 +220,6 @@ private fun WidgetPickerContent(
     collapsedSectionTitles: String,
     onCollapsedSectionTitlesChange: (String) -> Unit,
     previewImageLoader: WidgetPreviewImageLoader,
-    onAction: (LauncherShellAction) -> Unit,
     onWidgetDragStarted: (InstalledWidgetProvider) -> Unit,
     onWidgetDragMoved: (InstalledWidgetProvider, Offset, IntSize) -> Unit,
     onWidgetDragCancelled: (InstalledWidgetProvider) -> Unit,
@@ -271,7 +271,6 @@ private fun WidgetPickerContent(
                             WidgetProviderTile(
                                 provider = provider,
                                 previewImageLoader = previewImageLoader,
-                                onAction = onAction,
                                 onWidgetDragStarted = onWidgetDragStarted,
                                 onWidgetDragMoved = onWidgetDragMoved,
                                 onWidgetDragCancelled = onWidgetDragCancelled,
@@ -290,7 +289,6 @@ private fun WidgetPickerContent(
 private fun WidgetProviderTile(
     provider: InstalledWidgetProvider,
     previewImageLoader: WidgetPreviewImageLoader,
-    onAction: (LauncherShellAction) -> Unit,
     onWidgetDragStarted: (InstalledWidgetProvider) -> Unit,
     onWidgetDragMoved: (InstalledWidgetProvider, Offset, IntSize) -> Unit,
     onWidgetDragCancelled: (InstalledWidgetProvider) -> Unit,
@@ -388,16 +386,28 @@ private fun WidgetProviderTile(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        WidgetProviderAddMenu(provider = provider, onAction = onAction)
+        WidgetProviderAddMenu(
+            provider = provider,
+            onAccessiblePlacementRequested = onAccessiblePlacementRequested,
+        )
     }
 }
 
 @Composable
 private fun WidgetPickerAccessiblePlacementControls(
     placement: WidgetPickerAccessiblePlacement,
+    onSelect: (WidgetPickerAccessiblePlacement) -> Unit,
     onConfirm: () -> Unit,
     onCancel: () -> Unit,
 ) {
+    var pageMenuExpanded by remember { mutableStateOf(false) }
+    var positionMenuExpanded by remember { mutableStateOf(false) }
+    val selected = placement.selectedCandidate
+    val pageCandidates = placement.candidates.filter { candidate -> candidate.pageId != null }.distinctBy { it.pageId }
+    val positionCandidates =
+        placement.candidates.filter { candidate ->
+            placement.target == WidgetAddTarget.DOCK || candidate.pageId == selected?.pageId
+        }
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
@@ -412,6 +422,51 @@ private fun WidgetPickerAccessiblePlacementControls(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (placement.target == WidgetAddTarget.HOME) {
+                    Box {
+                        TextButton(onClick = { pageMenuExpanded = true }) {
+                            Text("Page ${selected?.pageId?.value ?: "unavailable"}")
+                        }
+                        DropdownMenu(
+                            expanded = pageMenuExpanded,
+                            onDismissRequest = { pageMenuExpanded = false },
+                        ) {
+                            pageCandidates.forEach { candidate ->
+                                DropdownMenuItem(
+                                    text = { Text("Page ${candidate.pageId?.value}") },
+                                    onClick = {
+                                        pageMenuExpanded = false
+                                        onSelect(placement.selectCandidate(candidate))
+                                    },
+                                )
+                            }
+                        }
+                    }
+                }
+                Box {
+                    TextButton(
+                        onClick = { positionMenuExpanded = true },
+                        enabled = positionCandidates.isNotEmpty(),
+                    ) {
+                        Text(selected?.placementPositionLabel() ?: "Position unavailable")
+                    }
+                    DropdownMenu(
+                        expanded = positionMenuExpanded,
+                        onDismissRequest = { positionMenuExpanded = false },
+                    ) {
+                        positionCandidates.forEach { candidate ->
+                            DropdownMenuItem(
+                                text = { Text(candidate.placementPositionLabel()) },
+                                onClick = {
+                                    positionMenuExpanded = false
+                                    onSelect(placement.selectCandidate(candidate))
+                                },
+                            )
+                        }
+                    }
+                }
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(onClick = onConfirm, enabled = placement.isValid) {
                     Text("Place")
                 }
@@ -423,12 +478,18 @@ private fun WidgetPickerAccessiblePlacementControls(
     }
 }
 
+private fun WidgetPickerPlacementCandidate.placementPositionLabel(): String =
+    when {
+        dockIndex != null -> "Dock position ${dockIndex + 1}"
+        cell != null -> "Column ${cell.column + 1}, row ${cell.row + 1}"
+        else -> "Position unavailable"
+    }
+
 private fun WidgetPickerAccessiblePlacement.accessiblePlacementDescription(): String =
     when {
         !isValid -> "${provider.label} cannot be placed at the selected ${target.name.lowercase()} target."
-        target == WidgetAddTarget.HOME && targetPageId != null && targetCell != null ->
-            "${provider.label} on Home page ${targetPageId.value}, " +
-                "starting at column ${targetCell.column + 1}, row ${targetCell.row + 1}."
+        target == WidgetAddTarget.HOME && selectedCandidate?.pageId != null ->
+            "${provider.label} on Home page ${selectedCandidate?.pageId?.value}."
         target == WidgetAddTarget.DOCK -> "${provider.label} in the Dock at the next available position."
         else -> "${provider.label} placement is ready."
     }
@@ -436,7 +497,7 @@ private fun WidgetPickerAccessiblePlacement.accessiblePlacementDescription(): St
 @Composable
 private fun WidgetProviderAddMenu(
     provider: InstalledWidgetProvider,
-    onAction: (LauncherShellAction) -> Unit,
+    onAccessiblePlacementRequested: (InstalledWidgetProvider, WidgetAddTarget) -> Unit,
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
 
@@ -452,14 +513,14 @@ private fun WidgetProviderAddMenu(
                 text = { Text("Choose Home position") },
                 onClick = {
                     menuExpanded = false
-                    onAction(provider.requestAddWidgetAction(WidgetAddTarget.HOME))
+                    onAccessiblePlacementRequested(provider, WidgetAddTarget.HOME)
                 },
             )
             DropdownMenuItem(
                 text = { Text("Choose Dock position") },
                 onClick = {
                     menuExpanded = false
-                    onAction(provider.requestAddWidgetAction(WidgetAddTarget.DOCK))
+                    onAccessiblePlacementRequested(provider, WidgetAddTarget.DOCK)
                 },
             )
         }

@@ -25,14 +25,28 @@ internal data class WidgetPickerDragPlacementPreview(
     val conflictingItemIds: Set<LauncherItemId> = emptySet(),
 )
 
+data class WidgetPickerPlacementCandidate(
+    val pageId: LauncherPageId? = null,
+    val cell: GridCell? = null,
+    val span: GridSpan? = null,
+    val dockIndex: Int? = null,
+)
+
 data class WidgetPickerAccessiblePlacement(
     val provider: InstalledWidgetProvider,
     val target: WidgetAddTarget,
-    val targetPageId: LauncherPageId? = null,
-    val targetCell: GridCell? = null,
-    val span: GridSpan? = null,
-    val isValid: Boolean,
-)
+    val candidates: List<WidgetPickerPlacementCandidate>,
+    val selectedCandidateIndex: Int = 0,
+) {
+    val selectedCandidate: WidgetPickerPlacementCandidate?
+        get() = candidates.getOrNull(selectedCandidateIndex)
+
+    val isValid: Boolean
+        get() = selectedCandidate != null
+
+    fun selectCandidate(candidate: WidgetPickerPlacementCandidate): WidgetPickerAccessiblePlacement =
+        copy(selectedCandidateIndex = candidates.indexOf(candidate).coerceAtLeast(0))
+}
 
 internal fun widgetPickerDragPlacementPreviewFor(
     page: LauncherPage,

@@ -61,6 +61,29 @@ class WidgetPickerSurfaceTest {
     }
 
     @Test
+    fun visibleAddMenuUsesTheSamePlacementSelectionFlow() {
+        var selectedTarget: WidgetAddTarget? = null
+        val emittedActions = mutableListOf<LauncherShellAction>()
+        composeRule.setContent {
+            MaterialTheme {
+                WidgetPickerSurface(
+                    providers = listOf(widgetProvider()),
+                    onAccessiblePlacementRequested = { _, target -> selectedTarget = target },
+                    onAction = { action -> emittedActions += action },
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("Add Clock").performClick()
+        composeRule.onNodeWithText("Choose Home position").performClick()
+
+        composeRule.runOnIdle {
+            assertEquals(WidgetAddTarget.HOME, selectedTarget)
+            assertTrue(emittedActions.isEmpty())
+        }
+    }
+
+    @Test
     fun accessiblePlacementCanBeCancelledWithoutEmittingAnAddRequest() {
         var cancelled = false
         val emittedActions = mutableListOf<LauncherShellAction>()
@@ -72,10 +95,14 @@ class WidgetPickerSurfaceTest {
                         WidgetPickerAccessiblePlacement(
                             provider = widgetProvider(),
                             target = WidgetAddTarget.HOME,
-                            targetPageId = LauncherPageId("home"),
-                            targetCell = GridCell(column = 0, row = 0),
-                            span = GridSpan(columns = 2, rows = 1),
-                            isValid = true,
+                            candidates =
+                                listOf(
+                                    WidgetPickerPlacementCandidate(
+                                        pageId = LauncherPageId("home"),
+                                        cell = GridCell(column = 0, row = 0),
+                                        span = GridSpan(columns = 2, rows = 1),
+                                    ),
+                                ),
                         ),
                     onAccessiblePlacementCancelled = { cancelled = true },
                     onAction = { action -> emittedActions += action },

@@ -4,6 +4,10 @@ import com.riffle.app.launcher.widgets.WidgetPreviewCache
 import com.riffle.app.launcher.widgets.widgetPreviewBitmapSize
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppProfile
+import com.riffle.core.domain.launcher.home.GridDimensions
+import com.riffle.core.domain.launcher.home.LauncherPage
+import com.riffle.core.domain.launcher.home.LauncherPageId
+import com.riffle.core.domain.launcher.home.LauncherPageType
 import com.riffle.core.domain.launcher.widgets.InstalledWidgetProvider
 import com.riffle.core.domain.launcher.widgets.WidgetProviderClassName
 import com.riffle.core.domain.launcher.widgets.WidgetProviderDimensions
@@ -13,6 +17,40 @@ import org.junit.Assert.assertNull
 import org.junit.Test
 
 class WidgetPickerDialogTest {
+    @Test
+    fun accessiblePlacementSelectsPageAndCellBeforeBuildingTheAddRequest() {
+        val provider = widgetProvider(label = "Weather", packageName = "com.example.weather", className = ".Weather")
+        val firstPage =
+            LauncherPage(id = LauncherPageId("first"), type = LauncherPageType.Home, grid = GridDimensions(2, 1))
+        val secondPage =
+            LauncherPage(id = LauncherPageId("second"), type = LauncherPageType.Home, grid = GridDimensions(2, 1))
+        val placement =
+            accessibleWidgetPlacementFor(
+                provider = provider,
+                target = WidgetAddTarget.HOME,
+                pages = listOf(firstPage, secondPage),
+                selectedPageId = secondPage.id,
+                dockAvailableSlots = 0,
+                availableWidthDp = 400,
+                availableHeightDp = 400,
+            )
+        var emittedRequest: LauncherShellAction.RequestAddWidget? = null
+
+        assertNull(emittedRequest)
+        val selected =
+            placement.selectCandidate(
+                placement.candidates.first { candidate ->
+                    candidate.pageId == secondPage.id && candidate.cell?.column == 1
+                },
+            )
+        assertEquals(secondPage.id, selected.selectedCandidate?.pageId)
+        assertEquals(1, selected.selectedCandidate?.cell?.column)
+
+        emittedRequest = accessibleWidgetAddActionFor(selected)
+        assertEquals(secondPage.id, emittedRequest?.targetPageId)
+        assertEquals(selected.selectedCandidate?.cell, emittedRequest?.targetCell)
+    }
+
     @Test
     fun previewCacheBoundsEntriesAndEvictsLeastRecentlyUsed() {
         val cache = WidgetPreviewCache<String>(maxEntries = 2)
