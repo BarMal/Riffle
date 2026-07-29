@@ -150,6 +150,20 @@ class LauncherThemeTest {
     }
 
     @Test
+    fun reducedTransparencyUsesOpaqueLauncherOverlayTokensForGlass() {
+        val tokens =
+            launcherThemeSurfaceTokens(
+                themePreset = LauncherThemePreset.GLASS,
+                colorScheme = lightScheme,
+                reducedTransparency = true,
+            )
+
+        assertEquals(1f, tokens.overlayAlpha)
+        assertEquals(1f, tokens.panelColor.alpha)
+        assertEquals(1f, tokens.menuColor.alpha)
+    }
+
+    @Test
     fun defaultHomeLabelTextContrastsWithItsScrimBackgroundAfterBackgroundCustomisation() {
         val scheme = lightScheme.withThemeColors(LauncherThemeColors(backgroundArgb = 0xFFF0F0F0.toInt()))
 

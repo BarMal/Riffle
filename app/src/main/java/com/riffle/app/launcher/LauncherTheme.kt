@@ -1,4 +1,4 @@
-@file:Suppress("CyclomaticComplexMethod", "TooManyFunctions")
+@file:Suppress("CyclomaticComplexMethod", "LongParameterList", "TooManyFunctions")
 
 package com.riffle.app.launcher
 
@@ -36,6 +36,7 @@ fun RiffleLauncherTheme(
     themeColors: LauncherThemeColors = LauncherThemeColors(),
     themeCornerStyle: LauncherThemeCornerStyle = LauncherThemeCornerStyle.PRESET,
     themeTypography: LauncherThemeTypography = LauncherThemeTypography.PRESET,
+    reducedTransparency: Boolean = false,
     content: @Composable () -> Unit,
 ) {
     val darkTheme =
@@ -60,7 +61,12 @@ fun RiffleLauncherTheme(
     CompositionLocalProvider(
         LocalLauncherCardShape provides launcherCardShape(themePreset, themeCornerStyle),
         LocalLauncherPanelShape provides launcherPanelShape(themePreset, themeCornerStyle),
-        LocalLauncherThemeSurfaceTokens provides launcherThemeSurfaceTokens(themePreset, colorScheme),
+        LocalLauncherThemeSurfaceTokens provides
+            launcherThemeSurfaceTokens(
+                themePreset = themePreset,
+                colorScheme = colorScheme,
+                reducedTransparency = reducedTransparency,
+            ),
         LocalLauncherThemeColorOverrides provides themeColors.toColorOverrides(),
     ) {
         MaterialTheme(
@@ -92,11 +98,13 @@ internal data class LauncherThemeColorOverrides(
 internal fun launcherThemeSurfaceTokens(
     themePreset: LauncherThemePreset,
     colorScheme: ColorScheme,
+    reducedTransparency: Boolean = false,
 ): LauncherThemeSurfaceTokens {
     val overlayAlpha =
-        when (themePreset) {
-            LauncherThemePreset.GLASS -> 0.78f
-            else -> 1f
+        if (themePreset == LauncherThemePreset.GLASS && !reducedTransparency) {
+            0.78f
+        } else {
+            1f
         }
     return LauncherThemeSurfaceTokens(
         panelColor = colorScheme.surface.copy(alpha = overlayAlpha),
