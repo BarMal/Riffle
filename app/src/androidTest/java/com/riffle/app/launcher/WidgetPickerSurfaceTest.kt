@@ -471,6 +471,59 @@ class WidgetPickerSurfaceTest {
     }
 
     @Test
+    fun cancellingProviderDragRestoresTheStandardHomePicker() {
+        var widgetPickerOpen by mutableStateOf(true)
+        val actions = mutableListOf<LauncherShellAction>()
+        composeRule.setContent {
+            MaterialTheme {
+                Box(modifier = Modifier.size(width = 300.dp, height = 500.dp)) {
+                    StandardHome(
+                        layout = com.riffle.core.domain.launcher.home.HomeLayoutDefaults.standard(),
+                        installedApps = emptyList(),
+                        interactions = StandardHomeInteractions(),
+                        presentation =
+                            StandardHomePresentation(
+                                appShortcutsByApp = emptyMap(),
+                                widgetPicker =
+                                    StandardHomeWidgetPickerState(
+                                        providers = listOf(widgetProvider()),
+                                        isOpen = widgetPickerOpen,
+                                    ),
+                            ),
+                        appIconLoader = EmptyAppIconLoader,
+                        onAction = { action ->
+                            actions += action
+                            when (action) {
+                                LauncherShellAction.CloseWidgetPicker -> widgetPickerOpen = false
+                                LauncherShellAction.OpenWidgetPicker -> widgetPickerOpen = true
+                                else -> Unit
+                            }
+                        },
+                    )
+                }
+            }
+        }
+
+        composeRule.onNodeWithTag(WIDGET_PROVIDER_TILE_TEST_TAG).performTouchInput {
+            down(center)
+            advanceEventTime(viewConfiguration.longPressTimeoutMillis + 50L)
+            moveBy(Offset(8f, 8f))
+            cancel()
+        }
+
+        composeRule.runOnIdle {
+            assertEquals(
+                listOf(LauncherShellAction.CloseWidgetPicker, LauncherShellAction.OpenWidgetPicker),
+                actions.filter {
+                    it == LauncherShellAction.CloseWidgetPicker || it == LauncherShellAction.OpenWidgetPicker
+                },
+            )
+            assertTrue(widgetPickerOpen)
+        }
+        composeRule.onNodeWithText("Widgets").assertIsDisplayed()
+    }
+
+    @Test
     fun providerDropUsesTheOffsetPickerRootCoordinateSpaceAndBounds() {
         var droppedPosition: Offset? = null
         var droppedRootSize: IntSize? = null
