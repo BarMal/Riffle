@@ -515,6 +515,7 @@ private fun WidgetPickerAccessiblePlacementControls(
     onCancel: () -> Unit,
 ) {
     val cancelFocusRequester = remember { FocusRequester() }
+    var isLaidOut by remember { mutableStateOf(false) }
     var pageMenuExpanded by remember { mutableStateOf(false) }
     var positionMenuExpanded by remember { mutableStateOf(false) }
     val selected = placement.selectedCandidate
@@ -523,8 +524,8 @@ private fun WidgetPickerAccessiblePlacementControls(
         placement.candidates.filter { candidate ->
             placement.target == WidgetAddTarget.DOCK || candidate.pageId == selected?.pageId
         }
-    LaunchedEffect(placement.provider.identity) {
-        withFrameNanos { }
+    LaunchedEffect(placement.provider.identity, isLaidOut) {
+        if (!isLaidOut) return@LaunchedEffect
         cancelFocusRequester.requestFocus()
     }
     Surface(
@@ -598,7 +599,8 @@ private fun WidgetPickerAccessiblePlacementControls(
                     modifier =
                         Modifier
                             .focusRequester(cancelFocusRequester)
-                            .focusable(),
+                            .focusable()
+                            .onGloballyPositioned { isLaidOut = true },
                     onClick = onCancel,
                 ) {
                     Text("Cancel")
