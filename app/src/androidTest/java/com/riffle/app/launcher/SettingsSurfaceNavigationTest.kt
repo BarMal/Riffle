@@ -9,6 +9,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.StateRestorationTester
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -42,11 +44,11 @@ class SettingsSurfaceNavigationTest {
             }
         }
 
-        composeRule.onNodeWithText("Appearance").performScrollTo().performClick()
+        composeRule.onNode(hasText("Appearance") and hasClickAction()).performScrollTo().performClick()
         composeRule.onNodeWithText("Hide navigation bar").performScrollTo().assertIsDisplayed()
         composeRule.onNodeWithText("Back").performClick()
 
-        composeRule.onNodeWithText("Appearance").assertIsDisplayed()
+        composeRule.onNode(hasText("Appearance") and hasClickAction()).assertIsDisplayed()
     }
 
     @Test
@@ -85,7 +87,7 @@ class SettingsSurfaceStateRestorationTest {
                 }
             }
 
-            onNodeWithText("Appearance").performScrollTo().performClick()
+            onNode(hasText("Appearance") and hasClickAction()).performScrollTo().performClick()
             onNodeWithText("Hide navigation bar").performScrollTo().assertIsDisplayed()
 
             restorationTester.emulateSaveAndRestore()
