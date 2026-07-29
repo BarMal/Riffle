@@ -1,6 +1,8 @@
 package com.riffle.app
 
 import android.content.Intent
+import com.riffle.app.launcher.FirstRunRepository
+import com.riffle.app.launcher.LauncherShellViewModel
 import com.riffle.core.domain.launcher.HomeRoleStatus
 import com.riffle.core.domain.launcher.OverlayDockPermissionStatus
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
@@ -18,20 +20,21 @@ import org.junit.Test
 class MainActivityStartupTest {
     @Test
     fun startupAppliesLiveStatusesBeforeFirstLauncherComposition() {
-        var homeRoleStatus = HomeRoleStatus.UNKNOWN
-        var notificationAccessStatus = NotificationAccessStatus.UNKNOWN
-        var overlayDockPermissionStatus = OverlayDockPermissionStatus.UNKNOWN
+        val viewModel = LauncherShellViewModel(firstRunRepository = FakeFirstRunRepository())
 
         composeLauncherShellAfterStatusRefresh(
             refreshStatuses = {
-                homeRoleStatus = HomeRoleStatus.DEFAULT_HOME
-                notificationAccessStatus = NotificationAccessStatus.GRANTED
-                overlayDockPermissionStatus = OverlayDockPermissionStatus.GRANTED
+                refreshLauncherPlatformStatuses(
+                    readHomeRoleStatus = { HomeRoleStatus.DEFAULT_HOME },
+                    notificationAccessStatus = NotificationAccessStatus.GRANTED,
+                    overlayDockPermissionStatus = OverlayDockPermissionStatus.GRANTED,
+                    publishStatuses = viewModel::onHomeRoleStatusChanged,
+                )
             },
             compose = {
-                assertEquals(HomeRoleStatus.DEFAULT_HOME, homeRoleStatus)
-                assertEquals(NotificationAccessStatus.GRANTED, notificationAccessStatus)
-                assertEquals(OverlayDockPermissionStatus.GRANTED, overlayDockPermissionStatus)
+                assertEquals(HomeRoleStatus.DEFAULT_HOME, viewModel.state.value.homeRoleStatus)
+                assertEquals(NotificationAccessStatus.GRANTED, viewModel.state.value.notificationAccessStatus)
+                assertEquals(OverlayDockPermissionStatus.GRANTED, viewModel.state.value.overlayDockPermissionStatus)
             },
         )
     }
@@ -136,4 +139,10 @@ class MainActivityStartupTest {
                 }.toList(),
             )
         }
+
+    private class FakeFirstRunRepository : FirstRunRepository {
+        override fun isFirstRunComplete(): Boolean = false
+
+        override fun setFirstRunComplete() = Unit
+    }
 }

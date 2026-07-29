@@ -60,6 +60,7 @@ import com.riffle.app.launcher.widgets.WidgetBindPermissionResult
 import com.riffle.app.launcher.widgets.WidgetConfigurationResult
 import com.riffle.core.domain.launcher.FirstRunStatus
 import com.riffle.core.domain.launcher.HomeRoleStatus
+import com.riffle.core.domain.launcher.OverlayDockPermissionStatus
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppProfile
 import com.riffle.core.domain.launcher.cards.TimeScapeWindowLayout
@@ -493,14 +494,11 @@ class MainActivity : ComponentActivity() {
         val notificationAccessStatus = notificationAccessGateway.getNotificationAccessStatus()
         val notificationAccessWasRevoked =
             shellViewModel.state.value.notificationAccessStatus == NotificationAccessStatus.REVOKED
-        shellViewModel.onHomeRoleStatusChanged(
-            homeRoleStatus =
-                startupPlatformValue(
-                    fallback = HomeRoleStatus.UNKNOWN,
-                    read = homeRoleGateway::getHomeRoleStatus,
-                ),
+        refreshLauncherPlatformStatuses(
+            readHomeRoleStatus = homeRoleGateway::getHomeRoleStatus,
             notificationAccessStatus = notificationAccessStatus,
             overlayDockPermissionStatus = overlayDockPermissionGateway.getOverlayDockPermissionStatus(),
+            publishStatuses = shellViewModel::onHomeRoleStatusChanged,
         )
         if (
             notificationAccessStatus == NotificationAccessStatus.REVOKED &&
@@ -601,6 +599,26 @@ internal fun composeLauncherShellAfterStatusRefresh(
 ) {
     refreshStatuses()
     compose()
+}
+
+internal fun refreshLauncherPlatformStatuses(
+    readHomeRoleStatus: () -> HomeRoleStatus,
+    notificationAccessStatus: NotificationAccessStatus,
+    overlayDockPermissionStatus: OverlayDockPermissionStatus,
+    publishStatuses: (
+        homeRoleStatus: HomeRoleStatus,
+        notificationAccessStatus: NotificationAccessStatus,
+        overlayDockPermissionStatus: OverlayDockPermissionStatus,
+    ) -> Unit,
+) {
+    publishStatuses(
+        startupPlatformValue(
+            fallback = HomeRoleStatus.UNKNOWN,
+            read = readHomeRoleStatus,
+        ),
+        notificationAccessStatus,
+        overlayDockPermissionStatus,
+    )
 }
 
 private const val BACKUP_DOCUMENT_MIME_TYPE = "application/json"
