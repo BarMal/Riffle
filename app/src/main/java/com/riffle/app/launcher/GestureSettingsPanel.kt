@@ -183,6 +183,10 @@ internal val LauncherGestureAction.label: String
             LauncherGestureAction.ENTER_FULLSCREEN_HOME -> "Fullscreen home"
             LauncherGestureAction.SELECT_NEXT_HOME_PAGE -> "Next page"
             LauncherGestureAction.SELECT_PREVIOUS_HOME_PAGE -> "Previous page"
+            LauncherGestureAction.ENTER_TIMESCAPE -> "Enter TimeScape"
+            LauncherGestureAction.EXIT_TIMESCAPE -> "Exit TimeScape"
+            LauncherGestureAction.SELECT_NEXT_APP_STAGE -> "Next TimeScape stage"
+            LauncherGestureAction.SELECT_PREVIOUS_APP_STAGE -> "Previous TimeScape stage"
             LauncherGestureAction.LAUNCH_APP -> "Launch app"
             LauncherGestureAction.LAUNCH_APP_SHORTCUT -> "Launch shortcut"
         }

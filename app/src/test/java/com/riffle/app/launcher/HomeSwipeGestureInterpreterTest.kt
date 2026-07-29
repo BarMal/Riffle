@@ -5,6 +5,7 @@ import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.apps.AppShortcutId
+import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.settings.GestureSettings
 import com.riffle.core.domain.launcher.settings.HomeGesture
 import com.riffle.core.domain.launcher.settings.HomeGestureSettings
@@ -244,6 +245,37 @@ class HomeSwipeGestureInterpreterTest {
         val settings = HomeGestureSettings(actions = mapOf(HomeGesture.ONE_FINGER_UP to LauncherGestureAction.NONE))
 
         assertNull(actionMapper.actionFor(HomeGesture.ONE_FINGER_UP, settings))
+    }
+
+    @Test
+    fun mapsTimeScapeEntryExitAndStageActions() {
+        val settings =
+            HomeGestureSettings(
+                actions =
+                    mapOf(
+                        HomeGesture.THREE_FINGER_UP to LauncherGestureAction.ENTER_TIMESCAPE,
+                        HomeGesture.THREE_FINGER_DOWN to LauncherGestureAction.EXIT_TIMESCAPE,
+                        HomeGesture.TWO_FINGER_LEFT to LauncherGestureAction.SELECT_NEXT_APP_STAGE,
+                        HomeGesture.TWO_FINGER_RIGHT to LauncherGestureAction.SELECT_PREVIOUS_APP_STAGE,
+                    ),
+            )
+
+        assertEquals(
+            LauncherShellAction.SelectLauncherViewMode(LauncherViewMode.CARD_INTERFACE),
+            actionMapper.actionFor(HomeGesture.THREE_FINGER_UP, settings),
+        )
+        assertEquals(
+            LauncherShellAction.SelectLauncherViewMode(LauncherViewMode.STANDARD_APP_DRAWER),
+            actionMapper.actionFor(HomeGesture.THREE_FINGER_DOWN, settings),
+        )
+        assertEquals(
+            LauncherShellAction.SelectNextAppStage,
+            actionMapper.actionFor(HomeGesture.TWO_FINGER_LEFT, settings),
+        )
+        assertEquals(
+            LauncherShellAction.SelectPreviousAppStage,
+            actionMapper.actionFor(HomeGesture.TWO_FINGER_RIGHT, settings),
+        )
     }
 
     @Test
