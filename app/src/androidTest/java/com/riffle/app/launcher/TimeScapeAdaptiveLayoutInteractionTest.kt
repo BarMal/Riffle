@@ -8,13 +8,16 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.unit.Density
@@ -96,6 +99,32 @@ class TimeScapeAdaptiveLayoutInteractionTest {
 
         composeRule.onNodeWithText("Stages").assertIsDisplayed()
         composeRule.onNodeWithText("Next").assertIsDisplayed()
+    }
+
+    @Test
+    fun compactUnfoldedCompactKeepsStageManagerPostureGated() {
+        var posture by mutableStateOf(TimeScapePosture.COMPACT)
+        composeRule.setContent {
+            CompositionLocalProvider(LocalDensity provides Density(TEST_WINDOW_DENSITY)) {
+                MaterialTheme {
+                    Box(
+                        modifier = Modifier.width(1_200.dp).height(TEST_WINDOW_HEIGHT_DP.dp).clipToBounds(),
+                    ) {
+                        TimeScapeAppStageSurface(
+                            state = LauncherShellState(notificationAccessStatus = NotificationAccessStatus.NOT_GRANTED),
+                            windowLayout = TimeScapeWindowLayout(1_200, TEST_WINDOW_HEIGHT_DP, posture = posture),
+                            onAction = {},
+                        )
+                    }
+                }
+            }
+        }
+
+        composeRule.onAllNodesWithText("Stages").assertCountEquals(0)
+        composeRule.runOnIdle { posture = TimeScapePosture.UNFOLDED }
+        composeRule.onNodeWithText("Stages").assertIsDisplayed()
+        composeRule.runOnIdle { posture = TimeScapePosture.COMPACT }
+        composeRule.onAllNodesWithText("Stages").assertCountEquals(0)
     }
 
     private fun setContent(

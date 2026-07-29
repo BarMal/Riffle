@@ -107,18 +107,30 @@ internal class AndroidHomeLayoutDeviceClassObserver(
 }
 
 private fun List<FoldingFeature>.timeScapePosture(hasFoldableHardware: Boolean): TimeScapePosture =
+    timeScapePostureFromSignals(
+        hasFoldableHardware = hasFoldableHardware,
+        hasFoldingFeature = isNotEmpty(),
+        hasHalfOpenedFoldingFeature = any { feature -> feature.state == FoldingFeature.State.HALF_OPENED },
+        hasHorizontalHalfOpenedFoldingFeature =
+            any { feature ->
+                feature.state == FoldingFeature.State.HALF_OPENED &&
+                    feature.orientation == FoldingFeature.Orientation.HORIZONTAL
+            },
+        hasFlatFoldingFeature = any { feature -> feature.state == FoldingFeature.State.FLAT },
+    )
+
+internal fun timeScapePostureFromSignals(
+    hasFoldableHardware: Boolean,
+    hasFoldingFeature: Boolean,
+    hasHalfOpenedFoldingFeature: Boolean,
+    hasHorizontalHalfOpenedFoldingFeature: Boolean,
+    hasFlatFoldingFeature: Boolean,
+): TimeScapePosture =
     when {
-        any { feature ->
-            feature.state == FoldingFeature.State.HALF_OPENED &&
-                feature.orientation == FoldingFeature.Orientation.HORIZONTAL
-        } ->
-            TimeScapePosture.TABLETOP
-        any { feature -> feature.state == FoldingFeature.State.HALF_OPENED } ->
-            TimeScapePosture.PARTIALLY_FOLDED
-        any { feature -> feature.state == FoldingFeature.State.FLAT } ->
-            TimeScapePosture.UNFOLDED
-        isNotEmpty() -> TimeScapePosture.COMPACT
-        hasFoldableHardware -> TimeScapePosture.COMPACT
+        hasHorizontalHalfOpenedFoldingFeature -> TimeScapePosture.TABLETOP
+        hasHalfOpenedFoldingFeature -> TimeScapePosture.PARTIALLY_FOLDED
+        hasFlatFoldingFeature -> TimeScapePosture.UNFOLDED
+        hasFoldingFeature || hasFoldableHardware -> TimeScapePosture.COMPACT
         else -> TimeScapePosture.UNKNOWN
     }
 

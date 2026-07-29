@@ -30,3 +30,22 @@ data class TimeScapePostureTransitionState(
     fun settle(): TimeScapePostureTransitionState =
         pendingPosture?.let { posture -> copy(settledPosture = posture, pendingPosture = null) } ?: this
 }
+
+/** Stable interaction identity retained while the launcher moves between Home destinations. */
+data class TimeScapeInteractionContext(
+    val selectedStageKey: String? = null,
+    val focusedCardKey: String? = null,
+    val detailCardKey: String? = null,
+    val templateId: String? = null,
+    val scrollOffsetPx: Int = 0,
+) {
+    fun reconcile(
+        availableStageKeys: Set<String>,
+        availableCardKeys: Set<String>,
+    ): TimeScapeInteractionContext =
+        copy(
+            selectedStageKey = selectedStageKey?.takeIf(availableStageKeys::contains),
+            focusedCardKey = focusedCardKey?.takeIf(availableCardKeys::contains),
+            detailCardKey = detailCardKey?.takeIf(availableCardKeys::contains),
+        )
+}

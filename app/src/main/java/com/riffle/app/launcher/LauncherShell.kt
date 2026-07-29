@@ -25,6 +25,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.LiveRegionMode
@@ -42,6 +46,7 @@ import com.riffle.core.domain.launcher.apps.AppActivityName
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.InstalledApp
+import com.riffle.core.domain.launcher.cards.TimeScapeInteractionContext
 import com.riffle.core.domain.launcher.cards.TimeScapeWindowLayout
 import com.riffle.core.domain.launcher.home.DockEditRejectionReason
 import com.riffle.core.domain.launcher.home.LauncherViewModeAvailability
@@ -60,6 +65,9 @@ fun LauncherShell(
     onAction: (LauncherShellAction) -> Unit,
 ) {
     val state by viewModel.state.collectAsState()
+    var timeScapeContext by rememberSaveable(stateSaver = TimeScapeInteractionContextSaver) {
+        mutableStateOf(TimeScapeInteractionContext())
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         LauncherShellContent(
@@ -69,6 +77,8 @@ fun LauncherShell(
             appIconLoader = appIconLoader,
             widgetRenderers = widgetRenderers,
             timeScapeWindowLayout = timeScapeWindowLayout,
+            timeScapeContext = timeScapeContext,
+            onTimeScapeContextChanged = { timeScapeContext = it },
             onAction = onAction,
             onSetupCardDismissed = viewModel::onSetupCardDismissed,
             onDockEditFeedbackDismissed = viewModel::onDockEditFeedbackDismissed,
@@ -87,6 +97,8 @@ fun LauncherShellContent(
     onAction: (LauncherShellAction) -> Unit,
     onSetupCardDismissed: () -> Unit = {},
     onDockEditFeedbackDismissed: () -> Unit = {},
+    timeScapeContext: TimeScapeInteractionContext = TimeScapeInteractionContext(),
+    onTimeScapeContextChanged: (TimeScapeInteractionContext) -> Unit = {},
 ) {
     val haptics = rememberLauncherHaptics(state.launcherSettings.haptics.feedbackStrength)
 
@@ -133,6 +145,8 @@ fun LauncherShellContent(
                 appIconLoader = appIconLoader,
                 widgetRenderers = widgetRenderers,
                 timeScapeWindowLayout = timeScapeWindowLayout,
+                timeScapeContext = timeScapeContext,
+                onTimeScapeContextChanged = onTimeScapeContextChanged,
                 haptics = haptics,
                 onAction = onAction,
             )
@@ -192,6 +206,28 @@ private fun DockEditRejectionMessage(
 }
 
 private const val DOCK_EDIT_REJECTION_TIMEOUT_MILLIS = 5_000L
+
+private val TimeScapeInteractionContextSaver =
+    Saver<TimeScapeInteractionContext, List<String>>(
+        save = { context ->
+            listOf(
+                context.selectedStageKey.orEmpty(),
+                context.focusedCardKey.orEmpty(),
+                context.detailCardKey.orEmpty(),
+                context.templateId.orEmpty(),
+                context.scrollOffsetPx.toString(),
+            )
+        },
+        restore = { saved ->
+            TimeScapeInteractionContext(
+                selectedStageKey = saved.getOrNull(0)?.takeIf(String::isNotBlank),
+                focusedCardKey = saved.getOrNull(1)?.takeIf(String::isNotBlank),
+                detailCardKey = saved.getOrNull(2)?.takeIf(String::isNotBlank),
+                templateId = saved.getOrNull(3)?.takeIf(String::isNotBlank),
+                scrollOffsetPx = saved.getOrNull(4)?.toIntOrNull() ?: 0,
+            )
+        },
+    )
 
 internal fun dockEditRejectionMessage(reason: DockEditRejectionReason): String =
     when (reason) {
@@ -328,6 +364,8 @@ private fun LauncherDestination(
     appIconLoader: AppIconLoader,
     widgetRenderers: LauncherWidgetRenderers,
     timeScapeWindowLayout: TimeScapeWindowLayout?,
+    timeScapeContext: TimeScapeInteractionContext,
+    onTimeScapeContextChanged: (TimeScapeInteractionContext) -> Unit,
     haptics: LauncherHaptics,
     onAction: (LauncherShellAction) -> Unit,
 ) {
@@ -340,6 +378,8 @@ private fun LauncherDestination(
                 appIconLoader = appIconLoader,
                 widgetRenderers = widgetRenderers,
                 timeScapeWindowLayout = timeScapeWindowLayout,
+                timeScapeContext = timeScapeContext,
+                onTimeScapeContextChanged = onTimeScapeContextChanged,
                 haptics = haptics,
                 onAction = settingsPageActionRouter.onAction,
             )

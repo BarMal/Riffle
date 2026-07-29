@@ -1,11 +1,50 @@
 package com.riffle.app.launcher
 
+import com.riffle.core.domain.launcher.cards.TimeScapePosture
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 
 class HomeLayoutDeviceClassSelectionTest {
+    @Test
+    fun timeScapePostureKeepsUnavailableAndUnconfirmedReportsOutOfStageManager() {
+        assertEquals(
+            TimeScapePosture.UNKNOWN,
+            timeScapePostureFromSignals(
+                hasFoldableHardware = false,
+                hasFoldingFeature = false,
+                hasHalfOpenedFoldingFeature = false,
+                hasHorizontalHalfOpenedFoldingFeature = false,
+                hasFlatFoldingFeature = false,
+            ),
+        )
+        assertEquals(
+            TimeScapePosture.COMPACT,
+            timeScapePostureFromSignals(
+                hasFoldableHardware = true,
+                hasFoldingFeature = false,
+                hasHalfOpenedFoldingFeature = false,
+                hasHorizontalHalfOpenedFoldingFeature = false,
+                hasFlatFoldingFeature = false,
+            ),
+        )
+    }
+
+    @Test
+    fun timeScapePostureRequiresFlatWindowManagerReportForUnfolded() {
+        assertEquals(
+            TimeScapePosture.UNFOLDED,
+            timeScapePostureFromSignals(
+                hasFoldableHardware = true,
+                hasFoldingFeature = true,
+                hasHalfOpenedFoldingFeature = false,
+                hasHorizontalHalfOpenedFoldingFeature = false,
+                hasFlatFoldingFeature = true,
+            ),
+        )
+    }
+
     @Test
     fun foldableDiagnosticsSummarizeSelectionAndSignals() {
         val event =
