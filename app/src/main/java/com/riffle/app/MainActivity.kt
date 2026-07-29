@@ -429,6 +429,7 @@ class MainActivity : ComponentActivity() {
         lifecycle.addObserver(packageChangeObserver)
         lifecycle.addObserver(widgetHostGateway)
         refreshHomeLayoutDeviceClass(source = "onCreate")
+        refreshPlatformStatuses()
         observeHomeLayoutDeviceClass()
         startSystemUiSync(shellViewModel.state)
         startWallpaperOffsetSync(
