@@ -396,6 +396,9 @@ class WidgetPickerSurfaceTest {
         composeRule.onNodeWithTag(WIDGET_PICKER_DRAG_PREVIEW_TEST_TAG).assertIsDisplayed()
 
         sourceNode.performTouchInput { up() }
+        repeat(3) {
+            composeRule.mainClock.advanceTimeByFrame()
+        }
         composeRule.waitForIdle()
 
         composeRule.runOnIdle {
