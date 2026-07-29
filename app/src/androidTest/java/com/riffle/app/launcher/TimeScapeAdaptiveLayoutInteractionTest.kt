@@ -92,6 +92,61 @@ class TimeScapeAdaptiveLayoutInteractionTest {
     }
 
     @Test
+    fun foldableTemplateRegionsDoNotCrossVerticalHinge() {
+        composeRule.setContent {
+            CompositionLocalProvider(LocalDensity provides Density(TEST_WINDOW_DENSITY)) {
+                MaterialTheme {
+                    Box(modifier = Modifier.width(1_200.dp).height(TEST_WINDOW_HEIGHT_DP.dp).clipToBounds()) {
+                        TimeScapeAppStageSurface(
+                            state =
+                                LauncherShellState(
+                                    settingsLayoutDeviceClass = HomeLayoutDeviceClass.FOLDABLE,
+                                    notificationAccessStatus = NotificationAccessStatus.NOT_GRANTED,
+                                ),
+                            windowLayout =
+                                TimeScapeWindowLayout(
+                                    widthDp = 1_200,
+                                    heightDp = TEST_WINDOW_HEIGHT_DP,
+                                    separatingHinges =
+                                        listOf(
+                                            TimeScapeHingeBounds(
+                                                leftDp = 584,
+                                                topDp = 0,
+                                                rightDp = 616,
+                                                bottomDp = TEST_WINDOW_HEIGHT_DP,
+                                            ),
+                                        ),
+                                    posture = TimeScapePosture.UNFOLDED,
+                                ),
+                            onAction = {},
+                        )
+                    }
+                }
+            }
+        }
+
+        val hingeLeftPx = 584 * TEST_WINDOW_DENSITY
+        val hingeRightPx = 616 * TEST_WINDOW_DENSITY
+        val regionTags =
+            listOf("clock", "search", "carousel", "dock").flatMap { id ->
+                val baseTag = timeScapeTemplateElementTestTag(id)
+                listOf(baseTag, timeScapeTemplatePaneFragmentTestTag(baseTag, 1))
+            } +
+                timeScapeTemplateSlotTestTag("app-stage").let { baseTag ->
+                    listOf(baseTag, timeScapeTemplatePaneFragmentTestTag(baseTag, 1))
+                }
+
+        regionTags.forEach { tag ->
+            val bounds = composeRule.onNodeWithTag(tag).fetchSemanticsNode().boundsInRoot
+            assertTrue(
+                "$tag crosses the separating hinge: $bounds",
+                bounds.right <= hingeLeftPx + PIXEL_TOLERANCE ||
+                    bounds.left >= hingeRightPx - PIXEL_TOLERANCE,
+            )
+        }
+    }
+
+    @Test
     fun largeWindowKeepsSupportingDetailPaneInsideSafeInsets() {
         setContent(
             widthDp = INSET_TEST_WINDOW_WIDTH_DP,

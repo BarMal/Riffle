@@ -263,6 +263,9 @@ internal fun TimeScapeAppStageSurface(
                     canvasHeightDp = paneLayout.contentHeightDp,
                     gridColumns = templateVariant?.canvas?.grid?.columns ?: 1,
                     gridRows = templateVariant?.canvas?.grid?.rows ?: 1,
+                    leadingPaneWidthDp = paneLayout.leadingRegionWidthDp,
+                    hingeGapDp = paneLayout.hingeGapDp,
+                    trailingPaneWidthDp = paneLayout.trailingRegionWidthDp,
                 )
                 if (paneLayout.mode == TimeScapePaneMode.COMPACT) {
                     TimeScapeCompactContent(
@@ -391,49 +394,132 @@ private fun TimeScapeTemplateStaticCanvas(
     canvasHeightDp: Int,
     gridColumns: Int,
     gridRows: Int,
+    leadingPaneWidthDp: Int,
+    hingeGapDp: Int,
+    trailingPaneWidthDp: Int,
 ) {
     if (gridColumns <= 0 || gridRows <= 0) return
     val cellWidthDp = canvasWidthDp.toFloat() / gridColumns
     val cellHeightDp = canvasHeightDp.toFloat() / gridRows
+    val paneIntervals =
+        timeScapeTemplatePaneIntervals(
+            canvasWidthDp = canvasWidthDp,
+            leadingPaneWidthDp = leadingPaneWidthDp,
+            hingeGapDp = hingeGapDp,
+            trailingPaneWidthDp = trailingPaneWidthDp,
+        )
     elements.forEach { element ->
         val placement = element.placement
         val x = cellWidthDp * placement.cell.column
         val y = cellHeightDp * placement.cell.row
         val width = cellWidthDp * placement.span.columns
         val height = cellHeightDp * placement.span.rows
-        Box(
-            modifier =
-                Modifier
-                    .offset(x = x.dp, y = y.dp)
-                    .width(width.dp)
-                    .height(height.dp)
-                    .testTag(timeScapeTemplateElementTestTag(element.id.value)),
-        ) {
-            Text(
-                text = timeScapeTemplateElementLabel(element.type),
-                modifier = Modifier.padding(8.dp),
-                style = MaterialTheme.typography.labelSmall,
-            )
+        timeScapeTemplateFragments(x, width, paneIntervals).forEachIndexed { index, fragment ->
+            Box(
+                modifier =
+                    Modifier
+                        .offset(x = fragment.startDp.dp, y = y.dp)
+                        .width(fragment.widthDp.dp)
+                        .height(height.dp)
+                        .testTag(timeScapeTemplateFragmentTestTag(element.id.value, index, isSlot = false)),
+            ) {
+                if (index == 0) {
+                    Text(
+                        text = timeScapeTemplateElementLabel(element.type),
+                        modifier = Modifier.padding(8.dp),
+                        style = MaterialTheme.typography.labelSmall,
+                    )
+                }
+            }
         }
     }
     dynamicSlots.forEach { slot ->
         val placement = slot.placement
-        Box(
-            modifier =
-                Modifier
-                    .offset(
-                        x = (cellWidthDp * placement.cell.column).dp,
-                        y = (cellHeightDp * placement.cell.row).dp,
-                    ).width((cellWidthDp * placement.span.columns).dp)
-                    .height((cellHeightDp * placement.span.rows).dp)
-                    .testTag(timeScapeTemplateSlotTestTag(slot.id.value)),
-        )
+        val x = cellWidthDp * placement.cell.column
+        val width = cellWidthDp * placement.span.columns
+        timeScapeTemplateFragments(x, width, paneIntervals).forEachIndexed { index, fragment ->
+            Box(
+                modifier =
+                    Modifier
+                        .offset(
+                            x = fragment.startDp.dp,
+                            y = (cellHeightDp * placement.cell.row).dp,
+                        ).width(fragment.widthDp.dp)
+                        .height((cellHeightDp * placement.span.rows).dp)
+                        .testTag(timeScapeTemplateFragmentTestTag(slot.id.value, index, isSlot = true)),
+            )
+        }
     }
 }
 
 internal fun timeScapeTemplateElementTestTag(id: String): String = "timescape-template-element-$id"
 
 internal fun timeScapeTemplateSlotTestTag(id: String): String = "timescape-template-slot-$id"
+
+internal fun timeScapeTemplatePaneFragmentTestTag(
+    baseTag: String,
+    paneIndex: Int,
+): String = "$baseTag-pane-$paneIndex"
+
+private fun timeScapeTemplateFragmentTestTag(
+    id: String,
+    fragmentIndex: Int,
+    isSlot: Boolean,
+): String {
+    val baseTag =
+        if (isSlot) {
+            timeScapeTemplateSlotTestTag(id)
+        } else {
+            timeScapeTemplateElementTestTag(id)
+        }
+    return if (fragmentIndex == 0) baseTag else timeScapeTemplatePaneFragmentTestTag(baseTag, fragmentIndex)
+}
+
+private data class TimeScapeTemplateHorizontalInterval(
+    val startDp: Float,
+    val endDp: Float,
+) {
+    val widthDp: Float
+        get() = endDp - startDp
+}
+
+private fun timeScapeTemplatePaneIntervals(
+    canvasWidthDp: Int,
+    leadingPaneWidthDp: Int,
+    hingeGapDp: Int,
+    trailingPaneWidthDp: Int,
+): List<TimeScapeTemplateHorizontalInterval> {
+    if (hingeGapDp <= 0) {
+        return listOf(TimeScapeTemplateHorizontalInterval(0f, canvasWidthDp.toFloat()))
+    }
+    val trailingStartDp = leadingPaneWidthDp + hingeGapDp
+    return buildList {
+        if (leadingPaneWidthDp > 0) {
+            add(TimeScapeTemplateHorizontalInterval(0f, leadingPaneWidthDp.toFloat()))
+        }
+        if (trailingPaneWidthDp > 0) {
+            add(
+                TimeScapeTemplateHorizontalInterval(
+                    startDp = trailingStartDp.toFloat(),
+                    endDp = (trailingStartDp + trailingPaneWidthDp).coerceAtMost(canvasWidthDp).toFloat(),
+                ),
+            )
+        }
+    }
+}
+
+private fun timeScapeTemplateFragments(
+    placementStartDp: Float,
+    placementWidthDp: Float,
+    paneIntervals: List<TimeScapeTemplateHorizontalInterval>,
+): List<TimeScapeTemplateHorizontalInterval> {
+    val placementEndDp = placementStartDp + placementWidthDp
+    return paneIntervals.mapNotNull { pane ->
+        val startDp = maxOf(placementStartDp, pane.startDp)
+        val endDp = minOf(placementEndDp, pane.endDp)
+        if (endDp > startDp) TimeScapeTemplateHorizontalInterval(startDp, endDp) else null
+    }
+}
 
 private fun timeScapeTemplateElementLabel(type: TimeScapeStaticElementType): String =
     when (type) {
