@@ -47,6 +47,28 @@ class WidgetPickerSurfaceTest {
     }
 
     @Test
+    fun presentsThePickerAsAThemeDrivenSpaciousPanel() {
+        composeRule.setContent {
+            MaterialTheme {
+                Box(modifier = Modifier.size(width = 300.dp, height = 500.dp)) {
+                    WidgetPickerSurface(
+                        providers = listOf(widgetProvider()),
+                        previewImageLoader = ThrowingWidgetPreviewImageLoader,
+                        onAction = {},
+                    )
+                }
+            }
+        }
+
+        val rootBounds = composeRule.onNodeWithTag(WIDGET_PICKER_ROOT_TEST_TAG).fetchSemanticsNode().boundsInRoot
+        val panelBounds = composeRule.onNodeWithTag(WIDGET_PICKER_PANEL_TEST_TAG).fetchSemanticsNode().boundsInRoot
+
+        assertTrue(panelBounds.width < rootBounds.width)
+        assertTrue(panelBounds.left > rootBounds.left)
+        assertTrue(panelBounds.right < rootBounds.right)
+    }
+
+    @Test
     fun boundsAnExtremeFallbackPreviewHeight() {
         composeRule.setContent {
             MaterialTheme {
