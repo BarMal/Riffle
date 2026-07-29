@@ -37,6 +37,7 @@ class AndroidFeedTransport(
     @Suppress("CyclomaticComplexMethod", "NestedBlockDepth", "ReturnCount")
     override fun fetch(request: FeedFetchRequest): FeedTransportResult {
         var currentUrl = request.configuration.url.value
+        var currentValidators = request.validators
         var redirectCount = 0
         while (true) {
             val connection =
@@ -51,10 +52,10 @@ class AndroidFeedTransport(
                     "Accept",
                     "application/rss+xml, application/atom+xml, application/xml, text/xml",
                 )
-                request.validators?.etag?.let { value ->
+                currentValidators?.etag?.let { value ->
                     connection.setRequestProperty("If-None-Match", value)
                 }
-                request.validators?.lastModified?.let { value ->
+                currentValidators?.lastModified?.let { value ->
                     connection.setRequestProperty("If-Modified-Since", value)
                 }
 
@@ -70,8 +71,13 @@ class AndroidFeedTransport(
                     if (redirectCount >= MAX_REDIRECTS) {
                         return FeedTransportResult.Failure(FeedSourceError.REDIRECT_LIMIT)
                     }
-                    currentUrl = resolveHttpsRedirect(currentUrl, location)
-                        ?: return FeedTransportResult.Failure(FeedSourceError.INVALID_REDIRECT)
+                    val nextUrl =
+                        resolveHttpsRedirect(currentUrl, location)
+                            ?: return FeedTransportResult.Failure(FeedSourceError.INVALID_REDIRECT)
+                    if (httpsOrigin(currentUrl) != httpsOrigin(nextUrl)) {
+                        currentValidators = null
+                    }
+                    currentUrl = nextUrl
                     redirectCount += 1
                     continue
                 }
@@ -109,6 +115,18 @@ internal fun resolveHttpsRedirect(
     runCatching { URI(currentUrl).resolve(location).toString() }
         .getOrNull()
         ?.let { resolved -> FeedUrl.parse(resolved).getOrNull()?.value }
+
+private fun httpsOrigin(url: String): String? =
+    runCatching {
+        URI(url).let { parsed ->
+            if (!parsed.scheme.equals("https", ignoreCase = true) || parsed.host == null) {
+                null
+            } else {
+                val port = if (parsed.port == -1) 443 else parsed.port
+                "https://${parsed.host.lowercase()}:$port"
+            }
+        }
+    }.getOrNull()
 
 private fun HttpURLConnection.feedValidators(): FeedValidators =
     FeedValidators(

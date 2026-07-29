@@ -104,6 +104,28 @@ class AndroidFeedTransportTest {
     }
 
     @Test
+    fun clearsConditionalHeadersOnCrossOriginHttpsRedirect() {
+        val first =
+            FakeHttpURLConnection(URL("https://example.com/feed")).apply {
+                status = 302
+                headers["Location"] = "https://cdn.example.com/feed"
+            }
+        val second =
+            FakeHttpURLConnection(URL("https://cdn.example.com/feed")).apply {
+                status = 200
+                body = "ok".toByteArray()
+            }
+        val connections = mapOf(first.url.toString() to first, second.url.toString() to second)
+
+        assertEquals(
+            FeedTransportResult.Content("ok", FeedValidators()),
+            AndroidFeedTransport(openConnection = { connections.getValue(it.toString()) })
+                .fetch(request(validators = FeedValidators("private-etag", "private-date"))),
+        )
+        assertEquals(emptyMap<String, String>(), second.sentProperties.filterKeys { it.startsWith("If-") })
+    }
+
+    @Test
     fun mapsTimeoutNetworkHttpAndOversizedResponsesToNormalizedErrors() {
         val timeout =
             FakeHttpURLConnection(URL("https://example.com/feed")).apply {
