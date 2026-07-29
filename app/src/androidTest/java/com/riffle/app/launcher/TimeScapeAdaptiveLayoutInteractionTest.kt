@@ -27,6 +27,7 @@ import com.riffle.core.domain.launcher.cards.TimeScapeHingeBounds
 import com.riffle.core.domain.launcher.cards.TimeScapePosture
 import com.riffle.core.domain.launcher.cards.TimeScapeRailSide
 import com.riffle.core.domain.launcher.cards.TimeScapeWindowLayout
+import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.settings.CardsSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettings
@@ -52,6 +53,41 @@ class TimeScapeAdaptiveLayoutInteractionTest {
         setContent(widthDp = 1_200)
 
         composeRule.onNodeWithText("Details").assertIsDisplayed()
+    }
+
+    @Test
+    fun foldableTemplateRendersVisibleCanvasElementsAndPlacesStageSlot() {
+        composeRule.setContent {
+            CompositionLocalProvider(LocalDensity provides Density(TEST_WINDOW_DENSITY)) {
+                MaterialTheme {
+                    Box(modifier = Modifier.width(1_200.dp).height(TEST_WINDOW_HEIGHT_DP.dp).clipToBounds()) {
+                        TimeScapeAppStageSurface(
+                            state =
+                                LauncherShellState(
+                                    settingsLayoutDeviceClass = HomeLayoutDeviceClass.FOLDABLE,
+                                    notificationAccessStatus = NotificationAccessStatus.NOT_GRANTED,
+                                ),
+                            windowLayout =
+                                TimeScapeWindowLayout(
+                                    widthDp = 1_200,
+                                    heightDp = TEST_WINDOW_HEIGHT_DP,
+                                    posture = TimeScapePosture.UNFOLDED,
+                                ),
+                            onAction = {},
+                        )
+                    }
+                }
+            }
+        }
+
+        val clock = composeRule.onNodeWithTag(timeScapeTemplateElementTestTag("clock")).fetchSemanticsNode().boundsInRoot
+        val search = composeRule.onNodeWithTag(timeScapeTemplateElementTestTag("search")).fetchSemanticsNode().boundsInRoot
+        val dock = composeRule.onNodeWithTag(timeScapeTemplateElementTestTag("dock")).fetchSemanticsNode().boundsInRoot
+        val stageRail = composeRule.onNodeWithText("Stages").fetchSemanticsNode().boundsInRoot
+
+        assertTrue(clock.top < search.top)
+        assertTrue(search.bottom <= stageRail.top)
+        assertTrue(stageRail.bottom <= dock.top)
     }
 
     @Test
