@@ -608,11 +608,12 @@ private fun rememberWidgetPreview(
     provider: InstalledWidgetProvider,
     previewImageLoader: WidgetPreviewImageLoader,
 ): ImageBitmap? {
-    var preview by remember(provider.identity, previewImageLoader) {
+    val previewRevision = previewImageLoader.previewRevision
+    var preview by remember(provider.identity, previewImageLoader, previewRevision) {
         mutableStateOf(previewImageLoader.cachedPreviewForOrNull(provider.identity))
     }
 
-    LaunchedEffect(provider.identity, previewImageLoader) {
+    LaunchedEffect(provider.identity, previewImageLoader, previewRevision) {
         val cachedPreview = previewImageLoader.cachedPreviewForOrNull(provider.identity)
         preview =
             cachedPreview ?: previewImageLoader.previewForOrNull(provider.identity)
