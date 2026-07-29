@@ -146,9 +146,11 @@ private fun SearchTopControls(
         modifier =
             Modifier
                 .widthIn(max = SEARCH_CONTROLS_MAX_WIDTH_DP.dp)
-                .fillMaxWidth(),
-        shape = RoundedCornerShape(SEARCH_CONTROLS_CORNER_DP.dp),
-        color = MaterialTheme.colorScheme.surface.copy(alpha = SEARCH_CONTROLS_ALPHA),
+                .fillMaxWidth()
+                .testTag(SEARCH_CONTROLS_TEST_TAG),
+        shape = LocalLauncherPanelShape.current,
+        contentColor = launcherPanelContentColor(),
+        color = launcherPanelSurfaceColor(),
         tonalElevation = 4.dp,
     ) {
         Column(
@@ -341,7 +343,7 @@ private fun SearchResultListItem(
                 Text(
                     text = result.label,
                     style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurface,
+                    color = launcherPanelContentColor(),
                 )
                 Text(
                     text = supportingText,
@@ -401,7 +403,7 @@ private fun SearchResultIconTile(
             Text(
                 text = result.label,
                 style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurface,
+                color = launcherPanelContentColor(),
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -544,8 +546,7 @@ private fun AppSearchFilters.searchResultTypeNoun(): String =
     }
 
 private const val SEARCH_CONTROLS_MAX_WIDTH_DP = 840
-private const val SEARCH_CONTROLS_CORNER_DP = 28
-private const val SEARCH_CONTROLS_ALPHA = 0.96f
+internal const val SEARCH_CONTROLS_TEST_TAG = "search-controls"
 private const val SEARCH_GRID_MAX_WIDTH_DP = 840
 private const val SEARCH_RESULT_BOTTOM_PADDING_DP = 32
 private const val SEARCH_RESULT_MIN_HEIGHT_DP = 64

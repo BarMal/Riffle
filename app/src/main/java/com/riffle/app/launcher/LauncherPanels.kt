@@ -156,7 +156,8 @@ fun LauncherPanel(
                     .fillMaxWidth()
                     .fillMaxHeight(),
             shape = LocalLauncherPanelShape.current,
-            color = MaterialTheme.colorScheme.surface.copy(alpha = PANEL_SURFACE_ALPHA),
+            color = launcherPanelSurfaceColor(),
+            contentColor = launcherPanelContentColor(),
             tonalElevation = 6.dp,
         ) {
             Column(
@@ -207,4 +208,3 @@ internal fun HomeInsetPolicy.safeDrawingPanelInsets(): WindowInsets {
 }
 
 private const val PANEL_MAX_WIDTH_DP = 840
-private const val PANEL_SURFACE_ALPHA = 0.96f

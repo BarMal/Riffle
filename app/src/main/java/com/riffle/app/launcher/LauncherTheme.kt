@@ -1,4 +1,4 @@
-@file:Suppress("CyclomaticComplexMethod", "TooManyFunctions")
+@file:Suppress("CyclomaticComplexMethod", "LongParameterList", "TooManyFunctions")
 
 package com.riffle.app.launcher
 
@@ -17,6 +17,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
@@ -36,6 +37,7 @@ fun RiffleLauncherTheme(
     themeColors: LauncherThemeColors = LauncherThemeColors(),
     themeCornerStyle: LauncherThemeCornerStyle = LauncherThemeCornerStyle.PRESET,
     themeTypography: LauncherThemeTypography = LauncherThemeTypography.PRESET,
+    reducedTransparency: Boolean = false,
     content: @Composable () -> Unit,
 ) {
     val darkTheme =
@@ -60,6 +62,12 @@ fun RiffleLauncherTheme(
     CompositionLocalProvider(
         LocalLauncherCardShape provides launcherCardShape(themePreset, themeCornerStyle),
         LocalLauncherPanelShape provides launcherPanelShape(themePreset, themeCornerStyle),
+        LocalLauncherThemeSurfaceTokens provides
+            launcherThemeSurfaceTokens(
+                themePreset = themePreset,
+                colorScheme = colorScheme,
+                reducedTransparency = reducedTransparency,
+            ),
         LocalLauncherThemeColorOverrides provides themeColors.toColorOverrides(),
     ) {
         MaterialTheme(
@@ -72,13 +80,131 @@ fun RiffleLauncherTheme(
 
 internal val LocalLauncherCardShape = staticCompositionLocalOf<Shape> { RoundedCornerShape(24.dp) }
 internal val LocalLauncherPanelShape = staticCompositionLocalOf<Shape> { RoundedCornerShape(32.dp) }
+internal val LocalLauncherThemeSurfaceTokens =
+    staticCompositionLocalOf { LauncherThemeSurfaceTokens() }
 internal val LocalLauncherThemeColorOverrides = staticCompositionLocalOf { LauncherThemeColorOverrides() }
+
+internal data class LauncherThemeSurfaceTokens(
+    val panelColor: Color = Color.Unspecified,
+    val menuColor: Color = Color.Unspecified,
+    val panelContentColor: Color = Color.Unspecified,
+    val menuContentColor: Color = Color.Unspecified,
+    val overlayAlpha: Float = 1f,
+)
 
 internal data class LauncherThemeColorOverrides(
     val dock: Color? = null,
     val label: Color? = null,
     val labelBackground: Color? = null,
 )
+
+internal fun launcherThemeSurfaceTokens(
+    themePreset: LauncherThemePreset,
+    colorScheme: ColorScheme,
+    reducedTransparency: Boolean = false,
+): LauncherThemeSurfaceTokens {
+    val overlayAlpha =
+        if (themePreset == LauncherThemePreset.GLASS && !reducedTransparency) {
+            0.78f
+        } else {
+            1f
+        }
+    val panelSurface = wallpaperAwareSurface(colorScheme.surface, overlayAlpha, colorScheme.onSurface)
+    val menuSurface = wallpaperAwareSurface(colorScheme.surfaceContainerHigh, overlayAlpha, colorScheme.onSurface)
+    return LauncherThemeSurfaceTokens(
+        panelColor = panelSurface.color,
+        menuColor = menuSurface.color,
+        panelContentColor = panelSurface.contentColor,
+        menuContentColor = menuSurface.contentColor,
+        overlayAlpha = overlayAlpha,
+    )
+}
+
+@Composable
+internal fun launcherPanelSurfaceColor(): Color {
+    val color = LocalLauncherThemeSurfaceTokens.current.panelColor
+    return if (color == Color.Unspecified) MaterialTheme.colorScheme.surface else color
+}
+
+@Composable
+internal fun launcherMenuSurfaceColor(): Color {
+    val color = LocalLauncherThemeSurfaceTokens.current.menuColor
+    return if (color == Color.Unspecified) MaterialTheme.colorScheme.surfaceContainerHigh else color
+}
+
+@Composable
+internal fun launcherPanelContentColor(): Color {
+    val color = LocalLauncherThemeSurfaceTokens.current.panelContentColor
+    return if (color == Color.Unspecified) MaterialTheme.colorScheme.onSurface else color
+}
+
+@Composable
+internal fun launcherMenuContentColor(): Color {
+    val color = LocalLauncherThemeSurfaceTokens.current.menuContentColor
+    return if (color == Color.Unspecified) MaterialTheme.colorScheme.onSurface else color
+}
+
+internal data class WallpaperAwareSurface(
+    val color: Color,
+    val contentColor: Color,
+)
+
+/**
+ * Keeps Glass content readable over the full wallpaper luminance range.
+ *
+ * A translucent mid-tone surface can make black text unreadable over a dark wallpaper and white
+ * text unreadable over a light one.  Choose the foreground requiring the least opposing scrim,
+ * then fold that scrim into the surface color so every overlay sharing this token has the same
+ * contrast guarantee.
+ */
+internal fun wallpaperAwareSurface(
+    surface: Color,
+    overlayAlpha: Float,
+    fallback: Color,
+): WallpaperAwareSurface {
+    val overlay = surface.copy(alpha = overlayAlpha)
+    if (overlayAlpha >= 1f) {
+        return WallpaperAwareSurface(color = overlay, contentColor = surface.contentColor(fallback))
+    }
+
+    return listOf(Color.Black, Color.White)
+        .map { foreground ->
+            val scrim = if (foreground == Color.Black) Color.White else Color.Black
+            val scrimAlpha = minimumScrimAlpha(overlay, foreground, scrim)
+            WallpaperAwareSurface(
+                color = scrim.copy(alpha = scrimAlpha).compositeOver(overlay),
+                contentColor = foreground,
+            ) to scrimAlpha
+        }.minBy { (_, scrimAlpha) -> scrimAlpha }
+        .first
+}
+
+private fun minimumScrimAlpha(
+    overlay: Color,
+    foreground: Color,
+    scrim: Color,
+): Float {
+    val worstCaseWallpaper = if (foreground == Color.Black) Color.Black else Color.White
+    if (foreground.contrastRatioAgainst(overlay.compositeOver(worstCaseWallpaper)) >= MINIMUM_TEXT_CONTRAST) {
+        return 0f
+    }
+
+    var low = 0f
+    var high = 1f
+    repeat(SCRIM_ALPHA_SEARCH_STEPS) {
+        val candidate = (low + high) / 2f
+        val renderedSurface = scrim.copy(alpha = candidate).compositeOver(overlay).compositeOver(worstCaseWallpaper)
+        if (foreground.contrastRatioAgainst(renderedSurface) >= MINIMUM_TEXT_CONTRAST) {
+            high = candidate
+        } else {
+            low = candidate
+        }
+    }
+    return high
+}
+
+private const val MINIMUM_TEXT_CONTRAST = 4.5f
+private const val SCRIM_ALPHA_SEARCH_STEPS = 24
 
 internal fun launcherCardShape(
     themePreset: LauncherThemePreset,

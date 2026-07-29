@@ -2,6 +2,7 @@ package com.riffle.app.launcher
 
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.settings.LauncherThemeAccent
@@ -134,6 +135,77 @@ class LauncherThemeTest {
         assertEquals(androidx.compose.ui.graphics.Color(0xFF405060), scheme.secondary)
         assertEquals(androidx.compose.ui.graphics.Color(0xFF405060), scheme.secondaryContainer)
         assertEquals(androidx.compose.ui.graphics.Color(0xFF405060), scheme.tertiaryContainer)
+    }
+
+    @Test
+    fun glassPresetProvidesTranslucentLauncherOverlayTokens() {
+        val glassTokens = launcherThemeSurfaceTokens(LauncherThemePreset.GLASS, lightScheme)
+        val materialTokens = launcherThemeSurfaceTokens(LauncherThemePreset.MATERIAL, lightScheme)
+
+        assertEquals(0.78f, glassTokens.overlayAlpha)
+        assertEquals(glassTokens.overlayAlpha, glassTokens.panelColor.alpha, 0.01f)
+        assertEquals(glassTokens.overlayAlpha, glassTokens.menuColor.alpha, 0.01f)
+        assertEquals(1f, materialTokens.overlayAlpha)
+        assertEquals(1f, materialTokens.panelColor.alpha)
+        assertEquals(1f, materialTokens.menuColor.alpha)
+    }
+
+    @Test
+    fun reducedTransparencyUsesOpaqueLauncherOverlayTokensForGlass() {
+        val tokens =
+            launcherThemeSurfaceTokens(
+                themePreset = LauncherThemePreset.GLASS,
+                colorScheme = lightScheme,
+                reducedTransparency = true,
+            )
+
+        assertEquals(1f, tokens.overlayAlpha)
+        assertEquals(1f, tokens.panelColor.alpha)
+        assertEquals(1f, tokens.menuColor.alpha)
+    }
+
+    @Test
+    fun glassSurfacesKeepSearchWidgetAndMenuContentReadableOverDarkAndLightWallpapers() {
+        val scheme = lightScheme.withThemeColors(LauncherThemeColors(backgroundArgb = 0xFF808080.toInt()))
+        val tokens = launcherThemeSurfaceTokens(LauncherThemePreset.GLASS, scheme)
+        val overlays =
+            listOf(
+                "search" to (tokens.panelColor to tokens.panelContentColor),
+                "widget" to (tokens.panelColor to tokens.panelContentColor),
+                "menu" to (tokens.menuColor to tokens.menuContentColor),
+            )
+
+        overlays.forEach { (name, surfaceAndContent) ->
+            val (surface, content) = surfaceAndContent
+            listOf(Color.Black, Color.White).forEach { wallpaper ->
+                val renderedSurface = surface.compositeOver(wallpaper)
+                assertTrue(
+                    "$name content must contrast over $wallpaper",
+                    contrastRatio(content, renderedSurface) >= 4.5f,
+                )
+            }
+        }
+    }
+
+    @Test
+    fun reducedTransparencyUsesOpaqueSurfacesWithoutGlassScrims() {
+        val scheme = lightScheme.withThemeColors(LauncherThemeColors(backgroundArgb = 0xFF808080.toInt()))
+        val tokens = launcherThemeSurfaceTokens(LauncherThemePreset.GLASS, scheme, reducedTransparency = true)
+
+        assertEquals(scheme.surface, tokens.panelColor)
+        assertEquals(scheme.surfaceContainerHigh, tokens.menuColor)
+        assertEquals(Color.Black, tokens.panelContentColor)
+        assertEquals(Color.Black, tokens.menuContentColor)
+    }
+
+    @Test
+    fun wallpaperAwareGlassSurfaceAddsAScrimWhenForegroundAloneWouldFail() {
+        val customSurface = Color(0x00101010)
+        val surface = wallpaperAwareSurface(customSurface, overlayAlpha = 0.78f, fallback = Color.Black)
+        val renderedSurface = surface.color.compositeOver(Color.Black)
+
+        assertEquals(Color.White, surface.contentColor)
+        assertTrue(contrastRatio(surface.contentColor, renderedSurface) >= 4.5f)
     }
 
     @Test

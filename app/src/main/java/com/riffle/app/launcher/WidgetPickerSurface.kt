@@ -27,7 +27,6 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -141,9 +140,9 @@ fun WidgetPickerSurface(
                     if (isDragHandoffActive) {
                         androidx.compose.ui.graphics.Color.Transparent
                     } else {
-                        MaterialTheme.colorScheme.surface.copy(alpha = WIDGET_PICKER_SURFACE_ALPHA)
+                        launcherPanelSurfaceColor()
                     },
-                contentColor = MaterialTheme.colorScheme.onSurface,
+                contentColor = launcherPanelContentColor(),
                 border =
                     if (isDragHandoffActive) {
                         null
@@ -534,7 +533,8 @@ private fun WidgetPickerAccessiblePlacementControls(
                 .fillMaxWidth()
                 .testTag(WIDGET_PICKER_ACCESSIBLE_PLACEMENT_TEST_TAG),
         shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.72f),
+        color = launcherPanelSurfaceColor(),
+        contentColor = launcherPanelContentColor(),
         tonalElevation = 2.dp,
     ) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -551,7 +551,7 @@ private fun WidgetPickerAccessiblePlacementControls(
                         TextButton(onClick = { pageMenuExpanded = true }) {
                             Text("Page ${selected?.pageId?.value ?: "unavailable"}")
                         }
-                        DropdownMenu(
+                        RiffleContextMenu(
                             expanded = pageMenuExpanded,
                             onDismissRequest = { pageMenuExpanded = false },
                         ) {
@@ -574,7 +574,7 @@ private fun WidgetPickerAccessiblePlacementControls(
                     ) {
                         Text(selected?.placementPositionLabel() ?: "Position unavailable")
                     }
-                    DropdownMenu(
+                    RiffleContextMenu(
                         expanded = positionMenuExpanded,
                         onDismissRequest = { positionMenuExpanded = false },
                     ) {
@@ -663,7 +663,7 @@ private fun WidgetProviderAddMenu(
         ) {
             Text(text = "Add ${provider.label}")
         }
-        DropdownMenu(
+        RiffleContextMenu(
             expanded = menuExpanded,
             onDismissRequest = { menuExpanded = false },
         ) {
@@ -827,7 +827,6 @@ internal fun InstalledWidgetProvider.requestAddWidgetAction(
 
 private const val WIDGET_PICKER_PANEL_MARGIN_DP = 12
 private const val WIDGET_PICKER_MAX_WIDTH_DP = 960
-private const val WIDGET_PICKER_SURFACE_ALPHA = 0.68f
 private const val WIDGET_PREVIEW_MAX_HEIGHT_DP = 240
 private const val WIDGET_PREVIEW_MIN_LEGIBLE_DIMENSION_DP = 48
 private const val WIDGET_PREVIEW_CONSTRAINED_WIDTH_DP = 180
