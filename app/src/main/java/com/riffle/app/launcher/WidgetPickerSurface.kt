@@ -5,6 +5,7 @@ package com.riffle.app.launcher
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -47,7 +48,6 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
@@ -103,6 +103,13 @@ fun WidgetPickerSurface(
     var rootCoordinates: LayoutCoordinates? by remember { mutableStateOf(null) }
     val providerFocusRequesters = remember { mutableMapOf<String, FocusRequester>() }
     var pendingProviderFocusKey by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(accessiblePlacement, pendingProviderFocusKey) {
+        val providerKey = pendingProviderFocusKey ?: return@LaunchedEffect
+        if (accessiblePlacement != null) return@LaunchedEffect
+        withFrameNanos { }
+        providerFocusRequesters[providerKey]?.requestFocus()
+        pendingProviderFocusKey = null
+    }
 
     Box(
         modifier =
@@ -217,9 +224,6 @@ fun WidgetPickerSurface(
                             onAccessiblePlacementRequested(provider, target)
                         },
                         providerFocusRequesters = providerFocusRequesters,
-                        pendingProviderFocusKey =
-                            pendingProviderFocusKey.takeIf { accessiblePlacement == null },
-                        onProviderFocusRestored = { pendingProviderFocusKey = null },
                         rootCoordinates = rootCoordinates,
                         onRetryRequested = onRetryRequested,
                         modifier = Modifier.weight(1f),
@@ -256,8 +260,6 @@ private fun WidgetPickerContent(
     onWidgetDropped: (InstalledWidgetProvider, Offset, IntSize) -> Unit,
     onAccessiblePlacementRequested: (InstalledWidgetProvider, WidgetAddTarget) -> Unit,
     providerFocusRequesters: MutableMap<String, FocusRequester>,
-    pendingProviderFocusKey: String?,
-    onProviderFocusRestored: () -> Unit,
     rootCoordinates: LayoutCoordinates?,
     onRetryRequested: () -> Unit,
     modifier: Modifier,
@@ -323,8 +325,6 @@ private fun WidgetPickerContent(
                                     providerFocusRequesters.getOrPut(provider.widgetPickerKey) {
                                         FocusRequester()
                                     },
-                                restoreAddFocus = pendingProviderFocusKey == provider.widgetPickerKey,
-                                onAddFocusRestored = onProviderFocusRestored,
                                 previewImageLoader = previewImageLoader,
                                 onWidgetDragStarted = onWidgetDragStarted,
                                 onWidgetDragMoved = onWidgetDragMoved,
@@ -389,8 +389,6 @@ private fun WidgetProviderTile(
     provider: InstalledWidgetProvider,
     contentVisibility: AppProfileContentVisibility,
     addFocusRequester: FocusRequester,
-    restoreAddFocus: Boolean,
-    onAddFocusRestored: () -> Unit,
     previewImageLoader: WidgetPreviewImageLoader,
     onWidgetDragStarted: (InstalledWidgetProvider) -> Unit,
     onWidgetDragMoved: (InstalledWidgetProvider, Offset, IntSize) -> Unit,
@@ -500,8 +498,6 @@ private fun WidgetProviderTile(
             provider = provider,
             enabled = isAvailable,
             focusRequester = addFocusRequester,
-            restoreFocus = restoreAddFocus,
-            onFocusRestored = onAddFocusRestored,
             onAccessiblePlacementRequested = onAccessiblePlacementRequested,
         )
     }
@@ -515,7 +511,6 @@ private fun WidgetPickerAccessiblePlacementControls(
     onCancel: () -> Unit,
 ) {
     val cancelFocusRequester = remember { FocusRequester() }
-    var cancelControlLaidOut by remember { mutableStateOf(false) }
     var pageMenuExpanded by remember { mutableStateOf(false) }
     var positionMenuExpanded by remember { mutableStateOf(false) }
     val selected = placement.selectedCandidate
@@ -524,8 +519,7 @@ private fun WidgetPickerAccessiblePlacementControls(
         placement.candidates.filter { candidate ->
             placement.target == WidgetAddTarget.DOCK || candidate.pageId == selected?.pageId
         }
-    LaunchedEffect(placement.provider.identity, cancelControlLaidOut) {
-        if (!cancelControlLaidOut) return@LaunchedEffect
+    LaunchedEffect(placement.provider.identity) {
         withFrameNanos { }
         cancelFocusRequester.requestFocus()
     }
@@ -599,7 +593,7 @@ private fun WidgetPickerAccessiblePlacementControls(
                     modifier =
                         Modifier
                             .focusRequester(cancelFocusRequester)
-                            .onGloballyPositioned { cancelControlLaidOut = true },
+                            .focusable(),
                     onClick = onCancel,
                 ) {
                     Text("Cancel")
@@ -649,33 +643,16 @@ private fun WidgetProviderAddMenu(
     provider: InstalledWidgetProvider,
     enabled: Boolean,
     focusRequester: FocusRequester,
-    restoreFocus: Boolean,
-    onFocusRestored: () -> Unit,
     onAccessiblePlacementRequested: (InstalledWidgetProvider, WidgetAddTarget) -> Unit,
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
-    var addControlLaidOut by remember { mutableStateOf(false) }
-
-    LaunchedEffect(restoreFocus, addControlLaidOut) {
-        if (!restoreFocus || !addControlLaidOut) return@LaunchedEffect
-        withFrameNanos { }
-        focusRequester.requestFocus()
-    }
 
     Box {
         TextButton(
             modifier =
                 Modifier
                     .focusRequester(focusRequester)
-                    .onGloballyPositioned {
-                        if (restoreFocus) addControlLaidOut = true
-                    }
-                    .onFocusChanged { focusState ->
-                        if (restoreFocus && focusState.isFocused) {
-                            onFocusRestored()
-                            addControlLaidOut = false
-                        }
-                    },
+                    .focusable(),
             onClick = { menuExpanded = true },
             enabled = enabled,
         ) {
