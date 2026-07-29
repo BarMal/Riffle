@@ -40,12 +40,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
@@ -527,7 +529,9 @@ private fun WidgetPickerAccessiblePlacementControls(
             placement.target == WidgetAddTarget.DOCK || candidate.pageId == selected?.pageId
         }
     LaunchedEffect(placement.provider.identity, cancelControlLaidOut) {
-        if (cancelControlLaidOut) cancelFocusRequester.requestFocus()
+        if (!cancelControlLaidOut) return@LaunchedEffect
+        withFrameNanos { }
+        cancelFocusRequester.requestFocus()
     }
     Surface(
         modifier =
@@ -654,6 +658,13 @@ private fun WidgetProviderAddMenu(
     onAccessiblePlacementRequested: (InstalledWidgetProvider, WidgetAddTarget) -> Unit,
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
+    var addControlLaidOut by remember { mutableStateOf(false) }
+
+    LaunchedEffect(restoreFocus, addControlLaidOut) {
+        if (!restoreFocus || !addControlLaidOut) return@LaunchedEffect
+        withFrameNanos { }
+        focusRequester.requestFocus()
+    }
 
     Box {
         TextButton(
@@ -661,9 +672,12 @@ private fun WidgetProviderAddMenu(
                 Modifier
                     .focusRequester(focusRequester)
                     .onGloballyPositioned {
-                        if (restoreFocus) {
-                            focusRequester.requestFocus()
+                        if (restoreFocus) addControlLaidOut = true
+                    }
+                    .onFocusChanged { focusState ->
+                        if (restoreFocus && focusState.isFocused) {
                             onFocusRestored()
+                            addControlLaidOut = false
                         }
                     },
             onClick = { menuExpanded = true },
