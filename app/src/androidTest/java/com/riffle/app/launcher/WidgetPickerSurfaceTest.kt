@@ -9,6 +9,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.ImageBitmap
@@ -470,37 +471,49 @@ class WidgetPickerSurfaceTest {
     }
 
     @Test
-    fun providerDropUsesThePickerRootCoordinateSpaceAndBounds() {
+    fun providerDropUsesTheOffsetPickerRootCoordinateSpaceAndBounds() {
         var droppedPosition: Offset? = null
         var droppedRootSize: IntSize? = null
         composeRule.setContent {
             MaterialTheme {
-                Box(modifier = Modifier.size(width = 300.dp, height = 500.dp)) {
-                    WidgetPickerSurface(
-                        providers = listOf(widgetProvider()),
-                        onWidgetDropped = { _, position, rootSize ->
-                            droppedPosition = position
-                            droppedRootSize = rootSize
-                        },
-                        onAction = {},
-                    )
+                Box(modifier = Modifier.size(width = 400.dp, height = 600.dp)) {
+                    Box(
+                        modifier =
+                            Modifier
+                                .align(Alignment.BottomEnd)
+                                .size(width = 300.dp, height = 500.dp),
+                    ) {
+                        WidgetPickerSurface(
+                            providers = listOf(widgetProvider()),
+                            onWidgetDropped = { _, position, rootSize ->
+                                droppedPosition = position
+                                droppedRootSize = rootSize
+                            },
+                            onAction = {},
+                        )
+                    }
                 }
             }
         }
         val rootBounds =
             composeRule.onNodeWithTag(WIDGET_PICKER_ROOT_TEST_TAG).fetchSemanticsNode().boundsInRoot
+        val tileBounds =
+            composeRule.onNodeWithTag(WIDGET_PROVIDER_TILE_TEST_TAG).fetchSemanticsNode().boundsInRoot
+        val dragDelta = Offset(12f, 16f)
 
         composeRule.onNodeWithTag(WIDGET_PROVIDER_TILE_TEST_TAG).performTouchInput {
             down(center)
             advanceEventTime(viewConfiguration.longPressTimeoutMillis + 50L)
-            moveBy(Offset(12f, 16f))
+            moveBy(dragDelta)
             up()
         }
 
         composeRule.runOnIdle {
             assertEquals(IntSize(rootBounds.width.toInt(), rootBounds.height.toInt()), droppedRootSize)
-            assertTrue(droppedPosition!!.x in 0f..rootBounds.width)
-            assertTrue(droppedPosition!!.y in 0f..rootBounds.height)
+            assertTrue(rootBounds.left > 0f)
+            assertTrue(rootBounds.top > 0f)
+            assertEquals(tileBounds.center.x - rootBounds.left + dragDelta.x, droppedPosition!!.x, 1f)
+            assertEquals(tileBounds.center.y - rootBounds.top + dragDelta.y, droppedPosition!!.y, 1f)
         }
     }
 
