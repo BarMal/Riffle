@@ -52,6 +52,8 @@ import androidx.lifecycle.LifecycleEventObserver
 import com.riffle.app.launcher.widgets.EmptyHomeWidgetViewFactory
 import com.riffle.app.launcher.widgets.HomeWidgetViewFactory
 import com.riffle.core.domain.launcher.WidgetProviderCatalogStatus
+import com.riffle.core.domain.launcher.apps.AppProfileContentVisibility
+import com.riffle.core.domain.launcher.apps.AppProfileId
 import com.riffle.core.domain.launcher.apps.AppShortcutsByApp
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.home.FolderItem
@@ -221,6 +223,7 @@ internal fun StandardHome(
     if (presentation.widgetPicker.isOpen || widgetPickerDragInProgress.value) {
         WidgetPickerSurface(
             providers = presentation.widgetPicker.providers,
+            profileContentVisibility = presentation.widgetPicker.profileContentVisibility,
             catalogStatus = presentation.widgetPicker.catalogStatus,
             previewImageLoader = widgetPreviewImageLoader,
             accessiblePlacement = accessibleWidgetPlacement.value,
@@ -797,6 +800,7 @@ internal data class StandardHomePresentation(
 
 internal data class StandardHomeWidgetPickerState(
     val providers: List<InstalledWidgetProvider> = emptyList(),
+    val profileContentVisibility: Map<AppProfileId, AppProfileContentVisibility> = emptyMap(),
     val catalogStatus: WidgetProviderCatalogStatus = WidgetProviderCatalogStatus.READY,
     val isOpen: Boolean = false,
 )

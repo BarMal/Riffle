@@ -111,6 +111,7 @@ private fun StandardHomeSurface(
                 widgetPicker =
                     StandardHomeWidgetPickerState(
                         providers = state.installedWidgetProviders,
+                        profileContentVisibility = state.profileContentVisibility,
                         catalogStatus = state.widgetProviderCatalogStatus,
                         isOpen = state.isWidgetPickerOpen,
                     ),
