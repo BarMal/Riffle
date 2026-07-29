@@ -1,5 +1,6 @@
 package com.riffle.app
 
+import android.content.Intent
 import com.riffle.core.domain.launcher.HomeRoleStatus
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.flow
@@ -13,6 +14,28 @@ import org.junit.Assert.assertThrows
 import org.junit.Test
 
 class MainActivityStartupTest {
+    @Test
+    fun coldStartHomeIntentRequestsTheStandardHomeDestination() {
+        assertEquals(
+            true,
+            shouldOpenDefaultHomeOnLaunch(
+                action = Intent.ACTION_MAIN,
+                categories = setOf(Intent.CATEGORY_HOME),
+            ),
+        )
+    }
+
+    @Test
+    fun launcherIconLaunchDoesNotRequestTheStandardHomeDestination() {
+        assertEquals(
+            false,
+            shouldOpenDefaultHomeOnLaunch(
+                action = Intent.ACTION_MAIN,
+                categories = setOf(Intent.CATEGORY_LAUNCHER),
+            ),
+        )
+    }
+
     @Test
     fun platformStatusReadUsesFallbackWhenPlatformCallFails() {
         assertEquals(
