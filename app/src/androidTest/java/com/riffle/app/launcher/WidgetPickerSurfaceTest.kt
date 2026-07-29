@@ -13,8 +13,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -194,9 +194,19 @@ class WidgetPickerSurfaceTest {
         composeRule.onNodeWithText("Add Clock").requestFocus()
         composeRule.onNodeWithText("Add Clock").performClick()
         composeRule.onNodeWithText("Choose Home position").performClick()
-        composeRule.onNodeWithText("Cancel").assertIsFocused()
+        composeRule.waitUntil {
+            composeRule
+                .onNodeWithText("Cancel")
+                .fetchSemanticsNode()
+                .config[SemanticsProperties.Focused]
+        }
         composeRule.onNodeWithText("Cancel").performClick()
-        composeRule.onNodeWithText("Add Clock").assertIsFocused()
+        composeRule.waitUntil {
+            composeRule
+                .onNodeWithText("Add Clock")
+                .fetchSemanticsNode()
+                .config[SemanticsProperties.Focused]
+        }
     }
 
     @Test
