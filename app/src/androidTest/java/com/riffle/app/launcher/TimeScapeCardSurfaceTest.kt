@@ -60,7 +60,9 @@ import com.riffle.core.domain.launcher.cards.CardExpansionPhase
 import com.riffle.core.domain.launcher.cards.CardExpansionState
 import com.riffle.core.domain.launcher.cards.LauncherCardId
 import com.riffle.core.domain.launcher.cards.TimeScapeWindowLayout
+import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.HomeLayoutKey
+import com.riffle.core.domain.launcher.home.HomeLayoutSet
 import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
 import com.riffle.core.domain.launcher.notifications.LauncherNotification
@@ -163,6 +165,62 @@ class TimeScapeCardSurfaceTest {
         assertEquals(
             LauncherShellAction.ToggleAppStagePinned(
                 AppStageId(app.identity.packageName, app.identity.profile.id),
+            ),
+            actions.single(),
+        )
+    }
+
+    @Test
+    fun pinnedStageOffersAnotherInstalledAppForPinning() {
+        val first = timeScapeTestApp()
+        val second =
+            first.copy(
+                identity =
+                    first.identity.copy(
+                        packageName = AppPackageName("com.example.calendar"),
+                    ),
+                label = "Calendar",
+            )
+        val firstStageId = AppStageId(first.identity.packageName, first.identity.profile.id)
+        val cardLayout = HomeLayoutDefaults.standard().copy(viewMode = LauncherViewMode.CARD_INTERFACE)
+        val cardLayoutSet = HomeLayoutSet.fromLayout(cardLayout)
+        val actions = mutableListOf<LauncherShellAction>()
+
+        composeRule.setContent {
+            MaterialTheme {
+                TimeScapeAppStageSurface(
+                    state =
+                        LauncherShellState(
+                            homeLayout = cardLayout,
+                            homeLayoutSet = cardLayoutSet,
+                            notificationAccessStatus = NotificationAccessStatus.GRANTED,
+                            installedApps = listOf(first, second),
+                            launcherSettings =
+                                LauncherSettings(
+                                    cards =
+                                        CardsSettings(
+                                            stagePreferencesByLayout =
+                                                mapOf(
+                                                    HomeLayoutKey(LauncherViewMode.CARD_INTERFACE) to
+                                                        AppStagePreferences(
+                                                            pinnedStageIds = listOf(firstStageId),
+                                                            selectedStageId = firstStageId,
+                                                        ),
+                                                ),
+                                        ),
+                                ),
+                        ),
+                    onAction = actions::add,
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("Add stage").performClick()
+        composeRule.onNodeWithText("Pin ${second.label}").performClick()
+
+        assertEquals(
+            LauncherShellAction.ToggleAppStagePinned(
+                AppStageId(second.identity.packageName, second.identity.profile.id),
             ),
             actions.single(),
         )
