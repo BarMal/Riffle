@@ -76,6 +76,7 @@ import com.riffle.core.domain.launcher.cards.LauncherCardId
 import com.riffle.core.domain.launcher.cards.TimeScapePaneLayoutPolicy
 import com.riffle.core.domain.launcher.cards.TimeScapePaneMode
 import com.riffle.core.domain.launcher.cards.TimeScapeWindowLayout
+import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.settings.TimeScapeCardStackResolution
 import com.riffle.core.domain.launcher.settings.TimeScapeViewportDp
@@ -133,7 +134,26 @@ internal fun TimeScapeAppStageSurface(
     }
 
     Surface(
-        modifier = modifier.fillMaxSize(),
+        modifier =
+            modifier
+                .fillMaxSize()
+                // Reuse the persisted gesture bindings, but only claim mode exit and stage
+                // navigation here. Focused cards consume their one-finger vertical drags first.
+                .homeGestureInput(
+                    enabled = detailOrigin == null,
+                    settings = state.launcherSettings.gestures.homeGestures,
+                    onAction = onAction,
+                    actionFilter = { action ->
+                        when (action) {
+                            LauncherShellAction.SelectNextAppStage,
+                            LauncherShellAction.SelectPreviousAppStage,
+                            LauncherShellAction.SelectLauncherViewMode(LauncherViewMode.STANDARD_APP_DRAWER),
+                            -> true
+
+                            else -> false
+                        }
+                    },
+                ),
         color = Color.Transparent,
         contentColor = MaterialTheme.colorScheme.onSurface,
     ) {

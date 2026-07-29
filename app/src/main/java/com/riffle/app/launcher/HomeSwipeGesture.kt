@@ -1,5 +1,6 @@
 package com.riffle.app.launcher
 
+import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.settings.HomeGesture
 import com.riffle.core.domain.launcher.settings.HomeGestureSettings
 import com.riffle.core.domain.launcher.settings.LauncherGestureAction
@@ -117,6 +118,7 @@ class HomeSwipeGestureActionMapper {
         settings: HomeGestureSettings = HomeGestureSettings(),
     ): LauncherShellAction? = settings.actionFor(gesture).toShellAction(settings.launchTargetFor(gesture))
 
+    @Suppress("CyclomaticComplexMethod")
     private fun LauncherGestureAction.toShellAction(launchTarget: LauncherGestureLaunchTarget?): LauncherShellAction? =
         when (this) {
             LauncherGestureAction.NONE -> null
@@ -129,6 +131,12 @@ class HomeSwipeGestureActionMapper {
             LauncherGestureAction.ENTER_FULLSCREEN_HOME -> LauncherShellAction.SelectFullscreenHomeEnabled(true)
             LauncherGestureAction.SELECT_NEXT_HOME_PAGE -> LauncherShellAction.SelectNextHomePage
             LauncherGestureAction.SELECT_PREVIOUS_HOME_PAGE -> LauncherShellAction.SelectPreviousHomePage
+            LauncherGestureAction.ENTER_TIMESCAPE ->
+                LauncherShellAction.SelectLauncherViewMode(LauncherViewMode.CARD_INTERFACE)
+            LauncherGestureAction.EXIT_TIMESCAPE ->
+                LauncherShellAction.SelectLauncherViewMode(LauncherViewMode.STANDARD_APP_DRAWER)
+            LauncherGestureAction.SELECT_NEXT_APP_STAGE -> LauncherShellAction.SelectNextAppStage
+            LauncherGestureAction.SELECT_PREVIOUS_APP_STAGE -> LauncherShellAction.SelectPreviousAppStage
             LauncherGestureAction.LAUNCH_APP -> launchTarget.launchAppAction()
             LauncherGestureAction.LAUNCH_APP_SHORTCUT -> launchTarget.launchShortcutAction()
         }
