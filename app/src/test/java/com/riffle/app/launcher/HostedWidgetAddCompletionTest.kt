@@ -167,6 +167,46 @@ class HostedWidgetAddCompletionTest {
     }
 
     @Test
+    fun completesHostedWidgetAddAtSelectedDockIndex() {
+        val first =
+            WidgetItem(
+                id = LauncherItemId("dock-widget:11"),
+                appWidgetId = HostedWidgetId(11),
+                label = "First",
+            )
+        val last =
+            WidgetItem(
+                id = LauncherItemId("dock-widget:12"),
+                appWidgetId = HostedWidgetId(12),
+                label = "Last",
+            )
+        val initialLayout =
+            HomeLayoutDefaults.standard().copy(
+                dock = HomeLayoutDefaults.standard().dock.copy(items = listOf(first, last)),
+            )
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                homeLayoutRepository = FakeHomeLayoutRepository(initialLayout),
+            )
+
+        val result =
+            viewModel.completeWidgetAdd(
+                LauncherShellAction.AddHostedWidgetToDock(
+                    hostedWidgetId = HostedWidgetId(14),
+                    label = "Weather",
+                    dockIndex = 1,
+                ),
+            )
+
+        assertEquals(HostedWidgetAddCompletionResult.Placed(message = null), result)
+        assertEquals(
+            listOf(HostedWidgetId(11), HostedWidgetId(14), HostedWidgetId(12)),
+            viewModel.state.value.homeLayout.dock.items.filterIsInstance<WidgetItem>().map(WidgetItem::appWidgetId),
+        )
+    }
+
+    @Test
     fun reportsRejectionWhenHostedWidgetAlreadyExistsInDock() {
         val existingWidget =
             WidgetItem(

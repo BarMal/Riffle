@@ -11,26 +11,57 @@ import com.riffle.app.launcher.WidgetPreviewImageLoader
 import com.riffle.app.launcher.apps.toAppProfile
 import com.riffle.core.domain.launcher.apps.AppProfile
 import com.riffle.core.domain.launcher.widgets.WidgetProviderIdentity
-import java.util.concurrent.ConcurrentHashMap
+import java.util.LinkedHashMap
 
 class AndroidWidgetPreviewImageLoader(
     private val context: Context,
     private val appWidgetManager: AppWidgetManager = AppWidgetManager.getInstance(context),
 ) : WidgetPreviewImageLoader {
-    private val previews = ConcurrentHashMap<WidgetProviderIdentity, ImageBitmap>()
+    private val previewCache = WidgetPreviewCache<ImageBitmap>()
 
     override fun previewFor(identity: WidgetProviderIdentity): ImageBitmap? =
-        previews[identity] ?: runCatching { loadPreview(identity) }.getOrNull()?.also { preview ->
-            previews[identity] = preview
-        }
+        previewCache[identity]
+            ?: runCatching { loadPreview(identity) }.getOrNull()?.also { preview ->
+                previewCache[identity] = preview
+            }
 
-    override fun cachedPreviewFor(identity: WidgetProviderIdentity): ImageBitmap? = previews[identity]
+    override fun cachedPreviewFor(identity: WidgetProviderIdentity): ImageBitmap? {
+        return previewCache[identity]
+    }
 
     private fun loadPreview(identity: WidgetProviderIdentity): ImageBitmap? =
         appWidgetManager.installedProviders
             .firstOrNull { provider -> provider.matches(identity) }
             ?.loadPreviewImage(context, WIDGET_PREVIEW_DENSITY)
             ?.toWidgetPreviewBitmap()
+}
+
+internal class WidgetPreviewCache<T>(
+    private val maxEntries: Int = MAX_PREVIEW_CACHE_ENTRIES,
+) {
+    private val lock = Any()
+    private val previews =
+        object : LinkedHashMap<WidgetProviderIdentity, T>(maxEntries.coerceAtLeast(1), 0.75f, true) {
+            override fun removeEldestEntry(eldest: MutableMap.MutableEntry<WidgetProviderIdentity, T>?): Boolean =
+                size > maxEntries.coerceAtLeast(0)
+        }
+
+    operator fun get(identity: WidgetProviderIdentity): T? =
+        synchronized(lock) {
+            previews[identity]
+        }
+
+    operator fun set(
+        identity: WidgetProviderIdentity,
+        preview: T,
+    ) {
+        synchronized(lock) {
+            previews[identity] = preview
+        }
+    }
+
+    internal val size: Int
+        get() = synchronized(lock) { previews.size }
 }
 
 private fun AppWidgetProviderInfo.matches(identity: WidgetProviderIdentity): Boolean =
@@ -74,3 +105,4 @@ internal fun widgetPreviewBitmapSize(
 private const val WIDGET_PREVIEW_DENSITY = 0
 private const val WIDGET_PREVIEW_BITMAP_WIDTH = 320
 private const val WIDGET_PREVIEW_BITMAP_HEIGHT = 180
+private const val MAX_PREVIEW_CACHE_ENTRIES = 48

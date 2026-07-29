@@ -25,6 +25,7 @@ data class PendingWidgetAddTransaction(
     val target: WidgetAddTarget,
     val targetPageId: LauncherPageId? = null,
     val targetCell: GridCell? = null,
+    val dockIndex: Int? = null,
     val step: PendingWidgetAddStep,
     val createdAtEpochMillis: Long,
     val version: Int = CURRENT_WIDGET_ADD_TRANSACTION_VERSION,
@@ -112,6 +113,7 @@ internal fun encodeWidgetAddTransaction(transaction: PendingWidgetAddTransaction
         .put("targetPageId", transaction.targetPageId?.value)
         .put("targetColumn", transaction.targetCell?.column)
         .put("targetRow", transaction.targetCell?.row)
+        .put("dockIndex", transaction.dockIndex)
         .put("step", transaction.step.name)
         .put("createdAtEpochMillis", transaction.createdAtEpochMillis)
         .toString()
@@ -155,6 +157,7 @@ internal fun decodeWidgetAddTransaction(value: String): PendingWidgetAddTransact
                     } else {
                         null
                     },
+                dockIndex = json.optInt("dockIndex", -1).takeIf { it >= 0 },
                 step = PendingWidgetAddStep.valueOf(json.getString("step")),
                 createdAtEpochMillis = json.getLong("createdAtEpochMillis").also { require(it >= 0) },
                 version = json.getInt("version").also { require(it in 1..CURRENT_WIDGET_ADD_TRANSACTION_VERSION) },
@@ -167,6 +170,6 @@ internal fun decodeInvalidWidgetAddTransactionHostedId(value: String): HostedWid
         HostedWidgetId(JSONObject(value).getInt("hostedWidgetId").also { require(it > 0) })
     }.getOrNull()
 
-private const val CURRENT_WIDGET_ADD_TRANSACTION_VERSION = 2
+private const val CURRENT_WIDGET_ADD_TRANSACTION_VERSION = 3
 private const val WIDGET_ADD_TRANSACTION_PREFERENCES = "widget_add_transaction"
 private const val WIDGET_ADD_TRANSACTION_KEY = "pending"

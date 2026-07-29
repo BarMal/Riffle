@@ -1,17 +1,256 @@
 package com.riffle.app.launcher
 
+import com.riffle.app.launcher.widgets.WidgetPreviewCache
 import com.riffle.app.launcher.widgets.widgetPreviewBitmapSize
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppProfile
+import com.riffle.core.domain.launcher.home.GridDimensions
+import com.riffle.core.domain.launcher.home.LauncherPage
+import com.riffle.core.domain.launcher.home.LauncherPageId
+import com.riffle.core.domain.launcher.home.LauncherPageType
 import com.riffle.core.domain.launcher.widgets.InstalledWidgetProvider
 import com.riffle.core.domain.launcher.widgets.WidgetProviderClassName
 import com.riffle.core.domain.launcher.widgets.WidgetProviderDimensions
 import com.riffle.core.domain.launcher.widgets.WidgetProviderIdentity
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 class WidgetPickerDialogTest {
+    @Test
+    fun cancellingAccessiblePlacementRestoresThePageSelectedWhenPlacementStarted() {
+        val initialPageId = LauncherPageId("first")
+        val candidatePageId = LauncherPageId("second")
+        val placement =
+            accessibleWidgetPlacementFor(
+                provider =
+                    widgetProvider(
+                        label = "Weather",
+                        packageName = "com.example.weather",
+                        className = ".Weather",
+                    ),
+                target = WidgetAddTarget.HOME,
+                pages =
+                    listOf(
+                        LauncherPage(
+                            id = initialPageId,
+                            type = LauncherPageType.Home,
+                            grid = GridDimensions(1, 1),
+                        ),
+                        LauncherPage(
+                            id = candidatePageId,
+                            type = LauncherPageType.Home,
+                            grid = GridDimensions(1, 1),
+                        ),
+                    ),
+                selectedPageId = initialPageId,
+                availableWidthDp = 400,
+                availableHeightDp = 400,
+            ).let { value ->
+                value.selectCandidate(value.candidates.first { candidate -> candidate.pageId == candidatePageId })
+            }
+        val actions =
+            listOfNotNull(
+                placement.selectedCandidate?.pageId?.let(LauncherShellAction::SelectHomePage),
+                accessibleWidgetPlacementCancellationActionFor(
+                    placement = placement,
+                    selectedPageId = candidatePageId,
+                ),
+            )
+
+        assertEquals(
+            listOf(
+                LauncherShellAction.SelectHomePage(candidatePageId),
+                LauncherShellAction.SelectHomePage(initialPageId),
+            ),
+            actions,
+        )
+    }
+
+    @Test
+    fun accessibleDockPlacementDispatchesSelectedNonFirstPosition() {
+        val provider = widgetProvider(label = "Weather", packageName = "com.example.weather", className = ".Weather")
+        val placement =
+            accessibleWidgetPlacementFor(
+                provider = provider,
+                target = WidgetAddTarget.DOCK,
+                pages = emptyList(),
+                selectedPageId = LauncherPageId("home"),
+                dockItemCount = 2,
+                availableWidthDp = 400,
+                availableHeightDp = 400,
+            )
+
+        val selected = placement.selectCandidate(placement.candidates.first { it.dockIndex == 1 })
+        val dispatched = accessibleWidgetAddActionFor(selected)
+
+        assertEquals(1, selected.selectedCandidate?.dockIndex)
+        assertEquals(1, dispatched?.dockIndex)
+        assertEquals(WidgetAddTarget.DOCK, dispatched?.target)
+    }
+
+    @Test
+    fun accessiblePlacementSelectsPageAndCellBeforeBuildingTheAddRequest() {
+        val provider = widgetProvider(label = "Weather", packageName = "com.example.weather", className = ".Weather")
+        val firstPage =
+            LauncherPage(id = LauncherPageId("first"), type = LauncherPageType.Home, grid = GridDimensions(2, 1))
+        val secondPage =
+            LauncherPage(id = LauncherPageId("second"), type = LauncherPageType.Home, grid = GridDimensions(2, 1))
+        val placement =
+            accessibleWidgetPlacementFor(
+                provider = provider,
+                target = WidgetAddTarget.HOME,
+                pages = listOf(firstPage, secondPage),
+                selectedPageId = secondPage.id,
+                availableWidthDp = 400,
+                availableHeightDp = 400,
+            )
+        var emittedRequest: LauncherShellAction.RequestAddWidget? = null
+
+        assertNull(emittedRequest)
+        val selected =
+            placement.selectCandidate(
+                placement.candidates.first { candidate ->
+                    candidate.pageId == secondPage.id && candidate.cell?.column == 1
+                },
+            )
+        assertEquals(secondPage.id, selected.selectedCandidate?.pageId)
+        assertEquals(1, selected.selectedCandidate?.cell?.column)
+
+        emittedRequest = accessibleWidgetAddActionFor(selected)
+        assertEquals(secondPage.id, emittedRequest?.targetPageId)
+        assertEquals(selected.selectedCandidate?.cell, emittedRequest?.targetCell)
+        assertEquals(
+            "Weather on Home page second, Column 2, row 1; placement is ready.",
+            selected.accessiblePlacementAnnouncement(),
+        )
+    }
+
+    @Test
+    fun accessibleDockPlacementOffersInsertionWhenDockIsFullOrDisabled() {
+        val placement =
+            accessibleWidgetPlacementFor(
+                provider =
+                    widgetProvider(
+                        label = "Weather",
+                        packageName = "com.example.weather",
+                        className = ".Weather",
+                    ),
+                target = WidgetAddTarget.DOCK,
+                pages = emptyList(),
+                selectedPageId = LauncherPageId("home"),
+                dockItemCount = 2,
+                availableWidthDp = 400,
+                availableHeightDp = 400,
+            )
+
+        assertEquals(listOf(0, 1, 2), placement.candidates.map { it.dockIndex })
+        assertEquals(
+            "Weather in the Dock at Dock position 1; placement is ready.",
+            placement.accessiblePlacementAnnouncement(),
+        )
+    }
+
+    @Test
+    fun accessiblePlacementAnnouncementIncludesSelectionAndValidity() {
+        val provider = widgetProvider(label = "Weather", packageName = "com.example.weather", className = ".Weather")
+        val placement =
+            accessibleWidgetPlacementFor(
+                provider = provider,
+                target = WidgetAddTarget.DOCK,
+                pages = emptyList(),
+                selectedPageId = LauncherPageId("home"),
+                dockItemCount = 2,
+                availableWidthDp = 400,
+                availableHeightDp = 400,
+            )
+
+        assertEquals(
+            "Weather in the Dock at Dock position 2; placement is ready.",
+            placement.selectCandidate(placement.candidates[1]).accessiblePlacementAnnouncement(),
+        )
+        assertEquals(
+            "Weather cannot be placed at the selected dock target.",
+            placement.copy(candidates = emptyList()).accessiblePlacementAnnouncement(),
+        )
+    }
+
+    @Test
+    fun previewCacheBoundsEntriesAndEvictsLeastRecentlyUsed() {
+        val cache = WidgetPreviewCache<String>(maxEntries = 2)
+        val baseIdentity =
+            widgetProvider(
+                label = "First",
+                packageName = "com.example.cache",
+                className = ".First",
+            ).identity
+        val first = baseIdentity
+        val second = baseIdentity.copy(className = WidgetProviderClassName(".Second"))
+        val third = baseIdentity.copy(className = WidgetProviderClassName(".Third"))
+
+        cache[first] = "first"
+        cache[second] = "second"
+        assertEquals("first", cache[first])
+        cache[third] = "third"
+
+        assertNull(cache[second])
+        assertEquals("first", cache[first])
+        assertEquals("third", cache[third])
+        assertEquals(2, cache.size)
+    }
+
+    @Test
+    fun previewCacheRemainsBoundedAndPreservesLruOrderDuringConcurrentAccess() {
+        val cache = WidgetPreviewCache<String>(maxEntries = 3)
+        val identities =
+            (0 until 8).map { index ->
+                widgetProvider(
+                    label = "Provider $index",
+                    packageName = "com.example.cache",
+                    className = ".Provider$index",
+                ).identity
+            }
+        identities.take(3).forEachIndexed { index, identity -> cache[identity] = "preview-$index" }
+        val start = CountDownLatch(1)
+        val executor = Executors.newFixedThreadPool(8)
+
+        try {
+            val tasks =
+                (0 until 8).map { worker ->
+                    executor.submit {
+                        start.await()
+                        repeat(2_000) { iteration ->
+                            val index = (worker + iteration) % identities.size
+                            val identity = identities[index]
+                            cache[identity] = "preview-$index"
+                            cache[identity]
+                        }
+                    }
+                }
+            start.countDown()
+            tasks.forEach { task -> task.get(10, TimeUnit.SECONDS) }
+        } finally {
+            executor.shutdownNow()
+        }
+
+        assertTrue(cache.size <= 3)
+        cache[identities[0]] = "most-recent"
+        cache[identities[1]] = "second-most-recent"
+        cache[identities[2]] = "third-most-recent"
+        assertEquals("most-recent", cache[identities[0]])
+        cache[identities[3]] = "new"
+
+        assertNull(cache[identities[1]])
+        assertEquals("most-recent", cache[identities[0]])
+        assertEquals("third-most-recent", cache[identities[2]])
+        assertEquals("new", cache[identities[3]])
+        assertEquals(3, cache.size)
+    }
+
     @Test
     fun previewLoaderFailuresFallBackToNoPreview() {
         val identity =

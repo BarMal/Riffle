@@ -96,6 +96,30 @@ class DockEngineTest {
     }
 
     @Test
+    fun addsWidgetAtRequestedDockIndex() {
+        val first = appShortcut(id = "first")
+        val last = appShortcut(id = "last")
+        val layout =
+            HomeLayoutDefaults.standard().copy(
+                dock = DockModel(capacity = 4, items = listOf(first, last)),
+            )
+
+        val result =
+            engine.addWidgetToDock(
+                layout = layout,
+                hostedWidgetId = HostedWidgetId(7),
+                label = "Weather",
+                targetIndex = 1,
+            )
+
+        val updated = assertIs<DockEditResult.Updated>(result)
+        assertEquals(
+            listOf(first.id, LauncherItemId("dock-widget:7"), last.id),
+            updated.layout.dock.items.map(LauncherItem::id),
+        )
+    }
+
+    @Test
     fun rejectsDuplicateDockWidget() {
         val layout =
             assertIs<DockEditResult.Updated>(
