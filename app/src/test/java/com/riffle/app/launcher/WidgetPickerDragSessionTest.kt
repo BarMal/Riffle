@@ -302,7 +302,7 @@ class WidgetPickerDragSessionTest {
             provider(targetCellWidth = null, targetCellHeight = 1).copy(
                 dimensions =
                     WidgetProviderDimensions(
-                        minWidthDp = 134,
+                        minWidthDp = 67,
                         minHeightDp = 1,
                         targetCellHeight = 1,
                     ),
@@ -326,8 +326,17 @@ class WidgetPickerDragSessionTest {
                 dockBounds = null,
                 density = 2f,
             )
+        val dropPreview =
+            widgetPickerDragPlacementPreviewFor(
+                page = page,
+                provider = provider,
+                cell = GridCell(column = 1, row = 0),
+                availableWidthDp = 201,
+                availableHeightDp = 100,
+            )
 
-        assertEquals(GridSpan(columns = 2, rows = 1), sharedPreviewAndDropGeometry?.span)
+        assertEquals(GridSpan(columns = 1, rows = 1), sharedPreviewAndDropGeometry?.span)
+        assertEquals(dropPreview, sharedPreviewAndDropGeometry)
         assertTrue(sharedPreviewAndDropGeometry?.isValid == true)
     }
 
