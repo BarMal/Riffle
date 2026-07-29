@@ -3,6 +3,7 @@ package com.riffle.core.domain.launcher.cards
 import com.riffle.core.domain.launcher.home.GridCell
 import com.riffle.core.domain.launcher.home.GridDimensions
 import com.riffle.core.domain.launcher.home.GridPlacement
+import com.riffle.core.domain.launcher.home.GridSpan
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -84,6 +85,30 @@ class TimeScapeTemplateTest {
         assertTrue(variant.validate().any { it is TimeScapeTemplateValidationIssue.OutOfBounds })
     }
 
+    @Test
+    fun validationRejectsNonPositiveSpansBeforeEnumeratingCells() {
+        val variant =
+            variantWithPlacements(
+                GridPlacement(GridCell(0, 0), GridSpan(columns = 0, rows = 1)),
+                GridPlacement(GridCell(0, 0), GridSpan(columns = 1, rows = -1)),
+            )
+
+        val issues = variant.validate()
+
+        assertEquals(2, issues.count { issue -> issue is TimeScapeTemplateValidationIssue.InvalidSpan })
+    }
+
+    @Test
+    fun validationRejectsExtremeSpansWithoutEnumeratingCells() {
+        val placement = GridPlacement(GridCell(0, 0), GridSpan(Int.MAX_VALUE, Int.MAX_VALUE))
+        val variant = variantWithPlacements(placement)
+
+        assertEquals(
+            listOf(TimeScapeTemplateValidationIssue.OutOfBounds(placement)),
+            variant.validate(),
+        )
+    }
+
     private fun variant(mode: TimeScapePaneMode): TimeScapeTemplateVariant =
         TimeScapeTemplateVariant(
             HomeLayoutDeviceClass.PHONE,
@@ -100,5 +125,16 @@ class TimeScapeTemplateTest {
             TimeScapeElementId(id),
             TimeScapeStaticElementType.CLOCK,
             placement,
+        )
+
+    private fun variantWithPlacements(vararg placements: GridPlacement): TimeScapeTemplateVariant =
+        TimeScapeTemplateVariant(
+            HomeLayoutDeviceClass.PHONE,
+            TimeScapePaneMode.COMPACT,
+            TimeScapeCanvas(
+                GridDimensions(2, 2),
+                placements.mapIndexed { index, placement -> element("element-$index", placement) },
+            ),
+            emptyList(),
         )
 }

@@ -96,6 +96,8 @@ sealed interface TimeScapeTemplateValidationIssue {
 
     data class OutOfBounds(val placement: GridPlacement) : TimeScapeTemplateValidationIssue
 
+    data class InvalidSpan(val placement: GridPlacement) : TimeScapeTemplateValidationIssue
+
     data class Collision(val placement: GridPlacement) : TimeScapeTemplateValidationIssue
 }
 
@@ -121,22 +123,34 @@ fun TimeScapeTemplateVariant.validate(): List<TimeScapeTemplateValidationIssue> 
     val placements = canvas.elements.map { element -> element.placement } + dynamicSlots.map { slot -> slot.placement }
     val occupied = mutableSetOf<GridCell>()
     placements.forEach { placement ->
-        val cells = placement.cells()
-        if (cells.any(::isOutsideGrid)) {
-            issues += TimeScapeTemplateValidationIssue.OutOfBounds(placement)
-        }
-        if (!occupied.addAll(cells)) {
-            issues += TimeScapeTemplateValidationIssue.Collision(placement)
+        when (val placementIssue = placement.validationIssue(canvas.grid)) {
+            null -> {
+                val cells = placement.cells()
+                if (!occupied.addAll(cells)) {
+                    issues += TimeScapeTemplateValidationIssue.Collision(placement)
+                }
+            }
+
+            else -> issues += placementIssue
         }
     }
     return issues
 }
 
-private fun TimeScapeTemplateVariant.isOutsideGrid(cell: GridCell): Boolean =
-    cell.column < 0 ||
-        cell.row < 0 ||
-        cell.column >= canvas.grid.columns ||
-        cell.row >= canvas.grid.rows
+private fun GridPlacement.validationIssue(grid: GridDimensions): TimeScapeTemplateValidationIssue? {
+    if (span.columns <= 0 || span.rows <= 0) {
+        return TimeScapeTemplateValidationIssue.InvalidSpan(this)
+    }
+    val rightExclusive = cell.column.toLong() + span.columns.toLong()
+    val bottomExclusive = cell.row.toLong() + span.rows.toLong()
+    val startsOutside = cell.column < 0 || cell.row < 0
+    val endsOutside = rightExclusive > grid.columns.toLong() || bottomExclusive > grid.rows.toLong()
+    return if (startsOutside || endsOutside) {
+        TimeScapeTemplateValidationIssue.OutOfBounds(this)
+    } else {
+        null
+    }
+}
 
 private fun GridPlacement.cells(): Set<GridCell> =
     (cell.column until cell.column + span.columns.coerceAtLeast(1)).flatMap { column ->
