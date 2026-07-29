@@ -31,6 +31,7 @@ import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.settings.CardsSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettings
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -38,6 +39,28 @@ import org.junit.Test
 class TimeScapeAdaptiveLayoutInteractionTest {
     @get:Rule
     val composeRule = createComposeRule()
+
+    @Test
+    fun configuredLeadingRailOverridesTrailingTemplateVariant() {
+        assertEquals(
+            TimeScapeRailSide.LEADING,
+            resolveTimeScapeRailSide(
+                configuredRailSide = TimeScapeRailSide.LEADING,
+                templateRailSide = TimeScapeRailSide.TRAILING,
+            ),
+        )
+    }
+
+    @Test
+    fun configuredTrailingRailOverridesLeadingTemplateVariant() {
+        assertEquals(
+            TimeScapeRailSide.TRAILING,
+            resolveTimeScapeRailSide(
+                configuredRailSide = TimeScapeRailSide.TRAILING,
+                templateRailSide = TimeScapeRailSide.LEADING,
+            ),
+        )
+    }
 
     @Test
     fun mediumWindowUsesNamedStageRailControls() {

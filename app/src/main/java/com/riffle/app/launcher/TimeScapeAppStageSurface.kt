@@ -96,6 +96,12 @@ import com.riffle.core.domain.launcher.settings.TimeScapeViewportDp
 import com.riffle.core.domain.launcher.settings.resolveTimeScapeCardStack
 import kotlinx.coroutines.flow.distinctUntilChanged
 
+@Suppress("UNUSED_PARAMETER")
+internal fun resolveTimeScapeRailSide(
+    configuredRailSide: TimeScapeRailSide,
+    templateRailSide: TimeScapeRailSide?,
+): TimeScapeRailSide = configuredRailSide
+
 /** The Cards home surface, compact by default and pane-adaptive for the current launcher window. */
 @Composable
 internal fun TimeScapeAppStageSurface(
@@ -236,11 +242,10 @@ internal fun TimeScapeAppStageSurface(
                         ?.variantFor(state.settingsLayoutDeviceClass, initialPaneLayout.mode)
                 }
             val railSide =
-                if (state.launcherSettings.cards.timeScapeRailSide == TimeScapeRailSide.TRAILING) {
-                    TimeScapeRailSide.TRAILING
-                } else {
-                    templateVariant?.railSide ?: TimeScapeRailSide.LEADING
-                }
+                resolveTimeScapeRailSide(
+                    configuredRailSide = state.launcherSettings.cards.timeScapeRailSide,
+                    templateRailSide = templateVariant?.railSide,
+                )
             val paneLayout =
                 remember(adaptiveWindow, postureTransition.effectivePosture, railSide) {
                     TimeScapePaneLayoutPolicy().layoutFor(
