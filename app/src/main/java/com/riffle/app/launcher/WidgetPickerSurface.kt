@@ -12,12 +12,12 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -52,6 +52,7 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.widgets.InstalledWidgetProvider
@@ -394,20 +395,33 @@ private fun WidgetProviderPreview(
 ) {
     val preview = rememberWidgetPreview(provider = provider, previewImageLoader = previewImageLoader)
 
-    BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-        val previewAspectRatio = provider.widgetPickerPreviewAspectRatio().boundedFor(maxWidth)
+    BoxWithConstraints(
+        modifier = Modifier.fillMaxWidth(),
+        contentAlignment = Alignment.Center,
+    ) {
+        val previewSize =
+            widgetPickerPreviewSize(
+                maxWidth = maxWidth,
+                preferredAspectRatio = provider.widgetPickerPreviewAspectRatio(),
+            )
+        val previewIsConstrained =
+            widgetPickerPreviewIsConstrained(
+                maxWidth = maxWidth,
+                preferredAspectRatio = provider.widgetPickerPreviewAspectRatio(),
+            )
 
-        if (preview != null) {
+        if (preview != null && !previewIsConstrained) {
             Image(
                 bitmap = preview,
                 contentDescription = "${provider.label} widget preview",
                 contentScale = ContentScale.Fit,
-                modifier = Modifier.widgetPickerPreviewBounds(previewAspectRatio),
+                modifier = Modifier.widgetPickerPreviewBounds(previewSize),
             )
         } else {
             WidgetProviderPreviewFallback(
                 provider = provider,
-                previewAspectRatio = previewAspectRatio,
+                previewSize = previewSize,
+                isConstrained = previewIsConstrained,
             )
         }
     }
@@ -436,34 +450,66 @@ private fun rememberWidgetPreview(
 @Composable
 private fun WidgetProviderPreviewFallback(
     provider: InstalledWidgetProvider,
-    previewAspectRatio: Float,
+    previewSize: DpSize,
+    isConstrained: Boolean,
 ) {
     Box(
         modifier =
             Modifier
-                .widgetPickerPreviewBounds(previewAspectRatio)
+                .widgetPickerPreviewBounds(previewSize)
                 .background(MaterialTheme.colorScheme.surfaceVariant),
         contentAlignment = Alignment.Center,
     ) {
         Text(
-            text = provider.widgetPickerPreviewLabel(),
+            text =
+                if (isConstrained) {
+                    "Preview ratio unavailable"
+                } else {
+                    provider.widgetPickerPreviewLabel()
+                },
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.onSecondaryContainer,
         )
     }
 }
 
-private fun Modifier.widgetPickerPreviewBounds(previewAspectRatio: Float): Modifier =
-    fillMaxWidth()
-        .aspectRatio(previewAspectRatio)
+private fun Modifier.widgetPickerPreviewBounds(previewSize: DpSize): Modifier =
+    size(previewSize)
         .clip(RoundedCornerShape(12.dp))
         .testTag(WIDGET_PICKER_PREVIEW_TEST_TAG)
 
-private fun Float.boundedFor(maxWidth: Dp): Float =
-    coerceIn(
-        minimumValue = maxWidth / WIDGET_PREVIEW_MAX_HEIGHT_DP.dp,
-        maximumValue = maxWidth / WIDGET_PREVIEW_MIN_HEIGHT_DP.dp,
-    )
+internal fun widgetPickerPreviewSize(
+    maxWidth: Dp,
+    preferredAspectRatio: Float,
+    maxHeight: Dp = WIDGET_PREVIEW_MAX_HEIGHT_DP.dp,
+): DpSize {
+    val aspectRatio = preferredAspectRatio.takeIf { it.isFinite() && it > 0f } ?: 1f
+    val width = maxWidth
+    val height = width / aspectRatio
+    if (widgetPickerPreviewIsConstrained(maxWidth, aspectRatio, maxHeight)) {
+        return DpSize(
+            width = width.coerceAtMost(WIDGET_PREVIEW_CONSTRAINED_WIDTH_DP.dp),
+            height = maxHeight.coerceAtMost(WIDGET_PREVIEW_CONSTRAINED_HEIGHT_DP.dp),
+        )
+    }
+    return if (height <= maxHeight) {
+        DpSize(width = width, height = height)
+    } else {
+        DpSize(width = maxHeight * aspectRatio, height = maxHeight)
+    }
+}
+
+internal fun widgetPickerPreviewIsConstrained(
+    maxWidth: Dp,
+    preferredAspectRatio: Float,
+    maxHeight: Dp = WIDGET_PREVIEW_MAX_HEIGHT_DP.dp,
+    minimumDimension: Dp = WIDGET_PREVIEW_MIN_LEGIBLE_DIMENSION_DP.dp,
+): Boolean {
+    val aspectRatio = preferredAspectRatio.takeIf { it.isFinite() && it > 0f } ?: 1f
+    val naturalHeight = maxWidth / aspectRatio
+    val naturalWidth = if (naturalHeight <= maxHeight) maxWidth else maxHeight * aspectRatio
+    return naturalWidth < minimumDimension || naturalHeight < minimumDimension
+}
 
 internal fun InstalledWidgetProvider.requestAddWidgetAction(
     target: WidgetAddTarget = WidgetAddTarget.HOME,
@@ -482,8 +528,10 @@ private const val WIDGET_PICKER_PANEL_MARGIN_DP = 12
 private const val WIDGET_PICKER_MAX_WIDTH_DP = 840
 private const val WIDGET_TILE_MIN_WIDTH_DP = 220
 private const val WIDGET_PICKER_SURFACE_ALPHA = 0.88f
-private const val WIDGET_PREVIEW_MIN_HEIGHT_DP = 72
 private const val WIDGET_PREVIEW_MAX_HEIGHT_DP = 240
+private const val WIDGET_PREVIEW_MIN_LEGIBLE_DIMENSION_DP = 48
+private const val WIDGET_PREVIEW_CONSTRAINED_WIDTH_DP = 180
+private const val WIDGET_PREVIEW_CONSTRAINED_HEIGHT_DP = 96
 internal const val WIDGET_PICKER_PREVIEW_TEST_TAG = "widget-picker-preview"
 internal const val WIDGET_PICKER_ROOT_TEST_TAG = "widget-picker-root"
 internal const val WIDGET_PICKER_PANEL_TEST_TAG = "widget-picker-panel"

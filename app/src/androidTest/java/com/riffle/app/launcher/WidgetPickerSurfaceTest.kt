@@ -113,10 +113,13 @@ class WidgetPickerSurfaceTest {
             }
         }
 
-        val previewHeight =
-            composeRule.onNodeWithTag(WIDGET_PICKER_PREVIEW_TEST_TAG).fetchSemanticsNode().boundsInRoot.height
+        val previewBounds =
+            composeRule.onNodeWithTag(WIDGET_PICKER_PREVIEW_TEST_TAG).fetchSemanticsNode().boundsInRoot
 
-        assertTrue(previewHeight <= with(composeRule.density) { 240.dp.toPx() })
+        with(composeRule.density) {
+            assertEquals(180.dp.toPx(), previewBounds.width, 1f)
+            assertEquals(96.dp.toPx(), previewBounds.height, 1f)
+        }
     }
 
     @Test
