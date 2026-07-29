@@ -19,19 +19,6 @@ import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
 
 @Composable
-internal fun SettingsHapticsPageContent(
-    state: SettingsSurfaceState,
-    onAction: (LauncherShellAction) -> Unit,
-) {
-    SettingsSection(title = "Haptics") {
-        HapticStrengthSetting(
-            selectedStrength = state.settings.haptics.feedbackStrength,
-            onAction = onAction,
-        )
-    }
-}
-
-@Composable
 internal fun SettingsPermissionsPageContent(
     state: SettingsSurfaceState,
     onAction: (LauncherShellAction) -> Unit,

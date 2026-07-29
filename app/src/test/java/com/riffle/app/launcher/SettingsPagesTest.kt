@@ -27,7 +27,7 @@ class SettingsPagesTest {
                 "Floating dock" to SettingsPage.FLOATING_DOCK,
                 "Gestures" to SettingsPage.GESTURES,
                 "Contextual behaviour" to SettingsPage.CONTEXTUAL,
-                "Motion" to SettingsPage.MOTION,
+                "Motion & haptics" to SettingsPage.MOTION,
                 "App drawer" to SettingsPage.APPS,
                 "Permissions" to SettingsPage.PERMISSIONS,
                 "Backup" to SettingsPage.BACKUP,
@@ -41,11 +41,22 @@ class SettingsPagesTest {
         assertEquals(
             listOf(
                 SettingsPageGroup.HOME,
+                SettingsPageGroup.APPEARANCE,
                 SettingsPageGroup.INTERACTION,
                 SettingsPageGroup.APPS,
                 SettingsPageGroup.SYSTEM,
             ),
             settingsMainPageGroups(),
+        )
+    }
+
+    @Test
+    fun mainSettingsPageKeepsAppearanceTasksTogether() {
+        val entries = settingsMainPageEntries()
+
+        assertEquals(
+            setOf(SettingsPage.APPEARANCE, SettingsPage.TIMESCAPE_APPEARANCE),
+            entries.filter { entry -> entry.group == SettingsPageGroup.APPEARANCE }.map { entry -> entry.page }.toSet(),
         )
     }
 
@@ -157,6 +168,10 @@ class SettingsPagesTest {
             "Home set · Notifications allowed · Floating dock not allowed",
             entries.single { entry -> entry.page == SettingsPage.PERMISSIONS }.subtitle,
         )
+        assertEquals(
+            "Apps, search results, and 2 hidden apps",
+            entries.single { entry -> entry.page == SettingsPage.APPS }.subtitle,
+        )
     }
 
     @Test
@@ -169,8 +184,8 @@ class SettingsPagesTest {
             )
 
         assertEquals(
-            emptyList<SettingsPageEntry>(),
-            settingsMainPageEntriesMatching(query = "3 hidden", status = status),
+            listOf(SettingsPage.APPS),
+            settingsMainPageEntriesMatching(query = "3 hidden", status = status).map { entry -> entry.page },
         )
         assertEquals(
             listOf(SettingsPage.PERMISSIONS),

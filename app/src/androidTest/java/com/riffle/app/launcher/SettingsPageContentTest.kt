@@ -134,6 +134,24 @@ class SettingsPageContentTest {
     }
 
     @Test
+    fun motionPageKeepsHapticsWithAccessibilityControls() {
+        composeRule.setContent {
+            MaterialTheme {
+                SettingsPageContent(
+                    modifier = Modifier,
+                    state = LauncherShellState().settingsSurfaceState(),
+                    page = SettingsPage.MOTION,
+                    onPageSelected = {},
+                    onAction = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("Reduced motion").assertExists()
+        composeRule.onNodeWithText("Feedback strength").assertExists()
+    }
+
+    @Test
     fun permissionsPageSurfacesRecoveryActionsForMissingAccess() {
         val actions = mutableListOf<LauncherShellAction>()
 

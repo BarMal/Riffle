@@ -16,8 +16,7 @@ enum class SettingsPage(
     FLOATING_DOCK("Floating dock"),
     GESTURES("Gestures"),
     CONTEXTUAL("Contextual"),
-    MOTION("Motion"),
-    HAPTICS("Haptics"),
+    MOTION("Motion & haptics"),
     PERMISSIONS("Permissions"),
     APPS("App drawer"),
     BACKUP("Backup"),
@@ -29,9 +28,10 @@ internal enum class SettingsPageGroup(
     val title: String,
 ) {
     HOME("Home & layout"),
+    APPEARANCE("Appearance"),
     INTERACTION("Interaction & accessibility"),
     APPS("Apps & content"),
-    SYSTEM("Permissions & data"),
+    SYSTEM("Permissions, privacy & backup"),
 }
 
 internal data class SettingsPageEntry(
@@ -60,6 +60,7 @@ internal fun SettingsSurfaceState.settingsOverviewStatus(): SettingsOverviewStat
 internal fun settingsMainPageGroups(): List<SettingsPageGroup> =
     listOf(
         SettingsPageGroup.HOME,
+        SettingsPageGroup.APPEARANCE,
         SettingsPageGroup.INTERACTION,
         SettingsPageGroup.APPS,
         SettingsPageGroup.SYSTEM,
