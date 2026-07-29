@@ -126,6 +126,26 @@ class WidgetPickerDragSessionTest {
     }
 
     @Test
+    fun dropValidityRequiresTheMatchingValidTargetPreview() {
+        val provider = provider(targetCellWidth = 1, targetCellHeight = 1)
+        val homePreview =
+            widgetPickerDragPlacementPreviewFor(
+                page = page(),
+                provider = provider,
+                cell = GridCell(column = 0, row = 0),
+                availableWidthDp = 400,
+                availableHeightDp = 500,
+            )
+        val dockPreview = WidgetPickerDockPlacementPreview(provider, dockIndex = 0, isValid = true)
+
+        assertTrue(widgetPickerDropIsValid(WidgetAddTarget.HOME, homePreview, null))
+        assertTrue(widgetPickerDropIsValid(WidgetAddTarget.DOCK, null, dockPreview))
+        assertFalse(widgetPickerDropIsValid(WidgetAddTarget.HOME, null, dockPreview))
+        assertFalse(widgetPickerDropIsValid(WidgetAddTarget.DOCK, homePreview, null))
+        assertFalse(widgetPickerDropIsValid(null, homePreview, dockPreview))
+    }
+
+    @Test
     fun derivesPreviewSpanFromMinimumDimensionsWhenTargetCellsAreMissing() {
         val existing =
             WidgetItem(

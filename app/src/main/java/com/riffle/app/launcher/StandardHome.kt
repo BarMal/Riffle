@@ -2,6 +2,7 @@
 
 package com.riffle.app.launcher
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -29,9 +30,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -39,10 +42,13 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import com.riffle.app.launcher.widgets.EmptyHomeWidgetViewFactory
 import com.riffle.app.launcher.widgets.HomeWidgetViewFactory
 import com.riffle.core.domain.launcher.WidgetProviderCatalogStatus
@@ -88,10 +94,66 @@ internal fun StandardHome(
     val latestWidgetPickerDrag = remember { mutableStateOf<WidgetPickerDragSnapshot?>(null) }
     val accessibleWidgetPlacement = remember { mutableStateOf<WidgetPickerAccessiblePlacement?>(null) }
     val activeWidgetPickerEdgeHoverSide = remember { mutableStateOf<WidgetPickerEdgeHoverSide?>(null) }
+    val widgetPickerDragWorkspaceBounds = remember { mutableStateOf<Rect?>(null) }
     val workspaceGridBounds = remember { mutableStateOf<Rect?>(null) }
     val dockBounds = remember { mutableStateOf<Rect?>(null) }
     val density = LocalDensity.current.density
     val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+    val finishWidgetPickerDrag: (Boolean) -> Unit = { restorePicker ->
+        val wasInProgress = widgetPickerDragInProgress.value
+        widgetPickerDragInProgress.value = false
+        widgetPickerDragPreview.value = null
+        widgetPickerDockPreview.value = null
+        latestWidgetPickerDrag.value = null
+        activeWidgetPickerEdgeHoverSide.value = null
+        widgetPickerDragWorkspaceBounds.value = null
+        if (restorePicker && wasInProgress) {
+            onAction(LauncherShellAction.OpenWidgetPicker)
+        }
+    }
+    val cancelAccessibleWidgetPlacement = {
+        val placement = accessibleWidgetPlacement.value
+        accessibleWidgetPlacement.value = null
+        placement
+            ?.let { value ->
+                accessibleWidgetPlacementCancellationActionFor(
+                    placement = value,
+                    selectedPageId = visibleLayout.selectedPageId,
+                )
+            }?.let(onAction)
+        Unit
+    }
+    BackHandler(enabled = widgetPickerDragInProgress.value || accessibleWidgetPlacement.value != null) {
+        if (widgetPickerDragInProgress.value) {
+            finishWidgetPickerDrag(true)
+        } else {
+            cancelAccessibleWidgetPlacement()
+        }
+    }
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val latestFinishWidgetPickerDrag = rememberUpdatedState(finishWidgetPickerDrag)
+    val latestCancelAccessibleWidgetPlacement = rememberUpdatedState(cancelAccessibleWidgetPlacement)
+    DisposableEffect(lifecycleOwner) {
+        val observer =
+            LifecycleEventObserver { _, event ->
+                if (event == Lifecycle.Event.ON_STOP) {
+                    latestFinishWidgetPickerDrag.value(true)
+                    latestCancelAccessibleWidgetPlacement.value()
+                }
+            }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+    LaunchedEffect(workspaceGridBounds.value) {
+        val startingBounds = widgetPickerDragWorkspaceBounds.value
+        if (
+            widgetPickerDragInProgress.value &&
+            startingBounds != null &&
+            workspaceGridBounds.value != startingBounds
+        ) {
+            finishWidgetPickerDrag(true)
+        }
+    }
     LaunchedEffect(
         latestWidgetPickerDrag.value,
         visibleLayout.selectedPage,
@@ -125,18 +187,6 @@ internal fun StandardHome(
         } else if (targetPageId == null) {
             activeWidgetPickerEdgeHoverSide.value = null
         }
-    }
-    val cancelAccessibleWidgetPlacement = {
-        val placement = accessibleWidgetPlacement.value
-        accessibleWidgetPlacement.value = null
-        placement
-            ?.let { value ->
-                accessibleWidgetPlacementCancellationActionFor(
-                    placement = value,
-                    selectedPageId = visibleLayout.selectedPageId,
-                )
-            }?.let(onAction)
-        Unit
     }
     val actions =
         HomeWorkspaceActions(
@@ -182,6 +232,7 @@ internal fun StandardHome(
                 widgetPickerDockPreview.value = null
                 latestWidgetPickerDrag.value = null
                 activeWidgetPickerEdgeHoverSide.value = null
+                widgetPickerDragWorkspaceBounds.value = workspaceGridBounds.value
                 onAction(LauncherShellAction.CloseWidgetPicker)
             },
             onWidgetDragMoved = { provider, position, rootSize ->
@@ -218,11 +269,7 @@ internal fun StandardHome(
                     )
             },
             onWidgetDragCancelled = {
-                widgetPickerDragInProgress.value = false
-                widgetPickerDragPreview.value = null
-                widgetPickerDockPreview.value = null
-                latestWidgetPickerDrag.value = null
-                activeWidgetPickerEdgeHoverSide.value = null
+                finishWidgetPickerDrag(true)
             },
             onAccessiblePlacementRequested = { provider, target ->
                 accessibleWidgetPlacement.value =
@@ -290,10 +337,13 @@ internal fun StandardHome(
                         dockBounds = dockBounds.value,
                         isRtl = isRtl,
                     )
-                if (
-                    (target == WidgetAddTarget.DOCK && dockPreview?.isValid == true) ||
-                    (target == WidgetAddTarget.HOME && preview?.isValid == true)
-                ) {
+                val isValidDrop =
+                    widgetPickerDropIsValid(
+                        target = target,
+                        homePreview = preview,
+                        dockPreview = dockPreview,
+                    )
+                if (isValidDrop && target != null) {
                     onAction(
                         LauncherShellAction.RequestAddWidget(
                             provider = provider.identity,
@@ -306,11 +356,7 @@ internal fun StandardHome(
                         ),
                     )
                 }
-                widgetPickerDragInProgress.value = false
-                widgetPickerDragPreview.value = null
-                widgetPickerDockPreview.value = null
-                latestWidgetPickerDrag.value = null
-                activeWidgetPickerEdgeHoverSide.value = null
+                finishWidgetPickerDrag(!isValidDrop)
             },
             onAction = onAction,
         )
