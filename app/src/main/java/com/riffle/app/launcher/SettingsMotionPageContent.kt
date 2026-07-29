@@ -57,6 +57,10 @@ internal fun SettingsMotionPageContent(
                 onAction(LauncherShellAction.SelectReducedMotionEnabled(enabled))
             },
         )
+        HapticStrengthSetting(
+            selectedStrength = state.settings.haptics.feedbackStrength,
+            onAction = onAction,
+        )
     }
 }
 

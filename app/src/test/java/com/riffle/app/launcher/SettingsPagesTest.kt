@@ -26,14 +26,11 @@ class SettingsPagesTest {
                 "TimeScape appearance" to SettingsPage.TIMESCAPE_APPEARANCE,
                 "Floating dock" to SettingsPage.FLOATING_DOCK,
                 "Gestures" to SettingsPage.GESTURES,
-                "Contextual" to SettingsPage.CONTEXTUAL,
+                "Contextual behaviour" to SettingsPage.CONTEXTUAL,
                 "Motion" to SettingsPage.MOTION,
-                "Haptics" to SettingsPage.HAPTICS,
                 "App drawer" to SettingsPage.APPS,
-                "Hidden apps" to SettingsPage.HIDDEN_APPS,
                 "Permissions" to SettingsPage.PERMISSIONS,
                 "Backup" to SettingsPage.BACKUP,
-                "About" to SettingsPage.VERSION,
             ),
             settingsMainPageEntries().map { entry ->
                 entry.label to entry.page
@@ -155,9 +152,8 @@ class SettingsPagesTest {
                 ),
             )
 
-        assertEquals("2 hidden apps", entries.single { entry -> entry.page == SettingsPage.HIDDEN_APPS }.subtitle)
         assertEquals(
-            "Home set",
+            "Home set · Notifications allowed · Floating dock not allowed",
             entries.single { entry -> entry.page == SettingsPage.PERMISSIONS }.subtitle,
         )
     }
@@ -172,12 +168,12 @@ class SettingsPagesTest {
             )
 
         assertEquals(
-            listOf(SettingsPage.HIDDEN_APPS),
-            settingsMainPageEntriesMatching(query = "3 hidden", status = status).map { entry -> entry.page },
+            emptyList<SettingsPageEntry>(),
+            settingsMainPageEntriesMatching(query = "3 hidden", status = status),
         )
         assertEquals(
-            emptyList<SettingsPageEntry>(),
-            settingsMainPageEntriesMatching(query = "overlay not allowed", status = status),
+            listOf(SettingsPage.PERMISSIONS),
+            settingsMainPageEntriesMatching(query = "overlay not allowed", status = status).map { entry -> entry.page },
         )
     }
 
@@ -190,7 +186,6 @@ class SettingsPagesTest {
                 ),
             )
 
-        val hiddenApps = entries.single { entry -> entry.id.value == "hidden_apps" }
         val permissions = entries.single { entry -> entry.id.value == "permissions" }
         val results =
             LauncherSearchProvider()
@@ -200,13 +195,14 @@ class SettingsPagesTest {
                     settingsEntries = entries,
                 )
 
-        assertEquals("Hidden apps", hiddenApps.title)
-        assertEquals("2 hidden apps", hiddenApps.subtitle)
-        assertEquals("Apps", hiddenApps.section)
         assertEquals(
             listOf(
                 "default home",
                 "home app",
+                "notifications",
+                "notification access",
+                "overlay access",
+                "floating dock permission",
                 "Permissions",
             ),
             permissions.searchAliases,
@@ -238,7 +234,7 @@ class SettingsPagesTest {
                 .map { result -> result.title },
         )
         assertEquals(
-            listOf("Dock"),
+            listOf("Permissions"),
             LauncherSearchProvider()
                 .search(query = "notification access", apps = emptyList(), settingsEntries = entries)
                 .map { result -> result.title },
