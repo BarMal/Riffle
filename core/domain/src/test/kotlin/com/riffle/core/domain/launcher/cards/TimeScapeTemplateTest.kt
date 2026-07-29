@@ -109,6 +109,30 @@ class TimeScapeTemplateTest {
         )
     }
 
+    @Test
+    fun validationHandlesExtremeInBoundsGridWithoutEnumeratingCells() {
+        val fullGrid = GridPlacement(GridCell(0, 0), GridSpan(Int.MAX_VALUE, Int.MAX_VALUE))
+        val overlappingCell = GridPlacement(GridCell(Int.MAX_VALUE - 1, Int.MAX_VALUE - 1))
+        val variant =
+            TimeScapeTemplateVariant(
+                HomeLayoutDeviceClass.PHONE,
+                TimeScapePaneMode.COMPACT,
+                TimeScapeCanvas(
+                    GridDimensions(Int.MAX_VALUE, Int.MAX_VALUE),
+                    listOf(
+                        element("full-grid", fullGrid),
+                        element("overlap", overlappingCell),
+                    ),
+                ),
+                emptyList(),
+            )
+
+        assertEquals(
+            listOf(TimeScapeTemplateValidationIssue.Collision(overlappingCell)),
+            variant.validate(),
+        )
+    }
+
     private fun variant(mode: TimeScapePaneMode): TimeScapeTemplateVariant =
         TimeScapeTemplateVariant(
             HomeLayoutDeviceClass.PHONE,

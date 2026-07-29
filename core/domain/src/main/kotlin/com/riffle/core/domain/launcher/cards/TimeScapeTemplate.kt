@@ -121,14 +121,14 @@ fun TimeScapeTemplateVariant.validate(): List<TimeScapeTemplateValidationIssue> 
         issues += TimeScapeTemplateValidationIssue.DuplicateSlotId(id)
     }
     val placements = canvas.elements.map { element -> element.placement } + dynamicSlots.map { slot -> slot.placement }
-    val occupied = mutableSetOf<GridCell>()
+    val acceptedPlacements = mutableListOf<GridPlacement>()
     placements.forEach { placement ->
         when (val placementIssue = placement.validationIssue(canvas.grid)) {
             null -> {
-                val cells = placement.cells()
-                if (!occupied.addAll(cells)) {
+                if (acceptedPlacements.any { accepted -> accepted.overlaps(placement) }) {
                     issues += TimeScapeTemplateValidationIssue.Collision(placement)
                 }
+                acceptedPlacements += placement
             }
 
             else -> issues += placementIssue
@@ -152,10 +152,16 @@ private fun GridPlacement.validationIssue(grid: GridDimensions): TimeScapeTempla
     }
 }
 
-private fun GridPlacement.cells(): Set<GridCell> =
-    (cell.column until cell.column + span.columns.coerceAtLeast(1)).flatMap { column ->
-        (cell.row until cell.row + span.rows.coerceAtLeast(1)).map { row -> GridCell(column, row) }
-    }.toSet()
+private fun GridPlacement.overlaps(other: GridPlacement): Boolean {
+    val rightExclusive = cell.column.toLong() + span.columns.toLong()
+    val bottomExclusive = cell.row.toLong() + span.rows.toLong()
+    val otherRightExclusive = other.cell.column.toLong() + other.span.columns.toLong()
+    val otherBottomExclusive = other.cell.row.toLong() + other.span.rows.toLong()
+    return cell.column.toLong() < otherRightExclusive &&
+        other.cell.column.toLong() < rightExclusive &&
+        cell.row.toLong() < otherBottomExclusive &&
+        other.cell.row.toLong() < bottomExclusive
+}
 
 object TimeScapeTemplateCatalogDefaults {
     val sharedCanvasId = TimeScapeTemplateId("timescape-shared-canvas")
