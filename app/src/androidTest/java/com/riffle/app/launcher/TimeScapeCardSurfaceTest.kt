@@ -919,6 +919,7 @@ class TimeScapeCardSurfaceTest {
         }
 
         composeRule.onNodeWithContentDescription("More stage options").performClick()
+        composeRule.onNodeWithTag(RIFFLE_CONTEXT_MENU_TEST_TAG).assertIsDisplayed()
         composeRule.onNodeWithText("Pin stage").assertIsDisplayed()
         composeRule.onNodeWithText("Open Mail").performClick()
 

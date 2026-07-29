@@ -12,6 +12,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.apps.AppShortcut
@@ -133,7 +134,7 @@ internal fun RiffleContextMenu(
     DropdownMenu(
         expanded = expanded,
         onDismissRequest = onDismissRequest,
-        modifier = modifier,
+        modifier = modifier.testTag(RIFFLE_CONTEXT_MENU_TEST_TAG),
         offset = offset,
         shape = LocalLauncherPanelShape.current,
         containerColor = launcherMenuSurfaceColor(),
@@ -143,6 +144,8 @@ internal fun RiffleContextMenu(
         content = content,
     )
 }
+
+internal const val RIFFLE_CONTEXT_MENU_TEST_TAG = "riffle-context-menu"
 
 private val ShortcutContextSurface.removeLabel: String
     get() =

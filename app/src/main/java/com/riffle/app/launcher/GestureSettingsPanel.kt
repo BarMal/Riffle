@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -144,7 +143,7 @@ private fun HomeGestureRow(
             TextButton(onClick = { isExpanded.value = true }) {
                 SettingsButtonText(text = action.targetLabel(launchTarget, installedApps))
             }
-            DropdownMenu(
+            RiffleContextMenu(
                 expanded = isExpanded.value,
                 onDismissRequest = { isExpanded.value = false },
             ) {
