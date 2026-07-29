@@ -78,6 +78,13 @@ baseline contract reusable while requiring these additional passing rows:
 | `feature-timescape-mvp-performance` | Separate compact-size fullscreen phone and expanded-size foldable/tablet/desktop runs meet the TimeScape card-update target, or a failed/blocked result documents the fallback and blocks closeout. |
 | `feature-timescape-mvp-standard-home` | Standard Home remains the independent default with layout, Dock, widgets, selected page, and wallpaper unchanged. |
 
+For #993, the foldable run must additionally exercise a compact → flat/unfolded → compact
+sequence while a stage and detail card are selected. Confirm that the configured rail remains on
+the configured side, the central detail surface stays launcher-rendered, the hinge and safe insets
+are not crossed, and folding back does not launch or duplicate content. Repeat after rotation,
+temporary multi-window/unavailable posture reporting, Back/exit to Standard Home, and removing the
+focused notification or app stage. A tabletop or partially folded posture must remain compact.
+
 Do not include screenshots, device serials, account identifiers, app lists, notification content,
 system tokens, or secrets. On failure, retain sanitized logs outside the manifest and link only a
 non-sensitive artifact reference in the release operator's record.

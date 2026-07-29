@@ -6,6 +6,7 @@ import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppProfileId
 import com.riffle.core.domain.launcher.cards.AppStageId
 import com.riffle.core.domain.launcher.cards.AppStagePreferences
+import com.riffle.core.domain.launcher.cards.TimeScapeTemplateId
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.HomeLayoutKey
 import com.riffle.core.domain.launcher.home.LauncherViewMode
@@ -104,6 +105,8 @@ private fun encodeCardsSettings(settings: CardsSettings): JSONObject =
     JSONObject()
         .put("stagePreferencesByLayout", JSONArray(settings.stagePreferencesByLayout.map(::encodeStagePreferences)))
         .put("timeScapeAppearance", encodeTimeScapeAppearance(settings.timeScapeAppearance))
+        .put("timeScapeTemplateId", settings.timeScapeTemplateId.value)
+        .put("timeScapeRailSide", settings.timeScapeRailSide.name)
 
 private fun encodeStagePreferences(entry: Map.Entry<HomeLayoutKey, AppStagePreferences>): JSONObject =
     JSONObject()
@@ -134,6 +137,12 @@ private fun JSONObject.toCardsSettings(defaults: CardsSettings): CardsSettings {
         timeScapeAppearance =
             optJSONObject("timeScapeAppearance")?.toTimeScapeAppearance(defaults.timeScapeAppearance)
                 ?: defaults.timeScapeAppearance,
+        timeScapeTemplateId =
+            optString("timeScapeTemplateId", defaults.timeScapeTemplateId.value)
+                .takeIf(String::isNotBlank)
+                ?.let(::TimeScapeTemplateId)
+                ?: defaults.timeScapeTemplateId,
+        timeScapeRailSide = enumOrDefault("timeScapeRailSide", defaults.timeScapeRailSide),
     )
 }
 

@@ -3,6 +3,9 @@ package com.riffle.core.domain.launcher.settings
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.cards.AppStagePreferences
+import com.riffle.core.domain.launcher.cards.TimeScapeRailSide
+import com.riffle.core.domain.launcher.cards.TimeScapeTemplateCatalogDefaults
+import com.riffle.core.domain.launcher.cards.TimeScapeTemplateId
 import com.riffle.core.domain.launcher.contextual.ContextualSettings
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.HomeLayoutKey
@@ -53,6 +56,8 @@ data class CardsSettings(
     val stagePreferencesByLayout: Map<HomeLayoutKey, AppStagePreferences> = emptyMap(),
     /** Durable visual intent for the optional TimeScape presentation. */
     val timeScapeAppearance: TimeScapeAppearanceSettings = TimeScapeAppearanceSettings.modern(),
+    val timeScapeTemplateId: TimeScapeTemplateId = TimeScapeTemplateCatalogDefaults.sharedCanvasId,
+    val timeScapeRailSide: TimeScapeRailSide = TimeScapeRailSide.LEADING,
 )
 
 /** Resolves TimeScape using the launcher-wide accessibility motion preference. */

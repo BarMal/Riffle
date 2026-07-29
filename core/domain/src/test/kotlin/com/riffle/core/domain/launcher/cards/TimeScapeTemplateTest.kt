@@ -60,6 +60,13 @@ class TimeScapeTemplateTest {
     }
 
     @Test
+    fun responsiveVariantCarriesConfiguredRailSide() {
+        val variant = variant(TimeScapePaneMode.THREE_PANE).copy(railSide = TimeScapeRailSide.TRAILING)
+
+        assertEquals(TimeScapeRailSide.TRAILING, variant.railSide)
+    }
+
+    @Test
     fun validationReportsCollisionsAndOutOfBoundsPlacements() {
         val variant =
             TimeScapeTemplateVariant(

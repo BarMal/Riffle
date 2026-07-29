@@ -4,6 +4,7 @@ import android.app.Activity
 import androidx.window.layout.FoldingFeature
 import androidx.window.layout.WindowInfoTracker
 import androidx.window.layout.WindowMetricsCalculator
+import com.riffle.core.domain.launcher.cards.TimeScapePosture
 import com.riffle.core.domain.launcher.cards.TimeScapeWindowLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import kotlinx.coroutines.flow.Flow
@@ -87,6 +88,10 @@ internal class AndroidHomeLayoutDeviceClassObserver(
                         foldingFeatures
                             .filter { feature -> feature.isSeparating }
                             .map { feature -> feature.bounds },
+                    posture =
+                        foldingFeatures.timeScapePosture(
+                            hasFoldableHardware = hasFoldableHardware,
+                        ),
                 ),
         )
     }
@@ -100,6 +105,34 @@ internal class AndroidHomeLayoutDeviceClassObserver(
         )
     }
 }
+
+private fun List<FoldingFeature>.timeScapePosture(hasFoldableHardware: Boolean): TimeScapePosture =
+    timeScapePostureFromSignals(
+        hasFoldableHardware = hasFoldableHardware,
+        hasFoldingFeature = isNotEmpty(),
+        hasHalfOpenedFoldingFeature = any { feature -> feature.state == FoldingFeature.State.HALF_OPENED },
+        hasHorizontalHalfOpenedFoldingFeature =
+            any { feature ->
+                feature.state == FoldingFeature.State.HALF_OPENED &&
+                    feature.orientation == FoldingFeature.Orientation.HORIZONTAL
+            },
+        hasFlatFoldingFeature = any { feature -> feature.state == FoldingFeature.State.FLAT },
+    )
+
+internal fun timeScapePostureFromSignals(
+    hasFoldableHardware: Boolean,
+    hasFoldingFeature: Boolean,
+    hasHalfOpenedFoldingFeature: Boolean,
+    hasHorizontalHalfOpenedFoldingFeature: Boolean,
+    hasFlatFoldingFeature: Boolean,
+): TimeScapePosture =
+    when {
+        hasHorizontalHalfOpenedFoldingFeature -> TimeScapePosture.TABLETOP
+        hasHalfOpenedFoldingFeature -> TimeScapePosture.PARTIALLY_FOLDED
+        hasFlatFoldingFeature -> TimeScapePosture.UNFOLDED
+        hasFoldingFeature || hasFoldableHardware -> TimeScapePosture.COMPACT
+        else -> TimeScapePosture.UNKNOWN
+    }
 
 internal data class HomeLayoutDeviceClassEvent(
     val source: String,

@@ -12,8 +12,56 @@ class TimeScapePaneLayoutPolicyTest {
     }
 
     @Test
+    fun foldedLargeWindowRemainsCompact() {
+        val layout =
+            policy.layoutFor(
+                TimeScapeWindowLayout(1_200, 900, posture = TimeScapePosture.PARTIALLY_FOLDED),
+            )
+
+        assertEquals(TimeScapePaneMode.COMPACT, layout.mode)
+    }
+
+    @Test
+    fun unfoldedWindowCanUseStageManager() {
+        val layout =
+            policy.layoutFor(
+                TimeScapeWindowLayout(1_200, 900, posture = TimeScapePosture.UNFOLDED),
+            )
+
+        assertEquals(TimeScapePaneMode.THREE_PANE, layout.mode)
+    }
+
+    @Test
+    fun unknownWideWindowRemainsCompactUntilPostureIsConfirmed() {
+        val layout = policy.layoutFor(TimeScapeWindowLayout(1_200, 900))
+
+        assertEquals(TimeScapePaneMode.COMPACT, layout.mode)
+    }
+
+    @Test
+    fun foldedPostureKeepsCompactSurfaceOnOneSideOfVerticalHinge() {
+        val layout =
+            policy.layoutFor(
+                TimeScapeWindowLayout(
+                    widthDp = 1_000,
+                    heightDp = 800,
+                    separatingHinges = listOf(TimeScapeHingeBounds(480, 0, 520, 800)),
+                    posture = TimeScapePosture.COMPACT,
+                ),
+            )
+
+        assertEquals(TimeScapePaneMode.COMPACT, layout.mode)
+        assertEquals(480, layout.contentWidthDp)
+        assertEquals(0, layout.contentStartDp)
+        assertEquals(0, layout.hingeGapDp)
+    }
+
+    @Test
     fun expandedWindowShowsRailWithoutStretchingTheSpline() {
-        val layout = policy.layoutFor(TimeScapeWindowLayout(800, 900))
+        val layout =
+            policy.layoutFor(
+                TimeScapeWindowLayout(800, 900, posture = TimeScapePosture.UNFOLDED),
+            )
 
         assertEquals(TimeScapePaneMode.TWO_PANE, layout.mode)
         assertEquals(104, layout.railWidthDp)
@@ -22,7 +70,10 @@ class TimeScapePaneLayoutPolicyTest {
 
     @Test
     fun desktopWindowShowsSupportingDetailPane() {
-        val layout = policy.layoutFor(TimeScapeWindowLayout(1_300, 900))
+        val layout =
+            policy.layoutFor(
+                TimeScapeWindowLayout(1_300, 900, posture = TimeScapePosture.UNFOLDED),
+            )
 
         assertEquals(TimeScapePaneMode.THREE_PANE, layout.mode)
         assertEquals(360, layout.detailWidthDp)
@@ -40,6 +91,7 @@ class TimeScapePaneLayoutPolicyTest {
                     widthDp = 1_050,
                     heightDp = 800,
                     separatingHinges = listOf(TimeScapeHingeBounds(510, 0, 540, 800)),
+                    posture = TimeScapePosture.UNFOLDED,
                 ),
             )
 
@@ -60,6 +112,7 @@ class TimeScapePaneLayoutPolicyTest {
                     safeStartDp = 20,
                     safeEndDp = 30,
                     separatingHinges = listOf(TimeScapeHingeBounds(520, 0, 550, 800)),
+                    posture = TimeScapePosture.UNFOLDED,
                 ),
             )
 
@@ -67,6 +120,66 @@ class TimeScapePaneLayoutPolicyTest {
         assertEquals(520, layout.trailingRegionWidthDp)
         assertEquals(30, layout.hingeGapDp)
         assertEquals(500, layout.railWidthDp + layout.splineWidthDp)
+    }
+
+    @Test
+    fun trailingRailIsReservedInsideMinimumThreePaneHingeRegions() {
+        val layout =
+            policy.layoutFor(
+                window =
+                    TimeScapeWindowLayout(
+                        widthDp = 872,
+                        heightDp = 800,
+                        safeStartDp = 8,
+                        safeEndDp = 8,
+                        separatingHinges = listOf(TimeScapeHingeBounds(368, 0, 400, 800)),
+                        posture = TimeScapePosture.UNFOLDED,
+                    ),
+                railSide = TimeScapeRailSide.TRAILING,
+            )
+
+        assertEquals(TimeScapePaneMode.THREE_PANE, layout.mode)
+        assertEquals(360, layout.splineWidthDp)
+        assertEquals(360, layout.detailWidthDp)
+        assertEquals(464, layout.trailingRegionWidthDp)
+        assertEquals(
+            layout.contentWidthDp,
+            layout.splineWidthDp +
+                layout.leadingRemainderDp +
+                layout.hingeGapDp +
+                layout.detailWidthDp +
+                layout.railWidthDp,
+        )
+    }
+
+    @Test
+    fun leadingRailRemainsReservedInsideMinimumThreePaneHingeRegions() {
+        val layout =
+            policy.layoutFor(
+                window =
+                    TimeScapeWindowLayout(
+                        widthDp = 872,
+                        heightDp = 800,
+                        safeStartDp = 8,
+                        safeEndDp = 8,
+                        separatingHinges = listOf(TimeScapeHingeBounds(472, 0, 504, 800)),
+                        posture = TimeScapePosture.UNFOLDED,
+                    ),
+                railSide = TimeScapeRailSide.LEADING,
+            )
+
+        assertEquals(TimeScapePaneMode.THREE_PANE, layout.mode)
+        assertEquals(104, layout.railWidthDp)
+        assertEquals(360, layout.splineWidthDp)
+        assertEquals(360, layout.detailWidthDp)
+        assertEquals(
+            layout.contentWidthDp,
+            layout.railWidthDp +
+                layout.splineWidthDp +
+                layout.leadingRemainderDp +
+                layout.hingeGapDp +
+                layout.detailWidthDp,
+        )
     }
 
     @Test
@@ -79,6 +192,7 @@ class TimeScapePaneLayoutPolicyTest {
                     safeTopDp = 24,
                     safeBottomDp = 16,
                     separatingHinges = listOf(TimeScapeHingeBounds(0, 380, 800, 420)),
+                    posture = TimeScapePosture.UNFOLDED,
                 ),
             )
 
