@@ -50,4 +50,16 @@ class TimeScapePostureTransitionTest {
             ),
         )
     }
+
+    @Test
+    fun contextReconciliationPreservesScrollOffsetForRendererRestoration() {
+        val context = TimeScapeInteractionContext(scrollOffsetPx = 128)
+
+        assertEquals(
+            128,
+            context
+                .reconcile(availableStageKeys = emptySet(), availableCardKeys = emptySet())
+                .scrollOffsetPx,
+        )
+    }
 }
