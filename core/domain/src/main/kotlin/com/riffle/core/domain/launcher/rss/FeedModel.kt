@@ -16,6 +16,7 @@ const val MAX_FEED_AUTHOR_LENGTH = 256
 const val MAX_FEED_SUMMARY_LENGTH = 4096
 const val MAX_FEED_SOURCE_ID_LENGTH = 512
 const val MAX_FEED_URL_LENGTH = 2048
+const val MAX_FEED_PUBLISHED_AT_LENGTH = 128
 
 @JvmInline
 value class FeedId(val value: String) {
@@ -196,16 +197,21 @@ object FeedItemNormalizer {
         }
 
     private fun parseDate(raw: String?): Instant? =
-        raw?.trim()?.takeIf(String::isNotEmpty)?.let { value ->
-            runCatching { Instant.parse(value) }.getOrNull()
-                ?: runCatching { DateTimeFormatter.RFC_1123_DATE_TIME.parse(value, Instant::from) }.getOrNull()
-        }
+        raw
+            ?.takeIf { value -> value.length <= MAX_FEED_PUBLISHED_AT_LENGTH }
+            ?.trim()
+            ?.takeIf(String::isNotEmpty)
+            ?.let { value ->
+                runCatching { Instant.parse(value) }.getOrNull()
+                    ?: runCatching { DateTimeFormatter.RFC_1123_DATE_TIME.parse(value, Instant::from) }.getOrNull()
+            }
 
     private fun normalizeText(
         raw: String?,
         maxLength: Int,
     ): String? =
         raw
+            ?.takeIf { value -> value.length <= maxLength }
             ?.replace(WHITESPACE, " ")
             ?.trim()
             ?.takeIf { value -> value.isNotEmpty() && value.length <= maxLength }

@@ -97,6 +97,7 @@ class FeedModelTest {
     @Test
     fun normalizerRejectsOversizedTitleAndBoundsOtherUntrustedFields() {
         val oversizedUrl = "https://example.com/" + "x".repeat(MAX_FEED_URL_LENGTH)
+        val oversizedRawDate = " ".repeat(MAX_FEED_PUBLISHED_AT_LENGTH + 1) + "2026-07-29T10:00:00Z"
         val result =
             FeedItemNormalizer.normalize(
                 format = FeedFormat.ATOM,
@@ -108,10 +109,11 @@ class FeedModelTest {
                             canonicalUrl = oversizedUrl,
                             title = "Valid title",
                             author = "A".repeat(MAX_FEED_AUTHOR_LENGTH + 1),
+                            publishedAt = oversizedRawDate,
                             summary = "M".repeat(MAX_FEED_SUMMARY_LENGTH + 1),
                             imageUrl = oversizedUrl,
                         ),
-                        FeedItemInput(title = "T".repeat(MAX_FEED_TITLE_LENGTH + 1)),
+                        FeedItemInput(title = " ".repeat(MAX_FEED_TITLE_LENGTH + 1) + "Valid after whitespace"),
                     ),
             )
 
@@ -119,6 +121,7 @@ class FeedModelTest {
         assertEquals("", result.title)
         assertEquals(null, item.canonicalUrl)
         assertEquals(null, item.author)
+        assertEquals(null, item.publishedAt)
         assertEquals(null, item.summary)
         assertEquals(null, item.imageUrl)
         assertTrue(item.identity.length <= MAX_FEED_SOURCE_ID_LENGTH)
