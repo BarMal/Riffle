@@ -141,7 +141,9 @@ class SettingsPageContentTest {
                     modifier = Modifier,
                     state =
                         LauncherShellState(
+                            homeRoleStatus = HomeRoleStatus.DEFAULT_HOME,
                             notificationAccessStatus = NotificationAccessStatus.NOT_GRANTED,
+                            overlayDockPermissionStatus = OverlayDockPermissionStatus.GRANTED,
                         ).settingsSurfaceState(),
                     page = SettingsPage.MAIN,
                     onPageSelected = {},
@@ -151,7 +153,9 @@ class SettingsPageContentTest {
         }
 
         composeRule.onNodeWithText("Permissions").assertExists()
-        composeRule.onNodeWithText("Notifications not allowed").assertExists()
+        composeRule
+            .onNodeWithText("Notifications not allowed · Home set · Floating dock allowed")
+            .assertExists()
     }
 
     @Test
