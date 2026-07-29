@@ -2,6 +2,8 @@ package com.riffle.app
 
 import android.content.Intent
 import com.riffle.core.domain.launcher.HomeRoleStatus
+import com.riffle.core.domain.launcher.OverlayDockPermissionStatus
+import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
@@ -14,6 +16,26 @@ import org.junit.Assert.assertThrows
 import org.junit.Test
 
 class MainActivityStartupTest {
+    @Test
+    fun startupAppliesLiveStatusesBeforeFirstLauncherComposition() {
+        var homeRoleStatus = HomeRoleStatus.UNKNOWN
+        var notificationAccessStatus = NotificationAccessStatus.UNKNOWN
+        var overlayDockPermissionStatus = OverlayDockPermissionStatus.UNKNOWN
+
+        composeLauncherShellAfterStatusRefresh(
+            refreshStatuses = {
+                homeRoleStatus = HomeRoleStatus.DEFAULT_HOME
+                notificationAccessStatus = NotificationAccessStatus.GRANTED
+                overlayDockPermissionStatus = OverlayDockPermissionStatus.GRANTED
+            },
+            compose = {
+                assertEquals(HomeRoleStatus.DEFAULT_HOME, homeRoleStatus)
+                assertEquals(NotificationAccessStatus.GRANTED, notificationAccessStatus)
+                assertEquals(OverlayDockPermissionStatus.GRANTED, overlayDockPermissionStatus)
+            },
+        )
+    }
+
     @Test
     fun coldStartHomeIntentRequestsTheStandardHomeDestination() {
         assertEquals(

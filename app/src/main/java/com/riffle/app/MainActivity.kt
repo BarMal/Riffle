@@ -429,7 +429,6 @@ class MainActivity : ComponentActivity() {
         lifecycle.addObserver(packageChangeObserver)
         lifecycle.addObserver(widgetHostGateway)
         refreshHomeLayoutDeviceClass(source = "onCreate")
-        refreshPlatformStatuses()
         observeHomeLayoutDeviceClass()
         startSystemUiSync(shellViewModel.state)
         startWallpaperOffsetSync(
@@ -437,21 +436,26 @@ class MainActivity : ComponentActivity() {
             wallpaperController = wallpaperController,
         )
 
-        setContent {
-            LauncherShell(
-                viewModel = shellViewModel,
-                appVersionLabel = appVersionLabel,
-                appBuildIdentityLabel = appBuildIdentityLabel,
-                appIconLoader = appIconLoader,
-                widgetRenderers =
-                    LauncherWidgetRenderers(
-                        viewFactory = widgetHostGateway,
-                        previewImageLoader = dependencies.widgetPreviewImageLoader,
-                    ),
-                timeScapeWindowLayout = timeScapeWindowLayout,
-                onAction = launcherActionRouter::handle,
-            )
-        }
+        composeLauncherShellAfterStatusRefresh(
+            refreshStatuses = ::refreshPlatformStatuses,
+            compose = {
+                setContent {
+                    LauncherShell(
+                        viewModel = shellViewModel,
+                        appVersionLabel = appVersionLabel,
+                        appBuildIdentityLabel = appBuildIdentityLabel,
+                        appIconLoader = appIconLoader,
+                        widgetRenderers =
+                            LauncherWidgetRenderers(
+                                viewFactory = widgetHostGateway,
+                                previewImageLoader = dependencies.widgetPreviewImageLoader,
+                            ),
+                        timeScapeWindowLayout = timeScapeWindowLayout,
+                        onAction = launcherActionRouter::handle,
+                    )
+                }
+            },
+        )
         if (shouldOpenDefaultHomeOnLaunch(intent.action, intent.categories)) {
             launcherActionRouter.handle(LauncherShellAction.OpenDefaultHome)
         }
@@ -590,6 +594,14 @@ internal fun shouldOpenDefaultHomeOnLaunch(
         action = action,
         categories = categories,
     )
+
+internal fun composeLauncherShellAfterStatusRefresh(
+    refreshStatuses: () -> Unit,
+    compose: () -> Unit,
+) {
+    refreshStatuses()
+    compose()
+}
 
 private const val BACKUP_DOCUMENT_MIME_TYPE = "application/json"
 private const val BACKUP_DOCUMENT_NAME = "riffle-backup.json"
