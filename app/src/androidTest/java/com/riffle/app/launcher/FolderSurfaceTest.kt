@@ -54,7 +54,9 @@ class FolderSurfaceTest {
         }
 
         val image = composeRule.onNodeWithTag(FOLDER_SURFACE_ROOT_TEST_TAG).captureToImage().toPixelMap()
-        val actual = image[image.width - 1, image.height - 1]
+        // The shared panel uses a rounded shape, so its corner is intentionally
+        // transparent and shows the wallpaper. Sample the interior instead.
+        val actual = image[image.width / 2, image.height / 2]
         val expected = panel.copy(alpha = 0.78f).compositeOver(wallpaper)
 
         assertColorClose(expected, actual)
