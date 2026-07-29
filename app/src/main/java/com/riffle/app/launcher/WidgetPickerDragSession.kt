@@ -12,6 +12,7 @@ import com.riffle.core.domain.launcher.home.LauncherPage
 import com.riffle.core.domain.launcher.home.LauncherPageId
 import com.riffle.core.domain.launcher.home.LauncherPageType
 import com.riffle.core.domain.launcher.widgets.InstalledWidgetProvider
+import kotlin.math.roundToInt
 
 internal enum class WidgetPickerDragTarget {
     HOME,
@@ -136,8 +137,8 @@ internal fun widgetPickerDragPlacementPreviewFor(
         page = page,
         provider = snapshot.provider,
         cell = widgetPickerDropCell(snapshot.position, workspaceBounds, page.grid),
-        availableWidthDp = (snapshot.rootSize.width / density).toInt(),
-        availableHeightDp = (snapshot.rootSize.height / density).toInt(),
+        availableWidthDp = (snapshot.rootSize.width / density).roundToInt(),
+        availableHeightDp = (snapshot.rootSize.height / density).roundToInt(),
     )
 }
 

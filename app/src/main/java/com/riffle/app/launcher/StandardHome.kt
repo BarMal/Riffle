@@ -251,21 +251,24 @@ internal fun StandardHome(
             onWidgetDropped = { provider, position, rootSize ->
                 val selectedPage = visibleLayout.selectedPage
                 val bounds = workspaceGridBounds.value
+                val snapshot =
+                    WidgetPickerDragSnapshot(
+                        provider = provider,
+                        position = position,
+                        rootSize = rootSize,
+                    )
                 val target =
                     bounds?.let {
                         widgetPickerDropTarget(position, workspaceBounds = it, dockBounds = dockBounds.value)
                     }
-                val cell = bounds?.let { widgetPickerDropCell(position, it, selectedPage.grid) }
                 val preview =
-                    cell?.let {
-                        widgetPickerDragPlacementPreviewFor(
-                            page = selectedPage,
-                            provider = provider,
-                            cell = it,
-                            availableWidthDp = (rootSize.width / density).roundToInt(),
-                            availableHeightDp = (rootSize.height / density).roundToInt(),
-                        )
-                    }
+                    widgetPickerDragPlacementPreviewFor(
+                        snapshot = snapshot,
+                        page = selectedPage,
+                        workspaceBounds = bounds,
+                        dockBounds = dockBounds.value,
+                        density = density,
+                    )
                 if (target == WidgetAddTarget.DOCK || (target == WidgetAddTarget.HOME && preview?.isValid == true)) {
                     onAction(
                         LauncherShellAction.RequestAddWidget(
@@ -274,7 +277,7 @@ internal fun StandardHome(
                             dimensions = provider.dimensions,
                             target = target,
                             targetPageId = selectedPage.id.takeIf { target == WidgetAddTarget.HOME },
-                            targetCell = cell.takeIf { target == WidgetAddTarget.HOME },
+                            targetCell = preview?.cell.takeIf { target == WidgetAddTarget.HOME },
                         ),
                     )
                 }

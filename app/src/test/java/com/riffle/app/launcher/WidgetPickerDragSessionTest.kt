@@ -296,6 +296,41 @@ class WidgetPickerDragSessionTest {
         assertFalse(secondPagePreview?.isValid == true)
     }
 
+    @Test
+    fun fractionalDensityUsesTheSameRoundedGeometryForPreviewAndDrop() {
+        val provider =
+            provider(targetCellWidth = null, targetCellHeight = 1).copy(
+                dimensions =
+                    WidgetProviderDimensions(
+                        minWidthDp = 134,
+                        minHeightDp = 1,
+                        targetCellHeight = 1,
+                    ),
+            )
+        val page =
+            page(id = "fractional").copy(
+                grid = GridDimensions(columns = 3, rows = 1),
+            )
+        val snapshot =
+            WidgetPickerDragSnapshot(
+                provider = provider,
+                position = Offset(200f, 50f),
+                rootSize = IntSize(401, 200),
+            )
+
+        val sharedPreviewAndDropGeometry =
+            widgetPickerDragPlacementPreviewFor(
+                snapshot = snapshot,
+                page = page,
+                workspaceBounds = Rect(0f, 0f, 401f, 200f),
+                dockBounds = null,
+                density = 2f,
+            )
+
+        assertEquals(GridSpan(columns = 2, rows = 1), sharedPreviewAndDropGeometry?.span)
+        assertTrue(sharedPreviewAndDropGeometry?.isValid == true)
+    }
+
     private fun page(
         id: String = "home",
         type: LauncherPageType = LauncherPageType.Home,
