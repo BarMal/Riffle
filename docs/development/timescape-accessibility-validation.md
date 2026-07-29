@@ -121,3 +121,23 @@ Only mark the MVP ready after every relevant scenario passes, `./gradlew verify`
 exact candidate SHA has complete device evidence. A blocked or failed required evidence row is a
 release blocker; create a separate issue for unrelated findings rather than widening the closeout
 change.
+
+## Reopened installed-build gate
+
+The 2026-07-28 installed-build retest reopened #894. Until a later candidate is revalidated, the
+closeout remains partial and must not be represented as complete evidence. The remaining product
+acceptance work is:
+
+- resolve Home gesture/setup entry and return behavior, including the configurable gesture contract;
+- make notification-access status and its contextual recovery path discoverable and usable;
+- resolve Cards content and navigation failures across focus, stage selection, detail/Back, and
+  mode switching;
+- complete widget manipulation and cross-surface drag/drop, including cancellation and placement
+  integrity; and
+- produce a new exact-SHA manifest with every baseline and `feature-timescape-mvp-*` row passing
+  under `-RequireTimeScapeMvp`, including the affected device/build and representative compact,
+  folded, expanded, accessibility, lifecycle, appearance, performance, and Standard Home runs.
+
+The first and third items coordinate with #992; widget manipulation and cross-surface drag/drop
+coordinate with #817. Keep any unrelated findings in separate issues. Do not close #894 until the
+new manifest validates and the complete device matrix passes.
