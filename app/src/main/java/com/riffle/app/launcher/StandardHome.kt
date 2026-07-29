@@ -38,8 +38,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import com.riffle.app.launcher.widgets.EmptyHomeWidgetViewFactory
 import com.riffle.app.launcher.widgets.HomeWidgetViewFactory
@@ -81,10 +83,47 @@ internal fun StandardHome(
     val homeDragSession = remember { mutableStateOf<HomeDragSession?>(null) }
     val widgetPickerDragInProgress = remember { mutableStateOf(false) }
     val widgetPickerDragPreview = remember { mutableStateOf<WidgetPickerDragPlacementPreview?>(null) }
+    val latestWidgetPickerDrag = remember { mutableStateOf<WidgetPickerDragSnapshot?>(null) }
     val accessibleWidgetPlacement = remember { mutableStateOf<WidgetPickerAccessiblePlacement?>(null) }
+    val activeWidgetPickerEdgeHoverSide = remember { mutableStateOf<WidgetPickerEdgeHoverSide?>(null) }
     val workspaceGridBounds = remember { mutableStateOf<Rect?>(null) }
     val dockBounds = remember { mutableStateOf<Rect?>(null) }
     val density = LocalDensity.current.density
+    val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+    LaunchedEffect(
+        latestWidgetPickerDrag.value,
+        visibleLayout.selectedPage,
+        workspaceGridBounds.value,
+        dockBounds.value,
+        density,
+    ) {
+        widgetPickerDragPreview.value =
+            latestWidgetPickerDrag.value?.let { snapshot ->
+                widgetPickerDragPlacementPreviewFor(
+                    snapshot = snapshot,
+                    page = visibleLayout.selectedPage,
+                    workspaceBounds = workspaceGridBounds.value,
+                    dockBounds = dockBounds.value,
+                    density = density,
+                )
+            }
+    }
+    LaunchedEffect(activeWidgetPickerEdgeHoverSide.value, visibleLayout.selectedPageId) {
+        val side = activeWidgetPickerEdgeHoverSide.value ?: return@LaunchedEffect
+        delay(WIDGET_PICKER_EDGE_HOVER_DELAY_MILLIS)
+        val targetPageId =
+            widgetPickerEdgeHoverPageId(
+                side = side,
+                pages = visibleLayout.pages,
+                selectedPageId = visibleLayout.selectedPageId,
+                isRtl = isRtl,
+            )
+        if (widgetPickerDragInProgress.value && activeWidgetPickerEdgeHoverSide.value == side && targetPageId != null) {
+            onAction(LauncherShellAction.SelectHomePage(targetPageId))
+        } else if (targetPageId == null) {
+            activeWidgetPickerEdgeHoverSide.value = null
+        }
+    }
     val cancelAccessibleWidgetPlacement = {
         val placement = accessibleWidgetPlacement.value
         accessibleWidgetPlacement.value = null
@@ -136,33 +175,41 @@ internal fun StandardHome(
                 cancelAccessibleWidgetPlacement()
                 widgetPickerDragInProgress.value = true
                 widgetPickerDragPreview.value = null
+                latestWidgetPickerDrag.value = null
+                activeWidgetPickerEdgeHoverSide.value = null
                 onAction(LauncherShellAction.CloseWidgetPicker)
             },
             onWidgetDragMoved = { provider, position, rootSize ->
                 val bounds = workspaceGridBounds.value
-                widgetPickerDragPreview.value =
-                    if (
-                        bounds == null ||
-                        widgetPickerDropTarget(
-                            position,
-                            workspaceBounds = bounds,
-                            dockBounds = dockBounds.value,
-                        ) != WidgetAddTarget.HOME
-                    ) {
-                        null
-                    } else {
-                        widgetPickerDragPlacementPreviewFor(
-                            page = visibleLayout.selectedPage,
-                            provider = provider,
-                            cell = widgetPickerDropCell(position, bounds, visibleLayout.selectedPage.grid),
-                            availableWidthDp = (rootSize.width / density).roundToInt(),
-                            availableHeightDp = (rootSize.height / density).roundToInt(),
+                val snapshot =
+                    WidgetPickerDragSnapshot(
+                        provider = provider,
+                        position = position,
+                        rootSize = rootSize,
+                    )
+                latestWidgetPickerDrag.value = snapshot
+                activeWidgetPickerEdgeHoverSide.value =
+                    bounds?.let { workspaceBounds ->
+                        widgetPickerEdgeHoverSide(
+                            position = position,
+                            workspaceBounds = workspaceBounds,
+                            edgeZonePx = WIDGET_PICKER_EDGE_HOVER_ZONE_DP * density,
                         )
                     }
+                widgetPickerDragPreview.value =
+                    widgetPickerDragPlacementPreviewFor(
+                        snapshot = snapshot,
+                        page = visibleLayout.selectedPage,
+                        workspaceBounds = bounds,
+                        dockBounds = dockBounds.value,
+                        density = density,
+                    )
             },
             onWidgetDragCancelled = {
                 widgetPickerDragInProgress.value = false
                 widgetPickerDragPreview.value = null
+                latestWidgetPickerDrag.value = null
+                activeWidgetPickerEdgeHoverSide.value = null
             },
             onAccessiblePlacementRequested = { provider, target ->
                 accessibleWidgetPlacement.value =
@@ -204,21 +251,24 @@ internal fun StandardHome(
             onWidgetDropped = { provider, position, rootSize ->
                 val selectedPage = visibleLayout.selectedPage
                 val bounds = workspaceGridBounds.value
+                val snapshot =
+                    WidgetPickerDragSnapshot(
+                        provider = provider,
+                        position = position,
+                        rootSize = rootSize,
+                    )
                 val target =
                     bounds?.let {
                         widgetPickerDropTarget(position, workspaceBounds = it, dockBounds = dockBounds.value)
                     }
-                val cell = bounds?.let { widgetPickerDropCell(position, it, selectedPage.grid) }
                 val preview =
-                    cell?.let {
-                        widgetPickerDragPlacementPreviewFor(
-                            page = selectedPage,
-                            provider = provider,
-                            cell = it,
-                            availableWidthDp = (rootSize.width / density).roundToInt(),
-                            availableHeightDp = (rootSize.height / density).roundToInt(),
-                        )
-                    }
+                    widgetPickerDragPlacementPreviewFor(
+                        snapshot = snapshot,
+                        page = selectedPage,
+                        workspaceBounds = bounds,
+                        dockBounds = dockBounds.value,
+                        density = density,
+                    )
                 if (target == WidgetAddTarget.DOCK || (target == WidgetAddTarget.HOME && preview?.isValid == true)) {
                     onAction(
                         LauncherShellAction.RequestAddWidget(
@@ -227,12 +277,14 @@ internal fun StandardHome(
                             dimensions = provider.dimensions,
                             target = target,
                             targetPageId = selectedPage.id.takeIf { target == WidgetAddTarget.HOME },
-                            targetCell = cell.takeIf { target == WidgetAddTarget.HOME },
+                            targetCell = preview?.cell.takeIf { target == WidgetAddTarget.HOME },
                         ),
                     )
                 }
                 widgetPickerDragInProgress.value = false
                 widgetPickerDragPreview.value = null
+                latestWidgetPickerDrag.value = null
+                activeWidgetPickerEdgeHoverSide.value = null
             },
             onAction = onAction,
         )
@@ -741,6 +793,8 @@ private const val HOME_SEARCH_HORIZONTAL_PADDING_DP = 14
 private const val HOME_SEARCH_SURFACE_ALPHA = 0.82f
 private const val HOME_SEARCH_BORDER_ALPHA = 0.38f
 private const val PAGE_INDICATOR_SETTLED_VISIBLE_MS = 250L
+private const val WIDGET_PICKER_EDGE_HOVER_ZONE_DP = 40
+private const val WIDGET_PICKER_EDGE_HOVER_DELAY_MILLIS = 650L
 
 internal fun widgetPickerDropCell(
     position: Offset,

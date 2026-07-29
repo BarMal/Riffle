@@ -1,5 +1,8 @@
 package com.riffle.app.launcher
 
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.unit.IntSize
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.home.GeneratedLauncherPageKind
 import com.riffle.core.domain.launcher.home.GridCell
@@ -144,12 +147,205 @@ class WidgetPickerDragSessionTest {
         assertEquals(setOf(existing.id), preview.conflictingItemIds)
     }
 
+    @Test
+    fun edgeHoverSelectsTheAdjacentEditablePage() {
+        val pages =
+            listOf(
+                page(id = "first"),
+                page(id = "second"),
+                page(id = "third"),
+            )
+
+        assertEquals(
+            LauncherPageId("first"),
+            widgetPickerEdgeHoverPageId(
+                position = Offset(5f, 100f),
+                workspaceBounds = Rect(0f, 0f, 400f, 500f),
+                edgeZonePx = 40f,
+                pages = pages,
+                selectedPageId = LauncherPageId("second"),
+            ),
+        )
+        assertEquals(
+            LauncherPageId("third"),
+            widgetPickerEdgeHoverPageId(
+                position = Offset(395f, 100f),
+                workspaceBounds = Rect(0f, 0f, 400f, 500f),
+                edgeZonePx = 40f,
+                pages = pages,
+                selectedPageId = LauncherPageId("second"),
+            ),
+        )
+    }
+
+    @Test
+    fun edgeHoverUsesVisualPageDirectionInRtl() {
+        val pages = listOf(page(id = "first"), page(id = "second"), page(id = "third"))
+
+        assertEquals(
+            LauncherPageId("third"),
+            widgetPickerEdgeHoverPageId(
+                position = Offset(5f, 100f),
+                workspaceBounds = Rect(0f, 0f, 400f, 500f),
+                edgeZonePx = 40f,
+                pages = pages,
+                selectedPageId = LauncherPageId("second"),
+                isRtl = true,
+            ),
+        )
+    }
+
+    @Test
+    fun edgeHoverDoesNotCrossGeneratedPageBoundary() {
+        val pages =
+            listOf(
+                page(id = "home"),
+                page(id = "generated", type = LauncherPageType.Generated(GeneratedLauncherPageKind.APP)),
+                page(id = "other-home"),
+            )
+
+        assertEquals(
+            null,
+            widgetPickerEdgeHoverPageId(
+                position = Offset(395f, 100f),
+                workspaceBounds = Rect(0f, 0f, 400f, 500f),
+                edgeZonePx = 40f,
+                pages = pages,
+                selectedPageId = LauncherPageId("home"),
+            ),
+        )
+    }
+
+    @Test
+    fun edgeHoverIgnoresInteriorOutsideAndTerminalTargets() {
+        val pages = listOf(page(id = "first"), page(id = "second"))
+        val bounds = Rect(0f, 0f, 400f, 500f)
+
+        assertEquals(
+            null,
+            widgetPickerEdgeHoverPageId(
+                position = Offset(200f, 100f),
+                workspaceBounds = bounds,
+                edgeZonePx = 40f,
+                pages = pages,
+                selectedPageId = LauncherPageId("first"),
+            ),
+        )
+        assertEquals(
+            null,
+            widgetPickerEdgeHoverPageId(
+                position = Offset(405f, 100f),
+                workspaceBounds = bounds,
+                edgeZonePx = 40f,
+                pages = pages,
+                selectedPageId = LauncherPageId("first"),
+            ),
+        )
+        assertEquals(
+            null,
+            widgetPickerEdgeHoverPageId(
+                position = Offset(5f, 100f),
+                workspaceBounds = bounds,
+                edgeZonePx = 40f,
+                pages = pages,
+                selectedPageId = LauncherPageId("first"),
+            ),
+        )
+    }
+
+    @Test
+    fun retainedDragSnapshotRecomputesCollisionPreviewForTheSelectedPage() {
+        val provider = provider(targetCellWidth = 1, targetCellHeight = 1)
+        val occupiedCell = GridCell(column = 3, row = 2)
+        val occupied =
+            WidgetItem(
+                id = LauncherItemId("occupied"),
+                appWidgetId = HostedWidgetId(3),
+                label = "Occupied",
+                placement = GridPlacement(cell = occupiedCell),
+            )
+        val snapshot =
+            WidgetPickerDragSnapshot(
+                provider = provider,
+                position = Offset(395f, 250f),
+                rootSize = IntSize(400, 500),
+            )
+        val bounds = Rect(0f, 0f, 400f, 500f)
+
+        val firstPagePreview =
+            widgetPickerDragPlacementPreviewFor(
+                snapshot = snapshot,
+                page = page(id = "first"),
+                workspaceBounds = bounds,
+                dockBounds = null,
+                density = 1f,
+            )
+        val secondPagePreview =
+            widgetPickerDragPlacementPreviewFor(
+                snapshot = snapshot,
+                page = page(id = "second", items = listOf(occupied)),
+                workspaceBounds = bounds,
+                dockBounds = null,
+                density = 1f,
+            )
+
+        assertEquals(LauncherPageId("first"), firstPagePreview?.targetPageId)
+        assertTrue(firstPagePreview?.isValid == true)
+        assertEquals(LauncherPageId("second"), secondPagePreview?.targetPageId)
+        assertEquals(setOf(occupied.id), secondPagePreview?.conflictingItemIds)
+        assertFalse(secondPagePreview?.isValid == true)
+    }
+
+    @Test
+    fun fractionalDensityUsesTheSameRoundedGeometryForPreviewAndDrop() {
+        val provider =
+            provider(targetCellWidth = null, targetCellHeight = null).copy(
+                dimensions =
+                    WidgetProviderDimensions(
+                        minWidthDp = 67,
+                        minHeightDp = 67,
+                    ),
+            )
+        val page =
+            page(id = "fractional").copy(
+                grid = GridDimensions(columns = 3, rows = 3),
+            )
+        val snapshot =
+            WidgetPickerDragSnapshot(
+                provider = provider,
+                position = Offset(200f, 200f),
+                rootSize = IntSize(401, 401),
+            )
+
+        val sharedPreviewAndDropGeometry =
+            widgetPickerDragPlacementPreviewFor(
+                snapshot = snapshot,
+                page = page,
+                workspaceBounds = Rect(0f, 0f, 401f, 401f),
+                dockBounds = null,
+                density = 2f,
+            )
+        val dropPreview =
+            widgetPickerDragPlacementPreviewFor(
+                page = page,
+                provider = provider,
+                cell = GridCell(column = 1, row = 1),
+                availableWidthDp = 201,
+                availableHeightDp = 201,
+            )
+
+        assertEquals(GridSpan(columns = 1, rows = 1), sharedPreviewAndDropGeometry?.span)
+        assertEquals(dropPreview, sharedPreviewAndDropGeometry)
+        assertTrue(sharedPreviewAndDropGeometry?.isValid == true)
+    }
+
     private fun page(
+        id: String = "home",
         type: LauncherPageType = LauncherPageType.Home,
         items: List<WidgetItem> = emptyList(),
     ): LauncherPage =
         LauncherPage(
-            id = LauncherPageId("home"),
+            id = LauncherPageId(id),
             type = type,
             grid = GridDimensions(columns = 4, rows = 5),
             items = items,

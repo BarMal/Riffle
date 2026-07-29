@@ -1,5 +1,8 @@
 package com.riffle.app.launcher
 
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.unit.IntSize
 import com.riffle.app.launcher.widgets.preferredGridSpan
 import com.riffle.core.domain.launcher.home.GridCell
 import com.riffle.core.domain.launcher.home.GridDimensions
@@ -9,6 +12,7 @@ import com.riffle.core.domain.launcher.home.LauncherPage
 import com.riffle.core.domain.launcher.home.LauncherPageId
 import com.riffle.core.domain.launcher.home.LauncherPageType
 import com.riffle.core.domain.launcher.widgets.InstalledWidgetProvider
+import kotlin.math.roundToInt
 
 internal enum class WidgetPickerDragTarget {
     HOME,
@@ -24,6 +28,17 @@ internal data class WidgetPickerDragPlacementPreview(
     val isValid: Boolean,
     val conflictingItemIds: Set<LauncherItemId> = emptySet(),
 )
+
+internal data class WidgetPickerDragSnapshot(
+    val provider: InstalledWidgetProvider,
+    val position: Offset,
+    val rootSize: IntSize,
+)
+
+internal enum class WidgetPickerEdgeHoverSide {
+    LEFT,
+    RIGHT,
+}
 
 data class WidgetPickerPlacementCandidate(
     val pageId: LauncherPageId? = null,
@@ -98,6 +113,94 @@ internal fun firstValidWidgetPickerPlacementPreviewFor(
         }
     }
     return null
+}
+
+internal fun widgetPickerDragPlacementPreviewFor(
+    snapshot: WidgetPickerDragSnapshot,
+    page: LauncherPage,
+    workspaceBounds: Rect?,
+    dockBounds: Rect?,
+    density: Float,
+): WidgetPickerDragPlacementPreview? {
+    if (
+        workspaceBounds == null ||
+        density <= 0f ||
+        widgetPickerDropTarget(
+            position = snapshot.position,
+            workspaceBounds = workspaceBounds,
+            dockBounds = dockBounds,
+        ) != WidgetAddTarget.HOME
+    ) {
+        return null
+    }
+    return widgetPickerDragPlacementPreviewFor(
+        page = page,
+        provider = snapshot.provider,
+        cell = widgetPickerDropCell(snapshot.position, workspaceBounds, page.grid),
+        availableWidthDp = (snapshot.rootSize.width / density).roundToInt(),
+        availableHeightDp = (snapshot.rootSize.height / density).roundToInt(),
+    )
+}
+
+internal fun widgetPickerEdgeHoverPageId(
+    position: Offset,
+    workspaceBounds: Rect,
+    edgeZonePx: Float,
+    pages: List<LauncherPage>,
+    selectedPageId: LauncherPageId,
+    isRtl: Boolean = false,
+): LauncherPageId? =
+    widgetPickerEdgeHoverSide(
+        position = position,
+        workspaceBounds = workspaceBounds,
+        edgeZonePx = edgeZonePx,
+    )?.let { side ->
+        widgetPickerEdgeHoverPageId(
+            side = side,
+            pages = pages,
+            selectedPageId = selectedPageId,
+            isRtl = isRtl,
+        )
+    }
+
+internal fun widgetPickerEdgeHoverSide(
+    position: Offset,
+    workspaceBounds: Rect,
+    edgeZonePx: Float,
+): WidgetPickerEdgeHoverSide? {
+    if (
+        edgeZonePx <= 0f ||
+        workspaceBounds.width <= 0f ||
+        !workspaceBounds.contains(position)
+    ) {
+        return null
+    }
+
+    val boundedEdgeZone = edgeZonePx.coerceAtMost(workspaceBounds.width / 2f)
+    return when {
+        position.x <= workspaceBounds.left + boundedEdgeZone -> WidgetPickerEdgeHoverSide.LEFT
+        position.x >= workspaceBounds.right - boundedEdgeZone -> WidgetPickerEdgeHoverSide.RIGHT
+        else -> null
+    }
+}
+
+internal fun widgetPickerEdgeHoverPageId(
+    side: WidgetPickerEdgeHoverSide,
+    pages: List<LauncherPage>,
+    selectedPageId: LauncherPageId,
+    isRtl: Boolean = false,
+): LauncherPageId? {
+    val selectedPageIndex = pages.indexOfFirst { page -> page.id == selectedPageId }
+    val physicalDirection = if (side == WidgetPickerEdgeHoverSide.LEFT) -1 else 1
+    val pageDirection = if (isRtl) -physicalDirection else physicalDirection
+    val selectedPage = pages.getOrNull(selectedPageIndex)
+    val adjacentPage = pages.getOrNull(selectedPageIndex + pageDirection)
+    return adjacentPage
+        ?.takeIf {
+            selectedPage != null &&
+                selectedPage.type !is LauncherPageType.Generated &&
+                adjacentPage.type !is LauncherPageType.Generated
+        }?.id
 }
 
 private fun GridSpan.cellsAt(origin: GridCell): List<GridCell> =
