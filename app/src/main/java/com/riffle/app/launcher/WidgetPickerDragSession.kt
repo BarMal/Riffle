@@ -4,6 +4,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.unit.IntSize
 import com.riffle.app.launcher.widgets.preferredGridSpan
+import com.riffle.core.domain.launcher.home.DockModel
 import com.riffle.core.domain.launcher.home.GridCell
 import com.riffle.core.domain.launcher.home.GridDimensions
 import com.riffle.core.domain.launcher.home.GridSpan
@@ -33,6 +34,12 @@ internal data class WidgetPickerDragSnapshot(
     val provider: InstalledWidgetProvider,
     val position: Offset,
     val rootSize: IntSize,
+)
+
+internal data class WidgetPickerDockPlacementPreview(
+    val provider: InstalledWidgetProvider,
+    val dockIndex: Int,
+    val isValid: Boolean,
 )
 
 internal enum class WidgetPickerEdgeHoverSide {
@@ -93,6 +100,26 @@ internal fun widgetPickerDragPlacementPreviewFor(
         isValid = page.type !is LauncherPageType.Generated && isInBounds && conflictingItems.isEmpty(),
         conflictingItemIds = conflictingItems,
     )
+}
+
+internal fun widgetPickerDockPlacementPreviewFor(
+    snapshot: WidgetPickerDragSnapshot,
+    dock: DockModel,
+    dockBounds: Rect?,
+    isRtl: Boolean = false,
+): WidgetPickerDockPlacementPreview? {
+    val bounds = dockBounds?.takeIf { it.width > 0f && it.height > 0f }
+    return bounds?.takeIf { it.contains(snapshot.position) }?.let {
+        val insertionCount = dock.items.size + 1
+        val physicalFraction = ((snapshot.position.x - it.left) / it.width).coerceIn(0f, 1f)
+        val logicalFraction = if (isRtl) 1f - physicalFraction else physicalFraction
+        val index = (logicalFraction * insertionCount).toInt().coerceIn(0, dock.items.size)
+        WidgetPickerDockPlacementPreview(
+            provider = snapshot.provider,
+            dockIndex = index,
+            isValid = dock.isEnabled && dock.items.size < dock.capacity,
+        )
+    }
 }
 
 internal fun firstValidWidgetPickerPlacementPreviewFor(

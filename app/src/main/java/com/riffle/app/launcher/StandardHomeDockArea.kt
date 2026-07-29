@@ -20,6 +20,7 @@ import com.riffle.core.domain.launcher.home.HomeEditMode
 import com.riffle.core.domain.launcher.home.HomeLayout
 
 @Composable
+@Suppress("LongParameterList")
 internal fun StandardHomeDockArea(
     layout: HomeLayout,
     presentation: StandardHomePresentation,
@@ -28,6 +29,7 @@ internal fun StandardHomeDockArea(
     onDockShelfExpandedChange: (Boolean) -> Unit,
     appIconLoader: AppIconLoader,
     actions: HomeWorkspaceActions,
+    widgetPickerDockPreview: WidgetPickerDockPlacementPreview? = null,
 ) {
     if (!layout.shouldShowDock()) {
         return
@@ -92,6 +94,7 @@ internal fun StandardHomeDockArea(
                     appIconLoader = appIconLoader,
                     widgetViewFactory = presentation.widgetViewFactory,
                     interactions = dockInteractions,
+                    widgetPickerDockPreview = widgetPickerDockPreview,
                 )
             }
         }

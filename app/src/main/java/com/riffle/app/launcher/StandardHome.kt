@@ -1,4 +1,4 @@
-@file:Suppress("CyclomaticComplexMethod", "LongMethod", "TooManyFunctions")
+@file:Suppress("ComplexCondition", "CyclomaticComplexMethod", "LongMethod", "LongParameterList", "TooManyFunctions")
 
 package com.riffle.app.launcher
 
@@ -83,6 +83,7 @@ internal fun StandardHome(
     val homeDragSession = remember { mutableStateOf<HomeDragSession?>(null) }
     val widgetPickerDragInProgress = remember { mutableStateOf(false) }
     val widgetPickerDragPreview = remember { mutableStateOf<WidgetPickerDragPlacementPreview?>(null) }
+    val widgetPickerDockPreview = remember { mutableStateOf<WidgetPickerDockPlacementPreview?>(null) }
     val latestWidgetPickerDrag = remember { mutableStateOf<WidgetPickerDragSnapshot?>(null) }
     val accessibleWidgetPlacement = remember { mutableStateOf<WidgetPickerAccessiblePlacement?>(null) }
     val activeWidgetPickerEdgeHoverSide = remember { mutableStateOf<WidgetPickerEdgeHoverSide?>(null) }
@@ -160,6 +161,7 @@ internal fun StandardHome(
                 visibleLayout = visibleLayout,
                 dragSession = homeDragSession.value,
                 widgetPickerDragPreview = widgetPickerDragPreview.value,
+                widgetPickerDockPreview = widgetPickerDockPreview.value,
                 presentation = presentation,
             ),
         appIconLoader = appIconLoader,
@@ -175,6 +177,7 @@ internal fun StandardHome(
                 cancelAccessibleWidgetPlacement()
                 widgetPickerDragInProgress.value = true
                 widgetPickerDragPreview.value = null
+                widgetPickerDockPreview.value = null
                 latestWidgetPickerDrag.value = null
                 activeWidgetPickerEdgeHoverSide.value = null
                 onAction(LauncherShellAction.CloseWidgetPicker)
@@ -204,10 +207,18 @@ internal fun StandardHome(
                         dockBounds = dockBounds.value,
                         density = density,
                     )
+                widgetPickerDockPreview.value =
+                    widgetPickerDockPlacementPreviewFor(
+                        snapshot = snapshot,
+                        dock = visibleLayout.dock,
+                        dockBounds = dockBounds.value,
+                        isRtl = isRtl,
+                    )
             },
             onWidgetDragCancelled = {
                 widgetPickerDragInProgress.value = false
                 widgetPickerDragPreview.value = null
+                widgetPickerDockPreview.value = null
                 latestWidgetPickerDrag.value = null
                 activeWidgetPickerEdgeHoverSide.value = null
             },
@@ -269,7 +280,17 @@ internal fun StandardHome(
                         dockBounds = dockBounds.value,
                         density = density,
                     )
-                if (target == WidgetAddTarget.DOCK || (target == WidgetAddTarget.HOME && preview?.isValid == true)) {
+                val dockPreview =
+                    widgetPickerDockPlacementPreviewFor(
+                        snapshot = snapshot,
+                        dock = visibleLayout.dock,
+                        dockBounds = dockBounds.value,
+                        isRtl = isRtl,
+                    )
+                if (
+                    (target == WidgetAddTarget.DOCK && dockPreview?.isValid == true) ||
+                    (target == WidgetAddTarget.HOME && preview?.isValid == true)
+                ) {
                     onAction(
                         LauncherShellAction.RequestAddWidget(
                             provider = provider.identity,
@@ -278,11 +299,13 @@ internal fun StandardHome(
                             target = target,
                             targetPageId = selectedPage.id.takeIf { target == WidgetAddTarget.HOME },
                             targetCell = preview?.cell.takeIf { target == WidgetAddTarget.HOME },
+                            dockIndex = dockPreview?.dockIndex.takeIf { target == WidgetAddTarget.DOCK },
                         ),
                     )
                 }
                 widgetPickerDragInProgress.value = false
                 widgetPickerDragPreview.value = null
+                widgetPickerDockPreview.value = null
                 latestWidgetPickerDrag.value = null
                 activeWidgetPickerEdgeHoverSide.value = null
             },
@@ -472,6 +495,7 @@ private fun StandardHomeColumn(
             onDockShelfExpandedChange = dockShelf.onExpandedChange,
             appIconLoader = appIconLoader,
             actions = actions,
+            widgetPickerDockPreview = state.widgetPickerDockPreview,
         )
     }
 }
@@ -665,6 +689,7 @@ private data class StandardHomeContentState(
     val visibleLayout: HomeLayout,
     val dragSession: HomeDragSession?,
     val widgetPickerDragPreview: WidgetPickerDragPlacementPreview?,
+    val widgetPickerDockPreview: WidgetPickerDockPlacementPreview?,
     val presentation: StandardHomePresentation,
 )
 
