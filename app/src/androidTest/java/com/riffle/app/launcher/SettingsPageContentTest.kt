@@ -21,6 +21,7 @@ import com.riffle.core.domain.launcher.FirstRunStatus
 import com.riffle.core.domain.launcher.HomeRoleStatus
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.OverlayDockPermissionStatus
+import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.settings.AppDrawerPresentation
 import com.riffle.core.domain.launcher.settings.AppDrawerSettings
 import com.riffle.core.domain.launcher.settings.AppearanceSettings
@@ -128,8 +129,40 @@ class SettingsPageContentTest {
         }
 
         composeRule.onNodeWithText("Default home app").assertExists()
-        composeRule.onNodeWithText("Notifications").assertDoesNotExist()
-        composeRule.onNodeWithText("Floating dock").assertDoesNotExist()
+        composeRule.onNodeWithText("Notification access").assertExists()
+        composeRule.onNodeWithText("Floating dock access").assertExists()
+    }
+
+    @Test
+    fun permissionsPageSurfacesRecoveryActionsForMissingAccess() {
+        val actions = mutableListOf<LauncherShellAction>()
+
+        composeRule.setContent {
+            MaterialTheme {
+                SettingsPageContent(
+                    modifier = Modifier,
+                    state =
+                        LauncherShellState(
+                            notificationAccessStatus = NotificationAccessStatus.NOT_GRANTED,
+                            overlayDockPermissionStatus = OverlayDockPermissionStatus.NOT_GRANTED,
+                        ).settingsSurfaceState(),
+                    page = SettingsPage.PERMISSIONS,
+                    onPageSelected = {},
+                    onAction = actions::add,
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("Allow notification access").performClick()
+        composeRule.onNodeWithText("Allow overlay access").performClick()
+
+        assertEquals(
+            listOf(
+                LauncherShellAction.RequestNotificationAccess,
+                LauncherShellAction.RequestOverlayDockPermission,
+            ),
+            actions,
+        )
     }
 
     @Test

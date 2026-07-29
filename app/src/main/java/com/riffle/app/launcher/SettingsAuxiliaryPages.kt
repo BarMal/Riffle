@@ -39,6 +39,8 @@ internal fun SettingsPermissionsPageContent(
     SettingsPermissionsSection(
         homeRoleStatus = state.homeRoleStatus,
         firstRunStatus = state.firstRunStatus,
+        notificationAccessStatus = state.notificationAccessStatus,
+        overlayDockPermissionStatus = state.overlayDockPermissionStatus,
         onAction = onAction,
     )
 }
@@ -118,7 +120,7 @@ private fun VersionInformationSetting(
 }
 
 @Composable
-private fun HapticStrengthSetting(
+internal fun HapticStrengthSetting(
     selectedStrength: HapticFeedbackStrength,
     onAction: (LauncherShellAction) -> Unit,
 ) {

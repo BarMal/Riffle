@@ -28,10 +28,10 @@ enum class SettingsPage(
 internal enum class SettingsPageGroup(
     val title: String,
 ) {
-    HOME("Home screen"),
-    INTERACTION("Interaction"),
-    APPS("Apps"),
-    SYSTEM("System"),
+    HOME("Home & layout"),
+    INTERACTION("Interaction & accessibility"),
+    APPS("Apps & content"),
+    SYSTEM("Permissions & data"),
 }
 
 internal data class SettingsPageEntry(
