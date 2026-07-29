@@ -2,6 +2,7 @@ package com.riffle.app.launcher
 
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.unit.IntSize
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.home.GeneratedLauncherPageKind
 import com.riffle.core.domain.launcher.home.GridCell
@@ -250,6 +251,49 @@ class WidgetPickerDragSessionTest {
                 selectedPageId = LauncherPageId("first"),
             ),
         )
+    }
+
+    @Test
+    fun retainedDragSnapshotRecomputesCollisionPreviewForTheSelectedPage() {
+        val provider = provider(targetCellWidth = 1, targetCellHeight = 1)
+        val occupiedCell = GridCell(column = 3, row = 2)
+        val occupied =
+            WidgetItem(
+                id = LauncherItemId("occupied"),
+                appWidgetId = HostedWidgetId(3),
+                label = "Occupied",
+                placement = GridPlacement(cell = occupiedCell),
+            )
+        val snapshot =
+            WidgetPickerDragSnapshot(
+                provider = provider,
+                position = Offset(395f, 250f),
+                rootSize = IntSize(400, 500),
+            )
+        val bounds = Rect(0f, 0f, 400f, 500f)
+
+        val firstPagePreview =
+            widgetPickerDragPlacementPreviewFor(
+                snapshot = snapshot,
+                page = page(id = "first"),
+                workspaceBounds = bounds,
+                dockBounds = null,
+                density = 1f,
+            )
+        val secondPagePreview =
+            widgetPickerDragPlacementPreviewFor(
+                snapshot = snapshot,
+                page = page(id = "second", items = listOf(occupied)),
+                workspaceBounds = bounds,
+                dockBounds = null,
+                density = 1f,
+            )
+
+        assertEquals(LauncherPageId("first"), firstPagePreview?.targetPageId)
+        assertTrue(firstPagePreview?.isValid == true)
+        assertEquals(LauncherPageId("second"), secondPagePreview?.targetPageId)
+        assertEquals(setOf(occupied.id), secondPagePreview?.conflictingItemIds)
+        assertFalse(secondPagePreview?.isValid == true)
     }
 
     private fun page(

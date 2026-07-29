@@ -83,12 +83,31 @@ internal fun StandardHome(
     val homeDragSession = remember { mutableStateOf<HomeDragSession?>(null) }
     val widgetPickerDragInProgress = remember { mutableStateOf(false) }
     val widgetPickerDragPreview = remember { mutableStateOf<WidgetPickerDragPlacementPreview?>(null) }
+    val latestWidgetPickerDrag = remember { mutableStateOf<WidgetPickerDragSnapshot?>(null) }
     val accessibleWidgetPlacement = remember { mutableStateOf<WidgetPickerAccessiblePlacement?>(null) }
     val activeWidgetPickerEdgeHoverSide = remember { mutableStateOf<WidgetPickerEdgeHoverSide?>(null) }
     val workspaceGridBounds = remember { mutableStateOf<Rect?>(null) }
     val dockBounds = remember { mutableStateOf<Rect?>(null) }
     val density = LocalDensity.current.density
     val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+    LaunchedEffect(
+        latestWidgetPickerDrag.value,
+        visibleLayout.selectedPage,
+        workspaceGridBounds.value,
+        dockBounds.value,
+        density,
+    ) {
+        widgetPickerDragPreview.value =
+            latestWidgetPickerDrag.value?.let { snapshot ->
+                widgetPickerDragPlacementPreviewFor(
+                    snapshot = snapshot,
+                    page = visibleLayout.selectedPage,
+                    workspaceBounds = workspaceGridBounds.value,
+                    dockBounds = dockBounds.value,
+                    density = density,
+                )
+            }
+    }
     LaunchedEffect(activeWidgetPickerEdgeHoverSide.value, visibleLayout.selectedPageId) {
         val side = activeWidgetPickerEdgeHoverSide.value ?: return@LaunchedEffect
         delay(WIDGET_PICKER_EDGE_HOVER_DELAY_MILLIS)
@@ -156,11 +175,19 @@ internal fun StandardHome(
                 cancelAccessibleWidgetPlacement()
                 widgetPickerDragInProgress.value = true
                 widgetPickerDragPreview.value = null
+                latestWidgetPickerDrag.value = null
                 activeWidgetPickerEdgeHoverSide.value = null
                 onAction(LauncherShellAction.CloseWidgetPicker)
             },
             onWidgetDragMoved = { provider, position, rootSize ->
                 val bounds = workspaceGridBounds.value
+                val snapshot =
+                    WidgetPickerDragSnapshot(
+                        provider = provider,
+                        position = position,
+                        rootSize = rootSize,
+                    )
+                latestWidgetPickerDrag.value = snapshot
                 activeWidgetPickerEdgeHoverSide.value =
                     bounds?.let { workspaceBounds ->
                         widgetPickerEdgeHoverSide(
@@ -170,28 +197,18 @@ internal fun StandardHome(
                         )
                     }
                 widgetPickerDragPreview.value =
-                    if (
-                        bounds == null ||
-                        widgetPickerDropTarget(
-                            position,
-                            workspaceBounds = bounds,
-                            dockBounds = dockBounds.value,
-                        ) != WidgetAddTarget.HOME
-                    ) {
-                        null
-                    } else {
-                        widgetPickerDragPlacementPreviewFor(
-                            page = visibleLayout.selectedPage,
-                            provider = provider,
-                            cell = widgetPickerDropCell(position, bounds, visibleLayout.selectedPage.grid),
-                            availableWidthDp = (rootSize.width / density).roundToInt(),
-                            availableHeightDp = (rootSize.height / density).roundToInt(),
-                        )
-                    }
+                    widgetPickerDragPlacementPreviewFor(
+                        snapshot = snapshot,
+                        page = visibleLayout.selectedPage,
+                        workspaceBounds = bounds,
+                        dockBounds = dockBounds.value,
+                        density = density,
+                    )
             },
             onWidgetDragCancelled = {
                 widgetPickerDragInProgress.value = false
                 widgetPickerDragPreview.value = null
+                latestWidgetPickerDrag.value = null
                 activeWidgetPickerEdgeHoverSide.value = null
             },
             onAccessiblePlacementRequested = { provider, target ->
@@ -263,6 +280,7 @@ internal fun StandardHome(
                 }
                 widgetPickerDragInProgress.value = false
                 widgetPickerDragPreview.value = null
+                latestWidgetPickerDrag.value = null
                 activeWidgetPickerEdgeHoverSide.value = null
             },
             onAction = onAction,

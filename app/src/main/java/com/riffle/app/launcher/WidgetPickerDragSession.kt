@@ -2,6 +2,7 @@ package com.riffle.app.launcher
 
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.unit.IntSize
 import com.riffle.app.launcher.widgets.preferredGridSpan
 import com.riffle.core.domain.launcher.home.GridCell
 import com.riffle.core.domain.launcher.home.GridDimensions
@@ -25,6 +26,12 @@ internal data class WidgetPickerDragPlacementPreview(
     val span: GridSpan,
     val isValid: Boolean,
     val conflictingItemIds: Set<LauncherItemId> = emptySet(),
+)
+
+internal data class WidgetPickerDragSnapshot(
+    val provider: InstalledWidgetProvider,
+    val position: Offset,
+    val rootSize: IntSize,
 )
 
 internal enum class WidgetPickerEdgeHoverSide {
@@ -105,6 +112,33 @@ internal fun firstValidWidgetPickerPlacementPreviewFor(
         }
     }
     return null
+}
+
+internal fun widgetPickerDragPlacementPreviewFor(
+    snapshot: WidgetPickerDragSnapshot,
+    page: LauncherPage,
+    workspaceBounds: Rect?,
+    dockBounds: Rect?,
+    density: Float,
+): WidgetPickerDragPlacementPreview? {
+    if (
+        workspaceBounds == null ||
+        density <= 0f ||
+        widgetPickerDropTarget(
+            position = snapshot.position,
+            workspaceBounds = workspaceBounds,
+            dockBounds = dockBounds,
+        ) != WidgetAddTarget.HOME
+    ) {
+        return null
+    }
+    return widgetPickerDragPlacementPreviewFor(
+        page = page,
+        provider = snapshot.provider,
+        cell = widgetPickerDropCell(snapshot.position, workspaceBounds, page.grid),
+        availableWidthDp = (snapshot.rootSize.width / density).toInt(),
+        availableHeightDp = (snapshot.rootSize.height / density).toInt(),
+    )
 }
 
 internal fun widgetPickerEdgeHoverPageId(

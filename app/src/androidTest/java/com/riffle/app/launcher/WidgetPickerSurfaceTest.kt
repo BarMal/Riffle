@@ -4,6 +4,10 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.ImageBitmap
@@ -20,6 +24,8 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.home.GridCell
 import com.riffle.core.domain.launcher.home.GridSpan
+import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
+import com.riffle.core.domain.launcher.home.LauncherPage
 import com.riffle.core.domain.launcher.home.LauncherPageId
 import com.riffle.core.domain.launcher.widgets.InstalledWidgetProvider
 import com.riffle.core.domain.launcher.widgets.WidgetProviderClassName
@@ -303,6 +309,95 @@ class WidgetPickerSurfaceTest {
         composeRule.runOnIdle {
             assertTrue(movedPosition != null)
             assertEquals(IntSize(300, 500), movedRootSize)
+        }
+    }
+
+    @Test
+    fun edgeHoverRecomputesDestinationPreviewBeforeDroppingOnTheSelectedPage() {
+        composeRule.mainClock.autoAdvance = false
+        val firstPageId = LauncherPageId("first")
+        val secondPageId = LauncherPageId("second")
+        val standardLayout = HomeLayoutDefaults.standard()
+        val firstPage = standardLayout.selectedPage.copy(id = firstPageId)
+        val secondPage = LauncherPage(id = secondPageId, grid = firstPage.grid)
+        var selectedPageAction: LauncherShellAction.SelectHomePage? = null
+        var addRequest: LauncherShellAction.RequestAddWidget? = null
+
+        composeRule.setContent {
+            var layout by
+                remember {
+                    mutableStateOf(
+                        standardLayout.copy(
+                            pages = listOf(firstPage, secondPage),
+                            selectedPageId = firstPageId,
+                        ),
+                    )
+                }
+            MaterialTheme {
+                Box(modifier = Modifier.size(width = 400.dp, height = 700.dp)) {
+                    StandardHome(
+                        layout = layout,
+                        installedApps = emptyList(),
+                        interactions = StandardHomeInteractions(),
+                        presentation =
+                            StandardHomePresentation(
+                                appShortcutsByApp = emptyMap(),
+                                reducedMotion = true,
+                                widgetPicker =
+                                    StandardHomeWidgetPickerState(
+                                        providers = listOf(widgetProvider()),
+                                        isOpen = true,
+                                    ),
+                            ),
+                        appIconLoader = EmptyAppIconLoader,
+                        onAction = { action ->
+                            when (action) {
+                                is LauncherShellAction.SelectHomePage -> {
+                                    selectedPageAction = action
+                                    layout = layout.copy(selectedPageId = action.pageId)
+                                }
+
+                                is LauncherShellAction.RequestAddWidget -> addRequest = action
+                                else -> Unit
+                            }
+                        },
+                    )
+                }
+            }
+        }
+        val sourceNode = composeRule.onNodeWithTag(WIDGET_PROVIDER_TILE_TEST_TAG)
+        val sourceBounds = sourceNode.fetchSemanticsNode().boundsInRoot
+        val workspaceBounds =
+            composeRule
+                .onNodeWithTag(widgetPickerWorkspaceGridTestTag(firstPageId))
+                .fetchSemanticsNode()
+                .boundsInRoot
+        val targetInSource =
+            Offset(
+                x = workspaceBounds.right - 2f - sourceBounds.left,
+                y = workspaceBounds.center.y - sourceBounds.top,
+            )
+
+        sourceNode.performTouchInput {
+            down(center)
+            advanceEventTime(viewConfiguration.longPressTimeoutMillis + 50L)
+            moveTo(targetInSource)
+        }
+        composeRule.mainClock.advanceTimeBy(700L)
+        composeRule.waitForIdle()
+
+        composeRule.runOnIdle {
+            assertEquals(secondPageId, selectedPageAction?.pageId)
+        }
+        composeRule.onNodeWithTag(widgetPickerWorkspaceGridTestTag(secondPageId)).assertIsDisplayed()
+        composeRule.onNodeWithTag(WIDGET_PICKER_DRAG_PREVIEW_TEST_TAG).assertIsDisplayed()
+
+        sourceNode.performTouchInput { up() }
+        composeRule.waitForIdle()
+
+        composeRule.runOnIdle {
+            assertEquals(secondPageId, addRequest?.targetPageId)
+            assertEquals(GridCell(column = firstPage.grid.columns - 1, row = firstPage.grid.rows / 2), addRequest?.targetCell)
         }
     }
 
