@@ -122,6 +122,17 @@ internal fun widgetPickerDockPlacementPreviewFor(
     }
 }
 
+internal fun widgetPickerDropIsValid(
+    target: WidgetAddTarget?,
+    homePreview: WidgetPickerDragPlacementPreview?,
+    dockPreview: WidgetPickerDockPlacementPreview?,
+): Boolean =
+    when (target) {
+        WidgetAddTarget.HOME -> homePreview?.isValid == true
+        WidgetAddTarget.DOCK -> dockPreview?.isValid == true
+        null -> false
+    }
+
 internal fun firstValidWidgetPickerPlacementPreviewFor(
     page: LauncherPage,
     provider: InstalledWidgetProvider,
