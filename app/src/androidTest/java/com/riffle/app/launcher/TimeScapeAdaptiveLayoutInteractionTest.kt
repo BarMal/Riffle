@@ -83,11 +83,12 @@ class TimeScapeAdaptiveLayoutInteractionTest {
         val clock = composeRule.onNodeWithTag(timeScapeTemplateElementTestTag("clock")).fetchSemanticsNode().boundsInRoot
         val search = composeRule.onNodeWithTag(timeScapeTemplateElementTestTag("search")).fetchSemanticsNode().boundsInRoot
         val dock = composeRule.onNodeWithTag(timeScapeTemplateElementTestTag("dock")).fetchSemanticsNode().boundsInRoot
-        val stageRail = composeRule.onNodeWithText("Stages").fetchSemanticsNode().boundsInRoot
+        val stageSlot =
+            composeRule.onNodeWithTag(timeScapeTemplateSlotTestTag("app-stage")).fetchSemanticsNode().boundsInRoot
 
         assertTrue(clock.top < search.top)
-        assertTrue(search.bottom <= stageRail.top)
-        assertTrue(stageRail.bottom <= dock.top)
+        assertTrue(search.bottom <= stageSlot.top)
+        assertTrue(stageSlot.bottom <= dock.top)
     }
 
     @Test

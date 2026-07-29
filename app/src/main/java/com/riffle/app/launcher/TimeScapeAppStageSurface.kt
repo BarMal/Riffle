@@ -78,7 +78,6 @@ import com.riffle.core.domain.launcher.cards.CardStackNavigationDirection
 import com.riffle.core.domain.launcher.cards.CardStackSettleRequest
 import com.riffle.core.domain.launcher.cards.LauncherCardId
 import com.riffle.core.domain.launcher.cards.TimeScapeDynamicSlot
-import com.riffle.core.domain.launcher.cards.TimeScapeDynamicSource
 import com.riffle.core.domain.launcher.cards.TimeScapeInteractionContext
 import com.riffle.core.domain.launcher.cards.TimeScapePaneLayoutPolicy
 import com.riffle.core.domain.launcher.cards.TimeScapePaneMode
@@ -244,15 +243,6 @@ internal fun TimeScapeAppStageSurface(
                     )
                 }
             val visibleTemplateElements = templateVariant?.visibleStaticElements().orEmpty()
-            val stageSlot =
-                templateVariant?.dynamicSlots?.firstOrNull { slot ->
-                    slot.source == TimeScapeDynamicSource.APP_STAGE_STACKS
-                }
-            val stageSlotOffsetDp =
-                stageSlot.offsetDp(
-                    contentHeightDp = paneLayout.contentHeightDp,
-                    gridRows = templateVariant?.canvas?.grid?.rows ?: 1,
-                )
             Box(
                 modifier =
                     Modifier.offset(y = paneLayout.contentTopDp.dp)
@@ -262,97 +252,91 @@ internal fun TimeScapeAppStageSurface(
             ) {
                 TimeScapeTemplateStaticCanvas(
                     elements = visibleTemplateElements,
+                    dynamicSlots = templateVariant?.dynamicSlots.orEmpty(),
                     canvasWidthDp = paneLayout.contentWidthDp,
                     canvasHeightDp = paneLayout.contentHeightDp,
                     gridColumns = templateVariant?.canvas?.grid?.columns ?: 1,
                     gridRows = templateVariant?.canvas?.grid?.rows ?: 1,
                 )
-                Box(
-                    modifier =
-                        Modifier.offset(
-                            y = stageSlotOffsetDp.dp,
-                        ),
-                ) {
-                    if (paneLayout.mode == TimeScapePaneMode.COMPACT) {
-                        TimeScapeCompactContent(
-                            selectedStage = selectedStage,
-                            state = state,
-                            shellState = shellState,
-                            detailRecoveryMessage = detailRecoveryMessage,
-                            detailState = detailState,
-                            focusedCardId = focusedCardIdValue?.let(::LauncherCardId),
-                            onFocusedCardChanged = {
-                                focusedCardIdValue = it?.value
-                                onContextChanged(context.copy(focusedCardKey = it?.value))
-                            },
-                            onDetailVisibilityChanged = { cardId ->
-                                detailCardKey = cardId?.value
-                                onContextChanged(context.copy(detailCardKey = cardId?.value))
-                                if (cardId != null) detailRecoveryMessage = null
-                            },
-                            onAction = onAction,
-                        )
-                    } else {
-                        Row(modifier = Modifier.fillMaxSize()) {
-                            if (railSide == TimeScapeRailSide.LEADING) {
-                                TimeScapeStageRail(
-                                    stages = shellState.snapshot.stages,
-                                    selectedStageId = selectedStage?.id,
-                                    state = state,
-                                    onAction = onAction,
-                                    scrollState = stageRailScrollState,
-                                    modifier = Modifier.width(paneLayout.railWidthDp.dp),
-                                )
-                            }
-                            Column(modifier = Modifier.width(paneLayout.splineWidthDp.dp).fillMaxSize()) {
-                                TimeScapeStageHeader(selectedStage, state, onAction)
-                                TimeScapeStageBody(
-                                    selectedStage = selectedStage,
-                                    state = state,
-                                    shellState = shellState,
-                                    detailRecoveryMessage = detailRecoveryMessage,
-                                    detailState = detailState,
-                                    focusedCardId = focusedCardIdValue?.let(::LauncherCardId),
-                                    onDetailVisibilityChanged = { cardId ->
-                                        detailCardKey = cardId?.value
-                                        onContextChanged(context.copy(detailCardKey = cardId?.value))
-                                        if (cardId != null) detailRecoveryMessage = null
-                                    },
-                                    onFocusedCardChanged = {
-                                        focusedCardIdValue = it?.value
-                                        onContextChanged(context.copy(focusedCardKey = it?.value))
-                                    },
-                                    showDetailInline = !paneLayout.showsDetailPane,
-                                    onAction = onAction,
-                                    modifier = Modifier.weight(1f),
-                                )
-                            }
-                            if (paneLayout.leadingRemainderDp > 0) {
-                                Spacer(modifier = Modifier.width(paneLayout.leadingRemainderDp.dp))
-                            }
-                            if (paneLayout.hingeGapDp > 0) Spacer(modifier = Modifier.width(paneLayout.hingeGapDp.dp))
-                            if (paneLayout.showsDetailPane) {
-                                TimeScapeSupportingPane(
-                                    stage = selectedStage,
-                                    selectedCardId = detailOrigin?.cardId ?: focusedCardIdValue?.let(::LauncherCardId),
-                                    state = state,
-                                    notificationCards = shellState.notificationCards,
-                                    emptyCard = selectedStage?.let { shellState.emptyAppCards[it.id] },
-                                    detailState = detailState,
-                                    onAction = onAction,
-                                    modifier = Modifier.width(paneLayout.detailWidthDp.dp).fillMaxSize(),
-                                )
-                            }
-                            if (railSide == TimeScapeRailSide.TRAILING) {
-                                TimeScapeStageRail(
-                                    stages = shellState.snapshot.stages,
-                                    selectedStageId = selectedStage?.id,
-                                    state = state,
-                                    onAction = onAction,
-                                    scrollState = stageRailScrollState,
-                                    modifier = Modifier.width(paneLayout.railWidthDp.dp),
-                                )
-                            }
+                if (paneLayout.mode == TimeScapePaneMode.COMPACT) {
+                    TimeScapeCompactContent(
+                        selectedStage = selectedStage,
+                        state = state,
+                        shellState = shellState,
+                        detailRecoveryMessage = detailRecoveryMessage,
+                        detailState = detailState,
+                        focusedCardId = focusedCardIdValue?.let(::LauncherCardId),
+                        onFocusedCardChanged = {
+                            focusedCardIdValue = it?.value
+                            onContextChanged(context.copy(focusedCardKey = it?.value))
+                        },
+                        onDetailVisibilityChanged = { cardId ->
+                            detailCardKey = cardId?.value
+                            onContextChanged(context.copy(detailCardKey = cardId?.value))
+                            if (cardId != null) detailRecoveryMessage = null
+                        },
+                        onAction = onAction,
+                    )
+                } else {
+                    Row(modifier = Modifier.fillMaxSize()) {
+                        if (railSide == TimeScapeRailSide.LEADING) {
+                            TimeScapeStageRail(
+                                stages = shellState.snapshot.stages,
+                                selectedStageId = selectedStage?.id,
+                                state = state,
+                                onAction = onAction,
+                                scrollState = stageRailScrollState,
+                                modifier = Modifier.width(paneLayout.railWidthDp.dp),
+                            )
+                        }
+                        Column(modifier = Modifier.width(paneLayout.splineWidthDp.dp).fillMaxSize()) {
+                            TimeScapeStageHeader(selectedStage, state, onAction)
+                            TimeScapeStageBody(
+                                selectedStage = selectedStage,
+                                state = state,
+                                shellState = shellState,
+                                detailRecoveryMessage = detailRecoveryMessage,
+                                detailState = detailState,
+                                focusedCardId = focusedCardIdValue?.let(::LauncherCardId),
+                                onDetailVisibilityChanged = { cardId ->
+                                    detailCardKey = cardId?.value
+                                    onContextChanged(context.copy(detailCardKey = cardId?.value))
+                                    if (cardId != null) detailRecoveryMessage = null
+                                },
+                                onFocusedCardChanged = {
+                                    focusedCardIdValue = it?.value
+                                    onContextChanged(context.copy(focusedCardKey = it?.value))
+                                },
+                                showDetailInline = !paneLayout.showsDetailPane,
+                                onAction = onAction,
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
+                        if (paneLayout.leadingRemainderDp > 0) {
+                            Spacer(modifier = Modifier.width(paneLayout.leadingRemainderDp.dp))
+                        }
+                        if (paneLayout.hingeGapDp > 0) Spacer(modifier = Modifier.width(paneLayout.hingeGapDp.dp))
+                        if (paneLayout.showsDetailPane) {
+                            TimeScapeSupportingPane(
+                                stage = selectedStage,
+                                selectedCardId = detailOrigin?.cardId ?: focusedCardIdValue?.let(::LauncherCardId),
+                                state = state,
+                                notificationCards = shellState.notificationCards,
+                                emptyCard = selectedStage?.let { shellState.emptyAppCards[it.id] },
+                                detailState = detailState,
+                                onAction = onAction,
+                                modifier = Modifier.width(paneLayout.detailWidthDp.dp).fillMaxSize(),
+                            )
+                        }
+                        if (railSide == TimeScapeRailSide.TRAILING) {
+                            TimeScapeStageRail(
+                                stages = shellState.snapshot.stages,
+                                selectedStageId = selectedStage?.id,
+                                state = state,
+                                onAction = onAction,
+                                scrollState = stageRailScrollState,
+                                modifier = Modifier.width(paneLayout.railWidthDp.dp),
+                            )
                         }
                     }
                 }
@@ -394,12 +378,13 @@ private fun TimeScapeCompactContent(
 @Composable
 private fun TimeScapeTemplateStaticCanvas(
     elements: List<TimeScapeStaticElement>,
+    dynamicSlots: List<TimeScapeDynamicSlot>,
     canvasWidthDp: Int,
     canvasHeightDp: Int,
     gridColumns: Int,
     gridRows: Int,
 ) {
-    if (elements.isEmpty() || gridColumns <= 0 || gridRows <= 0) return
+    if (gridColumns <= 0 || gridRows <= 0) return
     val cellWidthDp = canvasWidthDp / gridColumns
     val cellHeightDp = canvasHeightDp / gridRows
     elements.forEach { element ->
@@ -408,15 +393,13 @@ private fun TimeScapeTemplateStaticCanvas(
         val y = cellHeightDp * placement.cell.row
         val width = cellWidthDp * placement.span.columns
         val height = cellHeightDp * placement.span.rows
-        Surface(
+        Box(
             modifier =
                 Modifier
                     .offset(x = x.dp, y = y.dp)
                     .width(width.dp)
                     .height(height.dp)
                     .testTag(timeScapeTemplateElementTestTag(element.id.value)),
-            color = Color.Transparent,
-            contentColor = MaterialTheme.colorScheme.onSurface,
         ) {
             Text(
                 text = timeScapeTemplateElementLabel(element.type),
@@ -425,14 +408,24 @@ private fun TimeScapeTemplateStaticCanvas(
             )
         }
     }
+    dynamicSlots.forEach { slot ->
+        val placement = slot.placement
+        Box(
+            modifier =
+                Modifier
+                    .offset(
+                        x = (cellWidthDp * placement.cell.column).dp,
+                        y = (cellHeightDp * placement.cell.row).dp,
+                    ).width((cellWidthDp * placement.span.columns).dp)
+                    .height((cellHeightDp * placement.span.rows).dp)
+                    .testTag(timeScapeTemplateSlotTestTag(slot.id.value)),
+        )
+    }
 }
 
-private fun TimeScapeDynamicSlot?.offsetDp(
-    contentHeightDp: Int,
-    gridRows: Int,
-): Int = if (this == null || gridRows <= 0) 0 else contentHeightDp * placement.cell.row / gridRows
-
 internal fun timeScapeTemplateElementTestTag(id: String): String = "timescape-template-element-$id"
+
+internal fun timeScapeTemplateSlotTestTag(id: String): String = "timescape-template-slot-$id"
 
 private fun timeScapeTemplateElementLabel(type: TimeScapeStaticElementType): String =
     when (type) {
