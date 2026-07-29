@@ -20,6 +20,7 @@ fun DockEngine.applyEdit(
                 layout = layout,
                 hostedWidgetId = action.hostedWidgetId,
                 label = action.label,
+                targetIndex = action.dockIndex,
             )
 
         is LauncherShellAction.SelectDockEnabled ->

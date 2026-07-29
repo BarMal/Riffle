@@ -129,7 +129,7 @@ class WidgetBindingCoordinatorTest {
 
         val result =
             coordinator.requestAddWidget(
-                action = requestAddWidget(label = "Weather", target = WidgetAddTarget.DOCK),
+                action = requestAddWidget(label = "Weather", target = WidgetAddTarget.DOCK).copy(dockIndex = 1),
                 grid = GridDimensions(columns = 4, rows = 5),
                 availableWidthDp = 400,
                 availableHeightDp = 1000,
@@ -140,6 +140,7 @@ class WidgetBindingCoordinatorTest {
                 LauncherShellAction.AddHostedWidgetToDock(
                     hostedWidgetId = HostedWidgetId(1),
                     label = "Weather",
+                    dockIndex = 1,
                 ),
             ),
             result,

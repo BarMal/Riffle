@@ -18,6 +18,29 @@ import org.junit.Test
 
 class WidgetPickerDialogTest {
     @Test
+    fun accessibleDockPlacementDispatchesSelectedNonFirstPosition() {
+        val provider = widgetProvider(label = "Weather", packageName = "com.example.weather", className = ".Weather")
+        val placement =
+            accessibleWidgetPlacementFor(
+                provider = provider,
+                target = WidgetAddTarget.DOCK,
+                pages = emptyList(),
+                selectedPageId = LauncherPageId("home"),
+                dockAvailableSlots = 2,
+                dockItemCount = 2,
+                availableWidthDp = 400,
+                availableHeightDp = 400,
+            )
+
+        val selected = placement.selectCandidate(placement.candidates.first { it.dockIndex == 1 })
+        val dispatched = accessibleWidgetAddActionFor(selected)
+
+        assertEquals(1, selected.selectedCandidate?.dockIndex)
+        assertEquals(1, dispatched?.dockIndex)
+        assertEquals(WidgetAddTarget.DOCK, dispatched?.target)
+    }
+
+    @Test
     fun accessiblePlacementSelectsPageAndCellBeforeBuildingTheAddRequest() {
         val provider = widgetProvider(label = "Weather", packageName = "com.example.weather", className = ".Weather")
         val firstPage =

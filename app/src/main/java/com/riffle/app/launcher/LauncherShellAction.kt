@@ -314,6 +314,7 @@ sealed interface LauncherShellAction {
         val target: WidgetAddTarget = WidgetAddTarget.HOME,
         val targetPageId: LauncherPageId? = null,
         val targetCell: GridCell? = null,
+        val dockIndex: Int? = null,
     ) : LauncherShellAction
 
     data class AddHostedWidgetToHome(
@@ -329,6 +330,7 @@ sealed interface LauncherShellAction {
     data class AddHostedWidgetToDock(
         override val hostedWidgetId: HostedWidgetId,
         override val label: String,
+        val dockIndex: Int? = null,
     ) : LauncherShellAction,
         HostedWidgetAddAction
 

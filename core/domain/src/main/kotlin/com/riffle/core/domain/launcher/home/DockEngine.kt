@@ -35,10 +35,14 @@ class DockEngine {
         layout: HomeLayout,
         hostedWidgetId: HostedWidgetId,
         label: String,
+        targetIndex: Int? = null,
     ): DockEditResult =
         when {
             layout.containsHostedWidget(hostedWidgetId) ->
                 DockEditResult.Rejected(DockEditRejectionReason.DUPLICATE_WIDGET)
+
+            targetIndex != null && targetIndex !in 0..layout.dock.items.size ->
+                DockEditResult.Rejected(DockEditRejectionReason.INDEX_OUT_OF_BOUNDS)
 
             else ->
                 DockEditResult.Updated(
@@ -48,12 +52,17 @@ class DockEngine {
                                 capacity = layout.dock.capacity.coerceAtLeast(layout.dock.items.size + 1),
                                 isEnabled = true,
                                 items =
-                                    layout.dock.items +
-                                        WidgetItem(
-                                            id = LauncherItemId("dock-widget:${hostedWidgetId.value}"),
-                                            appWidgetId = hostedWidgetId,
-                                            label = label.ifBlank { DEFAULT_WIDGET_LABEL },
-                                        ),
+                                    layout.dock.items.toMutableList().apply {
+                                        add(
+                                            index = targetIndex ?: size,
+                                            element =
+                                                WidgetItem(
+                                                    id = LauncherItemId("dock-widget:${hostedWidgetId.value}"),
+                                                    appWidgetId = hostedWidgetId,
+                                                    label = label.ifBlank { DEFAULT_WIDGET_LABEL },
+                                                ),
+                                        )
+                                    },
                             ),
                     ),
                 )

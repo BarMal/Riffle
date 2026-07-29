@@ -161,6 +161,7 @@ internal fun StandardHome(
                         selectedPageId = visibleLayout.selectedPageId,
                         dockAvailableSlots =
                             visibleLayout.dock.availableSlots.takeIf { visibleLayout.dock.isEnabled } ?: 0,
+                        dockItemCount = visibleLayout.dock.items.size,
                         availableWidthDp = workspaceGridBounds.value?.width?.div(density)?.roundToInt() ?: 0,
                         availableHeightDp = workspaceGridBounds.value?.height?.div(density)?.roundToInt() ?: 0,
                     )
@@ -243,15 +244,18 @@ internal fun accessibleWidgetAddActionFor(placement: WidgetPickerAccessiblePlace
         target = placement.target,
         targetPageId = candidate.pageId,
         targetCell = candidate.cell,
+        dockIndex = candidate.dockIndex,
     )
 }
 
+@Suppress("LongParameterList")
 internal fun accessibleWidgetPlacementFor(
     provider: InstalledWidgetProvider,
     target: WidgetAddTarget,
     pages: List<LauncherPage>,
     selectedPageId: LauncherPageId,
     dockAvailableSlots: Int,
+    dockItemCount: Int = 0,
     availableWidthDp: Int,
     availableHeightDp: Int,
 ): WidgetPickerAccessiblePlacement {
@@ -261,7 +265,7 @@ internal fun accessibleWidgetPlacementFor(
             target = target,
             candidates =
                 if (dockAvailableSlots > 0) {
-                    (0 until dockAvailableSlots).map { index ->
+                    (0..dockItemCount).map { index ->
                         WidgetPickerPlacementCandidate(dockIndex = index)
                     }
                 } else {

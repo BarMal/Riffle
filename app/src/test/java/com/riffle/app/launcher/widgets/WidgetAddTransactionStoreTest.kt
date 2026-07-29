@@ -30,6 +30,7 @@ class WidgetAddTransactionStoreTest {
                 target = WidgetAddTarget.HOME,
                 targetPageId = LauncherPageId("home-2"),
                 targetCell = GridCell(column = 2, row = 3),
+                dockIndex = 1,
                 step = PendingWidgetAddStep.CONFIGURATION,
                 createdAtEpochMillis = 1234L,
             )
