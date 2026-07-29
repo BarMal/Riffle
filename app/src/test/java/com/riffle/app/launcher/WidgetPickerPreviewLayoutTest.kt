@@ -1,5 +1,6 @@
 package com.riffle.app.launcher
 
+import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.widgets.InstalledWidgetProvider
 import com.riffle.core.domain.launcher.widgets.WidgetProviderClassName
@@ -34,6 +35,30 @@ class WidgetPickerPreviewLayoutTest {
         assertEquals(
             0.125f,
             widgetProvider(minWidthDp = 100, minHeightDp = 800).widgetPickerPreviewAspectRatio(),
+        )
+    }
+
+    @Test
+    fun previewSizePreservesExtremeProviderShapesWithinTheHeightBound() {
+        assertEquals(
+            300.dp to 37.5.dp,
+            widgetPickerPreviewSize(maxWidth = 300.dp, preferredAspectRatio = 8f).let { it.width to it.height },
+        )
+        assertEquals(
+            30.dp to 240.dp,
+            widgetPickerPreviewSize(maxWidth = 300.dp, preferredAspectRatio = 0.125f).let {
+                it.width to it.height
+            },
+        )
+    }
+
+    @Test
+    fun previewSizeFallsBackToSquareForInvalidAspectRatios() {
+        assertEquals(
+            240.dp to 240.dp,
+            widgetPickerPreviewSize(maxWidth = 300.dp, preferredAspectRatio = Float.NaN).let {
+                it.width to it.height
+            },
         )
     }
 
