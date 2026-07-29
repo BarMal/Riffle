@@ -40,7 +40,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -103,11 +102,10 @@ fun WidgetPickerSurface(
     val providerFocusRequesters = remember { mutableMapOf<String, FocusRequester>() }
     val placementProviderKey = accessiblePlacement?.provider?.widgetPickerKey
     var previousPlacementProviderKey by remember { mutableStateOf(placementProviderKey) }
+    var pendingProviderFocusKey by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(placementProviderKey) {
         if (placementProviderKey == null) {
-            previousPlacementProviderKey?.let { key ->
-                providerFocusRequesters[key]?.requestFocusAcrossFrames()
-            }
+            pendingProviderFocusKey = previousPlacementProviderKey
         }
         previousPlacementProviderKey = placementProviderKey
     }
@@ -222,6 +220,8 @@ fun WidgetPickerSurface(
                         onWidgetDropped = onWidgetDropped,
                         onAccessiblePlacementRequested = onAccessiblePlacementRequested,
                         providerFocusRequesters = providerFocusRequesters,
+                        pendingProviderFocusKey = pendingProviderFocusKey,
+                        onProviderFocusRestored = { pendingProviderFocusKey = null },
                         rootCoordinates = rootCoordinates,
                         onRetryRequested = onRetryRequested,
                         modifier = Modifier.weight(1f),
@@ -258,6 +258,8 @@ private fun WidgetPickerContent(
     onWidgetDropped: (InstalledWidgetProvider, Offset, IntSize) -> Unit,
     onAccessiblePlacementRequested: (InstalledWidgetProvider, WidgetAddTarget) -> Unit,
     providerFocusRequesters: MutableMap<String, FocusRequester>,
+    pendingProviderFocusKey: String?,
+    onProviderFocusRestored: () -> Unit,
     rootCoordinates: LayoutCoordinates?,
     onRetryRequested: () -> Unit,
     modifier: Modifier,
@@ -323,6 +325,8 @@ private fun WidgetPickerContent(
                                     providerFocusRequesters.getOrPut(provider.widgetPickerKey) {
                                         FocusRequester()
                                     },
+                                restoreAddFocus = pendingProviderFocusKey == provider.widgetPickerKey,
+                                onAddFocusRestored = onProviderFocusRestored,
                                 previewImageLoader = previewImageLoader,
                                 onWidgetDragStarted = onWidgetDragStarted,
                                 onWidgetDragMoved = onWidgetDragMoved,
@@ -387,6 +391,8 @@ private fun WidgetProviderTile(
     provider: InstalledWidgetProvider,
     contentVisibility: AppProfileContentVisibility,
     addFocusRequester: FocusRequester,
+    restoreAddFocus: Boolean,
+    onAddFocusRestored: () -> Unit,
     previewImageLoader: WidgetPreviewImageLoader,
     onWidgetDragStarted: (InstalledWidgetProvider) -> Unit,
     onWidgetDragMoved: (InstalledWidgetProvider, Offset, IntSize) -> Unit,
@@ -496,6 +502,8 @@ private fun WidgetProviderTile(
             provider = provider,
             enabled = isAvailable,
             focusRequester = addFocusRequester,
+            restoreFocus = restoreAddFocus,
+            onFocusRestored = onAddFocusRestored,
             onAccessiblePlacementRequested = onAccessiblePlacementRequested,
         )
     }
@@ -509,6 +517,7 @@ private fun WidgetPickerAccessiblePlacementControls(
     onCancel: () -> Unit,
 ) {
     val cancelFocusRequester = remember { FocusRequester() }
+    var cancelControlLaidOut by remember { mutableStateOf(false) }
     var pageMenuExpanded by remember { mutableStateOf(false) }
     var positionMenuExpanded by remember { mutableStateOf(false) }
     val selected = placement.selectedCandidate
@@ -517,8 +526,8 @@ private fun WidgetPickerAccessiblePlacementControls(
         placement.candidates.filter { candidate ->
             placement.target == WidgetAddTarget.DOCK || candidate.pageId == selected?.pageId
         }
-    LaunchedEffect(placement.provider.identity) {
-        cancelFocusRequester.requestFocusAcrossFrames()
+    LaunchedEffect(placement.provider.identity, cancelControlLaidOut) {
+        if (cancelControlLaidOut) cancelFocusRequester.requestFocus()
     }
     Surface(
         modifier =
@@ -587,7 +596,10 @@ private fun WidgetPickerAccessiblePlacementControls(
                     Text("Place")
                 }
                 TextButton(
-                    modifier = Modifier.focusRequester(cancelFocusRequester),
+                    modifier =
+                        Modifier
+                            .focusRequester(cancelFocusRequester)
+                            .onGloballyPositioned { cancelControlLaidOut = true },
                     onClick = onCancel,
                 ) {
                     Text("Cancel")
@@ -632,25 +644,28 @@ private fun WidgetPickerAccessiblePlacement.accessibleWidgetLabel(): String =
         ?.let { summary -> "${provider.label}, $summary" }
         ?: provider.label
 
-private suspend fun FocusRequester.requestFocusAcrossFrames() {
-    repeat(FOCUS_REQUEST_FRAME_LIMIT) {
-        withFrameNanos { }
-        requestFocus()
-    }
-}
-
 @Composable
 private fun WidgetProviderAddMenu(
     provider: InstalledWidgetProvider,
     enabled: Boolean,
     focusRequester: FocusRequester,
+    restoreFocus: Boolean,
+    onFocusRestored: () -> Unit,
     onAccessiblePlacementRequested: (InstalledWidgetProvider, WidgetAddTarget) -> Unit,
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
 
     Box {
         TextButton(
-            modifier = Modifier.focusRequester(focusRequester),
+            modifier =
+                Modifier
+                    .focusRequester(focusRequester)
+                    .onGloballyPositioned {
+                        if (restoreFocus) {
+                            focusRequester.requestFocus()
+                            onFocusRestored()
+                        }
+                    },
             onClick = { menuExpanded = true },
             enabled = enabled,
         ) {
@@ -833,7 +848,6 @@ internal const val WIDGET_PICKER_PANEL_TEST_TAG = "widget-picker-panel"
 internal const val WIDGET_PROVIDER_TILE_TEST_TAG = "widget-provider-tile"
 internal const val WIDGET_PICKER_ACCESSIBLE_PLACEMENT_TEST_TAG = "widget-picker-accessible-placement"
 private const val WIDGET_PICKER_SECTION_STATE_SEPARATOR = "\u001f"
-private const val FOCUS_REQUEST_FRAME_LIMIT = 3
 
 private fun String.toCollapsedWidgetPickerSections(): Set<String> =
     split(WIDGET_PICKER_SECTION_STATE_SEPARATOR)
