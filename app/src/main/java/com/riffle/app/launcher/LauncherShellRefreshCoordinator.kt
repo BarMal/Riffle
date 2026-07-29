@@ -1,6 +1,7 @@
 package com.riffle.app.launcher
 
 import com.riffle.core.domain.launcher.LauncherShellState
+import com.riffle.core.domain.launcher.WidgetProviderCatalogStatus
 import com.riffle.core.domain.launcher.notifications.AppNotificationCounter
 import com.riffle.core.domain.launcher.notifications.AppNotificationGrouper
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationRepository
@@ -40,6 +41,7 @@ internal class LauncherShellRefreshCoordinator(
                 widgetProviderDependencies.widgetProviderCatalog.sortedProviders(
                     widgetProviderDependencies.widgetProviderRepository.installedWidgetProviders(),
                 ),
+            widgetProviderCatalogStatus = WidgetProviderCatalogStatus.READY,
         )
 }
 
@@ -108,16 +110,22 @@ internal class LauncherShellRefreshActions(
         )
     }
 
-    fun refreshWidgetProviders(): Job =
-        launchRefresh(
-            cancelExisting = { widgetProviderRefreshJob?.cancel() },
-            registerJob = { job -> widgetProviderRefreshJob = job },
-            refreshState = { refreshCoordinator.refreshWidgetProviders(currentState()) },
-            commitState = { state, context ->
-                context.ensureActive()
-                updateState(state)
-            },
-        )
+    fun refreshWidgetProviders(): Job {
+        widgetProviderRefreshJob?.cancel()
+        updateState(currentState().copy(widgetProviderCatalogStatus = WidgetProviderCatalogStatus.LOADING))
+        val job =
+            coroutineScope.launch(refreshDispatcher) {
+                val refreshedState =
+                    runCatching { refreshCoordinator.refreshWidgetProviders(currentState()) }
+                        .getOrElse {
+                            currentState().copy(widgetProviderCatalogStatus = WidgetProviderCatalogStatus.FAILED)
+                        }
+                coroutineContext.ensureActive()
+                updateState(refreshedState)
+            }
+        widgetProviderRefreshJob = job
+        return job
+    }
 
     private fun launchRefresh(
         cancelExisting: () -> Unit,

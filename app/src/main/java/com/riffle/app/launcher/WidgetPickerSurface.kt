@@ -63,6 +63,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import com.riffle.core.domain.launcher.WidgetProviderCatalogStatus
 import com.riffle.core.domain.launcher.widgets.InstalledWidgetProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -70,6 +71,7 @@ import kotlinx.coroutines.withContext
 @Composable
 fun WidgetPickerSurface(
     providers: List<InstalledWidgetProvider>,
+    catalogStatus: WidgetProviderCatalogStatus = WidgetProviderCatalogStatus.READY,
     previewImageLoader: WidgetPreviewImageLoader = EmptyWidgetPreviewImageLoader,
     accessiblePlacement: WidgetPickerAccessiblePlacement? = null,
     isDragHandoffActive: Boolean = false,
@@ -82,6 +84,7 @@ fun WidgetPickerSurface(
     onAccessiblePlacementConfirmed: () -> Unit = {},
     onAccessiblePlacementCancelled: () -> Unit = {},
     onAction: (LauncherShellAction) -> Unit,
+    onRetryRequested: () -> Unit = {},
     onCloseRequested: () -> Unit = { onAction(LauncherShellAction.CloseWidgetPicker) },
 ) {
     var query by rememberSaveable { mutableStateOf("") }
@@ -175,6 +178,9 @@ fun WidgetPickerSurface(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+                    if (catalogStatus == WidgetProviderCatalogStatus.FAILED && providers.isNotEmpty()) {
+                        WidgetPickerProviderReadFailure(onRetryRequested)
+                    }
                     accessiblePlacement?.let { placement ->
                         WidgetPickerAccessiblePlacementControls(
                             placement = placement,
@@ -185,6 +191,7 @@ fun WidgetPickerSurface(
                     }
                     WidgetPickerContent(
                         providers = providers,
+                        catalogStatus = catalogStatus,
                         providerSections = providerSections,
                         query = query,
                         collapsedSectionTitles = collapsedSectionTitles,
@@ -196,6 +203,7 @@ fun WidgetPickerSurface(
                         onWidgetDropped = onWidgetDropped,
                         onAccessiblePlacementRequested = onAccessiblePlacementRequested,
                         rootCoordinates = rootCoordinates,
+                        onRetryRequested = onRetryRequested,
                         modifier = Modifier.weight(1f),
                     )
                 }
@@ -218,6 +226,7 @@ private fun WidgetPickerEmptyMessage(text: String) {
 @Composable
 private fun WidgetPickerContent(
     providers: List<InstalledWidgetProvider>,
+    catalogStatus: WidgetProviderCatalogStatus,
     providerSections: List<WidgetPickerSection>,
     query: String,
     collapsedSectionTitles: String,
@@ -229,9 +238,16 @@ private fun WidgetPickerContent(
     onWidgetDropped: (InstalledWidgetProvider, Offset, IntSize) -> Unit,
     onAccessiblePlacementRequested: (InstalledWidgetProvider, WidgetAddTarget) -> Unit,
     rootCoordinates: LayoutCoordinates?,
+    onRetryRequested: () -> Unit,
     modifier: Modifier,
 ) {
     when {
+        catalogStatus == WidgetProviderCatalogStatus.LOADING && providers.isEmpty() ->
+            WidgetPickerEmptyMessage(text = "Loading widgets…")
+
+        catalogStatus == WidgetProviderCatalogStatus.FAILED && providers.isEmpty() ->
+            WidgetPickerProviderReadFailure(onRetryRequested)
+
         providers.isEmpty() ->
             WidgetPickerEmptyMessage(text = widgetPickerEmptyMessageText(providers.size, query))
 
@@ -285,6 +301,23 @@ private fun WidgetPickerContent(
                     }
                 }
             }
+    }
+}
+
+@Composable
+private fun WidgetPickerProviderReadFailure(onRetryRequested: () -> Unit) {
+    Column(
+        modifier = Modifier.padding(vertical = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text(
+            text = "Widgets couldn’t be loaded",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        TextButton(onClick = onRetryRequested) {
+            Text("Try again")
+        }
     }
 }
 
