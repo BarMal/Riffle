@@ -1,6 +1,6 @@
 # ADR 0001: RSS feed stages as a bounded TimeScape source
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-07-29
 - Supersedes: N/A
 - Superseded by: N/A
@@ -66,9 +66,12 @@ needed before adding a parser, network client, persistence schema, or worker.
 - Focusing a card changes focus only. Opening details presents sanitized article text and an
   explicit **Open in browser** action; it never embeds a third-party page or silently launches
   an app. Back returns from detail to the originating feed stage.
-- Read state and dismissal are launcher-owned intent keyed by stable feed/item identity.
-  Dismissal removes an item from the active projection but does not send a destructive request
-  to the publisher. Refresh must preserve valid read/dismiss intent across reordered entries.
+- Read state and dismissal are launcher-owned intent keyed by a fixed-length opaque SHA-256
+  digest of the normalized feed identity and normalized item identity. The persisted key never
+  contains a URL, query string, tracking parameter, title, article text, or other source field;
+  the source identity is used only while computing the digest. Dismissal removes an item from
+  the active projection but does not send a destructive request to the publisher. Refresh must
+  preserve valid read/dismiss intent across reordered entries.
 - A feed stage can be pinned and can remain visible when empty. Feed content is transient in
   the same sense as notification/media content; stage identity, pin order, selected stage,
   and source configuration are durable intent.
@@ -93,9 +96,10 @@ needed before adding a parser, network client, persistence schema, or worker.
   settings. Cached article text, summaries, images, response headers, auth material, and
   network error bodies are never backed up.
 - Backup may include feed identity, enabled state, refresh policy, selected template/slot
-  binding, and read/dismiss identifiers only if those identifiers contain no article content
-  or credentials. Restore validates URLs and schema versions, drops unsupported entries, and
-  starts with an empty cache; it never triggers a network request automatically.
+  binding, and opaque fixed-length read/dismiss digests. It never includes the source URL,
+  query/tracking data, article content, credentials, or any reversible item identifier in the
+  persisted state. Restore validates feed configuration and schema versions, drops unsupported
+  entries, and starts with an empty cache; it never triggers a network request automatically.
 - Work/private profile feed configuration and state remain profile-scoped. A locked or removed
   profile cannot contribute content to a visible feed stage. Diagnostics expose counts and
   failure categories only, not URLs, titles, article text, or account data.
@@ -116,19 +120,20 @@ needed before adding a parser, network client, persistence schema, or worker.
 
 The following slices are intentionally separate and should retain the contracts above:
 
-1. **Feed model and validation** — define feed configuration, stable item identity, RSS/Atom
-   normalized item models, profile ownership, URL validation, and domain conformance tests.
-2. **Platform source and refresh boundary** — implement HTTPS transport, conditional requests,
+1. [**Feed model and validation**](https://github.com/BarMal/Riffle/issues/1008) — define feed
+   configuration, stable item identity, opaque SHA-256 read/dismiss digests, RSS/Atom normalized
+   item models, profile ownership, URL validation, and domain conformance tests.
+2. [**Platform source and refresh boundary**](https://github.com/BarMal/Riffle/issues/1009) — implement HTTPS transport, conditional requests,
    timeout/size limits, metered/battery policy, foreground refresh, and parser adapter tests.
-3. **Persistence and cache** — add bounded offline item/image cache, migrations, read/dismiss
+3. [**Persistence and cache**](https://github.com/BarMal/Riffle/issues/1010) — add bounded offline item/image cache, migrations, opaque read/dismiss
    intent, eviction, and settings/backup exclusions with round-trip tests.
-4. **Template and stage projection** — bind `FUTURE_FEED` to the existing dynamic-slot model,
+4. [**Template and stage projection**](https://github.com/BarMal/Riffle/issues/1011) — bind `FUTURE_FEED` to the existing dynamic-slot model,
    reconcile empty/unavailable/profile states, and verify coexistence/order with app and recent
    stages.
-5. **Renderer and detail flow** — render feed cards in the existing TimeScape stack, expose
+5. [**Renderer and detail flow**](https://github.com/BarMal/Riffle/issues/1012) — render feed cards in the existing TimeScape stack, expose
    sanitized details and browser-open behavior, and validate focus, Back, accessibility, and
    reduced-motion behavior on phone and foldable variants.
-6. **Settings and validation** — add feed management, refresh/cache controls, privacy copy,
+6. [**Settings and validation**](https://github.com/BarMal/Riffle/issues/1013) — add feed management, refresh/cache controls, privacy copy,
    manual device scenarios, and end-to-end verification without exposing sensitive fixture data.
 
 ## Consequences
