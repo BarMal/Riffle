@@ -48,7 +48,7 @@ class WidgetPickerSurfaceTest {
     }
 
     @Test
-    fun presentsThePickerAsAThemeDrivenSpaciousPanel() {
+    fun insetsTheActualPickerSurfaceFromEveryCompactWindowEdge() {
         composeRule.setContent {
             MaterialTheme {
                 Box(modifier = Modifier.size(width = 300.dp, height = 500.dp)) {
@@ -67,6 +67,8 @@ class WidgetPickerSurfaceTest {
         assertTrue(panelBounds.width < rootBounds.width)
         assertTrue(panelBounds.left > rootBounds.left)
         assertTrue(panelBounds.right < rootBounds.right)
+        assertTrue(panelBounds.top > rootBounds.top)
+        assertTrue(panelBounds.bottom < rootBounds.bottom)
     }
 
     @Test

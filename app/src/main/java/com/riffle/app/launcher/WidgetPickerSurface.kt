@@ -84,91 +84,97 @@ fun WidgetPickerSurface(
                 .windowInsetsPadding(WindowInsets.safeDrawing),
         contentAlignment = Alignment.Center,
     ) {
-        Surface(
+        Box(
             modifier =
                 Modifier
                     .widthIn(max = WIDGET_PICKER_MAX_WIDTH_DP.dp)
                     .fillMaxWidth()
                     .fillMaxHeight()
-                    .padding(WIDGET_PICKER_PANEL_MARGIN_DP.dp)
-                    .testTag(WIDGET_PICKER_PANEL_TEST_TAG),
-            shape = LocalLauncherPanelShape.current,
-            color =
-                if (isDragHandoffActive) {
-                    androidx.compose.ui.graphics.Color.Transparent
-                } else {
-                    MaterialTheme.colorScheme.surface.copy(alpha = WIDGET_PICKER_SURFACE_ALPHA)
-                },
-            contentColor = MaterialTheme.colorScheme.onSurface,
-            border =
-                if (isDragHandoffActive) {
-                    null
-                } else {
-                    BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.56f))
-                },
-            tonalElevation = if (isDragHandoffActive) 0.dp else 6.dp,
+                    .padding(WIDGET_PICKER_PANEL_MARGIN_DP.dp),
         ) {
-            Column(
+            Surface(
                 modifier =
                     Modifier
                         .fillMaxSize()
-                        .alpha(if (isDragHandoffActive) 0f else 1f)
-                        .padding(WIDGET_PICKER_SCREEN_PADDING_DP.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+                        .testTag(WIDGET_PICKER_PANEL_TEST_TAG),
+                shape = LocalLauncherPanelShape.current,
+                color =
+                    if (isDragHandoffActive) {
+                        androidx.compose.ui.graphics.Color.Transparent
+                    } else {
+                        MaterialTheme.colorScheme.surface.copy(alpha = WIDGET_PICKER_SURFACE_ALPHA)
+                    },
+                contentColor = MaterialTheme.colorScheme.onSurface,
+                border =
+                    if (isDragHandoffActive) {
+                        null
+                    } else {
+                        BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.56f))
+                    },
+                tonalElevation = if (isDragHandoffActive) 0.dp else 6.dp,
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
+                Column(
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .alpha(if (isDragHandoffActive) 0f else 1f)
+                            .padding(WIDGET_PICKER_SCREEN_PADDING_DP.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    Text(
-                        text = "Widgets",
-                        style = MaterialTheme.typography.headlineMedium,
-                    )
-                    TextButton(onClick = { onAction(LauncherShellAction.CloseWidgetPicker) }) {
-                        Text(text = "Close")
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = "Widgets",
+                            style = MaterialTheme.typography.headlineMedium,
+                        )
+                        TextButton(onClick = { onAction(LauncherShellAction.CloseWidgetPicker) }) {
+                            Text(text = "Close")
+                        }
                     }
+                    AppSearchField(
+                        modifier = Modifier.fillMaxWidth(),
+                        query = query,
+                        onQueryChanged = { value -> query = value },
+                        label = "Search widgets",
+                    )
+                    Text(
+                        text =
+                            widgetPickerResultSummaryText(
+                                totalProviderCount = providers.size,
+                                resultCount = filteredProviders.size,
+                                query = query,
+                            ),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Text(
+                        text =
+                            if (isDragHandoffActive) {
+                                "Release on Home or Dock to place this widget"
+                            } else {
+                                "Long-press a widget to drag it to Home or Dock"
+                            },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    WidgetPickerContent(
+                        providers = providers,
+                        providerSections = providerSections,
+                        query = query,
+                        collapsedSectionTitles = collapsedSectionTitles,
+                        onCollapsedSectionTitlesChange = { value -> collapsedSectionTitles = value },
+                        previewImageLoader = previewImageLoader,
+                        onAction = onAction,
+                        onWidgetDragStarted = onWidgetDragStarted,
+                        onWidgetDragMoved = onWidgetDragMoved,
+                        onWidgetDragCancelled = onWidgetDragCancelled,
+                        onWidgetDropped = onWidgetDropped,
+                        rootCoordinates = rootCoordinates,
+                    )
                 }
-                AppSearchField(
-                    modifier = Modifier.fillMaxWidth(),
-                    query = query,
-                    onQueryChanged = { value -> query = value },
-                    label = "Search widgets",
-                )
-                Text(
-                    text =
-                        widgetPickerResultSummaryText(
-                            totalProviderCount = providers.size,
-                            resultCount = filteredProviders.size,
-                            query = query,
-                        ),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Text(
-                    text =
-                        if (isDragHandoffActive) {
-                            "Release on Home or Dock to place this widget"
-                        } else {
-                            "Long-press a widget to drag it to Home or Dock"
-                        },
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                WidgetPickerContent(
-                    providers = providers,
-                    providerSections = providerSections,
-                    query = query,
-                    collapsedSectionTitles = collapsedSectionTitles,
-                    onCollapsedSectionTitlesChange = { value -> collapsedSectionTitles = value },
-                    previewImageLoader = previewImageLoader,
-                    onAction = onAction,
-                    onWidgetDragStarted = onWidgetDragStarted,
-                    onWidgetDragMoved = onWidgetDragMoved,
-                    onWidgetDragCancelled = onWidgetDragCancelled,
-                    onWidgetDropped = onWidgetDropped,
-                    rootCoordinates = rootCoordinates,
-                )
             }
         }
     }
