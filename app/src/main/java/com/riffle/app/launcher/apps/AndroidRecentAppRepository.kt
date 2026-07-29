@@ -68,10 +68,11 @@ internal typealias PlatformRecentAppUsages = List<PlatformRecentAppUsage>
 internal fun PlatformRecentAppUsages.toRecentAppUsages(): List<RecentAppUsage> =
     asSequence()
         .filter { usage -> usage.packageName.isNotBlank() && usage.lastUsedAtMillis > 0 }
-        .map { usage ->
+        .groupBy { usage -> usage.packageName }
+        .map { (packageName, usages) ->
             RecentAppUsage(
-                packageName = AppPackageName(usage.packageName),
-                lastUsedAtMillis = usage.lastUsedAtMillis,
+                packageName = AppPackageName(packageName),
+                lastUsedAtMillis = usages.maxOf(PlatformRecentAppUsage::lastUsedAtMillis),
             )
         }.sortedWith(
             compareByDescending<RecentAppUsage> { usage -> usage.lastUsedAtMillis }
