@@ -189,6 +189,7 @@ fun FolderSurface(
                 .fillMaxSize()
                 .testTag(FOLDER_SURFACE_ROOT_TEST_TAG)
                 .windowInsetsPadding(WindowInsets.safeDrawing),
+        shape = LocalLauncherPanelShape.current,
         color = launcherPanelSurfaceColor(),
         contentColor = MaterialTheme.colorScheme.onSurface,
     ) {
