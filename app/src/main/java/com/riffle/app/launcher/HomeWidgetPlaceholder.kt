@@ -28,6 +28,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.zIndex
 import com.riffle.app.launcher.widgets.EmptyHomeWidgetViewFactory
 import com.riffle.app.launcher.widgets.HomeWidgetViewFactory
 import com.riffle.core.domain.launcher.home.GridDimensions
@@ -162,34 +163,39 @@ private fun BoxScope.WidgetEditHandles(
         label = widget.label,
         onClick = { onAction(LauncherShellAction.RemoveHomeShortcut(widget.id)) },
     )
-    WidgetResizeHandle(
-        modifier = Modifier.align(Alignment.CenterEnd),
-        label = "+",
-        contentDescription = "Make ${widget.label} wider",
-        enabled = widget.canResize(columnsDelta = 1, rowsDelta = 0, grid = grid, pageItems = pageItems),
-        onClick = { onAction(widget.resizeAction(columnsDelta = 1, rowsDelta = 0)) },
-    )
-    WidgetResizeHandle(
-        modifier = Modifier.align(Alignment.CenterStart),
-        label = "-",
-        contentDescription = "Make ${widget.label} narrower",
-        enabled = widget.canResize(columnsDelta = -1, rowsDelta = 0, grid = grid, pageItems = pageItems),
-        onClick = { onAction(widget.resizeAction(columnsDelta = -1, rowsDelta = 0)) },
-    )
-    WidgetResizeHandle(
-        modifier = Modifier.align(Alignment.BottomCenter),
-        label = "+",
-        contentDescription = "Make ${widget.label} taller",
-        enabled = widget.canResize(columnsDelta = 0, rowsDelta = 1, grid = grid, pageItems = pageItems),
-        onClick = { onAction(widget.resizeAction(columnsDelta = 0, rowsDelta = 1)) },
-    )
-    WidgetResizeHandle(
-        modifier = Modifier.align(Alignment.TopCenter),
-        label = "-",
-        contentDescription = "Make ${widget.label} shorter",
-        enabled = widget.canResize(columnsDelta = 0, rowsDelta = -1, grid = grid, pageItems = pageItems),
-        onClick = { onAction(widget.resizeAction(columnsDelta = 0, rowsDelta = -1)) },
-    )
+    val resizeHandleLabels = widget.resizeHandleLabels()
+    if ("Make wider" in resizeHandleLabels) {
+        WidgetResizeHandle(
+            modifier = Modifier.align(Alignment.CenterEnd),
+            label = "+",
+            contentDescription = "Make ${widget.label} wider",
+            enabled = widget.canResize(columnsDelta = 1, rowsDelta = 0, grid = grid, pageItems = pageItems),
+            onClick = { onAction(widget.resizeAction(columnsDelta = 1, rowsDelta = 0)) },
+        )
+        WidgetResizeHandle(
+            modifier = Modifier.align(Alignment.CenterStart),
+            label = "-",
+            contentDescription = "Make ${widget.label} narrower",
+            enabled = widget.canResize(columnsDelta = -1, rowsDelta = 0, grid = grid, pageItems = pageItems),
+            onClick = { onAction(widget.resizeAction(columnsDelta = -1, rowsDelta = 0)) },
+        )
+    }
+    if ("Make taller" in resizeHandleLabels) {
+        WidgetResizeHandle(
+            modifier = Modifier.align(Alignment.BottomCenter),
+            label = "+",
+            contentDescription = "Make ${widget.label} taller",
+            enabled = widget.canResize(columnsDelta = 0, rowsDelta = 1, grid = grid, pageItems = pageItems),
+            onClick = { onAction(widget.resizeAction(columnsDelta = 0, rowsDelta = 1)) },
+        )
+        WidgetResizeHandle(
+            modifier = Modifier.align(Alignment.TopCenter),
+            label = "-",
+            contentDescription = "Make ${widget.label} shorter",
+            enabled = widget.canResize(columnsDelta = 0, rowsDelta = -1, grid = grid, pageItems = pageItems),
+            onClick = { onAction(widget.resizeAction(columnsDelta = 0, rowsDelta = -1)) },
+        )
+    }
 }
 
 @Composable
@@ -203,6 +209,8 @@ private fun WidgetResizeHandle(
     Box(
         modifier =
             modifier
+                // Resize controls must win hit testing over the full-widget move/menu layer.
+                .zIndex(1f)
                 .size(WIDGET_RESIZE_HANDLE_SIZE_DP.dp)
                 .alpha(if (enabled) 1f else WIDGET_RESIZE_HANDLE_DISABLED_ALPHA)
                 .clip(CircleShape)
@@ -320,3 +328,15 @@ private fun WidgetItem.canResize(
 private const val WIDGET_RESIZE_HANDLE_SIZE_DP = 28
 private const val WIDGET_RESIZE_HANDLE_DISABLED_ALPHA = 0.38f
 private val WIDGET_RESIZE_PREVIEW_PAGE_ID = LauncherPageId("widget-resize-preview")
+
+internal fun WidgetItem.resizeHandleLabels(): List<String> =
+    buildList {
+        if (resizeConstraints.supportsHorizontalResize) {
+            add("Make wider")
+            add("Make narrower")
+        }
+        if (resizeConstraints.supportsVerticalResize) {
+            add("Make taller")
+            add("Make shorter")
+        }
+    }

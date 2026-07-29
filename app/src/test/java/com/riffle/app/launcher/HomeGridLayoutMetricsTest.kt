@@ -11,6 +11,18 @@ class HomeGridLayoutMetricsTest {
     private val metrics = HomeGridLayoutMetrics()
 
     @Test
+    fun gridSizeKeepsSquareCellsAndCentersWithinTheAvailableBounds() {
+        assertEquals(
+            HomeGridSizePx(widthPx = 400f, heightPx = 500f, cellSizePx = 100f),
+            metrics.gridSizePx(
+                grid = GridDimensions(columns = 4, rows = 5),
+                maxWidthPx = 400f,
+                maxHeightPx = 800f,
+            ),
+        )
+    }
+
+    @Test
     fun cellSizeUsesWidthBoundWhenWidthIsTighter() {
         assertEquals(
             100f,

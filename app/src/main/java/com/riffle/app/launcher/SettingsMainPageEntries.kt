@@ -7,7 +7,7 @@ import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 internal fun settingsMainPageEntries(status: SettingsOverviewStatus = SettingsOverviewStatus()) =
     homeSettingsPageEntries() +
         interactionSettingsPageEntries() +
-        appSettingsPageEntries() +
+        appSettingsPageEntries(status) +
         systemSettingsPageEntries(status)
 
 @Suppress("LongMethod")
@@ -55,7 +55,7 @@ private fun homeSettingsPageEntries(): List<SettingsPageEntry> =
             label = "Appearance",
             subtitle = "Theme, wallpaper, and system bars",
             page = SettingsPage.APPEARANCE,
-            group = SettingsPageGroup.HOME,
+            group = SettingsPageGroup.APPEARANCE,
             searchAliases =
                 listOf(
                     "change wallpaper",
@@ -72,7 +72,7 @@ private fun homeSettingsPageEntries(): List<SettingsPageEntry> =
             label = "TimeScape appearance",
             subtitle = "Cards, glass, colour, motion, and accessibility",
             page = SettingsPage.TIMESCAPE_APPEARANCE,
-            group = SettingsPageGroup.HOME,
+            group = SettingsPageGroup.APPEARANCE,
             searchAliases =
                 listOf(
                     "timescape",
@@ -135,19 +135,28 @@ private fun interactionSettingsPageEntries(): List<SettingsPageEntry> =
             searchAliases = listOf("contextual behaviour", "dynamic", "model", "actions"),
         ),
         SettingsPageEntry(
-            label = "Motion",
+            label = "Motion & haptics",
             subtitle = "Animation performance, reduced motion, and haptics",
             page = SettingsPage.MOTION,
             group = SettingsPageGroup.INTERACTION,
-            searchAliases = listOf("animations", "settle animations", "minimise motion", "haptics", "vibration"),
+            searchAliases =
+                listOf(
+                    "animations",
+                    "settle animations",
+                    "minimise motion",
+                    "reduced motion",
+                    "haptics",
+                    "vibration",
+                    "accessibility",
+                ),
         ),
     )
 
-private fun appSettingsPageEntries(): List<SettingsPageEntry> =
+private fun appSettingsPageEntries(status: SettingsOverviewStatus): List<SettingsPageEntry> =
     listOf(
         SettingsPageEntry(
             label = "App drawer",
-            subtitle = "Apps, search results, and hidden apps",
+            subtitle = status.appsSummary(),
             page = SettingsPage.APPS,
             group = SettingsPageGroup.APPS,
             searchAliases =
@@ -201,18 +210,14 @@ private fun systemSettingsPageEntries(status: SettingsOverviewStatus): List<Sett
     )
 
 private fun SettingsOverviewStatus.permissionsSummary(): String =
-    if (
-        notificationAccessStatus == NotificationAccessStatus.GRANTED &&
-        overlayDockPermissionStatus == OverlayDockPermissionStatus.GRANTED
-    ) {
-        homeRoleStatus.settingsOverviewLabel()
-    } else {
-        listOf(
-            homeRoleStatus.settingsOverviewLabel(),
-            notificationAccessStatus.settingsOverviewLabel("Notifications"),
-            overlayDockPermissionStatus.settingsOverviewLabel("Floating dock"),
-        ).joinToString(separator = " · ")
-    }
+    listOf(
+        notificationAccessStatus.settingsOverviewLabel("Notifications"),
+        homeRoleStatus.settingsOverviewLabel(),
+        overlayDockPermissionStatus.settingsOverviewLabel("Floating dock"),
+    ).joinToString(separator = " · ")
+
+private fun SettingsOverviewStatus.appsSummary(): String =
+    "Apps, search results, and $hiddenAppCount hidden app${if (hiddenAppCount == 1) "" else "s"}"
 
 private fun NotificationAccessStatus.settingsOverviewLabel(feature: String): String =
     when (this) {

@@ -47,7 +47,6 @@ internal fun SettingsPageContent(
             SettingsPage.GESTURES -> SettingsGesturesPageContent(state = state, onAction = onAction)
             SettingsPage.CONTEXTUAL -> SettingsContextualPageContent(state = state, onAction = onAction)
             SettingsPage.MOTION -> SettingsMotionPageContent(state = state, onAction = onAction)
-            SettingsPage.HAPTICS -> SettingsHapticsPageContent(state = state, onAction = onAction)
             SettingsPage.PERMISSIONS -> SettingsPermissionsPageContent(state = state, onAction = onAction)
             SettingsPage.APPS ->
                 {

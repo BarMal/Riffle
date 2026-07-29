@@ -1,17 +1,185 @@
 package com.riffle.app.launcher
 
+import android.appwidget.AppWidgetProviderInfo
+import com.riffle.app.launcher.widgets.canLoadGeneratedWidgetPreview
 import com.riffle.app.launcher.widgets.widgetPreviewBitmapSize
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppProfile
+import com.riffle.core.domain.launcher.home.GridDimensions
+import com.riffle.core.domain.launcher.home.LauncherPage
+import com.riffle.core.domain.launcher.home.LauncherPageId
+import com.riffle.core.domain.launcher.home.LauncherPageType
 import com.riffle.core.domain.launcher.widgets.InstalledWidgetProvider
 import com.riffle.core.domain.launcher.widgets.WidgetProviderClassName
 import com.riffle.core.domain.launcher.widgets.WidgetProviderDimensions
 import com.riffle.core.domain.launcher.widgets.WidgetProviderIdentity
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class WidgetPickerDialogTest {
+    @Test
+    fun cancellingAccessiblePlacementRestoresThePageSelectedWhenPlacementStarted() {
+        val initialPageId = LauncherPageId("first")
+        val candidatePageId = LauncherPageId("second")
+        val placement =
+            accessibleWidgetPlacementFor(
+                provider =
+                    widgetProvider(
+                        label = "Weather",
+                        packageName = "com.example.weather",
+                        className = ".Weather",
+                    ),
+                target = WidgetAddTarget.HOME,
+                pages =
+                    listOf(
+                        LauncherPage(
+                            id = initialPageId,
+                            type = LauncherPageType.Home,
+                            grid = GridDimensions(1, 1),
+                        ),
+                        LauncherPage(
+                            id = candidatePageId,
+                            type = LauncherPageType.Home,
+                            grid = GridDimensions(1, 1),
+                        ),
+                    ),
+                selectedPageId = initialPageId,
+                availableWidthDp = 400,
+                availableHeightDp = 400,
+            ).let { value ->
+                value.selectCandidate(value.candidates.first { candidate -> candidate.pageId == candidatePageId })
+            }
+        val actions =
+            listOfNotNull(
+                placement.selectedCandidate?.pageId?.let(LauncherShellAction::SelectHomePage),
+                accessibleWidgetPlacementCancellationActionFor(
+                    placement = placement,
+                    selectedPageId = candidatePageId,
+                ),
+            )
+
+        assertEquals(
+            listOf(
+                LauncherShellAction.SelectHomePage(candidatePageId),
+                LauncherShellAction.SelectHomePage(initialPageId),
+            ),
+            actions,
+        )
+    }
+
+    @Test
+    fun accessibleDockPlacementDispatchesSelectedNonFirstPosition() {
+        val provider = widgetProvider(label = "Weather", packageName = "com.example.weather", className = ".Weather")
+        val placement =
+            accessibleWidgetPlacementFor(
+                provider = provider,
+                target = WidgetAddTarget.DOCK,
+                pages = emptyList(),
+                selectedPageId = LauncherPageId("home"),
+                dockItemCount = 2,
+                availableWidthDp = 400,
+                availableHeightDp = 400,
+            )
+
+        val selected = placement.selectCandidate(placement.candidates.first { it.dockIndex == 1 })
+        val dispatched = accessibleWidgetAddActionFor(selected)
+
+        assertEquals(1, selected.selectedCandidate?.dockIndex)
+        assertEquals(1, dispatched?.dockIndex)
+        assertEquals(WidgetAddTarget.DOCK, dispatched?.target)
+    }
+
+    @Test
+    fun accessiblePlacementSelectsPageAndCellBeforeBuildingTheAddRequest() {
+        val provider = widgetProvider(label = "Weather", packageName = "com.example.weather", className = ".Weather")
+        val firstPage =
+            LauncherPage(id = LauncherPageId("first"), type = LauncherPageType.Home, grid = GridDimensions(2, 1))
+        val secondPage =
+            LauncherPage(id = LauncherPageId("second"), type = LauncherPageType.Home, grid = GridDimensions(2, 1))
+        val placement =
+            accessibleWidgetPlacementFor(
+                provider = provider,
+                target = WidgetAddTarget.HOME,
+                pages = listOf(firstPage, secondPage),
+                selectedPageId = secondPage.id,
+                availableWidthDp = 400,
+                availableHeightDp = 400,
+            )
+        var emittedRequest: LauncherShellAction.RequestAddWidget? = null
+
+        assertNull(emittedRequest)
+        val selected =
+            placement.selectCandidate(
+                placement.candidates.first { candidate ->
+                    candidate.pageId == secondPage.id && candidate.cell?.column == 1
+                },
+            )
+        assertEquals(secondPage.id, selected.selectedCandidate?.pageId)
+        assertEquals(1, selected.selectedCandidate?.cell?.column)
+
+        emittedRequest = accessibleWidgetAddActionFor(selected)
+        assertEquals(secondPage.id, emittedRequest?.targetPageId)
+        assertEquals(selected.selectedCandidate?.cell, emittedRequest?.targetCell)
+        assertEquals(
+            "Weather, 1 by 1 cells on Home page second, Column 2, row 1; placement is ready.",
+            selected.accessiblePlacementAnnouncement(),
+        )
+    }
+
+    @Test
+    fun accessibleDockPlacementOffersInsertionWhenDockIsFullOrDisabled() {
+        val placement =
+            accessibleWidgetPlacementFor(
+                provider =
+                    widgetProvider(
+                        label = "Weather",
+                        packageName = "com.example.weather",
+                        className = ".Weather",
+                    ),
+                target = WidgetAddTarget.DOCK,
+                pages = emptyList(),
+                selectedPageId = LauncherPageId("home"),
+                dockItemCount = 2,
+                availableWidthDp = 400,
+                availableHeightDp = 400,
+            )
+
+        assertEquals(listOf(0, 1, 2), placement.candidates.map { it.dockIndex })
+        assertEquals(
+            "Weather in the Dock at Dock position 1; placement is ready.",
+            placement.accessiblePlacementAnnouncement(),
+        )
+    }
+
+    @Test
+    fun accessiblePlacementAnnouncementIncludesSelectionAndValidity() {
+        val provider = widgetProvider(label = "Weather", packageName = "com.example.weather", className = ".Weather")
+        val placement =
+            accessibleWidgetPlacementFor(
+                provider = provider,
+                target = WidgetAddTarget.DOCK,
+                pages = emptyList(),
+                selectedPageId = LauncherPageId("home"),
+                dockItemCount = 2,
+                availableWidthDp = 400,
+                availableHeightDp = 400,
+            )
+
+        assertEquals(
+            "Weather in the Dock at Dock position 2; placement is ready.",
+            placement.selectCandidate(placement.candidates[1]).accessiblePlacementAnnouncement(),
+        )
+        assertEquals(
+            "Weather cannot be placed at the selected dock target.",
+            placement.copy(candidates = emptyList()).accessiblePlacementAnnouncement(),
+        )
+    }
+
     @Test
     fun previewLoaderFailuresFallBackToNoPreview() {
         val identity =
@@ -21,11 +189,53 @@ class WidgetPickerDialogTest {
             )
         val loader =
             object : WidgetPreviewImageLoader {
-                override fun previewFor(identity: WidgetProviderIdentity) = error("Preview provider failed")
+                override suspend fun previewFor(identity: WidgetProviderIdentity) = error("Preview provider failed")
             }
 
         assertNull(loader.cachedPreviewForOrNull(identity))
-        assertNull(loader.previewForOrNull(identity))
+        assertNull(runBlocking { loader.previewForOrNull(identity) })
+    }
+
+    @Test
+    fun previewLoaderPreservesCoroutineCancellation() {
+        val identity =
+            WidgetProviderIdentity(
+                packageName = AppPackageName("com.example.clock"),
+                className = WidgetProviderClassName(".ClockWidget"),
+            )
+        val loader =
+            object : WidgetPreviewImageLoader {
+                override suspend fun previewFor(identity: WidgetProviderIdentity): Nothing =
+                    throw CancellationException("Picker item left composition")
+            }
+
+        val failure = runCatching { runBlocking { loader.previewForOrNull(identity) } }.exceptionOrNull()
+
+        assertTrue(failure is CancellationException)
+    }
+
+    @Test
+    fun generatedPreviewRequiresAndroid15AndHomeScreenContent() {
+        assertFalse(
+            canLoadGeneratedWidgetPreview(
+                sdkInt = 34,
+                generatedPreviewCategories = AppWidgetProviderInfo.WIDGET_CATEGORY_HOME_SCREEN,
+            ),
+        )
+        assertFalse(
+            canLoadGeneratedWidgetPreview(
+                sdkInt = 35,
+                generatedPreviewCategories = AppWidgetProviderInfo.WIDGET_CATEGORY_KEYGUARD,
+            ),
+        )
+        assertTrue(
+            canLoadGeneratedWidgetPreview(
+                sdkInt = 35,
+                generatedPreviewCategories =
+                    AppWidgetProviderInfo.WIDGET_CATEGORY_HOME_SCREEN or
+                        AppWidgetProviderInfo.WIDGET_CATEGORY_KEYGUARD,
+            ),
+        )
     }
 
     @Test

@@ -31,6 +31,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.apps.AppDrawerProfileFilter
 import com.riffle.core.domain.launcher.apps.InstalledApp
@@ -186,9 +187,11 @@ fun FolderSurface(
         modifier =
             Modifier
                 .fillMaxSize()
+                .testTag(FOLDER_SURFACE_ROOT_TEST_TAG)
                 .windowInsetsPadding(WindowInsets.safeDrawing),
-        color = MaterialTheme.colorScheme.surface,
-        contentColor = MaterialTheme.colorScheme.onSurface,
+        shape = LocalLauncherPanelShape.current,
+        color = launcherPanelSurfaceColor(),
+        contentColor = launcherPanelContentColor(),
     ) {
         Column(
             modifier =
@@ -239,6 +242,8 @@ fun FolderSurface(
         }
     }
 }
+
+internal const val FOLDER_SURFACE_ROOT_TEST_TAG = "folder-surface-root"
 
 @Composable
 private fun FolderSurfaceHeader(

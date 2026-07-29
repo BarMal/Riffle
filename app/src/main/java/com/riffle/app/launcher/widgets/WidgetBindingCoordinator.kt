@@ -76,6 +76,7 @@ class WidgetBindingCoordinator(
                         target = action.target,
                         targetPageId = action.targetPageId,
                         targetCell = action.targetCell,
+                        dockIndex = action.dockIndex,
                         step = PendingWidgetAddStep.CONFIGURATION,
                         createdAtEpochMillis = epochMillisProvider(),
                     )
@@ -108,6 +109,7 @@ class WidgetBindingCoordinator(
                         target = action.target,
                         targetPageId = action.targetPageId,
                         targetCell = action.targetCell,
+                        dockIndex = action.dockIndex,
                         step = PendingWidgetAddStep.PERMISSION,
                         createdAtEpochMillis = epochMillisProvider(),
                     ),
@@ -248,6 +250,7 @@ class WidgetBindingCoordinator(
                 LauncherShellAction.AddHostedWidgetToDock(
                     hostedWidgetId = hostedWidgetId,
                     label = label,
+                    dockIndex = dockIndex,
                 )
         }
 }

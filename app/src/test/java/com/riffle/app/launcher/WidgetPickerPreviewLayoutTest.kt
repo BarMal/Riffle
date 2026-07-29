@@ -1,11 +1,13 @@
 package com.riffle.app.launcher
 
+import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.widgets.InstalledWidgetProvider
 import com.riffle.core.domain.launcher.widgets.WidgetProviderClassName
 import com.riffle.core.domain.launcher.widgets.WidgetProviderDimensions
 import com.riffle.core.domain.launcher.widgets.WidgetProviderIdentity
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class WidgetPickerPreviewLayoutTest {
@@ -34,6 +36,48 @@ class WidgetPickerPreviewLayoutTest {
         assertEquals(
             0.125f,
             widgetProvider(minWidthDp = 100, minHeightDp = 800).widgetPickerPreviewAspectRatio(),
+        )
+    }
+
+    @Test
+    fun previewSizePreservesExtremeProviderShapesWithinTheHeightBound() {
+        assertEquals(
+            300.dp to 75.dp,
+            widgetPickerPreviewSize(maxWidth = 300.dp, preferredAspectRatio = 4f).let { it.width to it.height },
+        )
+        assertEquals(
+            180.dp to 96.dp,
+            widgetPickerPreviewSize(maxWidth = 300.dp, preferredAspectRatio = 0.125f).let {
+                it.width to it.height
+            },
+        )
+    }
+
+    @Test
+    fun previewSizeUsesALegibleConstrainedStateForExtremeProviderRatios() {
+        assertEquals(
+            180.dp to 96.dp,
+            widgetPickerPreviewSize(maxWidth = 300.dp, preferredAspectRatio = 0.0001f).let {
+                it.width to it.height
+            },
+        )
+        assertEquals(
+            180.dp to 96.dp,
+            widgetPickerPreviewSize(maxWidth = 300.dp, preferredAspectRatio = 10_000f).let {
+                it.width to it.height
+            },
+        )
+        assertTrue(widgetPickerPreviewIsConstrained(maxWidth = 300.dp, preferredAspectRatio = 0.0001f))
+        assertTrue(widgetPickerPreviewIsConstrained(maxWidth = 300.dp, preferredAspectRatio = 10_000f))
+    }
+
+    @Test
+    fun previewSizeFallsBackToSquareForInvalidAspectRatios() {
+        assertEquals(
+            240.dp to 240.dp,
+            widgetPickerPreviewSize(maxWidth = 300.dp, preferredAspectRatio = Float.NaN).let {
+                it.width to it.height
+            },
         )
     }
 

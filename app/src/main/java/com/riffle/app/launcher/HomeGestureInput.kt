@@ -14,6 +14,7 @@ internal fun Modifier.homeGestureInput(
     enabled: Boolean,
     settings: HomeGestureSettings,
     onAction: (LauncherShellAction) -> Unit,
+    actionFilter: (LauncherShellAction) -> Boolean = { true },
 ): Modifier =
     if (!enabled) {
         this
@@ -52,7 +53,7 @@ internal fun Modifier.homeGestureInput(
                             interpreter = interpreter,
                         )
 
-                    if (action != null) {
+                    if (action != null && actionFilter(action)) {
                         handled = true
                         activeChanges.forEach { change -> change.consume() }
                         onAction(action)

@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -144,7 +143,7 @@ private fun HomeGestureRow(
             TextButton(onClick = { isExpanded.value = true }) {
                 SettingsButtonText(text = action.targetLabel(launchTarget, installedApps))
             }
-            DropdownMenu(
+            RiffleContextMenu(
                 expanded = isExpanded.value,
                 onDismissRequest = { isExpanded.value = false },
             ) {
@@ -184,6 +183,10 @@ internal val LauncherGestureAction.label: String
             LauncherGestureAction.ENTER_FULLSCREEN_HOME -> "Fullscreen home"
             LauncherGestureAction.SELECT_NEXT_HOME_PAGE -> "Next page"
             LauncherGestureAction.SELECT_PREVIOUS_HOME_PAGE -> "Previous page"
+            LauncherGestureAction.ENTER_TIMESCAPE -> "Enter TimeScape"
+            LauncherGestureAction.EXIT_TIMESCAPE -> "Exit TimeScape"
+            LauncherGestureAction.SELECT_NEXT_APP_STAGE -> "Next TimeScape stage"
+            LauncherGestureAction.SELECT_PREVIOUS_APP_STAGE -> "Previous TimeScape stage"
             LauncherGestureAction.LAUNCH_APP -> "Launch app"
             LauncherGestureAction.LAUNCH_APP_SHORTCUT -> "Launch shortcut"
         }

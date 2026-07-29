@@ -1,6 +1,11 @@
 package com.riffle.app
 
+import android.content.Intent
+import com.riffle.app.launcher.FirstRunRepository
+import com.riffle.app.launcher.LauncherShellViewModel
 import com.riffle.core.domain.launcher.HomeRoleStatus
+import com.riffle.core.domain.launcher.OverlayDockPermissionStatus
+import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
@@ -13,6 +18,60 @@ import org.junit.Assert.assertThrows
 import org.junit.Test
 
 class MainActivityStartupTest {
+    @Test
+    fun startupAppliesLiveStatusesBeforeFirstLauncherComposition() {
+        val viewModel = LauncherShellViewModel(firstRunRepository = FakeFirstRunRepository())
+
+        composeLauncherShellAfterStatusRefresh(
+            refreshStatuses = {
+                refreshLauncherPlatformStatuses(
+                    readHomeRoleStatus = { HomeRoleStatus.DEFAULT_HOME },
+                    notificationAccessStatus = NotificationAccessStatus.GRANTED,
+                    overlayDockPermissionStatus = OverlayDockPermissionStatus.GRANTED,
+                    publishStatuses = viewModel::onHomeRoleStatusChanged,
+                )
+            },
+            compose = {
+                assertEquals(HomeRoleStatus.DEFAULT_HOME, viewModel.state.value.homeRoleStatus)
+                assertEquals(NotificationAccessStatus.GRANTED, viewModel.state.value.notificationAccessStatus)
+                assertEquals(OverlayDockPermissionStatus.GRANTED, viewModel.state.value.overlayDockPermissionStatus)
+            },
+        )
+    }
+
+    @Test
+    fun coldStartHomeIntentRequestsTheStandardHomeDestination() {
+        assertEquals(
+            true,
+            shouldOpenDefaultHomeOnLaunch(
+                action = Intent.ACTION_MAIN,
+                categories = setOf(Intent.CATEGORY_HOME),
+            ),
+        )
+    }
+
+    @Test
+    fun launcherIconLaunchDoesNotRequestTheStandardHomeDestination() {
+        assertEquals(
+            false,
+            shouldOpenDefaultHomeOnLaunch(
+                action = Intent.ACTION_MAIN,
+                categories = setOf(Intent.CATEGORY_LAUNCHER),
+            ),
+        )
+    }
+
+    @Test
+    fun homeIntentWithDefaultCategoryRequestsTheStandardHomeDestination() {
+        assertEquals(
+            true,
+            shouldOpenDefaultHomeOnLaunch(
+                action = Intent.ACTION_MAIN,
+                categories = setOf(Intent.CATEGORY_HOME, Intent.CATEGORY_DEFAULT),
+            ),
+        )
+    }
+
     @Test
     fun platformStatusReadUsesFallbackWhenPlatformCallFails() {
         assertEquals(
@@ -80,4 +139,10 @@ class MainActivityStartupTest {
                 }.toList(),
             )
         }
+
+    private class FakeFirstRunRepository : FirstRunRepository {
+        override fun isFirstRunComplete(): Boolean = false
+
+        override fun setFirstRunComplete() = Unit
+    }
 }

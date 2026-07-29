@@ -27,7 +27,7 @@ class SettingsPagesTest {
                 "Floating dock" to SettingsPage.FLOATING_DOCK,
                 "Gestures" to SettingsPage.GESTURES,
                 "Contextual behaviour" to SettingsPage.CONTEXTUAL,
-                "Motion" to SettingsPage.MOTION,
+                "Motion & haptics" to SettingsPage.MOTION,
                 "App drawer" to SettingsPage.APPS,
                 "Permissions" to SettingsPage.PERMISSIONS,
                 "Backup" to SettingsPage.BACKUP,
@@ -41,11 +41,22 @@ class SettingsPagesTest {
         assertEquals(
             listOf(
                 SettingsPageGroup.HOME,
+                SettingsPageGroup.APPEARANCE,
                 SettingsPageGroup.INTERACTION,
                 SettingsPageGroup.APPS,
                 SettingsPageGroup.SYSTEM,
             ),
             settingsMainPageGroups(),
+        )
+    }
+
+    @Test
+    fun mainSettingsPageKeepsAppearanceTasksTogether() {
+        val entries = settingsMainPageEntries()
+
+        assertEquals(
+            setOf(SettingsPage.APPEARANCE, SettingsPage.TIMESCAPE_APPEARANCE),
+            entries.filter { entry -> entry.group == SettingsPageGroup.APPEARANCE }.map { entry -> entry.page }.toSet(),
         )
     }
 
@@ -154,9 +165,41 @@ class SettingsPagesTest {
             )
 
         assertEquals(
-            "Home set · Notifications allowed · Floating dock not allowed",
+            "Notifications allowed · Home set · Floating dock not allowed",
             entries.single { entry -> entry.page == SettingsPage.PERMISSIONS }.subtitle,
         )
+        assertEquals(
+            "Apps, search results, and 2 hidden apps",
+            entries.single { entry -> entry.page == SettingsPage.APPS }.subtitle,
+        )
+    }
+
+    @Test
+    fun mainSettingsEntryAlwaysExposesNotificationAccessStatus() {
+        val expectedLabels =
+            mapOf(
+                NotificationAccessStatus.GRANTED to "Notifications allowed",
+                NotificationAccessStatus.NOT_GRANTED to "Notifications not allowed",
+                NotificationAccessStatus.REVOKED to "Notifications revoked",
+                NotificationAccessStatus.UNKNOWN to "Notifications checking",
+            )
+
+        expectedLabels.forEach { (notificationAccessStatus, expectedLabel) ->
+            val summary =
+                settingsMainPageEntries(
+                    SettingsOverviewStatus(
+                        homeRoleStatus = HomeRoleStatus.DEFAULT_HOME,
+                        notificationAccessStatus = notificationAccessStatus,
+                        overlayDockPermissionStatus = OverlayDockPermissionStatus.GRANTED,
+                    ),
+                ).single { entry -> entry.page == SettingsPage.PERMISSIONS }
+                    .subtitle
+
+            assertEquals(
+                "$expectedLabel · Home set · Floating dock allowed",
+                summary,
+            )
+        }
     }
 
     @Test
@@ -169,8 +212,8 @@ class SettingsPagesTest {
             )
 
         assertEquals(
-            emptyList<SettingsPageEntry>(),
-            settingsMainPageEntriesMatching(query = "3 hidden", status = status),
+            listOf(SettingsPage.APPS),
+            settingsMainPageEntriesMatching(query = "3 hidden", status = status).map { entry -> entry.page },
         )
         assertEquals(
             listOf(SettingsPage.PERMISSIONS),

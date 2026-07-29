@@ -262,8 +262,9 @@ val defaultHomeGestureActions: Map<HomeGesture, LauncherGestureAction> =
         HomeGesture.TWO_FINGER_DOWN to LauncherGestureAction.OPEN_SETTINGS,
         HomeGesture.TWO_FINGER_LEFT to LauncherGestureAction.NONE,
         HomeGesture.TWO_FINGER_RIGHT to LauncherGestureAction.NONE,
-        HomeGesture.THREE_FINGER_UP to LauncherGestureAction.NONE,
-        HomeGesture.THREE_FINGER_DOWN to LauncherGestureAction.NONE,
+        // Three fingers avoid the platform back/home edges and the one-finger card stack.
+        HomeGesture.THREE_FINGER_UP to LauncherGestureAction.ENTER_TIMESCAPE,
+        HomeGesture.THREE_FINGER_DOWN to LauncherGestureAction.EXIT_TIMESCAPE,
         HomeGesture.THREE_FINGER_LEFT to LauncherGestureAction.NONE,
         HomeGesture.THREE_FINGER_RIGHT to LauncherGestureAction.NONE,
         HomeGesture.PINCH_IN to LauncherGestureAction.ENTER_HOME_EDIT_MODE,
@@ -381,6 +382,10 @@ enum class LauncherGestureAction {
     ENTER_FULLSCREEN_HOME,
     SELECT_NEXT_HOME_PAGE,
     SELECT_PREVIOUS_HOME_PAGE,
+    ENTER_TIMESCAPE,
+    EXIT_TIMESCAPE,
+    SELECT_NEXT_APP_STAGE,
+    SELECT_PREVIOUS_APP_STAGE,
     LAUNCH_APP,
     LAUNCH_APP_SHORTCUT,
 }

@@ -60,6 +60,9 @@ import com.riffle.app.launcher.widgets.WidgetBindPermissionResult
 import com.riffle.app.launcher.widgets.WidgetConfigurationResult
 import com.riffle.core.domain.launcher.FirstRunStatus
 import com.riffle.core.domain.launcher.HomeRoleStatus
+import com.riffle.core.domain.launcher.OverlayDockPermissionStatus
+import com.riffle.core.domain.launcher.apps.AppPackageName
+import com.riffle.core.domain.launcher.apps.AppProfile
 import com.riffle.core.domain.launcher.cards.TimeScapeWindowLayout
 import com.riffle.core.domain.launcher.home.HostedWidgetId
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
@@ -109,11 +112,13 @@ class MainActivity : ComponentActivity() {
     private val appIconLoader get() = dependencies.appIconLoader
     private val packageChangeObserver by lazy {
         dependencies.packageChangeObserver { change ->
-            when (change) {
-                AppCatalogChange.Refresh -> shellViewModel.refreshInstalledApps()
-                is AppCatalogChange.PackageRemoved ->
-                    shellViewModel.onConfirmedPackageRemoved(change.packageName, change.profile)
-            }
+            handleAppCatalogChange(
+                change = change,
+                invalidateWidgetPreviews = dependencies.widgetPreviewImageLoader::invalidatePreviews,
+                refreshInstalledApps = { shellViewModel.refreshInstalledApps() },
+                refreshWidgetProviders = { shellViewModel.refreshWidgetProviders() },
+                onConfirmedPackageRemoved = shellViewModel::onConfirmedPackageRemoved,
+            )
         }
     }
     private val wallpaperController get() = dependencies.wallpaperController
@@ -432,20 +437,28 @@ class MainActivity : ComponentActivity() {
             wallpaperController = wallpaperController,
         )
 
-        setContent {
-            LauncherShell(
-                viewModel = shellViewModel,
-                appVersionLabel = appVersionLabel,
-                appBuildIdentityLabel = appBuildIdentityLabel,
-                appIconLoader = appIconLoader,
-                widgetRenderers =
-                    LauncherWidgetRenderers(
-                        viewFactory = widgetHostGateway,
-                        previewImageLoader = dependencies.widgetPreviewImageLoader,
-                    ),
-                timeScapeWindowLayout = timeScapeWindowLayout,
-                onAction = launcherActionRouter::handle,
-            )
+        composeLauncherShellAfterStatusRefresh(
+            refreshStatuses = ::refreshPlatformStatuses,
+            compose = {
+                setContent {
+                    LauncherShell(
+                        viewModel = shellViewModel,
+                        appVersionLabel = appVersionLabel,
+                        appBuildIdentityLabel = appBuildIdentityLabel,
+                        appIconLoader = appIconLoader,
+                        widgetRenderers =
+                            LauncherWidgetRenderers(
+                                viewFactory = widgetHostGateway,
+                                previewImageLoader = dependencies.widgetPreviewImageLoader,
+                            ),
+                        timeScapeWindowLayout = timeScapeWindowLayout,
+                        onAction = launcherActionRouter::handle,
+                    )
+                }
+            },
+        )
+        if (shouldOpenDefaultHomeOnLaunch(intent.action, intent.categories)) {
+            launcherActionRouter.handle(LauncherShellAction.OpenDefaultHome)
         }
     }
 
@@ -467,7 +480,7 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         refreshPlatformStatuses()
-        if (intent.isLauncherHomeIntent()) {
+        if (shouldOpenDefaultHomeOnLaunch(intent.action, intent.categories)) {
             launcherActionRouter.handle(LauncherShellAction.OpenDefaultHome)
         }
     }
@@ -481,14 +494,11 @@ class MainActivity : ComponentActivity() {
         val notificationAccessStatus = notificationAccessGateway.getNotificationAccessStatus()
         val notificationAccessWasRevoked =
             shellViewModel.state.value.notificationAccessStatus == NotificationAccessStatus.REVOKED
-        shellViewModel.onHomeRoleStatusChanged(
-            homeRoleStatus =
-                startupPlatformValue(
-                    fallback = HomeRoleStatus.UNKNOWN,
-                    read = homeRoleGateway::getHomeRoleStatus,
-                ),
+        refreshLauncherPlatformStatuses(
+            readHomeRoleStatus = homeRoleGateway::getHomeRoleStatus,
             notificationAccessStatus = notificationAccessStatus,
             overlayDockPermissionStatus = overlayDockPermissionGateway.getOverlayDockPermissionStatus(),
+            publishStatuses = shellViewModel::onHomeRoleStatusChanged,
         )
         if (
             notificationAccessStatus == NotificationAccessStatus.REVOKED &&
@@ -574,6 +584,43 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+internal fun shouldOpenDefaultHomeOnLaunch(
+    action: String?,
+    categories: Set<String>?,
+): Boolean =
+    isLauncherHomeIntent(
+        action = action,
+        categories = categories,
+    )
+
+internal fun composeLauncherShellAfterStatusRefresh(
+    refreshStatuses: () -> Unit,
+    compose: () -> Unit,
+) {
+    refreshStatuses()
+    compose()
+}
+
+internal fun refreshLauncherPlatformStatuses(
+    readHomeRoleStatus: () -> HomeRoleStatus,
+    notificationAccessStatus: NotificationAccessStatus,
+    overlayDockPermissionStatus: OverlayDockPermissionStatus,
+    publishStatuses: (
+        homeRoleStatus: HomeRoleStatus,
+        notificationAccessStatus: NotificationAccessStatus,
+        overlayDockPermissionStatus: OverlayDockPermissionStatus,
+    ) -> Unit,
+) {
+    publishStatuses(
+        startupPlatformValue(
+            fallback = HomeRoleStatus.UNKNOWN,
+            read = readHomeRoleStatus,
+        ),
+        notificationAccessStatus,
+        overlayDockPermissionStatus,
+    )
+}
+
 private const val BACKUP_DOCUMENT_MIME_TYPE = "application/json"
 private const val BACKUP_DOCUMENT_NAME = "riffle-backup.json"
 private const val FOLDABLE_LAYOUT_LOG_TAG = "RiffleFoldableLayout"
@@ -608,6 +655,21 @@ internal fun <Value> startupPlatformValueOrNull(read: () -> Value?): Value? =
     }
 
 internal fun <Value> startupPlatformFlow(read: () -> Flow<Value>): Flow<Value> = flow { emitAll(read()) }.catch { }
+
+internal fun handleAppCatalogChange(
+    change: AppCatalogChange,
+    invalidateWidgetPreviews: () -> Unit,
+    refreshInstalledApps: () -> Unit,
+    refreshWidgetProviders: () -> Unit,
+    onConfirmedPackageRemoved: (AppPackageName, AppProfile) -> Unit,
+) {
+    invalidateWidgetPreviews()
+    when (change) {
+        AppCatalogChange.Refresh -> refreshInstalledApps()
+        is AppCatalogChange.PackageRemoved -> onConfirmedPackageRemoved(change.packageName, change.profile)
+    }
+    refreshWidgetProviders()
+}
 
 private fun String.launcherBuildTypeLabel(): String =
     when {

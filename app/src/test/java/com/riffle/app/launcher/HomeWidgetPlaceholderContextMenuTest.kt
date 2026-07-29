@@ -13,6 +13,26 @@ import org.junit.Test
 
 class HomeWidgetPlaceholderContextMenuTest {
     @Test
+    fun editSurfaceExposesOnlyProviderSupportedResizeAxes() {
+        val widget =
+            WidgetItem(
+                id = LauncherItemId("widget"),
+                appWidgetId = HostedWidgetId(42),
+                label = "Calendar",
+                resizeConstraints =
+                    WidgetResizeConstraints(
+                        supportsHorizontalResize = true,
+                        supportsVerticalResize = false,
+                    ),
+            )
+
+        assertEquals(
+            listOf("Make wider", "Make narrower"),
+            widget.resizeHandleLabels(),
+        )
+    }
+
+    @Test
     fun widgetPlaceholderMenuExposesOnlyProviderSupportedResizeAxis() {
         val widget =
             WidgetItem(

@@ -31,13 +31,14 @@ internal fun dockSurfaceMetrics(
     dock: DockModel,
     isEditing: Boolean,
     availableWidthDp: Int,
+    previewSlotCount: Int = 0,
 ): DockSurfaceMetrics? {
     val renderedSlotCount =
         dockRenderedSlotCount(
             capacity = dock.capacity,
             itemCount = dock.items.size,
             isEditing = isEditing,
-        )
+        ) + previewSlotCount.coerceAtLeast(0)
     if (
         !dockBackgroundVisible(
             capacity = dock.capacity,
@@ -179,6 +180,7 @@ private fun expandedOverflowSurfaceMetrics(
     ).copy(containerWidthDp = mainSurfaceMetrics.containerWidthDp)
 
 @Composable
+@Suppress("LongParameterList")
 internal fun DockSurfaceRow(
     dock: DockModel,
     surfaceMetrics: DockSurfaceMetrics,
@@ -187,6 +189,7 @@ internal fun DockSurfaceRow(
     appIconLoader: AppIconLoader,
     modifier: Modifier = Modifier,
     renderBackground: Boolean = true,
+    widgetPickerDockPreview: WidgetPickerDockPlacementPreview? = null,
 ) {
     Box(
         modifier =
@@ -212,6 +215,7 @@ internal fun DockSurfaceRow(
                 isEditing = isEditing,
                 presentation = presentation,
                 appIconLoader = appIconLoader,
+                widgetPickerDockPreview = widgetPickerDockPreview,
             )
         }
     }

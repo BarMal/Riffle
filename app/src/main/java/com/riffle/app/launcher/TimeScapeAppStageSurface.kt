@@ -23,7 +23,6 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -90,6 +89,7 @@ import com.riffle.core.domain.launcher.cards.TimeScapeTemplateCatalogDefaults
 import com.riffle.core.domain.launcher.cards.TimeScapeWindowLayout
 import com.riffle.core.domain.launcher.cards.variantFor
 import com.riffle.core.domain.launcher.cards.visibleStaticElements
+import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.settings.TimeScapeCardStackResolution
 import com.riffle.core.domain.launcher.settings.TimeScapeViewportDp
@@ -203,7 +203,26 @@ internal fun TimeScapeAppStageSurface(
     }
 
     Surface(
-        modifier = modifier.fillMaxSize(),
+        modifier =
+            modifier
+                .fillMaxSize()
+                // Reuse the persisted gesture bindings, but only claim mode exit and stage
+                // navigation here. Focused cards consume their one-finger vertical drags first.
+                .homeGestureInput(
+                    enabled = detailOrigin == null,
+                    settings = state.launcherSettings.gestures.homeGestures,
+                    onAction = onAction,
+                    actionFilter = { action ->
+                        when (action) {
+                            LauncherShellAction.SelectNextAppStage,
+                            LauncherShellAction.SelectPreviousAppStage,
+                            LauncherShellAction.SelectLauncherViewMode(LauncherViewMode.STANDARD_APP_DRAWER),
+                            -> true
+
+                            else -> false
+                        }
+                    },
+                ),
         color = Color.Transparent,
         contentColor = MaterialTheme.colorScheme.onSurface,
     ) {
@@ -305,7 +324,12 @@ internal fun TimeScapeAppStageSurface(
                             )
                         }
                         Column(modifier = Modifier.width(paneLayout.splineWidthDp.dp).fillMaxSize()) {
-                            TimeScapeStageHeader(selectedStage, state, onAction)
+                            TimeScapeStageHeader(
+                                selectedStage = selectedStage,
+                                stages = shellState.snapshot.stages,
+                                state = state,
+                                onAction = onAction,
+                            )
                             TimeScapeStageBody(
                                 selectedStage = selectedStage,
                                 state = state,
@@ -374,7 +398,12 @@ private fun TimeScapeCompactContent(
     onAction: (LauncherShellAction) -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        TimeScapeStageHeader(selectedStage, state, onAction)
+        TimeScapeStageHeader(
+            selectedStage = selectedStage,
+            stages = shellState.snapshot.stages,
+            state = state,
+            onAction = onAction,
+        )
         TimeScapeStageBody(
             selectedStage = selectedStage,
             state = state,
@@ -648,6 +677,7 @@ private fun TimeScapeSupportingPane(
 @Composable
 private fun TimeScapeStageHeader(
     selectedStage: AppStage?,
+    stages: List<AppStage>,
     state: LauncherShellState,
     onAction: (LauncherShellAction) -> Unit,
 ) {
@@ -655,6 +685,17 @@ private fun TimeScapeStageHeader(
     var overflowExpanded by rememberSaveable(selectedStage?.let(::timeScapeStageSelectorItemKey)) {
         mutableStateOf(false)
     }
+    var addStageExpanded by rememberSaveable(selectedStage?.let(::timeScapeStageSelectorItemKey)) {
+        mutableStateOf(false)
+    }
+    val pinnedStageIds = stages.filter(AppStage::isPinned).map(AppStage::id).toSet()
+    val addableApps =
+        state.installedApps
+            .filterNot { app ->
+                AppStageId(app.identity.packageName, app.identity.profile.id) in pinnedStageIds
+            }
+            .distinctBy { app -> "${app.identity.profile.id.value}:${app.identity.packageName.value}" }
+            .sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { app -> app.label })
     val selectedApp =
         selectedStage?.let { stage ->
             state.installedApps.firstOrNull { app ->
@@ -678,6 +719,29 @@ private fun TimeScapeStageHeader(
             Text(text = "TimeScape", style = MaterialTheme.typography.labelMedium)
         }
         if (selectedStage != null) {
+            if (addableApps.isNotEmpty()) {
+                Box {
+                    TextButton(onClick = { addStageExpanded = true }) { Text("Add stage") }
+                    RiffleContextMenu(
+                        expanded = addStageExpanded,
+                        onDismissRequest = { addStageExpanded = false },
+                    ) {
+                        addableApps.forEach { app ->
+                            DropdownMenuItem(
+                                text = { Text("Pin ${app.label}") },
+                                onClick = {
+                                    addStageExpanded = false
+                                    onAction(
+                                        LauncherShellAction.ToggleAppStagePinned(
+                                            AppStageId(app.identity.packageName, app.identity.profile.id),
+                                        ),
+                                    )
+                                },
+                            )
+                        }
+                    }
+                }
+            }
             TextButton(onClick = { onAction(LauncherShellAction.ToggleAppStagePinned(selectedStage.id)) }) {
                 Text(if (selectedStage.isPinned) "Unpin" else "Pin")
             }
@@ -688,7 +752,7 @@ private fun TimeScapeStageHeader(
                 ) {
                     Text(text = "⋮")
                 }
-                DropdownMenu(
+                RiffleContextMenu(
                     expanded = overflowExpanded,
                     onDismissRequest = { overflowExpanded = false },
                 ) {
