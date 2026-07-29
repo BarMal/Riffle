@@ -31,6 +31,7 @@ class SettingsPagesTest {
                 "App drawer" to SettingsPage.APPS,
                 "Permissions" to SettingsPage.PERMISSIONS,
                 "Backup" to SettingsPage.BACKUP,
+                "About" to SettingsPage.VERSION,
             ),
             settingsMainPageEntries().map { entry ->
                 entry.label to entry.page
@@ -249,6 +250,19 @@ class SettingsPagesTest {
             settingsMainPageEntries().map { entry -> entry.page },
             entries.map { entry -> entry.id.settingsPage() },
         )
+    }
+
+    @Test
+    fun aboutSettingsEntryRemainsReachableThroughSettingsSearch() {
+        val entries = settingsLauncherSearchEntries()
+        val about = entries.single { entry -> entry.id.value == "version" }
+        val results =
+            LauncherSearchProvider()
+                .search(query = "build", apps = emptyList(), settingsEntries = entries)
+
+        assertEquals("About", about.title)
+        assertEquals(SettingsPage.VERSION, about.id.settingsPage())
+        assertEquals(listOf("About"), results.map { result -> result.title })
     }
 
     @Test

@@ -192,6 +192,12 @@ private fun systemSettingsPageEntries(status: SettingsOverviewStatus): List<Sett
             group = SettingsPageGroup.SYSTEM,
             searchAliases = listOf("system", "launcher backup", "restore", "import", "export"),
         ),
+        SettingsPageEntry(
+            label = "About",
+            subtitle = "Version and build information",
+            page = SettingsPage.VERSION,
+            group = SettingsPageGroup.SYSTEM,
+        ),
     )
 
 private fun SettingsOverviewStatus.permissionsSummary(): String =
