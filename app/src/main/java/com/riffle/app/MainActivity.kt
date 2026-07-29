@@ -451,6 +451,9 @@ class MainActivity : ComponentActivity() {
                 onAction = launcherActionRouter::handle,
             )
         }
+        if (shouldOpenDefaultHomeOnLaunch(intent.action, intent.categories)) {
+            launcherActionRouter.handle(LauncherShellAction.OpenDefaultHome)
+        }
     }
 
     override fun onResume() {
@@ -577,6 +580,15 @@ class MainActivity : ComponentActivity() {
         Toast.makeText(this, "Widget setup was cancelled. Try again.", Toast.LENGTH_SHORT).show()
     }
 }
+
+internal fun shouldOpenDefaultHomeOnLaunch(
+    action: String?,
+    categories: Set<String>?,
+): Boolean =
+    isLauncherHomeIntent(
+        action = action,
+        categories = categories,
+    )
 
 private const val BACKUP_DOCUMENT_MIME_TYPE = "application/json"
 private const val BACKUP_DOCUMENT_NAME = "riffle-backup.json"
