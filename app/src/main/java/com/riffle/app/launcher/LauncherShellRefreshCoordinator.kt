@@ -31,9 +31,7 @@ internal class LauncherShellRefreshCoordinator(
                 notificationStaleFilter = notificationDependencies.notificationStaleFilter,
                 nowEpochMillis = notificationDependencies.epochMillisProvider.nowEpochMillis(),
             )
-        return refreshedState
-            .withReconciledCardsChapterSelection()
-            .withRefreshedGeneratedPages(installedAppDependencies.homeLayoutRepository)
+        return refreshedState.withRefreshedGeneratedPages(installedAppDependencies.homeLayoutRepository)
     }
 
     fun refreshWidgetProviders(currentState: LauncherShellState): LauncherShellState =

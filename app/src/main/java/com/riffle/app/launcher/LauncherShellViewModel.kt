@@ -28,13 +28,11 @@ import com.riffle.core.domain.launcher.home.FolderEngine
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
-import com.riffle.core.domain.launcher.home.HomeLayoutKey
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
 import com.riffle.core.domain.launcher.home.HomeLayoutSet
 import com.riffle.core.domain.launcher.home.HomeShortcutEngine
 import com.riffle.core.domain.launcher.home.HomeShortcutResult
 import com.riffle.core.domain.launcher.home.HostedWidgetId
-import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.home.LauncherViewModeAvailability
 import com.riffle.core.domain.launcher.home.PlacementRejectionReason
 import com.riffle.core.domain.launcher.home.WidgetEditResult
@@ -43,7 +41,6 @@ import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettingsRepository
 import com.riffle.core.domain.launcher.settings.stagePreferencesFor
-import com.riffle.core.domain.launcher.settings.withMigratedStagePreferences
 import com.riffle.core.domain.launcher.settings.withStagePreferences
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -309,10 +306,6 @@ class LauncherShellViewModel(
     }
 
     fun onHomePageEdited(action: LauncherShellAction) {
-        if (action.isCardsChapterAction()) {
-            mutableState.value = mutableState.value.withCardsChapterAction(action, launcherSettingsRepository)
-            return
-        }
         if (action.isAppStageAction()) {
             val currentState = mutableState.value
             val snapshot = appStageStateReconciler.reconcile(currentState).snapshot
@@ -389,15 +382,6 @@ class LauncherShellViewModel(
     }
 }
 
-private fun LauncherShellAction.isCardsChapterAction(): Boolean =
-    when (this) {
-        is LauncherShellAction.SelectCardsChapter,
-        is LauncherShellAction.ToggleCardsChapterPinned,
-        -> true
-
-        else -> false
-    }
-
 private fun LauncherShellAction.isAppStageAction(): Boolean =
     when (this) {
         is LauncherShellAction.SelectAppStage,
@@ -408,35 +392,6 @@ private fun LauncherShellAction.isAppStageAction(): Boolean =
 
         else -> false
     }
-
-private fun LauncherShellState.withCardsChapterAction(
-    action: LauncherShellAction,
-    launcherSettingsRepository: LauncherSettingsRepository,
-): LauncherShellState {
-    val preferences = launcherSettings.cards.chapterPreferences
-    val updatedPreferences =
-        when (action) {
-            is LauncherShellAction.SelectCardsChapter -> preferences.select(action.chapterId)
-            is LauncherShellAction.ToggleCardsChapterPinned ->
-                if (action.chapterId in preferences.pinnedChapterIds) {
-                    preferences.unpin(action.chapterId)
-                } else {
-                    preferences.pin(action.chapterId)
-                }
-
-            else -> return this
-        }
-    val updatedState =
-        copy(
-            launcherSettings =
-                launcherSettings.copy(
-                    cards = launcherSettings.cards.copy(chapterPreferences = updatedPreferences),
-                ),
-        )
-            .withReconciledCardsChapterSelection()
-    launcherSettingsRepository.saveLauncherSettings(updatedState.launcherSettings)
-    return updatedState
-}
 
 private fun LauncherShellState.withAppStageAction(
     action: LauncherShellAction,
@@ -612,10 +567,7 @@ private fun createInitialState(
     val layoutSet = initialLayoutSet ?: HomeLayoutSet.fromLayout(HomeLayoutDefaults.standard())
 
     val storedSettings = launcherSettingsRepository.loadLauncherSettings() ?: LauncherSettings()
-    val launcherSettings =
-        storedSettings.copy(
-            cards = storedSettings.cards.withMigratedStagePreferences(layoutSet.stagePreferenceLayoutKeys()),
-        )
+    val launcherSettings = storedSettings
     if (launcherSettings != storedSettings) {
         launcherSettingsRepository.saveLauncherSettings(launcherSettings)
     }
@@ -638,12 +590,6 @@ private fun createInitialState(
         setupCardDismissed = firstRunRepository.isSetupCardDismissed(),
     )
 }
-
-private fun HomeLayoutSet.stagePreferenceLayoutKeys(): Set<HomeLayoutKey> =
-    layouts.keys +
-        HomeLayoutDeviceClass.entries.map { deviceClass ->
-            HomeLayoutKey(viewMode = LauncherViewMode.CARD_INTERFACE, deviceClass = deviceClass)
-        }
 
 private fun HomeLayoutSet.selectInitialDeviceClass(
     deviceClass: HomeLayoutDeviceClass,

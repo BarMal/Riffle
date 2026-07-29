@@ -6,6 +6,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.platform.LocalDensity
@@ -59,6 +62,38 @@ class TimeScapeAdaptiveLayoutInteractionTest {
         assertTrue(paneBounds.top >= windowBounds.top + SAFE_TOP_PX - PIXEL_TOLERANCE)
         assertTrue(paneBounds.right <= windowBounds.right - SAFE_END_PX + PIXEL_TOLERANCE)
         assertTrue(paneBounds.bottom <= windowBounds.bottom - SAFE_BOTTOM_PX + PIXEL_TOLERANCE)
+    }
+
+    @Test
+    fun rotationLikeWindowResizeKeepsTimeScapeNavigationReachable() {
+        var widthDp by mutableIntStateOf(360)
+        var heightDp by mutableIntStateOf(800)
+        composeRule.setContent {
+            CompositionLocalProvider(LocalDensity provides Density(TEST_WINDOW_DENSITY)) {
+                MaterialTheme {
+                    Box(
+                        modifier =
+                            Modifier.width(widthDp.dp)
+                                .height(heightDp.dp)
+                                .clipToBounds(),
+                    ) {
+                        TimeScapeAppStageSurface(
+                            state = LauncherShellState(notificationAccessStatus = NotificationAccessStatus.NOT_GRANTED),
+                            windowLayout = TimeScapeWindowLayout(widthDp, heightDp),
+                            onAction = {},
+                        )
+                    }
+                }
+            }
+        }
+
+        composeRule.runOnIdle {
+            widthDp = 800
+            heightDp = 360
+        }
+
+        composeRule.onNodeWithText("Stages").assertIsDisplayed()
+        composeRule.onNodeWithText("Next").assertIsDisplayed()
     }
 
     private fun setContent(

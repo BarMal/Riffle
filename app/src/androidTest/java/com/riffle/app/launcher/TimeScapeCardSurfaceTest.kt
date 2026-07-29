@@ -141,6 +141,72 @@ class TimeScapeCardSurfaceTest {
     }
 
     @Test
+    fun appStageSurfaceOffersInstalledAppsBeforeNotificationsExist() {
+        val app = timeScapeTestApp()
+        val actions = mutableListOf<LauncherShellAction>()
+
+        composeRule.setContent {
+            MaterialTheme {
+                TimeScapeAppStageSurface(
+                    state =
+                        LauncherShellState(
+                            notificationAccessStatus = NotificationAccessStatus.GRANTED,
+                            installedApps = listOf(app),
+                        ),
+                    onAction = actions::add,
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("Choose an app to keep as a stage.").assertIsDisplayed()
+        composeRule.onNodeWithText("Pin ${app.label}").performClick()
+        assertEquals(
+            LauncherShellAction.ToggleAppStagePinned(
+                AppStageId(app.identity.packageName, app.identity.profile.id),
+            ),
+            actions.single(),
+        )
+    }
+
+    @Test
+    fun emptyPinnedStageKeepsLaunchAffordanceWithoutNotificationAccess() {
+        val app = timeScapeTestApp()
+        val stageId = AppStageId(app.identity.packageName, app.identity.profile.id)
+        val actions = mutableListOf<LauncherShellAction>()
+
+        composeRule.setContent {
+            MaterialTheme {
+                TimeScapeAppStageSurface(
+                    state =
+                        LauncherShellState(
+                            notificationAccessStatus = NotificationAccessStatus.NOT_GRANTED,
+                            installedApps = listOf(app),
+                            launcherSettings =
+                                LauncherSettings(
+                                    cards =
+                                        CardsSettings(
+                                            stagePreferencesByLayout =
+                                                mapOf(
+                                                    HomeLayoutKey(LauncherViewMode.STANDARD_APP_DRAWER) to
+                                                        AppStagePreferences(
+                                                            pinnedStageIds = listOf(stageId),
+                                                            selectedStageId = stageId,
+                                                        ),
+                                                ),
+                                        ),
+                                ),
+                        ),
+                    onAction = actions::add,
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("Stage ready").assertIsDisplayed()
+        composeRule.onNodeWithText("Open ${app.label}").performClick()
+        assertEquals(LauncherShellAction.LaunchApp(app.identity), actions.single())
+    }
+
+    @Test
     fun appStageSurfaceRendersTheFocusedAppStage() {
         val app =
             InstalledApp(
@@ -298,6 +364,89 @@ class TimeScapeCardSurfaceTest {
         composeRule.onNodeWithText("Back").performClick()
         composeRule.mainClock.advanceTimeBy(200)
         composeRule.onNodeWithText("Older message").assertIsDisplayed()
+    }
+
+    @Test
+    fun notificationRefreshKeepsFocusedCardByStableIdentity() {
+        val app = timeScapeTestApp()
+        val initial =
+            timeScapeTestState(
+                app,
+                timeScapeTestNotification(app).copy(text = "Before refresh"),
+            )
+        var state by mutableStateOf(initial)
+
+        composeRule.setContent {
+            MaterialTheme { TimeScapeAppStageSurface(state = state, onAction = {}) }
+        }
+
+        composeRule.onNodeWithText("Before refresh").performClick()
+        composeRule.runOnIdle {
+            state =
+                initial.copy(
+                    notificationGroupsByApp =
+                        initial.notificationGroupsByApp.map { group ->
+                            group.copy(
+                                notifications =
+                                    group.notifications.map { notification ->
+                                        notification.copy(text = "After refresh")
+                                    },
+                            )
+                        },
+                )
+        }
+
+        composeRule.onNodeWithText("After refresh").assertIsDisplayed()
+    }
+
+    @Test
+    fun compactStageSelectorRoutesNamedPreviousAndNextActions() {
+        val first = timeScapeTestApp()
+        val second =
+            first.copy(
+                identity =
+                    first.identity.copy(
+                        packageName = AppPackageName("com.example.calendar"),
+                    ),
+                label = "Calendar",
+            )
+        val firstNotification = timeScapeTestNotification(first)
+        val secondNotification =
+            firstNotification.copy(
+                key = LauncherNotificationKey("calendar"),
+                packageName = second.identity.packageName,
+                title = "Calendar event",
+            )
+        val actions = mutableListOf<LauncherShellAction>()
+        val state =
+            LauncherShellState(
+                notificationAccessStatus = NotificationAccessStatus.GRANTED,
+                installedApps = listOf(first, second),
+                profileContentVisibility =
+                    mapOf(
+                        first.identity.profile.id to AppProfileContentVisibility.VISIBLE,
+                    ),
+                notificationGroupsByApp =
+                    listOf(
+                        notificationGroup(first, firstNotification),
+                        notificationGroup(second, secondNotification),
+                    ),
+            )
+
+        composeRule.setContent {
+            MaterialTheme { TimeScapeAppStageSurface(state = state, onAction = actions::add) }
+        }
+
+        composeRule.onNodeWithText("Next").performClick()
+        composeRule.onNodeWithText("Previous").performClick()
+
+        assertEquals(
+            listOf(
+                LauncherShellAction.SelectNextAppStage,
+                LauncherShellAction.SelectPreviousAppStage,
+            ),
+            actions,
+        )
     }
 
     @Test
@@ -1224,6 +1373,18 @@ class TimeScapeCardSurfaceTest {
             title = "New message",
             text = "Hello from TimeScape",
             postedAtEpochMillis = 10,
+        )
+
+    private fun notificationGroup(
+        app: InstalledApp,
+        notification: LauncherNotification,
+    ): AppNotificationGroup =
+        AppNotificationGroup(
+            packageName = app.identity.packageName,
+            profileId = app.identity.profile.id,
+            latestCategory = NotificationCategory.MESSAGE,
+            latestAgeBucket = NotificationAgeBucket.RECENT,
+            notifications = listOf(notification),
         )
 
     private fun timeScapeTestState(

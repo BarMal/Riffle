@@ -13,8 +13,6 @@ import com.riffle.core.domain.launcher.apps.InstalledAppRefreshResult
 import com.riffle.core.domain.launcher.apps.InstalledAppRepository
 import com.riffle.core.domain.launcher.cards.AppStageId
 import com.riffle.core.domain.launcher.cards.AppStagePreferences
-import com.riffle.core.domain.launcher.cards.CardsChapterId
-import com.riffle.core.domain.launcher.cards.CardsChapterPreferences
 import com.riffle.core.domain.launcher.home.HomeLayoutKey
 import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.notifications.LauncherNotification
@@ -162,37 +160,6 @@ class LauncherShellNotificationStateTest {
                 .stagePreferencesFor(previousHarness.viewModel.state.value.homeLayoutSet.activeKey)
                 .selectedStageId,
         )
-    }
-
-    @Test
-    fun refreshPersistsOverviewWhenTheSelectedTransientChapterDisappears() {
-        val mail = CardsChapterId.App(AppPackageName("com.riffle.mail"), AppProfile.personal().id)
-        val settingsRepository =
-            FakeLauncherSettingsRepository(
-                LauncherSettings(
-                    cards = CardsSettings(CardsChapterPreferences(selectedChapterId = mail)),
-                ),
-            )
-        val notificationRepository =
-            FakeNotificationRepository(
-                notifications = listOf(notification(key = "mail-1", packageName = "com.riffle.mail")),
-            )
-        val viewModel =
-            LauncherShellViewModel(
-                firstRunRepository = FakeFirstRunRepository(),
-                launcherSettingsRepository = settingsRepository,
-                platformDependencies =
-                    LauncherShellPlatformDependencies(notificationRepository = notificationRepository),
-            )
-
-        runBlocking { viewModel.refreshNotifications().join() }
-        assertEquals(mail, viewModel.state.value.cardsChapterState().preferences.selectedChapterId)
-
-        notificationRepository.notifications = emptyList()
-        runBlocking { viewModel.refreshNotifications().join() }
-
-        assertEquals(CardsChapterId.Overview, viewModel.state.value.cardsChapterState().preferences.selectedChapterId)
-        assertEquals(CardsChapterId.Overview, settingsRepository.settings.cards.chapterPreferences.selectedChapterId)
     }
 
     @Test
