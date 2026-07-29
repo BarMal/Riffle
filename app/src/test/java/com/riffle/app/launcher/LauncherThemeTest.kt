@@ -2,6 +2,7 @@ package com.riffle.app.launcher
 
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.settings.LauncherThemeAccent
@@ -161,6 +162,16 @@ class LauncherThemeTest {
         assertEquals(1f, tokens.overlayAlpha)
         assertEquals(1f, tokens.panelColor.alpha)
         assertEquals(1f, tokens.menuColor.alpha)
+    }
+
+    @Test
+    fun translucentSurfaceChoosesReadableForegroundForDarkTransparentCustomColour() {
+        val customSurface = Color(0x00101010)
+        val foreground = translucentSurfaceContentColor(customSurface, overlayAlpha = 0.78f, fallback = Color.Black)
+        val renderedSurface = customSurface.copy(alpha = 0.78f).compositeOver(Color.Black)
+
+        assertEquals(Color.White, foreground)
+        assertTrue(contrastRatio(foreground, renderedSurface) >= 4.5f)
     }
 
     @Test

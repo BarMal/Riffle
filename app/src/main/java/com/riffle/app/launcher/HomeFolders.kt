@@ -191,7 +191,7 @@ fun FolderSurface(
                 .windowInsetsPadding(WindowInsets.safeDrawing),
         shape = LocalLauncherPanelShape.current,
         color = launcherPanelSurfaceColor(),
-        contentColor = MaterialTheme.colorScheme.onSurface,
+        contentColor = launcherPanelContentColor(),
     ) {
         Column(
             modifier =

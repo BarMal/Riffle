@@ -148,6 +148,7 @@ private fun SearchTopControls(
                 .widthIn(max = SEARCH_CONTROLS_MAX_WIDTH_DP.dp)
                 .fillMaxWidth(),
         shape = LocalLauncherPanelShape.current,
+        contentColor = launcherPanelContentColor(),
         color =
             launcherPanelSurfaceColor().copy(
                 alpha = minOf(LocalLauncherThemeSurfaceTokens.current.overlayAlpha, SEARCH_CONTROLS_ALPHA),
@@ -344,7 +345,7 @@ private fun SearchResultListItem(
                 Text(
                     text = result.label,
                     style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurface,
+                    color = launcherPanelContentColor(),
                 )
                 Text(
                     text = supportingText,
@@ -404,7 +405,7 @@ private fun SearchResultIconTile(
             Text(
                 text = result.label,
                 style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurface,
+                color = launcherPanelContentColor(),
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )

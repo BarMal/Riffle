@@ -17,6 +17,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
@@ -86,6 +87,8 @@ internal val LocalLauncherThemeColorOverrides = staticCompositionLocalOf { Launc
 internal data class LauncherThemeSurfaceTokens(
     val panelColor: Color = Color.Unspecified,
     val menuColor: Color = Color.Unspecified,
+    val panelContentColor: Color = Color.Unspecified,
+    val menuContentColor: Color = Color.Unspecified,
     val overlayAlpha: Float = 1f,
 )
 
@@ -109,6 +112,13 @@ internal fun launcherThemeSurfaceTokens(
     return LauncherThemeSurfaceTokens(
         panelColor = colorScheme.surface.copy(alpha = overlayAlpha),
         menuColor = colorScheme.surfaceContainerHigh.copy(alpha = overlayAlpha),
+        panelContentColor = translucentSurfaceContentColor(colorScheme.surface, overlayAlpha, colorScheme.onSurface),
+        menuContentColor =
+            translucentSurfaceContentColor(
+                colorScheme.surfaceContainerHigh,
+                overlayAlpha,
+                colorScheme.onSurface,
+            ),
         overlayAlpha = overlayAlpha,
     )
 }
@@ -123,6 +133,35 @@ internal fun launcherPanelSurfaceColor(): Color {
 internal fun launcherMenuSurfaceColor(): Color {
     val color = LocalLauncherThemeSurfaceTokens.current.menuColor
     return if (color == Color.Unspecified) MaterialTheme.colorScheme.surfaceContainerHigh else color
+}
+
+@Composable
+internal fun launcherPanelContentColor(): Color {
+    val color = LocalLauncherThemeSurfaceTokens.current.panelContentColor
+    return if (color == Color.Unspecified) MaterialTheme.colorScheme.onSurface else color
+}
+
+@Composable
+internal fun launcherMenuContentColor(): Color {
+    val color = LocalLauncherThemeSurfaceTokens.current.menuContentColor
+    return if (color == Color.Unspecified) MaterialTheme.colorScheme.onSurface else color
+}
+
+internal fun translucentSurfaceContentColor(
+    surface: Color,
+    overlayAlpha: Float,
+    fallback: Color,
+): Color {
+    if (overlayAlpha >= 1f) return surface.contentColor(fallback)
+
+    val darkestBackdrop = surface.copy(alpha = overlayAlpha).compositeOver(Color.Black)
+    val lightestBackdrop = surface.copy(alpha = overlayAlpha).compositeOver(Color.White)
+    return listOf(Color.Black, Color.White).maxBy { candidate ->
+        minOf(
+            candidate.contrastRatioAgainst(darkestBackdrop),
+            candidate.contrastRatioAgainst(lightestBackdrop),
+        )
+    }
 }
 
 internal fun launcherCardShape(

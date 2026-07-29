@@ -157,6 +157,7 @@ fun LauncherPanel(
                     .fillMaxHeight(),
             shape = LocalLauncherPanelShape.current,
             color = launcherPanelSurfaceColor(),
+            contentColor = launcherPanelContentColor(),
             tonalElevation = 6.dp,
         ) {
             Column(

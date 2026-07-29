@@ -142,7 +142,7 @@ fun WidgetPickerSurface(
                     } else {
                         launcherPanelSurfaceColor()
                     },
-                contentColor = MaterialTheme.colorScheme.onSurface,
+                contentColor = launcherPanelContentColor(),
                 border =
                     if (isDragHandoffActive) {
                         null
@@ -534,6 +534,7 @@ private fun WidgetPickerAccessiblePlacementControls(
                 .testTag(WIDGET_PICKER_ACCESSIBLE_PLACEMENT_TEST_TAG),
         shape = RoundedCornerShape(16.dp),
         color = launcherPanelSurfaceColor(),
+        contentColor = launcherPanelContentColor(),
         tonalElevation = 2.dp,
     ) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
