@@ -92,14 +92,18 @@ needed before adding a parser, network client, persistence schema, or worker.
 
 ### Privacy and backup/restore
 
-- Feed URLs are user configuration and may be backed up only when the user includes launcher
-  settings. Cached article text, summaries, images, response headers, auth material, and
-  network error bodies are never backed up.
-- Backup may include feed identity, enabled state, refresh policy, selected template/slot
-  binding, and opaque fixed-length read/dismiss digests. It never includes the source URL,
-  query/tracking data, article content, credentials, or any reversible item identifier in the
-  persisted state. Restore validates feed configuration and schema versions, drops unsupported
-  entries, and starts with an empty cache; it never triggers a network request automatically.
+- Normalized public HTTPS feed URLs are user configuration and are backed up when the user
+  includes launcher settings. URL normalization removes tracking-only query parameters before
+  storage and backup; embedded userinfo, credentials, and unsupported schemes are rejected.
+  Cached article text, summaries, images, response headers, auth material, and network error
+  bodies are never backed up.
+- Backup may include the normalized feed URL, feed identity, enabled state, refresh policy,
+  selected template/slot binding, and opaque fixed-length read/dismiss digests. It never
+  includes raw tracking-bearing URLs, credentials, article content, or any reversible item
+  identifier. Restore validates each feed URL and schema version, drops invalid or unsupported
+  entries, restores valid configuration with an empty cache, and never triggers a network
+  request automatically. A restored feed refreshes only after the normal user/scheduler policy
+  permits it.
 - Work/private profile feed configuration and state remain profile-scoped. A locked or removed
   profile cannot contribute content to a visible feed stage. Diagnostics expose counts and
   failure categories only, not URLs, titles, article text, or account data.
