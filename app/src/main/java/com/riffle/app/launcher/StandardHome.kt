@@ -81,6 +81,7 @@ internal fun StandardHome(
     val widgetPickerDragInProgress = remember { mutableStateOf(false) }
     val widgetPickerDragPreview = remember { mutableStateOf<WidgetPickerDragPlacementPreview?>(null) }
     val workspaceGridBounds = remember { mutableStateOf<Rect?>(null) }
+    val dockBounds = remember { mutableStateOf<Rect?>(null) }
     val density = LocalDensity.current.density
     val actions =
         HomeWorkspaceActions(
@@ -94,6 +95,7 @@ internal fun StandardHome(
                     workspaceGridBounds.value = bounds
                 }
             },
+            onDockBoundsChanged = { bounds -> dockBounds.value = bounds },
             onBackgroundClick = {},
             onAction = onAction,
         )
@@ -123,7 +125,14 @@ internal fun StandardHome(
             onWidgetDragMoved = { provider, position, rootSize ->
                 val bounds = workspaceGridBounds.value
                 widgetPickerDragPreview.value =
-                    if (bounds == null || widgetPickerDropTarget(position, bounds) != WidgetAddTarget.HOME) {
+                    if (
+                        bounds == null ||
+                        widgetPickerDropTarget(
+                            position,
+                            workspaceBounds = bounds,
+                            dockBounds = dockBounds.value,
+                        ) != WidgetAddTarget.HOME
+                    ) {
                         null
                     } else {
                         widgetPickerDragPlacementPreviewFor(
@@ -142,7 +151,10 @@ internal fun StandardHome(
             onWidgetDropped = { provider, position, rootSize ->
                 val selectedPage = visibleLayout.selectedPage
                 val bounds = workspaceGridBounds.value
-                val target = bounds?.let { widgetPickerDropTarget(position, it) }
+                val target =
+                    bounds?.let {
+                        widgetPickerDropTarget(position, workspaceBounds = it, dockBounds = dockBounds.value)
+                    }
                 val cell = bounds?.let { widgetPickerDropCell(position, it, selectedPage.grid) }
                 val preview =
                     cell?.let {
@@ -585,6 +597,7 @@ internal data class HomeWorkspaceActions(
     val haptics: LauncherHaptics,
     val onDockInteractionHeightChanged: (Int) -> Unit = {},
     val onWorkspaceGridBoundsChanged: (LauncherPageId, Rect) -> Unit = { _, _ -> },
+    val onDockBoundsChanged: (Rect) -> Unit = {},
     val onBackgroundClick: () -> Unit = {},
     val onAction: (LauncherShellAction) -> Unit,
 )
@@ -614,10 +627,11 @@ internal fun widgetPickerDropCell(
 
 internal fun widgetPickerDropTarget(
     position: Offset,
-    gridBounds: Rect,
+    workspaceBounds: Rect,
+    dockBounds: Rect?,
 ): WidgetAddTarget? =
     when {
-        gridBounds.contains(position) -> WidgetAddTarget.HOME
-        position.y >= gridBounds.bottom -> WidgetAddTarget.DOCK
+        workspaceBounds.contains(position) -> WidgetAddTarget.HOME
+        dockBounds?.contains(position) == true -> WidgetAddTarget.DOCK
         else -> null
     }

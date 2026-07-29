@@ -9,6 +9,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
@@ -57,6 +59,9 @@ internal fun StandardHomeDockArea(
             Modifier
                 .fillMaxWidth()
                 .onSizeChanged { size -> actions.onDockInteractionHeightChanged(size.height) }
+                .onGloballyPositioned { coordinates ->
+                    actions.onDockBoundsChanged(coordinates.boundsInRoot())
+                }
                 .padding(
                     start = margins.start.dp,
                     end = margins.end.dp,
