@@ -24,7 +24,10 @@ class LauncherShellViewModelPermissionStatusTest {
                 .filterIsInstance<LauncherSearchResult.Setting>()
                 .single { result -> result.title == "Permissions" }
 
-        assertEquals("Home set", permissionsResult.subtitle)
+        assertEquals(
+            "Notifications allowed · Home set · Floating dock allowed",
+            permissionsResult.subtitle,
+        )
     }
 
     private class FakeFirstRunRepository : FirstRunRepository {

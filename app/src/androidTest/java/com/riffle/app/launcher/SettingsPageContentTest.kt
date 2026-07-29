@@ -134,6 +134,31 @@ class SettingsPageContentTest {
     }
 
     @Test
+    fun mainPageMakesNotificationAccessDiscoverable() {
+        composeRule.setContent {
+            MaterialTheme {
+                SettingsPageContent(
+                    modifier = Modifier,
+                    state =
+                        LauncherShellState(
+                            homeRoleStatus = HomeRoleStatus.DEFAULT_HOME,
+                            notificationAccessStatus = NotificationAccessStatus.NOT_GRANTED,
+                            overlayDockPermissionStatus = OverlayDockPermissionStatus.GRANTED,
+                        ).settingsSurfaceState(),
+                    page = SettingsPage.MAIN,
+                    onPageSelected = {},
+                    onAction = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("Permissions").assertExists()
+        composeRule
+            .onNodeWithText("Notifications not allowed · Home set · Floating dock allowed")
+            .assertExists()
+    }
+
+    @Test
     fun motionPageKeepsHapticsWithAccessibilityControls() {
         composeRule.setContent {
             MaterialTheme {

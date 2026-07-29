@@ -210,18 +210,11 @@ private fun systemSettingsPageEntries(status: SettingsOverviewStatus): List<Sett
     )
 
 private fun SettingsOverviewStatus.permissionsSummary(): String =
-    if (
-        notificationAccessStatus == NotificationAccessStatus.GRANTED &&
-        overlayDockPermissionStatus == OverlayDockPermissionStatus.GRANTED
-    ) {
-        homeRoleStatus.settingsOverviewLabel()
-    } else {
-        listOf(
-            homeRoleStatus.settingsOverviewLabel(),
-            notificationAccessStatus.settingsOverviewLabel("Notifications"),
-            overlayDockPermissionStatus.settingsOverviewLabel("Floating dock"),
-        ).joinToString(separator = " · ")
-    }
+    listOf(
+        notificationAccessStatus.settingsOverviewLabel("Notifications"),
+        homeRoleStatus.settingsOverviewLabel(),
+        overlayDockPermissionStatus.settingsOverviewLabel("Floating dock"),
+    ).joinToString(separator = " · ")
 
 private fun SettingsOverviewStatus.appsSummary(): String =
     "Apps, search results, and $hiddenAppCount hidden app${if (hiddenAppCount == 1) "" else "s"}"
