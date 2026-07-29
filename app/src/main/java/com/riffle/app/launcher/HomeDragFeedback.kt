@@ -135,11 +135,13 @@ internal fun Modifier.homeItemDrag(
         pointerInput(item.id, dragState.cell, dragState.cellSizePx) {
             var dragX = 0f
             var dragY = 0f
+            var dragMoved = false
 
             detectDragGesturesAfterLongPress(
                 onDragStart = {
                     dragX = 0f
                     dragY = 0f
+                    dragMoved = false
                     actions.haptics.longPress()
                     actions.onDragSessionChanged(
                         HomeDragSession(
@@ -152,6 +154,7 @@ internal fun Modifier.homeItemDrag(
                 },
                 onDrag = { change, dragAmount ->
                     change.consume()
+                    dragMoved = true
                     dragX += dragAmount.x
                     dragY += dragAmount.y
                     actions.onDragSessionChanged(
@@ -179,6 +182,9 @@ internal fun Modifier.homeItemDrag(
                 },
                 onDragCancel = {
                     actions.onDragSessionChanged(null)
+                    if (!dragMoved) {
+                        onStationaryLongPress?.invoke()
+                    }
                 },
             )
         }

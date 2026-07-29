@@ -14,7 +14,11 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.riffle.core.domain.launcher.home.FolderItem
+import com.riffle.core.domain.launcher.home.GridCell
+import com.riffle.core.domain.launcher.home.GridDimensions
+import com.riffle.core.domain.launcher.home.HomeLabelSettings
 import com.riffle.core.domain.launcher.home.LauncherItemId
+import com.riffle.core.domain.launcher.home.LauncherPageId
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -110,5 +114,50 @@ class HomeWorkspaceContextMenuTest {
             assertEquals(listOf(LauncherShellAction.MoveHomeItemToDock(folder.id)), actions)
             assertEquals(false, menuExpanded.value)
         }
+    }
+
+    @Test
+    fun cancelledStationaryLongPressOnHomeFolderShowsContextMenu() {
+        val folder = FolderItem(id = LauncherItemId("folder"), label = "Folder", items = emptyList())
+
+        composeRule.setContent {
+            MaterialTheme {
+                Box(modifier = Modifier.fillMaxSize()) {
+                    HomeFolder(
+                        folder = folder,
+                        dragState =
+                            HomeItemDragState(
+                                pageId = LauncherPageId("home"),
+                                cell = GridCell(column = 0, row = 0),
+                                cellSizePx = 100f,
+                                grid = GridDimensions(columns = 1, rows = 1),
+                                pageItems = listOf(folder),
+                            ),
+                        isEditing = false,
+                        presentation =
+                            HomeFolderPresentation(
+                                notificationCount = 0,
+                                labelSettings = HomeLabelSettings(),
+                                reducedMotion = false,
+                            ),
+                        appIconLoader = EmptyAppIconLoader,
+                        actions =
+                            HomeWorkspaceActions(
+                                onFolderOpen = {},
+                                onDragSessionChanged = {},
+                                haptics = NoopLauncherHaptics,
+                                onAction = {},
+                            ),
+                    )
+                }
+            }
+        }
+
+        composeRule.onNodeWithText(folder.label).performTouchInput {
+            down(center)
+            advanceEventTime(viewConfiguration.longPressTimeoutMillis + 50L)
+            cancel()
+        }
+        composeRule.onNodeWithText("Edit folder").assertExists()
     }
 }
