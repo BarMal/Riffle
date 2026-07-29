@@ -26,7 +26,6 @@ class WidgetPickerDialogTest {
                 target = WidgetAddTarget.DOCK,
                 pages = emptyList(),
                 selectedPageId = LauncherPageId("home"),
-                dockAvailableSlots = 2,
                 dockItemCount = 2,
                 availableWidthDp = 400,
                 availableHeightDp = 400,
@@ -53,7 +52,6 @@ class WidgetPickerDialogTest {
                 target = WidgetAddTarget.HOME,
                 pages = listOf(firstPage, secondPage),
                 selectedPageId = secondPage.id,
-                dockAvailableSlots = 0,
                 availableWidthDp = 400,
                 availableHeightDp = 400,
             )
@@ -72,6 +70,59 @@ class WidgetPickerDialogTest {
         emittedRequest = accessibleWidgetAddActionFor(selected)
         assertEquals(secondPage.id, emittedRequest?.targetPageId)
         assertEquals(selected.selectedCandidate?.cell, emittedRequest?.targetCell)
+        assertEquals(
+            "Weather on Home page second, Column 2, row 1; placement is ready.",
+            selected.accessiblePlacementAnnouncement(),
+        )
+    }
+
+    @Test
+    fun accessibleDockPlacementOffersInsertionWhenDockIsFullOrDisabled() {
+        val placement =
+            accessibleWidgetPlacementFor(
+                provider =
+                    widgetProvider(
+                        label = "Weather",
+                        packageName = "com.example.weather",
+                        className = ".Weather",
+                    ),
+                target = WidgetAddTarget.DOCK,
+                pages = emptyList(),
+                selectedPageId = LauncherPageId("home"),
+                dockItemCount = 2,
+                availableWidthDp = 400,
+                availableHeightDp = 400,
+            )
+
+        assertEquals(listOf(0, 1, 2), placement.candidates.map { it.dockIndex })
+        assertEquals(
+            "Weather in the Dock at Dock position 1; placement is ready.",
+            placement.accessiblePlacementAnnouncement(),
+        )
+    }
+
+    @Test
+    fun accessiblePlacementAnnouncementIncludesSelectionAndValidity() {
+        val provider = widgetProvider(label = "Weather", packageName = "com.example.weather", className = ".Weather")
+        val placement =
+            accessibleWidgetPlacementFor(
+                provider = provider,
+                target = WidgetAddTarget.DOCK,
+                pages = emptyList(),
+                selectedPageId = LauncherPageId("home"),
+                dockItemCount = 2,
+                availableWidthDp = 400,
+                availableHeightDp = 400,
+            )
+
+        assertEquals(
+            "Weather in the Dock at Dock position 2; placement is ready.",
+            placement.selectCandidate(placement.candidates[1]).accessiblePlacementAnnouncement(),
+        )
+        assertEquals(
+            "Weather cannot be placed at the selected dock target.",
+            placement.copy(candidates = emptyList()).accessiblePlacementAnnouncement(),
+        )
     }
 
     @Test

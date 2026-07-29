@@ -52,8 +52,10 @@ import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
@@ -417,7 +419,8 @@ private fun WidgetPickerAccessiblePlacementControls(
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(text = "Placement preview", style = MaterialTheme.typography.titleMedium)
             Text(
-                text = placement.accessiblePlacementDescription(),
+                text = placement.accessiblePlacementAnnouncement(),
+                modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -485,12 +488,14 @@ private fun WidgetPickerPlacementCandidate.placementPositionLabel(): String =
         else -> "Position unavailable"
     }
 
-private fun WidgetPickerAccessiblePlacement.accessiblePlacementDescription(): String =
+internal fun WidgetPickerAccessiblePlacement.accessiblePlacementAnnouncement(): String =
     when {
         !isValid -> "${provider.label} cannot be placed at the selected ${target.name.lowercase()} target."
         target == WidgetAddTarget.HOME && selectedCandidate?.pageId != null ->
-            "${provider.label} on Home page ${selectedCandidate?.pageId?.value}."
-        target == WidgetAddTarget.DOCK -> "${provider.label} in the Dock at the next available position."
+            "${provider.label} on Home page ${selectedCandidate?.pageId?.value}, " +
+                "${selectedCandidate?.placementPositionLabel()}; placement is ready."
+        target == WidgetAddTarget.DOCK ->
+            "${provider.label} in the Dock at ${selectedCandidate?.placementPositionLabel()}; placement is ready."
         else -> "${provider.label} placement is ready."
     }
 
