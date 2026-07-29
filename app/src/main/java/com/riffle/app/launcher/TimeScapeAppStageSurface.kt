@@ -75,7 +75,6 @@ import com.riffle.core.domain.launcher.cards.CardStackLayoutEntry
 import com.riffle.core.domain.launcher.cards.CardStackNavigationDirection
 import com.riffle.core.domain.launcher.cards.CardStackSettleRequest
 import com.riffle.core.domain.launcher.cards.LauncherCardId
-import com.riffle.core.domain.launcher.cards.TimeScapeDynamicSource
 import com.riffle.core.domain.launcher.cards.TimeScapeInteractionContext
 import com.riffle.core.domain.launcher.cards.TimeScapePaneLayoutPolicy
 import com.riffle.core.domain.launcher.cards.TimeScapePaneMode
@@ -195,7 +194,7 @@ internal fun TimeScapeAppStageSurface(
                 withFrameNanos { }
                 postureTransition = postureTransition.settle()
             }
-            val paneLayout =
+            val initialPaneLayout =
                 remember(adaptiveWindow, postureTransition.effectivePosture) {
                     TimeScapePaneLayoutPolicy().layoutFor(
                         adaptiveWindow.copy(posture = postureTransition.effectivePosture),
@@ -205,11 +204,11 @@ internal fun TimeScapeAppStageSurface(
                 remember(
                     state.launcherSettings.cards.timeScapeTemplateId,
                     state.settingsLayoutDeviceClass,
-                    paneLayout.mode,
+                    initialPaneLayout.mode,
                 ) {
                     TimeScapeTemplateCatalogDefaults.templates
                         .firstOrNull { template -> template.id == state.launcherSettings.cards.timeScapeTemplateId }
-                        ?.variantFor(state.settingsLayoutDeviceClass, paneLayout.mode)
+                        ?.variantFor(state.settingsLayoutDeviceClass, initialPaneLayout.mode)
                 }
             val railSide =
                 if (state.launcherSettings.cards.timeScapeRailSide == TimeScapeRailSide.TRAILING) {
@@ -217,24 +216,19 @@ internal fun TimeScapeAppStageSurface(
                 } else {
                     templateVariant?.railSide ?: TimeScapeRailSide.LEADING
                 }
-            val stageSlot =
-                templateVariant?.dynamicSlots?.firstOrNull { slot ->
-                    slot.source == TimeScapeDynamicSource.APP_STAGE_STACKS
+            val paneLayout =
+                remember(adaptiveWindow, postureTransition.effectivePosture, railSide) {
+                    TimeScapePaneLayoutPolicy().layoutFor(
+                        window = adaptiveWindow.copy(posture = postureTransition.effectivePosture),
+                        railSide = railSide,
+                    )
                 }
-            val templateContentTopDp =
-                stageSlot?.let { slot ->
-                    paneLayout.contentHeightDp * slot.placement.cell.row / templateVariant.canvas.grid.rows
-                } ?: 0
-            val templateContentHeightDp =
-                stageSlot?.let { slot ->
-                    paneLayout.contentHeightDp * slot.placement.span.rows / templateVariant.canvas.grid.rows
-                } ?: paneLayout.contentHeightDp
             Box(
                 modifier =
-                    Modifier.offset(y = (paneLayout.contentTopDp + templateContentTopDp).dp)
+                    Modifier.offset(y = paneLayout.contentTopDp.dp)
                         .offset(x = paneLayout.contentStartDp.dp)
                         .width(paneLayout.contentWidthDp.dp)
-                        .height(templateContentHeightDp.dp),
+                        .height(paneLayout.contentHeightDp.dp),
             ) {
                 if (paneLayout.mode == TimeScapePaneMode.COMPACT) {
                     TimeScapeCompactContent(

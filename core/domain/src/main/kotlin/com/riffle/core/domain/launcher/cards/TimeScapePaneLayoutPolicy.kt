@@ -55,7 +55,10 @@ data class TimeScapePaneLayout(
 /** Chooses TimeScape panes from the current usable window, never a device-name classification. */
 class TimeScapePaneLayoutPolicy {
     @Suppress("CyclomaticComplexMethod", "LongMethod", "MaxLineLength", "ReturnCount")
-    fun layoutFor(window: TimeScapeWindowLayout): TimeScapePaneLayout {
+    fun layoutFor(
+        window: TimeScapeWindowLayout,
+        railSide: TimeScapeRailSide = TimeScapeRailSide.LEADING,
+    ): TimeScapePaneLayout {
         val safeWidth = (window.widthDp - window.safeStartDp - window.safeEndDp).coerceAtLeast(0)
         val safeHeight = (window.heightDp - window.safeTopDp - window.safeBottomDp).coerceAtLeast(0)
         val verticalHinge =
@@ -111,7 +114,11 @@ class TimeScapePaneLayoutPolicy {
             )
         }
 
-        if (verticalHinge != null && leadingWidth < RAIL_WIDTH_DP + MIN_SPLINE_WIDTH_DP) {
+        val leadingRailWidth = if (railSide == TimeScapeRailSide.LEADING) RAIL_WIDTH_DP else 0
+        val trailingRailWidth = if (railSide == TimeScapeRailSide.TRAILING) RAIL_WIDTH_DP else 0
+        val leadingRegionIsTooNarrow = leadingWidth < leadingRailWidth + MIN_SPLINE_WIDTH_DP
+        val trailingRegionIsTooNarrow = trailingWidth < trailingRailWidth
+        if (verticalHinge != null && (leadingRegionIsTooNarrow || trailingRegionIsTooNarrow)) {
             val useTrailingRegion = trailingWidth > leadingWidth
             val compactWidth = if (useTrailingRegion) trailingWidth else leadingWidth
             return TimeScapePaneLayout(
@@ -129,18 +136,20 @@ class TimeScapePaneLayoutPolicy {
             )
         }
 
-        if (verticalHinge != null && leadingWidth >= RAIL_WIDTH_DP + MIN_SPLINE_WIDTH_DP && trailingWidth >= DETAIL_WIDTH_DP) {
+        val hasThreePaneLeadingRegion = leadingWidth >= leadingRailWidth + MIN_SPLINE_WIDTH_DP
+        val hasThreePaneTrailingRegion = trailingWidth >= DETAIL_WIDTH_DP + trailingRailWidth
+        if (verticalHinge != null && hasThreePaneLeadingRegion && hasThreePaneTrailingRegion) {
+            val splineWidth = (leadingWidth - leadingRailWidth).coerceAtMost(MAX_SPLINE_WIDTH_DP)
             return TimeScapePaneLayout(
                 mode = TimeScapePaneMode.THREE_PANE,
                 railWidthDp = RAIL_WIDTH_DP,
-                splineWidthDp = (leadingWidth - RAIL_WIDTH_DP).coerceAtMost(MAX_SPLINE_WIDTH_DP),
-                detailWidthDp = trailingWidth.coerceAtMost(DETAIL_WIDTH_DP),
+                splineWidthDp = splineWidth,
+                detailWidthDp = (trailingWidth - trailingRailWidth).coerceAtMost(DETAIL_WIDTH_DP),
                 hingeGapDp = hingeGap,
                 leadingRegionWidthDp = leadingWidth,
                 trailingRegionWidthDp = trailingWidth,
                 leadingRemainderDp =
-                    (leadingWidth - RAIL_WIDTH_DP - (leadingWidth - RAIL_WIDTH_DP).coerceAtMost(MAX_SPLINE_WIDTH_DP))
-                        .coerceAtLeast(0),
+                    (leadingWidth - leadingRailWidth - splineWidth).coerceAtLeast(0),
                 contentWidthDp = safeWidth,
                 contentTopDp = contentTop,
                 contentHeightDp = contentHeight,
@@ -148,17 +157,17 @@ class TimeScapePaneLayoutPolicy {
         }
 
         if (verticalHinge != null) {
+            val splineWidth = (leadingWidth - leadingRailWidth).coerceAtMost(MAX_SPLINE_WIDTH_DP)
             return TimeScapePaneLayout(
                 mode = TimeScapePaneMode.TWO_PANE,
                 railWidthDp = RAIL_WIDTH_DP,
-                splineWidthDp = (leadingWidth - RAIL_WIDTH_DP).coerceAtMost(MAX_SPLINE_WIDTH_DP),
+                splineWidthDp = splineWidth,
                 detailWidthDp = 0,
                 hingeGapDp = hingeGap,
                 leadingRegionWidthDp = leadingWidth,
                 trailingRegionWidthDp = trailingWidth,
                 leadingRemainderDp =
-                    (leadingWidth - RAIL_WIDTH_DP - (leadingWidth - RAIL_WIDTH_DP).coerceAtMost(MAX_SPLINE_WIDTH_DP))
-                        .coerceAtLeast(0),
+                    (leadingWidth - leadingRailWidth - splineWidth).coerceAtLeast(0),
                 contentWidthDp = safeWidth,
                 contentTopDp = contentTop,
                 contentHeightDp = contentHeight,

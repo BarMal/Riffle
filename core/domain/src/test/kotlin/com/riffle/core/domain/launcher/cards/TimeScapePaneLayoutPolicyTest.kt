@@ -123,6 +123,66 @@ class TimeScapePaneLayoutPolicyTest {
     }
 
     @Test
+    fun trailingRailIsReservedInsideMinimumThreePaneHingeRegions() {
+        val layout =
+            policy.layoutFor(
+                window =
+                    TimeScapeWindowLayout(
+                        widthDp = 872,
+                        heightDp = 800,
+                        safeStartDp = 8,
+                        safeEndDp = 8,
+                        separatingHinges = listOf(TimeScapeHingeBounds(368, 0, 400, 800)),
+                        posture = TimeScapePosture.UNFOLDED,
+                    ),
+                railSide = TimeScapeRailSide.TRAILING,
+            )
+
+        assertEquals(TimeScapePaneMode.THREE_PANE, layout.mode)
+        assertEquals(360, layout.splineWidthDp)
+        assertEquals(360, layout.detailWidthDp)
+        assertEquals(464, layout.trailingRegionWidthDp)
+        assertEquals(
+            layout.contentWidthDp,
+            layout.splineWidthDp +
+                layout.leadingRemainderDp +
+                layout.hingeGapDp +
+                layout.detailWidthDp +
+                layout.railWidthDp,
+        )
+    }
+
+    @Test
+    fun leadingRailRemainsReservedInsideMinimumThreePaneHingeRegions() {
+        val layout =
+            policy.layoutFor(
+                window =
+                    TimeScapeWindowLayout(
+                        widthDp = 872,
+                        heightDp = 800,
+                        safeStartDp = 8,
+                        safeEndDp = 8,
+                        separatingHinges = listOf(TimeScapeHingeBounds(472, 0, 504, 800)),
+                        posture = TimeScapePosture.UNFOLDED,
+                    ),
+                railSide = TimeScapeRailSide.LEADING,
+            )
+
+        assertEquals(TimeScapePaneMode.THREE_PANE, layout.mode)
+        assertEquals(104, layout.railWidthDp)
+        assertEquals(360, layout.splineWidthDp)
+        assertEquals(360, layout.detailWidthDp)
+        assertEquals(
+            layout.contentWidthDp,
+            layout.railWidthDp +
+                layout.splineWidthDp +
+                layout.leadingRemainderDp +
+                layout.hingeGapDp +
+                layout.detailWidthDp,
+        )
+    }
+
+    @Test
     fun horizontalHingeUsesTheLargerSafeRegionWithoutCrossingTheFold() {
         val layout =
             policy.layoutFor(

@@ -23,9 +23,13 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.LauncherShellState
+import com.riffle.core.domain.launcher.cards.TimeScapeHingeBounds
 import com.riffle.core.domain.launcher.cards.TimeScapePosture
+import com.riffle.core.domain.launcher.cards.TimeScapeRailSide
 import com.riffle.core.domain.launcher.cards.TimeScapeWindowLayout
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
+import com.riffle.core.domain.launcher.settings.CardsSettings
+import com.riffle.core.domain.launcher.settings.LauncherSettings
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -66,6 +70,64 @@ class TimeScapeAdaptiveLayoutInteractionTest {
         assertTrue(paneBounds.top >= windowBounds.top + SAFE_TOP_PX - PIXEL_TOLERANCE)
         assertTrue(paneBounds.right <= windowBounds.right - SAFE_END_PX + PIXEL_TOLERANCE)
         assertTrue(paneBounds.bottom <= windowBounds.bottom - SAFE_BOTTOM_PX + PIXEL_TOLERANCE)
+    }
+
+    @Test
+    fun minimumThreePaneVerticalHingeKeepsTrailingRailInsideSafeInsets() {
+        composeRule.setContent {
+            CompositionLocalProvider(LocalDensity provides Density(MINIMUM_HINGE_TEST_DENSITY)) {
+                MaterialTheme {
+                    Box(
+                        modifier =
+                            Modifier.width(MINIMUM_HINGE_WINDOW_WIDTH_DP.dp)
+                                .height(TEST_WINDOW_HEIGHT_DP.dp)
+                                .clipToBounds()
+                                .testTag(TIME_SCAPE_ADAPTIVE_TEST_WINDOW_TAG),
+                    ) {
+                        TimeScapeAppStageSurface(
+                            state =
+                                LauncherShellState(
+                                    notificationAccessStatus = NotificationAccessStatus.NOT_GRANTED,
+                                    launcherSettings =
+                                        LauncherSettings(
+                                            cards = CardsSettings(timeScapeRailSide = TimeScapeRailSide.TRAILING),
+                                        ),
+                                ),
+                            windowInsets =
+                                WindowInsets(
+                                    MINIMUM_HINGE_SAFE_INSET_PX,
+                                    0,
+                                    MINIMUM_HINGE_SAFE_INSET_PX,
+                                    0,
+                                ),
+                            windowLayout =
+                                TimeScapeWindowLayout(
+                                    widthDp = MINIMUM_HINGE_WINDOW_WIDTH_DP,
+                                    heightDp = TEST_WINDOW_HEIGHT_DP,
+                                    separatingHinges =
+                                        listOf(
+                                            TimeScapeHingeBounds(
+                                                leftDp = 376,
+                                                topDp = 0,
+                                                rightDp = 408,
+                                                bottomDp = TEST_WINDOW_HEIGHT_DP,
+                                            ),
+                                        ),
+                                    posture = TimeScapePosture.UNFOLDED,
+                                ),
+                            onAction = {},
+                        )
+                    }
+                }
+            }
+        }
+
+        val railBounds = composeRule.onNodeWithText("Stages").fetchSemanticsNode().boundsInRoot
+        val paneBounds = composeRule.onNodeWithTag(TIME_SCAPE_SUPPORTING_PANE_TEST_TAG).fetchSemanticsNode().boundsInRoot
+        val windowBounds = composeRule.onNodeWithTag(TIME_SCAPE_ADAPTIVE_TEST_WINDOW_TAG).fetchSemanticsNode().boundsInRoot
+
+        assertTrue(paneBounds.right <= railBounds.left + PIXEL_TOLERANCE)
+        assertTrue(railBounds.right <= windowBounds.right - MINIMUM_HINGE_SAFE_INSET_PX + PIXEL_TOLERANCE)
     }
 
     @Test
@@ -165,6 +227,9 @@ class TimeScapeAdaptiveLayoutInteractionTest {
         const val TEST_WINDOW_HEIGHT_DP = 800
         const val INSET_TEST_WINDOW_WIDTH_DP = 1_400
         const val INSET_TEST_DENSITY = 0.25f
+        const val MINIMUM_HINGE_TEST_DENSITY = 0.25f
+        const val MINIMUM_HINGE_WINDOW_WIDTH_DP = 880
+        const val MINIMUM_HINGE_SAFE_INSET_PX = 2
         const val SAFE_START_PX = 24
         const val SAFE_TOP_PX = 16
         const val SAFE_END_PX = 48
