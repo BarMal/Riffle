@@ -107,8 +107,7 @@ fun WidgetPickerSurface(
     LaunchedEffect(placementProviderKey) {
         if (placementProviderKey == null) {
             previousPlacementProviderKey?.let { key ->
-                withFrameNanos { }
-                providerFocusRequesters[key]?.requestFocus()
+                providerFocusRequesters[key]?.requestFocusAcrossFrames()
             }
         }
         previousPlacementProviderKey = placementProviderKey
@@ -520,8 +519,7 @@ private fun WidgetPickerAccessiblePlacementControls(
             placement.target == WidgetAddTarget.DOCK || candidate.pageId == selected?.pageId
         }
     LaunchedEffect(placement.provider.identity) {
-        withFrameNanos { }
-        focusRequester.requestFocus()
+        focusRequester.requestFocusAcrossFrames()
     }
     Surface(
         modifier =
@@ -633,6 +631,13 @@ private fun WidgetPickerAccessiblePlacement.accessibleWidgetLabel(): String =
         .takeIf(String::isNotBlank)
         ?.let { summary -> "${provider.label}, $summary" }
         ?: provider.label
+
+private suspend fun FocusRequester.requestFocusAcrossFrames() {
+    repeat(FOCUS_REQUEST_FRAME_LIMIT) {
+        withFrameNanos { }
+        requestFocus()
+    }
+}
 
 @Composable
 private fun WidgetProviderAddMenu(
@@ -828,6 +833,7 @@ internal const val WIDGET_PICKER_PANEL_TEST_TAG = "widget-picker-panel"
 internal const val WIDGET_PROVIDER_TILE_TEST_TAG = "widget-provider-tile"
 internal const val WIDGET_PICKER_ACCESSIBLE_PLACEMENT_TEST_TAG = "widget-picker-accessible-placement"
 private const val WIDGET_PICKER_SECTION_STATE_SEPARATOR = "\u001f"
+private const val FOCUS_REQUEST_FRAME_LIMIT = 3
 
 private fun String.toCollapsedWidgetPickerSections(): Set<String> =
     split(WIDGET_PICKER_SECTION_STATE_SEPARATOR)
