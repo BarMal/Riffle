@@ -384,6 +384,9 @@ class WidgetPickerSurfaceTest {
             moveTo(targetInSource)
         }
         composeRule.mainClock.advanceTimeBy(700L)
+        repeat(3) {
+            composeRule.mainClock.advanceTimeByFrame()
+        }
         composeRule.waitForIdle()
 
         composeRule.runOnIdle {
