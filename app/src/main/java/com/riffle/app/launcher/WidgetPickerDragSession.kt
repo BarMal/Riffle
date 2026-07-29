@@ -30,14 +30,13 @@ internal fun widgetPickerDragPlacementPreviewFor(
     cell: GridCell,
 ): WidgetPickerDragPlacementPreview {
     val span = provider.widgetPickerDragSpan()
-    val candidateCells = span.cellsAt(cell)
+    val isInBounds = page.grid.contains(origin = cell, span = span)
+    val candidateCells = if (isInBounds) span.cellsAt(cell) else emptyList()
     val conflictingItems =
         page.items
             .filter { item -> candidateCells.any(item::occupies) }
             .map { item -> item.id }
             .toSet()
-    val isInBounds = candidateCells.all { candidate -> page.grid.contains(candidate) }
-
     return WidgetPickerDragPlacementPreview(
         provider = provider,
         target = WidgetPickerDragTarget.HOME,
@@ -62,6 +61,18 @@ private fun GridSpan.cellsAt(origin: GridCell): List<GridCell> =
         }
     }
 
-private fun GridDimensions.contains(cell: GridCell): Boolean {
-    return cell.column in 0 until columns && cell.row in 0 until rows
+private fun GridDimensions.contains(
+    origin: GridCell,
+    span: GridSpan,
+): Boolean {
+    return columns > 0 &&
+        rows > 0 &&
+        origin.column >= 0 &&
+        origin.row >= 0 &&
+        span.columns > 0 &&
+        span.rows > 0 &&
+        span.columns <= columns &&
+        span.rows <= rows &&
+        origin.column <= columns - span.columns &&
+        origin.row <= rows - span.rows
 }

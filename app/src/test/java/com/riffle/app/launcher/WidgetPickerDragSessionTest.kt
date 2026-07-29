@@ -83,6 +83,20 @@ class WidgetPickerDragSessionTest {
     }
 
     @Test
+    fun rejectsExtremeProviderDimensionsBeforeEnumeratingCandidateCells() {
+        val preview =
+            widgetPickerDragPlacementPreviewFor(
+                page = page(),
+                provider = provider(targetCellWidth = Int.MAX_VALUE, targetCellHeight = Int.MAX_VALUE),
+                cell = GridCell(column = 0, row = 0),
+            )
+
+        assertEquals(GridSpan(columns = Int.MAX_VALUE, rows = Int.MAX_VALUE), preview.span)
+        assertFalse(preview.isValid)
+        assertTrue(preview.conflictingItemIds.isEmpty())
+    }
+
+    @Test
     fun rejectsGeneratedPagesWithoutReportingAFalseCollision() {
         val preview =
             widgetPickerDragPlacementPreviewFor(
