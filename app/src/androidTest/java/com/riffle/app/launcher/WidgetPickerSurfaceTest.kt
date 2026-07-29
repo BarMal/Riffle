@@ -14,6 +14,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -27,6 +28,7 @@ import com.riffle.app.launcher.widgets.loadWidgetPreviewWithFallback
 import com.riffle.app.launcher.widgets.renderWidgetPreviewRemoteViews
 import com.riffle.core.domain.launcher.WidgetProviderCatalogStatus
 import com.riffle.core.domain.launcher.apps.AppPackageName
+import com.riffle.core.domain.launcher.apps.AppProfileContentVisibility
 import com.riffle.core.domain.launcher.home.GridCell
 import com.riffle.core.domain.launcher.home.GridSpan
 import com.riffle.core.domain.launcher.home.LauncherPageId
@@ -170,6 +172,39 @@ class WidgetPickerSurfaceTest {
 
         composeRule.onNodeWithText("Clock").assertIsDisplayed()
         composeRule.onNodeWithText("Add Clock").assertIsDisplayed()
+    }
+
+    @Test
+    fun lockedProfileDoesNotLoadOrOfferItsWidgetForPlacement() {
+        var previewLoadCount = 0
+        val provider = widgetProvider()
+        val loader =
+            object : WidgetPreviewImageLoader {
+                override suspend fun previewFor(identity: WidgetProviderIdentity): ImageBitmap? {
+                    previewLoadCount += 1
+                    return ImageBitmap(width = 1, height = 1)
+                }
+            }
+        composeRule.setContent {
+            MaterialTheme {
+                WidgetPickerSurface(
+                    providers = listOf(provider),
+                    profileContentVisibility =
+                        mapOf(
+                            provider.identity.profile.id to
+                                AppProfileContentVisibility.REDACTED_LOCKED,
+                        ),
+                    previewImageLoader = loader,
+                    onAction = {},
+                )
+            }
+        }
+
+        composeRule
+            .onNodeWithText("This profile is locked. Unlock it to preview or place its widgets.")
+            .assertIsDisplayed()
+        composeRule.onNodeWithText("Add Clock").assertIsNotEnabled()
+        composeRule.runOnIdle { assertEquals(0, previewLoadCount) }
     }
 
     @Test

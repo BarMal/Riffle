@@ -55,6 +55,7 @@ import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
@@ -64,11 +65,17 @@ import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.WidgetProviderCatalogStatus
+import com.riffle.core.domain.launcher.apps.AppProfileContentVisibility
+import com.riffle.core.domain.launcher.apps.AppProfileId
 import com.riffle.core.domain.launcher.widgets.InstalledWidgetProvider
 
 @Composable
 fun WidgetPickerSurface(
     providers: List<InstalledWidgetProvider>,
+    profileContentVisibility: Map<AppProfileId, AppProfileContentVisibility> =
+        providers.associate { provider ->
+            provider.identity.profile.id to AppProfileContentVisibility.VISIBLE
+        },
     catalogStatus: WidgetProviderCatalogStatus = WidgetProviderCatalogStatus.READY,
     previewImageLoader: WidgetPreviewImageLoader = EmptyWidgetPreviewImageLoader,
     accessiblePlacement: WidgetPickerAccessiblePlacement? = null,
@@ -88,7 +95,7 @@ fun WidgetPickerSurface(
     var query by rememberSaveable { mutableStateOf("") }
     var collapsedSectionTitles by rememberSaveable { mutableStateOf("") }
     val filteredProviders = providers.filteredWidgetProviders(query)
-    val providerSections = widgetPickerSectionsFor(filteredProviders)
+    val providerSections = widgetPickerSectionsFor(filteredProviders, profileContentVisibility)
     var rootCoordinates: LayoutCoordinates? by remember { mutableStateOf(null) }
 
     Box(
@@ -281,12 +288,21 @@ private fun WidgetPickerContent(
                         )
                     }
                     if (isExpanded) {
+                        if (section.contentVisibility != AppProfileContentVisibility.VISIBLE) {
+                            item(
+                                key = "profile-state:${section.key}",
+                                span = { GridItemSpan(maxLineSpan) },
+                            ) {
+                                WidgetPickerProfileState(section.contentVisibility)
+                            }
+                        }
                         items(
                             items = section.providers,
                             key = { provider -> provider.widgetPickerKey },
                         ) { provider ->
                             WidgetProviderTile(
                                 provider = provider,
+                                contentVisibility = section.contentVisibility,
                                 previewImageLoader = previewImageLoader,
                                 onWidgetDragStarted = onWidgetDragStarted,
                                 onWidgetDragMoved = onWidgetDragMoved,
@@ -320,8 +336,36 @@ private fun WidgetPickerProviderReadFailure(onRetryRequested: () -> Unit) {
 }
 
 @Composable
+private fun WidgetPickerProfileState(contentVisibility: AppProfileContentVisibility) {
+    Text(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 8.dp)
+                .semantics { liveRegion = LiveRegionMode.Polite },
+        text = widgetPickerProfileStateText(contentVisibility),
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+}
+
+internal fun widgetPickerProfileStateText(contentVisibility: AppProfileContentVisibility): String =
+    when (contentVisibility) {
+        AppProfileContentVisibility.VISIBLE -> ""
+        AppProfileContentVisibility.REDACTED_QUIET ->
+            "This profile is paused. Turn it on to preview or place its widgets."
+
+        AppProfileContentVisibility.REDACTED_LOCKED ->
+            "This profile is locked. Unlock it to preview or place its widgets."
+
+        AppProfileContentVisibility.REDACTED_UNAVAILABLE ->
+            "This profile is unavailable. Its widgets can’t be previewed or placed."
+    }
+
+@Composable
 private fun WidgetProviderTile(
     provider: InstalledWidgetProvider,
+    contentVisibility: AppProfileContentVisibility,
     previewImageLoader: WidgetPreviewImageLoader,
     onWidgetDragStarted: (InstalledWidgetProvider) -> Unit,
     onWidgetDragMoved: (InstalledWidgetProvider, Offset, IntSize) -> Unit,
@@ -330,6 +374,7 @@ private fun WidgetProviderTile(
     onAccessiblePlacementRequested: (InstalledWidgetProvider, WidgetAddTarget) -> Unit,
     rootCoordinates: LayoutCoordinates?,
 ) {
+    val isAvailable = contentVisibility == AppProfileContentVisibility.VISIBLE
     val summary = provider.widgetPickerSummary()
     val currentOnWidgetDragStarted by rememberUpdatedState(onWidgetDragStarted)
     val currentOnWidgetDragMoved by rememberUpdatedState(onWidgetDragMoved)
@@ -347,20 +392,25 @@ private fun WidgetProviderTile(
                 .testTag(WIDGET_PROVIDER_TILE_TEST_TAG)
                 .semantics {
                     role = Role.Image
-                    customActions =
-                        listOf(
-                            CustomAccessibilityAction("Add ${provider.label} to Home") {
-                                onAccessiblePlacementRequested(provider, WidgetAddTarget.HOME)
-                                true
-                            },
-                            CustomAccessibilityAction("Add ${provider.label} to Dock") {
-                                onAccessiblePlacementRequested(provider, WidgetAddTarget.DOCK)
-                                true
-                            },
-                        )
+                    if (isAvailable) {
+                        customActions =
+                            listOf(
+                                CustomAccessibilityAction("Add ${provider.label} to Home") {
+                                    onAccessiblePlacementRequested(provider, WidgetAddTarget.HOME)
+                                    true
+                                },
+                                CustomAccessibilityAction("Add ${provider.label} to Dock") {
+                                    onAccessiblePlacementRequested(provider, WidgetAddTarget.DOCK)
+                                    true
+                                },
+                            )
+                    } else {
+                        disabled()
+                    }
                 }
                 .onGloballyPositioned { layoutCoordinates -> coordinates = layoutCoordinates }
-                .pointerInput(provider.widgetPickerKey) {
+                .pointerInput(provider.widgetPickerKey, isAvailable) {
+                    if (!isAvailable) return@pointerInput
                     detectDragGesturesAfterLongPress(
                         onDragStart = { offset ->
                             dropPosition = offset
@@ -403,6 +453,7 @@ private fun WidgetProviderTile(
         WidgetProviderPreview(
             provider = provider,
             previewImageLoader = previewImageLoader,
+            loadPreview = isAvailable,
         )
         Text(
             text = provider.label,
@@ -422,6 +473,7 @@ private fun WidgetProviderTile(
         }
         WidgetProviderAddMenu(
             provider = provider,
+            enabled = isAvailable,
             onAccessiblePlacementRequested = onAccessiblePlacementRequested,
         )
     }
@@ -534,12 +586,13 @@ internal fun WidgetPickerAccessiblePlacement.accessiblePlacementAnnouncement(): 
 @Composable
 private fun WidgetProviderAddMenu(
     provider: InstalledWidgetProvider,
+    enabled: Boolean,
     onAccessiblePlacementRequested: (InstalledWidgetProvider, WidgetAddTarget) -> Unit,
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
 
     Box {
-        TextButton(onClick = { menuExpanded = true }) {
+        TextButton(onClick = { menuExpanded = true }, enabled = enabled) {
             Text(text = "Add ${provider.label}")
         }
         DropdownMenu(
@@ -568,8 +621,14 @@ private fun WidgetProviderAddMenu(
 private fun WidgetProviderPreview(
     provider: InstalledWidgetProvider,
     previewImageLoader: WidgetPreviewImageLoader,
+    loadPreview: Boolean,
 ) {
-    val preview = rememberWidgetPreview(provider = provider, previewImageLoader = previewImageLoader)
+    val preview =
+        if (loadPreview) {
+            rememberWidgetPreview(provider = provider, previewImageLoader = previewImageLoader)
+        } else {
+            null
+        }
 
     BoxWithConstraints(
         modifier = Modifier.fillMaxWidth(),

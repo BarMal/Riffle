@@ -4,17 +4,26 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import com.riffle.core.domain.launcher.apps.AppProfileContentVisibility
+import com.riffle.core.domain.launcher.apps.AppProfileId
 import com.riffle.core.domain.launcher.widgets.InstalledWidgetProvider
 
 internal data class WidgetPickerSection(
     val key: String,
     val title: String,
     val providers: List<InstalledWidgetProvider>,
+    val contentVisibility: AppProfileContentVisibility = AppProfileContentVisibility.VISIBLE,
 ) {
     val displayTitle: String = "$title (${providers.size})"
 }
 
-internal fun widgetPickerSectionsFor(providers: List<InstalledWidgetProvider>): List<WidgetPickerSection> =
+internal fun widgetPickerSectionsFor(
+    providers: List<InstalledWidgetProvider>,
+    profileContentVisibility: Map<AppProfileId, AppProfileContentVisibility> =
+        providers.associate { provider ->
+            provider.identity.profile.id to AppProfileContentVisibility.VISIBLE
+        },
+): List<WidgetPickerSection> =
     providers
         .groupBy { provider -> provider.widgetPickerSectionKey }
         .map { (key, sectionProviders) ->
@@ -26,6 +35,9 @@ internal fun widgetPickerSectionsFor(providers: List<InstalledWidgetProvider>): 
                         compareBy<InstalledWidgetProvider> { provider -> provider.label.lowercase() }
                             .thenBy { provider -> provider.identity.className.value },
                     ),
+                contentVisibility =
+                    profileContentVisibility[sectionProviders.first().identity.profile.id]
+                        ?: AppProfileContentVisibility.REDACTED_UNAVAILABLE,
             )
         }
         .sortedWith(
