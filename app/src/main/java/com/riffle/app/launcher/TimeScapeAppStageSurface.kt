@@ -420,7 +420,7 @@ private fun TimeScapeStageHeader(
             if (addableApps.isNotEmpty()) {
                 Box {
                     TextButton(onClick = { addStageExpanded = true }) { Text("Add stage") }
-                    DropdownMenu(
+                    RiffleContextMenu(
                         expanded = addStageExpanded,
                         onDismissRequest = { addStageExpanded = false },
                     ) {
