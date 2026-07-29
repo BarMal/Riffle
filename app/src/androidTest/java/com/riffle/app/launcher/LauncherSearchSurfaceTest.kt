@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toPixelMap
@@ -104,28 +105,32 @@ class LauncherSearchSurfaceTest {
     @Test
     fun searchGlassSurfaceKeepsContrastForMidToneBackgroundOnDarkAndLightWallpapers() {
         val themeColors = LauncherThemeColors(backgroundArgb = 0xFF808080.toInt())
-        listOf(Color.Black, Color.White).forEach { wallpaper ->
-            composeRule.setContent {
-                Box(modifier = Modifier.fillMaxSize().background(wallpaper)) {
-                    RiffleLauncherTheme(
-                        themePreset = LauncherThemePreset.GLASS,
-                        themeColors = themeColors,
-                    ) {
-                        SearchSurface(
-                            state =
-                                SearchSurfaceState(
-                                    query = "",
-                                    filters = AppSearchFilters(),
-                                    installedApps = listOf(camera),
-                                    results = listOf(camera),
-                                    homeLayout = HomeLayoutDefaults.standard(),
-                                ),
-                            appListContext = searchContext(),
-                            onAction = {},
-                        )
-                    }
+        val wallpaperColor = mutableStateOf(Color.Black)
+        composeRule.setContent {
+            Box(modifier = Modifier.fillMaxSize().background(wallpaperColor.value)) {
+                RiffleLauncherTheme(
+                    themePreset = LauncherThemePreset.GLASS,
+                    themeColors = themeColors,
+                ) {
+                    SearchSurface(
+                        state =
+                            SearchSurfaceState(
+                                query = "",
+                                filters = AppSearchFilters(),
+                                installedApps = listOf(camera),
+                                results = listOf(camera),
+                                homeLayout = HomeLayoutDefaults.standard(),
+                            ),
+                        appListContext = searchContext(),
+                        onAction = {},
+                    )
                 }
             }
+        }
+
+        listOf(Color.Black, Color.White).forEach { wallpaper ->
+            composeRule.runOnIdle { wallpaperColor.value = wallpaper }
+            composeRule.waitForIdle()
 
             val controls = composeRule.onNodeWithTag(SEARCH_CONTROLS_TEST_TAG).captureToImage().toPixelMap()
             val renderedSurface = controls[controls.width / 2, 4]
