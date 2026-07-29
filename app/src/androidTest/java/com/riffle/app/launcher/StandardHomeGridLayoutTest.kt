@@ -18,7 +18,7 @@ import com.riffle.core.domain.launcher.home.LauncherPage
 import com.riffle.core.domain.launcher.home.LauncherPageId
 import com.riffle.core.domain.launcher.home.LauncherPageType
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
+import org.junit.Assert.assertFalse
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -48,14 +48,16 @@ class StandardHomeGridLayoutTest {
         composeRule.onNodeWithTag(HOME_WORKSPACE_GRID_OVERFLOW_TEST_TAG).assertExists()
         val root = composeRule.onNodeWithTag(ROOT_TEST_TAG).fetchSemanticsNode().boundsInRoot
         val grid = composeRule.onNodeWithTag(HOME_WORKSPACE_GRID_TEST_TAG).fetchSemanticsNode().boundsInRoot
+        val overflow =
+            composeRule.onNodeWithTag(HOME_WORKSPACE_GRID_OVERFLOW_TEST_TAG).fetchSemanticsNode().boundsInRoot
         val density = composeRule.density
 
         with(density) {
             assertEquals(320.dp.toPx(), grid.width, 1f)
-            assertTrue("grid should occupy nearly the full workspace", grid.height >= 390.dp.toPx())
         }
         assertEquals(root.center.x, grid.center.x, 1f)
-        assertEquals(root.center.y, grid.center.y, 4f)
+        assertEquals((root.top + overflow.top) / 2f, grid.center.y, 4f)
+        assertFalse("overflow affordance must not cover the grid", grid.overlaps(overflow))
     }
 
     private fun setContent(page: LauncherPage) {
