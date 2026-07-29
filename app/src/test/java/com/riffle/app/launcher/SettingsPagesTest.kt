@@ -175,6 +175,34 @@ class SettingsPagesTest {
     }
 
     @Test
+    fun mainSettingsEntryAlwaysExposesNotificationAccessStatus() {
+        val expectedLabels =
+            mapOf(
+                NotificationAccessStatus.GRANTED to "Notifications allowed",
+                NotificationAccessStatus.NOT_GRANTED to "Notifications not allowed",
+                NotificationAccessStatus.REVOKED to "Notifications revoked",
+                NotificationAccessStatus.UNKNOWN to "Notifications checking",
+            )
+
+        expectedLabels.forEach { (notificationAccessStatus, expectedLabel) ->
+            val summary =
+                settingsMainPageEntries(
+                    SettingsOverviewStatus(
+                        homeRoleStatus = HomeRoleStatus.DEFAULT_HOME,
+                        notificationAccessStatus = notificationAccessStatus,
+                        overlayDockPermissionStatus = OverlayDockPermissionStatus.GRANTED,
+                    ),
+                ).single { entry -> entry.page == SettingsPage.PERMISSIONS }
+                    .subtitle
+
+            assertEquals(
+                "$expectedLabel · Home set · Floating dock allowed",
+                summary,
+            )
+        }
+    }
+
+    @Test
     fun filtersMainSettingsEntriesByLiveStatusSummaries() {
         val status =
             SettingsOverviewStatus(
