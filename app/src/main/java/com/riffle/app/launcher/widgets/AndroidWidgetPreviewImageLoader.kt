@@ -11,8 +11,7 @@ import com.riffle.app.launcher.WidgetPreviewImageLoader
 import com.riffle.app.launcher.apps.toAppProfile
 import com.riffle.core.domain.launcher.apps.AppProfile
 import com.riffle.core.domain.launcher.widgets.WidgetProviderIdentity
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.ConcurrentLinkedDeque
+import java.util.LinkedHashMap
 
 class AndroidWidgetPreviewImageLoader(
     private val context: Context,
@@ -40,33 +39,29 @@ class AndroidWidgetPreviewImageLoader(
 internal class WidgetPreviewCache<T>(
     private val maxEntries: Int = MAX_PREVIEW_CACHE_ENTRIES,
 ) {
-    private val previews = ConcurrentHashMap<WidgetProviderIdentity, T>()
-    private val previewOrder = ConcurrentLinkedDeque<WidgetProviderIdentity>()
+    private val lock = Any()
+    private val previews =
+        object : LinkedHashMap<WidgetProviderIdentity, T>(maxEntries.coerceAtLeast(1), 0.75f, true) {
+            override fun removeEldestEntry(eldest: MutableMap.MutableEntry<WidgetProviderIdentity, T>?): Boolean =
+                size > maxEntries.coerceAtLeast(0)
+        }
 
-    operator fun get(identity: WidgetProviderIdentity): T? = previews[identity]?.also { touch(identity) }
+    operator fun get(identity: WidgetProviderIdentity): T? =
+        synchronized(lock) {
+            previews[identity]
+        }
 
     operator fun set(
         identity: WidgetProviderIdentity,
         preview: T,
     ) {
-        previews[identity] = preview
-        touch(identity)
-        trimCache()
-    }
-
-    private fun trimCache() {
-        while (previewOrder.size > maxEntries.coerceAtLeast(0)) {
-            previewOrder.pollFirst()?.let(previews::remove)
+        synchronized(lock) {
+            previews[identity] = preview
         }
     }
 
     internal val size: Int
-        get() = previews.size
-
-    private fun touch(identity: WidgetProviderIdentity) {
-        previewOrder.remove(identity)
-        previewOrder.addLast(identity)
-    }
+        get() = synchronized(lock) { previews.size }
 }
 
 private fun AppWidgetProviderInfo.matches(identity: WidgetProviderIdentity): Boolean =

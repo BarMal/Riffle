@@ -14,7 +14,11 @@ import com.riffle.core.domain.launcher.widgets.WidgetProviderDimensions
 import com.riffle.core.domain.launcher.widgets.WidgetProviderIdentity
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 class WidgetPickerDialogTest {
     @Test
@@ -147,6 +151,54 @@ class WidgetPickerDialogTest {
         assertEquals("first", cache[first])
         assertEquals("third", cache[third])
         assertEquals(2, cache.size)
+    }
+
+    @Test
+    fun previewCacheRemainsBoundedAndPreservesLruOrderDuringConcurrentAccess() {
+        val cache = WidgetPreviewCache<String>(maxEntries = 3)
+        val identities =
+            (0 until 8).map { index ->
+                widgetProvider(
+                    label = "Provider $index",
+                    packageName = "com.example.cache",
+                    className = ".Provider$index",
+                ).identity
+            }
+        identities.take(3).forEachIndexed { index, identity -> cache[identity] = "preview-$index" }
+        val start = CountDownLatch(1)
+        val executor = Executors.newFixedThreadPool(8)
+
+        try {
+            val tasks =
+                (0 until 8).map { worker ->
+                    executor.submit {
+                        start.await()
+                        repeat(2_000) { iteration ->
+                            val index = (worker + iteration) % identities.size
+                            val identity = identities[index]
+                            cache[identity] = "preview-$index"
+                            cache[identity]
+                        }
+                    }
+                }
+            start.countDown()
+            tasks.forEach { task -> task.get(10, TimeUnit.SECONDS) }
+        } finally {
+            executor.shutdownNow()
+        }
+
+        assertTrue(cache.size <= 3)
+        cache[identities[0]] = "most-recent"
+        cache[identities[1]] = "second-most-recent"
+        cache[identities[2]] = "third-most-recent"
+        assertEquals("most-recent", cache[identities[0]])
+        cache[identities[3]] = "new"
+
+        assertNull(cache[identities[1]])
+        assertEquals("most-recent", cache[identities[0]])
+        assertEquals("third-most-recent", cache[identities[2]])
+        assertEquals("new", cache[identities[3]])
+        assertEquals(3, cache.size)
     }
 
     @Test
