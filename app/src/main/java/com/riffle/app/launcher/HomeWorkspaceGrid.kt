@@ -30,7 +30,6 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
@@ -43,7 +42,6 @@ import com.riffle.core.domain.launcher.home.GridSpan
 import com.riffle.core.domain.launcher.home.HomeLabelSettings
 import com.riffle.core.domain.launcher.home.LauncherItem
 import com.riffle.core.domain.launcher.home.LauncherPage
-import com.riffle.core.domain.launcher.home.LauncherPageId
 import com.riffle.core.domain.launcher.home.LauncherPageType
 import com.riffle.core.domain.launcher.home.WidgetItem
 
@@ -58,11 +56,9 @@ internal fun WorkspaceGrid(
 ) {
     BoxWithConstraints(
         modifier =
-            modifier
-                .testTag(widgetPickerWorkspaceGridTestTag(page.id))
-                .onGloballyPositioned { coordinates ->
-                    actions.onWorkspaceGridBoundsChanged(page.id, coordinates.boundsInRoot())
-                },
+            modifier.onGloballyPositioned { coordinates ->
+                actions.onWorkspaceGridBoundsChanged(page.id, coordinates.boundsInRoot())
+            },
         contentAlignment = Alignment.Center,
     ) {
         val metrics = HomeGridLayoutMetrics()
@@ -120,9 +116,6 @@ internal fun WorkspaceGrid(
         }
     }
 }
-
-@Suppress("MaxLineLength")
-internal fun widgetPickerWorkspaceGridTestTag(pageId: LauncherPageId): String = "widget-picker-workspace-grid:${pageId.value}"
 
 private val LauncherPage.hasGeneratedContentOverflowAffordance: Boolean
     get() = type is LauncherPageType.Generated && generatedContentOverflowCount > 0
