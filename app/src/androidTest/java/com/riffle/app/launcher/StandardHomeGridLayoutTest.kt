@@ -3,6 +3,9 @@ package com.riffle.app.launcher
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
@@ -12,6 +15,7 @@ import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.riffle.app.launcher.widgets.EmptyHomeWidgetViewFactory
 import com.riffle.core.domain.launcher.home.GeneratedLauncherPageKind
+import com.riffle.core.domain.launcher.home.GridCell
 import com.riffle.core.domain.launcher.home.GridDimensions
 import com.riffle.core.domain.launcher.home.HomeLabelSettings
 import com.riffle.core.domain.launcher.home.LauncherPage
@@ -34,6 +38,28 @@ class StandardHomeGridLayoutTest {
         setContent(page = standardPage())
 
         assertGridIsCenteredWithSquareCells()
+    }
+
+    @Test
+    fun publishesRenderedGridBoundsForWidgetDropHitTesting() {
+        val reportedBounds = mutableStateOf<Rect?>(null)
+        setContent(
+            page = standardPage(),
+            onWorkspaceGridBoundsChanged = { _, bounds -> reportedBounds.value = bounds },
+        )
+
+        val renderedBounds = composeRule.onNodeWithTag(HOME_WORKSPACE_GRID_TEST_TAG).fetchSemanticsNode().boundsInRoot
+        composeRule.runOnIdle {
+            assertEquals(renderedBounds, reportedBounds.value)
+        }
+        assertEquals(
+            GridCell(column = 0, row = 0),
+            widgetPickerDropCell(
+                position = Offset(renderedBounds.left + renderedBounds.width / 5f, renderedBounds.top + renderedBounds.height / 10f),
+                gridBounds = requireNotNull(reportedBounds.value),
+                grid = standardPage().grid,
+            ),
+        )
     }
 
     @Test
@@ -62,7 +88,10 @@ class StandardHomeGridLayoutTest {
         assertFalse("overflow affordance must not cover the grid", grid.overlaps(overflow))
     }
 
-    private fun setContent(page: LauncherPage) {
+    private fun setContent(
+        page: LauncherPage,
+        onWorkspaceGridBoundsChanged: (LauncherPageId, Rect) -> Unit = { _, _ -> },
+    ) {
         composeRule.setContent {
             MaterialTheme {
                 Box(modifier = Modifier.size(400.dp).testTag(ROOT_TEST_TAG)) {
@@ -89,6 +118,7 @@ class StandardHomeGridLayoutTest {
                                 onFolderOpen = {},
                                 onDragSessionChanged = {},
                                 haptics = NoopLauncherHaptics,
+                                onWorkspaceGridBoundsChanged = onWorkspaceGridBoundsChanged,
                                 onAction = {},
                             ),
                     )

@@ -57,10 +57,7 @@ internal fun WorkspaceGrid(
     modifier: Modifier = Modifier,
 ) {
     BoxWithConstraints(
-        modifier =
-            modifier.onGloballyPositioned { coordinates ->
-                actions.onWorkspaceGridBoundsChanged(page.id, coordinates.boundsInRoot())
-            },
+        modifier = modifier,
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
             BoxWithConstraints(
@@ -88,6 +85,9 @@ internal fun WorkspaceGrid(
                     modifier =
                         Modifier
                             .requiredSize(gridWidth, gridHeight)
+                            .onGloballyPositioned { coordinates ->
+                                actions.onWorkspaceGridBoundsChanged(page.id, coordinates.boundsInRoot())
+                            }
                             .testTag(HOME_WORKSPACE_GRID_TEST_TAG),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
