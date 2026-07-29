@@ -190,7 +190,9 @@ class AndroidFeedParser : FeedParser {
                     output.append(parser.text)
                 }
             }
-            event = parser.next()
+            if (depth > 0) {
+                event = parser.next()
+            }
         }
         return output.toString()
     }
