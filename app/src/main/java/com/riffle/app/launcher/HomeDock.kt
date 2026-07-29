@@ -1,4 +1,4 @@
-@file:Suppress("TooManyFunctions")
+@file:Suppress("LongParameterList", "TooManyFunctions")
 
 package com.riffle.app.launcher
 
@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -69,6 +70,7 @@ internal fun Dock(
     appIconLoader: AppIconLoader,
     widgetViewFactory: HomeWidgetViewFactory = EmptyHomeWidgetViewFactory,
     interactions: DockInteractions,
+    widgetPickerDockPreview: WidgetPickerDockPlacementPreview? = null,
 ) {
     val presentation = DockPresentation(notificationGroupsByApp, appShortcutsByApp, widgetViewFactory, interactions)
 
@@ -81,6 +83,7 @@ internal fun Dock(
                 dock = dock,
                 isEditing = isEditing,
                 availableWidthDp = maxWidth.value.toInt(),
+                previewSlotCount = if (widgetPickerDockPreview != null) 1 else 0,
             ) ?: return@BoxWithConstraints
         HomeBackgroundContextMenu(
             haptics = interactions.haptics,
@@ -97,6 +100,7 @@ internal fun Dock(
             isEditing = isEditing,
             presentation = presentation,
             appIconLoader = appIconLoader,
+            widgetPickerDockPreview = widgetPickerDockPreview,
         )
     }
 }
@@ -111,6 +115,7 @@ internal fun DockSlotsRow(
     isEditing: Boolean,
     presentation: DockPresentation,
     appIconLoader: AppIconLoader,
+    widgetPickerDockPreview: WidgetPickerDockPlacementPreview? = null,
 ) {
     val scrollState = rememberScrollState()
     val dragState = remember { mutableStateOf<DockDragState?>(null) }
@@ -153,29 +158,45 @@ internal fun DockSlotsRow(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             repeat(renderedSlotCount) { index ->
-                val previewItem = previewItems.getOrNull(index)
+                val candidateIndex = widgetPickerDockPreview?.dockIndex
+                val isWidgetCandidate = candidateIndex == index
+                val itemIndex = if (candidateIndex != null && index > candidateIndex) index - 1 else index
+                val previewItem = previewItems.getOrNull(itemIndex)
                 // A preview reflow moves items between visual slots. Key actual items by their
                 // stable launcher ID so the dragged node keeps its pointer-input coroutine until
                 // the gesture commits or cancels.
-                key(previewItem?.id ?: "dock-placeholder:$index") {
-                    DockSlot(
-                        modifier = Modifier.requiredSize(slotMetrics.iconSizeDp.dp),
-                        state =
-                            DockSlotState(
-                                item = dockSlotItemState(previewItem),
-                                shortcutIndex = dock.items.indexOfFirst { item -> item.id == previewItem?.id },
-                                visualIndex = index,
-                                shortcutCount = dock.items.size,
-                                iconSizeDp = slotMetrics.iconSizeDp,
-                                itemSpacingDp = slotMetrics.itemSpacingDp,
-                                isEditing = isEditing,
-                            ),
-                        presentation = slotPresentation,
-                        appIconLoader = appIconLoader,
-                        dragState = dragState.value,
-                        dragViewport = DockDragViewport(scrollState, contentViewportWidthDp),
-                        onDragStateChanged = { dragState.value = it },
-                    )
+                val slotKey =
+                    if (isWidgetCandidate) {
+                        "widget-candidate:$index"
+                    } else {
+                        previewItem?.id ?: "dock-placeholder:$index"
+                    }
+                key(slotKey) {
+                    if (isWidgetCandidate) {
+                        WidgetPickerDockPlaceholder(
+                            preview = requireNotNull(widgetPickerDockPreview),
+                            sizeDp = slotMetrics.iconSizeDp,
+                        )
+                    } else {
+                        DockSlot(
+                            modifier = Modifier.requiredSize(slotMetrics.iconSizeDp.dp),
+                            state =
+                                DockSlotState(
+                                    item = dockSlotItemState(previewItem),
+                                    shortcutIndex = dock.items.indexOfFirst { item -> item.id == previewItem?.id },
+                                    visualIndex = index,
+                                    shortcutCount = dock.items.size,
+                                    iconSizeDp = slotMetrics.iconSizeDp,
+                                    itemSpacingDp = slotMetrics.itemSpacingDp,
+                                    isEditing = isEditing,
+                                ),
+                            presentation = slotPresentation,
+                            appIconLoader = appIconLoader,
+                            dragState = dragState.value,
+                            dragViewport = DockDragViewport(scrollState, contentViewportWidthDp),
+                            onDragStateChanged = { dragState.value = it },
+                        )
+                    }
                 }
             }
         }
@@ -225,6 +246,39 @@ internal fun DockSlotsRow(
     }
 }
 
+@Composable
+private fun WidgetPickerDockPlaceholder(
+    preview: WidgetPickerDockPlacementPreview,
+    sizeDp: Int,
+) {
+    val color =
+        if (preview.isValid) {
+            MaterialTheme.colorScheme.primaryContainer
+        } else {
+            MaterialTheme.colorScheme.errorContainer
+        }
+    Box(
+        modifier =
+            Modifier
+                .requiredSize(sizeDp.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(color)
+                .testTag(WIDGET_PICKER_DOCK_PREVIEW_TEST_TAG),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = if (preview.isValid) "Place" else "Full",
+            style = MaterialTheme.typography.labelSmall,
+            color =
+                if (preview.isValid) {
+                    MaterialTheme.colorScheme.onPrimaryContainer
+                } else {
+                    MaterialTheme.colorScheme.onErrorContainer
+                },
+        )
+    }
+}
+
 private const val DOCK_MAX_WIDTH_DP = 560
 internal const val DOCK_VERTICAL_CHROME_DP = 32
 internal const val DOCK_HORIZONTAL_PADDING_DP = 14
@@ -235,6 +289,7 @@ private const val DOCK_EDGE_AUTO_SCROLL_MAX_PX_PER_EVENT = 24f
 private const val DOCK_DRAG_SLOT_HYSTERESIS = 0.15f
 private const val DOCK_EDGE_AUTO_SCROLL_FRAME_DELAY_MILLIS = 16L
 internal const val HOME_DOCK_SURFACE_TEST_TAG = "home-dock-surface"
+internal const val WIDGET_PICKER_DOCK_PREVIEW_TEST_TAG = "widget-picker-dock-preview"
 
 internal fun dockHeightDp(iconSizeDp: Int): Int = iconSizeDp + DOCK_VERTICAL_CHROME_DP
 

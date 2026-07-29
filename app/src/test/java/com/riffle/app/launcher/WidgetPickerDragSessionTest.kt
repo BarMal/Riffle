@@ -4,6 +4,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.unit.IntSize
 import com.riffle.core.domain.launcher.apps.AppPackageName
+import com.riffle.core.domain.launcher.home.DockModel
 import com.riffle.core.domain.launcher.home.GeneratedLauncherPageKind
 import com.riffle.core.domain.launcher.home.GridCell
 import com.riffle.core.domain.launcher.home.GridDimensions
@@ -339,6 +340,60 @@ class WidgetPickerDragSessionTest {
         assertTrue(sharedPreviewAndDropGeometry?.isValid == true)
     }
 
+    @Test
+    fun dockPreviewSelectsTheExactInsertionIndexAndRespectsRtl() {
+        val dock = DockModel(capacity = 4, items = listOf(dockWidget("first"), dockWidget("second")))
+        val bounds = Rect(100f, 400f, 400f, 500f)
+        val snapshot =
+            WidgetPickerDragSnapshot(
+                provider = provider(),
+                position = Offset(150f, 450f),
+                rootSize = IntSize(500, 600),
+            )
+
+        val ltr = widgetPickerDockPlacementPreviewFor(snapshot, dock, bounds)
+        val rtl = widgetPickerDockPlacementPreviewFor(snapshot, dock, bounds, isRtl = true)
+
+        assertEquals(0, ltr?.dockIndex)
+        assertEquals(2, rtl?.dockIndex)
+        assertTrue(ltr?.isValid == true)
+    }
+
+    @Test
+    fun dockPreviewRejectsAFullDockAndPositionsAtLogicalEdges() {
+        val dock = DockModel(capacity = 2, items = listOf(dockWidget("first"), dockWidget("second")))
+        val bounds = Rect(100f, 400f, 400f, 500f)
+
+        val ltrEnd =
+            widgetPickerDockPlacementPreviewFor(
+                snapshot =
+                    WidgetPickerDragSnapshot(
+                        provider = provider(),
+                        position = Offset(399f, 450f),
+                        rootSize = IntSize(500, 600),
+                    ),
+                dock = dock,
+                dockBounds = bounds,
+            )
+        val rtlEnd =
+            widgetPickerDockPlacementPreviewFor(
+                snapshot =
+                    WidgetPickerDragSnapshot(
+                        provider = provider(),
+                        position = Offset(100f, 450f),
+                        rootSize = IntSize(500, 600),
+                    ),
+                dock = dock,
+                dockBounds = bounds,
+                isRtl = true,
+            )
+
+        assertEquals(2, ltrEnd?.dockIndex)
+        assertEquals(2, rtlEnd?.dockIndex)
+        assertFalse(ltrEnd?.isValid == true)
+        assertFalse(rtlEnd?.isValid == true)
+    }
+
     private fun page(
         id: String = "home",
         type: LauncherPageType = LauncherPageType.Home,
@@ -352,8 +407,8 @@ class WidgetPickerDragSessionTest {
         )
 
     private fun provider(
-        targetCellWidth: Int?,
-        targetCellHeight: Int?,
+        targetCellWidth: Int? = 1,
+        targetCellHeight: Int? = 1,
     ): InstalledWidgetProvider =
         InstalledWidgetProvider(
             identity =
@@ -369,5 +424,12 @@ class WidgetPickerDragSessionTest {
                     targetCellWidth = targetCellWidth,
                     targetCellHeight = targetCellHeight,
                 ),
+        )
+
+    private fun dockWidget(id: String): WidgetItem =
+        WidgetItem(
+            id = LauncherItemId(id),
+            appWidgetId = HostedWidgetId(id.hashCode()),
+            label = id,
         )
 }
