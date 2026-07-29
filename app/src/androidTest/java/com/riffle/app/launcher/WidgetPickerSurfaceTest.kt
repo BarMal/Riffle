@@ -1,6 +1,7 @@
 package com.riffle.app.launcher
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.Modifier
@@ -44,6 +45,55 @@ class WidgetPickerSurfaceTest {
 
         composeRule.onNodeWithText("Clock").assertIsDisplayed()
         composeRule.onNodeWithText("Add Clock").assertIsDisplayed()
+    }
+
+    @Test
+    fun insetsTheActualPickerSurfaceFromEveryCompactWindowEdge() {
+        composeRule.setContent {
+            MaterialTheme {
+                Box(modifier = Modifier.size(width = 300.dp, height = 500.dp)) {
+                    WidgetPickerSurface(
+                        providers = listOf(widgetProvider()),
+                        previewImageLoader = ThrowingWidgetPreviewImageLoader,
+                        onAction = {},
+                    )
+                }
+            }
+        }
+
+        val rootBounds = composeRule.onNodeWithTag(WIDGET_PICKER_ROOT_TEST_TAG).fetchSemanticsNode().boundsInRoot
+        val panelBounds = composeRule.onNodeWithTag(WIDGET_PICKER_PANEL_TEST_TAG).fetchSemanticsNode().boundsInRoot
+
+        assertTrue(panelBounds.width < rootBounds.width)
+        assertTrue(panelBounds.left > rootBounds.left)
+        assertTrue(panelBounds.right < rootBounds.right)
+        assertTrue(panelBounds.top > rootBounds.top)
+        assertTrue(panelBounds.bottom < rootBounds.bottom)
+    }
+
+    @Test
+    fun capsAndCentersThePickerPanelOnWideWindows() {
+        composeRule.setContent {
+            MaterialTheme {
+                Box(modifier = Modifier.requiredSize(width = 1200.dp, height = 700.dp)) {
+                    WidgetPickerSurface(
+                        providers = listOf(widgetProvider()),
+                        previewImageLoader = ThrowingWidgetPreviewImageLoader,
+                        onAction = {},
+                    )
+                }
+            }
+        }
+
+        val rootBounds = composeRule.onNodeWithTag(WIDGET_PICKER_ROOT_TEST_TAG).fetchSemanticsNode().boundsInRoot
+        val panelBounds = composeRule.onNodeWithTag(WIDGET_PICKER_PANEL_TEST_TAG).fetchSemanticsNode().boundsInRoot
+        val expectedPanelWidth = with(composeRule.density) { (840 - (12 * 2)).dp.toPx() }
+        val leftMargin = panelBounds.left - rootBounds.left
+        val rightMargin = rootBounds.right - panelBounds.right
+
+        assertEquals(expectedPanelWidth, panelBounds.width, 1f)
+        assertEquals(leftMargin, rightMargin, 1f)
+        assertTrue(leftMargin > 0f)
     }
 
     @Test
