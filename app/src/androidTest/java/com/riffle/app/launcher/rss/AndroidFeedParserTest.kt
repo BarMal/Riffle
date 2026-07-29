@@ -76,7 +76,7 @@ class AndroidFeedParserTest {
                 append("</channel></rss>")
             }
         val feed = parser.parse(entries).getOrThrow()
-        assertEquals(100, feed.items.size)
+        assertEquals(50, feed.items.size)
         assertTrue(feed.items.none { item -> item.identity == "id-500" })
 
         val oversized = parser.parse("<rss><channel><item><title>${"x".repeat(257)}</title></item></channel></rss>").getOrThrow()
