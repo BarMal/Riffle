@@ -474,7 +474,7 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         refreshPlatformStatuses()
-        if (intent.isLauncherHomeIntent()) {
+        if (shouldOpenDefaultHomeOnLaunch(intent.action, intent.categories)) {
             launcherActionRouter.handle(LauncherShellAction.OpenDefaultHome)
         }
     }
