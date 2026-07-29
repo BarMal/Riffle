@@ -82,6 +82,7 @@ fun WidgetPickerSurface(
     onAccessiblePlacementConfirmed: () -> Unit = {},
     onAccessiblePlacementCancelled: () -> Unit = {},
     onAction: (LauncherShellAction) -> Unit,
+    onCloseRequested: () -> Unit = { onAction(LauncherShellAction.CloseWidgetPicker) },
 ) {
     var query by rememberSaveable { mutableStateOf("") }
     var collapsedSectionTitles by rememberSaveable { mutableStateOf("") }
@@ -144,7 +145,7 @@ fun WidgetPickerSurface(
                             text = "Widgets",
                             style = MaterialTheme.typography.headlineMedium,
                         )
-                        TextButton(onClick = { onAction(LauncherShellAction.CloseWidgetPicker) }) {
+                        TextButton(onClick = onCloseRequested) {
                             Text(text = "Close")
                         }
                     }

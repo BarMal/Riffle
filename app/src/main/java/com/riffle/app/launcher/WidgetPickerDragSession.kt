@@ -35,6 +35,7 @@ data class WidgetPickerPlacementCandidate(
 data class WidgetPickerAccessiblePlacement(
     val provider: InstalledWidgetProvider,
     val target: WidgetAddTarget,
+    val initialPageId: LauncherPageId,
     val candidates: List<WidgetPickerPlacementCandidate>,
     val selectedCandidateIndex: Int = 0,
 ) {

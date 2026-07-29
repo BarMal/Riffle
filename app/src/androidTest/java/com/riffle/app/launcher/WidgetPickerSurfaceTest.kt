@@ -95,6 +95,7 @@ class WidgetPickerSurfaceTest {
                         WidgetPickerAccessiblePlacement(
                             provider = widgetProvider(),
                             target = WidgetAddTarget.HOME,
+                            initialPageId = LauncherPageId("home"),
                             candidates =
                                 listOf(
                                     WidgetPickerPlacementCandidate(

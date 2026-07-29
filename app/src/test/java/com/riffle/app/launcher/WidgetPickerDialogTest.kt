@@ -22,6 +22,56 @@ import java.util.concurrent.TimeUnit
 
 class WidgetPickerDialogTest {
     @Test
+    fun cancellingAccessiblePlacementRestoresThePageSelectedWhenPlacementStarted() {
+        val initialPageId = LauncherPageId("first")
+        val candidatePageId = LauncherPageId("second")
+        val placement =
+            accessibleWidgetPlacementFor(
+                provider =
+                    widgetProvider(
+                        label = "Weather",
+                        packageName = "com.example.weather",
+                        className = ".Weather",
+                    ),
+                target = WidgetAddTarget.HOME,
+                pages =
+                    listOf(
+                        LauncherPage(
+                            id = initialPageId,
+                            type = LauncherPageType.Home,
+                            grid = GridDimensions(1, 1),
+                        ),
+                        LauncherPage(
+                            id = candidatePageId,
+                            type = LauncherPageType.Home,
+                            grid = GridDimensions(1, 1),
+                        ),
+                    ),
+                selectedPageId = initialPageId,
+                availableWidthDp = 400,
+                availableHeightDp = 400,
+            ).let { value ->
+                value.selectCandidate(value.candidates.first { candidate -> candidate.pageId == candidatePageId })
+            }
+        val actions =
+            listOfNotNull(
+                placement.selectedCandidate?.pageId?.let(LauncherShellAction::SelectHomePage),
+                accessibleWidgetPlacementCancellationActionFor(
+                    placement = placement,
+                    selectedPageId = candidatePageId,
+                ),
+            )
+
+        assertEquals(
+            listOf(
+                LauncherShellAction.SelectHomePage(candidatePageId),
+                LauncherShellAction.SelectHomePage(initialPageId),
+            ),
+            actions,
+        )
+    }
+
+    @Test
     fun accessibleDockPlacementDispatchesSelectedNonFirstPosition() {
         val provider = widgetProvider(label = "Weather", packageName = "com.example.weather", className = ".Weather")
         val placement =

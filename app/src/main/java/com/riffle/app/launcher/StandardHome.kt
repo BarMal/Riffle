@@ -85,6 +85,18 @@ internal fun StandardHome(
     val workspaceGridBounds = remember { mutableStateOf<Rect?>(null) }
     val dockBounds = remember { mutableStateOf<Rect?>(null) }
     val density = LocalDensity.current.density
+    val cancelAccessibleWidgetPlacement = {
+        val placement = accessibleWidgetPlacement.value
+        accessibleWidgetPlacement.value = null
+        placement
+            ?.let { value ->
+                accessibleWidgetPlacementCancellationActionFor(
+                    placement = value,
+                    selectedPageId = visibleLayout.selectedPageId,
+                )
+            }?.let(onAction)
+        Unit
+    }
     val actions =
         HomeWorkspaceActions(
             onFolderOpen = { folder -> openedFolderId.value = folder.id },
@@ -121,7 +133,7 @@ internal fun StandardHome(
             accessiblePlacement = accessibleWidgetPlacement.value,
             isDragHandoffActive = widgetPickerDragInProgress.value,
             onWidgetDragStarted = {
-                accessibleWidgetPlacement.value = null
+                cancelAccessibleWidgetPlacement()
                 widgetPickerDragInProgress.value = true
                 widgetPickerDragPreview.value = null
                 onAction(LauncherShellAction.CloseWidgetPicker)
@@ -159,6 +171,9 @@ internal fun StandardHome(
                         target = target,
                         pages = visibleLayout.pages,
                         selectedPageId = visibleLayout.selectedPageId,
+                        initialPageId =
+                            accessibleWidgetPlacement.value?.initialPageId
+                                ?: visibleLayout.selectedPageId,
                         dockItemCount = visibleLayout.dock.items.size,
                         availableWidthDp = workspaceGridBounds.value?.width?.div(density)?.roundToInt() ?: 0,
                         availableHeightDp = workspaceGridBounds.value?.height?.div(density)?.roundToInt() ?: 0,
@@ -181,7 +196,11 @@ internal fun StandardHome(
                     }
                 }
             },
-            onAccessiblePlacementCancelled = { accessibleWidgetPlacement.value = null },
+            onAccessiblePlacementCancelled = cancelAccessibleWidgetPlacement,
+            onCloseRequested = {
+                cancelAccessibleWidgetPlacement()
+                onAction(LauncherShellAction.CloseWidgetPicker)
+            },
             onWidgetDropped = { provider, position, rootSize ->
                 val selectedPage = visibleLayout.selectedPage
                 val bounds = workspaceGridBounds.value
@@ -246,12 +265,21 @@ internal fun accessibleWidgetAddActionFor(placement: WidgetPickerAccessiblePlace
     )
 }
 
+internal fun accessibleWidgetPlacementCancellationActionFor(
+    placement: WidgetPickerAccessiblePlacement,
+    selectedPageId: LauncherPageId,
+): LauncherShellAction.SelectHomePage? =
+    placement.initialPageId
+        .takeIf { initialPageId -> initialPageId != selectedPageId }
+        ?.let(LauncherShellAction::SelectHomePage)
+
 @Suppress("LongParameterList")
 internal fun accessibleWidgetPlacementFor(
     provider: InstalledWidgetProvider,
     target: WidgetAddTarget,
     pages: List<LauncherPage>,
     selectedPageId: LauncherPageId,
+    initialPageId: LauncherPageId = selectedPageId,
     dockItemCount: Int = 0,
     availableWidthDp: Int,
     availableHeightDp: Int,
@@ -260,6 +288,7 @@ internal fun accessibleWidgetPlacementFor(
         return WidgetPickerAccessiblePlacement(
             provider = provider,
             target = target,
+            initialPageId = initialPageId,
             candidates =
                 (0..dockItemCount).map { index ->
                     WidgetPickerPlacementCandidate(dockIndex = index)
@@ -294,6 +323,7 @@ internal fun accessibleWidgetPlacementFor(
     return WidgetPickerAccessiblePlacement(
         provider = provider,
         target = target,
+        initialPageId = initialPageId,
         candidates = candidates,
     )
 }
