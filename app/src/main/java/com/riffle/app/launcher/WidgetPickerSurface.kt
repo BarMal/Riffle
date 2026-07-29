@@ -511,6 +511,7 @@ private fun WidgetPickerAccessiblePlacementControls(
     onCancel: () -> Unit,
 ) {
     val focusRequester = remember { FocusRequester() }
+    var isLaidOut by remember { mutableStateOf(false) }
     var pageMenuExpanded by remember { mutableStateOf(false) }
     var positionMenuExpanded by remember { mutableStateOf(false) }
     val selected = placement.selectedCandidate
@@ -519,8 +520,8 @@ private fun WidgetPickerAccessiblePlacementControls(
         placement.candidates.filter { candidate ->
             placement.target == WidgetAddTarget.DOCK || candidate.pageId == selected?.pageId
         }
-    LaunchedEffect(placement.provider.identity) {
-        withFrameNanos { }
+    LaunchedEffect(placement.provider.identity, isLaidOut) {
+        if (!isLaidOut) return@LaunchedEffect
         focusRequester.requestFocus()
     }
     Surface(
@@ -529,7 +530,8 @@ private fun WidgetPickerAccessiblePlacementControls(
                 .fillMaxWidth()
                 .testTag(WIDGET_PICKER_ACCESSIBLE_PLACEMENT_TEST_TAG)
                 .focusRequester(focusRequester)
-                .focusable(),
+                .focusable()
+                .onGloballyPositioned { isLaidOut = true },
         shape = RoundedCornerShape(16.dp),
         color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.72f),
         tonalElevation = 2.dp,
