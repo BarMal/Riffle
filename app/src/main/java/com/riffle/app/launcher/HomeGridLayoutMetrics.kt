@@ -5,6 +5,19 @@ import com.riffle.core.domain.launcher.home.HomeLabelSettings
 import com.riffle.core.domain.launcher.home.HomeLabelSizing
 
 class HomeGridLayoutMetrics {
+    internal fun gridSizePx(
+        grid: GridDimensions,
+        maxWidthPx: Float,
+        maxHeightPx: Float,
+    ): HomeGridSizePx {
+        val cellSizePx = cellSizePx(grid, maxWidthPx, maxHeightPx)
+        return HomeGridSizePx(
+            widthPx = cellSizePx * grid.columns,
+            heightPx = cellSizePx * grid.rows,
+            cellSizePx = cellSizePx,
+        )
+    }
+
     fun cellSizePx(
         grid: GridDimensions,
         maxWidthPx: Float,
@@ -38,6 +51,12 @@ class HomeGridLayoutMetrics {
             HomeLabelSizing.DYNAMIC -> null
         }
 }
+
+internal data class HomeGridSizePx(
+    val widthPx: Float,
+    val heightPx: Float,
+    val cellSizePx: Float,
+)
 
 private const val HOME_ICON_LABEL_SPACING_DP = 6
 private const val HOME_LABEL_VERTICAL_PADDING_DP = 2
