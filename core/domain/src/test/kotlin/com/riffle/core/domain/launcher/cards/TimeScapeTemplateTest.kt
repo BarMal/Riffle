@@ -16,8 +16,29 @@ class TimeScapeTemplateTest {
 
         assertTrue(variant != null)
         assertEquals(TimeScapeDynamicSource.APP_STAGE_STACKS, variant.dynamicSlots.single().source)
-        assertEquals(listOf("clock", "carousel", "dock"), variant.canvas.elements.map { it.id.value })
+        assertEquals(listOf("clock", "search", "carousel", "dock"), variant.canvas.elements.map { it.id.value })
         assertEquals(emptyList(), variant.validate())
+    }
+
+    @Test
+    fun builtInTemplateUsesIntentionalPhoneAndFoldableStageManagerPlacements() {
+        val phone =
+            TimeScapeTemplateCatalogDefaults.sharedCanvas.variantFor(
+                HomeLayoutDeviceClass.PHONE,
+                TimeScapePaneMode.THREE_PANE,
+            )
+        val foldable =
+            TimeScapeTemplateCatalogDefaults.sharedCanvas.variantFor(
+                HomeLayoutDeviceClass.FOLDABLE,
+                TimeScapePaneMode.THREE_PANE,
+            )
+
+        assertTrue(phone != null)
+        assertTrue(foldable != null)
+        assertEquals(5, phone.canvas.grid.columns)
+        assertEquals(10, foldable.canvas.grid.columns)
+        assertEquals(emptyList(), phone.validate())
+        assertEquals(emptyList(), foldable.validate())
     }
 
     @Test

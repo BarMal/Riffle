@@ -153,8 +153,10 @@ object TimeScapeTemplateCatalogDefaults {
             description = "A persistent canvas around app-stage cards.",
             variants =
                 listOf(
-                    variant(HomeLayoutDeviceClass.PHONE, 4, 6),
-                    variant(HomeLayoutDeviceClass.FOLDABLE, 8, 6),
+                    variant(HomeLayoutDeviceClass.PHONE, TimeScapePaneMode.COMPACT, 4, 7),
+                    variant(HomeLayoutDeviceClass.PHONE, TimeScapePaneMode.THREE_PANE, 5, 7),
+                    variant(HomeLayoutDeviceClass.FOLDABLE, TimeScapePaneMode.COMPACT, 8, 7),
+                    variant(HomeLayoutDeviceClass.FOLDABLE, TimeScapePaneMode.THREE_PANE, 10, 7),
                 ),
         )
 
@@ -162,19 +164,21 @@ object TimeScapeTemplateCatalogDefaults {
 
     private fun variant(
         deviceClass: HomeLayoutDeviceClass,
+        paneMode: TimeScapePaneMode,
         columns: Int,
         rows: Int,
     ): TimeScapeTemplateVariant =
         TimeScapeTemplateVariant(
             deviceClass = deviceClass,
-            paneMode = TimeScapePaneMode.COMPACT,
+            paneMode = paneMode,
             canvas =
                 TimeScapeCanvas(
                     grid = GridDimensions(columns, rows),
                     elements =
                         listOf(
                             staticElement("clock", TimeScapeStaticElementType.CLOCK, 0, 0, columns, 1),
-                            staticElement("carousel", TimeScapeStaticElementType.APP_CAROUSEL, 0, 1, columns, 1),
+                            staticElement("search", TimeScapeStaticElementType.SEARCH, 0, 1, columns, 1),
+                            staticElement("carousel", TimeScapeStaticElementType.APP_CAROUSEL, 0, 2, columns, 1),
                             staticElement("dock", TimeScapeStaticElementType.DOCK, 0, rows - 1, columns, 1),
                         ),
                 ),
@@ -183,7 +187,7 @@ object TimeScapeTemplateCatalogDefaults {
                     TimeScapeDynamicSlot(
                         id = TimeScapeDynamicSlotId("app-stage"),
                         source = TimeScapeDynamicSource.APP_STAGE_STACKS,
-                        placement = GridPlacement(GridCell(0, 2), GridSpan(columns, rows - 3)),
+                        placement = GridPlacement(GridCell(0, 3), GridSpan(columns, rows - 4)),
                     ),
                 ),
         )
