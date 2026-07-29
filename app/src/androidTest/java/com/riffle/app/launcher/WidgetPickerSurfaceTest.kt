@@ -1,5 +1,7 @@
 package com.riffle.app.launcher
 
+import android.os.Build
+import android.widget.RemoteViews
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
@@ -20,6 +22,9 @@ import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
+import com.riffle.app.launcher.widgets.loadWidgetPreviewWithFallback
+import com.riffle.app.launcher.widgets.renderWidgetPreviewRemoteViews
 import com.riffle.core.domain.launcher.WidgetProviderCatalogStatus
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.home.GridCell
@@ -29,8 +34,13 @@ import com.riffle.core.domain.launcher.widgets.InstalledWidgetProvider
 import com.riffle.core.domain.launcher.widgets.WidgetProviderClassName
 import com.riffle.core.domain.launcher.widgets.WidgetProviderDimensions
 import com.riffle.core.domain.launcher.widgets.WidgetProviderIdentity
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import org.junit.Assume.assumeTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -160,6 +170,97 @@ class WidgetPickerSurfaceTest {
 
         composeRule.onNodeWithText("Clock").assertIsDisplayed()
         composeRule.onNodeWithText("Add Clock").assertIsDisplayed()
+    }
+
+    @Test
+    fun android15GeneratedRemoteViewsAreRetrievedAndRenderedBeforeLegacyPreview() {
+        assumeTrue(Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM)
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val generatedRemoteViews =
+            RemoteViews("android", android.R.layout.simple_list_item_1).apply {
+                setTextViewText(android.R.id.text1, "Generated widget preview")
+            }
+        var generatedPreviewRetrieved = false
+        var legacyPreviewLoaded = false
+
+        val preview =
+            runBlocking {
+                loadWidgetPreviewWithFallback(
+                    loadGeneratedPreview = {
+                        generatedPreviewRetrieved = true
+                        generatedRemoteViews
+                    },
+                    renderGeneratedPreview = { remoteViews ->
+                        withContext(Dispatchers.Main.immediate) {
+                            renderWidgetPreviewRemoteViews(
+                                context = context,
+                                remoteViews = remoteViews,
+                                intrinsicWidth = 200,
+                                intrinsicHeight = 100,
+                            )
+                        }
+                    },
+                    loadLegacyPreview = {
+                        legacyPreviewLoaded = true
+                        ImageBitmap(width = 1, height = 1)
+                    },
+                )
+            }
+
+        assertTrue(generatedPreviewRetrieved)
+        assertFalse(legacyPreviewLoaded)
+        assertEquals(200, preview?.width)
+        assertEquals(100, preview?.height)
+    }
+
+    @Test
+    fun android15GeneratedRenderFailureFallsBackToLegacyPreview() {
+        assumeTrue(Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM)
+        var legacyPreviewLoaded = false
+
+        val preview =
+            runBlocking {
+                loadWidgetPreviewWithFallback(
+                    loadGeneratedPreview = {
+                        RemoteViews("android", android.R.layout.simple_list_item_1)
+                    },
+                    renderGeneratedPreview = {
+                        error("Generated preview resource is malformed")
+                    },
+                    loadLegacyPreview = {
+                        legacyPreviewLoaded = true
+                        ImageBitmap(width = 7, height = 5)
+                    },
+                )
+            }
+
+        assertTrue(legacyPreviewLoaded)
+        assertEquals(7, preview?.width)
+        assertEquals(5, preview?.height)
+    }
+
+    @Test
+    fun android15MissingGeneratedRemoteViewsFallsBackWithoutRendering() {
+        assumeTrue(Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM)
+        var generatedPreviewRendered = false
+
+        val preview =
+            runBlocking {
+                loadWidgetPreviewWithFallback(
+                    loadGeneratedPreview = { null },
+                    renderGeneratedPreview = {
+                        generatedPreviewRendered = true
+                        ImageBitmap(width = 1, height = 1)
+                    },
+                    loadLegacyPreview = {
+                        ImageBitmap(width = 9, height = 6)
+                    },
+                )
+            }
+
+        assertFalse(generatedPreviewRendered)
+        assertEquals(9, preview?.width)
+        assertEquals(6, preview?.height)
     }
 
     @Test

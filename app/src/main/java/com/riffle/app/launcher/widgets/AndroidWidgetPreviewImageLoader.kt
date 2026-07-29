@@ -53,44 +53,56 @@ class AndroidWidgetPreviewImageLoader(
                 appWidgetManager.installedProviders.firstOrNull { candidate -> candidate.matches(identity) }
             } ?: return null
 
-        return loadGeneratedPreview(provider)
-            ?: withContext(Dispatchers.Default) {
-                provider
-                    .loadPreviewImage(context, WIDGET_PREVIEW_DENSITY)
-                    ?.toWidgetPreviewBitmap()
-            }
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+            loadAndroid15Preview(provider)
+        } else {
+            loadLegacyPreview(provider)
+        }
     }
 
-    private suspend fun loadGeneratedPreview(provider: AppWidgetProviderInfo): ImageBitmap? =
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
-            loadAndroid15GeneratedPreview(provider)
-        } else {
-            null
+    private suspend fun loadLegacyPreview(provider: AppWidgetProviderInfo): ImageBitmap? =
+        withContext(Dispatchers.Default) {
+            provider
+                .loadPreviewImage(context, WIDGET_PREVIEW_DENSITY)
+                ?.toWidgetPreviewBitmap()
         }
 
     @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
-    private suspend fun loadAndroid15GeneratedPreview(provider: AppWidgetProviderInfo): ImageBitmap? =
-        if (canLoadGeneratedWidgetPreview(Build.VERSION.SDK_INT, provider.generatedPreviewCategories)) {
-            provider.profile?.let { profile ->
-                previewCallOrNull {
-                    withContext(Dispatchers.Default) {
-                        appWidgetManager.getWidgetPreview(
-                            provider.provider,
-                            profile,
-                            AppWidgetProviderInfo.WIDGET_CATEGORY_HOME_SCREEN,
-                        )
-                    }
-                }?.let { remoteViews ->
-                    previewCallOrNull {
-                        withContext(Dispatchers.Main.immediate) {
-                            remoteViews.toWidgetPreviewBitmap(context, provider)
+    private suspend fun loadAndroid15Preview(provider: AppWidgetProviderInfo): ImageBitmap? {
+        val generatedPreviewLoader =
+            provider.profile
+                ?.takeIf {
+                    canLoadGeneratedWidgetPreview(
+                        sdkInt = Build.VERSION.SDK_INT,
+                        generatedPreviewCategories = provider.generatedPreviewCategories,
+                    )
+                }?.let { profile ->
+                    suspend {
+                        withContext(Dispatchers.Default) {
+                            appWidgetManager.getWidgetPreview(
+                                provider.provider,
+                                profile,
+                                AppWidgetProviderInfo.WIDGET_CATEGORY_HOME_SCREEN,
+                            )
                         }
                     }
                 }
-            }
-        } else {
-            null
-        }
+
+        return loadWidgetPreviewWithFallback(
+            loadGeneratedPreview = generatedPreviewLoader,
+            renderGeneratedPreview = { remoteViews ->
+                withContext(Dispatchers.Main.immediate) {
+                    renderWidgetPreviewRemoteViews(
+                        context = context,
+                        remoteViews = remoteViews,
+                        intrinsicWidth = provider.minWidth,
+                        intrinsicHeight = provider.minHeight,
+                    )
+                }
+            },
+            loadLegacyPreview = { loadLegacyPreview(provider) },
+        )
+    }
 }
 
 private suspend fun <T> previewCallOrNull(block: suspend () -> T?): T? =
@@ -101,6 +113,18 @@ private suspend fun <T> previewCallOrNull(block: suspend () -> T?): T? =
     } catch (_: RuntimeException) {
         null
     }
+
+internal suspend fun loadWidgetPreviewWithFallback(
+    loadGeneratedPreview: (suspend () -> RemoteViews?)?,
+    renderGeneratedPreview: suspend (RemoteViews) -> ImageBitmap,
+    loadLegacyPreview: suspend () -> ImageBitmap?,
+): ImageBitmap? {
+    val generatedPreview =
+        loadGeneratedPreview
+            ?.let { loader -> previewCallOrNull { loader() } }
+            ?.let { remoteViews -> previewCallOrNull { renderGeneratedPreview(remoteViews) } }
+    return generatedPreview ?: previewCallOrNull { loadLegacyPreview() }
+}
 
 internal class WidgetPreviewCache<T>(
     private val maxEntries: Int = MAX_PREVIEW_CACHE_ENTRIES,
@@ -144,17 +168,19 @@ private fun Drawable.toWidgetPreviewBitmap(): ImageBitmap {
     ).asImageBitmap()
 }
 
-private fun RemoteViews.toWidgetPreviewBitmap(
+internal fun renderWidgetPreviewRemoteViews(
     context: Context,
-    provider: AppWidgetProviderInfo,
+    remoteViews: RemoteViews,
+    intrinsicWidth: Int,
+    intrinsicHeight: Int,
 ): ImageBitmap {
     val size =
         widgetPreviewBitmapSize(
-            intrinsicWidth = provider.minWidth,
-            intrinsicHeight = provider.minHeight,
+            intrinsicWidth = intrinsicWidth,
+            intrinsicHeight = intrinsicHeight,
         )
     val parent = FrameLayout(context)
-    val previewView = apply(parent.context, parent)
+    val previewView = remoteViews.apply(parent.context, parent)
     parent.addView(previewView)
     previewView.measure(
         View.MeasureSpec.makeMeasureSpec(size.width, View.MeasureSpec.EXACTLY),
