@@ -19,6 +19,7 @@ import com.riffle.core.domain.launcher.home.LauncherPageId
 import com.riffle.core.domain.launcher.home.LauncherPageType
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -53,8 +54,9 @@ class StandardHomeGridLayoutTest {
         val density = composeRule.density
 
         with(density) {
-            assertEquals(320.dp.toPx(), grid.width, 1f)
+            assertTrue("grid should shrink to fit above overflow affordance", grid.width < 320.dp.toPx())
         }
+        assertEquals(grid.height * 4f / 5f, grid.width, 1f)
         assertEquals(root.center.x, grid.center.x, 1f)
         assertEquals((root.top + overflow.top) / 2f, grid.center.y, 4f)
         assertFalse("overflow affordance must not cover the grid", grid.overlaps(overflow))
