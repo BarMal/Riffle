@@ -50,6 +50,11 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpSize
@@ -103,7 +108,7 @@ fun WidgetPickerSurface(
                     if (isDragHandoffActive) {
                         androidx.compose.ui.graphics.Color.Transparent
                     } else {
-                        MaterialTheme.colorScheme.surface.copy(alpha = WIDGET_PICKER_SURFACE_ALPHA)
+                        MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = WIDGET_PICKER_SURFACE_ALPHA)
                     },
                 contentColor = MaterialTheme.colorScheme.onSurface,
                 border =
@@ -120,7 +125,7 @@ fun WidgetPickerSurface(
                             .fillMaxSize()
                             .alpha(if (isDragHandoffActive) 0f else 1f)
                             .padding(WIDGET_PICKER_SCREEN_PADDING_DP.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -290,6 +295,20 @@ private fun WidgetProviderTile(
                 .fillMaxWidth()
                 .padding(bottom = 2.dp)
                 .testTag(WIDGET_PROVIDER_TILE_TEST_TAG)
+                .semantics {
+                    role = Role.Image
+                    customActions =
+                        listOf(
+                            CustomAccessibilityAction("Add ${provider.label} to Home") {
+                                onAction(provider.requestAddWidgetAction(WidgetAddTarget.HOME))
+                                true
+                            },
+                            CustomAccessibilityAction("Add ${provider.label} to Dock") {
+                                onAction(provider.requestAddWidgetAction(WidgetAddTarget.DOCK))
+                                true
+                            },
+                        )
+                }
                 .onGloballyPositioned { layoutCoordinates -> coordinates = layoutCoordinates }
                 .pointerInput(provider.widgetPickerKey) {
                     detectDragGesturesAfterLongPress(
@@ -410,7 +429,7 @@ private fun WidgetProviderPreview(
                 preferredAspectRatio = provider.widgetPickerPreviewAspectRatio(),
             )
 
-        if (preview != null && !previewIsConstrained) {
+        if (preview != null) {
             Image(
                 bitmap = preview,
                 contentDescription = "${provider.label} widget preview",
@@ -463,7 +482,7 @@ private fun WidgetProviderPreviewFallback(
         Text(
             text =
                 if (isConstrained) {
-                    "Preview ratio unavailable"
+                    "Preview unavailable"
                 } else {
                     provider.widgetPickerPreviewLabel()
                 },
@@ -527,7 +546,7 @@ private const val WIDGET_PICKER_SCREEN_PADDING_DP = 20
 private const val WIDGET_PICKER_PANEL_MARGIN_DP = 12
 private const val WIDGET_PICKER_MAX_WIDTH_DP = 840
 private const val WIDGET_TILE_MIN_WIDTH_DP = 220
-private const val WIDGET_PICKER_SURFACE_ALPHA = 0.88f
+private const val WIDGET_PICKER_SURFACE_ALPHA = 0.76f
 private const val WIDGET_PREVIEW_MAX_HEIGHT_DP = 240
 private const val WIDGET_PREVIEW_MIN_LEGIBLE_DIMENSION_DP = 48
 private const val WIDGET_PREVIEW_CONSTRAINED_WIDTH_DP = 180

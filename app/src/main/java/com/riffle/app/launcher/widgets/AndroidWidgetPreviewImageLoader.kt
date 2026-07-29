@@ -12,19 +12,37 @@ import com.riffle.app.launcher.apps.toAppProfile
 import com.riffle.core.domain.launcher.apps.AppProfile
 import com.riffle.core.domain.launcher.widgets.WidgetProviderIdentity
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ConcurrentLinkedDeque
 
 class AndroidWidgetPreviewImageLoader(
     private val context: Context,
     private val appWidgetManager: AppWidgetManager = AppWidgetManager.getInstance(context),
 ) : WidgetPreviewImageLoader {
     private val previews = ConcurrentHashMap<WidgetProviderIdentity, ImageBitmap>()
+    private val previewOrder = ConcurrentLinkedDeque<WidgetProviderIdentity>()
 
     override fun previewFor(identity: WidgetProviderIdentity): ImageBitmap? =
-        previews[identity] ?: runCatching { loadPreview(identity) }.getOrNull()?.also { preview ->
-            previews[identity] = preview
-        }
+        previews[identity]?.also { touch(identity) }
+            ?: runCatching { loadPreview(identity) }.getOrNull()?.also { preview ->
+                previews[identity] = preview
+                touch(identity)
+                trimCache()
+            }
 
-    override fun cachedPreviewFor(identity: WidgetProviderIdentity): ImageBitmap? = previews[identity]
+    override fun cachedPreviewFor(identity: WidgetProviderIdentity): ImageBitmap? {
+        return previews[identity]?.also { touch(identity) }
+    }
+
+    private fun touch(identity: WidgetProviderIdentity) {
+        previewOrder.remove(identity)
+        previewOrder.addLast(identity)
+    }
+
+    private fun trimCache() {
+        while (previewOrder.size > MAX_PREVIEW_CACHE_ENTRIES) {
+            previewOrder.pollFirst()?.let(previews::remove)
+        }
+    }
 
     private fun loadPreview(identity: WidgetProviderIdentity): ImageBitmap? =
         appWidgetManager.installedProviders
@@ -74,3 +92,4 @@ internal fun widgetPreviewBitmapSize(
 private const val WIDGET_PREVIEW_DENSITY = 0
 private const val WIDGET_PREVIEW_BITMAP_WIDTH = 320
 private const val WIDGET_PREVIEW_BITMAP_HEIGHT = 180
+private const val MAX_PREVIEW_CACHE_ENTRIES = 48
