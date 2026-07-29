@@ -1,12 +1,35 @@
 package com.riffle.app.launcher
 
 import com.riffle.core.domain.launcher.cards.TimeScapePosture
+import com.riffle.core.domain.launcher.cards.TimeScapeWindowLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 
 class HomeLayoutDeviceClassSelectionTest {
+    @Test
+    fun deviceClassEventCarriesTheWindowLayoutUsedByTimeScapeRendering() {
+        val layout = TimeScapeWindowLayout(widthDp = 1_200, heightDp = 800, posture = TimeScapePosture.UNFOLDED)
+        val event =
+            HomeLayoutDeviceClassEvent(
+                source = "window-info",
+                selection =
+                    HomeLayoutDeviceClassSelection(
+                        activeDeviceClass = HomeLayoutDeviceClass.FOLDABLE,
+                        availableDeviceClasses = setOf(HomeLayoutDeviceClass.FOLDABLE),
+                    ),
+                windowSize = HomeLayoutWindowSize(screenWidthDp = 1_200, screenHeightDp = 800),
+                hasFoldableHardware = true,
+                configurationClass = HomeLayoutDeviceClass.FOLDABLE,
+                foldablePosture = HomeLayoutFoldablePosture.UNFOLDED,
+                foldingFeatures = emptyList(),
+                timeScapeWindowLayout = layout,
+            )
+
+        assertEquals(layout, event.timeScapeWindowLayout)
+    }
+
     @Test
     fun timeScapePostureKeepsUnavailableAndUnconfirmedReportsOutOfStageManager() {
         assertEquals(

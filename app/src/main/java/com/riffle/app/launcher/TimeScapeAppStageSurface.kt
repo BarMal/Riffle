@@ -36,9 +36,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -88,6 +90,7 @@ import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.settings.TimeScapeCardStackResolution
 import com.riffle.core.domain.launcher.settings.TimeScapeViewportDp
 import com.riffle.core.domain.launcher.settings.resolveTimeScapeCardStack
+import kotlinx.coroutines.flow.distinctUntilChanged
 
 /** The Cards home surface, compact by default and pane-adaptive for the current launcher window. */
 @Composable
@@ -118,6 +121,18 @@ internal fun TimeScapeAppStageSurface(
             mutableStateOf(context.focusedCardKey)
         }
     var detailRecoveryMessage by rememberSaveable { mutableStateOf<String?>(null) }
+    val stageRailScrollState = rememberScrollState(context.scrollOffsetPx.coerceAtLeast(0))
+    val latestContext by rememberUpdatedState(context)
+    val latestContextChanged by rememberUpdatedState(onContextChanged)
+    LaunchedEffect(stageRailScrollState) {
+        snapshotFlow { stageRailScrollState.value }
+            .distinctUntilChanged()
+            .collect { offset ->
+                if (offset != latestContext.scrollOffsetPx) {
+                    latestContextChanged(latestContext.copy(scrollOffsetPx = offset))
+                }
+            }
+    }
     val detailState =
         selectedStage?.let { stage ->
             rememberTimeScapeCardDetailState(
@@ -257,6 +272,7 @@ internal fun TimeScapeAppStageSurface(
                                 selectedStageId = selectedStage?.id,
                                 state = state,
                                 onAction = onAction,
+                                scrollState = stageRailScrollState,
                                 modifier = Modifier.width(paneLayout.railWidthDp.dp),
                             )
                         }
@@ -305,6 +321,7 @@ internal fun TimeScapeAppStageSurface(
                                 selectedStageId = selectedStage?.id,
                                 state = state,
                                 onAction = onAction,
+                                scrollState = stageRailScrollState,
                                 modifier = Modifier.width(paneLayout.railWidthDp.dp),
                             )
                         }
@@ -389,9 +406,10 @@ private fun TimeScapeStageRail(
     selectedStageId: AppStageId?,
     state: LauncherShellState,
     onAction: (LauncherShellAction) -> Unit,
+    scrollState: androidx.compose.foundation.ScrollState,
     modifier: Modifier,
 ) {
-    Column(modifier = modifier.padding(8.dp).verticalScroll(rememberScrollState())) {
+    Column(modifier = modifier.padding(8.dp).verticalScroll(scrollState)) {
         Text("Stages", style = MaterialTheme.typography.labelLarge)
         TextButton(onClick = { onAction(LauncherShellAction.SelectPreviousAppStage) }) { Text("Previous") }
         stages.forEach { stage ->
