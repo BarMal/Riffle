@@ -9,6 +9,7 @@ data class TimeScapeWindowLayout(
     val safeEndDp: Int = 0,
     val safeBottomDp: Int = 0,
     val separatingHinges: List<TimeScapeHingeBounds> = emptyList(),
+    val posture: TimeScapePosture = TimeScapePosture.UNKNOWN,
 )
 
 data class TimeScapeHingeBounds(
@@ -82,6 +83,36 @@ class TimeScapePaneLayoutPolicy {
                 useBottomRegion -> bottomRegionHeight ?: 0
                 else -> topRegionHeight ?: 0
             }
+
+        // A half-open or tabletop device must remain a usable compact surface even when the
+        // reported bounds are large. Stage Manager is reserved for a confirmed flat posture.
+        if (window.posture == TimeScapePosture.COMPACT ||
+            window.posture == TimeScapePosture.PARTIALLY_FOLDED ||
+            window.posture == TimeScapePosture.TABLETOP
+        ) {
+            val useTrailingRegion = verticalHinge != null && trailingWidth > leadingWidth
+            val compactWidth =
+                if (verticalHinge == null) {
+                    safeWidth
+                } else if (useTrailingRegion) {
+                    trailingWidth
+                } else {
+                    leadingWidth
+                }
+            return TimeScapePaneLayout(
+                mode = TimeScapePaneMode.COMPACT,
+                railWidthDp = 0,
+                splineWidthDp = compactWidth,
+                detailWidthDp = 0,
+                hingeGapDp = 0,
+                leadingRegionWidthDp = leadingWidth,
+                trailingRegionWidthDp = trailingWidth,
+                contentStartDp = if (useTrailingRegion) verticalHinge!!.rightDp - window.safeStartDp else 0,
+                contentWidthDp = compactWidth,
+                contentTopDp = contentTop,
+                contentHeightDp = contentHeight,
+            )
+        }
 
         if (verticalHinge != null && leadingWidth < RAIL_WIDTH_DP + MIN_SPLINE_WIDTH_DP) {
             val useTrailingRegion = trailingWidth > leadingWidth

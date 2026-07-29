@@ -36,6 +36,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
@@ -76,6 +77,8 @@ import com.riffle.core.domain.launcher.cards.CardStackSettleRequest
 import com.riffle.core.domain.launcher.cards.LauncherCardId
 import com.riffle.core.domain.launcher.cards.TimeScapePaneLayoutPolicy
 import com.riffle.core.domain.launcher.cards.TimeScapePaneMode
+import com.riffle.core.domain.launcher.cards.TimeScapePosture
+import com.riffle.core.domain.launcher.cards.TimeScapePostureTransitionState
 import com.riffle.core.domain.launcher.cards.TimeScapeWindowLayout
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.settings.TimeScapeCardStackResolution
@@ -148,7 +151,20 @@ internal fun TimeScapeAppStageSurface(
                     ?.insetLocal(safeInsets)
                     ?.takeIf(TimeScapeWindowLayout::hasUsableBounds)
                     ?: measuredWindow
-            val paneLayout = remember(adaptiveWindow) { TimeScapePaneLayoutPolicy().layoutFor(adaptiveWindow) }
+            var postureTransition by rememberSaveable(stateSaver = TimeScapePostureTransitionStateSaver) {
+                mutableStateOf(TimeScapePostureTransitionState())
+            }
+            LaunchedEffect(adaptiveWindow.posture) {
+                postureTransition = postureTransition.transitionTo(adaptiveWindow.posture)
+                withFrameNanos { }
+                postureTransition = postureTransition.settle()
+            }
+            val paneLayout =
+                remember(adaptiveWindow, postureTransition.effectivePosture) {
+                    TimeScapePaneLayoutPolicy().layoutFor(
+                        adaptiveWindow.copy(posture = postureTransition.effectivePosture),
+                    )
+                }
             Box(
                 modifier =
                     Modifier.offset(y = paneLayout.contentTopDp.dp)
@@ -1014,6 +1030,20 @@ private fun TimeScapeWindowLayout.insetLocal(insets: TimeScapeSafeInsetsDp): Tim
     )
 
 private fun TimeScapeWindowLayout.hasUsableBounds(): Boolean = widthDp > 0 && heightDp > 0
+
+private val TimeScapePostureTransitionStateSaver =
+    Saver<TimeScapePostureTransitionState, List<String>>(
+        save = { state -> listOf(state.settledPosture.name, state.pendingPosture?.name.orEmpty()) },
+        restore = { saved ->
+            val settled = saved.getOrNull(0)?.let(::timeScapePostureOrNull) ?: TimeScapePosture.UNKNOWN
+            val pending = saved.getOrNull(1)?.takeIf(String::isNotBlank)?.let(::timeScapePostureOrNull)
+            TimeScapePostureTransitionState(settled, pending)
+        },
+    )
+
+private fun timeScapePostureOrNull(value: String): TimeScapePosture? {
+    return runCatching { TimeScapePosture.valueOf(value) }.getOrNull()
+}
 
 @Composable
 private fun TimeScapeStageSelector(

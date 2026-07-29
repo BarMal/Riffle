@@ -12,6 +12,44 @@ class TimeScapePaneLayoutPolicyTest {
     }
 
     @Test
+    fun foldedLargeWindowRemainsCompact() {
+        val layout =
+            policy.layoutFor(
+                TimeScapeWindowLayout(1_200, 900, posture = TimeScapePosture.PARTIALLY_FOLDED),
+            )
+
+        assertEquals(TimeScapePaneMode.COMPACT, layout.mode)
+    }
+
+    @Test
+    fun unfoldedWindowCanUseStageManager() {
+        val layout =
+            policy.layoutFor(
+                TimeScapeWindowLayout(1_200, 900, posture = TimeScapePosture.UNFOLDED),
+            )
+
+        assertEquals(TimeScapePaneMode.THREE_PANE, layout.mode)
+    }
+
+    @Test
+    fun foldedPostureKeepsCompactSurfaceOnOneSideOfVerticalHinge() {
+        val layout =
+            policy.layoutFor(
+                TimeScapeWindowLayout(
+                    widthDp = 1_000,
+                    heightDp = 800,
+                    separatingHinges = listOf(TimeScapeHingeBounds(480, 0, 520, 800)),
+                    posture = TimeScapePosture.COMPACT,
+                ),
+            )
+
+        assertEquals(TimeScapePaneMode.COMPACT, layout.mode)
+        assertEquals(480, layout.contentWidthDp)
+        assertEquals(0, layout.contentStartDp)
+        assertEquals(0, layout.hingeGapDp)
+    }
+
+    @Test
     fun expandedWindowShowsRailWithoutStretchingTheSpline() {
         val layout = policy.layoutFor(TimeScapeWindowLayout(800, 900))
 

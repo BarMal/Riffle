@@ -4,6 +4,7 @@ import android.app.Activity
 import androidx.window.layout.FoldingFeature
 import androidx.window.layout.WindowInfoTracker
 import androidx.window.layout.WindowMetricsCalculator
+import com.riffle.core.domain.launcher.cards.TimeScapePosture
 import com.riffle.core.domain.launcher.cards.TimeScapeWindowLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import kotlinx.coroutines.flow.Flow
@@ -87,6 +88,11 @@ internal class AndroidHomeLayoutDeviceClassObserver(
                         foldingFeatures
                             .filter { feature -> feature.isSeparating }
                             .map { feature -> feature.bounds },
+                    posture =
+                        foldingFeatures.timeScapePosture(
+                            hasFoldableHardware = hasFoldableHardware,
+                            configurationClass = configurationClass,
+                        ),
                 ),
         )
     }
@@ -100,6 +106,27 @@ internal class AndroidHomeLayoutDeviceClassObserver(
         )
     }
 }
+
+private fun List<FoldingFeature>.timeScapePosture(
+    hasFoldableHardware: Boolean,
+    configurationClass: HomeLayoutDeviceClass?,
+): TimeScapePosture =
+    when {
+        any { feature ->
+            feature.state == FoldingFeature.State.HALF_OPENED &&
+                feature.orientation == FoldingFeature.Orientation.HORIZONTAL
+        } ->
+            TimeScapePosture.TABLETOP
+        any { feature -> feature.state == FoldingFeature.State.HALF_OPENED } ->
+            TimeScapePosture.PARTIALLY_FOLDED
+        any { feature -> feature.state == FoldingFeature.State.FLAT || feature.isSeparating } ->
+            TimeScapePosture.UNFOLDED
+        isNotEmpty() -> TimeScapePosture.COMPACT
+        hasFoldableHardware && configurationClass != HomeLayoutDeviceClass.PHONE ->
+            TimeScapePosture.UNFOLDED
+        hasFoldableHardware -> TimeScapePosture.COMPACT
+        else -> TimeScapePosture.UNKNOWN
+    }
 
 internal data class HomeLayoutDeviceClassEvent(
     val source: String,
