@@ -127,7 +127,7 @@ internal fun TimeScapeAppStageSurface(
     val selectedStage = shellState.snapshot.selectedStage
     var detailCardKey by rememberSaveable { mutableStateOf(context.detailCardKey) }
     var detailStageKey by rememberSaveable {
-        mutableStateOf(context.selectedStageKey.takeIf { context.detailCardKey != null })
+        mutableStateOf(context.detailStageKey)
     }
     var focusedCardIdValue by
         rememberSaveable(selectedStage?.id?.profileId?.value, selectedStage?.id?.packageName?.value) {
@@ -196,7 +196,7 @@ internal fun TimeScapeAppStageSurface(
             if (!isStillAvailable) {
                 detailCardKey = null
                 detailStageKey = null
-                onContextChanged(context.copy(detailCardKey = null))
+                onContextChanged(context.copy(detailStageKey = null, detailCardKey = null))
                 detailRecoveryMessage = "The selected card is no longer available."
             }
         }
@@ -287,7 +287,12 @@ internal fun TimeScapeAppStageSurface(
                         onDetailVisibilityChanged = { cardId ->
                             detailCardKey = cardId?.value
                             detailStageKey = cardId?.let { selectedStage?.id?.let(::timeScapeStageKey) }
-                            onContextChanged(context.copy(detailCardKey = cardId?.value))
+                            onContextChanged(
+                                context.copy(
+                                    detailStageKey = detailStageKey,
+                                    detailCardKey = cardId?.value,
+                                ),
+                            )
                             if (cardId != null) detailRecoveryMessage = null
                         },
                         onAction = onAction,
@@ -316,7 +321,12 @@ internal fun TimeScapeAppStageSurface(
                                 onDetailVisibilityChanged = { cardId ->
                                     detailCardKey = cardId?.value
                                     detailStageKey = cardId?.let { selectedStage?.id?.let(::timeScapeStageKey) }
-                                    onContextChanged(context.copy(detailCardKey = cardId?.value))
+                                    onContextChanged(
+                                        context.copy(
+                                            detailStageKey = detailStageKey,
+                                            detailCardKey = cardId?.value,
+                                        ),
+                                    )
                                     if (cardId != null) detailRecoveryMessage = null
                                 },
                                 onFocusedCardChanged = {
