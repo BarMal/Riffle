@@ -1,6 +1,7 @@
 package com.riffle.app.launcher
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.Modifier
@@ -66,6 +67,31 @@ class WidgetPickerSurfaceTest {
         assertTrue(panelBounds.width < rootBounds.width)
         assertTrue(panelBounds.left > rootBounds.left)
         assertTrue(panelBounds.right < rootBounds.right)
+    }
+
+    @Test
+    fun capsAndCentersThePickerPanelOnWideWindows() {
+        composeRule.setContent {
+            MaterialTheme {
+                Box(modifier = Modifier.requiredSize(width = 1200.dp, height = 700.dp)) {
+                    WidgetPickerSurface(
+                        providers = listOf(widgetProvider()),
+                        previewImageLoader = ThrowingWidgetPreviewImageLoader,
+                        onAction = {},
+                    )
+                }
+            }
+        }
+
+        val rootBounds = composeRule.onNodeWithTag(WIDGET_PICKER_ROOT_TEST_TAG).fetchSemanticsNode().boundsInRoot
+        val panelBounds = composeRule.onNodeWithTag(WIDGET_PICKER_PANEL_TEST_TAG).fetchSemanticsNode().boundsInRoot
+        val expectedMaxWidth = with(composeRule.density) { 840.dp.toPx() }
+        val leftMargin = panelBounds.left - rootBounds.left
+        val rightMargin = rootBounds.right - panelBounds.right
+
+        assertEquals(expectedMaxWidth, panelBounds.width, 1f)
+        assertEquals(leftMargin, rightMargin, 1f)
+        assertTrue(leftMargin > 0f)
     }
 
     @Test
