@@ -27,6 +27,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -53,7 +55,10 @@ internal fun WorkspaceGrid(
     modifier: Modifier = Modifier,
 ) {
     BoxWithConstraints(
-        modifier = modifier,
+        modifier =
+            modifier.onGloballyPositioned { coordinates ->
+                actions.onWorkspaceGridBoundsChanged(page.id, coordinates.boundsInRoot())
+            },
         contentAlignment = Alignment.Center,
     ) {
         val metrics = HomeGridLayoutMetrics()
@@ -91,6 +96,9 @@ internal fun WorkspaceGrid(
                                     page = page,
                                     previewItems = previewItems,
                                     activeDragSession = activeDragSession,
+                                    widgetPickerDragPreview =
+                                        gridState.widgetPickerDragPreview
+                                            ?.takeIf { preview -> preview.targetPageId == page.id },
                                     gridState = gridState,
                                 ),
                             presentation = presentation,
@@ -179,6 +187,12 @@ private fun RowScope.HomeGridCell(
                     )
                 }
             }
+
+            state.widgetPickerDragPreview
+                ?.takeIf { preview -> preview.cell == state.cell }
+                ?.let { preview ->
+                    WidgetPickerDragPlaceholder(preview = preview, cellSize = state.cellSize)
+                }
         }
     }
 }
@@ -190,6 +204,7 @@ internal data class HomeGridCellState(
     val page: LauncherPage,
     val previewItems: List<LauncherItem>,
     val activeDragSession: HomeDragSession?,
+    val widgetPickerDragPreview: WidgetPickerDragPlacementPreview?,
     val gridState: HomeGridState,
 )
 
@@ -379,6 +394,7 @@ internal data class HomeGridState(
     val pageCount: Int,
     val selectedPageIndex: Int,
     val dragSession: HomeDragSession?,
+    val widgetPickerDragPreview: WidgetPickerDragPlacementPreview? = null,
 )
 
 internal data class HomeGridItemState(

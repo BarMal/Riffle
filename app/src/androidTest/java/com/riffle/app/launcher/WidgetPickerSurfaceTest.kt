@@ -132,6 +132,38 @@ class WidgetPickerSurfaceTest {
         }
     }
 
+    @Test
+    fun providerDragReportsItsRootPositionBeforeDrop() {
+        var movedPosition: Offset? = null
+        var movedRootSize: IntSize? = null
+        composeRule.setContent {
+            MaterialTheme {
+                Box(modifier = Modifier.size(width = 300.dp, height = 500.dp)) {
+                    WidgetPickerSurface(
+                        providers = listOf(widgetProvider()),
+                        onWidgetDragMoved = { _, position, rootSize ->
+                            movedPosition = position
+                            movedRootSize = rootSize
+                        },
+                        onAction = {},
+                    )
+                }
+            }
+        }
+
+        composeRule.onNodeWithTag(WIDGET_PROVIDER_TILE_TEST_TAG).performTouchInput {
+            down(center)
+            advanceEventTime(viewConfiguration.longPressTimeoutMillis + 50L)
+            moveBy(Offset(12f, 16f))
+            cancel()
+        }
+
+        composeRule.runOnIdle {
+            assertTrue(movedPosition != null)
+            assertEquals(IntSize(300, 500), movedRootSize)
+        }
+    }
+
     private fun widgetProvider(): InstalledWidgetProvider =
         InstalledWidgetProvider(
             identity =

@@ -67,6 +67,23 @@ class WidgetPreferredSpanTest {
     }
 
     @Test
+    fun preservesOversizedTargetCellsForPlacementValidation() {
+        val span =
+            WidgetProviderDimensions(
+                minWidthDp = 40,
+                minHeightDp = 40,
+                targetCellWidth = Int.MAX_VALUE,
+                targetCellHeight = 2,
+            ).preferredGridSpan(
+                grid = GridDimensions(columns = 4, rows = 5),
+                availableWidthDp = 400,
+                availableHeightDp = 500,
+            )
+
+        assertEquals(GridSpan(columns = Int.MAX_VALUE, rows = 2), span)
+    }
+
+    @Test
     fun clampsPreferredSpanToGridBounds() {
         val span =
             WidgetProviderDimensions(

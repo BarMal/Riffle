@@ -1,4 +1,4 @@
-@file:Suppress("LongMethod", "TooManyFunctions")
+@file:Suppress("LongMethod", "LongParameterList", "TooManyFunctions")
 
 package com.riffle.app.launcher
 
@@ -61,6 +61,7 @@ fun WidgetPickerSurface(
     previewImageLoader: WidgetPreviewImageLoader = EmptyWidgetPreviewImageLoader,
     isDragHandoffActive: Boolean = false,
     onWidgetDragStarted: (InstalledWidgetProvider) -> Unit = {},
+    onWidgetDragMoved: (InstalledWidgetProvider, Offset, IntSize) -> Unit = { _, _, _ -> },
     onWidgetDragCancelled: (InstalledWidgetProvider) -> Unit = {},
     onWidgetDropped: (InstalledWidgetProvider, Offset, IntSize) -> Unit = { _, _, _ -> },
     onAction: (LauncherShellAction) -> Unit,
@@ -142,6 +143,7 @@ fun WidgetPickerSurface(
                 previewImageLoader = previewImageLoader,
                 onAction = onAction,
                 onWidgetDragStarted = onWidgetDragStarted,
+                onWidgetDragMoved = onWidgetDragMoved,
                 onWidgetDragCancelled = onWidgetDragCancelled,
                 onWidgetDropped = onWidgetDropped,
                 rootCoordinates = rootCoordinates,
@@ -171,6 +173,7 @@ private fun WidgetPickerContent(
     previewImageLoader: WidgetPreviewImageLoader,
     onAction: (LauncherShellAction) -> Unit,
     onWidgetDragStarted: (InstalledWidgetProvider) -> Unit,
+    onWidgetDragMoved: (InstalledWidgetProvider, Offset, IntSize) -> Unit,
     onWidgetDragCancelled: (InstalledWidgetProvider) -> Unit,
     onWidgetDropped: (InstalledWidgetProvider, Offset, IntSize) -> Unit,
     rootCoordinates: LayoutCoordinates?,
@@ -220,6 +223,7 @@ private fun WidgetPickerContent(
                                 previewImageLoader = previewImageLoader,
                                 onAction = onAction,
                                 onWidgetDragStarted = onWidgetDragStarted,
+                                onWidgetDragMoved = onWidgetDragMoved,
                                 onWidgetDragCancelled = onWidgetDragCancelled,
                                 onWidgetDropped = onWidgetDropped,
                                 rootCoordinates = rootCoordinates,
@@ -237,12 +241,14 @@ private fun WidgetProviderTile(
     previewImageLoader: WidgetPreviewImageLoader,
     onAction: (LauncherShellAction) -> Unit,
     onWidgetDragStarted: (InstalledWidgetProvider) -> Unit,
+    onWidgetDragMoved: (InstalledWidgetProvider, Offset, IntSize) -> Unit,
     onWidgetDragCancelled: (InstalledWidgetProvider) -> Unit,
     onWidgetDropped: (InstalledWidgetProvider, Offset, IntSize) -> Unit,
     rootCoordinates: LayoutCoordinates?,
 ) {
     val summary = provider.widgetPickerSummary()
     val currentOnWidgetDragStarted by rememberUpdatedState(onWidgetDragStarted)
+    val currentOnWidgetDragMoved by rememberUpdatedState(onWidgetDragMoved)
     val currentOnWidgetDragCancelled by rememberUpdatedState(onWidgetDragCancelled)
     val currentOnWidgetDropped by rememberUpdatedState(onWidgetDropped)
     val currentRootCoordinates by rememberUpdatedState(rootCoordinates)
@@ -265,6 +271,15 @@ private fun WidgetProviderTile(
                         onDrag = { change, _ ->
                             change.consume()
                             dropPosition = change.position
+                            val tileCoordinates = coordinates
+                            val dragRootCoordinates = currentRootCoordinates
+                            if (tileCoordinates != null && dragRootCoordinates != null) {
+                                currentOnWidgetDragMoved(
+                                    provider,
+                                    dragRootCoordinates.localPositionOf(tileCoordinates, dropPosition),
+                                    dragRootCoordinates.size,
+                                )
+                            }
                         },
                         onDragEnd = {
                             val tileCoordinates = coordinates

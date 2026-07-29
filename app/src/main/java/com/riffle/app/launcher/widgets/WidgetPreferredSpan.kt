@@ -18,7 +18,7 @@ fun WidgetProviderDimensions.preferredGridSpan(
         rows =
             targetCellHeight?.takeIf { it > 0 }
                 ?: minHeightDp.spanCells(availableDp = availableHeightDp, gridCells = grid.rows),
-    ).fitWidgetPreferredSpan(grid)
+    )
 }
 
 fun WidgetProviderDimensions.resizeConstraints(
