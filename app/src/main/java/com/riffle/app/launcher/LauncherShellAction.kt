@@ -402,6 +402,10 @@ sealed interface LauncherShellAction {
 
     data object ResetHomeSwipeGestureActions : LauncherShellAction
 
+    data class SelectDockGestureAction(
+        val action: LauncherGestureAction,
+    ) : LauncherShellAction
+
     data class SelectHapticFeedbackStrength(
         val strength: HapticFeedbackStrength,
     ) : LauncherShellAction

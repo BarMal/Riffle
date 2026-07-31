@@ -10,12 +10,14 @@ import com.riffle.core.domain.launcher.apps.AppProfileId
 import com.riffle.core.domain.launcher.apps.AppProfileType
 import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.apps.AppShortcutId
+import com.riffle.core.domain.launcher.settings.DockGestureSettings
 import com.riffle.core.domain.launcher.settings.GestureSettings
 import com.riffle.core.domain.launcher.settings.HomeGesture
 import com.riffle.core.domain.launcher.settings.HomeGestureSettings
 import com.riffle.core.domain.launcher.settings.HomeSwipeGestureSettings
 import com.riffle.core.domain.launcher.settings.LauncherGestureAction
 import com.riffle.core.domain.launcher.settings.LauncherGestureLaunchTarget
+import com.riffle.core.domain.launcher.settings.isValidDockSwipeUpAction
 import com.riffle.core.domain.launcher.settings.toHomeGestureSettings
 import org.json.JSONObject
 
@@ -23,6 +25,7 @@ fun encodeGestures(settings: GestureSettings): JSONObject =
     JSONObject()
         .put("homeGestures", encodeHomeGestures(settings.homeGestures))
         .put("homeSwipe", encodeHomeSwipeGestures(settings.homeSwipe))
+        .put("dockGestures", encodeDockGestures(settings.dockGestures))
 
 fun JSONObject.toGestures(defaults: GestureSettings): GestureSettings =
     defaults.copy(
@@ -30,6 +33,19 @@ fun JSONObject.toGestures(defaults: GestureSettings): GestureSettings =
             optJSONObject("homeGestures")?.toHomeGestures(defaults.homeGestures)
                 ?: optJSONObject("homeSwipe")?.toHomeSwipeGestures(defaults.homeSwipe)?.toHomeGestureSettings()
                 ?: defaults.homeGestures,
+        dockGestures =
+            optJSONObject("dockGestures")?.toDockGestures(defaults.dockGestures) ?: defaults.dockGestures,
+    )
+
+private fun encodeDockGestures(settings: DockGestureSettings): JSONObject {
+    return JSONObject().put("swipeUp", settings.swipeUp.name)
+}
+
+private fun JSONObject.toDockGestures(defaults: DockGestureSettings): DockGestureSettings =
+    DockGestureSettings(
+        swipeUp =
+            optGestureAction("swipeUp", defaults.swipeUp).takeIf { action -> action.isValidDockSwipeUpAction }
+                ?: defaults.swipeUp,
     )
 
 private fun encodeHomeGestures(settings: HomeGestureSettings): JSONObject =

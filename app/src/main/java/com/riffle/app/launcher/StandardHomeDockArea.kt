@@ -70,7 +70,14 @@ internal fun StandardHomeDockArea(
                     bottom = margins.bottom.dp,
                 )
                 .dockShelfMotion(dockShelfMotionPolicy(presentation.reducedMotion))
-                .dockShelfFrameRatePreference(presentation.motionPerformanceTargetFps),
+                .dockShelfFrameRatePreference(presentation.motionPerformanceTargetFps)
+                // Only claim the swipe-up gesture when the shelf-expand gesture is inactive, so the
+                // two physical swipe-up interactions on the dock region never compete for the drag.
+                .dockSwipeUpGestureInput(
+                    enabled = dockInteractions.onShelfExpandedChange == null,
+                    action = presentation.dockGestures.swipeUp,
+                    onAction = actions.onAction,
+                ),
         horizontalAlignment = layout.dock.alignment.toHorizontalAlignment(),
     ) {
         Spacer(modifier = Modifier.height(HOME_DOCK_TOP_SPACING_DP.dp))

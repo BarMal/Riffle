@@ -177,9 +177,10 @@ enum class LauncherThemeTypography {
 
 data class GestureSettings(
     val homeGestures: HomeGestureSettings = HomeGestureSettings(),
+    val dockGestures: DockGestureSettings = DockGestureSettings(),
 ) {
     val mappings: LauncherGestureMappings
-        get() = homeGestures.toLauncherGestureMappings()
+        get() = dockGestures.toLauncherGestureMappings(homeGestures.toLauncherGestureMappings())
 
     val conflicts: List<LauncherGestureConflict>
         get() =
@@ -191,7 +192,10 @@ data class GestureSettings(
                         action = conflict.action,
                         gestures = conflict.gestures.map(HomeGesture::toLauncherGesture),
                     )
-                }
+                } +
+                LauncherGestureConflictDetector
+                    .conflictsIn(mappings)
+                    .filter { conflict -> conflict.surface == LauncherGestureSurface.DOCK }
 
     val homeSwipe: HomeSwipeGestureSettings
         get() =
@@ -224,6 +228,27 @@ data class HomeGestureSettings(
 
     fun launchTargetFor(gesture: HomeGesture): LauncherGestureLaunchTarget? = launchTargets[gesture]
 }
+
+/**
+ * Durable binding for the Dock swipe-up gesture. Restricted to the mode-switch actions the Dock
+ * physically supports: staying put, returning to Standard Home from Cards mode, or opening the
+ * app drawer/search. Unlike [HomeGestureSettings], the Dock currently exposes a single gesture.
+ */
+data class DockGestureSettings(
+    val swipeUp: LauncherGestureAction = LauncherGestureAction.EXIT_TIMESCAPE,
+) {
+    companion object {
+        val ALLOWED_SWIPE_UP_ACTIONS: Set<LauncherGestureAction> =
+            setOf(
+                LauncherGestureAction.NONE,
+                LauncherGestureAction.EXIT_TIMESCAPE,
+                LauncherGestureAction.OPEN_APP_DRAWER,
+            )
+    }
+}
+
+val LauncherGestureAction.isValidDockSwipeUpAction: Boolean
+    get() = this in DockGestureSettings.ALLOWED_SWIPE_UP_ACTIONS
 
 sealed interface LauncherGestureLaunchTarget {
     data class App(

@@ -55,6 +55,26 @@ class LauncherShellGestureSettingsTest {
     }
 
     @Test
+    fun savesDockGestureActionSelection() {
+        val repository = FakeLauncherSettingsRepository()
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                launcherSettingsRepository = repository,
+            )
+
+        viewModel.onLauncherSettingsActionSelected(
+            LauncherShellAction.SelectDockGestureAction(LauncherGestureAction.OPEN_APP_DRAWER),
+        )
+
+        assertEquals(
+            LauncherGestureAction.OPEN_APP_DRAWER,
+            viewModel.state.value.launcherSettings.gestures.dockGestures.swipeUp,
+        )
+        assertEquals(viewModel.state.value.launcherSettings, repository.savedSettings)
+    }
+
+    @Test
     fun resetsHomeSwipeGestureActionsToDefaults() {
         val repository =
             FakeLauncherSettingsRepository(

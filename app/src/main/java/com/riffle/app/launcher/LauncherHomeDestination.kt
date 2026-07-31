@@ -116,6 +116,7 @@ private fun StandardHomeSurface(
                 installedApps = state.installedApps,
                 appShortcutsByApp = state.appShortcutsByApp,
                 homeGestures = state.launcherSettings.gestures.homeGestures,
+                dockGestures = state.launcherSettings.gestures.dockGestures,
                 reducedMotion = state.launcherSettings.motion.reducedMotion,
                 motionPerformanceTargetFps = state.launcherSettings.motion.performanceTargetFps,
                 widgetViewFactory = widgetRenderers.viewFactory,
