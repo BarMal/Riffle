@@ -10,6 +10,7 @@ import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -29,6 +30,23 @@ class LauncherAppIconRenderingTest {
         assertNotNull(icon)
         assertEquals(320, icon?.width)
         assertEquals(320, icon?.height)
+    }
+
+    @Test
+    fun colorForCachesADominantColorAlongsideTheIcon() {
+        val loader =
+            PackageManagerAppIconLoader(
+                packageManager = InstrumentationRegistry.getInstrumentation().targetContext.packageManager,
+                activityIconFor = { ColorDrawable(Color.rgb(210, 30, 30)) },
+                displayDensityFor = { 1f },
+            )
+        val identity = testIdentity()
+
+        assertNull(loader.cachedColorFor(identity))
+        val color = loader.colorFor(identity)
+
+        assertNotNull(color)
+        assertEquals(color, loader.cachedColorFor(identity))
     }
 
     private fun testIdentity() =

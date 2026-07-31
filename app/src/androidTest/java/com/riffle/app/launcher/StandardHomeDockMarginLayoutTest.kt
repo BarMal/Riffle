@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.toPixelMap
@@ -220,4 +221,6 @@ private object SolidRedIconLoader : AppIconLoader {
         }.asImageBitmap()
 
     override fun iconFor(identity: AppIdentity): ImageBitmap = icon
+
+    override fun colorFor(identity: AppIdentity): Color? = null
 }

@@ -3,6 +3,7 @@ package com.riffle.app.launcher.apps
 import android.content.ComponentName
 import android.content.pm.PackageManager
 import android.graphics.drawable.Drawable
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.core.graphics.drawable.toBitmap
@@ -24,10 +25,21 @@ class PackageManagerAppIconLoader(
 ) : AppIconLoader {
     private val icons = BoundedIconCache<AppIdentity, ImageBitmap>(MAX_CACHED_LAUNCHER_ICONS)
 
-    override fun iconFor(identity: AppIdentity): ImageBitmap? =
-        icons[identity] ?: loadIcon(identity)?.also { icon -> icons[identity] = icon }
+    // Parallel cache, same key set and eviction bound as [icons]: populated alongside the icon by
+    // [loadIcon] so the icon bitmap is only ever decoded once. Wrapped in [DominantColorEntry] so a
+    // legitimately absent color (icon has no sufficiently saturated pixels) is cached as a present
+    // "null" entry rather than being indistinguishable from "not yet loaded".
+    private val colors = BoundedIconCache<AppIdentity, DominantColorEntry>(MAX_CACHED_LAUNCHER_ICONS)
+
+    override fun iconFor(identity: AppIdentity): ImageBitmap? = icons[identity] ?: loadIcon(identity)
 
     override fun cachedIconFor(identity: AppIdentity): ImageBitmap? = icons[identity]
+
+    override fun colorFor(identity: AppIdentity): Color? =
+        colors[identity]?.color
+            ?: loadIcon(identity).let { colors[identity]?.color }
+
+    override fun cachedColorFor(identity: AppIdentity): Color? = colors[identity]?.color
 
     override fun preloadIcons(identities: List<AppIdentity>) {
         identities.forEach { identity -> iconFor(identity) }
@@ -36,13 +48,19 @@ class PackageManagerAppIconLoader(
     private fun loadIcon(identity: AppIdentity): ImageBitmap? =
         runCatching {
             activityIconFor(identity)?.toLauncherImageBitmap(iconBitmapSizePx(identity))
-        }.getOrNull()
+        }.getOrNull()?.also { icon ->
+            icons[identity] = icon
+            colors[identity] = DominantColorEntry(runCatching { dominantColorOf(icon) }.getOrNull())
+        }
 
     private fun iconBitmapSizePx(identity: AppIdentity): Int =
         runCatching { displayDensityFor(identity) }
             .getOrDefault(DEFAULT_DISPLAY_DENSITY)
             .let(::launcherIconBitmapSizePx)
 }
+
+/** Cache payload wrapper so a computed-but-absent dominant color is distinguishable from a cache miss. */
+private data class DominantColorEntry(val color: Color?)
 
 private val AppIdentity.componentName: ComponentName
     get() = ComponentName(packageName.value, activityName.value)

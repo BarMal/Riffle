@@ -177,7 +177,7 @@ internal class ImmediateHomePagerState(
     }
 }
 
-@Suppress("LongParameterList", "CyclomaticComplexMethod")
+@Suppress("LongParameterList", "CyclomaticComplexMethod", "LongMethod")
 @Composable
 internal fun ImmediateWorkspacePager(
     layout: HomeLayout,
@@ -254,6 +254,7 @@ internal fun ImmediateWorkspacePager(
                         reducedMotion = presentation.reducedMotion,
                         timeScapeAppearance = presentation.generatedPage.timeScapeAppearance,
                         haptics = actions.haptics,
+                        appIconLoader = appIconLoader,
                         modifier = pageModifier,
                     )
                 } else {
