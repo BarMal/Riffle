@@ -88,6 +88,7 @@ private fun CardsHomeSurface(
             context = timeScapeContext,
             onContextChanged = onTimeScapeContextChanged,
             onAction = onAction,
+            appIconLoader = appIconLoader,
         )
     }
 }

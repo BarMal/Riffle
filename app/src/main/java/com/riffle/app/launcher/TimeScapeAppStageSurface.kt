@@ -2,6 +2,8 @@
 
 package com.riffle.app.launcher
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -22,6 +24,7 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.IconButton
@@ -43,6 +46,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
@@ -59,6 +63,7 @@ import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.riffle.app.launcher.notifications.AndroidNotificationStageActionGateway
 import com.riffle.app.launcher.notifications.AppStageEmptyAppCard
@@ -66,6 +71,7 @@ import com.riffle.app.launcher.notifications.AppStageNotificationCard
 import com.riffle.app.launcher.notifications.AppStageShellStateReconciler
 import com.riffle.app.launcher.notifications.NotificationStageAction
 import com.riffle.core.domain.launcher.LauncherShellState
+import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.cards.AppStage
 import com.riffle.core.domain.launcher.cards.AppStageId
 import com.riffle.core.domain.launcher.cards.CardStackController
@@ -91,6 +97,7 @@ import com.riffle.core.domain.launcher.cards.variantFor
 import com.riffle.core.domain.launcher.cards.visibleStaticElements
 import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
+import com.riffle.core.domain.launcher.settings.TimeScapeAppearanceSettings
 import com.riffle.core.domain.launcher.settings.TimeScapeCardStackResolution
 import com.riffle.core.domain.launcher.settings.TimeScapeViewportDp
 import com.riffle.core.domain.launcher.settings.resolveTimeScapeCardStack
@@ -129,6 +136,7 @@ internal fun TimeScapeAppStageSurface(
     windowLayout: TimeScapeWindowLayout? = null,
     context: TimeScapeInteractionContext = TimeScapeInteractionContext(),
     onContextChanged: (TimeScapeInteractionContext) -> Unit = {},
+    appIconLoader: AppIconLoader = EmptyAppIconLoader,
 ) {
     val density = LocalDensity.current
     val layoutDirection = LocalLayoutDirection.current
@@ -318,6 +326,7 @@ internal fun TimeScapeAppStageSurface(
                             if (cardId != null) detailRecoveryMessage = null
                         },
                         onAction = onAction,
+                        appIconLoader = appIconLoader,
                     )
                 } else {
                     Row(modifier = Modifier.fillMaxSize()) {
@@ -326,6 +335,7 @@ internal fun TimeScapeAppStageSurface(
                                 stages = shellState.snapshot.stages,
                                 selectedStageId = selectedStage?.id,
                                 state = state,
+                                appIconLoader = appIconLoader,
                                 onAction = onAction,
                                 scrollState = stageRailScrollState,
                                 modifier = Modifier.width(paneLayout.railWidthDp.dp),
@@ -336,6 +346,7 @@ internal fun TimeScapeAppStageSurface(
                                 selectedStage = selectedStage,
                                 stages = shellState.snapshot.stages,
                                 state = state,
+                                appIconLoader = appIconLoader,
                                 onAction = onAction,
                             )
                             TimeScapeStageBody(
@@ -357,6 +368,7 @@ internal fun TimeScapeAppStageSurface(
                                 },
                                 showDetailInline = !paneLayout.showsDetailPane,
                                 onAction = onAction,
+                                appIconLoader = appIconLoader,
                                 modifier = Modifier.weight(1f),
                             )
                         }
@@ -381,6 +393,7 @@ internal fun TimeScapeAppStageSurface(
                                 stages = shellState.snapshot.stages,
                                 selectedStageId = selectedStage?.id,
                                 state = state,
+                                appIconLoader = appIconLoader,
                                 onAction = onAction,
                                 scrollState = stageRailScrollState,
                                 modifier = Modifier.width(paneLayout.railWidthDp.dp),
@@ -404,12 +417,14 @@ private fun TimeScapeCompactContent(
     onDetailVisibilityChanged: (LauncherCardId?) -> Unit,
     onFocusedCardChanged: (LauncherCardId?) -> Unit = {},
     onAction: (LauncherShellAction) -> Unit,
+    appIconLoader: AppIconLoader,
 ) {
     Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         TimeScapeStageHeader(
             selectedStage = selectedStage,
             stages = shellState.snapshot.stages,
             state = state,
+            appIconLoader = appIconLoader,
             onAction = onAction,
         )
         TimeScapeStageBody(
@@ -422,6 +437,7 @@ private fun TimeScapeCompactContent(
             onDetailVisibilityChanged = onDetailVisibilityChanged,
             onFocusedCardChanged = onFocusedCardChanged,
             onAction = onAction,
+            appIconLoader = appIconLoader,
             modifier = Modifier.weight(1f),
         )
         TimeScapeStageSelector(shellState.snapshot.stages, selectedStage?.id, state, onAction)
@@ -586,6 +602,7 @@ private fun TimeScapeStageBody(
     onFocusedCardChanged: (LauncherCardId?) -> Unit = {},
     showDetailInline: Boolean = true,
     onAction: (LauncherShellAction) -> Unit,
+    appIconLoader: AppIconLoader,
     modifier: Modifier,
 ) {
     if (selectedStage == null) {
@@ -607,6 +624,7 @@ private fun TimeScapeStageBody(
             onFocusedCardChanged,
             showDetailInline,
             onAction,
+            appIconLoader,
             modifier,
         )
     }
@@ -617,20 +635,106 @@ private fun TimeScapeStageRail(
     stages: List<AppStage>,
     selectedStageId: AppStageId?,
     state: LauncherShellState,
+    appIconLoader: AppIconLoader,
     onAction: (LauncherShellAction) -> Unit,
     scrollState: androidx.compose.foundation.ScrollState,
     modifier: Modifier,
 ) {
-    Column(modifier = modifier.padding(8.dp).verticalScroll(scrollState)) {
+    Column(
+        modifier = modifier.padding(8.dp).verticalScroll(scrollState),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
         Text("Stages", style = MaterialTheme.typography.labelLarge)
         TextButton(onClick = { onAction(LauncherShellAction.SelectPreviousAppStage) }) { Text("Previous") }
         stages.forEach { stage ->
-            TextButton(onClick = { onAction(LauncherShellAction.SelectAppStage(stage.id)) }) {
-                val label = stageLabel(stage.id, state)
-                Text(if (stage.id == selectedStageId) "$label •" else label)
-            }
+            TimeScapeStageRailTile(
+                stageId = stage.id,
+                isSelected = stage.id == selectedStageId,
+                label = stageLabel(stage.id, state),
+                identity = stageAppIdentity(stage.id, state),
+                appearance = state.launcherSettings.cards.timeScapeAppearance,
+                appIconLoader = appIconLoader,
+                onClick = { onAction(LauncherShellAction.SelectAppStage(stage.id)) },
+            )
         }
         TextButton(onClick = { onAction(LauncherShellAction.SelectNextAppStage) }) { Text("Next") }
+    }
+}
+
+/**
+ * A single stage tile in the rail: a small deterministically-tinted icon slot (reusing the same
+ * per-app seed color mechanism as populated [TimeScapeCardSurface] cards, via
+ * [resolveTimeScapeCardColors]) with a short caption below, and a clear ring/elevation treatment
+ * for the currently selected stage.
+ */
+@Composable
+private fun TimeScapeStageRailTile(
+    stageId: AppStageId,
+    isSelected: Boolean,
+    label: String,
+    identity: AppIdentity?,
+    appearance: TimeScapeAppearanceSettings,
+    appIconLoader: AppIconLoader,
+    onClick: () -> Unit,
+) {
+    val materialBackground = MaterialTheme.colorScheme.onSurface
+    val materialAccent = MaterialTheme.colorScheme.primary
+    val colors =
+        remember(appearance, stageId, materialBackground, materialAccent) {
+            resolveTimeScapeCardColors(
+                appearance = appearance,
+                background = TimeScapeCardBackground(appSeed = stageId.packageName.value),
+                materialBackground = materialBackground,
+                materialAccent = materialAccent,
+            )
+        }
+    val shape = RoundedCornerShape(14.dp)
+    Surface(
+        onClick = onClick,
+        shape = shape,
+        color = colors.background,
+        contentColor = colors.foreground,
+        tonalElevation = if (isSelected) 6.dp else 0.dp,
+        shadowElevation = if (isSelected) 4.dp else 0.dp,
+        border = if (isSelected) BorderStroke(2.dp, colors.accent) else null,
+        modifier =
+            Modifier.width(64.dp).semantics {
+                contentDescription =
+                    if (isSelected) "$label, selected. Open stage" else "$label. Open stage"
+            },
+    ) {
+        Column(
+            modifier = Modifier.padding(vertical = 8.dp, horizontal = 4.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            if (identity != null) {
+                LauncherAppIcon(
+                    identity = identity,
+                    label = label,
+                    iconLoader = appIconLoader,
+                    modifier = Modifier.launcherIconSize(),
+                )
+            } else {
+                Box(
+                    modifier =
+                        Modifier
+                            .launcherIconSize()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(colors.accent),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(text = label.firstOrNull()?.uppercase().orEmpty(), color = colors.foreground)
+                }
+            }
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
     }
 }
 
@@ -687,6 +791,7 @@ private fun TimeScapeStageHeader(
     selectedStage: AppStage?,
     stages: List<AppStage>,
     state: LauncherShellState,
+    appIconLoader: AppIconLoader,
     onAction: (LauncherShellAction) -> Unit,
 ) {
     val label = selectedStage?.let { stageLabel(it.id, state) } ?: "TimeScape"
@@ -715,6 +820,14 @@ private fun TimeScapeStageHeader(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        if (selectedApp != null) {
+            LauncherAppIcon(
+                identity = selectedApp.identity,
+                label = label,
+                iconLoader = appIconLoader,
+                modifier = Modifier.launcherIconSize().padding(end = 12.dp),
+            )
+        }
         Column(
             modifier =
                 Modifier.weight(1f).semantics {
@@ -804,6 +917,7 @@ private fun TimeScapeStageContent(
     onFocusedCardChanged: (LauncherCardId?) -> Unit = {},
     showDetailInline: Boolean,
     onAction: (LauncherShellAction) -> Unit,
+    appIconLoader: AppIconLoader,
     modifier: Modifier,
 ) {
     val availableCardIds = stage.content.map { content -> content.id }.toSet()
@@ -825,7 +939,8 @@ private fun TimeScapeStageContent(
                 shellState = shellState,
                 detailState = detailState,
                 showDetailInline = showDetailInline,
-                notificationAccessStatus = state.notificationAccessStatus,
+                state = state,
+                appIconLoader = appIconLoader,
                 onAction = onAction,
                 modifier = modifier,
             )
@@ -1157,15 +1272,18 @@ internal fun TimeScapeContextShelf(
 }
 
 @Composable
+@Suppress("LongMethod")
 private fun TimeScapeEmptyStage(
     stage: AppStage,
     shellState: com.riffle.app.launcher.notifications.AppStageShellState,
     detailState: TimeScapeCardDetailState,
     showDetailInline: Boolean,
-    notificationAccessStatus: NotificationAccessStatus,
+    state: LauncherShellState,
+    appIconLoader: AppIconLoader,
     onAction: (LauncherShellAction) -> Unit,
     modifier: Modifier,
 ) {
+    val notificationAccessStatus = state.notificationAccessStatus
     val emptyCard = shellState.emptyAppCards[stage.id]
     val detailCardId = timeScapeEmptyDetailCardId(stage.id)
     val availableCardIds = if (emptyCard == null) emptySet() else setOf(detailCardId)
@@ -1186,68 +1304,103 @@ private fun TimeScapeEmptyStage(
         )
         return
     }
-    Column(
-        modifier = modifier.fillMaxSize().padding(24.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        if (notificationAccessStatus != NotificationAccessStatus.GRANTED) {
-            Text(
-                text = notificationAccessStatus.timeScapeAccessMessage,
-                modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
-                style = MaterialTheme.typography.bodyLarge,
-            )
-            if (
-                notificationAccessStatus == NotificationAccessStatus.NOT_GRANTED ||
-                notificationAccessStatus == NotificationAccessStatus.REVOKED
+    val identity = stageAppIdentity(stage.id, state)
+    val label = stageLabel(stage.id, state)
+    BoxWithConstraints(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        val viewport = TimeScapeViewportDp(maxWidth.value.toInt(), maxHeight.value.toInt())
+        val resolution =
+            remember(state.launcherSettings, viewport) {
+                state.launcherSettings.resolveTimeScapeCardStack(
+                    viewport = viewport,
+                    capabilities = timeScapeRendererCapabilities(),
+                )
+            }
+        TimeScapeCardSurface(
+            appearance = state.launcherSettings.cards.timeScapeAppearance,
+            background = TimeScapeCardBackground(appSeed = stage.id.packageName.value),
+            modifier =
+                Modifier
+                    .size(width = resolution.cardWidthDp.dp, height = resolution.cardHeightDp.dp)
+                    .testTag(TIME_SCAPE_EMPTY_STAGE_CARD_TEST_TAG),
+            contentPadding = timeScapeResolvedContentPadding(resolution),
+        ) {
+            Column(
+                modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                TextButton(onClick = { onAction(LauncherShellAction.RequestNotificationAccess) }) {
-                    Text("Allow access")
+                if (identity != null) {
+                    LauncherAppIcon(
+                        identity = identity,
+                        label = label,
+                        iconLoader = appIconLoader,
+                        modifier = Modifier.size(56.dp),
+                    )
                 }
-            }
-        }
-        Text(
-            when {
-                stage.lifecycle.name == "PROFILE_LOCKED" -> "Profile unavailable"
-                notificationAccessStatus == NotificationAccessStatus.GRANTED -> "Nothing new"
-                else -> "Stage ready"
-            },
-            style = MaterialTheme.typography.titleMedium,
-        )
-        Text("This stage stays available so you can return to it.", style = MaterialTheme.typography.bodyMedium)
-        emptyCard?.let { card ->
-            TextButton(onClick = { onAction(LauncherShellAction.LaunchApp(card.app.identity)) }) {
-                Text("Open ${card.app.label}")
-            }
-            card.shortcuts.forEach { shortcut ->
-                TextButton(onClick = { onAction(LauncherShellAction.LaunchAppShortcut(shortcut)) }) {
-                    Text(shortcut.shortLabel)
-                }
-            }
-            TextButton(
-                onClick = { detailState.expand(detailCardId) },
-                modifier =
-                    Modifier.focusRequester(detailFocusRequester).onGloballyPositioned {
-                        if (restoreDetailFocusForCardId == detailCardId) detailControlLaidOut = true
+                if (notificationAccessStatus != NotificationAccessStatus.GRANTED) {
+                    Text(
+                        text = notificationAccessStatus.timeScapeAccessMessage,
+                        modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+                        style = MaterialTheme.typography.bodyLarge,
+                    )
+                    if (
+                        notificationAccessStatus == NotificationAccessStatus.NOT_GRANTED ||
+                        notificationAccessStatus == NotificationAccessStatus.REVOKED
+                    ) {
+                        TextButton(onClick = { onAction(LauncherShellAction.RequestNotificationAccess) }) {
+                            Text("Allow access")
+                        }
                     }
-                        .onFocusChanged { focusState ->
-                            if (restoreDetailFocusForCardId == detailCardId && focusState.isFocused) {
-                                restoreDetailFocusForCardId = null
-                                detailControlLaidOut = false
+                }
+                Text(
+                    when {
+                        stage.lifecycle.name == "PROFILE_LOCKED" -> "Profile unavailable"
+                        notificationAccessStatus == NotificationAccessStatus.GRANTED -> "Nothing new"
+                        else -> "Stage ready"
+                    },
+                    style = MaterialTheme.typography.titleMedium,
+                )
+                Text(
+                    "This stage stays available so you can return to it.",
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                emptyCard?.let { card ->
+                    TextButton(onClick = { onAction(LauncherShellAction.LaunchApp(card.app.identity)) }) {
+                        Text("Open ${card.app.label}")
+                    }
+                    card.shortcuts.forEach { shortcut ->
+                        TextButton(onClick = { onAction(LauncherShellAction.LaunchAppShortcut(shortcut)) }) {
+                            Text(shortcut.shortLabel)
+                        }
+                    }
+                    TextButton(
+                        onClick = { detailState.expand(detailCardId) },
+                        modifier =
+                            Modifier.focusRequester(detailFocusRequester).onGloballyPositioned {
+                                if (restoreDetailFocusForCardId == detailCardId) detailControlLaidOut = true
                             }
-                        }.focusable(),
-            ) {
-                Text("Details")
+                                .onFocusChanged { focusState ->
+                                    if (restoreDetailFocusForCardId == detailCardId && focusState.isFocused) {
+                                        restoreDetailFocusForCardId = null
+                                        detailControlLaidOut = false
+                                    }
+                                }.focusable(),
+                    ) {
+                        Text("Details")
+                    }
+                    RestoreFocusAfterLayout(
+                        enabled = restoreDetailFocusForCardId == detailCardId,
+                        focusRequester = detailFocusRequester,
+                        isLaidOut = detailControlLaidOut,
+                    )
+                }
+                TimeScapeDetailRecoveryMessage(detailState.sourceRemovalMessage)
             }
-            RestoreFocusAfterLayout(
-                enabled = restoreDetailFocusForCardId == detailCardId,
-                focusRequester = detailFocusRequester,
-                isLaidOut = detailControlLaidOut,
-            )
         }
-        TimeScapeDetailRecoveryMessage(detailState.sourceRemovalMessage)
     }
 }
+
+internal const val TIME_SCAPE_EMPTY_STAGE_CARD_TEST_TAG = "timescape-empty-stage-card"
 
 @Composable
 private fun RestoreFocusAfterLayout(
@@ -1436,6 +1589,14 @@ private fun stageLabel(
     }?.let { app ->
         app.identity.profile.profileDisplayLabel(app.label)
     } ?: "${id.packageName.value} (${id.profileId.value})"
+
+private fun stageAppIdentity(
+    id: AppStageId,
+    state: LauncherShellState,
+): AppIdentity? =
+    state.installedApps.firstOrNull { app ->
+        app.identity.packageName == id.packageName && app.identity.profile.id == id.profileId
+    }?.identity
 
 private fun AppStage.timeScapeStageStateDescription(): String =
     buildList {

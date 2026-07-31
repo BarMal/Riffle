@@ -266,6 +266,41 @@ class TimeScapeCardSurfaceTest {
     }
 
     @Test
+    fun emptyPinnedStageRendersInsideCardSurfaceContainer() {
+        val app = timeScapeTestApp()
+        val stageId = AppStageId(app.identity.packageName, app.identity.profile.id)
+
+        composeRule.setContent {
+            MaterialTheme {
+                TimeScapeAppStageSurface(
+                    state =
+                        LauncherShellState(
+                            notificationAccessStatus = NotificationAccessStatus.NOT_GRANTED,
+                            installedApps = listOf(app),
+                            launcherSettings =
+                                LauncherSettings(
+                                    cards =
+                                        CardsSettings(
+                                            stagePreferencesByLayout =
+                                                mapOf(
+                                                    HomeLayoutKey(LauncherViewMode.STANDARD_APP_DRAWER) to
+                                                        AppStagePreferences(
+                                                            pinnedStageIds = listOf(stageId),
+                                                            selectedStageId = stageId,
+                                                        ),
+                                                ),
+                                        ),
+                                ),
+                        ),
+                    onAction = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(TIME_SCAPE_EMPTY_STAGE_CARD_TEST_TAG).assertIsDisplayed()
+    }
+
+    @Test
     fun appStageSurfaceRendersTheFocusedAppStage() {
         val app =
             InstalledApp(
