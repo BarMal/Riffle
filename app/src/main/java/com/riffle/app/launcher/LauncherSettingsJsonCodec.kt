@@ -3,7 +3,9 @@
 package com.riffle.app.launcher
 
 import com.riffle.core.domain.launcher.apps.AppPackageName
+import com.riffle.core.domain.launcher.apps.AppProfile
 import com.riffle.core.domain.launcher.apps.AppProfileId
+import com.riffle.core.domain.launcher.apps.AppProfileType
 import com.riffle.core.domain.launcher.cards.AppStageId
 import com.riffle.core.domain.launcher.cards.AppStagePreferences
 import com.riffle.core.domain.launcher.cards.TimeScapeTemplateId
@@ -13,6 +15,10 @@ import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.home.WallpaperScrollMode
 import com.riffle.core.domain.launcher.home.WallpaperSettings
 import com.riffle.core.domain.launcher.home.WallpaperSource
+import com.riffle.core.domain.launcher.rss.FeedConfiguration
+import com.riffle.core.domain.launcher.rss.FeedId
+import com.riffle.core.domain.launcher.rss.FeedRefreshIntent
+import com.riffle.core.domain.launcher.rss.FeedUrl
 import com.riffle.core.domain.launcher.settings.AppDrawerPresentation
 import com.riffle.core.domain.launcher.settings.AppDrawerSettings
 import com.riffle.core.domain.launcher.settings.AppearanceSettings
@@ -29,6 +35,7 @@ import com.riffle.core.domain.launcher.settings.LauncherThemeTypography
 import com.riffle.core.domain.launcher.settings.OverlayDockEdge
 import com.riffle.core.domain.launcher.settings.OverlayDockExpandedOrientation
 import com.riffle.core.domain.launcher.settings.OverlayDockSettings
+import com.riffle.core.domain.launcher.settings.RssSettings
 import com.riffle.core.domain.launcher.settings.SearchResultPresentation
 import com.riffle.core.domain.launcher.settings.SearchSettings
 import com.riffle.core.domain.launcher.settings.TimeScapeAppearanceSettings
@@ -54,6 +61,7 @@ fun encodeLauncherSettings(settings: LauncherSettings): String =
         .put("haptics", encodeHaptics(settings.haptics))
         .put("motion", encodeMotionSettings(settings.motion))
         .put("overlayDock", encodeOverlayDock(settings.overlayDock))
+        .put("rss", encodeRssSettings(settings.rss))
         .put("search", encodeSearchSettings(settings.search))
         .toString()
 
@@ -70,6 +78,7 @@ fun decodeLauncherSettings(value: String): LauncherSettings =
             motion = json.optJSONObject("motion")?.toMotionSettings(defaults.motion) ?: defaults.motion,
             overlayDock =
                 json.optJSONObject("overlayDock")?.toOverlayDock(defaults.overlayDock) ?: defaults.overlayDock,
+            rss = json.optJSONObject("rss")?.toRssSettings(defaults.rss) ?: defaults.rss,
             search = json.optJSONObject("search")?.toSearchSettings(defaults.search) ?: defaults.search,
         )
     }
@@ -695,4 +704,66 @@ private fun JSONObject.toOverlayDock(defaults: OverlayDockSettings): OverlayDock
         showLabels = optBoolean("showLabels", defaults.showLabels),
     ).coerceOverlayDockSettings()
 
-internal const val LAUNCHER_SETTINGS_JSON_VERSION = 5
+private fun encodeRssSettings(settings: RssSettings): JSONObject =
+    JSONObject()
+        .put("feeds", JSONArray(settings.feeds.map(::encodeFeedConfiguration)))
+        .put("refreshInterval", settings.refreshInterval.name)
+
+private fun encodeFeedConfiguration(feed: FeedConfiguration): JSONObject =
+    JSONObject()
+        .put("id", feed.id.value)
+        .put("url", feed.url.value)
+        .put("profileId", feed.profile.id.value)
+        .put("profileType", feed.profile.type.name)
+        .put("enabled", feed.enabled)
+        .put("refreshIntent", feed.refreshIntent.name)
+
+private fun JSONObject.toRssSettings(defaults: RssSettings): RssSettings =
+    RssSettings(
+        feeds =
+            optJSONArray("feeds")
+                ?.let { entries ->
+                    (0 until entries.length())
+                        .mapNotNull { index -> entries.optJSONObject(index)?.toFeedConfiguration() }
+                }
+                ?: defaults.feeds,
+        refreshInterval = enumOrDefault("refreshInterval", defaults.refreshInterval),
+    )
+
+/**
+ * Drops the entry (rather than throwing or substituting a default) when the URL fails
+ * [FeedUrl.parse] -- e.g. non-HTTPS scheme, embedded userinfo, or malformed host -- or when the
+ * profile/enum fields are missing or unrecognized. This is the single point where both
+ * DataStore-loaded settings and backup-restored settings validate each feed URL and drop invalid
+ * or unsupported entries, per the ADR's restore contract.
+ */
+private fun JSONObject.toFeedConfiguration(): FeedConfiguration? =
+    optString("id").takeIf(String::isNotBlank)?.let(::FeedId)?.let { id ->
+        FeedUrl.parse(optString("url")).getOrNull()?.let { url ->
+            toFeedProfile()?.let { profile -> feedConfiguration(id, url, profile) }
+        }
+    }
+
+private fun JSONObject.feedConfiguration(
+    id: FeedId,
+    url: FeedUrl,
+    profile: AppProfile,
+): FeedConfiguration =
+    FeedConfiguration(
+        id = id,
+        url = url,
+        profile = profile,
+        enabled = optBoolean("enabled", true),
+        refreshIntent =
+            runCatching { FeedRefreshIntent.valueOf(optString("refreshIntent")) }
+                .getOrDefault(FeedRefreshIntent.MANUAL),
+    )
+
+private fun JSONObject.toFeedProfile(): AppProfile? =
+    optString("profileId").takeIf(String::isNotBlank)?.let(::AppProfileId)?.let { profileId ->
+        runCatching { AppProfileType.valueOf(optString("profileType")) }.getOrNull()?.let { profileType ->
+            AppProfile(id = profileId, type = profileType)
+        }
+    }
+
+internal const val LAUNCHER_SETTINGS_JSON_VERSION = 6

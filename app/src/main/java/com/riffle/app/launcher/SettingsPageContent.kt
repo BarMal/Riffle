@@ -80,6 +80,7 @@ internal fun SettingsPageContent(
                         onAction = onAction,
                     )
                 }
+            SettingsPage.RSS -> SettingsRssPageContent(state = state, onAction = onAction)
             SettingsPage.BACKUP -> SettingsBackupPageContent(onAction = onAction)
             SettingsPage.HIDDEN_APPS -> SettingsHiddenAppsPageContent(state = state, onAction = onAction)
             SettingsPage.VERSION -> SettingsVersionPageContent(state = state)

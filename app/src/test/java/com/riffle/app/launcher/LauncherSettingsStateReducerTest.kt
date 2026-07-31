@@ -1,22 +1,31 @@
 package com.riffle.app.launcher
 
+import com.riffle.app.launcher.rss.CachedFeedArticle
+import com.riffle.app.launcher.rss.FeedArticleCacheRepository
+import com.riffle.app.launcher.rss.FeedCacheResult
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppVisibilityRepository
 import com.riffle.core.domain.launcher.contextual.ContextualSettings
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
+import com.riffle.core.domain.launcher.rss.FeedConfiguration
+import com.riffle.core.domain.launcher.rss.FeedId
+import com.riffle.core.domain.launcher.rss.FeedUrl
 import com.riffle.core.domain.launcher.settings.AppDrawerPresentation
 import com.riffle.core.domain.launcher.settings.AppearanceSettings
+import com.riffle.core.domain.launcher.settings.FeedRefreshIntervalOption
 import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
 import com.riffle.core.domain.launcher.settings.HomeSystemBars
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettingsRepository
+import com.riffle.core.domain.launcher.settings.RssSettings
 import com.riffle.core.domain.launcher.settings.SearchResultPresentation
 import com.riffle.core.domain.launcher.settings.TimeScapeAppearanceSettings
 import com.riffle.core.domain.launcher.settings.homeSystemBars
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertSame
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class LauncherSettingsStateReducerTest {
@@ -288,14 +297,139 @@ class LauncherSettingsStateReducerTest {
         assertEquals(null, repository.savedSettings)
     }
 
+    @Test
+    fun addsRssFeedAndSyncsConfiguredFeeds() {
+        val repository = FakeLauncherSettingsRepository()
+        val reducer = reducer(launcherSettingsRepository = repository)
+        val url = FeedUrl.parse("https://example.com/feed.xml").getOrThrow()
+
+        val updatedState =
+            reducer.reduce(
+                state = LauncherShellState(),
+                action = LauncherShellAction.AddRssFeed(url),
+            )
+
+        assertEquals(1, updatedState.launcherSettings.rss.feeds.size)
+        assertEquals(url, updatedState.launcherSettings.rss.feeds.single().url)
+        assertEquals(updatedState.launcherSettings.rss.feeds, updatedState.configuredFeeds)
+        assertEquals(updatedState.launcherSettings, repository.savedSettings)
+    }
+
+    @Test
+    fun removingRssFeedClearsItsCacheAndSyncsConfiguredFeeds() {
+        val repository = FakeLauncherSettingsRepository()
+        val cacheRepository = FakeFeedArticleCacheRepository()
+        val reducer =
+            reducer(launcherSettingsRepository = repository, feedArticleCacheRepository = cacheRepository)
+        val feed =
+            FeedConfiguration(id = FeedId("feed-1"), url = FeedUrl.parse("https://example.com/feed.xml").getOrThrow())
+        val state = LauncherShellState(launcherSettings = LauncherSettings(rss = RssSettings(feeds = listOf(feed))))
+
+        val updatedState =
+            reducer.reduce(state = state, action = LauncherShellAction.RemoveRssFeed(feed.id))
+
+        assertEquals(emptyList<FeedConfiguration>(), updatedState.launcherSettings.rss.feeds)
+        assertEquals(emptyList<FeedConfiguration>(), updatedState.configuredFeeds)
+        assertEquals(listOf(feed.id), cacheRepository.clearedFeedIds)
+    }
+
+    @Test
+    fun disablingRssFeedClearsItsCacheButEnablingDoesNot() {
+        val cacheRepository = FakeFeedArticleCacheRepository()
+        val reducer = reducer(feedArticleCacheRepository = cacheRepository)
+        val feed =
+            FeedConfiguration(id = FeedId("feed-1"), url = FeedUrl.parse("https://example.com/feed.xml").getOrThrow())
+        val state = LauncherShellState(launcherSettings = LauncherSettings(rss = RssSettings(feeds = listOf(feed))))
+
+        val disabledState =
+            reducer.reduce(state = state, action = LauncherShellAction.SetRssFeedEnabled(feed.id, enabled = false))
+
+        assertEquals(false, disabledState.launcherSettings.rss.feeds.single().enabled)
+        assertEquals(listOf(feed.id), cacheRepository.clearedFeedIds)
+
+        val reEnabledState =
+            reducer.reduce(
+                state = disabledState,
+                action = LauncherShellAction.SetRssFeedEnabled(feed.id, enabled = true),
+            )
+
+        assertEquals(true, reEnabledState.launcherSettings.rss.feeds.single().enabled)
+        assertEquals(listOf(feed.id), cacheRepository.clearedFeedIds)
+    }
+
+    @Test
+    fun persistsRssRefreshIntervalSelection() {
+        val repository = FakeLauncherSettingsRepository()
+        val reducer = reducer(launcherSettingsRepository = repository)
+
+        val updatedState =
+            reducer.reduce(
+                state = LauncherShellState(),
+                action = LauncherShellAction.SelectRssRefreshInterval(FeedRefreshIntervalOption.MINUTES_30),
+            )
+
+        assertEquals(FeedRefreshIntervalOption.MINUTES_30, updatedState.launcherSettings.rss.refreshInterval)
+        assertEquals(updatedState.launcherSettings, repository.savedSettings)
+    }
+
+    @Test
+    fun addingADuplicateRssFeedIsIgnoredAndDoesNotDuplicateConfiguredFeeds() {
+        val reducer = reducer()
+        val url = FeedUrl.parse("https://example.com/feed.xml").getOrThrow()
+        val firstState =
+            reducer.reduce(state = LauncherShellState(), action = LauncherShellAction.AddRssFeed(url))
+
+        val secondState = reducer.reduce(state = firstState, action = LauncherShellAction.AddRssFeed(url))
+
+        assertEquals(1, secondState.launcherSettings.rss.feeds.size)
+        assertTrue(secondState.configuredFeeds.size == 1)
+    }
+
     private fun reducer(
         launcherSettingsRepository: LauncherSettingsRepository = FakeLauncherSettingsRepository(),
+        feedArticleCacheRepository: FeedArticleCacheRepository = FakeFeedArticleCacheRepository(),
     ): LauncherSettingsStateReducer =
         LauncherSettingsStateReducer(
             homeLayoutRepository = FakeHomeLayoutRepository(),
             launcherSettingsRepository = launcherSettingsRepository,
             appVisibilityRepository = FakeAppVisibilityRepository(),
+            feedArticleCacheRepository = feedArticleCacheRepository,
         )
+
+    private class FakeFeedArticleCacheRepository : FeedArticleCacheRepository {
+        val clearedFeedIds = mutableListOf<FeedId>()
+
+        override fun loadFeed(
+            feedId: FeedId,
+            staleAfterMillis: Long,
+        ): FeedCacheResult = FeedCacheResult.Empty
+
+        override fun replaceFeed(
+            feedId: FeedId,
+            articles: List<CachedFeedArticle>,
+        ) = Unit
+
+        override fun clearFeed(feedId: FeedId) {
+            clearedFeedIds += feedId
+        }
+
+        override fun isRead(digest: String): Boolean = false
+
+        override fun markRead(digest: String) = Unit
+
+        override fun isDismissed(digest: String): Boolean = false
+
+        override fun markDismissed(digest: String) = Unit
+
+        override fun cachedImage(digest: String): ByteArray? = null
+
+        override fun cacheImage(
+            digest: String,
+            bytes: ByteArray,
+        ) = Unit
+
+        override fun clear() = Unit
+    }
 
     private class FakeHomeLayoutRepository : HomeLayoutRepository {
         override fun loadHomeLayout(): HomeLayout? = null

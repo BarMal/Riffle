@@ -1,5 +1,7 @@
 package com.riffle.app.launcher
 
+import com.riffle.app.launcher.rss.FeedArticleCacheRepository
+import com.riffle.app.launcher.rss.NoopFeedArticleCacheRepository
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.apps.AppVisibilityRepository
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
@@ -10,6 +12,7 @@ internal class LauncherSettingsStateReducer(
     private val homeLayoutRepository: HomeLayoutRepository,
     private val launcherSettingsRepository: LauncherSettingsRepository,
     private val appVisibilityRepository: AppVisibilityRepository,
+    private val feedArticleCacheRepository: FeedArticleCacheRepository = NoopFeedArticleCacheRepository,
 ) {
     fun reduce(
         state: LauncherShellState,
@@ -115,6 +118,17 @@ internal class LauncherSettingsStateReducer(
                     state.withOverlayDockSettingsAction(
                         action = action,
                         launcherSettingsRepository = launcherSettingsRepository,
+                    )
+
+                is LauncherShellAction.AddRssFeed,
+                is LauncherShellAction.RemoveRssFeed,
+                is LauncherShellAction.SetRssFeedEnabled,
+                is LauncherShellAction.SelectRssRefreshInterval,
+                ->
+                    state.withRssSettingsAction(
+                        action = action,
+                        launcherSettingsRepository = launcherSettingsRepository,
+                        feedArticleCacheRepository = feedArticleCacheRepository,
                     )
 
                 is LauncherShellAction.SelectSettingsLayoutDeviceClass ->

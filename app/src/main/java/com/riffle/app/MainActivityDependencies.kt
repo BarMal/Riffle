@@ -31,6 +31,7 @@ import com.riffle.app.launcher.notifications.AndroidNotificationAccessGateway
 import com.riffle.app.launcher.notifications.DataStoreActiveNotificationRepository
 import com.riffle.app.launcher.overlay.AndroidOverlayDockPermissionGateway
 import com.riffle.app.launcher.overlay.AndroidOverlayDockServiceController
+import com.riffle.app.launcher.rss.DataStoreFeedArticleCacheRepository
 import com.riffle.app.launcher.widgets.AndroidInstalledWidgetProviderRepository
 import com.riffle.app.launcher.widgets.AndroidWidgetHostGateway
 import com.riffle.app.launcher.widgets.AndroidWidgetPreviewImageLoader
@@ -56,6 +57,7 @@ internal class MainActivityDependencies(
         )
     }
     val appVisibilityRepository by lazy { SharedPreferencesAppVisibilityRepository(activity) }
+    val feedArticleCacheRepository by lazy { DataStoreFeedArticleCacheRepository(activity) }
     val homeRoleGateway by lazy { AndroidHomeRoleGateway(activity) }
     val appLauncher by lazy { AndroidAppLauncher(activity) }
     val webSearchLauncher by lazy { AndroidWebSearchLauncher(activity) }
@@ -92,6 +94,7 @@ internal class MainActivityDependencies(
                     screenHeightDp = activity.resources.configuration.screenHeightDp,
                 ),
             deleteHostedWidgetId = widgetHostGateway::deleteHostedWidgetId,
+            feedArticleCacheRepository = feedArticleCacheRepository,
         )
 
     fun packageChangeObserver(onCatalogChanged: (AppCatalogChange) -> Unit): AndroidPackageChangeObserver =

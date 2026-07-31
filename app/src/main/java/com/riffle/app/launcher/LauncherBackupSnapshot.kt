@@ -1,5 +1,6 @@
 package com.riffle.app.launcher
 
+import com.riffle.app.launcher.rss.SettingsBackedConfiguredFeedSource
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppVisibilityRepository
@@ -40,6 +41,9 @@ fun LauncherShellState.withImportedBackup(
         homeLayoutSet = document.homeLayoutSet,
         settingsLayoutDeviceClass = document.homeLayoutSet.activeKey.deviceClass,
         launcherSettings = document.launcherSettings,
+        // Restore never triggers a network refresh; this only assigns configuration, with an
+        // empty cache by construction since the article cache is never part of the backup document.
+        configuredFeeds = SettingsBackedConfiguredFeedSource(document.launcherSettings).configuredFeeds(),
     )
 }
 

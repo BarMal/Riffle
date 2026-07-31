@@ -21,6 +21,7 @@ data class LauncherSettings(
     val haptics: HapticSettings = HapticSettings(),
     val motion: MotionSettings = MotionSettings(),
     val overlayDock: OverlayDockSettings = OverlayDockSettings(),
+    val rss: RssSettings = RssSettings(),
     val search: SearchSettings = SearchSettings(),
 )
 

@@ -27,6 +27,12 @@ value class FeedId(val value: String) {
 
 /** A normalized, explicitly configured HTTPS feed URL. */
 class FeedUrl private constructor(val value: String) {
+    override fun equals(other: Any?): Boolean = this === other || (other is FeedUrl && value == other.value)
+
+    override fun hashCode(): Int = value.hashCode()
+
+    override fun toString(): String = "FeedUrl(value=$value)"
+
     companion object {
         fun parse(raw: String): Result<FeedUrl> =
             runCatching {

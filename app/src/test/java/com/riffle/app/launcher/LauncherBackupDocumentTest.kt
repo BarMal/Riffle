@@ -8,13 +8,18 @@ import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.HomeLayoutSet
 import com.riffle.core.domain.launcher.home.WallpaperSettings
 import com.riffle.core.domain.launcher.home.WallpaperSource
+import com.riffle.core.domain.launcher.rss.FeedConfiguration
+import com.riffle.core.domain.launcher.rss.FeedId
+import com.riffle.core.domain.launcher.rss.FeedUrl
 import com.riffle.core.domain.launcher.settings.AppearanceSettings
 import com.riffle.core.domain.launcher.settings.CardsSettings
+import com.riffle.core.domain.launcher.settings.FeedRefreshIntervalOption
 import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
 import com.riffle.core.domain.launcher.settings.HapticSettings
 import com.riffle.core.domain.launcher.settings.HomeSystemBars
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.MotionSettings
+import com.riffle.core.domain.launcher.settings.RssSettings
 import com.riffle.core.domain.launcher.settings.TimeScapeAppearancePreset
 import com.riffle.core.domain.launcher.settings.TimeScapeAppearanceSettings
 import com.riffle.core.domain.launcher.settings.homeSystemBars
@@ -59,6 +64,60 @@ class LauncherBackupDocumentTest {
         assertEquals(settings, decodedDocument.launcherSettings)
         assertEquals(setOf(cameraIdentity), decodedDocument.hiddenAppIdentities)
         assertEquals(123_456L, decodedDocument.exportedAtEpochMillis)
+    }
+
+    @Test
+    fun roundTripsValidRssFeedConfigurationInBackup() {
+        val feed =
+            FeedConfiguration(
+                id = FeedId("feed-1"),
+                url = FeedUrl.parse("https://example.com/feed.xml").getOrThrow(),
+                enabled = true,
+            )
+        val document =
+            LauncherBackupDocument(
+                homeLayoutSet = HomeLayoutSet.fromLayout(HomeLayoutDefaults.standard()),
+                launcherSettings =
+                    LauncherSettings(
+                        rss = RssSettings(feeds = listOf(feed), refreshInterval = FeedRefreshIntervalOption.MINUTES_60),
+                    ),
+            )
+
+        val decodedDocument = decodeLauncherBackupDocument(encodeLauncherBackupDocument(document))
+
+        assertEquals(document.launcherSettings.rss, decodedDocument.launcherSettings.rss)
+    }
+
+    @Test
+    fun dropsInvalidRssFeedEntriesOnBackupRestoreWithoutTriggeringAnyNetworkCall() {
+        val validFeed =
+            FeedConfiguration(
+                id = FeedId("valid"),
+                url = FeedUrl.parse("https://example.com/feed.xml").getOrThrow(),
+            )
+        val validJson =
+            JSONObject(
+                encodeLauncherBackupDocument(
+                    LauncherBackupDocument(
+                        homeLayoutSet = HomeLayoutSet.fromLayout(HomeLayoutDefaults.standard()),
+                        launcherSettings = LauncherSettings(rss = RssSettings(feeds = listOf(validFeed))),
+                    ),
+                ),
+            )
+        val rssJson = validJson.getJSONObject("settings").getJSONObject("rss")
+        val invalidFeedJson =
+            JSONObject()
+                .put("id", "invalid")
+                .put("url", "http://example.com/insecure.xml")
+                .put("profileId", "personal")
+                .put("profileType", "PERSONAL")
+        rssJson.getJSONArray("feeds").put(invalidFeedJson)
+
+        val decodedDocument = decodeLauncherBackupDocument(validJson.toString())
+
+        // Restore validates each feed URL, drops the invalid entry, and keeps the valid one -- with
+        // an empty cache by construction, since the article cache is never part of this document.
+        assertEquals(listOf(validFeed), decodedDocument.launcherSettings.rss.feeds)
     }
 
     @Test

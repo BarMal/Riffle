@@ -29,6 +29,7 @@ class SettingsPagesTest {
                 "Contextual behaviour" to SettingsPage.CONTEXTUAL,
                 "Motion & haptics" to SettingsPage.MOTION,
                 "App drawer" to SettingsPage.APPS,
+                "RSS feeds" to SettingsPage.RSS,
                 "Permissions" to SettingsPage.PERMISSIONS,
                 "Backup" to SettingsPage.BACKUP,
                 "About" to SettingsPage.VERSION,
@@ -135,8 +136,12 @@ class SettingsPagesTest {
             settingsMainPageEntriesMatching("handle opacity").map { entry -> entry.page },
         )
         assertEquals(
-            listOf(SettingsPage.APPS),
+            listOf(SettingsPage.APPS, SettingsPage.RSS),
             settingsMainPageEntriesMatching("refresh apps").map { entry -> entry.page },
+        )
+        assertEquals(
+            listOf(SettingsPage.RSS),
+            settingsMainPageEntriesMatching("refresh interval").map { entry -> entry.page },
         )
     }
 

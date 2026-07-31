@@ -5,6 +5,7 @@ package com.riffle.app.launcher
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.riffle.app.launcher.notifications.AppStageShellStateReconciler
+import com.riffle.app.launcher.rss.SettingsBackedConfiguredFeedSource
 import com.riffle.core.domain.launcher.FirstRunStatus
 import com.riffle.core.domain.launcher.HomeRoleStatus
 import com.riffle.core.domain.launcher.LauncherShellState
@@ -79,6 +80,7 @@ class LauncherShellViewModel(
             homeLayoutRepository = homeLayoutRepository,
             launcherSettingsRepository = launcherSettingsRepository,
             appVisibilityRepository = appVisibilityRepository,
+            feedArticleCacheRepository = platformDependencies.feedArticleCacheRepository,
         )
     private val appShortcutRepository =
         installedAppRepository as? AppShortcutRepository ?: NoopAppShortcutRepository
@@ -579,6 +581,7 @@ private fun createInitialState(
         settingsLayoutDeviceClass = layoutSet.activeKey.deviceClass,
         availableLayoutDeviceClasses = setOf(layoutSet.activeKey.deviceClass),
         launcherSettings = launcherSettings,
+        configuredFeeds = SettingsBackedConfiguredFeedSource(launcherSettings).configuredFeeds(),
     ).copy(
         firstRunStatus =
             if (hasRecoveredHomeRoleRequest) {

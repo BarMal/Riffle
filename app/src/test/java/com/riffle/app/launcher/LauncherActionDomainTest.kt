@@ -31,7 +31,10 @@ import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.home.WallpaperScrollMode
 import com.riffle.core.domain.launcher.home.WallpaperSource
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
+import com.riffle.core.domain.launcher.rss.FeedId
+import com.riffle.core.domain.launcher.rss.FeedUrl
 import com.riffle.core.domain.launcher.settings.AppDrawerPresentation
+import com.riffle.core.domain.launcher.settings.FeedRefreshIntervalOption
 import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
 import com.riffle.core.domain.launcher.settings.HomeGesture
 import com.riffle.core.domain.launcher.settings.HomeSwipeGestureDirection
@@ -353,6 +356,19 @@ class LauncherActionDomainTest {
                 settings(
                     "SelectAppDrawerIconGridColumns",
                     LauncherShellAction.SelectAppDrawerIconGridColumns(columns = 5),
+                ),
+                settings(
+                    "AddRssFeed",
+                    LauncherShellAction.AddRssFeed(FeedUrl.parse("https://example.com/feed.xml").getOrThrow()),
+                ),
+                settings("RemoveRssFeed", LauncherShellAction.RemoveRssFeed(FeedId("feed-1"))),
+                settings(
+                    "SetRssFeedEnabled",
+                    LauncherShellAction.SetRssFeedEnabled(FeedId("feed-1"), enabled = false),
+                ),
+                settings(
+                    "SelectRssRefreshInterval",
+                    LauncherShellAction.SelectRssRefreshInterval(FeedRefreshIntervalOption.MINUTES_30),
                 ),
                 settings(
                     "SelectWallpaperSource",
