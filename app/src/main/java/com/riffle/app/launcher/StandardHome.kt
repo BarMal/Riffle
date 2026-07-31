@@ -216,6 +216,7 @@ internal fun StandardHome(
                 dragSession = homeDragSession.value,
                 widgetPickerDragPreview = widgetPickerDragPreview.value,
                 widgetPickerDockPreview = widgetPickerDockPreview.value,
+                widgetPickerDragInProgress = widgetPickerDragInProgress.value,
                 presentation = presentation,
             ),
         appIconLoader = appIconLoader,
@@ -549,6 +550,8 @@ private fun StandardHomeColumn(
             appIconLoader = appIconLoader,
             actions = actions,
             widgetPickerDockPreview = state.widgetPickerDockPreview,
+            isWidgetPickerInteractionActive =
+                state.presentation.widgetPicker.isOpen || state.widgetPickerDragInProgress,
         )
     }
 }
@@ -743,6 +746,7 @@ private data class StandardHomeContentState(
     val dragSession: HomeDragSession?,
     val widgetPickerDragPreview: WidgetPickerDragPlacementPreview?,
     val widgetPickerDockPreview: WidgetPickerDockPlacementPreview?,
+    val widgetPickerDragInProgress: Boolean,
     val presentation: StandardHomePresentation,
 )
 

@@ -30,6 +30,7 @@ internal fun StandardHomeDockArea(
     appIconLoader: AppIconLoader,
     actions: HomeWorkspaceActions,
     widgetPickerDockPreview: WidgetPickerDockPlacementPreview? = null,
+    isWidgetPickerInteractionActive: Boolean = false,
 ) {
     if (!layout.shouldShowDock()) {
         return
@@ -71,10 +72,12 @@ internal fun StandardHomeDockArea(
                 )
                 .dockShelfMotion(dockShelfMotionPolicy(presentation.reducedMotion))
                 .dockShelfFrameRatePreference(presentation.motionPerformanceTargetFps)
-                // Only claim the swipe-up gesture when the shelf-expand gesture is inactive, so the
-                // two physical swipe-up interactions on the dock region never compete for the drag.
+                // Only claim the swipe-up gesture when the shelf-expand gesture is inactive and no
+                // widget-picker drag/tile interaction is in play: this Column draws on top of
+                // WidgetPickerSurface in the overlapping dock region, so it must yield the region's
+                // touches to the picker's own drag detector whenever it is active.
                 .dockSwipeUpGestureInput(
-                    enabled = dockInteractions.onShelfExpandedChange == null,
+                    enabled = dockInteractions.onShelfExpandedChange == null && !isWidgetPickerInteractionActive,
                     action = presentation.dockGestures.swipeUp,
                     onAction = actions.onAction,
                 ),
