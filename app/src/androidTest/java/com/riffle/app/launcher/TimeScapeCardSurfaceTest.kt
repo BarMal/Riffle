@@ -37,6 +37,7 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import com.riffle.app.launcher.notifications.AppStageNotificationCard
@@ -261,7 +262,11 @@ class TimeScapeCardSurfaceTest {
         }
 
         composeRule.onNodeWithText("Stage ready").assertIsDisplayed()
-        composeRule.onNodeWithText("Open ${app.label}").performClick()
+        // The empty-stage placeholder now renders inside a fixed-size TimeScapeCardSurface
+        // (matching populated-card sizing) with its content in a scrollable Column, so an
+        // affordance below the fold needs a scroll before it can be clicked, same as on a real
+        // device.
+        composeRule.onNodeWithText("Open ${app.label}").performScrollTo().performClick()
         assertEquals(LauncherShellAction.LaunchApp(app.identity), actions.single())
     }
 
