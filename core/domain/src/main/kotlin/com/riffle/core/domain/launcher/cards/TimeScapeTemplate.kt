@@ -126,15 +126,26 @@ fun TimeScapeTemplateVariant.validate(): List<TimeScapeTemplateValidationIssue> 
     slotIds.groupingBy { id -> id }.eachCount().filterValues { count -> count > 1 }.keys.forEach { id ->
         issues += TimeScapeTemplateValidationIssue.DuplicateSlotId(id)
     }
-    val placements = canvas.elements.map { element -> element.placement } + dynamicSlots.map { slot -> slot.placement }
-    val acceptedPlacements = mutableListOf<GridPlacement>()
-    placements.forEach { placement ->
-        when (val placementIssue = placement.validationIssue(canvas.grid)) {
+    val placements =
+        canvas.elements.map { element -> TaggedPlacement(element.placement, isDynamicSlot = false) } +
+            dynamicSlots.map { slot -> TaggedPlacement(slot.placement, isDynamicSlot = true) }
+    val acceptedPlacements = mutableListOf<TaggedPlacement>()
+    placements.forEach { tagged ->
+        when (val placementIssue = tagged.placement.validationIssue(canvas.grid)) {
             null -> {
-                if (acceptedPlacements.any { accepted -> accepted.overlaps(placement) }) {
-                    issues += TimeScapeTemplateValidationIssue.Collision(placement)
+                // Dynamic slots may intentionally share a region: they represent alternative
+                // content sources (e.g. app-stage stacks and feed stages) that coexist within the
+                // same visual stage area rather than separate canvas regions. Only a static
+                // element colliding with anything else is a real layout conflict.
+                val collides =
+                    acceptedPlacements.any { accepted ->
+                        val bothDynamic = accepted.isDynamicSlot && tagged.isDynamicSlot
+                        !bothDynamic && accepted.placement.overlaps(tagged.placement)
+                    }
+                if (collides) {
+                    issues += TimeScapeTemplateValidationIssue.Collision(tagged.placement)
                 }
-                acceptedPlacements += placement
+                acceptedPlacements += tagged
             }
 
             else -> issues += placementIssue
@@ -142,6 +153,8 @@ fun TimeScapeTemplateVariant.validate(): List<TimeScapeTemplateValidationIssue> 
     }
     return issues
 }
+
+private data class TaggedPlacement(val placement: GridPlacement, val isDynamicSlot: Boolean)
 
 private fun GridPlacement.validationIssue(grid: GridDimensions): TimeScapeTemplateValidationIssue? {
     if (span.columns <= 0 || span.rows <= 0) {
@@ -213,6 +226,13 @@ object TimeScapeTemplateCatalogDefaults {
                     TimeScapeDynamicSlot(
                         id = TimeScapeDynamicSlotId("app-stage"),
                         source = TimeScapeDynamicSource.APP_STAGE_STACKS,
+                        placement = GridPlacement(GridCell(0, 3), GridSpan(columns, rows - 4)),
+                    ),
+                    // Feed stages coexist with app stages in the same stage area rather than a
+                    // separate canvas region (see ADR 0001, "Template binding and coexistence").
+                    TimeScapeDynamicSlot(
+                        id = TimeScapeDynamicSlotId("feed-stage"),
+                        source = TimeScapeDynamicSource.FUTURE_FEED,
                         placement = GridPlacement(GridCell(0, 3), GridSpan(columns, rows - 4)),
                     ),
                 ),

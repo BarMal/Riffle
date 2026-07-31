@@ -24,8 +24,15 @@ import com.riffle.core.domain.launcher.home.HomeLayoutSet
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.notifications.NotificationCategory
+import com.riffle.core.domain.launcher.rss.FeedConfiguration
+import com.riffle.core.domain.launcher.rss.FeedId
+import com.riffle.core.domain.launcher.rss.FeedProfileStatus
+import com.riffle.core.domain.launcher.rss.FeedStageCacheProjection
+import com.riffle.core.domain.launcher.rss.FeedStagePlanner
+import com.riffle.core.domain.launcher.rss.FeedStageSnapshot
 import com.riffle.core.domain.launcher.search.LauncherSearchResult
 import com.riffle.core.domain.launcher.settings.LauncherSettings
+import com.riffle.core.domain.launcher.settings.feedStagePreferencesFor
 import com.riffle.core.domain.launcher.settings.stagePreferencesFor
 import com.riffle.core.domain.launcher.widgets.InstalledWidgetProvider
 
@@ -47,6 +54,10 @@ data class LauncherShellState(
     val notificationCountsByCategory: Map<NotificationCategory, Int> = emptyMap(),
     val notificationGroupsByApp: List<AppNotificationGroup> = emptyList(),
     val profileContentVisibility: Map<AppProfileId, AppProfileContentVisibility> = emptyMap(),
+    /** Configured feeds, sourced from a ConfiguredFeedSource (a placeholder seam pending #1013). */
+    val configuredFeeds: List<FeedConfiguration> = emptyList(),
+    /** Latest offline-cache projection per feed, adapted from the app-module feed article cache. */
+    val feedCacheProjections: Map<FeedId, FeedStageCacheProjection> = emptyMap(),
     val installedApps: List<InstalledApp> = emptyList(),
     val hiddenApps: List<InstalledApp> = emptyList(),
     val appShortcutsByApp: AppShortcutsByApp = emptyMap(),
@@ -85,6 +96,38 @@ data class LauncherShellState(
                 launcherSettings
                     .cards
                     .stagePreferencesFor(homeLayoutSet.activeKey)
+                    .let { preferences ->
+                        if (preferences.selectedStageId == null) {
+                            preferences.copy(selectedStageId = previous?.preferences?.selectedStageId)
+                        } else {
+                            preferences
+                        }
+                    },
+            previous = previous,
+        )
+
+    /**
+     * Reconciles TimeScape feed stages from [configuredFeeds] and [feedCacheProjections].
+     *
+     * This is a parallel projection alongside [appStageSnapshot] rather than a merge into
+     * [AppStageSnapshot]: feed stages have no package/app identity, and unlike app stages they are
+     * never pruned for being empty (every configured, non-removed-profile feed always projects a
+     * stage). Coexistence with pinned app stages, the selected app-stage focus, and the recent/
+     * frequently-used stack is therefore preserved by construction -- this snapshot only ever adds
+     * an independent, separately selectable list of feed stages for a renderer to also read.
+     */
+    fun feedStageSnapshot(
+        previous: FeedStageSnapshot? = null,
+        planner: FeedStagePlanner = FeedStagePlanner(),
+    ): FeedStageSnapshot =
+        planner.reconcile(
+            configuredFeeds = configuredFeeds,
+            profileStatuses = feedProfileStatusesForStages(),
+            cacheProjections = feedCacheProjections,
+            preferences =
+                launcherSettings
+                    .cards
+                    .feedStagePreferencesFor(homeLayoutSet.activeKey)
                     .let { preferences ->
                         if (preferences.selectedStageId == null) {
                             preferences.copy(selectedStageId = previous?.preferences?.selectedStageId)
@@ -157,6 +200,21 @@ private fun LauncherShellState.profileStatesForStages(): Map<AppProfileId, AppSt
             AppProfileContentVisibility.REDACTED_LOCKED,
             AppProfileContentVisibility.REDACTED_UNAVAILABLE,
             -> AppStageProfileState.LOCKED
+        }
+    }
+}
+
+/** Mirrors profileStatesForStages() above for feed profile-lock handling. */
+private fun LauncherShellState.feedProfileStatusesForStages(): Map<AppProfileId, FeedProfileStatus> {
+    return profileContentVisibility.mapValues { (_, visibility) ->
+        when (visibility) {
+            AppProfileContentVisibility.VISIBLE,
+            AppProfileContentVisibility.REDACTED_QUIET,
+            -> FeedProfileStatus.AVAILABLE
+
+            AppProfileContentVisibility.REDACTED_LOCKED,
+            AppProfileContentVisibility.REDACTED_UNAVAILABLE,
+            -> FeedProfileStatus.LOCKED
         }
     }
 }

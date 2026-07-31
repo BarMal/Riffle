@@ -16,9 +16,25 @@ class TimeScapeTemplateTest {
         val variant = template.variantFor(HomeLayoutDeviceClass.PHONE, TimeScapePaneMode.COMPACT)
 
         assertTrue(variant != null)
-        assertEquals(TimeScapeDynamicSource.APP_STAGE_STACKS, variant.dynamicSlots.single().source)
+        assertEquals(
+            setOf(TimeScapeDynamicSource.APP_STAGE_STACKS, TimeScapeDynamicSource.FUTURE_FEED),
+            variant.dynamicSlots.map { it.source }.toSet(),
+        )
         assertEquals(listOf("clock", "search", "carousel", "dock"), variant.canvas.elements.map { it.id.value })
         assertEquals(emptyList(), variant.validate())
+    }
+
+    @Test
+    fun builtInTemplateBindsFeedDynamicSlotToTheSharedStageAreaWithoutCollision() {
+        val template = TimeScapeTemplateCatalogDefaults.sharedCanvas
+
+        template.variants.forEach { variant ->
+            val appStageSlot = variant.dynamicSlots.single { it.source == TimeScapeDynamicSource.APP_STAGE_STACKS }
+            val feedSlot = variant.dynamicSlots.single { it.source == TimeScapeDynamicSource.FUTURE_FEED }
+
+            assertEquals(appStageSlot.placement, feedSlot.placement)
+            assertEquals(emptyList(), variant.validate())
+        }
     }
 
     @Test
@@ -90,6 +106,45 @@ class TimeScapeTemplateTest {
 
         assertTrue(variant.validate().any { it is TimeScapeTemplateValidationIssue.Collision })
         assertTrue(variant.validate().any { it is TimeScapeTemplateValidationIssue.OutOfBounds })
+    }
+
+    @Test
+    fun validationAllowsOverlappingDynamicSlotsButNotDynamicSlotOverlappingStaticElement() {
+        val sharedPlacement = GridPlacement(GridCell(0, 0))
+        val twoDynamicSlots =
+            TimeScapeTemplateVariant(
+                HomeLayoutDeviceClass.PHONE,
+                TimeScapePaneMode.COMPACT,
+                TimeScapeCanvas(GridDimensions(2, 2), emptyList()),
+                listOf(
+                    TimeScapeDynamicSlot(
+                        TimeScapeDynamicSlotId("a"),
+                        TimeScapeDynamicSource.APP_STAGE_STACKS,
+                        sharedPlacement,
+                    ),
+                    TimeScapeDynamicSlot(
+                        TimeScapeDynamicSlotId("b"),
+                        TimeScapeDynamicSource.FUTURE_FEED,
+                        sharedPlacement,
+                    ),
+                ),
+            )
+        val dynamicOverlappingStatic =
+            TimeScapeTemplateVariant(
+                HomeLayoutDeviceClass.PHONE,
+                TimeScapePaneMode.COMPACT,
+                TimeScapeCanvas(GridDimensions(2, 2), listOf(element("clock", sharedPlacement))),
+                listOf(
+                    TimeScapeDynamicSlot(
+                        TimeScapeDynamicSlotId("a"),
+                        TimeScapeDynamicSource.APP_STAGE_STACKS,
+                        sharedPlacement,
+                    ),
+                ),
+            )
+
+        assertEquals(emptyList(), twoDynamicSlots.validate())
+        assertTrue(dynamicOverlappingStatic.validate().any { it is TimeScapeTemplateValidationIssue.Collision })
     }
 
     @Test
