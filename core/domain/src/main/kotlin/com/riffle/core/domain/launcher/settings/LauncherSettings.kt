@@ -10,6 +10,7 @@ import com.riffle.core.domain.launcher.contextual.ContextualSettings
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.HomeLayoutKey
 import com.riffle.core.domain.launcher.home.WallpaperSettings
+import com.riffle.core.domain.launcher.rss.FeedStagePreferences
 
 data class LauncherSettings(
     val appDrawer: AppDrawerSettings = AppDrawerSettings(),
@@ -54,6 +55,8 @@ enum class SearchResultPresentation {
 /** Stored user intent for the TimeScape app-stage surface. */
 data class CardsSettings(
     val stagePreferencesByLayout: Map<HomeLayoutKey, AppStagePreferences> = emptyMap(),
+    /** Durable pin/select intent for TimeScape feed stages, mirroring [stagePreferencesByLayout]. */
+    val feedStagePreferencesByLayout: Map<HomeLayoutKey, FeedStagePreferences> = emptyMap(),
     /** Durable visual intent for the optional TimeScape presentation. */
     val timeScapeAppearance: TimeScapeAppearanceSettings = TimeScapeAppearanceSettings.modern(),
     val timeScapeTemplateId: TimeScapeTemplateId = TimeScapeTemplateCatalogDefaults.sharedCanvasId,
@@ -79,6 +82,15 @@ fun CardsSettings.withStagePreferences(
     layoutKey: HomeLayoutKey,
     preferences: AppStagePreferences,
 ): CardsSettings = copy(stagePreferencesByLayout = stagePreferencesByLayout + (layoutKey to preferences))
+
+/** Returns variant-specific feed stage intent. */
+fun CardsSettings.feedStagePreferencesFor(layoutKey: HomeLayoutKey): FeedStagePreferences =
+    feedStagePreferencesByLayout[layoutKey] ?: FeedStagePreferences()
+
+fun CardsSettings.withFeedStagePreferences(
+    layoutKey: HomeLayoutKey,
+    preferences: FeedStagePreferences,
+): CardsSettings = copy(feedStagePreferencesByLayout = feedStagePreferencesByLayout + (layoutKey to preferences))
 
 data class AppearanceSettings(
     val wallpaper: WallpaperSettings = WallpaperSettings.system(),
