@@ -17,10 +17,15 @@ import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.home.WallpaperScrollMode
 import com.riffle.core.domain.launcher.home.WallpaperSettings
 import com.riffle.core.domain.launcher.home.WallpaperSource
+import com.riffle.core.domain.launcher.rss.FeedConfiguration
+import com.riffle.core.domain.launcher.rss.FeedId
+import com.riffle.core.domain.launcher.rss.FeedRefreshIntent
+import com.riffle.core.domain.launcher.rss.FeedUrl
 import com.riffle.core.domain.launcher.settings.AppDrawerPresentation
 import com.riffle.core.domain.launcher.settings.AppDrawerSettings
 import com.riffle.core.domain.launcher.settings.AppearanceSettings
 import com.riffle.core.domain.launcher.settings.CardsSettings
+import com.riffle.core.domain.launcher.settings.FeedRefreshIntervalOption
 import com.riffle.core.domain.launcher.settings.GestureSettings
 import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
 import com.riffle.core.domain.launcher.settings.HapticSettings
@@ -50,6 +55,7 @@ import com.riffle.core.domain.launcher.settings.MotionSettings
 import com.riffle.core.domain.launcher.settings.OverlayDockEdge
 import com.riffle.core.domain.launcher.settings.OverlayDockExpandedOrientation
 import com.riffle.core.domain.launcher.settings.OverlayDockSettings
+import com.riffle.core.domain.launcher.settings.RssSettings
 import com.riffle.core.domain.launcher.settings.SearchResultPresentation
 import com.riffle.core.domain.launcher.settings.SearchSettings
 import com.riffle.core.domain.launcher.settings.TimeScapeAppearanceSettings
@@ -62,6 +68,7 @@ import com.riffle.core.domain.launcher.settings.withHomeSystemBars
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 @Suppress("LargeClass")
@@ -872,6 +879,109 @@ class LauncherSettingsJsonCodecTest {
             )
 
         assertEquals(LauncherGestureAction.OPEN_APP_DRAWER, decodedSettings.gestures.homeSwipe.up)
+    }
+
+    @Test
+    fun roundTripsRssFeedConfigurationAndRefreshInterval() {
+        val feed =
+            FeedConfiguration(
+                id = FeedId("feed-1"),
+                url = FeedUrl.parse("https://example.com/feed.xml?utm_source=x&keep=1").getOrThrow(),
+                profile = AppProfile.personal(),
+                enabled = false,
+                refreshIntent = FeedRefreshIntent.ALLOW_SCHEDULED,
+            )
+        val settings =
+            LauncherSettings(
+                rss = RssSettings(feeds = listOf(feed), refreshInterval = FeedRefreshIntervalOption.MINUTES_30),
+            )
+
+        val decoded = decodeLauncherSettings(encodeLauncherSettings(settings))
+
+        assertEquals(settings.rss, decoded.rss)
+        assertEquals("https://example.com/feed.xml?keep=1", decoded.rss.feeds.single().url.value)
+    }
+
+    @Test
+    fun defaultsMissingRssSettings() {
+        val decodedSettings = decodeLauncherSettings("{}")
+
+        assertEquals(RssSettings(), decodedSettings.rss)
+    }
+
+    @Test
+    fun dropsInvalidFeedEntriesOnDecodeWhileKeepingValidOnes() {
+        val decodedSettings =
+            decodeLauncherSettings(
+                """
+                {
+                  "rss": {
+                    "feeds": [
+                      {
+                        "id": "valid",
+                        "url": "https://example.com/feed.xml",
+                        "profileId": "personal",
+                        "profileType": "PERSONAL",
+                        "enabled": true,
+                        "refreshIntent": "MANUAL"
+                      },
+                      {
+                        "id": "http-scheme",
+                        "url": "http://example.com/feed.xml",
+                        "profileId": "personal",
+                        "profileType": "PERSONAL"
+                      },
+                      {
+                        "id": "credentials",
+                        "url": "https://user:pass@example.com/feed.xml",
+                        "profileId": "personal",
+                        "profileType": "PERSONAL"
+                      },
+                      {
+                        "id": "blank-url",
+                        "url": "",
+                        "profileId": "personal",
+                        "profileType": "PERSONAL"
+                      },
+                      {
+                        "id": "",
+                        "url": "https://example.com/other.xml",
+                        "profileId": "personal",
+                        "profileType": "PERSONAL"
+                      },
+                      "not-an-object"
+                    ]
+                  }
+                }
+                """.trimIndent(),
+            )
+
+        assertEquals(1, decodedSettings.rss.feeds.size)
+        assertEquals("https://example.com/feed.xml", decodedSettings.rss.feeds.single().url.value)
+    }
+
+    @Test
+    fun defaultsUnknownRssRefreshInterval() {
+        val decodedSettings =
+            decodeLauncherSettings(
+                """
+                {
+                  "rss": {
+                    "refreshInterval": "UNKNOWN"
+                  }
+                }
+                """.trimIndent(),
+            )
+
+        assertEquals(FeedRefreshIntervalOption.DEFAULT, decodedSettings.rss.refreshInterval)
+    }
+
+    @Test
+    fun encodesRssSettingsVersion() {
+        val encodedSettings = JSONObject(encodeLauncherSettings(LauncherSettings()))
+
+        assertEquals(6, encodedSettings.getInt("version"))
+        assertTrue(encodedSettings.has("rss"))
     }
 
     @Test

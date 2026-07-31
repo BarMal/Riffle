@@ -175,6 +175,22 @@ private fun appSettingsPageEntries(status: SettingsOverviewStatus): List<Setting
                     "app grid columns",
                 ),
         ),
+        SettingsPageEntry(
+            label = "RSS feeds",
+            subtitle = "Manage feeds, refresh interval, and privacy",
+            page = SettingsPage.RSS,
+            group = SettingsPageGroup.APPS,
+            searchAliases =
+                listOf(
+                    "rss",
+                    "atom",
+                    "feeds",
+                    "add feed",
+                    "feed url",
+                    "refresh interval",
+                    "privacy",
+                ),
+        ),
     )
 
 private fun systemSettingsPageEntries(status: SettingsOverviewStatus): List<SettingsPageEntry> =

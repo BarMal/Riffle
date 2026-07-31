@@ -19,6 +19,7 @@ enum class SettingsPage(
     MOTION("Motion & haptics"),
     PERMISSIONS("Permissions"),
     APPS("App drawer"),
+    RSS("RSS feeds"),
     BACKUP("Backup"),
     HIDDEN_APPS("Hidden apps"),
     VERSION("About"),

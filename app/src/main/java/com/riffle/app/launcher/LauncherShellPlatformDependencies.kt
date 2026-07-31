@@ -1,5 +1,7 @@
 package com.riffle.app.launcher
 
+import com.riffle.app.launcher.rss.FeedArticleCacheRepository
+import com.riffle.app.launcher.rss.NoopFeedArticleCacheRepository
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.HostedWidgetId
 import com.riffle.core.domain.launcher.home.LauncherViewMode
@@ -17,6 +19,7 @@ data class LauncherShellPlatformDependencies(
     val initialHomeLayoutDeviceClass: HomeLayoutDeviceClass? = null,
     val viewModeAvailability: LauncherViewModeAvailability = defaultLauncherViewModeAvailability(),
     val deleteHostedWidgetId: (HostedWidgetId) -> Unit = {},
+    val feedArticleCacheRepository: FeedArticleCacheRepository = NoopFeedArticleCacheRepository,
 ) {
     fun installedWidgetProviders(catalog: WidgetProviderCatalog): List<InstalledWidgetProvider> =
         catalog.sortedProviders(widgetProviderRepository.installedWidgetProviders())

@@ -108,6 +108,10 @@ internal fun LauncherShellAction.launcherSettingsActionRoute(): LauncherSettings
         is LauncherShellAction.SelectSearchResultPresentation,
         is LauncherShellAction.SelectAppDrawerPresentation,
         is LauncherShellAction.SelectAppDrawerIconGridColumns,
+        is LauncherShellAction.AddRssFeed,
+        is LauncherShellAction.RemoveRssFeed,
+        is LauncherShellAction.SetRssFeedEnabled,
+        is LauncherShellAction.SelectRssRefreshInterval,
         -> LauncherSettingsActionRoute.SettingsState(this)
 
         LauncherShellAction.RequestNotificationAccess -> LauncherSettingsActionRoute.RequestNotificationAccess

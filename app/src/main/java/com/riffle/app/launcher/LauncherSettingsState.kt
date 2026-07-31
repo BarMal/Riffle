@@ -1,5 +1,6 @@
 package com.riffle.app.launcher
 
+import com.riffle.app.launcher.rss.SettingsBackedConfiguredFeedSource
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.settings.HomeGesture
 import com.riffle.core.domain.launcher.settings.HomeGestureSettings
@@ -16,8 +17,10 @@ fun LauncherShellState.withLauncherSettings(
     settings: LauncherSettings,
     launcherSettingsRepository: LauncherSettingsRepository,
 ): LauncherShellState =
-    copy(launcherSettings = settings)
-        .also { state -> launcherSettingsRepository.saveLauncherSettings(state.launcherSettings) }
+    copy(
+        launcherSettings = settings,
+        configuredFeeds = SettingsBackedConfiguredFeedSource(settings).configuredFeeds(),
+    ).also { state -> launcherSettingsRepository.saveLauncherSettings(state.launcherSettings) }
 
 fun LauncherShellState.withHomeSwipeGestureAction(
     direction: HomeSwipeGestureDirection,

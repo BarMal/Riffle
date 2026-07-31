@@ -48,3 +48,35 @@ interface FeedArticleCacheRepository {
     /** Fully clears all cached articles, images, and read/dismiss state. */
     fun clear()
 }
+
+/** No-op default for call sites that do not yet wire a real cache (mirrors other Noop* repositories). */
+object NoopFeedArticleCacheRepository : FeedArticleCacheRepository {
+    override fun loadFeed(
+        feedId: FeedId,
+        staleAfterMillis: Long,
+    ): FeedCacheResult = FeedCacheResult.Empty
+
+    override fun replaceFeed(
+        feedId: FeedId,
+        articles: List<CachedFeedArticle>,
+    ) = Unit
+
+    override fun clearFeed(feedId: FeedId) = Unit
+
+    override fun isRead(digest: String): Boolean = false
+
+    override fun markRead(digest: String) = Unit
+
+    override fun isDismissed(digest: String): Boolean = false
+
+    override fun markDismissed(digest: String) = Unit
+
+    override fun cachedImage(digest: String): ByteArray? = null
+
+    override fun cacheImage(
+        digest: String,
+        bytes: ByteArray,
+    ) = Unit
+
+    override fun clear() = Unit
+}

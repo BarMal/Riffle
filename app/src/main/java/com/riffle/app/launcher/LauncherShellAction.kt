@@ -3,6 +3,7 @@ package com.riffle.app.launcher
 import com.riffle.app.launcher.notifications.NotificationStageAction
 import com.riffle.core.domain.launcher.apps.AppDrawerProfileFilter
 import com.riffle.core.domain.launcher.apps.AppIdentity
+import com.riffle.core.domain.launcher.apps.AppProfile
 import com.riffle.core.domain.launcher.apps.AppProfileType
 import com.riffle.core.domain.launcher.apps.AppSearchContentFilter
 import com.riffle.core.domain.launcher.apps.AppShortcut
@@ -28,7 +29,10 @@ import com.riffle.core.domain.launcher.home.WallpaperScrollMode
 import com.riffle.core.domain.launcher.home.WallpaperSource
 import com.riffle.core.domain.launcher.home.WidgetResizeConstraints
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
+import com.riffle.core.domain.launcher.rss.FeedId
+import com.riffle.core.domain.launcher.rss.FeedUrl
 import com.riffle.core.domain.launcher.settings.AppDrawerPresentation
+import com.riffle.core.domain.launcher.settings.FeedRefreshIntervalOption
 import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
 import com.riffle.core.domain.launcher.settings.HomeGesture
 import com.riffle.core.domain.launcher.settings.HomeSwipeGestureDirection
@@ -444,6 +448,23 @@ sealed interface LauncherShellAction {
     data class SelectOverlayDockShowLabels(val showLabels: Boolean) : LauncherShellAction
 
     data class DismissNotifications(val keys: List<LauncherNotificationKey>) : LauncherShellAction
+
+    /** Adds an already-validated feed URL; the settings UI validates via [FeedUrl.parse] first. */
+    data class AddRssFeed(
+        val url: FeedUrl,
+        val profile: AppProfile = AppProfile.personal(),
+    ) : LauncherShellAction
+
+    /** Removes a configured feed and clears its offline article cache. */
+    data class RemoveRssFeed(val feedId: FeedId) : LauncherShellAction
+
+    /** Disabling a feed also clears its offline article cache. */
+    data class SetRssFeedEnabled(
+        val feedId: FeedId,
+        val enabled: Boolean,
+    ) : LauncherShellAction
+
+    data class SelectRssRefreshInterval(val option: FeedRefreshIntervalOption) : LauncherShellAction
 }
 
 enum class WidgetAddTarget {
