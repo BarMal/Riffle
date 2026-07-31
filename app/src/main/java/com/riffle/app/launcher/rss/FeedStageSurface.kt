@@ -96,6 +96,13 @@ fun FeedStageSurface(
     LaunchedEffect(cards) {
         detailState.reconcile(cards.map { card -> LauncherCardId(card.digest) }.toSet())
     }
+    // FeedArticleStack reports focus changes back through a callback rather than owning its own
+    // saveable state, so a caller that leaves focusedDigest/onFocusedDigestChanged at their no-op
+    // defaults needs somewhere durable to land: without this, every recomposition would re-read
+    // the original (unchanged) focusedDigest argument and navigation would appear to silently
+    // revert. This remembers the latest reported focus and feeds it back in as the source of
+    // truth, while still forwarding changes to an external caller that does supply its own state.
+    var internalFocusedDigest by rememberSaveable(stage.id.feedId.value) { mutableStateOf(focusedDigest) }
 
     when (stage.lifecycle) {
         FeedStageLifecycle.LOADING -> FeedStagePlaceholder(FEED_MESSAGE_LOADING, modifier = modifier)
@@ -122,8 +129,11 @@ fun FeedStageSurface(
                     artworkLoader = artworkLoader,
                     browserLauncher = browserLauncher,
                     detailState = detailState,
-                    focusedDigest = focusedDigest,
-                    onFocusedDigestChanged = onFocusedDigestChanged,
+                    focusedDigest = internalFocusedDigest,
+                    onFocusedDigestChanged = { digest ->
+                        internalFocusedDigest = digest
+                        onFocusedDigestChanged(digest)
+                    },
                     modifier = modifier,
                 )
             }
