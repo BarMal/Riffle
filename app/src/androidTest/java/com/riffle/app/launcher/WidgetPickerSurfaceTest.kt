@@ -487,6 +487,11 @@ class WidgetPickerSurfaceTest {
                                 widgetPicker =
                                     StandardHomeWidgetPickerState(
                                         providers = listOf(widgetProvider()),
+                                        profileContentVisibility =
+                                            mapOf(
+                                                widgetProvider().identity.profile.id to
+                                                    AppProfileContentVisibility.VISIBLE,
+                                            ),
                                         isOpen = widgetPickerOpen,
                                     ),
                             ),
