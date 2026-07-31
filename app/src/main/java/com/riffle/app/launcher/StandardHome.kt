@@ -69,6 +69,7 @@ import com.riffle.core.domain.launcher.home.LauncherPageId
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.settings.AppearanceSettings
+import com.riffle.core.domain.launcher.settings.DockGestureSettings
 import com.riffle.core.domain.launcher.settings.HomeGestureSettings
 import com.riffle.core.domain.launcher.settings.MotionPerformanceTargetFps
 import com.riffle.core.domain.launcher.settings.TimeScapeAppearanceSettings
@@ -215,6 +216,7 @@ internal fun StandardHome(
                 dragSession = homeDragSession.value,
                 widgetPickerDragPreview = widgetPickerDragPreview.value,
                 widgetPickerDockPreview = widgetPickerDockPreview.value,
+                widgetPickerDragInProgress = widgetPickerDragInProgress.value,
                 presentation = presentation,
             ),
         appIconLoader = appIconLoader,
@@ -548,6 +550,8 @@ private fun StandardHomeColumn(
             appIconLoader = appIconLoader,
             actions = actions,
             widgetPickerDockPreview = state.widgetPickerDockPreview,
+            isWidgetPickerInteractionActive =
+                state.presentation.widgetPicker.isOpen || state.widgetPickerDragInProgress,
         )
     }
 }
@@ -742,6 +746,7 @@ private data class StandardHomeContentState(
     val dragSession: HomeDragSession?,
     val widgetPickerDragPreview: WidgetPickerDragPlacementPreview?,
     val widgetPickerDockPreview: WidgetPickerDockPlacementPreview?,
+    val widgetPickerDragInProgress: Boolean,
     val presentation: StandardHomePresentation,
 )
 
@@ -790,6 +795,7 @@ internal data class StandardHomePresentation(
     val installedApps: List<InstalledApp> = emptyList(),
     val appShortcutsByApp: AppShortcutsByApp,
     val homeGestures: HomeGestureSettings = HomeGestureSettings(),
+    val dockGestures: DockGestureSettings = DockGestureSettings(),
     val reducedMotion: Boolean = false,
     val motionPerformanceTargetFps: MotionPerformanceTargetFps = MotionPerformanceTargetFps.FPS_120,
     val widgetViewFactory: HomeWidgetViewFactory = EmptyHomeWidgetViewFactory,

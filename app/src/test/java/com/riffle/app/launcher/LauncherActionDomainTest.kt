@@ -418,6 +418,10 @@ class LauncherActionDomainTest {
                 ),
                 settings("ResetHomeSwipeGestureActions", LauncherShellAction.ResetHomeSwipeGestureActions),
                 settings(
+                    "SelectDockGestureAction",
+                    LauncherShellAction.SelectDockGestureAction(LauncherGestureAction.OPEN_APP_DRAWER),
+                ),
+                settings(
                     "SelectHapticFeedbackStrength",
                     LauncherShellAction.SelectHapticFeedbackStrength(HapticFeedbackStrength.LIGHT),
                 ),

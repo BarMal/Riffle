@@ -96,6 +96,23 @@ import com.riffle.core.domain.launcher.settings.TimeScapeViewportDp
 import com.riffle.core.domain.launcher.settings.resolveTimeScapeCardStack
 import kotlinx.coroutines.flow.distinctUntilChanged
 
+/**
+ * Cards mode reuses the persisted home-gesture bindings, but only lets a subset of actions
+ * through: stage navigation, exiting back to Standard Home, and reaching the app drawer/search so
+ * Cards mode stays a normal, discoverable overlay rather than an isolated static surface.
+ */
+internal fun timeScapeAppStageActionFilter(action: LauncherShellAction): Boolean =
+    when (action) {
+        LauncherShellAction.SelectNextAppStage,
+        LauncherShellAction.SelectPreviousAppStage,
+        LauncherShellAction.SelectLauncherViewMode(LauncherViewMode.STANDARD_APP_DRAWER),
+        LauncherShellAction.OpenAppDrawer,
+        LauncherShellAction.OpenSearch,
+        -> true
+
+        else -> false
+    }
+
 @Suppress("UNUSED_PARAMETER")
 internal fun resolveTimeScapeRailSide(
     configuredRailSide: TimeScapeRailSide,
@@ -212,16 +229,7 @@ internal fun TimeScapeAppStageSurface(
                     enabled = detailOrigin == null,
                     settings = state.launcherSettings.gestures.homeGestures,
                     onAction = onAction,
-                    actionFilter = { action ->
-                        when (action) {
-                            LauncherShellAction.SelectNextAppStage,
-                            LauncherShellAction.SelectPreviousAppStage,
-                            LauncherShellAction.SelectLauncherViewMode(LauncherViewMode.STANDARD_APP_DRAWER),
-                            -> true
-
-                            else -> false
-                        }
-                    },
+                    actionFilter = ::timeScapeAppStageActionFilter,
                 ),
         color = Color.Transparent,
         contentColor = MaterialTheme.colorScheme.onSurface,

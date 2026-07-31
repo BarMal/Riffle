@@ -6,6 +6,7 @@ import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppProfile
 import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.apps.AppShortcutId
+import com.riffle.core.domain.launcher.settings.DockGestureSettings
 import com.riffle.core.domain.launcher.settings.GestureSettings
 import com.riffle.core.domain.launcher.settings.HomeGesture
 import com.riffle.core.domain.launcher.settings.HomeGestureSettings
@@ -57,5 +58,22 @@ class LauncherGestureSettingsJsonCodecTest {
             LauncherGestureLaunchTarget.Shortcut(shortcut),
             decoded.homeGestures.launchTargetFor(HomeGesture.TWO_FINGER_RIGHT),
         )
+    }
+
+    @Test
+    fun roundTripsDockSwipeUpGestureAction() {
+        val settings =
+            GestureSettings(dockGestures = DockGestureSettings(swipeUp = LauncherGestureAction.OPEN_APP_DRAWER))
+
+        val decoded = encodeGestures(settings).toGestures(GestureSettings())
+
+        assertEquals(LauncherGestureAction.OPEN_APP_DRAWER, decoded.dockGestures.swipeUp)
+    }
+
+    @Test
+    fun fallsBackToDefaultDockSwipeUpActionWhenMissing() {
+        val decoded = encodeGestures(GestureSettings()).toGestures(GestureSettings())
+
+        assertEquals(LauncherGestureAction.EXIT_TIMESCAPE, decoded.dockGestures.swipeUp)
     }
 }

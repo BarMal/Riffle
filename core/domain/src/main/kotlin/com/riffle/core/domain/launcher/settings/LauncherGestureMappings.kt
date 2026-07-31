@@ -74,6 +74,14 @@ fun HomeGestureSettings.toLauncherGestureMappings(): LauncherGestureMappings =
         )
     }
 
+/** The Dock currently exposes a single physical gesture: a one-finger swipe up. */
+fun DockGestureSettings.toLauncherGestureMappings(base: LauncherGestureMappings = LauncherGestureMappings()) =
+    base.withAction(
+        surface = LauncherGestureSurface.DOCK,
+        gesture = LauncherGesture.ONE_FINGER_UP,
+        action = swipeUp,
+    )
+
 fun HomeGesture.toLauncherGesture(): LauncherGesture = LauncherGesture.valueOf(name)
 
 fun LauncherGesture.toHomeGesture(): HomeGesture = HomeGesture.valueOf(name)
