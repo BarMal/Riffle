@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Legacy Auto Backup rules (API 23-30; minSdk is 28). Mirrors data_extraction_rules.xml, which
+  covers API 31+: both are required because this app's minSdk is below 31. Excludes the offline
+  RSS article cache DataStore file from Auto Backup. See issue #1010.
+-->
+<full-backup-content>
+    <exclude domain="file" path="datastore/riffle_rss_article_cache.preferences_pb" />
+</full-backup-content>
