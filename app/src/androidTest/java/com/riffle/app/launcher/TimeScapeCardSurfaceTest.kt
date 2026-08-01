@@ -29,6 +29,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.captureToImage
+import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -467,11 +468,14 @@ class TimeScapeCardSurfaceTest {
             }
         }
 
-        composeRule.onNodeWithText("Details").performClick()
+        // SPLIT mode legitimately shows more than one "Details" affordance for the same focused
+        // card at once (the upper TimeScapeSupportingPane's own context shelf, and the lower
+        // stack's card content) -- both drive the same detailState.expand(...) for the same card,
+        // so clicking either is equivalent; disambiguate by picking the first clickable one.
+        composeRule.onAllNodes(hasText("Details").and(hasClickAction()))[0].performClick()
         composeRule.mainClock.advanceTimeBy(500)
 
-        // The upper TimeScapeSupportingPane and the lower stage pager both exist in SPLIT mode,
-        // but only the upper pane should show the expanded card's detail -- the lower stack must
+        // Only the upper pane should show the expanded card's detail -- the lower stack must
         // suppress its own inline detail (showDetailInline = false) rather than duplicating it.
         composeRule.onAllNodesWithText("Notification details").assertCountEquals(1)
     }
