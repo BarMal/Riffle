@@ -417,13 +417,23 @@ class TimeScapeCardSurfaceTest {
     fun cardStackStaysComposedButDimmedWhileDetailIsExpanded() {
         val app = timeScapeTestApp()
         val notification = timeScapeTestNotification(app)
+        // A bare "Focused" content-description substring is ambiguous in this tree:
+        // TimeScapeCardNavigationControls' position indicator also carries a "Focused card
+        // position" content description (see cardNavigationUsesOnePoliteLiveRegionForTheSettled-
+        // FocusedCard, which disambiguates the same way). Only the focused CardStack entry's own
+        // semantics also tag a polite live region, so AND-ing on that uniquely targets it instead
+        // of matching either node depending on composition order.
+        val focusedCardDescription =
+            SemanticsMatcher
+                .expectValue(SemanticsProperties.LiveRegion, LiveRegionMode.Polite)
+                .and(hasContentDescription("Focused", substring = true))
         composeRule.setContent {
             MaterialTheme {
                 TimeScapeAppStageSurface(state = timeScapeTestState(app, notification), onAction = {})
             }
         }
 
-        composeRule.onNode(hasContentDescription("Focused", substring = true)).assertExists()
+        composeRule.onNode(focusedCardDescription).assertExists()
 
         composeRule.onNodeWithText("Details").performClick()
         composeRule.mainClock.advanceTimeBy(500)
@@ -432,7 +442,7 @@ class TimeScapeCardSurfaceTest {
         // The underlying card stack (including the focused card behind the detail overlay) stays
         // in the semantics tree -- dimmed via CardStack's dimFactor, not torn down -- rather than
         // being branched away entirely.
-        composeRule.onNode(hasContentDescription("Focused", substring = true)).assertExists()
+        composeRule.onNode(focusedCardDescription).assertExists()
     }
 
     @Test
