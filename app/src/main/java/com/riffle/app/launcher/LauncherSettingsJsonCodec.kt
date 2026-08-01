@@ -116,6 +116,7 @@ private fun encodeCardsSettings(settings: CardsSettings): JSONObject =
         .put("timeScapeAppearance", encodeTimeScapeAppearance(settings.timeScapeAppearance))
         .put("timeScapeTemplateId", settings.timeScapeTemplateId.value)
         .put("timeScapeRailSide", settings.timeScapeRailSide.name)
+        .put("timeScapePaneArrangement", settings.timeScapePaneArrangement.name)
 
 private fun encodeStagePreferences(entry: Map.Entry<HomeLayoutKey, AppStagePreferences>): JSONObject =
     JSONObject()
@@ -152,6 +153,7 @@ private fun JSONObject.toCardsSettings(defaults: CardsSettings): CardsSettings {
                 ?.let(::TimeScapeTemplateId)
                 ?: defaults.timeScapeTemplateId,
         timeScapeRailSide = enumOrDefault("timeScapeRailSide", defaults.timeScapeRailSide),
+        timeScapePaneArrangement = enumOrDefault("timeScapePaneArrangement", defaults.timeScapePaneArrangement),
     )
 }
 
@@ -766,4 +768,4 @@ private fun JSONObject.toFeedProfile(): AppProfile? =
         }
     }
 
-internal const val LAUNCHER_SETTINGS_JSON_VERSION = 6
+internal const val LAUNCHER_SETTINGS_JSON_VERSION = 7

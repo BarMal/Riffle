@@ -3,6 +3,7 @@ package com.riffle.core.domain.launcher.settings
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.cards.AppStagePreferences
+import com.riffle.core.domain.launcher.cards.TimeScapePaneArrangement
 import com.riffle.core.domain.launcher.cards.TimeScapeRailSide
 import com.riffle.core.domain.launcher.cards.TimeScapeTemplateCatalogDefaults
 import com.riffle.core.domain.launcher.cards.TimeScapeTemplateId
@@ -62,6 +63,8 @@ data class CardsSettings(
     val timeScapeAppearance: TimeScapeAppearanceSettings = TimeScapeAppearanceSettings.modern(),
     val timeScapeTemplateId: TimeScapeTemplateId = TimeScapeTemplateCatalogDefaults.sharedCanvasId,
     val timeScapeRailSide: TimeScapeRailSide = TimeScapeRailSide.LEADING,
+    /** User-opted alternative to the full-stack surface: a top detail region over the card stack. */
+    val timeScapePaneArrangement: TimeScapePaneArrangement = TimeScapePaneArrangement.STACK,
 )
 
 /** Resolves TimeScape using the launcher-wide accessibility motion preference. */

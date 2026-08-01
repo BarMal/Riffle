@@ -6,6 +6,7 @@ import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppProfile
 import com.riffle.core.domain.launcher.cards.AppStageId
 import com.riffle.core.domain.launcher.cards.AppStagePreferences
+import com.riffle.core.domain.launcher.cards.TimeScapePaneArrangement
 import com.riffle.core.domain.launcher.cards.TimeScapeRailSide
 import com.riffle.core.domain.launcher.cards.TimeScapeTemplateCatalogDefaults
 import com.riffle.core.domain.launcher.contextual.ContextualSettings
@@ -128,6 +129,34 @@ class LauncherSettingsJsonCodecTest {
 
         assertEquals(settings.cards.timeScapeTemplateId, decoded.cards.timeScapeTemplateId)
         assertEquals(settings.cards.timeScapeRailSide, decoded.cards.timeScapeRailSide)
+    }
+
+    @Test
+    fun roundTripsConfiguredTimeScapePaneArrangement() {
+        val settings =
+            LauncherSettings(
+                cards = CardsSettings(timeScapePaneArrangement = TimeScapePaneArrangement.SPLIT),
+            )
+
+        val decoded = decodeLauncherSettings(encodeLauncherSettings(settings))
+
+        assertEquals(settings.cards.timeScapePaneArrangement, decoded.cards.timeScapePaneArrangement)
+    }
+
+    @Test
+    fun defaultsUnknownTimeScapePaneArrangement() {
+        val decodedSettings =
+            decodeLauncherSettings(
+                """
+                {
+                  "cards": {
+                    "timeScapePaneArrangement": "UNKNOWN"
+                  }
+                }
+                """.trimIndent(),
+            )
+
+        assertEquals(TimeScapePaneArrangement.STACK, decodedSettings.cards.timeScapePaneArrangement)
     }
 
     @Test
@@ -980,7 +1009,7 @@ class LauncherSettingsJsonCodecTest {
     fun encodesRssSettingsVersion() {
         val encodedSettings = JSONObject(encodeLauncherSettings(LauncherSettings()))
 
-        assertEquals(6, encodedSettings.getInt("version"))
+        assertEquals(LAUNCHER_SETTINGS_JSON_VERSION, encodedSettings.getInt("version"))
         assertTrue(encodedSettings.has("rss"))
     }
 

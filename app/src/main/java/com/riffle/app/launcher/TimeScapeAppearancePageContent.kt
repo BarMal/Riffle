@@ -27,6 +27,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import com.riffle.core.domain.launcher.cards.TimeScapePaneArrangement
 import com.riffle.core.domain.launcher.settings.MAX_TIMESCAPE_BLUR_STRENGTH_PERCENT
 import com.riffle.core.domain.launcher.settings.MAX_TIMESCAPE_CARD_ASPECT_RATIO_PERCENT
 import com.riffle.core.domain.launcher.settings.MAX_TIMESCAPE_CONTENT_PADDING_DP
@@ -111,6 +112,22 @@ internal fun TimeScapeAppearancePageContent(
         timeScapeFallbackMessage(appearance, rendererCapabilities)?.let { message ->
             SettingsListRow(title = "Effective fallback", subtitle = message)
         }
+    }
+    SettingsSection(title = "Layout") {
+        TimeScapeEnumChoices(
+            title = "Pane arrangement",
+            values = TimeScapePaneArrangement.entries,
+            selected = state.settings.cards.timeScapePaneArrangement,
+            label = TimeScapePaneArrangement::label,
+            testTag = { arrangement -> "timescape-pane-arrangement-${arrangement.name}" },
+            onSelected = { arrangement ->
+                onAction(LauncherShellAction.SelectTimeScapePaneArrangement(arrangement))
+            },
+        )
+        SettingsListRow(
+            title = "About Split",
+            subtitle = "Split shows card details in a larger area above the stack",
+        )
     }
     SettingsSection(title = "Preset and reset") {
         TimeScapeEnumChoices(
@@ -643,3 +660,9 @@ private fun TimeScapeFanDirection.label(): String = name.lowercase().replaceFirs
 private fun TimeScapeEasing.label(): String = name.lowercase().replace('_', ' ').replaceFirstChar(Char::uppercase)
 
 private fun TimeScapeHapticStrength.label(): String = name.lowercase().replaceFirstChar(Char::uppercase)
+
+private fun TimeScapePaneArrangement.label(): String =
+    when (this) {
+        TimeScapePaneArrangement.STACK -> "Stack"
+        TimeScapePaneArrangement.SPLIT -> "Split"
+    }

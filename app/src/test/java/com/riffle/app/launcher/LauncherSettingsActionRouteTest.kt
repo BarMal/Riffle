@@ -6,6 +6,7 @@ import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.apps.AppShortcutId
 import com.riffle.core.domain.launcher.apps.InstalledApp
+import com.riffle.core.domain.launcher.cards.TimeScapePaneArrangement
 import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.home.WallpaperScrollMode
 import com.riffle.core.domain.launcher.settings.AppDrawerPresentation
@@ -30,6 +31,7 @@ class LauncherSettingsActionRouteTest {
                 LauncherShellAction.SelectAppDrawerPresentation(AppDrawerPresentation.ICONS),
                 LauncherShellAction.SelectAppDrawerIconGridColumns(columns = 5),
                 LauncherShellAction.UpdateTimeScapeAppearance(TimeScapeAppearanceSettings.modern()),
+                LauncherShellAction.SelectTimeScapePaneArrangement(TimeScapePaneArrangement.SPLIT),
             )
 
         actions.forEach { action ->

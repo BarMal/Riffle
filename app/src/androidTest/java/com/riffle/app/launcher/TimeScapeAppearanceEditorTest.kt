@@ -19,6 +19,7 @@ import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.riffle.core.domain.launcher.LauncherShellState
+import com.riffle.core.domain.launcher.cards.TimeScapePaneArrangement
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.MotionSettings
 import com.riffle.core.domain.launcher.settings.TimeScapeAppearancePreset
@@ -51,6 +52,7 @@ class TimeScapeAppearanceEditorTest {
 
         composeRule.onNodeWithContentDescription("TimeScape live preview").assertExists()
         listOf(
+            "Layout",
             "Preset and reset",
             "Card geometry",
             "Stack and spline",
@@ -68,6 +70,40 @@ class TimeScapeAppearanceEditorTest {
             "Spring bounciness",
             "Haptic strength",
         ).forEach { label -> composeRule.onNodeWithText(label).assertExists() }
+    }
+
+    @Test
+    fun selectingSplitDispatchesTheTimeScapePaneArrangementAction() {
+        val actions = mutableListOf<LauncherShellAction>()
+        composeRule.setContent {
+            MaterialTheme {
+                // The page's sections (Preview, Layout, Preset and reset, ...) exceed the test
+                // window's height; without a bounded, scrollable container the "Layout" section's
+                // chips can be measured outside the real window bounds, so performClick() ends up
+                // hitting whatever unrelated element occupies that pixel instead -- matching the
+                // scrollable wrapper the other tests in this file already use.
+                Column(
+                    modifier =
+                        Modifier
+                            .requiredSize(360.dp, 800.dp)
+                            .verticalScroll(rememberScrollState()),
+                ) {
+                    TimeScapeAppearancePageContent(
+                        state = LauncherShellState().settingsSurfaceState(),
+                        onAction = actions::add,
+                    )
+                }
+            }
+        }
+
+        composeRule.onNodeWithTag("timescape-pane-arrangement-${TimeScapePaneArrangement.SPLIT.name}")
+            .performScrollTo()
+            .performClick()
+
+        composeRule.runOnIdle {
+            val action = actions.last() as LauncherShellAction.SelectTimeScapePaneArrangement
+            assertEquals(TimeScapePaneArrangement.SPLIT, action.arrangement)
+        }
     }
 
     @Test

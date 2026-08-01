@@ -84,7 +84,10 @@ fun TimeScapeTemplate.variantFor(
 fun TimeScapeTemplateVariant.visibleStaticElements(): List<TimeScapeStaticElement> =
     canvas.elements.filter { element ->
         when (paneMode) {
-            TimeScapePaneMode.COMPACT -> element.visibleInCompact
+            // SPLIT has no authored template variants yet -- variantFor() already falls back to
+            // the COMPACT variant for it, so this branch mirrors that same compact visibility for
+            // the (currently unreachable) case where a variant's own paneMode is SPLIT.
+            TimeScapePaneMode.COMPACT, TimeScapePaneMode.SPLIT -> element.visibleInCompact
             TimeScapePaneMode.TWO_PANE, TimeScapePaneMode.THREE_PANE -> element.visibleInStageManager
         }
     }
