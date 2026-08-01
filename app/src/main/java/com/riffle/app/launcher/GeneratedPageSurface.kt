@@ -51,6 +51,8 @@ import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.settings.MIN_TIMESCAPE_REACHABLE_CARD_HEIGHT_DP
 import com.riffle.core.domain.launcher.settings.TimeScapeAppearanceSettings
 import com.riffle.core.domain.launcher.settings.TimeScapeViewportDp
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @Composable
 @Suppress("LongMethod", "LongParameterList")
@@ -62,6 +64,7 @@ internal fun GeneratedNotificationCardsPage(
     reducedMotion: Boolean,
     timeScapeAppearance: TimeScapeAppearanceSettings = TimeScapeAppearanceSettings.modern(),
     haptics: LauncherHaptics = NoopLauncherHaptics,
+    appIconLoader: AppIconLoader = EmptyAppIconLoader,
     modifier: Modifier = Modifier,
 ) {
     val state = generatedNotificationCardsPageState(groups, notificationAccessStatus, apps)
@@ -221,6 +224,7 @@ internal fun GeneratedNotificationCardsPage(
                                         isFocused = entry.cardIndex == activeCardIndex,
                                         appearance = timeScapeAppearance,
                                         artworkCache = artworkCache,
+                                        appIconLoader = appIconLoader,
                                         cardWidth = resolution.cardWidthDp.dp,
                                         cardHeight = resolution.cardHeightDp.dp,
                                         contentPadding = generatedNotificationCardContentPadding(resolution),
@@ -234,6 +238,7 @@ internal fun GeneratedNotificationCardsPage(
                                     onAction = onAction,
                                     appearance = timeScapeAppearance,
                                     artworkCache = artworkCache,
+                                    appIconLoader = appIconLoader,
                                 )
                             }
                         }
@@ -263,6 +268,7 @@ private fun GeneratedNotificationCardsFallback(
     onAction: (LauncherShellAction) -> Unit,
     appearance: TimeScapeAppearanceSettings,
     artworkCache: TimeScapeArtworkCache<ImageBitmap>,
+    appIconLoader: AppIconLoader,
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize().testTag(GENERATED_NOTIFICATION_CARD_LIST_TEST_TAG),
@@ -270,7 +276,7 @@ private fun GeneratedNotificationCardsFallback(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         items(cards, key = { card -> generatedNotificationCardId(card).value }) { card ->
-            GeneratedNotificationCardFallback(card, onAction, appearance, artworkCache)
+            GeneratedNotificationCardFallback(card, onAction, appearance, artworkCache, appIconLoader)
         }
     }
 }
@@ -281,18 +287,31 @@ private fun GeneratedNotificationCardFallback(
     onAction: (LauncherShellAction) -> Unit,
     appearance: TimeScapeAppearanceSettings,
     artworkCache: TimeScapeArtworkCache<ImageBitmap>,
+    appIconLoader: AppIconLoader,
 ) {
     val label = dockNotificationCardLabel(card)
     val artwork =
         remember(card.group.notifications, artworkCache) {
             generatedNotificationArtwork(card, artworkCache)
         }
+    val identity = card.app?.identity
+    var appColor by remember(identity, appIconLoader) {
+        mutableStateOf(identity?.let(appIconLoader::cachedColorFor))
+    }
+    LaunchedEffect(identity, appIconLoader) {
+        appColor =
+            identity?.let { appIdentity ->
+                appIconLoader.cachedColorFor(appIdentity)
+                    ?: withContext(Dispatchers.Default) { appIconLoader.colorFor(appIdentity) }
+            }
+    }
     TimeScapeCardSurface(
         appearance = appearance,
         background =
             TimeScapeCardBackground(
                 artwork = artwork,
                 appSeed = card.app?.identity?.packageName?.value ?: card.group.packageName.value,
+                appColor = appColor,
             ),
         modifier =
             Modifier
@@ -371,6 +390,7 @@ private fun GeneratedNotificationCard(
     isFocused: Boolean,
     appearance: TimeScapeAppearanceSettings,
     artworkCache: TimeScapeArtworkCache<ImageBitmap>,
+    appIconLoader: AppIconLoader,
     cardWidth: androidx.compose.ui.unit.Dp,
     cardHeight: androidx.compose.ui.unit.Dp,
     contentPadding: androidx.compose.ui.unit.Dp,
@@ -383,6 +403,16 @@ private fun GeneratedNotificationCard(
         remember(card.group.notifications, artworkCache) {
             generatedNotificationArtwork(card, artworkCache)
         }
+    var appColor by remember(identity, appIconLoader) {
+        mutableStateOf(identity?.let(appIconLoader::cachedColorFor))
+    }
+    LaunchedEffect(identity, appIconLoader) {
+        appColor =
+            identity?.let { appIdentity ->
+                appIconLoader.cachedColorFor(appIdentity)
+                    ?: withContext(Dispatchers.Default) { appIconLoader.colorFor(appIdentity) }
+            }
+    }
     Box(modifier = modifier, contentAlignment = Alignment.Center) {
         TimeScapeCardSurface(
             appearance = appearance,
@@ -390,6 +420,7 @@ private fun GeneratedNotificationCard(
                 TimeScapeCardBackground(
                     artwork = artwork,
                     appSeed = card.app?.identity?.packageName?.value ?: card.group.packageName.value,
+                    appColor = appColor,
                 ),
             modifier =
                 Modifier

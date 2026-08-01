@@ -16,6 +16,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.layout.ContentScale
@@ -29,6 +30,11 @@ interface AppIconLoader {
 
     fun cachedIconFor(identity: AppIdentity): ImageBitmap? = null
 
+    /** Dominant color derived from the app's icon, or null if unavailable (see [cachedColorFor]). */
+    fun colorFor(identity: AppIdentity): Color?
+
+    fun cachedColorFor(identity: AppIdentity): Color? = null
+
     fun preloadIcons(identities: List<AppIdentity>) {
         identities.forEach(::iconFor)
     }
@@ -36,6 +42,8 @@ interface AppIconLoader {
 
 object EmptyAppIconLoader : AppIconLoader {
     override fun iconFor(identity: AppIdentity): ImageBitmap? = null
+
+    override fun colorFor(identity: AppIdentity): Color? = null
 
     override fun preloadIcons(identities: List<AppIdentity>) = Unit
 }

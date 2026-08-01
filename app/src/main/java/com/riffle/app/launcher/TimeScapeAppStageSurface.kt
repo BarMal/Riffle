@@ -101,7 +101,9 @@ import com.riffle.core.domain.launcher.settings.TimeScapeAppearanceSettings
 import com.riffle.core.domain.launcher.settings.TimeScapeCardStackResolution
 import com.riffle.core.domain.launcher.settings.TimeScapeViewportDp
 import com.riffle.core.domain.launcher.settings.resolveTimeScapeCardStack
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.withContext
 
 /**
  * Cards mode reuses the persisted home-gesture bindings, but only lets a subset of actions
@@ -680,11 +682,21 @@ private fun TimeScapeStageRailTile(
 ) {
     val materialBackground = MaterialTheme.colorScheme.onSurface
     val materialAccent = MaterialTheme.colorScheme.primary
+    var appColor by remember(identity, appIconLoader) {
+        mutableStateOf(identity?.let(appIconLoader::cachedColorFor))
+    }
+    LaunchedEffect(identity, appIconLoader) {
+        appColor =
+            identity?.let { appIdentity ->
+                appIconLoader.cachedColorFor(appIdentity)
+                    ?: withContext(Dispatchers.Default) { appIconLoader.colorFor(appIdentity) }
+            }
+    }
     val colors =
-        remember(appearance, stageId, materialBackground, materialAccent) {
+        remember(appearance, stageId, materialBackground, materialAccent, appColor) {
             resolveTimeScapeCardColors(
                 appearance = appearance,
-                background = TimeScapeCardBackground(appSeed = stageId.packageName.value),
+                background = TimeScapeCardBackground(appSeed = stageId.packageName.value, appColor = appColor),
                 materialBackground = materialBackground,
                 materialAccent = materialAccent,
             )
@@ -954,6 +966,7 @@ private fun TimeScapeStageContent(
                 onFocusedCardChanged = onFocusedCardChanged,
                 showDetailInline = showDetailInline,
                 onAction = onAction,
+                appIconLoader = appIconLoader,
                 modifier = modifier,
             )
     }
@@ -969,9 +982,21 @@ private fun TimeScapeNotificationStack(
     onFocusedCardChanged: (LauncherCardId?) -> Unit,
     showDetailInline: Boolean,
     onAction: (LauncherShellAction) -> Unit,
+    appIconLoader: AppIconLoader,
     modifier: Modifier,
 ) {
     val haptics = rememberLauncherHaptics(state.launcherSettings.haptics.feedbackStrength)
+    val stageAppIdentityValue = remember(stage.id, state) { stageAppIdentity(stage.id, state) }
+    var stageAppColor by remember(stageAppIdentityValue, appIconLoader) {
+        mutableStateOf(stageAppIdentityValue?.let(appIconLoader::cachedColorFor))
+    }
+    LaunchedEffect(stageAppIdentityValue, appIconLoader) {
+        stageAppColor =
+            stageAppIdentityValue?.let { appIdentity ->
+                appIconLoader.cachedColorFor(appIdentity)
+                    ?: withContext(Dispatchers.Default) { appIconLoader.colorFor(appIdentity) }
+            }
+    }
     val cards =
         remember(stage.content, notificationCards) {
             val cardsById = notificationCards.associateBy { card -> card.content.id }
@@ -1144,6 +1169,7 @@ private fun TimeScapeNotificationStack(
                                 TimeScapeCardBackground(
                                     artwork = artwork,
                                     appSeed = stage.id.packageName.value,
+                                    appColor = stageAppColor,
                                 ),
                             modifier =
                                 cardModifier.size(
@@ -1306,6 +1332,16 @@ private fun TimeScapeEmptyStage(
     }
     val identity = stageAppIdentity(stage.id, state)
     val label = stageLabel(stage.id, state)
+    var emptyStageAppColor by remember(identity, appIconLoader) {
+        mutableStateOf(identity?.let(appIconLoader::cachedColorFor))
+    }
+    LaunchedEffect(identity, appIconLoader) {
+        emptyStageAppColor =
+            identity?.let { appIdentity ->
+                appIconLoader.cachedColorFor(appIdentity)
+                    ?: withContext(Dispatchers.Default) { appIconLoader.colorFor(appIdentity) }
+            }
+    }
     BoxWithConstraints(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         val viewport = TimeScapeViewportDp(maxWidth.value.toInt(), maxHeight.value.toInt())
         val resolution =
@@ -1317,7 +1353,7 @@ private fun TimeScapeEmptyStage(
             }
         TimeScapeCardSurface(
             appearance = state.launcherSettings.cards.timeScapeAppearance,
-            background = TimeScapeCardBackground(appSeed = stage.id.packageName.value),
+            background = TimeScapeCardBackground(appSeed = stage.id.packageName.value, appColor = emptyStageAppColor),
             modifier =
                 Modifier
                     .size(width = resolution.cardWidthDp.dp, height = resolution.cardHeightDp.dp)

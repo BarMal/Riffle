@@ -1110,6 +1110,37 @@ class TimeScapeCardSurfaceTest {
     }
 
     @Test
+    fun appColorWinsOverTheSeedHashFallback() {
+        val appColor = Color(0.2f, 0.4f, 0.9f)
+        val backgroundSources =
+            listOf(
+                TimeScapeBackgroundSource.APP_DERIVED_SOLID,
+                TimeScapeBackgroundSource.APP_DERIVED_GRADIENT,
+                TimeScapeBackgroundSource.NOTIFICATION_ARTWORK,
+                TimeScapeBackgroundSource.APP_ICON_TREATMENT,
+            )
+
+        backgroundSources.forEach { source ->
+            val colorsWithAppColor =
+                resolveTimeScapeCardColors(
+                    appearance = TimeScapeAppearanceSettings(surface = TimeScapeSurface(backgroundSource = source)),
+                    background = TimeScapeCardBackground(appSeed = "com.example.app", appColor = appColor),
+                    materialBackground = Color.White,
+                    materialAccent = Color.Blue,
+                )
+            val colorsWithoutAppColor =
+                resolveTimeScapeCardColors(
+                    appearance = TimeScapeAppearanceSettings(surface = TimeScapeSurface(backgroundSource = source)),
+                    background = TimeScapeCardBackground(appSeed = "com.example.app"),
+                    materialBackground = Color.White,
+                    materialAccent = Color.Blue,
+                )
+
+            assertNotEquals(colorsWithAppColor.background, colorsWithoutAppColor.background)
+        }
+    }
+
+    @Test
     fun foregroundMaintainsContrastForAutomaticAndMaterialTypographyModes() {
         val modes =
             listOf(
