@@ -358,7 +358,7 @@ private fun Modifier.immediateHomePageDrag(
         }
     }
 
-private fun pageSettleTargetIndex(
+internal fun pageSettleTargetIndex(
     startPagePosition: Float,
     releasedPagePosition: Float,
     horizontalDragPx: Float,

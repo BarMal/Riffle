@@ -414,6 +414,38 @@ class TimeScapeCardSurfaceTest {
     }
 
     @Test
+    fun cardStackStaysComposedButDimmedWhileDetailIsExpanded() {
+        val app = timeScapeTestApp()
+        val notification = timeScapeTestNotification(app)
+        // A bare "Focused" content-description substring is ambiguous in this tree:
+        // TimeScapeCardNavigationControls' position indicator also carries a "Focused card
+        // position" content description (see cardNavigationUsesOnePoliteLiveRegionForTheSettled-
+        // FocusedCard, which disambiguates the same way). Only the focused CardStack entry's own
+        // semantics also tag a polite live region, so AND-ing on that uniquely targets it instead
+        // of matching either node depending on composition order.
+        val focusedCardDescription =
+            SemanticsMatcher
+                .expectValue(SemanticsProperties.LiveRegion, LiveRegionMode.Polite)
+                .and(hasContentDescription("Focused", substring = true))
+        composeRule.setContent {
+            MaterialTheme {
+                TimeScapeAppStageSurface(state = timeScapeTestState(app, notification), onAction = {})
+            }
+        }
+
+        composeRule.onNode(focusedCardDescription).assertExists()
+
+        composeRule.onNodeWithText("Details").performClick()
+        composeRule.mainClock.advanceTimeBy(500)
+
+        composeRule.onNodeWithText("Notification details").assertIsDisplayed()
+        // The underlying card stack (including the focused card behind the detail overlay) stays
+        // in the semantics tree -- dimmed via CardStack's dimFactor, not torn down -- rather than
+        // being branched away entirely.
+        composeRule.onNode(focusedCardDescription).assertExists()
+    }
+
+    @Test
     fun focusedCardAndOpenDetailSurviveCompactAndSupportingPaneChanges() {
         val app = timeScapeTestApp()
         val newest =
@@ -1042,6 +1074,50 @@ class TimeScapeCardSurfaceTest {
         composeRule
             .onNodeWithContentDescription("Work - Mail, selected. Open stage")
             .assertIsDisplayed()
+    }
+
+    @Test
+    fun tappingASpineItemDispatchesSelectAppStageForThatStage() {
+        val first = timeScapeTestApp()
+        val second =
+            first.copy(
+                identity = first.identity.copy(packageName = AppPackageName("com.example.calendar")),
+                label = "Calendar",
+            )
+        val firstStageId = AppStageId(first.identity.packageName, first.identity.profile.id)
+        val secondStageId = AppStageId(second.identity.packageName, second.identity.profile.id)
+        val actions = mutableListOf<LauncherShellAction>()
+
+        composeRule.setContent {
+            MaterialTheme {
+                TimeScapeAppStageSurface(
+                    state =
+                        LauncherShellState(
+                            notificationAccessStatus = NotificationAccessStatus.GRANTED,
+                            installedApps = listOf(first, second),
+                            launcherSettings =
+                                LauncherSettings(
+                                    cards =
+                                        CardsSettings(
+                                            stagePreferencesByLayout =
+                                                mapOf(
+                                                    HomeLayoutKey(LauncherViewMode.STANDARD_APP_DRAWER) to
+                                                        AppStagePreferences(
+                                                            pinnedStageIds = listOf(firstStageId, secondStageId),
+                                                            selectedStageId = firstStageId,
+                                                        ),
+                                                ),
+                                        ),
+                                ),
+                        ),
+                    onAction = actions::add,
+                )
+            }
+        }
+
+        composeRule.onNodeWithContentDescription("Calendar. Open stage").performClick()
+
+        assertEquals(LauncherShellAction.SelectAppStage(secondStageId), actions.single())
     }
 
     @Test

@@ -38,6 +38,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -52,6 +53,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -101,9 +103,12 @@ import com.riffle.core.domain.launcher.settings.TimeScapeAppearanceSettings
 import com.riffle.core.domain.launcher.settings.TimeScapeCardStackResolution
 import com.riffle.core.domain.launcher.settings.TimeScapeViewportDp
 import com.riffle.core.domain.launcher.settings.resolveTimeScapeCardStack
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.math.abs
 
 /**
  * Cards mode reuses the persisted home-gesture bindings, but only lets a subset of actions
@@ -408,6 +413,14 @@ internal fun TimeScapeAppStageSurface(
     }
 }
 
+/**
+ * Compact (single-pane phone) content. Unlike the two-pane/rail layout, there's no persistent
+ * rail to tap here, so this is where the continuous horizontal drag pager and its synced spine
+ * carousel live. The wider-screen layout keeps its existing rail-based navigation unchanged; the
+ * rail already gives equivalent discoverability there, and mirroring the graphicsLayer-offset
+ * pager approach for a rail+content split isn't a trivial extension, so the drag pager stays
+ * compact-only for now.
+ */
 @Composable
 private fun TimeScapeCompactContent(
     selectedStage: AppStage?,
@@ -421,16 +434,27 @@ private fun TimeScapeCompactContent(
     onAction: (LauncherShellAction) -> Unit,
     appIconLoader: AppIconLoader,
 ) {
+    val stages = shellState.snapshot.stages
+    val reducedMotion = state.launcherSettings.motion.reducedMotion
+    val pagerState =
+        rememberTimeScapeStagePagerState(
+            stages = stages,
+            selectedStageId = selectedStage?.id,
+            reducedMotion = reducedMotion,
+            onAction = onAction,
+        )
     Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         TimeScapeStageHeader(
             selectedStage = selectedStage,
-            stages = shellState.snapshot.stages,
+            stages = stages,
             state = state,
             appIconLoader = appIconLoader,
             onAction = onAction,
         )
-        TimeScapeStageBody(
+        TimeScapeCompactStagePager(
+            stages = stages,
             selectedStage = selectedStage,
+            pagerState = pagerState,
             state = state,
             shellState = shellState,
             detailRecoveryMessage = detailRecoveryMessage,
@@ -442,8 +466,149 @@ private fun TimeScapeCompactContent(
             appIconLoader = appIconLoader,
             modifier = Modifier.weight(1f),
         )
-        TimeScapeStageSelector(shellState.snapshot.stages, selectedStage?.id, state, onAction)
+        TimeScapeStageSpine(
+            stages = stages,
+            selectedStageId = selectedStage?.id,
+            pagePosition = pagerState.pagePosition,
+            state = state,
+            appIconLoader = appIconLoader,
+            onAction = onAction,
+        )
     }
+}
+
+/**
+ * Lays out every stage's content side by side, offsetting each via `graphicsLayer` translation
+ * driven by [TimeScapeStagePagerState.pagePosition] -- mirroring [ImmediateWorkspacePager]'s
+ * approach for Standard Home's own pages -- and attaches [timeScapeStagePagerDrag] to claim
+ * horizontal drags. With zero or one stage there is nothing to page between, so this falls back to
+ * rendering [TimeScapeStageBody] directly without a drag gesture.
+ */
+@Composable
+@Suppress("LongParameterList")
+private fun TimeScapeCompactStagePager(
+    stages: List<AppStage>,
+    selectedStage: AppStage?,
+    pagerState: TimeScapeStagePagerState,
+    state: LauncherShellState,
+    shellState: com.riffle.app.launcher.notifications.AppStageShellState,
+    detailRecoveryMessage: String?,
+    detailState: TimeScapeCardDetailState?,
+    focusedCardId: LauncherCardId?,
+    onDetailVisibilityChanged: (LauncherCardId?) -> Unit,
+    onFocusedCardChanged: (LauncherCardId?) -> Unit,
+    onAction: (LauncherShellAction) -> Unit,
+    appIconLoader: AppIconLoader,
+    modifier: Modifier,
+) {
+    if (selectedStage == null || stages.size <= 1) {
+        TimeScapeStageBody(
+            selectedStage = selectedStage,
+            state = state,
+            shellState = shellState,
+            detailRecoveryMessage = detailRecoveryMessage,
+            detailState = detailState,
+            focusedCardId = focusedCardId,
+            onDetailVisibilityChanged = onDetailVisibilityChanged,
+            onFocusedCardChanged = onFocusedCardChanged,
+            onAction = onAction,
+            appIconLoader = appIconLoader,
+            modifier = modifier,
+        )
+        return
+    }
+
+    val coroutineScope = rememberCoroutineScope()
+    val reducedMotion = state.launcherSettings.motion.reducedMotion
+    BoxWithConstraints(modifier = modifier.fillMaxSize()) {
+        val stageWidthPx = with(LocalDensity.current) { maxWidth.toPx() }
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .timeScapeStagePagerDrag(
+                        enabled = true,
+                        stageWidthPx = stageWidthPx,
+                        stages = stages,
+                        selectedStageId = selectedStage.id,
+                        pagerState = pagerState,
+                        reducedMotion = reducedMotion,
+                        launchStageMotion = { action ->
+                            coroutineScope.launch(start = CoroutineStart.UNDISPATCHED) { action() }
+                        },
+                    ),
+        ) {
+            stages.forEachIndexed { index, stage ->
+                val stageModifier =
+                    Modifier
+                        .fillMaxSize()
+                        .graphicsLayer {
+                            translationX = (index - pagerState.pagePosition) * stageWidthPx
+                        }
+                if (stage.id == selectedStage.id) {
+                    TimeScapeStageBody(
+                        selectedStage = stage,
+                        state = state,
+                        shellState = shellState,
+                        detailRecoveryMessage = detailRecoveryMessage,
+                        detailState = detailState,
+                        focusedCardId = focusedCardId,
+                        onDetailVisibilityChanged = onDetailVisibilityChanged,
+                        onFocusedCardChanged = onFocusedCardChanged,
+                        onAction = onAction,
+                        appIconLoader = appIconLoader,
+                        modifier = stageModifier,
+                    )
+                } else {
+                    TimeScapeNeighborStagePage(
+                        stage = stage,
+                        state = state,
+                        shellState = shellState,
+                        onAction = onAction,
+                        appIconLoader = appIconLoader,
+                        modifier = stageModifier,
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * A non-selected stage rendered only because it is (or was just) adjacent during a pager drag.
+ * It owns its own ephemeral detail/focus state rather than the durable, context-restorable state
+ * the actually-selected stage uses -- that state is only meaningful once a settle commits this
+ * stage as selected, at which point [TimeScapeCompactStagePager] switches it to the durable path.
+ */
+@Composable
+private fun TimeScapeNeighborStagePage(
+    stage: AppStage,
+    state: LauncherShellState,
+    shellState: com.riffle.app.launcher.notifications.AppStageShellState,
+    onAction: (LauncherShellAction) -> Unit,
+    appIconLoader: AppIconLoader,
+    modifier: Modifier,
+) {
+    val detailState =
+        rememberTimeScapeCardDetailState(
+            stageId = stage.id,
+            motion = state.launcherSettings.cards.timeScapeAppearance.motion,
+            globalReducedMotion = state.launcherSettings.motion.reducedMotion,
+        )
+    var focusedCardId by remember(stage.id) { mutableStateOf<LauncherCardId?>(null) }
+    TimeScapeStageBody(
+        selectedStage = stage,
+        state = state,
+        shellState = shellState,
+        detailRecoveryMessage = null,
+        detailState = detailState,
+        focusedCardId = focusedCardId,
+        onDetailVisibilityChanged = {},
+        onFocusedCardChanged = { focusedCardId = it },
+        onAction = onAction,
+        appIconLoader = appIconLoader,
+        modifier = modifier,
+    )
 }
 
 @Composable
@@ -1061,19 +1226,11 @@ private fun TimeScapeNotificationStack(
                     capabilities = timeScapeRendererCapabilities(),
                 )
             }
-        if (detailState.expansionState.isVisible && showDetailInline) {
-            cards
-                .firstOrNull { card -> card.content.id == detailState.expansionState.cardId }
-                ?.let { card ->
-                    TimeScapeCardDetailSurface(
-                        card = card,
-                        detailState = detailState,
-                        onAction = onAction,
-                        onClose = { restoreDetailFocusForCardId = card.content.id },
-                        modifier = Modifier.fillMaxSize(),
-                    )
-                }
-        } else {
+        val isDetailVisible = detailState.expansionState.isVisible && showDetailInline
+        // Siblings stay composed (and thus discoverable/re-focusable) but dimmed while a card's
+        // detail is expanded, instead of being torn down entirely.
+        val stackDimFactor = if (isDetailVisible) TIME_SCAPE_SIBLING_DIM_FACTOR else 1f
+        Box(modifier = Modifier.fillMaxSize()) {
             Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Box(
                     modifier = Modifier.fillMaxWidth().weight(1f),
@@ -1089,6 +1246,7 @@ private fun TimeScapeNotificationStack(
                         animationSpec = resolution.animation,
                         reducedMotion = resolution.reducedMotion,
                         itemKey = { entry -> cards[entry.cardIndex].content.id },
+                        dimFactor = stackDimFactor,
                         interaction =
                             CardStackInteraction(
                                 focusedItemKey = activeCard.content.id,
@@ -1201,9 +1359,24 @@ private fun TimeScapeNotificationStack(
                 )
                 TimeScapeDetailRecoveryMessage(detailState.sourceRemovalMessage)
             }
+            if (isDetailVisible) {
+                cards
+                    .firstOrNull { card -> card.content.id == detailState.expansionState.cardId }
+                    ?.let { card ->
+                        TimeScapeCardDetailSurface(
+                            card = card,
+                            detailState = detailState,
+                            onAction = onAction,
+                            onClose = { restoreDetailFocusForCardId = card.content.id },
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                    }
+            }
         }
     }
 }
+
+internal const val TIME_SCAPE_SIBLING_DIM_FACTOR = 0.18f
 
 /** Keeps every active notification reachable even when the visual stack depth is smaller. */
 internal fun timeScapeNotificationStackEntries(
@@ -1527,7 +1700,7 @@ private data class TimeScapeDetailOrigin(
 private fun timeScapeEmptyDetailCardId(stageId: AppStageId): LauncherCardId =
     LauncherCardId("stage-empty:${stageId.profileId.value}:${stageId.packageName.value}")
 
-private fun timeScapeStageKey(stageId: AppStageId): String {
+internal fun timeScapeStageKey(stageId: AppStageId): String {
     return "${stageId.profileId.value}:${stageId.packageName.value}"
 }
 
@@ -1576,11 +1749,21 @@ private fun timeScapePostureOrNull(value: String): TimeScapePosture? {
     return runCatching { TimeScapePosture.valueOf(value) }.getOrNull()
 }
 
+/**
+ * A slim, always-centered-on-selection horizontal strip synced to the pager's fractional
+ * [pagePosition] -- mirroring the reference app's chapter-carousel concept with Compose idioms:
+ * each item's alpha/scale is a function of its distance from [pagePosition], so it visually tracks
+ * an in-progress drag rather than jumping only when a page fully settles. Evolves the previous
+ * static [TimeScapeStageSelector] in place rather than adding a redundant second control; its
+ * Previous/Next buttons remain for non-drag (keyboard, switch, accessibility) navigation.
+ */
 @Composable
-private fun TimeScapeStageSelector(
+private fun TimeScapeStageSpine(
     stages: List<AppStage>,
     selectedStageId: AppStageId?,
+    pagePosition: Float,
     state: LauncherShellState,
+    appIconLoader: AppIconLoader,
     onAction: (LauncherShellAction) -> Unit,
 ) {
     if (stages.isEmpty()) return
@@ -1592,24 +1775,54 @@ private fun TimeScapeStageSelector(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             items(stages, key = ::timeScapeStageSelectorItemKey) { stage ->
+                val index = stages.indexOf(stage)
+                val proximity = 1f - abs(index - pagePosition).coerceIn(0f, 1f)
+                val itemAlpha = TIME_SCAPE_SPINE_MIN_ALPHA + (1f - TIME_SCAPE_SPINE_MIN_ALPHA) * proximity
+                val itemScale = TIME_SCAPE_SPINE_MIN_SCALE + (1f - TIME_SCAPE_SPINE_MIN_SCALE) * proximity
+                val identity = stageAppIdentity(stage.id, state)
+                val label = stageLabel(stage.id, state)
                 TextButton(
                     onClick = { onAction(LauncherShellAction.SelectAppStage(stage.id)) },
                     modifier =
-                        Modifier.semantics {
-                            contentDescription =
-                                "${stageLabel(stage.id, state)}" +
-                                if (stage.id == selectedStageId) {
-                                    ", selected. Open stage"
-                                } else {
-                                    ". Open stage"
-                                }
-                        },
-                ) { Text(stageLabel(stage.id, state)) }
+                        Modifier
+                            .graphicsLayer {
+                                scaleX = itemScale
+                                scaleY = itemScale
+                                alpha = itemAlpha
+                            }
+                            .semantics {
+                                contentDescription =
+                                    "$label" +
+                                    if (stage.id == selectedStageId) {
+                                        ", selected. Open stage"
+                                    } else {
+                                        ". Open stage"
+                                    }
+                            },
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        if (identity != null) {
+                            LauncherAppIcon(
+                                identity = identity,
+                                label = label,
+                                iconLoader = appIconLoader,
+                                modifier = Modifier.size(20.dp),
+                            )
+                        }
+                        Text(label)
+                    }
+                }
             }
         }
         TextButton(onClick = { onAction(LauncherShellAction.SelectNextAppStage) }) { Text("Next") }
     }
 }
+
+private const val TIME_SCAPE_SPINE_MIN_ALPHA = 0.45f
+private const val TIME_SCAPE_SPINE_MIN_SCALE = 0.85f
 
 /** Lazy layouts require item keys that Android can store in a Bundle across recreation. */
 internal fun timeScapeStageSelectorItemKey(stage: AppStage): String {

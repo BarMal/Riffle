@@ -75,6 +75,8 @@ internal fun CardStack(
     reducedMotion: Boolean = false,
     itemKey: (CardStackLayoutEntry) -> Any = { entry -> entry.cardIndex },
     interaction: CardStackInteraction? = null,
+    /** Multiplies every rendered entry's alpha, e.g. to dim the whole stack behind a detail overlay. */
+    dimFactor: Float = 1f,
     content: @Composable (CardStackLayoutEntry, Modifier) -> Unit,
 ) {
     val motionMode = cardStackMotionMode(reducedMotion)
@@ -144,6 +146,7 @@ internal fun CardStack(
                     animationSpec = animationSpec,
                     motionMode = motionMode,
                     timing = timing,
+                    dimFactor = dimFactor,
                     isFocused = interaction?.let { stableItemKey == it.focusedItemKey } ?: true,
                     interaction =
                         interaction?.copy(
@@ -251,6 +254,7 @@ private fun AnimatedCardStackEntry(
     timing: CardStackAnimationTiming,
     isFocused: Boolean,
     interaction: CardStackInteraction?,
+    dimFactor: Float = 1f,
     content: @Composable (CardStackLayoutEntry, Modifier) -> Unit,
 ) {
     val spec = animationSpec
@@ -273,7 +277,7 @@ private fun AnimatedCardStackEntry(
                 timing = if (hasEntered) timing else CardStackAnimationTiming.ENTER,
             )
         val alpha by animateFloatAsState(
-            targetValue = renderedPose.alpha,
+            targetValue = renderedPose.alpha * dimFactor,
             animationSpec = if (spec.animatesAlpha) animationSpec else snap(),
             label = "card-stack-alpha",
         )
