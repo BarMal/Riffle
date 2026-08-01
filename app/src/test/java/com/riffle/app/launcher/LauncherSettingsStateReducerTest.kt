@@ -6,6 +6,7 @@ import com.riffle.app.launcher.rss.FeedCacheResult
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppVisibilityRepository
+import com.riffle.core.domain.launcher.cards.TimeScapePaneArrangement
 import com.riffle.core.domain.launcher.contextual.ContextualSettings
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
@@ -97,6 +98,20 @@ class LauncherSettingsStateReducerTest {
 
         assertEquals(6, updatedState.launcherSettings.cards.timeScapeAppearance.geometry.visibleDepth)
         assertEquals(0, updatedState.launcherSettings.cards.timeScapeAppearance.surface.blurStrengthPercent)
+        assertEquals(updatedState.launcherSettings, repository.savedSettings)
+    }
+
+    @Test
+    fun persistsTimeScapePaneArrangementSelection() {
+        val repository = FakeLauncherSettingsRepository()
+
+        val updatedState =
+            reducer(launcherSettingsRepository = repository).reduce(
+                state = LauncherShellState(),
+                action = LauncherShellAction.SelectTimeScapePaneArrangement(TimeScapePaneArrangement.SPLIT),
+            )
+
+        assertEquals(TimeScapePaneArrangement.SPLIT, updatedState.launcherSettings.cards.timeScapePaneArrangement)
         assertEquals(updatedState.launcherSettings, repository.savedSettings)
     }
 

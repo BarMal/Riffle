@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.cards.TimeScapeHingeBounds
+import com.riffle.core.domain.launcher.cards.TimeScapePaneArrangement
 import com.riffle.core.domain.launcher.cards.TimeScapePosture
 import com.riffle.core.domain.launcher.cards.TimeScapeRailSide
 import com.riffle.core.domain.launcher.cards.TimeScapeWindowLayout
@@ -302,6 +303,43 @@ class TimeScapeAdaptiveLayoutInteractionTest {
         composeRule.onNodeWithText("Stages").assertIsDisplayed()
         composeRule.runOnIdle { posture = TimeScapePosture.COMPACT }
         composeRule.onAllNodesWithText("Stages").assertCountEquals(0)
+    }
+
+    @Test
+    fun splitArrangementRendersSupportingPaneAndStagePagerTogether() {
+        composeRule.setContent {
+            CompositionLocalProvider(LocalDensity provides Density(TEST_WINDOW_DENSITY)) {
+                MaterialTheme {
+                    Box(modifier = Modifier.width(360.dp).height(TEST_WINDOW_HEIGHT_DP.dp).clipToBounds()) {
+                        TimeScapeAppStageSurface(
+                            state =
+                                LauncherShellState(
+                                    notificationAccessStatus = NotificationAccessStatus.NOT_GRANTED,
+                                    launcherSettings =
+                                        LauncherSettings(
+                                            cards =
+                                                CardsSettings(
+                                                    timeScapePaneArrangement = TimeScapePaneArrangement.SPLIT,
+                                                ),
+                                        ),
+                                ),
+                            windowLayout =
+                                TimeScapeWindowLayout(
+                                    widthDp = 360,
+                                    heightDp = TEST_WINDOW_HEIGHT_DP,
+                                    posture = TimeScapePosture.UNFOLDED,
+                                ),
+                            onAction = {},
+                        )
+                    }
+                }
+            }
+        }
+
+        // Both the upper detail region and the lower stage pager/spine region must be present
+        // simultaneously -- proving this is a genuine split, not one replacing the other.
+        composeRule.onNodeWithTag(TIME_SCAPE_SUPPORTING_PANE_TEST_TAG).assertIsDisplayed()
+        composeRule.onNodeWithText("Install an app to create your first stage.").assertIsDisplayed()
     }
 
     private fun setContent(

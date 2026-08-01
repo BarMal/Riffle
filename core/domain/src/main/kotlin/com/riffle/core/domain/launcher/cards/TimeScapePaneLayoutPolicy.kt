@@ -1,5 +1,7 @@
 package com.riffle.core.domain.launcher.cards
 
+import kotlin.math.roundToInt
+
 /** Framework-independent window and separating-hinge inputs for the adaptive TimeScape surface. */
 data class TimeScapeWindowLayout(
     val widthDp: Int,
@@ -27,6 +29,25 @@ enum class TimeScapePaneMode {
     COMPACT,
     TWO_PANE,
     THREE_PANE,
+
+    /**
+     * User-opted alternative to [COMPACT]: a top focus/detail region over a bottom card-stack
+     * strip. Never produced from window geometry alone -- only when [TimeScapePaneArrangement.SPLIT]
+     * is explicitly requested and the window is at least as wide as a workable [COMPACT] surface.
+     */
+    SPLIT,
+}
+
+/**
+ * User-selectable choice between the existing full-stack TimeScape surface ([STACK], today's only
+ * behavior) and the [SPLIT] top-detail/bottom-stack layout. This is independent of window
+ * geometry -- [TimeScapePaneLayoutPolicy] still decides [TimeScapePaneMode.COMPACT] vs wider modes
+ * from the window itself, and only promotes a would-be-[TimeScapePaneMode.COMPACT] result to
+ * [TimeScapePaneMode.SPLIT] when [SPLIT] is requested and the window is workable.
+ */
+enum class TimeScapePaneArrangement {
+    STACK,
+    SPLIT,
 }
 
 /**
@@ -47,17 +68,55 @@ data class TimeScapePaneLayout(
     val contentWidthDp: Int = 0,
     val contentTopDp: Int = 0,
     val contentHeightDp: Int = 0,
+    /** [TimeScapePaneMode.SPLIT]-only: height of the upper focus/detail region. */
+    val upperRegionHeightDp: Int = 0,
+    /** [TimeScapePaneMode.SPLIT]-only: height of the lower card-stack + spine region. */
+    val lowerRegionHeightDp: Int = 0,
 ) {
-    val showsRail: Boolean get() = mode != TimeScapePaneMode.COMPACT
+    val showsRail: Boolean get() = mode == TimeScapePaneMode.TWO_PANE || mode == TimeScapePaneMode.THREE_PANE
     val showsDetailPane: Boolean get() = mode == TimeScapePaneMode.THREE_PANE
 }
 
 /** Chooses TimeScape panes from the current usable window, never a device-name classification. */
 class TimeScapePaneLayoutPolicy {
-    @Suppress("CyclomaticComplexMethod", "LongMethod", "MaxLineLength", "ReturnCount")
+    /**
+     * [arrangement] is a user preference, not a geometry input: [resolveStackLayout] below is run
+     * exactly as before (byte-for-byte, for [TimeScapePaneArrangement.STACK]) and only when
+     * [TimeScapePaneArrangement.SPLIT] is requested and the geometry-only result would have been
+     * [TimeScapePaneMode.COMPACT] do we promote it to [TimeScapePaneMode.SPLIT] -- and only if the
+     * window is workable (mirrors the same non-degenerate-bounds spirit as the compact-fallback
+     * paths above, using a minimum content height instead of width since the split adds a second
+     * vertical region). An unworkably small window keeps [TimeScapePaneMode.COMPACT] even though
+     * [TimeScapePaneArrangement.SPLIT] was requested.
+     */
     fun layoutFor(
         window: TimeScapeWindowLayout,
         railSide: TimeScapeRailSide = TimeScapeRailSide.LEADING,
+        arrangement: TimeScapePaneArrangement = TimeScapePaneArrangement.STACK,
+    ): TimeScapePaneLayout {
+        val stackLayout = resolveStackLayout(window, railSide)
+        val canSplit =
+            arrangement == TimeScapePaneArrangement.SPLIT &&
+                stackLayout.mode == TimeScapePaneMode.COMPACT &&
+                stackLayout.contentWidthDp > 0 &&
+                stackLayout.contentHeightDp >= MIN_SPLIT_CONTENT_HEIGHT_DP
+        if (!canSplit) return stackLayout
+
+        val upperHeight =
+            (stackLayout.contentHeightDp * SPLIT_UPPER_REGION_RATIO)
+                .roundToInt()
+                .coerceIn(0, stackLayout.contentHeightDp)
+        return stackLayout.copy(
+            mode = TimeScapePaneMode.SPLIT,
+            upperRegionHeightDp = upperHeight,
+            lowerRegionHeightDp = stackLayout.contentHeightDp - upperHeight,
+        )
+    }
+
+    @Suppress("CyclomaticComplexMethod", "LongMethod", "MaxLineLength", "ReturnCount")
+    private fun resolveStackLayout(
+        window: TimeScapeWindowLayout,
+        railSide: TimeScapeRailSide,
     ): TimeScapePaneLayout {
         val safeWidth = (window.widthDp - window.safeStartDp - window.safeEndDp).coerceAtLeast(0)
         val safeHeight = (window.heightDp - window.safeTopDp - window.safeBottomDp).coerceAtLeast(0)
@@ -228,6 +287,23 @@ class TimeScapePaneLayoutPolicy {
         const val MIN_SPLINE_WIDTH_DP = 360
         const val MAX_SPLINE_WIDTH_DP = 560
         const val DETAIL_WIDTH_DP = 360
+
+        /**
+         * The upper focus/detail region gets 60% of the available content height in
+         * [TimeScapePaneMode.SPLIT] -- roughly the upper 3/5, inside the requested 1/2-2/3 range and a
+         * clean fit against the existing hinge-region math above, which also favors whichever side
+         * gets the (implicitly larger) remainder rather than an even split.
+         */
+        const val SPLIT_UPPER_REGION_RATIO = 0.6f
+
+        /**
+         * A phone-width [TimeScapePaneMode.COMPACT] window can still be too short to host a top
+         * detail region plus a bottom stage pager and spine without either becoming unusably small.
+         * 400dp comfortably fits a compact header (~64dp) + a minimal detail summary above a pager
+         * and spine strip below; shorter than this, [TimeScapePaneArrangement.SPLIT] falls back to
+         * [TimeScapePaneMode.COMPACT] rather than rendering a degenerate split.
+         */
+        const val MIN_SPLIT_CONTENT_HEIGHT_DP = 400
     }
 }
 

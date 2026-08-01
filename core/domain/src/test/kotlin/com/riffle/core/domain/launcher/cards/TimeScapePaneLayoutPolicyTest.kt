@@ -1,7 +1,9 @@
 package com.riffle.core.domain.launcher.cards
 
+import kotlin.math.roundToInt
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotEquals
 
 class TimeScapePaneLayoutPolicyTest {
     private val policy = TimeScapePaneLayoutPolicy()
@@ -218,5 +220,63 @@ class TimeScapePaneLayoutPolicyTest {
         assertEquals(TimeScapePaneMode.COMPACT, layout.mode)
         assertEquals(312, layout.contentStartDp)
         assertEquals(388, layout.contentWidthDp)
+    }
+
+    @Test
+    fun stackArrangementNeverProducesSplitRegardlessOfWindowSize() {
+        val sizes =
+            listOf(
+                TimeScapeWindowLayout(360, 780),
+                TimeScapeWindowLayout(500, 900),
+                TimeScapeWindowLayout(800, 900, posture = TimeScapePosture.UNFOLDED),
+                TimeScapeWindowLayout(1_300, 900, posture = TimeScapePosture.UNFOLDED),
+            )
+
+        sizes.forEach { window ->
+            val layout = policy.layoutFor(window, arrangement = TimeScapePaneArrangement.STACK)
+            assertNotEquals(TimeScapePaneMode.SPLIT, layout.mode)
+        }
+
+        // The default arrangement parameter must behave identically to an explicit STACK.
+        sizes.forEach { window ->
+            assertNotEquals(TimeScapePaneMode.SPLIT, policy.layoutFor(window).mode)
+        }
+    }
+
+    @Test
+    fun splitArrangementPromotesAWorkablyTallCompactWindowToSplit() {
+        val layout =
+            policy.layoutFor(
+                TimeScapeWindowLayout(360, 780),
+                arrangement = TimeScapePaneArrangement.SPLIT,
+            )
+
+        assertEquals(TimeScapePaneMode.SPLIT, layout.mode)
+        assertEquals(layout.contentHeightDp, layout.upperRegionHeightDp + layout.lowerRegionHeightDp)
+        assertEquals((layout.contentHeightDp * 0.6f).roundToInt(), layout.upperRegionHeightDp)
+    }
+
+    @Test
+    fun splitArrangementFallsBackToCompactOnAnUnworkablyShortWindow() {
+        val layout =
+            policy.layoutFor(
+                TimeScapeWindowLayout(360, 300),
+                arrangement = TimeScapePaneArrangement.SPLIT,
+            )
+
+        assertEquals(TimeScapePaneMode.COMPACT, layout.mode)
+        assertEquals(0, layout.upperRegionHeightDp)
+        assertEquals(0, layout.lowerRegionHeightDp)
+    }
+
+    @Test
+    fun splitArrangementDoesNotPromoteAWideNonCompactWindow() {
+        val layout =
+            policy.layoutFor(
+                TimeScapeWindowLayout(1_300, 900, posture = TimeScapePosture.UNFOLDED),
+                arrangement = TimeScapePaneArrangement.SPLIT,
+            )
+
+        assertEquals(TimeScapePaneMode.THREE_PANE, layout.mode)
     }
 }

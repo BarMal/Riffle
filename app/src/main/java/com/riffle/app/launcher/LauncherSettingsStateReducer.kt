@@ -92,6 +92,18 @@ internal class LauncherSettingsStateReducer(
                         launcherSettingsRepository = launcherSettingsRepository,
                     )
 
+                is LauncherShellAction.SelectTimeScapePaneArrangement ->
+                    state.withLauncherSettings(
+                        settings =
+                            state.launcherSettings.copy(
+                                cards =
+                                    state.launcherSettings.cards.copy(
+                                        timeScapePaneArrangement = action.arrangement,
+                                    ),
+                            ),
+                        launcherSettingsRepository = launcherSettingsRepository,
+                    )
+
                 is LauncherShellAction.SelectSearchResultPresentation ->
                     state.withLauncherSettings(
                         settings =

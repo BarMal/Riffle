@@ -19,6 +19,7 @@ import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.riffle.core.domain.launcher.LauncherShellState
+import com.riffle.core.domain.launcher.cards.TimeScapePaneArrangement
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.MotionSettings
 import com.riffle.core.domain.launcher.settings.TimeScapeAppearancePreset
@@ -51,6 +52,7 @@ class TimeScapeAppearanceEditorTest {
 
         composeRule.onNodeWithContentDescription("TimeScape live preview").assertExists()
         listOf(
+            "Layout",
             "Preset and reset",
             "Card geometry",
             "Stack and spline",
@@ -68,6 +70,26 @@ class TimeScapeAppearanceEditorTest {
             "Spring bounciness",
             "Haptic strength",
         ).forEach { label -> composeRule.onNodeWithText(label).assertExists() }
+    }
+
+    @Test
+    fun selectingSplitDispatchesTheTimeScapePaneArrangementAction() {
+        val actions = mutableListOf<LauncherShellAction>()
+        composeRule.setContent {
+            MaterialTheme {
+                TimeScapeAppearancePageContent(
+                    state = LauncherShellState().settingsSurfaceState(),
+                    onAction = actions::add,
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("timescape-pane-arrangement-${TimeScapePaneArrangement.SPLIT.name}").performClick()
+
+        composeRule.runOnIdle {
+            val action = actions.last() as LauncherShellAction.SelectTimeScapePaneArrangement
+            assertEquals(TimeScapePaneArrangement.SPLIT, action.arrangement)
+        }
     }
 
     @Test

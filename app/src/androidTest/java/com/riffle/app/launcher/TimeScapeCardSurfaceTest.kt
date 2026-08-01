@@ -60,6 +60,7 @@ import com.riffle.core.domain.launcher.cards.AppStagePreferences
 import com.riffle.core.domain.launcher.cards.CardExpansionPhase
 import com.riffle.core.domain.launcher.cards.CardExpansionState
 import com.riffle.core.domain.launcher.cards.LauncherCardId
+import com.riffle.core.domain.launcher.cards.TimeScapePaneArrangement
 import com.riffle.core.domain.launcher.cards.TimeScapePosture
 import com.riffle.core.domain.launcher.cards.TimeScapeWindowLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
@@ -443,6 +444,36 @@ class TimeScapeCardSurfaceTest {
         // in the semantics tree -- dimmed via CardStack's dimFactor, not torn down -- rather than
         // being branched away entirely.
         composeRule.onNode(focusedCardDescription).assertExists()
+    }
+
+    @Test
+    fun splitArrangementShowsExpandedDetailOnlyOnceNotDuplicatedInTheLowerStack() {
+        val app = timeScapeTestApp()
+        val notification = timeScapeTestNotification(app)
+        val splitState =
+            timeScapeTestState(app, notification).copy(
+                launcherSettings =
+                    LauncherSettings(
+                        cards = CardsSettings(timeScapePaneArrangement = TimeScapePaneArrangement.SPLIT),
+                    ),
+            )
+        composeRule.setContent {
+            MaterialTheme {
+                TimeScapeAppStageSurface(
+                    state = splitState,
+                    windowLayout = TimeScapeWindowLayout(widthDp = 360, heightDp = 800, posture = TimeScapePosture.UNFOLDED),
+                    onAction = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("Details").performClick()
+        composeRule.mainClock.advanceTimeBy(500)
+
+        // The upper TimeScapeSupportingPane and the lower stage pager both exist in SPLIT mode,
+        // but only the upper pane should show the expanded card's detail -- the lower stack must
+        // suppress its own inline detail (showDetailInline = false) rather than duplicating it.
+        composeRule.onAllNodesWithText("Notification details").assertCountEquals(1)
     }
 
     @Test

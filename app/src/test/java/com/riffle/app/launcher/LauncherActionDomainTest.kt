@@ -11,6 +11,7 @@ import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.apps.AppShortcutId
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.cards.AppStageId
+import com.riffle.core.domain.launcher.cards.TimeScapePaneArrangement
 import com.riffle.core.domain.launcher.home.DockAlignment
 import com.riffle.core.domain.launcher.home.DockBackgroundSizing
 import com.riffle.core.domain.launcher.home.DockItemMoveDirection
@@ -450,6 +451,10 @@ class LauncherActionDomainTest {
                 settings(
                     "UpdateTimeScapeAppearance",
                     LauncherShellAction.UpdateTimeScapeAppearance(TimeScapeAppearanceSettings.modern()),
+                ),
+                settings(
+                    "SelectTimeScapePaneArrangement",
+                    LauncherShellAction.SelectTimeScapePaneArrangement(TimeScapePaneArrangement.SPLIT),
                 ),
                 settings("SelectOverlayDockEnabled", LauncherShellAction.SelectOverlayDockEnabled(enabled = true)),
                 settings("SelectOverlayDockEdge", LauncherShellAction.SelectOverlayDockEdge(OverlayDockEdge.START)),
