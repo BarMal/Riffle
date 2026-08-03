@@ -241,13 +241,15 @@ class TimeScapeAdaptiveLayoutInteractionTest {
             }
         }
 
-        val railBounds = composeRule.onNodeWithText("Stages").fetchSemanticsNode().boundsInRoot
+        val railBounds = composeRule.onNodeWithTag(TIME_SCAPE_STAGE_RAIL_TEST_TAG).fetchSemanticsNode().boundsInRoot
         val windowBounds = composeRule.onNodeWithTag(TIME_SCAPE_ADAPTIVE_TEST_WINDOW_TAG).fetchSemanticsNode().boundsInRoot
 
-        // A TOP rail sits in a horizontal strip flush with the window's top edge, not offset to
-        // one side the way the default LEADING column would be. Generous tolerance accounts for
-        // TimeScapeStageRail's own internal 8dp padding around "Stages" at the test density.
-        assertTrue(railBounds.top <= windowBounds.top + TOP_RAIL_TOLERANCE_PX)
+        // A TOP rail sits in a horizontal strip flush with the window's top edge and spanning its
+        // full width, unlike the default LEADING rail, which is a narrow column offset to one
+        // side. Checking the rail container itself (rather than a child like "Stages") avoids
+        // false positives from TimeScapeStageRail's own internal vertical centering of its tiles.
+        assertTrue(railBounds.top <= windowBounds.top + PIXEL_TOLERANCE)
+        assertTrue(railBounds.width >= windowBounds.width - PIXEL_TOLERANCE)
     }
 
     @Test
@@ -450,10 +452,6 @@ class TimeScapeAdaptiveLayoutInteractionTest {
         const val SAFE_END_PX = 48
         const val SAFE_BOTTOM_PX = 32
         const val PIXEL_TOLERANCE = 1f
-
-        // TimeScapeStageRail wraps its content in an 8dp padding; at TEST_WINDOW_DENSITY that's
-        // ~2.4px, so this leaves comfortable slack instead of matching PIXEL_TOLERANCE exactly.
-        const val TOP_RAIL_TOLERANCE_PX = 10f
         const val TIME_SCAPE_ADAPTIVE_TEST_WINDOW_TAG = "timescape-adaptive-test-window"
     }
 }

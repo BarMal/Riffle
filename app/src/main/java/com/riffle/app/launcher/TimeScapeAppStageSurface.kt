@@ -986,18 +986,21 @@ private fun TimeScapeStageRail(
     }
     if (horizontal) {
         Row(
-            modifier = modifier.padding(8.dp).horizontalScroll(scrollState),
+            modifier = modifier.testTag(TIME_SCAPE_STAGE_RAIL_TEST_TAG).padding(8.dp).horizontalScroll(scrollState),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) { tiles() }
     } else {
         Column(
-            modifier = modifier.padding(8.dp).verticalScroll(scrollState),
+            modifier = modifier.testTag(TIME_SCAPE_STAGE_RAIL_TEST_TAG).padding(8.dp).verticalScroll(scrollState),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) { tiles() }
     }
 }
+
+/** Only one [TimeScapeStageRail] is ever composed at a time, so a single fixed tag is unambiguous. */
+internal const val TIME_SCAPE_STAGE_RAIL_TEST_TAG = "timescape-stage-rail"
 
 /**
  * A single stage tile in the rail: a small deterministically-tinted icon slot (reusing the same
