@@ -132,6 +132,14 @@ class LauncherSettingsJsonCodecTest {
     }
 
     @Test
+    fun unconfiguredRailSideRoundTripsAsNull() {
+        val settings = LauncherSettings(cards = CardsSettings())
+
+        assertEquals(null, settings.cards.timeScapeRailSide)
+        assertEquals(null, decodeLauncherSettings(encodeLauncherSettings(settings)).cards.timeScapeRailSide)
+    }
+
+    @Test
     fun roundTripsConfiguredTimeScapePaneArrangement() {
         val settings =
             LauncherSettings(

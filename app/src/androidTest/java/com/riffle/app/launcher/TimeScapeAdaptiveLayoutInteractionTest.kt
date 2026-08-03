@@ -64,6 +64,25 @@ class TimeScapeAdaptiveLayoutInteractionTest {
     }
 
     @Test
+    fun unconfiguredRailDefersToTheTemplateVariant() {
+        assertEquals(
+            TimeScapeRailSide.TRAILING,
+            resolveTimeScapeRailSide(
+                configuredRailSide = null,
+                templateRailSide = TimeScapeRailSide.TRAILING,
+            ),
+        )
+    }
+
+    @Test
+    fun unconfiguredRailWithNoTemplateFallsBackToLeading() {
+        assertEquals(
+            TimeScapeRailSide.LEADING,
+            resolveTimeScapeRailSide(configuredRailSide = null, templateRailSide = null),
+        )
+    }
+
+    @Test
     fun mediumWindowUsesNamedStageRailControls() {
         setContent(widthDp = 800)
 
@@ -186,6 +205,46 @@ class TimeScapeAdaptiveLayoutInteractionTest {
         assertTrue(paneBounds.top >= windowBounds.top + SAFE_TOP_PX - PIXEL_TOLERANCE)
         assertTrue(paneBounds.right <= windowBounds.right - SAFE_END_PX + PIXEL_TOLERANCE)
         assertTrue(paneBounds.bottom <= windowBounds.bottom - SAFE_BOTTOM_PX + PIXEL_TOLERANCE)
+    }
+
+    @Test
+    fun topRailRendersAboveTheStageContentInsteadOfBesideIt() {
+        composeRule.setContent {
+            MaterialTheme {
+                Box(
+                    modifier =
+                        Modifier.width(800.dp)
+                            .height(TEST_WINDOW_HEIGHT_DP.dp)
+                            .clipToBounds()
+                            .testTag(TIME_SCAPE_ADAPTIVE_TEST_WINDOW_TAG),
+                ) {
+                    TimeScapeAppStageSurface(
+                        state =
+                            LauncherShellState(
+                                notificationAccessStatus = NotificationAccessStatus.NOT_GRANTED,
+                                launcherSettings =
+                                    LauncherSettings(
+                                        cards = CardsSettings(timeScapeRailSide = TimeScapeRailSide.TOP),
+                                    ),
+                            ),
+                        windowLayout =
+                            TimeScapeWindowLayout(
+                                widthDp = 800,
+                                heightDp = TEST_WINDOW_HEIGHT_DP,
+                                posture = TimeScapePosture.UNFOLDED,
+                            ),
+                        onAction = {},
+                    )
+                }
+            }
+        }
+
+        val railBounds = composeRule.onNodeWithText("Stages").fetchSemanticsNode().boundsInRoot
+        val windowBounds = composeRule.onNodeWithTag(TIME_SCAPE_ADAPTIVE_TEST_WINDOW_TAG).fetchSemanticsNode().boundsInRoot
+
+        // A TOP rail sits in a horizontal strip flush with the window's top edge, not offset to
+        // one side the way the default LEADING column would be.
+        assertTrue(railBounds.top <= windowBounds.top + PIXEL_TOLERANCE)
     }
 
     @Test

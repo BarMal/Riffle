@@ -14,4 +14,11 @@ class TimeScapeAppearancePageContentTest {
         assertEquals(0, action.appearance.surface.blurStrengthPercent)
         assertEquals(0, action.appearance.motion.travelIntensityPercent)
     }
+
+    @Test
+    fun presetActionAppliesTheWarmGlassProfile() {
+        val action = timeScapeAppearancePresetAction(TimeScapeAppearancePreset.WARM_GLASS)
+
+        assertEquals(TimeScapeAppearancePreset.WARM_GLASS, action.appearance.preset)
+    }
 }

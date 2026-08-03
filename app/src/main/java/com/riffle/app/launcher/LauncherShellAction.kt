@@ -10,6 +10,7 @@ import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.cards.AppStageId
 import com.riffle.core.domain.launcher.cards.TimeScapePaneArrangement
+import com.riffle.core.domain.launcher.cards.TimeScapeRailSide
 import com.riffle.core.domain.launcher.home.DockAlignment
 import com.riffle.core.domain.launcher.home.DockBackgroundSizing
 import com.riffle.core.domain.launcher.home.DockItemMoveDirection
@@ -429,6 +430,8 @@ sealed interface LauncherShellAction {
     ) : LauncherShellAction
 
     data class SelectTimeScapePaneArrangement(val arrangement: TimeScapePaneArrangement) : LauncherShellAction
+
+    data class SelectTimeScapeRailSide(val side: TimeScapeRailSide) : LauncherShellAction
 
     data class SelectOverlayDockEnabled(val enabled: Boolean) : LauncherShellAction
 
