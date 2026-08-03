@@ -325,9 +325,17 @@ private const val RAIL_HEIGHT_DP = 96
 
 /**
  * When the rail runs along the top or bottom edge it consumes vertical rather than horizontal
- * space: reserve it from [TimeScapePaneLayout.contentHeightDp] the same way a horizontal separating
- * hinge already does, rather than touching any of the width-based pane-mode math above (which stays
- * exactly as before for [TimeScapeRailSide.LEADING]/[TimeScapeRailSide.TRAILING]).
+ * space: reserve it from [TimeScapePaneLayout.contentHeightDp] rather than touching any of the
+ * width-based pane-mode math above (which stays exactly as before for
+ * [TimeScapeRailSide.LEADING]/[TimeScapeRailSide.TRAILING]).
+ *
+ * [TimeScapePaneLayout.contentTopDp] is deliberately left untouched here: it positions the whole
+ * content [androidx.compose.foundation.layout.Box] -- which contains the rail itself, not just the
+ * area below it -- within the window, mirroring how a horizontal separating hinge already shifts
+ * that same offset. Adjusting it here would push the rail down along with everything else instead
+ * of just reserving its height; the rail-then-content ordering inside that box (a plain
+ * top-to-bottom [androidx.compose.foundation.layout.Column]) is what actually keeps the content
+ * below the rail, no extra offset required.
  */
 private fun TimeScapePaneLayout.reserveHorizontalRail(railSide: TimeScapeRailSide): TimeScapePaneLayout {
     if (!railSide.isHorizontalEdge || !showsRail) return this
@@ -336,7 +344,6 @@ private fun TimeScapePaneLayout.reserveHorizontalRail(railSide: TimeScapeRailSid
         railWidthDp = 0,
         railHeightDp = reservedHeight,
         contentHeightDp = contentHeightDp - reservedHeight,
-        contentTopDp = if (railSide == TimeScapeRailSide.TOP) contentTopDp + reservedHeight else contentTopDp,
     )
 }
 

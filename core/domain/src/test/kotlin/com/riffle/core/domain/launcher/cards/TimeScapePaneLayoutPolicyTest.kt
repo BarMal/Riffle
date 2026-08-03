@@ -197,7 +197,10 @@ class TimeScapePaneLayoutPolicyTest {
         assertEquals(96, layout.railHeightDp)
         assertEquals(560, layout.splineWidthDp)
         assertEquals(804, layout.contentHeightDp)
-        assertEquals(96, layout.contentTopDp)
+        // contentTopDp positions the whole content box (rail included), not just the area below
+        // the rail -- it stays untouched; the rail-then-content Column ordering is what keeps
+        // content below the rail without an extra offset.
+        assertEquals(0, layout.contentTopDp)
     }
 
     @Test

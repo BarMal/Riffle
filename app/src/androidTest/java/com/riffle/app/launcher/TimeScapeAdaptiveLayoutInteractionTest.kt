@@ -210,31 +210,33 @@ class TimeScapeAdaptiveLayoutInteractionTest {
     @Test
     fun topRailRendersAboveTheStageContentInsteadOfBesideIt() {
         composeRule.setContent {
-            MaterialTheme {
-                Box(
-                    modifier =
-                        Modifier.width(800.dp)
-                            .height(TEST_WINDOW_HEIGHT_DP.dp)
-                            .clipToBounds()
-                            .testTag(TIME_SCAPE_ADAPTIVE_TEST_WINDOW_TAG),
-                ) {
-                    TimeScapeAppStageSurface(
-                        state =
-                            LauncherShellState(
-                                notificationAccessStatus = NotificationAccessStatus.NOT_GRANTED,
-                                launcherSettings =
-                                    LauncherSettings(
-                                        cards = CardsSettings(timeScapeRailSide = TimeScapeRailSide.TOP),
-                                    ),
-                            ),
-                        windowLayout =
-                            TimeScapeWindowLayout(
-                                widthDp = 800,
-                                heightDp = TEST_WINDOW_HEIGHT_DP,
-                                posture = TimeScapePosture.UNFOLDED,
-                            ),
-                        onAction = {},
-                    )
+            CompositionLocalProvider(LocalDensity provides Density(TEST_WINDOW_DENSITY)) {
+                MaterialTheme {
+                    Box(
+                        modifier =
+                            Modifier.width(800.dp)
+                                .height(TEST_WINDOW_HEIGHT_DP.dp)
+                                .clipToBounds()
+                                .testTag(TIME_SCAPE_ADAPTIVE_TEST_WINDOW_TAG),
+                    ) {
+                        TimeScapeAppStageSurface(
+                            state =
+                                LauncherShellState(
+                                    notificationAccessStatus = NotificationAccessStatus.NOT_GRANTED,
+                                    launcherSettings =
+                                        LauncherSettings(
+                                            cards = CardsSettings(timeScapeRailSide = TimeScapeRailSide.TOP),
+                                        ),
+                                ),
+                            windowLayout =
+                                TimeScapeWindowLayout(
+                                    widthDp = 800,
+                                    heightDp = TEST_WINDOW_HEIGHT_DP,
+                                    posture = TimeScapePosture.UNFOLDED,
+                                ),
+                            onAction = {},
+                        )
+                    }
                 }
             }
         }
@@ -243,8 +245,9 @@ class TimeScapeAdaptiveLayoutInteractionTest {
         val windowBounds = composeRule.onNodeWithTag(TIME_SCAPE_ADAPTIVE_TEST_WINDOW_TAG).fetchSemanticsNode().boundsInRoot
 
         // A TOP rail sits in a horizontal strip flush with the window's top edge, not offset to
-        // one side the way the default LEADING column would be.
-        assertTrue(railBounds.top <= windowBounds.top + PIXEL_TOLERANCE)
+        // one side the way the default LEADING column would be. Generous tolerance accounts for
+        // TimeScapeStageRail's own internal 8dp padding around "Stages" at the test density.
+        assertTrue(railBounds.top <= windowBounds.top + TOP_RAIL_TOLERANCE_PX)
     }
 
     @Test
@@ -447,6 +450,10 @@ class TimeScapeAdaptiveLayoutInteractionTest {
         const val SAFE_END_PX = 48
         const val SAFE_BOTTOM_PX = 32
         const val PIXEL_TOLERANCE = 1f
+
+        // TimeScapeStageRail wraps its content in an 8dp padding; at TEST_WINDOW_DENSITY that's
+        // ~2.4px, so this leaves comfortable slack instead of matching PIXEL_TOLERANCE exactly.
+        const val TOP_RAIL_TOLERANCE_PX = 10f
         const val TIME_SCAPE_ADAPTIVE_TEST_WINDOW_TAG = "timescape-adaptive-test-window"
     }
 }
