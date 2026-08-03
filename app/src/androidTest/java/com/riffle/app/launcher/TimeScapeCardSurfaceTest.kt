@@ -147,6 +147,23 @@ class TimeScapeCardSurfaceTest {
     }
 
     @Test
+    fun stageHeaderDoesNotRepeatTimeScapeWhenNoStageIsSelected() {
+        composeRule.setContent {
+            MaterialTheme {
+                TimeScapeAppStageSurface(
+                    state = LauncherShellState(notificationAccessStatus = NotificationAccessStatus.NOT_GRANTED),
+                    onAction = {},
+                )
+            }
+        }
+
+        // The header title falls back to "TimeScape" when no stage is selected, and used to be
+        // followed by an unconditional "TimeScape" eyebrow subtitle underneath it -- stacking the
+        // same text twice. Only one instance should ever be on screen at a time.
+        composeRule.onAllNodesWithText("TimeScape").assertCountEquals(1)
+    }
+
+    @Test
     fun appStageSurfaceOffersInstalledAppsBeforeNotificationsExist() {
         val app = timeScapeTestApp()
         val actions = mutableListOf<LauncherShellAction>()

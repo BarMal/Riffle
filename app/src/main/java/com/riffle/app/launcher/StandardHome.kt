@@ -40,6 +40,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalLifecycleOwner
@@ -198,6 +199,7 @@ internal fun StandardHome(
             currentDragSession = { homeDragSession.value },
             haptics = interactions.haptics,
             onDockInteractionHeightChanged = interactions.onDockInteractionHeightChanged,
+            onBottomControlsHeightChanged = interactions.onBottomControlsHeightChanged,
             onWorkspaceGridBoundsChanged = { pageId, bounds ->
                 if (pageId == visibleLayout.selectedPageId) {
                     workspaceGridBounds.value = bounds
@@ -540,6 +542,8 @@ private fun StandardHomeColumn(
             appIconLoader = appIconLoader,
             widgetViewFactory = state.presentation.widgetViewFactory,
             actions = homeActions,
+            modifier =
+                Modifier.onSizeChanged { size -> homeActions.onBottomControlsHeightChanged(size.height) },
         )
         StandardHomeDockArea(
             layout = state.visibleLayout,
@@ -595,9 +599,11 @@ private fun HomeBottomControls(
     appIconLoader: AppIconLoader,
     widgetViewFactory: HomeWidgetViewFactory,
     actions: HomeWorkspaceActions,
+    modifier: Modifier = Modifier,
 ) {
     AnimatedContent(
         targetState = layout.editMode,
+        modifier = modifier,
         transitionSpec = {
             homePageOverviewMotionPolicy(reducedMotion).contentTransform(
                 enteringOverview = targetState == HomeEditMode.ManagingPages,
@@ -787,6 +793,7 @@ internal data class HomeDragSession(
 internal data class StandardHomeInteractions(
     val haptics: LauncherHaptics = NoopLauncherHaptics,
     val onDockInteractionHeightChanged: (Int) -> Unit = {},
+    val onBottomControlsHeightChanged: (Int) -> Unit = {},
 )
 
 internal data class StandardHomePresentation(
@@ -865,6 +872,7 @@ internal data class HomeWorkspaceActions(
     val currentDragSession: () -> HomeDragSession? = { null },
     val haptics: LauncherHaptics,
     val onDockInteractionHeightChanged: (Int) -> Unit = {},
+    val onBottomControlsHeightChanged: (Int) -> Unit = {},
     val onWorkspaceGridBoundsChanged: (LauncherPageId, Rect) -> Unit = { _, _ -> },
     val onDockBoundsChanged: (Rect) -> Unit = {},
     val onBackgroundClick: () -> Unit = {},

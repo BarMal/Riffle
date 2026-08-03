@@ -62,12 +62,17 @@ private fun CardsHomeSurface(
     onAction: (LauncherShellAction) -> Unit,
 ) {
     val dockInteractionHeightPx = remember { mutableIntStateOf(0) }
+    // TimeScapeAppStageSurface's own root is fully transparent, so it must clip its content above
+    // both the Dock AND the real Standard Home search pill/page-indicator band directly above the
+    // Dock (HomeBottomSearchArea) -- otherwise that band bleeds through and visually collides with
+    // whatever TimeScape draws at that same height (e.g. a BOTTOM-docked stage rail).
+    val bottomControlsHeightPx = remember { mutableIntStateOf(0) }
     val density = LocalDensity.current
     val dockInteractionHeight =
         maxOf(
             state.homeLayout.dockInteractionRegionHeightDp().dp,
             with(density) { dockInteractionHeightPx.intValue.toDp() },
-        )
+        ) + with(density) { bottomControlsHeightPx.intValue.toDp() }
 
     Box(modifier = Modifier.fillMaxSize()) {
         StandardHomeSurface(
@@ -77,6 +82,9 @@ private fun CardsHomeSurface(
             haptics = haptics,
             onDockInteractionHeightChanged = { heightPx ->
                 dockInteractionHeightPx.intValue = heightPx
+            },
+            onBottomControlsHeightChanged = { heightPx ->
+                bottomControlsHeightPx.intValue = heightPx
             },
             onAction = onAction,
         )
@@ -100,6 +108,7 @@ private fun StandardHomeSurface(
     widgetRenderers: LauncherWidgetRenderers,
     haptics: LauncherHaptics,
     onDockInteractionHeightChanged: (Int) -> Unit = {},
+    onBottomControlsHeightChanged: (Int) -> Unit = {},
     onAction: (LauncherShellAction) -> Unit,
 ) {
     StandardHome(
@@ -109,6 +118,7 @@ private fun StandardHomeSurface(
             StandardHomeInteractions(
                 haptics = haptics,
                 onDockInteractionHeightChanged = onDockInteractionHeightChanged,
+                onBottomControlsHeightChanged = onBottomControlsHeightChanged,
             ),
         presentation =
             StandardHomePresentation(

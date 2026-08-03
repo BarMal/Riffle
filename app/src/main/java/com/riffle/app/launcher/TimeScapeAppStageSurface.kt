@@ -97,7 +97,6 @@ import com.riffle.core.domain.launcher.cards.TimeScapePosture
 import com.riffle.core.domain.launcher.cards.TimeScapePostureTransitionState
 import com.riffle.core.domain.launcher.cards.TimeScapeRailSide
 import com.riffle.core.domain.launcher.cards.TimeScapeStaticElement
-import com.riffle.core.domain.launcher.cards.TimeScapeStaticElementType
 import com.riffle.core.domain.launcher.cards.TimeScapeTemplateCatalogDefaults
 import com.riffle.core.domain.launcher.cards.TimeScapeWindowLayout
 import com.riffle.core.domain.launcher.cards.variantFor
@@ -800,6 +799,11 @@ private fun TimeScapeTemplateStaticCanvas(
         val width = cellWidthDp * placement.span.columns
         val height = cellHeightDp * placement.span.rows
         timeScapeTemplateFragments(x, width, paneIntervals).forEachIndexed { index, fragment ->
+            // Deliberately no visible content here: this canvas exists to give
+            // TimeScapeAdaptiveLayoutInteractionTest stable, positioned geometry to assert
+            // against (see timeScapeTemplateElementTestTag usages there), not to render UI --
+            // the real per-element widgets (clock, search, app carousel, dock) are the
+            // Standard Home surface underneath and the pane content composed right after this.
             Box(
                 modifier =
                     Modifier
@@ -807,15 +811,7 @@ private fun TimeScapeTemplateStaticCanvas(
                         .width(fragment.widthDp.dp)
                         .height(height.dp)
                         .testTag(timeScapeTemplateFragmentTestTag(element.id.value, index, isSlot = false)),
-            ) {
-                if (index == 0) {
-                    Text(
-                        text = timeScapeTemplateElementLabel(element.type),
-                        modifier = Modifier.padding(8.dp),
-                        style = MaterialTheme.typography.labelSmall,
-                    )
-                }
-            }
+            )
         }
     }
     dynamicSlots.forEach { slot ->
@@ -906,17 +902,6 @@ private fun timeScapeTemplateFragments(
     }
 }
 
-private fun timeScapeTemplateElementLabel(type: TimeScapeStaticElementType): String =
-    when (type) {
-        TimeScapeStaticElementType.CLOCK -> "Clock"
-        TimeScapeStaticElementType.SEARCH -> "Search"
-        TimeScapeStaticElementType.APP_CAROUSEL -> "Apps"
-        TimeScapeStaticElementType.DOCK -> "Dock"
-        TimeScapeStaticElementType.IMAGE -> "Image"
-        TimeScapeStaticElementType.SHAPE -> "Shape"
-        TimeScapeStaticElementType.WIDGET -> "Widget"
-    }
-
 @Composable
 private fun TimeScapeStageBody(
     selectedStage: AppStage?,
@@ -969,8 +954,16 @@ private fun TimeScapeStageRail(
     horizontal: Boolean = false,
 ) {
     val tiles: @Composable () -> Unit = {
-        Text("Stages", style = MaterialTheme.typography.labelLarge)
-        TextButton(onClick = { onAction(LauncherShellAction.SelectPreviousAppStage) }) { Text("Previous") }
+        Text(
+            "Stages",
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        TimeScapeContextActionButton(
+            label = "Previous",
+            onClick = { onAction(LauncherShellAction.SelectPreviousAppStage) },
+        )
         stages.forEach { stage ->
             TimeScapeStageRailTile(
                 stageId = stage.id,
@@ -982,17 +975,29 @@ private fun TimeScapeStageRail(
                 onClick = { onAction(LauncherShellAction.SelectAppStage(stage.id)) },
             )
         }
-        TextButton(onClick = { onAction(LauncherShellAction.SelectNextAppStage) }) { Text("Next") }
+        TimeScapeContextActionButton(
+            label = "Next",
+            onClick = { onAction(LauncherShellAction.SelectNextAppStage) },
+        )
     }
+    val railBackground = Modifier.background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.32f))
     if (horizontal) {
         Row(
-            modifier = modifier.testTag(TIME_SCAPE_STAGE_RAIL_TEST_TAG).padding(8.dp).horizontalScroll(scrollState),
+            modifier =
+                modifier.testTag(TIME_SCAPE_STAGE_RAIL_TEST_TAG)
+                    .then(railBackground)
+                    .padding(8.dp)
+                    .horizontalScroll(scrollState),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) { tiles() }
     } else {
         Column(
-            modifier = modifier.testTag(TIME_SCAPE_STAGE_RAIL_TEST_TAG).padding(8.dp).verticalScroll(scrollState),
+            modifier =
+                modifier.testTag(TIME_SCAPE_STAGE_RAIL_TEST_TAG)
+                    .then(railBackground)
+                    .padding(8.dp)
+                    .verticalScroll(scrollState),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) { tiles() }
@@ -1194,7 +1199,11 @@ private fun TimeScapeStageHeader(
                 },
         ) {
             Text(text = label, style = MaterialTheme.typography.titleLarge)
-            Text(text = "TimeScape", style = MaterialTheme.typography.labelMedium)
+            // Only show the "TimeScape" eyebrow when it wouldn't just repeat the title above --
+            // label already falls back to "TimeScape" itself when no stage is selected.
+            if (label != "TimeScape") {
+                Text(text = "TimeScape", style = MaterialTheme.typography.labelMedium)
+            }
         }
         if (selectedStage != null) {
             if (addableApps.isNotEmpty()) {
@@ -1894,7 +1903,7 @@ private fun TimeScapeUnavailableState(
 ) {
     Column(
         modifier = modifier.fillMaxWidth().padding(24.dp),
-        verticalArrangement = Arrangement.Center,
+        verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(
@@ -1904,9 +1913,10 @@ private fun TimeScapeUnavailableState(
         )
         TimeScapeDetailRecoveryMessage(recoveryMessage)
         if (access == NotificationAccessStatus.NOT_GRANTED || access == NotificationAccessStatus.REVOKED) {
-            TextButton(onClick = { onAction(LauncherShellAction.RequestNotificationAccess) }) {
-                Text("Allow access")
-            }
+            TimeScapeContextActionButton(
+                label = "Allow access",
+                onClick = { onAction(LauncherShellAction.RequestNotificationAccess) },
+            )
         }
         if (installedApps.isEmpty()) {
             Text("Install an app to create your first stage.", style = MaterialTheme.typography.bodyMedium)
@@ -1926,7 +1936,8 @@ private fun TimeScapeUnavailableState(
                         "${app.identity.profile.id.value}:${app.identity.packageName.value}"
                     },
                 ) { app ->
-                    TextButton(
+                    TimeScapeContextActionButton(
+                        label = "Pin ${app.label}",
                         onClick = {
                             onAction(
                                 LauncherShellAction.ToggleAppStagePinned(
@@ -1934,9 +1945,7 @@ private fun TimeScapeUnavailableState(
                                 ),
                             )
                         },
-                    ) {
-                        Text("Pin ${app.label}")
-                    }
+                    )
                 }
             }
         }
@@ -2027,8 +2036,18 @@ private fun TimeScapeStageSpine(
     onAction: (LauncherShellAction) -> Unit,
 ) {
     if (stages.isEmpty()) return
-    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        TextButton(onClick = { onAction(LauncherShellAction.SelectPreviousAppStage) }) { Text("Previous") }
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.32f))
+                .padding(4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        TimeScapeContextActionButton(
+            label = "Previous",
+            onClick = { onAction(LauncherShellAction.SelectPreviousAppStage) },
+        )
         LazyRow(
             modifier = Modifier.weight(1f),
             contentPadding = PaddingValues(horizontal = 4.dp),
@@ -2043,6 +2062,12 @@ private fun TimeScapeStageSpine(
                 val label = stageLabel(stage.id, state)
                 TextButton(
                     onClick = { onAction(LauncherShellAction.SelectAppStage(stage.id)) },
+                    shape = RoundedCornerShape(percent = 50),
+                    colors =
+                        ButtonDefaults.textButtonColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
+                            contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        ),
                     modifier =
                         Modifier
                             .graphicsLayer {
@@ -2072,12 +2097,15 @@ private fun TimeScapeStageSpine(
                                 modifier = Modifier.size(20.dp),
                             )
                         }
-                        Text(label)
+                        Text(label, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                 }
             }
         }
-        TextButton(onClick = { onAction(LauncherShellAction.SelectNextAppStage) }) { Text("Next") }
+        TimeScapeContextActionButton(
+            label = "Next",
+            onClick = { onAction(LauncherShellAction.SelectNextAppStage) },
+        )
     }
 }
 
