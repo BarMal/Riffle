@@ -5,6 +5,7 @@ package com.riffle.app.launcher
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -26,6 +27,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -65,6 +67,7 @@ import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.riffle.app.launcher.notifications.AndroidNotificationStageActionGateway
@@ -129,11 +132,15 @@ internal fun timeScapeAppStageActionFilter(action: LauncherShellAction): Boolean
         else -> false
     }
 
-@Suppress("UNUSED_PARAMETER")
+/**
+ * `null` [configuredRailSide] means the user has never chosen a rail edge, so the active
+ * template's [templateRailSide] applies; once the user picks an edge in settings it always wins,
+ * matching how every other explicit user preference in this file overrides its template default.
+ */
 internal fun resolveTimeScapeRailSide(
-    configuredRailSide: TimeScapeRailSide,
+    configuredRailSide: TimeScapeRailSide?,
     templateRailSide: TimeScapeRailSide?,
-): TimeScapeRailSide = configuredRailSide
+): TimeScapeRailSide = configuredRailSide ?: templateRailSide ?: TimeScapeRailSide.LEADING
 
 /**
  * Mirrors [resolveTimeScapeRailSide]'s shape: the pane arrangement is a plain configured user
@@ -372,80 +379,102 @@ internal fun TimeScapeAppStageSurface(
                             appIconLoader = appIconLoader,
                         )
 
-                    TimeScapePaneMode.TWO_PANE, TimeScapePaneMode.THREE_PANE ->
-                        Row(modifier = Modifier.fillMaxSize()) {
-                            if (railSide == TimeScapeRailSide.LEADING) {
-                                TimeScapeStageRail(
-                                    stages = shellState.snapshot.stages,
-                                    selectedStageId = selectedStage?.id,
-                                    state = state,
-                                    appIconLoader = appIconLoader,
-                                    onAction = onAction,
-                                    scrollState = stageRailScrollState,
-                                    modifier = Modifier.width(paneLayout.railWidthDp.dp),
-                                )
-                            }
-                            Column(modifier = Modifier.width(paneLayout.splineWidthDp.dp).fillMaxSize()) {
-                                TimeScapeStageHeader(
-                                    selectedStage = selectedStage,
-                                    stages = shellState.snapshot.stages,
-                                    state = state,
-                                    appIconLoader = appIconLoader,
-                                    onAction = onAction,
-                                )
-                                TimeScapeStageBody(
-                                    selectedStage = selectedStage,
-                                    state = state,
-                                    shellState = shellState,
-                                    detailRecoveryMessage = detailRecoveryMessage,
-                                    detailState = detailState,
-                                    focusedCardId = focusedCardIdValue?.let(::LauncherCardId),
-                                    onDetailVisibilityChanged = { cardId ->
-                                        detailCardKey = cardId?.value
-                                        detailStageKey = cardId?.let { selectedStage?.id?.let(::timeScapeStageKey) }
-                                        onContextChanged(context.copy(detailCardKey = cardId?.value))
-                                        if (cardId != null) detailRecoveryMessage = null
-                                    },
-                                    onFocusedCardChanged = {
-                                        focusedCardIdValue = it?.value
-                                        onContextChanged(context.copy(focusedCardKey = it?.value))
-                                    },
-                                    showDetailInline = !paneLayout.showsDetailPane,
-                                    onAction = onAction,
-                                    appIconLoader = appIconLoader,
-                                    modifier = Modifier.weight(1f),
-                                )
-                            }
-                            if (paneLayout.leadingRemainderDp > 0) {
-                                Spacer(modifier = Modifier.width(paneLayout.leadingRemainderDp.dp))
-                            }
-                            if (paneLayout.hingeGapDp > 0) {
-                                Spacer(modifier = Modifier.width(paneLayout.hingeGapDp.dp))
-                            }
-                            if (paneLayout.showsDetailPane) {
-                                TimeScapeSupportingPane(
-                                    stage = selectedStage,
-                                    selectedCardId = detailOrigin?.cardId ?: focusedCardIdValue?.let(::LauncherCardId),
-                                    state = state,
-                                    notificationCards = shellState.notificationCards,
-                                    emptyCard = selectedStage?.let { shellState.emptyAppCards[it.id] },
-                                    detailState = detailState,
-                                    onAction = onAction,
-                                    modifier = Modifier.width(paneLayout.detailWidthDp.dp).fillMaxSize(),
-                                )
-                            }
-                            if (railSide == TimeScapeRailSide.TRAILING) {
-                                TimeScapeStageRail(
-                                    stages = shellState.snapshot.stages,
-                                    selectedStageId = selectedStage?.id,
-                                    state = state,
-                                    appIconLoader = appIconLoader,
-                                    onAction = onAction,
-                                    scrollState = stageRailScrollState,
-                                    modifier = Modifier.width(paneLayout.railWidthDp.dp),
-                                )
-                            }
+                    TimeScapePaneMode.TWO_PANE, TimeScapePaneMode.THREE_PANE -> {
+                        // TOP/BOTTOM rails run as a horizontal strip outside the leading/trailing
+                        // Row below, since they reserve height (paneLayout.railHeightDp) rather
+                        // than width -- see TimeScapePaneLayoutPolicy.reserveHorizontalRail.
+                        val horizontalRail: @Composable () -> Unit = {
+                            TimeScapeStageRail(
+                                stages = shellState.snapshot.stages,
+                                selectedStageId = selectedStage?.id,
+                                state = state,
+                                appIconLoader = appIconLoader,
+                                onAction = onAction,
+                                scrollState = stageRailScrollState,
+                                modifier = Modifier.fillMaxWidth().height(paneLayout.railHeightDp.dp),
+                                horizontal = true,
+                            )
                         }
+                        Column(modifier = Modifier.fillMaxSize()) {
+                            if (railSide == TimeScapeRailSide.TOP) horizontalRail()
+                            Row(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                                if (railSide == TimeScapeRailSide.LEADING) {
+                                    TimeScapeStageRail(
+                                        stages = shellState.snapshot.stages,
+                                        selectedStageId = selectedStage?.id,
+                                        state = state,
+                                        appIconLoader = appIconLoader,
+                                        onAction = onAction,
+                                        scrollState = stageRailScrollState,
+                                        modifier = Modifier.width(paneLayout.railWidthDp.dp),
+                                    )
+                                }
+                                Column(modifier = Modifier.width(paneLayout.splineWidthDp.dp).fillMaxSize()) {
+                                    TimeScapeStageHeader(
+                                        selectedStage = selectedStage,
+                                        stages = shellState.snapshot.stages,
+                                        state = state,
+                                        appIconLoader = appIconLoader,
+                                        onAction = onAction,
+                                    )
+                                    TimeScapeStageBody(
+                                        selectedStage = selectedStage,
+                                        state = state,
+                                        shellState = shellState,
+                                        detailRecoveryMessage = detailRecoveryMessage,
+                                        detailState = detailState,
+                                        focusedCardId = focusedCardIdValue?.let(::LauncherCardId),
+                                        onDetailVisibilityChanged = { cardId ->
+                                            detailCardKey = cardId?.value
+                                            detailStageKey =
+                                                cardId?.let { selectedStage?.id?.let(::timeScapeStageKey) }
+                                            onContextChanged(context.copy(detailCardKey = cardId?.value))
+                                            if (cardId != null) detailRecoveryMessage = null
+                                        },
+                                        onFocusedCardChanged = {
+                                            focusedCardIdValue = it?.value
+                                            onContextChanged(context.copy(focusedCardKey = it?.value))
+                                        },
+                                        showDetailInline = !paneLayout.showsDetailPane,
+                                        onAction = onAction,
+                                        appIconLoader = appIconLoader,
+                                        modifier = Modifier.weight(1f),
+                                    )
+                                }
+                                if (paneLayout.leadingRemainderDp > 0) {
+                                    Spacer(modifier = Modifier.width(paneLayout.leadingRemainderDp.dp))
+                                }
+                                if (paneLayout.hingeGapDp > 0) {
+                                    Spacer(modifier = Modifier.width(paneLayout.hingeGapDp.dp))
+                                }
+                                if (paneLayout.showsDetailPane) {
+                                    TimeScapeSupportingPane(
+                                        stage = selectedStage,
+                                        selectedCardId =
+                                            detailOrigin?.cardId ?: focusedCardIdValue?.let(::LauncherCardId),
+                                        state = state,
+                                        notificationCards = shellState.notificationCards,
+                                        emptyCard = selectedStage?.let { shellState.emptyAppCards[it.id] },
+                                        detailState = detailState,
+                                        onAction = onAction,
+                                        modifier = Modifier.width(paneLayout.detailWidthDp.dp).fillMaxSize(),
+                                    )
+                                }
+                                if (railSide == TimeScapeRailSide.TRAILING) {
+                                    TimeScapeStageRail(
+                                        stages = shellState.snapshot.stages,
+                                        selectedStageId = selectedStage?.id,
+                                        state = state,
+                                        appIconLoader = appIconLoader,
+                                        onAction = onAction,
+                                        scrollState = stageRailScrollState,
+                                        modifier = Modifier.width(paneLayout.railWidthDp.dp),
+                                    )
+                                }
+                            }
+                            if (railSide == TimeScapeRailSide.BOTTOM) horizontalRail()
+                        }
+                    }
                 }
             }
         }
@@ -937,12 +966,9 @@ private fun TimeScapeStageRail(
     onAction: (LauncherShellAction) -> Unit,
     scrollState: androidx.compose.foundation.ScrollState,
     modifier: Modifier,
+    horizontal: Boolean = false,
 ) {
-    Column(
-        modifier = modifier.padding(8.dp).verticalScroll(scrollState),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
+    val tiles: @Composable () -> Unit = {
         Text("Stages", style = MaterialTheme.typography.labelLarge)
         TextButton(onClick = { onAction(LauncherShellAction.SelectPreviousAppStage) }) { Text("Previous") }
         stages.forEach { stage ->
@@ -958,7 +984,23 @@ private fun TimeScapeStageRail(
         }
         TextButton(onClick = { onAction(LauncherShellAction.SelectNextAppStage) }) { Text("Next") }
     }
+    if (horizontal) {
+        Row(
+            modifier = modifier.testTag(TIME_SCAPE_STAGE_RAIL_TEST_TAG).padding(8.dp).horizontalScroll(scrollState),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) { tiles() }
+    } else {
+        Column(
+            modifier = modifier.testTag(TIME_SCAPE_STAGE_RAIL_TEST_TAG).padding(8.dp).verticalScroll(scrollState),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) { tiles() }
+    }
 }
+
+/** Only one [TimeScapeStageRail] is ever composed at a time, so a single fixed tag is unambiguous. */
+internal const val TIME_SCAPE_STAGE_RAIL_TEST_TAG = "timescape-stage-rail"
 
 /**
  * A single stage tile in the rail: a small deterministically-tinted icon slot (reusing the same
@@ -1071,25 +1113,32 @@ private fun TimeScapeSupportingPane(
         TimeScapeCardDetailSurface(card, detailState, onAction, modifier = paneModifier)
         return
     }
-    Column(
-        modifier =
-            paneModifier
-                .verticalScroll(rememberScrollState())
-                .padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+    Surface(
+        modifier = paneModifier,
+        shape = RoundedCornerShape(24.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.32f),
+        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
     ) {
-        Text("Details", style = MaterialTheme.typography.titleMedium)
-        if (card == null) {
-            Text("Select a card to keep its context visible here.")
-        } else {
-            stage?.let { Text(stageLabel(it.id, state), style = MaterialTheme.typography.labelLarge) }
-            Text(card.title, style = MaterialTheme.typography.titleMedium)
-            Text(card.text, style = MaterialTheme.typography.bodyMedium)
-            TimeScapeContextShelf(
-                card = card,
-                onAction = onAction,
-                onDetailRequested = { detailState?.expand(card.content.id) },
-            )
+        Column(
+            modifier =
+                Modifier
+                    .verticalScroll(rememberScrollState())
+                    .padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text("Details", style = MaterialTheme.typography.titleMedium)
+            if (card == null) {
+                Text("Select a card to keep its context visible here.")
+            } else {
+                stage?.let { Text(stageLabel(it.id, state), style = MaterialTheme.typography.labelLarge) }
+                Text(card.title, style = MaterialTheme.typography.titleMedium)
+                Text(card.text, style = MaterialTheme.typography.bodyMedium)
+                TimeScapeContextActionsGrid(
+                    card = card,
+                    onAction = onAction,
+                    onDetailRequested = { detailState?.expand(card.content.id) },
+                )
+            }
         }
     }
 }
@@ -1570,16 +1619,16 @@ internal fun TimeScapeContextShelf(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         card.supportedActions.sortedBy { action -> action.label() }.forEach { action ->
-            TextButton(
+            TimeScapeContextActionButton(
+                label = action.label(),
                 onClick = {
                     onAction(LauncherShellAction.PerformNotificationStageAction(card.notificationKey, action))
                 },
-            ) {
-                Text(action.label())
-            }
+            )
         }
         onDetailRequested?.let { requestDetail ->
-            TextButton(
+            TimeScapeContextActionButton(
+                label = "Details",
                 onClick = requestDetail,
                 modifier =
                     detailFocusRequester?.let { requester ->
@@ -1594,9 +1643,89 @@ internal fun TimeScapeContextShelf(
                             }.focusable()
                     }
                         ?: Modifier,
-            ) {
-                Text("Details")
+            )
+        }
+    }
+}
+
+/**
+ * A pill-shaped, translucent "glass" action button -- the shared building block for
+ * [TimeScapeContextShelf]'s inline row and [TimeScapeContextActionsGrid]'s two-column layout,
+ * styled to sit closer to Calm's `contextActionButton()` glass-pill treatment than a bare
+ * [TextButton].
+ */
+@Composable
+private fun TimeScapeContextActionButton(
+    label: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    // Built on TextButton (not a raw clickable Surface) so click routing keeps the same proven
+    // semantics/hit-testing behavior as every other action button in this file.
+    TextButton(
+        onClick = onClick,
+        modifier = modifier,
+        shape = RoundedCornerShape(percent = 50),
+        colors =
+            ButtonDefaults.textButtonColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
+                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            ),
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+/**
+ * Two-column action grid mirroring Calm's `FocusOverlayController.actionsGrid()`: actions are
+ * chunked by 2, and a lone trailing action spans the full row width instead of being stranded
+ * beside empty space.
+ */
+@Composable
+internal fun TimeScapeContextActionsGrid(
+    card: AppStageNotificationCard,
+    onAction: (LauncherShellAction) -> Unit,
+    onDetailRequested: (() -> Unit)? = null,
+    modifier: Modifier = Modifier,
+) {
+    val actions = card.supportedActions.sortedBy { action -> action.label() }
+    if (actions.isEmpty() && onDetailRequested == null) return
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        actions.chunked(2).forEach { rowActions ->
+            if (rowActions.size == 1) {
+                TimeScapeContextActionButton(
+                    label = rowActions[0].label(),
+                    onClick = {
+                        onAction(
+                            LauncherShellAction.PerformNotificationStageAction(card.notificationKey, rowActions[0]),
+                        )
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            } else {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    rowActions.forEach { action ->
+                        TimeScapeContextActionButton(
+                            label = action.label(),
+                            onClick = {
+                                onAction(
+                                    LauncherShellAction.PerformNotificationStageAction(card.notificationKey, action),
+                                )
+                            },
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+                }
             }
+        }
+        onDetailRequested?.let { requestDetail ->
+            TimeScapeContextActionButton(label = "Details", onClick = requestDetail, modifier = Modifier.fillMaxWidth())
         }
     }
 }

@@ -320,6 +320,7 @@ data class TimeScapeCardStackResolution(
 enum class TimeScapeAppearancePreset {
     MODERN_TIMESCAPE,
     FLAT_REDUCED_DEPTH,
+    WARM_GLASS,
     ;
 
     internal val settings: TimeScapeAppearanceSettings
@@ -352,6 +353,33 @@ enum class TimeScapeAppearancePreset {
                                 travelIntensityPercent = 0,
                                 parallaxIntensityPercent = 0,
                                 rotationIntensityPercent = 0,
+                            ),
+                    )
+                // A warm, translucent glass treatment modeled on the Calm prototype's palette
+                // (CalmTheme.kt: near-black surfaces, a warm tan accent, and a heavier glass/blur
+                // layer than MODERN_TIMESCAPE) -- an opt-in preset rather than a change to the
+                // shipped default, so it's directly comparable against the other two.
+                WARM_GLASS ->
+                    TimeScapeAppearanceSettings(
+                        preset = this,
+                        surface =
+                            TimeScapeSurface(
+                                backgroundSource = TimeScapeBackgroundSource.CUSTOM_SOLID,
+                                // Calm's SURFACE color (#0C0B10) tinted toward its warm GLASS layer.
+                                customBackgroundArgb = 0xFF14110EL,
+                                glassTransparencyPercent = 58,
+                                // Calm's warm-tan GLOSS/REFRACTION highlight rather than a neutral white tint.
+                                glassTintArgb = 0xFFC6B597L,
+                                blurStrengthPercent = 46,
+                                outlineWidthDp = 1,
+                                highlightPercent = 24,
+                                shadowElevationDp = 18,
+                            ),
+                        typography =
+                            TimeScapeTypography(
+                                accentSource = TimeScapeAccentSource.CUSTOM,
+                                // Calm's ACCENT color (#C6B597).
+                                customAccentArgb = 0xFFC6B597L,
                             ),
                     )
             }

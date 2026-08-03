@@ -7,6 +7,7 @@ import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppVisibilityRepository
 import com.riffle.core.domain.launcher.cards.TimeScapePaneArrangement
+import com.riffle.core.domain.launcher.cards.TimeScapeRailSide
 import com.riffle.core.domain.launcher.contextual.ContextualSettings
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
@@ -112,6 +113,20 @@ class LauncherSettingsStateReducerTest {
             )
 
         assertEquals(TimeScapePaneArrangement.SPLIT, updatedState.launcherSettings.cards.timeScapePaneArrangement)
+        assertEquals(updatedState.launcherSettings, repository.savedSettings)
+    }
+
+    @Test
+    fun persistsTimeScapeRailSideSelection() {
+        val repository = FakeLauncherSettingsRepository()
+
+        val updatedState =
+            reducer(launcherSettingsRepository = repository).reduce(
+                state = LauncherShellState(),
+                action = LauncherShellAction.SelectTimeScapeRailSide(TimeScapeRailSide.TOP),
+            )
+
+        assertEquals(TimeScapeRailSide.TOP, updatedState.launcherSettings.cards.timeScapeRailSide)
         assertEquals(updatedState.launcherSettings, repository.savedSettings)
     }
 

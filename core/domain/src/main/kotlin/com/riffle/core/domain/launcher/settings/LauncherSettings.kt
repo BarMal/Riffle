@@ -62,7 +62,12 @@ data class CardsSettings(
     /** Durable visual intent for the optional TimeScape presentation. */
     val timeScapeAppearance: TimeScapeAppearanceSettings = TimeScapeAppearanceSettings.modern(),
     val timeScapeTemplateId: TimeScapeTemplateId = TimeScapeTemplateCatalogDefaults.sharedCanvasId,
-    val timeScapeRailSide: TimeScapeRailSide = TimeScapeRailSide.LEADING,
+    /**
+     * Explicit user choice of rail edge, or `null` if the user has never changed it -- in which
+     * case the active template's [com.riffle.core.domain.launcher.cards.TimeScapeTemplateVariant.railSide]
+     * applies, falling back to [com.riffle.core.domain.launcher.cards.TimeScapeRailSide.LEADING].
+     */
+    val timeScapeRailSide: TimeScapeRailSide? = null,
     /** User-opted alternative to the full-stack surface: a top detail region over the card stack. */
     val timeScapePaneArrangement: TimeScapePaneArrangement = TimeScapePaneArrangement.STACK,
 )

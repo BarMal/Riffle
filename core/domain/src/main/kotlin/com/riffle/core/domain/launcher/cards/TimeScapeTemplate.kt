@@ -28,7 +28,13 @@ data class TimeScapeTemplateVariant(
 enum class TimeScapeRailSide {
     LEADING,
     TRAILING,
+    TOP,
+    BOTTOM,
 }
+
+/** True for the two edges where the rail runs as a horizontal strip instead of a side column. */
+val TimeScapeRailSide.isHorizontalEdge: Boolean
+    get() = this == TimeScapeRailSide.TOP || this == TimeScapeRailSide.BOTTOM
 
 data class TimeScapeCanvas(
     val grid: GridDimensions,

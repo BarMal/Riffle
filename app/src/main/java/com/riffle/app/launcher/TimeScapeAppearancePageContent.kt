@@ -28,6 +28,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.cards.TimeScapePaneArrangement
+import com.riffle.core.domain.launcher.cards.TimeScapeRailSide
 import com.riffle.core.domain.launcher.settings.MAX_TIMESCAPE_BLUR_STRENGTH_PERCENT
 import com.riffle.core.domain.launcher.settings.MAX_TIMESCAPE_CARD_ASPECT_RATIO_PERCENT
 import com.riffle.core.domain.launcher.settings.MAX_TIMESCAPE_CONTENT_PADDING_DP
@@ -114,6 +115,20 @@ internal fun TimeScapeAppearancePageContent(
         }
     }
     SettingsSection(title = "Layout") {
+        TimeScapeEnumChoices(
+            title = "Rail side",
+            values = TimeScapeRailSide.entries,
+            selected = state.settings.cards.timeScapeRailSide ?: TimeScapeRailSide.LEADING,
+            label = TimeScapeRailSide::label,
+            testTag = { side -> "timescape-rail-side-${side.name}" },
+            onSelected = { side ->
+                onAction(LauncherShellAction.SelectTimeScapeRailSide(side))
+            },
+        )
+        SettingsListRow(
+            title = "About rail side",
+            subtitle = "Which edge the stage rail docks to in Stage Manager and split-pane layouts",
+        )
         TimeScapeEnumChoices(
             title = "Pane arrangement",
             values = TimeScapePaneArrangement.entries,
@@ -647,6 +662,7 @@ private fun TimeScapeAppearancePreset.label(): String =
     when (this) {
         TimeScapeAppearancePreset.MODERN_TIMESCAPE -> "Modern"
         TimeScapeAppearancePreset.FLAT_REDUCED_DEPTH -> "Flat"
+        TimeScapeAppearancePreset.WARM_GLASS -> "Warm glass"
     }
 
 private fun TimeScapeBackgroundSource.label(): String = name.lowercase().replace('_', ' ').replaceFirstChar(Char::uppercase)
@@ -665,4 +681,12 @@ private fun TimeScapePaneArrangement.label(): String =
     when (this) {
         TimeScapePaneArrangement.STACK -> "Stack"
         TimeScapePaneArrangement.SPLIT -> "Split"
+    }
+
+private fun TimeScapeRailSide.label(): String =
+    when (this) {
+        TimeScapeRailSide.LEADING -> "Leading edge"
+        TimeScapeRailSide.TRAILING -> "Trailing edge"
+        TimeScapeRailSide.TOP -> "Top edge"
+        TimeScapeRailSide.BOTTOM -> "Bottom edge"
     }

@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.cards.TimeScapePaneArrangement
+import com.riffle.core.domain.launcher.cards.TimeScapeRailSide
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.MotionSettings
 import com.riffle.core.domain.launcher.settings.TimeScapeAppearancePreset
@@ -103,6 +104,35 @@ class TimeScapeAppearanceEditorTest {
         composeRule.runOnIdle {
             val action = actions.last() as LauncherShellAction.SelectTimeScapePaneArrangement
             assertEquals(TimeScapePaneArrangement.SPLIT, action.arrangement)
+        }
+    }
+
+    @Test
+    fun selectingTopDispatchesTheTimeScapeRailSideAction() {
+        val actions = mutableListOf<LauncherShellAction>()
+        composeRule.setContent {
+            MaterialTheme {
+                Column(
+                    modifier =
+                        Modifier
+                            .requiredSize(360.dp, 800.dp)
+                            .verticalScroll(rememberScrollState()),
+                ) {
+                    TimeScapeAppearancePageContent(
+                        state = LauncherShellState().settingsSurfaceState(),
+                        onAction = actions::add,
+                    )
+                }
+            }
+        }
+
+        composeRule.onNodeWithTag("timescape-rail-side-${TimeScapeRailSide.TOP.name}")
+            .performScrollTo()
+            .performClick()
+
+        composeRule.runOnIdle {
+            val action = actions.last() as LauncherShellAction.SelectTimeScapeRailSide
+            assertEquals(TimeScapeRailSide.TOP, action.side)
         }
     }
 

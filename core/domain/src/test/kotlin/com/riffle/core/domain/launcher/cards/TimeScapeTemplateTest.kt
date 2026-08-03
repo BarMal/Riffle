@@ -83,6 +83,14 @@ class TimeScapeTemplateTest {
     }
 
     @Test
+    fun onlyTopAndBottomRailSidesAreHorizontalEdges() {
+        assertTrue(TimeScapeRailSide.TOP.isHorizontalEdge)
+        assertTrue(TimeScapeRailSide.BOTTOM.isHorizontalEdge)
+        assertTrue(!TimeScapeRailSide.LEADING.isHorizontalEdge)
+        assertTrue(!TimeScapeRailSide.TRAILING.isHorizontalEdge)
+    }
+
+    @Test
     fun validationReportsCollisionsAndOutOfBoundsPlacements() {
         val variant =
             TimeScapeTemplateVariant(

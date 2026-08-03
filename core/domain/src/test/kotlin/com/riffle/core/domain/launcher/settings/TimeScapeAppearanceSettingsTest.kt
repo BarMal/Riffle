@@ -28,6 +28,16 @@ class TimeScapeAppearanceSettingsTest {
     }
 
     @Test
+    fun warmGlassPresetIsAppliedAtomicallyAndStaysWithinCoerceBounds() {
+        val warm = TimeScapeAppearanceSettings().applyPreset(TimeScapeAppearancePreset.WARM_GLASS)
+
+        assertEquals(TimeScapeAppearancePreset.WARM_GLASS, warm.preset)
+        assertEquals(TimeScapeBackgroundSource.CUSTOM_SOLID, warm.surface.backgroundSource)
+        assertEquals(TimeScapeAccentSource.CUSTOM, warm.typography.accentSource)
+        assertEquals(warm, warm.coerce())
+    }
+
+    @Test
     fun coercionKeepsEveryImportedValueInItsSafeRange() {
         val coerced =
             TimeScapeAppearanceSettings(

@@ -185,6 +185,41 @@ class TimeScapePaneLayoutPolicyTest {
     }
 
     @Test
+    fun topRailReservesHeightInsteadOfWidth() {
+        val layout =
+            policy.layoutFor(
+                TimeScapeWindowLayout(800, 900, posture = TimeScapePosture.UNFOLDED),
+                railSide = TimeScapeRailSide.TOP,
+            )
+
+        assertEquals(TimeScapePaneMode.TWO_PANE, layout.mode)
+        assertEquals(0, layout.railWidthDp)
+        assertEquals(96, layout.railHeightDp)
+        assertEquals(560, layout.splineWidthDp)
+        assertEquals(804, layout.contentHeightDp)
+        // contentTopDp positions the whole content box (rail included), not just the area below
+        // the rail -- it stays untouched; the rail-then-content Column ordering is what keeps
+        // content below the rail without an extra offset.
+        assertEquals(0, layout.contentTopDp)
+    }
+
+    @Test
+    fun bottomRailReservesHeightWithoutShiftingContentDown() {
+        val layout =
+            policy.layoutFor(
+                TimeScapeWindowLayout(1_300, 900, posture = TimeScapePosture.UNFOLDED),
+                railSide = TimeScapeRailSide.BOTTOM,
+            )
+
+        assertEquals(TimeScapePaneMode.THREE_PANE, layout.mode)
+        assertEquals(0, layout.railWidthDp)
+        assertEquals(96, layout.railHeightDp)
+        assertEquals(360, layout.detailWidthDp)
+        assertEquals(804, layout.contentHeightDp)
+        assertEquals(0, layout.contentTopDp)
+    }
+
+    @Test
     fun horizontalHingeUsesTheLargerSafeRegionWithoutCrossingTheFold() {
         val layout =
             policy.layoutFor(

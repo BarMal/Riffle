@@ -91,6 +91,7 @@ internal fun LauncherShellAction.launcherSettingsActionRoute(): LauncherSettings
         is LauncherShellAction.SelectContextualEnabled,
         is LauncherShellAction.UpdateTimeScapeAppearance,
         is LauncherShellAction.SelectTimeScapePaneArrangement,
+        is LauncherShellAction.SelectTimeScapeRailSide,
         is LauncherShellAction.SelectOverlayDockEnabled,
         is LauncherShellAction.SelectOverlayDockEdge,
         is LauncherShellAction.SelectOverlayDockHandleThickness,

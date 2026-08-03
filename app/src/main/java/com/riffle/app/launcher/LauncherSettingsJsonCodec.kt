@@ -8,6 +8,7 @@ import com.riffle.core.domain.launcher.apps.AppProfileId
 import com.riffle.core.domain.launcher.apps.AppProfileType
 import com.riffle.core.domain.launcher.cards.AppStageId
 import com.riffle.core.domain.launcher.cards.AppStagePreferences
+import com.riffle.core.domain.launcher.cards.TimeScapeRailSide
 import com.riffle.core.domain.launcher.cards.TimeScapeTemplateId
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.HomeLayoutKey
@@ -115,7 +116,7 @@ private fun encodeCardsSettings(settings: CardsSettings): JSONObject =
         .put("stagePreferencesByLayout", JSONArray(settings.stagePreferencesByLayout.map(::encodeStagePreferences)))
         .put("timeScapeAppearance", encodeTimeScapeAppearance(settings.timeScapeAppearance))
         .put("timeScapeTemplateId", settings.timeScapeTemplateId.value)
-        .put("timeScapeRailSide", settings.timeScapeRailSide.name)
+        .put("timeScapeRailSide", settings.timeScapeRailSide?.name)
         .put("timeScapePaneArrangement", settings.timeScapePaneArrangement.name)
 
 private fun encodeStagePreferences(entry: Map.Entry<HomeLayoutKey, AppStagePreferences>): JSONObject =
@@ -152,7 +153,7 @@ private fun JSONObject.toCardsSettings(defaults: CardsSettings): CardsSettings {
                 .takeIf(String::isNotBlank)
                 ?.let(::TimeScapeTemplateId)
                 ?: defaults.timeScapeTemplateId,
-        timeScapeRailSide = enumOrDefault("timeScapeRailSide", defaults.timeScapeRailSide),
+        timeScapeRailSide = enumOrNull<TimeScapeRailSide>("timeScapeRailSide") ?: defaults.timeScapeRailSide,
         timeScapePaneArrangement = enumOrDefault("timeScapePaneArrangement", defaults.timeScapePaneArrangement),
     )
 }
@@ -529,6 +530,13 @@ private inline fun <reified T : Enum<T>> JSONObject?.enumOrDefault(
             it.name == value
         }
     } ?: default
+
+private inline fun <reified T : Enum<T>> JSONObject?.enumOrNull(name: String): T? =
+    this?.optString(name)?.let { value ->
+        enumValues<T>().firstOrNull {
+            it.name == value
+        }
+    }
 
 private fun JSONObject.toStagePreferencesEntry(): Pair<HomeLayoutKey, AppStagePreferences>? =
     runCatching { LauncherViewMode.valueOf(optString("viewMode")) }.getOrNull()?.let { viewMode ->
