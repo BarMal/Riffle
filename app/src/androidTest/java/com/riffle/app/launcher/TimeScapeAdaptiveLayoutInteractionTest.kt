@@ -17,6 +17,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -83,12 +84,13 @@ class TimeScapeAdaptiveLayoutInteractionTest {
     }
 
     @Test
-    fun mediumWindowUsesNamedStageRailControls() {
+    fun mediumWindowRendersStageRail() {
         setContent(widthDp = 800)
 
-        composeRule.onNodeWithText("Stages").assertIsDisplayed()
-        composeRule.onNodeWithText("Previous").assertIsDisplayed()
-        composeRule.onNodeWithText("Next").assertIsDisplayed()
+        // Previous/Next controls were removed in favor of tap/settle-drag navigation on the rail's
+        // own card-stack visual (see TimeScapeStageHeader's customActions for the non-touch path) --
+        // the rail's testTag is now the stable signal that this pane mode shows a rail at all.
+        composeRule.onNodeWithTag(TIME_SCAPE_STAGE_RAIL_TEST_TAG).assertIsDisplayed()
     }
 
     @Test
@@ -245,9 +247,7 @@ class TimeScapeAdaptiveLayoutInteractionTest {
         val windowBounds = composeRule.onNodeWithTag(TIME_SCAPE_ADAPTIVE_TEST_WINDOW_TAG).fetchSemanticsNode().boundsInRoot
 
         // A TOP rail sits in a horizontal strip flush with the window's top edge and spanning its
-        // full width, unlike the default LEADING rail, which is a narrow column offset to one
-        // side. Checking the rail container itself (rather than a child like "Stages") avoids
-        // false positives from TimeScapeStageRail's own internal vertical centering of its tiles.
+        // full width, unlike the default LEADING rail, which is a narrow column offset to one side.
         assertTrue(railBounds.top <= windowBounds.top + PIXEL_TOLERANCE)
         assertTrue(railBounds.width >= windowBounds.width - PIXEL_TOLERANCE)
     }
@@ -302,7 +302,7 @@ class TimeScapeAdaptiveLayoutInteractionTest {
             }
         }
 
-        val railBounds = composeRule.onNodeWithText("Stages").fetchSemanticsNode().boundsInRoot
+        val railBounds = composeRule.onNodeWithTag(TIME_SCAPE_STAGE_RAIL_TEST_TAG).fetchSemanticsNode().boundsInRoot
         val paneBounds = composeRule.onNodeWithTag(TIME_SCAPE_SUPPORTING_PANE_TEST_TAG).fetchSemanticsNode().boundsInRoot
         val windowBounds = composeRule.onNodeWithTag(TIME_SCAPE_ADAPTIVE_TEST_WINDOW_TAG).fetchSemanticsNode().boundsInRoot
 
@@ -339,8 +339,7 @@ class TimeScapeAdaptiveLayoutInteractionTest {
             heightDp = 360
         }
 
-        composeRule.onNodeWithText("Stages").assertIsDisplayed()
-        composeRule.onNodeWithText("Next").assertIsDisplayed()
+        composeRule.onNodeWithTag(TIME_SCAPE_STAGE_RAIL_TEST_TAG).assertIsDisplayed()
     }
 
     @Test
@@ -362,11 +361,11 @@ class TimeScapeAdaptiveLayoutInteractionTest {
             }
         }
 
-        composeRule.onAllNodesWithText("Stages").assertCountEquals(0)
+        composeRule.onAllNodesWithTag(TIME_SCAPE_STAGE_RAIL_TEST_TAG).assertCountEquals(0)
         composeRule.runOnIdle { posture = TimeScapePosture.UNFOLDED }
-        composeRule.onNodeWithText("Stages").assertIsDisplayed()
+        composeRule.onNodeWithTag(TIME_SCAPE_STAGE_RAIL_TEST_TAG).assertIsDisplayed()
         composeRule.runOnIdle { posture = TimeScapePosture.COMPACT }
-        composeRule.onAllNodesWithText("Stages").assertCountEquals(0)
+        composeRule.onAllNodesWithTag(TIME_SCAPE_STAGE_RAIL_TEST_TAG).assertCountEquals(0)
     }
 
     @Test

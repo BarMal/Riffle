@@ -22,6 +22,7 @@ import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertCountEquals
@@ -29,6 +30,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.captureToImage
+import androidx.compose.ui.test.click
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
@@ -39,6 +41,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import com.riffle.app.launcher.notifications.AppStageNotificationCard
@@ -583,7 +586,7 @@ class TimeScapeCardSurfaceTest {
     }
 
     @Test
-    fun compactStageSelectorRoutesNamedPreviousAndNextActions() {
+    fun stageHeaderExposesPreviousAndNextStageAsCustomAccessibilityActions() {
         val first = timeScapeTestApp()
         val second =
             first.copy(
@@ -620,13 +623,79 @@ class TimeScapeCardSurfaceTest {
             MaterialTheme { TimeScapeAppStageSurface(state = state, onAction = actions::add) }
         }
 
-        composeRule.onNodeWithText("Next").performClick()
-        composeRule.onNodeWithText("Previous").performClick()
+        // Previous/Next are no longer visible buttons (removed as redundant with tapping a stage
+        // directly, or swiping) -- they're reachable via TimeScapeStageHeader's customActions,
+        // the same CustomAccessibilityAction pattern already used for intra-stack card navigation
+        // (see WidgetPickerSurfaceTest for the identical precedent).
+        val headerActions =
+            composeRule
+                .onNodeWithTag(TIME_SCAPE_STAGE_HEADER_TEST_TAG)
+                .fetchSemanticsNode()
+                .config[SemanticsActions.CustomActions]
+        headerActions.first { action -> action.label == "Next stage" }.action()
+        headerActions.first { action -> action.label == "Previous stage" }.action()
 
         assertEquals(
             listOf(
                 LauncherShellAction.SelectNextAppStage,
                 LauncherShellAction.SelectPreviousAppStage,
+            ),
+            actions,
+        )
+    }
+
+    @Test
+    fun tappingAStageRailTileSelectsThatStage() {
+        val first = timeScapeTestApp()
+        val second =
+            first.copy(
+                identity = first.identity.copy(packageName = AppPackageName("com.example.calendar")),
+                label = "Calendar",
+            )
+        val firstNotification = timeScapeTestNotification(first)
+        val secondNotification =
+            firstNotification.copy(
+                key = LauncherNotificationKey("calendar"),
+                packageName = second.identity.packageName,
+                title = "Calendar event",
+            )
+        val actions = mutableListOf<LauncherShellAction>()
+        val state =
+            LauncherShellState(
+                notificationAccessStatus = NotificationAccessStatus.GRANTED,
+                installedApps = listOf(first, second),
+                profileContentVisibility =
+                    mapOf(
+                        first.identity.profile.id to AppProfileContentVisibility.VISIBLE,
+                    ),
+                notificationGroupsByApp =
+                    listOf(
+                        notificationGroup(first, firstNotification),
+                        notificationGroup(second, secondNotification),
+                    ),
+            )
+
+        composeRule.setContent {
+            MaterialTheme {
+                TimeScapeAppStageSurface(
+                    state = state,
+                    windowLayout =
+                        TimeScapeWindowLayout(widthDp = 800, heightDp = 800, posture = TimeScapePosture.UNFOLDED),
+                    onAction = actions::add,
+                )
+            }
+        }
+
+        // Rail tiles are no longer their own clickable Surface -- the CardStack-supplied modifier
+        // (raw pointer input, not a semantics onClick action) drives tap-to-select now, so this
+        // must synthesize a real touch rather than use performClick().
+        composeRule.onNodeWithContentDescription("Calendar. Open stage").performTouchInput { click() }
+
+        assertEquals(
+            listOf(
+                LauncherShellAction.SelectAppStage(
+                    AppStageId(second.identity.packageName, second.identity.profile.id),
+                ),
             ),
             actions,
         )

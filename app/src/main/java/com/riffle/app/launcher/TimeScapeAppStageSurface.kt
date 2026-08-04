@@ -5,7 +5,6 @@ package com.riffle.app.launcher
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -41,15 +40,14 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
@@ -84,6 +82,7 @@ import com.riffle.core.domain.launcher.cards.CardStackFocusResult
 import com.riffle.core.domain.launcher.cards.CardStackFocusState
 import com.riffle.core.domain.launcher.cards.CardStackKey
 import com.riffle.core.domain.launcher.cards.CardStackLayoutEntry
+import com.riffle.core.domain.launcher.cards.CardStackLayoutPolicy
 import com.riffle.core.domain.launcher.cards.CardStackNavigationDirection
 import com.riffle.core.domain.launcher.cards.CardStackSettleRequest
 import com.riffle.core.domain.launcher.cards.LauncherCardId
@@ -109,7 +108,6 @@ import com.riffle.core.domain.launcher.settings.TimeScapeViewportDp
 import com.riffle.core.domain.launcher.settings.resolveTimeScapeCardStack
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.abs
@@ -180,18 +178,6 @@ internal fun TimeScapeAppStageSurface(
             mutableStateOf(context.focusedCardKey)
         }
     var detailRecoveryMessage by rememberSaveable { mutableStateOf<String?>(null) }
-    val stageRailScrollState = rememberScrollState(context.scrollOffsetPx.coerceAtLeast(0))
-    val latestContext by rememberUpdatedState(context)
-    val latestContextChanged by rememberUpdatedState(onContextChanged)
-    LaunchedEffect(stageRailScrollState) {
-        snapshotFlow { stageRailScrollState.value }
-            .distinctUntilChanged()
-            .collect { offset ->
-                if (offset != latestContext.scrollOffsetPx) {
-                    latestContextChanged(latestContext.copy(scrollOffsetPx = offset))
-                }
-            }
-    }
     val detailState =
         selectedStage?.let { stage ->
             rememberTimeScapeCardDetailState(
@@ -389,7 +375,6 @@ internal fun TimeScapeAppStageSurface(
                                 state = state,
                                 appIconLoader = appIconLoader,
                                 onAction = onAction,
-                                scrollState = stageRailScrollState,
                                 modifier = Modifier.fillMaxWidth().height(paneLayout.railHeightDp.dp),
                                 horizontal = true,
                             )
@@ -404,7 +389,6 @@ internal fun TimeScapeAppStageSurface(
                                         state = state,
                                         appIconLoader = appIconLoader,
                                         onAction = onAction,
-                                        scrollState = stageRailScrollState,
                                         modifier = Modifier.width(paneLayout.railWidthDp.dp),
                                     )
                                 }
@@ -466,7 +450,6 @@ internal fun TimeScapeAppStageSurface(
                                         state = state,
                                         appIconLoader = appIconLoader,
                                         onAction = onAction,
-                                        scrollState = stageRailScrollState,
                                         modifier = Modifier.width(paneLayout.railWidthDp.dp),
                                     )
                                 }
@@ -968,22 +951,73 @@ private fun TimeScapeStageRail(
     state: LauncherShellState,
     appIconLoader: AppIconLoader,
     onAction: (LauncherShellAction) -> Unit,
-    scrollState: androidx.compose.foundation.ScrollState,
     modifier: Modifier,
     horizontal: Boolean = false,
 ) {
-    val tiles: @Composable () -> Unit = {
-        Text(
-            "Stages",
-            style = MaterialTheme.typography.labelLarge,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        TimeScapeContextActionButton(
-            label = "Previous",
-            onClick = { onAction(LauncherShellAction.SelectPreviousAppStage) },
-        )
-        stages.forEach { stage ->
+    // Deliberately does not early-return on an empty stages list: the container (testTag,
+    // background) still composes with an empty CardStack -- CardStackLayoutPolicy.entries()
+    // already returns an empty list for cardCount = 0 -- so the rail's presence stays a stable
+    // signal of "this pane mode shows a rail" independent of whether any stage exists yet.
+    val haptics = rememberLauncherHaptics(state.launcherSettings.haptics.feedbackStrength)
+    val reducedMotion = state.launcherSettings.motion.reducedMotion
+    val activeIndex = stages.indexOfFirst { stage -> stage.id == selectedStageId }.coerceAtLeast(0)
+    var settleTransitionId by rememberSaveable { mutableIntStateOf(0) }
+
+    fun navigate(direction: CardStackNavigationDirection): Boolean {
+        val delta = if (direction == CardStackNavigationDirection.NEXT) 1 else -1
+        val targetStage = stages.getOrNull(activeIndex + delta) ?: return false
+        settleTransitionId++
+        onAction(LauncherShellAction.SelectAppStage(targetStage.id))
+        return true
+    }
+
+    val railBackground = Modifier.background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.32f))
+    Box(
+        // Explicit clip: the fan/stack visual is allowed to layer within this container, but must
+        // never bleed into neighboring UI the way earlier TimeScape overflow bugs did.
+        modifier = modifier.testTag(TIME_SCAPE_STAGE_RAIL_TEST_TAG).then(railBackground).clipToBounds(),
+        contentAlignment = Alignment.Center,
+    ) {
+        CardStack(
+            entries =
+                TIME_SCAPE_STAGE_RAIL_LAYOUT_POLICY.entries(
+                    cardCount = stages.size,
+                    activeIndex = activeIndex,
+                    reducedMotion = reducedMotion,
+                ),
+            reducedMotion = reducedMotion,
+            orientation = if (horizontal) CardStackOrientation.HORIZONTAL else CardStackOrientation.VERTICAL,
+            itemKey = { entry -> timeScapeStageSelectorItemKey(stages[entry.cardIndex]) },
+            interaction =
+                CardStackInteraction(
+                    focusedItemKey = stages.getOrNull(activeIndex)?.let(::timeScapeStageSelectorItemKey),
+                    settleTransitionId = settleTransitionId,
+                    onFocusRequest = { entry ->
+                        if (entry.cardIndex != activeIndex) {
+                            settleTransitionId++
+                            onAction(LauncherShellAction.SelectAppStage(stages[entry.cardIndex].id))
+                        }
+                    },
+                    onSettle = { dragPx, velocityPxPerSecond ->
+                        val motion =
+                            if (abs(velocityPxPerSecond) >= TIME_SCAPE_STAGE_RAIL_FLING_VELOCITY_THRESHOLD_PX) {
+                                velocityPxPerSecond
+                            } else {
+                                dragPx
+                            }
+                        if (abs(motion) >= TIME_SCAPE_STAGE_RAIL_SETTLE_DISTANCE_THRESHOLD_PX) {
+                            navigate(
+                                if (motion < 0f) CardStackNavigationDirection.NEXT else CardStackNavigationDirection.PREVIOUS,
+                            )
+                        }
+                    },
+                    onSettleHaptic = {
+                        haptics.timeScapeSettle(state.launcherSettings.cards.timeScapeAppearance.motion.hapticStrength)
+                    },
+                    onNavigate = ::navigate,
+                ),
+        ) { entry, cardModifier ->
+            val stage = stages[entry.cardIndex]
             TimeScapeStageRailTile(
                 stageId = stage.id,
                 isSelected = stage.id == selectedStageId,
@@ -991,35 +1025,9 @@ private fun TimeScapeStageRail(
                 identity = stageAppIdentity(stage.id, state),
                 appearance = state.launcherSettings.cards.timeScapeAppearance,
                 appIconLoader = appIconLoader,
-                onClick = { onAction(LauncherShellAction.SelectAppStage(stage.id)) },
+                modifier = cardModifier,
             )
         }
-        TimeScapeContextActionButton(
-            label = "Next",
-            onClick = { onAction(LauncherShellAction.SelectNextAppStage) },
-        )
-    }
-    val railBackground = Modifier.background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.32f))
-    if (horizontal) {
-        Row(
-            modifier =
-                modifier.testTag(TIME_SCAPE_STAGE_RAIL_TEST_TAG)
-                    .then(railBackground)
-                    .padding(8.dp)
-                    .horizontalScroll(scrollState),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) { tiles() }
-    } else {
-        Column(
-            modifier =
-                modifier.testTag(TIME_SCAPE_STAGE_RAIL_TEST_TAG)
-                    .then(railBackground)
-                    .padding(8.dp)
-                    .verticalScroll(scrollState),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) { tiles() }
     }
 }
 
@@ -1027,10 +1035,29 @@ private fun TimeScapeStageRail(
 internal const val TIME_SCAPE_STAGE_RAIL_TEST_TAG = "timescape-stage-rail"
 
 /**
+ * Tuned much smaller than the full-screen notification [CardStack] (fewer visible layers, tighter
+ * offset/scale steps) to fit the rail's fixed [TimeScapePaneLayoutPolicy] budget
+ * (`RAIL_WIDTH_DP`/`RAIL_HEIGHT_DP`) rather than a whole viewport.
+ */
+private val TIME_SCAPE_STAGE_RAIL_LAYOUT_POLICY =
+    CardStackLayoutPolicy(
+        maxVisibleDepth = 2,
+        scaleStep = 0.1f,
+        offsetStep = 10f,
+        alphaStep = 0.3f,
+    )
+
+/** Same settle thresholds as [TimeScapeNotificationStack]'s card-to-card settle, for a consistent feel. */
+private const val TIME_SCAPE_STAGE_RAIL_SETTLE_DISTANCE_THRESHOLD_PX = 64f
+private const val TIME_SCAPE_STAGE_RAIL_FLING_VELOCITY_THRESHOLD_PX = 500f
+
+/**
  * A single stage tile in the rail: a small deterministically-tinted icon slot (reusing the same
  * per-app seed color mechanism as populated [TimeScapeCardSurface] cards, via
  * [resolveTimeScapeCardColors]) with a short caption below, and a clear ring/elevation treatment
- * for the currently selected stage.
+ * for the currently selected stage. Non-interactive on its own -- [modifier] (supplied by the
+ * enclosing [CardStack]) already carries tap-to-select/settle-drag handling, mirroring how
+ * [TimeScapeCardSurface] relies on its own given modifier rather than an internal onClick.
  */
 @Composable
 private fun TimeScapeStageRailTile(
@@ -1040,7 +1067,7 @@ private fun TimeScapeStageRailTile(
     identity: AppIdentity?,
     appearance: TimeScapeAppearanceSettings,
     appIconLoader: AppIconLoader,
-    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val materialBackground = MaterialTheme.colorScheme.onSurface
     val materialAccent = MaterialTheme.colorScheme.primary
@@ -1065,7 +1092,6 @@ private fun TimeScapeStageRailTile(
         }
     val shape = RoundedCornerShape(14.dp)
     Surface(
-        onClick = onClick,
         shape = shape,
         color = colors.background,
         contentColor = colors.foreground,
@@ -1073,7 +1099,7 @@ private fun TimeScapeStageRailTile(
         shadowElevation = if (isSelected) 4.dp else 0.dp,
         border = if (isSelected) BorderStroke(2.dp, colors.accent) else null,
         modifier =
-            Modifier.width(64.dp).semantics {
+            modifier.width(64.dp).semantics {
                 contentDescription =
                     if (isSelected) "$label, selected. Open stage" else "$label. Open stage"
             },
@@ -1215,13 +1241,34 @@ private fun TimeScapeStageHeader(
         }
         Column(
             modifier =
-                Modifier.weight(1f).semantics {
+                Modifier.weight(1f).testTag(TIME_SCAPE_STAGE_HEADER_TEST_TAG).semantics {
                     contentDescription = "TimeScape stage: $label"
                     stateDescription = selectedStage?.timeScapeStageStateDescription() ?: "No stage selected"
                     liveRegion = LiveRegionMode.Polite
+                    // The rail/spine's visible Previous/Next buttons were removed as redundant
+                    // with tapping a stage directly (or swiping, in compact/split layouts) --
+                    // this keeps stage-to-stage navigation reachable for TalkBack/switch users,
+                    // mirroring the "Previous card"/"Next card" CustomAccessibilityAction
+                    // precedent used for intra-stack card navigation elsewhere in this file.
+                    customActions =
+                        listOf(
+                            CustomAccessibilityAction("Previous stage") {
+                                onAction(LauncherShellAction.SelectPreviousAppStage)
+                                true
+                            },
+                            CustomAccessibilityAction("Next stage") {
+                                onAction(LauncherShellAction.SelectNextAppStage)
+                                true
+                            },
+                        )
                 },
         ) {
-            Text(text = label, style = MaterialTheme.typography.titleLarge)
+            Text(
+                text = label,
+                style = MaterialTheme.typography.titleLarge,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
             // Only show the "TimeScape" eyebrow when it wouldn't just repeat the title above --
             // label already falls back to "TimeScape" itself when no stage is selected.
             if (label != "TimeScape") {
@@ -1294,6 +1341,9 @@ private fun TimeScapeStageHeader(
         }
     }
 }
+
+/** Only one [TimeScapeStageHeader] is ever composed at a time, so a single fixed tag is unambiguous. */
+internal const val TIME_SCAPE_STAGE_HEADER_TEST_TAG = "timescape-stage-header"
 
 @Composable
 private fun TimeScapeStageContent(
@@ -2059,6 +2109,8 @@ private fun TimeScapeStageSpine(
     onAction: (LauncherShellAction) -> Unit,
 ) {
     if (stages.isEmpty()) return
+    // Previous/Next were removed as redundant with tapping a chip directly (or swiping, via
+    // TimeScapeStagePager) -- TimeScapeStageHeader's customActions cover non-touch navigation.
     Row(
         modifier =
             Modifier
@@ -2067,10 +2119,6 @@ private fun TimeScapeStageSpine(
                 .padding(4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        TimeScapeContextActionButton(
-            label = "Previous",
-            onClick = { onAction(LauncherShellAction.SelectPreviousAppStage) },
-        )
         LazyRow(
             modifier = Modifier.weight(1f),
             contentPadding = PaddingValues(horizontal = 4.dp),
@@ -2125,10 +2173,6 @@ private fun TimeScapeStageSpine(
                 }
             }
         }
-        TimeScapeContextActionButton(
-            label = "Next",
-            onClick = { onAction(LauncherShellAction.SelectNextAppStage) },
-        )
     }
 }
 
