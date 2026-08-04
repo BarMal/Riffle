@@ -17,8 +17,11 @@ import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.apps.AppShortcutId
 import com.riffle.core.domain.launcher.apps.InstalledApp
+import com.riffle.core.domain.launcher.cards.AppStageId
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
+import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.settings.OverlayDockSettings
+import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -84,6 +87,43 @@ class AppListContextMenuTest {
         composeRule.onNodeWithTag(APP_DRAWER_ICON_GRID_TEST_TAG).assertExists()
         composeRule.onNodeWithText(camera.label).performTouchInput { longClick() }
         composeRule.onNodeWithText("Add to home").assertExists()
+    }
+
+    @Test
+    fun appDrawerOffersPinAsACardInsteadOfAddToHomeWhenInCardsMode() {
+        val actions = mutableListOf<LauncherShellAction>()
+        val cardsHomeLayout = HomeLayoutDefaults.standard().copy(viewMode = LauncherViewMode.CARD_INTERFACE)
+
+        composeRule.setContent {
+            MaterialTheme {
+                Box(modifier = Modifier.fillMaxSize()) {
+                    AppList(
+                        apps = listOf(camera),
+                        emptyText = "No apps",
+                        context =
+                            AppListContext(
+                                homeLayout = cardsHomeLayout,
+                                overlayDock = OverlayDockSettings(),
+                                notificationGroupsByApp = emptyList(),
+                                appIconLoader = EmptyAppIconLoader,
+                                onAction = actions::add,
+                            ),
+                    )
+                }
+            }
+        }
+
+        composeRule.onNodeWithText("...").performClick()
+        composeRule.onNodeWithText("Pin as a card").assertExists()
+        composeRule.onNodeWithText("Add to home").assertDoesNotExist()
+        composeRule.onNodeWithText("Pin as a card").performClick()
+
+        assertEquals(
+            LauncherShellAction.ToggleAppStagePinned(
+                AppStageId(camera.identity.packageName, camera.identity.profile.id),
+            ),
+            actions.single(),
+        )
     }
 
     private companion object {

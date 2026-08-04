@@ -28,6 +28,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.apps.InstalledApp
+import com.riffle.core.domain.launcher.cards.AppStageId
 import com.riffle.core.domain.launcher.home.LauncherItemId
 
 @Composable
@@ -196,11 +197,17 @@ private fun AppDrawerRowActions(
     onMenuExpandedChange: (Boolean) -> Unit,
     onAction: (LauncherShellAction) -> Unit,
 ) {
-    TextButton(
-        enabled = !state.isOnHome,
-        onClick = { onAction(LauncherShellAction.AddAppToHome(state.app)) },
-    ) {
-        Text(text = if (state.isOnHome) "Added" else "Add")
+    if (state.homeSurfaceKind == HomeSurfaceKind.CARDS) {
+        TextButton(onClick = { onAction(LauncherShellAction.ToggleAppStagePinned(state.app.stageId)) }) {
+            Text(text = "Pin")
+        }
+    } else {
+        TextButton(
+            enabled = !state.isOnHome,
+            onClick = { onAction(LauncherShellAction.AddAppToHome(state.app)) },
+        ) {
+            Text(text = if (state.isOnHome) "Added" else "Add")
+        }
     }
     TextButton(
         onClick = {
@@ -285,12 +292,20 @@ private fun AppDrawerMainMenuItems(
     onOpenShortcuts: () -> Unit,
     onExpandedChange: (Boolean) -> Unit,
 ) {
-    AppDrawerRowMenuItem(
-        text = if (state.isOnHome) "Added to home" else "Add to home",
-        enabled = !state.isOnHome,
-        onClick = { onAction(LauncherShellAction.AddAppToHome(state.app)) },
-        onExpandedChange = onExpandedChange,
-    )
+    if (state.homeSurfaceKind == HomeSurfaceKind.CARDS) {
+        AppDrawerRowMenuItem(
+            text = "Pin as a card",
+            onClick = { onAction(LauncherShellAction.ToggleAppStagePinned(state.app.stageId)) },
+            onExpandedChange = onExpandedChange,
+        )
+    } else {
+        AppDrawerRowMenuItem(
+            text = if (state.isOnHome) "Added to home" else "Add to home",
+            enabled = !state.isOnHome,
+            onClick = { onAction(LauncherShellAction.AddAppToHome(state.app)) },
+            onExpandedChange = onExpandedChange,
+        )
+    }
     AppDrawerRowMenuItem(
         text = if (state.dockItemId == null) "Add to dock" else "Remove from dock",
         onClick = {
@@ -402,6 +417,9 @@ private fun AppDrawerRowMenuItem(
 internal val InstalledApp.drawerKey: String
     get() = "${identity.profile.id.value}:${identity.packageName.value}/${identity.activityName.value}"
 
+internal val InstalledApp.stageId: AppStageId
+    get() = AppStageId(identity.packageName, identity.profile.id)
+
 private val AppShortcut.menuLabel: String
     get() = longLabel ?: shortLabel
 
@@ -431,4 +449,5 @@ internal data class AppDrawerRowState(
     val shortcutItems: List<AppDrawerShortcutMenuItem>,
     val showInlineActions: Boolean,
     val haptics: LauncherHaptics,
+    val homeSurfaceKind: HomeSurfaceKind,
 )

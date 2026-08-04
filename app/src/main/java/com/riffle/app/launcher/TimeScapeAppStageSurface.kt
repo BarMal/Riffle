@@ -579,7 +579,20 @@ private fun TimeScapeSplitContent(
             reducedMotion = reducedMotion,
             onAction = onAction,
         )
-    Column(modifier = Modifier.fillMaxSize()) {
+    // upperRegionHeightDp/lowerRegionHeightDp sum to exactly paneLayout.contentHeightDp -- the
+    // domain layer has no notion of the header this Column also renders, so using those as fixed
+    // heights directly would make the Column taller than the Box it's measured within, overflowing
+    // un-clipped past the header. Use their ratio as Column weights instead: Compose reserves space
+    // for the non-weighted header first, then splits whatever's left between the two regions in the
+    // same proportion the domain layer intended.
+    val regionHeightTotal = paneLayout.upperRegionHeightDp + paneLayout.lowerRegionHeightDp
+    val upperRegionWeight =
+        if (regionHeightTotal > 0) {
+            paneLayout.upperRegionHeightDp.toFloat() / regionHeightTotal
+        } else {
+            DEFAULT_SPLIT_UPPER_REGION_WEIGHT
+        }
+    Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         TimeScapeStageHeader(
             selectedStage = selectedStage,
             stages = stages,
@@ -595,10 +608,10 @@ private fun TimeScapeSplitContent(
             emptyCard = selectedStage?.let { shellState.emptyAppCards[it.id] },
             detailState = detailState,
             onAction = onAction,
-            modifier = Modifier.fillMaxWidth().height(paneLayout.upperRegionHeightDp.dp),
+            modifier = Modifier.fillMaxWidth().weight(upperRegionWeight),
         )
         Column(
-            modifier = Modifier.fillMaxWidth().height(paneLayout.lowerRegionHeightDp.dp),
+            modifier = Modifier.fillMaxWidth().weight(1f - upperRegionWeight),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             TimeScapeCompactStagePager(
@@ -630,6 +643,12 @@ private fun TimeScapeSplitContent(
         }
     }
 }
+
+/**
+ * Matches [TimeScapePaneLayoutPolicy]'s own SPLIT_UPPER_REGION_RATIO default, for the case where
+ * paneLayout reports a zero-height content area (nothing to weight against yet).
+ */
+private const val DEFAULT_SPLIT_UPPER_REGION_WEIGHT = 0.6f
 
 /**
  * Lays out every stage's content side by side, offsetting each via `graphicsLayer` translation
@@ -1179,7 +1198,11 @@ private fun TimeScapeStageHeader(
             }
         }
     Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.32f))
+                .padding(horizontal = 20.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (selectedApp != null) {
