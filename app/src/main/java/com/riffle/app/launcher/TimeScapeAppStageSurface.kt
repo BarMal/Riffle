@@ -13,9 +13,11 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.matchParentSize
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -975,10 +977,25 @@ private fun TimeScapeStageRail(
     Box(
         // Explicit clip: the fan/stack visual is allowed to layer within this container, but must
         // never bleed into neighboring UI the way earlier TimeScape overflow bugs did.
-        modifier = modifier.testTag(TIME_SCAPE_STAGE_RAIL_TEST_TAG).then(railBackground).clipToBounds(),
+        // fillMaxHeight() matters for LEADING/TRAILING: the caller only pins width there (unlike
+        // TOP/BOTTOM, which pins height explicitly), so without it this Box would wrap-size to its
+        // content -- collapsing to zero height whenever there are no stages yet, since nothing
+        // here is unconditionally present the way the old Row/Column's "Stages"/Previous/Next
+        // chrome always was.
+        modifier =
+            modifier.testTag(TIME_SCAPE_STAGE_RAIL_TEST_TAG)
+                .then(railBackground)
+                .fillMaxHeight()
+                .clipToBounds(),
         contentAlignment = Alignment.Center,
     ) {
         CardStack(
+            // CardStack's own root has no size of its own -- give it the same bounded size as
+            // this Box (rather than leaving it to size from its graphicsLayer-positioned,
+            // layout-wise-tiny children), so BoxWithConstraints inside each entry measures
+            // against real, finite constraints instead of whatever this Box's ambient
+            // constraints happen to resolve to.
+            modifier = Modifier.matchParentSize(),
             entries =
                 TIME_SCAPE_STAGE_RAIL_LAYOUT_POLICY.entries(
                     cardCount = stages.size,
