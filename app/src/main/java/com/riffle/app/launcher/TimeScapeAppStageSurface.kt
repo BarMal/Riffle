@@ -1058,12 +1058,22 @@ internal const val TIME_SCAPE_STAGE_RAIL_TEST_TAG = "timescape-stage-rail"
  * Tuned much smaller than the full-screen notification [CardStack] (fewer visible layers, tighter
  * offset/scale steps) to fit the rail's fixed [TimeScapePaneLayoutPolicy] budget
  * (`RAIL_WIDTH_DP`/`RAIL_HEIGHT_DP`) rather than a whole viewport.
+ *
+ * [CardStackLayoutPolicy.verticalOffsetStep] -- not [CardStackLayoutPolicy.offsetStep] -- is the
+ * field that ends up driving each entry's *primary* translation in [CardStack] regardless of
+ * [CardStackOrientation] (see [AnimatedCardStackEntry]'s graphicsLayer block: it's always the axis
+ * [CardStackInteraction.onSettle] drives). Leaving it at its zero default here left every
+ * non-focused tile stacked almost exactly on top of the focused one -- offset only by the tiny
+ * secondary [CardStackLayoutPolicy.offsetStep] wiggle -- which made them functionally untappable
+ * (the focused tile's own hit-test region covered their reported bounds). A real step here is what
+ * actually fans the tiles out into a tappable peek stack.
  */
 private val TIME_SCAPE_STAGE_RAIL_LAYOUT_POLICY =
     CardStackLayoutPolicy(
         maxVisibleDepth = 2,
         scaleStep = 0.1f,
         offsetStep = 10f,
+        verticalOffsetStep = 36f,
         alphaStep = 0.3f,
     )
 
