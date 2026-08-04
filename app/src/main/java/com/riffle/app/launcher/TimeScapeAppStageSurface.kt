@@ -1064,16 +1064,20 @@ internal const val TIME_SCAPE_STAGE_RAIL_TEST_TAG = "timescape-stage-rail"
  * [CardStackOrientation] (see [AnimatedCardStackEntry]'s graphicsLayer block: it's always the axis
  * [CardStackInteraction.onSettle] drives). Leaving it at its zero default here left every
  * non-focused tile stacked almost exactly on top of the focused one -- offset only by the tiny
- * secondary [CardStackLayoutPolicy.offsetStep] wiggle -- which made them functionally untappable
- * (the focused tile's own hit-test region covered their reported bounds). A real step here is what
- * actually fans the tiles out into a tappable peek stack.
+ * secondary [CardStackLayoutPolicy.offsetStep] wiggle -- which made them functionally untappable:
+ * a raw touch at a background tile's own reported center still landed inside the focused tile's
+ * (larger, unshifted) hit-test bounds, since Compose routes a pointer event to whichever entry's
+ * `Box` is topmost -- by z-order -- at that exact point, not whichever entry's semantics node the
+ * point was nominally "for". [TimeScapeStageRailTile]'s own layout is roughly icon (40dp) + label +
+ * padding tall, so this step needs to clear roughly that whole height, not a fraction of it, for a
+ * background tile's own center to actually land outside the focused tile's box.
  */
 private val TIME_SCAPE_STAGE_RAIL_LAYOUT_POLICY =
     CardStackLayoutPolicy(
         maxVisibleDepth = 2,
         scaleStep = 0.1f,
         offsetStep = 10f,
-        verticalOffsetStep = 36f,
+        verticalOffsetStep = 72f,
         alphaStep = 0.3f,
     )
 
