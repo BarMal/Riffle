@@ -653,11 +653,16 @@ class TimeScapeCardSurfaceTest {
                 label = "Calendar",
             )
         val firstNotification = timeScapeTestNotification(first)
+        // Older than firstNotification so AppStagePlanner's default-selection tie-break (most
+        // recent content wins) deterministically leaves "Calendar" unselected regardless of how
+        // package names happen to sort -- this test taps it expecting the plain, unselected
+        // "Calendar. Open stage" content description.
         val secondNotification =
             firstNotification.copy(
                 key = LauncherNotificationKey("calendar"),
                 packageName = second.identity.packageName,
                 title = "Calendar event",
+                postedAtEpochMillis = firstNotification.postedAtEpochMillis - 1,
             )
         val actions = mutableListOf<LauncherShellAction>()
         val state =
