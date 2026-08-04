@@ -1006,9 +1006,13 @@ private fun TimeScapeStageRail(
                                 dragPx
                             }
                         if (abs(motion) >= TIME_SCAPE_STAGE_RAIL_SETTLE_DISTANCE_THRESHOLD_PX) {
-                            navigate(
-                                if (motion < 0f) CardStackNavigationDirection.NEXT else CardStackNavigationDirection.PREVIOUS,
-                            )
+                            val direction =
+                                if (motion < 0f) {
+                                    CardStackNavigationDirection.NEXT
+                                } else {
+                                    CardStackNavigationDirection.PREVIOUS
+                                }
+                            navigate(direction)
                         }
                     },
                     onSettleHaptic = {

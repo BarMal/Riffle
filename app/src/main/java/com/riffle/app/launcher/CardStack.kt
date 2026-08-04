@@ -368,9 +368,17 @@ private fun Modifier.cardStackKeyboardInput(
 ): Modifier {
     val requester = interaction?.keyboardFocusRequester ?: return this
     val previousKeys =
-        if (orientation == CardStackOrientation.HORIZONTAL) setOf(Key.DirectionLeft) else setOf(Key.DirectionUp, Key.PageUp)
+        if (orientation == CardStackOrientation.HORIZONTAL) {
+            setOf(Key.DirectionLeft)
+        } else {
+            setOf(Key.DirectionUp, Key.PageUp)
+        }
     val nextKeys =
-        if (orientation == CardStackOrientation.HORIZONTAL) setOf(Key.DirectionRight) else setOf(Key.DirectionDown, Key.PageDown)
+        if (orientation == CardStackOrientation.HORIZONTAL) {
+            setOf(Key.DirectionRight)
+        } else {
+            setOf(Key.DirectionDown, Key.PageDown)
+        }
     return focusRequester(requester)
         .focusable()
         .onPreviewKeyEvent { event ->
