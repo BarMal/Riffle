@@ -445,22 +445,32 @@ private fun SearchResultContextMenu(
     RiffleContextMenu(expanded = expanded, onDismissRequest = { onExpandedChange(false) }) {
         when (result) {
             is SearchGridResult.App -> {
-                DropdownMenuItem(
-                    text = {
-                        Text(
-                            if (appListContext.homeLayout.containsHomeApp(result.app.identity)) {
-                                "Added to home"
-                            } else {
-                                "Add to home"
-                            },
-                        )
-                    },
-                    enabled = !appListContext.homeLayout.containsHomeApp(result.app.identity),
-                    onClick = {
-                        onExpandedChange(false)
-                        appListContext.onAction(LauncherShellAction.AddAppToHome(result.app))
-                    },
-                )
+                if (appListContext.homeLayout.viewMode.homeSurfaceKind() == HomeSurfaceKind.CARDS) {
+                    DropdownMenuItem(
+                        text = { Text("Pin as a card") },
+                        onClick = {
+                            onExpandedChange(false)
+                            appListContext.onAction(LauncherShellAction.ToggleAppStagePinned(result.app.stageId))
+                        },
+                    )
+                } else {
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                if (appListContext.homeLayout.containsHomeApp(result.app.identity)) {
+                                    "Added to home"
+                                } else {
+                                    "Add to home"
+                                },
+                            )
+                        },
+                        enabled = !appListContext.homeLayout.containsHomeApp(result.app.identity),
+                        onClick = {
+                            onExpandedChange(false)
+                            appListContext.onAction(LauncherShellAction.AddAppToHome(result.app))
+                        },
+                    )
+                }
                 DropdownMenuItem(
                     text = { Text("App info") },
                     onClick = {

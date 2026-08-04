@@ -17,6 +17,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -25,10 +26,13 @@ import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppSearchFilters
 import com.riffle.core.domain.launcher.apps.InstalledApp
+import com.riffle.core.domain.launcher.cards.AppStageId
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
+import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.settings.LauncherThemeColors
 import com.riffle.core.domain.launcher.settings.LauncherThemePreset
 import com.riffle.core.domain.launcher.settings.OverlayDockSettings
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -64,6 +68,51 @@ class LauncherSearchSurfaceTest {
         composeRule.onNodeWithTag(SEARCH_RESULT_LIST_TEST_TAG).assertDoesNotExist()
         composeRule.onNodeWithText(camera.label).performTouchInput { longClick() }
         composeRule.onNodeWithText("Add to home").assertExists()
+    }
+
+    @Test
+    fun searchOffersPinAsACardInsteadOfAddToHomeWhenInCardsMode() {
+        val actions = mutableListOf<LauncherShellAction>()
+
+        val cardsHomeLayout = HomeLayoutDefaults.standard().copy(viewMode = LauncherViewMode.CARD_INTERFACE)
+
+        composeRule.setContent {
+            MaterialTheme {
+                Box(modifier = Modifier.fillMaxSize()) {
+                    SearchSurface(
+                        state =
+                            SearchSurfaceState(
+                                query = "",
+                                filters = AppSearchFilters(),
+                                installedApps = listOf(camera),
+                                results = listOf(camera),
+                                homeLayout = cardsHomeLayout,
+                            ),
+                        appListContext =
+                            AppListContext(
+                                homeLayout = cardsHomeLayout,
+                                overlayDock = OverlayDockSettings(),
+                                notificationGroupsByApp = emptyList(),
+                                appIconLoader = EmptyAppIconLoader,
+                                onAction = actions::add,
+                            ),
+                        onAction = {},
+                    )
+                }
+            }
+        }
+
+        composeRule.onNodeWithText(camera.label).performTouchInput { longClick() }
+        composeRule.onNodeWithText("Pin as a card").assertExists()
+        composeRule.onNodeWithText("Add to home").assertDoesNotExist()
+        composeRule.onNodeWithText("Pin as a card").performClick()
+
+        assertEquals(
+            LauncherShellAction.ToggleAppStagePinned(
+                AppStageId(camera.identity.packageName, camera.identity.profile.id),
+            ),
+            actions.single(),
+        )
     }
 
     @Test

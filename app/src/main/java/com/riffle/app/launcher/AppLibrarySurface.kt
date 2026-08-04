@@ -194,4 +194,5 @@ internal fun InstalledApp.drawerRowState(
                 },
         showInlineActions = showInlineActions,
         haptics = context.haptics,
+        homeSurfaceKind = context.homeLayout.viewMode.homeSurfaceKind(),
     )
