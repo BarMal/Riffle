@@ -3,10 +3,10 @@ package com.riffle.core.domain.launcher.settings
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.cards.AppStagePreferences
-import com.riffle.core.domain.launcher.cards.TimeScapePaneArrangement
-import com.riffle.core.domain.launcher.cards.TimeScapeRailSide
-import com.riffle.core.domain.launcher.cards.TimeScapeTemplateCatalogDefaults
-import com.riffle.core.domain.launcher.cards.TimeScapeTemplateId
+import com.riffle.core.domain.launcher.cards.AdaptiveStagePaneArrangement
+import com.riffle.core.domain.launcher.cards.AdaptiveStageRailSide
+import com.riffle.core.domain.launcher.cards.AdaptiveStageTemplateCatalogDefaults
+import com.riffle.core.domain.launcher.cards.AdaptiveStageTemplateId
 import com.riffle.core.domain.launcher.contextual.ContextualSettings
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.HomeLayoutKey
@@ -54,36 +54,36 @@ enum class SearchResultPresentation {
     LIST,
 }
 
-/** Stored user intent for the TimeScape app-stage surface. */
+/** Stored user intent for the AdaptiveStage app-stage surface. */
 data class CardsSettings(
     val stagePreferencesByLayout: Map<HomeLayoutKey, AppStagePreferences> = emptyMap(),
-    /** Durable pin/select intent for TimeScape feed stages, mirroring [stagePreferencesByLayout]. */
+    /** Durable pin/select intent for AdaptiveStage feed stages, mirroring [stagePreferencesByLayout]. */
     val feedStagePreferencesByLayout: Map<HomeLayoutKey, FeedStagePreferences> = emptyMap(),
-    /** Durable visual intent for the optional TimeScape presentation. */
-    val timeScapeAppearance: TimeScapeAppearanceSettings = TimeScapeAppearanceSettings.modern(),
-    val timeScapeTemplateId: TimeScapeTemplateId = TimeScapeTemplateCatalogDefaults.sharedCanvasId,
+    /** Durable visual intent for the optional AdaptiveStage presentation. */
+    val adaptiveStageAppearance: AdaptiveStageAppearanceSettings = AdaptiveStageAppearanceSettings.modern(),
+    val adaptiveStageTemplateId: AdaptiveStageTemplateId = AdaptiveStageTemplateCatalogDefaults.sharedCanvasId,
     /**
      * Explicit user choice of rail edge, or `null` if the user has never changed it -- in which
-     * case the active template's [com.riffle.core.domain.launcher.cards.TimeScapeTemplateVariant.railSide]
-     * applies, falling back to [com.riffle.core.domain.launcher.cards.TimeScapeRailSide.LEADING].
+     * case the active template's [com.riffle.core.domain.launcher.cards.AdaptiveStageTemplateVariant.railSide]
+     * applies, falling back to [com.riffle.core.domain.launcher.cards.AdaptiveStageRailSide.LEADING].
      */
-    val timeScapeRailSide: TimeScapeRailSide? = null,
+    val adaptiveStageRailSide: AdaptiveStageRailSide? = null,
     /** User-opted alternative to the full-stack surface: a top detail region over the card stack. */
-    val timeScapePaneArrangement: TimeScapePaneArrangement = TimeScapePaneArrangement.STACK,
+    val adaptiveStagePaneArrangement: AdaptiveStagePaneArrangement = AdaptiveStagePaneArrangement.STACK,
 )
 
-/** Resolves TimeScape using the launcher-wide accessibility motion preference. */
-fun LauncherSettings.resolveTimeScapeCardStack(
-    viewport: TimeScapeViewportDp,
-    capabilities: TimeScapeRendererCapabilities = TimeScapeRendererCapabilities(),
-): TimeScapeCardStackResolution =
-    cards.timeScapeAppearance.resolveCardStack(
+/** Resolves AdaptiveStage using the launcher-wide accessibility motion preference. */
+fun LauncherSettings.resolveAdaptiveStageCardStack(
+    viewport: AdaptiveStageViewportDp,
+    capabilities: AdaptiveStageRendererCapabilities = AdaptiveStageRendererCapabilities(),
+): AdaptiveStageCardStackResolution =
+    cards.adaptiveStageAppearance.resolveCardStack(
         viewport = viewport,
         capabilities = capabilities,
         globalReducedMotion = motion.reducedMotion,
     )
 
-/** Returns variant-specific TimeScape intent. */
+/** Returns variant-specific AdaptiveStage intent. */
 fun CardsSettings.stagePreferencesFor(layoutKey: HomeLayoutKey): AppStagePreferences =
     stagePreferencesByLayout[layoutKey] ?: AppStagePreferences()
 
@@ -256,13 +256,13 @@ data class HomeGestureSettings(
  * app drawer/search. Unlike [HomeGestureSettings], the Dock currently exposes a single gesture.
  */
 data class DockGestureSettings(
-    val swipeUp: LauncherGestureAction = LauncherGestureAction.EXIT_TIMESCAPE,
+    val swipeUp: LauncherGestureAction = LauncherGestureAction.EXIT_ADAPTIVE_STAGE,
 ) {
     companion object {
         val ALLOWED_SWIPE_UP_ACTIONS: Set<LauncherGestureAction> =
             setOf(
                 LauncherGestureAction.NONE,
-                LauncherGestureAction.EXIT_TIMESCAPE,
+                LauncherGestureAction.EXIT_ADAPTIVE_STAGE,
                 LauncherGestureAction.OPEN_APP_DRAWER,
             )
     }
@@ -309,8 +309,8 @@ val defaultHomeGestureActions: Map<HomeGesture, LauncherGestureAction> =
         HomeGesture.TWO_FINGER_LEFT to LauncherGestureAction.NONE,
         HomeGesture.TWO_FINGER_RIGHT to LauncherGestureAction.NONE,
         // Three fingers avoid the platform back/home edges and the one-finger card stack.
-        HomeGesture.THREE_FINGER_UP to LauncherGestureAction.ENTER_TIMESCAPE,
-        HomeGesture.THREE_FINGER_DOWN to LauncherGestureAction.EXIT_TIMESCAPE,
+        HomeGesture.THREE_FINGER_UP to LauncherGestureAction.ENTER_ADAPTIVE_STAGE,
+        HomeGesture.THREE_FINGER_DOWN to LauncherGestureAction.EXIT_ADAPTIVE_STAGE,
         HomeGesture.THREE_FINGER_LEFT to LauncherGestureAction.NONE,
         HomeGesture.THREE_FINGER_RIGHT to LauncherGestureAction.NONE,
         HomeGesture.PINCH_IN to LauncherGestureAction.ENTER_HOME_EDIT_MODE,
@@ -428,8 +428,8 @@ enum class LauncherGestureAction {
     ENTER_FULLSCREEN_HOME,
     SELECT_NEXT_HOME_PAGE,
     SELECT_PREVIOUS_HOME_PAGE,
-    ENTER_TIMESCAPE,
-    EXIT_TIMESCAPE,
+    ENTER_ADAPTIVE_STAGE,
+    EXIT_ADAPTIVE_STAGE,
     SELECT_NEXT_APP_STAGE,
     SELECT_PREVIOUS_APP_STAGE,
     LAUNCH_APP,

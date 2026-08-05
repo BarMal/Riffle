@@ -102,7 +102,7 @@ class LauncherShellNotificationStateTest {
         val older = app(label = "Older", packageName = "com.riffle.older")
 
         val nextHarness =
-            timeScapeHarness(
+            adaptiveStageHarness(
                 apps = listOf(newer, older),
                 notifications =
                     listOf(
@@ -132,7 +132,7 @@ class LauncherShellNotificationStateTest {
         )
 
         val previousHarness =
-            timeScapeHarness(
+            adaptiveStageHarness(
                 apps = listOf(newer, older),
                 notifications =
                     listOf(
@@ -450,16 +450,16 @@ class LauncherShellNotificationStateTest {
         override fun setFirstRunComplete() = Unit
     }
 
-    private data class TimeScapeHarness(
+    private data class AdaptiveStageHarness(
         val viewModel: LauncherShellViewModel,
         val notificationRepository: FakeNotificationRepository,
     )
 
-    private fun timeScapeHarness(
+    private fun adaptiveStageHarness(
         apps: List<InstalledApp>,
         notifications: List<LauncherNotification>,
         selectedStage: InstalledApp,
-    ): TimeScapeHarness {
+    ): AdaptiveStageHarness {
         val notificationRepository = FakeNotificationRepository(notifications)
         val viewModel =
             LauncherShellViewModel(
@@ -491,7 +491,7 @@ class LauncherShellNotificationStateTest {
                 AppStageId(selectedStage.identity.packageName, selectedStage.identity.profile.id),
             ),
         )
-        return TimeScapeHarness(viewModel, notificationRepository)
+        return AdaptiveStageHarness(viewModel, notificationRepository)
     }
 
     private class FakeNotificationRepository(

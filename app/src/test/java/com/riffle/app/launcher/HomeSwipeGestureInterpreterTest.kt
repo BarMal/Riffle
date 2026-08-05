@@ -248,13 +248,13 @@ class HomeSwipeGestureInterpreterTest {
     }
 
     @Test
-    fun mapsTimeScapeEntryExitAndStageActions() {
+    fun mapsAdaptiveStageEntryExitAndStageActions() {
         val settings =
             HomeGestureSettings(
                 actions =
                     mapOf(
-                        HomeGesture.THREE_FINGER_UP to LauncherGestureAction.ENTER_TIMESCAPE,
-                        HomeGesture.THREE_FINGER_DOWN to LauncherGestureAction.EXIT_TIMESCAPE,
+                        HomeGesture.THREE_FINGER_UP to LauncherGestureAction.ENTER_ADAPTIVE_STAGE,
+                        HomeGesture.THREE_FINGER_DOWN to LauncherGestureAction.EXIT_ADAPTIVE_STAGE,
                         HomeGesture.TWO_FINGER_LEFT to LauncherGestureAction.SELECT_NEXT_APP_STAGE,
                         HomeGesture.TWO_FINGER_RIGHT to LauncherGestureAction.SELECT_PREVIOUS_APP_STAGE,
                     ),

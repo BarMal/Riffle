@@ -6,18 +6,18 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalView
 import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
-import com.riffle.core.domain.launcher.settings.TimeScapeHapticStrength
+import com.riffle.core.domain.launcher.settings.AdaptiveStageHapticStrength
 
 interface LauncherHaptics {
     fun longPress()
 
-    fun timeScapeSettle(strength: TimeScapeHapticStrength)
+    fun adaptiveStageSettle(strength: AdaptiveStageHapticStrength)
 }
 
 object NoopLauncherHaptics : LauncherHaptics {
     override fun longPress() = Unit
 
-    override fun timeScapeSettle(strength: TimeScapeHapticStrength) = Unit
+    override fun adaptiveStageSettle(strength: AdaptiveStageHapticStrength) = Unit
 }
 
 @Composable
@@ -42,8 +42,8 @@ private class ViewLauncherHaptics(
         }
     }
 
-    override fun timeScapeSettle(strength: TimeScapeHapticStrength) {
-        strength.timeScapeSettleHapticFeedbackConstant()?.let { constant ->
+    override fun adaptiveStageSettle(strength: AdaptiveStageHapticStrength) {
+        strength.adaptiveStageSettleHapticFeedbackConstant()?.let { constant ->
             view.performHapticFeedback(constant)
         }
     }
@@ -57,10 +57,10 @@ internal fun HapticFeedbackStrength.longPressHapticFeedbackConstant(): Int? =
         HapticFeedbackStrength.STRONG -> HapticFeedbackConstants.LONG_PRESS
     }
 
-internal fun TimeScapeHapticStrength.timeScapeSettleHapticFeedbackConstant(): Int? =
+internal fun AdaptiveStageHapticStrength.adaptiveStageSettleHapticFeedbackConstant(): Int? =
     when (this) {
-        TimeScapeHapticStrength.OFF -> null
-        TimeScapeHapticStrength.LIGHT -> HapticFeedbackConstants.CLOCK_TICK
-        TimeScapeHapticStrength.MEDIUM -> HapticFeedbackConstants.CONTEXT_CLICK
-        TimeScapeHapticStrength.STRONG -> HapticFeedbackConstants.LONG_PRESS
+        AdaptiveStageHapticStrength.OFF -> null
+        AdaptiveStageHapticStrength.LIGHT -> HapticFeedbackConstants.CLOCK_TICK
+        AdaptiveStageHapticStrength.MEDIUM -> HapticFeedbackConstants.CONTEXT_CLICK
+        AdaptiveStageHapticStrength.STRONG -> HapticFeedbackConstants.LONG_PRESS
     }

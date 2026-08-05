@@ -1,6 +1,6 @@
 package com.riffle.app.launcher.notifications
 
-import com.riffle.app.launcher.TimeScapeArtworkRevisionLookup
+import com.riffle.app.launcher.AdaptiveStageArtworkRevisionLookup
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.apps.AppActivityName
 import com.riffle.core.domain.launcher.apps.AppIdentity
@@ -90,7 +90,7 @@ class AppStageNotificationContentTest {
                 notifications = listOf(notification),
                 notificationAccessStatus = NotificationAccessStatus.GRANTED,
                 profileContentVisibility = mapOf(AppProfile.personal().id to AppProfileContentVisibility.VISIBLE),
-                artworkRevisions = TimeScapeArtworkRevisionLookup { "revision-1" },
+                artworkRevisions = AdaptiveStageArtworkRevisionLookup { "revision-1" },
             )
 
         val card = cards.single()
@@ -109,7 +109,7 @@ class AppStageNotificationContentTest {
                 notificationAccessStatus = NotificationAccessStatus.GRANTED,
                 profileContentVisibility =
                     mapOf(AppProfile.personal().id to AppProfileContentVisibility.REDACTED_QUIET),
-                artworkRevisions = TimeScapeArtworkRevisionLookup { "revision-1" },
+                artworkRevisions = AdaptiveStageArtworkRevisionLookup { "revision-1" },
             )
 
         val card = cards.single()

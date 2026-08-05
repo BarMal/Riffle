@@ -20,8 +20,8 @@ import com.riffle.core.domain.launcher.settings.HomeSystemBars
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.MotionSettings
 import com.riffle.core.domain.launcher.settings.RssSettings
-import com.riffle.core.domain.launcher.settings.TimeScapeAppearancePreset
-import com.riffle.core.domain.launcher.settings.TimeScapeAppearanceSettings
+import com.riffle.core.domain.launcher.settings.AdaptiveStageAppearancePreset
+import com.riffle.core.domain.launcher.settings.AdaptiveStageAppearanceSettings
 import com.riffle.core.domain.launcher.settings.homeSystemBars
 import com.riffle.core.domain.launcher.settings.withHomeSystemBars
 import org.json.JSONObject
@@ -45,9 +45,9 @@ class LauncherBackupDocumentTest {
                 motion = MotionSettings(reducedMotion = true),
                 cards =
                     CardsSettings(
-                        timeScapeAppearance =
-                            TimeScapeAppearanceSettings()
-                                .applyPreset(TimeScapeAppearancePreset.FLAT_REDUCED_DEPTH),
+                        adaptiveStageAppearance =
+                            AdaptiveStageAppearanceSettings()
+                                .applyPreset(AdaptiveStageAppearancePreset.FLAT_REDUCED_DEPTH),
                     ),
             )
         val document =

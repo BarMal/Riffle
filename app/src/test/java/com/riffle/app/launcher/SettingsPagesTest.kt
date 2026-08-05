@@ -23,7 +23,7 @@ class SettingsPagesTest {
                 "Layout" to SettingsPage.LAYOUT,
                 "Dock" to SettingsPage.DOCK,
                 "Appearance" to SettingsPage.APPEARANCE,
-                "TimeScape appearance" to SettingsPage.TIMESCAPE_APPEARANCE,
+                "Cards appearance" to SettingsPage.ADAPTIVE_STAGE_APPEARANCE,
                 "Floating dock" to SettingsPage.FLOATING_DOCK,
                 "Gestures" to SettingsPage.GESTURES,
                 "Contextual behaviour" to SettingsPage.CONTEXTUAL,
@@ -56,7 +56,7 @@ class SettingsPagesTest {
         val entries = settingsMainPageEntries()
 
         assertEquals(
-            setOf(SettingsPage.APPEARANCE, SettingsPage.TIMESCAPE_APPEARANCE),
+            setOf(SettingsPage.APPEARANCE, SettingsPage.ADAPTIVE_STAGE_APPEARANCE),
             entries.filter { entry -> entry.group == SettingsPageGroup.APPEARANCE }.map { entry -> entry.page }.toSet(),
         )
     }

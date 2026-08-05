@@ -64,7 +64,7 @@ internal class LauncherShellRefreshActions(
     private val currentState: () -> LauncherShellState,
     private val updateState: (LauncherShellState) -> Unit,
     private val refreshCoordinator: LauncherShellRefreshCoordinator,
-    private val artworkRevisionStore: TimeScapeArtworkRevisionStore = timeScapeArtworkRevisions,
+    private val artworkRevisionStore: AdaptiveStageArtworkRevisionStore = adaptiveStageArtworkRevisions,
     private val beforeNotificationCommit: () -> Unit = {},
 ) {
     private var installedAppRefreshJob: Job? = null

@@ -1,7 +1,7 @@
 package com.riffle.app.launcher.notifications
 
-import com.riffle.app.launcher.TimeScapeArtworkRevisionLookup
-import com.riffle.app.launcher.timeScapeArtworkRevisions
+import com.riffle.app.launcher.AdaptiveStageArtworkRevisionLookup
+import com.riffle.app.launcher.adaptiveStageArtworkRevisions
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.apps.AppProfileContentVisibility
 import com.riffle.core.domain.launcher.apps.AppProfileId
@@ -139,7 +139,7 @@ internal fun appStageNotificationCards(
     notificationAccessStatus: NotificationAccessStatus,
     profileContentVisibility: Map<AppProfileId, AppProfileContentVisibility>,
     actionAvailability: NotificationStageActionAvailability = NotificationStageActionAvailability.None,
-    artworkRevisions: TimeScapeArtworkRevisionLookup = timeScapeArtworkRevisions,
+    artworkRevisions: AdaptiveStageArtworkRevisionLookup = adaptiveStageArtworkRevisions,
 ): List<AppStageNotificationCard> {
     if (notificationAccessStatus != NotificationAccessStatus.GRANTED) return emptyList()
     return notifications.mapNotNull { notification ->
@@ -192,7 +192,7 @@ fun appStageEmptyAppCard(
 private fun LauncherNotification.toAppStageCard(
     isRedacted: Boolean,
     actionAvailability: NotificationStageActionAvailability,
-    artworkRevisions: TimeScapeArtworkRevisionLookup,
+    artworkRevisions: AdaptiveStageArtworkRevisionLookup,
 ): AppStageNotificationCard {
     val contentKind = if (isMediaSession) AppStageContentKind.MEDIA else AppStageContentKind.NOTIFICATION
     val actions =

@@ -8,17 +8,17 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-class TimeScapeAppStageActionFilterTest {
+class AdaptiveStageAppStageActionFilterTest {
     @Test
     fun allowsStageNavigationActions() {
-        assertTrue(timeScapeAppStageActionFilter(LauncherShellAction.SelectNextAppStage))
-        assertTrue(timeScapeAppStageActionFilter(LauncherShellAction.SelectPreviousAppStage))
+        assertTrue(adaptiveStageAppStageActionFilter(LauncherShellAction.SelectNextAppStage))
+        assertTrue(adaptiveStageAppStageActionFilter(LauncherShellAction.SelectPreviousAppStage))
     }
 
     @Test
     fun allowsExitingBackToStandardHome() {
         assertTrue(
-            timeScapeAppStageActionFilter(
+            adaptiveStageAppStageActionFilter(
                 LauncherShellAction.SelectLauncherViewMode(LauncherViewMode.STANDARD_APP_DRAWER),
             ),
         )
@@ -27,7 +27,7 @@ class TimeScapeAppStageActionFilterTest {
     @Test
     fun doesNotAllowEnteringCardsModeFromWithinCardsMode() {
         assertFalse(
-            timeScapeAppStageActionFilter(
+            adaptiveStageAppStageActionFilter(
                 LauncherShellAction.SelectLauncherViewMode(LauncherViewMode.CARD_INTERFACE),
             ),
         )
@@ -35,20 +35,20 @@ class TimeScapeAppStageActionFilterTest {
 
     @Test
     fun allowsOpeningTheAppDrawerFromCardsMode() {
-        assertTrue(timeScapeAppStageActionFilter(LauncherShellAction.OpenAppDrawer))
+        assertTrue(adaptiveStageAppStageActionFilter(LauncherShellAction.OpenAppDrawer))
     }
 
     @Test
     fun allowsOpeningSearchFromCardsMode() {
-        assertTrue(timeScapeAppStageActionFilter(LauncherShellAction.OpenSearch))
+        assertTrue(adaptiveStageAppStageActionFilter(LauncherShellAction.OpenSearch))
     }
 
     @Test
     fun blocksUnrelatedActionsFromReachingCardsMode() {
-        assertFalse(timeScapeAppStageActionFilter(LauncherShellAction.OpenSettings))
-        assertFalse(timeScapeAppStageActionFilter(LauncherShellAction.OpenNotifications))
+        assertFalse(adaptiveStageAppStageActionFilter(LauncherShellAction.OpenSettings))
+        assertFalse(adaptiveStageAppStageActionFilter(LauncherShellAction.OpenNotifications))
         assertFalse(
-            timeScapeAppStageActionFilter(
+            adaptiveStageAppStageActionFilter(
                 LauncherShellAction.LaunchApp(
                     AppIdentity(
                         packageName = AppPackageName("com.riffle.mail"),

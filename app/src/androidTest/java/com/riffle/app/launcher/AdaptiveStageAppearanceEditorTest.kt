@@ -19,16 +19,16 @@ import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.riffle.core.domain.launcher.LauncherShellState
-import com.riffle.core.domain.launcher.cards.TimeScapePaneArrangement
-import com.riffle.core.domain.launcher.cards.TimeScapeRailSide
+import com.riffle.core.domain.launcher.cards.AdaptiveStagePaneArrangement
+import com.riffle.core.domain.launcher.cards.AdaptiveStageRailSide
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.MotionSettings
-import com.riffle.core.domain.launcher.settings.TimeScapeAppearancePreset
-import com.riffle.core.domain.launcher.settings.TimeScapeAppearanceSettings
-import com.riffle.core.domain.launcher.settings.TimeScapeEasing
-import com.riffle.core.domain.launcher.settings.TimeScapeHapticStrength
-import com.riffle.core.domain.launcher.settings.TimeScapeRendererCapabilities
-import com.riffle.core.domain.launcher.settings.TimeScapeSurface
+import com.riffle.core.domain.launcher.settings.AdaptiveStageAppearancePreset
+import com.riffle.core.domain.launcher.settings.AdaptiveStageAppearanceSettings
+import com.riffle.core.domain.launcher.settings.AdaptiveStageEasing
+import com.riffle.core.domain.launcher.settings.AdaptiveStageHapticStrength
+import com.riffle.core.domain.launcher.settings.AdaptiveStageRendererCapabilities
+import com.riffle.core.domain.launcher.settings.AdaptiveStageSurface
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -36,7 +36,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
-class TimeScapeAppearanceEditorTest {
+class AdaptiveStageAppearanceEditorTest {
     @get:Rule
     val composeRule = createComposeRule()
 
@@ -44,19 +44,19 @@ class TimeScapeAppearanceEditorTest {
     fun exposesTheLivePreviewAndEveryEditorSection() {
         composeRule.setContent {
             MaterialTheme {
-                TimeScapeAppearancePageContent(
+                AdaptiveStageAppearancePageContent(
                     state = LauncherShellState().settingsSurfaceState(),
                     onAction = {},
                 )
             }
         }
 
-        composeRule.onNodeWithContentDescription("TimeScape live preview").assertExists()
+        composeRule.onNodeWithContentDescription("Cards appearance preview").assertExists()
         listOf(
             "Layout",
             "Preset and reset",
             "Card geometry",
-            "Stack and spline",
+            "Stack and stack",
             "Surface and glass",
             "Colour and content",
             "Motion",
@@ -74,7 +74,7 @@ class TimeScapeAppearanceEditorTest {
     }
 
     @Test
-    fun selectingSplitDispatchesTheTimeScapePaneArrangementAction() {
+    fun selectingSplitDispatchesTheAdaptiveStagePaneArrangementAction() {
         val actions = mutableListOf<LauncherShellAction>()
         composeRule.setContent {
             MaterialTheme {
@@ -89,7 +89,7 @@ class TimeScapeAppearanceEditorTest {
                             .requiredSize(360.dp, 800.dp)
                             .verticalScroll(rememberScrollState()),
                 ) {
-                    TimeScapeAppearancePageContent(
+                    AdaptiveStageAppearancePageContent(
                         state = LauncherShellState().settingsSurfaceState(),
                         onAction = actions::add,
                     )
@@ -97,18 +97,18 @@ class TimeScapeAppearanceEditorTest {
             }
         }
 
-        composeRule.onNodeWithTag("timescape-pane-arrangement-${TimeScapePaneArrangement.SPLIT.name}")
+        composeRule.onNodeWithTag("adaptive-stage-pane-arrangement-${AdaptiveStagePaneArrangement.SPLIT.name}")
             .performScrollTo()
             .performClick()
 
         composeRule.runOnIdle {
-            val action = actions.last() as LauncherShellAction.SelectTimeScapePaneArrangement
-            assertEquals(TimeScapePaneArrangement.SPLIT, action.arrangement)
+            val action = actions.last() as LauncherShellAction.SelectAdaptiveStagePaneArrangement
+            assertEquals(AdaptiveStagePaneArrangement.SPLIT, action.arrangement)
         }
     }
 
     @Test
-    fun selectingTopDispatchesTheTimeScapeRailSideAction() {
+    fun selectingTopDispatchesTheAdaptiveStageRailSideAction() {
         val actions = mutableListOf<LauncherShellAction>()
         composeRule.setContent {
             MaterialTheme {
@@ -118,7 +118,7 @@ class TimeScapeAppearanceEditorTest {
                             .requiredSize(360.dp, 800.dp)
                             .verticalScroll(rememberScrollState()),
                 ) {
-                    TimeScapeAppearancePageContent(
+                    AdaptiveStageAppearancePageContent(
                         state = LauncherShellState().settingsSurfaceState(),
                         onAction = actions::add,
                     )
@@ -126,13 +126,13 @@ class TimeScapeAppearanceEditorTest {
             }
         }
 
-        composeRule.onNodeWithTag("timescape-rail-side-${TimeScapeRailSide.TOP.name}")
+        composeRule.onNodeWithTag("adaptive-stage-rail-side-${AdaptiveStageRailSide.TOP.name}")
             .performScrollTo()
             .performClick()
 
         composeRule.runOnIdle {
-            val action = actions.last() as LauncherShellAction.SelectTimeScapeRailSide
-            assertEquals(TimeScapeRailSide.TOP, action.side)
+            val action = actions.last() as LauncherShellAction.SelectAdaptiveStageRailSide
+            assertEquals(AdaptiveStageRailSide.TOP, action.side)
         }
     }
 
@@ -147,7 +147,7 @@ class TimeScapeAppearanceEditorTest {
                             .requiredSize(360.dp)
                             .verticalScroll(rememberScrollState()),
                 ) {
-                    TimeScapeAppearancePageContent(
+                    AdaptiveStageAppearancePageContent(
                         state = LauncherShellState().settingsSurfaceState(),
                         onAction = actions::add,
                     )
@@ -155,13 +155,13 @@ class TimeScapeAppearanceEditorTest {
             }
         }
 
-        composeRule.onNodeWithTag("timescape-preset-FLAT_REDUCED_DEPTH").assertExists()
-        composeRule.onNodeWithText("Reset TimeScape appearance").performScrollTo().performClick()
-        composeRule.onNodeWithText("Reset TimeScape appearance?").assertExists()
-        composeRule.onNodeWithContentDescription("Confirm TimeScape reset").performClick()
+        composeRule.onNodeWithTag("adaptive-stage-preset-FLAT_REDUCED_DEPTH").assertExists()
+        composeRule.onNodeWithText("Reset Cards appearance").performScrollTo().performClick()
+        composeRule.onNodeWithText("Reset Cards appearance?").assertExists()
+        composeRule.onNodeWithContentDescription("Confirm Cards reset").performClick()
         composeRule.runOnIdle {
-            val action = actions.last() as LauncherShellAction.UpdateTimeScapeAppearance
-            assertEquals(TimeScapeAppearancePreset.MODERN_TIMESCAPE, action.appearance.preset)
+            val action = actions.last() as LauncherShellAction.UpdateAdaptiveStageAppearance
+            assertEquals(AdaptiveStageAppearancePreset.MODERN_ADAPTIVE_STAGE, action.appearance.preset)
         }
     }
 
@@ -169,7 +169,7 @@ class TimeScapeAppearanceEditorTest {
     fun previewUsesTheLauncherWideReducedMotionPreference() {
         composeRule.setContent {
             MaterialTheme {
-                TimeScapeAppearancePageContent(
+                AdaptiveStageAppearancePageContent(
                     state =
                         LauncherShellState(
                             launcherSettings = LauncherSettings(motion = MotionSettings(reducedMotion = true)),
@@ -195,7 +195,7 @@ class TimeScapeAppearanceEditorTest {
                             .requiredSize(360.dp)
                             .verticalScroll(rememberScrollState()),
                 ) {
-                    TimeScapeAppearancePageContent(
+                    AdaptiveStageAppearancePageContent(
                         state = LauncherShellState().settingsSurfaceState(),
                         onAction = actions::add,
                     )
@@ -210,7 +210,7 @@ class TimeScapeAppearanceEditorTest {
             }
 
         composeRule.runOnIdle {
-            val action = actions.last() as LauncherShellAction.UpdateTimeScapeAppearance
+            val action = actions.last() as LauncherShellAction.UpdateAdaptiveStageAppearance
             assertEquals(100, action.appearance.geometry.cardAspectRatioPercent)
         }
     }
@@ -220,7 +220,7 @@ class TimeScapeAppearanceEditorTest {
         val actions = mutableListOf<LauncherShellAction>()
         composeRule.setContent {
             MaterialTheme {
-                TimeScapeAppearancePageContent(
+                AdaptiveStageAppearancePageContent(
                     state = LauncherShellState().settingsSurfaceState(),
                     onAction = actions::add,
                 )
@@ -233,7 +233,7 @@ class TimeScapeAppearanceEditorTest {
                 assertTrue(setProgress(600f))
             }
         composeRule.runOnIdle {
-            val action = actions.last() as LauncherShellAction.UpdateTimeScapeAppearance
+            val action = actions.last() as LauncherShellAction.UpdateAdaptiveStageAppearance
             assertEquals(600, action.appearance.motion.settleDurationMillis)
         }
         composeRule
@@ -242,8 +242,8 @@ class TimeScapeAppearanceEditorTest {
                 assertTrue(click())
             }
         composeRule.runOnIdle {
-            val action = actions.last() as LauncherShellAction.UpdateTimeScapeAppearance
-            assertEquals(TimeScapeEasing.STANDARD, action.appearance.motion.easing)
+            val action = actions.last() as LauncherShellAction.UpdateAdaptiveStageAppearance
+            assertEquals(AdaptiveStageEasing.STANDARD, action.appearance.motion.easing)
         }
         composeRule
             .onNodeWithContentDescription("Haptic strength: Strong")
@@ -252,8 +252,8 @@ class TimeScapeAppearanceEditorTest {
             }
 
         composeRule.runOnIdle {
-            val action = actions.last() as LauncherShellAction.UpdateTimeScapeAppearance
-            assertEquals(TimeScapeHapticStrength.STRONG, action.appearance.motion.hapticStrength)
+            val action = actions.last() as LauncherShellAction.UpdateAdaptiveStageAppearance
+            assertEquals(AdaptiveStageHapticStrength.STRONG, action.appearance.motion.hapticStrength)
         }
     }
 
@@ -261,10 +261,10 @@ class TimeScapeAppearanceEditorTest {
     fun displaysTheActualUnavailableBlurFallbackInThePreview() {
         composeRule.setContent {
             MaterialTheme {
-                TimeScapeAppearancePageContent(
+                AdaptiveStageAppearancePageContent(
                     state = LauncherShellState().settingsSurfaceState(),
                     onAction = {},
-                    rendererCapabilities = TimeScapeRendererCapabilities(supportsBlur = false),
+                    rendererCapabilities = AdaptiveStageRendererCapabilities(supportsBlur = false),
                 )
             }
         }
@@ -278,17 +278,17 @@ class TimeScapeAppearanceEditorTest {
     fun previewAppliesItsInjectedBlurFallbackToEveryRenderedCard() {
         composeRule.setContent {
             MaterialTheme {
-                TimeScapeAppearancePreview(
-                    appearance = TimeScapeAppearanceSettings(surface = TimeScapeSurface(blurStrengthPercent = 72)),
+                AdaptiveStageAppearancePreview(
+                    appearance = AdaptiveStageAppearanceSettings(surface = AdaptiveStageSurface(blurStrengthPercent = 72)),
                     globalReducedMotion = false,
-                    rendererCapabilities = TimeScapeRendererCapabilities(supportsBlur = false),
+                    rendererCapabilities = AdaptiveStageRendererCapabilities(supportsBlur = false),
                     modifier = Modifier.requiredSize(360.dp),
                 )
             }
         }
 
         composeRule
-            .onAllNodes(SemanticsMatcher.expectValue(TimeScapeCardBlurStrengthKey, 0))
+            .onAllNodes(SemanticsMatcher.expectValue(AdaptiveStageCardBlurStrengthKey, 0))
             .assertCountEquals(3)
     }
 }

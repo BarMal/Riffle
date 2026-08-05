@@ -27,11 +27,11 @@ import org.junit.Rule
 import org.junit.Test
 
 /**
- * Drives [timeScapeStagePagerDrag] directly against a minimal harness, the same way
+ * Drives [adaptiveStageStagePagerDrag] directly against a minimal harness, the same way
  * [CardStackGestureTest] exercises [CardStack] in isolation, rather than the full
- * [TimeScapeAppStageSurface] tree.
+ * [AdaptiveStageAppStageSurface] tree.
  */
-class TimeScapeStagePagerGestureTest {
+class AdaptiveStageStagePagerGestureTest {
     @get:Rule
     val composeRule = createAndroidComposeRule<ComponentActivity>()
 
@@ -51,7 +51,7 @@ class TimeScapeStagePagerGestureTest {
         composeRule.setContent {
             val coroutineScope = rememberCoroutineScope()
             val pagerState =
-                rememberTimeScapeStagePagerState(
+                rememberAdaptiveStageStagePagerState(
                     stages = stages,
                     selectedStageId = selectedStageId,
                     onAction = { action ->
@@ -64,7 +64,7 @@ class TimeScapeStagePagerGestureTest {
                     Modifier
                         .fillMaxSize()
                         .testTag("pager")
-                        .timeScapeStagePagerDrag(
+                        .adaptiveStageStagePagerDrag(
                             enabled = true,
                             stageWidthPx = 1000f,
                             stages = stages,
@@ -100,7 +100,7 @@ class TimeScapeStagePagerGestureTest {
         composeRule.setContent {
             val coroutineScope = rememberCoroutineScope()
             val pagerState =
-                rememberTimeScapeStagePagerState(
+                rememberAdaptiveStageStagePagerState(
                     stages = stages,
                     selectedStageId = selectedStageId,
                     onAction = { action ->
@@ -113,7 +113,7 @@ class TimeScapeStagePagerGestureTest {
                     Modifier
                         .fillMaxSize()
                         .testTag("pager")
-                        .timeScapeStagePagerDrag(
+                        .adaptiveStageStagePagerDrag(
                             enabled = true,
                             // A very wide virtual stage width relative to the small on-screen drag
                             // below keeps this well under both the distance and fling thresholds.

@@ -26,19 +26,19 @@ import kotlin.math.roundToInt
 /**
  * Continuous horizontal drag-to-switch-stage pager state, mirroring
  * [rememberImmediateHomePagerState]'s fractional-position/settle-animation/pending-target-guard
- * shape but keyed on TimeScape's stage list instead of Standard Home's page list.
+ * shape but keyed on AdaptiveStage's stage list instead of Standard Home's page list.
  *
  * Settling dispatches [LauncherShellAction.SelectAppStage] -- the same action a rail tap or the
  * stage selector already dispatches -- so no reducer changes are needed.
  */
 @Suppress("LongMethod")
 @Composable
-internal fun rememberTimeScapeStagePagerState(
+internal fun rememberAdaptiveStageStagePagerState(
     stages: List<AppStage>,
     selectedStageId: AppStageId?,
     reducedMotion: Boolean = false,
     onAction: (LauncherShellAction) -> Unit,
-): TimeScapeStagePagerState {
+): AdaptiveStageStagePagerState {
     val selectedStageIndex = stages.indexOfFirst { stage -> stage.id == selectedStageId }.coerceAtLeast(0)
     val dragStagePosition = remember { mutableFloatStateOf(selectedStageIndex.toFloat()) }
     val settleStagePosition = remember { Animatable(selectedStageIndex.toFloat()) }
@@ -80,7 +80,7 @@ internal fun rememberTimeScapeStagePagerState(
                         settleStagePosition.snapTo(dragStagePosition.floatValue)
                         settleStagePosition.animateTo(
                             targetValue = selectedStageIndex.toFloat(),
-                            animationSpec = timeScapeStageSettleAnimation(homePageSettleMotionPolicy(reducedMotion)),
+                            animationSpec = adaptiveStageStageSettleAnimation(homePageSettleMotionPolicy(reducedMotion)),
                         ) {
                             dragStagePosition.floatValue = value
                         }
@@ -93,7 +93,7 @@ internal fun rememberTimeScapeStagePagerState(
         }
     }
 
-    return TimeScapeStagePagerState(
+    return AdaptiveStageStagePagerState(
         pagePositionState = dragStagePosition,
         settlePagePosition = settleStagePosition,
         isSettling = isSettling,
@@ -127,7 +127,7 @@ internal fun rememberTimeScapeStagePagerState(
     )
 }
 
-internal class TimeScapeStagePagerState(
+internal class AdaptiveStageStagePagerState(
     private val pagePositionState: MutableFloatState,
     private val settlePagePosition: Animatable<Float, *>,
     private val isSettling: MutableState<Boolean>,
@@ -164,7 +164,7 @@ internal class TimeScapeStagePagerState(
             settlePagePosition.snapTo(pagePositionState.floatValue)
             settlePagePosition.animateTo(
                 targetValue = targetStagePosition,
-                animationSpec = timeScapeStageSettleAnimation(homePageSettleMotionPolicy(reducedMotion)),
+                animationSpec = adaptiveStageStageSettleAnimation(homePageSettleMotionPolicy(reducedMotion)),
                 initialVelocity = initialVelocity,
             ) {
                 pagePositionState.floatValue = value
@@ -176,7 +176,7 @@ internal class TimeScapeStagePagerState(
     }
 }
 
-private fun timeScapeStageSettleAnimation(policy: HomePageSettleMotionPolicy) =
+private fun adaptiveStageStageSettleAnimation(policy: HomePageSettleMotionPolicy) =
     when (policy) {
         HomePageSettleMotionPolicy.ReducedShortTween ->
             tween<Float>(
@@ -198,19 +198,19 @@ private fun timeScapeStageSettleAnimation(policy: HomePageSettleMotionPolicy) =
  * [PointerEventPass.Initial] so it sees drags before [cardStackPointerInput] (which only consumes
  * vertical drags on the default Main pass) -- the two gestures coexist without conflict.
  */
-internal fun Modifier.timeScapeStagePagerDrag(
+internal fun Modifier.adaptiveStageStagePagerDrag(
     enabled: Boolean,
     stageWidthPx: Float,
     stages: List<AppStage>,
     selectedStageId: AppStageId?,
-    pagerState: TimeScapeStagePagerState,
+    pagerState: AdaptiveStageStagePagerState,
     reducedMotion: Boolean,
     launchStageMotion: (suspend () -> Unit) -> Unit,
 ): Modifier =
     if (!enabled) {
         this
     } else {
-        val stageIdsKey = stages.joinToString(separator = "|") { stage -> timeScapeStageKey(stage.id) }
+        val stageIdsKey = stages.joinToString(separator = "|") { stage -> adaptiveStageStageKey(stage.id) }
         pointerInput(stageWidthPx, selectedStageId, stageIdsKey) {
             awaitEachGesture {
                 val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)

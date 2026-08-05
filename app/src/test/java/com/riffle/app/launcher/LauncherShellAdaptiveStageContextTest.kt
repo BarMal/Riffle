@@ -1,15 +1,15 @@
 package com.riffle.app.launcher
 
 import androidx.compose.runtime.saveable.SaverScope
-import com.riffle.core.domain.launcher.cards.TimeScapeInteractionContext
+import com.riffle.core.domain.launcher.cards.AdaptiveStageInteractionContext
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
-class LauncherShellTimeScapeContextTest {
+class LauncherShellAdaptiveStageContextTest {
     @Test
     fun saverRestoresDetailOriginWhenSelectionMovedToAnotherStage() {
         val context =
-            TimeScapeInteractionContext(
+            AdaptiveStageInteractionContext(
                 selectedStageKey = "work:calendar",
                 detailStageKey = "personal:mail",
                 focusedCardKey = "work:calendar:focused",
@@ -19,7 +19,7 @@ class LauncherShellTimeScapeContextTest {
             )
 
         val saved: List<String> =
-            with(TimeScapeInteractionContextSaver) {
+            with(AdaptiveStageInteractionContextSaver) {
                 with(
                     object : SaverScope {
                         override fun canBeSaved(value: Any): Boolean = true
@@ -29,13 +29,13 @@ class LauncherShellTimeScapeContextTest {
                 }
             }
 
-        assertEquals(context, TimeScapeInteractionContextSaver.restore(saved))
+        assertEquals(context, AdaptiveStageInteractionContextSaver.restore(saved))
     }
 
     @Test
     fun reconciliationClearsUnavailableDetailOriginWithoutChangingSelection() {
         val context =
-            TimeScapeInteractionContext(
+            AdaptiveStageInteractionContext(
                 selectedStageKey = "work:calendar",
                 detailStageKey = "personal:mail",
                 detailCardKey = "personal:mail:message",
@@ -53,12 +53,12 @@ class LauncherShellTimeScapeContextTest {
     @Test
     fun saverRestoresLegacyPayloadWithoutShiftingExistingFields() {
         val restored =
-            TimeScapeInteractionContextSaver.restore(
+            AdaptiveStageInteractionContextSaver.restore(
                 listOf("work:calendar", "focused", "detail", "shared", "12"),
             )
 
         assertEquals(
-            TimeScapeInteractionContext(
+            AdaptiveStageInteractionContext(
                 selectedStageKey = "work:calendar",
                 focusedCardKey = "focused",
                 detailCardKey = "detail",

@@ -6,12 +6,12 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * [TimeScapeStagePagerState] settles via the same generic threshold/fling/external-selection
+ * [AdaptiveStageStagePagerState] settles via the same generic threshold/fling/external-selection
  * helpers [ImmediateHomePagerState] uses (see [ImmediateHomePagerTest]), reused as-is rather than
- * duplicated. These tests exercise that shared logic against TimeScape-shaped stage counts and
+ * duplicated. These tests exercise that shared logic against AdaptiveStage-shaped stage counts and
  * confirm the pager's own constants.
  */
-class TimeScapeStagePagerTest {
+class AdaptiveStageStagePagerTest {
     @Test
     fun settlesToNextStageOncePastDistanceThresholdDraggingLeft() {
         assertEquals(

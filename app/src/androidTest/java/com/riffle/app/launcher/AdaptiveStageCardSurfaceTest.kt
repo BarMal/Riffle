@@ -64,9 +64,9 @@ import com.riffle.core.domain.launcher.cards.AppStagePreferences
 import com.riffle.core.domain.launcher.cards.CardExpansionPhase
 import com.riffle.core.domain.launcher.cards.CardExpansionState
 import com.riffle.core.domain.launcher.cards.LauncherCardId
-import com.riffle.core.domain.launcher.cards.TimeScapePaneArrangement
-import com.riffle.core.domain.launcher.cards.TimeScapePosture
-import com.riffle.core.domain.launcher.cards.TimeScapeWindowLayout
+import com.riffle.core.domain.launcher.cards.AdaptiveStagePaneArrangement
+import com.riffle.core.domain.launcher.cards.AdaptiveStagePosture
+import com.riffle.core.domain.launcher.cards.AdaptiveStageWindowLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.HomeLayoutKey
 import com.riffle.core.domain.launcher.home.HomeLayoutSet
@@ -79,16 +79,16 @@ import com.riffle.core.domain.launcher.notifications.NotificationAgeBucket
 import com.riffle.core.domain.launcher.notifications.NotificationCategory
 import com.riffle.core.domain.launcher.settings.CardsSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettings
-import com.riffle.core.domain.launcher.settings.TimeScapeAccentSource
-import com.riffle.core.domain.launcher.settings.TimeScapeAppearanceSettings
-import com.riffle.core.domain.launcher.settings.TimeScapeBackgroundSource
-import com.riffle.core.domain.launcher.settings.TimeScapeContentDensity
-import com.riffle.core.domain.launcher.settings.TimeScapeGeometry
-import com.riffle.core.domain.launcher.settings.TimeScapeHapticStrength
-import com.riffle.core.domain.launcher.settings.TimeScapeMotion
-import com.riffle.core.domain.launcher.settings.TimeScapeSurface
-import com.riffle.core.domain.launcher.settings.TimeScapeTypography
-import com.riffle.core.domain.launcher.settings.TimeScapeViewportDp
+import com.riffle.core.domain.launcher.settings.AdaptiveStageAccentSource
+import com.riffle.core.domain.launcher.settings.AdaptiveStageAppearanceSettings
+import com.riffle.core.domain.launcher.settings.AdaptiveStageBackgroundSource
+import com.riffle.core.domain.launcher.settings.AdaptiveStageContentDensity
+import com.riffle.core.domain.launcher.settings.AdaptiveStageGeometry
+import com.riffle.core.domain.launcher.settings.AdaptiveStageHapticStrength
+import com.riffle.core.domain.launcher.settings.AdaptiveStageMotion
+import com.riffle.core.domain.launcher.settings.AdaptiveStageSurface
+import com.riffle.core.domain.launcher.settings.AdaptiveStageTypography
+import com.riffle.core.domain.launcher.settings.AdaptiveStageViewportDp
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
@@ -97,15 +97,15 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
-class TimeScapeCardSurfaceTest {
+class AdaptiveStageCardSurfaceTest {
     @get:Rule
     val composeRule = createComposeRule()
 
     @Test
     fun detailTransitionsUseThePersistedExpandAndExitDurations() {
-        val motion = TimeScapeMotion(expandDurationMillis = 440, exitDurationMillis = 190)
+        val motion = AdaptiveStageMotion(expandDurationMillis = 440, exitDurationMillis = 190)
         val detailState =
-            TimeScapeCardDetailState(
+            AdaptiveStageCardDetailState(
                 currentExpansion = { CardExpansionState() },
                 updateExpansion = {},
                 currentRecoveryMessage = { null },
@@ -119,11 +119,11 @@ class TimeScapeCardSurfaceTest {
     }
 
     @Test
-    fun mapsTimeScapeHapticStrengthToDistinctSettleFeedback() {
-        assertNull(TimeScapeHapticStrength.OFF.timeScapeSettleHapticFeedbackConstant())
+    fun mapsAdaptiveStageHapticStrengthToDistinctSettleFeedback() {
+        assertNull(AdaptiveStageHapticStrength.OFF.adaptiveStageSettleHapticFeedbackConstant())
         assertNotEquals(
-            TimeScapeHapticStrength.LIGHT.timeScapeSettleHapticFeedbackConstant(),
-            TimeScapeHapticStrength.STRONG.timeScapeSettleHapticFeedbackConstant(),
+            AdaptiveStageHapticStrength.LIGHT.adaptiveStageSettleHapticFeedbackConstant(),
+            AdaptiveStageHapticStrength.STRONG.adaptiveStageSettleHapticFeedbackConstant(),
         )
     }
 
@@ -131,7 +131,7 @@ class TimeScapeCardSurfaceTest {
     fun appStageSurfaceExplainsMissingNotificationAccess() {
         composeRule.setContent {
             MaterialTheme {
-                TimeScapeAppStageSurface(
+                AdaptiveStageAppStageSurface(
                     state = LauncherShellState(notificationAccessStatus = NotificationAccessStatus.NOT_GRANTED),
                     onAction = {},
                 )
@@ -150,30 +150,30 @@ class TimeScapeCardSurfaceTest {
     }
 
     @Test
-    fun stageHeaderDoesNotRepeatTimeScapeWhenNoStageIsSelected() {
+    fun stageHeaderDoesNotRepeatAdaptiveStageWhenNoStageIsSelected() {
         composeRule.setContent {
             MaterialTheme {
-                TimeScapeAppStageSurface(
+                AdaptiveStageAppStageSurface(
                     state = LauncherShellState(notificationAccessStatus = NotificationAccessStatus.NOT_GRANTED),
                     onAction = {},
                 )
             }
         }
 
-        // The header title falls back to "TimeScape" when no stage is selected, and used to be
-        // followed by an unconditional "TimeScape" eyebrow subtitle underneath it -- stacking the
+        // The header title falls back to "Cards" when no stage is selected, and used to be
+        // followed by an unconditional "Cards" eyebrow subtitle underneath it -- stacking the
         // same text twice. Only one instance should ever be on screen at a time.
-        composeRule.onAllNodesWithText("TimeScape").assertCountEquals(1)
+        composeRule.onAllNodesWithText("Cards").assertCountEquals(1)
     }
 
     @Test
     fun appStageSurfaceOffersInstalledAppsBeforeNotificationsExist() {
-        val app = timeScapeTestApp()
+        val app = adaptiveStageTestApp()
         val actions = mutableListOf<LauncherShellAction>()
 
         composeRule.setContent {
             MaterialTheme {
-                TimeScapeAppStageSurface(
+                AdaptiveStageAppStageSurface(
                     state =
                         LauncherShellState(
                             notificationAccessStatus = NotificationAccessStatus.GRANTED,
@@ -196,7 +196,7 @@ class TimeScapeCardSurfaceTest {
 
     @Test
     fun pinnedStageOffersAnotherInstalledAppForPinning() {
-        val first = timeScapeTestApp()
+        val first = adaptiveStageTestApp()
         val second =
             first.copy(
                 identity =
@@ -212,7 +212,7 @@ class TimeScapeCardSurfaceTest {
 
         composeRule.setContent {
             MaterialTheme {
-                TimeScapeAppStageSurface(
+                AdaptiveStageAppStageSurface(
                     state =
                         LauncherShellState(
                             homeLayout = cardLayout,
@@ -252,13 +252,13 @@ class TimeScapeCardSurfaceTest {
 
     @Test
     fun emptyPinnedStageKeepsLaunchAffordanceWithoutNotificationAccess() {
-        val app = timeScapeTestApp()
+        val app = adaptiveStageTestApp()
         val stageId = AppStageId(app.identity.packageName, app.identity.profile.id)
         val actions = mutableListOf<LauncherShellAction>()
 
         composeRule.setContent {
             MaterialTheme {
-                TimeScapeAppStageSurface(
+                AdaptiveStageAppStageSurface(
                     state =
                         LauncherShellState(
                             notificationAccessStatus = NotificationAccessStatus.NOT_GRANTED,
@@ -284,7 +284,7 @@ class TimeScapeCardSurfaceTest {
         }
 
         composeRule.onNodeWithText("Stage ready").assertIsDisplayed()
-        // The empty-stage placeholder now renders inside a fixed-size TimeScapeCardSurface
+        // The empty-stage placeholder now renders inside a fixed-size AdaptiveStageCardSurface
         // (matching populated-card sizing) with its content in a scrollable Column, so an
         // affordance below the fold needs a scroll before it can be clicked, same as on a real
         // device.
@@ -294,12 +294,12 @@ class TimeScapeCardSurfaceTest {
 
     @Test
     fun emptyPinnedStageRendersInsideCardSurfaceContainer() {
-        val app = timeScapeTestApp()
+        val app = adaptiveStageTestApp()
         val stageId = AppStageId(app.identity.packageName, app.identity.profile.id)
 
         composeRule.setContent {
             MaterialTheme {
-                TimeScapeAppStageSurface(
+                AdaptiveStageAppStageSurface(
                     state =
                         LauncherShellState(
                             notificationAccessStatus = NotificationAccessStatus.NOT_GRANTED,
@@ -324,7 +324,7 @@ class TimeScapeCardSurfaceTest {
             }
         }
 
-        composeRule.onNodeWithTag(TIME_SCAPE_EMPTY_STAGE_CARD_TEST_TAG).assertIsDisplayed()
+        composeRule.onNodeWithTag(ADAPTIVE_STAGE_EMPTY_STAGE_CARD_TEST_TAG).assertIsDisplayed()
     }
 
     @Test
@@ -345,12 +345,12 @@ class TimeScapeCardSurfaceTest {
                 packageName = app.identity.packageName,
                 profileId = app.identity.profile.id,
                 title = "New message",
-                text = "Hello from TimeScape",
+                text = "Hello from Cards",
                 postedAtEpochMillis = 10,
             )
         composeRule.setContent {
             MaterialTheme {
-                TimeScapeAppStageSurface(
+                AdaptiveStageAppStageSurface(
                     state =
                         LauncherShellState(
                             notificationAccessStatus = NotificationAccessStatus.GRANTED,
@@ -375,28 +375,28 @@ class TimeScapeCardSurfaceTest {
 
         composeRule.onNodeWithContentDescription("Mail, selected. Open stage").assertIsDisplayed()
         composeRule.onNodeWithText("New message").assertIsDisplayed()
-        composeRule.onNodeWithText("Hello from TimeScape").assertIsDisplayed()
+        composeRule.onNodeWithText("Hello from Cards").assertIsDisplayed()
     }
 
     @Test
     fun cardNavigationUsesOnePoliteLiveRegionForTheSettledFocusedCard() {
-        val app = timeScapeTestApp()
+        val app = adaptiveStageTestApp()
         val newest =
-            timeScapeTestNotification(app).copy(
+            adaptiveStageTestNotification(app).copy(
                 key = LauncherNotificationKey("newest"),
                 title = "Newest message",
                 postedAtEpochMillis = 20,
             )
         val older =
-            timeScapeTestNotification(app).copy(
+            adaptiveStageTestNotification(app).copy(
                 key = LauncherNotificationKey("older"),
                 title = "Older message",
                 postedAtEpochMillis = 10,
             )
         val state =
-            timeScapeTestState(app, newest).copy(
+            adaptiveStageTestState(app, newest).copy(
                 notificationGroupsByApp =
-                    timeScapeTestState(app, newest).notificationGroupsByApp.map { group ->
+                    adaptiveStageTestState(app, newest).notificationGroupsByApp.map { group ->
                         group.copy(notifications = listOf(newest, older))
                     },
             )
@@ -406,7 +406,7 @@ class TimeScapeCardSurfaceTest {
                 .and(hasContentDescription("Focused", substring = true))
 
         composeRule.setContent {
-            MaterialTheme { TimeScapeAppStageSurface(state = state, onAction = {}) }
+            MaterialTheme { AdaptiveStageAppStageSurface(state = state, onAction = {}) }
         }
 
         composeRule.onAllNodes(focusedCardLiveRegion).assertCountEquals(1)
@@ -417,11 +417,11 @@ class TimeScapeCardSurfaceTest {
 
     @Test
     fun explicitDetailsOpensAndBackReturnsToTheFocusedCard() {
-        val app = timeScapeTestApp()
-        val notification = timeScapeTestNotification(app)
+        val app = adaptiveStageTestApp()
+        val notification = adaptiveStageTestNotification(app)
         composeRule.setContent {
             MaterialTheme {
-                TimeScapeAppStageSurface(state = timeScapeTestState(app, notification), onAction = {})
+                AdaptiveStageAppStageSurface(state = adaptiveStageTestState(app, notification), onAction = {})
             }
         }
 
@@ -437,10 +437,10 @@ class TimeScapeCardSurfaceTest {
 
     @Test
     fun cardStackStaysComposedButDimmedWhileDetailIsExpanded() {
-        val app = timeScapeTestApp()
-        val notification = timeScapeTestNotification(app)
+        val app = adaptiveStageTestApp()
+        val notification = adaptiveStageTestNotification(app)
         // A bare "Focused" content-description substring is ambiguous in this tree:
-        // TimeScapeCardNavigationControls' position indicator also carries a "Focused card
+        // AdaptiveStageCardNavigationControls' position indicator also carries a "Focused card
         // position" content description (see cardNavigationUsesOnePoliteLiveRegionForTheSettled-
         // FocusedCard, which disambiguates the same way). Only the focused CardStack entry's own
         // semantics also tag a polite live region, so AND-ing on that uniquely targets it instead
@@ -451,7 +451,7 @@ class TimeScapeCardSurfaceTest {
                 .and(hasContentDescription("Focused", substring = true))
         composeRule.setContent {
             MaterialTheme {
-                TimeScapeAppStageSurface(state = timeScapeTestState(app, notification), onAction = {})
+                AdaptiveStageAppStageSurface(state = adaptiveStageTestState(app, notification), onAction = {})
             }
         }
 
@@ -469,27 +469,27 @@ class TimeScapeCardSurfaceTest {
 
     @Test
     fun splitArrangementShowsExpandedDetailOnlyOnceNotDuplicatedInTheLowerStack() {
-        val app = timeScapeTestApp()
-        val notification = timeScapeTestNotification(app)
+        val app = adaptiveStageTestApp()
+        val notification = adaptiveStageTestNotification(app)
         val splitState =
-            timeScapeTestState(app, notification).copy(
+            adaptiveStageTestState(app, notification).copy(
                 launcherSettings =
                     LauncherSettings(
-                        cards = CardsSettings(timeScapePaneArrangement = TimeScapePaneArrangement.SPLIT),
+                        cards = CardsSettings(adaptiveStagePaneArrangement = AdaptiveStagePaneArrangement.SPLIT),
                     ),
             )
         composeRule.setContent {
             MaterialTheme {
-                TimeScapeAppStageSurface(
+                AdaptiveStageAppStageSurface(
                     state = splitState,
-                    windowLayout = TimeScapeWindowLayout(widthDp = 360, heightDp = 800, posture = TimeScapePosture.UNFOLDED),
+                    windowLayout = AdaptiveStageWindowLayout(widthDp = 360, heightDp = 800, posture = AdaptiveStagePosture.UNFOLDED),
                     onAction = {},
                 )
             }
         }
 
         // SPLIT mode legitimately shows more than one "Details" affordance for the same focused
-        // card at once (the upper TimeScapeSupportingPane's own context shelf, and the lower
+        // card at once (the upper AdaptiveStageSupportingPane's own context shelf, and the lower
         // stack's card content) -- both drive the same detailState.expand(...) for the same card,
         // so clicking either is equivalent; disambiguate by picking the first clickable one.
         composeRule.onAllNodes(hasText("Details").and(hasClickAction()))[0].performClick()
@@ -502,24 +502,24 @@ class TimeScapeCardSurfaceTest {
 
     @Test
     fun focusedCardAndOpenDetailSurviveCompactAndSupportingPaneChanges() {
-        val app = timeScapeTestApp()
+        val app = adaptiveStageTestApp()
         val newest =
-            timeScapeTestNotification(app).copy(
+            adaptiveStageTestNotification(app).copy(
                 key = LauncherNotificationKey("newest"),
                 title = "Newest message",
                 text = "Selected card context",
                 postedAtEpochMillis = 20,
             )
         val older =
-            timeScapeTestNotification(app).copy(
+            adaptiveStageTestNotification(app).copy(
                 key = LauncherNotificationKey("older"),
                 title = "Older message",
                 postedAtEpochMillis = 10,
             )
         val testState =
-            timeScapeTestState(app, newest).copy(
+            adaptiveStageTestState(app, newest).copy(
                 notificationGroupsByApp =
-                    timeScapeTestState(app, newest).notificationGroupsByApp.map { group ->
+                    adaptiveStageTestState(app, newest).notificationGroupsByApp.map { group ->
                         group.copy(notifications = listOf(newest, older))
                     },
             )
@@ -528,9 +528,9 @@ class TimeScapeCardSurfaceTest {
             CompositionLocalProvider(LocalDensity provides Density(0.3f)) {
                 MaterialTheme {
                     Box(modifier = Modifier.width(widthDp.dp).height(800.dp).clipToBounds()) {
-                        TimeScapeAppStageSurface(
+                        AdaptiveStageAppStageSurface(
                             state = testState,
-                            windowLayout = TimeScapeWindowLayout(widthDp, 800, posture = TimeScapePosture.UNFOLDED),
+                            windowLayout = AdaptiveStageWindowLayout(widthDp, 800, posture = AdaptiveStagePosture.UNFOLDED),
                             onAction = {},
                         )
                     }
@@ -543,7 +543,7 @@ class TimeScapeCardSurfaceTest {
         composeRule.onNodeWithText("Notification details").assertIsDisplayed()
 
         composeRule.runOnIdle { widthDp = 1_200 }
-        composeRule.onNodeWithTag(TIME_SCAPE_SUPPORTING_PANE_TEST_TAG).assertIsDisplayed()
+        composeRule.onNodeWithTag(ADAPTIVE_STAGE_SUPPORTING_PANE_TEST_TAG).assertIsDisplayed()
         composeRule.onNodeWithText("Notification details").assertExists()
         composeRule.runOnIdle { widthDp = 500 }
         composeRule.onNodeWithText("Notification details").assertIsDisplayed()
@@ -554,16 +554,16 @@ class TimeScapeCardSurfaceTest {
 
     @Test
     fun notificationRefreshKeepsFocusedCardByStableIdentity() {
-        val app = timeScapeTestApp()
+        val app = adaptiveStageTestApp()
         val initial =
-            timeScapeTestState(
+            adaptiveStageTestState(
                 app,
-                timeScapeTestNotification(app).copy(text = "Before refresh"),
+                adaptiveStageTestNotification(app).copy(text = "Before refresh"),
             )
         var state by mutableStateOf(initial)
 
         composeRule.setContent {
-            MaterialTheme { TimeScapeAppStageSurface(state = state, onAction = {}) }
+            MaterialTheme { AdaptiveStageAppStageSurface(state = state, onAction = {}) }
         }
 
         composeRule.onNodeWithText("Before refresh").performClick()
@@ -587,7 +587,7 @@ class TimeScapeCardSurfaceTest {
 
     @Test
     fun stageHeaderExposesPreviousAndNextStageAsCustomAccessibilityActions() {
-        val first = timeScapeTestApp()
+        val first = adaptiveStageTestApp()
         val second =
             first.copy(
                 identity =
@@ -596,7 +596,7 @@ class TimeScapeCardSurfaceTest {
                     ),
                 label = "Calendar",
             )
-        val firstNotification = timeScapeTestNotification(first)
+        val firstNotification = adaptiveStageTestNotification(first)
         val secondNotification =
             firstNotification.copy(
                 key = LauncherNotificationKey("calendar"),
@@ -620,16 +620,16 @@ class TimeScapeCardSurfaceTest {
             )
 
         composeRule.setContent {
-            MaterialTheme { TimeScapeAppStageSurface(state = state, onAction = actions::add) }
+            MaterialTheme { AdaptiveStageAppStageSurface(state = state, onAction = actions::add) }
         }
 
         // Previous/Next are no longer visible buttons (removed as redundant with tapping a stage
-        // directly, or swiping) -- they're reachable via TimeScapeStageHeader's customActions,
+        // directly, or swiping) -- they're reachable via AdaptiveStageStageHeader's customActions,
         // the same CustomAccessibilityAction pattern already used for intra-stack card navigation
         // (see WidgetPickerSurfaceTest for the identical precedent).
         val headerActions =
             composeRule
-                .onNodeWithTag(TIME_SCAPE_STAGE_HEADER_TEST_TAG)
+                .onNodeWithTag(ADAPTIVE_STAGE_STAGE_HEADER_TEST_TAG)
                 .fetchSemanticsNode()
                 .config[SemanticsActions.CustomActions]
         headerActions.first { action -> action.label == "Next stage" }.action()
@@ -646,13 +646,13 @@ class TimeScapeCardSurfaceTest {
 
     @Test
     fun tappingAStageRailTileSelectsThatStage() {
-        val first = timeScapeTestApp()
+        val first = adaptiveStageTestApp()
         val second =
             first.copy(
                 identity = first.identity.copy(packageName = AppPackageName("com.example.calendar")),
                 label = "Calendar",
             )
-        val firstNotification = timeScapeTestNotification(first)
+        val firstNotification = adaptiveStageTestNotification(first)
         // Older than firstNotification so AppStagePlanner's default-selection tie-break (most
         // recent content wins) deterministically leaves "Calendar" unselected regardless of how
         // package names happen to sort -- this test taps it expecting the plain, unselected
@@ -682,10 +682,10 @@ class TimeScapeCardSurfaceTest {
 
         composeRule.setContent {
             MaterialTheme {
-                TimeScapeAppStageSurface(
+                AdaptiveStageAppStageSurface(
                     state = state,
                     windowLayout =
-                        TimeScapeWindowLayout(widthDp = 800, heightDp = 800, posture = TimeScapePosture.UNFOLDED),
+                        AdaptiveStageWindowLayout(widthDp = 800, heightDp = 800, posture = AdaptiveStagePosture.UNFOLDED),
                     onAction = actions::add,
                 )
             }
@@ -708,7 +708,7 @@ class TimeScapeCardSurfaceTest {
 
     @Test
     fun detailActionsRouteEverySupportedActionToTheFocusedNotificationKey() {
-        val app = timeScapeTestApp()
+        val app = adaptiveStageTestApp()
         val key = LauncherNotificationKey("focused-notification")
         val card =
             AppStageNotificationCard(
@@ -737,17 +737,17 @@ class TimeScapeCardSurfaceTest {
             var expansion by remember { mutableStateOf(CardExpansionState().expand(card.content.id, true)) }
             val detailState =
                 remember {
-                    TimeScapeCardDetailState(
+                    AdaptiveStageCardDetailState(
                         currentExpansion = { expansion },
                         updateExpansion = { expansion = it },
                         currentRecoveryMessage = { null },
                         updateRecoveryMessage = { _ -> },
-                        motion = TimeScapeMotion(reducedMotion = true),
+                        motion = AdaptiveStageMotion(reducedMotion = true),
                         globalReducedMotion = false,
                     )
                 }
             MaterialTheme {
-                TimeScapeCardDetailSurface(card = card, detailState = detailState, onAction = actions::add)
+                AdaptiveStageCardDetailSurface(card = card, detailState = detailState, onAction = actions::add)
             }
         }
 
@@ -777,11 +777,11 @@ class TimeScapeCardSurfaceTest {
 
     @Test
     fun initialNotificationStageDoesNotMoveFocusToDetails() {
-        val app = timeScapeTestApp()
+        val app = adaptiveStageTestApp()
         composeRule.setContent {
             MaterialTheme {
-                TimeScapeAppStageSurface(
-                    state = timeScapeTestState(app, timeScapeTestNotification(app)),
+                AdaptiveStageAppStageSurface(
+                    state = adaptiveStageTestState(app, adaptiveStageTestNotification(app)),
                     onAction = {},
                 )
             }
@@ -792,9 +792,9 @@ class TimeScapeCardSurfaceTest {
 
     @Test
     fun emptyAppDetailsBackRestoresFocusToItsDetailsControl() {
-        val app = timeScapeTestApp()
+        val app = adaptiveStageTestApp()
         composeRule.setContent {
-            MaterialTheme { TimeScapeAppStageSurface(state = emptyPinnedStageState(app), onAction = {}) }
+            MaterialTheme { AdaptiveStageAppStageSurface(state = emptyPinnedStageState(app), onAction = {}) }
         }
 
         composeRule.onNodeWithText("Details").performClick()
@@ -808,15 +808,15 @@ class TimeScapeCardSurfaceTest {
 
     @Test
     fun emptyAppDetailMovesToSupportingPaneAndBackAcrossResize() {
-        val app = timeScapeTestApp()
+        val app = adaptiveStageTestApp()
         var widthDp by mutableIntStateOf(500)
         composeRule.setContent {
             CompositionLocalProvider(LocalDensity provides Density(0.3f)) {
                 MaterialTheme {
                     Box(modifier = Modifier.width(widthDp.dp).height(800.dp).clipToBounds()) {
-                        TimeScapeAppStageSurface(
+                        AdaptiveStageAppStageSurface(
                             state = emptyPinnedStageState(app),
-                            windowLayout = TimeScapeWindowLayout(widthDp, 800, posture = TimeScapePosture.UNFOLDED),
+                            windowLayout = AdaptiveStageWindowLayout(widthDp, 800, posture = AdaptiveStagePosture.UNFOLDED),
                             onAction = {},
                         )
                     }
@@ -828,7 +828,7 @@ class TimeScapeCardSurfaceTest {
         composeRule.onNodeWithText("App details").assertIsDisplayed()
 
         composeRule.runOnIdle { widthDp = 1_200 }
-        composeRule.onNodeWithTag(TIME_SCAPE_SUPPORTING_PANE_TEST_TAG).assertIsDisplayed()
+        composeRule.onNodeWithTag(ADAPTIVE_STAGE_SUPPORTING_PANE_TEST_TAG).assertIsDisplayed()
         composeRule.onNodeWithText("App details").assertExists()
 
         composeRule.runOnIdle { widthDp = 500 }
@@ -837,17 +837,17 @@ class TimeScapeCardSurfaceTest {
 
     @Test
     fun removingSourceDuringBackCloseDoesNotFocusRemainingCardDetails() {
-        val app = timeScapeTestApp()
-        val source = timeScapeTestNotification(app).copy(key = LauncherNotificationKey("source"), postedAtEpochMillis = 20)
+        val app = adaptiveStageTestApp()
+        val source = adaptiveStageTestNotification(app).copy(key = LauncherNotificationKey("source"), postedAtEpochMillis = 20)
         val remaining =
-            timeScapeTestNotification(app).copy(
+            adaptiveStageTestNotification(app).copy(
                 key = LauncherNotificationKey("remaining"),
                 title = "Remaining notification",
                 postedAtEpochMillis = 10,
             )
         var state by
             mutableStateOf(
-                timeScapeTestState(app, source).copy(
+                adaptiveStageTestState(app, source).copy(
                     notificationGroupsByApp =
                         listOf(
                             AppNotificationGroup(
@@ -861,7 +861,7 @@ class TimeScapeCardSurfaceTest {
                 ),
             )
         composeRule.setContent {
-            MaterialTheme { TimeScapeAppStageSurface(state = state, onAction = {}) }
+            MaterialTheme { AdaptiveStageAppStageSurface(state = state, onAction = {}) }
         }
 
         composeRule.onNodeWithText("Details").performClick()
@@ -889,8 +889,8 @@ class TimeScapeCardSurfaceTest {
     fun initialEmptyAppStageDoesNotMoveFocusToDetails() {
         composeRule.setContent {
             MaterialTheme {
-                TimeScapeAppStageSurface(
-                    state = emptyPinnedStageState(timeScapeTestApp()),
+                AdaptiveStageAppStageSurface(
+                    state = emptyPinnedStageState(adaptiveStageTestApp()),
                     onAction = {},
                 )
             }
@@ -901,10 +901,10 @@ class TimeScapeCardSurfaceTest {
 
     @Test
     fun removedExpandedEmptyAppRecoversWithoutFocusingDetachedDetailsControl() {
-        val app = timeScapeTestApp()
+        val app = adaptiveStageTestApp()
         var state by mutableStateOf(emptyPinnedStageState(app))
         composeRule.setContent {
-            MaterialTheme { TimeScapeAppStageSurface(state = state, onAction = {}) }
+            MaterialTheme { AdaptiveStageAppStageSurface(state = state, onAction = {}) }
         }
 
         composeRule.onNodeWithText("Details").performClick()
@@ -918,11 +918,11 @@ class TimeScapeCardSurfaceTest {
 
     @Test
     fun removedExpandedContentReturnsToTheStageWithAnExplanation() {
-        val app = timeScapeTestApp()
-        val notification = timeScapeTestNotification(app)
-        var state by mutableStateOf(timeScapeTestState(app, notification))
+        val app = adaptiveStageTestApp()
+        val notification = adaptiveStageTestNotification(app)
+        var state by mutableStateOf(adaptiveStageTestState(app, notification))
         composeRule.setContent {
-            MaterialTheme { TimeScapeAppStageSurface(state = state, onAction = {}) }
+            MaterialTheme { AdaptiveStageAppStageSurface(state = state, onAction = {}) }
         }
 
         composeRule.onNodeWithText("Details").performClick()
@@ -935,11 +935,11 @@ class TimeScapeCardSurfaceTest {
 
     @Test
     fun revokingNotificationAccessWhileDetailIsOpenClosesItWithAnExplanation() {
-        val app = timeScapeTestApp()
-        val notification = timeScapeTestNotification(app)
-        var state by mutableStateOf(timeScapeTestState(app, notification))
+        val app = adaptiveStageTestApp()
+        val notification = adaptiveStageTestNotification(app)
+        var state by mutableStateOf(adaptiveStageTestState(app, notification))
         composeRule.setContent {
-            MaterialTheme { TimeScapeAppStageSurface(state = state, onAction = {}) }
+            MaterialTheme { AdaptiveStageAppStageSurface(state = state, onAction = {}) }
         }
 
         composeRule.onNodeWithText("Details").performClick()
@@ -971,7 +971,7 @@ class TimeScapeCardSurfaceTest {
                 packageName = app.identity.packageName,
                 profileId = app.identity.profile.id,
                 title = "New message",
-                text = "Hello from TimeScape",
+                text = "Hello from Cards",
                 postedAtEpochMillis = 10,
             )
         var state by
@@ -996,7 +996,7 @@ class TimeScapeCardSurfaceTest {
 
         composeRule.setContent {
             MaterialTheme {
-                TimeScapeAppStageSurface(state = state, onAction = {})
+                AdaptiveStageAppStageSurface(state = state, onAction = {})
             }
         }
         composeRule.onNodeWithText("New message").assertIsDisplayed()
@@ -1028,7 +1028,7 @@ class TimeScapeCardSurfaceTest {
 
         composeRule.setContent {
             MaterialTheme {
-                TimeScapeAppStageSurface(
+                AdaptiveStageAppStageSurface(
                     state =
                         LauncherShellState(
                             notificationAccessStatus = NotificationAccessStatus.REVOKED,
@@ -1065,7 +1065,7 @@ class TimeScapeCardSurfaceTest {
                 SemanticsMatcher("selected pinned stage exposes pin state") { node ->
                     SemanticsProperties.StateDescription in node.config &&
                         node.config[SemanticsProperties.StateDescription].contains("Pinned")
-                }.and(hasContentDescription("TimeScape stage: Mail")),
+                }.and(hasContentDescription("Cards stage: Mail")),
             ).assertIsDisplayed()
         composeRule.onNodeWithText("Nothing new").assertDoesNotExist()
     }
@@ -1088,13 +1088,13 @@ class TimeScapeCardSurfaceTest {
                 packageName = app.identity.packageName,
                 profileId = app.identity.profile.id,
                 title = "New message",
-                text = "Hello from TimeScape",
+                text = "Hello from Cards",
                 postedAtEpochMillis = 10,
             )
         val actions = mutableListOf<LauncherShellAction>()
         composeRule.setContent {
             MaterialTheme {
-                TimeScapeAppStageSurface(
+                AdaptiveStageAppStageSurface(
                     state =
                         LauncherShellState(
                             notificationAccessStatus = NotificationAccessStatus.GRANTED,
@@ -1164,7 +1164,7 @@ class TimeScapeCardSurfaceTest {
 
         composeRule.setContent {
             MaterialTheme {
-                TimeScapeAppStageSurface(
+                AdaptiveStageAppStageSurface(
                     state =
                         LauncherShellState(
                             notificationAccessStatus = NotificationAccessStatus.GRANTED,
@@ -1204,7 +1204,7 @@ class TimeScapeCardSurfaceTest {
 
     @Test
     fun tappingASpineItemDispatchesSelectAppStageForThatStage() {
-        val first = timeScapeTestApp()
+        val first = adaptiveStageTestApp()
         val second =
             first.copy(
                 identity = first.identity.copy(packageName = AppPackageName("com.example.calendar")),
@@ -1216,7 +1216,7 @@ class TimeScapeCardSurfaceTest {
 
         composeRule.setContent {
             MaterialTheme {
-                TimeScapeAppStageSurface(
+                AdaptiveStageAppStageSurface(
                     state =
                         LauncherShellState(
                             notificationAccessStatus = NotificationAccessStatus.GRANTED,
@@ -1253,13 +1253,13 @@ class TimeScapeCardSurfaceTest {
 
         assertEquals(
             "personal:com.example.mail",
-            timeScapeStageSelectorItemKey(
+            adaptiveStageStageSelectorItemKey(
                 AppStage(personal, setOf(AppStageOrigin.DYNAMIC), AppStageLifecycle.EMPTY),
             ),
         )
         assertEquals(
             "work:com.example.mail",
-            timeScapeStageSelectorItemKey(
+            adaptiveStageStageSelectorItemKey(
                 AppStage(work, setOf(AppStageOrigin.DYNAMIC), AppStageLifecycle.EMPTY),
             ),
         )
@@ -1268,16 +1268,16 @@ class TimeScapeCardSurfaceTest {
     @Test
     fun everyBackgroundSourceRendersCardContentWithAFallback() {
         val appearances =
-            TimeScapeBackgroundSource.entries.map { source ->
-                TimeScapeAppearanceSettings(surface = TimeScapeSurface(backgroundSource = source))
+            AdaptiveStageBackgroundSource.entries.map { source ->
+                AdaptiveStageAppearanceSettings(surface = AdaptiveStageSurface(backgroundSource = source))
             }
 
         composeRule.setContent {
             MaterialTheme {
                 appearances.forEachIndexed { index, appearance ->
-                    TimeScapeCardSurface(
+                    AdaptiveStageCardSurface(
                         appearance = appearance,
-                        background = TimeScapeCardBackground(appSeed = "card-$index"),
+                        background = AdaptiveStageCardBackground(appSeed = "card-$index"),
                     ) {
                         Text("Card $index")
                     }
@@ -1291,17 +1291,17 @@ class TimeScapeCardSurfaceTest {
     @Test
     fun reducedTransparencyKeepsAnOpaqueLegibleSurface() {
         val colors =
-            resolveTimeScapeCardColors(
+            resolveAdaptiveStageCardColors(
                 appearance =
-                    TimeScapeAppearanceSettings(
+                    AdaptiveStageAppearanceSettings(
                         surface =
-                            TimeScapeSurface(
+                            AdaptiveStageSurface(
                                 customBackgroundArgb = 0xFF101010L,
-                                backgroundSource = TimeScapeBackgroundSource.CUSTOM_SOLID,
+                                backgroundSource = AdaptiveStageBackgroundSource.CUSTOM_SOLID,
                             ),
-                        motion = TimeScapeMotion(reducedTransparency = true),
+                        motion = AdaptiveStageMotion(reducedTransparency = true),
                     ),
-                background = TimeScapeCardBackground(),
+                background = AdaptiveStageCardBackground(),
                 materialBackground = Color.White,
                 materialAccent = Color.Blue,
             )
@@ -1316,24 +1316,24 @@ class TimeScapeCardSurfaceTest {
         val appColor = Color(0.2f, 0.4f, 0.9f)
         val backgroundSources =
             listOf(
-                TimeScapeBackgroundSource.APP_DERIVED_SOLID,
-                TimeScapeBackgroundSource.APP_DERIVED_GRADIENT,
-                TimeScapeBackgroundSource.NOTIFICATION_ARTWORK,
-                TimeScapeBackgroundSource.APP_ICON_TREATMENT,
+                AdaptiveStageBackgroundSource.APP_DERIVED_SOLID,
+                AdaptiveStageBackgroundSource.APP_DERIVED_GRADIENT,
+                AdaptiveStageBackgroundSource.NOTIFICATION_ARTWORK,
+                AdaptiveStageBackgroundSource.APP_ICON_TREATMENT,
             )
 
         backgroundSources.forEach { source ->
             val colorsWithAppColor =
-                resolveTimeScapeCardColors(
-                    appearance = TimeScapeAppearanceSettings(surface = TimeScapeSurface(backgroundSource = source)),
-                    background = TimeScapeCardBackground(appSeed = "com.example.app", appColor = appColor),
+                resolveAdaptiveStageCardColors(
+                    appearance = AdaptiveStageAppearanceSettings(surface = AdaptiveStageSurface(backgroundSource = source)),
+                    background = AdaptiveStageCardBackground(appSeed = "com.example.app", appColor = appColor),
                     materialBackground = Color.White,
                     materialAccent = Color.Blue,
                 )
             val colorsWithoutAppColor =
-                resolveTimeScapeCardColors(
-                    appearance = TimeScapeAppearanceSettings(surface = TimeScapeSurface(backgroundSource = source)),
-                    background = TimeScapeCardBackground(appSeed = "com.example.app"),
+                resolveAdaptiveStageCardColors(
+                    appearance = AdaptiveStageAppearanceSettings(surface = AdaptiveStageSurface(backgroundSource = source)),
+                    background = AdaptiveStageCardBackground(appSeed = "com.example.app"),
                     materialBackground = Color.White,
                     materialAccent = Color.Blue,
                 )
@@ -1352,22 +1352,22 @@ class TimeScapeCardSurfaceTest {
 
         modes.forEach { (automaticForegroundContrast, backgroundArgb) ->
             val colors =
-                resolveTimeScapeCardColors(
+                resolveAdaptiveStageCardColors(
                     appearance =
-                        TimeScapeAppearanceSettings(
+                        AdaptiveStageAppearanceSettings(
                             surface =
-                                TimeScapeSurface(
-                                    backgroundSource = TimeScapeBackgroundSource.CUSTOM_SOLID,
+                                AdaptiveStageSurface(
+                                    backgroundSource = AdaptiveStageBackgroundSource.CUSTOM_SOLID,
                                     customBackgroundArgb = backgroundArgb,
                                     glassTintArgb = backgroundArgb,
                                     glassTransparencyPercent = 0,
                                 ),
                             typography =
-                                TimeScapeTypography(
+                                AdaptiveStageTypography(
                                     automaticForegroundContrast = automaticForegroundContrast,
                                 ),
                         ),
-                    background = TimeScapeCardBackground(),
+                    background = AdaptiveStageCardBackground(),
                     materialBackground = Color.White,
                     materialAccent = Color.Blue,
                 )
@@ -1386,10 +1386,10 @@ class TimeScapeCardSurfaceTest {
                 }
             }.asImageBitmap()
         val appearance =
-            TimeScapeAppearanceSettings(
+            AdaptiveStageAppearanceSettings(
                 surface =
-                    TimeScapeSurface(
-                        backgroundSource = TimeScapeBackgroundSource.NOTIFICATION_ARTWORK,
+                    AdaptiveStageSurface(
+                        backgroundSource = AdaptiveStageBackgroundSource.NOTIFICATION_ARTWORK,
                         glassTintArgb = 0xFFFFFFFFL,
                         glassTransparencyPercent = 50,
                         blurStrengthPercent = 0,
@@ -1398,9 +1398,9 @@ class TimeScapeCardSurfaceTest {
 
         composeRule.setContent {
             MaterialTheme {
-                TimeScapeCardSurface(
+                AdaptiveStageCardSurface(
                     appearance = appearance,
-                    background = TimeScapeCardBackground(artwork = artwork),
+                    background = AdaptiveStageCardBackground(artwork = artwork),
                     modifier = Modifier.requiredSize(120.dp).testTag("artwork-card"),
                 ) {}
             }
@@ -1426,10 +1426,10 @@ class TimeScapeCardSurfaceTest {
                 }
             }.asImageBitmap()
         val appearance =
-            TimeScapeAppearanceSettings(
+            AdaptiveStageAppearanceSettings(
                 surface =
-                    TimeScapeSurface(
-                        backgroundSource = TimeScapeBackgroundSource.NOTIFICATION_ARTWORK,
+                    AdaptiveStageSurface(
+                        backgroundSource = AdaptiveStageBackgroundSource.NOTIFICATION_ARTWORK,
                         glassTintArgb = 0xFFFFFFFFL,
                         glassTransparencyPercent = 95,
                         blurStrengthPercent = 0,
@@ -1438,9 +1438,9 @@ class TimeScapeCardSurfaceTest {
 
         composeRule.setContent {
             MaterialTheme {
-                TimeScapeCardSurface(
+                AdaptiveStageCardSurface(
                     appearance = appearance,
-                    background = TimeScapeCardBackground(artwork = artwork),
+                    background = AdaptiveStageCardBackground(artwork = artwork),
                     modifier = Modifier.requiredSize(160.dp).testTag("mixed-artwork-card"),
                 ) {}
             }
@@ -1451,9 +1451,9 @@ class TimeScapeCardSurfaceTest {
         val left = pixels[rendered.width / 4, rendered.height / 2]
         val right = pixels[rendered.width * 3 / 4, rendered.height / 2]
         val colors =
-            resolveTimeScapeCardColors(
+            resolveAdaptiveStageCardColors(
                 appearance = appearance,
-                background = TimeScapeCardBackground(artwork = artwork),
+                background = AdaptiveStageCardBackground(artwork = artwork),
                 materialBackground = Color.Black,
                 materialAccent = Color.Blue,
             )
@@ -1468,8 +1468,8 @@ class TimeScapeCardSurfaceTest {
     fun saturationAndContrastAdjustFallbackBackgrounds() {
         val original = Color(0.8f, 0.2f, 0.1f)
 
-        val desaturated = timeScapeAdjustedColor(original, saturationPercent = 0, contrastPercent = 100)
-        val contrasted = timeScapeAdjustedColor(original, saturationPercent = 100, contrastPercent = 150)
+        val desaturated = adaptiveStageAdjustedColor(original, saturationPercent = 0, contrastPercent = 100)
+        val contrasted = adaptiveStageAdjustedColor(original, saturationPercent = 100, contrastPercent = 150)
 
         assertEquals(desaturated.red, desaturated.green, 0.001f)
         assertEquals(desaturated.green, desaturated.blue, 0.001f)
@@ -1481,19 +1481,19 @@ class TimeScapeCardSurfaceTest {
         var observedAction = Color.Unspecified
         var observedFontScale = 0f
         val appearance =
-            TimeScapeAppearanceSettings(
+            AdaptiveStageAppearanceSettings(
                 typography =
-                    TimeScapeTypography(
-                        accentSource = TimeScapeAccentSource.CUSTOM,
+                    AdaptiveStageTypography(
+                        accentSource = AdaptiveStageAccentSource.CUSTOM,
                         customAccentArgb = 0xFF336699L,
-                        contentDensity = TimeScapeContentDensity.EXPANDED,
+                        contentDensity = AdaptiveStageContentDensity.EXPANDED,
                         textScalePercent = 130,
                     ),
             )
 
         composeRule.setContent {
             MaterialTheme {
-                TimeScapeCardSurface(appearance, TimeScapeCardBackground()) {
+                AdaptiveStageCardSurface(appearance, AdaptiveStageCardBackground()) {
                     observedAction = MaterialTheme.colorScheme.primary
                     observedFontScale = LocalDensity.current.fontScale
                     Text("Styled card")
@@ -1504,17 +1504,17 @@ class TimeScapeCardSurfaceTest {
         composeRule.onNodeWithText("Styled card").assertIsDisplayed()
         composeRule.runOnIdle {
             val colors =
-                resolveTimeScapeCardColors(
+                resolveAdaptiveStageCardColors(
                     appearance = appearance,
-                    background = TimeScapeCardBackground(),
+                    background = AdaptiveStageCardBackground(),
                     materialBackground = Color.Black,
                     materialAccent = Color.Blue,
                 )
             assertEquals(Color(0xFF336699), colors.accent)
             assertTrue(contrastRatio(observedAction, colors.glass) >= 4.5f)
             assertEquals(1.3f, observedFontScale, 0.001f)
-            assertEquals(1.2f, timeScapeContentDensityScale(TimeScapeContentDensity.EXPANDED), 0.001f)
-            assertEquals(0.8f, timeScapeContentDensityScale(TimeScapeContentDensity.COMPACT), 0.001f)
+            assertEquals(1.2f, adaptiveStageContentDensityScale(AdaptiveStageContentDensity.EXPANDED), 0.001f)
+            assertEquals(0.8f, adaptiveStageContentDensityScale(AdaptiveStageContentDensity.COMPACT), 0.001f)
         }
     }
 
@@ -1523,31 +1523,31 @@ class TimeScapeCardSurfaceTest {
         val actionColors = mutableMapOf<Int, Pair<Color, Color>>()
         val appearances =
             listOf(
-                TimeScapeAppearanceSettings(
+                AdaptiveStageAppearanceSettings(
                     surface =
-                        TimeScapeSurface(
-                            backgroundSource = TimeScapeBackgroundSource.CUSTOM_SOLID,
+                        AdaptiveStageSurface(
+                            backgroundSource = AdaptiveStageBackgroundSource.CUSTOM_SOLID,
                             customBackgroundArgb = 0xFFFFFFFFL,
                             glassTintArgb = 0xFFFFFFFFL,
                             glassTransparencyPercent = 0,
                         ),
                     typography =
-                        TimeScapeTypography(
-                            accentSource = TimeScapeAccentSource.CUSTOM,
+                        AdaptiveStageTypography(
+                            accentSource = AdaptiveStageAccentSource.CUSTOM,
                             customAccentArgb = 0xFFFFFFFFL,
                         ),
                 ),
-                TimeScapeAppearanceSettings(
+                AdaptiveStageAppearanceSettings(
                     surface =
-                        TimeScapeSurface(
-                            backgroundSource = TimeScapeBackgroundSource.CUSTOM_SOLID,
+                        AdaptiveStageSurface(
+                            backgroundSource = AdaptiveStageBackgroundSource.CUSTOM_SOLID,
                             customBackgroundArgb = 0xFF000000L,
                             glassTintArgb = 0xFF000000L,
                             glassTransparencyPercent = 0,
                         ),
                     typography =
-                        TimeScapeTypography(
-                            accentSource = TimeScapeAccentSource.CUSTOM,
+                        AdaptiveStageTypography(
+                            accentSource = AdaptiveStageAccentSource.CUSTOM,
                             customAccentArgb = 0xFF000000L,
                         ),
                 ),
@@ -1556,7 +1556,7 @@ class TimeScapeCardSurfaceTest {
         composeRule.setContent {
             MaterialTheme {
                 appearances.forEachIndexed { index, appearance ->
-                    TimeScapeCardSurface(appearance, TimeScapeCardBackground()) {
+                    AdaptiveStageCardSurface(appearance, AdaptiveStageCardBackground()) {
                         actionColors[index] = MaterialTheme.colorScheme.primary to MaterialTheme.colorScheme.onPrimary
                         TextButton(onClick = {}) { Text("Action $index") }
                     }
@@ -1570,9 +1570,9 @@ class TimeScapeCardSurfaceTest {
             assertEquals(2, actionColors.size)
             appearances.indices.forEach { index ->
                 val colors =
-                    resolveTimeScapeCardColors(
+                    resolveAdaptiveStageCardColors(
                         appearance = appearances[index],
-                        background = TimeScapeCardBackground(),
+                        background = AdaptiveStageCardBackground(),
                         materialBackground = Color.Black,
                         materialAccent = Color.Blue,
                     )
@@ -1585,19 +1585,19 @@ class TimeScapeCardSurfaceTest {
 
     @Test
     fun oldPlatformDisablesBlurWithoutChangingStoredAppearance() {
-        val appearance = TimeScapeAppearanceSettings(surface = TimeScapeSurface(blurStrengthPercent = 72))
+        val appearance = AdaptiveStageAppearanceSettings(surface = AdaptiveStageSurface(blurStrengthPercent = 72))
 
-        assertFalse(timeScapeRendererCapabilities(sdkInt = 30).supportsBlur)
+        assertFalse(adaptiveStageRendererCapabilities(sdkInt = 30).supportsBlur)
         assertEquals(72, appearance.surface.blurStrengthPercent)
-        assertEquals(0, appearance.effectiveFor(timeScapeRendererCapabilities(sdkInt = 30)).surface.blurStrengthPercent)
+        assertEquals(0, appearance.effectiveFor(adaptiveStageRendererCapabilities(sdkInt = 30)).surface.blurStrengthPercent)
     }
 
     @Test
     fun corruptOrOversizedArtworkFallsBackAndDecodingIsBounded() {
-        assertNull(decodeTimeScapeArtwork("not-base64"))
-        assertNull(decodeTimeScapeArtwork("a".repeat(2_800_001)))
-        assertEquals(2, timeScapeArtworkSampleSize(width = 1_024, height = 600))
-        assertEquals(4, timeScapeArtworkSampleSize(width = 3_000, height = 900))
+        assertNull(decodeAdaptiveStageArtwork("not-base64"))
+        assertNull(decodeAdaptiveStageArtwork("a".repeat(2_800_001)))
+        assertEquals(2, adaptiveStageArtworkSampleSize(width = 1_024, height = 600))
+        assertEquals(4, adaptiveStageArtworkSampleSize(width = 3_000, height = 900))
     }
 
     @Test
@@ -1640,27 +1640,27 @@ class TimeScapeCardSurfaceTest {
     @Test
     fun previewAndProductionCardsUseTheSameCappedContentPaddingOnConstrainedViewports() {
         val resolution =
-            TimeScapeAppearanceSettings(
-                geometry = TimeScapeGeometry(contentPaddingDp = 64),
+            AdaptiveStageAppearanceSettings(
+                geometry = AdaptiveStageGeometry(contentPaddingDp = 64),
             ).resolveCardStack(
-                viewport = TimeScapeViewportDp(widthDp = 500, heightDp = 475),
+                viewport = AdaptiveStageViewportDp(widthDp = 500, heightDp = 475),
             )
 
         assertTrue(resolution.isUsable)
         assertEquals(
             resolution.contentPaddingDp.dp,
-            timeScapeResolvedContentPadding(resolution),
+            adaptiveStageResolvedContentPadding(resolution),
         )
         assertTrue(resolution.contentPaddingDp < 64)
     }
 
     @Test
     fun resolvedStackRetainsFocusedCardAsHighestOrderEntryWithoutMotion() {
-        val appearance = TimeScapeAppearanceSettings(motion = TimeScapeMotion(reducedMotion = true))
+        val appearance = AdaptiveStageAppearanceSettings(motion = AdaptiveStageMotion(reducedMotion = true))
         val entries =
             appearance
                 .resolveCardStack(
-                    viewport = com.riffle.core.domain.launcher.settings.TimeScapeViewportDp(800, 1_200),
+                    viewport = com.riffle.core.domain.launcher.settings.AdaptiveStageViewportDp(800, 1_200),
                     globalReducedMotion = true,
                 ).layoutPolicy
                 .entries(cardCount = 3, activeIndex = 1, reducedMotion = true)
@@ -1672,12 +1672,12 @@ class TimeScapeCardSurfaceTest {
     @Test
     fun notificationStackKeepsEveryAvailableCardReachableBeyondConfiguredVisualDepth() {
         val resolution =
-            TimeScapeAppearanceSettings().resolveCardStack(
-                viewport = TimeScapeViewportDp(widthDp = 800, heightDp = 1_200),
+            AdaptiveStageAppearanceSettings().resolveCardStack(
+                viewport = AdaptiveStageViewportDp(widthDp = 800, heightDp = 1_200),
             )
 
         val entries =
-            timeScapeNotificationStackEntries(
+            adaptiveStageNotificationStackEntries(
                 resolution = resolution,
                 cardCount = 11,
                 activeCardIndex = 5,
@@ -1687,7 +1687,7 @@ class TimeScapeCardSurfaceTest {
         assertEquals((0..10).toSet(), entries.map { entry -> entry.cardIndex }.toSet())
     }
 
-    private fun timeScapeTestApp(): InstalledApp =
+    private fun adaptiveStageTestApp(): InstalledApp =
         InstalledApp(
             identity =
                 AppIdentity(
@@ -1698,13 +1698,13 @@ class TimeScapeCardSurfaceTest {
             label = "Mail",
         )
 
-    private fun timeScapeTestNotification(app: InstalledApp): LauncherNotification =
+    private fun adaptiveStageTestNotification(app: InstalledApp): LauncherNotification =
         LauncherNotification(
             key = LauncherNotificationKey("mail"),
             packageName = app.identity.packageName,
             profileId = app.identity.profile.id,
             title = "New message",
-            text = "Hello from TimeScape",
+            text = "Hello from Cards",
             postedAtEpochMillis = 10,
         )
 
@@ -1720,7 +1720,7 @@ class TimeScapeCardSurfaceTest {
             notifications = listOf(notification),
         )
 
-    private fun timeScapeTestState(
+    private fun adaptiveStageTestState(
         app: InstalledApp,
         notification: LauncherNotification,
     ): LauncherShellState =

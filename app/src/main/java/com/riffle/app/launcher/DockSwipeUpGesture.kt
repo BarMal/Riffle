@@ -21,7 +21,7 @@ import kotlin.math.abs
 internal fun LauncherGestureAction.toDockSwipeUpShellAction(): LauncherShellAction? =
     when (this) {
         LauncherGestureAction.NONE -> null
-        LauncherGestureAction.EXIT_TIMESCAPE ->
+        LauncherGestureAction.EXIT_ADAPTIVE_STAGE ->
             LauncherShellAction.SelectLauncherViewMode(LauncherViewMode.STANDARD_APP_DRAWER)
         LauncherGestureAction.OPEN_APP_DRAWER -> LauncherShellAction.OpenAppDrawer
         // The Dock swipe-up binding only persists one of the three actions above; any other value

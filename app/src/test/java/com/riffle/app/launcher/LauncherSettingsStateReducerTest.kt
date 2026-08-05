@@ -6,8 +6,8 @@ import com.riffle.app.launcher.rss.FeedCacheResult
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppVisibilityRepository
-import com.riffle.core.domain.launcher.cards.TimeScapePaneArrangement
-import com.riffle.core.domain.launcher.cards.TimeScapeRailSide
+import com.riffle.core.domain.launcher.cards.AdaptiveStagePaneArrangement
+import com.riffle.core.domain.launcher.cards.AdaptiveStageRailSide
 import com.riffle.core.domain.launcher.contextual.ContextualSettings
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
@@ -23,7 +23,7 @@ import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettingsRepository
 import com.riffle.core.domain.launcher.settings.RssSettings
 import com.riffle.core.domain.launcher.settings.SearchResultPresentation
-import com.riffle.core.domain.launcher.settings.TimeScapeAppearanceSettings
+import com.riffle.core.domain.launcher.settings.AdaptiveStageAppearanceSettings
 import com.riffle.core.domain.launcher.settings.homeSystemBars
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertSame
@@ -83,50 +83,50 @@ class LauncherSettingsStateReducerTest {
     }
 
     @Test
-    fun replacesAndCoercesTheCompleteTimeScapeProfileAtomically() {
+    fun replacesAndCoercesTheCompleteAdaptiveStageProfileAtomically() {
         val repository = FakeLauncherSettingsRepository()
         val requested =
-            TimeScapeAppearanceSettings.modern().copy(
-                geometry = TimeScapeAppearanceSettings.modern().geometry.copy(visibleDepth = 99),
-                surface = TimeScapeAppearanceSettings.modern().surface.copy(blurStrengthPercent = -5),
+            AdaptiveStageAppearanceSettings.modern().copy(
+                geometry = AdaptiveStageAppearanceSettings.modern().geometry.copy(visibleDepth = 99),
+                surface = AdaptiveStageAppearanceSettings.modern().surface.copy(blurStrengthPercent = -5),
             )
 
         val updatedState =
             reducer(launcherSettingsRepository = repository).reduce(
                 state = LauncherShellState(),
-                action = LauncherShellAction.UpdateTimeScapeAppearance(requested),
+                action = LauncherShellAction.UpdateAdaptiveStageAppearance(requested),
             )
 
-        assertEquals(6, updatedState.launcherSettings.cards.timeScapeAppearance.geometry.visibleDepth)
-        assertEquals(0, updatedState.launcherSettings.cards.timeScapeAppearance.surface.blurStrengthPercent)
+        assertEquals(6, updatedState.launcherSettings.cards.adaptiveStageAppearance.geometry.visibleDepth)
+        assertEquals(0, updatedState.launcherSettings.cards.adaptiveStageAppearance.surface.blurStrengthPercent)
         assertEquals(updatedState.launcherSettings, repository.savedSettings)
     }
 
     @Test
-    fun persistsTimeScapePaneArrangementSelection() {
+    fun persistsAdaptiveStagePaneArrangementSelection() {
         val repository = FakeLauncherSettingsRepository()
 
         val updatedState =
             reducer(launcherSettingsRepository = repository).reduce(
                 state = LauncherShellState(),
-                action = LauncherShellAction.SelectTimeScapePaneArrangement(TimeScapePaneArrangement.SPLIT),
+                action = LauncherShellAction.SelectAdaptiveStagePaneArrangement(AdaptiveStagePaneArrangement.SPLIT),
             )
 
-        assertEquals(TimeScapePaneArrangement.SPLIT, updatedState.launcherSettings.cards.timeScapePaneArrangement)
+        assertEquals(AdaptiveStagePaneArrangement.SPLIT, updatedState.launcherSettings.cards.adaptiveStagePaneArrangement)
         assertEquals(updatedState.launcherSettings, repository.savedSettings)
     }
 
     @Test
-    fun persistsTimeScapeRailSideSelection() {
+    fun persistsAdaptiveStageRailSideSelection() {
         val repository = FakeLauncherSettingsRepository()
 
         val updatedState =
             reducer(launcherSettingsRepository = repository).reduce(
                 state = LauncherShellState(),
-                action = LauncherShellAction.SelectTimeScapeRailSide(TimeScapeRailSide.TOP),
+                action = LauncherShellAction.SelectAdaptiveStageRailSide(AdaptiveStageRailSide.TOP),
             )
 
-        assertEquals(TimeScapeRailSide.TOP, updatedState.launcherSettings.cards.timeScapeRailSide)
+        assertEquals(AdaptiveStageRailSide.TOP, updatedState.launcherSettings.cards.adaptiveStageRailSide)
         assertEquals(updatedState.launcherSettings, repository.savedSettings)
     }
 

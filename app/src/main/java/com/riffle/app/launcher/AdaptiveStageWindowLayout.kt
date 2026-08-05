@@ -1,29 +1,29 @@
 package com.riffle.app.launcher
 
 import android.graphics.Rect
-import com.riffle.core.domain.launcher.cards.TimeScapeHingeBounds
-import com.riffle.core.domain.launcher.cards.TimeScapePosture
-import com.riffle.core.domain.launcher.cards.TimeScapeWindowLayout
+import com.riffle.core.domain.launcher.cards.AdaptiveStageHingeBounds
+import com.riffle.core.domain.launcher.cards.AdaptiveStagePosture
+import com.riffle.core.domain.launcher.cards.AdaptiveStageWindowLayout
 import kotlin.math.roundToInt
 
-/** Converts Android window coordinates into the framework-independent TimeScape pane input. */
-internal fun timeScapeWindowLayoutFromPixels(
+/** Converts Android window coordinates into the framework-independent AdaptiveStage pane input. */
+internal fun adaptiveStageWindowLayoutFromPixels(
     widthPx: Int,
     heightPx: Int,
     density: Float,
     separatingHingeBounds: List<Rect>,
-    posture: TimeScapePosture = TimeScapePosture.UNKNOWN,
-): TimeScapeWindowLayout {
+    posture: AdaptiveStagePosture = AdaptiveStagePosture.UNKNOWN,
+): AdaptiveStageWindowLayout {
     val safeDensity = density.takeIf { value -> value > 0f } ?: 1f
 
     fun Int.toDp(): Int = (this / safeDensity).roundToInt()
 
-    return TimeScapeWindowLayout(
+    return AdaptiveStageWindowLayout(
         widthDp = widthPx.toDp(),
         heightDp = heightPx.toDp(),
         separatingHinges =
             separatingHingeBounds.map { bounds ->
-                TimeScapeHingeBounds(
+                AdaptiveStageHingeBounds(
                     leftDp = bounds.left.toDp(),
                     topDp = bounds.top.toDp(),
                     rightDp = bounds.right.toDp(),

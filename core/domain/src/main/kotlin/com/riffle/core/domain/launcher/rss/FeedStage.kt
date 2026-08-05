@@ -1,7 +1,7 @@
 package com.riffle.core.domain.launcher.rss
 
 /**
- * Stable identity for one TimeScape feed stage. One [FeedStage] projects from exactly one
+ * Stable identity for one AdaptiveStage feed stage. One [FeedStage] projects from exactly one
  * [FeedConfiguration], keyed by its already profile-scoped [FeedId].
  */
 @JvmInline

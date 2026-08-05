@@ -48,9 +48,9 @@ import com.riffle.core.domain.launcher.cards.LauncherCardId
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroupKey
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
-import com.riffle.core.domain.launcher.settings.MIN_TIMESCAPE_REACHABLE_CARD_HEIGHT_DP
-import com.riffle.core.domain.launcher.settings.TimeScapeAppearanceSettings
-import com.riffle.core.domain.launcher.settings.TimeScapeViewportDp
+import com.riffle.core.domain.launcher.settings.MIN_ADAPTIVE_STAGE_REACHABLE_CARD_HEIGHT_DP
+import com.riffle.core.domain.launcher.settings.AdaptiveStageAppearanceSettings
+import com.riffle.core.domain.launcher.settings.AdaptiveStageViewportDp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -62,7 +62,7 @@ internal fun GeneratedNotificationCardsPage(
     apps: List<InstalledApp>,
     onAction: (LauncherShellAction) -> Unit,
     reducedMotion: Boolean,
-    timeScapeAppearance: TimeScapeAppearanceSettings = TimeScapeAppearanceSettings.modern(),
+    adaptiveStageAppearance: AdaptiveStageAppearanceSettings = AdaptiveStageAppearanceSettings.modern(),
     haptics: LauncherHaptics = NoopLauncherHaptics,
     appIconLoader: AppIconLoader = EmptyAppIconLoader,
     modifier: Modifier = Modifier,
@@ -75,11 +75,11 @@ internal fun GeneratedNotificationCardsPage(
         when (state) {
             is GeneratedNotificationCardsPageState.Content ->
                 BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-                    val showCardHeader = maxHeight >= MIN_TIMESCAPE_REACHABLE_CARD_HEIGHT_DP.dp
+                    val showCardHeader = maxHeight >= MIN_ADAPTIVE_STAGE_REACHABLE_CARD_HEIGHT_DP.dp
                     val controller = remember { CardStackController() }
                     val artworkCache =
                         remember {
-                            TimeScapeArtworkCache<ImageBitmap>(decode = ::decodeTimeScapeArtwork)
+                            AdaptiveStageArtworkCache<ImageBitmap>(decode = ::decodeAdaptiveStageArtwork)
                         }
                     val stackKey = remember { CardStackKey("generated-notification-cards") }
                     val cardIds = state.cards.map(::generatedNotificationCardId)
@@ -142,13 +142,13 @@ internal fun GeneratedNotificationCardsPage(
                                     .padding(horizontal = 12.dp, vertical = 8.dp),
                         ) {
                             val resolution =
-                                timeScapeAppearance.resolveCardStack(
+                                adaptiveStageAppearance.resolveCardStack(
                                     viewport =
-                                        TimeScapeViewportDp(
+                                        AdaptiveStageViewportDp(
                                             widthDp = maxWidth.value.toInt(),
                                             heightDp = maxHeight.value.toInt(),
                                         ),
-                                    capabilities = timeScapeRendererCapabilities(),
+                                    capabilities = adaptiveStageRendererCapabilities(),
                                     globalReducedMotion = reducedMotion,
                                 )
                             if (resolution.isUsable) {
@@ -214,7 +214,7 @@ internal fun GeneratedNotificationCardsPage(
                                                 applyFocus(result)
                                             },
                                             onSettleHaptic = {
-                                                haptics.timeScapeSettle(timeScapeAppearance.motion.hapticStrength)
+                                                haptics.adaptiveStageSettle(adaptiveStageAppearance.motion.hapticStrength)
                                             },
                                         ),
                                 ) { entry, pointerModifier ->
@@ -222,7 +222,7 @@ internal fun GeneratedNotificationCardsPage(
                                         card = state.cards[entry.cardIndex],
                                         onAction = onAction,
                                         isFocused = entry.cardIndex == activeCardIndex,
-                                        appearance = timeScapeAppearance,
+                                        appearance = adaptiveStageAppearance,
                                         artworkCache = artworkCache,
                                         appIconLoader = appIconLoader,
                                         cardWidth = resolution.cardWidthDp.dp,
@@ -236,7 +236,7 @@ internal fun GeneratedNotificationCardsPage(
                                 GeneratedNotificationCardsFallback(
                                     cards = state.cards,
                                     onAction = onAction,
-                                    appearance = timeScapeAppearance,
+                                    appearance = adaptiveStageAppearance,
                                     artworkCache = artworkCache,
                                     appIconLoader = appIconLoader,
                                 )
@@ -266,8 +266,8 @@ internal fun GeneratedNotificationCardsPage(
 private fun GeneratedNotificationCardsFallback(
     cards: List<DockNotificationCardState>,
     onAction: (LauncherShellAction) -> Unit,
-    appearance: TimeScapeAppearanceSettings,
-    artworkCache: TimeScapeArtworkCache<ImageBitmap>,
+    appearance: AdaptiveStageAppearanceSettings,
+    artworkCache: AdaptiveStageArtworkCache<ImageBitmap>,
     appIconLoader: AppIconLoader,
 ) {
     LazyColumn(
@@ -285,8 +285,8 @@ private fun GeneratedNotificationCardsFallback(
 private fun GeneratedNotificationCardFallback(
     card: DockNotificationCardState,
     onAction: (LauncherShellAction) -> Unit,
-    appearance: TimeScapeAppearanceSettings,
-    artworkCache: TimeScapeArtworkCache<ImageBitmap>,
+    appearance: AdaptiveStageAppearanceSettings,
+    artworkCache: AdaptiveStageArtworkCache<ImageBitmap>,
     appIconLoader: AppIconLoader,
 ) {
     val label = dockNotificationCardLabel(card)
@@ -305,10 +305,10 @@ private fun GeneratedNotificationCardFallback(
                     ?: withContext(Dispatchers.Default) { appIconLoader.colorFor(appIdentity) }
             }
     }
-    TimeScapeCardSurface(
+    AdaptiveStageCardSurface(
         appearance = appearance,
         background =
-            TimeScapeCardBackground(
+            AdaptiveStageCardBackground(
                 artwork = artwork,
                 appSeed = card.app?.identity?.packageName?.value ?: card.group.packageName.value,
                 appColor = appColor,
@@ -388,8 +388,8 @@ private fun GeneratedNotificationCard(
     card: DockNotificationCardState,
     onAction: (LauncherShellAction) -> Unit,
     isFocused: Boolean,
-    appearance: TimeScapeAppearanceSettings,
-    artworkCache: TimeScapeArtworkCache<ImageBitmap>,
+    appearance: AdaptiveStageAppearanceSettings,
+    artworkCache: AdaptiveStageArtworkCache<ImageBitmap>,
     appIconLoader: AppIconLoader,
     cardWidth: androidx.compose.ui.unit.Dp,
     cardHeight: androidx.compose.ui.unit.Dp,
@@ -414,10 +414,10 @@ private fun GeneratedNotificationCard(
             }
     }
     Box(modifier = modifier, contentAlignment = Alignment.Center) {
-        TimeScapeCardSurface(
+        AdaptiveStageCardSurface(
             appearance = appearance,
             background =
-                TimeScapeCardBackground(
+                AdaptiveStageCardBackground(
                     artwork = artwork,
                     appSeed = card.app?.identity?.packageName?.value ?: card.group.packageName.value,
                     appColor = appColor,
@@ -510,8 +510,8 @@ internal fun generatedNotificationCardContentDescription(card: DockNotificationC
 /** Resolves only the currently composed card's artwork and caches both valid and corrupt input. */
 internal fun generatedNotificationArtwork(
     card: DockNotificationCardState,
-    artworkCache: TimeScapeArtworkCache<ImageBitmap>,
-    revisions: TimeScapeArtworkRevisionLookup = timeScapeArtworkRevisions,
+    artworkCache: AdaptiveStageArtworkCache<ImageBitmap>,
+    revisions: AdaptiveStageArtworkRevisionLookup = adaptiveStageArtworkRevisions,
 ): ImageBitmap? {
     val notification = card.group.notifications.maxByOrNull { item -> item.postedAtEpochMillis }
     val artwork = notification?.largeIconPngBase64
@@ -522,7 +522,7 @@ internal fun generatedNotificationArtwork(
 /** Content-addressed revision prevents distinct untrusted payloads from sharing artwork cache entries. */
 internal fun generatedNotificationArtworkSourceKey(
     card: DockNotificationCardState,
-    revisions: TimeScapeArtworkRevisionLookup = timeScapeArtworkRevisions,
+    revisions: AdaptiveStageArtworkRevisionLookup = adaptiveStageArtworkRevisions,
 ): String? {
     val notification = card.group.notifications.maxByOrNull { item -> item.postedAtEpochMillis }
     val revision = notification?.let(revisions::revisionFor) ?: return null
@@ -544,7 +544,7 @@ internal fun generatedNotificationCardFocusDescription(
 ): String = "Card ${focusedCardIndex + 1} of $cardCount"
 
 internal fun generatedNotificationCardContentPadding(
-    resolution: com.riffle.core.domain.launcher.settings.TimeScapeCardStackResolution,
+    resolution: com.riffle.core.domain.launcher.settings.AdaptiveStageCardStackResolution,
 ): androidx.compose.ui.unit.Dp = resolution.contentPaddingDp.dp
 
 internal const val GENERATED_NOTIFICATION_CARD_STACK_TEST_TAG = "generated-notification-card-stack"

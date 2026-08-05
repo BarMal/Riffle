@@ -87,26 +87,26 @@ import com.riffle.core.domain.launcher.cards.CardStackLayoutPolicy
 import com.riffle.core.domain.launcher.cards.CardStackNavigationDirection
 import com.riffle.core.domain.launcher.cards.CardStackSettleRequest
 import com.riffle.core.domain.launcher.cards.LauncherCardId
-import com.riffle.core.domain.launcher.cards.TimeScapeDynamicSlot
-import com.riffle.core.domain.launcher.cards.TimeScapeInteractionContext
-import com.riffle.core.domain.launcher.cards.TimeScapePaneArrangement
-import com.riffle.core.domain.launcher.cards.TimeScapePaneLayout
-import com.riffle.core.domain.launcher.cards.TimeScapePaneLayoutPolicy
-import com.riffle.core.domain.launcher.cards.TimeScapePaneMode
-import com.riffle.core.domain.launcher.cards.TimeScapePosture
-import com.riffle.core.domain.launcher.cards.TimeScapePostureTransitionState
-import com.riffle.core.domain.launcher.cards.TimeScapeRailSide
-import com.riffle.core.domain.launcher.cards.TimeScapeStaticElement
-import com.riffle.core.domain.launcher.cards.TimeScapeTemplateCatalogDefaults
-import com.riffle.core.domain.launcher.cards.TimeScapeWindowLayout
+import com.riffle.core.domain.launcher.cards.AdaptiveStageDynamicSlot
+import com.riffle.core.domain.launcher.cards.AdaptiveStageInteractionContext
+import com.riffle.core.domain.launcher.cards.AdaptiveStagePaneArrangement
+import com.riffle.core.domain.launcher.cards.AdaptiveStagePaneLayout
+import com.riffle.core.domain.launcher.cards.AdaptiveStagePaneLayoutPolicy
+import com.riffle.core.domain.launcher.cards.AdaptiveStagePaneMode
+import com.riffle.core.domain.launcher.cards.AdaptiveStagePosture
+import com.riffle.core.domain.launcher.cards.AdaptiveStagePostureTransitionState
+import com.riffle.core.domain.launcher.cards.AdaptiveStageRailSide
+import com.riffle.core.domain.launcher.cards.AdaptiveStageStaticElement
+import com.riffle.core.domain.launcher.cards.AdaptiveStageTemplateCatalogDefaults
+import com.riffle.core.domain.launcher.cards.AdaptiveStageWindowLayout
 import com.riffle.core.domain.launcher.cards.variantFor
 import com.riffle.core.domain.launcher.cards.visibleStaticElements
 import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
-import com.riffle.core.domain.launcher.settings.TimeScapeAppearanceSettings
-import com.riffle.core.domain.launcher.settings.TimeScapeCardStackResolution
-import com.riffle.core.domain.launcher.settings.TimeScapeViewportDp
-import com.riffle.core.domain.launcher.settings.resolveTimeScapeCardStack
+import com.riffle.core.domain.launcher.settings.AdaptiveStageAppearanceSettings
+import com.riffle.core.domain.launcher.settings.AdaptiveStageCardStackResolution
+import com.riffle.core.domain.launcher.settings.AdaptiveStageViewportDp
+import com.riffle.core.domain.launcher.settings.resolveAdaptiveStageCardStack
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -118,7 +118,7 @@ import kotlin.math.abs
  * through: stage navigation, exiting back to Standard Home, and reaching the app drawer/search so
  * Cards mode stays a normal, discoverable overlay rather than an isolated static surface.
  */
-internal fun timeScapeAppStageActionFilter(action: LauncherShellAction): Boolean =
+internal fun adaptiveStageAppStageActionFilter(action: LauncherShellAction): Boolean =
     when (action) {
         LauncherShellAction.SelectNextAppStage,
         LauncherShellAction.SelectPreviousAppStage,
@@ -135,33 +135,33 @@ internal fun timeScapeAppStageActionFilter(action: LauncherShellAction): Boolean
  * template's [templateRailSide] applies; once the user picks an edge in settings it always wins,
  * matching how every other explicit user preference in this file overrides its template default.
  */
-internal fun resolveTimeScapeRailSide(
-    configuredRailSide: TimeScapeRailSide?,
-    templateRailSide: TimeScapeRailSide?,
-): TimeScapeRailSide = configuredRailSide ?: templateRailSide ?: TimeScapeRailSide.LEADING
+internal fun resolveAdaptiveStageRailSide(
+    configuredRailSide: AdaptiveStageRailSide?,
+    templateRailSide: AdaptiveStageRailSide?,
+): AdaptiveStageRailSide = configuredRailSide ?: templateRailSide ?: AdaptiveStageRailSide.LEADING
 
 /**
- * Mirrors [resolveTimeScapeRailSide]'s shape: the pane arrangement is a plain configured user
+ * Mirrors [resolveAdaptiveStageRailSide]'s shape: the pane arrangement is a plain configured user
  * preference today, with no template or device override to reconcile against yet.
  */
-internal fun resolveTimeScapePaneArrangement(value: TimeScapePaneArrangement): TimeScapePaneArrangement = value
+internal fun resolveAdaptiveStagePaneArrangement(value: AdaptiveStagePaneArrangement): AdaptiveStagePaneArrangement = value
 
 /** The Cards home surface, compact by default and pane-adaptive for the current launcher window. */
 @Composable
-internal fun TimeScapeAppStageSurface(
+internal fun AdaptiveStageAppStageSurface(
     state: LauncherShellState,
     onAction: (LauncherShellAction) -> Unit,
     modifier: Modifier = Modifier,
     windowInsets: WindowInsets = WindowInsets(0, 0, 0, 0),
-    windowLayout: TimeScapeWindowLayout? = null,
-    context: TimeScapeInteractionContext = TimeScapeInteractionContext(),
-    onContextChanged: (TimeScapeInteractionContext) -> Unit = {},
+    windowLayout: AdaptiveStageWindowLayout? = null,
+    context: AdaptiveStageInteractionContext = AdaptiveStageInteractionContext(),
+    onContextChanged: (AdaptiveStageInteractionContext) -> Unit = {},
     appIconLoader: AppIconLoader = EmptyAppIconLoader,
 ) {
     val density = LocalDensity.current
     val layoutDirection = LocalLayoutDirection.current
     val safeInsets =
-        TimeScapeSafeInsetsDp(
+        AdaptiveStageSafeInsetsDp(
             start = with(density) { windowInsets.getLeft(this, layoutDirection).toDp().value.toInt() },
             top = with(density) { windowInsets.getTop(this).toDp().value.toInt() },
             end = with(density) { windowInsets.getRight(this, layoutDirection).toDp().value.toInt() },
@@ -181,38 +181,38 @@ internal fun TimeScapeAppStageSurface(
     var detailRecoveryMessage by rememberSaveable { mutableStateOf<String?>(null) }
     val detailState =
         selectedStage?.let { stage ->
-            rememberTimeScapeCardDetailState(
+            rememberAdaptiveStageCardDetailState(
                 stageId = stage.id,
-                motion = state.launcherSettings.cards.timeScapeAppearance.motion,
+                motion = state.launcherSettings.cards.adaptiveStageAppearance.motion,
                 globalReducedMotion = state.launcherSettings.motion.reducedMotion,
             )
         }
 
-    LaunchedEffect(selectedStage?.id, state.launcherSettings.cards.timeScapeTemplateId) {
+    LaunchedEffect(selectedStage?.id, state.launcherSettings.cards.adaptiveStageTemplateId) {
         onContextChanged(
             context.copy(
-                selectedStageKey = selectedStage?.id?.let(::timeScapeStageKey),
-                templateId = state.launcherSettings.cards.timeScapeTemplateId.value,
+                selectedStageKey = selectedStage?.id?.let(::adaptiveStageStageKey),
+                templateId = state.launcherSettings.cards.adaptiveStageTemplateId.value,
             ),
         )
     }
 
     LaunchedEffect(shellState.snapshot.stages, shellState.notificationCards, shellState.emptyAppCards) {
-        val availableStageKeys = shellState.snapshot.stages.map { stage -> timeScapeStageKey(stage.id) }.toSet()
+        val availableStageKeys = shellState.snapshot.stages.map { stage -> adaptiveStageStageKey(stage.id) }.toSet()
         val availableCardKeys =
             shellState.notificationCards.map { card -> card.content.id.value }.toSet() +
-                shellState.emptyAppCards.keys.map { stageId -> timeScapeEmptyDetailCardId(stageId).value }
+                shellState.emptyAppCards.keys.map { stageId -> adaptiveStageEmptyDetailCardId(stageId).value }
         val reconciled = context.reconcile(availableStageKeys, availableCardKeys)
         if (reconciled != context) onContextChanged(reconciled)
     }
 
     val detailOrigin =
         detailCardKey?.let { cardKey ->
-            TimeScapeDetailOrigin(detailStageKey, LauncherCardId(cardKey))
+            AdaptiveStageDetailOrigin(detailStageKey, LauncherCardId(cardKey))
         }
     LaunchedEffect(context.selectedStageKey, shellState.snapshot.stages) {
         shellState.snapshot.stages
-            .firstOrNull { stage -> timeScapeStageKey(stage.id) == context.selectedStageKey }
+            .firstOrNull { stage -> adaptiveStageStageKey(stage.id) == context.selectedStageKey }
             ?.takeIf { stage -> stage.id != selectedStage?.id }
             ?.let { stage -> onAction(LauncherShellAction.SelectAppStage(stage.id)) }
     }
@@ -220,10 +220,10 @@ internal fun TimeScapeAppStageSurface(
         detailOrigin?.let { origin ->
             val isStillAvailable =
                 selectedStage?.let { stage ->
-                    timeScapeStageKey(stage.id) == origin.stageKey &&
+                    adaptiveStageStageKey(stage.id) == origin.stageKey &&
                         (
                             stage.content.any { it.id == origin.cardId } ||
-                                origin.cardId == timeScapeEmptyDetailCardId(stage.id)
+                                origin.cardId == adaptiveStageEmptyDetailCardId(stage.id)
                         )
                 } == true
             if (!isStillAvailable) {
@@ -245,23 +245,23 @@ internal fun TimeScapeAppStageSurface(
                     enabled = detailOrigin == null,
                     settings = state.launcherSettings.gestures.homeGestures,
                     onAction = onAction,
-                    actionFilter = ::timeScapeAppStageActionFilter,
+                    actionFilter = ::adaptiveStageAppStageActionFilter,
                 ),
         color = Color.Transparent,
         contentColor = MaterialTheme.colorScheme.onSurface,
     ) {
         BoxWithConstraints(modifier = Modifier.fillMaxSize().windowInsetsPadding(windowInsets)) {
-            val measuredWindow = TimeScapeWindowLayout(maxWidth.value.toInt(), maxHeight.value.toInt())
+            val measuredWindow = AdaptiveStageWindowLayout(maxWidth.value.toInt(), maxHeight.value.toInt())
             // Window metrics arrive independently of the Cards-mode selection. Until Android has
             // reported a usable window, keep the recovery body in the measured Compose bounds
             // instead of laying out a zero-sized adaptive pane beneath the header.
             val adaptiveWindow =
                 windowLayout
                     ?.insetLocal(safeInsets)
-                    ?.takeIf(TimeScapeWindowLayout::hasUsableBounds)
+                    ?.takeIf(AdaptiveStageWindowLayout::hasUsableBounds)
                     ?: measuredWindow
-            var postureTransition by rememberSaveable(stateSaver = TimeScapePostureTransitionStateSaver) {
-                mutableStateOf(TimeScapePostureTransitionState())
+            var postureTransition by rememberSaveable(stateSaver = AdaptiveStagePostureTransitionStateSaver) {
+                mutableStateOf(AdaptiveStagePostureTransitionState())
             }
             LaunchedEffect(adaptiveWindow.posture) {
                 postureTransition = postureTransition.transitionTo(adaptiveWindow.posture)
@@ -270,30 +270,30 @@ internal fun TimeScapeAppStageSurface(
             }
             val initialPaneLayout =
                 remember(adaptiveWindow, postureTransition.effectivePosture) {
-                    TimeScapePaneLayoutPolicy().layoutFor(
+                    AdaptiveStagePaneLayoutPolicy().layoutFor(
                         adaptiveWindow.copy(posture = postureTransition.effectivePosture),
                     )
                 }
             val templateVariant =
                 remember(
-                    state.launcherSettings.cards.timeScapeTemplateId,
+                    state.launcherSettings.cards.adaptiveStageTemplateId,
                     state.settingsLayoutDeviceClass,
                     initialPaneLayout.mode,
                 ) {
-                    TimeScapeTemplateCatalogDefaults.templates
-                        .firstOrNull { template -> template.id == state.launcherSettings.cards.timeScapeTemplateId }
+                    AdaptiveStageTemplateCatalogDefaults.templates
+                        .firstOrNull { template -> template.id == state.launcherSettings.cards.adaptiveStageTemplateId }
                         ?.variantFor(state.settingsLayoutDeviceClass, initialPaneLayout.mode)
                 }
             val railSide =
-                resolveTimeScapeRailSide(
-                    configuredRailSide = state.launcherSettings.cards.timeScapeRailSide,
+                resolveAdaptiveStageRailSide(
+                    configuredRailSide = state.launcherSettings.cards.adaptiveStageRailSide,
                     templateRailSide = templateVariant?.railSide,
                 )
             val paneArrangement =
-                resolveTimeScapePaneArrangement(value = state.launcherSettings.cards.timeScapePaneArrangement)
+                resolveAdaptiveStagePaneArrangement(value = state.launcherSettings.cards.adaptiveStagePaneArrangement)
             val paneLayout =
                 remember(adaptiveWindow, postureTransition.effectivePosture, railSide, paneArrangement) {
-                    TimeScapePaneLayoutPolicy().layoutFor(
+                    AdaptiveStagePaneLayoutPolicy().layoutFor(
                         window = adaptiveWindow.copy(posture = postureTransition.effectivePosture),
                         railSide = railSide,
                         arrangement = paneArrangement,
@@ -307,7 +307,7 @@ internal fun TimeScapeAppStageSurface(
                         .width(paneLayout.contentWidthDp.dp)
                         .height(paneLayout.contentHeightDp.dp),
             ) {
-                TimeScapeTemplateStaticCanvas(
+                AdaptiveStageTemplateStaticCanvas(
                     elements = visibleTemplateElements,
                     dynamicSlots = templateVariant?.dynamicSlots.orEmpty(),
                     canvasWidthDp = paneLayout.contentWidthDp,
@@ -319,8 +319,8 @@ internal fun TimeScapeAppStageSurface(
                     trailingPaneWidthDp = paneLayout.trailingRegionWidthDp,
                 )
                 when (paneLayout.mode) {
-                    TimeScapePaneMode.COMPACT ->
-                        TimeScapeCompactContent(
+                    AdaptiveStagePaneMode.COMPACT ->
+                        AdaptiveStageCompactContent(
                             selectedStage = selectedStage,
                             state = state,
                             shellState = shellState,
@@ -333,7 +333,7 @@ internal fun TimeScapeAppStageSurface(
                             },
                             onDetailVisibilityChanged = { cardId ->
                                 detailCardKey = cardId?.value
-                                detailStageKey = cardId?.let { selectedStage?.id?.let(::timeScapeStageKey) }
+                                detailStageKey = cardId?.let { selectedStage?.id?.let(::adaptiveStageStageKey) }
                                 onContextChanged(context.copy(detailCardKey = cardId?.value))
                                 if (cardId != null) detailRecoveryMessage = null
                             },
@@ -341,8 +341,8 @@ internal fun TimeScapeAppStageSurface(
                             appIconLoader = appIconLoader,
                         )
 
-                    TimeScapePaneMode.SPLIT ->
-                        TimeScapeSplitContent(
+                    AdaptiveStagePaneMode.SPLIT ->
+                        AdaptiveStageSplitContent(
                             selectedStage = selectedStage,
                             state = state,
                             shellState = shellState,
@@ -357,7 +357,7 @@ internal fun TimeScapeAppStageSurface(
                             },
                             onDetailVisibilityChanged = { cardId ->
                                 detailCardKey = cardId?.value
-                                detailStageKey = cardId?.let { selectedStage?.id?.let(::timeScapeStageKey) }
+                                detailStageKey = cardId?.let { selectedStage?.id?.let(::adaptiveStageStageKey) }
                                 onContextChanged(context.copy(detailCardKey = cardId?.value))
                                 if (cardId != null) detailRecoveryMessage = null
                             },
@@ -365,12 +365,12 @@ internal fun TimeScapeAppStageSurface(
                             appIconLoader = appIconLoader,
                         )
 
-                    TimeScapePaneMode.TWO_PANE, TimeScapePaneMode.THREE_PANE -> {
+                    AdaptiveStagePaneMode.TWO_PANE, AdaptiveStagePaneMode.THREE_PANE -> {
                         // TOP/BOTTOM rails run as a horizontal strip outside the leading/trailing
                         // Row below, since they reserve height (paneLayout.railHeightDp) rather
-                        // than width -- see TimeScapePaneLayoutPolicy.reserveHorizontalRail.
+                        // than width -- see AdaptiveStagePaneLayoutPolicy.reserveHorizontalRail.
                         val horizontalRail: @Composable () -> Unit = {
-                            TimeScapeStageRail(
+                            AdaptiveStageStageRail(
                                 stages = shellState.snapshot.stages,
                                 selectedStageId = selectedStage?.id,
                                 state = state,
@@ -381,10 +381,10 @@ internal fun TimeScapeAppStageSurface(
                             )
                         }
                         Column(modifier = Modifier.fillMaxSize()) {
-                            if (railSide == TimeScapeRailSide.TOP) horizontalRail()
+                            if (railSide == AdaptiveStageRailSide.TOP) horizontalRail()
                             Row(modifier = Modifier.weight(1f).fillMaxWidth()) {
-                                if (railSide == TimeScapeRailSide.LEADING) {
-                                    TimeScapeStageRail(
+                                if (railSide == AdaptiveStageRailSide.LEADING) {
+                                    AdaptiveStageStageRail(
                                         stages = shellState.snapshot.stages,
                                         selectedStageId = selectedStage?.id,
                                         state = state,
@@ -393,15 +393,15 @@ internal fun TimeScapeAppStageSurface(
                                         modifier = Modifier.width(paneLayout.railWidthDp.dp),
                                     )
                                 }
-                                Column(modifier = Modifier.width(paneLayout.splineWidthDp.dp).fillMaxSize()) {
-                                    TimeScapeStageHeader(
+                                Column(modifier = Modifier.width(paneLayout.stackWidthDp.dp).fillMaxSize()) {
+                                    AdaptiveStageStageHeader(
                                         selectedStage = selectedStage,
                                         stages = shellState.snapshot.stages,
                                         state = state,
                                         appIconLoader = appIconLoader,
                                         onAction = onAction,
                                     )
-                                    TimeScapeStageBody(
+                                    AdaptiveStageStageBody(
                                         selectedStage = selectedStage,
                                         state = state,
                                         shellState = shellState,
@@ -411,7 +411,7 @@ internal fun TimeScapeAppStageSurface(
                                         onDetailVisibilityChanged = { cardId ->
                                             detailCardKey = cardId?.value
                                             detailStageKey =
-                                                cardId?.let { selectedStage?.id?.let(::timeScapeStageKey) }
+                                                cardId?.let { selectedStage?.id?.let(::adaptiveStageStageKey) }
                                             onContextChanged(context.copy(detailCardKey = cardId?.value))
                                             if (cardId != null) detailRecoveryMessage = null
                                         },
@@ -432,7 +432,7 @@ internal fun TimeScapeAppStageSurface(
                                     Spacer(modifier = Modifier.width(paneLayout.hingeGapDp.dp))
                                 }
                                 if (paneLayout.showsDetailPane) {
-                                    TimeScapeSupportingPane(
+                                    AdaptiveStageSupportingPane(
                                         stage = selectedStage,
                                         selectedCardId =
                                             detailOrigin?.cardId ?: focusedCardIdValue?.let(::LauncherCardId),
@@ -444,8 +444,8 @@ internal fun TimeScapeAppStageSurface(
                                         modifier = Modifier.width(paneLayout.detailWidthDp.dp).fillMaxSize(),
                                     )
                                 }
-                                if (railSide == TimeScapeRailSide.TRAILING) {
-                                    TimeScapeStageRail(
+                                if (railSide == AdaptiveStageRailSide.TRAILING) {
+                                    AdaptiveStageStageRail(
                                         stages = shellState.snapshot.stages,
                                         selectedStageId = selectedStage?.id,
                                         state = state,
@@ -455,7 +455,7 @@ internal fun TimeScapeAppStageSurface(
                                     )
                                 }
                             }
-                            if (railSide == TimeScapeRailSide.BOTTOM) horizontalRail()
+                            if (railSide == AdaptiveStageRailSide.BOTTOM) horizontalRail()
                         }
                     }
                 }
@@ -473,12 +473,12 @@ internal fun TimeScapeAppStageSurface(
  * compact-only for now.
  */
 @Composable
-private fun TimeScapeCompactContent(
+private fun AdaptiveStageCompactContent(
     selectedStage: AppStage?,
     state: LauncherShellState,
     shellState: com.riffle.app.launcher.notifications.AppStageShellState,
     detailRecoveryMessage: String?,
-    detailState: TimeScapeCardDetailState?,
+    detailState: AdaptiveStageCardDetailState?,
     focusedCardId: LauncherCardId?,
     onDetailVisibilityChanged: (LauncherCardId?) -> Unit,
     onFocusedCardChanged: (LauncherCardId?) -> Unit = {},
@@ -488,21 +488,21 @@ private fun TimeScapeCompactContent(
     val stages = shellState.snapshot.stages
     val reducedMotion = state.launcherSettings.motion.reducedMotion
     val pagerState =
-        rememberTimeScapeStagePagerState(
+        rememberAdaptiveStageStagePagerState(
             stages = stages,
             selectedStageId = selectedStage?.id,
             reducedMotion = reducedMotion,
             onAction = onAction,
         )
     Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        TimeScapeStageHeader(
+        AdaptiveStageStageHeader(
             selectedStage = selectedStage,
             stages = stages,
             state = state,
             appIconLoader = appIconLoader,
             onAction = onAction,
         )
-        TimeScapeCompactStagePager(
+        AdaptiveStageCompactStagePager(
             stages = stages,
             selectedStage = selectedStage,
             pagerState = pagerState,
@@ -517,7 +517,7 @@ private fun TimeScapeCompactContent(
             appIconLoader = appIconLoader,
             modifier = Modifier.weight(1f),
         )
-        TimeScapeStageSpine(
+        AdaptiveStageStageSpine(
             stages = stages,
             selectedStageId = selectedStage?.id,
             pagePosition = pagerState.pagePosition,
@@ -530,25 +530,25 @@ private fun TimeScapeCompactContent(
 
 /**
  * The Phase 3 split arrangement: a header, then an upper focus/detail region (reusing
- * [TimeScapeSupportingPane] verbatim -- it already renders the expanded card/empty-app detail
+ * [AdaptiveStageSupportingPane] verbatim -- it already renders the expanded card/empty-app detail
  * surface, or a summary, without any phone-vs-wide gating inside it) sized to
- * [TimeScapePaneLayout.upperRegionHeightDp], over a lower region sized to
- * [TimeScapePaneLayout.lowerRegionHeightDp] hosting the exact same drag-based
- * [TimeScapeCompactStagePager] and synced [TimeScapeStageSpine] that [TimeScapeCompactContent]
+ * [AdaptiveStagePaneLayout.upperRegionHeightDp], over a lower region sized to
+ * [AdaptiveStagePaneLayout.lowerRegionHeightDp] hosting the exact same drag-based
+ * [AdaptiveStageCompactStagePager] and synced [AdaptiveStageStageSpine] that [AdaptiveStageCompactContent]
  * uses -- same drag gesture, same settle behavior, same tap-to-select -- just constrained to the
  * remaining height instead of filling the whole column.
  */
 @Composable
 @Suppress("LongParameterList")
-private fun TimeScapeSplitContent(
+private fun AdaptiveStageSplitContent(
     selectedStage: AppStage?,
     state: LauncherShellState,
     shellState: com.riffle.app.launcher.notifications.AppStageShellState,
     detailRecoveryMessage: String?,
-    detailState: TimeScapeCardDetailState?,
+    detailState: AdaptiveStageCardDetailState?,
     focusedCardId: LauncherCardId?,
     selectedDetailCardId: LauncherCardId?,
-    paneLayout: TimeScapePaneLayout,
+    paneLayout: AdaptiveStagePaneLayout,
     onDetailVisibilityChanged: (LauncherCardId?) -> Unit,
     onFocusedCardChanged: (LauncherCardId?) -> Unit = {},
     onAction: (LauncherShellAction) -> Unit,
@@ -557,7 +557,7 @@ private fun TimeScapeSplitContent(
     val stages = shellState.snapshot.stages
     val reducedMotion = state.launcherSettings.motion.reducedMotion
     val pagerState =
-        rememberTimeScapeStagePagerState(
+        rememberAdaptiveStageStagePagerState(
             stages = stages,
             selectedStageId = selectedStage?.id,
             reducedMotion = reducedMotion,
@@ -577,14 +577,14 @@ private fun TimeScapeSplitContent(
             DEFAULT_SPLIT_UPPER_REGION_WEIGHT
         }
     Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        TimeScapeStageHeader(
+        AdaptiveStageStageHeader(
             selectedStage = selectedStage,
             stages = stages,
             state = state,
             appIconLoader = appIconLoader,
             onAction = onAction,
         )
-        TimeScapeSupportingPane(
+        AdaptiveStageSupportingPane(
             stage = selectedStage,
             selectedCardId = selectedDetailCardId,
             state = state,
@@ -598,7 +598,7 @@ private fun TimeScapeSplitContent(
             modifier = Modifier.fillMaxWidth().weight(1f - upperRegionWeight),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            TimeScapeCompactStagePager(
+            AdaptiveStageCompactStagePager(
                 stages = stages,
                 selectedStage = selectedStage,
                 pagerState = pagerState,
@@ -612,11 +612,11 @@ private fun TimeScapeSplitContent(
                 onAction = onAction,
                 appIconLoader = appIconLoader,
                 modifier = Modifier.weight(1f),
-                // The upper TimeScapeSupportingPane already renders the expanded card's detail;
+                // The upper AdaptiveStageSupportingPane already renders the expanded card's detail;
                 // showing it inline here too would duplicate it.
                 showDetailInline = false,
             )
-            TimeScapeStageSpine(
+            AdaptiveStageStageSpine(
                 stages = stages,
                 selectedStageId = selectedStage?.id,
                 pagePosition = pagerState.pagePosition,
@@ -629,40 +629,40 @@ private fun TimeScapeSplitContent(
 }
 
 /**
- * Matches [TimeScapePaneLayoutPolicy]'s own SPLIT_UPPER_REGION_RATIO default, for the case where
+ * Matches [AdaptiveStagePaneLayoutPolicy]'s own SPLIT_UPPER_REGION_RATIO default, for the case where
  * paneLayout reports a zero-height content area (nothing to weight against yet).
  */
 private const val DEFAULT_SPLIT_UPPER_REGION_WEIGHT = 0.6f
 
 /**
  * Lays out every stage's content side by side, offsetting each via `graphicsLayer` translation
- * driven by [TimeScapeStagePagerState.pagePosition] -- mirroring [ImmediateWorkspacePager]'s
- * approach for Standard Home's own pages -- and attaches [timeScapeStagePagerDrag] to claim
+ * driven by [AdaptiveStageStagePagerState.pagePosition] -- mirroring [ImmediateWorkspacePager]'s
+ * approach for Standard Home's own pages -- and attaches [adaptiveStageStagePagerDrag] to claim
  * horizontal drags. With zero or one stage there is nothing to page between, so this falls back to
- * rendering [TimeScapeStageBody] directly without a drag gesture.
+ * rendering [AdaptiveStageStageBody] directly without a drag gesture.
  */
 @Composable
 @Suppress("LongParameterList")
-private fun TimeScapeCompactStagePager(
+private fun AdaptiveStageCompactStagePager(
     stages: List<AppStage>,
     selectedStage: AppStage?,
-    pagerState: TimeScapeStagePagerState,
+    pagerState: AdaptiveStageStagePagerState,
     state: LauncherShellState,
     shellState: com.riffle.app.launcher.notifications.AppStageShellState,
     detailRecoveryMessage: String?,
-    detailState: TimeScapeCardDetailState?,
+    detailState: AdaptiveStageCardDetailState?,
     focusedCardId: LauncherCardId?,
     onDetailVisibilityChanged: (LauncherCardId?) -> Unit,
     onFocusedCardChanged: (LauncherCardId?) -> Unit,
     onAction: (LauncherShellAction) -> Unit,
     appIconLoader: AppIconLoader,
     modifier: Modifier,
-    // false in SPLIT mode, where TimeScapeSplitContent already renders the expanded card's detail
-    // in its upper TimeScapeSupportingPane -- rendering it inline here too would duplicate it.
+    // false in SPLIT mode, where AdaptiveStageSplitContent already renders the expanded card's detail
+    // in its upper AdaptiveStageSupportingPane -- rendering it inline here too would duplicate it.
     showDetailInline: Boolean = true,
 ) {
     if (selectedStage == null || stages.size <= 1) {
-        TimeScapeStageBody(
+        AdaptiveStageStageBody(
             selectedStage = selectedStage,
             state = state,
             shellState = shellState,
@@ -687,7 +687,7 @@ private fun TimeScapeCompactStagePager(
             modifier =
                 Modifier
                     .fillMaxSize()
-                    .timeScapeStagePagerDrag(
+                    .adaptiveStageStagePagerDrag(
                         enabled = true,
                         stageWidthPx = stageWidthPx,
                         stages = stages,
@@ -707,7 +707,7 @@ private fun TimeScapeCompactStagePager(
                             translationX = (index - pagerState.pagePosition) * stageWidthPx
                         }
                 if (stage.id == selectedStage.id) {
-                    TimeScapeStageBody(
+                    AdaptiveStageStageBody(
                         selectedStage = stage,
                         state = state,
                         shellState = shellState,
@@ -722,7 +722,7 @@ private fun TimeScapeCompactStagePager(
                         modifier = stageModifier,
                     )
                 } else {
-                    TimeScapeNeighborStagePage(
+                    AdaptiveStageNeighborStagePage(
                         stage = stage,
                         state = state,
                         shellState = shellState,
@@ -740,10 +740,10 @@ private fun TimeScapeCompactStagePager(
  * A non-selected stage rendered only because it is (or was just) adjacent during a pager drag.
  * It owns its own ephemeral detail/focus state rather than the durable, context-restorable state
  * the actually-selected stage uses -- that state is only meaningful once a settle commits this
- * stage as selected, at which point [TimeScapeCompactStagePager] switches it to the durable path.
+ * stage as selected, at which point [AdaptiveStageCompactStagePager] switches it to the durable path.
  */
 @Composable
-private fun TimeScapeNeighborStagePage(
+private fun AdaptiveStageNeighborStagePage(
     stage: AppStage,
     state: LauncherShellState,
     shellState: com.riffle.app.launcher.notifications.AppStageShellState,
@@ -752,13 +752,13 @@ private fun TimeScapeNeighborStagePage(
     modifier: Modifier,
 ) {
     val detailState =
-        rememberTimeScapeCardDetailState(
+        rememberAdaptiveStageCardDetailState(
             stageId = stage.id,
-            motion = state.launcherSettings.cards.timeScapeAppearance.motion,
+            motion = state.launcherSettings.cards.adaptiveStageAppearance.motion,
             globalReducedMotion = state.launcherSettings.motion.reducedMotion,
         )
     var focusedCardId by remember(stage.id) { mutableStateOf<LauncherCardId?>(null) }
-    TimeScapeStageBody(
+    AdaptiveStageStageBody(
         selectedStage = stage,
         state = state,
         shellState = shellState,
@@ -774,9 +774,9 @@ private fun TimeScapeNeighborStagePage(
 }
 
 @Composable
-private fun TimeScapeTemplateStaticCanvas(
-    elements: List<TimeScapeStaticElement>,
-    dynamicSlots: List<TimeScapeDynamicSlot>,
+private fun AdaptiveStageTemplateStaticCanvas(
+    elements: List<AdaptiveStageStaticElement>,
+    dynamicSlots: List<AdaptiveStageDynamicSlot>,
     canvasWidthDp: Int,
     canvasHeightDp: Int,
     gridColumns: Int,
@@ -789,7 +789,7 @@ private fun TimeScapeTemplateStaticCanvas(
     val cellWidthDp = canvasWidthDp.toFloat() / gridColumns
     val cellHeightDp = canvasHeightDp.toFloat() / gridRows
     val paneIntervals =
-        timeScapeTemplatePaneIntervals(
+        adaptiveStageTemplatePaneIntervals(
             canvasWidthDp = canvasWidthDp,
             leadingPaneWidthDp = leadingPaneWidthDp,
             hingeGapDp = hingeGapDp,
@@ -801,10 +801,10 @@ private fun TimeScapeTemplateStaticCanvas(
         val y = cellHeightDp * placement.cell.row
         val width = cellWidthDp * placement.span.columns
         val height = cellHeightDp * placement.span.rows
-        timeScapeTemplateFragments(x, width, paneIntervals).forEachIndexed { index, fragment ->
+        adaptiveStageTemplateFragments(x, width, paneIntervals).forEachIndexed { index, fragment ->
             // Deliberately no visible content here: this canvas exists to give
-            // TimeScapeAdaptiveLayoutInteractionTest stable, positioned geometry to assert
-            // against (see timeScapeTemplateElementTestTag usages there), not to render UI --
+            // AdaptiveStageAdaptiveLayoutInteractionTest stable, positioned geometry to assert
+            // against (see adaptiveStageTemplateElementTestTag usages there), not to render UI --
             // the real per-element widgets (clock, search, app carousel, dock) are the
             // Standard Home surface underneath and the pane content composed right after this.
             Box(
@@ -813,7 +813,7 @@ private fun TimeScapeTemplateStaticCanvas(
                         .offset(x = fragment.startDp.dp, y = y.dp)
                         .width(fragment.widthDp.dp)
                         .height(height.dp)
-                        .testTag(timeScapeTemplateFragmentTestTag(element.id.value, index, isSlot = false)),
+                        .testTag(adaptiveStageTemplateFragmentTestTag(element.id.value, index, isSlot = false)),
             )
         }
     }
@@ -821,7 +821,7 @@ private fun TimeScapeTemplateStaticCanvas(
         val placement = slot.placement
         val x = cellWidthDp * placement.cell.column
         val width = cellWidthDp * placement.span.columns
-        timeScapeTemplateFragments(x, width, paneIntervals).forEachIndexed { index, fragment ->
+        adaptiveStageTemplateFragments(x, width, paneIntervals).forEachIndexed { index, fragment ->
             Box(
                 modifier =
                     Modifier
@@ -830,36 +830,36 @@ private fun TimeScapeTemplateStaticCanvas(
                             y = (cellHeightDp * placement.cell.row).dp,
                         ).width(fragment.widthDp.dp)
                         .height((cellHeightDp * placement.span.rows).dp)
-                        .testTag(timeScapeTemplateFragmentTestTag(slot.id.value, index, isSlot = true)),
+                        .testTag(adaptiveStageTemplateFragmentTestTag(slot.id.value, index, isSlot = true)),
             )
         }
     }
 }
 
-internal fun timeScapeTemplateElementTestTag(id: String): String = "timescape-template-element-$id"
+internal fun adaptiveStageTemplateElementTestTag(id: String): String = "adaptive-stage-template-element-$id"
 
-internal fun timeScapeTemplateSlotTestTag(id: String): String = "timescape-template-slot-$id"
+internal fun adaptiveStageTemplateSlotTestTag(id: String): String = "adaptive-stage-template-slot-$id"
 
-internal fun timeScapeTemplatePaneFragmentTestTag(
+internal fun adaptiveStageTemplatePaneFragmentTestTag(
     baseTag: String,
     paneIndex: Int,
 ): String = "$baseTag-pane-$paneIndex"
 
-private fun timeScapeTemplateFragmentTestTag(
+private fun adaptiveStageTemplateFragmentTestTag(
     id: String,
     fragmentIndex: Int,
     isSlot: Boolean,
 ): String {
     val baseTag =
         if (isSlot) {
-            timeScapeTemplateSlotTestTag(id)
+            adaptiveStageTemplateSlotTestTag(id)
         } else {
-            timeScapeTemplateElementTestTag(id)
+            adaptiveStageTemplateElementTestTag(id)
         }
-    return if (fragmentIndex == 0) baseTag else timeScapeTemplatePaneFragmentTestTag(baseTag, fragmentIndex)
+    return if (fragmentIndex == 0) baseTag else adaptiveStageTemplatePaneFragmentTestTag(baseTag, fragmentIndex)
 }
 
-private data class TimeScapeTemplateHorizontalInterval(
+private data class AdaptiveStageTemplateHorizontalInterval(
     val startDp: Float,
     val endDp: Float,
 ) {
@@ -867,23 +867,23 @@ private data class TimeScapeTemplateHorizontalInterval(
         get() = endDp - startDp
 }
 
-private fun timeScapeTemplatePaneIntervals(
+private fun adaptiveStageTemplatePaneIntervals(
     canvasWidthDp: Int,
     leadingPaneWidthDp: Int,
     hingeGapDp: Int,
     trailingPaneWidthDp: Int,
-): List<TimeScapeTemplateHorizontalInterval> {
+): List<AdaptiveStageTemplateHorizontalInterval> {
     if (hingeGapDp <= 0) {
-        return listOf(TimeScapeTemplateHorizontalInterval(0f, canvasWidthDp.toFloat()))
+        return listOf(AdaptiveStageTemplateHorizontalInterval(0f, canvasWidthDp.toFloat()))
     }
     val trailingStartDp = leadingPaneWidthDp + hingeGapDp
     return buildList {
         if (leadingPaneWidthDp > 0) {
-            add(TimeScapeTemplateHorizontalInterval(0f, leadingPaneWidthDp.toFloat()))
+            add(AdaptiveStageTemplateHorizontalInterval(0f, leadingPaneWidthDp.toFloat()))
         }
         if (trailingPaneWidthDp > 0) {
             add(
-                TimeScapeTemplateHorizontalInterval(
+                AdaptiveStageTemplateHorizontalInterval(
                     startDp = trailingStartDp.toFloat(),
                     endDp = (trailingStartDp + trailingPaneWidthDp).coerceAtMost(canvasWidthDp).toFloat(),
                 ),
@@ -892,26 +892,26 @@ private fun timeScapeTemplatePaneIntervals(
     }
 }
 
-private fun timeScapeTemplateFragments(
+private fun adaptiveStageTemplateFragments(
     placementStartDp: Float,
     placementWidthDp: Float,
-    paneIntervals: List<TimeScapeTemplateHorizontalInterval>,
-): List<TimeScapeTemplateHorizontalInterval> {
+    paneIntervals: List<AdaptiveStageTemplateHorizontalInterval>,
+): List<AdaptiveStageTemplateHorizontalInterval> {
     val placementEndDp = placementStartDp + placementWidthDp
     return paneIntervals.mapNotNull { pane ->
         val startDp = maxOf(placementStartDp, pane.startDp)
         val endDp = minOf(placementEndDp, pane.endDp)
-        if (endDp > startDp) TimeScapeTemplateHorizontalInterval(startDp, endDp) else null
+        if (endDp > startDp) AdaptiveStageTemplateHorizontalInterval(startDp, endDp) else null
     }
 }
 
 @Composable
-private fun TimeScapeStageBody(
+private fun AdaptiveStageStageBody(
     selectedStage: AppStage?,
     state: LauncherShellState,
     shellState: com.riffle.app.launcher.notifications.AppStageShellState,
     detailRecoveryMessage: String?,
-    detailState: TimeScapeCardDetailState?,
+    detailState: AdaptiveStageCardDetailState?,
     focusedCardId: LauncherCardId?,
     onDetailVisibilityChanged: (LauncherCardId?) -> Unit,
     onFocusedCardChanged: (LauncherCardId?) -> Unit = {},
@@ -921,7 +921,7 @@ private fun TimeScapeStageBody(
     modifier: Modifier,
 ) {
     if (selectedStage == null) {
-        TimeScapeUnavailableState(
+        AdaptiveStageUnavailableState(
             access = state.notificationAccessStatus,
             recoveryMessage = detailRecoveryMessage,
             installedApps = state.installedApps,
@@ -929,7 +929,7 @@ private fun TimeScapeStageBody(
             modifier = modifier,
         )
     } else {
-        TimeScapeStageContent(
+        AdaptiveStageStageContent(
             selectedStage,
             state,
             shellState,
@@ -946,7 +946,7 @@ private fun TimeScapeStageBody(
 }
 
 @Composable
-private fun TimeScapeStageRail(
+private fun AdaptiveStageStageRail(
     stages: List<AppStage>,
     selectedStageId: AppStageId?,
     state: LauncherShellState,
@@ -975,14 +975,14 @@ private fun TimeScapeStageRail(
     val railBackground = Modifier.background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.32f))
     Box(
         // Explicit clip: the fan/stack visual is allowed to layer within this container, but must
-        // never bleed into neighboring UI the way earlier TimeScape overflow bugs did.
+        // never bleed into neighboring UI the way earlier AdaptiveStage overflow bugs did.
         // fillMaxHeight() matters for LEADING/TRAILING: the caller only pins width there (unlike
         // TOP/BOTTOM, which pins height explicitly), so without it this Box would wrap-size to its
         // content -- collapsing to zero height whenever there are no stages yet, since nothing
         // here is unconditionally present the way the old Row/Column's "Stages"/Previous/Next
         // chrome always was.
         modifier =
-            modifier.testTag(TIME_SCAPE_STAGE_RAIL_TEST_TAG)
+            modifier.testTag(ADAPTIVE_STAGE_STAGE_RAIL_TEST_TAG)
                 .then(railBackground)
                 .fillMaxHeight()
                 .clipToBounds(),
@@ -996,17 +996,17 @@ private fun TimeScapeStageRail(
             // constraints happen to resolve to.
             modifier = Modifier.matchParentSize(),
             entries =
-                TIME_SCAPE_STAGE_RAIL_LAYOUT_POLICY.entries(
+                ADAPTIVE_STAGE_STAGE_RAIL_LAYOUT_POLICY.entries(
                     cardCount = stages.size,
                     activeIndex = activeIndex,
                     reducedMotion = reducedMotion,
                 ),
             reducedMotion = reducedMotion,
             orientation = if (horizontal) CardStackOrientation.HORIZONTAL else CardStackOrientation.VERTICAL,
-            itemKey = { entry -> timeScapeStageSelectorItemKey(stages[entry.cardIndex]) },
+            itemKey = { entry -> adaptiveStageStageSelectorItemKey(stages[entry.cardIndex]) },
             interaction =
                 CardStackInteraction(
-                    focusedItemKey = stages.getOrNull(activeIndex)?.let(::timeScapeStageSelectorItemKey),
+                    focusedItemKey = stages.getOrNull(activeIndex)?.let(::adaptiveStageStageSelectorItemKey),
                     settleTransitionId = settleTransitionId,
                     onFocusRequest = { entry ->
                         if (entry.cardIndex != activeIndex) {
@@ -1016,12 +1016,12 @@ private fun TimeScapeStageRail(
                     },
                     onSettle = { dragPx, velocityPxPerSecond ->
                         val motion =
-                            if (abs(velocityPxPerSecond) >= TIME_SCAPE_STAGE_RAIL_FLING_VELOCITY_THRESHOLD_PX) {
+                            if (abs(velocityPxPerSecond) >= ADAPTIVE_STAGE_STAGE_RAIL_FLING_VELOCITY_THRESHOLD_PX) {
                                 velocityPxPerSecond
                             } else {
                                 dragPx
                             }
-                        if (abs(motion) >= TIME_SCAPE_STAGE_RAIL_SETTLE_DISTANCE_THRESHOLD_PX) {
+                        if (abs(motion) >= ADAPTIVE_STAGE_STAGE_RAIL_SETTLE_DISTANCE_THRESHOLD_PX) {
                             val direction =
                                 if (motion < 0f) {
                                     CardStackNavigationDirection.NEXT
@@ -1032,18 +1032,18 @@ private fun TimeScapeStageRail(
                         }
                     },
                     onSettleHaptic = {
-                        haptics.timeScapeSettle(state.launcherSettings.cards.timeScapeAppearance.motion.hapticStrength)
+                        haptics.adaptiveStageSettle(state.launcherSettings.cards.adaptiveStageAppearance.motion.hapticStrength)
                     },
                     onNavigate = ::navigate,
                 ),
         ) { entry, cardModifier ->
             val stage = stages[entry.cardIndex]
-            TimeScapeStageRailTile(
+            AdaptiveStageStageRailTile(
                 stageId = stage.id,
                 isSelected = stage.id == selectedStageId,
                 label = stageLabel(stage.id, state),
                 identity = stageAppIdentity(stage.id, state),
-                appearance = state.launcherSettings.cards.timeScapeAppearance,
+                appearance = state.launcherSettings.cards.adaptiveStageAppearance,
                 appIconLoader = appIconLoader,
                 modifier = cardModifier,
             )
@@ -1051,12 +1051,12 @@ private fun TimeScapeStageRail(
     }
 }
 
-/** Only one [TimeScapeStageRail] is ever composed at a time, so a single fixed tag is unambiguous. */
-internal const val TIME_SCAPE_STAGE_RAIL_TEST_TAG = "timescape-stage-rail"
+/** Only one [AdaptiveStageStageRail] is ever composed at a time, so a single fixed tag is unambiguous. */
+internal const val ADAPTIVE_STAGE_STAGE_RAIL_TEST_TAG = "adaptive-stage-stage-rail"
 
 /**
  * Tuned much smaller than the full-screen notification [CardStack] (fewer visible layers, tighter
- * offset/scale steps) to fit the rail's fixed [TimeScapePaneLayoutPolicy] budget
+ * offset/scale steps) to fit the rail's fixed [AdaptiveStagePaneLayoutPolicy] budget
  * (`RAIL_WIDTH_DP`/`RAIL_HEIGHT_DP`) rather than a whole viewport.
  *
  * [CardStackLayoutPolicy.verticalOffsetStep] -- not [CardStackLayoutPolicy.offsetStep] -- is the
@@ -1068,11 +1068,11 @@ internal const val TIME_SCAPE_STAGE_RAIL_TEST_TAG = "timescape-stage-rail"
  * a raw touch at a background tile's own reported center still landed inside the focused tile's
  * (larger, unshifted) hit-test bounds, since Compose routes a pointer event to whichever entry's
  * `Box` is topmost -- by z-order -- at that exact point, not whichever entry's semantics node the
- * point was nominally "for". [TimeScapeStageRailTile]'s own layout is roughly icon (40dp) + label +
+ * point was nominally "for". [AdaptiveStageStageRailTile]'s own layout is roughly icon (40dp) + label +
  * padding tall, so this step needs to clear roughly that whole height, not a fraction of it, for a
  * background tile's own center to actually land outside the focused tile's box.
  */
-private val TIME_SCAPE_STAGE_RAIL_LAYOUT_POLICY =
+private val ADAPTIVE_STAGE_STAGE_RAIL_LAYOUT_POLICY =
     CardStackLayoutPolicy(
         maxVisibleDepth = 2,
         scaleStep = 0.1f,
@@ -1081,25 +1081,25 @@ private val TIME_SCAPE_STAGE_RAIL_LAYOUT_POLICY =
         alphaStep = 0.3f,
     )
 
-/** Same settle thresholds as [TimeScapeNotificationStack]'s card-to-card settle, for a consistent feel. */
-private const val TIME_SCAPE_STAGE_RAIL_SETTLE_DISTANCE_THRESHOLD_PX = 64f
-private const val TIME_SCAPE_STAGE_RAIL_FLING_VELOCITY_THRESHOLD_PX = 500f
+/** Same settle thresholds as [AdaptiveStageNotificationStack]'s card-to-card settle, for a consistent feel. */
+private const val ADAPTIVE_STAGE_STAGE_RAIL_SETTLE_DISTANCE_THRESHOLD_PX = 64f
+private const val ADAPTIVE_STAGE_STAGE_RAIL_FLING_VELOCITY_THRESHOLD_PX = 500f
 
 /**
  * A single stage tile in the rail: a small deterministically-tinted icon slot (reusing the same
- * per-app seed color mechanism as populated [TimeScapeCardSurface] cards, via
- * [resolveTimeScapeCardColors]) with a short caption below, and a clear ring/elevation treatment
+ * per-app seed color mechanism as populated [AdaptiveStageCardSurface] cards, via
+ * [resolveAdaptiveStageCardColors]) with a short caption below, and a clear ring/elevation treatment
  * for the currently selected stage. Non-interactive on its own -- [modifier] (supplied by the
  * enclosing [CardStack]) already carries tap-to-select/settle-drag handling, mirroring how
- * [TimeScapeCardSurface] relies on its own given modifier rather than an internal onClick.
+ * [AdaptiveStageCardSurface] relies on its own given modifier rather than an internal onClick.
  */
 @Composable
-private fun TimeScapeStageRailTile(
+private fun AdaptiveStageStageRailTile(
     stageId: AppStageId,
     isSelected: Boolean,
     label: String,
     identity: AppIdentity?,
-    appearance: TimeScapeAppearanceSettings,
+    appearance: AdaptiveStageAppearanceSettings,
     appIconLoader: AppIconLoader,
     modifier: Modifier = Modifier,
 ) {
@@ -1117,9 +1117,9 @@ private fun TimeScapeStageRailTile(
     }
     val colors =
         remember(appearance, stageId, materialBackground, materialAccent, appColor) {
-            resolveTimeScapeCardColors(
+            resolveAdaptiveStageCardColors(
                 appearance = appearance,
-                background = TimeScapeCardBackground(appSeed = stageId.packageName.value, appColor = appColor),
+                background = AdaptiveStageCardBackground(appSeed = stageId.packageName.value, appColor = appColor),
                 materialBackground = materialBackground,
                 materialAccent = materialAccent,
             )
@@ -1173,28 +1173,28 @@ private fun TimeScapeStageRailTile(
 }
 
 @Composable
-private fun TimeScapeSupportingPane(
+private fun AdaptiveStageSupportingPane(
     stage: AppStage?,
     selectedCardId: LauncherCardId?,
     state: LauncherShellState,
     notificationCards: List<AppStageNotificationCard>,
     emptyCard: AppStageEmptyAppCard?,
-    detailState: TimeScapeCardDetailState?,
+    detailState: AdaptiveStageCardDetailState?,
     onAction: (LauncherShellAction) -> Unit,
     modifier: Modifier,
 ) {
     val card = notificationCards.firstOrNull { it.content.id == selectedCardId }
-    val paneModifier = modifier.testTag(TIME_SCAPE_SUPPORTING_PANE_TEST_TAG)
+    val paneModifier = modifier.testTag(ADAPTIVE_STAGE_SUPPORTING_PANE_TEST_TAG)
     if (
         emptyCard != null &&
-        selectedCardId == stage?.id?.let(::timeScapeEmptyDetailCardId) &&
+        selectedCardId == stage?.id?.let(::adaptiveStageEmptyDetailCardId) &&
         detailState?.expansionState?.isVisible == true
     ) {
-        TimeScapeEmptyAppDetailSurface(emptyCard, detailState, onAction, modifier = paneModifier)
+        AdaptiveStageEmptyAppDetailSurface(emptyCard, detailState, onAction, modifier = paneModifier)
         return
     }
     if (card != null && detailState?.expansionState?.isVisible == true) {
-        TimeScapeCardDetailSurface(card, detailState, onAction, modifier = paneModifier)
+        AdaptiveStageCardDetailSurface(card, detailState, onAction, modifier = paneModifier)
         return
     }
     Surface(
@@ -1217,7 +1217,7 @@ private fun TimeScapeSupportingPane(
                 stage?.let { Text(stageLabel(it.id, state), style = MaterialTheme.typography.labelLarge) }
                 Text(card.title, style = MaterialTheme.typography.titleMedium)
                 Text(card.text, style = MaterialTheme.typography.bodyMedium)
-                TimeScapeContextActionsGrid(
+                AdaptiveStageContextActionsGrid(
                     card = card,
                     onAction = onAction,
                     onDetailRequested = { detailState?.expand(card.content.id) },
@@ -1228,18 +1228,18 @@ private fun TimeScapeSupportingPane(
 }
 
 @Composable
-private fun TimeScapeStageHeader(
+private fun AdaptiveStageStageHeader(
     selectedStage: AppStage?,
     stages: List<AppStage>,
     state: LauncherShellState,
     appIconLoader: AppIconLoader,
     onAction: (LauncherShellAction) -> Unit,
 ) {
-    val label = selectedStage?.let { stageLabel(it.id, state) } ?: "TimeScape"
-    var overflowExpanded by rememberSaveable(selectedStage?.let(::timeScapeStageSelectorItemKey)) {
+    val label = selectedStage?.let { stageLabel(it.id, state) } ?: "Cards"
+    var overflowExpanded by rememberSaveable(selectedStage?.let(::adaptiveStageStageSelectorItemKey)) {
         mutableStateOf(false)
     }
-    var addStageExpanded by rememberSaveable(selectedStage?.let(::timeScapeStageSelectorItemKey)) {
+    var addStageExpanded by rememberSaveable(selectedStage?.let(::adaptiveStageStageSelectorItemKey)) {
         mutableStateOf(false)
     }
     val pinnedStageIds = stages.filter(AppStage::isPinned).map(AppStage::id).toSet()
@@ -1275,9 +1275,9 @@ private fun TimeScapeStageHeader(
         }
         Column(
             modifier =
-                Modifier.weight(1f).testTag(TIME_SCAPE_STAGE_HEADER_TEST_TAG).semantics {
-                    contentDescription = "TimeScape stage: $label"
-                    stateDescription = selectedStage?.timeScapeStageStateDescription() ?: "No stage selected"
+                Modifier.weight(1f).testTag(ADAPTIVE_STAGE_STAGE_HEADER_TEST_TAG).semantics {
+                    contentDescription = "Cards stage: $label"
+                    stateDescription = selectedStage?.adaptiveStageStageStateDescription() ?: "No stage selected"
                     liveRegion = LiveRegionMode.Polite
                     // The rail/spine's visible Previous/Next buttons were removed as redundant
                     // with tapping a stage directly (or swiping, in compact/split layouts) --
@@ -1303,10 +1303,10 @@ private fun TimeScapeStageHeader(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            // Only show the "TimeScape" eyebrow when it wouldn't just repeat the title above --
-            // label already falls back to "TimeScape" itself when no stage is selected.
-            if (label != "TimeScape") {
-                Text(text = "TimeScape", style = MaterialTheme.typography.labelMedium)
+            // Only show the "Cards" eyebrow when it wouldn't just repeat the title above --
+            // label already falls back to "Cards" itself when no stage is selected.
+            if (label != "Cards") {
+                Text(text = "Cards", style = MaterialTheme.typography.labelMedium)
             }
         }
         if (selectedStage != null) {
@@ -1376,15 +1376,15 @@ private fun TimeScapeStageHeader(
     }
 }
 
-/** Only one [TimeScapeStageHeader] is ever composed at a time, so a single fixed tag is unambiguous. */
-internal const val TIME_SCAPE_STAGE_HEADER_TEST_TAG = "timescape-stage-header"
+/** Only one [AdaptiveStageStageHeader] is ever composed at a time, so a single fixed tag is unambiguous. */
+internal const val ADAPTIVE_STAGE_STAGE_HEADER_TEST_TAG = "adaptive-stage-stage-header"
 
 @Composable
-private fun TimeScapeStageContent(
+private fun AdaptiveStageStageContent(
     stage: AppStage,
     state: LauncherShellState,
     shellState: com.riffle.app.launcher.notifications.AppStageShellState,
-    detailState: TimeScapeCardDetailState,
+    detailState: AdaptiveStageCardDetailState,
     focusedCardId: LauncherCardId?,
     onDetailVisibilityChanged: (LauncherCardId?) -> Unit,
     onFocusedCardChanged: (LauncherCardId?) -> Unit = {},
@@ -1407,7 +1407,7 @@ private fun TimeScapeStageContent(
     }
     when {
         stage.content.isEmpty() ->
-            TimeScapeEmptyStage(
+            AdaptiveStageEmptyStage(
                 stage = stage,
                 shellState = shellState,
                 detailState = detailState,
@@ -1418,7 +1418,7 @@ private fun TimeScapeStageContent(
                 modifier = modifier,
             )
         else ->
-            TimeScapeNotificationStack(
+            AdaptiveStageNotificationStack(
                 stage = stage,
                 state = state,
                 notificationCards = shellState.notificationCards,
@@ -1434,11 +1434,11 @@ private fun TimeScapeStageContent(
 }
 
 @Composable
-private fun TimeScapeNotificationStack(
+private fun AdaptiveStageNotificationStack(
     stage: AppStage,
     state: LauncherShellState,
     notificationCards: List<AppStageNotificationCard>,
-    detailState: TimeScapeCardDetailState,
+    detailState: AdaptiveStageCardDetailState,
     focusedCardId: LauncherCardId?,
     onFocusedCardChanged: (LauncherCardId?) -> Unit,
     showDetailInline: Boolean,
@@ -1467,11 +1467,11 @@ private fun TimeScapeNotificationStack(
     val controller = remember(stage.id) { CardStackController() }
     val artworkCache =
         remember(stage.id) {
-            TimeScapeArtworkCache<ImageBitmap>(decode = ::decodeTimeScapeArtwork)
+            AdaptiveStageArtworkCache<ImageBitmap>(decode = ::decodeAdaptiveStageArtwork)
         }
     val stackKey =
         remember(stage.id) {
-            CardStackKey("timescape:${stage.id.profileId.value}:${stage.id.packageName.value}")
+            CardStackKey("stage:${stage.id.profileId.value}:${stage.id.packageName.value}")
         }
     var previousCardIds by remember(stage.id) { mutableStateOf(emptyList<LauncherCardId>()) }
     var settleTransitionId by rememberSaveable(stage.id.profileId.value, stage.id.packageName.value) {
@@ -1514,18 +1514,18 @@ private fun TimeScapeNotificationStack(
     }
 
     BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
-        val viewport = TimeScapeViewportDp(maxWidth.value.toInt(), maxHeight.value.toInt())
+        val viewport = AdaptiveStageViewportDp(maxWidth.value.toInt(), maxHeight.value.toInt())
         val resolution =
             remember(state.launcherSettings, viewport) {
-                state.launcherSettings.resolveTimeScapeCardStack(
+                state.launcherSettings.resolveAdaptiveStageCardStack(
                     viewport = viewport,
-                    capabilities = timeScapeRendererCapabilities(),
+                    capabilities = adaptiveStageRendererCapabilities(),
                 )
             }
         val isDetailVisible = detailState.expansionState.isVisible && showDetailInline
         // Siblings stay composed (and thus discoverable/re-focusable) but dimmed while a card's
         // detail is expanded, instead of being torn down entirely.
-        val stackDimFactor = if (isDetailVisible) TIME_SCAPE_SIBLING_DIM_FACTOR else 1f
+        val stackDimFactor = if (isDetailVisible) ADAPTIVE_STAGE_SIBLING_DIM_FACTOR else 1f
         Box(modifier = Modifier.fillMaxSize()) {
             Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Box(
@@ -1534,7 +1534,7 @@ private fun TimeScapeNotificationStack(
                 ) {
                     CardStack(
                         entries =
-                            timeScapeNotificationStackEntries(
+                            adaptiveStageNotificationStackEntries(
                                 resolution = resolution,
                                 cardCount = cards.size,
                                 activeCardIndex = activeCardIndex,
@@ -1578,8 +1578,8 @@ private fun TimeScapeNotificationStack(
                                         }
                                 },
                                 onSettleHaptic = {
-                                    haptics.timeScapeSettle(
-                                        state.launcherSettings.cards.timeScapeAppearance.motion.hapticStrength,
+                                    haptics.adaptiveStageSettle(
+                                        state.launcherSettings.cards.adaptiveStageAppearance.motion.hapticStrength,
                                     )
                                 },
                                 onNavigate = ::navigate,
@@ -1597,7 +1597,7 @@ private fun TimeScapeNotificationStack(
                             if (entry.cardIndex == activeCardIndex) {
                                 Modifier.semantics {
                                     contentDescription =
-                                        "Focused ${timeScapeCardKindLabel(card)} card: ${card.title}. ${card.text}"
+                                        "Focused ${adaptiveStageCardKindLabel(card)} card: ${card.title}. ${card.text}"
                                     stateDescription = "Card ${entry.cardIndex + 1} of ${cards.size}"
                                     liveRegion = LiveRegionMode.Polite
                                     customActions =
@@ -1617,10 +1617,10 @@ private fun TimeScapeNotificationStack(
                             } else {
                                 Modifier
                             }
-                        TimeScapeCardSurface(
-                            appearance = state.launcherSettings.cards.timeScapeAppearance,
+                        AdaptiveStageCardSurface(
+                            appearance = state.launcherSettings.cards.adaptiveStageAppearance,
                             background =
-                                TimeScapeCardBackground(
+                                AdaptiveStageCardBackground(
                                     artwork = artwork,
                                     appSeed = stage.id.packageName.value,
                                     appColor = stageAppColor,
@@ -1630,7 +1630,7 @@ private fun TimeScapeNotificationStack(
                                     width = resolution.cardWidthDp.dp,
                                     height = resolution.cardHeightDp.dp,
                                 ).then(focusedCardSemantics),
-                            contentPadding = timeScapeResolvedContentPadding(resolution),
+                            contentPadding = adaptiveStageResolvedContentPadding(resolution),
                         ) {
                             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                 Text(card.title, style = MaterialTheme.typography.titleMedium)
@@ -1639,13 +1639,13 @@ private fun TimeScapeNotificationStack(
                         }
                     }
                 }
-                TimeScapeCardNavigationControls(
+                AdaptiveStageCardNavigationControls(
                     position = activeCardIndex + 1,
                     count = cards.size,
                     onPrevious = { navigate(CardStackNavigationDirection.PREVIOUS) },
                     onNext = { navigate(CardStackNavigationDirection.NEXT) },
                 )
-                TimeScapeContextShelf(
+                AdaptiveStageContextShelf(
                     card = activeCard,
                     onAction = onAction,
                     onDetailRequested = { detailState.expand(activeCard.content.id) },
@@ -1653,13 +1653,13 @@ private fun TimeScapeNotificationStack(
                     restoreDetailFocus = restoreDetailFocusForCardId == activeCard.content.id,
                     onDetailFocusRestored = { restoreDetailFocusForCardId = null },
                 )
-                TimeScapeDetailRecoveryMessage(detailState.sourceRemovalMessage)
+                AdaptiveStageDetailRecoveryMessage(detailState.sourceRemovalMessage)
             }
             if (isDetailVisible) {
                 cards
                     .firstOrNull { card -> card.content.id == detailState.expansionState.cardId }
                     ?.let { card ->
-                        TimeScapeCardDetailSurface(
+                        AdaptiveStageCardDetailSurface(
                             card = card,
                             detailState = detailState,
                             onAction = onAction,
@@ -1672,11 +1672,11 @@ private fun TimeScapeNotificationStack(
     }
 }
 
-internal const val TIME_SCAPE_SIBLING_DIM_FACTOR = 0.18f
+internal const val ADAPTIVE_STAGE_SIBLING_DIM_FACTOR = 0.18f
 
 /** Keeps every active notification reachable even when the visual stack depth is smaller. */
-internal fun timeScapeNotificationStackEntries(
-    resolution: TimeScapeCardStackResolution,
+internal fun adaptiveStageNotificationStackEntries(
+    resolution: AdaptiveStageCardStackResolution,
     cardCount: Int,
     activeCardIndex: Int,
 ): List<CardStackLayoutEntry> =
@@ -1689,7 +1689,7 @@ internal fun timeScapeNotificationStackEntries(
         )
 
 @Composable
-private fun TimeScapeCardNavigationControls(
+private fun AdaptiveStageCardNavigationControls(
     position: Int,
     count: Int,
     onPrevious: () -> Unit,
@@ -1715,7 +1715,7 @@ private fun TimeScapeCardNavigationControls(
 }
 
 @Composable
-internal fun TimeScapeContextShelf(
+internal fun AdaptiveStageContextShelf(
     card: AppStageNotificationCard,
     onAction: (LauncherShellAction) -> Unit,
     onDetailRequested: (() -> Unit)? = null,
@@ -1735,7 +1735,7 @@ internal fun TimeScapeContextShelf(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         card.supportedActions.sortedBy { action -> action.label() }.forEach { action ->
-            TimeScapeContextActionButton(
+            AdaptiveStageContextActionButton(
                 label = action.label(),
                 onClick = {
                     onAction(LauncherShellAction.PerformNotificationStageAction(card.notificationKey, action))
@@ -1743,7 +1743,7 @@ internal fun TimeScapeContextShelf(
             )
         }
         onDetailRequested?.let { requestDetail ->
-            TimeScapeContextActionButton(
+            AdaptiveStageContextActionButton(
                 label = "Details",
                 onClick = requestDetail,
                 modifier =
@@ -1766,12 +1766,12 @@ internal fun TimeScapeContextShelf(
 
 /**
  * A pill-shaped, translucent "glass" action button -- the shared building block for
- * [TimeScapeContextShelf]'s inline row and [TimeScapeContextActionsGrid]'s two-column layout,
+ * [AdaptiveStageContextShelf]'s inline row and [AdaptiveStageContextActionsGrid]'s two-column layout,
  * styled to sit closer to Calm's `contextActionButton()` glass-pill treatment than a bare
  * [TextButton].
  */
 @Composable
-private fun TimeScapeContextActionButton(
+private fun AdaptiveStageContextActionButton(
     label: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -1804,7 +1804,7 @@ private fun TimeScapeContextActionButton(
  * beside empty space.
  */
 @Composable
-internal fun TimeScapeContextActionsGrid(
+internal fun AdaptiveStageContextActionsGrid(
     card: AppStageNotificationCard,
     onAction: (LauncherShellAction) -> Unit,
     onDetailRequested: (() -> Unit)? = null,
@@ -1815,7 +1815,7 @@ internal fun TimeScapeContextActionsGrid(
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
         actions.chunked(2).forEach { rowActions ->
             if (rowActions.size == 1) {
-                TimeScapeContextActionButton(
+                AdaptiveStageContextActionButton(
                     label = rowActions[0].label(),
                     onClick = {
                         onAction(
@@ -1827,7 +1827,7 @@ internal fun TimeScapeContextActionsGrid(
             } else {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     rowActions.forEach { action ->
-                        TimeScapeContextActionButton(
+                        AdaptiveStageContextActionButton(
                             label = action.label(),
                             onClick = {
                                 onAction(
@@ -1841,17 +1841,17 @@ internal fun TimeScapeContextActionsGrid(
             }
         }
         onDetailRequested?.let { requestDetail ->
-            TimeScapeContextActionButton(label = "Details", onClick = requestDetail, modifier = Modifier.fillMaxWidth())
+            AdaptiveStageContextActionButton(label = "Details", onClick = requestDetail, modifier = Modifier.fillMaxWidth())
         }
     }
 }
 
 @Composable
 @Suppress("LongMethod")
-private fun TimeScapeEmptyStage(
+private fun AdaptiveStageEmptyStage(
     stage: AppStage,
     shellState: com.riffle.app.launcher.notifications.AppStageShellState,
-    detailState: TimeScapeCardDetailState,
+    detailState: AdaptiveStageCardDetailState,
     showDetailInline: Boolean,
     state: LauncherShellState,
     appIconLoader: AppIconLoader,
@@ -1860,7 +1860,7 @@ private fun TimeScapeEmptyStage(
 ) {
     val notificationAccessStatus = state.notificationAccessStatus
     val emptyCard = shellState.emptyAppCards[stage.id]
-    val detailCardId = timeScapeEmptyDetailCardId(stage.id)
+    val detailCardId = adaptiveStageEmptyDetailCardId(stage.id)
     val availableCardIds = if (emptyCard == null) emptySet() else setOf(detailCardId)
     val detailFocusRequester = remember { FocusRequester() }
     var restoreDetailFocusForCardId by remember { mutableStateOf<LauncherCardId?>(null) }
@@ -1870,7 +1870,7 @@ private fun TimeScapeEmptyStage(
         if (restoreDetailFocusForCardId !in availableCardIds) restoreDetailFocusForCardId = null
     }
     if (detailState.expansionState.isVisible && showDetailInline && emptyCard != null) {
-        TimeScapeEmptyAppDetailSurface(
+        AdaptiveStageEmptyAppDetailSurface(
             card = emptyCard,
             detailState = detailState,
             onAction = onAction,
@@ -1892,22 +1892,22 @@ private fun TimeScapeEmptyStage(
             }
     }
     BoxWithConstraints(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        val viewport = TimeScapeViewportDp(maxWidth.value.toInt(), maxHeight.value.toInt())
+        val viewport = AdaptiveStageViewportDp(maxWidth.value.toInt(), maxHeight.value.toInt())
         val resolution =
             remember(state.launcherSettings, viewport) {
-                state.launcherSettings.resolveTimeScapeCardStack(
+                state.launcherSettings.resolveAdaptiveStageCardStack(
                     viewport = viewport,
-                    capabilities = timeScapeRendererCapabilities(),
+                    capabilities = adaptiveStageRendererCapabilities(),
                 )
             }
-        TimeScapeCardSurface(
-            appearance = state.launcherSettings.cards.timeScapeAppearance,
-            background = TimeScapeCardBackground(appSeed = stage.id.packageName.value, appColor = emptyStageAppColor),
+        AdaptiveStageCardSurface(
+            appearance = state.launcherSettings.cards.adaptiveStageAppearance,
+            background = AdaptiveStageCardBackground(appSeed = stage.id.packageName.value, appColor = emptyStageAppColor),
             modifier =
                 Modifier
                     .size(width = resolution.cardWidthDp.dp, height = resolution.cardHeightDp.dp)
-                    .testTag(TIME_SCAPE_EMPTY_STAGE_CARD_TEST_TAG),
-            contentPadding = timeScapeResolvedContentPadding(resolution),
+                    .testTag(ADAPTIVE_STAGE_EMPTY_STAGE_CARD_TEST_TAG),
+            contentPadding = adaptiveStageResolvedContentPadding(resolution),
         ) {
             Column(
                 modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
@@ -1924,7 +1924,7 @@ private fun TimeScapeEmptyStage(
                 }
                 if (notificationAccessStatus != NotificationAccessStatus.GRANTED) {
                     Text(
-                        text = notificationAccessStatus.timeScapeAccessMessage,
+                        text = notificationAccessStatus.adaptiveStageAccessMessage,
                         modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
                         style = MaterialTheme.typography.bodyLarge,
                     )
@@ -1979,13 +1979,13 @@ private fun TimeScapeEmptyStage(
                         isLaidOut = detailControlLaidOut,
                     )
                 }
-                TimeScapeDetailRecoveryMessage(detailState.sourceRemovalMessage)
+                AdaptiveStageDetailRecoveryMessage(detailState.sourceRemovalMessage)
             }
         }
     }
 }
 
-internal const val TIME_SCAPE_EMPTY_STAGE_CARD_TEST_TAG = "timescape-empty-stage-card"
+internal const val ADAPTIVE_STAGE_EMPTY_STAGE_CARD_TEST_TAG = "adaptive-stage-empty-stage-card"
 
 @Composable
 private fun RestoreFocusAfterLayout(
@@ -2001,7 +2001,7 @@ private fun RestoreFocusAfterLayout(
 }
 
 @Composable
-private fun TimeScapeUnavailableState(
+private fun AdaptiveStageUnavailableState(
     access: NotificationAccessStatus,
     recoveryMessage: String?,
     installedApps: List<com.riffle.core.domain.launcher.apps.InstalledApp>,
@@ -2014,13 +2014,13 @@ private fun TimeScapeUnavailableState(
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(
-            text = access.timeScapeAccessMessage,
+            text = access.adaptiveStageAccessMessage,
             modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
             style = MaterialTheme.typography.bodyLarge,
         )
-        TimeScapeDetailRecoveryMessage(recoveryMessage)
+        AdaptiveStageDetailRecoveryMessage(recoveryMessage)
         if (access == NotificationAccessStatus.NOT_GRANTED || access == NotificationAccessStatus.REVOKED) {
-            TimeScapeContextActionButton(
+            AdaptiveStageContextActionButton(
                 label = "Allow access",
                 onClick = { onAction(LauncherShellAction.RequestNotificationAccess) },
             )
@@ -2043,7 +2043,7 @@ private fun TimeScapeUnavailableState(
                         "${app.identity.profile.id.value}:${app.identity.packageName.value}"
                     },
                 ) { app ->
-                    TimeScapeContextActionButton(
+                    AdaptiveStageContextActionButton(
                         label = "Pin ${app.label}",
                         onClick = {
                             onAction(
@@ -2059,7 +2059,7 @@ private fun TimeScapeUnavailableState(
     }
 }
 
-private val NotificationAccessStatus.timeScapeAccessMessage: String
+private val NotificationAccessStatus.adaptiveStageAccessMessage: String
     get() =
         when (this) {
             NotificationAccessStatus.GRANTED -> "No active stages yet. New notifications will appear here."
@@ -2068,21 +2068,21 @@ private val NotificationAccessStatus.timeScapeAccessMessage: String
             NotificationAccessStatus.UNKNOWN -> "Checking notification access."
         }
 
-private data class TimeScapeDetailOrigin(
+private data class AdaptiveStageDetailOrigin(
     val stageKey: String?,
     val cardId: LauncherCardId,
 )
 
-private fun timeScapeEmptyDetailCardId(stageId: AppStageId): LauncherCardId =
+private fun adaptiveStageEmptyDetailCardId(stageId: AppStageId): LauncherCardId =
     LauncherCardId("stage-empty:${stageId.profileId.value}:${stageId.packageName.value}")
 
-internal fun timeScapeStageKey(stageId: AppStageId): String {
+internal fun adaptiveStageStageKey(stageId: AppStageId): String {
     return "${stageId.profileId.value}:${stageId.packageName.value}"
 }
 
-internal const val TIME_SCAPE_SUPPORTING_PANE_TEST_TAG = "timescape-supporting-pane"
+internal const val ADAPTIVE_STAGE_SUPPORTING_PANE_TEST_TAG = "adaptive-stage-supporting-pane"
 
-private data class TimeScapeSafeInsetsDp(
+private data class AdaptiveStageSafeInsetsDp(
     val start: Int,
     val top: Int,
     val end: Int,
@@ -2090,7 +2090,7 @@ private data class TimeScapeSafeInsetsDp(
 )
 
 /** Converts full-window hinge coordinates into the inset content coordinates used by the surface. */
-private fun TimeScapeWindowLayout.insetLocal(insets: TimeScapeSafeInsetsDp): TimeScapeWindowLayout =
+private fun AdaptiveStageWindowLayout.insetLocal(insets: AdaptiveStageSafeInsetsDp): AdaptiveStageWindowLayout =
     copy(
         widthDp = (widthDp - insets.start - insets.end).coerceAtLeast(0),
         heightDp = (heightDp - insets.top - insets.bottom).coerceAtLeast(0),
@@ -2109,20 +2109,20 @@ private fun TimeScapeWindowLayout.insetLocal(insets: TimeScapeSafeInsetsDp): Tim
             },
     )
 
-private fun TimeScapeWindowLayout.hasUsableBounds(): Boolean = widthDp > 0 && heightDp > 0
+private fun AdaptiveStageWindowLayout.hasUsableBounds(): Boolean = widthDp > 0 && heightDp > 0
 
-private val TimeScapePostureTransitionStateSaver =
-    Saver<TimeScapePostureTransitionState, List<String>>(
+private val AdaptiveStagePostureTransitionStateSaver =
+    Saver<AdaptiveStagePostureTransitionState, List<String>>(
         save = { state -> listOf(state.settledPosture.name, state.pendingPosture?.name.orEmpty()) },
         restore = { saved ->
-            val settled = saved.getOrNull(0)?.let(::timeScapePostureOrNull) ?: TimeScapePosture.UNKNOWN
-            val pending = saved.getOrNull(1)?.takeIf(String::isNotBlank)?.let(::timeScapePostureOrNull)
-            TimeScapePostureTransitionState(settled, pending)
+            val settled = saved.getOrNull(0)?.let(::adaptiveStagePostureOrNull) ?: AdaptiveStagePosture.UNKNOWN
+            val pending = saved.getOrNull(1)?.takeIf(String::isNotBlank)?.let(::adaptiveStagePostureOrNull)
+            AdaptiveStagePostureTransitionState(settled, pending)
         },
     )
 
-private fun timeScapePostureOrNull(value: String): TimeScapePosture? {
-    return runCatching { TimeScapePosture.valueOf(value) }.getOrNull()
+private fun adaptiveStagePostureOrNull(value: String): AdaptiveStagePosture? {
+    return runCatching { AdaptiveStagePosture.valueOf(value) }.getOrNull()
 }
 
 /**
@@ -2130,11 +2130,11 @@ private fun timeScapePostureOrNull(value: String): TimeScapePosture? {
  * [pagePosition] -- mirroring the reference app's chapter-carousel concept with Compose idioms:
  * each item's alpha/scale is a function of its distance from [pagePosition], so it visually tracks
  * an in-progress drag rather than jumping only when a page fully settles. Evolves the previous
- * static [TimeScapeStageSelector] in place rather than adding a redundant second control; its
+ * static [AdaptiveStageStageSelector] in place rather than adding a redundant second control; its
  * Previous/Next buttons remain for non-drag (keyboard, switch, accessibility) navigation.
  */
 @Composable
-private fun TimeScapeStageSpine(
+private fun AdaptiveStageStageSpine(
     stages: List<AppStage>,
     selectedStageId: AppStageId?,
     pagePosition: Float,
@@ -2144,7 +2144,7 @@ private fun TimeScapeStageSpine(
 ) {
     if (stages.isEmpty()) return
     // Previous/Next were removed as redundant with tapping a chip directly (or swiping, via
-    // TimeScapeStagePager) -- TimeScapeStageHeader's customActions cover non-touch navigation.
+    // AdaptiveStageStagePager) -- AdaptiveStageStageHeader's customActions cover non-touch navigation.
     Row(
         modifier =
             Modifier
@@ -2158,11 +2158,11 @@ private fun TimeScapeStageSpine(
             contentPadding = PaddingValues(horizontal = 4.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            items(stages, key = ::timeScapeStageSelectorItemKey) { stage ->
+            items(stages, key = ::adaptiveStageStageSelectorItemKey) { stage ->
                 val index = stages.indexOf(stage)
                 val proximity = 1f - abs(index - pagePosition).coerceIn(0f, 1f)
-                val itemAlpha = TIME_SCAPE_SPINE_MIN_ALPHA + (1f - TIME_SCAPE_SPINE_MIN_ALPHA) * proximity
-                val itemScale = TIME_SCAPE_SPINE_MIN_SCALE + (1f - TIME_SCAPE_SPINE_MIN_SCALE) * proximity
+                val itemAlpha = ADAPTIVE_STAGE_SPINE_MIN_ALPHA + (1f - ADAPTIVE_STAGE_SPINE_MIN_ALPHA) * proximity
+                val itemScale = ADAPTIVE_STAGE_SPINE_MIN_SCALE + (1f - ADAPTIVE_STAGE_SPINE_MIN_SCALE) * proximity
                 val identity = stageAppIdentity(stage.id, state)
                 val label = stageLabel(stage.id, state)
                 TextButton(
@@ -2210,11 +2210,11 @@ private fun TimeScapeStageSpine(
     }
 }
 
-private const val TIME_SCAPE_SPINE_MIN_ALPHA = 0.45f
-private const val TIME_SCAPE_SPINE_MIN_SCALE = 0.85f
+private const val ADAPTIVE_STAGE_SPINE_MIN_ALPHA = 0.45f
+private const val ADAPTIVE_STAGE_SPINE_MIN_SCALE = 0.85f
 
 /** Lazy layouts require item keys that Android can store in a Bundle across recreation. */
-internal fun timeScapeStageSelectorItemKey(stage: AppStage): String {
+internal fun adaptiveStageStageSelectorItemKey(stage: AppStage): String {
     return "${stage.id.profileId.value}:${stage.id.packageName.value}"
 }
 
@@ -2236,7 +2236,7 @@ private fun stageAppIdentity(
         app.identity.packageName == id.packageName && app.identity.profile.id == id.profileId
     }?.identity
 
-private fun AppStage.timeScapeStageStateDescription(): String =
+private fun AppStage.adaptiveStageStageStateDescription(): String =
     buildList {
         add(
             origins
@@ -2255,7 +2255,7 @@ private fun AppStage.timeScapeStageStateDescription(): String =
         add("${content.size} ${if (content.size == 1) "card" else "cards"}")
     }.joinToString(", ")
 
-private fun timeScapeCardKindLabel(card: AppStageNotificationCard): String =
+private fun adaptiveStageCardKindLabel(card: AppStageNotificationCard): String =
     when (card.content.kind) {
         com.riffle.core.domain.launcher.cards.AppStageContentKind.NOTIFICATION -> "notification"
         com.riffle.core.domain.launcher.cards.AppStageContentKind.MEDIA -> "media"

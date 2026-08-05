@@ -3,8 +3,8 @@ package com.riffle.app.launcher.rss
 import android.graphics.BitmapFactory
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
-import com.riffle.app.launcher.TimeScapeArtworkCache
-import com.riffle.app.launcher.timeScapeArtworkSampleSize
+import com.riffle.app.launcher.AdaptiveStageArtworkCache
+import com.riffle.app.launcher.adaptiveStageArtworkSampleSize
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -41,9 +41,9 @@ object EmptyFeedArtworkLoader : FeedArtworkLoader {
 
 /**
  * Backed by [FeedArticleCacheRepository.cachedImage]. Decoded bitmaps are kept in a small
- * process-only LRU ([TimeScapeArtworkCache], shared with `TimeScapeCardSurface.kt`) keyed by the
+ * process-only LRU ([AdaptiveStageArtworkCache], shared with `AdaptiveStageCardSurface.kt`) keyed by the
  * article digest, so repeated composition does not repeatedly decode the same bytes. Decoding
- * reuses the same bounded, downsampled approach as `decodeTimeScapeArtwork` -- see
+ * reuses the same bounded, downsampled approach as `decodeAdaptiveStageArtwork` -- see
  * [decodeFeedArtworkBytes] -- just starting from raw cached bytes instead of a base64 payload.
  */
 class RepositoryFeedArtworkLoader(
@@ -51,7 +51,7 @@ class RepositoryFeedArtworkLoader(
     private val dispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) : FeedArtworkLoader {
     private val cache =
-        TimeScapeArtworkCache<ImageBitmap>(
+        AdaptiveStageArtworkCache<ImageBitmap>(
             decode = { digest -> digest?.let { key -> decodeFeedArtworkBytes(repository.cachedImage(key)) } },
         )
 
@@ -61,7 +61,7 @@ class RepositoryFeedArtworkLoader(
 
 /**
  * Bounds and downsamples cached artwork bytes into a Compose [ImageBitmap], mirroring
- * `decodeTimeScapeArtwork`'s size caps so a malformed or oversized cached image can never block
+ * `decodeAdaptiveStageArtwork`'s size caps so a malformed or oversized cached image can never block
  * or crash the renderer.
  */
 @Suppress("ReturnCount")
@@ -76,7 +76,7 @@ internal fun decodeFeedArtworkBytes(bytes: ByteArray?): ImageBitmap? {
             0,
             bytes.size,
             BitmapFactory.Options().apply {
-                inSampleSize = timeScapeArtworkSampleSize(bounds.outWidth, bounds.outHeight)
+                inSampleSize = adaptiveStageArtworkSampleSize(bounds.outWidth, bounds.outHeight)
             },
         )?.asImageBitmap()
     }.getOrNull()

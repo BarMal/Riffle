@@ -202,7 +202,7 @@ class LauncherShellRefreshCoordinatorTest {
                     }
             }
         val coordinator = coordinator(notificationRepository = repository)
-        val revisions = TimeScapeArtworkRevisionStore()
+        val revisions = AdaptiveStageArtworkRevisionStore()
         val dispatcher = Executors.newFixedThreadPool(2).asCoroutineDispatcher()
         try {
             runBlocking {
@@ -223,7 +223,7 @@ class LauncherShellRefreshCoordinatorTest {
                 olderJob.join()
             }
 
-            val expected = TimeScapeArtworkRevisionStore()
+            val expected = AdaptiveStageArtworkRevisionStore()
             expected.replace(coordinator.refreshNotifications(LauncherShellState()).notificationGroupsByApp)
             assertEquals(expected.revisionFor(newer), revisions.revisionFor(newer))
         } finally {
@@ -247,7 +247,7 @@ class LauncherShellRefreshCoordinatorTest {
                     if (readCount.getAndIncrement() == 0) listOf(older) else listOf(newer)
             }
         val coordinator = coordinator(notificationRepository = repository)
-        val revisions = TimeScapeArtworkRevisionStore()
+        val revisions = AdaptiveStageArtworkRevisionStore()
         val latestState = AtomicReference<LauncherShellState>()
         val dispatcher = Executors.newFixedThreadPool(2).asCoroutineDispatcher()
         try {
@@ -275,7 +275,7 @@ class LauncherShellRefreshCoordinatorTest {
                 olderJob.join()
             }
 
-            val expected = TimeScapeArtworkRevisionStore()
+            val expected = AdaptiveStageArtworkRevisionStore()
             val expectedState = coordinator.refreshNotifications(LauncherShellState())
             expected.replace(expectedState.notificationGroupsByApp)
             assertEquals(expected.revisionFor(newer), revisions.revisionFor(newer))

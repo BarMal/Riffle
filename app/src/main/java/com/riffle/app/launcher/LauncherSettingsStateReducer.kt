@@ -80,37 +80,37 @@ internal class LauncherSettingsStateReducer(
                         launcherSettingsRepository = launcherSettingsRepository,
                     )
 
-                is LauncherShellAction.UpdateTimeScapeAppearance ->
+                is LauncherShellAction.UpdateAdaptiveStageAppearance ->
                     state.withLauncherSettings(
                         settings =
                             state.launcherSettings.copy(
                                 cards =
                                     state.launcherSettings.cards.copy(
-                                        timeScapeAppearance = action.appearance.coerce(),
+                                        adaptiveStageAppearance = action.appearance.coerce(),
                                     ),
                             ),
                         launcherSettingsRepository = launcherSettingsRepository,
                     )
 
-                is LauncherShellAction.SelectTimeScapePaneArrangement ->
+                is LauncherShellAction.SelectAdaptiveStagePaneArrangement ->
                     state.withLauncherSettings(
                         settings =
                             state.launcherSettings.copy(
                                 cards =
                                     state.launcherSettings.cards.copy(
-                                        timeScapePaneArrangement = action.arrangement,
+                                        adaptiveStagePaneArrangement = action.arrangement,
                                     ),
                             ),
                         launcherSettingsRepository = launcherSettingsRepository,
                     )
 
-                is LauncherShellAction.SelectTimeScapeRailSide ->
+                is LauncherShellAction.SelectAdaptiveStageRailSide ->
                     state.withLauncherSettings(
                         settings =
                             state.launcherSettings.copy(
                                 cards =
                                     state.launcherSettings.cards.copy(
-                                        timeScapeRailSide = action.side,
+                                        adaptiveStageRailSide = action.side,
                                     ),
                             ),
                         launcherSettingsRepository = launcherSettingsRepository,

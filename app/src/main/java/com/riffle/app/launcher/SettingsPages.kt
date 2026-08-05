@@ -12,7 +12,7 @@ enum class SettingsPage(
     LAYOUT("Layout"),
     DOCK("Dock"),
     APPEARANCE("Appearance"),
-    TIMESCAPE_APPEARANCE("TimeScape appearance"),
+    ADAPTIVE_STAGE_APPEARANCE("Cards appearance"),
     FLOATING_DOCK("Floating dock"),
     GESTURES("Gestures"),
     CONTEXTUAL("Contextual"),

@@ -11,8 +11,8 @@ import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.apps.AppShortcutId
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.cards.AppStageId
-import com.riffle.core.domain.launcher.cards.TimeScapePaneArrangement
-import com.riffle.core.domain.launcher.cards.TimeScapeRailSide
+import com.riffle.core.domain.launcher.cards.AdaptiveStagePaneArrangement
+import com.riffle.core.domain.launcher.cards.AdaptiveStageRailSide
 import com.riffle.core.domain.launcher.home.DockAlignment
 import com.riffle.core.domain.launcher.home.DockBackgroundSizing
 import com.riffle.core.domain.launcher.home.DockItemMoveDirection
@@ -51,7 +51,7 @@ import com.riffle.core.domain.launcher.settings.OverlayDockEdge
 import com.riffle.core.domain.launcher.settings.OverlayDockExpandedOrientation
 import com.riffle.core.domain.launcher.settings.OverlayDockItemMoveDirection
 import com.riffle.core.domain.launcher.settings.SearchResultPresentation
-import com.riffle.core.domain.launcher.settings.TimeScapeAppearanceSettings
+import com.riffle.core.domain.launcher.settings.AdaptiveStageAppearanceSettings
 import com.riffle.core.domain.launcher.widgets.WidgetProviderClassName
 import com.riffle.core.domain.launcher.widgets.WidgetProviderDimensions
 import com.riffle.core.domain.launcher.widgets.WidgetProviderIdentity
@@ -450,16 +450,16 @@ class LauncherActionDomainTest {
                 ),
                 settings("SelectContextualEnabled", LauncherShellAction.SelectContextualEnabled(enabled = true)),
                 settings(
-                    "UpdateTimeScapeAppearance",
-                    LauncherShellAction.UpdateTimeScapeAppearance(TimeScapeAppearanceSettings.modern()),
+                    "UpdateAdaptiveStageAppearance",
+                    LauncherShellAction.UpdateAdaptiveStageAppearance(AdaptiveStageAppearanceSettings.modern()),
                 ),
                 settings(
-                    "SelectTimeScapePaneArrangement",
-                    LauncherShellAction.SelectTimeScapePaneArrangement(TimeScapePaneArrangement.SPLIT),
+                    "SelectAdaptiveStagePaneArrangement",
+                    LauncherShellAction.SelectAdaptiveStagePaneArrangement(AdaptiveStagePaneArrangement.SPLIT),
                 ),
                 settings(
-                    "SelectTimeScapeRailSide",
-                    LauncherShellAction.SelectTimeScapeRailSide(TimeScapeRailSide.TOP),
+                    "SelectAdaptiveStageRailSide",
+                    LauncherShellAction.SelectAdaptiveStageRailSide(AdaptiveStageRailSide.TOP),
                 ),
                 settings("SelectOverlayDockEnabled", LauncherShellAction.SelectOverlayDockEnabled(enabled = true)),
                 settings("SelectOverlayDockEdge", LauncherShellAction.SelectOverlayDockEdge(OverlayDockEdge.START)),

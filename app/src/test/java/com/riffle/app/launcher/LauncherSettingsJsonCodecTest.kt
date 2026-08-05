@@ -6,9 +6,9 @@ import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppProfile
 import com.riffle.core.domain.launcher.cards.AppStageId
 import com.riffle.core.domain.launcher.cards.AppStagePreferences
-import com.riffle.core.domain.launcher.cards.TimeScapePaneArrangement
-import com.riffle.core.domain.launcher.cards.TimeScapeRailSide
-import com.riffle.core.domain.launcher.cards.TimeScapeTemplateCatalogDefaults
+import com.riffle.core.domain.launcher.cards.AdaptiveStagePaneArrangement
+import com.riffle.core.domain.launcher.cards.AdaptiveStageRailSide
+import com.riffle.core.domain.launcher.cards.AdaptiveStageTemplateCatalogDefaults
 import com.riffle.core.domain.launcher.contextual.ContextualSettings
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
@@ -59,10 +59,10 @@ import com.riffle.core.domain.launcher.settings.OverlayDockSettings
 import com.riffle.core.domain.launcher.settings.RssSettings
 import com.riffle.core.domain.launcher.settings.SearchResultPresentation
 import com.riffle.core.domain.launcher.settings.SearchSettings
-import com.riffle.core.domain.launcher.settings.TimeScapeAppearanceSettings
-import com.riffle.core.domain.launcher.settings.TimeScapeGeometry
-import com.riffle.core.domain.launcher.settings.TimeScapeMotion
-import com.riffle.core.domain.launcher.settings.TimeScapeSurface
+import com.riffle.core.domain.launcher.settings.AdaptiveStageAppearanceSettings
+import com.riffle.core.domain.launcher.settings.AdaptiveStageGeometry
+import com.riffle.core.domain.launcher.settings.AdaptiveStageMotion
+import com.riffle.core.domain.launcher.settings.AdaptiveStageSurface
 import com.riffle.core.domain.launcher.settings.homeSystemBars
 import com.riffle.core.domain.launcher.settings.stagePreferencesFor
 import com.riffle.core.domain.launcher.settings.withHomeSystemBars
@@ -103,7 +103,7 @@ class LauncherSettingsJsonCodecTest {
     }
 
     @Test
-    fun roundTripsTimeScapeStageIntent() {
+    fun roundTripsAdaptiveStageStageIntent() {
         val mail = AppStageId(AppPackageName("com.riffle.mail"), AppProfile.personal().id)
         val key = HomeLayoutKey(LauncherViewMode.CARD_INTERFACE)
         val settings =
@@ -115,60 +115,60 @@ class LauncherSettingsJsonCodecTest {
     }
 
     @Test
-    fun roundTripsConfiguredTimeScapeTemplateAndRailSide() {
+    fun roundTripsConfiguredAdaptiveStageTemplateAndRailSide() {
         val settings =
             LauncherSettings(
                 cards =
                     CardsSettings(
-                        timeScapeTemplateId = TimeScapeTemplateCatalogDefaults.sharedCanvasId,
-                        timeScapeRailSide = TimeScapeRailSide.TRAILING,
+                        adaptiveStageTemplateId = AdaptiveStageTemplateCatalogDefaults.sharedCanvasId,
+                        adaptiveStageRailSide = AdaptiveStageRailSide.TRAILING,
                     ),
             )
 
         val decoded = decodeLauncherSettings(encodeLauncherSettings(settings))
 
-        assertEquals(settings.cards.timeScapeTemplateId, decoded.cards.timeScapeTemplateId)
-        assertEquals(settings.cards.timeScapeRailSide, decoded.cards.timeScapeRailSide)
+        assertEquals(settings.cards.adaptiveStageTemplateId, decoded.cards.adaptiveStageTemplateId)
+        assertEquals(settings.cards.adaptiveStageRailSide, decoded.cards.adaptiveStageRailSide)
     }
 
     @Test
     fun unconfiguredRailSideRoundTripsAsNull() {
         val settings = LauncherSettings(cards = CardsSettings())
 
-        assertEquals(null, settings.cards.timeScapeRailSide)
-        assertEquals(null, decodeLauncherSettings(encodeLauncherSettings(settings)).cards.timeScapeRailSide)
+        assertEquals(null, settings.cards.adaptiveStageRailSide)
+        assertEquals(null, decodeLauncherSettings(encodeLauncherSettings(settings)).cards.adaptiveStageRailSide)
     }
 
     @Test
-    fun roundTripsConfiguredTimeScapePaneArrangement() {
+    fun roundTripsConfiguredAdaptiveStagePaneArrangement() {
         val settings =
             LauncherSettings(
-                cards = CardsSettings(timeScapePaneArrangement = TimeScapePaneArrangement.SPLIT),
+                cards = CardsSettings(adaptiveStagePaneArrangement = AdaptiveStagePaneArrangement.SPLIT),
             )
 
         val decoded = decodeLauncherSettings(encodeLauncherSettings(settings))
 
-        assertEquals(settings.cards.timeScapePaneArrangement, decoded.cards.timeScapePaneArrangement)
+        assertEquals(settings.cards.adaptiveStagePaneArrangement, decoded.cards.adaptiveStagePaneArrangement)
     }
 
     @Test
-    fun defaultsUnknownTimeScapePaneArrangement() {
+    fun defaultsUnknownAdaptiveStagePaneArrangement() {
         val decodedSettings =
             decodeLauncherSettings(
                 """
                 {
                   "cards": {
-                    "timeScapePaneArrangement": "UNKNOWN"
+                    "adaptiveStagePaneArrangement": "UNKNOWN"
                   }
                 }
                 """.trimIndent(),
             )
 
-        assertEquals(TimeScapePaneArrangement.STACK, decodedSettings.cards.timeScapePaneArrangement)
+        assertEquals(AdaptiveStagePaneArrangement.STACK, decodedSettings.cards.adaptiveStagePaneArrangement)
     }
 
     @Test
-    fun migratesLegacyCardsChapterJsonToTimeScapeStageIntent() {
+    fun migratesLegacyCardsChapterJsonToAdaptiveStageStageIntent() {
         val legacyJson =
             """
             {
@@ -192,7 +192,7 @@ class LauncherSettingsJsonCodecTest {
     }
 
     @Test
-    fun migratesLegacyCardsChapterJsonToNonPhoneTimeScapeStageIntent() {
+    fun migratesLegacyCardsChapterJsonToNonPhoneAdaptiveStageStageIntent() {
         val legacyJson =
             """
             {
@@ -233,16 +233,16 @@ class LauncherSettingsJsonCodecTest {
     }
 
     @Test
-    fun roundTripsTimeScapeAppearanceAndClampsImportedValues() {
+    fun roundTripsAdaptiveStageAppearanceAndClampsImportedValues() {
         val settings =
             LauncherSettings(
                 cards =
                     CardsSettings(
-                        timeScapeAppearance =
-                            TimeScapeAppearanceSettings(
-                                geometry = TimeScapeGeometry(visibleDepth = 5, rotationDegrees = 8),
-                                surface = TimeScapeSurface(blurStrengthPercent = 42),
-                                motion = TimeScapeMotion(reducedTransparency = true),
+                        adaptiveStageAppearance =
+                            AdaptiveStageAppearanceSettings(
+                                geometry = AdaptiveStageGeometry(visibleDepth = 5, rotationDegrees = 8),
+                                surface = AdaptiveStageSurface(blurStrengthPercent = 42),
+                                motion = AdaptiveStageMotion(reducedTransparency = true),
                             ),
                     ),
             )
@@ -254,7 +254,7 @@ class LauncherSettingsJsonCodecTest {
                 """
                 {
                   "cards": {
-                    "timeScapeAppearance": {
+                    "adaptiveStageAppearance": {
                       "geometry": { "visibleDepth": 999 },
                       "surface": { "blurStrengthPercent": -1 },
                       "motion": { "settleDurationMillis": 9999 }
@@ -262,20 +262,20 @@ class LauncherSettingsJsonCodecTest {
                   }
                 }
                 """.trimIndent(),
-            ).cards.timeScapeAppearance
+            ).cards.adaptiveStageAppearance
         assertEquals(6, imported.geometry.visibleDepth)
         assertEquals(0, imported.surface.blurStrengthPercent)
         assertEquals(600, imported.motion.settleDurationMillis)
     }
 
     @Test
-    fun defaultsMissingOrUnknownTimeScapeAppearanceValuesSafely() {
+    fun defaultsMissingOrUnknownAdaptiveStageAppearanceValuesSafely() {
         val decoded =
             decodeLauncherSettings(
                 """
                 {
                   "cards": {
-                    "timeScapeAppearance": {
+                    "adaptiveStageAppearance": {
                       "preset": "FUTURE",
                       "geometry": { "fanDirection": "FUTURE" },
                       "surface": { "backgroundSource": "FUTURE" }
@@ -283,9 +283,9 @@ class LauncherSettingsJsonCodecTest {
                   }
                 }
                 """.trimIndent(),
-            ).cards.timeScapeAppearance
+            ).cards.adaptiveStageAppearance
 
-        assertEquals(TimeScapeAppearanceSettings.modern(), decoded)
+        assertEquals(AdaptiveStageAppearanceSettings.modern(), decoded)
     }
 
     @Test

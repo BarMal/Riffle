@@ -37,7 +37,7 @@ import com.riffle.core.domain.launcher.cards.AppStageId
 import com.riffle.core.domain.launcher.cards.CardExpansionPhase
 import com.riffle.core.domain.launcher.cards.CardExpansionState
 import com.riffle.core.domain.launcher.cards.LauncherCardId
-import com.riffle.core.domain.launcher.settings.TimeScapeMotion
+import com.riffle.core.domain.launcher.settings.AdaptiveStageMotion
 import kotlinx.coroutines.delay
 
 /**
@@ -46,12 +46,12 @@ import kotlinx.coroutines.delay
  * Source payload and platform action handles stay with the live stage projection. Only the stable
  * card identity and presentation phase survive activity recreation.
  */
-internal class TimeScapeCardDetailState(
+internal class AdaptiveStageCardDetailState(
     private val currentExpansion: () -> CardExpansionState,
     private val updateExpansion: (CardExpansionState) -> Unit,
     private val currentRecoveryMessage: () -> String?,
     private val updateRecoveryMessage: (String?) -> Unit,
-    val motion: TimeScapeMotion,
+    val motion: AdaptiveStageMotion,
     val globalReducedMotion: Boolean,
 ) {
     val reducedMotion: Boolean
@@ -86,11 +86,11 @@ internal class TimeScapeCardDetailState(
 }
 
 @Composable
-internal fun rememberTimeScapeCardDetailState(
+internal fun rememberAdaptiveStageCardDetailState(
     stageId: AppStageId,
-    motion: TimeScapeMotion,
+    motion: AdaptiveStageMotion,
     globalReducedMotion: Boolean = false,
-): TimeScapeCardDetailState {
+): AdaptiveStageCardDetailState {
     var expansion by
         rememberSaveable(
             stageId.profileId.value,
@@ -103,7 +103,7 @@ internal fun rememberTimeScapeCardDetailState(
         mutableStateOf<String?>(null)
     }
     return remember(stageId, motion, globalReducedMotion) {
-        TimeScapeCardDetailState(
+        AdaptiveStageCardDetailState(
             currentExpansion = { expansion },
             updateExpansion = { expansion = it },
             currentRecoveryMessage = { recoveryMessage },
@@ -115,30 +115,30 @@ internal fun rememberTimeScapeCardDetailState(
 }
 
 @Composable
-internal fun TimeScapeCardDetailSurface(
+internal fun AdaptiveStageCardDetailSurface(
     card: AppStageNotificationCard,
-    detailState: TimeScapeCardDetailState,
+    detailState: AdaptiveStageCardDetailState,
     onAction: (LauncherShellAction) -> Unit,
     onClose: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
-    TimeScapeDetailContainer(detailState = detailState, onClose = onClose, modifier = modifier) {
+    AdaptiveStageDetailContainer(detailState = detailState, onClose = onClose, modifier = modifier) {
         Text(detailTitle(card), style = MaterialTheme.typography.headlineSmall)
         Text(detailKindLabel(card.content.kind), style = MaterialTheme.typography.labelLarge)
         Text(card.text, style = MaterialTheme.typography.bodyLarge)
-        TimeScapeContextShelf(card = card, onAction = onAction)
+        AdaptiveStageContextShelf(card = card, onAction = onAction)
     }
 }
 
 @Composable
-internal fun TimeScapeEmptyAppDetailSurface(
+internal fun AdaptiveStageEmptyAppDetailSurface(
     card: AppStageEmptyAppCard,
-    detailState: TimeScapeCardDetailState,
+    detailState: AdaptiveStageCardDetailState,
     onAction: (LauncherShellAction) -> Unit,
     onClose: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
-    TimeScapeDetailContainer(detailState = detailState, onClose = onClose, modifier = modifier) {
+    AdaptiveStageDetailContainer(detailState = detailState, onClose = onClose, modifier = modifier) {
         Text("${card.app.label} details", style = MaterialTheme.typography.headlineSmall)
         Text("App details", style = MaterialTheme.typography.labelLarge)
         Text("No current notification content for this app.", style = MaterialTheme.typography.bodyLarge)
@@ -154,8 +154,8 @@ internal fun TimeScapeEmptyAppDetailSurface(
 }
 
 @Composable
-private fun TimeScapeDetailContainer(
-    detailState: TimeScapeCardDetailState,
+private fun AdaptiveStageDetailContainer(
+    detailState: AdaptiveStageCardDetailState,
     onClose: () -> Unit,
     modifier: Modifier,
     content: @Composable () -> Unit,
@@ -170,7 +170,7 @@ private fun TimeScapeDetailContainer(
                 } else {
                     tween(detailState.transitionDurationMillis(phase))
                 },
-            label = "timescape-card-detail-alpha",
+            label = "adaptive-stage-card-detail-alpha",
         )
 
     val closeDetail = {
@@ -204,7 +204,7 @@ private fun TimeScapeDetailContainer(
     }
 }
 
-internal fun TimeScapeCardDetailState.transitionDurationMillis(phase: CardExpansionPhase): Int =
+internal fun AdaptiveStageCardDetailState.transitionDurationMillis(phase: CardExpansionPhase): Int =
     when (phase) {
         CardExpansionPhase.EXPANDING -> motion.expandDurationMillis
         CardExpansionPhase.COLLAPSING -> motion.exitDurationMillis
@@ -214,7 +214,7 @@ internal fun TimeScapeCardDetailState.transitionDurationMillis(phase: CardExpans
     }
 
 @Composable
-internal fun TimeScapeDetailRecoveryMessage(
+internal fun AdaptiveStageDetailRecoveryMessage(
     message: String?,
     modifier: Modifier = Modifier,
 ) {

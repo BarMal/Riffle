@@ -107,7 +107,7 @@ class GeneratedPageSurfaceTest {
     fun artworkCacheCachesDecodeFailuresAndEvictsLeastRecentlyUsedArtwork() {
         var decodeCalls = 0
         val cache =
-            TimeScapeArtworkCache<Int>(maxEntries = 2) {
+            AdaptiveStageArtworkCache<Int>(maxEntries = 2) {
                 decodeCalls += 1
                 if (it == "corrupt") null else it?.length
             }
@@ -162,7 +162,7 @@ class GeneratedPageSurfaceTest {
                     ),
             )
 
-        val revisions = TimeScapeArtworkRevisionStore()
+        val revisions = AdaptiveStageArtworkRevisionStore()
         revisions.replace(listOf(first.group))
         val firstKey = generatedNotificationArtworkSourceKey(first, revisions)
         revisions.replace(listOf(second.group))
@@ -186,7 +186,7 @@ class GeneratedPageSurfaceTest {
                         ),
                 )
             }
-        val revisions = TimeScapeArtworkRevisionStore()
+        val revisions = AdaptiveStageArtworkRevisionStore()
 
         revisions.replace(groups)
 
