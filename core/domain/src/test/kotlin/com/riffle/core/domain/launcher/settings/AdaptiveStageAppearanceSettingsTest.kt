@@ -6,12 +6,12 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
-class TimeScapeAppearanceSettingsTest {
+class AdaptiveStageAppearanceSettingsTest {
     @Test
     fun modernDefaultIsCoherentAndResetIsDeterministic() {
-        val modern = TimeScapeAppearanceSettings.modern()
+        val modern = AdaptiveStageAppearanceSettings.modern()
 
-        assertEquals(TimeScapeAppearancePreset.MODERN_TIMESCAPE, modern.preset)
+        assertEquals(AdaptiveStageAppearancePreset.MODERN_ADAPTIVE_STAGE, modern.preset)
         assertEquals(modern, modern.copy(geometry = modern.geometry.copy(visibleDepth = 1)).reset())
         assertTrue(modern.geometry.visibleDepth >= 1)
         assertTrue(modern.geometry.cardAspectRatioPercent in 55..100)
@@ -19,9 +19,9 @@ class TimeScapeAppearanceSettingsTest {
 
     @Test
     fun flatPresetIsAppliedAtomically() {
-        val flat = TimeScapeAppearanceSettings().applyPreset(TimeScapeAppearancePreset.FLAT_REDUCED_DEPTH)
+        val flat = AdaptiveStageAppearanceSettings().applyPreset(AdaptiveStageAppearancePreset.FLAT_REDUCED_DEPTH)
 
-        assertEquals(TimeScapeAppearancePreset.FLAT_REDUCED_DEPTH, flat.preset)
+        assertEquals(AdaptiveStageAppearancePreset.FLAT_REDUCED_DEPTH, flat.preset)
         assertEquals(0, flat.geometry.rotationDegrees)
         assertEquals(0, flat.surface.blurStrengthPercent)
         assertEquals(0, flat.motion.travelIntensityPercent)
@@ -29,26 +29,26 @@ class TimeScapeAppearanceSettingsTest {
 
     @Test
     fun warmGlassPresetIsAppliedAtomicallyAndStaysWithinCoerceBounds() {
-        val warm = TimeScapeAppearanceSettings().applyPreset(TimeScapeAppearancePreset.WARM_GLASS)
+        val warm = AdaptiveStageAppearanceSettings().applyPreset(AdaptiveStageAppearancePreset.WARM_GLASS)
 
-        assertEquals(TimeScapeAppearancePreset.WARM_GLASS, warm.preset)
-        assertEquals(TimeScapeBackgroundSource.CUSTOM_SOLID, warm.surface.backgroundSource)
-        assertEquals(TimeScapeAccentSource.CUSTOM, warm.typography.accentSource)
+        assertEquals(AdaptiveStageAppearancePreset.WARM_GLASS, warm.preset)
+        assertEquals(AdaptiveStageBackgroundSource.CUSTOM_SOLID, warm.surface.backgroundSource)
+        assertEquals(AdaptiveStageAccentSource.CUSTOM, warm.typography.accentSource)
         assertEquals(warm, warm.coerce())
     }
 
     @Test
     fun coercionKeepsEveryImportedValueInItsSafeRange() {
         val coerced =
-            TimeScapeAppearanceSettings(
+            AdaptiveStageAppearanceSettings(
                 version = 99,
-                geometry = TimeScapeGeometry(cardAspectRatioPercent = -1, visibleDepth = 99, contentPaddingDp = -1),
-                surface = TimeScapeSurface(blurStrengthPercent = 999, customBackgroundArgb = -1),
-                typography = TimeScapeTypography(textScalePercent = 999, customAccentArgb = -1),
-                motion = TimeScapeMotion(settleDurationMillis = -1, parallaxIntensityPercent = 999),
+                geometry = AdaptiveStageGeometry(cardAspectRatioPercent = -1, visibleDepth = 99, contentPaddingDp = -1),
+                surface = AdaptiveStageSurface(blurStrengthPercent = 999, customBackgroundArgb = -1),
+                typography = AdaptiveStageTypography(textScalePercent = 999, customAccentArgb = -1),
+                motion = AdaptiveStageMotion(settleDurationMillis = -1, parallaxIntensityPercent = 999),
             ).coerce()
 
-        assertEquals(CURRENT_TIMESCAPE_APPEARANCE_VERSION, coerced.version)
+        assertEquals(CURRENT_ADAPTIVE_STAGE_APPEARANCE_VERSION, coerced.version)
         assertEquals(55, coerced.geometry.cardAspectRatioPercent)
         assertEquals(6, coerced.geometry.visibleDepth)
         assertEquals(0, coerced.geometry.contentPaddingDp)
@@ -62,14 +62,14 @@ class TimeScapeAppearanceSettingsTest {
     @Test
     fun capabilityAndAccessibilityFallbacksDoNotRewriteIntent() {
         val stored =
-            TimeScapeAppearanceSettings(
-                surface = TimeScapeSurface(blurStrengthPercent = 60, textureIntensityPercent = 20),
-                motion = TimeScapeMotion(reducedMotion = true, reducedTransparency = true),
+            AdaptiveStageAppearanceSettings(
+                surface = AdaptiveStageSurface(blurStrengthPercent = 60, textureIntensityPercent = 20),
+                motion = AdaptiveStageMotion(reducedMotion = true, reducedTransparency = true),
             )
 
         val effective =
             stored.effectiveFor(
-                TimeScapeRendererCapabilities(
+                AdaptiveStageRendererCapabilities(
                     supportsBlur = false,
                     supportsTexture = false,
                 ),
@@ -79,7 +79,7 @@ class TimeScapeAppearanceSettingsTest {
         assertEquals(0, effective.surface.blurStrengthPercent)
         assertEquals(0, effective.surface.textureIntensityPercent)
         assertEquals(0, effective.motion.enterDurationMillis)
-        assertEquals(TimeScapeEasing.STANDARD, effective.motion.easing)
+        assertEquals(AdaptiveStageEasing.STANDARD, effective.motion.easing)
         assertEquals(0, effective.motion.springBouncinessPercent)
         assertEquals(0, effective.motion.travelIntensityPercent)
         assertFalse(effective.surface.glassTransparencyPercent > 0)
@@ -88,12 +88,12 @@ class TimeScapeAppearanceSettingsTest {
     @Test
     fun resolvesAppearanceIntoBoundedCardStackTokens() {
         val viewport =
-            TimeScapeViewportDp(
+            AdaptiveStageViewportDp(
                 widthDp = 800,
                 heightDp = 1200,
-                insets = TimeScapeInsetsDp(startDp = 24, topDp = 48, endDp = 24, bottomDp = 48),
+                insets = AdaptiveStageInsetsDp(startDp = 24, topDp = 48, endDp = 24, bottomDp = 48),
             )
-        val resolution = TimeScapeAppearanceSettings().resolveCardStack(viewport)
+        val resolution = AdaptiveStageAppearanceSettings().resolveCardStack(viewport)
         val entries = resolution.layoutPolicy.entries(cardCount = 9, activeIndex = 4)
         val horizontalTravel = (viewport.safeWidthDp - resolution.cardWidthDp) / 2f
         val verticalTravel = (viewport.safeHeightDp - resolution.cardHeightDp) / 2f
@@ -109,16 +109,16 @@ class TimeScapeAppearanceSettingsTest {
     @Test
     fun projectsPersistedMotionIntoTheCardStackRendererTokens() {
         val resolution =
-            TimeScapeAppearanceSettings(
+            AdaptiveStageAppearanceSettings(
                 motion =
-                    TimeScapeMotion(
+                    AdaptiveStageMotion(
                         settleDurationMillis = 410,
                         reflowDurationMillis = 360,
                         enterDurationMillis = 300,
-                        easing = TimeScapeEasing.EMPHASIZED,
+                        easing = AdaptiveStageEasing.EMPHASIZED,
                         springBouncinessPercent = 35,
                     ),
-            ).resolveCardStack(TimeScapeViewportDp(widthDp = 800, heightDp = 1200))
+            ).resolveCardStack(AdaptiveStageViewportDp(widthDp = 800, heightDp = 1200))
 
         assertEquals(360, resolution.animation.durationMillis)
         assertEquals(300, resolution.animation.enterDurationMillis)
@@ -129,10 +129,10 @@ class TimeScapeAppearanceSettingsTest {
 
     @Test
     fun focusedScaleCannotOverflowTheSafeViewport() {
-        val viewport = TimeScapeViewportDp(widthDp = 400, heightDp = 400)
+        val viewport = AdaptiveStageViewportDp(widthDp = 400, heightDp = 400)
         val resolution =
-            TimeScapeAppearanceSettings(
-                geometry = TimeScapeGeometry(cardAspectRatioPercent = 100, focusedScalePercent = 115),
+            AdaptiveStageAppearanceSettings(
+                geometry = AdaptiveStageGeometry(cardAspectRatioPercent = 100, focusedScalePercent = 115),
             ).resolveCardStack(viewport)
 
         assertTrue(resolution.isUsable)
@@ -142,10 +142,10 @@ class TimeScapeAppearanceSettingsTest {
 
     @Test
     fun minimumFocusedScaleKeepsBackgroundCardsWithinHorizontalAndVerticalBounds() {
-        val viewport = TimeScapeViewportDp(widthDp = 400, heightDp = 400)
+        val viewport = AdaptiveStageViewportDp(widthDp = 400, heightDp = 400)
         val resolution =
-            TimeScapeAppearanceSettings(
-                geometry = TimeScapeGeometry(cardAspectRatioPercent = 100, focusedScalePercent = 85),
+            AdaptiveStageAppearanceSettings(
+                geometry = AdaptiveStageGeometry(cardAspectRatioPercent = 100, focusedScalePercent = 85),
             ).resolveCardStack(viewport)
         val backgroundEntries =
             resolution.layoutPolicy.entries(cardCount = 9, activeIndex = 4).filter { it.depth > 0 }
@@ -166,11 +166,11 @@ class TimeScapeAppearanceSettingsTest {
 
     @Test
     fun maximumRotationKeepsBackgroundCardsWithinHorizontalAndVerticalBounds() {
-        val viewport = TimeScapeViewportDp(widthDp = 400, heightDp = 400)
+        val viewport = AdaptiveStageViewportDp(widthDp = 400, heightDp = 400)
         val resolution =
-            TimeScapeAppearanceSettings(
+            AdaptiveStageAppearanceSettings(
                 geometry =
-                    TimeScapeGeometry(
+                    AdaptiveStageGeometry(
                         cardAspectRatioPercent = 100,
                         focusedScalePercent = 85,
                         visibleDepth = 1,
@@ -216,19 +216,19 @@ class TimeScapeAppearanceSettingsTest {
 
     @Test
     fun focusedGapAndFanDirectionAffectBoundedLayoutTokens() {
-        val viewport = TimeScapeViewportDp(widthDp = 800, heightDp = 1200)
+        val viewport = AdaptiveStageViewportDp(widthDp = 800, heightDp = 1200)
 
         fun resolve(
-            direction: TimeScapeFanDirection,
+            direction: AdaptiveStageFanDirection,
             gapDp: Int,
-        ) = TimeScapeAppearanceSettings(
-            geometry = TimeScapeGeometry(fanDirection = direction, focusedGapDp = gapDp),
+        ) = AdaptiveStageAppearanceSettings(
+            geometry = AdaptiveStageGeometry(fanDirection = direction, focusedGapDp = gapDp),
         ).resolveCardStack(viewport)
 
-        val towardEnd = resolve(TimeScapeFanDirection.END, gapDp = 32)
-        val towardStart = resolve(TimeScapeFanDirection.START, gapDp = 32)
-        val noFan = resolve(TimeScapeFanDirection.NONE, gapDp = 32)
-        val noGap = resolve(TimeScapeFanDirection.END, gapDp = 0)
+        val towardEnd = resolve(AdaptiveStageFanDirection.END, gapDp = 32)
+        val towardStart = resolve(AdaptiveStageFanDirection.START, gapDp = 32)
+        val noFan = resolve(AdaptiveStageFanDirection.NONE, gapDp = 32)
+        val noGap = resolve(AdaptiveStageFanDirection.END, gapDp = 0)
         val endEntry = towardEnd.layoutPolicy.entries(cardCount = 3, activeIndex = 1).last { it.cardIndex == 2 }
         val startEntry = towardStart.layoutPolicy.entries(cardCount = 3, activeIndex = 1).last { it.cardIndex == 2 }
         val noFanEntry = noFan.layoutPolicy.entries(cardCount = 3, activeIndex = 1).last { it.cardIndex == 2 }
@@ -244,8 +244,8 @@ class TimeScapeAppearanceSettingsTest {
     @Test
     fun reducedMotionResolutionUsesStaticStackTokens() {
         val resolution =
-            TimeScapeAppearanceSettings(motion = TimeScapeMotion(reducedMotion = true))
-                .resolveCardStack(TimeScapeViewportDp(widthDp = 800, heightDp = 1200))
+            AdaptiveStageAppearanceSettings(motion = AdaptiveStageMotion(reducedMotion = true))
+                .resolveCardStack(AdaptiveStageViewportDp(widthDp = 800, heightDp = 1200))
         val entries =
             resolution.layoutPolicy.entries(
                 cardCount = 3,
@@ -263,8 +263,8 @@ class TimeScapeAppearanceSettingsTest {
     @Test
     fun reducedMotionWideShortViewportReservesReachableBackgroundCardSeparation() {
         val resolution =
-            TimeScapeAppearanceSettings(motion = TimeScapeMotion(reducedMotion = true))
-                .resolveCardStack(TimeScapeViewportDp(widthDp = 1_200, heightDp = 800))
+            AdaptiveStageAppearanceSettings(motion = AdaptiveStageMotion(reducedMotion = true))
+                .resolveCardStack(AdaptiveStageViewportDp(widthDp = 1_200, heightDp = 800))
         val entries =
             resolution.layoutPolicy.entries(
                 cardCount = 3,
@@ -279,22 +279,22 @@ class TimeScapeAppearanceSettingsTest {
     @Test
     fun reducedMotionZeroSpacingUsesTheReachableListFallback() {
         val resolution =
-            TimeScapeAppearanceSettings(
-                geometry = TimeScapeGeometry(verticalSpacingDp = 0),
-                motion = TimeScapeMotion(reducedMotion = true),
-            ).resolveCardStack(TimeScapeViewportDp(widthDp = 1_200, heightDp = 800))
+            AdaptiveStageAppearanceSettings(
+                geometry = AdaptiveStageGeometry(verticalSpacingDp = 0),
+                motion = AdaptiveStageMotion(reducedMotion = true),
+            ).resolveCardStack(AdaptiveStageViewportDp(widthDp = 1_200, heightDp = 800))
 
         assertFalse(resolution.isUsable)
     }
 
     @Test
-    fun globalReducedMotionUsesStaticTimeScapeTokensWithoutChangingStoredIntent() {
-        val storedAppearance = TimeScapeAppearanceSettings()
+    fun globalReducedMotionUsesStaticAdaptiveStageTokensWithoutChangingStoredIntent() {
+        val storedAppearance = AdaptiveStageAppearanceSettings()
         val resolution =
             LauncherSettings(
-                cards = CardsSettings(timeScapeAppearance = storedAppearance),
+                cards = CardsSettings(adaptiveStageAppearance = storedAppearance),
                 motion = MotionSettings(reducedMotion = true),
-            ).resolveTimeScapeCardStack(TimeScapeViewportDp(widthDp = 800, heightDp = 1200))
+            ).resolveAdaptiveStageCardStack(AdaptiveStageViewportDp(widthDp = 800, heightDp = 1200))
         val entries =
             resolution.layoutPolicy.entries(
                 cardCount = 3,

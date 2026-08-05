@@ -125,7 +125,7 @@ class LauncherShellViewModel(
         )
     private val widgetEngine = WidgetEngine()
 
-    /** Keeps navigation aligned with the retained empty stage rendered by the TimeScape surface. */
+    /** Keeps navigation aligned with the retained empty stage rendered by the AdaptiveStage surface. */
     private val appStageStateReconciler = AppStageShellStateReconciler()
 
     private val mutableState =

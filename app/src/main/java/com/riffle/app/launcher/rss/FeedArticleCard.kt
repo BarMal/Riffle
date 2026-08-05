@@ -5,9 +5,9 @@ import com.riffle.core.domain.launcher.rss.FeedStage
 /**
  * Renderer-local join of a thin, ordering-only [com.riffle.core.domain.launcher.rss.FeedStageItem]
  * against the rich [CachedFeedArticle] display fields sourced from [FeedArticleCacheRepository],
- * keyed by their shared opaque digest. This mirrors how `TimeScapeNotificationStack` joins thin
+ * keyed by their shared opaque digest. This mirrors how `AdaptiveStageNotificationStack` joins thin
  * `AppStageContent` identifiers against full `AppStageNotificationCard` data by id
- * (`TimeScapeAppStageSurface.kt`).
+ * (`AdaptiveStageAppStageSurface.kt`).
  *
  * [title], [author], and [summary] are always the sanitized, tag-stripped display forms -- never
  * the raw cached text -- so every renderer that consumes this model can pass them straight to a

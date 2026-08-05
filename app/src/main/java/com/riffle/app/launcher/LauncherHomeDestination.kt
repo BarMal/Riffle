@@ -12,8 +12,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.LauncherShellState
-import com.riffle.core.domain.launcher.cards.TimeScapeInteractionContext
-import com.riffle.core.domain.launcher.cards.TimeScapeWindowLayout
+import com.riffle.core.domain.launcher.cards.AdaptiveStageInteractionContext
+import com.riffle.core.domain.launcher.cards.AdaptiveStageWindowLayout
 
 @Composable
 fun HomeDestination(
@@ -21,9 +21,9 @@ fun HomeDestination(
     appIconLoader: AppIconLoader,
     widgetRenderers: LauncherWidgetRenderers = LauncherWidgetRenderers(),
     haptics: LauncherHaptics = NoopLauncherHaptics,
-    timeScapeWindowLayout: TimeScapeWindowLayout? = null,
-    timeScapeContext: TimeScapeInteractionContext = TimeScapeInteractionContext(),
-    onTimeScapeContextChanged: (TimeScapeInteractionContext) -> Unit = {},
+    adaptiveStageWindowLayout: AdaptiveStageWindowLayout? = null,
+    adaptiveStageContext: AdaptiveStageInteractionContext = AdaptiveStageInteractionContext(),
+    onAdaptiveStageContextChanged: (AdaptiveStageInteractionContext) -> Unit = {},
     onAction: (LauncherShellAction) -> Unit,
 ) {
     when (state.homeLayout.viewMode.homeSurfaceKind()) {
@@ -33,9 +33,9 @@ fun HomeDestination(
                 appIconLoader = appIconLoader,
                 widgetRenderers = widgetRenderers,
                 haptics = haptics,
-                timeScapeWindowLayout = timeScapeWindowLayout,
-                timeScapeContext = timeScapeContext,
-                onTimeScapeContextChanged = onTimeScapeContextChanged,
+                adaptiveStageWindowLayout = adaptiveStageWindowLayout,
+                adaptiveStageContext = adaptiveStageContext,
+                onAdaptiveStageContextChanged = onAdaptiveStageContextChanged,
                 onAction = onAction,
             )
 
@@ -56,16 +56,16 @@ private fun CardsHomeSurface(
     appIconLoader: AppIconLoader,
     widgetRenderers: LauncherWidgetRenderers,
     haptics: LauncherHaptics,
-    timeScapeWindowLayout: TimeScapeWindowLayout?,
-    timeScapeContext: TimeScapeInteractionContext,
-    onTimeScapeContextChanged: (TimeScapeInteractionContext) -> Unit,
+    adaptiveStageWindowLayout: AdaptiveStageWindowLayout?,
+    adaptiveStageContext: AdaptiveStageInteractionContext,
+    onAdaptiveStageContextChanged: (AdaptiveStageInteractionContext) -> Unit,
     onAction: (LauncherShellAction) -> Unit,
 ) {
     val dockInteractionHeightPx = remember { mutableIntStateOf(0) }
-    // TimeScapeAppStageSurface's own root is fully transparent, so it must clip its content above
+    // AdaptiveStageAppStageSurface's own root is fully transparent, so it must clip its content above
     // both the Dock AND the real Standard Home search pill/page-indicator band directly above the
     // Dock (HomeBottomSearchArea) -- otherwise that band bleeds through and visually collides with
-    // whatever TimeScape draws at that same height (e.g. a BOTTOM-docked stage rail).
+    // whatever AdaptiveStage draws at that same height (e.g. a BOTTOM-docked stage rail).
     val bottomControlsHeightPx = remember { mutableIntStateOf(0) }
     val density = LocalDensity.current
     val dockInteractionHeight =
@@ -88,13 +88,13 @@ private fun CardsHomeSurface(
             },
             onAction = onAction,
         )
-        TimeScapeAppStageSurface(
+        AdaptiveStageAppStageSurface(
             state = state,
             modifier = Modifier.padding(bottom = dockInteractionHeight),
             windowInsets = cardsPanelInsetPolicy(state).safeDrawingPanelInsets(),
-            windowLayout = timeScapeWindowLayout,
-            context = timeScapeContext,
-            onContextChanged = onTimeScapeContextChanged,
+            windowLayout = adaptiveStageWindowLayout,
+            context = adaptiveStageContext,
+            onContextChanged = onAdaptiveStageContextChanged,
             onAction = onAction,
             appIconLoader = appIconLoader,
         )
@@ -139,7 +139,7 @@ private fun StandardHomeSurface(
                         isOpen = state.isWidgetPickerOpen,
                     ),
                 homeInsetPolicy = homeInsetPolicy(state.launcherSettings.appearance),
-                timeScapeAppearance = state.launcherSettings.cards.timeScapeAppearance,
+                adaptiveStageAppearance = state.launcherSettings.cards.adaptiveStageAppearance,
             ),
         appIconLoader = appIconLoader,
         widgetPreviewImageLoader = widgetRenderers.previewImageLoader,

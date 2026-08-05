@@ -6,15 +6,15 @@ import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.apps.AppShortcutId
 import com.riffle.core.domain.launcher.apps.InstalledApp
-import com.riffle.core.domain.launcher.cards.TimeScapePaneArrangement
-import com.riffle.core.domain.launcher.cards.TimeScapeRailSide
+import com.riffle.core.domain.launcher.cards.AdaptiveStagePaneArrangement
+import com.riffle.core.domain.launcher.cards.AdaptiveStageRailSide
 import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.home.WallpaperScrollMode
+import com.riffle.core.domain.launcher.settings.AdaptiveStageAppearanceSettings
 import com.riffle.core.domain.launcher.settings.AppDrawerPresentation
 import com.riffle.core.domain.launcher.settings.OverlayDockEdge
 import com.riffle.core.domain.launcher.settings.OverlayDockExpandedOrientation
 import com.riffle.core.domain.launcher.settings.OverlayDockItemMoveDirection
-import com.riffle.core.domain.launcher.settings.TimeScapeAppearanceSettings
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -31,9 +31,9 @@ class LauncherSettingsActionRouteTest {
                 LauncherShellAction.SelectHomeNavigationBarHidden(hidden = true),
                 LauncherShellAction.SelectAppDrawerPresentation(AppDrawerPresentation.ICONS),
                 LauncherShellAction.SelectAppDrawerIconGridColumns(columns = 5),
-                LauncherShellAction.UpdateTimeScapeAppearance(TimeScapeAppearanceSettings.modern()),
-                LauncherShellAction.SelectTimeScapePaneArrangement(TimeScapePaneArrangement.SPLIT),
-                LauncherShellAction.SelectTimeScapeRailSide(TimeScapeRailSide.TOP),
+                LauncherShellAction.UpdateAdaptiveStageAppearance(AdaptiveStageAppearanceSettings.modern()),
+                LauncherShellAction.SelectAdaptiveStagePaneArrangement(AdaptiveStagePaneArrangement.SPLIT),
+                LauncherShellAction.SelectAdaptiveStageRailSide(AdaptiveStageRailSide.TOP),
             )
 
         actions.forEach { action ->

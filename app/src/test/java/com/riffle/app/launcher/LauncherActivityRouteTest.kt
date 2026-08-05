@@ -68,7 +68,7 @@ class LauncherActivityRouteTest {
     }
 
     @Test
-    fun routesTimeScapeStageActionsAsHomeActions() {
+    fun routesAdaptiveStageStageActionsAsHomeActions() {
         val stage = AppStageId(AppPackageName("com.example.stage"), appIdentity.profile.id)
         val actions =
             listOf(

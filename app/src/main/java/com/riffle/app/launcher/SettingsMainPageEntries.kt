@@ -69,13 +69,13 @@ private fun homeSettingsPageEntries(): List<SettingsPageEntry> =
                 ),
         ),
         SettingsPageEntry(
-            label = "TimeScape appearance",
+            label = "Cards appearance",
             subtitle = "Cards, glass, colour, motion, and accessibility",
-            page = SettingsPage.TIMESCAPE_APPEARANCE,
+            page = SettingsPage.ADAPTIVE_STAGE_APPEARANCE,
             group = SettingsPageGroup.APPEARANCE,
             searchAliases =
                 listOf(
-                    "timescape",
+                    "stage appearance",
                     "card geometry",
                     "card stack",
                     "glass",
@@ -85,7 +85,7 @@ private fun homeSettingsPageEntries(): List<SettingsPageEntry> =
                     "card typography",
                     "card motion",
                     "reduced transparency",
-                    "timescape preset",
+                    "appearance preset",
                 ),
         ),
         SettingsPageEntry(

@@ -63,7 +63,7 @@ import com.riffle.core.domain.launcher.HomeRoleStatus
 import com.riffle.core.domain.launcher.OverlayDockPermissionStatus
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppProfile
-import com.riffle.core.domain.launcher.cards.TimeScapeWindowLayout
+import com.riffle.core.domain.launcher.cards.AdaptiveStageWindowLayout
 import com.riffle.core.domain.launcher.home.HostedWidgetId
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.widgets.WidgetProviderIdentity
@@ -75,7 +75,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
-    private var timeScapeWindowLayout by mutableStateOf<TimeScapeWindowLayout?>(null)
+    private var adaptiveStageWindowLayout by mutableStateOf<AdaptiveStageWindowLayout?>(null)
     private val dependencies by lazy { MainActivityDependencies(this) }
     private val homeLayoutRepository get() = dependencies.homeLayoutRepository
     private val launcherSettingsRepository get() = dependencies.launcherSettingsRepository
@@ -451,7 +451,7 @@ class MainActivity : ComponentActivity() {
                                 viewFactory = widgetHostGateway,
                                 previewImageLoader = dependencies.widgetPreviewImageLoader,
                             ),
-                        timeScapeWindowLayout = timeScapeWindowLayout,
+                        adaptiveStageWindowLayout = adaptiveStageWindowLayout,
                         onAction = launcherActionRouter::handle,
                     )
                 }
@@ -535,7 +535,7 @@ class MainActivity : ComponentActivity() {
 
     private fun applyHomeLayoutDeviceClassEvent(event: HomeLayoutDeviceClassEvent) {
         Log.i(FOLDABLE_LAYOUT_LOG_TAG, event.logText)
-        timeScapeWindowLayout = event.timeScapeWindowLayout
+        adaptiveStageWindowLayout = event.adaptiveStageWindowLayout
         shellViewModel.onHomePageEdited(
             LauncherShellAction.SelectHomeLayoutDeviceClass(
                 deviceClass = event.selection.activeDeviceClass,

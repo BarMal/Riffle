@@ -10,10 +10,10 @@ import org.junit.Test
 
 class DockSwipeUpGestureTest {
     @Test
-    fun exitTimescapeMapsToSwitchingBackToStandardHome() {
+    fun exitAdaptiveStageMapsToSwitchingBackToStandardHome() {
         assertEquals(
             LauncherShellAction.SelectLauncherViewMode(LauncherViewMode.STANDARD_APP_DRAWER),
-            LauncherGestureAction.EXIT_TIMESCAPE.toDockSwipeUpShellAction(),
+            LauncherGestureAction.EXIT_ADAPTIVE_STAGE.toDockSwipeUpShellAction(),
         )
     }
 
@@ -33,7 +33,7 @@ class DockSwipeUpGestureTest {
     @Test
     fun actionsOutsideTheAllowedSetMapToNoAction() {
         assertNull(LauncherGestureAction.OPEN_SEARCH.toDockSwipeUpShellAction())
-        assertNull(LauncherGestureAction.ENTER_TIMESCAPE.toDockSwipeUpShellAction())
+        assertNull(LauncherGestureAction.ENTER_ADAPTIVE_STAGE.toDockSwipeUpShellAction())
     }
 
     @Test

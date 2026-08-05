@@ -16,25 +16,25 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.cards.CardStackAnimationProfile
-import com.riffle.core.domain.launcher.settings.TimeScapeAppearanceSettings
-import com.riffle.core.domain.launcher.settings.TimeScapeRendererCapabilities
-import com.riffle.core.domain.launcher.settings.TimeScapeViewportDp
+import com.riffle.core.domain.launcher.settings.AdaptiveStageAppearanceSettings
+import com.riffle.core.domain.launcher.settings.AdaptiveStageRendererCapabilities
+import com.riffle.core.domain.launcher.settings.AdaptiveStageViewportDp
 
 /** Stable, non-sensitive content rendered through the same card surface and stack projection as Home. */
 @Composable
-internal fun TimeScapeAppearancePreview(
-    appearance: TimeScapeAppearanceSettings,
+internal fun AdaptiveStageAppearancePreview(
+    appearance: AdaptiveStageAppearanceSettings,
     globalReducedMotion: Boolean,
-    rendererCapabilities: TimeScapeRendererCapabilities = timeScapeRendererCapabilities(),
+    rendererCapabilities: AdaptiveStageRendererCapabilities = adaptiveStageRendererCapabilities(),
     modifier: Modifier = Modifier,
 ) {
     BoxWithConstraints(
-        modifier = modifier.semantics { contentDescription = "TimeScape live preview" },
+        modifier = modifier.semantics { contentDescription = "Cards appearance preview" },
         contentAlignment = Alignment.Center,
     ) {
         val resolution =
             appearance.resolveCardStack(
-                viewport = TimeScapeViewportDp(maxWidth.value.toInt(), maxHeight.value.toInt()),
+                viewport = AdaptiveStageViewportDp(maxWidth.value.toInt(), maxHeight.value.toInt()),
                 capabilities = rendererCapabilities,
                 globalReducedMotion = globalReducedMotion,
             )
@@ -55,10 +55,10 @@ internal fun TimeScapeAppearancePreview(
             itemKey = { entry -> "preview-${entry.cardIndex}" },
         ) { entry, _ ->
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                TimeScapeCardSurface(
+                AdaptiveStageCardSurface(
                     appearance = effectiveAppearance,
                     background =
-                        TimeScapeCardBackground(
+                        AdaptiveStageCardBackground(
                             appSeed = PREVIEW_APP_SEEDS[entry.cardIndex],
                             appColor = PREVIEW_APP_COLORS[entry.cardIndex],
                             wallpaperAccent = MaterialTheme.colorScheme.tertiary,
@@ -67,7 +67,7 @@ internal fun TimeScapeAppearancePreview(
                         Modifier
                             .requiredWidth(resolution.cardWidthDp.dp)
                             .requiredHeight(resolution.cardHeightDp.dp),
-                    contentPadding = timeScapeResolvedContentPadding(resolution),
+                    contentPadding = adaptiveStageResolvedContentPadding(resolution),
                     rendererCapabilities = rendererCapabilities,
                 ) {
                     Text(

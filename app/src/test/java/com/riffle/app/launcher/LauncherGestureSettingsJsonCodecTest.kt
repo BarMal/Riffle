@@ -74,6 +74,6 @@ class LauncherGestureSettingsJsonCodecTest {
     fun fallsBackToDefaultDockSwipeUpActionWhenMissing() {
         val decoded = encodeGestures(GestureSettings()).toGestures(GestureSettings())
 
-        assertEquals(LauncherGestureAction.EXIT_TIMESCAPE, decoded.dockGestures.swipeUp)
+        assertEquals(LauncherGestureAction.EXIT_ADAPTIVE_STAGE, decoded.dockGestures.swipeUp)
     }
 }

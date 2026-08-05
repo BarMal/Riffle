@@ -27,116 +27,116 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
-import com.riffle.core.domain.launcher.cards.TimeScapePaneArrangement
-import com.riffle.core.domain.launcher.cards.TimeScapeRailSide
-import com.riffle.core.domain.launcher.settings.MAX_TIMESCAPE_BLUR_STRENGTH_PERCENT
-import com.riffle.core.domain.launcher.settings.MAX_TIMESCAPE_CARD_ASPECT_RATIO_PERCENT
-import com.riffle.core.domain.launcher.settings.MAX_TIMESCAPE_CONTENT_PADDING_DP
-import com.riffle.core.domain.launcher.settings.MAX_TIMESCAPE_CONTRAST_PERCENT
-import com.riffle.core.domain.launcher.settings.MAX_TIMESCAPE_CORNER_RADIUS_DP
-import com.riffle.core.domain.launcher.settings.MAX_TIMESCAPE_CURVE_DP
-import com.riffle.core.domain.launcher.settings.MAX_TIMESCAPE_FOCUSED_GAP_DP
-import com.riffle.core.domain.launcher.settings.MAX_TIMESCAPE_FOCUSED_SCALE_PERCENT
-import com.riffle.core.domain.launcher.settings.MAX_TIMESCAPE_GLASS_TRANSPARENCY_PERCENT
-import com.riffle.core.domain.launcher.settings.MAX_TIMESCAPE_HIGHLIGHT_PERCENT
-import com.riffle.core.domain.launcher.settings.MAX_TIMESCAPE_HORIZONTAL_OFFSET_DP
-import com.riffle.core.domain.launcher.settings.MAX_TIMESCAPE_OUTLINE_WIDTH_DP
-import com.riffle.core.domain.launcher.settings.MAX_TIMESCAPE_OVERLAP_PERCENT
-import com.riffle.core.domain.launcher.settings.MAX_TIMESCAPE_PARALLAX_INTENSITY_PERCENT
-import com.riffle.core.domain.launcher.settings.MAX_TIMESCAPE_ROTATION_DEGREES
-import com.riffle.core.domain.launcher.settings.MAX_TIMESCAPE_ROTATION_INTENSITY_PERCENT
-import com.riffle.core.domain.launcher.settings.MAX_TIMESCAPE_SATURATION_PERCENT
-import com.riffle.core.domain.launcher.settings.MAX_TIMESCAPE_SETTLE_DURATION_MILLIS
-import com.riffle.core.domain.launcher.settings.MAX_TIMESCAPE_SHADOW_ELEVATION_DP
-import com.riffle.core.domain.launcher.settings.MAX_TIMESCAPE_SPRING_BOUNCINESS_PERCENT
-import com.riffle.core.domain.launcher.settings.MAX_TIMESCAPE_TEXTURE_INTENSITY_PERCENT
-import com.riffle.core.domain.launcher.settings.MAX_TIMESCAPE_TEXT_SCALE_PERCENT
-import com.riffle.core.domain.launcher.settings.MAX_TIMESCAPE_TRANSITION_DURATION_MILLIS
-import com.riffle.core.domain.launcher.settings.MAX_TIMESCAPE_TRAVEL_INTENSITY_PERCENT
-import com.riffle.core.domain.launcher.settings.MAX_TIMESCAPE_VERTICAL_SPACING_DP
-import com.riffle.core.domain.launcher.settings.MAX_TIMESCAPE_VISIBLE_DEPTH
-import com.riffle.core.domain.launcher.settings.MIN_TIMESCAPE_BLUR_STRENGTH_PERCENT
-import com.riffle.core.domain.launcher.settings.MIN_TIMESCAPE_CARD_ASPECT_RATIO_PERCENT
-import com.riffle.core.domain.launcher.settings.MIN_TIMESCAPE_CONTENT_PADDING_DP
-import com.riffle.core.domain.launcher.settings.MIN_TIMESCAPE_CONTRAST_PERCENT
-import com.riffle.core.domain.launcher.settings.MIN_TIMESCAPE_CORNER_RADIUS_DP
-import com.riffle.core.domain.launcher.settings.MIN_TIMESCAPE_CURVE_DP
-import com.riffle.core.domain.launcher.settings.MIN_TIMESCAPE_FOCUSED_GAP_DP
-import com.riffle.core.domain.launcher.settings.MIN_TIMESCAPE_FOCUSED_SCALE_PERCENT
-import com.riffle.core.domain.launcher.settings.MIN_TIMESCAPE_GLASS_TRANSPARENCY_PERCENT
-import com.riffle.core.domain.launcher.settings.MIN_TIMESCAPE_HIGHLIGHT_PERCENT
-import com.riffle.core.domain.launcher.settings.MIN_TIMESCAPE_HORIZONTAL_OFFSET_DP
-import com.riffle.core.domain.launcher.settings.MIN_TIMESCAPE_OUTLINE_WIDTH_DP
-import com.riffle.core.domain.launcher.settings.MIN_TIMESCAPE_OVERLAP_PERCENT
-import com.riffle.core.domain.launcher.settings.MIN_TIMESCAPE_PARALLAX_INTENSITY_PERCENT
-import com.riffle.core.domain.launcher.settings.MIN_TIMESCAPE_ROTATION_DEGREES
-import com.riffle.core.domain.launcher.settings.MIN_TIMESCAPE_ROTATION_INTENSITY_PERCENT
-import com.riffle.core.domain.launcher.settings.MIN_TIMESCAPE_SATURATION_PERCENT
-import com.riffle.core.domain.launcher.settings.MIN_TIMESCAPE_SETTLE_DURATION_MILLIS
-import com.riffle.core.domain.launcher.settings.MIN_TIMESCAPE_SHADOW_ELEVATION_DP
-import com.riffle.core.domain.launcher.settings.MIN_TIMESCAPE_SPRING_BOUNCINESS_PERCENT
-import com.riffle.core.domain.launcher.settings.MIN_TIMESCAPE_TEXTURE_INTENSITY_PERCENT
-import com.riffle.core.domain.launcher.settings.MIN_TIMESCAPE_TEXT_SCALE_PERCENT
-import com.riffle.core.domain.launcher.settings.MIN_TIMESCAPE_TRANSITION_DURATION_MILLIS
-import com.riffle.core.domain.launcher.settings.MIN_TIMESCAPE_TRAVEL_INTENSITY_PERCENT
-import com.riffle.core.domain.launcher.settings.MIN_TIMESCAPE_VERTICAL_SPACING_DP
-import com.riffle.core.domain.launcher.settings.MIN_TIMESCAPE_VISIBLE_DEPTH
-import com.riffle.core.domain.launcher.settings.TimeScapeAccentSource
-import com.riffle.core.domain.launcher.settings.TimeScapeAppearancePreset
-import com.riffle.core.domain.launcher.settings.TimeScapeAppearanceSettings
-import com.riffle.core.domain.launcher.settings.TimeScapeBackgroundSource
-import com.riffle.core.domain.launcher.settings.TimeScapeContentDensity
-import com.riffle.core.domain.launcher.settings.TimeScapeEasing
-import com.riffle.core.domain.launcher.settings.TimeScapeFanDirection
-import com.riffle.core.domain.launcher.settings.TimeScapeHapticStrength
-import com.riffle.core.domain.launcher.settings.TimeScapeRendererCapabilities
+import com.riffle.core.domain.launcher.cards.AdaptiveStagePaneArrangement
+import com.riffle.core.domain.launcher.cards.AdaptiveStageRailSide
+import com.riffle.core.domain.launcher.settings.AdaptiveStageAccentSource
+import com.riffle.core.domain.launcher.settings.AdaptiveStageAppearancePreset
+import com.riffle.core.domain.launcher.settings.AdaptiveStageAppearanceSettings
+import com.riffle.core.domain.launcher.settings.AdaptiveStageBackgroundSource
+import com.riffle.core.domain.launcher.settings.AdaptiveStageContentDensity
+import com.riffle.core.domain.launcher.settings.AdaptiveStageEasing
+import com.riffle.core.domain.launcher.settings.AdaptiveStageFanDirection
+import com.riffle.core.domain.launcher.settings.AdaptiveStageHapticStrength
+import com.riffle.core.domain.launcher.settings.AdaptiveStageRendererCapabilities
+import com.riffle.core.domain.launcher.settings.MAX_ADAPTIVE_STAGE_BLUR_STRENGTH_PERCENT
+import com.riffle.core.domain.launcher.settings.MAX_ADAPTIVE_STAGE_CARD_ASPECT_RATIO_PERCENT
+import com.riffle.core.domain.launcher.settings.MAX_ADAPTIVE_STAGE_CONTENT_PADDING_DP
+import com.riffle.core.domain.launcher.settings.MAX_ADAPTIVE_STAGE_CONTRAST_PERCENT
+import com.riffle.core.domain.launcher.settings.MAX_ADAPTIVE_STAGE_CORNER_RADIUS_DP
+import com.riffle.core.domain.launcher.settings.MAX_ADAPTIVE_STAGE_CURVE_DP
+import com.riffle.core.domain.launcher.settings.MAX_ADAPTIVE_STAGE_FOCUSED_GAP_DP
+import com.riffle.core.domain.launcher.settings.MAX_ADAPTIVE_STAGE_FOCUSED_SCALE_PERCENT
+import com.riffle.core.domain.launcher.settings.MAX_ADAPTIVE_STAGE_GLASS_TRANSPARENCY_PERCENT
+import com.riffle.core.domain.launcher.settings.MAX_ADAPTIVE_STAGE_HIGHLIGHT_PERCENT
+import com.riffle.core.domain.launcher.settings.MAX_ADAPTIVE_STAGE_HORIZONTAL_OFFSET_DP
+import com.riffle.core.domain.launcher.settings.MAX_ADAPTIVE_STAGE_OUTLINE_WIDTH_DP
+import com.riffle.core.domain.launcher.settings.MAX_ADAPTIVE_STAGE_OVERLAP_PERCENT
+import com.riffle.core.domain.launcher.settings.MAX_ADAPTIVE_STAGE_PARALLAX_INTENSITY_PERCENT
+import com.riffle.core.domain.launcher.settings.MAX_ADAPTIVE_STAGE_ROTATION_DEGREES
+import com.riffle.core.domain.launcher.settings.MAX_ADAPTIVE_STAGE_ROTATION_INTENSITY_PERCENT
+import com.riffle.core.domain.launcher.settings.MAX_ADAPTIVE_STAGE_SATURATION_PERCENT
+import com.riffle.core.domain.launcher.settings.MAX_ADAPTIVE_STAGE_SETTLE_DURATION_MILLIS
+import com.riffle.core.domain.launcher.settings.MAX_ADAPTIVE_STAGE_SHADOW_ELEVATION_DP
+import com.riffle.core.domain.launcher.settings.MAX_ADAPTIVE_STAGE_SPRING_BOUNCINESS_PERCENT
+import com.riffle.core.domain.launcher.settings.MAX_ADAPTIVE_STAGE_TEXTURE_INTENSITY_PERCENT
+import com.riffle.core.domain.launcher.settings.MAX_ADAPTIVE_STAGE_TEXT_SCALE_PERCENT
+import com.riffle.core.domain.launcher.settings.MAX_ADAPTIVE_STAGE_TRANSITION_DURATION_MILLIS
+import com.riffle.core.domain.launcher.settings.MAX_ADAPTIVE_STAGE_TRAVEL_INTENSITY_PERCENT
+import com.riffle.core.domain.launcher.settings.MAX_ADAPTIVE_STAGE_VERTICAL_SPACING_DP
+import com.riffle.core.domain.launcher.settings.MAX_ADAPTIVE_STAGE_VISIBLE_DEPTH
+import com.riffle.core.domain.launcher.settings.MIN_ADAPTIVE_STAGE_BLUR_STRENGTH_PERCENT
+import com.riffle.core.domain.launcher.settings.MIN_ADAPTIVE_STAGE_CARD_ASPECT_RATIO_PERCENT
+import com.riffle.core.domain.launcher.settings.MIN_ADAPTIVE_STAGE_CONTENT_PADDING_DP
+import com.riffle.core.domain.launcher.settings.MIN_ADAPTIVE_STAGE_CONTRAST_PERCENT
+import com.riffle.core.domain.launcher.settings.MIN_ADAPTIVE_STAGE_CORNER_RADIUS_DP
+import com.riffle.core.domain.launcher.settings.MIN_ADAPTIVE_STAGE_CURVE_DP
+import com.riffle.core.domain.launcher.settings.MIN_ADAPTIVE_STAGE_FOCUSED_GAP_DP
+import com.riffle.core.domain.launcher.settings.MIN_ADAPTIVE_STAGE_FOCUSED_SCALE_PERCENT
+import com.riffle.core.domain.launcher.settings.MIN_ADAPTIVE_STAGE_GLASS_TRANSPARENCY_PERCENT
+import com.riffle.core.domain.launcher.settings.MIN_ADAPTIVE_STAGE_HIGHLIGHT_PERCENT
+import com.riffle.core.domain.launcher.settings.MIN_ADAPTIVE_STAGE_HORIZONTAL_OFFSET_DP
+import com.riffle.core.domain.launcher.settings.MIN_ADAPTIVE_STAGE_OUTLINE_WIDTH_DP
+import com.riffle.core.domain.launcher.settings.MIN_ADAPTIVE_STAGE_OVERLAP_PERCENT
+import com.riffle.core.domain.launcher.settings.MIN_ADAPTIVE_STAGE_PARALLAX_INTENSITY_PERCENT
+import com.riffle.core.domain.launcher.settings.MIN_ADAPTIVE_STAGE_ROTATION_DEGREES
+import com.riffle.core.domain.launcher.settings.MIN_ADAPTIVE_STAGE_ROTATION_INTENSITY_PERCENT
+import com.riffle.core.domain.launcher.settings.MIN_ADAPTIVE_STAGE_SATURATION_PERCENT
+import com.riffle.core.domain.launcher.settings.MIN_ADAPTIVE_STAGE_SETTLE_DURATION_MILLIS
+import com.riffle.core.domain.launcher.settings.MIN_ADAPTIVE_STAGE_SHADOW_ELEVATION_DP
+import com.riffle.core.domain.launcher.settings.MIN_ADAPTIVE_STAGE_SPRING_BOUNCINESS_PERCENT
+import com.riffle.core.domain.launcher.settings.MIN_ADAPTIVE_STAGE_TEXTURE_INTENSITY_PERCENT
+import com.riffle.core.domain.launcher.settings.MIN_ADAPTIVE_STAGE_TEXT_SCALE_PERCENT
+import com.riffle.core.domain.launcher.settings.MIN_ADAPTIVE_STAGE_TRANSITION_DURATION_MILLIS
+import com.riffle.core.domain.launcher.settings.MIN_ADAPTIVE_STAGE_TRAVEL_INTENSITY_PERCENT
+import com.riffle.core.domain.launcher.settings.MIN_ADAPTIVE_STAGE_VERTICAL_SPACING_DP
+import com.riffle.core.domain.launcher.settings.MIN_ADAPTIVE_STAGE_VISIBLE_DEPTH
 
 @Composable
-internal fun TimeScapeAppearancePageContent(
+internal fun AdaptiveStageAppearancePageContent(
     state: SettingsSurfaceState,
     onAction: (LauncherShellAction) -> Unit,
-    rendererCapabilities: TimeScapeRendererCapabilities = timeScapeRendererCapabilities(),
+    rendererCapabilities: AdaptiveStageRendererCapabilities = adaptiveStageRendererCapabilities(),
 ) {
-    val appearance = state.settings.cards.timeScapeAppearance
+    val appearance = state.settings.cards.adaptiveStageAppearance
     var resetConfirmationVisible by rememberSaveable { mutableStateOf(false) }
-    val update: ((TimeScapeAppearanceSettings) -> TimeScapeAppearanceSettings) -> Unit = { transform ->
-        onAction(LauncherShellAction.UpdateTimeScapeAppearance(transform(appearance).coerce()))
+    val update: ((AdaptiveStageAppearanceSettings) -> AdaptiveStageAppearanceSettings) -> Unit = { transform ->
+        onAction(LauncherShellAction.UpdateAdaptiveStageAppearance(transform(appearance).coerce()))
     }
 
     SettingsSection(title = "Preview") {
-        TimeScapeAppearancePreview(
+        AdaptiveStageAppearancePreview(
             appearance = appearance,
             globalReducedMotion = state.settings.motion.reducedMotion,
             rendererCapabilities = rendererCapabilities,
             modifier = Modifier.fillMaxWidth().heightIn(min = 340.dp, max = 460.dp),
         )
-        timeScapeFallbackMessage(appearance, rendererCapabilities)?.let { message ->
+        adaptiveStageFallbackMessage(appearance, rendererCapabilities)?.let { message ->
             SettingsListRow(title = "Effective fallback", subtitle = message)
         }
     }
     SettingsSection(title = "Layout") {
-        TimeScapeEnumChoices(
+        AdaptiveStageEnumChoices(
             title = "Rail side",
-            values = TimeScapeRailSide.entries,
-            selected = state.settings.cards.timeScapeRailSide ?: TimeScapeRailSide.LEADING,
-            label = TimeScapeRailSide::label,
-            testTag = { side -> "timescape-rail-side-${side.name}" },
+            values = AdaptiveStageRailSide.entries,
+            selected = state.settings.cards.adaptiveStageRailSide ?: AdaptiveStageRailSide.LEADING,
+            label = AdaptiveStageRailSide::label,
+            testTag = { side -> "adaptive-stage-rail-side-${side.name}" },
             onSelected = { side ->
-                onAction(LauncherShellAction.SelectTimeScapeRailSide(side))
+                onAction(LauncherShellAction.SelectAdaptiveStageRailSide(side))
             },
         )
         SettingsListRow(
             title = "About rail side",
-            subtitle = "Which edge the stage rail docks to in Stage Manager and split-pane layouts",
+            subtitle = "Which edge the stage rail docks to in unfolded and split-pane layouts",
         )
-        TimeScapeEnumChoices(
+        AdaptiveStageEnumChoices(
             title = "Pane arrangement",
-            values = TimeScapePaneArrangement.entries,
-            selected = state.settings.cards.timeScapePaneArrangement,
-            label = TimeScapePaneArrangement::label,
-            testTag = { arrangement -> "timescape-pane-arrangement-${arrangement.name}" },
+            values = AdaptiveStagePaneArrangement.entries,
+            selected = state.settings.cards.adaptiveStagePaneArrangement,
+            label = AdaptiveStagePaneArrangement::label,
+            testTag = { arrangement -> "adaptive-stage-pane-arrangement-${arrangement.name}" },
             onSelected = { arrangement ->
-                onAction(LauncherShellAction.SelectTimeScapePaneArrangement(arrangement))
+                onAction(LauncherShellAction.SelectAdaptiveStagePaneArrangement(arrangement))
             },
         )
         SettingsListRow(
@@ -145,68 +145,68 @@ internal fun TimeScapeAppearancePageContent(
         )
     }
     SettingsSection(title = "Preset and reset") {
-        TimeScapeEnumChoices(
+        AdaptiveStageEnumChoices(
             title = "Appearance preset",
-            values = TimeScapeAppearancePreset.entries,
+            values = AdaptiveStageAppearancePreset.entries,
             selected = appearance.preset,
-            label = TimeScapeAppearancePreset::label,
-            testTag = { preset -> "timescape-preset-${preset.name}" },
+            label = AdaptiveStageAppearancePreset::label,
+            testTag = { preset -> "adaptive-stage-preset-${preset.name}" },
             onSelected = { preset ->
-                onAction(timeScapeAppearancePresetAction(preset))
+                onAction(adaptiveStageAppearancePresetAction(preset))
             },
         )
         SettingsClickableRow(
-            title = "Reset TimeScape appearance",
-            subtitle = "Restore the Modern TimeScape profile",
+            title = "Reset Cards appearance",
+            subtitle = "Restore the Modern Cards profile",
             onClick = { resetConfirmationVisible = true },
             trailingContent = { SettingsButtonText(text = "Reset") },
         )
     }
     SettingsSection(title = "Card geometry") {
-        TimeScapeSlider(
+        AdaptiveStageSlider(
             "Card aspect ratio",
             appearance.geometry.cardAspectRatioPercent,
-            MIN_TIMESCAPE_CARD_ASPECT_RATIO_PERCENT..MAX_TIMESCAPE_CARD_ASPECT_RATIO_PERCENT,
+            MIN_ADAPTIVE_STAGE_CARD_ASPECT_RATIO_PERCENT..MAX_ADAPTIVE_STAGE_CARD_ASPECT_RATIO_PERCENT,
             "%",
         ) { value ->
             update {
                 it.copy(geometry = it.geometry.copy(cardAspectRatioPercent = value))
             }
         }
-        TimeScapeSlider(
+        AdaptiveStageSlider(
             "Focused card scale",
             appearance.geometry.focusedScalePercent,
-            MIN_TIMESCAPE_FOCUSED_SCALE_PERCENT..MAX_TIMESCAPE_FOCUSED_SCALE_PERCENT,
+            MIN_ADAPTIVE_STAGE_FOCUSED_SCALE_PERCENT..MAX_ADAPTIVE_STAGE_FOCUSED_SCALE_PERCENT,
             "%",
         ) { value ->
             update {
                 it.copy(geometry = it.geometry.copy(focusedScalePercent = value))
             }
         }
-        TimeScapeSlider(
+        AdaptiveStageSlider(
             "Focused card gap",
             appearance.geometry.focusedGapDp,
-            MIN_TIMESCAPE_FOCUSED_GAP_DP..MAX_TIMESCAPE_FOCUSED_GAP_DP,
+            MIN_ADAPTIVE_STAGE_FOCUSED_GAP_DP..MAX_ADAPTIVE_STAGE_FOCUSED_GAP_DP,
             "dp",
         ) { value ->
             update {
                 it.copy(geometry = it.geometry.copy(focusedGapDp = value))
             }
         }
-        TimeScapeSlider(
+        AdaptiveStageSlider(
             "Corner radius",
             appearance.geometry.cornerRadiusDp,
-            MIN_TIMESCAPE_CORNER_RADIUS_DP..MAX_TIMESCAPE_CORNER_RADIUS_DP,
+            MIN_ADAPTIVE_STAGE_CORNER_RADIUS_DP..MAX_ADAPTIVE_STAGE_CORNER_RADIUS_DP,
             "dp",
         ) { value ->
             update {
                 it.copy(geometry = it.geometry.copy(cornerRadiusDp = value))
             }
         }
-        TimeScapeSlider(
+        AdaptiveStageSlider(
             "Content padding",
             appearance.geometry.contentPaddingDp,
-            MIN_TIMESCAPE_CONTENT_PADDING_DP..MAX_TIMESCAPE_CONTENT_PADDING_DP,
+            MIN_ADAPTIVE_STAGE_CONTENT_PADDING_DP..MAX_ADAPTIVE_STAGE_CONTENT_PADDING_DP,
             "dp",
         ) { value ->
             update {
@@ -219,72 +219,72 @@ internal fun TimeScapeAppearancePageContent(
             }
         })
     }
-    SettingsSection(title = "Stack and spline") {
-        TimeScapeSlider(
+    SettingsSection(title = "Stack and stack") {
+        AdaptiveStageSlider(
             "Visible card depth",
             appearance.geometry.visibleDepth,
-            MIN_TIMESCAPE_VISIBLE_DEPTH..MAX_TIMESCAPE_VISIBLE_DEPTH,
+            MIN_ADAPTIVE_STAGE_VISIBLE_DEPTH..MAX_ADAPTIVE_STAGE_VISIBLE_DEPTH,
             "cards",
         ) { value ->
             update {
                 it.copy(geometry = it.geometry.copy(visibleDepth = value))
             }
         }
-        TimeScapeSlider(
+        AdaptiveStageSlider(
             "Card overlap",
             appearance.geometry.overlapPercent,
-            MIN_TIMESCAPE_OVERLAP_PERCENT..MAX_TIMESCAPE_OVERLAP_PERCENT,
+            MIN_ADAPTIVE_STAGE_OVERLAP_PERCENT..MAX_ADAPTIVE_STAGE_OVERLAP_PERCENT,
             "%",
         ) { value ->
             update {
                 it.copy(geometry = it.geometry.copy(overlapPercent = value))
             }
         }
-        TimeScapeSlider(
+        AdaptiveStageSlider(
             "Vertical spacing",
             appearance.geometry.verticalSpacingDp,
-            MIN_TIMESCAPE_VERTICAL_SPACING_DP..MAX_TIMESCAPE_VERTICAL_SPACING_DP,
+            MIN_ADAPTIVE_STAGE_VERTICAL_SPACING_DP..MAX_ADAPTIVE_STAGE_VERTICAL_SPACING_DP,
             "dp",
         ) { value ->
             update {
                 it.copy(geometry = it.geometry.copy(verticalSpacingDp = value))
             }
         }
-        TimeScapeSlider(
+        AdaptiveStageSlider(
             "Horizontal offset",
             appearance.geometry.horizontalOffsetDp,
-            MIN_TIMESCAPE_HORIZONTAL_OFFSET_DP..MAX_TIMESCAPE_HORIZONTAL_OFFSET_DP,
+            MIN_ADAPTIVE_STAGE_HORIZONTAL_OFFSET_DP..MAX_ADAPTIVE_STAGE_HORIZONTAL_OFFSET_DP,
             "dp",
         ) { value ->
             update {
                 it.copy(geometry = it.geometry.copy(horizontalOffsetDp = value))
             }
         }
-        TimeScapeSlider(
-            "Spline curve",
+        AdaptiveStageSlider(
+            "Stack curve",
             appearance.geometry.curveDp,
-            MIN_TIMESCAPE_CURVE_DP..MAX_TIMESCAPE_CURVE_DP,
+            MIN_ADAPTIVE_STAGE_CURVE_DP..MAX_ADAPTIVE_STAGE_CURVE_DP,
             "dp",
         ) { value ->
             update {
                 it.copy(geometry = it.geometry.copy(curveDp = value))
             }
         }
-        TimeScapeSlider(
+        AdaptiveStageSlider(
             "Card rotation",
             appearance.geometry.rotationDegrees,
-            MIN_TIMESCAPE_ROTATION_DEGREES..MAX_TIMESCAPE_ROTATION_DEGREES,
+            MIN_ADAPTIVE_STAGE_ROTATION_DEGREES..MAX_ADAPTIVE_STAGE_ROTATION_DEGREES,
             "°",
         ) { value ->
             update {
                 it.copy(geometry = it.geometry.copy(rotationDegrees = value))
             }
         }
-        TimeScapeEnumChoices(
+        AdaptiveStageEnumChoices(
             "Fan direction",
-            TimeScapeFanDirection.entries,
+            AdaptiveStageFanDirection.entries,
             appearance.geometry.fanDirection,
-            TimeScapeFanDirection::label,
+            AdaptiveStageFanDirection::label,
         ) { value ->
             update {
                 it.copy(geometry = it.geometry.copy(fanDirection = value))
@@ -292,100 +292,100 @@ internal fun TimeScapeAppearancePageContent(
         }
     }
     SettingsSection(title = "Surface and glass") {
-        TimeScapeEnumChoices(
+        AdaptiveStageEnumChoices(
             "Background",
-            TimeScapeBackgroundSource.entries,
+            AdaptiveStageBackgroundSource.entries,
             appearance.surface.backgroundSource,
-            TimeScapeBackgroundSource::label,
+            AdaptiveStageBackgroundSource::label,
         ) { value ->
             update {
                 it.copy(surface = it.surface.copy(backgroundSource = value))
             }
         }
-        TimeScapeColorChoices("Custom background", appearance.surface.customBackgroundArgb) { value ->
+        AdaptiveStageColorChoices("Custom background", appearance.surface.customBackgroundArgb) { value ->
             update {
                 it.copy(surface = it.surface.copy(customBackgroundArgb = value))
             }
         }
-        TimeScapeSlider(
+        AdaptiveStageSlider(
             "Glass transparency",
             appearance.surface.glassTransparencyPercent,
-            MIN_TIMESCAPE_GLASS_TRANSPARENCY_PERCENT..MAX_TIMESCAPE_GLASS_TRANSPARENCY_PERCENT,
+            MIN_ADAPTIVE_STAGE_GLASS_TRANSPARENCY_PERCENT..MAX_ADAPTIVE_STAGE_GLASS_TRANSPARENCY_PERCENT,
             "%",
         ) { value ->
             update {
                 it.copy(surface = it.surface.copy(glassTransparencyPercent = value))
             }
         }
-        TimeScapeColorChoices("Glass tint", appearance.surface.glassTintArgb) { value ->
+        AdaptiveStageColorChoices("Glass tint", appearance.surface.glassTintArgb) { value ->
             update {
                 it.copy(surface = it.surface.copy(glassTintArgb = value))
             }
         }
-        TimeScapeSlider(
+        AdaptiveStageSlider(
             "Blur strength",
             appearance.surface.blurStrengthPercent,
-            MIN_TIMESCAPE_BLUR_STRENGTH_PERCENT..MAX_TIMESCAPE_BLUR_STRENGTH_PERCENT,
+            MIN_ADAPTIVE_STAGE_BLUR_STRENGTH_PERCENT..MAX_ADAPTIVE_STAGE_BLUR_STRENGTH_PERCENT,
             "%",
         ) { value ->
             update {
                 it.copy(surface = it.surface.copy(blurStrengthPercent = value))
             }
         }
-        TimeScapeSlider(
+        AdaptiveStageSlider(
             "Saturation",
             appearance.surface.saturationPercent,
-            MIN_TIMESCAPE_SATURATION_PERCENT..MAX_TIMESCAPE_SATURATION_PERCENT,
+            MIN_ADAPTIVE_STAGE_SATURATION_PERCENT..MAX_ADAPTIVE_STAGE_SATURATION_PERCENT,
             "%",
         ) { value ->
             update {
                 it.copy(surface = it.surface.copy(saturationPercent = value))
             }
         }
-        TimeScapeSlider(
+        AdaptiveStageSlider(
             "Contrast",
             appearance.surface.contrastPercent,
-            MIN_TIMESCAPE_CONTRAST_PERCENT..MAX_TIMESCAPE_CONTRAST_PERCENT,
+            MIN_ADAPTIVE_STAGE_CONTRAST_PERCENT..MAX_ADAPTIVE_STAGE_CONTRAST_PERCENT,
             "%",
         ) { value ->
             update {
                 it.copy(surface = it.surface.copy(contrastPercent = value))
             }
         }
-        TimeScapeSlider(
+        AdaptiveStageSlider(
             "Outline width",
             appearance.surface.outlineWidthDp,
-            MIN_TIMESCAPE_OUTLINE_WIDTH_DP..MAX_TIMESCAPE_OUTLINE_WIDTH_DP,
+            MIN_ADAPTIVE_STAGE_OUTLINE_WIDTH_DP..MAX_ADAPTIVE_STAGE_OUTLINE_WIDTH_DP,
             "dp",
         ) { value ->
             update {
                 it.copy(surface = it.surface.copy(outlineWidthDp = value))
             }
         }
-        TimeScapeSlider(
+        AdaptiveStageSlider(
             "Highlight",
             appearance.surface.highlightPercent,
-            MIN_TIMESCAPE_HIGHLIGHT_PERCENT..MAX_TIMESCAPE_HIGHLIGHT_PERCENT,
+            MIN_ADAPTIVE_STAGE_HIGHLIGHT_PERCENT..MAX_ADAPTIVE_STAGE_HIGHLIGHT_PERCENT,
             "%",
         ) { value ->
             update {
                 it.copy(surface = it.surface.copy(highlightPercent = value))
             }
         }
-        TimeScapeSlider(
+        AdaptiveStageSlider(
             "Shadow elevation",
             appearance.surface.shadowElevationDp,
-            MIN_TIMESCAPE_SHADOW_ELEVATION_DP..MAX_TIMESCAPE_SHADOW_ELEVATION_DP,
+            MIN_ADAPTIVE_STAGE_SHADOW_ELEVATION_DP..MAX_ADAPTIVE_STAGE_SHADOW_ELEVATION_DP,
             "dp",
         ) { value ->
             update {
                 it.copy(surface = it.surface.copy(shadowElevationDp = value))
             }
         }
-        TimeScapeSlider(
+        AdaptiveStageSlider(
             "Texture intensity",
             appearance.surface.textureIntensityPercent,
-            MIN_TIMESCAPE_TEXTURE_INTENSITY_PERCENT..MAX_TIMESCAPE_TEXTURE_INTENSITY_PERCENT,
+            MIN_ADAPTIVE_STAGE_TEXTURE_INTENSITY_PERCENT..MAX_ADAPTIVE_STAGE_TEXTURE_INTENSITY_PERCENT,
             "%",
         ) { value ->
             update {
@@ -394,17 +394,17 @@ internal fun TimeScapeAppearancePageContent(
         }
     }
     SettingsSection(title = "Colour and content") {
-        TimeScapeEnumChoices(
+        AdaptiveStageEnumChoices(
             "Accent",
-            TimeScapeAccentSource.entries,
+            AdaptiveStageAccentSource.entries,
             appearance.typography.accentSource,
-            TimeScapeAccentSource::label,
+            AdaptiveStageAccentSource::label,
         ) { value ->
             update {
                 it.copy(typography = it.typography.copy(accentSource = value))
             }
         }
-        TimeScapeColorChoices("Custom accent", appearance.typography.customAccentArgb) { value ->
+        AdaptiveStageColorChoices("Custom accent", appearance.typography.customAccentArgb) { value ->
             update {
                 it.copy(typography = it.typography.copy(customAccentArgb = value))
             }
@@ -419,20 +419,20 @@ internal fun TimeScapeAppearancePageContent(
                 }
             },
         )
-        TimeScapeEnumChoices(
+        AdaptiveStageEnumChoices(
             "Content density",
-            TimeScapeContentDensity.entries,
+            AdaptiveStageContentDensity.entries,
             appearance.typography.contentDensity,
-            TimeScapeContentDensity::label,
+            AdaptiveStageContentDensity::label,
         ) { value ->
             update {
                 it.copy(typography = it.typography.copy(contentDensity = value))
             }
         }
-        TimeScapeSlider(
+        AdaptiveStageSlider(
             "Text scale",
             appearance.typography.textScalePercent,
-            MIN_TIMESCAPE_TEXT_SCALE_PERCENT..MAX_TIMESCAPE_TEXT_SCALE_PERCENT,
+            MIN_ADAPTIVE_STAGE_TEXT_SCALE_PERCENT..MAX_ADAPTIVE_STAGE_TEXT_SCALE_PERCENT,
             "%",
         ) { value ->
             update {
@@ -441,111 +441,111 @@ internal fun TimeScapeAppearancePageContent(
         }
     }
     SettingsSection(title = "Motion") {
-        TimeScapeSlider(
+        AdaptiveStageSlider(
             "Settle duration",
             appearance.motion.settleDurationMillis,
-            MIN_TIMESCAPE_SETTLE_DURATION_MILLIS..MAX_TIMESCAPE_SETTLE_DURATION_MILLIS,
+            MIN_ADAPTIVE_STAGE_SETTLE_DURATION_MILLIS..MAX_ADAPTIVE_STAGE_SETTLE_DURATION_MILLIS,
             "ms",
         ) { value ->
             update {
                 it.copy(motion = it.motion.copy(settleDurationMillis = value))
             }
         }
-        TimeScapeSlider(
+        AdaptiveStageSlider(
             "Reflow duration",
             appearance.motion.reflowDurationMillis,
-            MIN_TIMESCAPE_TRANSITION_DURATION_MILLIS..MAX_TIMESCAPE_TRANSITION_DURATION_MILLIS,
+            MIN_ADAPTIVE_STAGE_TRANSITION_DURATION_MILLIS..MAX_ADAPTIVE_STAGE_TRANSITION_DURATION_MILLIS,
             "ms",
         ) { value ->
             update {
                 it.copy(motion = it.motion.copy(reflowDurationMillis = value))
             }
         }
-        TimeScapeSlider(
+        AdaptiveStageSlider(
             "Enter duration",
             appearance.motion.enterDurationMillis,
-            MIN_TIMESCAPE_TRANSITION_DURATION_MILLIS..MAX_TIMESCAPE_TRANSITION_DURATION_MILLIS,
+            MIN_ADAPTIVE_STAGE_TRANSITION_DURATION_MILLIS..MAX_ADAPTIVE_STAGE_TRANSITION_DURATION_MILLIS,
             "ms",
         ) { value ->
             update {
                 it.copy(motion = it.motion.copy(enterDurationMillis = value))
             }
         }
-        TimeScapeSlider(
+        AdaptiveStageSlider(
             "Exit duration",
             appearance.motion.exitDurationMillis,
-            MIN_TIMESCAPE_TRANSITION_DURATION_MILLIS..MAX_TIMESCAPE_TRANSITION_DURATION_MILLIS,
+            MIN_ADAPTIVE_STAGE_TRANSITION_DURATION_MILLIS..MAX_ADAPTIVE_STAGE_TRANSITION_DURATION_MILLIS,
             "ms",
         ) { value ->
             update {
                 it.copy(motion = it.motion.copy(exitDurationMillis = value))
             }
         }
-        TimeScapeSlider(
+        AdaptiveStageSlider(
             "Expand duration",
             appearance.motion.expandDurationMillis,
-            MIN_TIMESCAPE_TRANSITION_DURATION_MILLIS..MAX_TIMESCAPE_TRANSITION_DURATION_MILLIS,
+            MIN_ADAPTIVE_STAGE_TRANSITION_DURATION_MILLIS..MAX_ADAPTIVE_STAGE_TRANSITION_DURATION_MILLIS,
             "ms",
         ) { value ->
             update {
                 it.copy(motion = it.motion.copy(expandDurationMillis = value))
             }
         }
-        TimeScapeEnumChoices(
+        AdaptiveStageEnumChoices(
             "Easing",
-            TimeScapeEasing.entries,
+            AdaptiveStageEasing.entries,
             appearance.motion.easing,
-            TimeScapeEasing::label,
+            AdaptiveStageEasing::label,
         ) { value ->
             update {
                 it.copy(motion = it.motion.copy(easing = value))
             }
         }
-        TimeScapeSlider(
+        AdaptiveStageSlider(
             "Spring bounciness",
             appearance.motion.springBouncinessPercent,
-            MIN_TIMESCAPE_SPRING_BOUNCINESS_PERCENT..MAX_TIMESCAPE_SPRING_BOUNCINESS_PERCENT,
+            MIN_ADAPTIVE_STAGE_SPRING_BOUNCINESS_PERCENT..MAX_ADAPTIVE_STAGE_SPRING_BOUNCINESS_PERCENT,
             "%",
         ) { value ->
             update {
                 it.copy(motion = it.motion.copy(springBouncinessPercent = value))
             }
         }
-        TimeScapeSlider(
+        AdaptiveStageSlider(
             "Travel intensity",
             appearance.motion.travelIntensityPercent,
-            MIN_TIMESCAPE_TRAVEL_INTENSITY_PERCENT..MAX_TIMESCAPE_TRAVEL_INTENSITY_PERCENT,
+            MIN_ADAPTIVE_STAGE_TRAVEL_INTENSITY_PERCENT..MAX_ADAPTIVE_STAGE_TRAVEL_INTENSITY_PERCENT,
             "%",
         ) { value ->
             update {
                 it.copy(motion = it.motion.copy(travelIntensityPercent = value))
             }
         }
-        TimeScapeSlider(
+        AdaptiveStageSlider(
             "Parallax intensity",
             appearance.motion.parallaxIntensityPercent,
-            MIN_TIMESCAPE_PARALLAX_INTENSITY_PERCENT..MAX_TIMESCAPE_PARALLAX_INTENSITY_PERCENT,
+            MIN_ADAPTIVE_STAGE_PARALLAX_INTENSITY_PERCENT..MAX_ADAPTIVE_STAGE_PARALLAX_INTENSITY_PERCENT,
             "%",
         ) { value ->
             update {
                 it.copy(motion = it.motion.copy(parallaxIntensityPercent = value))
             }
         }
-        TimeScapeSlider(
+        AdaptiveStageSlider(
             "Rotation intensity",
             appearance.motion.rotationIntensityPercent,
-            MIN_TIMESCAPE_ROTATION_INTENSITY_PERCENT..MAX_TIMESCAPE_ROTATION_INTENSITY_PERCENT,
+            MIN_ADAPTIVE_STAGE_ROTATION_INTENSITY_PERCENT..MAX_ADAPTIVE_STAGE_ROTATION_INTENSITY_PERCENT,
             "%",
         ) { value ->
             update {
                 it.copy(motion = it.motion.copy(rotationIntensityPercent = value))
             }
         }
-        TimeScapeEnumChoices(
+        AdaptiveStageEnumChoices(
             "Haptic strength",
-            TimeScapeHapticStrength.entries,
+            AdaptiveStageHapticStrength.entries,
             appearance.motion.hapticStrength,
-            TimeScapeHapticStrength::label,
+            AdaptiveStageHapticStrength::label,
         ) { value ->
             update {
                 it.copy(motion = it.motion.copy(hapticStrength = value))
@@ -567,15 +567,15 @@ internal fun TimeScapeAppearancePageContent(
     if (resetConfirmationVisible) {
         AlertDialog(
             onDismissRequest = { resetConfirmationVisible = false },
-            title = { Text("Reset TimeScape appearance?") },
-            text = { Text("This replaces all TimeScape appearance, geometry, and motion choices with the Modern preset.") },
+            title = { Text("Reset Cards appearance?") },
+            text = { Text("This replaces all Cards appearance, geometry, and motion choices with the Modern preset.") },
             confirmButton = {
                 TextButton(
                     onClick = {
                         update { it.reset() }
                         resetConfirmationVisible = false
                     },
-                    modifier = Modifier.semantics { contentDescription = "Confirm TimeScape reset" },
+                    modifier = Modifier.semantics { contentDescription = "Confirm Cards reset" },
                 ) { Text("Reset") }
             },
             dismissButton = { TextButton(onClick = { resetConfirmationVisible = false }) { Text("Cancel") } },
@@ -584,7 +584,7 @@ internal fun TimeScapeAppearancePageContent(
 }
 
 @Composable
-private fun TimeScapeSlider(
+private fun AdaptiveStageSlider(
     title: String,
     value: Int,
     range: IntRange,
@@ -596,7 +596,7 @@ private fun TimeScapeSlider(
 
 @Composable
 @OptIn(ExperimentalLayoutApi::class)
-private fun <T> TimeScapeEnumChoices(
+private fun <T> AdaptiveStageEnumChoices(
     title: String,
     values: Iterable<T>,
     selected: T,
@@ -623,13 +623,13 @@ private fun <T> TimeScapeEnumChoices(
 }
 
 @Composable
-private fun TimeScapeColorChoices(
+private fun AdaptiveStageColorChoices(
     title: String,
     selected: Long,
     onSelected: (Long) -> Unit,
 ) {
     val colors = listOf(0xFF1B1B1FL, 0xFF355C7DL, 0xFF6C5B7BL, 0xFFC06C84L, 0xFFFFFFFFL)
-    TimeScapeEnumChoices(
+    AdaptiveStageEnumChoices(
         title = title,
         values = colors,
         selected = selected,
@@ -638,9 +638,9 @@ private fun TimeScapeColorChoices(
     )
 }
 
-private fun timeScapeFallbackMessage(
-    appearance: TimeScapeAppearanceSettings,
-    rendererCapabilities: TimeScapeRendererCapabilities,
+private fun adaptiveStageFallbackMessage(
+    appearance: AdaptiveStageAppearanceSettings,
+    rendererCapabilities: AdaptiveStageRendererCapabilities,
 ): String? {
     val effective = appearance.effectiveFor(rendererCapabilities)
     return when {
@@ -653,40 +653,40 @@ private fun timeScapeFallbackMessage(
     }
 }
 
-internal fun timeScapeAppearancePresetAction(preset: TimeScapeAppearancePreset): LauncherShellAction.UpdateTimeScapeAppearance =
-    LauncherShellAction.UpdateTimeScapeAppearance(
-        TimeScapeAppearanceSettings.modern().applyPreset(preset).coerce(),
+internal fun adaptiveStageAppearancePresetAction(preset: AdaptiveStageAppearancePreset): LauncherShellAction.UpdateAdaptiveStageAppearance =
+    LauncherShellAction.UpdateAdaptiveStageAppearance(
+        AdaptiveStageAppearanceSettings.modern().applyPreset(preset).coerce(),
     )
 
-private fun TimeScapeAppearancePreset.label(): String =
+private fun AdaptiveStageAppearancePreset.label(): String =
     when (this) {
-        TimeScapeAppearancePreset.MODERN_TIMESCAPE -> "Modern"
-        TimeScapeAppearancePreset.FLAT_REDUCED_DEPTH -> "Flat"
-        TimeScapeAppearancePreset.WARM_GLASS -> "Warm glass"
+        AdaptiveStageAppearancePreset.MODERN_ADAPTIVE_STAGE -> "Modern"
+        AdaptiveStageAppearancePreset.FLAT_REDUCED_DEPTH -> "Flat"
+        AdaptiveStageAppearancePreset.WARM_GLASS -> "Warm glass"
     }
 
-private fun TimeScapeBackgroundSource.label(): String = name.lowercase().replace('_', ' ').replaceFirstChar(Char::uppercase)
+private fun AdaptiveStageBackgroundSource.label(): String = name.lowercase().replace('_', ' ').replaceFirstChar(Char::uppercase)
 
-private fun TimeScapeAccentSource.label(): String = name.lowercase().replace('_', ' ').replaceFirstChar(Char::uppercase)
+private fun AdaptiveStageAccentSource.label(): String = name.lowercase().replace('_', ' ').replaceFirstChar(Char::uppercase)
 
-private fun TimeScapeContentDensity.label(): String = name.lowercase().replaceFirstChar(Char::uppercase)
+private fun AdaptiveStageContentDensity.label(): String = name.lowercase().replaceFirstChar(Char::uppercase)
 
-private fun TimeScapeFanDirection.label(): String = name.lowercase().replaceFirstChar(Char::uppercase)
+private fun AdaptiveStageFanDirection.label(): String = name.lowercase().replaceFirstChar(Char::uppercase)
 
-private fun TimeScapeEasing.label(): String = name.lowercase().replace('_', ' ').replaceFirstChar(Char::uppercase)
+private fun AdaptiveStageEasing.label(): String = name.lowercase().replace('_', ' ').replaceFirstChar(Char::uppercase)
 
-private fun TimeScapeHapticStrength.label(): String = name.lowercase().replaceFirstChar(Char::uppercase)
+private fun AdaptiveStageHapticStrength.label(): String = name.lowercase().replaceFirstChar(Char::uppercase)
 
-private fun TimeScapePaneArrangement.label(): String =
+private fun AdaptiveStagePaneArrangement.label(): String =
     when (this) {
-        TimeScapePaneArrangement.STACK -> "Stack"
-        TimeScapePaneArrangement.SPLIT -> "Split"
+        AdaptiveStagePaneArrangement.STACK -> "Stack"
+        AdaptiveStagePaneArrangement.SPLIT -> "Split"
     }
 
-private fun TimeScapeRailSide.label(): String =
+private fun AdaptiveStageRailSide.label(): String =
     when (this) {
-        TimeScapeRailSide.LEADING -> "Leading edge"
-        TimeScapeRailSide.TRAILING -> "Trailing edge"
-        TimeScapeRailSide.TOP -> "Top edge"
-        TimeScapeRailSide.BOTTOM -> "Bottom edge"
+        AdaptiveStageRailSide.LEADING -> "Leading edge"
+        AdaptiveStageRailSide.TRAILING -> "Trailing edge"
+        AdaptiveStageRailSide.TOP -> "Top edge"
+        AdaptiveStageRailSide.BOTTOM -> "Bottom edge"
     }

@@ -8,9 +8,9 @@ import com.riffle.core.domain.launcher.apps.AppProfileType
 import com.riffle.core.domain.launcher.apps.AppSearchContentFilter
 import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.apps.InstalledApp
+import com.riffle.core.domain.launcher.cards.AdaptiveStagePaneArrangement
+import com.riffle.core.domain.launcher.cards.AdaptiveStageRailSide
 import com.riffle.core.domain.launcher.cards.AppStageId
-import com.riffle.core.domain.launcher.cards.TimeScapePaneArrangement
-import com.riffle.core.domain.launcher.cards.TimeScapeRailSide
 import com.riffle.core.domain.launcher.home.DockAlignment
 import com.riffle.core.domain.launcher.home.DockBackgroundSizing
 import com.riffle.core.domain.launcher.home.DockItemMoveDirection
@@ -33,6 +33,7 @@ import com.riffle.core.domain.launcher.home.WidgetResizeConstraints
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
 import com.riffle.core.domain.launcher.rss.FeedId
 import com.riffle.core.domain.launcher.rss.FeedUrl
+import com.riffle.core.domain.launcher.settings.AdaptiveStageAppearanceSettings
 import com.riffle.core.domain.launcher.settings.AppDrawerPresentation
 import com.riffle.core.domain.launcher.settings.FeedRefreshIntervalOption
 import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
@@ -51,7 +52,6 @@ import com.riffle.core.domain.launcher.settings.OverlayDockEdge
 import com.riffle.core.domain.launcher.settings.OverlayDockExpandedOrientation
 import com.riffle.core.domain.launcher.settings.OverlayDockItemMoveDirection
 import com.riffle.core.domain.launcher.settings.SearchResultPresentation
-import com.riffle.core.domain.launcher.settings.TimeScapeAppearanceSettings
 import com.riffle.core.domain.launcher.widgets.WidgetProviderDimensions
 import com.riffle.core.domain.launcher.widgets.WidgetProviderIdentity
 
@@ -100,7 +100,7 @@ sealed interface LauncherShellAction {
 
     data class SelectHomePage(val pageId: LauncherPageId) : LauncherShellAction
 
-    /** Selects the visible TimeScape app stage without launching its app. */
+    /** Selects the visible AdaptiveStage app stage without launching its app. */
     data class SelectAppStage(val stageId: AppStageId) : LauncherShellAction
 
     /** Keeps a stage available when it has no live notification content. */
@@ -424,14 +424,14 @@ sealed interface LauncherShellAction {
 
     data class SelectContextualEnabled(val enabled: Boolean) : LauncherShellAction
 
-    /** Replaces the complete TimeScape profile in one persisted, atomic update. */
-    data class UpdateTimeScapeAppearance(
-        val appearance: TimeScapeAppearanceSettings,
+    /** Replaces the complete AdaptiveStage profile in one persisted, atomic update. */
+    data class UpdateAdaptiveStageAppearance(
+        val appearance: AdaptiveStageAppearanceSettings,
     ) : LauncherShellAction
 
-    data class SelectTimeScapePaneArrangement(val arrangement: TimeScapePaneArrangement) : LauncherShellAction
+    data class SelectAdaptiveStagePaneArrangement(val arrangement: AdaptiveStagePaneArrangement) : LauncherShellAction
 
-    data class SelectTimeScapeRailSide(val side: TimeScapeRailSide) : LauncherShellAction
+    data class SelectAdaptiveStageRailSide(val side: AdaptiveStageRailSide) : LauncherShellAction
 
     data class SelectOverlayDockEnabled(val enabled: Boolean) : LauncherShellAction
 

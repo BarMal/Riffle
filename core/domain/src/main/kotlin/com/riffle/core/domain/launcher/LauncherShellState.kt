@@ -79,7 +79,7 @@ data class LauncherShellState(
     /** Profile content policy used by Cards surfaces; profiles without an app-state decision are redacted. */
     fun cardsProfileContentVisibility(): Map<AppProfileId, AppProfileContentVisibility> = profileContentVisibility
 
-    /** Reconciles optional TimeScape stages from the same installed-app/profile/settings snapshot. */
+    /** Reconciles optional AdaptiveStage stages from the same installed-app/profile/settings snapshot. */
     fun appStageSnapshot(
         contentSnapshot: AppStageContentSnapshot = appStageContentSnapshot(),
         previous: AppStageSnapshot? = null,
@@ -107,7 +107,7 @@ data class LauncherShellState(
         )
 
     /**
-     * Reconciles TimeScape feed stages from [configuredFeeds] and [feedCacheProjections].
+     * Reconciles AdaptiveStage feed stages from [configuredFeeds] and [feedCacheProjections].
      *
      * This is a parallel projection alongside [appStageSnapshot] rather than a merge into
      * [AppStageSnapshot]: feed stages have no package/app identity, and unlike app stages they are

@@ -44,16 +44,16 @@ class LauncherSettingsTest {
     }
 
     @Test
-    fun cardsDefaultToTheModernTimeScapeAppearanceIntent() {
-        assertEquals(TimeScapeAppearanceSettings.modern(), LauncherSettings().cards.timeScapeAppearance)
+    fun cardsDefaultToTheModernAdaptiveStageAppearanceIntent() {
+        assertEquals(AdaptiveStageAppearanceSettings.modern(), LauncherSettings().cards.adaptiveStageAppearance)
     }
 
     @Test
-    fun defaultsReserveThreeFingerSwipesForTimeScapeModeChanges() {
+    fun defaultsReserveThreeFingerSwipesForAdaptiveStageModeChanges() {
         val gestures = LauncherSettings().gestures.homeGestures
 
-        assertEquals(LauncherGestureAction.ENTER_TIMESCAPE, gestures.actionFor(HomeGesture.THREE_FINGER_UP))
-        assertEquals(LauncherGestureAction.EXIT_TIMESCAPE, gestures.actionFor(HomeGesture.THREE_FINGER_DOWN))
+        assertEquals(LauncherGestureAction.ENTER_ADAPTIVE_STAGE, gestures.actionFor(HomeGesture.THREE_FINGER_UP))
+        assertEquals(LauncherGestureAction.EXIT_ADAPTIVE_STAGE, gestures.actionFor(HomeGesture.THREE_FINGER_DOWN))
     }
 
     @Test

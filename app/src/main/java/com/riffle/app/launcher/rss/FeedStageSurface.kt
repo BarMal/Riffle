@@ -41,15 +41,15 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
+import com.riffle.app.launcher.AdaptiveStageCardBackground
+import com.riffle.app.launcher.AdaptiveStageCardDetailState
+import com.riffle.app.launcher.AdaptiveStageCardSurface
+import com.riffle.app.launcher.AdaptiveStageDetailRecoveryMessage
 import com.riffle.app.launcher.CardStack
 import com.riffle.app.launcher.CardStackInteraction
-import com.riffle.app.launcher.TimeScapeCardBackground
-import com.riffle.app.launcher.TimeScapeCardDetailState
-import com.riffle.app.launcher.TimeScapeCardSurface
-import com.riffle.app.launcher.TimeScapeDetailRecoveryMessage
-import com.riffle.app.launcher.timeScapeNotificationStackEntries
-import com.riffle.app.launcher.timeScapeRendererCapabilities
-import com.riffle.app.launcher.timeScapeResolvedContentPadding
+import com.riffle.app.launcher.adaptiveStageNotificationStackEntries
+import com.riffle.app.launcher.adaptiveStageRendererCapabilities
+import com.riffle.app.launcher.adaptiveStageResolvedContentPadding
 import com.riffle.app.launcher.transitionDurationMillis
 import com.riffle.core.domain.launcher.cards.CardExpansionPhase
 import com.riffle.core.domain.launcher.cards.CardExpansionState
@@ -63,16 +63,16 @@ import com.riffle.core.domain.launcher.cards.LauncherCardId
 import com.riffle.core.domain.launcher.rss.FeedStage
 import com.riffle.core.domain.launcher.rss.FeedStageId
 import com.riffle.core.domain.launcher.rss.FeedStageLifecycle
-import com.riffle.core.domain.launcher.settings.TimeScapeAppearanceSettings
-import com.riffle.core.domain.launcher.settings.TimeScapeMotion
-import com.riffle.core.domain.launcher.settings.TimeScapeViewportDp
+import com.riffle.core.domain.launcher.settings.AdaptiveStageAppearanceSettings
+import com.riffle.core.domain.launcher.settings.AdaptiveStageMotion
+import com.riffle.core.domain.launcher.settings.AdaptiveStageViewportDp
 import kotlinx.coroutines.delay
 
 /**
  * Renders one reconciled [FeedStage]: honest loading/empty/stale/unavailable/error/profile-locked
  * placeholders, and -- when articles are available -- a focus-only card stack with accessible
- * previous/next navigation and a sanitized detail flow. Mirrors `TimeScapeNotificationStack` and
- * `TimeScapeCardDetailSurface` (`TimeScapeAppStageSurface.kt`/`TimeScapeCardDetailSurface.kt`).
+ * previous/next navigation and a sanitized detail flow. Mirrors `AdaptiveStageNotificationStack` and
+ * `AdaptiveStageCardDetailSurface` (`AdaptiveStageAppStageSurface.kt`/`AdaptiveStageCardDetailSurface.kt`).
  *
  * Artwork is only ever decoded from already-cached local bytes via [artworkLoader]; there is no
  * live network image loader here (see ADR 0001). [browserLauncher] is the only way an article's
@@ -83,7 +83,7 @@ import kotlinx.coroutines.delay
 fun FeedStageSurface(
     stage: FeedStage,
     articles: List<CachedFeedArticle>,
-    appearance: TimeScapeAppearanceSettings,
+    appearance: AdaptiveStageAppearanceSettings,
     globalReducedMotion: Boolean = false,
     artworkLoader: FeedArtworkLoader = EmptyFeedArtworkLoader,
     browserLauncher: FeedArticleBrowserLauncher = NoOpFeedArticleBrowserLauncher,
@@ -113,7 +113,7 @@ fun FeedStageSurface(
         FeedStageLifecycle.ACTIVE, FeedStageLifecycle.STALE ->
             if (cards.isEmpty()) {
                 // A card removed (cache cleared, feed removed) while its detail was open still
-                // gets an explanation here, mirroring TimeScapeEmptyStage's recovery message.
+                // gets an explanation here, mirroring AdaptiveStageEmptyStage's recovery message.
                 FeedStagePlaceholder(
                     FEED_MESSAGE_EMPTY,
                     recoveryMessage = detailState.sourceRemovalMessage,
@@ -168,7 +168,7 @@ private fun FeedStagePlaceholder(
             modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
             style = MaterialTheme.typography.bodyLarge,
         )
-        TimeScapeDetailRecoveryMessage(recoveryMessage)
+        AdaptiveStageDetailRecoveryMessage(recoveryMessage)
     }
 }
 
@@ -177,12 +177,12 @@ private fun FeedStagePlaceholder(
 private fun FeedArticleStack(
     stageId: FeedStageId,
     cards: List<FeedArticleCard>,
-    appearance: TimeScapeAppearanceSettings,
+    appearance: AdaptiveStageAppearanceSettings,
     globalReducedMotion: Boolean,
     isStale: Boolean,
     artworkLoader: FeedArtworkLoader,
     browserLauncher: FeedArticleBrowserLauncher,
-    detailState: TimeScapeCardDetailState,
+    detailState: AdaptiveStageCardDetailState,
     focusedDigest: String?,
     onFocusedDigestChanged: (String?) -> Unit,
     modifier: Modifier,
@@ -224,12 +224,12 @@ private fun FeedArticleStack(
     }
 
     BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
-        val viewport = TimeScapeViewportDp(maxWidth.value.toInt(), maxHeight.value.toInt())
+        val viewport = AdaptiveStageViewportDp(maxWidth.value.toInt(), maxHeight.value.toInt())
         val resolution =
             remember(appearance, globalReducedMotion, viewport) {
                 appearance.resolveCardStack(
                     viewport = viewport,
-                    capabilities = timeScapeRendererCapabilities(),
+                    capabilities = adaptiveStageRendererCapabilities(),
                     globalReducedMotion = globalReducedMotion,
                 )
             }
@@ -259,7 +259,7 @@ private fun FeedArticleStack(
                 ) {
                     CardStack(
                         entries =
-                            timeScapeNotificationStackEntries(
+                            adaptiveStageNotificationStackEntries(
                                 resolution = resolution,
                                 cardCount = cards.size,
                                 activeCardIndex = activeIndex,
@@ -333,16 +333,16 @@ private fun FeedArticleStack(
                             } else {
                                 Modifier
                             }
-                        TimeScapeCardSurface(
+                        AdaptiveStageCardSurface(
                             appearance = appearance,
                             background =
-                                TimeScapeCardBackground(artwork = artwork, appSeed = stageId.feedId.value),
+                                AdaptiveStageCardBackground(artwork = artwork, appSeed = stageId.feedId.value),
                             modifier =
                                 cardModifier.size(
                                     width = resolution.cardWidthDp.dp,
                                     height = resolution.cardHeightDp.dp,
                                 ).then(focusedSemantics),
-                            contentPadding = timeScapeResolvedContentPadding(resolution),
+                            contentPadding = adaptiveStageResolvedContentPadding(resolution),
                         ) {
                             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                 Text(card.title, style = MaterialTheme.typography.titleMedium)
@@ -362,7 +362,7 @@ private fun FeedArticleStack(
                 TextButton(onClick = { detailState.expand(LauncherCardId(activeCard.digest)) }) {
                     Text(FEED_SHOW_DETAILS_LABEL)
                 }
-                TimeScapeDetailRecoveryMessage(detailState.sourceRemovalMessage)
+                AdaptiveStageDetailRecoveryMessage(detailState.sourceRemovalMessage)
             }
         }
     }
@@ -407,12 +407,12 @@ private fun FeedArticleNavigationControls(
 /**
  * Sanitized article detail: title/author/date/summary as plain text only (never a WebView/
  * AndroidView rendering raw HTML), an explicit "Open in browser" action, and Back-to-stage
- * restoration via system Back and an explicit Back button. Mirrors `TimeScapeCardDetailSurface`.
+ * restoration via system Back and an explicit Back button. Mirrors `AdaptiveStageCardDetailSurface`.
  */
 @Composable
 internal fun FeedArticleDetailSurface(
     card: FeedArticleCard,
-    detailState: TimeScapeCardDetailState,
+    detailState: AdaptiveStageCardDetailState,
     browserLauncher: FeedArticleBrowserLauncher,
     onClose: () -> Unit = {},
     modifier: Modifier = Modifier,
@@ -431,7 +431,7 @@ internal fun FeedArticleDetailSurface(
 
 @Composable
 private fun FeedArticleDetailContainer(
-    detailState: TimeScapeCardDetailState,
+    detailState: AdaptiveStageCardDetailState,
     onClose: () -> Unit,
     modifier: Modifier,
     content: @Composable () -> Unit,
@@ -482,22 +482,22 @@ private fun FeedArticleDetailContainer(
 
 /**
  * Transient, saveable detail ownership for one visible feed stage. Reuses the framework-generic
- * [TimeScapeCardDetailState] (it is keyed only on card/expansion state, not on `AppStageId`) so the
+ * [AdaptiveStageCardDetailState] (it is keyed only on card/expansion state, not on `AppStageId`) so the
  * expand/collapse/reconcile policy stays identical to the app-stage detail flow.
  */
 @Composable
 internal fun rememberFeedCardDetailState(
     stageId: FeedStageId,
-    motion: TimeScapeMotion,
+    motion: AdaptiveStageMotion,
     globalReducedMotion: Boolean = false,
-): TimeScapeCardDetailState {
+): AdaptiveStageCardDetailState {
     var expansion by
         rememberSaveable(stageId.feedId.value, stateSaver = FeedCardExpansionStateSaver) {
             mutableStateOf(CardExpansionState())
         }
     var recoveryMessage by rememberSaveable(stageId.feedId.value) { mutableStateOf<String?>(null) }
     return remember(stageId, motion, globalReducedMotion) {
-        TimeScapeCardDetailState(
+        AdaptiveStageCardDetailState(
             currentExpansion = { expansion },
             updateExpansion = { expansion = it },
             currentRecoveryMessage = { recoveryMessage },

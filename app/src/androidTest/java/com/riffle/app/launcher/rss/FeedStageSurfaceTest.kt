@@ -24,7 +24,7 @@ import com.riffle.core.domain.launcher.rss.FeedStage
 import com.riffle.core.domain.launcher.rss.FeedStageId
 import com.riffle.core.domain.launcher.rss.FeedStageItem
 import com.riffle.core.domain.launcher.rss.FeedStageLifecycle
-import com.riffle.core.domain.launcher.settings.TimeScapeAppearanceSettings
+import com.riffle.core.domain.launcher.settings.AdaptiveStageAppearanceSettings
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -40,7 +40,7 @@ class FeedStageSurfaceTest {
                 FeedStageSurface(
                     stage = stage(FeedStageLifecycle.ACTIVE, listOf(item(1))),
                     articles = listOf(article(digest(1), title = "Only article", summary = "Body text")),
-                    appearance = TimeScapeAppearanceSettings(),
+                    appearance = AdaptiveStageAppearanceSettings(),
                 )
             }
         }
@@ -62,7 +62,7 @@ class FeedStageSurfaceTest {
                 FeedStageSurface(
                     stage = stage(FeedStageLifecycle.ACTIVE, listOf(item(1))),
                     articles = listOf(article(digest(1), title = "Artwork article")),
-                    appearance = TimeScapeAppearanceSettings(),
+                    appearance = AdaptiveStageAppearanceSettings(),
                     artworkLoader = loader,
                 )
             }
@@ -88,7 +88,7 @@ class FeedStageSurfaceTest {
                             article(digest(1), title = "Newest article"),
                             article(digest(2), title = "Older article"),
                         ),
-                    appearance = TimeScapeAppearanceSettings(),
+                    appearance = AdaptiveStageAppearanceSettings(),
                 )
             }
         }
@@ -109,7 +109,7 @@ class FeedStageSurfaceTest {
                             article(digest(1), title = "First article"),
                             article(digest(2), title = "Second article"),
                         ),
-                    appearance = TimeScapeAppearanceSettings(),
+                    appearance = AdaptiveStageAppearanceSettings(),
                 )
             }
         }
@@ -135,7 +135,7 @@ class FeedStageSurfaceTest {
                                 summary = "<p>Body &amp; more</p><script>evil()</script>",
                             ),
                         ),
-                    appearance = TimeScapeAppearanceSettings(),
+                    appearance = AdaptiveStageAppearanceSettings(),
                 )
             }
         }
@@ -158,7 +158,7 @@ class FeedStageSurfaceTest {
                     stage = stage(FeedStageLifecycle.ACTIVE, listOf(item(1))),
                     articles =
                         listOf(article(digest(1), canonicalUrl = "https://example.com/article")),
-                    appearance = TimeScapeAppearanceSettings(),
+                    appearance = AdaptiveStageAppearanceSettings(),
                     browserLauncher = launcher,
                 )
             }
@@ -179,7 +179,7 @@ class FeedStageSurfaceTest {
                 FeedStageSurface(
                     stage = stage(FeedStageLifecycle.ACTIVE, listOf(item(1))),
                     articles = listOf(article(digest(1), canonicalUrl = null)),
-                    appearance = TimeScapeAppearanceSettings(),
+                    appearance = AdaptiveStageAppearanceSettings(),
                 )
             }
         }
@@ -196,7 +196,7 @@ class FeedStageSurfaceTest {
                 FeedStageSurface(
                     stage = stage(FeedStageLifecycle.ACTIVE, listOf(item(1))),
                     articles = listOf(article(digest(1), title = "Only article")),
-                    appearance = TimeScapeAppearanceSettings(),
+                    appearance = AdaptiveStageAppearanceSettings(),
                 )
             }
         }
@@ -219,7 +219,7 @@ class FeedStageSurfaceTest {
                 FeedStageSurface(
                     stage = stage(FeedStageLifecycle.ACTIVE, listOf(item(1))),
                     articles = articles,
-                    appearance = TimeScapeAppearanceSettings(),
+                    appearance = AdaptiveStageAppearanceSettings(),
                 )
             }
         }
@@ -252,7 +252,7 @@ class FeedStageSurfaceTest {
                             FeedStageSurface(
                                 stage = stage(lifecycle, emptyList()),
                                 articles = emptyList(),
-                                appearance = TimeScapeAppearanceSettings(),
+                                appearance = AdaptiveStageAppearanceSettings(),
                             )
                         }
                     }
@@ -270,7 +270,7 @@ class FeedStageSurfaceTest {
                 FeedStageSurface(
                     stage = stage(FeedStageLifecycle.STALE, listOf(item(1))),
                     articles = listOf(article(digest(1), title = "Stale article")),
-                    appearance = TimeScapeAppearanceSettings(),
+                    appearance = AdaptiveStageAppearanceSettings(),
                 )
             }
         }
@@ -287,7 +287,7 @@ class FeedStageSurfaceTest {
                     // Item references a digest with no matching cached article -- e.g. evicted.
                     stage = stage(FeedStageLifecycle.ACTIVE, listOf(item(1))),
                     articles = emptyList(),
-                    appearance = TimeScapeAppearanceSettings(),
+                    appearance = AdaptiveStageAppearanceSettings(),
                 )
             }
         }

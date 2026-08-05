@@ -7,8 +7,8 @@ import kotlin.test.assertTrue
 
 class DockGestureSettingsTest {
     @Test
-    fun defaultsToExitingTimescapeOnSwipeUp() {
-        assertEquals(LauncherGestureAction.EXIT_TIMESCAPE, DockGestureSettings().swipeUp)
+    fun defaultsToExitingAdaptiveStageOnSwipeUp() {
+        assertEquals(LauncherGestureAction.EXIT_ADAPTIVE_STAGE, DockGestureSettings().swipeUp)
     }
 
     @Test
@@ -16,7 +16,7 @@ class DockGestureSettingsTest {
         assertEquals(
             setOf(
                 LauncherGestureAction.NONE,
-                LauncherGestureAction.EXIT_TIMESCAPE,
+                LauncherGestureAction.EXIT_ADAPTIVE_STAGE,
                 LauncherGestureAction.OPEN_APP_DRAWER,
             ),
             DockGestureSettings.ALLOWED_SWIPE_UP_ACTIONS,

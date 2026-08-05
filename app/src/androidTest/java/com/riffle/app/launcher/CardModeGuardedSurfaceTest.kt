@@ -24,7 +24,7 @@ import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppProfile
 import com.riffle.core.domain.launcher.apps.AppProfileContentVisibility
 import com.riffle.core.domain.launcher.apps.InstalledApp
-import com.riffle.core.domain.launcher.cards.TimeScapeWindowLayout
+import com.riffle.core.domain.launcher.cards.AdaptiveStageWindowLayout
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.FolderItem
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
@@ -50,14 +50,14 @@ class CardModeGuardedSurfaceTest {
     val composeRule = createComposeRule()
 
     @Test
-    fun launcherShellRoutesCardModeToTimeScapeAndRecoversToStandard() {
+    fun launcherShellRoutesCardModeToAdaptiveStageAndRecoversToStandard() {
         var state by mutableStateOf(cardsState(NotificationAccessStatus.GRANTED))
 
         composeRule.setContent {
             LauncherShellContent(
                 state = state,
                 appIconLoader = EmptyAppIconLoader,
-                timeScapeWindowLayout = TimeScapeWindowLayout(widthDp = 0, heightDp = 0),
+                adaptiveStageWindowLayout = AdaptiveStageWindowLayout(widthDp = 0, heightDp = 0),
                 onAction = {},
             )
         }
@@ -93,7 +93,7 @@ class CardModeGuardedSurfaceTest {
             LauncherShellContent(
                 state = state,
                 appIconLoader = EmptyAppIconLoader,
-                timeScapeWindowLayout = TimeScapeWindowLayout(widthDp = 0, heightDp = 0),
+                adaptiveStageWindowLayout = AdaptiveStageWindowLayout(widthDp = 0, heightDp = 0),
                 onAction = {},
             )
         }
@@ -117,7 +117,7 @@ class CardModeGuardedSurfaceTest {
     }
 
     @Test
-    fun launcherShellCardModeShowsTheFocusedTimeScapeCardStack() {
+    fun launcherShellCardModeShowsTheFocusedAdaptiveStageCardStack() {
         composeRule.setContent {
             LauncherShellContent(
                 state = cardsState(NotificationAccessStatus.GRANTED, groups = listOf(notificationGroup())),
@@ -170,7 +170,7 @@ class CardModeGuardedSurfaceTest {
     }
 
     @Test
-    fun cardModeDockReceivesPhysicalTapWithAnActiveTimeScapeStage() {
+    fun cardModeDockReceivesPhysicalTapWithAnActiveAdaptiveStageStage() {
         val app = cardsHomeApp()
         val shortcut =
             AppShortcutItem(
@@ -201,12 +201,12 @@ class CardModeGuardedSurfaceTest {
             LauncherShellContent(
                 state = state,
                 appIconLoader = EmptyAppIconLoader,
-                timeScapeWindowLayout = TimeScapeWindowLayout(widthDp = 360, heightDp = 640),
+                adaptiveStageWindowLayout = AdaptiveStageWindowLayout(widthDp = 360, heightDp = 640),
                 onAction = actions::add,
             )
         }
 
-        composeRule.onNodeWithTag(TIME_SCAPE_STAGE_HEADER_TEST_TAG).assertIsDisplayed()
+        composeRule.onNodeWithTag(ADAPTIVE_STAGE_STAGE_HEADER_TEST_TAG).assertIsDisplayed()
         composeRule.onNodeWithTag(dockItemTestTag(shortcut.id)).performTouchInput { click() }
 
         composeRule.runOnIdle {
@@ -215,7 +215,7 @@ class CardModeGuardedSurfaceTest {
     }
 
     @Test
-    fun cardModeExpandedDockShelfWithBottomMarginReceivesPhysicalTapWithAnActiveTimeScapeStage() {
+    fun cardModeExpandedDockShelfWithBottomMarginReceivesPhysicalTapWithAnActiveAdaptiveStageStage() {
         val primary = cardsHomeApp(packageName = "com.example.camera")
         val overflow = cardsHomeApp(packageName = "com.example.photos")
         val primaryShortcut =
@@ -264,12 +264,12 @@ class CardModeGuardedSurfaceTest {
             LauncherShellContent(
                 state = state,
                 appIconLoader = EmptyAppIconLoader,
-                timeScapeWindowLayout = TimeScapeWindowLayout(widthDp = 360, heightDp = 640),
+                adaptiveStageWindowLayout = AdaptiveStageWindowLayout(widthDp = 360, heightDp = 640),
                 onAction = actions::add,
             )
         }
 
-        composeRule.onNodeWithTag(TIME_SCAPE_STAGE_HEADER_TEST_TAG).assertIsDisplayed()
+        composeRule.onNodeWithTag(ADAPTIVE_STAGE_STAGE_HEADER_TEST_TAG).assertIsDisplayed()
         composeRule.onNodeWithTag(dockItemTestTag(primaryShortcut.id)).performTouchInput {
             down(center)
             moveBy(Offset(0f, -24f))
@@ -324,7 +324,7 @@ class CardModeGuardedSurfaceTest {
     }
 
     @Test
-    fun cardModeKeepsTimeScapeCardDetailsInteractiveAlongsideTheDock() {
+    fun cardModeKeepsAdaptiveStageCardDetailsInteractiveAlongsideTheDock() {
         composeRule.setContent {
             LauncherShellContent(
                 state = cardsState(NotificationAccessStatus.GRANTED, groups = listOf(notificationGroup())),

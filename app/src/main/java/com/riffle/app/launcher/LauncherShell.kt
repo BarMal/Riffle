@@ -46,8 +46,8 @@ import com.riffle.core.domain.launcher.apps.AppActivityName
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.InstalledApp
-import com.riffle.core.domain.launcher.cards.TimeScapeInteractionContext
-import com.riffle.core.domain.launcher.cards.TimeScapeWindowLayout
+import com.riffle.core.domain.launcher.cards.AdaptiveStageInteractionContext
+import com.riffle.core.domain.launcher.cards.AdaptiveStageWindowLayout
 import com.riffle.core.domain.launcher.home.DockEditRejectionReason
 import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.home.LauncherViewModeAvailability
@@ -62,12 +62,12 @@ fun LauncherShell(
     appBuildIdentityLabel: String,
     appIconLoader: AppIconLoader = EmptyAppIconLoader,
     widgetRenderers: LauncherWidgetRenderers = LauncherWidgetRenderers(),
-    timeScapeWindowLayout: TimeScapeWindowLayout? = null,
+    adaptiveStageWindowLayout: AdaptiveStageWindowLayout? = null,
     onAction: (LauncherShellAction) -> Unit,
 ) {
     val state by viewModel.state.collectAsState()
-    var timeScapeContext by rememberSaveable(stateSaver = TimeScapeInteractionContextSaver) {
-        mutableStateOf(TimeScapeInteractionContext())
+    var adaptiveStageContext by rememberSaveable(stateSaver = AdaptiveStageInteractionContextSaver) {
+        mutableStateOf(AdaptiveStageInteractionContext())
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -77,9 +77,9 @@ fun LauncherShell(
             appInfo = LauncherShellAppInfo(appVersionLabel, appBuildIdentityLabel),
             appIconLoader = appIconLoader,
             widgetRenderers = widgetRenderers,
-            timeScapeWindowLayout = timeScapeWindowLayout,
-            timeScapeContext = timeScapeContext,
-            onTimeScapeContextChanged = { timeScapeContext = it },
+            adaptiveStageWindowLayout = adaptiveStageWindowLayout,
+            adaptiveStageContext = adaptiveStageContext,
+            onAdaptiveStageContextChanged = { adaptiveStageContext = it },
             onAction = onAction,
             onSetupCardDismissed = viewModel::onSetupCardDismissed,
             onDockEditFeedbackDismissed = viewModel::onDockEditFeedbackDismissed,
@@ -94,12 +94,12 @@ fun LauncherShellContent(
     appInfo: LauncherShellAppInfo = LauncherShellAppInfo(),
     appIconLoader: AppIconLoader = EmptyAppIconLoader,
     widgetRenderers: LauncherWidgetRenderers = LauncherWidgetRenderers(),
-    timeScapeWindowLayout: TimeScapeWindowLayout? = null,
+    adaptiveStageWindowLayout: AdaptiveStageWindowLayout? = null,
     onAction: (LauncherShellAction) -> Unit,
     onSetupCardDismissed: () -> Unit = {},
     onDockEditFeedbackDismissed: () -> Unit = {},
-    timeScapeContext: TimeScapeInteractionContext = TimeScapeInteractionContext(),
-    onTimeScapeContextChanged: (TimeScapeInteractionContext) -> Unit = {},
+    adaptiveStageContext: AdaptiveStageInteractionContext = AdaptiveStageInteractionContext(),
+    onAdaptiveStageContextChanged: (AdaptiveStageInteractionContext) -> Unit = {},
 ) {
     val haptics = rememberLauncherHaptics(state.launcherSettings.haptics.feedbackStrength)
 
@@ -117,7 +117,7 @@ fun LauncherShellContent(
         themeColors = state.launcherSettings.appearance.themeColors,
         themeCornerStyle = state.launcherSettings.appearance.themeCornerStyle,
         themeTypography = state.launcherSettings.appearance.themeTypography,
-        reducedTransparency = state.launcherSettings.cards.timeScapeAppearance.motion.reducedTransparency,
+        reducedTransparency = state.launcherSettings.cards.adaptiveStageAppearance.motion.reducedTransparency,
     ) {
         val usesSystemWallpaper =
             state.launcherSettings.appearance.wallpaper.source == WallpaperSource.SYSTEM &&
@@ -144,9 +144,9 @@ fun LauncherShellContent(
                     ),
                 appIconLoader = appIconLoader,
                 widgetRenderers = widgetRenderers,
-                timeScapeWindowLayout = timeScapeWindowLayout,
-                timeScapeContext = timeScapeContext,
-                onTimeScapeContextChanged = onTimeScapeContextChanged,
+                adaptiveStageWindowLayout = adaptiveStageWindowLayout,
+                adaptiveStageContext = adaptiveStageContext,
+                onAdaptiveStageContextChanged = onAdaptiveStageContextChanged,
                 haptics = haptics,
                 onAction = onAction,
             )
@@ -209,7 +209,7 @@ private fun DockEditRejectionMessage(
  * System Back returns from any non-Home destination to Home, and separately switches Cards mode
  * back to Standard Home when Home itself is showing the Cards overlay. Both handlers are
  * mutually exclusive on [state.destination][LauncherShellState.destination], so ordering between
- * them never matters; a focused/expanded TimeScape card unwinds first via its own nested
+ * them never matters; a focused/expanded AdaptiveStage card unwinds first via its own nested
  * BackHandler, which composes later and therefore takes priority over both of these.
  */
 @Composable
@@ -241,8 +241,8 @@ internal fun shouldExitCardsModeOnBackPress(
     viewMode: LauncherViewMode,
 ): Boolean = destination == ShellDestination.HOME && viewMode.homeSurfaceKind() == HomeSurfaceKind.CARDS
 
-internal val TimeScapeInteractionContextSaver =
-    Saver<TimeScapeInteractionContext, List<String>>(
+internal val AdaptiveStageInteractionContextSaver =
+    Saver<AdaptiveStageInteractionContext, List<String>>(
         save = { context ->
             listOf(
                 context.selectedStageKey.orEmpty(),
@@ -255,7 +255,7 @@ internal val TimeScapeInteractionContextSaver =
         },
         restore = { saved ->
             if (saved.size >= 6) {
-                TimeScapeInteractionContext(
+                AdaptiveStageInteractionContext(
                     selectedStageKey = saved.getOrNull(0)?.takeIf(String::isNotBlank),
                     detailStageKey = saved.getOrNull(1)?.takeIf(String::isNotBlank),
                     focusedCardKey = saved.getOrNull(2)?.takeIf(String::isNotBlank),
@@ -264,7 +264,7 @@ internal val TimeScapeInteractionContextSaver =
                     scrollOffsetPx = saved.getOrNull(5)?.toIntOrNull() ?: 0,
                 )
             } else {
-                TimeScapeInteractionContext(
+                AdaptiveStageInteractionContext(
                     selectedStageKey = saved.getOrNull(0)?.takeIf(String::isNotBlank),
                     focusedCardKey = saved.getOrNull(1)?.takeIf(String::isNotBlank),
                     detailCardKey = saved.getOrNull(2)?.takeIf(String::isNotBlank),
@@ -409,9 +409,9 @@ private fun LauncherDestination(
     settingsState: SettingsSurfaceState,
     appIconLoader: AppIconLoader,
     widgetRenderers: LauncherWidgetRenderers,
-    timeScapeWindowLayout: TimeScapeWindowLayout?,
-    timeScapeContext: TimeScapeInteractionContext,
-    onTimeScapeContextChanged: (TimeScapeInteractionContext) -> Unit,
+    adaptiveStageWindowLayout: AdaptiveStageWindowLayout?,
+    adaptiveStageContext: AdaptiveStageInteractionContext,
+    onAdaptiveStageContextChanged: (AdaptiveStageInteractionContext) -> Unit,
     haptics: LauncherHaptics,
     onAction: (LauncherShellAction) -> Unit,
 ) {
@@ -423,9 +423,9 @@ private fun LauncherDestination(
                 state = state,
                 appIconLoader = appIconLoader,
                 widgetRenderers = widgetRenderers,
-                timeScapeWindowLayout = timeScapeWindowLayout,
-                timeScapeContext = timeScapeContext,
-                onTimeScapeContextChanged = onTimeScapeContextChanged,
+                adaptiveStageWindowLayout = adaptiveStageWindowLayout,
+                adaptiveStageContext = adaptiveStageContext,
+                onAdaptiveStageContextChanged = onAdaptiveStageContextChanged,
                 haptics = haptics,
                 onAction = settingsPageActionRouter.onAction,
             )

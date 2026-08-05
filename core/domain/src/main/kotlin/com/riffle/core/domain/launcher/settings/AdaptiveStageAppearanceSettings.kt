@@ -10,20 +10,20 @@ import kotlin.math.min
 import kotlin.math.sin
 
 /**
- * Versioned, renderer-independent appearance intent for the optional TimeScape card surface.
+ * Versioned, renderer-independent appearance intent for the optional AdaptiveStage card surface.
  * Values are always normalized through [coerce] before persistence or use.
  */
-data class TimeScapeAppearanceSettings(
-    val version: Int = CURRENT_TIMESCAPE_APPEARANCE_VERSION,
-    val preset: TimeScapeAppearancePreset = TimeScapeAppearancePreset.MODERN_TIMESCAPE,
-    val geometry: TimeScapeGeometry = TimeScapeGeometry(),
-    val surface: TimeScapeSurface = TimeScapeSurface(),
-    val typography: TimeScapeTypography = TimeScapeTypography(),
-    val motion: TimeScapeMotion = TimeScapeMotion(),
+data class AdaptiveStageAppearanceSettings(
+    val version: Int = CURRENT_ADAPTIVE_STAGE_APPEARANCE_VERSION,
+    val preset: AdaptiveStageAppearancePreset = AdaptiveStageAppearancePreset.MODERN_ADAPTIVE_STAGE,
+    val geometry: AdaptiveStageGeometry = AdaptiveStageGeometry(),
+    val surface: AdaptiveStageSurface = AdaptiveStageSurface(),
+    val typography: AdaptiveStageTypography = AdaptiveStageTypography(),
+    val motion: AdaptiveStageMotion = AdaptiveStageMotion(),
 ) {
-    fun coerce(): TimeScapeAppearanceSettings =
+    fun coerce(): AdaptiveStageAppearanceSettings =
         copy(
-            version = version.coerceIn(1, CURRENT_TIMESCAPE_APPEARANCE_VERSION),
+            version = version.coerceIn(1, CURRENT_ADAPTIVE_STAGE_APPEARANCE_VERSION),
             geometry = geometry.coerce(),
             surface = surface.coerce(),
             typography = typography.coerce(),
@@ -31,13 +31,13 @@ data class TimeScapeAppearanceSettings(
         )
 
     /** Applies all preset values in one immutable update. */
-    fun applyPreset(preset: TimeScapeAppearancePreset): TimeScapeAppearanceSettings = preset.settings
+    fun applyPreset(preset: AdaptiveStageAppearancePreset): AdaptiveStageAppearanceSettings = preset.settings
 
     /** Reset has one stable result regardless of the current customisation. */
-    fun reset(): TimeScapeAppearanceSettings = modern()
+    fun reset(): AdaptiveStageAppearanceSettings = modern()
 
     /** Resolves platform limitations without rewriting the stored user preference. */
-    fun effectiveFor(capabilities: TimeScapeRendererCapabilities): TimeScapeAppearanceSettings =
+    fun effectiveFor(capabilities: AdaptiveStageRendererCapabilities): AdaptiveStageAppearanceSettings =
         coerce().let { settings ->
             settings.copy(
                 surface =
@@ -65,7 +65,7 @@ data class TimeScapeAppearanceSettings(
                             enterDurationMillis = 0,
                             exitDurationMillis = 0,
                             expandDurationMillis = 0,
-                            easing = TimeScapeEasing.STANDARD,
+                            easing = AdaptiveStageEasing.STANDARD,
                             springBouncinessPercent = 0,
                             travelIntensityPercent = 0,
                             parallaxIntensityPercent = 0,
@@ -84,10 +84,10 @@ data class TimeScapeAppearanceSettings(
      */
     @Suppress("LongMethod")
     fun resolveCardStack(
-        viewport: TimeScapeViewportDp,
-        capabilities: TimeScapeRendererCapabilities = TimeScapeRendererCapabilities(),
+        viewport: AdaptiveStageViewportDp,
+        capabilities: AdaptiveStageRendererCapabilities = AdaptiveStageRendererCapabilities(),
         globalReducedMotion: Boolean = false,
-    ): TimeScapeCardStackResolution {
+    ): AdaptiveStageCardStackResolution {
         val appearance = effectiveForResolution(capabilities, globalReducedMotion)
         val focusedScale = appearance.geometry.focusedScalePercent / 100f
         val stackBounds = resolveStackBounds(appearance.geometry, appearance.motion, focusedScale)
@@ -102,9 +102,9 @@ data class TimeScapeAppearanceSettings(
         val motionScale = appearance.motion.travelIntensityPercent / 100f
         val offsetDirection =
             when (appearance.geometry.fanDirection) {
-                TimeScapeFanDirection.NONE -> 0f
-                TimeScapeFanDirection.START -> -1f
-                TimeScapeFanDirection.END -> 1f
+                AdaptiveStageFanDirection.NONE -> 0f
+                AdaptiveStageFanDirection.START -> -1f
+                AdaptiveStageFanDirection.END -> 1f
             }
         val focusedGap =
             if (offsetDirection == 0f) {
@@ -146,7 +146,7 @@ data class TimeScapeAppearanceSettings(
                 reducedMotionOffsetStep = 0f,
             )
         val animated = !appearance.motion.reducedMotion && isUsable
-        return TimeScapeCardStackResolution(
+        return AdaptiveStageCardStackResolution(
             isUsable = isUsable,
             cardWidthDp = cardSize.widthDp,
             cardHeightDp = cardSize.heightDp,
@@ -174,39 +174,39 @@ data class TimeScapeAppearanceSettings(
     }
 
     companion object {
-        fun modern(): TimeScapeAppearanceSettings = TimeScapeAppearancePreset.MODERN_TIMESCAPE.settings
+        fun modern(): AdaptiveStageAppearanceSettings = AdaptiveStageAppearancePreset.MODERN_ADAPTIVE_STAGE.settings
     }
 }
 
-private fun TimeScapeEasing.cardStackEasing(): CardStackAnimationEasing =
+private fun AdaptiveStageEasing.cardStackEasing(): CardStackAnimationEasing =
     when (this) {
-        TimeScapeEasing.STANDARD -> CardStackAnimationEasing.STANDARD
-        TimeScapeEasing.EMPHASIZED -> CardStackAnimationEasing.EMPHASIZED
-        TimeScapeEasing.GENTLE_SPRING -> CardStackAnimationEasing.GENTLE_SPRING
+        AdaptiveStageEasing.STANDARD -> CardStackAnimationEasing.STANDARD
+        AdaptiveStageEasing.EMPHASIZED -> CardStackAnimationEasing.EMPHASIZED
+        AdaptiveStageEasing.GENTLE_SPRING -> CardStackAnimationEasing.GENTLE_SPRING
     }
 
-private fun TimeScapeAppearanceSettings.effectiveForResolution(
-    capabilities: TimeScapeRendererCapabilities,
+private fun AdaptiveStageAppearanceSettings.effectiveForResolution(
+    capabilities: AdaptiveStageRendererCapabilities,
     globalReducedMotion: Boolean,
-): TimeScapeAppearanceSettings =
+): AdaptiveStageAppearanceSettings =
     copy(motion = motion.copy(reducedMotion = motion.reducedMotion || globalReducedMotion))
         .effectiveFor(capabilities)
 
-private fun TimeScapeAppearanceSettings.staticVerticalSeparationDp(): Int =
+private fun AdaptiveStageAppearanceSettings.staticVerticalSeparationDp(): Int =
     if (motion.reducedMotion) {
         geometry.verticalSpacingDp * geometry.visibleDepth
     } else {
         0
     }
 
-private fun TimeScapeAppearanceSettings.hasReachableStackLayout(): Boolean {
+private fun AdaptiveStageAppearanceSettings.hasReachableStackLayout(): Boolean {
     return !motion.reducedMotion || geometry.verticalSpacingDp > 0
 }
 
-private fun TimeScapeAppearanceSettings.resolveCardSize(
-    viewport: TimeScapeViewportDp,
-    stackBounds: ResolvedTimeScapeStackBounds,
-): ResolvedTimeScapeCardSize =
+private fun AdaptiveStageAppearanceSettings.resolveCardSize(
+    viewport: AdaptiveStageViewportDp,
+    stackBounds: ResolvedAdaptiveStageStackBounds,
+): ResolvedAdaptiveStageCardSize =
     resolveCardSize(
         viewport = viewport,
         requestedPadding = geometry.contentPaddingDp,
@@ -216,12 +216,12 @@ private fun TimeScapeAppearanceSettings.resolveCardSize(
     )
 
 private fun resolveCardSize(
-    viewport: TimeScapeViewportDp,
+    viewport: AdaptiveStageViewportDp,
     requestedPadding: Int,
-    geometry: TimeScapeGeometry,
-    stackBounds: ResolvedTimeScapeStackBounds,
+    geometry: AdaptiveStageGeometry,
+    stackBounds: ResolvedAdaptiveStageStackBounds,
     reservedVerticalSpaceDp: Int = 0,
-): ResolvedTimeScapeCardSize {
+): ResolvedAdaptiveStageCardSize {
     val availableWidth = (viewport.safeWidthDp - requestedPadding * 2).coerceAtLeast(0)
     val availableHeight =
         (viewport.safeHeightDp - requestedPadding * 2 - reservedVerticalSpaceDp).coerceAtLeast(0)
@@ -230,7 +230,7 @@ private fun resolveCardSize(
     val height = if (aspectRatio == 0f) 0 else (width / aspectRatio).toInt()
     val focusedWidth = ceil(width * stackBounds.focusedScale).toInt()
     val focusedHeight = ceil(height * stackBounds.focusedScale).toInt()
-    return ResolvedTimeScapeCardSize(
+    return ResolvedAdaptiveStageCardSize(
         widthDp = width,
         heightDp = height,
         focusedWidthDp = focusedWidth,
@@ -240,12 +240,12 @@ private fun resolveCardSize(
 }
 
 private fun resolveStackBounds(
-    geometry: TimeScapeGeometry,
-    motion: TimeScapeMotion,
+    geometry: AdaptiveStageGeometry,
+    motion: AdaptiveStageMotion,
     focusedScale: Float,
-): ResolvedTimeScapeStackBounds {
+): ResolvedAdaptiveStageStackBounds {
     val depth = geometry.visibleDepth
-    val scaleStep = (1f - MIN_TIMESCAPE_BACKGROUND_CARD_SCALE) / depth
+    val scaleStep = (1f - MIN_ADAPTIVE_STAGE_BACKGROUND_CARD_SCALE) / depth
     val rotationStep = geometry.rotationDegrees * motion.rotationIntensityPercent / 100f
     val aspectRatio = geometry.cardAspectRatioPercent / 100f
     var maxWidthScale = focusedScale
@@ -258,7 +258,7 @@ private fun resolveStackBounds(
         maxWidthScale = maxOf(maxWidthScale, scale * (cosine + absoluteSine / aspectRatio))
         maxHeightScale = maxOf(maxHeightScale, scale * (absoluteSine + cosine / aspectRatio))
     }
-    return ResolvedTimeScapeStackBounds(
+    return ResolvedAdaptiveStageStackBounds(
         focusedScale = focusedScale,
         scaleStep = scaleStep,
         rotationStep = rotationStep,
@@ -267,7 +267,7 @@ private fun resolveStackBounds(
     )
 }
 
-private data class ResolvedTimeScapeStackBounds(
+private data class ResolvedAdaptiveStageStackBounds(
     val focusedScale: Float,
     val scaleStep: Float,
     val rotationStep: Float,
@@ -275,7 +275,7 @@ private data class ResolvedTimeScapeStackBounds(
     val maxHeightScale: Float,
 )
 
-private data class ResolvedTimeScapeCardSize(
+private data class ResolvedAdaptiveStageCardSize(
     val widthDp: Int,
     val heightDp: Int,
     val focusedWidthDp: Int,
@@ -284,21 +284,21 @@ private data class ResolvedTimeScapeCardSize(
 ) {
     val isUsable: Boolean
         get() =
-            focusedWidthDp >= MIN_TIMESCAPE_REACHABLE_CARD_WIDTH_DP &&
-                focusedHeightDp >= MIN_TIMESCAPE_REACHABLE_CARD_HEIGHT_DP &&
+            focusedWidthDp >= MIN_ADAPTIVE_STAGE_REACHABLE_CARD_WIDTH_DP &&
+                focusedHeightDp >= MIN_ADAPTIVE_STAGE_REACHABLE_CARD_HEIGHT_DP &&
                 fitsAvailableSpace
 }
 
-data class TimeScapeViewportDp(
+data class AdaptiveStageViewportDp(
     val widthDp: Int,
     val heightDp: Int,
-    val insets: TimeScapeInsetsDp = TimeScapeInsetsDp(),
+    val insets: AdaptiveStageInsetsDp = AdaptiveStageInsetsDp(),
 ) {
     val safeWidthDp: Int get() = (widthDp - insets.startDp - insets.endDp).coerceAtLeast(0)
     val safeHeightDp: Int get() = (heightDp - insets.topDp - insets.bottomDp).coerceAtLeast(0)
 }
 
-data class TimeScapeInsetsDp(
+data class AdaptiveStageInsetsDp(
     val startDp: Int = 0,
     val topDp: Int = 0,
     val endDp: Int = 0,
@@ -306,7 +306,7 @@ data class TimeScapeInsetsDp(
 )
 
 /** Renderer contract joining appearance intent to the existing stack layout and animation APIs. */
-data class TimeScapeCardStackResolution(
+data class AdaptiveStageCardStackResolution(
     val isUsable: Boolean,
     val cardWidthDp: Int,
     val cardHeightDp: Int,
@@ -317,39 +317,39 @@ data class TimeScapeCardStackResolution(
     val animation: CardStackAnimationSpec,
 )
 
-enum class TimeScapeAppearancePreset {
-    MODERN_TIMESCAPE,
+enum class AdaptiveStageAppearancePreset {
+    MODERN_ADAPTIVE_STAGE,
     FLAT_REDUCED_DEPTH,
     WARM_GLASS,
     ;
 
-    internal val settings: TimeScapeAppearanceSettings
+    internal val settings: AdaptiveStageAppearanceSettings
         get() =
             when (this) {
-                MODERN_TIMESCAPE -> TimeScapeAppearanceSettings(preset = this)
+                MODERN_ADAPTIVE_STAGE -> AdaptiveStageAppearanceSettings(preset = this)
                 FLAT_REDUCED_DEPTH ->
-                    TimeScapeAppearanceSettings(
+                    AdaptiveStageAppearanceSettings(
                         preset = this,
                         geometry =
-                            TimeScapeGeometry(
+                            AdaptiveStageGeometry(
                                 visibleDepth = 2,
                                 focusedScalePercent = 100,
                                 overlapPercent = 0,
                                 horizontalOffsetDp = 0,
                                 curveDp = 0,
-                                fanDirection = TimeScapeFanDirection.NONE,
+                                fanDirection = AdaptiveStageFanDirection.NONE,
                                 rotationDegrees = 0,
                             ),
                         surface =
-                            TimeScapeSurface(
-                                backgroundSource = TimeScapeBackgroundSource.SYSTEM_WALLPAPER_ACCENT,
+                            AdaptiveStageSurface(
+                                backgroundSource = AdaptiveStageBackgroundSource.SYSTEM_WALLPAPER_ACCENT,
                                 glassTransparencyPercent = 0,
                                 blurStrengthPercent = 0,
                                 shadowElevationDp = 0,
                                 textureIntensityPercent = 0,
                             ),
                         motion =
-                            TimeScapeMotion(
+                            AdaptiveStageMotion(
                                 travelIntensityPercent = 0,
                                 parallaxIntensityPercent = 0,
                                 rotationIntensityPercent = 0,
@@ -357,14 +357,14 @@ enum class TimeScapeAppearancePreset {
                     )
                 // A warm, translucent glass treatment modeled on the Calm prototype's palette
                 // (CalmTheme.kt: near-black surfaces, a warm tan accent, and a heavier glass/blur
-                // layer than MODERN_TIMESCAPE) -- an opt-in preset rather than a change to the
+                // layer than MODERN_ADAPTIVE_STAGE) -- an opt-in preset rather than a change to the
                 // shipped default, so it's directly comparable against the other two.
                 WARM_GLASS ->
-                    TimeScapeAppearanceSettings(
+                    AdaptiveStageAppearanceSettings(
                         preset = this,
                         surface =
-                            TimeScapeSurface(
-                                backgroundSource = TimeScapeBackgroundSource.CUSTOM_SOLID,
+                            AdaptiveStageSurface(
+                                backgroundSource = AdaptiveStageBackgroundSource.CUSTOM_SOLID,
                                 // Calm's SURFACE color (#0C0B10) tinted toward its warm GLASS layer.
                                 customBackgroundArgb = 0xFF14110EL,
                                 glassTransparencyPercent = 58,
@@ -376,8 +376,8 @@ enum class TimeScapeAppearancePreset {
                                 shadowElevationDp = 18,
                             ),
                         typography =
-                            TimeScapeTypography(
-                                accentSource = TimeScapeAccentSource.CUSTOM,
+                            AdaptiveStageTypography(
+                                accentSource = AdaptiveStageAccentSource.CUSTOM,
                                 // Calm's ACCENT color (#C6B597).
                                 customAccentArgb = 0xFFC6B597L,
                             ),
@@ -385,7 +385,7 @@ enum class TimeScapeAppearancePreset {
             }
 }
 
-data class TimeScapeGeometry(
+data class AdaptiveStageGeometry(
     val cardAspectRatioPercent: Int = 72,
     val focusedScalePercent: Int = 100,
     val focusedGapDp: Int = 12,
@@ -394,76 +394,76 @@ data class TimeScapeGeometry(
     val verticalSpacingDp: Int = 8,
     val horizontalOffsetDp: Int = 20,
     val curveDp: Int = 6,
-    val fanDirection: TimeScapeFanDirection = TimeScapeFanDirection.END,
+    val fanDirection: AdaptiveStageFanDirection = AdaptiveStageFanDirection.END,
     val rotationDegrees: Int = 4,
     val cornerRadiusDp: Int = 28,
     val clipContent: Boolean = true,
     val contentPaddingDp: Int = 20,
 ) {
-    fun coerce(): TimeScapeGeometry =
+    fun coerce(): AdaptiveStageGeometry =
         copy(
             cardAspectRatioPercent =
                 cardAspectRatioPercent.coerceIn(
-                    MIN_TIMESCAPE_CARD_ASPECT_RATIO_PERCENT,
-                    MAX_TIMESCAPE_CARD_ASPECT_RATIO_PERCENT,
+                    MIN_ADAPTIVE_STAGE_CARD_ASPECT_RATIO_PERCENT,
+                    MAX_ADAPTIVE_STAGE_CARD_ASPECT_RATIO_PERCENT,
                 ),
             focusedScalePercent =
                 focusedScalePercent.coerceIn(
-                    MIN_TIMESCAPE_FOCUSED_SCALE_PERCENT,
-                    MAX_TIMESCAPE_FOCUSED_SCALE_PERCENT,
+                    MIN_ADAPTIVE_STAGE_FOCUSED_SCALE_PERCENT,
+                    MAX_ADAPTIVE_STAGE_FOCUSED_SCALE_PERCENT,
                 ),
             focusedGapDp =
                 focusedGapDp.coerceIn(
-                    MIN_TIMESCAPE_FOCUSED_GAP_DP,
-                    MAX_TIMESCAPE_FOCUSED_GAP_DP,
+                    MIN_ADAPTIVE_STAGE_FOCUSED_GAP_DP,
+                    MAX_ADAPTIVE_STAGE_FOCUSED_GAP_DP,
                 ),
             visibleDepth =
                 visibleDepth.coerceIn(
-                    MIN_TIMESCAPE_VISIBLE_DEPTH,
-                    MAX_TIMESCAPE_VISIBLE_DEPTH,
+                    MIN_ADAPTIVE_STAGE_VISIBLE_DEPTH,
+                    MAX_ADAPTIVE_STAGE_VISIBLE_DEPTH,
                 ),
             overlapPercent =
                 overlapPercent.coerceIn(
-                    MIN_TIMESCAPE_OVERLAP_PERCENT,
-                    MAX_TIMESCAPE_OVERLAP_PERCENT,
+                    MIN_ADAPTIVE_STAGE_OVERLAP_PERCENT,
+                    MAX_ADAPTIVE_STAGE_OVERLAP_PERCENT,
                 ),
             verticalSpacingDp =
                 verticalSpacingDp.coerceIn(
-                    MIN_TIMESCAPE_VERTICAL_SPACING_DP,
-                    MAX_TIMESCAPE_VERTICAL_SPACING_DP,
+                    MIN_ADAPTIVE_STAGE_VERTICAL_SPACING_DP,
+                    MAX_ADAPTIVE_STAGE_VERTICAL_SPACING_DP,
                 ),
             horizontalOffsetDp =
                 horizontalOffsetDp.coerceIn(
-                    MIN_TIMESCAPE_HORIZONTAL_OFFSET_DP,
-                    MAX_TIMESCAPE_HORIZONTAL_OFFSET_DP,
+                    MIN_ADAPTIVE_STAGE_HORIZONTAL_OFFSET_DP,
+                    MAX_ADAPTIVE_STAGE_HORIZONTAL_OFFSET_DP,
                 ),
             curveDp =
                 curveDp.coerceIn(
-                    MIN_TIMESCAPE_CURVE_DP,
-                    MAX_TIMESCAPE_CURVE_DP,
+                    MIN_ADAPTIVE_STAGE_CURVE_DP,
+                    MAX_ADAPTIVE_STAGE_CURVE_DP,
                 ),
             rotationDegrees =
                 rotationDegrees.coerceIn(
-                    MIN_TIMESCAPE_ROTATION_DEGREES,
-                    MAX_TIMESCAPE_ROTATION_DEGREES,
+                    MIN_ADAPTIVE_STAGE_ROTATION_DEGREES,
+                    MAX_ADAPTIVE_STAGE_ROTATION_DEGREES,
                 ),
             cornerRadiusDp =
                 cornerRadiusDp.coerceIn(
-                    MIN_TIMESCAPE_CORNER_RADIUS_DP,
-                    MAX_TIMESCAPE_CORNER_RADIUS_DP,
+                    MIN_ADAPTIVE_STAGE_CORNER_RADIUS_DP,
+                    MAX_ADAPTIVE_STAGE_CORNER_RADIUS_DP,
                 ),
             contentPaddingDp =
                 contentPaddingDp.coerceIn(
-                    MIN_TIMESCAPE_CONTENT_PADDING_DP,
-                    MAX_TIMESCAPE_CONTENT_PADDING_DP,
+                    MIN_ADAPTIVE_STAGE_CONTENT_PADDING_DP,
+                    MAX_ADAPTIVE_STAGE_CONTENT_PADDING_DP,
                 ),
         )
 }
 
-enum class TimeScapeFanDirection { NONE, START, END }
+enum class AdaptiveStageFanDirection { NONE, START, END }
 
-data class TimeScapeSurface(
-    val backgroundSource: TimeScapeBackgroundSource = TimeScapeBackgroundSource.APP_DERIVED_GRADIENT,
+data class AdaptiveStageSurface(
+    val backgroundSource: AdaptiveStageBackgroundSource = AdaptiveStageBackgroundSource.APP_DERIVED_GRADIENT,
     val customBackgroundArgb: Long = 0xFF1B1B1FL,
     val glassTransparencyPercent: Int = 38,
     val glassTintArgb: Long = 0xCCFFFFFFL,
@@ -475,62 +475,62 @@ data class TimeScapeSurface(
     val shadowElevationDp: Int = 12,
     val textureIntensityPercent: Int = 0,
 ) {
-    fun coerce(): TimeScapeSurface =
+    fun coerce(): AdaptiveStageSurface =
         copy(
             customBackgroundArgb =
                 customBackgroundArgb.coerceIn(
-                    MIN_TIMESCAPE_ARGB,
-                    MAX_TIMESCAPE_ARGB,
+                    MIN_ADAPTIVE_STAGE_ARGB,
+                    MAX_ADAPTIVE_STAGE_ARGB,
                 ),
             glassTintArgb =
                 glassTintArgb.coerceIn(
-                    MIN_TIMESCAPE_ARGB,
-                    MAX_TIMESCAPE_ARGB,
+                    MIN_ADAPTIVE_STAGE_ARGB,
+                    MAX_ADAPTIVE_STAGE_ARGB,
                 ),
             glassTransparencyPercent =
                 glassTransparencyPercent.coerceIn(
-                    MIN_TIMESCAPE_GLASS_TRANSPARENCY_PERCENT,
-                    MAX_TIMESCAPE_GLASS_TRANSPARENCY_PERCENT,
+                    MIN_ADAPTIVE_STAGE_GLASS_TRANSPARENCY_PERCENT,
+                    MAX_ADAPTIVE_STAGE_GLASS_TRANSPARENCY_PERCENT,
                 ),
             blurStrengthPercent =
                 blurStrengthPercent.coerceIn(
-                    MIN_TIMESCAPE_BLUR_STRENGTH_PERCENT,
-                    MAX_TIMESCAPE_BLUR_STRENGTH_PERCENT,
+                    MIN_ADAPTIVE_STAGE_BLUR_STRENGTH_PERCENT,
+                    MAX_ADAPTIVE_STAGE_BLUR_STRENGTH_PERCENT,
                 ),
             saturationPercent =
                 saturationPercent.coerceIn(
-                    MIN_TIMESCAPE_SATURATION_PERCENT,
-                    MAX_TIMESCAPE_SATURATION_PERCENT,
+                    MIN_ADAPTIVE_STAGE_SATURATION_PERCENT,
+                    MAX_ADAPTIVE_STAGE_SATURATION_PERCENT,
                 ),
             contrastPercent =
                 contrastPercent.coerceIn(
-                    MIN_TIMESCAPE_CONTRAST_PERCENT,
-                    MAX_TIMESCAPE_CONTRAST_PERCENT,
+                    MIN_ADAPTIVE_STAGE_CONTRAST_PERCENT,
+                    MAX_ADAPTIVE_STAGE_CONTRAST_PERCENT,
                 ),
             outlineWidthDp =
                 outlineWidthDp.coerceIn(
-                    MIN_TIMESCAPE_OUTLINE_WIDTH_DP,
-                    MAX_TIMESCAPE_OUTLINE_WIDTH_DP,
+                    MIN_ADAPTIVE_STAGE_OUTLINE_WIDTH_DP,
+                    MAX_ADAPTIVE_STAGE_OUTLINE_WIDTH_DP,
                 ),
             highlightPercent =
                 highlightPercent.coerceIn(
-                    MIN_TIMESCAPE_HIGHLIGHT_PERCENT,
-                    MAX_TIMESCAPE_HIGHLIGHT_PERCENT,
+                    MIN_ADAPTIVE_STAGE_HIGHLIGHT_PERCENT,
+                    MAX_ADAPTIVE_STAGE_HIGHLIGHT_PERCENT,
                 ),
             shadowElevationDp =
                 shadowElevationDp.coerceIn(
-                    MIN_TIMESCAPE_SHADOW_ELEVATION_DP,
-                    MAX_TIMESCAPE_SHADOW_ELEVATION_DP,
+                    MIN_ADAPTIVE_STAGE_SHADOW_ELEVATION_DP,
+                    MAX_ADAPTIVE_STAGE_SHADOW_ELEVATION_DP,
                 ),
             textureIntensityPercent =
                 textureIntensityPercent.coerceIn(
-                    MIN_TIMESCAPE_TEXTURE_INTENSITY_PERCENT,
-                    MAX_TIMESCAPE_TEXTURE_INTENSITY_PERCENT,
+                    MIN_ADAPTIVE_STAGE_TEXTURE_INTENSITY_PERCENT,
+                    MAX_ADAPTIVE_STAGE_TEXTURE_INTENSITY_PERCENT,
                 ),
         )
 }
 
-enum class TimeScapeBackgroundSource {
+enum class AdaptiveStageBackgroundSource {
     NOTIFICATION_ARTWORK,
     APP_ICON_TREATMENT,
     APP_DERIVED_SOLID,
@@ -539,154 +539,154 @@ enum class TimeScapeBackgroundSource {
     CUSTOM_SOLID,
 }
 
-data class TimeScapeTypography(
-    val accentSource: TimeScapeAccentSource = TimeScapeAccentSource.APP_DERIVED,
+data class AdaptiveStageTypography(
+    val accentSource: AdaptiveStageAccentSource = AdaptiveStageAccentSource.APP_DERIVED,
     val customAccentArgb: Long = 0xFF6750A4L,
     val automaticForegroundContrast: Boolean = true,
-    val contentDensity: TimeScapeContentDensity = TimeScapeContentDensity.COMFORTABLE,
+    val contentDensity: AdaptiveStageContentDensity = AdaptiveStageContentDensity.COMFORTABLE,
     val textScalePercent: Int = 100,
 ) {
-    fun coerce(): TimeScapeTypography =
+    fun coerce(): AdaptiveStageTypography =
         copy(
-            customAccentArgb = customAccentArgb.coerceIn(MIN_TIMESCAPE_ARGB, MAX_TIMESCAPE_ARGB),
+            customAccentArgb = customAccentArgb.coerceIn(MIN_ADAPTIVE_STAGE_ARGB, MAX_ADAPTIVE_STAGE_ARGB),
             textScalePercent =
                 textScalePercent.coerceIn(
-                    MIN_TIMESCAPE_TEXT_SCALE_PERCENT,
-                    MAX_TIMESCAPE_TEXT_SCALE_PERCENT,
+                    MIN_ADAPTIVE_STAGE_TEXT_SCALE_PERCENT,
+                    MAX_ADAPTIVE_STAGE_TEXT_SCALE_PERCENT,
                 ),
         )
 }
 
-enum class TimeScapeAccentSource { APP_DERIVED, SYSTEM_WALLPAPER, CUSTOM }
+enum class AdaptiveStageAccentSource { APP_DERIVED, SYSTEM_WALLPAPER, CUSTOM }
 
-enum class TimeScapeContentDensity { COMPACT, COMFORTABLE, EXPANDED }
+enum class AdaptiveStageContentDensity { COMPACT, COMFORTABLE, EXPANDED }
 
-data class TimeScapeMotion(
+data class AdaptiveStageMotion(
     val settleDurationMillis: Int = 220,
     val reflowDurationMillis: Int = 260,
     val enterDurationMillis: Int = 240,
     val exitDurationMillis: Int = 180,
     val expandDurationMillis: Int = 280,
-    val easing: TimeScapeEasing = TimeScapeEasing.GENTLE_SPRING,
+    val easing: AdaptiveStageEasing = AdaptiveStageEasing.GENTLE_SPRING,
     val springBouncinessPercent: Int = 20,
     val travelIntensityPercent: Int = 100,
     val parallaxIntensityPercent: Int = 18,
     val rotationIntensityPercent: Int = 100,
-    val hapticStrength: TimeScapeHapticStrength = TimeScapeHapticStrength.MEDIUM,
+    val hapticStrength: AdaptiveStageHapticStrength = AdaptiveStageHapticStrength.MEDIUM,
     val reducedMotion: Boolean = false,
     val reducedTransparency: Boolean = false,
 ) {
-    fun coerce(): TimeScapeMotion =
+    fun coerce(): AdaptiveStageMotion =
         copy(
             settleDurationMillis =
                 settleDurationMillis.coerceIn(
-                    MIN_TIMESCAPE_SETTLE_DURATION_MILLIS,
-                    MAX_TIMESCAPE_SETTLE_DURATION_MILLIS,
+                    MIN_ADAPTIVE_STAGE_SETTLE_DURATION_MILLIS,
+                    MAX_ADAPTIVE_STAGE_SETTLE_DURATION_MILLIS,
                 ),
             reflowDurationMillis =
                 reflowDurationMillis.coerceIn(
-                    MIN_TIMESCAPE_TRANSITION_DURATION_MILLIS,
-                    MAX_TIMESCAPE_TRANSITION_DURATION_MILLIS,
+                    MIN_ADAPTIVE_STAGE_TRANSITION_DURATION_MILLIS,
+                    MAX_ADAPTIVE_STAGE_TRANSITION_DURATION_MILLIS,
                 ),
             enterDurationMillis =
                 enterDurationMillis.coerceIn(
-                    MIN_TIMESCAPE_TRANSITION_DURATION_MILLIS,
-                    MAX_TIMESCAPE_TRANSITION_DURATION_MILLIS,
+                    MIN_ADAPTIVE_STAGE_TRANSITION_DURATION_MILLIS,
+                    MAX_ADAPTIVE_STAGE_TRANSITION_DURATION_MILLIS,
                 ),
             exitDurationMillis =
                 exitDurationMillis.coerceIn(
-                    MIN_TIMESCAPE_TRANSITION_DURATION_MILLIS,
-                    MAX_TIMESCAPE_TRANSITION_DURATION_MILLIS,
+                    MIN_ADAPTIVE_STAGE_TRANSITION_DURATION_MILLIS,
+                    MAX_ADAPTIVE_STAGE_TRANSITION_DURATION_MILLIS,
                 ),
             expandDurationMillis =
                 expandDurationMillis.coerceIn(
-                    MIN_TIMESCAPE_TRANSITION_DURATION_MILLIS,
-                    MAX_TIMESCAPE_TRANSITION_DURATION_MILLIS,
+                    MIN_ADAPTIVE_STAGE_TRANSITION_DURATION_MILLIS,
+                    MAX_ADAPTIVE_STAGE_TRANSITION_DURATION_MILLIS,
                 ),
             springBouncinessPercent =
                 springBouncinessPercent.coerceIn(
-                    MIN_TIMESCAPE_SPRING_BOUNCINESS_PERCENT,
-                    MAX_TIMESCAPE_SPRING_BOUNCINESS_PERCENT,
+                    MIN_ADAPTIVE_STAGE_SPRING_BOUNCINESS_PERCENT,
+                    MAX_ADAPTIVE_STAGE_SPRING_BOUNCINESS_PERCENT,
                 ),
             travelIntensityPercent =
                 travelIntensityPercent.coerceIn(
-                    MIN_TIMESCAPE_TRAVEL_INTENSITY_PERCENT,
-                    MAX_TIMESCAPE_TRAVEL_INTENSITY_PERCENT,
+                    MIN_ADAPTIVE_STAGE_TRAVEL_INTENSITY_PERCENT,
+                    MAX_ADAPTIVE_STAGE_TRAVEL_INTENSITY_PERCENT,
                 ),
             parallaxIntensityPercent =
                 parallaxIntensityPercent.coerceIn(
-                    MIN_TIMESCAPE_PARALLAX_INTENSITY_PERCENT,
-                    MAX_TIMESCAPE_PARALLAX_INTENSITY_PERCENT,
+                    MIN_ADAPTIVE_STAGE_PARALLAX_INTENSITY_PERCENT,
+                    MAX_ADAPTIVE_STAGE_PARALLAX_INTENSITY_PERCENT,
                 ),
             rotationIntensityPercent =
                 rotationIntensityPercent.coerceIn(
-                    MIN_TIMESCAPE_ROTATION_INTENSITY_PERCENT,
-                    MAX_TIMESCAPE_ROTATION_INTENSITY_PERCENT,
+                    MIN_ADAPTIVE_STAGE_ROTATION_INTENSITY_PERCENT,
+                    MAX_ADAPTIVE_STAGE_ROTATION_INTENSITY_PERCENT,
                 ),
         )
 }
 
-enum class TimeScapeEasing { STANDARD, EMPHASIZED, GENTLE_SPRING }
+enum class AdaptiveStageEasing { STANDARD, EMPHASIZED, GENTLE_SPRING }
 
-enum class TimeScapeHapticStrength { OFF, LIGHT, MEDIUM, STRONG }
+enum class AdaptiveStageHapticStrength { OFF, LIGHT, MEDIUM, STRONG }
 
-data class TimeScapeRendererCapabilities(val supportsBlur: Boolean = true, val supportsTexture: Boolean = true)
+data class AdaptiveStageRendererCapabilities(val supportsBlur: Boolean = true, val supportsTexture: Boolean = true)
 
-const val CURRENT_TIMESCAPE_APPEARANCE_VERSION = 1
-const val MIN_TIMESCAPE_CARD_ASPECT_RATIO_PERCENT = 55
-const val MAX_TIMESCAPE_CARD_ASPECT_RATIO_PERCENT = 100
-const val MIN_TIMESCAPE_FOCUSED_SCALE_PERCENT = 85
-const val MAX_TIMESCAPE_FOCUSED_SCALE_PERCENT = 115
-const val MIN_TIMESCAPE_FOCUSED_GAP_DP = 0
-const val MAX_TIMESCAPE_FOCUSED_GAP_DP = 64
-const val MIN_TIMESCAPE_VISIBLE_DEPTH = 1
-const val MAX_TIMESCAPE_VISIBLE_DEPTH = 6
-const val MIN_TIMESCAPE_OVERLAP_PERCENT = 0
-const val MAX_TIMESCAPE_OVERLAP_PERCENT = 60
-const val MIN_TIMESCAPE_VERTICAL_SPACING_DP = 0
-const val MAX_TIMESCAPE_VERTICAL_SPACING_DP = 96
-const val MIN_TIMESCAPE_HORIZONTAL_OFFSET_DP = 0
-const val MAX_TIMESCAPE_HORIZONTAL_OFFSET_DP = 160
-const val MIN_TIMESCAPE_CURVE_DP = 0
-const val MAX_TIMESCAPE_CURVE_DP = 96
-const val MIN_TIMESCAPE_ROTATION_DEGREES = 0
-const val MAX_TIMESCAPE_ROTATION_DEGREES = 18
-const val MIN_TIMESCAPE_CORNER_RADIUS_DP = 0
-const val MAX_TIMESCAPE_CORNER_RADIUS_DP = 64
-const val MIN_TIMESCAPE_CONTENT_PADDING_DP = 0
-const val MAX_TIMESCAPE_CONTENT_PADDING_DP = 64
-const val MIN_TIMESCAPE_ARGB = 0L
-const val MAX_TIMESCAPE_ARGB = 0xFFFFFFFFL
-const val MIN_TIMESCAPE_GLASS_TRANSPARENCY_PERCENT = 0
-const val MAX_TIMESCAPE_GLASS_TRANSPARENCY_PERCENT = 95
-const val MIN_TIMESCAPE_BLUR_STRENGTH_PERCENT = 0
-const val MAX_TIMESCAPE_BLUR_STRENGTH_PERCENT = 100
-const val MIN_TIMESCAPE_SATURATION_PERCENT = 50
-const val MAX_TIMESCAPE_SATURATION_PERCENT = 150
-const val MIN_TIMESCAPE_CONTRAST_PERCENT = 75
-const val MAX_TIMESCAPE_CONTRAST_PERCENT = 150
-const val MIN_TIMESCAPE_OUTLINE_WIDTH_DP = 0
-const val MAX_TIMESCAPE_OUTLINE_WIDTH_DP = 4
-const val MIN_TIMESCAPE_HIGHLIGHT_PERCENT = 0
-const val MAX_TIMESCAPE_HIGHLIGHT_PERCENT = 100
-const val MIN_TIMESCAPE_SHADOW_ELEVATION_DP = 0
-const val MAX_TIMESCAPE_SHADOW_ELEVATION_DP = 32
-const val MIN_TIMESCAPE_TEXTURE_INTENSITY_PERCENT = 0
-const val MAX_TIMESCAPE_TEXTURE_INTENSITY_PERCENT = 40
-const val MIN_TIMESCAPE_TEXT_SCALE_PERCENT = 85
-const val MAX_TIMESCAPE_TEXT_SCALE_PERCENT = 130
-const val MIN_TIMESCAPE_SETTLE_DURATION_MILLIS = 80
-const val MAX_TIMESCAPE_SETTLE_DURATION_MILLIS = 600
-const val MIN_TIMESCAPE_TRANSITION_DURATION_MILLIS = 80
-const val MAX_TIMESCAPE_TRANSITION_DURATION_MILLIS = 700
-const val MIN_TIMESCAPE_SPRING_BOUNCINESS_PERCENT = 0
-const val MAX_TIMESCAPE_SPRING_BOUNCINESS_PERCENT = 40
-const val MIN_TIMESCAPE_TRAVEL_INTENSITY_PERCENT = 0
-const val MAX_TIMESCAPE_TRAVEL_INTENSITY_PERCENT = 150
-const val MIN_TIMESCAPE_PARALLAX_INTENSITY_PERCENT = 0
-const val MAX_TIMESCAPE_PARALLAX_INTENSITY_PERCENT = 50
-const val MIN_TIMESCAPE_ROTATION_INTENSITY_PERCENT = 0
-const val MAX_TIMESCAPE_ROTATION_INTENSITY_PERCENT = 150
-const val MIN_TIMESCAPE_REACHABLE_CARD_WIDTH_DP = 160
-const val MIN_TIMESCAPE_REACHABLE_CARD_HEIGHT_DP = 220
-const val MIN_TIMESCAPE_BACKGROUND_CARD_SCALE = 0.94f
+const val CURRENT_ADAPTIVE_STAGE_APPEARANCE_VERSION = 1
+const val MIN_ADAPTIVE_STAGE_CARD_ASPECT_RATIO_PERCENT = 55
+const val MAX_ADAPTIVE_STAGE_CARD_ASPECT_RATIO_PERCENT = 100
+const val MIN_ADAPTIVE_STAGE_FOCUSED_SCALE_PERCENT = 85
+const val MAX_ADAPTIVE_STAGE_FOCUSED_SCALE_PERCENT = 115
+const val MIN_ADAPTIVE_STAGE_FOCUSED_GAP_DP = 0
+const val MAX_ADAPTIVE_STAGE_FOCUSED_GAP_DP = 64
+const val MIN_ADAPTIVE_STAGE_VISIBLE_DEPTH = 1
+const val MAX_ADAPTIVE_STAGE_VISIBLE_DEPTH = 6
+const val MIN_ADAPTIVE_STAGE_OVERLAP_PERCENT = 0
+const val MAX_ADAPTIVE_STAGE_OVERLAP_PERCENT = 60
+const val MIN_ADAPTIVE_STAGE_VERTICAL_SPACING_DP = 0
+const val MAX_ADAPTIVE_STAGE_VERTICAL_SPACING_DP = 96
+const val MIN_ADAPTIVE_STAGE_HORIZONTAL_OFFSET_DP = 0
+const val MAX_ADAPTIVE_STAGE_HORIZONTAL_OFFSET_DP = 160
+const val MIN_ADAPTIVE_STAGE_CURVE_DP = 0
+const val MAX_ADAPTIVE_STAGE_CURVE_DP = 96
+const val MIN_ADAPTIVE_STAGE_ROTATION_DEGREES = 0
+const val MAX_ADAPTIVE_STAGE_ROTATION_DEGREES = 18
+const val MIN_ADAPTIVE_STAGE_CORNER_RADIUS_DP = 0
+const val MAX_ADAPTIVE_STAGE_CORNER_RADIUS_DP = 64
+const val MIN_ADAPTIVE_STAGE_CONTENT_PADDING_DP = 0
+const val MAX_ADAPTIVE_STAGE_CONTENT_PADDING_DP = 64
+const val MIN_ADAPTIVE_STAGE_ARGB = 0L
+const val MAX_ADAPTIVE_STAGE_ARGB = 0xFFFFFFFFL
+const val MIN_ADAPTIVE_STAGE_GLASS_TRANSPARENCY_PERCENT = 0
+const val MAX_ADAPTIVE_STAGE_GLASS_TRANSPARENCY_PERCENT = 95
+const val MIN_ADAPTIVE_STAGE_BLUR_STRENGTH_PERCENT = 0
+const val MAX_ADAPTIVE_STAGE_BLUR_STRENGTH_PERCENT = 100
+const val MIN_ADAPTIVE_STAGE_SATURATION_PERCENT = 50
+const val MAX_ADAPTIVE_STAGE_SATURATION_PERCENT = 150
+const val MIN_ADAPTIVE_STAGE_CONTRAST_PERCENT = 75
+const val MAX_ADAPTIVE_STAGE_CONTRAST_PERCENT = 150
+const val MIN_ADAPTIVE_STAGE_OUTLINE_WIDTH_DP = 0
+const val MAX_ADAPTIVE_STAGE_OUTLINE_WIDTH_DP = 4
+const val MIN_ADAPTIVE_STAGE_HIGHLIGHT_PERCENT = 0
+const val MAX_ADAPTIVE_STAGE_HIGHLIGHT_PERCENT = 100
+const val MIN_ADAPTIVE_STAGE_SHADOW_ELEVATION_DP = 0
+const val MAX_ADAPTIVE_STAGE_SHADOW_ELEVATION_DP = 32
+const val MIN_ADAPTIVE_STAGE_TEXTURE_INTENSITY_PERCENT = 0
+const val MAX_ADAPTIVE_STAGE_TEXTURE_INTENSITY_PERCENT = 40
+const val MIN_ADAPTIVE_STAGE_TEXT_SCALE_PERCENT = 85
+const val MAX_ADAPTIVE_STAGE_TEXT_SCALE_PERCENT = 130
+const val MIN_ADAPTIVE_STAGE_SETTLE_DURATION_MILLIS = 80
+const val MAX_ADAPTIVE_STAGE_SETTLE_DURATION_MILLIS = 600
+const val MIN_ADAPTIVE_STAGE_TRANSITION_DURATION_MILLIS = 80
+const val MAX_ADAPTIVE_STAGE_TRANSITION_DURATION_MILLIS = 700
+const val MIN_ADAPTIVE_STAGE_SPRING_BOUNCINESS_PERCENT = 0
+const val MAX_ADAPTIVE_STAGE_SPRING_BOUNCINESS_PERCENT = 40
+const val MIN_ADAPTIVE_STAGE_TRAVEL_INTENSITY_PERCENT = 0
+const val MAX_ADAPTIVE_STAGE_TRAVEL_INTENSITY_PERCENT = 150
+const val MIN_ADAPTIVE_STAGE_PARALLAX_INTENSITY_PERCENT = 0
+const val MAX_ADAPTIVE_STAGE_PARALLAX_INTENSITY_PERCENT = 50
+const val MIN_ADAPTIVE_STAGE_ROTATION_INTENSITY_PERCENT = 0
+const val MAX_ADAPTIVE_STAGE_ROTATION_INTENSITY_PERCENT = 150
+const val MIN_ADAPTIVE_STAGE_REACHABLE_CARD_WIDTH_DP = 160
+const val MIN_ADAPTIVE_STAGE_REACHABLE_CARD_HEIGHT_DP = 220
+const val MIN_ADAPTIVE_STAGE_BACKGROUND_CARD_SCALE = 0.94f

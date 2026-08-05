@@ -41,25 +41,25 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
 import com.riffle.core.domain.launcher.notifications.LauncherNotification
-import com.riffle.core.domain.launcher.settings.TimeScapeAccentSource
-import com.riffle.core.domain.launcher.settings.TimeScapeAppearanceSettings
-import com.riffle.core.domain.launcher.settings.TimeScapeBackgroundSource
-import com.riffle.core.domain.launcher.settings.TimeScapeCardStackResolution
-import com.riffle.core.domain.launcher.settings.TimeScapeContentDensity
-import com.riffle.core.domain.launcher.settings.TimeScapeRendererCapabilities
+import com.riffle.core.domain.launcher.settings.AdaptiveStageAccentSource
+import com.riffle.core.domain.launcher.settings.AdaptiveStageAppearanceSettings
+import com.riffle.core.domain.launcher.settings.AdaptiveStageBackgroundSource
+import com.riffle.core.domain.launcher.settings.AdaptiveStageCardStackResolution
+import com.riffle.core.domain.launcher.settings.AdaptiveStageContentDensity
+import com.riffle.core.domain.launcher.settings.AdaptiveStageRendererCapabilities
 import java.security.MessageDigest
 import java.util.LinkedHashMap
 import kotlin.math.max
 
 /** Transient visual inputs. Every source has a colour fallback when platform artwork is unavailable. */
-internal data class TimeScapeCardBackground(
+internal data class AdaptiveStageCardBackground(
     val artwork: ImageBitmap? = null,
     val appSeed: String = "riffle",
     val appColor: Color? = null,
     val wallpaperAccent: Color? = null,
 )
 
-internal data class TimeScapeCardColors(
+internal data class AdaptiveStageCardColors(
     val background: Color,
     val foreground: Color,
     val accent: Color,
@@ -69,7 +69,7 @@ internal data class TimeScapeCardColors(
     val outline: Color,
 )
 
-internal data class TimeScapeCardActionColors(
+internal data class AdaptiveStageCardActionColors(
     val action: Color,
     val onAction: Color,
 )
@@ -79,8 +79,8 @@ internal data class TimeScapeCardActionColors(
  * identities plus a source revision, not artwork payloads, so private base64 data is not retained
  * as cache metadata.
  */
-internal class TimeScapeArtworkCache<Value>(
-    private val maxEntries: Int = DEFAULT_TIMESCAPE_ARTWORK_CACHE_ENTRIES,
+internal class AdaptiveStageArtworkCache<Value>(
+    private val maxEntries: Int = DEFAULT_ADAPTIVE_STAGE_ARTWORK_CACHE_ENTRIES,
     private val decode: (String?) -> Value?,
 ) {
     init {
@@ -107,7 +107,7 @@ internal class TimeScapeArtworkCache<Value>(
 }
 
 /** Immutable revision lookup consumed by card composition without hashing artwork payloads. */
-internal fun interface TimeScapeArtworkRevisionLookup {
+internal fun interface AdaptiveStageArtworkRevisionLookup {
     fun revisionFor(notification: LauncherNotification): String?
 }
 
@@ -116,7 +116,7 @@ internal fun interface TimeScapeArtworkRevisionLookup {
  * The volatile map replacement makes each UI lookup observe either the prior complete snapshot or
  * the next complete snapshot, never a partially calculated burst.
  */
-internal class TimeScapeArtworkRevisionStore : TimeScapeArtworkRevisionLookup {
+internal class AdaptiveStageArtworkRevisionStore : AdaptiveStageArtworkRevisionLookup {
     @Volatile
     private var revisionsByNotificationId: Map<String, String> = emptyMap()
 
@@ -137,7 +137,7 @@ internal class TimeScapeArtworkRevisionStore : TimeScapeArtworkRevisionLookup {
     }
 }
 
-internal val timeScapeArtworkRevisions = TimeScapeArtworkRevisionStore()
+internal val adaptiveStageArtworkRevisions = AdaptiveStageArtworkRevisionStore()
 
 private fun LauncherNotification.artworkRevisionId(): String = "${profileId.value}:${packageName.value}:${key.value}"
 
@@ -151,39 +151,39 @@ private fun String.sha256Revision(): String {
     }
 }
 
-/** Keeps all TimeScape card renderers aligned with the reachability-capped stack resolution. */
+/** Keeps all AdaptiveStage card renderers aligned with the reachability-capped stack resolution. */
 @Suppress("MaxLineLength")
-internal fun timeScapeResolvedContentPadding(resolution: TimeScapeCardStackResolution): Dp = resolution.contentPaddingDp.dp
+internal fun adaptiveStageResolvedContentPadding(resolution: AdaptiveStageCardStackResolution): Dp = resolution.contentPaddingDp.dp
 
-internal fun timeScapeRendererCapabilities(sdkInt: Int = Build.VERSION.SDK_INT): TimeScapeRendererCapabilities =
-    TimeScapeRendererCapabilities(supportsBlur = sdkInt >= Build.VERSION_CODES.S)
+internal fun adaptiveStageRendererCapabilities(sdkInt: Int = Build.VERSION.SDK_INT): AdaptiveStageRendererCapabilities =
+    AdaptiveStageRendererCapabilities(supportsBlur = sdkInt >= Build.VERSION_CODES.S)
 
-internal fun resolveTimeScapeCardColors(
-    appearance: TimeScapeAppearanceSettings,
-    background: TimeScapeCardBackground,
+internal fun resolveAdaptiveStageCardColors(
+    appearance: AdaptiveStageAppearanceSettings,
+    background: AdaptiveStageCardBackground,
     materialBackground: Color,
     materialAccent: Color,
-    rendererCapabilities: TimeScapeRendererCapabilities = timeScapeRendererCapabilities(),
-): TimeScapeCardColors {
+    rendererCapabilities: AdaptiveStageRendererCapabilities = adaptiveStageRendererCapabilities(),
+): AdaptiveStageCardColors {
     val effective = appearance.effectiveFor(rendererCapabilities)
     val surface = effective.surface
     val base =
         when (surface.backgroundSource) {
-            TimeScapeBackgroundSource.NOTIFICATION_ARTWORK,
-            TimeScapeBackgroundSource.APP_ICON_TREATMENT,
+            AdaptiveStageBackgroundSource.NOTIFICATION_ARTWORK,
+            AdaptiveStageBackgroundSource.APP_ICON_TREATMENT,
             ->
-                background.artwork?.let(::timeScapeArtworkColor)
+                background.artwork?.let(::adaptiveStageArtworkColor)
                     ?: background.appColor
-                    ?: timeScapeSeedColor(background.appSeed)
+                    ?: adaptiveStageSeedColor(background.appSeed)
 
-            TimeScapeBackgroundSource.APP_DERIVED_SOLID,
-            TimeScapeBackgroundSource.APP_DERIVED_GRADIENT,
-            -> background.appColor ?: timeScapeSeedColor(background.appSeed)
+            AdaptiveStageBackgroundSource.APP_DERIVED_SOLID,
+            AdaptiveStageBackgroundSource.APP_DERIVED_GRADIENT,
+            -> background.appColor ?: adaptiveStageSeedColor(background.appSeed)
 
-            TimeScapeBackgroundSource.SYSTEM_WALLPAPER_ACCENT -> background.wallpaperAccent ?: materialAccent
-            TimeScapeBackgroundSource.CUSTOM_SOLID -> Color(surface.customBackgroundArgb.toInt())
+            AdaptiveStageBackgroundSource.SYSTEM_WALLPAPER_ACCENT -> background.wallpaperAccent ?: materialAccent
+            AdaptiveStageBackgroundSource.CUSTOM_SOLID -> Color(surface.customBackgroundArgb.toInt())
         }
-    val adjustedBase = timeScapeAdjustedColor(base, surface.saturationPercent, surface.contrastPercent)
+    val adjustedBase = adaptiveStageAdjustedColor(base, surface.saturationPercent, surface.contrastPercent)
     val glassTint =
         Color(surface.glassTintArgb.toInt())
             .copy(alpha = 1f - surface.glassTransparencyPercent / 100f)
@@ -192,18 +192,18 @@ internal fun resolveTimeScapeCardColors(
             .compositeOver(adjustedBase)
     val requestedForeground =
         if (effective.typography.automaticForegroundContrast) {
-            timeScapeAccessibleForeground(glass)
+            adaptiveStageAccessibleForeground(glass)
         } else {
             materialBackground
         }
-    val foreground = timeScapeForeground(requestedForeground, glass)
+    val foreground = adaptiveStageForeground(requestedForeground, glass)
     val accent =
         when (effective.typography.accentSource) {
-            TimeScapeAccentSource.APP_DERIVED -> adjustedBase
-            TimeScapeAccentSource.SYSTEM_WALLPAPER -> background.wallpaperAccent ?: materialAccent
-            TimeScapeAccentSource.CUSTOM -> Color(effective.typography.customAccentArgb.toInt())
+            AdaptiveStageAccentSource.APP_DERIVED -> adjustedBase
+            AdaptiveStageAccentSource.SYSTEM_WALLPAPER -> background.wallpaperAccent ?: materialAccent
+            AdaptiveStageAccentSource.CUSTOM -> Color(effective.typography.customAccentArgb.toInt())
         }
-    return TimeScapeCardColors(
+    return AdaptiveStageCardColors(
         background = adjustedBase,
         foreground = foreground,
         accent = accent,
@@ -213,7 +213,7 @@ internal fun resolveTimeScapeCardColors(
     )
 }
 
-internal fun timeScapeAdjustedColor(
+internal fun adaptiveStageAdjustedColor(
     color: Color,
     saturationPercent: Int,
     contrastPercent: Int,
@@ -228,24 +228,24 @@ internal fun timeScapeAdjustedColor(
     return Color(adjusted(color.red), adjusted(color.green), adjusted(color.blue), color.alpha)
 }
 
-private fun timeScapeArtworkColor(artwork: ImageBitmap): Color? =
+private fun adaptiveStageArtworkColor(artwork: ImageBitmap): Color? =
     runCatching {
         artwork.toPixelMap()[artwork.width / 2, artwork.height / 2]
     }.getOrNull()
 
-internal fun timeScapeAccessibleForeground(background: Color): Color =
+internal fun adaptiveStageAccessibleForeground(background: Color): Color =
     if (contrastRatio(Color.Black, background) >= contrastRatio(Color.White, background)) {
         Color.Black
     } else {
         Color.White
     }
 
-private fun timeScapeForeground(
+private fun adaptiveStageForeground(
     preferred: Color,
     background: Color,
 ): Color =
     preferred.takeIf { contrastRatio(it, background) >= MINIMUM_FOREGROUND_CONTRAST_RATIO }
-        ?: timeScapeAccessibleForeground(background)
+        ?: adaptiveStageAccessibleForeground(background)
 
 internal fun contrastRatio(
     first: Color,
@@ -257,27 +257,27 @@ internal fun contrastRatio(
         (minOf(firstLuminance, secondLuminance) + 0.05f)
 }
 
-internal fun resolveTimeScapeCardActionColors(
+internal fun resolveAdaptiveStageCardActionColors(
     accent: Color,
     surface: Color,
-): TimeScapeCardActionColors {
+): AdaptiveStageCardActionColors {
     val action =
         accent.takeIf { contrastRatio(it, surface) >= MINIMUM_ACTION_CONTRAST_RATIO }
-            ?: timeScapeAccessibleForeground(surface)
-    return TimeScapeCardActionColors(
+            ?: adaptiveStageAccessibleForeground(surface)
+    return AdaptiveStageCardActionColors(
         action = action,
-        onAction = timeScapeAccessibleForeground(action),
+        onAction = adaptiveStageAccessibleForeground(action),
     )
 }
 
 @Composable
 @Suppress("LongMethod")
-internal fun TimeScapeCardSurface(
-    appearance: TimeScapeAppearanceSettings,
-    background: TimeScapeCardBackground,
+internal fun AdaptiveStageCardSurface(
+    appearance: AdaptiveStageAppearanceSettings,
+    background: AdaptiveStageCardBackground,
     modifier: Modifier = Modifier,
     contentPadding: Dp = appearance.geometry.contentPaddingDp.dp,
-    rendererCapabilities: TimeScapeRendererCapabilities = timeScapeRendererCapabilities(),
+    rendererCapabilities: AdaptiveStageRendererCapabilities = adaptiveStageRendererCapabilities(),
     content: @Composable BoxScope.() -> Unit,
 ) {
     val effective = remember(appearance, rendererCapabilities) { appearance.effectiveFor(rendererCapabilities) }
@@ -285,7 +285,7 @@ internal fun TimeScapeCardSurface(
     val materialAccent = MaterialTheme.colorScheme.primary
     val colors =
         remember(effective, background, materialBackground, materialAccent, rendererCapabilities) {
-            resolveTimeScapeCardColors(
+            resolveAdaptiveStageCardColors(
                 appearance = effective,
                 background = background,
                 materialBackground = materialBackground,
@@ -294,9 +294,9 @@ internal fun TimeScapeCardSurface(
             )
         }
     val shape = remember(effective.geometry.cornerRadiusDp) { RoundedCornerShape(effective.geometry.cornerRadiusDp.dp) }
-    val actionColors = remember(colors) { resolveTimeScapeCardActionColors(colors.accent, colors.glass) }
+    val actionColors = remember(colors) { resolveAdaptiveStageCardActionColors(colors.accent, colors.glass) }
     val density = LocalDensity.current
-    val contentDensityScale = timeScapeContentDensityScale(effective.typography.contentDensity)
+    val contentDensityScale = adaptiveStageContentDensityScale(effective.typography.contentDensity)
     val adjustedPadding = contentPadding * contentDensityScale
     val adjustedDensity =
         Density(
@@ -307,8 +307,8 @@ internal fun TimeScapeCardSurface(
         background.artwork != null &&
             effective.surface.backgroundSource in
             setOf(
-                TimeScapeBackgroundSource.NOTIFICATION_ARTWORK,
-                TimeScapeBackgroundSource.APP_ICON_TREATMENT,
+                AdaptiveStageBackgroundSource.NOTIFICATION_ARTWORK,
+                AdaptiveStageBackgroundSource.APP_ICON_TREATMENT,
             )
     val artworkModifier =
         remember(effective.surface.blurStrengthPercent) {
@@ -347,14 +347,14 @@ internal fun TimeScapeCardSurface(
         modifier =
             modifier
                 .shadow(effective.surface.shadowElevationDp.dp, shape, clip = false)
-                .semantics { this[TimeScapeCardBlurStrengthKey] = effective.surface.blurStrengthPercent },
+                .semantics { this[AdaptiveStageCardBlurStrengthKey] = effective.surface.blurStrengthPercent },
     ) {
         Box(
             modifier =
                 Modifier
                     .fillMaxSize()
                     .clip(shape)
-                    .background(timeScapeBackgroundBrush(effective, colors.background))
+                    .background(adaptiveStageBackgroundBrush(effective, colors.background))
                     .border(effective.surface.outlineWidthDp.dp, colors.outline, shape),
         ) {
             if (artworkEnabled) {
@@ -367,7 +367,7 @@ internal fun TimeScapeCardSurface(
                 )
             }
             Box(modifier = Modifier.fillMaxSize().background(colors.glassTint))
-            TimeScapeTexture(
+            AdaptiveStageTexture(
                 color = colors.accent,
                 intensityPercent = effective.surface.textureIntensityPercent,
             )
@@ -403,17 +403,17 @@ internal fun TimeScapeCardSurface(
 }
 
 /** Exposes the rendered blur state for accessibility-aware Compose regression coverage. */
-internal val TimeScapeCardBlurStrengthKey = SemanticsPropertyKey<Int>("TimeScapeCardBlurStrength")
+internal val AdaptiveStageCardBlurStrengthKey = SemanticsPropertyKey<Int>("AdaptiveStageCardBlurStrength")
 
-internal fun timeScapeContentDensityScale(density: TimeScapeContentDensity): Float =
+internal fun adaptiveStageContentDensityScale(density: AdaptiveStageContentDensity): Float =
     when (density) {
-        TimeScapeContentDensity.COMPACT -> 0.8f
-        TimeScapeContentDensity.COMFORTABLE -> 1f
-        TimeScapeContentDensity.EXPANDED -> 1.2f
+        AdaptiveStageContentDensity.COMPACT -> 0.8f
+        AdaptiveStageContentDensity.COMFORTABLE -> 1f
+        AdaptiveStageContentDensity.EXPANDED -> 1.2f
     }
 
 @Composable
-private fun TimeScapeTexture(
+private fun AdaptiveStageTexture(
     color: Color,
     intensityPercent: Int,
 ) {
@@ -438,11 +438,11 @@ private fun TimeScapeTexture(
     }
 }
 
-private fun timeScapeBackgroundBrush(
-    appearance: TimeScapeAppearanceSettings,
+private fun adaptiveStageBackgroundBrush(
+    appearance: AdaptiveStageAppearanceSettings,
     base: Color,
 ): Brush =
-    if (appearance.surface.backgroundSource == TimeScapeBackgroundSource.APP_DERIVED_GRADIENT) {
+    if (appearance.surface.backgroundSource == AdaptiveStageBackgroundSource.APP_DERIVED_GRADIENT) {
         Brush.linearGradient(
             listOf(
                 base.copy(alpha = 0.92f),
@@ -455,8 +455,8 @@ private fun timeScapeBackgroundBrush(
     }
 
 @Suppress("ReturnCount")
-internal fun decodeTimeScapeArtwork(value: String?): ImageBitmap? {
-    if (value.isNullOrBlank() || value.length > MAX_TIMESCAPE_ARTWORK_BASE64_CHARS) return null
+internal fun decodeAdaptiveStageArtwork(value: String?): ImageBitmap? {
+    if (value.isNullOrBlank() || value.length > MAX_ADAPTIVE_STAGE_ARTWORK_BASE64_CHARS) return null
     return runCatching {
         val bytes = Base64.decode(value, Base64.DEFAULT)
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
@@ -467,34 +467,34 @@ internal fun decodeTimeScapeArtwork(value: String?): ImageBitmap? {
             0,
             bytes.size,
             BitmapFactory.Options().apply {
-                inSampleSize = timeScapeArtworkSampleSize(bounds.outWidth, bounds.outHeight)
+                inSampleSize = adaptiveStageArtworkSampleSize(bounds.outWidth, bounds.outHeight)
             },
         )?.asImageBitmap()
     }.getOrNull()
 }
 
-internal fun timeScapeArtworkSampleSize(
+internal fun adaptiveStageArtworkSampleSize(
     width: Int,
     height: Int,
 ): Int {
     var sample = 1
     while (
-        width / sample > MAX_TIMESCAPE_ARTWORK_DIMENSION_PX ||
-        height / sample > MAX_TIMESCAPE_ARTWORK_DIMENSION_PX
+        width / sample > MAX_ADAPTIVE_STAGE_ARTWORK_DIMENSION_PX ||
+        height / sample > MAX_ADAPTIVE_STAGE_ARTWORK_DIMENSION_PX
     ) {
         sample *= 2
     }
     return sample
 }
 
-private fun timeScapeSeedColor(seed: String): Color {
+private fun adaptiveStageSeedColor(seed: String): Color {
     val hue = (seed.hashCode().toUInt().toLong() % 360L).toFloat()
     return Color.hsv(hue, 0.46f, 0.72f)
 }
 
-private const val MAX_TIMESCAPE_ARTWORK_BASE64_CHARS = 2_800_000
-private const val MAX_TIMESCAPE_ARTWORK_DIMENSION_PX = 768
-private const val DEFAULT_TIMESCAPE_ARTWORK_CACHE_ENTRIES = 12
+private const val MAX_ADAPTIVE_STAGE_ARTWORK_BASE64_CHARS = 2_800_000
+private const val MAX_ADAPTIVE_STAGE_ARTWORK_DIMENSION_PX = 768
+private const val DEFAULT_ADAPTIVE_STAGE_ARTWORK_CACHE_ENTRIES = 12
 private const val ARTWORK_REVISION_HEX = "0123456789abcdef"
 private const val MINIMUM_FOREGROUND_CONTRAST_RATIO = 4.5f
 private const val MINIMUM_ACTION_CONTRAST_RATIO = MINIMUM_FOREGROUND_CONTRAST_RATIO

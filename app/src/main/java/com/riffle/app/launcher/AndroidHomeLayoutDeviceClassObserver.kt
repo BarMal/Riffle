@@ -4,8 +4,8 @@ import android.app.Activity
 import androidx.window.layout.FoldingFeature
 import androidx.window.layout.WindowInfoTracker
 import androidx.window.layout.WindowMetricsCalculator
-import com.riffle.core.domain.launcher.cards.TimeScapePosture
-import com.riffle.core.domain.launcher.cards.TimeScapeWindowLayout
+import com.riffle.core.domain.launcher.cards.AdaptiveStagePosture
+import com.riffle.core.domain.launcher.cards.AdaptiveStageWindowLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -79,8 +79,8 @@ internal class AndroidHomeLayoutDeviceClassObserver(
                         isSeparating = feature.isSeparating,
                     )
                 },
-            timeScapeWindowLayout =
-                timeScapeWindowLayoutFromPixels(
+            adaptiveStageWindowLayout =
+                adaptiveStageWindowLayoutFromPixels(
                     widthPx = windowMetricsCalculator.computeCurrentWindowMetrics(activity).bounds.width(),
                     heightPx = windowMetricsCalculator.computeCurrentWindowMetrics(activity).bounds.height(),
                     density = activity.resources.displayMetrics.density,
@@ -89,7 +89,7 @@ internal class AndroidHomeLayoutDeviceClassObserver(
                             .filter { feature -> feature.isSeparating }
                             .map { feature -> feature.bounds },
                     posture =
-                        foldingFeatures.timeScapePosture(
+                        foldingFeatures.adaptiveStagePosture(
                             hasFoldableHardware = hasFoldableHardware,
                         ),
                 ),
@@ -106,8 +106,8 @@ internal class AndroidHomeLayoutDeviceClassObserver(
     }
 }
 
-private fun List<FoldingFeature>.timeScapePosture(hasFoldableHardware: Boolean): TimeScapePosture =
-    timeScapePostureFromSignals(
+private fun List<FoldingFeature>.adaptiveStagePosture(hasFoldableHardware: Boolean): AdaptiveStagePosture =
+    adaptiveStagePostureFromSignals(
         hasFoldableHardware = hasFoldableHardware,
         hasFoldingFeature = isNotEmpty(),
         hasHalfOpenedFoldingFeature = any { feature -> feature.state == FoldingFeature.State.HALF_OPENED },
@@ -119,19 +119,19 @@ private fun List<FoldingFeature>.timeScapePosture(hasFoldableHardware: Boolean):
         hasFlatFoldingFeature = any { feature -> feature.state == FoldingFeature.State.FLAT },
     )
 
-internal fun timeScapePostureFromSignals(
+internal fun adaptiveStagePostureFromSignals(
     hasFoldableHardware: Boolean,
     hasFoldingFeature: Boolean,
     hasHalfOpenedFoldingFeature: Boolean,
     hasHorizontalHalfOpenedFoldingFeature: Boolean,
     hasFlatFoldingFeature: Boolean,
-): TimeScapePosture =
+): AdaptiveStagePosture =
     when {
-        hasHorizontalHalfOpenedFoldingFeature -> TimeScapePosture.TABLETOP
-        hasHalfOpenedFoldingFeature -> TimeScapePosture.PARTIALLY_FOLDED
-        hasFlatFoldingFeature -> TimeScapePosture.UNFOLDED
-        hasFoldingFeature || hasFoldableHardware -> TimeScapePosture.COMPACT
-        else -> TimeScapePosture.UNKNOWN
+        hasHorizontalHalfOpenedFoldingFeature -> AdaptiveStagePosture.TABLETOP
+        hasHalfOpenedFoldingFeature -> AdaptiveStagePosture.PARTIALLY_FOLDED
+        hasFlatFoldingFeature -> AdaptiveStagePosture.UNFOLDED
+        hasFoldingFeature || hasFoldableHardware -> AdaptiveStagePosture.COMPACT
+        else -> AdaptiveStagePosture.UNKNOWN
     }
 
 internal data class HomeLayoutDeviceClassEvent(
@@ -142,7 +142,7 @@ internal data class HomeLayoutDeviceClassEvent(
     val configurationClass: HomeLayoutDeviceClass?,
     val foldablePosture: HomeLayoutFoldablePosture,
     val foldingFeatures: List<HomeLayoutFoldingFeatureDebug>,
-    val timeScapeWindowLayout: TimeScapeWindowLayout = TimeScapeWindowLayout(widthDp = 0, heightDp = 0),
+    val adaptiveStageWindowLayout: AdaptiveStageWindowLayout = AdaptiveStageWindowLayout(widthDp = 0, heightDp = 0),
 ) {
     val logText: String
         get() =

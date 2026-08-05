@@ -6,10 +6,10 @@ import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppProfile
 import com.riffle.core.domain.launcher.apps.AppProfileId
 import com.riffle.core.domain.launcher.apps.AppProfileType
+import com.riffle.core.domain.launcher.cards.AdaptiveStageRailSide
+import com.riffle.core.domain.launcher.cards.AdaptiveStageTemplateId
 import com.riffle.core.domain.launcher.cards.AppStageId
 import com.riffle.core.domain.launcher.cards.AppStagePreferences
-import com.riffle.core.domain.launcher.cards.TimeScapeRailSide
-import com.riffle.core.domain.launcher.cards.TimeScapeTemplateId
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.HomeLayoutKey
 import com.riffle.core.domain.launcher.home.LauncherViewMode
@@ -20,6 +20,11 @@ import com.riffle.core.domain.launcher.rss.FeedConfiguration
 import com.riffle.core.domain.launcher.rss.FeedId
 import com.riffle.core.domain.launcher.rss.FeedRefreshIntent
 import com.riffle.core.domain.launcher.rss.FeedUrl
+import com.riffle.core.domain.launcher.settings.AdaptiveStageAppearanceSettings
+import com.riffle.core.domain.launcher.settings.AdaptiveStageGeometry
+import com.riffle.core.domain.launcher.settings.AdaptiveStageMotion
+import com.riffle.core.domain.launcher.settings.AdaptiveStageSurface
+import com.riffle.core.domain.launcher.settings.AdaptiveStageTypography
 import com.riffle.core.domain.launcher.settings.AppDrawerPresentation
 import com.riffle.core.domain.launcher.settings.AppDrawerSettings
 import com.riffle.core.domain.launcher.settings.AppearanceSettings
@@ -39,11 +44,6 @@ import com.riffle.core.domain.launcher.settings.OverlayDockSettings
 import com.riffle.core.domain.launcher.settings.RssSettings
 import com.riffle.core.domain.launcher.settings.SearchResultPresentation
 import com.riffle.core.domain.launcher.settings.SearchSettings
-import com.riffle.core.domain.launcher.settings.TimeScapeAppearanceSettings
-import com.riffle.core.domain.launcher.settings.TimeScapeGeometry
-import com.riffle.core.domain.launcher.settings.TimeScapeMotion
-import com.riffle.core.domain.launcher.settings.TimeScapeSurface
-import com.riffle.core.domain.launcher.settings.TimeScapeTypography
 import com.riffle.core.domain.launcher.settings.coerceOverlayDockSettings
 import com.riffle.core.domain.launcher.settings.coerced
 import com.riffle.core.domain.launcher.settings.homeSystemBars
@@ -114,10 +114,10 @@ private fun JSONObject.toSearchSettings(defaults: SearchSettings): SearchSetting
 private fun encodeCardsSettings(settings: CardsSettings): JSONObject =
     JSONObject()
         .put("stagePreferencesByLayout", JSONArray(settings.stagePreferencesByLayout.map(::encodeStagePreferences)))
-        .put("timeScapeAppearance", encodeTimeScapeAppearance(settings.timeScapeAppearance))
-        .put("timeScapeTemplateId", settings.timeScapeTemplateId.value)
-        .put("timeScapeRailSide", settings.timeScapeRailSide?.name)
-        .put("timeScapePaneArrangement", settings.timeScapePaneArrangement.name)
+        .put("timeScapeAppearance", encodeAdaptiveStageAppearance(settings.adaptiveStageAppearance))
+        .put("timeScapeTemplateId", settings.adaptiveStageTemplateId.value)
+        .put("timeScapeRailSide", settings.adaptiveStageRailSide?.name)
+        .put("timeScapePaneArrangement", settings.adaptiveStagePaneArrangement.name)
 
 private fun encodeStagePreferences(entry: Map.Entry<HomeLayoutKey, AppStagePreferences>): JSONObject =
     JSONObject()
@@ -145,20 +145,20 @@ private fun JSONObject.toCardsSettings(defaults: CardsSettings): CardsSettings {
             ?: defaults.stagePreferencesByLayout
     return CardsSettings(
         stagePreferencesByLayout = stagePreferencesByLayout,
-        timeScapeAppearance =
-            optJSONObject("timeScapeAppearance")?.toTimeScapeAppearance(defaults.timeScapeAppearance)
-                ?: defaults.timeScapeAppearance,
-        timeScapeTemplateId =
-            optString("timeScapeTemplateId", defaults.timeScapeTemplateId.value)
+        adaptiveStageAppearance =
+            optJSONObject("timeScapeAppearance")?.toAdaptiveStageAppearance(defaults.adaptiveStageAppearance)
+                ?: defaults.adaptiveStageAppearance,
+        adaptiveStageTemplateId =
+            optString("timeScapeTemplateId", defaults.adaptiveStageTemplateId.value)
                 .takeIf(String::isNotBlank)
-                ?.let(::TimeScapeTemplateId)
-                ?: defaults.timeScapeTemplateId,
-        timeScapeRailSide = enumOrNull<TimeScapeRailSide>("timeScapeRailSide") ?: defaults.timeScapeRailSide,
-        timeScapePaneArrangement = enumOrDefault("timeScapePaneArrangement", defaults.timeScapePaneArrangement),
+                ?.let(::AdaptiveStageTemplateId)
+                ?: defaults.adaptiveStageTemplateId,
+        adaptiveStageRailSide = enumOrNull<AdaptiveStageRailSide>("timeScapeRailSide") ?: defaults.adaptiveStageRailSide,
+        adaptiveStagePaneArrangement = enumOrDefault("timeScapePaneArrangement", defaults.adaptiveStagePaneArrangement),
     )
 }
 
-private fun encodeTimeScapeAppearance(settings: TimeScapeAppearanceSettings): JSONObject =
+private fun encodeAdaptiveStageAppearance(settings: AdaptiveStageAppearanceSettings): JSONObject =
     settings.coerce().let { appearance ->
         JSONObject()
             .put("version", appearance.version)
@@ -289,16 +289,16 @@ private fun encodeTimeScapeAppearance(settings: TimeScapeAppearanceSettings): JS
             )
     }
 
-private fun JSONObject.toTimeScapeAppearance(defaults: TimeScapeAppearanceSettings): TimeScapeAppearanceSettings {
+private fun JSONObject.toAdaptiveStageAppearance(defaults: AdaptiveStageAppearanceSettings): AdaptiveStageAppearanceSettings {
     val geometry = optJSONObject("geometry")
     val surface = optJSONObject("surface")
     val typography = optJSONObject("typography")
     val motion = optJSONObject("motion")
-    return TimeScapeAppearanceSettings(
+    return AdaptiveStageAppearanceSettings(
         version = optInt("version", defaults.version),
         preset = enumOrDefault("preset", defaults.preset),
         geometry =
-            TimeScapeGeometry(
+            AdaptiveStageGeometry(
                 cardAspectRatioPercent =
                     geometry.optIntOrDefault(
                         "cardAspectRatioPercent",
@@ -366,7 +366,7 @@ private fun JSONObject.toTimeScapeAppearance(defaults: TimeScapeAppearanceSettin
                     ),
             ),
         surface =
-            TimeScapeSurface(
+            AdaptiveStageSurface(
                 backgroundSource =
                     surface.enumOrDefault(
                         "backgroundSource",
@@ -424,7 +424,7 @@ private fun JSONObject.toTimeScapeAppearance(defaults: TimeScapeAppearanceSettin
                     ),
             ),
         typography =
-            TimeScapeTypography(
+            AdaptiveStageTypography(
                 accentSource = typography.enumOrDefault("accentSource", defaults.typography.accentSource),
                 customAccentArgb = typography.optLongOrDefault("customAccentArgb", defaults.typography.customAccentArgb),
                 automaticForegroundContrast =
@@ -436,7 +436,7 @@ private fun JSONObject.toTimeScapeAppearance(defaults: TimeScapeAppearanceSettin
                 textScalePercent = typography.optIntOrDefault("textScalePercent", defaults.typography.textScalePercent),
             ),
         motion =
-            TimeScapeMotion(
+            AdaptiveStageMotion(
                 settleDurationMillis =
                     motion.optIntOrDefault(
                         "settleDurationMillis",

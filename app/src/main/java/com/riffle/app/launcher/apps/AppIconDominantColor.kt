@@ -7,7 +7,7 @@ import kotlin.math.roundToInt
 
 /**
  * Derives a single representative accent color from a decoded app icon bitmap, for use as a
- * per-app TimeScape card tint (mirrors the reference "Calm" app, which tints cards from the
+ * per-app AdaptiveStage card tint (mirrors the reference "Calm" app, which tints cards from the
  * app icon's dominant hue instead of a deterministic per-package hash).
  *
  * Sampling approach: the bitmap is walked on a stride grid (every [strideX]/[strideY]-th pixel in
@@ -20,7 +20,7 @@ import kotlin.math.roundToInt
  * desaturated region (e.g. a white/gray background fill) covers more pixels. The bucket with the
  * largest accumulated weight wins, and its saturation-weighted mean hue is used to build the
  * result color. Saturation and value are then pinned to FIXED constants matching
- * `timeScapeSeedColor`'s `0.46f`/`0.72f` (see `TimeScapeCardSurface.kt`) rather than using the
+ * `adaptiveStageSeedColor`'s `0.46f`/`0.72f` (see `AdaptiveStageCardSurface.kt`) rather than using the
  * icon's own sampled saturation/value, so cards stay equally legible regardless of how dark,
  * light, or washed out the source icon happens to be.
  *

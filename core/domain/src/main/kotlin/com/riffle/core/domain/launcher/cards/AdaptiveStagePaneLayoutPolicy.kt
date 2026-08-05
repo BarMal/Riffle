@@ -2,19 +2,19 @@ package com.riffle.core.domain.launcher.cards
 
 import kotlin.math.roundToInt
 
-/** Framework-independent window and separating-hinge inputs for the adaptive TimeScape surface. */
-data class TimeScapeWindowLayout(
+/** Framework-independent window and separating-hinge inputs for the adaptive AdaptiveStage surface. */
+data class AdaptiveStageWindowLayout(
     val widthDp: Int,
     val heightDp: Int,
     val safeStartDp: Int = 0,
     val safeTopDp: Int = 0,
     val safeEndDp: Int = 0,
     val safeBottomDp: Int = 0,
-    val separatingHinges: List<TimeScapeHingeBounds> = emptyList(),
-    val posture: TimeScapePosture = TimeScapePosture.UNKNOWN,
+    val separatingHinges: List<AdaptiveStageHingeBounds> = emptyList(),
+    val posture: AdaptiveStagePosture = AdaptiveStagePosture.UNKNOWN,
 )
 
-data class TimeScapeHingeBounds(
+data class AdaptiveStageHingeBounds(
     val leftDp: Int,
     val topDp: Int,
     val rightDp: Int,
@@ -25,39 +25,39 @@ data class TimeScapeHingeBounds(
     val heightDp: Int get() = (bottomDp - topDp).coerceAtLeast(0)
 }
 
-enum class TimeScapePaneMode {
+enum class AdaptiveStagePaneMode {
     COMPACT,
     TWO_PANE,
     THREE_PANE,
 
     /**
      * User-opted alternative to [COMPACT]: a top focus/detail region over a bottom card-stack
-     * strip. Never produced from window geometry alone -- only when [TimeScapePaneArrangement.SPLIT]
+     * strip. Never produced from window geometry alone -- only when [AdaptiveStagePaneArrangement.SPLIT]
      * is explicitly requested and the window is at least as wide as a workable [COMPACT] surface.
      */
     SPLIT,
 }
 
 /**
- * User-selectable choice between the existing full-stack TimeScape surface ([STACK], today's only
+ * User-selectable choice between the existing full-stack AdaptiveStage surface ([STACK], today's only
  * behavior) and the [SPLIT] top-detail/bottom-stack layout. This is independent of window
- * geometry -- [TimeScapePaneLayoutPolicy] still decides [TimeScapePaneMode.COMPACT] vs wider modes
- * from the window itself, and only promotes a would-be-[TimeScapePaneMode.COMPACT] result to
- * [TimeScapePaneMode.SPLIT] when [SPLIT] is requested and the window is workable.
+ * geometry -- [AdaptiveStagePaneLayoutPolicy] still decides [AdaptiveStagePaneMode.COMPACT] vs wider modes
+ * from the window itself, and only promotes a would-be-[AdaptiveStagePaneMode.COMPACT] result to
+ * [AdaptiveStagePaneMode.SPLIT] when [SPLIT] is requested and the window is workable.
  */
-enum class TimeScapePaneArrangement {
+enum class AdaptiveStagePaneArrangement {
     STACK,
     SPLIT,
 }
 
 /**
- * Concrete pane sizes with bounded Spline and detail surfaces. A vertical separating hinge is a
+ * Concrete pane sizes with bounded Stack and detail surfaces. A vertical separating hinge is a
  * real layout gap; callers must render content on either side rather than under it.
  */
-data class TimeScapePaneLayout(
-    val mode: TimeScapePaneMode,
+data class AdaptiveStagePaneLayout(
+    val mode: AdaptiveStagePaneMode,
     val railWidthDp: Int,
-    val splineWidthDp: Int,
+    val stackWidthDp: Int,
     val detailWidthDp: Int,
     val hingeGapDp: Int = 0,
     val leadingRegionWidthDp: Int = 0,
@@ -68,38 +68,38 @@ data class TimeScapePaneLayout(
     val contentWidthDp: Int = 0,
     val contentTopDp: Int = 0,
     val contentHeightDp: Int = 0,
-    /** [TimeScapePaneMode.SPLIT]-only: height of the upper focus/detail region. */
+    /** [AdaptiveStagePaneMode.SPLIT]-only: height of the upper focus/detail region. */
     val upperRegionHeightDp: Int = 0,
-    /** [TimeScapePaneMode.SPLIT]-only: height of the lower card-stack + spine region. */
+    /** [AdaptiveStagePaneMode.SPLIT]-only: height of the lower card-stack + spine region. */
     val lowerRegionHeightDp: Int = 0,
-    /** Non-zero only when the rail runs along [TimeScapeRailSide.TOP]/[TimeScapeRailSide.BOTTOM]. */
+    /** Non-zero only when the rail runs along [AdaptiveStageRailSide.TOP]/[AdaptiveStageRailSide.BOTTOM]. */
     val railHeightDp: Int = 0,
 ) {
-    val showsRail: Boolean get() = mode == TimeScapePaneMode.TWO_PANE || mode == TimeScapePaneMode.THREE_PANE
-    val showsDetailPane: Boolean get() = mode == TimeScapePaneMode.THREE_PANE
+    val showsRail: Boolean get() = mode == AdaptiveStagePaneMode.TWO_PANE || mode == AdaptiveStagePaneMode.THREE_PANE
+    val showsDetailPane: Boolean get() = mode == AdaptiveStagePaneMode.THREE_PANE
 }
 
-/** Chooses TimeScape panes from the current usable window, never a device-name classification. */
-class TimeScapePaneLayoutPolicy {
+/** Chooses AdaptiveStage panes from the current usable window, never a device-name classification. */
+class AdaptiveStagePaneLayoutPolicy {
     /**
      * [arrangement] is a user preference, not a geometry input: [resolveStackLayout] below is run
-     * exactly as before (byte-for-byte, for [TimeScapePaneArrangement.STACK]) and only when
-     * [TimeScapePaneArrangement.SPLIT] is requested and the geometry-only result would have been
-     * [TimeScapePaneMode.COMPACT] do we promote it to [TimeScapePaneMode.SPLIT] -- and only if the
+     * exactly as before (byte-for-byte, for [AdaptiveStagePaneArrangement.STACK]) and only when
+     * [AdaptiveStagePaneArrangement.SPLIT] is requested and the geometry-only result would have been
+     * [AdaptiveStagePaneMode.COMPACT] do we promote it to [AdaptiveStagePaneMode.SPLIT] -- and only if the
      * window is workable (mirrors the same non-degenerate-bounds spirit as the compact-fallback
      * paths above, using a minimum content height instead of width since the split adds a second
-     * vertical region). An unworkably small window keeps [TimeScapePaneMode.COMPACT] even though
-     * [TimeScapePaneArrangement.SPLIT] was requested.
+     * vertical region). An unworkably small window keeps [AdaptiveStagePaneMode.COMPACT] even though
+     * [AdaptiveStagePaneArrangement.SPLIT] was requested.
      */
     fun layoutFor(
-        window: TimeScapeWindowLayout,
-        railSide: TimeScapeRailSide = TimeScapeRailSide.LEADING,
-        arrangement: TimeScapePaneArrangement = TimeScapePaneArrangement.STACK,
-    ): TimeScapePaneLayout {
+        window: AdaptiveStageWindowLayout,
+        railSide: AdaptiveStageRailSide = AdaptiveStageRailSide.LEADING,
+        arrangement: AdaptiveStagePaneArrangement = AdaptiveStagePaneArrangement.STACK,
+    ): AdaptiveStagePaneLayout {
         val stackLayout = resolveStackLayout(window, railSide).reserveHorizontalRail(railSide)
         val canSplit =
-            arrangement == TimeScapePaneArrangement.SPLIT &&
-                stackLayout.mode == TimeScapePaneMode.COMPACT &&
+            arrangement == AdaptiveStagePaneArrangement.SPLIT &&
+                stackLayout.mode == AdaptiveStagePaneMode.COMPACT &&
                 stackLayout.contentWidthDp > 0 &&
                 stackLayout.contentHeightDp >= MIN_SPLIT_CONTENT_HEIGHT_DP
         if (!canSplit) return stackLayout
@@ -109,7 +109,7 @@ class TimeScapePaneLayoutPolicy {
                 .roundToInt()
                 .coerceIn(0, stackLayout.contentHeightDp)
         return stackLayout.copy(
-            mode = TimeScapePaneMode.SPLIT,
+            mode = AdaptiveStagePaneMode.SPLIT,
             upperRegionHeightDp = upperHeight,
             lowerRegionHeightDp = stackLayout.contentHeightDp - upperHeight,
         )
@@ -117,9 +117,9 @@ class TimeScapePaneLayoutPolicy {
 
     @Suppress("CyclomaticComplexMethod", "LongMethod", "MaxLineLength", "ReturnCount")
     private fun resolveStackLayout(
-        window: TimeScapeWindowLayout,
-        railSide: TimeScapeRailSide,
-    ): TimeScapePaneLayout {
+        window: AdaptiveStageWindowLayout,
+        railSide: AdaptiveStageRailSide,
+    ): AdaptiveStagePaneLayout {
         val safeWidth = (window.widthDp - window.safeStartDp - window.safeEndDp).coerceAtLeast(0)
         val safeHeight = (window.heightDp - window.safeTopDp - window.safeBottomDp).coerceAtLeast(0)
         val verticalHinge =
@@ -149,7 +149,7 @@ class TimeScapePaneLayoutPolicy {
             }
 
         // A half-open or tabletop device must remain a usable compact surface even when the
-        // reported bounds are large. Stage Manager is reserved for a confirmed flat posture.
+        // reported bounds are large. The docked-rail layout is reserved for a confirmed flat posture.
         if (window.posture.isCompactFallback()) {
             val useTrailingRegion = verticalHinge != null && trailingWidth > leadingWidth
             val compactWidth =
@@ -160,10 +160,10 @@ class TimeScapePaneLayoutPolicy {
                 } else {
                     leadingWidth
                 }
-            return TimeScapePaneLayout(
-                mode = TimeScapePaneMode.COMPACT,
+            return AdaptiveStagePaneLayout(
+                mode = AdaptiveStagePaneMode.COMPACT,
                 railWidthDp = 0,
-                splineWidthDp = compactWidth,
+                stackWidthDp = compactWidth,
                 detailWidthDp = 0,
                 hingeGapDp = 0,
                 leadingRegionWidthDp = leadingWidth,
@@ -175,17 +175,17 @@ class TimeScapePaneLayoutPolicy {
             )
         }
 
-        val leadingRailWidth = if (railSide == TimeScapeRailSide.LEADING) RAIL_WIDTH_DP else 0
-        val trailingRailWidth = if (railSide == TimeScapeRailSide.TRAILING) RAIL_WIDTH_DP else 0
-        val leadingRegionIsTooNarrow = leadingWidth < leadingRailWidth + MIN_SPLINE_WIDTH_DP
+        val leadingRailWidth = if (railSide == AdaptiveStageRailSide.LEADING) RAIL_WIDTH_DP else 0
+        val trailingRailWidth = if (railSide == AdaptiveStageRailSide.TRAILING) RAIL_WIDTH_DP else 0
+        val leadingRegionIsTooNarrow = leadingWidth < leadingRailWidth + MIN_STACK_WIDTH_DP
         val trailingRegionIsTooNarrow = trailingWidth < trailingRailWidth
         if (verticalHinge != null && (leadingRegionIsTooNarrow || trailingRegionIsTooNarrow)) {
             val useTrailingRegion = trailingWidth > leadingWidth
             val compactWidth = if (useTrailingRegion) trailingWidth else leadingWidth
-            return TimeScapePaneLayout(
-                mode = TimeScapePaneMode.COMPACT,
+            return AdaptiveStagePaneLayout(
+                mode = AdaptiveStagePaneMode.COMPACT,
                 railWidthDp = 0,
-                splineWidthDp = compactWidth,
+                stackWidthDp = compactWidth,
                 detailWidthDp = 0,
                 hingeGapDp = 0,
                 leadingRegionWidthDp = leadingWidth,
@@ -197,20 +197,20 @@ class TimeScapePaneLayoutPolicy {
             )
         }
 
-        val hasThreePaneLeadingRegion = leadingWidth >= leadingRailWidth + MIN_SPLINE_WIDTH_DP
+        val hasThreePaneLeadingRegion = leadingWidth >= leadingRailWidth + MIN_STACK_WIDTH_DP
         val hasThreePaneTrailingRegion = trailingWidth >= DETAIL_WIDTH_DP + trailingRailWidth
         if (verticalHinge != null && hasThreePaneLeadingRegion && hasThreePaneTrailingRegion) {
-            val splineWidth = (leadingWidth - leadingRailWidth).coerceAtMost(MAX_SPLINE_WIDTH_DP)
-            return TimeScapePaneLayout(
-                mode = TimeScapePaneMode.THREE_PANE,
+            val stackWidth = (leadingWidth - leadingRailWidth).coerceAtMost(MAX_STACK_WIDTH_DP)
+            return AdaptiveStagePaneLayout(
+                mode = AdaptiveStagePaneMode.THREE_PANE,
                 railWidthDp = RAIL_WIDTH_DP,
-                splineWidthDp = splineWidth,
+                stackWidthDp = stackWidth,
                 detailWidthDp = (trailingWidth - trailingRailWidth).coerceAtMost(DETAIL_WIDTH_DP),
                 hingeGapDp = hingeGap,
                 leadingRegionWidthDp = leadingWidth,
                 trailingRegionWidthDp = trailingWidth,
                 leadingRemainderDp =
-                    (leadingWidth - leadingRailWidth - splineWidth).coerceAtLeast(0),
+                    (leadingWidth - leadingRailWidth - stackWidth).coerceAtLeast(0),
                 contentWidthDp = safeWidth,
                 contentTopDp = contentTop,
                 contentHeightDp = contentHeight,
@@ -218,17 +218,17 @@ class TimeScapePaneLayoutPolicy {
         }
 
         if (verticalHinge != null) {
-            val splineWidth = (leadingWidth - leadingRailWidth).coerceAtMost(MAX_SPLINE_WIDTH_DP)
-            return TimeScapePaneLayout(
-                mode = TimeScapePaneMode.TWO_PANE,
+            val stackWidth = (leadingWidth - leadingRailWidth).coerceAtMost(MAX_STACK_WIDTH_DP)
+            return AdaptiveStagePaneLayout(
+                mode = AdaptiveStagePaneMode.TWO_PANE,
                 railWidthDp = RAIL_WIDTH_DP,
-                splineWidthDp = splineWidth,
+                stackWidthDp = stackWidth,
                 detailWidthDp = 0,
                 hingeGapDp = hingeGap,
                 leadingRegionWidthDp = leadingWidth,
                 trailingRegionWidthDp = trailingWidth,
                 leadingRemainderDp =
-                    (leadingWidth - leadingRailWidth - splineWidth).coerceAtLeast(0),
+                    (leadingWidth - leadingRailWidth - stackWidth).coerceAtLeast(0),
                 contentWidthDp = safeWidth,
                 contentTopDp = contentTop,
                 contentHeightDp = contentHeight,
@@ -242,10 +242,10 @@ class TimeScapePaneLayoutPolicy {
         val noHingeRailWidth = if (railSide.isHorizontalEdge) 0 else RAIL_WIDTH_DP
         return when {
             usableWidth < MIN_TWO_PANE_WIDTH_DP ->
-                TimeScapePaneLayout(
-                    mode = TimeScapePaneMode.COMPACT,
+                AdaptiveStagePaneLayout(
+                    mode = AdaptiveStagePaneMode.COMPACT,
                     railWidthDp = 0,
-                    splineWidthDp = usableWidth,
+                    stackWidthDp = usableWidth,
                     detailWidthDp = 0,
                     hingeGapDp = hingeGap,
                     leadingRegionWidthDp = leadingWidth,
@@ -256,11 +256,11 @@ class TimeScapePaneLayoutPolicy {
                 )
 
             usableWidth < MIN_THREE_PANE_WIDTH_DP ->
-                TimeScapePaneLayout(
-                    mode = TimeScapePaneMode.TWO_PANE,
+                AdaptiveStagePaneLayout(
+                    mode = AdaptiveStagePaneMode.TWO_PANE,
                     railWidthDp = noHingeRailWidth,
-                    splineWidthDp =
-                        (usableWidth - noHingeRailWidth).coerceIn(MIN_SPLINE_WIDTH_DP, MAX_SPLINE_WIDTH_DP),
+                    stackWidthDp =
+                        (usableWidth - noHingeRailWidth).coerceIn(MIN_STACK_WIDTH_DP, MAX_STACK_WIDTH_DP),
                     detailWidthDp = 0,
                     hingeGapDp = hingeGap,
                     leadingRegionWidthDp = leadingWidth,
@@ -271,12 +271,12 @@ class TimeScapePaneLayoutPolicy {
                 )
 
             else ->
-                TimeScapePaneLayout(
-                    mode = TimeScapePaneMode.THREE_PANE,
+                AdaptiveStagePaneLayout(
+                    mode = AdaptiveStagePaneMode.THREE_PANE,
                     railWidthDp = noHingeRailWidth,
-                    splineWidthDp =
+                    stackWidthDp =
                         (usableWidth - noHingeRailWidth - DETAIL_WIDTH_DP)
-                            .coerceIn(MIN_SPLINE_WIDTH_DP, MAX_SPLINE_WIDTH_DP),
+                            .coerceIn(MIN_STACK_WIDTH_DP, MAX_STACK_WIDTH_DP),
                     detailWidthDp = DETAIL_WIDTH_DP,
                     hingeGapDp = hingeGap,
                     leadingRegionWidthDp = leadingWidth,
@@ -292,44 +292,44 @@ class TimeScapePaneLayoutPolicy {
         const val MIN_TWO_PANE_WIDTH_DP = 600
         const val MIN_THREE_PANE_WIDTH_DP = 1_000
         const val RAIL_WIDTH_DP = 104
-        const val MIN_SPLINE_WIDTH_DP = 360
-        const val MAX_SPLINE_WIDTH_DP = 560
+        const val MIN_STACK_WIDTH_DP = 360
+        const val MAX_STACK_WIDTH_DP = 560
         const val DETAIL_WIDTH_DP = 360
 
         /**
          * The upper focus/detail region gets 60% of the available content height in
-         * [TimeScapePaneMode.SPLIT] -- roughly the upper 3/5, inside the requested 1/2-2/3 range and a
+         * [AdaptiveStagePaneMode.SPLIT] -- roughly the upper 3/5, inside the requested 1/2-2/3 range and a
          * clean fit against the existing hinge-region math above, which also favors whichever side
          * gets the (implicitly larger) remainder rather than an even split.
          */
         const val SPLIT_UPPER_REGION_RATIO = 0.6f
 
         /**
-         * A phone-width [TimeScapePaneMode.COMPACT] window can still be too short to host a top
+         * A phone-width [AdaptiveStagePaneMode.COMPACT] window can still be too short to host a top
          * detail region plus a bottom stage pager and spine without either becoming unusably small.
          * 400dp comfortably fits a compact header (~64dp) + a minimal detail summary above a pager
-         * and spine strip below; shorter than this, [TimeScapePaneArrangement.SPLIT] falls back to
-         * [TimeScapePaneMode.COMPACT] rather than rendering a degenerate split.
+         * and spine strip below; shorter than this, [AdaptiveStagePaneArrangement.SPLIT] falls back to
+         * [AdaptiveStagePaneMode.COMPACT] rather than rendering a degenerate split.
          */
         const val MIN_SPLIT_CONTENT_HEIGHT_DP = 400
     }
 }
 
 /**
- * Height reserved for a [TimeScapeRailSide.TOP]/[TimeScapeRailSide.BOTTOM] rail, sized for a row of
- * [TimeScapeStageRailTile]-shaped tiles (icon + label) plus padding -- deliberately smaller than
- * [TimeScapePaneLayoutPolicy]'s `RAIL_WIDTH_DP` column, since a horizontal strip only needs to fit
+ * Height reserved for a [AdaptiveStageRailSide.TOP]/[AdaptiveStageRailSide.BOTTOM] rail, sized for a row of
+ * [AdaptiveStageStageRailTile]-shaped tiles (icon + label) plus padding -- deliberately smaller than
+ * [AdaptiveStagePaneLayoutPolicy]'s `RAIL_WIDTH_DP` column, since a horizontal strip only needs to fit
  * one tile's height rather than a label column beside it.
  */
 private const val RAIL_HEIGHT_DP = 96
 
 /**
  * When the rail runs along the top or bottom edge it consumes vertical rather than horizontal
- * space: reserve it from [TimeScapePaneLayout.contentHeightDp] rather than touching any of the
+ * space: reserve it from [AdaptiveStagePaneLayout.contentHeightDp] rather than touching any of the
  * width-based pane-mode math above (which stays exactly as before for
- * [TimeScapeRailSide.LEADING]/[TimeScapeRailSide.TRAILING]).
+ * [AdaptiveStageRailSide.LEADING]/[AdaptiveStageRailSide.TRAILING]).
  *
- * [TimeScapePaneLayout.contentTopDp] is deliberately left untouched here: it positions the whole
+ * [AdaptiveStagePaneLayout.contentTopDp] is deliberately left untouched here: it positions the whole
  * content [androidx.compose.foundation.layout.Box] -- which contains the rail itself, not just the
  * area below it -- within the window, mirroring how a horizontal separating hinge already shifts
  * that same offset. Adjusting it here would push the rail down along with everything else instead
@@ -337,7 +337,7 @@ private const val RAIL_HEIGHT_DP = 96
  * top-to-bottom [androidx.compose.foundation.layout.Column]) is what actually keeps the content
  * below the rail, no extra offset required.
  */
-private fun TimeScapePaneLayout.reserveHorizontalRail(railSide: TimeScapeRailSide): TimeScapePaneLayout {
+private fun AdaptiveStagePaneLayout.reserveHorizontalRail(railSide: AdaptiveStageRailSide): AdaptiveStagePaneLayout {
     if (!railSide.isHorizontalEdge || !showsRail) return this
     val reservedHeight = RAIL_HEIGHT_DP.coerceAtMost(contentHeightDp)
     return copy(
@@ -347,12 +347,12 @@ private fun TimeScapePaneLayout.reserveHorizontalRail(railSide: TimeScapeRailSid
     )
 }
 
-private fun TimeScapePosture.isCompactFallback(): Boolean =
+private fun AdaptiveStagePosture.isCompactFallback(): Boolean =
     when (this) {
-        TimeScapePosture.UNKNOWN,
-        TimeScapePosture.COMPACT,
-        TimeScapePosture.PARTIALLY_FOLDED,
-        TimeScapePosture.TABLETOP,
+        AdaptiveStagePosture.UNKNOWN,
+        AdaptiveStagePosture.COMPACT,
+        AdaptiveStagePosture.PARTIALLY_FOLDED,
+        AdaptiveStagePosture.TABLETOP,
         -> true
-        TimeScapePosture.UNFOLDED -> false
+        AdaptiveStagePosture.UNFOLDED -> false
     }

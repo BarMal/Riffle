@@ -9,15 +9,15 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-class TimeScapeTemplateTest {
+class AdaptiveStageTemplateTest {
     @Test
     fun builtInTemplateKeepsCanvasElementsOutsideAppStageSlot() {
-        val template = TimeScapeTemplateCatalogDefaults.sharedCanvas
-        val variant = template.variantFor(HomeLayoutDeviceClass.PHONE, TimeScapePaneMode.COMPACT)
+        val template = AdaptiveStageTemplateCatalogDefaults.sharedCanvas
+        val variant = template.variantFor(HomeLayoutDeviceClass.PHONE, AdaptiveStagePaneMode.COMPACT)
 
         assertTrue(variant != null)
         assertEquals(
-            setOf(TimeScapeDynamicSource.APP_STAGE_STACKS, TimeScapeDynamicSource.FUTURE_FEED),
+            setOf(AdaptiveStageDynamicSource.APP_STAGE_STACKS, AdaptiveStageDynamicSource.FUTURE_FEED),
             variant.dynamicSlots.map { it.source }.toSet(),
         )
         assertEquals(listOf("clock", "search", "carousel", "dock"), variant.canvas.elements.map { it.id.value })
@@ -26,11 +26,11 @@ class TimeScapeTemplateTest {
 
     @Test
     fun builtInTemplateBindsFeedDynamicSlotToTheSharedStageAreaWithoutCollision() {
-        val template = TimeScapeTemplateCatalogDefaults.sharedCanvas
+        val template = AdaptiveStageTemplateCatalogDefaults.sharedCanvas
 
         template.variants.forEach { variant ->
-            val appStageSlot = variant.dynamicSlots.single { it.source == TimeScapeDynamicSource.APP_STAGE_STACKS }
-            val feedSlot = variant.dynamicSlots.single { it.source == TimeScapeDynamicSource.FUTURE_FEED }
+            val appStageSlot = variant.dynamicSlots.single { it.source == AdaptiveStageDynamicSource.APP_STAGE_STACKS }
+            val feedSlot = variant.dynamicSlots.single { it.source == AdaptiveStageDynamicSource.FUTURE_FEED }
 
             assertEquals(appStageSlot.placement, feedSlot.placement)
             assertEquals(emptyList(), variant.validate())
@@ -40,14 +40,14 @@ class TimeScapeTemplateTest {
     @Test
     fun builtInTemplateUsesIntentionalPhoneAndFoldableStageManagerPlacements() {
         val phone =
-            TimeScapeTemplateCatalogDefaults.sharedCanvas.variantFor(
+            AdaptiveStageTemplateCatalogDefaults.sharedCanvas.variantFor(
                 HomeLayoutDeviceClass.PHONE,
-                TimeScapePaneMode.THREE_PANE,
+                AdaptiveStagePaneMode.THREE_PANE,
             )
         val foldable =
-            TimeScapeTemplateCatalogDefaults.sharedCanvas.variantFor(
+            AdaptiveStageTemplateCatalogDefaults.sharedCanvas.variantFor(
                 HomeLayoutDeviceClass.FOLDABLE,
-                TimeScapePaneMode.THREE_PANE,
+                AdaptiveStagePaneMode.THREE_PANE,
             )
 
         assertTrue(phone != null)
@@ -60,43 +60,43 @@ class TimeScapeTemplateTest {
 
     @Test
     fun exactResponsiveVariantWinsAndDeviceFallsBackToCompact() {
-        val compact = variant(TimeScapePaneMode.COMPACT)
-        val stageManager = variant(TimeScapePaneMode.THREE_PANE)
+        val compact = variant(AdaptiveStagePaneMode.COMPACT)
+        val stageManager = variant(AdaptiveStagePaneMode.THREE_PANE)
         val template =
-            TimeScapeTemplate(
-                TimeScapeTemplateId("test"),
+            AdaptiveStageTemplate(
+                AdaptiveStageTemplateId("test"),
                 "Test",
                 "",
                 listOf(compact, stageManager),
             )
 
-        assertEquals(stageManager, template.variantFor(HomeLayoutDeviceClass.PHONE, TimeScapePaneMode.THREE_PANE))
-        assertEquals(compact, template.variantFor(HomeLayoutDeviceClass.PHONE, TimeScapePaneMode.TWO_PANE))
-        assertEquals(null, template.variantFor(HomeLayoutDeviceClass.FOLDABLE, TimeScapePaneMode.COMPACT))
+        assertEquals(stageManager, template.variantFor(HomeLayoutDeviceClass.PHONE, AdaptiveStagePaneMode.THREE_PANE))
+        assertEquals(compact, template.variantFor(HomeLayoutDeviceClass.PHONE, AdaptiveStagePaneMode.TWO_PANE))
+        assertEquals(null, template.variantFor(HomeLayoutDeviceClass.FOLDABLE, AdaptiveStagePaneMode.COMPACT))
     }
 
     @Test
     fun responsiveVariantCarriesConfiguredRailSide() {
-        val variant = variant(TimeScapePaneMode.THREE_PANE).copy(railSide = TimeScapeRailSide.TRAILING)
+        val variant = variant(AdaptiveStagePaneMode.THREE_PANE).copy(railSide = AdaptiveStageRailSide.TRAILING)
 
-        assertEquals(TimeScapeRailSide.TRAILING, variant.railSide)
+        assertEquals(AdaptiveStageRailSide.TRAILING, variant.railSide)
     }
 
     @Test
     fun onlyTopAndBottomRailSidesAreHorizontalEdges() {
-        assertTrue(TimeScapeRailSide.TOP.isHorizontalEdge)
-        assertTrue(TimeScapeRailSide.BOTTOM.isHorizontalEdge)
-        assertTrue(!TimeScapeRailSide.LEADING.isHorizontalEdge)
-        assertTrue(!TimeScapeRailSide.TRAILING.isHorizontalEdge)
+        assertTrue(AdaptiveStageRailSide.TOP.isHorizontalEdge)
+        assertTrue(AdaptiveStageRailSide.BOTTOM.isHorizontalEdge)
+        assertTrue(!AdaptiveStageRailSide.LEADING.isHorizontalEdge)
+        assertTrue(!AdaptiveStageRailSide.TRAILING.isHorizontalEdge)
     }
 
     @Test
     fun validationReportsCollisionsAndOutOfBoundsPlacements() {
         val variant =
-            TimeScapeTemplateVariant(
+            AdaptiveStageTemplateVariant(
                 HomeLayoutDeviceClass.PHONE,
-                TimeScapePaneMode.COMPACT,
-                TimeScapeCanvas(
+                AdaptiveStagePaneMode.COMPACT,
+                AdaptiveStageCanvas(
                     GridDimensions(2, 2),
                     listOf(
                         element("first", GridPlacement(GridCell(0, 0))),
@@ -104,55 +104,55 @@ class TimeScapeTemplateTest {
                     ),
                 ),
                 listOf(
-                    TimeScapeDynamicSlot(
-                        TimeScapeDynamicSlotId("stage"),
-                        TimeScapeDynamicSource.APP_STAGE_STACKS,
+                    AdaptiveStageDynamicSlot(
+                        AdaptiveStageDynamicSlotId("stage"),
+                        AdaptiveStageDynamicSource.APP_STAGE_STACKS,
                         GridPlacement(GridCell(2, 0)),
                     ),
                 ),
             )
 
-        assertTrue(variant.validate().any { it is TimeScapeTemplateValidationIssue.Collision })
-        assertTrue(variant.validate().any { it is TimeScapeTemplateValidationIssue.OutOfBounds })
+        assertTrue(variant.validate().any { it is AdaptiveStageTemplateValidationIssue.Collision })
+        assertTrue(variant.validate().any { it is AdaptiveStageTemplateValidationIssue.OutOfBounds })
     }
 
     @Test
     fun validationAllowsOverlappingDynamicSlotsButNotDynamicSlotOverlappingStaticElement() {
         val sharedPlacement = GridPlacement(GridCell(0, 0))
         val twoDynamicSlots =
-            TimeScapeTemplateVariant(
+            AdaptiveStageTemplateVariant(
                 HomeLayoutDeviceClass.PHONE,
-                TimeScapePaneMode.COMPACT,
-                TimeScapeCanvas(GridDimensions(2, 2), emptyList()),
+                AdaptiveStagePaneMode.COMPACT,
+                AdaptiveStageCanvas(GridDimensions(2, 2), emptyList()),
                 listOf(
-                    TimeScapeDynamicSlot(
-                        TimeScapeDynamicSlotId("a"),
-                        TimeScapeDynamicSource.APP_STAGE_STACKS,
+                    AdaptiveStageDynamicSlot(
+                        AdaptiveStageDynamicSlotId("a"),
+                        AdaptiveStageDynamicSource.APP_STAGE_STACKS,
                         sharedPlacement,
                     ),
-                    TimeScapeDynamicSlot(
-                        TimeScapeDynamicSlotId("b"),
-                        TimeScapeDynamicSource.FUTURE_FEED,
+                    AdaptiveStageDynamicSlot(
+                        AdaptiveStageDynamicSlotId("b"),
+                        AdaptiveStageDynamicSource.FUTURE_FEED,
                         sharedPlacement,
                     ),
                 ),
             )
         val dynamicOverlappingStatic =
-            TimeScapeTemplateVariant(
+            AdaptiveStageTemplateVariant(
                 HomeLayoutDeviceClass.PHONE,
-                TimeScapePaneMode.COMPACT,
-                TimeScapeCanvas(GridDimensions(2, 2), listOf(element("clock", sharedPlacement))),
+                AdaptiveStagePaneMode.COMPACT,
+                AdaptiveStageCanvas(GridDimensions(2, 2), listOf(element("clock", sharedPlacement))),
                 listOf(
-                    TimeScapeDynamicSlot(
-                        TimeScapeDynamicSlotId("a"),
-                        TimeScapeDynamicSource.APP_STAGE_STACKS,
+                    AdaptiveStageDynamicSlot(
+                        AdaptiveStageDynamicSlotId("a"),
+                        AdaptiveStageDynamicSource.APP_STAGE_STACKS,
                         sharedPlacement,
                     ),
                 ),
             )
 
         assertEquals(emptyList(), twoDynamicSlots.validate())
-        assertTrue(dynamicOverlappingStatic.validate().any { it is TimeScapeTemplateValidationIssue.Collision })
+        assertTrue(dynamicOverlappingStatic.validate().any { it is AdaptiveStageTemplateValidationIssue.Collision })
     }
 
     @Test
@@ -165,7 +165,7 @@ class TimeScapeTemplateTest {
 
         val issues = variant.validate()
 
-        assertEquals(2, issues.count { issue -> issue is TimeScapeTemplateValidationIssue.InvalidSpan })
+        assertEquals(2, issues.count { issue -> issue is AdaptiveStageTemplateValidationIssue.InvalidSpan })
     }
 
     @Test
@@ -174,7 +174,7 @@ class TimeScapeTemplateTest {
         val variant = variantWithPlacements(placement)
 
         assertEquals(
-            listOf(TimeScapeTemplateValidationIssue.OutOfBounds(placement)),
+            listOf(AdaptiveStageTemplateValidationIssue.OutOfBounds(placement)),
             variant.validate(),
         )
     }
@@ -184,10 +184,10 @@ class TimeScapeTemplateTest {
         val fullGrid = GridPlacement(GridCell(0, 0), GridSpan(Int.MAX_VALUE, Int.MAX_VALUE))
         val overlappingCell = GridPlacement(GridCell(Int.MAX_VALUE - 1, Int.MAX_VALUE - 1))
         val variant =
-            TimeScapeTemplateVariant(
+            AdaptiveStageTemplateVariant(
                 HomeLayoutDeviceClass.PHONE,
-                TimeScapePaneMode.COMPACT,
-                TimeScapeCanvas(
+                AdaptiveStagePaneMode.COMPACT,
+                AdaptiveStageCanvas(
                     GridDimensions(Int.MAX_VALUE, Int.MAX_VALUE),
                     listOf(
                         element("full-grid", fullGrid),
@@ -198,34 +198,34 @@ class TimeScapeTemplateTest {
             )
 
         assertEquals(
-            listOf(TimeScapeTemplateValidationIssue.Collision(overlappingCell)),
+            listOf(AdaptiveStageTemplateValidationIssue.Collision(overlappingCell)),
             variant.validate(),
         )
     }
 
-    private fun variant(mode: TimeScapePaneMode): TimeScapeTemplateVariant =
-        TimeScapeTemplateVariant(
+    private fun variant(mode: AdaptiveStagePaneMode): AdaptiveStageTemplateVariant =
+        AdaptiveStageTemplateVariant(
             HomeLayoutDeviceClass.PHONE,
             mode,
-            TimeScapeCanvas(GridDimensions(4, 4), emptyList()),
+            AdaptiveStageCanvas(GridDimensions(4, 4), emptyList()),
             emptyList(),
         )
 
     private fun element(
         id: String,
         placement: GridPlacement,
-    ): TimeScapeStaticElement =
-        TimeScapeStaticElement(
-            TimeScapeElementId(id),
-            TimeScapeStaticElementType.CLOCK,
+    ): AdaptiveStageStaticElement =
+        AdaptiveStageStaticElement(
+            AdaptiveStageElementId(id),
+            AdaptiveStageStaticElementType.CLOCK,
             placement,
         )
 
-    private fun variantWithPlacements(vararg placements: GridPlacement): TimeScapeTemplateVariant =
-        TimeScapeTemplateVariant(
+    private fun variantWithPlacements(vararg placements: GridPlacement): AdaptiveStageTemplateVariant =
+        AdaptiveStageTemplateVariant(
             HomeLayoutDeviceClass.PHONE,
-            TimeScapePaneMode.COMPACT,
-            TimeScapeCanvas(
+            AdaptiveStagePaneMode.COMPACT,
+            AdaptiveStageCanvas(
                 GridDimensions(2, 2),
                 placements.mapIndexed { index, placement -> element("element-$index", placement) },
             ),

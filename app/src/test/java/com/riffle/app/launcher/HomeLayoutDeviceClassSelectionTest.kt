@@ -1,7 +1,7 @@
 package com.riffle.app.launcher
 
-import com.riffle.core.domain.launcher.cards.TimeScapePosture
-import com.riffle.core.domain.launcher.cards.TimeScapeWindowLayout
+import com.riffle.core.domain.launcher.cards.AdaptiveStagePosture
+import com.riffle.core.domain.launcher.cards.AdaptiveStageWindowLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -9,8 +9,8 @@ import org.junit.Test
 
 class HomeLayoutDeviceClassSelectionTest {
     @Test
-    fun deviceClassEventCarriesTheWindowLayoutUsedByTimeScapeRendering() {
-        val layout = TimeScapeWindowLayout(widthDp = 1_200, heightDp = 800, posture = TimeScapePosture.UNFOLDED)
+    fun deviceClassEventCarriesTheWindowLayoutUsedByAdaptiveStageRendering() {
+        val layout = AdaptiveStageWindowLayout(widthDp = 1_200, heightDp = 800, posture = AdaptiveStagePosture.UNFOLDED)
         val event =
             HomeLayoutDeviceClassEvent(
                 source = "window-info",
@@ -24,17 +24,17 @@ class HomeLayoutDeviceClassSelectionTest {
                 configurationClass = HomeLayoutDeviceClass.FOLDABLE,
                 foldablePosture = HomeLayoutFoldablePosture.UNFOLDED,
                 foldingFeatures = emptyList(),
-                timeScapeWindowLayout = layout,
+                adaptiveStageWindowLayout = layout,
             )
 
-        assertEquals(layout, event.timeScapeWindowLayout)
+        assertEquals(layout, event.adaptiveStageWindowLayout)
     }
 
     @Test
-    fun timeScapePostureKeepsUnavailableAndUnconfirmedReportsOutOfStageManager() {
+    fun adaptiveStagePostureKeepsUnavailableAndUnconfirmedReportsOutOfStageManager() {
         assertEquals(
-            TimeScapePosture.UNKNOWN,
-            timeScapePostureFromSignals(
+            AdaptiveStagePosture.UNKNOWN,
+            adaptiveStagePostureFromSignals(
                 hasFoldableHardware = false,
                 hasFoldingFeature = false,
                 hasHalfOpenedFoldingFeature = false,
@@ -43,8 +43,8 @@ class HomeLayoutDeviceClassSelectionTest {
             ),
         )
         assertEquals(
-            TimeScapePosture.COMPACT,
-            timeScapePostureFromSignals(
+            AdaptiveStagePosture.COMPACT,
+            adaptiveStagePostureFromSignals(
                 hasFoldableHardware = true,
                 hasFoldingFeature = false,
                 hasHalfOpenedFoldingFeature = false,
@@ -55,10 +55,10 @@ class HomeLayoutDeviceClassSelectionTest {
     }
 
     @Test
-    fun timeScapePostureRequiresFlatWindowManagerReportForUnfolded() {
+    fun adaptiveStagePostureRequiresFlatWindowManagerReportForUnfolded() {
         assertEquals(
-            TimeScapePosture.UNFOLDED,
-            timeScapePostureFromSignals(
+            AdaptiveStagePosture.UNFOLDED,
+            adaptiveStagePostureFromSignals(
                 hasFoldableHardware = true,
                 hasFoldingFeature = true,
                 hasHalfOpenedFoldingFeature = false,

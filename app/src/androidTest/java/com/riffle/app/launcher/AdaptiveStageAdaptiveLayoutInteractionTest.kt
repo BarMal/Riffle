@@ -23,11 +23,11 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.LauncherShellState
-import com.riffle.core.domain.launcher.cards.TimeScapeHingeBounds
-import com.riffle.core.domain.launcher.cards.TimeScapePaneArrangement
-import com.riffle.core.domain.launcher.cards.TimeScapePosture
-import com.riffle.core.domain.launcher.cards.TimeScapeRailSide
-import com.riffle.core.domain.launcher.cards.TimeScapeWindowLayout
+import com.riffle.core.domain.launcher.cards.AdaptiveStageHingeBounds
+import com.riffle.core.domain.launcher.cards.AdaptiveStagePaneArrangement
+import com.riffle.core.domain.launcher.cards.AdaptiveStagePosture
+import com.riffle.core.domain.launcher.cards.AdaptiveStageRailSide
+import com.riffle.core.domain.launcher.cards.AdaptiveStageWindowLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.settings.CardsSettings
@@ -37,17 +37,17 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
-class TimeScapeAdaptiveLayoutInteractionTest {
+class AdaptiveStageAdaptiveLayoutInteractionTest {
     @get:Rule
     val composeRule = createComposeRule()
 
     @Test
     fun configuredLeadingRailOverridesTrailingTemplateVariant() {
         assertEquals(
-            TimeScapeRailSide.LEADING,
-            resolveTimeScapeRailSide(
-                configuredRailSide = TimeScapeRailSide.LEADING,
-                templateRailSide = TimeScapeRailSide.TRAILING,
+            AdaptiveStageRailSide.LEADING,
+            resolveAdaptiveStageRailSide(
+                configuredRailSide = AdaptiveStageRailSide.LEADING,
+                templateRailSide = AdaptiveStageRailSide.TRAILING,
             ),
         )
     }
@@ -55,10 +55,10 @@ class TimeScapeAdaptiveLayoutInteractionTest {
     @Test
     fun configuredTrailingRailOverridesLeadingTemplateVariant() {
         assertEquals(
-            TimeScapeRailSide.TRAILING,
-            resolveTimeScapeRailSide(
-                configuredRailSide = TimeScapeRailSide.TRAILING,
-                templateRailSide = TimeScapeRailSide.LEADING,
+            AdaptiveStageRailSide.TRAILING,
+            resolveAdaptiveStageRailSide(
+                configuredRailSide = AdaptiveStageRailSide.TRAILING,
+                templateRailSide = AdaptiveStageRailSide.LEADING,
             ),
         )
     }
@@ -66,10 +66,10 @@ class TimeScapeAdaptiveLayoutInteractionTest {
     @Test
     fun unconfiguredRailDefersToTheTemplateVariant() {
         assertEquals(
-            TimeScapeRailSide.TRAILING,
-            resolveTimeScapeRailSide(
+            AdaptiveStageRailSide.TRAILING,
+            resolveAdaptiveStageRailSide(
                 configuredRailSide = null,
-                templateRailSide = TimeScapeRailSide.TRAILING,
+                templateRailSide = AdaptiveStageRailSide.TRAILING,
             ),
         )
     }
@@ -77,8 +77,8 @@ class TimeScapeAdaptiveLayoutInteractionTest {
     @Test
     fun unconfiguredRailWithNoTemplateFallsBackToLeading() {
         assertEquals(
-            TimeScapeRailSide.LEADING,
-            resolveTimeScapeRailSide(configuredRailSide = null, templateRailSide = null),
+            AdaptiveStageRailSide.LEADING,
+            resolveAdaptiveStageRailSide(configuredRailSide = null, templateRailSide = null),
         )
     }
 
@@ -87,9 +87,9 @@ class TimeScapeAdaptiveLayoutInteractionTest {
         setContent(widthDp = 800)
 
         // Previous/Next controls were removed in favor of tap/settle-drag navigation on the rail's
-        // own card-stack visual (see TimeScapeStageHeader's customActions for the non-touch path) --
+        // own card-stack visual (see AdaptiveStageStageHeader's customActions for the non-touch path) --
         // the rail's testTag is now the stable signal that this pane mode shows a rail at all.
-        composeRule.onNodeWithTag(TIME_SCAPE_STAGE_RAIL_TEST_TAG).assertIsDisplayed()
+        composeRule.onNodeWithTag(ADAPTIVE_STAGE_STAGE_RAIL_TEST_TAG).assertIsDisplayed()
     }
 
     @Test
@@ -105,17 +105,17 @@ class TimeScapeAdaptiveLayoutInteractionTest {
             CompositionLocalProvider(LocalDensity provides Density(TEST_WINDOW_DENSITY)) {
                 MaterialTheme {
                     Box(modifier = Modifier.width(1_200.dp).height(TEST_WINDOW_HEIGHT_DP.dp).clipToBounds()) {
-                        TimeScapeAppStageSurface(
+                        AdaptiveStageAppStageSurface(
                             state =
                                 LauncherShellState(
                                     settingsLayoutDeviceClass = HomeLayoutDeviceClass.FOLDABLE,
                                     notificationAccessStatus = NotificationAccessStatus.NOT_GRANTED,
                                 ),
                             windowLayout =
-                                TimeScapeWindowLayout(
+                                AdaptiveStageWindowLayout(
                                     widthDp = 1_200,
                                     heightDp = TEST_WINDOW_HEIGHT_DP,
-                                    posture = TimeScapePosture.UNFOLDED,
+                                    posture = AdaptiveStagePosture.UNFOLDED,
                                 ),
                             onAction = {},
                         )
@@ -124,11 +124,11 @@ class TimeScapeAdaptiveLayoutInteractionTest {
             }
         }
 
-        val clock = composeRule.onNodeWithTag(timeScapeTemplateElementTestTag("clock")).fetchSemanticsNode().boundsInRoot
-        val search = composeRule.onNodeWithTag(timeScapeTemplateElementTestTag("search")).fetchSemanticsNode().boundsInRoot
-        val dock = composeRule.onNodeWithTag(timeScapeTemplateElementTestTag("dock")).fetchSemanticsNode().boundsInRoot
+        val clock = composeRule.onNodeWithTag(adaptiveStageTemplateElementTestTag("clock")).fetchSemanticsNode().boundsInRoot
+        val search = composeRule.onNodeWithTag(adaptiveStageTemplateElementTestTag("search")).fetchSemanticsNode().boundsInRoot
+        val dock = composeRule.onNodeWithTag(adaptiveStageTemplateElementTestTag("dock")).fetchSemanticsNode().boundsInRoot
         val stageSlot =
-            composeRule.onNodeWithTag(timeScapeTemplateSlotTestTag("app-stage")).fetchSemanticsNode().boundsInRoot
+            composeRule.onNodeWithTag(adaptiveStageTemplateSlotTestTag("app-stage")).fetchSemanticsNode().boundsInRoot
 
         assertTrue(clock.top < search.top)
         assertTrue(search.bottom <= stageSlot.top)
@@ -141,26 +141,26 @@ class TimeScapeAdaptiveLayoutInteractionTest {
             CompositionLocalProvider(LocalDensity provides Density(TEST_WINDOW_DENSITY)) {
                 MaterialTheme {
                     Box(modifier = Modifier.width(1_200.dp).height(TEST_WINDOW_HEIGHT_DP.dp).clipToBounds()) {
-                        TimeScapeAppStageSurface(
+                        AdaptiveStageAppStageSurface(
                             state =
                                 LauncherShellState(
                                     settingsLayoutDeviceClass = HomeLayoutDeviceClass.FOLDABLE,
                                     notificationAccessStatus = NotificationAccessStatus.NOT_GRANTED,
                                 ),
                             windowLayout =
-                                TimeScapeWindowLayout(
+                                AdaptiveStageWindowLayout(
                                     widthDp = 1_200,
                                     heightDp = TEST_WINDOW_HEIGHT_DP,
                                     separatingHinges =
                                         listOf(
-                                            TimeScapeHingeBounds(
+                                            AdaptiveStageHingeBounds(
                                                 leftDp = 584,
                                                 topDp = 0,
                                                 rightDp = 616,
                                                 bottomDp = TEST_WINDOW_HEIGHT_DP,
                                             ),
                                         ),
-                                    posture = TimeScapePosture.UNFOLDED,
+                                    posture = AdaptiveStagePosture.UNFOLDED,
                                 ),
                             onAction = {},
                         )
@@ -173,11 +173,11 @@ class TimeScapeAdaptiveLayoutInteractionTest {
         val hingeRightPx = 616 * TEST_WINDOW_DENSITY
         val regionTags =
             listOf("clock", "search", "carousel", "dock").flatMap { id ->
-                val baseTag = timeScapeTemplateElementTestTag(id)
-                listOf(baseTag, timeScapeTemplatePaneFragmentTestTag(baseTag, 1))
+                val baseTag = adaptiveStageTemplateElementTestTag(id)
+                listOf(baseTag, adaptiveStageTemplatePaneFragmentTestTag(baseTag, 1))
             } +
-                timeScapeTemplateSlotTestTag("app-stage").let { baseTag ->
-                    listOf(baseTag, timeScapeTemplatePaneFragmentTestTag(baseTag, 1))
+                adaptiveStageTemplateSlotTestTag("app-stage").let { baseTag ->
+                    listOf(baseTag, adaptiveStageTemplatePaneFragmentTestTag(baseTag, 1))
                 }
 
         regionTags.forEach { tag ->
@@ -199,8 +199,8 @@ class TimeScapeAdaptiveLayoutInteractionTest {
         )
 
         composeRule.onNodeWithText("Details").assertIsDisplayed()
-        val paneBounds = composeRule.onNodeWithTag(TIME_SCAPE_SUPPORTING_PANE_TEST_TAG).fetchSemanticsNode().boundsInRoot
-        val windowBounds = composeRule.onNodeWithTag(TIME_SCAPE_ADAPTIVE_TEST_WINDOW_TAG).fetchSemanticsNode().boundsInRoot
+        val paneBounds = composeRule.onNodeWithTag(ADAPTIVE_STAGE_SUPPORTING_PANE_TEST_TAG).fetchSemanticsNode().boundsInRoot
+        val windowBounds = composeRule.onNodeWithTag(ADAPTIVE_STAGE_ADAPTIVE_TEST_WINDOW_TAG).fetchSemanticsNode().boundsInRoot
 
         assertTrue(paneBounds.left >= windowBounds.left + SAFE_START_PX - PIXEL_TOLERANCE)
         assertTrue(paneBounds.top >= windowBounds.top + SAFE_TOP_PX - PIXEL_TOLERANCE)
@@ -218,22 +218,22 @@ class TimeScapeAdaptiveLayoutInteractionTest {
                             Modifier.width(800.dp)
                                 .height(TEST_WINDOW_HEIGHT_DP.dp)
                                 .clipToBounds()
-                                .testTag(TIME_SCAPE_ADAPTIVE_TEST_WINDOW_TAG),
+                                .testTag(ADAPTIVE_STAGE_ADAPTIVE_TEST_WINDOW_TAG),
                     ) {
-                        TimeScapeAppStageSurface(
+                        AdaptiveStageAppStageSurface(
                             state =
                                 LauncherShellState(
                                     notificationAccessStatus = NotificationAccessStatus.NOT_GRANTED,
                                     launcherSettings =
                                         LauncherSettings(
-                                            cards = CardsSettings(timeScapeRailSide = TimeScapeRailSide.TOP),
+                                            cards = CardsSettings(adaptiveStageRailSide = AdaptiveStageRailSide.TOP),
                                         ),
                                 ),
                             windowLayout =
-                                TimeScapeWindowLayout(
+                                AdaptiveStageWindowLayout(
                                     widthDp = 800,
                                     heightDp = TEST_WINDOW_HEIGHT_DP,
-                                    posture = TimeScapePosture.UNFOLDED,
+                                    posture = AdaptiveStagePosture.UNFOLDED,
                                 ),
                             onAction = {},
                         )
@@ -242,8 +242,8 @@ class TimeScapeAdaptiveLayoutInteractionTest {
             }
         }
 
-        val railBounds = composeRule.onNodeWithTag(TIME_SCAPE_STAGE_RAIL_TEST_TAG).fetchSemanticsNode().boundsInRoot
-        val windowBounds = composeRule.onNodeWithTag(TIME_SCAPE_ADAPTIVE_TEST_WINDOW_TAG).fetchSemanticsNode().boundsInRoot
+        val railBounds = composeRule.onNodeWithTag(ADAPTIVE_STAGE_STAGE_RAIL_TEST_TAG).fetchSemanticsNode().boundsInRoot
+        val windowBounds = composeRule.onNodeWithTag(ADAPTIVE_STAGE_ADAPTIVE_TEST_WINDOW_TAG).fetchSemanticsNode().boundsInRoot
 
         // A TOP rail sits in a horizontal strip flush with the window's top edge and spanning its
         // full width, unlike the default LEADING rail, which is a narrow column offset to one side.
@@ -261,15 +261,15 @@ class TimeScapeAdaptiveLayoutInteractionTest {
                             Modifier.width(MINIMUM_HINGE_WINDOW_WIDTH_DP.dp)
                                 .height(TEST_WINDOW_HEIGHT_DP.dp)
                                 .clipToBounds()
-                                .testTag(TIME_SCAPE_ADAPTIVE_TEST_WINDOW_TAG),
+                                .testTag(ADAPTIVE_STAGE_ADAPTIVE_TEST_WINDOW_TAG),
                     ) {
-                        TimeScapeAppStageSurface(
+                        AdaptiveStageAppStageSurface(
                             state =
                                 LauncherShellState(
                                     notificationAccessStatus = NotificationAccessStatus.NOT_GRANTED,
                                     launcherSettings =
                                         LauncherSettings(
-                                            cards = CardsSettings(timeScapeRailSide = TimeScapeRailSide.TRAILING),
+                                            cards = CardsSettings(adaptiveStageRailSide = AdaptiveStageRailSide.TRAILING),
                                         ),
                                 ),
                             windowInsets =
@@ -280,19 +280,19 @@ class TimeScapeAdaptiveLayoutInteractionTest {
                                     0,
                                 ),
                             windowLayout =
-                                TimeScapeWindowLayout(
+                                AdaptiveStageWindowLayout(
                                     widthDp = MINIMUM_HINGE_WINDOW_WIDTH_DP,
                                     heightDp = TEST_WINDOW_HEIGHT_DP,
                                     separatingHinges =
                                         listOf(
-                                            TimeScapeHingeBounds(
+                                            AdaptiveStageHingeBounds(
                                                 leftDp = 376,
                                                 topDp = 0,
                                                 rightDp = 408,
                                                 bottomDp = TEST_WINDOW_HEIGHT_DP,
                                             ),
                                         ),
-                                    posture = TimeScapePosture.UNFOLDED,
+                                    posture = AdaptiveStagePosture.UNFOLDED,
                                 ),
                             onAction = {},
                         )
@@ -301,16 +301,16 @@ class TimeScapeAdaptiveLayoutInteractionTest {
             }
         }
 
-        val railBounds = composeRule.onNodeWithTag(TIME_SCAPE_STAGE_RAIL_TEST_TAG).fetchSemanticsNode().boundsInRoot
-        val paneBounds = composeRule.onNodeWithTag(TIME_SCAPE_SUPPORTING_PANE_TEST_TAG).fetchSemanticsNode().boundsInRoot
-        val windowBounds = composeRule.onNodeWithTag(TIME_SCAPE_ADAPTIVE_TEST_WINDOW_TAG).fetchSemanticsNode().boundsInRoot
+        val railBounds = composeRule.onNodeWithTag(ADAPTIVE_STAGE_STAGE_RAIL_TEST_TAG).fetchSemanticsNode().boundsInRoot
+        val paneBounds = composeRule.onNodeWithTag(ADAPTIVE_STAGE_SUPPORTING_PANE_TEST_TAG).fetchSemanticsNode().boundsInRoot
+        val windowBounds = composeRule.onNodeWithTag(ADAPTIVE_STAGE_ADAPTIVE_TEST_WINDOW_TAG).fetchSemanticsNode().boundsInRoot
 
         assertTrue(paneBounds.right <= railBounds.left + PIXEL_TOLERANCE)
         assertTrue(railBounds.right <= windowBounds.right - MINIMUM_HINGE_SAFE_INSET_PX + PIXEL_TOLERANCE)
     }
 
     @Test
-    fun rotationLikeWindowResizeKeepsTimeScapeNavigationReachable() {
+    fun rotationLikeWindowResizeKeepsAdaptiveStageNavigationReachable() {
         var widthDp by mutableIntStateOf(360)
         var heightDp by mutableIntStateOf(800)
         composeRule.setContent {
@@ -322,10 +322,10 @@ class TimeScapeAdaptiveLayoutInteractionTest {
                                 .height(heightDp.dp)
                                 .clipToBounds(),
                     ) {
-                        TimeScapeAppStageSurface(
+                        AdaptiveStageAppStageSurface(
                             state = LauncherShellState(notificationAccessStatus = NotificationAccessStatus.NOT_GRANTED),
                             windowLayout =
-                                TimeScapeWindowLayout(widthDp, heightDp, posture = TimeScapePosture.UNFOLDED),
+                                AdaptiveStageWindowLayout(widthDp, heightDp, posture = AdaptiveStagePosture.UNFOLDED),
                             onAction = {},
                         )
                     }
@@ -338,21 +338,21 @@ class TimeScapeAdaptiveLayoutInteractionTest {
             heightDp = 360
         }
 
-        composeRule.onNodeWithTag(TIME_SCAPE_STAGE_RAIL_TEST_TAG).assertIsDisplayed()
+        composeRule.onNodeWithTag(ADAPTIVE_STAGE_STAGE_RAIL_TEST_TAG).assertIsDisplayed()
     }
 
     @Test
     fun compactUnfoldedCompactKeepsStageManagerPostureGated() {
-        var posture by mutableStateOf(TimeScapePosture.COMPACT)
+        var posture by mutableStateOf(AdaptiveStagePosture.COMPACT)
         composeRule.setContent {
             CompositionLocalProvider(LocalDensity provides Density(TEST_WINDOW_DENSITY)) {
                 MaterialTheme {
                     Box(
                         modifier = Modifier.width(1_200.dp).height(TEST_WINDOW_HEIGHT_DP.dp).clipToBounds(),
                     ) {
-                        TimeScapeAppStageSurface(
+                        AdaptiveStageAppStageSurface(
                             state = LauncherShellState(notificationAccessStatus = NotificationAccessStatus.NOT_GRANTED),
-                            windowLayout = TimeScapeWindowLayout(1_200, TEST_WINDOW_HEIGHT_DP, posture = posture),
+                            windowLayout = AdaptiveStageWindowLayout(1_200, TEST_WINDOW_HEIGHT_DP, posture = posture),
                             onAction = {},
                         )
                     }
@@ -360,11 +360,11 @@ class TimeScapeAdaptiveLayoutInteractionTest {
             }
         }
 
-        composeRule.onAllNodesWithTag(TIME_SCAPE_STAGE_RAIL_TEST_TAG).assertCountEquals(0)
-        composeRule.runOnIdle { posture = TimeScapePosture.UNFOLDED }
-        composeRule.onNodeWithTag(TIME_SCAPE_STAGE_RAIL_TEST_TAG).assertIsDisplayed()
-        composeRule.runOnIdle { posture = TimeScapePosture.COMPACT }
-        composeRule.onAllNodesWithTag(TIME_SCAPE_STAGE_RAIL_TEST_TAG).assertCountEquals(0)
+        composeRule.onAllNodesWithTag(ADAPTIVE_STAGE_STAGE_RAIL_TEST_TAG).assertCountEquals(0)
+        composeRule.runOnIdle { posture = AdaptiveStagePosture.UNFOLDED }
+        composeRule.onNodeWithTag(ADAPTIVE_STAGE_STAGE_RAIL_TEST_TAG).assertIsDisplayed()
+        composeRule.runOnIdle { posture = AdaptiveStagePosture.COMPACT }
+        composeRule.onAllNodesWithTag(ADAPTIVE_STAGE_STAGE_RAIL_TEST_TAG).assertCountEquals(0)
     }
 
     @Test
@@ -373,7 +373,7 @@ class TimeScapeAdaptiveLayoutInteractionTest {
             CompositionLocalProvider(LocalDensity provides Density(TEST_WINDOW_DENSITY)) {
                 MaterialTheme {
                     Box(modifier = Modifier.width(360.dp).height(TEST_WINDOW_HEIGHT_DP.dp).clipToBounds()) {
-                        TimeScapeAppStageSurface(
+                        AdaptiveStageAppStageSurface(
                             state =
                                 LauncherShellState(
                                     notificationAccessStatus = NotificationAccessStatus.NOT_GRANTED,
@@ -381,15 +381,15 @@ class TimeScapeAdaptiveLayoutInteractionTest {
                                         LauncherSettings(
                                             cards =
                                                 CardsSettings(
-                                                    timeScapePaneArrangement = TimeScapePaneArrangement.SPLIT,
+                                                    adaptiveStagePaneArrangement = AdaptiveStagePaneArrangement.SPLIT,
                                                 ),
                                         ),
                                 ),
                             windowLayout =
-                                TimeScapeWindowLayout(
+                                AdaptiveStageWindowLayout(
                                     widthDp = 360,
                                     heightDp = TEST_WINDOW_HEIGHT_DP,
-                                    posture = TimeScapePosture.UNFOLDED,
+                                    posture = AdaptiveStagePosture.UNFOLDED,
                                 ),
                             onAction = {},
                         )
@@ -400,7 +400,7 @@ class TimeScapeAdaptiveLayoutInteractionTest {
 
         // Both the upper detail region and the lower stage pager/spine region must be present
         // simultaneously -- proving this is a genuine split, not one replacing the other.
-        composeRule.onNodeWithTag(TIME_SCAPE_SUPPORTING_PANE_TEST_TAG).assertIsDisplayed()
+        composeRule.onNodeWithTag(ADAPTIVE_STAGE_SUPPORTING_PANE_TEST_TAG).assertIsDisplayed()
         composeRule.onNodeWithText("Install an app to create your first stage.").assertIsDisplayed()
     }
 
@@ -418,16 +418,16 @@ class TimeScapeAdaptiveLayoutInteractionTest {
                             Modifier.width(widthDp.dp)
                                 .height(TEST_WINDOW_HEIGHT_DP.dp)
                                 .clipToBounds()
-                                .testTag(TIME_SCAPE_ADAPTIVE_TEST_WINDOW_TAG),
+                                .testTag(ADAPTIVE_STAGE_ADAPTIVE_TEST_WINDOW_TAG),
                     ) {
-                        TimeScapeAppStageSurface(
+                        AdaptiveStageAppStageSurface(
                             state = LauncherShellState(notificationAccessStatus = NotificationAccessStatus.NOT_GRANTED),
                             windowInsets = windowInsets,
                             windowLayout =
-                                TimeScapeWindowLayout(
+                                AdaptiveStageWindowLayout(
                                     widthDp = widthDp,
                                     heightDp = TEST_WINDOW_HEIGHT_DP,
-                                    posture = TimeScapePosture.UNFOLDED,
+                                    posture = AdaptiveStagePosture.UNFOLDED,
                                 ),
                             onAction = {},
                         )
@@ -450,6 +450,6 @@ class TimeScapeAdaptiveLayoutInteractionTest {
         const val SAFE_END_PX = 48
         const val SAFE_BOTTOM_PX = 32
         const val PIXEL_TOLERANCE = 1f
-        const val TIME_SCAPE_ADAPTIVE_TEST_WINDOW_TAG = "timescape-adaptive-test-window"
+        const val ADAPTIVE_STAGE_ADAPTIVE_TEST_WINDOW_TAG = "adaptive-stage-adaptive-test-window"
     }
 }

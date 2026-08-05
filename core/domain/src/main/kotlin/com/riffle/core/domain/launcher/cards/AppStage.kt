@@ -3,7 +3,7 @@ package com.riffle.core.domain.launcher.cards
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppProfileId
 
-/** Stable, profile-aware identity for one TimeScape app stage. */
+/** Stable, profile-aware identity for one AdaptiveStage app stage. */
 data class AppStageId(
     val packageName: AppPackageName,
     val profileId: AppProfileId,
