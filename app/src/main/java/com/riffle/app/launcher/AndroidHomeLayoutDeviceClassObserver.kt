@@ -7,10 +7,10 @@ import androidx.window.layout.WindowMetricsCalculator
 import com.riffle.core.domain.launcher.cards.AdaptiveStagePosture
 import com.riffle.core.domain.launcher.cards.AdaptiveStageWindowLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
-import kotlin.math.roundToInt
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
+import kotlin.math.roundToInt
 
 internal class AndroidHomeLayoutDeviceClassObserver(
     private val activity: Activity,

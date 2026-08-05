@@ -107,11 +107,11 @@ import com.riffle.core.domain.launcher.settings.AdaptiveStageAppearanceSettings
 import com.riffle.core.domain.launcher.settings.AdaptiveStageCardStackResolution
 import com.riffle.core.domain.launcher.settings.AdaptiveStageViewportDp
 import com.riffle.core.domain.launcher.settings.resolveAdaptiveStageCardStack
-import kotlin.math.abs
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.math.abs
 
 /**
  * Cards mode reuses the persisted home-gesture bindings, but only lets a subset of actions
@@ -144,9 +144,8 @@ internal fun resolveAdaptiveStageRailSide(
  * Mirrors [resolveAdaptiveStageRailSide]'s shape: the pane arrangement is a plain configured user
  * preference today, with no template or device override to reconcile against yet.
  */
-internal fun resolveAdaptiveStagePaneArrangement(
-    value: AdaptiveStagePaneArrangement,
-): AdaptiveStagePaneArrangement = value
+internal fun resolveAdaptiveStagePaneArrangement(value: AdaptiveStagePaneArrangement): AdaptiveStagePaneArrangement =
+    value
 
 /** The Cards home surface, compact by default and pane-adaptive for the current launcher window. */
 @Composable
