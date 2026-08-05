@@ -10,11 +10,11 @@ import com.riffle.core.domain.launcher.cards.AdaptiveStagePaneArrangement
 import com.riffle.core.domain.launcher.cards.AdaptiveStageRailSide
 import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.home.WallpaperScrollMode
+import com.riffle.core.domain.launcher.settings.AdaptiveStageAppearanceSettings
 import com.riffle.core.domain.launcher.settings.AppDrawerPresentation
 import com.riffle.core.domain.launcher.settings.OverlayDockEdge
 import com.riffle.core.domain.launcher.settings.OverlayDockExpandedOrientation
 import com.riffle.core.domain.launcher.settings.OverlayDockItemMoveDirection
-import com.riffle.core.domain.launcher.settings.AdaptiveStageAppearanceSettings
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test

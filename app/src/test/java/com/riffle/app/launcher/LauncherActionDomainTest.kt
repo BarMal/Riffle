@@ -10,9 +10,9 @@ import com.riffle.core.domain.launcher.apps.AppSearchContentFilter
 import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.apps.AppShortcutId
 import com.riffle.core.domain.launcher.apps.InstalledApp
-import com.riffle.core.domain.launcher.cards.AppStageId
 import com.riffle.core.domain.launcher.cards.AdaptiveStagePaneArrangement
 import com.riffle.core.domain.launcher.cards.AdaptiveStageRailSide
+import com.riffle.core.domain.launcher.cards.AppStageId
 import com.riffle.core.domain.launcher.home.DockAlignment
 import com.riffle.core.domain.launcher.home.DockBackgroundSizing
 import com.riffle.core.domain.launcher.home.DockItemMoveDirection
@@ -35,6 +35,7 @@ import com.riffle.core.domain.launcher.home.WallpaperSource
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
 import com.riffle.core.domain.launcher.rss.FeedId
 import com.riffle.core.domain.launcher.rss.FeedUrl
+import com.riffle.core.domain.launcher.settings.AdaptiveStageAppearanceSettings
 import com.riffle.core.domain.launcher.settings.AppDrawerPresentation
 import com.riffle.core.domain.launcher.settings.FeedRefreshIntervalOption
 import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
@@ -51,7 +52,6 @@ import com.riffle.core.domain.launcher.settings.OverlayDockEdge
 import com.riffle.core.domain.launcher.settings.OverlayDockExpandedOrientation
 import com.riffle.core.domain.launcher.settings.OverlayDockItemMoveDirection
 import com.riffle.core.domain.launcher.settings.SearchResultPresentation
-import com.riffle.core.domain.launcher.settings.AdaptiveStageAppearanceSettings
 import com.riffle.core.domain.launcher.widgets.WidgetProviderClassName
 import com.riffle.core.domain.launcher.widgets.WidgetProviderDimensions
 import com.riffle.core.domain.launcher.widgets.WidgetProviderIdentity

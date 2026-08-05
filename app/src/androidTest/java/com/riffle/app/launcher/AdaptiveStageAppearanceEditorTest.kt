@@ -21,14 +21,14 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.cards.AdaptiveStagePaneArrangement
 import com.riffle.core.domain.launcher.cards.AdaptiveStageRailSide
-import com.riffle.core.domain.launcher.settings.LauncherSettings
-import com.riffle.core.domain.launcher.settings.MotionSettings
 import com.riffle.core.domain.launcher.settings.AdaptiveStageAppearancePreset
 import com.riffle.core.domain.launcher.settings.AdaptiveStageAppearanceSettings
 import com.riffle.core.domain.launcher.settings.AdaptiveStageEasing
 import com.riffle.core.domain.launcher.settings.AdaptiveStageHapticStrength
 import com.riffle.core.domain.launcher.settings.AdaptiveStageRendererCapabilities
 import com.riffle.core.domain.launcher.settings.AdaptiveStageSurface
+import com.riffle.core.domain.launcher.settings.LauncherSettings
+import com.riffle.core.domain.launcher.settings.MotionSettings
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule

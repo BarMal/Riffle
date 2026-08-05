@@ -76,17 +76,6 @@ import com.riffle.app.launcher.notifications.AppStageShellStateReconciler
 import com.riffle.app.launcher.notifications.NotificationStageAction
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.apps.AppIdentity
-import com.riffle.core.domain.launcher.cards.AppStage
-import com.riffle.core.domain.launcher.cards.AppStageId
-import com.riffle.core.domain.launcher.cards.CardStackController
-import com.riffle.core.domain.launcher.cards.CardStackFocusResult
-import com.riffle.core.domain.launcher.cards.CardStackFocusState
-import com.riffle.core.domain.launcher.cards.CardStackKey
-import com.riffle.core.domain.launcher.cards.CardStackLayoutEntry
-import com.riffle.core.domain.launcher.cards.CardStackLayoutPolicy
-import com.riffle.core.domain.launcher.cards.CardStackNavigationDirection
-import com.riffle.core.domain.launcher.cards.CardStackSettleRequest
-import com.riffle.core.domain.launcher.cards.LauncherCardId
 import com.riffle.core.domain.launcher.cards.AdaptiveStageDynamicSlot
 import com.riffle.core.domain.launcher.cards.AdaptiveStageInteractionContext
 import com.riffle.core.domain.launcher.cards.AdaptiveStagePaneArrangement
@@ -99,6 +88,17 @@ import com.riffle.core.domain.launcher.cards.AdaptiveStageRailSide
 import com.riffle.core.domain.launcher.cards.AdaptiveStageStaticElement
 import com.riffle.core.domain.launcher.cards.AdaptiveStageTemplateCatalogDefaults
 import com.riffle.core.domain.launcher.cards.AdaptiveStageWindowLayout
+import com.riffle.core.domain.launcher.cards.AppStage
+import com.riffle.core.domain.launcher.cards.AppStageId
+import com.riffle.core.domain.launcher.cards.CardStackController
+import com.riffle.core.domain.launcher.cards.CardStackFocusResult
+import com.riffle.core.domain.launcher.cards.CardStackFocusState
+import com.riffle.core.domain.launcher.cards.CardStackKey
+import com.riffle.core.domain.launcher.cards.CardStackLayoutEntry
+import com.riffle.core.domain.launcher.cards.CardStackLayoutPolicy
+import com.riffle.core.domain.launcher.cards.CardStackNavigationDirection
+import com.riffle.core.domain.launcher.cards.CardStackSettleRequest
+import com.riffle.core.domain.launcher.cards.LauncherCardId
 import com.riffle.core.domain.launcher.cards.variantFor
 import com.riffle.core.domain.launcher.cards.visibleStaticElements
 import com.riffle.core.domain.launcher.home.LauncherViewMode
@@ -107,11 +107,11 @@ import com.riffle.core.domain.launcher.settings.AdaptiveStageAppearanceSettings
 import com.riffle.core.domain.launcher.settings.AdaptiveStageCardStackResolution
 import com.riffle.core.domain.launcher.settings.AdaptiveStageViewportDp
 import com.riffle.core.domain.launcher.settings.resolveAdaptiveStageCardStack
+import kotlin.math.abs
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlin.math.abs
 
 /**
  * Cards mode reuses the persisted home-gesture bindings, but only lets a subset of actions
@@ -144,7 +144,9 @@ internal fun resolveAdaptiveStageRailSide(
  * Mirrors [resolveAdaptiveStageRailSide]'s shape: the pane arrangement is a plain configured user
  * preference today, with no template or device override to reconcile against yet.
  */
-internal fun resolveAdaptiveStagePaneArrangement(value: AdaptiveStagePaneArrangement): AdaptiveStagePaneArrangement = value
+internal fun resolveAdaptiveStagePaneArrangement(
+    value: AdaptiveStagePaneArrangement,
+): AdaptiveStagePaneArrangement = value
 
 /** The Cards home surface, compact by default and pane-adaptive for the current launcher window. */
 @Composable
@@ -1032,7 +1034,9 @@ private fun AdaptiveStageStageRail(
                         }
                     },
                     onSettleHaptic = {
-                        haptics.adaptiveStageSettle(state.launcherSettings.cards.adaptiveStageAppearance.motion.hapticStrength)
+                        haptics.adaptiveStageSettle(
+                            state.launcherSettings.cards.adaptiveStageAppearance.motion.hapticStrength,
+                        )
                     },
                     onNavigate = ::navigate,
                 ),
@@ -1841,7 +1845,11 @@ internal fun AdaptiveStageContextActionsGrid(
             }
         }
         onDetailRequested?.let { requestDetail ->
-            AdaptiveStageContextActionButton(label = "Details", onClick = requestDetail, modifier = Modifier.fillMaxWidth())
+            AdaptiveStageContextActionButton(
+                label = "Details",
+                onClick = requestDetail,
+                modifier = Modifier.fillMaxWidth(),
+            )
         }
     }
 }
@@ -1902,7 +1910,8 @@ private fun AdaptiveStageEmptyStage(
             }
         AdaptiveStageCardSurface(
             appearance = state.launcherSettings.cards.adaptiveStageAppearance,
-            background = AdaptiveStageCardBackground(appSeed = stage.id.packageName.value, appColor = emptyStageAppColor),
+            background =
+                AdaptiveStageCardBackground(appSeed = stage.id.packageName.value, appColor = emptyStageAppColor),
             modifier =
                 Modifier
                     .size(width = resolution.cardWidthDp.dp, height = resolution.cardHeightDp.dp)

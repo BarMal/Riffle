@@ -31,11 +31,11 @@ import com.riffle.core.domain.launcher.home.GeneratedLauncherPageKind
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.LauncherPage
 import com.riffle.core.domain.launcher.home.LauncherPageType
+import kotlin.math.abs
+import kotlin.math.roundToInt
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlin.math.abs
-import kotlin.math.roundToInt
 
 @Composable
 internal fun rememberImmediateHomePagerState(

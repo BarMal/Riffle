@@ -14,6 +14,7 @@ import com.riffle.core.domain.launcher.home.HomeLayoutRepository
 import com.riffle.core.domain.launcher.rss.FeedConfiguration
 import com.riffle.core.domain.launcher.rss.FeedId
 import com.riffle.core.domain.launcher.rss.FeedUrl
+import com.riffle.core.domain.launcher.settings.AdaptiveStageAppearanceSettings
 import com.riffle.core.domain.launcher.settings.AppDrawerPresentation
 import com.riffle.core.domain.launcher.settings.AppearanceSettings
 import com.riffle.core.domain.launcher.settings.FeedRefreshIntervalOption
@@ -23,7 +24,6 @@ import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettingsRepository
 import com.riffle.core.domain.launcher.settings.RssSettings
 import com.riffle.core.domain.launcher.settings.SearchResultPresentation
-import com.riffle.core.domain.launcher.settings.AdaptiveStageAppearanceSettings
 import com.riffle.core.domain.launcher.settings.homeSystemBars
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertSame
@@ -112,7 +112,10 @@ class LauncherSettingsStateReducerTest {
                 action = LauncherShellAction.SelectAdaptiveStagePaneArrangement(AdaptiveStagePaneArrangement.SPLIT),
             )
 
-        assertEquals(AdaptiveStagePaneArrangement.SPLIT, updatedState.launcherSettings.cards.adaptiveStagePaneArrangement)
+        assertEquals(
+            AdaptiveStagePaneArrangement.SPLIT,
+            updatedState.launcherSettings.cards.adaptiveStagePaneArrangement,
+        )
         assertEquals(updatedState.launcherSettings, repository.savedSettings)
     }
 

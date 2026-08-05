@@ -8,12 +8,12 @@ import com.riffle.core.domain.launcher.notifications.LauncherNotificationReposit
 import com.riffle.core.domain.launcher.notifications.NotificationStaleFilter
 import com.riffle.core.domain.launcher.widgets.InstalledWidgetProviderRepository
 import com.riffle.core.domain.launcher.widgets.WidgetProviderCatalog
+import kotlin.coroutines.coroutineContext
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
-import kotlin.coroutines.coroutineContext
 
 internal class LauncherShellRefreshCoordinator(
     private val installedAppDependencies: InstalledAppRefreshDependencies,

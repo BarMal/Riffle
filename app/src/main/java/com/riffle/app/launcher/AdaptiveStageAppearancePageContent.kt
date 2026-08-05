@@ -29,6 +29,15 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.cards.AdaptiveStagePaneArrangement
 import com.riffle.core.domain.launcher.cards.AdaptiveStageRailSide
+import com.riffle.core.domain.launcher.settings.AdaptiveStageAccentSource
+import com.riffle.core.domain.launcher.settings.AdaptiveStageAppearancePreset
+import com.riffle.core.domain.launcher.settings.AdaptiveStageAppearanceSettings
+import com.riffle.core.domain.launcher.settings.AdaptiveStageBackgroundSource
+import com.riffle.core.domain.launcher.settings.AdaptiveStageContentDensity
+import com.riffle.core.domain.launcher.settings.AdaptiveStageEasing
+import com.riffle.core.domain.launcher.settings.AdaptiveStageFanDirection
+import com.riffle.core.domain.launcher.settings.AdaptiveStageHapticStrength
+import com.riffle.core.domain.launcher.settings.AdaptiveStageRendererCapabilities
 import com.riffle.core.domain.launcher.settings.MAX_ADAPTIVE_STAGE_BLUR_STRENGTH_PERCENT
 import com.riffle.core.domain.launcher.settings.MAX_ADAPTIVE_STAGE_CARD_ASPECT_RATIO_PERCENT
 import com.riffle.core.domain.launcher.settings.MAX_ADAPTIVE_STAGE_CONTENT_PADDING_DP
@@ -81,15 +90,6 @@ import com.riffle.core.domain.launcher.settings.MIN_ADAPTIVE_STAGE_TRANSITION_DU
 import com.riffle.core.domain.launcher.settings.MIN_ADAPTIVE_STAGE_TRAVEL_INTENSITY_PERCENT
 import com.riffle.core.domain.launcher.settings.MIN_ADAPTIVE_STAGE_VERTICAL_SPACING_DP
 import com.riffle.core.domain.launcher.settings.MIN_ADAPTIVE_STAGE_VISIBLE_DEPTH
-import com.riffle.core.domain.launcher.settings.AdaptiveStageAccentSource
-import com.riffle.core.domain.launcher.settings.AdaptiveStageAppearancePreset
-import com.riffle.core.domain.launcher.settings.AdaptiveStageAppearanceSettings
-import com.riffle.core.domain.launcher.settings.AdaptiveStageBackgroundSource
-import com.riffle.core.domain.launcher.settings.AdaptiveStageContentDensity
-import com.riffle.core.domain.launcher.settings.AdaptiveStageEasing
-import com.riffle.core.domain.launcher.settings.AdaptiveStageFanDirection
-import com.riffle.core.domain.launcher.settings.AdaptiveStageHapticStrength
-import com.riffle.core.domain.launcher.settings.AdaptiveStageRendererCapabilities
 
 @Composable
 internal fun AdaptiveStageAppearancePageContent(

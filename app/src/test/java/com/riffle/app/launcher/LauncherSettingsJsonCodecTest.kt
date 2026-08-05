@@ -4,11 +4,11 @@ import com.riffle.core.domain.launcher.apps.AppActivityName
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppProfile
-import com.riffle.core.domain.launcher.cards.AppStageId
-import com.riffle.core.domain.launcher.cards.AppStagePreferences
 import com.riffle.core.domain.launcher.cards.AdaptiveStagePaneArrangement
 import com.riffle.core.domain.launcher.cards.AdaptiveStageRailSide
 import com.riffle.core.domain.launcher.cards.AdaptiveStageTemplateCatalogDefaults
+import com.riffle.core.domain.launcher.cards.AppStageId
+import com.riffle.core.domain.launcher.cards.AppStagePreferences
 import com.riffle.core.domain.launcher.contextual.ContextualSettings
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
@@ -22,6 +22,10 @@ import com.riffle.core.domain.launcher.rss.FeedConfiguration
 import com.riffle.core.domain.launcher.rss.FeedId
 import com.riffle.core.domain.launcher.rss.FeedRefreshIntent
 import com.riffle.core.domain.launcher.rss.FeedUrl
+import com.riffle.core.domain.launcher.settings.AdaptiveStageAppearanceSettings
+import com.riffle.core.domain.launcher.settings.AdaptiveStageGeometry
+import com.riffle.core.domain.launcher.settings.AdaptiveStageMotion
+import com.riffle.core.domain.launcher.settings.AdaptiveStageSurface
 import com.riffle.core.domain.launcher.settings.AppDrawerPresentation
 import com.riffle.core.domain.launcher.settings.AppDrawerSettings
 import com.riffle.core.domain.launcher.settings.AppearanceSettings
@@ -59,10 +63,6 @@ import com.riffle.core.domain.launcher.settings.OverlayDockSettings
 import com.riffle.core.domain.launcher.settings.RssSettings
 import com.riffle.core.domain.launcher.settings.SearchResultPresentation
 import com.riffle.core.domain.launcher.settings.SearchSettings
-import com.riffle.core.domain.launcher.settings.AdaptiveStageAppearanceSettings
-import com.riffle.core.domain.launcher.settings.AdaptiveStageGeometry
-import com.riffle.core.domain.launcher.settings.AdaptiveStageMotion
-import com.riffle.core.domain.launcher.settings.AdaptiveStageSurface
 import com.riffle.core.domain.launcher.settings.homeSystemBars
 import com.riffle.core.domain.launcher.settings.stagePreferencesFor
 import com.riffle.core.domain.launcher.settings.withHomeSystemBars

@@ -80,7 +80,8 @@ internal fun rememberAdaptiveStageStagePagerState(
                         settleStagePosition.snapTo(dragStagePosition.floatValue)
                         settleStagePosition.animateTo(
                             targetValue = selectedStageIndex.toFloat(),
-                            animationSpec = adaptiveStageStageSettleAnimation(homePageSettleMotionPolicy(reducedMotion)),
+                            animationSpec =
+                                adaptiveStageStageSettleAnimation(homePageSettleMotionPolicy(reducedMotion)),
                         ) {
                             dragStagePosition.floatValue = value
                         }

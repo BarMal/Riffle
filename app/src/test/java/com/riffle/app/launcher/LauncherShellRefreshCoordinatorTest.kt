@@ -35,15 +35,15 @@ import com.riffle.core.domain.launcher.widgets.InstalledWidgetProviderRepository
 import com.riffle.core.domain.launcher.widgets.WidgetProviderClassName
 import com.riffle.core.domain.launcher.widgets.WidgetProviderDimensions
 import com.riffle.core.domain.launcher.widgets.WidgetProviderIdentity
-import kotlinx.coroutines.asCoroutineDispatcher
-import kotlinx.coroutines.runBlocking
-import org.junit.Assert.assertEquals
-import org.junit.Test
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
+import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.runBlocking
+import org.junit.Assert.assertEquals
+import org.junit.Test
 
 class LauncherShellRefreshCoordinatorTest {
     @Test

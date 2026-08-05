@@ -41,12 +41,12 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
-import com.riffle.app.launcher.CardStack
-import com.riffle.app.launcher.CardStackInteraction
 import com.riffle.app.launcher.AdaptiveStageCardBackground
 import com.riffle.app.launcher.AdaptiveStageCardDetailState
 import com.riffle.app.launcher.AdaptiveStageCardSurface
 import com.riffle.app.launcher.AdaptiveStageDetailRecoveryMessage
+import com.riffle.app.launcher.CardStack
+import com.riffle.app.launcher.CardStackInteraction
 import com.riffle.app.launcher.adaptiveStageNotificationStackEntries
 import com.riffle.app.launcher.adaptiveStageRendererCapabilities
 import com.riffle.app.launcher.adaptiveStageResolvedContentPadding

@@ -48,9 +48,9 @@ import com.riffle.core.domain.launcher.cards.LauncherCardId
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroupKey
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
-import com.riffle.core.domain.launcher.settings.MIN_ADAPTIVE_STAGE_REACHABLE_CARD_HEIGHT_DP
 import com.riffle.core.domain.launcher.settings.AdaptiveStageAppearanceSettings
 import com.riffle.core.domain.launcher.settings.AdaptiveStageViewportDp
+import com.riffle.core.domain.launcher.settings.MIN_ADAPTIVE_STAGE_REACHABLE_CARD_HEIGHT_DP
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -214,7 +214,9 @@ internal fun GeneratedNotificationCardsPage(
                                                 applyFocus(result)
                                             },
                                             onSettleHaptic = {
-                                                haptics.adaptiveStageSettle(adaptiveStageAppearance.motion.hapticStrength)
+                                                haptics.adaptiveStageSettle(
+                                                    adaptiveStageAppearance.motion.hapticStrength,
+                                                )
                                             },
                                         ),
                                 ) { entry, pointerModifier ->

@@ -69,15 +69,15 @@ import com.riffle.core.domain.launcher.home.LauncherPage
 import com.riffle.core.domain.launcher.home.LauncherPageId
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
+import com.riffle.core.domain.launcher.settings.AdaptiveStageAppearanceSettings
 import com.riffle.core.domain.launcher.settings.AppearanceSettings
 import com.riffle.core.domain.launcher.settings.DockGestureSettings
 import com.riffle.core.domain.launcher.settings.HomeGestureSettings
 import com.riffle.core.domain.launcher.settings.MotionPerformanceTargetFps
-import com.riffle.core.domain.launcher.settings.AdaptiveStageAppearanceSettings
 import com.riffle.core.domain.launcher.settings.homeSystemBars
 import com.riffle.core.domain.launcher.widgets.InstalledWidgetProvider
-import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
+import kotlinx.coroutines.delay
 
 @Composable
 internal fun StandardHome(

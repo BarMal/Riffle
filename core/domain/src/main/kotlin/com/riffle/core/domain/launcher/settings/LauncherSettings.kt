@@ -2,11 +2,11 @@ package com.riffle.core.domain.launcher.settings
 
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppShortcut
-import com.riffle.core.domain.launcher.cards.AppStagePreferences
 import com.riffle.core.domain.launcher.cards.AdaptiveStagePaneArrangement
 import com.riffle.core.domain.launcher.cards.AdaptiveStageRailSide
 import com.riffle.core.domain.launcher.cards.AdaptiveStageTemplateCatalogDefaults
 import com.riffle.core.domain.launcher.cards.AdaptiveStageTemplateId
+import com.riffle.core.domain.launcher.cards.AppStagePreferences
 import com.riffle.core.domain.launcher.contextual.ContextualSettings
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.HomeLayoutKey

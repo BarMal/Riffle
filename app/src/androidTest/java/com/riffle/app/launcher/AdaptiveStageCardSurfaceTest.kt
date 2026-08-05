@@ -54,6 +54,9 @@ import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppProfile
 import com.riffle.core.domain.launcher.apps.AppProfileContentVisibility
 import com.riffle.core.domain.launcher.apps.InstalledApp
+import com.riffle.core.domain.launcher.cards.AdaptiveStagePaneArrangement
+import com.riffle.core.domain.launcher.cards.AdaptiveStagePosture
+import com.riffle.core.domain.launcher.cards.AdaptiveStageWindowLayout
 import com.riffle.core.domain.launcher.cards.AppStage
 import com.riffle.core.domain.launcher.cards.AppStageContent
 import com.riffle.core.domain.launcher.cards.AppStageContentKind
@@ -64,9 +67,6 @@ import com.riffle.core.domain.launcher.cards.AppStagePreferences
 import com.riffle.core.domain.launcher.cards.CardExpansionPhase
 import com.riffle.core.domain.launcher.cards.CardExpansionState
 import com.riffle.core.domain.launcher.cards.LauncherCardId
-import com.riffle.core.domain.launcher.cards.AdaptiveStagePaneArrangement
-import com.riffle.core.domain.launcher.cards.AdaptiveStagePosture
-import com.riffle.core.domain.launcher.cards.AdaptiveStageWindowLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.HomeLayoutKey
 import com.riffle.core.domain.launcher.home.HomeLayoutSet
@@ -77,8 +77,6 @@ import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.notifications.NotificationAgeBucket
 import com.riffle.core.domain.launcher.notifications.NotificationCategory
-import com.riffle.core.domain.launcher.settings.CardsSettings
-import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.AdaptiveStageAccentSource
 import com.riffle.core.domain.launcher.settings.AdaptiveStageAppearanceSettings
 import com.riffle.core.domain.launcher.settings.AdaptiveStageBackgroundSource
@@ -89,6 +87,8 @@ import com.riffle.core.domain.launcher.settings.AdaptiveStageMotion
 import com.riffle.core.domain.launcher.settings.AdaptiveStageSurface
 import com.riffle.core.domain.launcher.settings.AdaptiveStageTypography
 import com.riffle.core.domain.launcher.settings.AdaptiveStageViewportDp
+import com.riffle.core.domain.launcher.settings.CardsSettings
+import com.riffle.core.domain.launcher.settings.LauncherSettings
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals

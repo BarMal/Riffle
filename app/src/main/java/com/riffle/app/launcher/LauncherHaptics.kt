@@ -5,8 +5,8 @@ import android.view.View
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalView
-import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
 import com.riffle.core.domain.launcher.settings.AdaptiveStageHapticStrength
+import com.riffle.core.domain.launcher.settings.HapticFeedbackStrength
 
 interface LauncherHaptics {
     fun longPress()
