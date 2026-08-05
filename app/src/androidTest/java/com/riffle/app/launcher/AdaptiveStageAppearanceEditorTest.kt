@@ -21,7 +21,6 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.cards.AdaptiveStagePaneArrangement
 import com.riffle.core.domain.launcher.cards.AdaptiveStageRailSide
-import com.riffle.core.domain.launcher.settings.AdaptiveStageAppearancePreset
 import com.riffle.core.domain.launcher.settings.AdaptiveStageAppearanceSettings
 import com.riffle.core.domain.launcher.settings.AdaptiveStageEasing
 import com.riffle.core.domain.launcher.settings.AdaptiveStageHapticStrength
@@ -53,8 +52,9 @@ class AdaptiveStageAppearanceEditorTest {
 
         composeRule.onNodeWithContentDescription("Cards appearance preview").assertExists()
         listOf(
+            "Appearance target",
             "Layout",
-            "Preset and reset",
+            "Reset appearance",
             "Card geometry",
             "Stack and stack",
             "Surface and glass",
@@ -78,8 +78,8 @@ class AdaptiveStageAppearanceEditorTest {
         val actions = mutableListOf<LauncherShellAction>()
         composeRule.setContent {
             MaterialTheme {
-                // The page's sections (Preview, Layout, Preset and reset, ...) exceed the test
-                // window's height; without a bounded, scrollable container the "Layout" section's
+                // The page's sections (Appearance target, Preview, Layout, Reset, ...) exceed the
+                // test window's height; without a bounded, scrollable container the "Layout" section's
                 // chips can be measured outside the real window bounds, so performClick() ends up
                 // hitting whatever unrelated element occupies that pixel instead -- matching the
                 // scrollable wrapper the other tests in this file already use.
@@ -137,7 +137,25 @@ class AdaptiveStageAppearanceEditorTest {
     }
 
     @Test
-    fun exposesPresetControlsAndConfirmsResetThroughAnAtomicAction() {
+    fun noPresetPickerExistsAnywhereInTheEditor() {
+        composeRule.setContent {
+            MaterialTheme {
+                AdaptiveStageAppearancePageContent(
+                    state = LauncherShellState().settingsSurfaceState(),
+                    onAction = {},
+                )
+            }
+        }
+
+        listOf("MODERN_ADAPTIVE_STAGE", "FLAT_REDUCED_DEPTH", "WARM_GLASS").forEach { presetName ->
+            composeRule.onNodeWithTag("adaptive-stage-preset-$presetName").assertDoesNotExist()
+        }
+        composeRule.onNodeWithText("Appearance preset").assertDoesNotExist()
+        composeRule.onNodeWithText("Preset and reset").assertDoesNotExist()
+    }
+
+    @Test
+    fun resettingTheFoldedTargetDispatchesTheFoldedDefaultAtomically() {
         val actions = mutableListOf<LauncherShellAction>()
         composeRule.setContent {
             MaterialTheme {
@@ -155,13 +173,41 @@ class AdaptiveStageAppearanceEditorTest {
             }
         }
 
-        composeRule.onNodeWithTag("adaptive-stage-preset-FLAT_REDUCED_DEPTH").assertExists()
-        composeRule.onNodeWithText("Reset Cards appearance").performScrollTo().performClick()
-        composeRule.onNodeWithText("Reset Cards appearance?").assertExists()
+        composeRule.onNodeWithText("Reset Folded Cards appearance").performScrollTo().performClick()
+        composeRule.onNodeWithText("Reset Folded Cards appearance?").assertExists()
         composeRule.onNodeWithContentDescription("Confirm Cards reset").performClick()
         composeRule.runOnIdle {
             val action = actions.last() as LauncherShellAction.UpdateAdaptiveStageAppearance
-            assertEquals(AdaptiveStageAppearancePreset.MODERN_ADAPTIVE_STAGE, action.appearance.preset)
+            assertEquals(AdaptiveStageAppearanceSettings.modern(), action.appearance)
+        }
+    }
+
+    @Test
+    fun switchingToTheUnfoldedTargetEditsAndResetsTheUnfoldedProfileIndependently() {
+        val actions = mutableListOf<LauncherShellAction>()
+        composeRule.setContent {
+            MaterialTheme {
+                Column(
+                    modifier =
+                        Modifier
+                            .requiredSize(360.dp, 800.dp)
+                            .verticalScroll(rememberScrollState()),
+                ) {
+                    AdaptiveStageAppearancePageContent(
+                        state = LauncherShellState().settingsSurfaceState(),
+                        onAction = actions::add,
+                    )
+                }
+            }
+        }
+
+        composeRule.onNodeWithTag("adaptive-stage-appearance-target-UNFOLDED").performScrollTo().performClick()
+        composeRule.onNodeWithText("Reset Unfolded Cards appearance").performScrollTo().performClick()
+        composeRule.onNodeWithText("Reset Unfolded Cards appearance?").assertExists()
+        composeRule.onNodeWithContentDescription("Confirm Cards reset").performClick()
+        composeRule.runOnIdle {
+            val action = actions.last() as LauncherShellAction.UpdateUnfoldedAdaptiveStageAppearance
+            assertEquals(AdaptiveStageAppearanceSettings.unfolded(), action.appearance)
         }
     }
 
@@ -182,6 +228,41 @@ class AdaptiveStageAppearanceEditorTest {
         composeRule
             .onNode(SemanticsMatcher.expectValue(CardStackMotionModeKey, CardStackMotionMode.SNAP))
             .assertExists()
+    }
+
+    @Test
+    fun editingAFieldWhileTheUnfoldedTargetIsSelectedDispatchesTheUnfoldedActionNotTheFoldedOne() {
+        val actions = mutableListOf<LauncherShellAction>()
+        composeRule.setContent {
+            MaterialTheme {
+                Column(
+                    modifier =
+                        Modifier
+                            .requiredSize(360.dp, 800.dp)
+                            .verticalScroll(rememberScrollState()),
+                ) {
+                    AdaptiveStageAppearancePageContent(
+                        state = LauncherShellState().settingsSurfaceState(),
+                        onAction = actions::add,
+                    )
+                }
+            }
+        }
+
+        composeRule.onNodeWithTag("adaptive-stage-appearance-target-UNFOLDED").performScrollTo().performClick()
+        // 80 (not 100): unfolded()'s own default cardAspectRatioPercent is already 100, so setting
+        // it to 100 again would be a no-op the slider never dispatches a change for.
+        composeRule
+            .onNodeWithContentDescription("Card aspect ratio")
+            .performScrollTo()
+            .performSemanticsAction(SemanticsActions.SetProgress) { setProgress ->
+                assertTrue(setProgress(80f))
+            }
+
+        composeRule.runOnIdle {
+            val action = actions.last() as LauncherShellAction.UpdateUnfoldedAdaptiveStageAppearance
+            assertEquals(80, action.appearance.geometry.cardAspectRatioPercent)
+        }
     }
 
     @Test

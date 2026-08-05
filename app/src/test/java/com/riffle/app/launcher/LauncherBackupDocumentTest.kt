@@ -11,8 +11,12 @@ import com.riffle.core.domain.launcher.home.WallpaperSource
 import com.riffle.core.domain.launcher.rss.FeedConfiguration
 import com.riffle.core.domain.launcher.rss.FeedId
 import com.riffle.core.domain.launcher.rss.FeedUrl
-import com.riffle.core.domain.launcher.settings.AdaptiveStageAppearancePreset
 import com.riffle.core.domain.launcher.settings.AdaptiveStageAppearanceSettings
+import com.riffle.core.domain.launcher.settings.AdaptiveStageBackgroundSource
+import com.riffle.core.domain.launcher.settings.AdaptiveStageFanDirection
+import com.riffle.core.domain.launcher.settings.AdaptiveStageGeometry
+import com.riffle.core.domain.launcher.settings.AdaptiveStageMotion
+import com.riffle.core.domain.launcher.settings.AdaptiveStageSurface
 import com.riffle.core.domain.launcher.settings.AppearanceSettings
 import com.riffle.core.domain.launcher.settings.CardsSettings
 import com.riffle.core.domain.launcher.settings.FeedRefreshIntervalOption
@@ -46,8 +50,37 @@ class LauncherBackupDocumentTest {
                 cards =
                     CardsSettings(
                         adaptiveStageAppearance =
-                            AdaptiveStageAppearanceSettings()
-                                .applyPreset(AdaptiveStageAppearancePreset.FLAT_REDUCED_DEPTH),
+                            AdaptiveStageAppearanceSettings(
+                                geometry =
+                                    AdaptiveStageGeometry(
+                                        visibleDepth = 2,
+                                        overlapPercent = 0,
+                                        horizontalOffsetDp = 0,
+                                        curveDp = 0,
+                                        fanDirection = AdaptiveStageFanDirection.NONE,
+                                        rotationDegrees = 0,
+                                    ),
+                                surface =
+                                    AdaptiveStageSurface(
+                                        backgroundSource = AdaptiveStageBackgroundSource.SYSTEM_WALLPAPER_ACCENT,
+                                        glassTransparencyPercent = 0,
+                                        blurStrengthPercent = 0,
+                                        shadowElevationDp = 0,
+                                        textureIntensityPercent = 0,
+                                    ),
+                                motion =
+                                    AdaptiveStageMotion(
+                                        travelIntensityPercent = 0,
+                                        parallaxIntensityPercent = 0,
+                                        rotationIntensityPercent = 0,
+                                    ),
+                            ),
+                        unfoldedAppearance =
+                            AdaptiveStageAppearanceSettings.unfolded().let { unfolded ->
+                                unfolded.copy(
+                                    geometry = unfolded.geometry.copy(visibleDepth = 3, verticalSpacingDp = 40),
+                                )
+                            },
                     ),
             )
         val document =

@@ -85,7 +85,9 @@ private fun homeSettingsPageEntries(): List<SettingsPageEntry> =
                     "card typography",
                     "card motion",
                     "reduced transparency",
-                    "appearance preset",
+                    "folded appearance",
+                    "unfolded appearance",
+                    "rail appearance",
                 ),
         ),
         SettingsPageEntry(

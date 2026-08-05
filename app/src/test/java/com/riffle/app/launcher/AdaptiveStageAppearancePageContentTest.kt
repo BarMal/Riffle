@@ -1,24 +1,41 @@
 package com.riffle.app.launcher
 
-import com.riffle.core.domain.launcher.settings.AdaptiveStageAppearancePreset
+import com.riffle.core.domain.launcher.settings.AdaptiveStageAppearanceSettings
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
 import org.junit.Test
 
+/**
+ * Pure-logic coverage for the folded/unfolded editor target (#1058) -- which default a reset
+ * returns to, and that each target has a distinct label. [AdaptiveStageAppearancePageContent]
+ * itself needs a real Compose tree to exercise (see [AdaptiveStageAppearanceEditorTest]).
+ */
 class AdaptiveStageAppearancePageContentTest {
     @Test
-    fun presetActionReplacesTheCompleteProfileWithTheSelectedPreset() {
-        val action = adaptiveStageAppearancePresetAction(AdaptiveStageAppearancePreset.FLAT_REDUCED_DEPTH)
-
-        assertEquals(AdaptiveStageAppearancePreset.FLAT_REDUCED_DEPTH, action.appearance.preset)
-        assertEquals(2, action.appearance.geometry.visibleDepth)
-        assertEquals(0, action.appearance.surface.blurStrengthPercent)
-        assertEquals(0, action.appearance.motion.travelIntensityPercent)
+    fun foldedTargetResetsToTheModernDefault() {
+        assertEquals(
+            AdaptiveStageAppearanceSettings.modern(),
+            AdaptiveStageAppearanceEditorTarget.FOLDED.defaultAppearance(),
+        )
     }
 
     @Test
-    fun presetActionAppliesTheWarmGlassProfile() {
-        val action = adaptiveStageAppearancePresetAction(AdaptiveStageAppearancePreset.WARM_GLASS)
+    fun unfoldedTargetResetsToTheUnfoldedDefault() {
+        assertEquals(
+            AdaptiveStageAppearanceSettings.unfolded(),
+            AdaptiveStageAppearanceEditorTarget.UNFOLDED.defaultAppearance(),
+        )
+    }
 
-        assertEquals(AdaptiveStageAppearancePreset.WARM_GLASS, action.appearance.preset)
+    @Test
+    fun theTwoTargetsHaveDistinctDefaultsAndLabels() {
+        assertNotEquals(
+            AdaptiveStageAppearanceEditorTarget.FOLDED.defaultAppearance(),
+            AdaptiveStageAppearanceEditorTarget.UNFOLDED.defaultAppearance(),
+        )
+        assertNotEquals(
+            AdaptiveStageAppearanceEditorTarget.FOLDED.label(),
+            AdaptiveStageAppearanceEditorTarget.UNFOLDED.label(),
+        )
     }
 }

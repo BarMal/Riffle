@@ -424,8 +424,13 @@ sealed interface LauncherShellAction {
 
     data class SelectContextualEnabled(val enabled: Boolean) : LauncherShellAction
 
-    /** Replaces the complete AdaptiveStage profile in one persisted, atomic update. */
+    /** Replaces the complete folded AdaptiveStage profile in one persisted, atomic update. */
     data class UpdateAdaptiveStageAppearance(
+        val appearance: AdaptiveStageAppearanceSettings,
+    ) : LauncherShellAction
+
+    /** Replaces the complete unfolded (docked-rail) AdaptiveStage profile, independent of the folded one. */
+    data class UpdateUnfoldedAdaptiveStageAppearance(
         val appearance: AdaptiveStageAppearanceSettings,
     ) : LauncherShellAction
 

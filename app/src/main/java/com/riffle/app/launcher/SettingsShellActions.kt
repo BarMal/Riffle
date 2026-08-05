@@ -90,6 +90,7 @@ internal fun LauncherShellAction.launcherSettingsActionRoute(): LauncherSettings
         is LauncherShellAction.SelectMotionPerformanceTargetFps,
         is LauncherShellAction.SelectContextualEnabled,
         is LauncherShellAction.UpdateAdaptiveStageAppearance,
+        is LauncherShellAction.UpdateUnfoldedAdaptiveStageAppearance,
         is LauncherShellAction.SelectAdaptiveStagePaneArrangement,
         is LauncherShellAction.SelectAdaptiveStageRailSide,
         is LauncherShellAction.SelectOverlayDockEnabled,

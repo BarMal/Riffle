@@ -15,7 +15,6 @@ import kotlin.math.sin
  */
 data class AdaptiveStageAppearanceSettings(
     val version: Int = CURRENT_ADAPTIVE_STAGE_APPEARANCE_VERSION,
-    val preset: AdaptiveStageAppearancePreset = AdaptiveStageAppearancePreset.MODERN_ADAPTIVE_STAGE,
     val geometry: AdaptiveStageGeometry = AdaptiveStageGeometry(),
     val surface: AdaptiveStageSurface = AdaptiveStageSurface(),
     val typography: AdaptiveStageTypography = AdaptiveStageTypography(),
@@ -29,12 +28,6 @@ data class AdaptiveStageAppearanceSettings(
             typography = typography.coerce(),
             motion = motion.coerce(),
         )
-
-    /** Applies all preset values in one immutable update. */
-    fun applyPreset(preset: AdaptiveStageAppearancePreset): AdaptiveStageAppearanceSettings = preset.settings
-
-    /** Reset has one stable result regardless of the current customisation. */
-    fun reset(): AdaptiveStageAppearanceSettings = modern()
 
     /** Resolves platform limitations without rewriting the stored user preference. */
     fun effectiveFor(capabilities: AdaptiveStageRendererCapabilities): AdaptiveStageAppearanceSettings =
@@ -181,14 +174,14 @@ data class AdaptiveStageAppearanceSettings(
     }
 
     companion object {
-        fun modern(): AdaptiveStageAppearanceSettings = AdaptiveStageAppearancePreset.MODERN_ADAPTIVE_STAGE.settings
+        /** Plain default field values for the folded (single-stage, full-size) layout. */
+        fun modern(): AdaptiveStageAppearanceSettings = AdaptiveStageAppearanceSettings()
 
         /**
          * Plain default field values for an unfolded, docked-rail layout: linear and spaced with no
-         * overlap between adjacent tiles, as opposed to [modern]'s curved, tight, overlapping fan. This
-         * is a literal set of field values, not derived from [AdaptiveStageAppearancePreset] -- presets
-         * are a separate, user-facing concept (see #1058) that this default is deliberately independent
-         * of.
+         * overlap between adjacent tiles, as opposed to [modern]'s curved, tight, overlapping fan. Each
+         * layout ships only this one literal set of field values -- there is no preset system (#1058
+         * removed it in favor of direct, per-field editing for both layouts).
          *
          * [AdaptiveStageGeometry.verticalSpacingDp] of 72 mirrors the value the previous hand-rolled
          * rail policy needed before tiles were reliably tappable -- see #1054's fix: a rail tile is
@@ -377,74 +370,6 @@ data class AdaptiveStageCardStackResolution(
     val layoutPolicy: CardStackLayoutPolicy,
     val animation: CardStackAnimationSpec,
 )
-
-enum class AdaptiveStageAppearancePreset {
-    MODERN_ADAPTIVE_STAGE,
-    FLAT_REDUCED_DEPTH,
-    WARM_GLASS,
-    ;
-
-    internal val settings: AdaptiveStageAppearanceSettings
-        get() =
-            when (this) {
-                MODERN_ADAPTIVE_STAGE -> AdaptiveStageAppearanceSettings(preset = this)
-                FLAT_REDUCED_DEPTH ->
-                    AdaptiveStageAppearanceSettings(
-                        preset = this,
-                        geometry =
-                            AdaptiveStageGeometry(
-                                visibleDepth = 2,
-                                focusedScalePercent = 100,
-                                overlapPercent = 0,
-                                horizontalOffsetDp = 0,
-                                curveDp = 0,
-                                fanDirection = AdaptiveStageFanDirection.NONE,
-                                rotationDegrees = 0,
-                            ),
-                        surface =
-                            AdaptiveStageSurface(
-                                backgroundSource = AdaptiveStageBackgroundSource.SYSTEM_WALLPAPER_ACCENT,
-                                glassTransparencyPercent = 0,
-                                blurStrengthPercent = 0,
-                                shadowElevationDp = 0,
-                                textureIntensityPercent = 0,
-                            ),
-                        motion =
-                            AdaptiveStageMotion(
-                                travelIntensityPercent = 0,
-                                parallaxIntensityPercent = 0,
-                                rotationIntensityPercent = 0,
-                            ),
-                    )
-                // A warm, translucent glass treatment modeled on the Calm prototype's palette
-                // (CalmTheme.kt: near-black surfaces, a warm tan accent, and a heavier glass/blur
-                // layer than MODERN_ADAPTIVE_STAGE) -- an opt-in preset rather than a change to the
-                // shipped default, so it's directly comparable against the other two.
-                WARM_GLASS ->
-                    AdaptiveStageAppearanceSettings(
-                        preset = this,
-                        surface =
-                            AdaptiveStageSurface(
-                                backgroundSource = AdaptiveStageBackgroundSource.CUSTOM_SOLID,
-                                // Calm's SURFACE color (#0C0B10) tinted toward its warm GLASS layer.
-                                customBackgroundArgb = 0xFF14110EL,
-                                glassTransparencyPercent = 58,
-                                // Calm's warm-tan GLOSS/REFRACTION highlight rather than a neutral white tint.
-                                glassTintArgb = 0xFFC6B597L,
-                                blurStrengthPercent = 46,
-                                outlineWidthDp = 1,
-                                highlightPercent = 24,
-                                shadowElevationDp = 18,
-                            ),
-                        typography =
-                            AdaptiveStageTypography(
-                                accentSource = AdaptiveStageAccentSource.CUSTOM,
-                                // Calm's ACCENT color (#C6B597).
-                                customAccentArgb = 0xFFC6B597L,
-                            ),
-                    )
-            }
-}
 
 data class AdaptiveStageGeometry(
     val cardAspectRatioPercent: Int = 72,
