@@ -172,7 +172,7 @@ internal fun AdaptiveStageAppearancePageContent(
             subtitle = "Split shows card details in a larger area above the stack",
         )
     }
-    SettingsSection(title = "Reset") {
+    SettingsSection(title = "Reset appearance") {
         SettingsClickableRow(
             title = "Reset ${editorTarget.label()} Cards appearance",
             subtitle = "Restore this layout's default geometry, surface, and motion",

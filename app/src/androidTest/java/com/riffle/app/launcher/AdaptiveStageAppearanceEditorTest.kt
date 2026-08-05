@@ -54,7 +54,7 @@ class AdaptiveStageAppearanceEditorTest {
         listOf(
             "Appearance target",
             "Layout",
-            "Reset",
+            "Reset appearance",
             "Card geometry",
             "Stack and stack",
             "Surface and glass",
@@ -250,16 +250,18 @@ class AdaptiveStageAppearanceEditorTest {
         }
 
         composeRule.onNodeWithTag("adaptive-stage-appearance-target-UNFOLDED").performScrollTo().performClick()
+        // 80 (not 100): unfolded()'s own default cardAspectRatioPercent is already 100, so setting
+        // it to 100 again would be a no-op the slider never dispatches a change for.
         composeRule
             .onNodeWithContentDescription("Card aspect ratio")
             .performScrollTo()
             .performSemanticsAction(SemanticsActions.SetProgress) { setProgress ->
-                assertTrue(setProgress(100f))
+                assertTrue(setProgress(80f))
             }
 
         composeRule.runOnIdle {
             val action = actions.last() as LauncherShellAction.UpdateUnfoldedAdaptiveStageAppearance
-            assertEquals(100, action.appearance.geometry.cardAspectRatioPercent)
+            assertEquals(80, action.appearance.geometry.cardAspectRatioPercent)
         }
     }
 
