@@ -115,6 +115,7 @@ private fun encodeCardsSettings(settings: CardsSettings): JSONObject =
     JSONObject()
         .put("stagePreferencesByLayout", JSONArray(settings.stagePreferencesByLayout.map(::encodeStagePreferences)))
         .put("timeScapeAppearance", encodeAdaptiveStageAppearance(settings.adaptiveStageAppearance))
+        .put("adaptiveStageUnfoldedAppearance", encodeAdaptiveStageAppearance(settings.unfoldedAppearance))
         .put("timeScapeTemplateId", settings.adaptiveStageTemplateId.value)
         .put("timeScapeRailSide", settings.adaptiveStageRailSide?.name)
         .put("timeScapePaneArrangement", settings.adaptiveStagePaneArrangement.name)
@@ -148,6 +149,9 @@ private fun JSONObject.toCardsSettings(defaults: CardsSettings): CardsSettings {
         adaptiveStageAppearance =
             optJSONObject("timeScapeAppearance")?.toAdaptiveStageAppearance(defaults.adaptiveStageAppearance)
                 ?: defaults.adaptiveStageAppearance,
+        unfoldedAppearance =
+            optJSONObject("adaptiveStageUnfoldedAppearance")?.toAdaptiveStageAppearance(defaults.unfoldedAppearance)
+                ?: defaults.unfoldedAppearance,
         adaptiveStageTemplateId =
             optString("timeScapeTemplateId", defaults.adaptiveStageTemplateId.value)
                 .takeIf(String::isNotBlank)
@@ -162,7 +166,6 @@ private fun encodeAdaptiveStageAppearance(settings: AdaptiveStageAppearanceSetti
     settings.coerce().let { appearance ->
         JSONObject()
             .put("version", appearance.version)
-            .put("preset", appearance.preset.name)
             .put(
                 "geometry",
                 JSONObject().put(
@@ -296,7 +299,6 @@ private fun JSONObject.toAdaptiveStageAppearance(defaults: AdaptiveStageAppearan
     val motion = optJSONObject("motion")
     return AdaptiveStageAppearanceSettings(
         version = optInt("version", defaults.version),
-        preset = enumOrDefault("preset", defaults.preset),
         geometry =
             AdaptiveStageGeometry(
                 cardAspectRatioPercent =
@@ -776,4 +778,4 @@ private fun JSONObject.toFeedProfile(): AppProfile? =
         }
     }
 
-internal const val LAUNCHER_SETTINGS_JSON_VERSION = 7
+internal const val LAUNCHER_SETTINGS_JSON_VERSION = 8

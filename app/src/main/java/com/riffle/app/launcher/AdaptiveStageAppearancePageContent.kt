@@ -30,7 +30,6 @@ import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.cards.AdaptiveStagePaneArrangement
 import com.riffle.core.domain.launcher.cards.AdaptiveStageRailSide
 import com.riffle.core.domain.launcher.settings.AdaptiveStageAccentSource
-import com.riffle.core.domain.launcher.settings.AdaptiveStageAppearancePreset
 import com.riffle.core.domain.launcher.settings.AdaptiveStageAppearanceSettings
 import com.riffle.core.domain.launcher.settings.AdaptiveStageBackgroundSource
 import com.riffle.core.domain.launcher.settings.AdaptiveStageContentDensity
@@ -97,12 +96,40 @@ internal fun AdaptiveStageAppearancePageContent(
     onAction: (LauncherShellAction) -> Unit,
     rendererCapabilities: AdaptiveStageRendererCapabilities = adaptiveStageRendererCapabilities(),
 ) {
-    val appearance = state.settings.cards.adaptiveStageAppearance
+    var editorTarget by rememberSaveable { mutableStateOf(AdaptiveStageAppearanceEditorTarget.FOLDED) }
+    val appearance =
+        when (editorTarget) {
+            AdaptiveStageAppearanceEditorTarget.FOLDED -> state.settings.cards.adaptiveStageAppearance
+            AdaptiveStageAppearanceEditorTarget.UNFOLDED -> state.settings.cards.unfoldedAppearance
+        }
     var resetConfirmationVisible by rememberSaveable { mutableStateOf(false) }
     val update: ((AdaptiveStageAppearanceSettings) -> AdaptiveStageAppearanceSettings) -> Unit = { transform ->
-        onAction(LauncherShellAction.UpdateAdaptiveStageAppearance(transform(appearance).coerce()))
+        val next = transform(appearance).coerce()
+        onAction(
+            when (editorTarget) {
+                AdaptiveStageAppearanceEditorTarget.FOLDED -> LauncherShellAction.UpdateAdaptiveStageAppearance(next)
+                AdaptiveStageAppearanceEditorTarget.UNFOLDED ->
+                    LauncherShellAction.UpdateUnfoldedAdaptiveStageAppearance(next)
+            },
+        )
     }
 
+    SettingsSection(title = "Appearance target") {
+        AdaptiveStageEnumChoices(
+            title = "Editing",
+            values = AdaptiveStageAppearanceEditorTarget.entries,
+            selected = editorTarget,
+            label = AdaptiveStageAppearanceEditorTarget::label,
+            testTag = { target -> "adaptive-stage-appearance-target-${target.name}" },
+            onSelected = { target -> editorTarget = target },
+        )
+        SettingsListRow(
+            title = "About Folded and Unfolded",
+            subtitle = "Folded is the single-stage, full-size stack. Unfolded is the docked rail" +
+                " shown alongside content on a larger or unfolded screen. Each has its own" +
+                " independent appearance.",
+        )
+    }
     SettingsSection(title = "Preview") {
         AdaptiveStageAppearancePreview(
             appearance = appearance,
@@ -144,20 +171,10 @@ internal fun AdaptiveStageAppearancePageContent(
             subtitle = "Split shows card details in a larger area above the stack",
         )
     }
-    SettingsSection(title = "Preset and reset") {
-        AdaptiveStageEnumChoices(
-            title = "Appearance preset",
-            values = AdaptiveStageAppearancePreset.entries,
-            selected = appearance.preset,
-            label = AdaptiveStageAppearancePreset::label,
-            testTag = { preset -> "adaptive-stage-preset-${preset.name}" },
-            onSelected = { preset ->
-                onAction(adaptiveStageAppearancePresetAction(preset))
-            },
-        )
+    SettingsSection(title = "Reset") {
         SettingsClickableRow(
-            title = "Reset Cards appearance",
-            subtitle = "Restore the Modern Cards profile",
+            title = "Reset ${editorTarget.label()} Cards appearance",
+            subtitle = "Restore this layout's default geometry, surface, and motion",
             onClick = { resetConfirmationVisible = true },
             trailingContent = { SettingsButtonText(text = "Reset") },
         )
@@ -567,12 +584,17 @@ internal fun AdaptiveStageAppearancePageContent(
     if (resetConfirmationVisible) {
         AlertDialog(
             onDismissRequest = { resetConfirmationVisible = false },
-            title = { Text("Reset Cards appearance?") },
-            text = { Text("This replaces all Cards appearance, geometry, and motion choices with the Modern preset.") },
+            title = { Text("Reset ${editorTarget.label()} Cards appearance?") },
+            text = {
+                Text(
+                    "This replaces all ${editorTarget.label().lowercase()} Cards appearance, geometry, and" +
+                        " motion choices with its default values.",
+                )
+            },
             confirmButton = {
                 TextButton(
                     onClick = {
-                        update { it.reset() }
+                        update { editorTarget.defaultAppearance() }
                         resetConfirmationVisible = false
                     },
                     modifier = Modifier.semantics { contentDescription = "Confirm Cards reset" },
@@ -582,6 +604,20 @@ internal fun AdaptiveStageAppearancePageContent(
         )
     }
 }
+
+internal enum class AdaptiveStageAppearanceEditorTarget { FOLDED, UNFOLDED }
+
+internal fun AdaptiveStageAppearanceEditorTarget.defaultAppearance(): AdaptiveStageAppearanceSettings =
+    when (this) {
+        AdaptiveStageAppearanceEditorTarget.FOLDED -> AdaptiveStageAppearanceSettings.modern()
+        AdaptiveStageAppearanceEditorTarget.UNFOLDED -> AdaptiveStageAppearanceSettings.unfolded()
+    }
+
+internal fun AdaptiveStageAppearanceEditorTarget.label(): String =
+    when (this) {
+        AdaptiveStageAppearanceEditorTarget.FOLDED -> "Folded"
+        AdaptiveStageAppearanceEditorTarget.UNFOLDED -> "Unfolded"
+    }
 
 @Composable
 private fun AdaptiveStageSlider(
@@ -652,18 +688,6 @@ private fun adaptiveStageFallbackMessage(
         else -> null
     }
 }
-
-internal fun adaptiveStageAppearancePresetAction(preset: AdaptiveStageAppearancePreset): LauncherShellAction.UpdateAdaptiveStageAppearance =
-    LauncherShellAction.UpdateAdaptiveStageAppearance(
-        AdaptiveStageAppearanceSettings.modern().applyPreset(preset).coerce(),
-    )
-
-private fun AdaptiveStageAppearancePreset.label(): String =
-    when (this) {
-        AdaptiveStageAppearancePreset.MODERN_ADAPTIVE_STAGE -> "Modern"
-        AdaptiveStageAppearancePreset.FLAT_REDUCED_DEPTH -> "Flat"
-        AdaptiveStageAppearancePreset.WARM_GLASS -> "Warm glass"
-    }
 
 private fun AdaptiveStageBackgroundSource.label(): String = name.lowercase().replace('_', ' ').replaceFirstChar(Char::uppercase)
 

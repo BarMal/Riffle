@@ -454,6 +454,12 @@ class LauncherActionDomainTest {
                     LauncherShellAction.UpdateAdaptiveStageAppearance(AdaptiveStageAppearanceSettings.modern()),
                 ),
                 settings(
+                    "UpdateUnfoldedAdaptiveStageAppearance",
+                    LauncherShellAction.UpdateUnfoldedAdaptiveStageAppearance(
+                        AdaptiveStageAppearanceSettings.unfolded(),
+                    ),
+                ),
+                settings(
                     "SelectAdaptiveStagePaneArrangement",
                     LauncherShellAction.SelectAdaptiveStagePaneArrangement(AdaptiveStagePaneArrangement.SPLIT),
                 ),

@@ -92,6 +92,18 @@ internal class LauncherSettingsStateReducer(
                         launcherSettingsRepository = launcherSettingsRepository,
                     )
 
+                is LauncherShellAction.UpdateUnfoldedAdaptiveStageAppearance ->
+                    state.withLauncherSettings(
+                        settings =
+                            state.launcherSettings.copy(
+                                cards =
+                                    state.launcherSettings.cards.copy(
+                                        unfoldedAppearance = action.appearance.coerce(),
+                                    ),
+                            ),
+                        launcherSettingsRepository = launcherSettingsRepository,
+                    )
+
                 is LauncherShellAction.SelectAdaptiveStagePaneArrangement ->
                     state.withLauncherSettings(
                         settings =

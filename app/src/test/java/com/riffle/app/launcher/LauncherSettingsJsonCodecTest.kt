@@ -285,7 +285,52 @@ class LauncherSettingsJsonCodecTest {
                 """.trimIndent(),
             ).cards.adaptiveStageAppearance
 
+        // "preset" is a stray key from before #1058 removed the preset system -- a real user's
+        // already-persisted settings.json can still contain it, and decoding must ignore it
+        // harmlessly rather than choke on it.
         assertEquals(AdaptiveStageAppearanceSettings.modern(), decoded)
+    }
+
+    @Test
+    fun roundTripsUnfoldedAdaptiveStageAppearanceIndependentlyOfFolded() {
+        val settings =
+            LauncherSettings(
+                cards =
+                    CardsSettings(
+                        adaptiveStageAppearance =
+                            AdaptiveStageAppearanceSettings(
+                                geometry = AdaptiveStageGeometry(visibleDepth = 5),
+                            ),
+                        unfoldedAppearance =
+                            AdaptiveStageAppearanceSettings.unfolded()
+                                .let { unfolded -> unfolded.copy(geometry = unfolded.geometry.copy(visibleDepth = 3)) },
+                    ),
+            )
+
+        val decoded = decodeLauncherSettings(encodeLauncherSettings(settings))
+
+        assertEquals(settings.cards, decoded.cards)
+        assertEquals(5, decoded.cards.adaptiveStageAppearance.geometry.visibleDepth)
+        assertEquals(3, decoded.cards.unfoldedAppearance.geometry.visibleDepth)
+    }
+
+    @Test
+    fun missingUnfoldedAppearanceInLegacyJsonDefaultsToThePlainUnfoldedProfileWithoutLosingOtherCardsFields() {
+        val decoded =
+            decodeLauncherSettings(
+                """
+                {
+                  "cards": {
+                    "timeScapeAppearance": { "geometry": { "visibleDepth": 5 } },
+                    "timeScapeRailSide": "TOP"
+                  }
+                }
+                """.trimIndent(),
+            ).cards
+
+        assertEquals(AdaptiveStageAppearanceSettings.unfolded(), decoded.unfoldedAppearance)
+        assertEquals(5, decoded.adaptiveStageAppearance.geometry.visibleDepth)
+        assertEquals(AdaptiveStageRailSide.TOP, decoded.adaptiveStageRailSide)
     }
 
     @Test

@@ -32,6 +32,7 @@ class LauncherSettingsActionRouteTest {
                 LauncherShellAction.SelectAppDrawerPresentation(AppDrawerPresentation.ICONS),
                 LauncherShellAction.SelectAppDrawerIconGridColumns(columns = 5),
                 LauncherShellAction.UpdateAdaptiveStageAppearance(AdaptiveStageAppearanceSettings.modern()),
+                LauncherShellAction.UpdateUnfoldedAdaptiveStageAppearance(AdaptiveStageAppearanceSettings.unfolded()),
                 LauncherShellAction.SelectAdaptiveStagePaneArrangement(AdaptiveStagePaneArrangement.SPLIT),
                 LauncherShellAction.SelectAdaptiveStageRailSide(AdaptiveStageRailSide.TOP),
             )

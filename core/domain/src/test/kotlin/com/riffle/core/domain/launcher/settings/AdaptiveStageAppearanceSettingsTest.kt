@@ -9,33 +9,14 @@ import kotlin.test.assertTrue
 
 class AdaptiveStageAppearanceSettingsTest {
     @Test
-    fun modernDefaultIsCoherentAndResetIsDeterministic() {
+    fun modernDefaultIsCoherentAndMatchesThePlainConstructorDefault() {
         val modern = AdaptiveStageAppearanceSettings.modern()
 
-        assertEquals(AdaptiveStageAppearancePreset.MODERN_ADAPTIVE_STAGE, modern.preset)
-        assertEquals(modern, modern.copy(geometry = modern.geometry.copy(visibleDepth = 1)).reset())
+        // There is no preset system (#1058 removed it): modern() is just the folded layout's own
+        // literal default field values, identical to the plain no-arg constructor.
+        assertEquals(AdaptiveStageAppearanceSettings(), modern)
         assertTrue(modern.geometry.visibleDepth >= 1)
         assertTrue(modern.geometry.cardAspectRatioPercent in 55..100)
-    }
-
-    @Test
-    fun flatPresetIsAppliedAtomically() {
-        val flat = AdaptiveStageAppearanceSettings().applyPreset(AdaptiveStageAppearancePreset.FLAT_REDUCED_DEPTH)
-
-        assertEquals(AdaptiveStageAppearancePreset.FLAT_REDUCED_DEPTH, flat.preset)
-        assertEquals(0, flat.geometry.rotationDegrees)
-        assertEquals(0, flat.surface.blurStrengthPercent)
-        assertEquals(0, flat.motion.travelIntensityPercent)
-    }
-
-    @Test
-    fun warmGlassPresetIsAppliedAtomicallyAndStaysWithinCoerceBounds() {
-        val warm = AdaptiveStageAppearanceSettings().applyPreset(AdaptiveStageAppearancePreset.WARM_GLASS)
-
-        assertEquals(AdaptiveStageAppearancePreset.WARM_GLASS, warm.preset)
-        assertEquals(AdaptiveStageBackgroundSource.CUSTOM_SOLID, warm.surface.backgroundSource)
-        assertEquals(AdaptiveStageAccentSource.CUSTOM, warm.typography.accentSource)
-        assertEquals(warm, warm.coerce())
     }
 
     @Test
