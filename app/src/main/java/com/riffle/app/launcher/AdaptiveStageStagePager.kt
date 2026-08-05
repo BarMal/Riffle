@@ -18,41 +18,43 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.util.VelocityTracker
-import com.riffle.core.domain.launcher.cards.AppStage
-import com.riffle.core.domain.launcher.cards.AppStageId
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
 /**
- * Continuous horizontal drag-to-switch-stage pager state, mirroring
+ * Continuous horizontal drag-to-switch-page pager state, mirroring
  * [rememberImmediateHomePagerState]'s fractional-position/settle-animation/pending-target-guard
- * shape but keyed on AdaptiveStage's stage list instead of Standard Home's page list.
+ * shape but keyed on an abstract page count/index instead of Standard Home's page list.
  *
- * Settling dispatches [LauncherShellAction.SelectAppStage] -- the same action a rail tap or the
- * stage selector already dispatches -- so no reducer changes are needed.
+ * This is deliberately generic over what a "page" is -- [pageCount] and [selectedIndex] are plain
+ * integers, and [onSettle] receives the settled index directly, rather than this function resolving
+ * [com.riffle.core.domain.launcher.cards.AppStageId]s itself. The caller (which knows whether a given
+ * index is a real app stage or a virtual page like "All notifications") decides what settling on it
+ * means -- e.g. dispatching [LauncherShellAction.SelectAppStage] for a real stage's index, or just
+ * updating local UI state for a virtual page's index.
  */
 @Suppress("LongMethod")
 @Composable
 internal fun rememberAdaptiveStageStagePagerState(
-    stages: List<AppStage>,
-    selectedStageId: AppStageId?,
+    pageCount: Int,
+    selectedIndex: Int,
     reducedMotion: Boolean = false,
-    onAction: (LauncherShellAction) -> Unit,
+    onSettle: (Int) -> Unit,
 ): AdaptiveStageStagePagerState {
-    val selectedStageIndex = stages.indexOfFirst { stage -> stage.id == selectedStageId }.coerceAtLeast(0)
-    val dragStagePosition = remember { mutableFloatStateOf(selectedStageIndex.toFloat()) }
-    val settleStagePosition = remember { Animatable(selectedStageIndex.toFloat()) }
+    val coercedSelectedIndex = selectedIndex.coerceAtLeast(0)
+    val dragStagePosition = remember { mutableFloatStateOf(coercedSelectedIndex.toFloat()) }
+    val settleStagePosition = remember { Animatable(coercedSelectedIndex.toFloat()) }
     val isDragging = remember { mutableStateOf(false) }
     val isSettling = remember { mutableStateOf(false) }
     val pendingGestureTargetStageIndex = remember { mutableStateOf<Int?>(null) }
 
     LaunchedEffect(
-        selectedStageIndex,
-        stages.size,
+        coercedSelectedIndex,
+        pageCount,
         isDragging.value,
         pendingGestureTargetStageIndex.value,
     ) {
-        if (pendingGestureTargetStageIndex.value == selectedStageIndex) {
+        if (pendingGestureTargetStageIndex.value == coercedSelectedIndex) {
             pendingGestureTargetStageIndex.value = null
         }
 
@@ -61,15 +63,15 @@ internal fun rememberAdaptiveStageStagePagerState(
                 isDragging = isDragging.value,
                 isSettling = isSettling.value,
                 hasPendingGestureTarget = pendingGestureTargetStageIndex.value != null,
-                pageCount = stages.size,
+                pageCount = pageCount,
                 currentPagePosition = dragStagePosition.floatValue,
-                selectedPageIndex = selectedStageIndex,
+                selectedPageIndex = coercedSelectedIndex,
             )
 
         if (shouldApplyExternalSelection) {
             when (homePageExternalSelectionSettlePolicy(reducedMotion)) {
                 HomePageExternalSelectionSettlePolicy.ImmediateSnap -> {
-                    val targetStagePosition = selectedStageIndex.toFloat()
+                    val targetStagePosition = coercedSelectedIndex.toFloat()
                     dragStagePosition.floatValue = targetStagePosition
                     settleStagePosition.snapTo(targetStagePosition)
                 }
@@ -79,13 +81,13 @@ internal fun rememberAdaptiveStageStagePagerState(
                     try {
                         settleStagePosition.snapTo(dragStagePosition.floatValue)
                         settleStagePosition.animateTo(
-                            targetValue = selectedStageIndex.toFloat(),
+                            targetValue = coercedSelectedIndex.toFloat(),
                             animationSpec =
                                 adaptiveStageStageSettleAnimation(homePageSettleMotionPolicy(reducedMotion)),
                         ) {
                             dragStagePosition.floatValue = value
                         }
-                        dragStagePosition.floatValue = selectedStageIndex.toFloat()
+                        dragStagePosition.floatValue = coercedSelectedIndex.toFloat()
                     } finally {
                         isSettling.value = false
                     }
@@ -105,24 +107,13 @@ internal fun rememberAdaptiveStageStagePagerState(
         },
         onTargetStageSettling = { targetIndex ->
             pendingGestureTargetStageIndex.value =
-                when (stages.getOrNull(targetIndex)?.id) {
-                    selectedStageId -> null
-                    null -> null
-                    else -> targetIndex
-                }
+                if (targetIndex == coercedSelectedIndex) null else targetIndex
         },
         onDragStopped = { targetIndex ->
-            val targetStageId = stages.getOrNull(targetIndex)?.id
             pendingGestureTargetStageIndex.value =
-                when (targetStageId) {
-                    selectedStageId -> null
-                    null -> null
-                    else -> targetIndex
-                }
+                if (targetIndex == coercedSelectedIndex) null else targetIndex
 
-            targetStageId
-                ?.takeIf { stageId -> stageId != selectedStageId }
-                ?.let { stageId -> onAction(LauncherShellAction.SelectAppStage(stageId)) }
+            if (targetIndex != coercedSelectedIndex) onSettle(targetIndex)
             isDragging.value = false
         },
     )
@@ -198,12 +189,17 @@ private fun adaptiveStageStageSettleAnimation(policy: HomePageSettleMotionPolicy
  * horizontal-intent-threshold/continuous-snapTo/settle-threshold-or-fling logic. Runs on
  * [PointerEventPass.Initial] so it sees drags before [cardStackPointerInput] (which only consumes
  * vertical drags on the default Main pass) -- the two gestures coexist without conflict.
+ *
+ * [pageCount] and [selectedIndex] are the same abstract page identity [rememberAdaptiveStageStagePagerState]
+ * uses; [navigationKey] should change whenever the underlying set of pages changes shape (a stage
+ * added/removed, or a virtual page appearing/disappearing) so the gesture recognizer resets.
  */
 internal fun Modifier.adaptiveStageStagePagerDrag(
     enabled: Boolean,
     stageWidthPx: Float,
-    stages: List<AppStage>,
-    selectedStageId: AppStageId?,
+    pageCount: Int,
+    selectedIndex: Int,
+    navigationKey: String,
     pagerState: AdaptiveStageStagePagerState,
     reducedMotion: Boolean,
     launchStageMotion: (suspend () -> Unit) -> Unit,
@@ -211,8 +207,7 @@ internal fun Modifier.adaptiveStageStagePagerDrag(
     if (!enabled) {
         this
     } else {
-        val stageIdsKey = stages.joinToString(separator = "|") { stage -> adaptiveStageStageKey(stage.id) }
-        pointerInput(stageWidthPx, selectedStageId, stageIdsKey) {
+        pointerInput(stageWidthPx, selectedIndex, navigationKey) {
             awaitEachGesture {
                 val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
                 if (stageWidthPx <= 0f) {
@@ -228,7 +223,7 @@ internal fun Modifier.adaptiveStageStagePagerDrag(
                 var dragY = 0f
                 var isStageDrag = false
                 var pointerIsDown = true
-                val lastStageIndex = stages.lastIndex.coerceAtLeast(0)
+                val lastStageIndex = (pageCount - 1).coerceAtLeast(0)
 
                 while (pointerIsDown) {
                     val event = awaitPointerEvent(PointerEventPass.Initial)
@@ -270,7 +265,7 @@ internal fun Modifier.adaptiveStageStagePagerDrag(
                             horizontalDragPx = dragX,
                             pageWidthPx = stageWidthPx,
                             horizontalVelocityPxPerSecond = velocity,
-                            pageCount = stages.size,
+                            pageCount = pageCount,
                         )
                     launchStageMotion {
                         pagerState.onTargetStageSettling(targetIndex)

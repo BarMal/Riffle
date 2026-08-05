@@ -98,6 +98,7 @@ import com.riffle.core.domain.launcher.cards.CardStackLayoutEntry
 import com.riffle.core.domain.launcher.cards.CardStackNavigationDirection
 import com.riffle.core.domain.launcher.cards.CardStackSettleRequest
 import com.riffle.core.domain.launcher.cards.LauncherCardId
+import com.riffle.core.domain.launcher.cards.mergedContentByRecency
 import com.riffle.core.domain.launcher.cards.variantFor
 import com.riffle.core.domain.launcher.cards.visibleStaticElements
 import com.riffle.core.domain.launcher.home.LauncherViewMode
@@ -183,11 +184,24 @@ internal fun AdaptiveStageAppStageSurface(
     val detailState =
         selectedStage?.let { stage ->
             rememberAdaptiveStageCardDetailState(
-                stageId = stage.id,
+                scopeKey = stage.id,
                 motion = state.launcherSettings.cards.adaptiveStageAppearance.motion,
                 globalReducedMotion = state.launcherSettings.motion.reducedMotion,
             )
         }
+    // Local, non-persisted UI state -- the "All notifications" page merges content across every
+    // real stage (see #1056/#1057), so it deliberately isn't a real AppStageId and never touches
+    // AppStagePlanner, LauncherShellAction's stage-selection reducer, or persisted preferences the
+    // way a real stage selection does. Selecting a real stage through any of the existing paths
+    // (SelectAppStage/prev/next/tap) implicitly leaves this page, since those all flow through the
+    // callbacks below that explicitly clear it.
+    var allNotificationsSelected by rememberSaveable { mutableStateOf(false) }
+    val allNotificationsDetailState =
+        rememberAdaptiveStageCardDetailState(
+            scopeKey = "all-notifications",
+            motion = state.launcherSettings.cards.adaptiveStageAppearance.motion,
+            globalReducedMotion = state.launcherSettings.motion.reducedMotion,
+        )
 
     LaunchedEffect(selectedStage?.id, state.launcherSettings.cards.adaptiveStageTemplateId) {
         onContextChanged(
@@ -327,7 +341,10 @@ internal fun AdaptiveStageAppStageSurface(
                             shellState = shellState,
                             detailRecoveryMessage = detailRecoveryMessage,
                             detailState = detailState,
+                            allNotificationsDetailState = allNotificationsDetailState,
                             focusedCardId = focusedCardIdValue?.let(::LauncherCardId),
+                            allNotificationsSelected = allNotificationsSelected,
+                            onAllNotificationsSelectedChanged = { allNotificationsSelected = it },
                             onFocusedCardChanged = {
                                 focusedCardIdValue = it?.value
                                 onContextChanged(context.copy(focusedCardKey = it?.value))
@@ -349,8 +366,11 @@ internal fun AdaptiveStageAppStageSurface(
                             shellState = shellState,
                             detailRecoveryMessage = detailRecoveryMessage,
                             detailState = detailState,
+                            allNotificationsDetailState = allNotificationsDetailState,
                             focusedCardId = focusedCardIdValue?.let(::LauncherCardId),
                             selectedDetailCardId = detailOrigin?.cardId ?: focusedCardIdValue?.let(::LauncherCardId),
+                            allNotificationsSelected = allNotificationsSelected,
+                            onAllNotificationsSelectedChanged = { allNotificationsSelected = it },
                             paneLayout = paneLayout,
                             onFocusedCardChanged = {
                                 focusedCardIdValue = it?.value
@@ -374,6 +394,8 @@ internal fun AdaptiveStageAppStageSurface(
                             AdaptiveStageStageRail(
                                 stages = shellState.snapshot.stages,
                                 selectedStageId = selectedStage?.id,
+                                allNotificationsSelected = allNotificationsSelected,
+                                onAllNotificationsSelectedChanged = { allNotificationsSelected = it },
                                 state = state,
                                 appIconLoader = appIconLoader,
                                 onAction = onAction,
@@ -388,6 +410,8 @@ internal fun AdaptiveStageAppStageSurface(
                                     AdaptiveStageStageRail(
                                         stages = shellState.snapshot.stages,
                                         selectedStageId = selectedStage?.id,
+                                        allNotificationsSelected = allNotificationsSelected,
+                                        onAllNotificationsSelectedChanged = { allNotificationsSelected = it },
                                         state = state,
                                         appIconLoader = appIconLoader,
                                         onAction = onAction,
@@ -397,17 +421,24 @@ internal fun AdaptiveStageAppStageSurface(
                                 Column(modifier = Modifier.width(paneLayout.stackWidthDp.dp).fillMaxSize()) {
                                     AdaptiveStageStageHeader(
                                         selectedStage = selectedStage,
+                                        allNotificationsSelected = allNotificationsSelected,
                                         stages = shellState.snapshot.stages,
                                         state = state,
                                         appIconLoader = appIconLoader,
                                         onAction = onAction,
                                     )
-                                    AdaptiveStageStageBody(
-                                        selectedStage = selectedStage,
+                                    AdaptiveStagePageBody(
+                                        page =
+                                            if (allNotificationsSelected) {
+                                                AdaptiveStagePage.AllNotifications
+                                            } else {
+                                                selectedStage?.let(AdaptiveStagePage::Stage)
+                                            },
                                         state = state,
                                         shellState = shellState,
                                         detailRecoveryMessage = detailRecoveryMessage,
                                         detailState = detailState,
+                                        allNotificationsDetailState = allNotificationsDetailState,
                                         focusedCardId = focusedCardIdValue?.let(::LauncherCardId),
                                         onDetailVisibilityChanged = { cardId ->
                                             detailCardKey = cardId?.value
@@ -449,6 +480,8 @@ internal fun AdaptiveStageAppStageSurface(
                                     AdaptiveStageStageRail(
                                         stages = shellState.snapshot.stages,
                                         selectedStageId = selectedStage?.id,
+                                        allNotificationsSelected = allNotificationsSelected,
+                                        onAllNotificationsSelectedChanged = { allNotificationsSelected = it },
                                         state = state,
                                         appIconLoader = appIconLoader,
                                         onAction = onAction,
@@ -462,6 +495,61 @@ internal fun AdaptiveStageAppStageSurface(
                 }
             }
         }
+    }
+}
+
+/**
+ * One entry in the compact-mode pager/rail's navigable list: either a real app stage, or the
+ * virtual "All notifications" page. Deliberately a plain app-layer type, not a real
+ * [AppStage]/[AppStageId] -- this concept never touches [AppStagePlanner], persistence, or the
+ * reducer's stage-selection gating (which requires real stage membership). See #1057.
+ */
+internal sealed interface AdaptiveStagePage {
+    data class Stage(val stage: AppStage) : AdaptiveStagePage
+
+    data object AllNotifications : AdaptiveStagePage
+}
+
+internal fun List<AppStage>.withAllNotificationsPage(): List<AdaptiveStagePage> =
+    map(AdaptiveStagePage::Stage) + AdaptiveStagePage.AllNotifications
+
+/**
+ * The pager's index into [pages] for whatever is currently shown, independent of pages.size.
+ *
+ * Deliberately returns -1 (out of bounds, [List.getOrNull] resolves it to `null`) rather than
+ * falling back to the All-notifications page when there's no real selected stage and the user
+ * hasn't explicitly chosen All notifications -- that's the "no notification access" / zero-stages
+ * case, which must keep showing [AdaptiveStageUnavailableState], not an empty merged view.
+ */
+internal fun adaptiveStageSelectedPageIndex(
+    pages: List<AdaptiveStagePage>,
+    selectedStageId: AppStageId?,
+    allNotificationsSelected: Boolean,
+): Int =
+    if (allNotificationsSelected) {
+        pages.lastIndex.coerceAtLeast(0)
+    } else {
+        pages.indexOfFirst { page -> page is AdaptiveStagePage.Stage && page.stage.id == selectedStageId }
+    }
+
+/**
+ * What settling the pager (or tapping a rail tile) on [index] means: select the real stage and leave
+ * the All-notifications page, or select the All-notifications page -- entirely local UI state, not a
+ * [LauncherShellAction], since it isn't a real, persistable stage selection.
+ */
+internal fun adaptiveStageOnPageSettled(
+    pages: List<AdaptiveStagePage>,
+    index: Int,
+    onAction: (LauncherShellAction) -> Unit,
+    onAllNotificationsSelectedChanged: (Boolean) -> Unit,
+) {
+    when (val page = pages.getOrNull(index)) {
+        is AdaptiveStagePage.Stage -> {
+            onAllNotificationsSelectedChanged(false)
+            onAction(LauncherShellAction.SelectAppStage(page.stage.id))
+        }
+        AdaptiveStagePage.AllNotifications -> onAllNotificationsSelectedChanged(true)
+        null -> Unit
     }
 }
 
@@ -480,7 +568,10 @@ private fun AdaptiveStageCompactContent(
     shellState: com.riffle.app.launcher.notifications.AppStageShellState,
     detailRecoveryMessage: String?,
     detailState: AdaptiveStageCardDetailState?,
+    allNotificationsDetailState: AdaptiveStageCardDetailState,
     focusedCardId: LauncherCardId?,
+    allNotificationsSelected: Boolean,
+    onAllNotificationsSelectedChanged: (Boolean) -> Unit,
     onDetailVisibilityChanged: (LauncherCardId?) -> Unit,
     onFocusedCardChanged: (LauncherCardId?) -> Unit = {},
     onAction: (LauncherShellAction) -> Unit,
@@ -488,29 +579,36 @@ private fun AdaptiveStageCompactContent(
 ) {
     val stages = shellState.snapshot.stages
     val reducedMotion = state.launcherSettings.motion.reducedMotion
+    val pages = remember(stages) { stages.withAllNotificationsPage() }
+    val selectedPageIndex =
+        adaptiveStageSelectedPageIndex(pages, selectedStage?.id, allNotificationsSelected)
     val pagerState =
         rememberAdaptiveStageStagePagerState(
-            stages = stages,
-            selectedStageId = selectedStage?.id,
+            pageCount = pages.size,
+            selectedIndex = selectedPageIndex,
             reducedMotion = reducedMotion,
-            onAction = onAction,
+            onSettle = { index ->
+                adaptiveStageOnPageSettled(pages, index, onAction, onAllNotificationsSelectedChanged)
+            },
         )
     Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         AdaptiveStageStageHeader(
             selectedStage = selectedStage,
+            allNotificationsSelected = allNotificationsSelected,
             stages = stages,
             state = state,
             appIconLoader = appIconLoader,
             onAction = onAction,
         )
         AdaptiveStageCompactStagePager(
-            stages = stages,
-            selectedStage = selectedStage,
+            pages = pages,
+            selectedPageIndex = selectedPageIndex,
             pagerState = pagerState,
             state = state,
             shellState = shellState,
             detailRecoveryMessage = detailRecoveryMessage,
             detailState = detailState,
+            allNotificationsDetailState = allNotificationsDetailState,
             focusedCardId = focusedCardId,
             onDetailVisibilityChanged = onDetailVisibilityChanged,
             onFocusedCardChanged = onFocusedCardChanged,
@@ -547,8 +645,11 @@ private fun AdaptiveStageSplitContent(
     shellState: com.riffle.app.launcher.notifications.AppStageShellState,
     detailRecoveryMessage: String?,
     detailState: AdaptiveStageCardDetailState?,
+    allNotificationsDetailState: AdaptiveStageCardDetailState,
     focusedCardId: LauncherCardId?,
     selectedDetailCardId: LauncherCardId?,
+    allNotificationsSelected: Boolean,
+    onAllNotificationsSelectedChanged: (Boolean) -> Unit,
     paneLayout: AdaptiveStagePaneLayout,
     onDetailVisibilityChanged: (LauncherCardId?) -> Unit,
     onFocusedCardChanged: (LauncherCardId?) -> Unit = {},
@@ -557,12 +658,17 @@ private fun AdaptiveStageSplitContent(
 ) {
     val stages = shellState.snapshot.stages
     val reducedMotion = state.launcherSettings.motion.reducedMotion
+    val pages = remember(stages) { stages.withAllNotificationsPage() }
+    val selectedPageIndex =
+        adaptiveStageSelectedPageIndex(pages, selectedStage?.id, allNotificationsSelected)
     val pagerState =
         rememberAdaptiveStageStagePagerState(
-            stages = stages,
-            selectedStageId = selectedStage?.id,
+            pageCount = pages.size,
+            selectedIndex = selectedPageIndex,
             reducedMotion = reducedMotion,
-            onAction = onAction,
+            onSettle = { index ->
+                adaptiveStageOnPageSettled(pages, index, onAction, onAllNotificationsSelectedChanged)
+            },
         )
     // upperRegionHeightDp/lowerRegionHeightDp sum to exactly paneLayout.contentHeightDp -- the
     // domain layer has no notion of the header this Column also renders, so using those as fixed
@@ -580,6 +686,7 @@ private fun AdaptiveStageSplitContent(
     Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         AdaptiveStageStageHeader(
             selectedStage = selectedStage,
+            allNotificationsSelected = allNotificationsSelected,
             stages = stages,
             state = state,
             appIconLoader = appIconLoader,
@@ -600,13 +707,14 @@ private fun AdaptiveStageSplitContent(
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             AdaptiveStageCompactStagePager(
-                stages = stages,
-                selectedStage = selectedStage,
+                pages = pages,
+                selectedPageIndex = selectedPageIndex,
                 pagerState = pagerState,
                 state = state,
                 shellState = shellState,
                 detailRecoveryMessage = detailRecoveryMessage,
                 detailState = detailState,
+                allNotificationsDetailState = allNotificationsDetailState,
                 focusedCardId = focusedCardId,
                 onDetailVisibilityChanged = onDetailVisibilityChanged,
                 onFocusedCardChanged = onFocusedCardChanged,
@@ -644,14 +752,16 @@ private const val DEFAULT_SPLIT_UPPER_REGION_WEIGHT = 0.6f
  */
 @Composable
 @Suppress("LongParameterList")
+@Suppress("LongParameterList")
 private fun AdaptiveStageCompactStagePager(
-    stages: List<AppStage>,
-    selectedStage: AppStage?,
+    pages: List<AdaptiveStagePage>,
+    selectedPageIndex: Int,
     pagerState: AdaptiveStageStagePagerState,
     state: LauncherShellState,
     shellState: com.riffle.app.launcher.notifications.AppStageShellState,
     detailRecoveryMessage: String?,
     detailState: AdaptiveStageCardDetailState?,
+    allNotificationsDetailState: AdaptiveStageCardDetailState,
     focusedCardId: LauncherCardId?,
     onDetailVisibilityChanged: (LauncherCardId?) -> Unit,
     onFocusedCardChanged: (LauncherCardId?) -> Unit,
@@ -660,19 +770,23 @@ private fun AdaptiveStageCompactStagePager(
     modifier: Modifier,
     // false in SPLIT mode, where AdaptiveStageSplitContent already renders the expanded card's detail
     // in its upper AdaptiveStageSupportingPane -- rendering it inline here too would duplicate it.
+    // Always true for the All-notifications page regardless -- SPLIT mode's upper pane doesn't (yet)
+    // preview all-notifications cards, so its own inline overlay is the only detail surface it has.
     showDetailInline: Boolean = true,
 ) {
-    if (selectedStage == null || stages.size <= 1) {
-        AdaptiveStageStageBody(
-            selectedStage = selectedStage,
+    val selectedPage = pages.getOrNull(selectedPageIndex)
+    if (selectedPage == null || pages.size <= 1) {
+        AdaptiveStagePageBody(
+            page = selectedPage,
             state = state,
             shellState = shellState,
             detailRecoveryMessage = detailRecoveryMessage,
             detailState = detailState,
+            allNotificationsDetailState = allNotificationsDetailState,
             focusedCardId = focusedCardId,
             onDetailVisibilityChanged = onDetailVisibilityChanged,
             onFocusedCardChanged = onFocusedCardChanged,
-            showDetailInline = showDetailInline,
+            showDetailInline = true,
             onAction = onAction,
             appIconLoader = appIconLoader,
             modifier = modifier,
@@ -682,6 +796,7 @@ private fun AdaptiveStageCompactStagePager(
 
     val coroutineScope = rememberCoroutineScope()
     val reducedMotion = state.launcherSettings.motion.reducedMotion
+    val navigationKey = remember(pages) { pages.joinToString(separator = "|", transform = ::adaptiveStagePageKey) }
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
         val stageWidthPx = with(LocalDensity.current) { maxWidth.toPx() }
         Box(
@@ -691,8 +806,9 @@ private fun AdaptiveStageCompactStagePager(
                     .adaptiveStageStagePagerDrag(
                         enabled = true,
                         stageWidthPx = stageWidthPx,
-                        stages = stages,
-                        selectedStageId = selectedStage.id,
+                        pageCount = pages.size,
+                        selectedIndex = selectedPageIndex,
+                        navigationKey = navigationKey,
                         pagerState = pagerState,
                         reducedMotion = reducedMotion,
                         launchStageMotion = { action ->
@@ -700,20 +816,21 @@ private fun AdaptiveStageCompactStagePager(
                         },
                     ),
         ) {
-            stages.forEachIndexed { index, stage ->
+            pages.forEachIndexed { index, page ->
                 val stageModifier =
                     Modifier
                         .fillMaxSize()
                         .graphicsLayer {
                             translationX = (index - pagerState.pagePosition) * stageWidthPx
                         }
-                if (stage.id == selectedStage.id) {
-                    AdaptiveStageStageBody(
-                        selectedStage = stage,
+                if (index == selectedPageIndex) {
+                    AdaptiveStagePageBody(
+                        page = page,
                         state = state,
                         shellState = shellState,
                         detailRecoveryMessage = detailRecoveryMessage,
                         detailState = detailState,
+                        allNotificationsDetailState = allNotificationsDetailState,
                         focusedCardId = focusedCardId,
                         onDetailVisibilityChanged = onDetailVisibilityChanged,
                         onFocusedCardChanged = onFocusedCardChanged,
@@ -723,10 +840,11 @@ private fun AdaptiveStageCompactStagePager(
                         modifier = stageModifier,
                     )
                 } else {
-                    AdaptiveStageNeighborStagePage(
-                        stage = stage,
+                    AdaptiveStageNeighborPage(
+                        page = page,
                         state = state,
                         shellState = shellState,
+                        allNotificationsDetailState = allNotificationsDetailState,
                         onAction = onAction,
                         appIconLoader = appIconLoader,
                         modifier = stageModifier,
@@ -734,6 +852,111 @@ private fun AdaptiveStageCompactStagePager(
                 }
             }
         }
+    }
+}
+
+internal fun adaptiveStagePageKey(page: AdaptiveStagePage): String =
+    when (page) {
+        is AdaptiveStagePage.Stage -> adaptiveStageStageKey(page.stage.id)
+        AdaptiveStagePage.AllNotifications -> "all-notifications"
+    }
+
+/**
+ * Renders whichever page is selected -- a real stage's body, the merged All-notifications body,
+ * or the unavailable state when there's no stage and All notifications isn't selected either.
+ */
+@Composable
+@Suppress("LongParameterList")
+private fun AdaptiveStagePageBody(
+    page: AdaptiveStagePage?,
+    state: LauncherShellState,
+    shellState: com.riffle.app.launcher.notifications.AppStageShellState,
+    detailRecoveryMessage: String?,
+    detailState: AdaptiveStageCardDetailState?,
+    allNotificationsDetailState: AdaptiveStageCardDetailState,
+    focusedCardId: LauncherCardId?,
+    onDetailVisibilityChanged: (LauncherCardId?) -> Unit,
+    onFocusedCardChanged: (LauncherCardId?) -> Unit = {},
+    showDetailInline: Boolean = true,
+    onAction: (LauncherShellAction) -> Unit,
+    appIconLoader: AppIconLoader,
+    modifier: Modifier,
+) {
+    when (page) {
+        is AdaptiveStagePage.Stage ->
+            AdaptiveStageStageBody(
+                selectedStage = page.stage,
+                state = state,
+                shellState = shellState,
+                detailRecoveryMessage = detailRecoveryMessage,
+                detailState = detailState,
+                focusedCardId = focusedCardId,
+                onDetailVisibilityChanged = onDetailVisibilityChanged,
+                onFocusedCardChanged = onFocusedCardChanged,
+                showDetailInline = showDetailInline,
+                onAction = onAction,
+                appIconLoader = appIconLoader,
+                modifier = modifier,
+            )
+
+        AdaptiveStagePage.AllNotifications ->
+            AdaptiveStageAllNotificationsStack(
+                stages = shellState.snapshot.stages,
+                state = state,
+                notificationCards = shellState.notificationCards,
+                detailState = allNotificationsDetailState,
+                onAction = onAction,
+                appIconLoader = appIconLoader,
+                modifier = modifier,
+            )
+
+        null ->
+            AdaptiveStageUnavailableState(
+                access = state.notificationAccessStatus,
+                recoveryMessage = detailRecoveryMessage,
+                installedApps = state.installedApps,
+                onAction = onAction,
+                modifier = modifier,
+            )
+    }
+}
+
+/** A page rendered only because it is (or was just) adjacent during a pager drag, not selected. */
+@Composable
+private fun AdaptiveStageNeighborPage(
+    page: AdaptiveStagePage,
+    state: LauncherShellState,
+    shellState: com.riffle.app.launcher.notifications.AppStageShellState,
+    allNotificationsDetailState: AdaptiveStageCardDetailState,
+    onAction: (LauncherShellAction) -> Unit,
+    appIconLoader: AppIconLoader,
+    modifier: Modifier,
+) {
+    when (page) {
+        is AdaptiveStagePage.Stage ->
+            AdaptiveStageNeighborStagePage(
+                stage = page.stage,
+                state = state,
+                shellState = shellState,
+                onAction = onAction,
+                appIconLoader = appIconLoader,
+                modifier = modifier,
+            )
+
+        // Unlike a neighboring real stage (which gets its own ephemeral ::AdaptiveStageNeighborStagePage
+        // ::detail/focus state, since there could be many different stages swiped past), there's only
+        // ever one All-notifications page -- reusing its durable state whether selected or a neighbor
+        // during a drag is simpler and loses nothing.
+        AdaptiveStagePage.AllNotifications ->
+            AdaptiveStageAllNotificationsStack(
+                stages = shellState.snapshot.stages,
+                state = state,
+                notificationCards = shellState.notificationCards,
+                detailState = allNotificationsDetailState,
+                onAction = onAction,
+                appIconLoader = appIconLoader,
+                modifier = modifier,
+            )
     }
 }
 
@@ -754,7 +977,7 @@ private fun AdaptiveStageNeighborStagePage(
 ) {
     val detailState =
         rememberAdaptiveStageCardDetailState(
-            stageId = stage.id,
+            scopeKey = stage.id,
             motion = state.launcherSettings.cards.adaptiveStageAppearance.motion,
             globalReducedMotion = state.launcherSettings.motion.reducedMotion,
         )
@@ -950,6 +1173,8 @@ private fun AdaptiveStageStageBody(
 private fun AdaptiveStageStageRail(
     stages: List<AppStage>,
     selectedStageId: AppStageId?,
+    allNotificationsSelected: Boolean,
+    onAllNotificationsSelectedChanged: (Boolean) -> Unit,
     state: LauncherShellState,
     appIconLoader: AppIconLoader,
     onAction: (LauncherShellAction) -> Unit,
@@ -959,17 +1184,24 @@ private fun AdaptiveStageStageRail(
     // Deliberately does not early-return on an empty stages list: the container (testTag,
     // background) still composes with an empty CardStack -- CardStackLayoutPolicy.entries()
     // already returns an empty list for cardCount = 0 -- so the rail's presence stays a stable
-    // signal of "this pane mode shows a rail" independent of whether any stage exists yet.
+    // signal of "this pane mode shows a rail" independent of whether any stage exists yet. The
+    // trailing "All notifications" page (see #1057) keeps at least one tile even then.
     val haptics = rememberLauncherHaptics(state.launcherSettings.haptics.feedbackStrength)
-    val activeIndex = stages.indexOfFirst { stage -> stage.id == selectedStageId }.coerceAtLeast(0)
+    val pages = remember(stages) { stages.withAllNotificationsPage() }
+    val activeIndex =
+        adaptiveStageSelectedPageIndex(pages, selectedStageId, allNotificationsSelected).coerceAtLeast(0)
     var settleTransitionId by rememberSaveable { mutableIntStateOf(0) }
+
+    fun navigateToIndex(targetIndex: Int): Boolean {
+        if (pages.getOrNull(targetIndex) == null) return false
+        settleTransitionId++
+        adaptiveStageOnPageSettled(pages, targetIndex, onAction, onAllNotificationsSelectedChanged)
+        return true
+    }
 
     fun navigate(direction: CardStackNavigationDirection): Boolean {
         val delta = if (direction == CardStackNavigationDirection.NEXT) 1 else -1
-        val targetStage = stages.getOrNull(activeIndex + delta) ?: return false
-        settleTransitionId++
-        onAction(LauncherShellAction.SelectAppStage(targetStage.id))
-        return true
+        return navigateToIndex(activeIndex + delta)
     }
 
     val railBackground = Modifier.background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.32f))
@@ -1008,23 +1240,20 @@ private fun AdaptiveStageStageRail(
             modifier = Modifier.matchParentSize(),
             entries =
                 resolution.layoutPolicy.entries(
-                    cardCount = stages.size,
+                    cardCount = pages.size,
                     activeIndex = activeIndex,
                     reducedMotion = resolution.reducedMotion,
                 ),
             animationSpec = resolution.animation,
             reducedMotion = resolution.reducedMotion,
             orientation = if (horizontal) CardStackOrientation.HORIZONTAL else CardStackOrientation.VERTICAL,
-            itemKey = { entry -> adaptiveStageStageSelectorItemKey(stages[entry.cardIndex]) },
+            itemKey = { entry -> adaptiveStagePageKey(pages[entry.cardIndex]) },
             interaction =
                 CardStackInteraction(
-                    focusedItemKey = stages.getOrNull(activeIndex)?.let(::adaptiveStageStageSelectorItemKey),
+                    focusedItemKey = pages.getOrNull(activeIndex)?.let(::adaptiveStagePageKey),
                     settleTransitionId = settleTransitionId,
                     onFocusRequest = { entry ->
-                        if (entry.cardIndex != activeIndex) {
-                            settleTransitionId++
-                            onAction(LauncherShellAction.SelectAppStage(stages[entry.cardIndex].id))
-                        }
+                        if (entry.cardIndex != activeIndex) navigateToIndex(entry.cardIndex)
                     },
                     onSettle = { dragPx, velocityPxPerSecond ->
                         val motion =
@@ -1051,16 +1280,25 @@ private fun AdaptiveStageStageRail(
                     onNavigate = ::navigate,
                 ),
         ) { entry, cardModifier ->
-            val stage = stages[entry.cardIndex]
-            AdaptiveStageStageRailTile(
-                stageId = stage.id,
-                isSelected = stage.id == selectedStageId,
-                label = stageLabel(stage.id, state),
-                identity = stageAppIdentity(stage.id, state),
-                appearance = state.launcherSettings.cards.unfoldedAppearance,
-                appIconLoader = appIconLoader,
-                modifier = cardModifier,
-            )
+            when (val page = pages[entry.cardIndex]) {
+                is AdaptiveStagePage.Stage ->
+                    AdaptiveStageStageRailTile(
+                        stageId = page.stage.id,
+                        isSelected = !allNotificationsSelected && page.stage.id == selectedStageId,
+                        label = stageLabel(page.stage.id, state),
+                        identity = stageAppIdentity(page.stage.id, state),
+                        appearance = state.launcherSettings.cards.unfoldedAppearance,
+                        appIconLoader = appIconLoader,
+                        modifier = cardModifier,
+                    )
+
+                AdaptiveStagePage.AllNotifications ->
+                    AdaptiveStageAllNotificationsRailTile(
+                        isSelected = allNotificationsSelected,
+                        appearance = state.launcherSettings.cards.unfoldedAppearance,
+                        modifier = cardModifier,
+                    )
+            }
         }
     }
 }
@@ -1159,6 +1397,67 @@ private fun AdaptiveStageStageRailTile(
     }
 }
 
+/**
+ * The rail's tile for the virtual "All notifications" page (#1057) -- same shape as
+ * [AdaptiveStageStageRailTile], but with no single app identity to key its color/icon off, so it
+ * uses a fixed seed and a generic "All" glyph instead of a per-app [LauncherAppIcon].
+ */
+@Composable
+private fun AdaptiveStageAllNotificationsRailTile(
+    isSelected: Boolean,
+    appearance: AdaptiveStageAppearanceSettings,
+    modifier: Modifier = Modifier,
+) {
+    val materialBackground = MaterialTheme.colorScheme.onSurface
+    val materialAccent = MaterialTheme.colorScheme.primary
+    val colors =
+        remember(appearance, materialBackground, materialAccent) {
+            resolveAdaptiveStageCardColors(
+                appearance = appearance,
+                background = AdaptiveStageCardBackground(appSeed = "all-notifications", appColor = null),
+                materialBackground = materialBackground,
+                materialAccent = materialAccent,
+            )
+        }
+    val shape = RoundedCornerShape(14.dp)
+    Surface(
+        shape = shape,
+        color = colors.background,
+        contentColor = colors.foreground,
+        tonalElevation = if (isSelected) 6.dp else 0.dp,
+        shadowElevation = if (isSelected) 4.dp else 0.dp,
+        border = if (isSelected) BorderStroke(2.dp, colors.accent) else null,
+        modifier =
+            modifier.width(64.dp).semantics {
+                contentDescription =
+                    if (isSelected) "All notifications, selected. Open" else "All notifications. Open"
+            },
+    ) {
+        Column(
+            modifier = Modifier.padding(vertical = 8.dp, horizontal = 4.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Box(
+                modifier =
+                    Modifier
+                        .launcherIconSize()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(colors.accent),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(text = "All", color = colors.foreground, style = MaterialTheme.typography.labelSmall)
+            }
+            Text(
+                text = "All notifications",
+                style = MaterialTheme.typography.labelSmall,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}
+
 @Composable
 private fun AdaptiveStageSupportingPane(
     stage: AppStage?,
@@ -1217,12 +1516,23 @@ private fun AdaptiveStageSupportingPane(
 @Composable
 private fun AdaptiveStageStageHeader(
     selectedStage: AppStage?,
+    allNotificationsSelected: Boolean,
     stages: List<AppStage>,
     state: LauncherShellState,
     appIconLoader: AppIconLoader,
     onAction: (LauncherShellAction) -> Unit,
 ) {
-    val label = selectedStage?.let { stageLabel(it.id, state) } ?: "Cards"
+    val label =
+        when {
+            allNotificationsSelected -> "All notifications"
+            selectedStage != null -> stageLabel(selectedStage.id, state)
+            else -> "Cards"
+        }
+    // Per-stage actions (Add stage/Pin/overflow) only make sense for a real selected stage, and
+    // must stay hidden while the virtual All-notifications page is selected -- selectedStage
+    // itself isn't cleared in that state (it stays the last real selection so leaving All
+    // notifications returns to it), so this needs its own explicit gate.
+    val showStageActions = selectedStage != null && !allNotificationsSelected
     var overflowExpanded by rememberSaveable(selectedStage?.let(::adaptiveStageStageSelectorItemKey)) {
         mutableStateOf(false)
     }
@@ -1252,7 +1562,7 @@ private fun AdaptiveStageStageHeader(
                 .padding(horizontal = 20.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        if (selectedApp != null) {
+        if (selectedApp != null && !allNotificationsSelected) {
             LauncherAppIcon(
                 identity = selectedApp.identity,
                 label = label,
@@ -1264,7 +1574,12 @@ private fun AdaptiveStageStageHeader(
             modifier =
                 Modifier.weight(1f).testTag(ADAPTIVE_STAGE_STAGE_HEADER_TEST_TAG).semantics {
                     contentDescription = "Cards stage: $label"
-                    stateDescription = selectedStage?.adaptiveStageStageStateDescription() ?: "No stage selected"
+                    stateDescription =
+                        when {
+                            allNotificationsSelected -> "Showing every stage's notifications"
+                            selectedStage != null -> selectedStage.adaptiveStageStageStateDescription()
+                            else -> "No stage selected"
+                        }
                     liveRegion = LiveRegionMode.Polite
                     // The rail/spine's visible Previous/Next buttons were removed as redundant
                     // with tapping a stage directly (or swiping, in compact/split layouts) --
@@ -1296,7 +1611,7 @@ private fun AdaptiveStageStageHeader(
                 Text(text = "Cards", style = MaterialTheme.typography.labelMedium)
             }
         }
-        if (selectedStage != null) {
+        if (showStageActions && selectedStage != null) {
             if (addableApps.isNotEmpty()) {
                 Box {
                     TextButton(onClick = { addStageExpanded = true }) { Text("Add stage") }
@@ -1660,6 +1975,267 @@ private fun AdaptiveStageNotificationStack(
 }
 
 internal const val ADAPTIVE_STAGE_SIBLING_DIM_FACTOR = 0.18f
+
+/**
+ * The "All notifications" page (#1057): every stage's content merged into one recency-ordered
+ * stream via [mergedContentByRecency], rendered through the same [CardStack] visual as a single
+ * stage's own [AdaptiveStageNotificationStack]. Unlike that stack, per-card app identity/color is
+ * resolved *inside* the [CardStack] content lambda rather than hoisted once, since consecutive
+ * cards here can come from entirely different apps. Owns its own focus state locally rather than
+ * lifting it to a caller -- SPLIT mode's upper AdaptiveStageSupportingPane doesn't preview
+ * All-notifications cards (see AdaptiveStageCompactStagePager's showDetailInline doc), so there's
+ * no sibling surface that needs to stay in sync with which card is focused here.
+ */
+@Composable
+private fun AdaptiveStageAllNotificationsStack(
+    stages: List<AppStage>,
+    state: LauncherShellState,
+    notificationCards: List<AppStageNotificationCard>,
+    detailState: AdaptiveStageCardDetailState,
+    onAction: (LauncherShellAction) -> Unit,
+    appIconLoader: AppIconLoader,
+    modifier: Modifier,
+) {
+    val haptics = rememberLauncherHaptics(state.launcherSettings.haptics.feedbackStrength)
+    val mergedEntries =
+        remember(stages, notificationCards) {
+            val cardsById = notificationCards.associateBy { card -> card.content.id }
+            stages.mergedContentByRecency().mapNotNull { entry ->
+                cardsById[entry.content.id]?.let { card -> card to entry.stage }
+            }
+        }
+    val cards = mergedEntries.map { (card, _) -> card }
+    val cardStages = mergedEntries.map { (_, stage) -> stage }
+    val cardIds = cards.map { card -> card.content.id }
+    val controller = remember { CardStackController() }
+    val artworkCache =
+        remember { AdaptiveStageArtworkCache<ImageBitmap>(decode = ::decodeAdaptiveStageArtwork) }
+    val stackKey = remember { CardStackKey("all-notifications") }
+    var previousCardIds by remember { mutableStateOf(emptyList<LauncherCardId>()) }
+    var settleTransitionId by rememberSaveable { mutableIntStateOf(0) }
+    var focusedCardId by remember { mutableStateOf<LauncherCardId?>(null) }
+    val focusState = CardStackFocusState(stackKey, focusedCardId)
+    LaunchedEffect(cardIds) {
+        val reconciliation =
+            if (focusState.focusedCardId == null) {
+                controller.restore(focusState, cardIds)
+            } else {
+                controller.reconcile(focusState, previousCardIds, cardIds)
+            }
+        if (reconciliation is CardStackFocusResult.Applied) {
+            focusedCardId = reconciliation.state.focusedCardId
+        }
+        previousCardIds = cardIds
+    }
+    val activeCardIndex = cardIds.indexOf(focusState.focusedCardId).takeIf { index -> index >= 0 } ?: 0
+    val focusedCard = cards.getOrNull(activeCardIndex)
+    LaunchedEffect(focusedCard?.content?.id) {
+        focusedCardId = focusedCard?.content?.id
+    }
+    val detailFocusRequester = remember { FocusRequester() }
+    var restoreDetailFocusForCardId by remember { mutableStateOf<LauncherCardId?>(null) }
+    LaunchedEffect(cardIds) {
+        if (restoreDetailFocusForCardId !in cardIds) restoreDetailFocusForCardId = null
+    }
+
+    fun navigate(direction: CardStackNavigationDirection): Boolean {
+        val result = controller.navigate(focusState, cardIds, direction)
+        if (result is CardStackFocusResult.Applied) {
+            if (result.focusChanged) settleTransitionId++
+            focusedCardId = result.state.focusedCardId
+            return !result.boundaryReached
+        }
+        return false
+    }
+
+    if (focusedCard == null) {
+        AdaptiveStageAllNotificationsEmptyState(modifier = modifier)
+        return
+    }
+    val activeCard = focusedCard
+
+    BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
+        val viewport = AdaptiveStageViewportDp(maxWidth.value.toInt(), maxHeight.value.toInt())
+        val resolution =
+            remember(state.launcherSettings, viewport) {
+                state.launcherSettings.resolveAdaptiveStageCardStack(
+                    viewport = viewport,
+                    capabilities = adaptiveStageRendererCapabilities(),
+                )
+            }
+        val isDetailVisible = detailState.expansionState.isVisible
+        // Siblings stay composed (and thus discoverable/re-focusable) but dimmed while a card's
+        // detail is expanded, instead of being torn down entirely -- same treatment as
+        // AdaptiveStageNotificationStack.
+        val stackDimFactor = if (isDetailVisible) ADAPTIVE_STAGE_SIBLING_DIM_FACTOR else 1f
+        Box(modifier = Modifier.fillMaxSize()) {
+            Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Box(
+                    modifier = Modifier.fillMaxWidth().weight(1f),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    CardStack(
+                        entries =
+                            adaptiveStageNotificationStackEntries(
+                                resolution = resolution,
+                                cardCount = cards.size,
+                                activeCardIndex = activeCardIndex,
+                            ),
+                        animationSpec = resolution.animation,
+                        reducedMotion = resolution.reducedMotion,
+                        itemKey = { entry -> cards[entry.cardIndex].content.id },
+                        dimFactor = stackDimFactor,
+                        interaction =
+                            CardStackInteraction(
+                                focusedItemKey = activeCard.content.id,
+                                settleTransitionId = settleTransitionId,
+                                onFocusRequest = { entry ->
+                                    controller
+                                        .jumpTo(focusState, cardIds, cardIds[entry.cardIndex])
+                                        .let { result ->
+                                            if (result is CardStackFocusResult.Applied) {
+                                                focusedCardId = result.state.focusedCardId
+                                            }
+                                        }
+                                },
+                                onSettle = { drag, velocity ->
+                                    controller
+                                        .settle(
+                                            focusState,
+                                            cardIds,
+                                            CardStackSettleRequest(
+                                                focusedCardId = activeCard.content.id,
+                                                verticalDragPx = drag,
+                                                verticalVelocityPxPerSecond = velocity,
+                                                distanceThresholdPx = 64f,
+                                                flingVelocityThresholdPxPerSecond = 500f,
+                                            ),
+                                        ).let { result ->
+                                            if (result is CardStackFocusResult.Applied) {
+                                                if (result.state.focusedCardId != focusState.focusedCardId) {
+                                                    settleTransitionId++
+                                                }
+                                                focusedCardId = result.state.focusedCardId
+                                            }
+                                        }
+                                },
+                                onSettleHaptic = {
+                                    haptics.adaptiveStageSettle(
+                                        state.launcherSettings.cards.adaptiveStageAppearance.motion.hapticStrength,
+                                    )
+                                },
+                                onNavigate = ::navigate,
+                                onExpand = { detailState.expand(activeCard.content.id) },
+                            ),
+                    ) { entry, cardModifier ->
+                        val card = cards[entry.cardIndex]
+                        val cardStageId = cardStages[entry.cardIndex].id
+                        val identity = remember(cardStageId, state) { stageAppIdentity(cardStageId, state) }
+                        var appColor by remember(identity, appIconLoader) {
+                            mutableStateOf(identity?.let(appIconLoader::cachedColorFor))
+                        }
+                        LaunchedEffect(identity, appIconLoader) {
+                            appColor =
+                                identity?.let { appIdentity ->
+                                    appIconLoader.cachedColorFor(appIdentity)
+                                        ?: withContext(Dispatchers.Default) { appIconLoader.colorFor(appIdentity) }
+                                }
+                        }
+                        val artwork =
+                            remember(card.artworkSourceKey, card.artworkBase64, artworkCache) {
+                                card.artworkSourceKey?.let { sourceKey ->
+                                    artworkCache.getOrDecode(sourceKey, card.artworkBase64)
+                                }
+                            }
+                        val focusedCardSemantics =
+                            if (entry.cardIndex == activeCardIndex) {
+                                Modifier.semantics {
+                                    contentDescription =
+                                        "Focused ${adaptiveStageCardKindLabel(card)} card: ${card.title}. ${card.text}"
+                                    stateDescription = "Card ${entry.cardIndex + 1} of ${cards.size}"
+                                    liveRegion = LiveRegionMode.Polite
+                                    customActions =
+                                        listOf(
+                                            CustomAccessibilityAction("Previous card") {
+                                                navigate(CardStackNavigationDirection.PREVIOUS)
+                                            },
+                                            CustomAccessibilityAction("Next card") {
+                                                navigate(CardStackNavigationDirection.NEXT)
+                                            },
+                                            CustomAccessibilityAction("Show details") {
+                                                detailState.expand(card.content.id)
+                                                true
+                                            },
+                                        )
+                                }
+                            } else {
+                                Modifier
+                            }
+                        AdaptiveStageCardSurface(
+                            appearance = state.launcherSettings.cards.adaptiveStageAppearance,
+                            background =
+                                AdaptiveStageCardBackground(
+                                    artwork = artwork,
+                                    appSeed = cardStageId.packageName.value,
+                                    appColor = appColor,
+                                ),
+                            modifier =
+                                cardModifier.size(
+                                    width = resolution.cardWidthDp.dp,
+                                    height = resolution.cardHeightDp.dp,
+                                ).then(focusedCardSemantics),
+                            contentPadding = adaptiveStageResolvedContentPadding(resolution),
+                        ) {
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Text(stageLabel(cardStageId, state), style = MaterialTheme.typography.labelMedium)
+                                Text(card.title, style = MaterialTheme.typography.titleMedium)
+                                Text(card.text, style = MaterialTheme.typography.bodyMedium)
+                            }
+                        }
+                    }
+                }
+                AdaptiveStageCardNavigationControls(
+                    position = activeCardIndex + 1,
+                    count = cards.size,
+                    onPrevious = { navigate(CardStackNavigationDirection.PREVIOUS) },
+                    onNext = { navigate(CardStackNavigationDirection.NEXT) },
+                )
+                AdaptiveStageContextShelf(
+                    card = activeCard,
+                    onAction = onAction,
+                    onDetailRequested = { detailState.expand(activeCard.content.id) },
+                    detailFocusRequester = detailFocusRequester,
+                    restoreDetailFocus = restoreDetailFocusForCardId == activeCard.content.id,
+                    onDetailFocusRestored = { restoreDetailFocusForCardId = null },
+                )
+                AdaptiveStageDetailRecoveryMessage(detailState.sourceRemovalMessage)
+            }
+            if (isDetailVisible) {
+                cards
+                    .firstOrNull { card -> card.content.id == detailState.expansionState.cardId }
+                    ?.let { card ->
+                        AdaptiveStageCardDetailSurface(
+                            card = card,
+                            detailState = detailState,
+                            onAction = onAction,
+                            onClose = { restoreDetailFocusForCardId = card.content.id },
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                    }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AdaptiveStageAllNotificationsEmptyState(modifier: Modifier) {
+    Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Text(
+            text = "No notifications yet",
+            style = MaterialTheme.typography.titleMedium,
+        )
+    }
+}
 
 /** Keeps every active notification reachable even when the visual stack depth is smaller. */
 internal fun adaptiveStageNotificationStackEntries(
