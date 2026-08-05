@@ -144,8 +144,8 @@ internal fun resolveAdaptiveStageRailSide(
  * Mirrors [resolveAdaptiveStageRailSide]'s shape: the pane arrangement is a plain configured user
  * preference today, with no template or device override to reconcile against yet.
  */
-internal fun resolveAdaptiveStagePaneArrangement(value: AdaptiveStagePaneArrangement): AdaptiveStagePaneArrangement =
-    value
+@Suppress("MaxLineLength")
+internal fun resolveAdaptiveStagePaneArrangement(value: AdaptiveStagePaneArrangement): AdaptiveStagePaneArrangement = value
 
 /** The Cards home surface, compact by default and pane-adaptive for the current launcher window. */
 @Composable
