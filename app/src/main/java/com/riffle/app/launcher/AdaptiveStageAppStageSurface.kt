@@ -752,7 +752,6 @@ private const val DEFAULT_SPLIT_UPPER_REGION_WEIGHT = 0.6f
  */
 @Composable
 @Suppress("LongParameterList")
-@Suppress("LongParameterList")
 private fun AdaptiveStageCompactStagePager(
     pages: List<AdaptiveStagePage>,
     selectedPageIndex: Int,

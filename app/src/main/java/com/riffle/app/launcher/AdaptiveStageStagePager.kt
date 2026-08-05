@@ -194,6 +194,7 @@ private fun adaptiveStageStageSettleAnimation(policy: HomePageSettleMotionPolicy
  * uses; [navigationKey] should change whenever the underlying set of pages changes shape (a stage
  * added/removed, or a virtual page appearing/disappearing) so the gesture recognizer resets.
  */
+@Suppress("LongParameterList")
 internal fun Modifier.adaptiveStageStagePagerDrag(
     enabled: Boolean,
     stageWidthPx: Float,
