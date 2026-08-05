@@ -21,14 +21,12 @@ import com.riffle.core.domain.launcher.apps.AppProfileContentVisibility
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.cards.AdaptiveStagePosture
 import com.riffle.core.domain.launcher.cards.AdaptiveStageWindowLayout
-import com.riffle.core.domain.launcher.cards.AppStageId
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
 import com.riffle.core.domain.launcher.notifications.LauncherNotification
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.notifications.NotificationAgeBucket
 import com.riffle.core.domain.launcher.notifications.NotificationCategory
-import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
@@ -36,9 +34,10 @@ import org.junit.Test
  * Covers the "All notifications" page (#1057) end to end through the real
  * [AdaptiveStageAppStageSurface] tree -- the rail's extra tile, selecting it, and the merged
  * content it shows -- as opposed to [AdaptiveStageAllNotificationsPageTest]'s pure-logic coverage
- * of the underlying page-index/settle helpers alone. Uses a wide (TWO_PANE) window since that's
- * where the rail (and its "All notifications" tile) render at all; see
- * [AdaptiveStageAdaptiveLayoutInteractionTest.mediumWindowRendersStageRail] for the same
+ * of the underlying page-index/settle helpers alone (including the reverse direction, settling on
+ * a real stage from the merged page, which doesn't need a real Compose tree to verify). Uses a
+ * wide (TWO_PANE) window since that's where the rail (and its "All notifications" tile) render at
+ * all; see [AdaptiveStageAdaptiveLayoutInteractionTest.mediumWindowRendersStageRail] for the same
  * width/posture combination.
  */
 class AdaptiveStageAllNotificationsSurfaceTest {
@@ -58,36 +57,7 @@ class AdaptiveStageAllNotificationsSurfaceTest {
         composeRule.onNodeWithText("Chat message").assertIsDisplayed()
     }
 
-    @Test
-    fun selectingARealStageTileAfterAllNotificationsLeavesThePage() {
-        val mail = testApp("mail", "Mail")
-        val chat = testApp("chat", "Chat")
-        val dispatched = mutableListOf<LauncherShellAction>()
-        setWideContent(twoStageState(mail, chat), onAction = { dispatched.add(it) })
-
-        composeRule.onNodeWithContentDescription("All notifications. Open").performClick()
-        composeRule.onNodeWithContentDescription("Cards stage: All notifications").assertIsDisplayed()
-
-        composeRule.onNodeWithContentDescription("Mail. Open stage").performClick()
-
-        // The surface is a stateless, unidirectional composable -- without a real reducer wired up
-        // to onAction, the selected stage itself won't visibly change here, only the local
-        // allNotificationsSelected UI state and the dispatched action, which this asserts instead.
-        // Asserted via the header (a plain, always-fully-rendered row), not a rail tile: the rail is
-        // a peek/fan CardStack, so a tile far from the now-active index can legitimately be
-        // composed-but-not-displayed (stacked behind others) by design, not a regression.
-        composeRule.onNodeWithContentDescription("Cards stage: All notifications").assertDoesNotExist()
-        assertTrue(
-            dispatched.contains(
-                LauncherShellAction.SelectAppStage(AppStageId(mail.identity.packageName, mail.identity.profile.id)),
-            ),
-        )
-    }
-
-    private fun setWideContent(
-        state: LauncherShellState,
-        onAction: (LauncherShellAction) -> Unit = {},
-    ) {
+    private fun setWideContent(state: LauncherShellState) {
         composeRule.setContent {
             MaterialTheme {
                 Box(modifier = Modifier.width(800.dp).height(800.dp).clipToBounds()) {
@@ -99,7 +69,7 @@ class AdaptiveStageAllNotificationsSurfaceTest {
                                 heightDp = 800,
                                 posture = AdaptiveStagePosture.UNFOLDED,
                             ),
-                        onAction = onAction,
+                        onAction = {},
                     )
                 }
             }
