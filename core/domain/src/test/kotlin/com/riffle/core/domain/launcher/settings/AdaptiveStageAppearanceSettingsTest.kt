@@ -4,6 +4,7 @@ import com.riffle.core.domain.launcher.cards.CardStackAnimationEasing
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
 class AdaptiveStageAppearanceSettingsTest {
@@ -310,5 +311,65 @@ class AdaptiveStageAppearanceSettingsTest {
         assertEquals(0f, entries.maxOf { kotlin.math.abs(it.offset) })
         assertEquals(0f, entries.maxOf { kotlin.math.abs(it.rotationDegrees) })
         assertTrue(entries.any { it.verticalOffset != 0f })
+    }
+
+    @Test
+    fun defaultRoleMatchesPrimaryByteForByte() {
+        val viewport = AdaptiveStageViewportDp(widthDp = 800, heightDp = 1200)
+        val settings = AdaptiveStageAppearanceSettings()
+
+        assertEquals(
+            settings.resolveCardStack(viewport, role = AdaptiveStageCardStackRole.PRIMARY),
+            settings.resolveCardStack(viewport),
+        )
+    }
+
+    @Test
+    fun railRoleIsUsableAtAPhysicallyNarrowViewportThatPrimaryRoleRejects() {
+        // A rail's own real strip -- narrow cross-axis, generous along-axis -- is far too small for
+        // AdaptiveStageCardStackRole.PRIMARY's "reachable card" floor, but that floor is the wrong
+        // yardstick for a small tile; RAIL's floor is Android's own minimum touch-target size instead.
+        val railViewport = AdaptiveStageViewportDp(widthDp = 104, heightDp = 720)
+        val settings = AdaptiveStageAppearanceSettings.unfolded()
+
+        val primaryResolution = settings.resolveCardStack(railViewport, role = AdaptiveStageCardStackRole.PRIMARY)
+        val railResolution = settings.resolveCardStack(railViewport, role = AdaptiveStageCardStackRole.RAIL)
+
+        assertFalse(primaryResolution.isUsable)
+        assertTrue(railResolution.isUsable)
+        // A collapsed-to-depth-1 result (the PRIMARY-role fallback for an unusable layout) is exactly
+        // the bug #1055 is fixing: verify RAIL role keeps the real configured depth instead.
+        assertEquals(settings.geometry.visibleDepth, railResolution.layoutPolicy.maxVisibleDepth)
+        assertEquals(1, primaryResolution.layoutPolicy.maxVisibleDepth)
+    }
+
+    @Test
+    fun unfoldedDefaultIsLinearSpacedAndNonOverlappingUnlikeModern() {
+        val modern = AdaptiveStageAppearanceSettings.modern()
+        val unfolded = AdaptiveStageAppearanceSettings.unfolded()
+
+        assertEquals(0, unfolded.geometry.overlapPercent)
+        assertEquals(0, unfolded.geometry.curveDp)
+        assertEquals(0, unfolded.geometry.rotationDegrees)
+        assertEquals(AdaptiveStageFanDirection.NONE, unfolded.geometry.fanDirection)
+        assertTrue(unfolded.geometry.verticalSpacingDp > 0)
+        assertTrue(modern.geometry.overlapPercent > 0)
+        assertTrue(modern.geometry.curveDp > 0)
+        assertNotEquals(modern.geometry, unfolded.geometry)
+    }
+
+    @Test
+    fun railCardStackResolvesFromUnfoldedAppearanceAgainstItsOwnNarrowViewport() {
+        val unfoldedAppearance =
+            AdaptiveStageAppearanceSettings.unfolded()
+                .copy(geometry = AdaptiveStageGeometry(overlapPercent = 0, verticalSpacingDp = 72))
+        val railViewport = AdaptiveStageViewportDp(widthDp = 104, heightDp = 720)
+        val resolution =
+            LauncherSettings(cards = CardsSettings(unfoldedAppearance = unfoldedAppearance))
+                .resolveAdaptiveStageRailCardStack(railViewport)
+        val entries = resolution.layoutPolicy.entries(cardCount = 5, activeIndex = 2)
+
+        assertTrue(resolution.isUsable)
+        assertTrue(entries.filter { it.depth > 0 }.all { it.verticalOffset != 0f })
     }
 }

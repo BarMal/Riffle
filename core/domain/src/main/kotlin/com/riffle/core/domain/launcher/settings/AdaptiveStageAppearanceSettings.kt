@@ -81,19 +81,26 @@ data class AdaptiveStageAppearanceSettings(
      * Converts persisted intent to the card-stack primitives used by renderers. The resolution is
      * viewport- and inset-aware; callers must use [isUsable] to choose a non-stack fallback on a
      * space-constrained surface.
+     *
+     * [role] only changes the minimum-reachable-size floor [isUsable] enforces: [AdaptiveStageCardStackRole.PRIMARY]
+     * (the default) expects a large "reachable card" sized against a whole viewport, while
+     * [AdaptiveStageCardStackRole.RAIL] expects a small tile within a physically narrow strip -- callers
+     * pass that strip's own real bounds as [viewport] rather than a whole-window size, so every other
+     * part of this resolution (travel, offset/scale/alpha steps) already scales itself to fit.
      */
     @Suppress("LongMethod")
     fun resolveCardStack(
         viewport: AdaptiveStageViewportDp,
         capabilities: AdaptiveStageRendererCapabilities = AdaptiveStageRendererCapabilities(),
         globalReducedMotion: Boolean = false,
+        role: AdaptiveStageCardStackRole = AdaptiveStageCardStackRole.PRIMARY,
     ): AdaptiveStageCardStackResolution {
         val appearance = effectiveForResolution(capabilities, globalReducedMotion)
         val focusedScale = appearance.geometry.focusedScalePercent / 100f
         val stackBounds = resolveStackBounds(appearance.geometry, appearance.motion, focusedScale)
         val cardSize = appearance.resolveCardSize(viewport, stackBounds)
         val requestedPadding = appearance.geometry.contentPaddingDp
-        val isUsable = cardSize.isUsable && appearance.hasReachableStackLayout()
+        val isUsable = cardSize.isUsable(role) && appearance.hasReachableStackLayout()
         val depth = if (isUsable) appearance.geometry.visibleDepth else 1
         val horizontalTravel =
             ((viewport.safeWidthDp - cardSize.widthDp * stackBounds.maxWidthScale) / 2f).coerceAtLeast(0f)
@@ -175,6 +182,47 @@ data class AdaptiveStageAppearanceSettings(
 
     companion object {
         fun modern(): AdaptiveStageAppearanceSettings = AdaptiveStageAppearancePreset.MODERN_ADAPTIVE_STAGE.settings
+
+        /**
+         * Plain default field values for an unfolded, docked-rail layout: linear and spaced with no
+         * overlap between adjacent tiles, as opposed to [modern]'s curved, tight, overlapping fan. This
+         * is a literal set of field values, not derived from [AdaptiveStageAppearancePreset] -- presets
+         * are a separate, user-facing concept (see #1058) that this default is deliberately independent
+         * of.
+         *
+         * [AdaptiveStageGeometry.verticalSpacingDp] of 72 mirrors the value the previous hand-rolled
+         * rail policy needed before tiles were reliably tappable -- see #1054's fix: a rail tile is
+         * roughly icon (40dp) + label + padding tall, so a background tile's own center needs to clear
+         * that whole height, not a fraction of it, to land outside the focused tile's larger hit box
+         * (Compose routes a pointer event to whichever entry is topmost by z-order at that point).
+         * [AdaptiveStageGeometry.visibleDepth] of 2 matches that same hand-rolled policy's
+         * `maxVisibleDepth` for the same reason: [resolveCardStack] divides the available travel by
+         * `visibleDepth` (so every ring stays within the viewport), so a larger depth here would
+         * silently claw back the 72dp step below the tappable threshold on a physically narrow rail.
+         */
+        fun unfolded(): AdaptiveStageAppearanceSettings =
+            AdaptiveStageAppearanceSettings(
+                geometry =
+                    AdaptiveStageGeometry(
+                        cardAspectRatioPercent = 100,
+                        focusedScalePercent = 100,
+                        focusedGapDp = 8,
+                        visibleDepth = 2,
+                        overlapPercent = 0,
+                        verticalSpacingDp = 72,
+                        horizontalOffsetDp = 0,
+                        curveDp = 0,
+                        fanDirection = AdaptiveStageFanDirection.NONE,
+                        rotationDegrees = 0,
+                        cornerRadiusDp = 16,
+                        contentPaddingDp = 4,
+                    ),
+                motion =
+                    AdaptiveStageMotion(
+                        parallaxIntensityPercent = 0,
+                        rotationIntensityPercent = 0,
+                    ),
+            )
     }
 }
 
@@ -282,12 +330,25 @@ private data class ResolvedAdaptiveStageCardSize(
     val focusedHeightDp: Int,
     val fitsAvailableSpace: Boolean,
 ) {
-    val isUsable: Boolean
-        get() =
-            focusedWidthDp >= MIN_ADAPTIVE_STAGE_REACHABLE_CARD_WIDTH_DP &&
-                focusedHeightDp >= MIN_ADAPTIVE_STAGE_REACHABLE_CARD_HEIGHT_DP &&
-                fitsAvailableSpace
+    fun isUsable(role: AdaptiveStageCardStackRole): Boolean {
+        val (minWidthDp, minHeightDp) = role.minimumReachableSizeDp()
+        return focusedWidthDp >= minWidthDp && focusedHeightDp >= minHeightDp && fitsAvailableSpace
+    }
 }
+
+/**
+ * Which kind of [CardStackLayoutPolicy]-driven surface [AdaptiveStageAppearanceSettings.resolveCardStack]
+ * is sizing for -- see that function's doc for how this changes reachability sizing.
+ */
+enum class AdaptiveStageCardStackRole { PRIMARY, RAIL }
+
+private fun AdaptiveStageCardStackRole.minimumReachableSizeDp(): Pair<Int, Int> =
+    when (this) {
+        AdaptiveStageCardStackRole.PRIMARY ->
+            MIN_ADAPTIVE_STAGE_REACHABLE_CARD_WIDTH_DP to MIN_ADAPTIVE_STAGE_REACHABLE_CARD_HEIGHT_DP
+        AdaptiveStageCardStackRole.RAIL ->
+            MIN_ADAPTIVE_STAGE_REACHABLE_RAIL_TILE_WIDTH_DP to MIN_ADAPTIVE_STAGE_REACHABLE_RAIL_TILE_HEIGHT_DP
+    }
 
 data class AdaptiveStageViewportDp(
     val widthDp: Int,
@@ -689,4 +750,13 @@ const val MIN_ADAPTIVE_STAGE_ROTATION_INTENSITY_PERCENT = 0
 const val MAX_ADAPTIVE_STAGE_ROTATION_INTENSITY_PERCENT = 150
 const val MIN_ADAPTIVE_STAGE_REACHABLE_CARD_WIDTH_DP = 160
 const val MIN_ADAPTIVE_STAGE_REACHABLE_CARD_HEIGHT_DP = 220
+
+/**
+ * A rail tile is deliberately much smaller than a full "reachable card" -- these mirror Android's own
+ * accepted minimum touch-target size rather than [MIN_ADAPTIVE_STAGE_REACHABLE_CARD_WIDTH_DP]/
+ * [MIN_ADAPTIVE_STAGE_REACHABLE_CARD_HEIGHT_DP], which describe a full notification card, not an icon
+ * tile.
+ */
+const val MIN_ADAPTIVE_STAGE_REACHABLE_RAIL_TILE_WIDTH_DP = 40
+const val MIN_ADAPTIVE_STAGE_REACHABLE_RAIL_TILE_HEIGHT_DP = 40
 const val MIN_ADAPTIVE_STAGE_BACKGROUND_CARD_SCALE = 0.94f

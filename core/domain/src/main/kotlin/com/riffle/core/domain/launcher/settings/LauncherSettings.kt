@@ -59,8 +59,19 @@ data class CardsSettings(
     val stagePreferencesByLayout: Map<HomeLayoutKey, AppStagePreferences> = emptyMap(),
     /** Durable pin/select intent for AdaptiveStage feed stages, mirroring [stagePreferencesByLayout]. */
     val feedStagePreferencesByLayout: Map<HomeLayoutKey, FeedStagePreferences> = emptyMap(),
-    /** Durable visual intent for the optional AdaptiveStage presentation. */
+    /**
+     * Durable visual intent for the optional AdaptiveStage presentation -- specifically, the *folded*
+     * layout's card stack (the surface that's always present, whether or not a docked rail is also
+     * shown). See [unfoldedAppearance] for the docked rail's independent appearance intent.
+     */
     val adaptiveStageAppearance: AdaptiveStageAppearanceSettings = AdaptiveStageAppearanceSettings.modern(),
+    /**
+     * Durable visual intent for the *unfolded* layout's docked rail, fully independent of
+     * [adaptiveStageAppearance] -- every field is separately user-adjustable (see #1058). Not yet
+     * exposed in settings UI or persisted; both land in #1058, which owns the field-level UI and the
+     * accompanying JSON codec extension.
+     */
+    val unfoldedAppearance: AdaptiveStageAppearanceSettings = AdaptiveStageAppearanceSettings.unfolded(),
     val adaptiveStageTemplateId: AdaptiveStageTemplateId = AdaptiveStageTemplateCatalogDefaults.sharedCanvasId,
     /**
      * Explicit user choice of rail edge, or `null` if the user has never changed it -- in which
@@ -81,6 +92,22 @@ fun LauncherSettings.resolveAdaptiveStageCardStack(
         viewport = viewport,
         capabilities = capabilities,
         globalReducedMotion = motion.reducedMotion,
+    )
+
+/**
+ * Resolves the docked rail's independent [CardsSettings.unfoldedAppearance], sized against [viewport]
+ * -- the rail's own physical bounds, not the whole window -- with [AdaptiveStageCardStackRole.RAIL]'s
+ * smaller reachability floor.
+ */
+fun LauncherSettings.resolveAdaptiveStageRailCardStack(
+    viewport: AdaptiveStageViewportDp,
+    capabilities: AdaptiveStageRendererCapabilities = AdaptiveStageRendererCapabilities(),
+): AdaptiveStageCardStackResolution =
+    cards.unfoldedAppearance.resolveCardStack(
+        viewport = viewport,
+        capabilities = capabilities,
+        globalReducedMotion = motion.reducedMotion,
+        role = AdaptiveStageCardStackRole.RAIL,
     )
 
 /** Returns variant-specific AdaptiveStage intent. */
