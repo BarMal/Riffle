@@ -33,7 +33,6 @@ import androidx.compose.ui.unit.dp
 import com.riffle.app.launcher.notifications.AppStageEmptyAppCard
 import com.riffle.app.launcher.notifications.AppStageNotificationCard
 import com.riffle.core.domain.launcher.cards.AppStageContentKind
-import com.riffle.core.domain.launcher.cards.AppStageId
 import com.riffle.core.domain.launcher.cards.CardExpansionPhase
 import com.riffle.core.domain.launcher.cards.CardExpansionState
 import com.riffle.core.domain.launcher.cards.LauncherCardId
@@ -85,24 +84,27 @@ internal class AdaptiveStageCardDetailState(
     }
 }
 
+/**
+ * [scopeKey] gives this state its own independent saved slot -- e.g. a stage's id for a real stage,
+ * or a fixed constant for a single shared surface like the merged All-notifications view.
+ * Rendering itself never needs [scopeKey]: the card passed to [AdaptiveStageCardDetailSurface]
+ * already carries its own stage attribution via `AppStageContent.stageId`, so this state machine is
+ * deliberately stage-agnostic -- it only tracks which card id is expanded, not which stage it's from.
+ */
 @Composable
 internal fun rememberAdaptiveStageCardDetailState(
-    stageId: AppStageId,
+    scopeKey: Any,
     motion: AdaptiveStageMotion,
     globalReducedMotion: Boolean = false,
 ): AdaptiveStageCardDetailState {
     var expansion by
-        rememberSaveable(
-            stageId.profileId.value,
-            stageId.packageName.value,
-            stateSaver = CardExpansionStateSaver,
-        ) {
+        rememberSaveable(scopeKey, stateSaver = CardExpansionStateSaver) {
             mutableStateOf(CardExpansionState())
         }
-    var recoveryMessage by rememberSaveable(stageId.profileId.value, stageId.packageName.value) {
+    var recoveryMessage by rememberSaveable(scopeKey) {
         mutableStateOf<String?>(null)
     }
-    return remember(stageId, motion, globalReducedMotion) {
+    return remember(scopeKey, motion, globalReducedMotion) {
         AdaptiveStageCardDetailState(
             currentExpansion = { expansion },
             updateExpansion = { expansion = it },

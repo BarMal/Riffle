@@ -4,7 +4,7 @@ import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -29,7 +29,11 @@ import org.junit.Test
 /**
  * Drives [adaptiveStageStagePagerDrag] directly against a minimal harness, the same way
  * [CardStackGestureTest] exercises [CardStack] in isolation, rather than the full
- * [AdaptiveStageAppStageSurface] tree.
+ * [AdaptiveStageAppStageSurface] tree. Works in plain page indices rather than [AppStage]s
+ * directly (see #1057) -- the pager itself no longer knows whether a given index is a real stage
+ * or the virtual All-notifications page; only the harness (mirroring
+ * [AdaptiveStageAppStageSurface]'s own [adaptiveStageOnPageSettled]) maps a settled index back to
+ * a [LauncherShellAction].
  */
 class AdaptiveStageStagePagerGestureTest {
     @get:Rule
@@ -45,18 +49,18 @@ class AdaptiveStageStagePagerGestureTest {
     @Test
     fun horizontalDragPastThresholdSettlesToTheNextStage() {
         val stages = listOf(stage("first"), stage("second"))
-        var selectedStageId by mutableStateOf(stages[0].id)
+        var selectedIndex by mutableIntStateOf(0)
         val dispatched = mutableListOf<LauncherShellAction>()
 
         composeRule.setContent {
             val coroutineScope = rememberCoroutineScope()
             val pagerState =
                 rememberAdaptiveStageStagePagerState(
-                    stages = stages,
-                    selectedStageId = selectedStageId,
-                    onAction = { action ->
-                        dispatched.add(action)
-                        if (action is LauncherShellAction.SelectAppStage) selectedStageId = action.stageId
+                    pageCount = stages.size,
+                    selectedIndex = selectedIndex,
+                    onSettle = { index ->
+                        dispatched.add(LauncherShellAction.SelectAppStage(stages[index].id))
+                        selectedIndex = index
                     },
                 )
             Box(
@@ -67,8 +71,9 @@ class AdaptiveStageStagePagerGestureTest {
                         .adaptiveStageStagePagerDrag(
                             enabled = true,
                             stageWidthPx = 1000f,
-                            stages = stages,
-                            selectedStageId = selectedStageId,
+                            pageCount = stages.size,
+                            selectedIndex = selectedIndex,
+                            navigationKey = "test",
                             pagerState = pagerState,
                             reducedMotion = false,
                             launchStageMotion = { action ->
@@ -83,7 +88,7 @@ class AdaptiveStageStagePagerGestureTest {
         }
 
         composeRule.runOnIdle {
-            assertEquals(stages[1].id, selectedStageId)
+            assertEquals(1, selectedIndex)
             assertEquals(
                 listOf(LauncherShellAction.SelectAppStage(stages[1].id)),
                 dispatched,
@@ -94,18 +99,18 @@ class AdaptiveStageStagePagerGestureTest {
     @Test
     fun shortDragBelowThresholdSettlesBackWithoutDispatchingAnAction() {
         val stages = listOf(stage("first"), stage("second"))
-        var selectedStageId by mutableStateOf(stages[0].id)
+        var selectedIndex by mutableIntStateOf(0)
         val dispatched = mutableListOf<LauncherShellAction>()
 
         composeRule.setContent {
             val coroutineScope = rememberCoroutineScope()
             val pagerState =
                 rememberAdaptiveStageStagePagerState(
-                    stages = stages,
-                    selectedStageId = selectedStageId,
-                    onAction = { action ->
-                        dispatched.add(action)
-                        if (action is LauncherShellAction.SelectAppStage) selectedStageId = action.stageId
+                    pageCount = stages.size,
+                    selectedIndex = selectedIndex,
+                    onSettle = { index ->
+                        dispatched.add(LauncherShellAction.SelectAppStage(stages[index].id))
+                        selectedIndex = index
                     },
                 )
             Box(
@@ -118,8 +123,9 @@ class AdaptiveStageStagePagerGestureTest {
                             // A very wide virtual stage width relative to the small on-screen drag
                             // below keeps this well under both the distance and fling thresholds.
                             stageWidthPx = 100_000f,
-                            stages = stages,
-                            selectedStageId = selectedStageId,
+                            pageCount = stages.size,
+                            selectedIndex = selectedIndex,
+                            navigationKey = "test",
                             pagerState = pagerState,
                             reducedMotion = false,
                             launchStageMotion = { action ->
@@ -138,7 +144,7 @@ class AdaptiveStageStagePagerGestureTest {
         }
 
         composeRule.runOnIdle {
-            assertEquals(stages[0].id, selectedStageId)
+            assertEquals(0, selectedIndex)
             assertEquals(emptyList<LauncherShellAction>(), dispatched)
         }
     }
