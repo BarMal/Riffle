@@ -125,9 +125,10 @@ internal fun AdaptiveStageAppearancePageContent(
         )
         SettingsListRow(
             title = "About Folded and Unfolded",
-            subtitle = "Folded is the single-stage, full-size stack. Unfolded is the docked rail" +
-                " shown alongside content on a larger or unfolded screen. Each has its own" +
-                " independent appearance.",
+            subtitle =
+                "Folded is the single-stage, full-size stack. Unfolded is the docked rail" +
+                    " shown alongside content on a larger or unfolded screen. Each has its own" +
+                    " independent appearance.",
         )
     }
     SettingsSection(title = "Preview") {
