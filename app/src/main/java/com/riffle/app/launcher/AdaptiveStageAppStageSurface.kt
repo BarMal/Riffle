@@ -841,9 +841,9 @@ private fun AdaptiveStageCompactStagePager(
                 } else {
                     AdaptiveStageNeighborPage(
                         page = page,
+                        selectedPageIsAllNotifications = selectedPage is AdaptiveStagePage.AllNotifications,
                         state = state,
                         shellState = shellState,
-                        allNotificationsDetailState = allNotificationsDetailState,
                         onAction = onAction,
                         appIconLoader = appIconLoader,
                         modifier = stageModifier,
@@ -920,43 +920,40 @@ private fun AdaptiveStagePageBody(
     }
 }
 
-/** A page rendered only because it is (or was just) adjacent during a pager drag, not selected. */
+/**
+ * A page rendered only because it is (or was just) adjacent during a pager drag, not selected.
+ *
+ * The All-notifications page's content is a strict merge of every real stage's own content, so
+ * co-composing it in full alongside a real stage -- whether it's this neighbor itself, or it's
+ * currently the *selected* page and a real stage is the neighbor -- would duplicate that stage's
+ * cards in the composition (two semantics nodes for the same notification), not just in some rare
+ * coincidental-text edge case. Either direction renders a blank placeholder instead: a deliberate
+ * scope cut that still occupies the right slot for the slide transition and swaps to the full
+ * stack the moment a settle actually selects that page. Real-stage-to-real-stage neighbors are
+ * unaffected and still render in full, preserving the existing swipe preview.
+ */
 @Composable
 private fun AdaptiveStageNeighborPage(
     page: AdaptiveStagePage,
+    selectedPageIsAllNotifications: Boolean,
     state: LauncherShellState,
     shellState: com.riffle.app.launcher.notifications.AppStageShellState,
-    allNotificationsDetailState: AdaptiveStageCardDetailState,
     onAction: (LauncherShellAction) -> Unit,
     appIconLoader: AppIconLoader,
     modifier: Modifier,
 ) {
-    when (page) {
-        is AdaptiveStagePage.Stage ->
-            AdaptiveStageNeighborStagePage(
-                stage = page.stage,
-                state = state,
-                shellState = shellState,
-                onAction = onAction,
-                appIconLoader = appIconLoader,
-                modifier = modifier,
-            )
-
-        // Unlike a neighboring real stage (which gets its own ephemeral ::AdaptiveStageNeighborStagePage
-        // ::detail/focus state, since there could be many different stages swiped past), there's only
-        // ever one All-notifications page -- reusing its durable state whether selected or a neighbor
-        // during a drag is simpler and loses nothing.
-        AdaptiveStagePage.AllNotifications ->
-            AdaptiveStageAllNotificationsStack(
-                stages = shellState.snapshot.stages,
-                state = state,
-                notificationCards = shellState.notificationCards,
-                detailState = allNotificationsDetailState,
-                onAction = onAction,
-                appIconLoader = appIconLoader,
-                modifier = modifier,
-            )
+    if (page is AdaptiveStagePage.AllNotifications || selectedPageIsAllNotifications) {
+        Box(modifier = modifier.fillMaxSize())
+        return
     }
+    AdaptiveStageNeighborStagePage(
+        stage = (page as AdaptiveStagePage.Stage).stage,
+        state = state,
+        shellState = shellState,
+        onAction = onAction,
+        appIconLoader = appIconLoader,
+        modifier = modifier,
+    )
 }
 
 /**

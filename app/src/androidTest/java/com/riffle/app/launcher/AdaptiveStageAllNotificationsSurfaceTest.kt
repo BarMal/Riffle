@@ -21,12 +21,14 @@ import com.riffle.core.domain.launcher.apps.AppProfileContentVisibility
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.cards.AdaptiveStagePosture
 import com.riffle.core.domain.launcher.cards.AdaptiveStageWindowLayout
+import com.riffle.core.domain.launcher.cards.AppStageId
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
 import com.riffle.core.domain.launcher.notifications.LauncherNotification
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.notifications.NotificationAgeBucket
 import com.riffle.core.domain.launcher.notifications.NotificationCategory
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
@@ -60,18 +62,29 @@ class AdaptiveStageAllNotificationsSurfaceTest {
     fun selectingARealStageTileAfterAllNotificationsLeavesThePage() {
         val mail = testApp("mail", "Mail")
         val chat = testApp("chat", "Chat")
-        setWideContent(twoStageState(mail, chat))
+        val dispatched = mutableListOf<LauncherShellAction>()
+        setWideContent(twoStageState(mail, chat), onAction = { dispatched.add(it) })
 
         composeRule.onNodeWithContentDescription("All notifications. Open").performClick()
         composeRule.onNodeWithContentDescription("Cards stage: All notifications").assertIsDisplayed()
 
         composeRule.onNodeWithContentDescription("Mail. Open stage").performClick()
 
-        composeRule.onNodeWithContentDescription("Cards stage: Mail").assertIsDisplayed()
+        // The surface is a stateless, unidirectional composable -- without a real reducer wired up
+        // to onAction, the selected stage itself won't visibly change here, only the local
+        // allNotificationsSelected UI state and the dispatched action, which this asserts instead.
         composeRule.onNodeWithContentDescription("All notifications. Open").assertIsDisplayed()
+        assertTrue(
+            dispatched.contains(
+                LauncherShellAction.SelectAppStage(AppStageId(mail.identity.packageName, mail.identity.profile.id)),
+            ),
+        )
     }
 
-    private fun setWideContent(state: LauncherShellState) {
+    private fun setWideContent(
+        state: LauncherShellState,
+        onAction: (LauncherShellAction) -> Unit = {},
+    ) {
         composeRule.setContent {
             MaterialTheme {
                 Box(modifier = Modifier.width(800.dp).height(800.dp).clipToBounds()) {
@@ -83,7 +96,7 @@ class AdaptiveStageAllNotificationsSurfaceTest {
                                 heightDp = 800,
                                 posture = AdaptiveStagePosture.UNFOLDED,
                             ),
-                        onAction = {},
+                        onAction = onAction,
                     )
                 }
             }
