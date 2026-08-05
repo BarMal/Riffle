@@ -158,7 +158,7 @@ class LauncherSettingsJsonCodecTest {
                 """
                 {
                   "cards": {
-                    "adaptiveStagePaneArrangement": "UNKNOWN"
+                    "timeScapePaneArrangement": "UNKNOWN"
                   }
                 }
                 """.trimIndent(),
@@ -254,7 +254,7 @@ class LauncherSettingsJsonCodecTest {
                 """
                 {
                   "cards": {
-                    "adaptiveStageAppearance": {
+                    "timeScapeAppearance": {
                       "geometry": { "visibleDepth": 999 },
                       "surface": { "blurStrengthPercent": -1 },
                       "motion": { "settleDurationMillis": 9999 }
@@ -275,7 +275,7 @@ class LauncherSettingsJsonCodecTest {
                 """
                 {
                   "cards": {
-                    "adaptiveStageAppearance": {
+                    "timeScapeAppearance": {
                       "preset": "FUTURE",
                       "geometry": { "fanDirection": "FUTURE" },
                       "surface": { "backgroundSource": "FUTURE" }
