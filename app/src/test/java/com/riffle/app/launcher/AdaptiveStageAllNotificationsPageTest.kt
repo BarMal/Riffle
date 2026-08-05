@@ -154,6 +154,6 @@ class AdaptiveStageAllNotificationsPageTest {
         profile: AppProfile = AppProfile.personal(),
     ) = AppStageId(packageName = AppPackageName("com.riffle.$name"), profileId = profile.id)
 
-    private fun appStage(id: AppStageId) =
-        AppStage(id, setOf(AppStageOrigin.DYNAMIC), AppStageLifecycle.ACTIVE, emptyList())
+    @Suppress("MaxLineLength")
+    private fun appStage(id: AppStageId) = AppStage(id, setOf(AppStageOrigin.DYNAMIC), AppStageLifecycle.ACTIVE, emptyList())
 }
