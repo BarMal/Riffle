@@ -49,10 +49,25 @@ import com.riffle.core.domain.launcher.cards.CardStackLayoutEntry
 import com.riffle.core.domain.launcher.cards.CardStackNavigationDirection
 import kotlin.math.abs
 
+/**
+ * Which screen axis is this stack's own drag-to-navigate/fan axis. [VERTICAL] (the default,
+ * matching every existing call site) keeps today's exact behavior: [CardStackLayoutEntry.offset]
+ * maps to horizontal translation, [CardStackLayoutEntry.verticalOffset] maps to vertical
+ * translation and drives settle, and a vertical drag is this stack's own gesture (horizontal
+ * drags pass through unconsumed for an ancestor). [HORIZONTAL] rotates all of that 90 degrees --
+ * used for a rail docked to a TOP/BOTTOM edge -- with no change to the layout math itself
+ * (CardStackLayoutPolicy stays orientation-agnostic; only which screen axis each of its two
+ * offset fields renders along, and which drag axis settles, changes here).
+ */
+internal enum class CardStackOrientation { VERTICAL, HORIZONTAL }
+
 /** Callbacks supplied by a surface that owns durable card focus. */
 internal data class CardStackInteraction(
     val focusedItemKey: Any?,
     val onFocusRequest: (CardStackLayoutEntry) -> Unit,
+    /** Named for the [CardStackOrientation.VERTICAL] default; carries horizontal drag/velocity
+     *  instead when [CardStackOrientation.HORIZONTAL] -- treat both params as "this stack's own
+     *  primary-axis drag," not literally vertical. */
     val onSettle: (verticalDragPx: Float, verticalVelocityPxPerSecond: Float) -> Unit,
     val onSettleHaptic: () -> Unit = {},
     /** Alternate-input navigation commits one focused-card change without emulating a drag. */
@@ -77,6 +92,7 @@ internal fun CardStack(
     interaction: CardStackInteraction? = null,
     /** Multiplies every rendered entry's alpha, e.g. to dim the whole stack behind a detail overlay. */
     dimFactor: Float = 1f,
+    orientation: CardStackOrientation = CardStackOrientation.VERTICAL,
     content: @Composable (CardStackLayoutEntry, Modifier) -> Unit,
 ) {
     val motionMode = cardStackMotionMode(reducedMotion)
@@ -147,6 +163,7 @@ internal fun CardStack(
                     motionMode = motionMode,
                     timing = timing,
                     dimFactor = dimFactor,
+                    orientation = orientation,
                     isFocused = interaction?.let { stableItemKey == it.focusedItemKey } ?: true,
                     interaction =
                         interaction?.copy(
@@ -161,6 +178,7 @@ internal fun CardStack(
                                 stableItemKey = stableItemKey,
                                 isFocused = stableItemKey == interaction?.focusedItemKey,
                                 interaction = interaction,
+                                orientation = orientation,
                             ),
                         )
                     },
@@ -255,6 +273,7 @@ private fun AnimatedCardStackEntry(
     isFocused: Boolean,
     interaction: CardStackInteraction?,
     dimFactor: Float = 1f,
+    orientation: CardStackOrientation = CardStackOrientation.VERTICAL,
     content: @Composable (CardStackLayoutEntry, Modifier) -> Unit,
 ) {
     val spec = animationSpec
@@ -316,14 +335,22 @@ private fun AnimatedCardStackEntry(
                     }
                     .then(
                         if (isFocused) {
-                            Modifier.cardStackKeyboardInput(interaction)
+                            Modifier.cardStackKeyboardInput(interaction, orientation)
                         } else {
                             Modifier
                         },
                     )
                     .graphicsLayer {
-                        translationX = offset
-                        translationY = verticalOffset
+                        // HORIZONTAL rotates the whole coordinate system 90 degrees: the settle
+                        // axis (verticalOffset by default) becomes translationX, and the
+                        // fan/stagger axis (offset by default) becomes translationY.
+                        if (orientation == CardStackOrientation.HORIZONTAL) {
+                            translationX = verticalOffset
+                            translationY = offset
+                        } else {
+                            translationX = offset
+                            translationY = verticalOffset
+                        }
                         scaleX = scale
                         scaleY = scale
                         this.alpha = alpha
@@ -335,20 +362,30 @@ private fun AnimatedCardStackEntry(
     }
 }
 
-private fun Modifier.cardStackKeyboardInput(interaction: CardStackInteraction?): Modifier {
+private fun Modifier.cardStackKeyboardInput(
+    interaction: CardStackInteraction?,
+    orientation: CardStackOrientation,
+): Modifier {
     val requester = interaction?.keyboardFocusRequester ?: return this
+    val previousKeys =
+        if (orientation == CardStackOrientation.HORIZONTAL) {
+            setOf(Key.DirectionLeft)
+        } else {
+            setOf(Key.DirectionUp, Key.PageUp)
+        }
+    val nextKeys =
+        if (orientation == CardStackOrientation.HORIZONTAL) {
+            setOf(Key.DirectionRight)
+        } else {
+            setOf(Key.DirectionDown, Key.PageDown)
+        }
     return focusRequester(requester)
         .focusable()
         .onPreviewKeyEvent { event ->
             if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
             when (event.key) {
-                Key.DirectionUp,
-                Key.PageUp,
-                -> interaction.onNavigate?.invoke(CardStackNavigationDirection.PREVIOUS) ?: false
-
-                Key.DirectionDown,
-                Key.PageDown,
-                -> interaction.onNavigate?.invoke(CardStackNavigationDirection.NEXT) ?: false
+                in previousKeys -> interaction.onNavigate?.invoke(CardStackNavigationDirection.PREVIOUS) ?: false
+                in nextKeys -> interaction.onNavigate?.invoke(CardStackNavigationDirection.NEXT) ?: false
 
                 Key.DirectionCenter,
                 Key.Enter,
@@ -403,9 +440,18 @@ private fun Modifier.cardStackPointerInput(
     stableItemKey: Any,
     isFocused: Boolean,
     interaction: CardStackInteraction?,
+    orientation: CardStackOrientation,
 ): Modifier {
     if (interaction == null) return this
-    return pointerInput(stableItemKey, isFocused, interaction) {
+    // This stack's own drag-to-navigate axis follows orientation; the other axis is always left
+    // unconsumed for an ancestor's page/stage drag, exactly as the VERTICAL default always has.
+    val ownAxis =
+        if (orientation == CardStackOrientation.HORIZONTAL) {
+            CardStackGestureAxis.HORIZONTAL
+        } else {
+            CardStackGestureAxis.VERTICAL
+        }
+    return pointerInput(stableItemKey, isFocused, interaction, orientation) {
         awaitEachGesture {
             val down = awaitFirstDown(requireUnconsumed = false)
             val pointerId: PointerId = down.id
@@ -444,10 +490,10 @@ private fun Modifier.cardStackPointerInput(
                             CardStackGestureAxis.HORIZONTAL
                         }
                 }
-                if (axis == CardStackGestureAxis.VERTICAL) change.consume()
+                if (axis == ownAxis) change.consume()
                 if (!change.pressed) {
                     // A background-card tap focuses the card without consuming an ancestor's
-                    // horizontal page/stage drag before that drag's axis is known.
+                    // cross-axis page/stage drag before that drag's axis is known.
                     if (axis == null && !isFocused) change.consume()
                     break
                 }
@@ -456,12 +502,18 @@ private fun Modifier.cardStackPointerInput(
             when {
                 cancelled -> Unit
                 axis == null -> interaction.onFocusRequest(entry)
-                axis == CardStackGestureAxis.VERTICAL ->
+                axis == ownAxis ->
                     interaction.run {
-                        onSettle(verticalDrag, velocityTracker.calculateVelocity().y)
+                        val (dragPx, velocityPxPerSecond) =
+                            if (orientation == CardStackOrientation.HORIZONTAL) {
+                                horizontalDrag to velocityTracker.calculateVelocity().x
+                            } else {
+                                verticalDrag to velocityTracker.calculateVelocity().y
+                            }
+                        onSettle(dragPx, velocityPxPerSecond)
                         onSettleHaptic()
                     }
-                // Horizontal gestures remain unconsumed for the owning page/stage surface.
+                // Cross-axis gestures remain unconsumed for the owning page/stage surface.
                 else -> Unit
             }
         }

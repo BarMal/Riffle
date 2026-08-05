@@ -206,7 +206,7 @@ class CardModeGuardedSurfaceTest {
             )
         }
 
-        composeRule.onNodeWithText("Previous").assertIsDisplayed()
+        composeRule.onNodeWithTag(TIME_SCAPE_STAGE_HEADER_TEST_TAG).assertIsDisplayed()
         composeRule.onNodeWithTag(dockItemTestTag(shortcut.id)).performTouchInput { click() }
 
         composeRule.runOnIdle {
@@ -269,7 +269,7 @@ class CardModeGuardedSurfaceTest {
             )
         }
 
-        composeRule.onNodeWithText("Previous").assertIsDisplayed()
+        composeRule.onNodeWithTag(TIME_SCAPE_STAGE_HEADER_TEST_TAG).assertIsDisplayed()
         composeRule.onNodeWithTag(dockItemTestTag(primaryShortcut.id)).performTouchInput {
             down(center)
             moveBy(Offset(0f, -24f))
