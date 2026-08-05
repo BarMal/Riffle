@@ -49,6 +49,14 @@ class LauncherSettingsTest {
     }
 
     @Test
+    fun cardsDefaultToTheUnfoldedAppearanceIntentIndependentlyOfTheFoldedOne() {
+        val cards = LauncherSettings().cards
+
+        assertEquals(AdaptiveStageAppearanceSettings.unfolded(), cards.unfoldedAppearance)
+        assertEquals(AdaptiveStageAppearanceSettings.modern(), cards.adaptiveStageAppearance)
+    }
+
+    @Test
     fun defaultsReserveThreeFingerSwipesForAdaptiveStageModeChanges() {
         val gestures = LauncherSettings().gestures.homeGestures
 

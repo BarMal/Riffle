@@ -95,7 +95,6 @@ import com.riffle.core.domain.launcher.cards.CardStackFocusResult
 import com.riffle.core.domain.launcher.cards.CardStackFocusState
 import com.riffle.core.domain.launcher.cards.CardStackKey
 import com.riffle.core.domain.launcher.cards.CardStackLayoutEntry
-import com.riffle.core.domain.launcher.cards.CardStackLayoutPolicy
 import com.riffle.core.domain.launcher.cards.CardStackNavigationDirection
 import com.riffle.core.domain.launcher.cards.CardStackSettleRequest
 import com.riffle.core.domain.launcher.cards.LauncherCardId
@@ -107,6 +106,7 @@ import com.riffle.core.domain.launcher.settings.AdaptiveStageAppearanceSettings
 import com.riffle.core.domain.launcher.settings.AdaptiveStageCardStackResolution
 import com.riffle.core.domain.launcher.settings.AdaptiveStageViewportDp
 import com.riffle.core.domain.launcher.settings.resolveAdaptiveStageCardStack
+import com.riffle.core.domain.launcher.settings.resolveAdaptiveStageRailCardStack
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -961,7 +961,6 @@ private fun AdaptiveStageStageRail(
     // already returns an empty list for cardCount = 0 -- so the rail's presence stays a stable
     // signal of "this pane mode shows a rail" independent of whether any stage exists yet.
     val haptics = rememberLauncherHaptics(state.launcherSettings.haptics.feedbackStrength)
-    val reducedMotion = state.launcherSettings.motion.reducedMotion
     val activeIndex = stages.indexOfFirst { stage -> stage.id == selectedStageId }.coerceAtLeast(0)
     var settleTransitionId by rememberSaveable { mutableIntStateOf(0) }
 
@@ -974,7 +973,7 @@ private fun AdaptiveStageStageRail(
     }
 
     val railBackground = Modifier.background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.32f))
-    Box(
+    BoxWithConstraints(
         // Explicit clip: the fan/stack visual is allowed to layer within this container, but must
         // never bleed into neighboring UI the way earlier AdaptiveStage overflow bugs did.
         // fillMaxHeight() matters for LEADING/TRAILING: the caller only pins width there (unlike
@@ -989,6 +988,17 @@ private fun AdaptiveStageStageRail(
                 .clipToBounds(),
         contentAlignment = Alignment.Center,
     ) {
+        // This Box's own real bounds -- not the whole window -- are what
+        // AdaptiveStageCardStackRole.RAIL's resolution sizes tiles and travel against; see
+        // resolveAdaptiveStageRailCardStack's doc for why that's the right viewport to pass here.
+        val viewport = AdaptiveStageViewportDp(maxWidth.value.toInt(), maxHeight.value.toInt())
+        val resolution =
+            remember(state.launcherSettings, viewport) {
+                state.launcherSettings.resolveAdaptiveStageRailCardStack(
+                    viewport = viewport,
+                    capabilities = adaptiveStageRendererCapabilities(),
+                )
+            }
         CardStack(
             // CardStack's own root has no size of its own -- give it the same bounded size as
             // this Box (rather than leaving it to size from its graphicsLayer-positioned,
@@ -997,12 +1007,13 @@ private fun AdaptiveStageStageRail(
             // constraints happen to resolve to.
             modifier = Modifier.matchParentSize(),
             entries =
-                ADAPTIVE_STAGE_STAGE_RAIL_LAYOUT_POLICY.entries(
+                resolution.layoutPolicy.entries(
                     cardCount = stages.size,
                     activeIndex = activeIndex,
-                    reducedMotion = reducedMotion,
+                    reducedMotion = resolution.reducedMotion,
                 ),
-            reducedMotion = reducedMotion,
+            animationSpec = resolution.animation,
+            reducedMotion = resolution.reducedMotion,
             orientation = if (horizontal) CardStackOrientation.HORIZONTAL else CardStackOrientation.VERTICAL,
             itemKey = { entry -> adaptiveStageStageSelectorItemKey(stages[entry.cardIndex]) },
             interaction =
@@ -1034,7 +1045,7 @@ private fun AdaptiveStageStageRail(
                     },
                     onSettleHaptic = {
                         haptics.adaptiveStageSettle(
-                            state.launcherSettings.cards.adaptiveStageAppearance.motion.hapticStrength,
+                            state.launcherSettings.cards.unfoldedAppearance.motion.hapticStrength,
                         )
                     },
                     onNavigate = ::navigate,
@@ -1046,7 +1057,7 @@ private fun AdaptiveStageStageRail(
                 isSelected = stage.id == selectedStageId,
                 label = stageLabel(stage.id, state),
                 identity = stageAppIdentity(stage.id, state),
-                appearance = state.launcherSettings.cards.adaptiveStageAppearance,
+                appearance = state.launcherSettings.cards.unfoldedAppearance,
                 appIconLoader = appIconLoader,
                 modifier = cardModifier,
             )
@@ -1056,33 +1067,6 @@ private fun AdaptiveStageStageRail(
 
 /** Only one [AdaptiveStageStageRail] is ever composed at a time, so a single fixed tag is unambiguous. */
 internal const val ADAPTIVE_STAGE_STAGE_RAIL_TEST_TAG = "adaptive-stage-stage-rail"
-
-/**
- * Tuned much smaller than the full-screen notification [CardStack] (fewer visible layers, tighter
- * offset/scale steps) to fit the rail's fixed [AdaptiveStagePaneLayoutPolicy] budget
- * (`RAIL_WIDTH_DP`/`RAIL_HEIGHT_DP`) rather than a whole viewport.
- *
- * [CardStackLayoutPolicy.verticalOffsetStep] -- not [CardStackLayoutPolicy.offsetStep] -- is the
- * field that ends up driving each entry's *primary* translation in [CardStack] regardless of
- * [CardStackOrientation] (see [AnimatedCardStackEntry]'s graphicsLayer block: it's always the axis
- * [CardStackInteraction.onSettle] drives). Leaving it at its zero default here left every
- * non-focused tile stacked almost exactly on top of the focused one -- offset only by the tiny
- * secondary [CardStackLayoutPolicy.offsetStep] wiggle -- which made them functionally untappable:
- * a raw touch at a background tile's own reported center still landed inside the focused tile's
- * (larger, unshifted) hit-test bounds, since Compose routes a pointer event to whichever entry's
- * `Box` is topmost -- by z-order -- at that exact point, not whichever entry's semantics node the
- * point was nominally "for". [AdaptiveStageStageRailTile]'s own layout is roughly icon (40dp) + label +
- * padding tall, so this step needs to clear roughly that whole height, not a fraction of it, for a
- * background tile's own center to actually land outside the focused tile's box.
- */
-private val ADAPTIVE_STAGE_STAGE_RAIL_LAYOUT_POLICY =
-    CardStackLayoutPolicy(
-        maxVisibleDepth = 2,
-        scaleStep = 0.1f,
-        offsetStep = 10f,
-        verticalOffsetStep = 72f,
-        alphaStep = 0.3f,
-    )
 
 /** Same settle thresholds as [AdaptiveStageNotificationStack]'s card-to-card settle, for a consistent feel. */
 private const val ADAPTIVE_STAGE_STAGE_RAIL_SETTLE_DISTANCE_THRESHOLD_PX = 64f
