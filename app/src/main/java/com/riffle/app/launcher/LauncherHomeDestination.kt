@@ -62,30 +62,41 @@ private fun CardsHomeSurface(
     onAction: (LauncherShellAction) -> Unit,
 ) {
     val dockInteractionHeightPx = remember { mutableIntStateOf(0) }
-    // AdaptiveStageAppStageSurface's own root is fully transparent, so it must clip its content above
-    // both the Dock AND the real Standard Home search pill/page-indicator band directly above the
-    // Dock (HomeBottomSearchArea) -- otherwise that band bleeds through and visually collides with
-    // whatever AdaptiveStage draws at that same height (e.g. a BOTTOM-docked stage rail).
-    val bottomControlsHeightPx = remember { mutableIntStateOf(0) }
     val density = LocalDensity.current
     val dockInteractionHeight =
         maxOf(
             state.homeLayout.dockInteractionRegionHeightDp().dp,
             with(density) { dockInteractionHeightPx.intValue.toDp() },
-        ) + with(density) { bottomControlsHeightPx.intValue.toDp() }
+        )
 
     Box(modifier = Modifier.fillMaxSize()) {
-        StandardHomeSurface(
-            state = state,
+        // Cards mode reuses the standard Dock but must not show the standard grid pages (and any
+        // icons placed on them) underneath TimeScape's own canvas -- see StandardHomeDockOnlySurface.
+        StandardHomeDockOnlySurface(
+            layout = state.homeLayout,
+            installedApps = state.installedApps,
+            interactions =
+                StandardHomeInteractions(
+                    haptics = haptics,
+                    onDockInteractionHeightChanged = { heightPx ->
+                        dockInteractionHeightPx.intValue = heightPx
+                    },
+                ),
+            presentation =
+                StandardHomePresentation(
+                    notificationGroupsByApp = state.notificationGroupsByApp,
+                    notificationAccessStatus = state.notificationAccessStatus,
+                    installedApps = state.installedApps,
+                    appShortcutsByApp = state.appShortcutsByApp,
+                    homeGestures = state.launcherSettings.gestures.homeGestures,
+                    dockGestures = state.launcherSettings.gestures.dockGestures,
+                    reducedMotion = state.launcherSettings.motion.reducedMotion,
+                    motionPerformanceTargetFps = state.launcherSettings.motion.performanceTargetFps,
+                    widgetViewFactory = widgetRenderers.viewFactory,
+                    homeInsetPolicy = homeInsetPolicy(state.launcherSettings.appearance),
+                    adaptiveStageAppearance = state.launcherSettings.cards.adaptiveStageAppearance,
+                ),
             appIconLoader = appIconLoader,
-            widgetRenderers = widgetRenderers,
-            haptics = haptics,
-            onDockInteractionHeightChanged = { heightPx ->
-                dockInteractionHeightPx.intValue = heightPx
-            },
-            onBottomControlsHeightChanged = { heightPx ->
-                bottomControlsHeightPx.intValue = heightPx
-            },
             onAction = onAction,
         )
         AdaptiveStageAppStageSurface(

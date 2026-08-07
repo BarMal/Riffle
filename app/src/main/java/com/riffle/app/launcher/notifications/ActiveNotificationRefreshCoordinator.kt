@@ -20,6 +20,8 @@ class ActiveNotificationRefreshCoordinator(
     private val dispatchOnMainThread: (() -> Unit) -> Unit,
     private val refreshNotifications: () -> Unit,
     private val refreshPlatformStatuses: () -> Unit,
+    private val isListenerConnected: () -> Boolean = RiffleNotificationListenerConnection::isConnected,
+    private val requestListenerRebind: () -> Unit = {},
 ) : DefaultLifecycleObserver {
     private var removeNotificationObserver: (() -> Unit)? = null
     private var removeConnectionObserver: (() -> Unit)? = null
@@ -46,6 +48,13 @@ class ActiveNotificationRefreshCoordinator(
         removeNotificationObserver = null
         removeConnectionObserver?.invoke()
         removeConnectionObserver = null
+    }
+
+    override fun onStart(owner: LifecycleOwner) {
+        // The platform can silently drop the listener binding without ever calling
+        // onListenerDisconnected (observed on OEM power management). Home is foregrounded often
+        // enough that this doubles as a cheap health check, not just a lifecycle formality.
+        if (!isListenerConnected()) requestListenerRebind()
     }
 
     override fun onDestroy(owner: LifecycleOwner) {

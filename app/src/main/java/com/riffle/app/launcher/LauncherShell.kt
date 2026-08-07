@@ -49,7 +49,6 @@ import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.cards.AdaptiveStageInteractionContext
 import com.riffle.core.domain.launcher.cards.AdaptiveStageWindowLayout
 import com.riffle.core.domain.launcher.home.DockEditRejectionReason
-import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.home.LauncherViewModeAvailability
 import com.riffle.core.domain.launcher.home.WallpaperSource
 import com.riffle.core.domain.launcher.search.LauncherSearchResult
@@ -206,11 +205,9 @@ private fun DockEditRejectionMessage(
 }
 
 /**
- * System Back returns from any non-Home destination to Home, and separately switches Cards mode
- * back to Standard Home when Home itself is showing the Cards overlay. Both handlers are
- * mutually exclusive on [state.destination][LauncherShellState.destination], so ordering between
- * them never matters; a focused/expanded AdaptiveStage card unwinds first via its own nested
- * BackHandler, which composes later and therefore takes priority over both of these.
+ * System Back returns from any non-Home destination to Home. A focused/expanded AdaptiveStage card
+ * unwinds first via its own nested BackHandler, which composes later and therefore takes priority
+ * over this one.
  */
 @Composable
 private fun LauncherShellBackHandling(
@@ -220,26 +217,9 @@ private fun LauncherShellBackHandling(
     BackHandler(enabled = state.destination != ShellDestination.HOME) {
         onAction(LauncherShellAction.OpenHome)
     }
-
-    BackHandler(
-        enabled = shouldExitCardsModeOnBackPress(state.destination, state.homeLayout.viewMode),
-    ) {
-        onAction(LauncherShellAction.SelectLauncherViewMode(LauncherViewMode.STANDARD_APP_DRAWER))
-    }
 }
 
 private const val DOCK_EDIT_REJECTION_TIMEOUT_MILLIS = 5_000L
-
-/**
- * System Back should switch Cards mode back to Standard Home only when Home itself is showing
- * (no app drawer/search/settings/notifications destination is already intercepting Back) and the
- * current view mode renders the Cards overlay. A focused/expanded card unwinds first through its
- * own nested BackHandler, which composes after (and therefore takes priority over) this one.
- */
-internal fun shouldExitCardsModeOnBackPress(
-    destination: ShellDestination,
-    viewMode: LauncherViewMode,
-): Boolean = destination == ShellDestination.HOME && viewMode.homeSurfaceKind() == HomeSurfaceKind.CARDS
 
 internal val AdaptiveStageInteractionContextSaver =
     Saver<AdaptiveStageInteractionContext, List<String>>(
