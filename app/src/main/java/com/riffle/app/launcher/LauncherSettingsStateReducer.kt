@@ -167,6 +167,14 @@ internal class LauncherSettingsStateReducer(
                         feedArticleCacheRepository = feedArticleCacheRepository,
                     )
 
+                is LauncherShellAction.AddNotificationHideRule,
+                is LauncherShellAction.RemoveNotificationHideRule,
+                ->
+                    state.withNotificationHidingAction(
+                        action = action,
+                        launcherSettingsRepository = launcherSettingsRepository,
+                    )
+
                 is LauncherShellAction.SelectSettingsLayoutDeviceClass ->
                     state.withSettingsLayoutDeviceClass(action.deviceClass)
 

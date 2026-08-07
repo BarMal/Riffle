@@ -3,7 +3,9 @@ package com.riffle.app.launcher
 import com.riffle.app.launcher.notifications.NotificationStageAction
 import com.riffle.core.domain.launcher.apps.AppDrawerProfileFilter
 import com.riffle.core.domain.launcher.apps.AppIdentity
+import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppProfile
+import com.riffle.core.domain.launcher.apps.AppProfileId
 import com.riffle.core.domain.launcher.apps.AppProfileType
 import com.riffle.core.domain.launcher.apps.AppSearchContentFilter
 import com.riffle.core.domain.launcher.apps.AppShortcut
@@ -31,6 +33,8 @@ import com.riffle.core.domain.launcher.home.WallpaperScrollMode
 import com.riffle.core.domain.launcher.home.WallpaperSource
 import com.riffle.core.domain.launcher.home.WidgetResizeConstraints
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
+import com.riffle.core.domain.launcher.notifications.NotificationHideRule
+import com.riffle.core.domain.launcher.notifications.NotificationHideRuleId
 import com.riffle.core.domain.launcher.rss.FeedId
 import com.riffle.core.domain.launcher.rss.FeedUrl
 import com.riffle.core.domain.launcher.settings.AdaptiveStageAppearanceSettings
@@ -476,6 +480,17 @@ sealed interface LauncherShellAction {
     ) : LauncherShellAction
 
     data class SelectRssRefreshInterval(val option: FeedRefreshIntervalOption) : LauncherShellAction
+
+    /** Adds a durable rule that hides future notifications matching [kind]/[matchMode]/[value] for the source app. */
+    data class AddNotificationHideRule(
+        val packageName: AppPackageName,
+        val profileId: AppProfileId,
+        val kind: NotificationHideRule.Kind,
+        val value: String = "",
+        val matchMode: NotificationHideRule.MatchMode = NotificationHideRule.MatchMode.EXACT,
+    ) : LauncherShellAction
+
+    data class RemoveNotificationHideRule(val id: NotificationHideRuleId) : LauncherShellAction
 }
 
 enum class WidgetAddTarget {

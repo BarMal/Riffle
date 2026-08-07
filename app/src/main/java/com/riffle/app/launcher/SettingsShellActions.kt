@@ -115,6 +115,8 @@ internal fun LauncherShellAction.launcherSettingsActionRoute(): LauncherSettings
         is LauncherShellAction.RemoveRssFeed,
         is LauncherShellAction.SetRssFeedEnabled,
         is LauncherShellAction.SelectRssRefreshInterval,
+        is LauncherShellAction.AddNotificationHideRule,
+        is LauncherShellAction.RemoveNotificationHideRule,
         -> LauncherSettingsActionRoute.SettingsState(this)
 
         LauncherShellAction.RequestNotificationAccess -> LauncherSettingsActionRoute.RequestNotificationAccess

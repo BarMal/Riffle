@@ -5,6 +5,7 @@ import com.riffle.core.domain.launcher.apps.AppActivityName
 import com.riffle.core.domain.launcher.apps.AppDrawerProfileFilter
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
+import com.riffle.core.domain.launcher.apps.AppProfile
 import com.riffle.core.domain.launcher.apps.AppProfileType
 import com.riffle.core.domain.launcher.apps.AppSearchContentFilter
 import com.riffle.core.domain.launcher.apps.AppShortcut
@@ -33,6 +34,8 @@ import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.home.WallpaperScrollMode
 import com.riffle.core.domain.launcher.home.WallpaperSource
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
+import com.riffle.core.domain.launcher.notifications.NotificationHideRule
+import com.riffle.core.domain.launcher.notifications.NotificationHideRuleId
 import com.riffle.core.domain.launcher.rss.FeedId
 import com.riffle.core.domain.launcher.rss.FeedUrl
 import com.riffle.core.domain.launcher.settings.AdaptiveStageAppearanceSettings
@@ -371,6 +374,18 @@ class LauncherActionDomainTest {
                 settings(
                     "SelectRssRefreshInterval",
                     LauncherShellAction.SelectRssRefreshInterval(FeedRefreshIntervalOption.MINUTES_30),
+                ),
+                settings(
+                    "AddNotificationHideRule",
+                    LauncherShellAction.AddNotificationHideRule(
+                        packageName = AppPackageName("com.example.chat"),
+                        profileId = AppProfile.personal().id,
+                        kind = NotificationHideRule.Kind.APP,
+                    ),
+                ),
+                settings(
+                    "RemoveNotificationHideRule",
+                    LauncherShellAction.RemoveNotificationHideRule(NotificationHideRuleId("rule-1")),
                 ),
                 settings(
                     "SelectWallpaperSource",
