@@ -13,8 +13,12 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.ScrollableTabRow
+import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -90,20 +94,24 @@ import com.riffle.core.domain.launcher.settings.MIN_ADAPTIVE_STAGE_TRAVEL_INTENS
 import com.riffle.core.domain.launcher.settings.MIN_ADAPTIVE_STAGE_VERTICAL_SPACING_DP
 import com.riffle.core.domain.launcher.settings.MIN_ADAPTIVE_STAGE_VISIBLE_DEPTH
 
+private typealias AdaptiveStageAppearanceUpdate = ((AdaptiveStageAppearanceSettings) -> AdaptiveStageAppearanceSettings) -> Unit
+
 @Composable
 internal fun AdaptiveStageAppearancePageContent(
     state: SettingsSurfaceState,
     onAction: (LauncherShellAction) -> Unit,
+    modifier: Modifier = Modifier,
     rendererCapabilities: AdaptiveStageRendererCapabilities = adaptiveStageRendererCapabilities(),
 ) {
     var editorTarget by rememberSaveable { mutableStateOf(AdaptiveStageAppearanceEditorTarget.FOLDED) }
+    var selectedTab by rememberSaveable { mutableStateOf(AdaptiveStageAppearanceTab.LAYOUT) }
     val appearance =
         when (editorTarget) {
             AdaptiveStageAppearanceEditorTarget.FOLDED -> state.settings.cards.adaptiveStageAppearance
             AdaptiveStageAppearanceEditorTarget.UNFOLDED -> state.settings.cards.unfoldedAppearance
         }
     var resetConfirmationVisible by rememberSaveable { mutableStateOf(false) }
-    val update: ((AdaptiveStageAppearanceSettings) -> AdaptiveStageAppearanceSettings) -> Unit = { transform ->
+    val update: AdaptiveStageAppearanceUpdate = { transform ->
         val next = transform(appearance).coerce()
         onAction(
             when (editorTarget) {
@@ -114,34 +122,148 @@ internal fun AdaptiveStageAppearancePageContent(
         )
     }
 
-    SettingsSection(title = "Appearance target") {
-        AdaptiveStageEnumChoices(
-            title = "Editing",
-            values = AdaptiveStageAppearanceEditorTarget.entries,
-            selected = editorTarget,
-            label = AdaptiveStageAppearanceEditorTarget::label,
-            testTag = { target -> "adaptive-stage-appearance-target-${target.name}" },
-            onSelected = { target -> editorTarget = target },
-        )
-        SettingsListRow(
-            title = "About Folded and Unfolded",
-            subtitle =
-                "Folded is the single-stage, full-size stack. Unfolded is the docked rail" +
-                    " shown alongside content on a larger or unfolded screen. Each has its own" +
-                    " independent appearance.",
-        )
-    }
-    SettingsSection(title = "Preview") {
-        AdaptiveStageAppearancePreview(
-            appearance = appearance,
-            globalReducedMotion = state.settings.motion.reducedMotion,
-            rendererCapabilities = rendererCapabilities,
-            modifier = Modifier.fillMaxWidth().heightIn(min = 340.dp, max = 460.dp),
-        )
-        adaptiveStageFallbackMessage(appearance, rendererCapabilities)?.let { message ->
-            SettingsListRow(title = "Effective fallback", subtitle = message)
+    Column(modifier = modifier) {
+        SettingsSection(title = "Appearance target") {
+            AdaptiveStageEnumChoices(
+                title = "Editing",
+                values = AdaptiveStageAppearanceEditorTarget.entries,
+                selected = editorTarget,
+                label = AdaptiveStageAppearanceEditorTarget::label,
+                testTag = { target -> "adaptive-stage-appearance-target-${target.name}" },
+                onSelected = { target -> editorTarget = target },
+            )
+            SettingsListRow(
+                title = "About Folded and Unfolded",
+                subtitle =
+                    "Folded is the single-stage, full-size stack. Unfolded is the docked rail" +
+                        " shown alongside content on a larger or unfolded screen. Each has its own" +
+                        " independent appearance.",
+            )
+        }
+        SettingsSection(title = "Preview") {
+            AdaptiveStageAppearancePreview(
+                appearance = appearance,
+                globalReducedMotion = state.settings.motion.reducedMotion,
+                rendererCapabilities = rendererCapabilities,
+                modifier = Modifier.fillMaxWidth().heightIn(min = 220.dp, max = 300.dp),
+            )
+            adaptiveStageFallbackMessage(appearance, rendererCapabilities)?.let { message ->
+                SettingsListRow(title = "Effective fallback", subtitle = message)
+            }
+        }
+        SettingsSection(title = "Reset appearance") {
+            SettingsClickableRow(
+                title = "Reset ${editorTarget.label()} Cards appearance",
+                subtitle = "Restore this layout's default geometry, surface, and motion",
+                onClick = { resetConfirmationVisible = true },
+                trailingContent = { SettingsButtonText(text = "Reset") },
+            )
+        }
+        AdaptiveStageAppearanceTabRow(selected = selectedTab, onSelected = { tab -> selectedTab = tab })
+        Column(
+            modifier = Modifier.weight(1f).verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            when (selectedTab) {
+                AdaptiveStageAppearanceTab.LAYOUT ->
+                    AdaptiveStageLayoutTabContent(state = state, onAction = onAction)
+
+                AdaptiveStageAppearanceTab.GEOMETRY ->
+                    AdaptiveStageGeometryTabContent(appearance = appearance, update = update)
+
+                AdaptiveStageAppearanceTab.SURFACE ->
+                    AdaptiveStageSurfaceTabContent(appearance = appearance, update = update)
+
+                AdaptiveStageAppearanceTab.COLOR ->
+                    AdaptiveStageColorTabContent(appearance = appearance, update = update)
+
+                AdaptiveStageAppearanceTab.MOTION ->
+                    AdaptiveStageMotionTabContent(appearance = appearance, update = update)
+
+                AdaptiveStageAppearanceTab.ACCESSIBILITY ->
+                    AdaptiveStageAccessibilityTabContent(appearance = appearance, update = update)
+            }
         }
     }
+    if (resetConfirmationVisible) {
+        AlertDialog(
+            onDismissRequest = { resetConfirmationVisible = false },
+            title = { Text("Reset ${editorTarget.label()} Cards appearance?") },
+            text = {
+                Text(
+                    "This replaces all ${editorTarget.label().lowercase()} Cards appearance, geometry, and" +
+                        " motion choices with its default values.",
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        update { editorTarget.defaultAppearance() }
+                        resetConfirmationVisible = false
+                    },
+                    modifier = Modifier.semantics { contentDescription = "Confirm Cards reset" },
+                ) { Text("Reset") }
+            },
+            dismissButton = { TextButton(onClick = { resetConfirmationVisible = false }) { Text("Cancel") } },
+        )
+    }
+}
+
+internal enum class AdaptiveStageAppearanceEditorTarget { FOLDED, UNFOLDED }
+
+internal fun AdaptiveStageAppearanceEditorTarget.defaultAppearance(): AdaptiveStageAppearanceSettings =
+    when (this) {
+        AdaptiveStageAppearanceEditorTarget.FOLDED -> AdaptiveStageAppearanceSettings.modern()
+        AdaptiveStageAppearanceEditorTarget.UNFOLDED -> AdaptiveStageAppearanceSettings.unfolded()
+    }
+
+internal fun AdaptiveStageAppearanceEditorTarget.label(): String =
+    when (this) {
+        AdaptiveStageAppearanceEditorTarget.FOLDED -> "Folded"
+        AdaptiveStageAppearanceEditorTarget.UNFOLDED -> "Unfolded"
+    }
+
+internal enum class AdaptiveStageAppearanceTab { LAYOUT, GEOMETRY, SURFACE, COLOR, MOTION, ACCESSIBILITY }
+
+internal fun AdaptiveStageAppearanceTab.label(): String =
+    when (this) {
+        AdaptiveStageAppearanceTab.LAYOUT -> "Layout"
+        AdaptiveStageAppearanceTab.GEOMETRY -> "Geometry"
+        AdaptiveStageAppearanceTab.SURFACE -> "Surface"
+        AdaptiveStageAppearanceTab.COLOR -> "Color"
+        AdaptiveStageAppearanceTab.MOTION -> "Motion"
+        AdaptiveStageAppearanceTab.ACCESSIBILITY -> "Accessibility"
+    }
+
+@Composable
+private fun AdaptiveStageAppearanceTabRow(
+    selected: AdaptiveStageAppearanceTab,
+    onSelected: (AdaptiveStageAppearanceTab) -> Unit,
+) {
+    val tabs = AdaptiveStageAppearanceTab.entries
+    ScrollableTabRow(
+        selectedTabIndex = tabs.indexOf(selected),
+        edgePadding = 8.dp,
+    ) {
+        tabs.forEach { tab ->
+            Tab(
+                selected = tab == selected,
+                onClick = { onSelected(tab) },
+                text = { Text(tab.label()) },
+                modifier =
+                    Modifier
+                        .semantics { contentDescription = "Appearance section: ${tab.label()}" }
+                        .testTag("adaptive-stage-appearance-tab-${tab.name}"),
+            )
+        }
+    }
+}
+
+@Composable
+private fun AdaptiveStageLayoutTabContent(
+    state: SettingsSurfaceState,
+    onAction: (LauncherShellAction) -> Unit,
+) {
     SettingsSection(title = "Layout") {
         AdaptiveStageEnumChoices(
             title = "Rail side",
@@ -172,14 +294,13 @@ internal fun AdaptiveStageAppearancePageContent(
             subtitle = "Split shows card details in a larger area above the stack",
         )
     }
-    SettingsSection(title = "Reset appearance") {
-        SettingsClickableRow(
-            title = "Reset ${editorTarget.label()} Cards appearance",
-            subtitle = "Restore this layout's default geometry, surface, and motion",
-            onClick = { resetConfirmationVisible = true },
-            trailingContent = { SettingsButtonText(text = "Reset") },
-        )
-    }
+}
+
+@Composable
+private fun AdaptiveStageGeometryTabContent(
+    appearance: AdaptiveStageAppearanceSettings,
+    update: AdaptiveStageAppearanceUpdate,
+) {
     SettingsSection(title = "Card geometry") {
         AdaptiveStageSlider(
             "Card aspect ratio",
@@ -309,6 +430,13 @@ internal fun AdaptiveStageAppearancePageContent(
             }
         }
     }
+}
+
+@Composable
+private fun AdaptiveStageSurfaceTabContent(
+    appearance: AdaptiveStageAppearanceSettings,
+    update: AdaptiveStageAppearanceUpdate,
+) {
     SettingsSection(title = "Surface and glass") {
         AdaptiveStageEnumChoices(
             "Background",
@@ -411,6 +539,13 @@ internal fun AdaptiveStageAppearancePageContent(
             }
         }
     }
+}
+
+@Composable
+private fun AdaptiveStageColorTabContent(
+    appearance: AdaptiveStageAppearanceSettings,
+    update: AdaptiveStageAppearanceUpdate,
+) {
     SettingsSection(title = "Colour and content") {
         AdaptiveStageEnumChoices(
             "Accent",
@@ -458,6 +593,13 @@ internal fun AdaptiveStageAppearancePageContent(
             }
         }
     }
+}
+
+@Composable
+private fun AdaptiveStageMotionTabContent(
+    appearance: AdaptiveStageAppearanceSettings,
+    update: AdaptiveStageAppearanceUpdate,
+) {
     SettingsSection(title = "Motion") {
         AdaptiveStageSlider(
             "Settle duration",
@@ -570,6 +712,13 @@ internal fun AdaptiveStageAppearancePageContent(
             }
         }
     }
+}
+
+@Composable
+private fun AdaptiveStageAccessibilityTabContent(
+    appearance: AdaptiveStageAppearanceSettings,
+    update: AdaptiveStageAppearanceUpdate,
+) {
     SettingsSection(title = "Accessibility fallbacks") {
         SettingsSwitchRow("Reduced motion", "Use static, reachable card positions", appearance.motion.reducedMotion, { value ->
             update {
@@ -582,43 +731,7 @@ internal fun AdaptiveStageAppearancePageContent(
             }
         })
     }
-    if (resetConfirmationVisible) {
-        AlertDialog(
-            onDismissRequest = { resetConfirmationVisible = false },
-            title = { Text("Reset ${editorTarget.label()} Cards appearance?") },
-            text = {
-                Text(
-                    "This replaces all ${editorTarget.label().lowercase()} Cards appearance, geometry, and" +
-                        " motion choices with its default values.",
-                )
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        update { editorTarget.defaultAppearance() }
-                        resetConfirmationVisible = false
-                    },
-                    modifier = Modifier.semantics { contentDescription = "Confirm Cards reset" },
-                ) { Text("Reset") }
-            },
-            dismissButton = { TextButton(onClick = { resetConfirmationVisible = false }) { Text("Cancel") } },
-        )
-    }
 }
-
-internal enum class AdaptiveStageAppearanceEditorTarget { FOLDED, UNFOLDED }
-
-internal fun AdaptiveStageAppearanceEditorTarget.defaultAppearance(): AdaptiveStageAppearanceSettings =
-    when (this) {
-        AdaptiveStageAppearanceEditorTarget.FOLDED -> AdaptiveStageAppearanceSettings.modern()
-        AdaptiveStageAppearanceEditorTarget.UNFOLDED -> AdaptiveStageAppearanceSettings.unfolded()
-    }
-
-internal fun AdaptiveStageAppearanceEditorTarget.label(): String =
-    when (this) {
-        AdaptiveStageAppearanceEditorTarget.FOLDED -> "Folded"
-        AdaptiveStageAppearanceEditorTarget.UNFOLDED -> "Unfolded"
-    }
 
 @Composable
 private fun AdaptiveStageSlider(
