@@ -3,6 +3,7 @@ package com.riffle.app.launcher.notifications
 import android.app.Notification
 import android.content.pm.LauncherApps
 import android.graphics.Bitmap
+import android.os.Bundle
 import android.os.Process
 import android.os.UserHandle
 import android.os.UserManager
@@ -110,11 +111,20 @@ private fun Notification.bodyText(): String =
 @Suppress("DEPRECATION")
 private fun Notification.largeIconPngBase64(): String? =
     sequenceOf(
-        extras?.getParcelable(Notification.EXTRA_LARGE_ICON_BIG) as? Bitmap,
-        extras?.getParcelable(Notification.EXTRA_LARGE_ICON) as? Bitmap,
+        extras?.bitmapExtraOrNull(Notification.EXTRA_LARGE_ICON_BIG),
+        extras?.bitmapExtraOrNull(Notification.EXTRA_LARGE_ICON),
     ).filterNotNull()
         .mapNotNull(Bitmap::pngBase64OrNull)
         .firstOrNull()
+
+/**
+ * The platform stores a notification's large icon as either a [Bitmap] or an [android.graphics.drawable.Icon]
+ * depending on how the posting app built it. The deprecated single-arg `getParcelable` throws
+ * ClassCastException rather than returning null when the stored type doesn't match what's requested here,
+ * so this must not use a plain `as? Bitmap` (a safe cast only guards the cast itself, not the throwing getter).
+ */
+@Suppress("DEPRECATION")
+private fun Bundle.bitmapExtraOrNull(key: String): Bitmap? = runCatching { getParcelable(key) as? Bitmap }.getOrNull()
 
 private fun Bitmap.pngBase64OrNull(): String? =
     ByteArrayOutputStream().use { output ->
