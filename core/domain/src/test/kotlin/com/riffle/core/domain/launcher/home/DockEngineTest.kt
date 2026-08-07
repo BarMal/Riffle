@@ -321,6 +321,28 @@ class DockEngineTest {
     }
 
     @Test
+    fun movesHomeWidgetToDockWithoutChangingItsIdentity() {
+        val widget =
+            WidgetItem(
+                id = LauncherItemId("widget:weather"),
+                appWidgetId = HostedWidgetId(42),
+                label = "Weather",
+                placement = GridPlacement(GridCell(0, 0)),
+            )
+        val layout =
+            HomeLayoutDefaults.standard().copy(
+                pages = listOf(HomeLayoutDefaults.standard().selectedPage.copy(items = listOf(widget))),
+                dock = DockModel(capacity = 2, items = emptyList()),
+            )
+
+        val updated = assertIs<DockEditResult.Updated>(engine.moveHomeItemToDock(layout, widget.id)).layout
+
+        assertEquals(emptyList<LauncherItem>(), updated.selectedPage.items)
+        assertEquals(widget.id, updated.dock.items.single().id)
+        assertIs<WidgetItem>(updated.dock.items.single())
+    }
+
+    @Test
     fun movesDockShortcutToTheRequestedHomeCellWithoutChangingItsIdentity() {
         val phone = appShortcut(id = "phone")
         val layout = HomeLayoutDefaults.standard().copy(dock = DockModel(capacity = 2, items = listOf(phone)))
@@ -333,6 +355,27 @@ class DockEngineTest {
         assertEquals(emptyList<LauncherItem>(), updated.dock.items)
         val moved = assertIs<AppShortcutItem>(updated.selectedPage.items.single())
         assertEquals(phone.id, moved.id)
+        assertEquals(GridPlacement(GridCell(column = 2, row = 1)), moved.placement)
+    }
+
+    @Test
+    fun movesDockWidgetToTheRequestedHomeCellWithoutChangingItsIdentity() {
+        val widget =
+            WidgetItem(
+                id = LauncherItemId("dock-widget:weather"),
+                appWidgetId = HostedWidgetId(42),
+                label = "Weather",
+            )
+        val layout = HomeLayoutDefaults.standard().copy(dock = DockModel(capacity = 2, items = listOf(widget)))
+
+        val updated =
+            assertIs<DockEditResult.Updated>(
+                engine.moveDockItemToHome(layout, widget.id, GridCell(column = 2, row = 1)),
+            ).layout
+
+        assertEquals(emptyList<LauncherItem>(), updated.dock.items)
+        val moved = assertIs<WidgetItem>(updated.selectedPage.items.single())
+        assertEquals(widget.id, moved.id)
         assertEquals(GridPlacement(GridCell(column = 2, row = 1)), moved.placement)
     }
 

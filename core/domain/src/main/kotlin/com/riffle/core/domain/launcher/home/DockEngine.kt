@@ -155,7 +155,7 @@ class DockEngine {
             item == null -> DockEditResult.Rejected(DockEditRejectionReason.ITEM_NOT_FOUND)
             pageId != null && sourcePage.id != pageId ->
                 DockEditResult.Rejected(DockEditRejectionReason.HOME_PAGE_NOT_FOUND)
-            item !is AppShortcutItem && item !is FolderItem ->
+            item !is AppShortcutItem && item !is FolderItem && item !is WidgetItem ->
                 DockEditResult.Rejected(DockEditRejectionReason.UNSUPPORTED_ITEM)
             !layout.dock.isEnabled -> DockEditResult.Rejected(DockEditRejectionReason.DOCK_DISABLED)
             layout.dock.items.size >= layout.dock.capacity ->
@@ -192,7 +192,7 @@ class DockEngine {
 
         return when {
             item == null -> DockEditResult.Rejected(DockEditRejectionReason.ITEM_NOT_FOUND)
-            item !is AppShortcutItem && item !is FolderItem ->
+            item !is AppShortcutItem && item !is FolderItem && item !is WidgetItem ->
                 DockEditResult.Rejected(DockEditRejectionReason.UNSUPPORTED_ITEM)
             destinationPage.type is LauncherPageType.Generated ->
                 DockEditResult.Rejected(DockEditRejectionReason.GENERATED_HOME_PAGE)
