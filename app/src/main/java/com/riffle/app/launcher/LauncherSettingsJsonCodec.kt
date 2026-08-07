@@ -16,6 +16,8 @@ import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.home.WallpaperScrollMode
 import com.riffle.core.domain.launcher.home.WallpaperSettings
 import com.riffle.core.domain.launcher.home.WallpaperSource
+import com.riffle.core.domain.launcher.notifications.NotificationHideRule
+import com.riffle.core.domain.launcher.notifications.NotificationHideRuleId
 import com.riffle.core.domain.launcher.rss.FeedConfiguration
 import com.riffle.core.domain.launcher.rss.FeedId
 import com.riffle.core.domain.launcher.rss.FeedRefreshIntent
@@ -38,6 +40,7 @@ import com.riffle.core.domain.launcher.settings.LauncherThemeCornerStyle
 import com.riffle.core.domain.launcher.settings.LauncherThemeMode
 import com.riffle.core.domain.launcher.settings.LauncherThemePreset
 import com.riffle.core.domain.launcher.settings.LauncherThemeTypography
+import com.riffle.core.domain.launcher.settings.NotificationHidingSettings
 import com.riffle.core.domain.launcher.settings.OverlayDockEdge
 import com.riffle.core.domain.launcher.settings.OverlayDockExpandedOrientation
 import com.riffle.core.domain.launcher.settings.OverlayDockSettings
@@ -61,6 +64,7 @@ fun encodeLauncherSettings(settings: LauncherSettings): String =
         .put("gestures", encodeGestures(settings.gestures))
         .put("haptics", encodeHaptics(settings.haptics))
         .put("motion", encodeMotionSettings(settings.motion))
+        .put("notificationHiding", encodeNotificationHiding(settings.notificationHiding))
         .put("overlayDock", encodeOverlayDock(settings.overlayDock))
         .put("rss", encodeRssSettings(settings.rss))
         .put("search", encodeSearchSettings(settings.search))
@@ -77,6 +81,9 @@ fun decodeLauncherSettings(value: String): LauncherSettings =
             gestures = json.optJSONObject("gestures")?.toGestures(defaults.gestures) ?: defaults.gestures,
             haptics = json.optJSONObject("haptics")?.toHaptics(defaults.haptics) ?: defaults.haptics,
             motion = json.optJSONObject("motion")?.toMotionSettings(defaults.motion) ?: defaults.motion,
+            notificationHiding =
+                json.optJSONObject("notificationHiding")?.toNotificationHiding(defaults.notificationHiding)
+                    ?: defaults.notificationHiding,
             overlayDock =
                 json.optJSONObject("overlayDock")?.toOverlayDock(defaults.overlayDock) ?: defaults.overlayDock,
             rss = json.optJSONObject("rss")?.toRssSettings(defaults.rss) ?: defaults.rss,
@@ -716,6 +723,49 @@ private fun JSONObject.toOverlayDock(defaults: OverlayDockSettings): OverlayDock
         showLabels = optBoolean("showLabels", defaults.showLabels),
     ).coerceOverlayDockSettings()
 
+private fun encodeNotificationHiding(settings: NotificationHidingSettings): JSONObject =
+    JSONObject().put("rules", JSONArray(settings.rules.map(::encodeNotificationHideRule)))
+
+private fun encodeNotificationHideRule(rule: NotificationHideRule): JSONObject =
+    JSONObject()
+        .put("id", rule.id.value)
+        .put("packageName", rule.packageName.value)
+        .put("profileId", rule.profileId.value)
+        .put("kind", rule.kind.name)
+        .put("value", rule.value)
+        .put("matchMode", rule.matchMode.name)
+
+private fun JSONObject.toNotificationHiding(defaults: NotificationHidingSettings): NotificationHidingSettings =
+    NotificationHidingSettings(
+        rules =
+            optJSONArray("rules")
+                ?.let { entries ->
+                    (0 until entries.length())
+                        .mapNotNull { index -> entries.optJSONObject(index)?.toNotificationHideRule() }
+                }
+                ?: defaults.rules,
+    )
+
+/**
+ * Drops the entry (rather than throwing or substituting a default) when the id or kind/matchMode
+ * enum is missing or unrecognized.
+ */
+@Suppress("ReturnCount")
+private fun JSONObject.toNotificationHideRule(): NotificationHideRule? {
+    val id = optString("id").takeIf(String::isNotBlank)?.let(::NotificationHideRuleId) ?: return null
+    val packageName = optString("packageName").takeIf(String::isNotBlank)?.let(::AppPackageName) ?: return null
+    val profileId = optString("profileId").takeIf(String::isNotBlank)?.let(::AppProfileId) ?: return null
+    val kind = enumOrNull<NotificationHideRule.Kind>("kind") ?: return null
+    return NotificationHideRule(
+        id = id,
+        packageName = packageName,
+        profileId = profileId,
+        kind = kind,
+        value = optString("value"),
+        matchMode = enumOrDefault("matchMode", NotificationHideRule.MatchMode.EXACT),
+    )
+}
+
 private fun encodeRssSettings(settings: RssSettings): JSONObject =
     JSONObject()
         .put("feeds", JSONArray(settings.feeds.map(::encodeFeedConfiguration)))
@@ -778,4 +828,4 @@ private fun JSONObject.toFeedProfile(): AppProfile? =
         }
     }
 
-internal const val LAUNCHER_SETTINGS_JSON_VERSION = 8
+internal const val LAUNCHER_SETTINGS_JSON_VERSION = 9

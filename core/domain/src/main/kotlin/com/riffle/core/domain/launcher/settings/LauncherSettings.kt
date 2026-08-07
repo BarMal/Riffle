@@ -21,6 +21,7 @@ data class LauncherSettings(
     val gestures: GestureSettings = GestureSettings(),
     val haptics: HapticSettings = HapticSettings(),
     val motion: MotionSettings = MotionSettings(),
+    val notificationHiding: NotificationHidingSettings = NotificationHidingSettings(),
     val overlayDock: OverlayDockSettings = OverlayDockSettings(),
     val rss: RssSettings = RssSettings(),
     val search: SearchSettings = SearchSettings(),

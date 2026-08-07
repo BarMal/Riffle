@@ -103,6 +103,7 @@ import com.riffle.core.domain.launcher.cards.variantFor
 import com.riffle.core.domain.launcher.cards.visibleStaticElements
 import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
+import com.riffle.core.domain.launcher.notifications.NotificationHideRule
 import com.riffle.core.domain.launcher.settings.AdaptiveStageAppearanceSettings
 import com.riffle.core.domain.launcher.settings.AdaptiveStageCardStackResolution
 import com.riffle.core.domain.launcher.settings.AdaptiveStageViewportDp
@@ -2282,7 +2283,6 @@ internal fun AdaptiveStageContextShelf(
     restoreDetailFocus: Boolean = false,
     onDetailFocusRestored: (() -> Unit)? = null,
 ) {
-    if (card.supportedActions.isEmpty() && onDetailRequested == null) return
     var detailControlLaidOut by remember { mutableStateOf(false) }
     RestoreFocusAfterLayout(
         enabled = restoreDetailFocus,
@@ -2319,6 +2319,90 @@ internal fun AdaptiveStageContextShelf(
                     }
                         ?: Modifier,
             )
+        }
+        NotificationHideMenuButton(card = card, onAction = onAction)
+    }
+}
+
+/**
+ * A per-card overflow menu offering durable "hide notifications like this" rules, built from the
+ * card's own content rather than freeform authoring -- mirrors the "Calm" reference app's
+ * contextual rule-creation UX.
+ */
+@Composable
+private fun NotificationHideMenuButton(
+    card: AppStageNotificationCard,
+    onAction: (LauncherShellAction) -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val stageId = card.content.stageId
+
+    fun addRule(
+        kind: NotificationHideRule.Kind,
+        value: String = "",
+        matchMode: NotificationHideRule.MatchMode = NotificationHideRule.MatchMode.EXACT,
+    ) {
+        expanded = false
+        onAction(
+            LauncherShellAction.AddNotificationHideRule(
+                packageName = stageId.packageName,
+                profileId = stageId.profileId,
+                kind = kind,
+                value = value,
+                matchMode = matchMode,
+            ),
+        )
+    }
+
+    Box {
+        IconButton(
+            onClick = { expanded = true },
+            modifier = Modifier.semantics { contentDescription = "Hide notifications like this" },
+        ) {
+            Text(text = "⋮")
+        }
+        RiffleContextMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+        ) {
+            DropdownMenuItem(
+                text = { Text("Hide all notifications from this app") },
+                onClick = { addRule(NotificationHideRule.Kind.APP) },
+            )
+            if (card.title.isNotBlank()) {
+                DropdownMenuItem(
+                    text = { Text("Hide notifications with this title") },
+                    onClick = { addRule(NotificationHideRule.Kind.TITLE, card.title) },
+                )
+                NotificationHideRule.generalizeNumbers(card.title)?.let { pattern ->
+                    DropdownMenuItem(
+                        text = { Text("Hide similar notifications (title)") },
+                        onClick = {
+                            addRule(NotificationHideRule.Kind.TITLE, pattern, NotificationHideRule.MatchMode.WILDCARD)
+                        },
+                    )
+                }
+            }
+            if (card.text.isNotBlank()) {
+                DropdownMenuItem(
+                    text = { Text("Hide notifications with this content") },
+                    onClick = { addRule(NotificationHideRule.Kind.BODY, card.text) },
+                )
+                NotificationHideRule.generalizeNumbers(card.text)?.let { pattern ->
+                    DropdownMenuItem(
+                        text = { Text("Hide similar notifications (content)") },
+                        onClick = {
+                            addRule(NotificationHideRule.Kind.BODY, pattern, NotificationHideRule.MatchMode.WILDCARD)
+                        },
+                    )
+                }
+            }
+            if (card.title.isBlank() && card.text.isBlank()) {
+                DropdownMenuItem(
+                    text = { Text("Hide empty notifications from this app") },
+                    onClick = { addRule(NotificationHideRule.Kind.EMPTY_CONTENT) },
+                )
+            }
         }
     }
 }

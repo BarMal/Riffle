@@ -57,6 +57,7 @@ import com.riffle.core.domain.launcher.settings.MIN_OVERLAY_DOCK_HANDLE_THICKNES
 import com.riffle.core.domain.launcher.settings.MIN_OVERLAY_DOCK_VERTICAL_OFFSET_DP
 import com.riffle.core.domain.launcher.settings.MotionPerformanceTargetFps
 import com.riffle.core.domain.launcher.settings.MotionSettings
+import com.riffle.core.domain.launcher.settings.NotificationHidingSettings
 import com.riffle.core.domain.launcher.settings.OverlayDockEdge
 import com.riffle.core.domain.launcher.settings.OverlayDockExpandedOrientation
 import com.riffle.core.domain.launcher.settings.OverlayDockSettings
@@ -1064,6 +1065,70 @@ class LauncherSettingsJsonCodecTest {
 
         assertEquals(LAUNCHER_SETTINGS_JSON_VERSION, encodedSettings.getInt("version"))
         assertTrue(encodedSettings.has("rss"))
+    }
+
+    @Test
+    fun roundTripsNotificationHideRules() {
+        val rule =
+            com.riffle.core.domain.launcher.notifications.NotificationHideRule(
+                id = com.riffle.core.domain.launcher.notifications.NotificationHideRuleId("rule-1"),
+                packageName = AppPackageName("com.example.chat"),
+                profileId = AppProfile.personal().id,
+                kind = com.riffle.core.domain.launcher.notifications.NotificationHideRule.Kind.TITLE,
+                value = "order #{?} shipped",
+                matchMode = com.riffle.core.domain.launcher.notifications.NotificationHideRule.MatchMode.WILDCARD,
+            )
+        val settings = LauncherSettings(notificationHiding = NotificationHidingSettings(rules = listOf(rule)))
+
+        val decoded = decodeLauncherSettings(encodeLauncherSettings(settings))
+
+        assertEquals(settings.notificationHiding, decoded.notificationHiding)
+    }
+
+    @Test
+    fun defaultsMissingNotificationHidingSettings() {
+        val decodedSettings = decodeLauncherSettings("{}")
+
+        assertEquals(NotificationHidingSettings(), decodedSettings.notificationHiding)
+    }
+
+    @Test
+    fun dropsInvalidNotificationHideRuleEntriesOnDecodeWhileKeepingValidOnes() {
+        val decodedSettings =
+            decodeLauncherSettings(
+                """
+                {
+                  "notificationHiding": {
+                    "rules": [
+                      {
+                        "id": "valid",
+                        "packageName": "com.example.chat",
+                        "profileId": "personal",
+                        "kind": "APP",
+                        "value": "",
+                        "matchMode": "EXACT"
+                      },
+                      {
+                        "id": "",
+                        "packageName": "com.example.chat",
+                        "profileId": "personal",
+                        "kind": "APP"
+                      },
+                      {
+                        "id": "missing-kind",
+                        "packageName": "com.example.chat",
+                        "profileId": "personal",
+                        "kind": "NOT_A_KIND"
+                      },
+                      "not-an-object"
+                    ]
+                  }
+                }
+                """.trimIndent(),
+            )
+
+        assertEquals(1, decodedSettings.notificationHiding.rules.size)
+        assertEquals("valid", decodedSettings.notificationHiding.rules.single().id.value)
     }
 
     @Test
