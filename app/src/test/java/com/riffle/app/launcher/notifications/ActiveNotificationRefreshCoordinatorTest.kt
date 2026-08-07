@@ -79,6 +79,49 @@ class ActiveNotificationRefreshCoordinatorTest {
         assertEquals(1, refreshes)
     }
 
+    @Test
+    fun requestsRebindOnStartWhenListenerNotConnected() {
+        var rebindRequests = 0
+        val coordinator =
+            ActiveNotificationRefreshCoordinator(
+                notificationChangeSource = FakeNotificationChangeSource(),
+                connectionChangeSource = FakeConnectionChangeSource(),
+                dispatchOnMainThread = { action -> action() },
+                refreshNotifications = {},
+                refreshPlatformStatuses = {},
+                isListenerConnected = { false },
+                requestListenerRebind = { rebindRequests += 1 },
+            )
+
+        coordinator.onStart(FakeLifecycleOwner)
+
+        assertEquals(1, rebindRequests)
+    }
+
+    @Test
+    fun doesNotRequestRebindOnStartWhenListenerAlreadyConnected() {
+        var rebindRequests = 0
+        val coordinator =
+            ActiveNotificationRefreshCoordinator(
+                notificationChangeSource = FakeNotificationChangeSource(),
+                connectionChangeSource = FakeConnectionChangeSource(),
+                dispatchOnMainThread = { action -> action() },
+                refreshNotifications = {},
+                refreshPlatformStatuses = {},
+                isListenerConnected = { true },
+                requestListenerRebind = { rebindRequests += 1 },
+            )
+
+        coordinator.onStart(FakeLifecycleOwner)
+
+        assertEquals(0, rebindRequests)
+    }
+
+    private object FakeLifecycleOwner : androidx.lifecycle.LifecycleOwner {
+        override val lifecycle: androidx.lifecycle.Lifecycle
+            get() = throw UnsupportedOperationException("not used by the coordinator under test")
+    }
+
     private class FakeNotificationChangeSource : ActiveNotificationChangeSource {
         private var onChanged: (() -> Unit)? = null
 

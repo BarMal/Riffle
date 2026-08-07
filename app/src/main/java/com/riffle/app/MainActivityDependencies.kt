@@ -1,6 +1,8 @@
 package com.riffle.app
 
 import android.app.Activity
+import android.content.ComponentName
+import android.service.notification.NotificationListenerService
 import com.riffle.app.launcher.AndroidHomeLayoutDeviceClassObserver
 import com.riffle.app.launcher.AndroidHomeRoleGateway
 import com.riffle.app.launcher.AndroidLauncherWallpaperController
@@ -29,6 +31,8 @@ import com.riffle.app.launcher.homeLayoutDeviceClassFromConfiguration
 import com.riffle.app.launcher.notifications.ActiveNotificationRefreshCoordinator
 import com.riffle.app.launcher.notifications.AndroidNotificationAccessGateway
 import com.riffle.app.launcher.notifications.DataStoreActiveNotificationRepository
+import com.riffle.app.launcher.notifications.RiffleNotificationListenerConnection
+import com.riffle.app.launcher.notifications.RiffleNotificationListenerService
 import com.riffle.app.launcher.overlay.AndroidOverlayDockPermissionGateway
 import com.riffle.app.launcher.overlay.AndroidOverlayDockServiceController
 import com.riffle.app.launcher.rss.DataStoreFeedArticleCacheRepository
@@ -111,6 +115,12 @@ internal class MainActivityDependencies(
             dispatchOnMainThread = { action -> activity.runOnUiThread { action() } },
             refreshNotifications = refreshNotifications,
             refreshPlatformStatuses = refreshPlatformStatuses,
+            isListenerConnected = RiffleNotificationListenerConnection::isConnected,
+            requestListenerRebind = {
+                NotificationListenerService.requestRebind(
+                    ComponentName(activity, RiffleNotificationListenerService::class.java),
+                )
+            },
         )
 
     fun backupDocumentHandler(currentState: () -> LauncherShellState): LauncherBackupDocumentHandler =
