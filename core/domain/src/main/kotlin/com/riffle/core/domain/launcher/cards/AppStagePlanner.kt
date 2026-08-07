@@ -13,7 +13,7 @@ class AppStagePlanner {
         val installedIds = identitySnapshot.installedStageIds.toSet()
         val profileStates = identitySnapshot.profileStates
         val pins = validPins(preferences, installedIds, profileStates)
-        val content = dynamicContent(contentSnapshot, installedIds, profileStates)
+        val content = dynamicContent(contentSnapshot, profileStates)
         val requestedSelection = preferences.selectedStageId
         val retainedId =
             retainedEmptyDynamicId(requestedSelection, pins, installedIds, profileStates, previous)
@@ -38,15 +38,21 @@ private fun validPins(
         id in installedIds && profileStates[id.profileId] != AppStageProfileState.REMOVED
     }
 
+/**
+ * Live notification/media content is proof the source app exists and can notify, regardless of
+ * whether [installedIds] (built from launcher-visible activities, see InstalledApp enumeration)
+ * happens to include it -- unlike [validPins], this must not gate on install-list membership, or
+ * a real, currently-installed app can have its notifications silently dropped by a stale or
+ * activity-less installed-apps snapshot (e.g. a headless app, a still-refreshing app list, or a
+ * transient LauncherApps query failure).
+ */
 private fun dynamicContent(
     snapshot: AppStageContentSnapshot,
-    installedIds: Set<AppStageId>,
     profileStates: Map<AppProfileId, AppStageProfileState>,
 ): Map<AppStageId, List<AppStageContent>> =
     normalize(snapshot.content)
         .filter { content ->
-            content.stageId in installedIds &&
-                profileStates[content.stageId.profileId] !in
+            profileStates[content.stageId.profileId] !in
                 setOf(AppStageProfileState.LOCKED, AppStageProfileState.REMOVED)
         }
         .groupBy(AppStageContent::stageId)
