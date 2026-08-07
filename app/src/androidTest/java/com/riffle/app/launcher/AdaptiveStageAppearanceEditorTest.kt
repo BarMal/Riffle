@@ -47,6 +47,7 @@ class AdaptiveStageAppearanceEditorTest {
                 AdaptiveStageAppearancePageContent(
                     state = LauncherShellState().settingsSurfaceState(),
                     onAction = {},
+                    modifier = Modifier.requiredSize(360.dp, 800.dp),
                 )
             }
         }
@@ -283,6 +284,7 @@ class AdaptiveStageAppearanceEditorTest {
                 AdaptiveStageAppearancePageContent(
                     state = LauncherShellState().settingsSurfaceState(),
                     onAction = actions::add,
+                    modifier = Modifier.requiredSize(360.dp, 800.dp),
                 )
             }
         }
