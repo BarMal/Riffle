@@ -121,6 +121,20 @@ class AppStagePlannerTest {
     }
 
     @Test
+    fun surfacesDynamicContentForAStageMissingFromTheInstalledSnapshot() {
+        // A live notification is proof the source app exists and can notify, even when the
+        // installed-apps snapshot (built from launcher-visible activities) hasn't caught up with
+        // it yet -- e.g. a headless app, a still-refreshing app list, or a query race. Unlike a
+        // pin, freshly-received content must not be gated on installedStageIds membership.
+        val notEnumerated = stage("headless")
+
+        val snapshot = planner.reconcile(inventory(), content(notEnumerated to 5L))
+
+        assertEquals(listOf(notEnumerated), snapshot.stages.map(AppStage::id))
+        assertEquals(AppStageLifecycle.ACTIVE, snapshot.selectedStage?.lifecycle)
+    }
+
+    @Test
     fun removesUninstalledOrRemovedProfilePinsAndRejectsTheirContent() {
         val mail = stage("mail")
         val work = stage("chat", AppProfile.work())
