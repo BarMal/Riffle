@@ -63,14 +63,24 @@ fun SettingsSurface(
                 onAction = onAction,
             )
             Spacer(modifier = Modifier.height(24.dp))
+            val pageContentModifier =
+                Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .widthIn(max = SETTINGS_PAGE_MAX_WIDTH_DP.dp)
+                    .align(Alignment.CenterHorizontally)
+            // The appearance page manages its own sticky preview, tabs, and inner scroll
+            // rather than sharing this page-wide scroll container.
+            val settingsContentModifier =
+                if (selectedPage.value == SettingsPage.ADAPTIVE_STAGE_APPEARANCE) {
+                    pageContentModifier
+                } else {
+                    pageContentModifier.verticalScroll(
+                        settingsPageScrollStateFor(pageScrollStates, selectedPage.value),
+                    )
+                }
             SettingsPageContent(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .weight(1f)
-                        .widthIn(max = SETTINGS_PAGE_MAX_WIDTH_DP.dp)
-                        .align(Alignment.CenterHorizontally)
-                        .verticalScroll(settingsPageScrollStateFor(pageScrollStates, selectedPage.value)),
+                modifier = settingsContentModifier,
                 state = state,
                 page = selectedPage.value,
                 onPageSelected = { page -> selectedPage.value = page },

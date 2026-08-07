@@ -1,9 +1,6 @@
 package com.riffle.app.launcher
 
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.requiredSize
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.SemanticsActions
@@ -39,8 +36,12 @@ class AdaptiveStageAppearanceEditorTest {
     @get:Rule
     val composeRule = createComposeRule()
 
+    private fun selectTab(tab: AdaptiveStageAppearanceTab) {
+        composeRule.onNodeWithTag("adaptive-stage-appearance-tab-${tab.name}").performScrollTo().performClick()
+    }
+
     @Test
-    fun exposesTheLivePreviewAndEveryEditorSection() {
+    fun exposesAPersistentPreviewAndEveryTabbedSection() {
         composeRule.setContent {
             MaterialTheme {
                 AdaptiveStageAppearancePageContent(
@@ -50,18 +51,28 @@ class AdaptiveStageAppearanceEditorTest {
             }
         }
 
+        // The preview, target chooser, and reset row stay outside the tabs entirely.
         composeRule.onNodeWithContentDescription("Cards appearance preview").assertExists()
-        listOf(
-            "Appearance target",
-            "Layout",
-            "Reset appearance",
-            "Card geometry",
-            "Stack and stack",
-            "Surface and glass",
-            "Colour and content",
-            "Motion",
-            "Accessibility fallbacks",
-        ).forEach { title -> composeRule.onNodeWithText(title).assertExists() }
+        composeRule.onNodeWithText("Appearance target").assertExists()
+        composeRule.onNodeWithText("Reset appearance").assertExists()
+
+        val tabToSectionTitles =
+            mapOf(
+                AdaptiveStageAppearanceTab.LAYOUT to listOf("Layout"),
+                AdaptiveStageAppearanceTab.GEOMETRY to listOf("Card geometry", "Stack and stack"),
+                AdaptiveStageAppearanceTab.SURFACE to listOf("Surface and glass"),
+                AdaptiveStageAppearanceTab.COLOR to listOf("Colour and content"),
+                AdaptiveStageAppearanceTab.MOTION to listOf("Motion"),
+                AdaptiveStageAppearanceTab.ACCESSIBILITY to listOf("Accessibility fallbacks"),
+            )
+        tabToSectionTitles.forEach { (tab, titles) ->
+            selectTab(tab)
+            titles.forEach { title -> composeRule.onNodeWithText(title).assertExists() }
+            // The preview stays visible no matter which tab is selected.
+            composeRule.onNodeWithContentDescription("Cards appearance preview").assertExists()
+        }
+
+        selectTab(AdaptiveStageAppearanceTab.MOTION)
         listOf(
             "Settle duration",
             "Enter duration",
@@ -78,25 +89,20 @@ class AdaptiveStageAppearanceEditorTest {
         val actions = mutableListOf<LauncherShellAction>()
         composeRule.setContent {
             MaterialTheme {
-                // The page's sections (Appearance target, Preview, Layout, Reset, ...) exceed the
-                // test window's height; without a bounded, scrollable container the "Layout" section's
-                // chips can be measured outside the real window bounds, so performClick() ends up
-                // hitting whatever unrelated element occupies that pixel instead -- matching the
-                // scrollable wrapper the other tests in this file already use.
-                Column(
-                    modifier =
-                        Modifier
-                            .requiredSize(360.dp, 800.dp)
-                            .verticalScroll(rememberScrollState()),
-                ) {
-                    AdaptiveStageAppearancePageContent(
-                        state = LauncherShellState().settingsSurfaceState(),
-                        onAction = actions::add,
-                    )
-                }
+                // The page's sections exceed the test window's height; without a bounded,
+                // scrollable container the "Layout" tab's chips can be measured outside the real
+                // window bounds, so performClick() ends up hitting whatever unrelated element
+                // occupies that pixel instead -- matching the fixed-size wrapper the other tests
+                // in this file already use.
+                AdaptiveStageAppearancePageContent(
+                    state = LauncherShellState().settingsSurfaceState(),
+                    onAction = actions::add,
+                    modifier = Modifier.requiredSize(360.dp, 800.dp),
+                )
             }
         }
 
+        selectTab(AdaptiveStageAppearanceTab.LAYOUT)
         composeRule.onNodeWithTag("adaptive-stage-pane-arrangement-${AdaptiveStagePaneArrangement.SPLIT.name}")
             .performScrollTo()
             .performClick()
@@ -112,20 +118,15 @@ class AdaptiveStageAppearanceEditorTest {
         val actions = mutableListOf<LauncherShellAction>()
         composeRule.setContent {
             MaterialTheme {
-                Column(
-                    modifier =
-                        Modifier
-                            .requiredSize(360.dp, 800.dp)
-                            .verticalScroll(rememberScrollState()),
-                ) {
-                    AdaptiveStageAppearancePageContent(
-                        state = LauncherShellState().settingsSurfaceState(),
-                        onAction = actions::add,
-                    )
-                }
+                AdaptiveStageAppearancePageContent(
+                    state = LauncherShellState().settingsSurfaceState(),
+                    onAction = actions::add,
+                    modifier = Modifier.requiredSize(360.dp, 800.dp),
+                )
             }
         }
 
+        selectTab(AdaptiveStageAppearanceTab.LAYOUT)
         composeRule.onNodeWithTag("adaptive-stage-rail-side-${AdaptiveStageRailSide.TOP.name}")
             .performScrollTo()
             .performClick()
@@ -159,17 +160,11 @@ class AdaptiveStageAppearanceEditorTest {
         val actions = mutableListOf<LauncherShellAction>()
         composeRule.setContent {
             MaterialTheme {
-                Column(
-                    modifier =
-                        Modifier
-                            .requiredSize(360.dp)
-                            .verticalScroll(rememberScrollState()),
-                ) {
-                    AdaptiveStageAppearancePageContent(
-                        state = LauncherShellState().settingsSurfaceState(),
-                        onAction = actions::add,
-                    )
-                }
+                AdaptiveStageAppearancePageContent(
+                    state = LauncherShellState().settingsSurfaceState(),
+                    onAction = actions::add,
+                    modifier = Modifier.requiredSize(360.dp, 800.dp),
+                )
             }
         }
 
@@ -187,17 +182,11 @@ class AdaptiveStageAppearanceEditorTest {
         val actions = mutableListOf<LauncherShellAction>()
         composeRule.setContent {
             MaterialTheme {
-                Column(
-                    modifier =
-                        Modifier
-                            .requiredSize(360.dp, 800.dp)
-                            .verticalScroll(rememberScrollState()),
-                ) {
-                    AdaptiveStageAppearancePageContent(
-                        state = LauncherShellState().settingsSurfaceState(),
-                        onAction = actions::add,
-                    )
-                }
+                AdaptiveStageAppearancePageContent(
+                    state = LauncherShellState().settingsSurfaceState(),
+                    onAction = actions::add,
+                    modifier = Modifier.requiredSize(360.dp, 800.dp),
+                )
             }
         }
 
@@ -235,21 +224,16 @@ class AdaptiveStageAppearanceEditorTest {
         val actions = mutableListOf<LauncherShellAction>()
         composeRule.setContent {
             MaterialTheme {
-                Column(
-                    modifier =
-                        Modifier
-                            .requiredSize(360.dp, 800.dp)
-                            .verticalScroll(rememberScrollState()),
-                ) {
-                    AdaptiveStageAppearancePageContent(
-                        state = LauncherShellState().settingsSurfaceState(),
-                        onAction = actions::add,
-                    )
-                }
+                AdaptiveStageAppearancePageContent(
+                    state = LauncherShellState().settingsSurfaceState(),
+                    onAction = actions::add,
+                    modifier = Modifier.requiredSize(360.dp, 800.dp),
+                )
             }
         }
 
         composeRule.onNodeWithTag("adaptive-stage-appearance-target-UNFOLDED").performScrollTo().performClick()
+        selectTab(AdaptiveStageAppearanceTab.GEOMETRY)
         // 80 (not 100): unfolded()'s own default cardAspectRatioPercent is already 100, so setting
         // it to 100 again would be a no-op the slider never dispatches a change for.
         composeRule
@@ -270,20 +254,15 @@ class AdaptiveStageAppearanceEditorTest {
         val actions = mutableListOf<LauncherShellAction>()
         composeRule.setContent {
             MaterialTheme {
-                Column(
-                    modifier =
-                        Modifier
-                            .requiredSize(360.dp)
-                            .verticalScroll(rememberScrollState()),
-                ) {
-                    AdaptiveStageAppearancePageContent(
-                        state = LauncherShellState().settingsSurfaceState(),
-                        onAction = actions::add,
-                    )
-                }
+                AdaptiveStageAppearancePageContent(
+                    state = LauncherShellState().settingsSurfaceState(),
+                    onAction = actions::add,
+                    modifier = Modifier.requiredSize(360.dp, 800.dp),
+                )
             }
         }
 
+        selectTab(AdaptiveStageAppearanceTab.GEOMETRY)
         composeRule
             .onNodeWithContentDescription("Card aspect ratio")
             .performSemanticsAction(SemanticsActions.SetProgress) { setProgress ->
@@ -308,6 +287,7 @@ class AdaptiveStageAppearanceEditorTest {
             }
         }
 
+        selectTab(AdaptiveStageAppearanceTab.MOTION)
         composeRule
             .onNodeWithContentDescription("Settle duration")
             .performSemanticsAction(SemanticsActions.SetProgress) { setProgress ->
