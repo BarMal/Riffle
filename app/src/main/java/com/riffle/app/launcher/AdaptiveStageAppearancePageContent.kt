@@ -11,13 +11,18 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ScrollableTabRow
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -26,6 +31,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
@@ -123,41 +129,35 @@ internal fun AdaptiveStageAppearancePageContent(
     }
 
     Column(modifier = modifier) {
-        SettingsSection(title = "Appearance target") {
-            AdaptiveStageEnumChoices(
-                title = "Editing",
-                values = AdaptiveStageAppearanceEditorTarget.entries,
-                selected = editorTarget,
-                label = AdaptiveStageAppearanceEditorTarget::label,
-                testTag = { target -> "adaptive-stage-appearance-target-${target.name}" },
-                onSelected = { target -> editorTarget = target },
-            )
-            SettingsListRow(
-                title = "About Folded and Unfolded",
-                subtitle =
-                    "Folded is the single-stage, full-size stack. Unfolded is the docked rail" +
-                        " shown alongside content on a larger or unfolded screen. Each has its own" +
-                        " independent appearance.",
-            )
+        // Sticky header: the target chooser and reset action share one compact row instead of
+        // two separately titled, separately carded sections, and the preview drops its own
+        // "Preview" label -- on a real device the previous three stacked sections left no room
+        // for any tab content at all. The reset row's old subtitle is dropped too since the
+        // confirmation dialog already explains what resetting does.
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            AdaptiveStageTargetToggle(selected = editorTarget, onSelected = { target -> editorTarget = target })
+            TextButton(onClick = { resetConfirmationVisible = true }) {
+                SettingsButtonText(text = "Reset ${editorTarget.label()}")
+            }
         }
-        SettingsSection(title = "Preview") {
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(24.dp),
+            color = MaterialTheme.colorScheme.surfaceContainerLow,
+        ) {
             AdaptiveStageAppearancePreview(
                 appearance = appearance,
                 globalReducedMotion = state.settings.motion.reducedMotion,
                 rendererCapabilities = rendererCapabilities,
                 modifier = Modifier.fillMaxWidth().heightIn(min = 220.dp, max = 300.dp),
             )
-            adaptiveStageFallbackMessage(appearance, rendererCapabilities)?.let { message ->
-                SettingsListRow(title = "Effective fallback", subtitle = message)
-            }
         }
-        SettingsSection(title = "Reset appearance") {
-            SettingsClickableRow(
-                title = "Reset ${editorTarget.label()} Cards appearance",
-                subtitle = "Restore this layout's default geometry, surface, and motion",
-                onClick = { resetConfirmationVisible = true },
-                trailingContent = { SettingsButtonText(text = "Reset") },
-            )
+        adaptiveStageFallbackMessage(appearance, rendererCapabilities)?.let { message ->
+            SettingsListRow(title = "Effective fallback", subtitle = message)
         }
         AdaptiveStageAppearanceTabRow(selected = selectedTab, onSelected = { tab -> selectedTab = tab })
         Column(
@@ -260,11 +260,38 @@ private fun AdaptiveStageAppearanceTabRow(
 }
 
 @Composable
+private fun AdaptiveStageTargetToggle(
+    selected: AdaptiveStageAppearanceEditorTarget,
+    onSelected: (AdaptiveStageAppearanceEditorTarget) -> Unit,
+) {
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        AdaptiveStageAppearanceEditorTarget.entries.forEach { target ->
+            FilterChip(
+                selected = target == selected,
+                onClick = { onSelected(target) },
+                label = { Text(target.label()) },
+                modifier =
+                    Modifier
+                        .semantics { contentDescription = "Appearance target: ${target.label()}" }
+                        .testTag("adaptive-stage-appearance-target-${target.name}"),
+            )
+        }
+    }
+}
+
+@Composable
 private fun AdaptiveStageLayoutTabContent(
     state: SettingsSurfaceState,
     onAction: (LauncherShellAction) -> Unit,
 ) {
     SettingsSection(title = "Layout") {
+        SettingsListRow(
+            title = "About Folded and Unfolded",
+            subtitle =
+                "Folded is the single-stage, full-size stack. Unfolded is the docked rail" +
+                    " shown alongside content on a larger or unfolded screen. Each has its own" +
+                    " independent appearance.",
+        )
         AdaptiveStageEnumChoices(
             title = "Rail side",
             values = AdaptiveStageRailSide.entries,
