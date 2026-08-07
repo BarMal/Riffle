@@ -6,9 +6,6 @@ import android.os.UserManager
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
-import java.io.File
-import java.text.SimpleDateFormat
-import java.util.Locale
 
 class RiffleNotificationListenerService : NotificationListenerService() {
     private val repository by lazy { DataStoreActiveNotificationRepository(this) }
@@ -19,17 +16,7 @@ class RiffleNotificationListenerService : NotificationListenerService() {
         )
     }
 
-    private fun diag(message: String) {
-        runCatching {
-            val dir = getExternalFilesDir(null) ?: return
-            dir.mkdirs()
-            val stamp = SimpleDateFormat("HH:mm:ss.SSS", Locale.US).format(System.currentTimeMillis())
-            File(dir, "riffle_notification_diag.txt").appendText("$stamp $message\n")
-        }
-    }
-
     override fun onListenerConnected() {
-        diag("onListenerConnected")
         ignoreNotificationListenerFailure {
             RiffleNotificationListenerConnection.connect(this)
             saveActiveNotifications()
@@ -47,14 +34,9 @@ class RiffleNotificationListenerService : NotificationListenerService() {
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
-        diag("onNotificationPosted pkg=${sbn?.packageName} key=${sbn?.key}")
-        val result =
-            runCatching {
-                sbn?.let { notification -> AndroidNotificationStageActionGateway.replace(this, notification) }
-                saveActiveNotifications()
-            }
-        result.exceptionOrNull()?.let { e ->
-            diag("onNotificationPosted FAILED: ${e.javaClass.simpleName}: ${e.message}")
+        ignoreNotificationListenerFailure {
+            sbn?.let { notification -> AndroidNotificationStageActionGateway.replace(this, notification) }
+            saveActiveNotifications()
         }
     }
 
@@ -71,30 +53,17 @@ class RiffleNotificationListenerService : NotificationListenerService() {
             saveActiveNotifications()
         }.isSuccess
 
+    /**
+     * Maps each notification independently so one notification that fails to map (a platform quirk
+     * in a single StatusBarNotification, say) can't discard the snapshot write for every other
+     * currently active notification.
+     */
     private fun saveActiveNotifications() {
-        val platformSnapshot = runCatching { activeNotifications }
-        diag(
-            "saveActiveNotifications activeNotifications=" +
-                (platformSnapshot.getOrNull()?.size?.toString() ?: "THREW:${platformSnapshot.exceptionOrNull()}"),
-        )
-        val mapped =
-            platformSnapshot.getOrNull()
-                ?.also { notifications ->
-                    runCatching { AndroidNotificationStageActionGateway.replaceAll(this, notifications) }
-                }?.mapNotNull { notification ->
-                    runCatching { notificationMapper.map(notification) }
-                        .onFailure { e ->
-                            diag("mapping FAILED for one notification: ${e.javaClass.simpleName}: ${e.message}")
-                        }.getOrNull()
-                }
-        diag("mapped count=${mapped?.size}")
-        mapped?.let { list ->
-            val saveResult = runCatching { repository.saveActiveNotifications(list) }
-            saveResult.exceptionOrNull()?.let { e ->
-                diag("repository.save FAILED: ${e.javaClass.simpleName}: ${e.message}")
-            }
-            diag("repository.save OK, packages=${list.map { it.packageName.value }}")
-        }
+        activeNotifications
+            ?.also { notifications ->
+                runCatching { AndroidNotificationStageActionGateway.replaceAll(this, notifications) }
+            }?.mapNotNull { notification -> runCatching { notificationMapper.map(notification) }.getOrNull() }
+            ?.let { list -> runCatching { repository.saveActiveNotifications(list) } }
     }
 }
 
