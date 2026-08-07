@@ -457,6 +457,58 @@ internal fun accessibleWidgetPlacementFor(
     )
 }
 
+/**
+ * Renders only the standard Dock, pinned to the bottom of the screen. Cards mode reuses the
+ * standard Dock but must not show the standard grid pages (and their icons) underneath its own
+ * canvas -- unlike [StandardHome], this never composes [ImmediateWorkspacePager].
+ */
+@Composable
+internal fun StandardHomeDockOnlySurface(
+    layout: HomeLayout,
+    installedApps: List<InstalledApp>,
+    interactions: StandardHomeInteractions,
+    presentation: StandardHomePresentation,
+    appIconLoader: AppIconLoader,
+    onAction: (LauncherShellAction) -> Unit,
+) {
+    val visibleLayout = layout.visibleTo(installedApps)
+    val notificationShelfState =
+        dockNotificationShelfState(
+            showNotificationCards = visibleLayout.dock.showNotificationCards,
+            groups = presentation.notificationGroupsByApp,
+            notificationAccessStatus = presentation.notificationAccessStatus,
+            apps = presentation.installedApps,
+        )
+    val dockShelf = rememberDockShelfController(visibleLayout, notificationShelfState)
+    val actions =
+        HomeWorkspaceActions(
+            onFolderOpen = {},
+            onDragSessionChanged = {},
+            haptics = interactions.haptics,
+            onDockInteractionHeightChanged = interactions.onDockInteractionHeightChanged,
+            onBackgroundClick = dockShelf.dismiss,
+            onAction = onAction,
+        )
+
+    Box(
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .windowInsetsPadding(presentation.homeInsetPolicy.safeDrawingInsets()),
+        contentAlignment = Alignment.BottomCenter,
+    ) {
+        StandardHomeDockArea(
+            layout = visibleLayout,
+            presentation = presentation,
+            notificationShelfState = notificationShelfState,
+            isDockShelfExpanded = dockShelf.isExpanded,
+            onDockShelfExpandedChange = dockShelf.onExpandedChange,
+            appIconLoader = appIconLoader,
+            actions = actions,
+        )
+    }
+}
+
 @Suppress("LongMethod")
 @Composable
 private fun StandardHomeColumn(

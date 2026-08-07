@@ -10,6 +10,7 @@ import androidx.compose.ui.test.click
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -206,7 +207,7 @@ class CardModeGuardedSurfaceTest {
             )
         }
 
-        composeRule.onNodeWithText("Previous").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Previous").assertIsDisplayed()
         composeRule.onNodeWithTag(dockItemTestTag(shortcut.id)).performTouchInput { click() }
 
         composeRule.runOnIdle {
@@ -269,7 +270,7 @@ class CardModeGuardedSurfaceTest {
             )
         }
 
-        composeRule.onNodeWithText("Previous").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Previous").assertIsDisplayed()
         composeRule.onNodeWithTag(dockItemTestTag(primaryShortcut.id)).performTouchInput {
             down(center)
             moveBy(Offset(0f, -24f))

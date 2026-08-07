@@ -12,9 +12,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
+import androidx.compose.material3.Button
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -37,6 +42,7 @@ import com.riffle.core.domain.launcher.cards.AppStageId
 import com.riffle.core.domain.launcher.cards.CardExpansionPhase
 import com.riffle.core.domain.launcher.cards.CardExpansionState
 import com.riffle.core.domain.launcher.cards.LauncherCardId
+import com.riffle.core.domain.launcher.settings.TimeScapeAppearanceSettings
 import com.riffle.core.domain.launcher.settings.TimeScapeMotion
 import kotlinx.coroutines.delay
 
@@ -118,11 +124,18 @@ internal fun rememberTimeScapeCardDetailState(
 internal fun TimeScapeCardDetailSurface(
     card: AppStageNotificationCard,
     detailState: TimeScapeCardDetailState,
+    appearance: TimeScapeAppearanceSettings,
     onAction: (LauncherShellAction) -> Unit,
     onClose: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
-    TimeScapeDetailContainer(detailState = detailState, onClose = onClose, modifier = modifier) {
+    TimeScapeDetailContainer(
+        detailState = detailState,
+        appearance = appearance,
+        background = TimeScapeCardBackground(appSeed = card.content.stageId.packageName.value),
+        onClose = onClose,
+        modifier = modifier,
+    ) {
         Text(detailTitle(card), style = MaterialTheme.typography.headlineSmall)
         Text(detailKindLabel(card.content.kind), style = MaterialTheme.typography.labelLarge)
         Text(card.text, style = MaterialTheme.typography.bodyLarge)
@@ -134,28 +147,51 @@ internal fun TimeScapeCardDetailSurface(
 internal fun TimeScapeEmptyAppDetailSurface(
     card: AppStageEmptyAppCard,
     detailState: TimeScapeCardDetailState,
+    appearance: TimeScapeAppearanceSettings,
     onAction: (LauncherShellAction) -> Unit,
     onClose: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
-    TimeScapeDetailContainer(detailState = detailState, onClose = onClose, modifier = modifier) {
+    TimeScapeDetailContainer(
+        detailState = detailState,
+        appearance = appearance,
+        background = TimeScapeCardBackground(appSeed = card.app.identity.packageName.value),
+        onClose = onClose,
+        modifier = modifier,
+    ) {
         Text("${card.app.label} details", style = MaterialTheme.typography.headlineSmall)
         Text("App details", style = MaterialTheme.typography.labelLarge)
         Text("No current notification content for this app.", style = MaterialTheme.typography.bodyLarge)
-        TextButton(onClick = { onAction(LauncherShellAction.LaunchApp(card.app.identity)) }) {
+        Button(onClick = { onAction(LauncherShellAction.LaunchApp(card.app.identity)) }) {
+            Icon(
+                Icons.AutoMirrored.Filled.ExitToApp,
+                contentDescription = null,
+                modifier = Modifier.padding(end = 4.dp),
+            )
             Text("Open ${card.app.label}")
         }
         card.shortcuts.forEach { shortcut ->
-            TextButton(onClick = { onAction(LauncherShellAction.LaunchAppShortcut(shortcut)) }) {
+            FilledTonalButton(onClick = { onAction(LauncherShellAction.LaunchAppShortcut(shortcut)) }) {
                 Text(shortcut.shortLabel)
             }
         }
     }
 }
 
+/**
+ * Additive wrapper around the shared [TimeScapeCardSurface] card-visual infrastructure. Detail
+ * content previously rendered directly onto a transparent `Column`, inheriting `LocalContentColor`
+ * from the outer stage `Surface` with no guaranteed contrast against whatever TimeScape
+ * canvas/wallpaper content sat behind it. Routing through [TimeScapeCardSurface] gives the detail
+ * pane the same opaque/glass background, shape, and accessible-foreground resolution already used
+ * for stage cards, so text renders against a known, controlled background instead of a transparent
+ * overlay.
+ */
 @Composable
 private fun TimeScapeDetailContainer(
     detailState: TimeScapeCardDetailState,
+    appearance: TimeScapeAppearanceSettings,
+    background: TimeScapeCardBackground,
     onClose: () -> Unit,
     modifier: Modifier,
     content: @Composable () -> Unit,
@@ -186,21 +222,34 @@ private fun TimeScapeDetailContainer(
         }
     }
 
-    Column(
-        modifier =
-            modifier
-                .fillMaxSize()
-                .graphicsLayer { this.alpha = alpha }
-                .verticalScroll(rememberScrollState())
-                .semantics {
-                    stateDescription = "Card details open"
-                    liveRegion = LiveRegionMode.Polite
-                }
-                .padding(24.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+    TimeScapeCardSurface(
+        appearance = appearance,
+        background = background,
+        modifier = modifier.fillMaxSize().graphicsLayer { this.alpha = alpha },
+        contentPadding = 0.dp,
     ) {
-        TextButton(onClick = closeDetail) { Text("Back") }
-        content()
+        Column(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .semantics {
+                        stateDescription = "Card details open"
+                        liveRegion = LiveRegionMode.Polite
+                    }
+                    .padding(24.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            FilledTonalButton(onClick = closeDetail) {
+                Icon(
+                    Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = null,
+                    modifier = Modifier.padding(end = 4.dp),
+                )
+                Text("Back")
+            }
+            content()
+        }
     }
 }
 

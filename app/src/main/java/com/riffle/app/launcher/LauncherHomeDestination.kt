@@ -14,6 +14,7 @@ import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.cards.TimeScapeInteractionContext
 import com.riffle.core.domain.launcher.cards.TimeScapeWindowLayout
+import kotlin.math.roundToInt
 
 @Composable
 fun HomeDestination(
@@ -68,23 +69,53 @@ private fun CardsHomeSurface(
             state.homeLayout.dockInteractionRegionHeightDp().dp,
             with(density) { dockInteractionHeightPx.intValue.toDp() },
         )
+    // TimeScapeAppStageSurface is given `dockInteractionHeight` less real Compose height below (via
+    // the `.padding(bottom = dockInteractionHeight)` modifier), so its own pane-layout math must see
+    // the same reduced height -- otherwise it lays out the spine against the full window height and
+    // overflows past the real, smaller Surface bounds onto the Dock beneath. Subtract the same
+    // live-measured dock height from the externally-supplied window metrics here, at the source,
+    // rather than papering over the mismatch with a clip inside TimeScapeAppStageSurface.
+    val dockInteractionHeightDp = dockInteractionHeight.value.roundToInt()
+    val timeScapeWindowLayoutBelowDock =
+        timeScapeWindowLayout?.let { layout ->
+            layout.copy(heightDp = (layout.heightDp - dockInteractionHeightDp).coerceAtLeast(0))
+        }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        StandardHomeSurface(
-            state = state,
+        // Cards mode reuses the standard Dock but must not show the standard grid pages (and any
+        // icons placed on them) underneath TimeScape's own canvas -- see StandardHomeDockOnlySurface.
+        StandardHomeDockOnlySurface(
+            layout = state.homeLayout,
+            installedApps = state.installedApps,
+            interactions =
+                StandardHomeInteractions(
+                    haptics = haptics,
+                    onDockInteractionHeightChanged = { heightPx ->
+                        dockInteractionHeightPx.intValue = heightPx
+                    },
+                ),
+            presentation =
+                StandardHomePresentation(
+                    notificationGroupsByApp = state.notificationGroupsByApp,
+                    notificationAccessStatus = state.notificationAccessStatus,
+                    installedApps = state.installedApps,
+                    appShortcutsByApp = state.appShortcutsByApp,
+                    homeGestures = state.launcherSettings.gestures.homeGestures,
+                    dockGestures = state.launcherSettings.gestures.dockGestures,
+                    reducedMotion = state.launcherSettings.motion.reducedMotion,
+                    motionPerformanceTargetFps = state.launcherSettings.motion.performanceTargetFps,
+                    widgetViewFactory = widgetRenderers.viewFactory,
+                    homeInsetPolicy = homeInsetPolicy(state.launcherSettings.appearance),
+                    timeScapeAppearance = state.launcherSettings.cards.timeScapeAppearance,
+                ),
             appIconLoader = appIconLoader,
-            widgetRenderers = widgetRenderers,
-            haptics = haptics,
-            onDockInteractionHeightChanged = { heightPx ->
-                dockInteractionHeightPx.intValue = heightPx
-            },
             onAction = onAction,
         )
         TimeScapeAppStageSurface(
             state = state,
             modifier = Modifier.padding(bottom = dockInteractionHeight),
             windowInsets = cardsPanelInsetPolicy(state).safeDrawingPanelInsets(),
-            windowLayout = timeScapeWindowLayout,
+            windowLayout = timeScapeWindowLayoutBelowDock,
             context = timeScapeContext,
             onContextChanged = onTimeScapeContextChanged,
             onAction = onAction,

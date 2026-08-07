@@ -18,6 +18,7 @@ import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.unit.Density
@@ -68,8 +69,8 @@ class TimeScapeAdaptiveLayoutInteractionTest {
         setContent(widthDp = 800)
 
         composeRule.onNodeWithText("Stages").assertIsDisplayed()
-        composeRule.onNodeWithText("Previous").assertIsDisplayed()
-        composeRule.onNodeWithText("Next").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Previous").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Next").assertIsDisplayed()
     }
 
     @Test
@@ -276,7 +277,7 @@ class TimeScapeAdaptiveLayoutInteractionTest {
         }
 
         composeRule.onNodeWithText("Stages").assertIsDisplayed()
-        composeRule.onNodeWithText("Next").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Next").assertIsDisplayed()
     }
 
     @Test

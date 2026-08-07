@@ -603,8 +603,8 @@ class TimeScapeCardSurfaceTest {
             MaterialTheme { TimeScapeAppStageSurface(state = state, onAction = actions::add) }
         }
 
-        composeRule.onNodeWithText("Next").performClick()
-        composeRule.onNodeWithText("Previous").performClick()
+        composeRule.onNodeWithContentDescription("Next").performClick()
+        composeRule.onNodeWithContentDescription("Previous").performClick()
 
         assertEquals(
             listOf(
@@ -656,7 +656,12 @@ class TimeScapeCardSurfaceTest {
                     )
                 }
             MaterialTheme {
-                TimeScapeCardDetailSurface(card = card, detailState = detailState, onAction = actions::add)
+                TimeScapeCardDetailSurface(
+                    card = card,
+                    detailState = detailState,
+                    appearance = TimeScapeAppearanceSettings(),
+                    onAction = actions::add,
+                )
             }
         }
 

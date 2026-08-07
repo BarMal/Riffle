@@ -1,5 +1,6 @@
 package com.riffle.app.launcher.notifications
 
+import android.content.ComponentName
 import android.content.pm.LauncherApps
 import android.os.UserManager
 import android.service.notification.NotificationListenerService
@@ -26,6 +27,9 @@ class RiffleNotificationListenerService : NotificationListenerService() {
         ignoreNotificationListenerFailure {
             RiffleNotificationListenerConnection.disconnect(this)
             AndroidNotificationStageActionGateway.clear()
+            // The platform can unbind this listener outside a permission revocation (e.g. OEM battery
+            // management). Ask the platform to retry the binding rather than staying silently dead.
+            requestRebind(ComponentName(this, RiffleNotificationListenerService::class.java))
         }
     }
 
