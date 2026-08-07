@@ -6,6 +6,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
@@ -68,7 +70,12 @@ class AdaptiveStageAppearanceEditorTest {
             )
         tabToSectionTitles.forEach { (tab, titles) ->
             selectTab(tab)
-            titles.forEach { title -> composeRule.onNodeWithText(title).assertExists() }
+            titles.forEach { title ->
+                // Some section titles (e.g. "Layout", "Motion") match their own tab's label
+                // text too; excluding clickable nodes keeps this matching the section heading,
+                // not the merged, clickable Tab node.
+                composeRule.onNode(hasText(title) and !hasClickAction()).assertExists()
+            }
             // The preview stays visible no matter which tab is selected.
             composeRule.onNodeWithContentDescription("Cards appearance preview").assertExists()
         }
@@ -169,7 +176,10 @@ class AdaptiveStageAppearanceEditorTest {
             }
         }
 
-        composeRule.onNodeWithText("Reset Folded Cards appearance").performScrollTo().performClick()
+        // "Reset appearance" lives in the sticky header above the tabs, not inside the tab
+        // content's scrollable column, so it's always on screen -- no performScrollTo() needed
+        // (and none is possible: it has no scrollable ancestor).
+        composeRule.onNodeWithText("Reset Folded Cards appearance").performClick()
         composeRule.onNodeWithText("Reset Folded Cards appearance?").assertExists()
         composeRule.onNodeWithContentDescription("Confirm Cards reset").performClick()
         composeRule.runOnIdle {
@@ -191,8 +201,11 @@ class AdaptiveStageAppearanceEditorTest {
             }
         }
 
-        composeRule.onNodeWithTag("adaptive-stage-appearance-target-UNFOLDED").performScrollTo().performClick()
-        composeRule.onNodeWithText("Reset Unfolded Cards appearance").performScrollTo().performClick()
+        // Both the target chooser and "Reset appearance" live in the sticky header above the
+        // tabs, not inside the tab content's scrollable column, so they're always on screen --
+        // no performScrollTo() needed (and none is possible: neither has a scrollable ancestor).
+        composeRule.onNodeWithTag("adaptive-stage-appearance-target-UNFOLDED").performClick()
+        composeRule.onNodeWithText("Reset Unfolded Cards appearance").performClick()
         composeRule.onNodeWithText("Reset Unfolded Cards appearance?").assertExists()
         composeRule.onNodeWithContentDescription("Confirm Cards reset").performClick()
         composeRule.runOnIdle {
@@ -233,7 +246,10 @@ class AdaptiveStageAppearanceEditorTest {
             }
         }
 
-        composeRule.onNodeWithTag("adaptive-stage-appearance-target-UNFOLDED").performScrollTo().performClick()
+        // The target chooser lives in the sticky header above the tabs, not inside the tab
+        // content's scrollable column, so it's always on screen -- no performScrollTo() needed
+        // (and none is possible: it has no scrollable ancestor).
+        composeRule.onNodeWithTag("adaptive-stage-appearance-target-UNFOLDED").performClick()
         selectTab(AdaptiveStageAppearanceTab.GEOMETRY)
         // 80 (not 100): unfolded()'s own default cardAspectRatioPercent is already 100, so setting
         // it to 100 again would be a no-op the slider never dispatches a change for.
