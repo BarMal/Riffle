@@ -474,6 +474,7 @@ internal fun StandardHomeDockOnlySurface(
     onAction: (LauncherShellAction) -> Unit,
 ) {
     val visibleLayout = layout.visibleTo(installedApps)
+    val openedFolderId = remember { mutableStateOf<LauncherItemId?>(null) }
     val notificationShelfState =
         dockNotificationShelfState(
             showNotificationCards = visibleLayout.dock.showNotificationCards,
@@ -484,7 +485,7 @@ internal fun StandardHomeDockOnlySurface(
     val dockShelf = rememberDockShelfController(visibleLayout, notificationShelfState)
     val actions =
         HomeWorkspaceActions(
-            onFolderOpen = {},
+            onFolderOpen = { folder -> openedFolderId.value = folder.id },
             onDragSessionChanged = {},
             haptics = interactions.haptics,
             onDockInteractionHeightChanged = interactions.onDockInteractionHeightChanged,
@@ -507,6 +508,16 @@ internal fun StandardHomeDockOnlySurface(
             onDockShelfExpandedChange = dockShelf.onExpandedChange,
             appIconLoader = appIconLoader,
             actions = actions,
+        )
+    }
+    visibleLayout.openedFolder(openedFolderId.value)?.let { folder ->
+        FolderSurface(
+            folder = folder,
+            layout = visibleLayout,
+            installedApps = installedApps,
+            appIconLoader = appIconLoader,
+            onDismiss = { openedFolderId.value = null },
+            onAction = onAction,
         )
     }
 }
