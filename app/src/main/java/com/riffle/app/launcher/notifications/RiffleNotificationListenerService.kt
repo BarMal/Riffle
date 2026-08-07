@@ -78,14 +78,17 @@ class RiffleNotificationListenerService : NotificationListenerService() {
                 (platformSnapshot.getOrNull()?.size?.toString() ?: "THREW:${platformSnapshot.exceptionOrNull()}"),
         )
         val mapped =
-            runCatching {
-                platformSnapshot.getOrNull()
-                    ?.also { notifications -> AndroidNotificationStageActionGateway.replaceAll(this, notifications) }
-                    ?.map(notificationMapper::map)
-            }
-        mapped.exceptionOrNull()?.let { e -> diag("mapping FAILED: ${e.javaClass.simpleName}: ${e.message}") }
-        diag("mapped count=${mapped.getOrNull()?.size}")
-        mapped.getOrNull()?.let { list ->
+            platformSnapshot.getOrNull()
+                ?.also { notifications ->
+                    runCatching { AndroidNotificationStageActionGateway.replaceAll(this, notifications) }
+                }?.mapNotNull { notification ->
+                    runCatching { notificationMapper.map(notification) }
+                        .onFailure { e ->
+                            diag("mapping FAILED for one notification: ${e.javaClass.simpleName}: ${e.message}")
+                        }.getOrNull()
+                }
+        diag("mapped count=${mapped?.size}")
+        mapped?.let { list ->
             val saveResult = runCatching { repository.saveActiveNotifications(list) }
             saveResult.exceptionOrNull()?.let { e ->
                 diag("repository.save FAILED: ${e.javaClass.simpleName}: ${e.message}")
