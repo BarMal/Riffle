@@ -475,9 +475,14 @@ private fun AdaptiveStageSurfaceTabContent(
                 it.copy(surface = it.surface.copy(backgroundSource = value))
             }
         }
-        AdaptiveStageColorChoices("Custom background", appearance.surface.customBackgroundArgb) { value ->
-            update {
-                it.copy(surface = it.surface.copy(customBackgroundArgb = value))
+        // Only actually used when Background above is set to Custom -- see
+        // resolveAdaptiveStageCardColors, which ignores customBackgroundArgb for every other
+        // source. Showing it unconditionally read as two competing background controls.
+        if (appearance.surface.backgroundSource == AdaptiveStageBackgroundSource.CUSTOM_SOLID) {
+            AdaptiveStageColorChoices("Custom background", appearance.surface.customBackgroundArgb) { value ->
+                update {
+                    it.copy(surface = it.surface.copy(customBackgroundArgb = value))
+                }
             }
         }
         AdaptiveStageSlider(
@@ -584,9 +589,13 @@ private fun AdaptiveStageColorTabContent(
                 it.copy(typography = it.typography.copy(accentSource = value))
             }
         }
-        AdaptiveStageColorChoices("Custom accent", appearance.typography.customAccentArgb) { value ->
-            update {
-                it.copy(typography = it.typography.copy(customAccentArgb = value))
+        // Only actually used when Accent above is set to Custom -- see
+        // resolveAdaptiveStageCardColors, which ignores customAccentArgb for every other source.
+        if (appearance.typography.accentSource == AdaptiveStageAccentSource.CUSTOM) {
+            AdaptiveStageColorChoices("Custom accent", appearance.typography.customAccentArgb) { value ->
+                update {
+                    it.copy(typography = it.typography.copy(customAccentArgb = value))
+                }
             }
         }
         SettingsSwitchRow(

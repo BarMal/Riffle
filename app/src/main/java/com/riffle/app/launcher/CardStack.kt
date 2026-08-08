@@ -24,6 +24,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.graphicsLayer
@@ -141,12 +142,19 @@ internal fun CardStack(
 
     Box(
         modifier =
-            modifier.semantics {
-                isTraversalGroup = true
-                this[CardStackAnimationProfileKey] = animationProfile
-                this[CardStackMotionModeKey] = motionMode
-                this[CardStackAnimationSpecKey] = animationSpec
-            },
+            modifier
+                // Fanned/rotated background entries can translate beyond the focused card's own
+                // footprint by design (see AdaptiveStageAppearanceSettings' fan-stage-margin
+                // doc) -- without this, that overflow bled into whatever sibling UI sits above
+                // or below the stack (nav controls, contextual actions, the dock) instead of
+                // staying contained to the stack's own allotted area.
+                .clipToBounds()
+                .semantics {
+                    isTraversalGroup = true
+                    this[CardStackAnimationProfileKey] = animationProfile
+                    this[CardStackMotionModeKey] = motionMode
+                    this[CardStackAnimationSpecKey] = animationSpec
+                },
     ) {
         entries.forEach { entry ->
             // A card index identifies a stable card while focus changes, so Compose can
