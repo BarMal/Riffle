@@ -100,18 +100,31 @@ class CardStackController {
                 CardStackFocusResult.Rejected(CardStackFocusRejection.UNKNOWN_CARD)
             }
 
-    /** Moves without cycling. A boundary result lets a surface provide bounded-feedback haptics. */
+    /**
+     * Moves [steps] cards without cycling, clamping to whichever boundary card is reached first
+     * rather than refusing to move at all -- a hard fling near the end of a short stack should
+     * land on the last card, not no-op. A boundary result lets a surface provide bounded-feedback
+     * haptics either way.
+     */
     fun navigate(
         state: CardStackFocusState,
         cardIds: List<LauncherCardId>,
         direction: CardStackNavigationDirection,
-    ): CardStackFocusResult =
-        cardIds.rejectDuplicateIds()
-            ?: navigateValidStack(state, cardIds, direction)
+        steps: Int = 1,
+    ): CardStackFocusResult {
+        require(steps >= 1) { "Steps must be at least 1." }
+        return cardIds.rejectDuplicateIds() ?: navigateValidStack(state, cardIds, direction, steps)
+    }
 
     /**
-     * Converts a completed vertical drag or fling into exactly one focus operation. Dragging up
-     * moves chronologically forward; dragging down moves back. Insufficient movement is a no-op.
+     * Converts a completed vertical drag or fling into one focus operation. Dragging up moves
+     * chronologically forward; dragging down moves back. Insufficient movement is a no-op.
+     *
+     * A fling (velocity past [CardStackSettleRequest.flingVelocityThresholdPxPerSecond]) can skip
+     * more than one card: how many is the fling's velocity expressed as a multiple of that same
+     * threshold, e.g. twice the threshold velocity skips two cards. A plain drag-release always
+     * moves exactly one card regardless of distance -- only a fling's velocity, never drag
+     * distance, drives multi-card skips.
      *
      * The focus captured by [CardStackSettleRequest] is checked before navigation so a delayed
      * result cannot overwrite a focus selected by content reconciliation or another input source.
@@ -129,11 +142,15 @@ class CardStackController {
         cardIds: List<LauncherCardId>,
         request: CardStackSettleRequest,
     ): CardStackFocusResult {
-        val motion =
-            if (abs(request.verticalVelocityPxPerSecond) >= request.flingVelocityThresholdPxPerSecond) {
-                request.verticalVelocityPxPerSecond
+        val isFling = abs(request.verticalVelocityPxPerSecond) >= request.flingVelocityThresholdPxPerSecond
+        val motion = if (isFling) request.verticalVelocityPxPerSecond else request.verticalDragPx
+        val steps =
+            if (isFling) {
+                (abs(request.verticalVelocityPxPerSecond) / request.flingVelocityThresholdPxPerSecond)
+                    .toInt()
+                    .coerceAtLeast(1)
             } else {
-                request.verticalDragPx
+                1
             }
         return when {
             state.focusedCardId != request.focusedCardId ->
@@ -149,6 +166,7 @@ class CardStackController {
                         } else {
                             CardStackNavigationDirection.PREVIOUS
                         },
+                    steps = steps,
                 )
         }
     }
@@ -171,17 +189,22 @@ class CardStackController {
         state: CardStackFocusState,
         cardIds: List<LauncherCardId>,
         direction: CardStackNavigationDirection,
+        steps: Int,
     ): CardStackFocusResult {
         val focusedIndex = cardIds.indexOf(state.focusedCardId)
         return when {
             cardIds.isEmpty() -> apply(state, null)
             focusedIndex < 0 -> apply(state, cardIds.first())
             else -> {
-                val targetIndex = focusedIndex + direction.indexDelta
-                if (targetIndex !in cardIds.indices) {
+                val rawTargetIndex = focusedIndex + direction.indexDelta * steps
+                // For steps == 1 this only clamps at a boundary already sitting on that same
+                // index, matching the old single-step no-op exactly. For steps > 1 (a hard
+                // fling), it lands on the furthest reachable card instead of refusing to move.
+                val targetIndex = rawTargetIndex.coerceIn(cardIds.indices)
+                if (rawTargetIndex !in cardIds.indices) {
                     CardStackFocusResult.Applied(
-                        state = state.copy(focusedCardId = cardIds[focusedIndex]),
-                        focusChanged = state.focusedCardId != cardIds[focusedIndex],
+                        state = state.copy(focusedCardId = cardIds[targetIndex]),
+                        focusChanged = state.focusedCardId != cardIds[targetIndex],
                         boundaryReached = true,
                     )
                 } else {

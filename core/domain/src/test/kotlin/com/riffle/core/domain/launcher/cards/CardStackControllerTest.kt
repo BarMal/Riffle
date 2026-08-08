@@ -156,6 +156,71 @@ class CardStackControllerTest {
     }
 
     @Test
+    fun aHarderFlingSkipsMoreThanOneCard() {
+        val initial = controller.initialize(overview, listOf(a, b, c, d)).applied().state
+
+        val flungTwo =
+            controller.settle(
+                initial,
+                listOf(a, b, c, d),
+                CardStackSettleRequest(
+                    focusedCardId = a,
+                    verticalDragPx = -4f,
+                    verticalVelocityPxPerSecond = -2_100f,
+                    distanceThresholdPx = 48f,
+                    flingVelocityThresholdPxPerSecond = 1_000f,
+                ),
+            ).applied()
+
+        // 2_100f is just over twice the 1_000f fling threshold, so it skips two cards (a -> c),
+        // not one (a -> b) the way a plain slow drag-release would.
+        assertEquals(c, flungTwo.state.focusedCardId)
+    }
+
+    @Test
+    fun aFlingThatWouldOvershootTheStackLandsOnTheLastReachableCardInstead() {
+        val initial = controller.initialize(overview, listOf(a, b, c)).applied().state
+
+        val flungPastTheEnd =
+            controller.settle(
+                initial,
+                listOf(a, b, c),
+                CardStackSettleRequest(
+                    focusedCardId = a,
+                    verticalDragPx = -4f,
+                    verticalVelocityPxPerSecond = -5_000f,
+                    distanceThresholdPx = 48f,
+                    flingVelocityThresholdPxPerSecond = 1_000f,
+                ),
+            ).applied()
+
+        // A 5-card skip from a 3-card stack's first card can only reach its last card -- not a
+        // no-op, and not an out-of-bounds index.
+        assertEquals(c, flungPastTheEnd.state.focusedCardId)
+        assertEquals(true, flungPastTheEnd.boundaryReached)
+    }
+
+    @Test
+    fun aSlowDragReleaseNeverSkipsMultipleCardsRegardlessOfDistance() {
+        val initial = controller.initialize(overview, listOf(a, b, c, d)).applied().state
+
+        val dragged =
+            controller.settle(
+                initial,
+                listOf(a, b, c, d),
+                CardStackSettleRequest(
+                    focusedCardId = a,
+                    verticalDragPx = -400f,
+                    verticalVelocityPxPerSecond = 0f,
+                    distanceThresholdPx = 48f,
+                    flingVelocityThresholdPxPerSecond = 1_000f,
+                ),
+            ).applied()
+
+        assertEquals(b, dragged.state.focusedCardId)
+    }
+
+    @Test
     fun cancelledOrShortDragIsANoOpAndBoundarySettleIsReported() {
         val initial = controller.initialize(overview, listOf(a, b)).applied().state
 
