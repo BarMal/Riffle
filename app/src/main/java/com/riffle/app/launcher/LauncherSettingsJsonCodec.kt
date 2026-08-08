@@ -208,7 +208,7 @@ private fun encodeAdaptiveStageAppearance(settings: AdaptiveStageAppearanceSetti
                 ).put(
                     "cornerRadiusDp",
                     appearance.geometry.cornerRadiusDp,
-                ).put("clipContent", appearance.geometry.clipContent).put("contentPaddingDp", appearance.geometry.contentPaddingDp),
+                ).put("contentPaddingDp", appearance.geometry.contentPaddingDp),
             )
             .put(
                 "surface",
@@ -362,11 +362,6 @@ private fun JSONObject.toAdaptiveStageAppearance(defaults: AdaptiveStageAppearan
                     geometry.optIntOrDefault(
                         "cornerRadiusDp",
                         defaults.geometry.cornerRadiusDp,
-                    ),
-                clipContent =
-                    geometry.optBooleanOrDefault(
-                        "clipContent",
-                        defaults.geometry.clipContent,
                     ),
                 contentPaddingDp =
                     geometry.optIntOrDefault(

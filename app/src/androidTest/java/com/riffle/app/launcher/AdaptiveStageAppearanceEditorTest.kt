@@ -63,7 +63,7 @@ class AdaptiveStageAppearanceEditorTest {
 
         val tabToSectionTitles =
             mapOf(
-                AdaptiveStageAppearanceTab.LAYOUT to listOf("Layout", "About Folded and Unfolded"),
+                AdaptiveStageAppearanceTab.LAYOUT to listOf("Layout"),
                 AdaptiveStageAppearanceTab.GEOMETRY to listOf("Card geometry", "Stack and stack"),
                 AdaptiveStageAppearanceTab.SURFACE to listOf("Surface and glass"),
                 AdaptiveStageAppearanceTab.COLOR to listOf("Colour and content"),

@@ -375,7 +375,7 @@ internal fun AdaptiveStageCardSurface(
         val contentModifier =
             Modifier
                 .fillMaxSize()
-                .then(if (effective.geometry.clipContent) Modifier.clip(shape) else Modifier)
+                .clip(shape)
                 .padding(adjustedPadding)
                 .background(colors.glass, shape)
         MaterialTheme(
