@@ -127,7 +127,8 @@ private fun Modifier.dockShelfGestureInput(
 
 private const val DOCK_SHELF_GESTURE_THRESHOLD_PX = 80f
 
-// Was 24f -- close enough to ordinary touch slop on common device densities that a claim could
-// fire before a drag's real intent (e.g. a horizontal dock scroll with some vertical wobble) was
-// distinguishable, making the shelf gesture feel eager to grab drags meant for something else.
-private const val DOCK_SHELF_GESTURE_CLAIM_THRESHOLD_PX = 48f
+// DockShelfGestureInteractionTest pins this to 24f (claiming no later than a 24px drag, ahead of
+// homeGestureInput's own threshold) -- raising it broke that guarantee against those tests' fixed
+// two-step synthetic drags. The eager-capture fix here is the Main-pass + isConsumed change above,
+// not this threshold.
+private const val DOCK_SHELF_GESTURE_CLAIM_THRESHOLD_PX = 24f
