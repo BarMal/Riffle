@@ -1772,23 +1772,12 @@ private fun AdaptiveStageNotificationStack(
         remember(stage.id) {
             CardStackKey("stage:${stage.id.profileId.value}:${stage.id.packageName.value}")
         }
-    var previousCardIds by remember(stage.id) { mutableStateOf(emptyList<LauncherCardId>()) }
     var settleTransitionId by rememberSaveable(stage.id.profileId.value, stage.id.packageName.value) {
         mutableIntStateOf(0)
     }
-    val focusState = CardStackFocusState(stackKey, focusedCardId)
-    LaunchedEffect(cardIds) {
-        val reconciliation =
-            if (focusState.focusedCardId == null) {
-                controller.restore(focusState, cardIds)
-            } else {
-                controller.reconcile(focusState, previousCardIds, cardIds)
-            }
-        if (reconciliation is CardStackFocusResult.Applied) {
-            onFocusedCardChanged(reconciliation.state.focusedCardId)
-        }
-        previousCardIds = cardIds
-    }
+    val reconciledFocusedCardId =
+        rememberReconciledFocusedCardId(controller, stackKey, cardIds, focusedCardId, onFocusedCardChanged)
+    val focusState = CardStackFocusState(stackKey, reconciledFocusedCardId)
     val activeCardIndex = cardIds.indexOf(focusState.focusedCardId).takeIf { index -> index >= 0 } ?: 0
     val focusedCard = cards.getOrNull(activeCardIndex)
     val activeCard = focusedCard ?: return
@@ -1938,12 +1927,7 @@ private fun AdaptiveStageNotificationStack(
                         }
                     }
                 }
-                AdaptiveStageCardNavigationControls(
-                    position = activeCardIndex + 1,
-                    count = cards.size,
-                    onPrevious = { navigate(CardStackNavigationDirection.PREVIOUS) },
-                    onNext = { navigate(CardStackNavigationDirection.NEXT) },
-                )
+                AdaptiveStageCardPositionIndicator(position = activeCardIndex + 1, count = cards.size)
                 AdaptiveStageContextShelf(
                     card = activeCard,
                     onAction = onAction,
@@ -2008,22 +1992,11 @@ private fun AdaptiveStageAllNotificationsStack(
     val artworkCache =
         remember { AdaptiveStageArtworkCache<ImageBitmap>(decode = ::decodeAdaptiveStageArtwork) }
     val stackKey = remember { CardStackKey("all-notifications") }
-    var previousCardIds by remember { mutableStateOf(emptyList<LauncherCardId>()) }
     var settleTransitionId by rememberSaveable { mutableIntStateOf(0) }
     var focusedCardId by remember { mutableStateOf<LauncherCardId?>(null) }
-    val focusState = CardStackFocusState(stackKey, focusedCardId)
-    LaunchedEffect(cardIds) {
-        val reconciliation =
-            if (focusState.focusedCardId == null) {
-                controller.restore(focusState, cardIds)
-            } else {
-                controller.reconcile(focusState, previousCardIds, cardIds)
-            }
-        if (reconciliation is CardStackFocusResult.Applied) {
-            focusedCardId = reconciliation.state.focusedCardId
-        }
-        previousCardIds = cardIds
-    }
+    val reconciledFocusedCardId =
+        rememberReconciledFocusedCardId(controller, stackKey, cardIds, focusedCardId) { id -> focusedCardId = id }
+    val focusState = CardStackFocusState(stackKey, reconciledFocusedCardId)
     val activeCardIndex = cardIds.indexOf(focusState.focusedCardId).takeIf { index -> index >= 0 } ?: 0
     val focusedCard = cards.getOrNull(activeCardIndex)
     LaunchedEffect(focusedCard?.content?.id) {
@@ -2191,12 +2164,7 @@ private fun AdaptiveStageAllNotificationsStack(
                         }
                     }
                 }
-                AdaptiveStageCardNavigationControls(
-                    position = activeCardIndex + 1,
-                    count = cards.size,
-                    onPrevious = { navigate(CardStackNavigationDirection.PREVIOUS) },
-                    onNext = { navigate(CardStackNavigationDirection.NEXT) },
-                )
+                AdaptiveStageCardPositionIndicator(position = activeCardIndex + 1, count = cards.size)
                 AdaptiveStageContextShelf(
                     card = activeCard,
                     onAction = onAction,
@@ -2249,28 +2217,28 @@ internal fun adaptiveStageNotificationStackEntries(
         )
 
 @Composable
-private fun AdaptiveStageCardNavigationControls(
+private fun AdaptiveStageCardPositionIndicator(
     position: Int,
     count: Int,
-    onPrevious: () -> Unit,
-    onNext: () -> Unit,
 ) {
+    // Drag/fling on the stack itself is the only navigation surface now -- see
+    // AdaptiveStageCardNavigationControls' removal -- this just reports where the focused
+    // card sits, matching the "Previous card"/"Next card" TalkBack custom actions attached
+    // to the focused card, which remain the accessible navigation path.
     Row(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        TextButton(onClick = onPrevious, enabled = position > 1) { Text("Previous card") }
         Text(
             text = "Card $position of $count",
             modifier =
-                Modifier.weight(1f).semantics {
+                Modifier.semantics {
                     contentDescription = "Focused card position"
                     stateDescription = "Card $position of $count"
                 },
             style = MaterialTheme.typography.labelLarge,
         )
-        TextButton(onClick = onNext, enabled = position < count) { Text("Next card") }
     }
 }
 

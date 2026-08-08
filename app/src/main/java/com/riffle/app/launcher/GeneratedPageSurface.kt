@@ -85,20 +85,14 @@ internal fun GeneratedNotificationCardsPage(
                     val cardIds = state.cards.map(::generatedNotificationCardId)
                     var focusedCardIdValue by rememberSaveable { mutableStateOf<String?>(null) }
                     var settleTransitionId by rememberSaveable { mutableIntStateOf(0) }
-                    var previousCardIds by remember { mutableStateOf(cardIds) }
-                    val focusState = CardStackFocusState(stackKey, focusedCardIdValue?.let(::LauncherCardId))
-                    LaunchedEffect(cardIds) {
-                        val reconciled =
-                            if (focusState.focusedCardId == null) {
-                                controller.restore(focusState, cardIds)
-                            } else {
-                                controller.reconcile(focusState, previousCardIds, cardIds)
-                            }
-                        if (reconciled is CardStackFocusResult.Applied) {
-                            focusedCardIdValue = reconciled.state.focusedCardId?.value
-                        }
-                        previousCardIds = cardIds
-                    }
+                    val reconciledFocusedCardId =
+                        rememberReconciledFocusedCardId(
+                            controller = controller,
+                            stackKey = stackKey,
+                            cardIds = cardIds,
+                            focusedCardId = focusedCardIdValue?.let(::LauncherCardId),
+                        ) { id -> focusedCardIdValue = id?.value }
+                    val focusState = CardStackFocusState(stackKey, reconciledFocusedCardId)
                     val activeCardIndex = cardIds.indexOf(focusState.focusedCardId).takeIf { it >= 0 } ?: 0
 
                     fun applyFocus(result: CardStackFocusResult) {
