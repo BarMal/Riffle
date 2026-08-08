@@ -285,13 +285,6 @@ private fun AdaptiveStageLayoutTabContent(
     onAction: (LauncherShellAction) -> Unit,
 ) {
     SettingsSection(title = "Layout") {
-        SettingsListRow(
-            title = "About Folded and Unfolded",
-            subtitle =
-                "Folded is the single-stage, full-size stack. Unfolded is the docked rail" +
-                    " shown alongside content on a larger or unfolded screen. Each has its own" +
-                    " independent appearance.",
-        )
         AdaptiveStageEnumChoices(
             title = "Rail side",
             values = AdaptiveStageRailSide.entries,
@@ -301,10 +294,6 @@ private fun AdaptiveStageLayoutTabContent(
             onSelected = { side ->
                 onAction(LauncherShellAction.SelectAdaptiveStageRailSide(side))
             },
-        )
-        SettingsListRow(
-            title = "About rail side",
-            subtitle = "Which edge the stage rail docks to in unfolded and split-pane layouts",
         )
         AdaptiveStageEnumChoices(
             title = "Pane arrangement",
@@ -379,11 +368,6 @@ private fun AdaptiveStageGeometryTabContent(
                 it.copy(geometry = it.geometry.copy(contentPaddingDp = value))
             }
         }
-        SettingsSwitchRow("Clip card content", "Keep content inside the card shape", appearance.geometry.clipContent, { value ->
-            update {
-                it.copy(geometry = it.geometry.copy(clipContent = value))
-            }
-        })
     }
     SettingsSection(title = "Stack and stack") {
         AdaptiveStageSlider(

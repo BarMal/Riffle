@@ -414,7 +414,6 @@ data class AdaptiveStageGeometry(
     val fanDirection: AdaptiveStageFanDirection = AdaptiveStageFanDirection.END,
     val rotationDegrees: Int = 4,
     val cornerRadiusDp: Int = 28,
-    val clipContent: Boolean = true,
     val contentPaddingDp: Int = 20,
 ) {
     fun coerce(): AdaptiveStageGeometry =
