@@ -166,16 +166,14 @@ jobs:
           RIFFLE_SIGNING_KEY_PASSWORD: ${{ secrets.RIFFLE_SIGNING_KEY_PASSWORD }}
           RIFFLE_VERSION_CODE: ${{ github.run_number }}
           RIFFLE_VERSION_NAME: 0.1.0-alpha.${{ github.run_number }}
-        run: ./gradlew assembleRelease bundleRelease
+        run: ./gradlew assembleRelease
 
       - name: Upload release artifacts
         if: steps.existing_release.outputs.already_published != 'true'
         uses: actions/upload-artifact@v4
         with:
           name: riffle-alpha-release-${{ github.run_id }}
-          path: |
-            app/build/outputs/apk/release/*.apk
-            app/build/outputs/bundle/release/*.aab
+          path: app/build/outputs/apk/release/*.apk
           if-no-files-found: error
           retention-days: 1
 
@@ -186,7 +184,6 @@ jobs:
         run: |
           mkdir -p "$RUNNER_TEMP/release"
           cp app/build/outputs/apk/release/*.apk "$RUNNER_TEMP/release/riffle-alpha.apk"
-          cp app/build/outputs/bundle/release/*.aab "$RUNNER_TEMP/release/riffle-alpha.aab"
           pwsh .github/scripts/assert-artifact-size.ps1 \
             -ArtifactPath "$RUNNER_TEMP/release/riffle-alpha.apk" \
             -MaxBytes 26214400 \
@@ -196,14 +193,12 @@ jobs:
             -ReleaseChannel alpha \
             -CommitSha "$CANDIDATE_SHA" \
             -ApkPath "$RUNNER_TEMP/release/riffle-alpha.apk" \
-            -AabPath "$RUNNER_TEMP/release/riffle-alpha.aab" \
             -NotesPath "$RUNNER_TEMP/release-notes.md" \
             -ReleaseNotesPath "$RELEASE_NOTES_PATH" \
             -RequireReleaseNotes
 
           gh release create "$RELEASE_TAG" \
             "$RUNNER_TEMP/release/riffle-alpha.apk" \
-            "$RUNNER_TEMP/release/riffle-alpha.aab" \
             --repo "$GITHUB_REPOSITORY" \
             --target "$CANDIDATE_SHA" \
             --title "Riffle Alpha ${CANDIDATE_SHA:0:12}" \
