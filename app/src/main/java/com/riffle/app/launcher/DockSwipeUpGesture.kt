@@ -6,7 +6,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
-import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.settings.LauncherGestureAction
@@ -52,13 +51,21 @@ internal fun Modifier.dockSwipeUpGestureInput(
         val currentShellAction by rememberUpdatedState(shellAction)
         pointerInput(action) {
             awaitEachGesture {
-                val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+                // Default (Main) pass, not Initial: Main dispatches descendant-first, so a
+                // descendant gesture (e.g. a horizontal scroll on dock content) gets first look
+                // at the same event and can consume it before this ancestor-level handler runs --
+                // Initial dispatched ancestor-first instead, letting this claim any qualifying
+                // drag regardless of what a descendant wanted it for.
+                val down = awaitFirstDown(requireUnconsumed = false)
                 val start = down.position
                 var handled = false
                 while (!handled) {
-                    val event = awaitPointerEvent(PointerEventPass.Initial)
+                    val event = awaitPointerEvent()
                     val trackedChange = event.changes.firstOrNull { change -> change.id == down.id }
                     if (trackedChange == null) {
+                        handled = true
+                    } else if (trackedChange.isConsumed) {
+                        // A descendant already claimed this drag for itself.
                         handled = true
                     } else {
                         val drag = trackedChange.position - start

@@ -7,7 +7,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
-import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import kotlin.math.abs
 
@@ -80,13 +79,22 @@ private fun Modifier.dockShelfGestureInput(
         val currentOnExpandedChange by rememberUpdatedState(onExpandedChange)
         pointerInput(isExpanded) {
             awaitEachGesture {
-                val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+                // Default (Main) pass, not Initial: Main dispatches descendant-first, so a
+                // descendant gesture (e.g. a horizontal scroll on the dock icon or notification
+                // row) gets first look at the same event and can consume it before this
+                // ancestor-level handler runs -- Initial dispatched ancestor-first instead,
+                // letting this claim any qualifying drag regardless of what a descendant wanted
+                // it for.
+                val down = awaitFirstDown(requireUnconsumed = false)
                 val start = down.position
                 var handled = false
                 while (!handled) {
-                    val event = awaitPointerEvent(PointerEventPass.Initial)
+                    val event = awaitPointerEvent()
                     val trackedChange = event.changes.firstOrNull { change -> change.id == down.id }
                     if (trackedChange == null) {
+                        handled = true
+                    } else if (trackedChange.isConsumed) {
+                        // A descendant already claimed this drag for itself.
                         handled = true
                     } else {
                         val drag = trackedChange.position - start
@@ -118,4 +126,8 @@ private fun Modifier.dockShelfGestureInput(
 }
 
 private const val DOCK_SHELF_GESTURE_THRESHOLD_PX = 80f
-private const val DOCK_SHELF_GESTURE_CLAIM_THRESHOLD_PX = 24f
+
+// Was 24f -- close enough to ordinary touch slop on common device densities that a claim could
+// fire before a drag's real intent (e.g. a horizontal dock scroll with some vertical wobble) was
+// distinguishable, making the shelf gesture feel eager to grab drags meant for something else.
+private const val DOCK_SHELF_GESTURE_CLAIM_THRESHOLD_PX = 48f

@@ -36,12 +36,12 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.PointerId
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.util.VelocityTracker
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.SemanticsPropertyKey
 import androidx.compose.ui.semantics.invisibleToUser
 import androidx.compose.ui.semantics.isTraversalGroup
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.traversalIndex
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.riffle.core.domain.launcher.cards.CardStackAnimationEasing
 import com.riffle.core.domain.launcher.cards.CardStackAnimationProfile
@@ -287,15 +287,19 @@ private fun AnimatedCardStackEntry(
     val spec = animationSpec
     var hasEntered by remember(stableItemKey) { mutableStateOf(motionMode == CardStackMotionMode.SNAP) }
     LaunchedEffect(stableItemKey, motionMode) { hasEntered = true }
-    val density = LocalDensity.current
     BoxWithConstraints {
+        // entry.offset/verticalOffset (and every CardStackLayoutPolicy step that produces them)
+        // are dp-scale, per the domain layer's own resolveCardStack/CardStackLayoutPolicy tests --
+        // so width/height stay dp-scale here too (maxWidth.value, not maxWidth.toPx()), keeping
+        // this whole pose in one consistent unit. The actual dp->px conversion happens once, at
+        // the graphicsLayer assignment below, where GraphicsLayerScope's own Density applies.
         val renderedPose =
             cardStackRenderedPose(
                 entry = entry,
                 animationSpec = animationSpec,
                 entering = !hasEntered,
-                width = with(density) { maxWidth.toPx() },
-                height = with(density) { maxHeight.toPx() },
+                width = maxWidth.value,
+                height = maxHeight.value,
             )
         val animationSpec =
             cardStackAnimationSpec(
@@ -349,15 +353,23 @@ private fun AnimatedCardStackEntry(
                         },
                     )
                     .graphicsLayer {
+                        // offset/verticalOffset are dp-scale (see their computation in
+                        // CardStackLayoutPolicy/resolveCardStack), but GraphicsLayerScope's
+                        // translationX/Y are pixels, not dp -- unlike Modifier.offset(x = ...dp),
+                        // this scope does not convert automatically. Without the explicit
+                        // .dp.toPx() below, every configured offset/spacing/curve value rendered
+                        // at only 1/density of its intended distance (invisible on most real
+                        // devices); GraphicsLayerScope itself implements Density, so this dp.toPx()
+                        // needs no external density lookup.
                         // HORIZONTAL rotates the whole coordinate system 90 degrees: the settle
                         // axis (verticalOffset by default) becomes translationX, and the
                         // fan/stagger axis (offset by default) becomes translationY.
                         if (orientation == CardStackOrientation.HORIZONTAL) {
-                            translationX = verticalOffset
-                            translationY = offset
+                            translationX = verticalOffset.dp.toPx()
+                            translationY = offset.dp.toPx()
                         } else {
-                            translationX = offset
-                            translationY = verticalOffset
+                            translationX = offset.dp.toPx()
+                            translationY = verticalOffset.dp.toPx()
                         }
                         scaleX = scale
                         scaleY = scale

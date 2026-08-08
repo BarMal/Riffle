@@ -478,6 +478,13 @@ internal fun AdaptiveStageAppStageSurface(
                                     )
                                 }
                                 if (railSide == AdaptiveStageRailSide.TRAILING) {
+                                    // The stack/detail panes are capped (MIN/MAX_STACK_WIDTH_DP,
+                                    // DETAIL_WIDTH_DP) and don't necessarily consume this Row's
+                                    // whole width -- without this filler, a Row default-packs its
+                                    // children to the leading edge, so the leftover width lands
+                                    // after the trailing rail instead of before it, leaving the
+                                    // rail short of the true trailing screen edge.
+                                    Spacer(modifier = Modifier.weight(1f))
                                     AdaptiveStageStageRail(
                                         stages = shellState.snapshot.stages,
                                         selectedStageId = selectedStage?.id,
