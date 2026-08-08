@@ -687,6 +687,11 @@ private fun AdaptiveStageMotionTabContent(
                 it.copy(motion = it.motion.copy(expandDurationMillis = value))
             }
         }
+        SettingsListRow(
+            title = "About settle, exit, and expand",
+            subtitle = "These only play during real use -- releasing a drag, dismissing a card, " +
+                "or opening its details -- so this static preview above won't visibly react to them.",
+        )
         AdaptiveStageEnumChoices(
             "Easing",
             AdaptiveStageEasing.entries,
