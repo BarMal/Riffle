@@ -797,7 +797,10 @@ class AdaptiveStageCardSurfaceTest {
             MaterialTheme { AdaptiveStageAppStageSurface(state = emptyPinnedStageState(app), onAction = {}) }
         }
 
-        composeRule.onNodeWithText("Details").performClick()
+        // The empty-stage card intentionally leaves room for a real fan stack rather than filling
+        // the viewport (see AdaptiveStageAppearanceSettings' PRIMARY_FAN_STAGE_MARGIN_FRACTION), so
+        // its own scrollable content column no longer necessarily fits "Details" without scrolling.
+        composeRule.onNodeWithText("Details").performScrollTo().performClick()
 
         composeRule.onNodeWithText("App details").assertIsDisplayed()
         composeRule.onNodeWithText("Back").performClick()
@@ -907,7 +910,10 @@ class AdaptiveStageCardSurfaceTest {
             MaterialTheme { AdaptiveStageAppStageSurface(state = state, onAction = {}) }
         }
 
-        composeRule.onNodeWithText("Details").performClick()
+        // The empty-stage card intentionally leaves room for a real fan stack rather than filling
+        // the viewport (see AdaptiveStageAppearanceSettings' PRIMARY_FAN_STAGE_MARGIN_FRACTION), so
+        // its own scrollable content column no longer necessarily fits "Details" without scrolling.
+        composeRule.onNodeWithText("Details").performScrollTo().performClick()
         composeRule.onNodeWithText("App details").assertIsDisplayed()
         composeRule.runOnIdle { state = state.copy(installedApps = emptyList()) }
 
