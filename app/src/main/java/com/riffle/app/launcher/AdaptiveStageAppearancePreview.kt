@@ -17,6 +17,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.cards.CardStackAnimationProfile
 import com.riffle.core.domain.launcher.settings.AdaptiveStageAppearanceSettings
+import com.riffle.core.domain.launcher.settings.AdaptiveStageCardStackRole
 import com.riffle.core.domain.launcher.settings.AdaptiveStageRendererCapabilities
 import com.riffle.core.domain.launcher.settings.AdaptiveStageViewportDp
 
@@ -37,11 +38,15 @@ internal fun AdaptiveStageAppearancePreview(
                 viewport = AdaptiveStageViewportDp(maxWidth.value.toInt(), maxHeight.value.toInt()),
                 capabilities = rendererCapabilities,
                 globalReducedMotion = globalReducedMotion,
+                // This preview is never touched -- it's a static illustration of the appearance
+                // choices, not a real, tappable card stack -- so it only needs to stay legible,
+                // not clear PRIMARY's much larger touch-reachable floor.
+                role = AdaptiveStageCardStackRole.PREVIEW,
             )
         val effectiveAppearance = appearance.effectiveFor(rendererCapabilities)
         if (!resolution.isUsable) {
             Text(
-                text = "Preview needs more space for reachable cards",
+                text = "Preview needs more space to render",
                 style = MaterialTheme.typography.bodyMedium,
             )
             return@BoxWithConstraints

@@ -75,11 +75,14 @@ data class AdaptiveStageAppearanceSettings(
      * viewport- and inset-aware; callers must use [isUsable] to choose a non-stack fallback on a
      * space-constrained surface.
      *
-     * [role] only changes the minimum-reachable-size floor [isUsable] enforces: [AdaptiveStageCardStackRole.PRIMARY]
-     * (the default) expects a large "reachable card" sized against a whole viewport, while
+     * [role] only changes the minimum-size floor [isUsable] enforces: [AdaptiveStageCardStackRole.PRIMARY]
+     * (the default) expects a large, touch-reachable card sized against a whole viewport, while
      * [AdaptiveStageCardStackRole.RAIL] expects a small tile within a physically narrow strip -- callers
      * pass that strip's own real bounds as [viewport] rather than a whole-window size, so every other
      * part of this resolution (travel, offset/scale/alpha steps) already scales itself to fit.
+     * [AdaptiveStageCardStackRole.PREVIEW] is for static illustrations (e.g. the settings preview):
+     * never touched, so it only needs to stay legible, not reachable -- a much smaller floor than
+     * [AdaptiveStageCardStackRole.PRIMARY] enforces for the same viewport.
      */
     @Suppress("LongMethod")
     fun resolveCardStack(
@@ -324,7 +327,7 @@ private data class ResolvedAdaptiveStageCardSize(
     val fitsAvailableSpace: Boolean,
 ) {
     fun isUsable(role: AdaptiveStageCardStackRole): Boolean {
-        val (minWidthDp, minHeightDp) = role.minimumReachableSizeDp()
+        val (minWidthDp, minHeightDp) = role.minimumUsableSizeDp()
         return focusedWidthDp >= minWidthDp && focusedHeightDp >= minHeightDp && fitsAvailableSpace
     }
 }
@@ -333,14 +336,16 @@ private data class ResolvedAdaptiveStageCardSize(
  * Which kind of [CardStackLayoutPolicy]-driven surface [AdaptiveStageAppearanceSettings.resolveCardStack]
  * is sizing for -- see that function's doc for how this changes reachability sizing.
  */
-enum class AdaptiveStageCardStackRole { PRIMARY, RAIL }
+enum class AdaptiveStageCardStackRole { PRIMARY, RAIL, PREVIEW }
 
-private fun AdaptiveStageCardStackRole.minimumReachableSizeDp(): Pair<Int, Int> =
+private fun AdaptiveStageCardStackRole.minimumUsableSizeDp(): Pair<Int, Int> =
     when (this) {
         AdaptiveStageCardStackRole.PRIMARY ->
             MIN_ADAPTIVE_STAGE_REACHABLE_CARD_WIDTH_DP to MIN_ADAPTIVE_STAGE_REACHABLE_CARD_HEIGHT_DP
         AdaptiveStageCardStackRole.RAIL ->
             MIN_ADAPTIVE_STAGE_REACHABLE_RAIL_TILE_WIDTH_DP to MIN_ADAPTIVE_STAGE_REACHABLE_RAIL_TILE_HEIGHT_DP
+        AdaptiveStageCardStackRole.PREVIEW ->
+            MIN_ADAPTIVE_STAGE_LEGIBLE_PREVIEW_CARD_WIDTH_DP to MIN_ADAPTIVE_STAGE_LEGIBLE_PREVIEW_CARD_HEIGHT_DP
     }
 
 data class AdaptiveStageViewportDp(
@@ -684,4 +689,12 @@ const val MIN_ADAPTIVE_STAGE_REACHABLE_CARD_HEIGHT_DP = 220
  */
 const val MIN_ADAPTIVE_STAGE_REACHABLE_RAIL_TILE_WIDTH_DP = 40
 const val MIN_ADAPTIVE_STAGE_REACHABLE_RAIL_TILE_HEIGHT_DP = 40
+
+/**
+ * A settings preview is never touched -- it's a static illustration of the appearance choices,
+ * not a real card stack -- so it only needs to stay legible, not [MIN_ADAPTIVE_STAGE_REACHABLE_CARD_WIDTH_DP]/
+ * [MIN_ADAPTIVE_STAGE_REACHABLE_CARD_HEIGHT_DP]'s touch-reachable size.
+ */
+const val MIN_ADAPTIVE_STAGE_LEGIBLE_PREVIEW_CARD_WIDTH_DP = 100
+const val MIN_ADAPTIVE_STAGE_LEGIBLE_PREVIEW_CARD_HEIGHT_DP = 120
 const val MIN_ADAPTIVE_STAGE_BACKGROUND_CARD_SCALE = 0.94f

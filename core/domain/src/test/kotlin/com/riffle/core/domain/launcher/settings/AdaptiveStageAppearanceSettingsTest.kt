@@ -325,6 +325,25 @@ class AdaptiveStageAppearanceSettingsTest {
     }
 
     @Test
+    fun previewRoleIsUsableAtASettingsPreviewSizeThatPrimaryRoleRejects() {
+        // The stack-bounding box reserves room for every background card's rotated silhouette, so
+        // the focused card ends up much smaller than the viewport -- too small to clear PRIMARY's
+        // touch-reachable floor at the settings preview's actual size, even though the illustration
+        // itself is still perfectly legible. PREVIEW role exists because that floor is the wrong
+        // yardstick for a static, never-touched illustration.
+        val previewViewport = AdaptiveStageViewportDp(widthDp = 360, heightDp = 220)
+        val settings = AdaptiveStageAppearanceSettings()
+
+        val primaryResolution = settings.resolveCardStack(previewViewport, role = AdaptiveStageCardStackRole.PRIMARY)
+        val previewResolution = settings.resolveCardStack(previewViewport, role = AdaptiveStageCardStackRole.PREVIEW)
+
+        assertFalse(primaryResolution.isUsable)
+        assertTrue(previewResolution.isUsable)
+        assertEquals(settings.geometry.visibleDepth, previewResolution.layoutPolicy.maxVisibleDepth)
+        assertEquals(1, primaryResolution.layoutPolicy.maxVisibleDepth)
+    }
+
+    @Test
     fun unfoldedDefaultIsLinearSpacedAndNonOverlappingUnlikeModern() {
         val modern = AdaptiveStageAppearanceSettings.modern()
         val unfolded = AdaptiveStageAppearanceSettings.unfolded()
