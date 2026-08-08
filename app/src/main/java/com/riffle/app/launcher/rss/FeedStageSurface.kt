@@ -50,6 +50,7 @@ import com.riffle.app.launcher.CardStackInteraction
 import com.riffle.app.launcher.adaptiveStageNotificationStackEntries
 import com.riffle.app.launcher.adaptiveStageRendererCapabilities
 import com.riffle.app.launcher.adaptiveStageResolvedContentPadding
+import com.riffle.app.launcher.rememberReconciledFocusedCardId
 import com.riffle.app.launcher.transitionDurationMillis
 import com.riffle.core.domain.launcher.cards.CardExpansionPhase
 import com.riffle.core.domain.launcher.cards.CardExpansionState
@@ -191,22 +192,15 @@ private fun FeedArticleStack(
     val controller = remember(stageId) { CardStackController() }
     val stackKey =
         remember(stageId) { CardStackKey("feed:${stageId.feedId.value}") }
-    var previousCardIds by remember(stageId) { mutableStateOf(emptyList<LauncherCardId>()) }
     var settleTransitionId by rememberSaveable(stageId.feedId.value) { mutableIntStateOf(0) }
-    val focusState = CardStackFocusState(stackKey, focusedDigest?.let(::LauncherCardId))
-
-    LaunchedEffect(cardIds) {
-        val reconciliation =
-            if (focusState.focusedCardId == null) {
-                controller.restore(focusState, cardIds)
-            } else {
-                controller.reconcile(focusState, previousCardIds, cardIds)
-            }
-        if (reconciliation is CardStackFocusResult.Applied) {
-            onFocusedDigestChanged(reconciliation.state.focusedCardId?.value)
-        }
-        previousCardIds = cardIds
-    }
+    val reconciledFocusedCardId =
+        rememberReconciledFocusedCardId(
+            controller = controller,
+            stackKey = stackKey,
+            cardIds = cardIds,
+            focusedCardId = focusedDigest?.let(::LauncherCardId),
+        ) { id -> onFocusedDigestChanged(id?.value) }
+    val focusState = CardStackFocusState(stackKey, reconciledFocusedCardId)
 
     val activeIndex = cardIds.indexOf(focusState.focusedCardId).takeIf { index -> index >= 0 } ?: 0
     val activeCard = cards.getOrNull(activeIndex) ?: return
