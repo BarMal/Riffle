@@ -2217,7 +2217,10 @@ internal fun adaptiveStageNotificationStackEntries(
         )
 
 @Composable
-private fun AdaptiveStageCardPositionIndicator(position: Int, count: Int) {
+private fun AdaptiveStageCardPositionIndicator(
+    position: Int,
+    count: Int,
+) {
     // Drag/fling on the stack itself is the only navigation surface now -- see
     // AdaptiveStageCardNavigationControls' removal -- this just reports where the focused
     // card sits, matching the "Previous card"/"Next card" TalkBack custom actions attached
