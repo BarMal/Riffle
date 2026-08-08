@@ -97,12 +97,11 @@ if ($ValidateOnly) {
     return
 }
 
-if ([string]::IsNullOrWhiteSpace($ApkPath) -or [string]::IsNullOrWhiteSpace($AabPath) -or [string]::IsNullOrWhiteSpace($NotesPath)) {
-    throw "ApkPath, AabPath, and NotesPath are required unless ValidateOnly is specified."
+if ([string]::IsNullOrWhiteSpace($ApkPath) -or [string]::IsNullOrWhiteSpace($NotesPath)) {
+    throw "ApkPath and NotesPath are required unless ValidateOnly is specified."
 }
 
 $apk = Get-Item -LiteralPath $ApkPath
-$aab = Get-Item -LiteralPath $AabPath
 
 $releaseNotesSection = ""
 if (-not [string]::IsNullOrWhiteSpace($releaseNotes)) {
@@ -114,6 +113,12 @@ $releaseNotes
 "@
 }
 
+$artifactRows = "| $($apk.Name) | $(Format-Mib $apk.Length) MiB ($($apk.Length) bytes) |"
+if (-not [string]::IsNullOrWhiteSpace($AabPath)) {
+    $aab = Get-Item -LiteralPath $AabPath
+    $artifactRows += "`n| $($aab.Name) | $(Format-Mib $aab.Length) MiB ($($aab.Length) bytes) |"
+}
+
 $notes = @"
 Signed $ReleaseChannel build from commit $CommitSha.
 $releaseNotesSection
@@ -122,8 +127,7 @@ $releaseNotesSection
 
 | Artifact | Size |
 | --- | ---: |
-| $($apk.Name) | $(Format-Mib $apk.Length) MiB ($($apk.Length) bytes) |
-| $($aab.Name) | $(Format-Mib $aab.Length) MiB ($($aab.Length) bytes) |
+$artifactRows
 
 APK size budget tracking: #53
 "@
