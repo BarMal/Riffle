@@ -54,14 +54,16 @@ class AdaptiveStageAppearanceEditorTest {
             }
         }
 
-        // The preview, target chooser, and reset row stay outside the tabs entirely.
+        // The preview, target chooser, and reset action stay outside the tabs entirely.
         composeRule.onNodeWithContentDescription("Cards appearance preview").assertExists()
-        composeRule.onNodeWithText("Appearance target").assertExists()
-        composeRule.onNodeWithText("Reset appearance").assertExists()
+        composeRule
+            .onNodeWithTag("adaptive-stage-appearance-target-${AdaptiveStageAppearanceEditorTarget.FOLDED.name}")
+            .assertExists()
+        composeRule.onNodeWithText("Reset Folded").assertExists()
 
         val tabToSectionTitles =
             mapOf(
-                AdaptiveStageAppearanceTab.LAYOUT to listOf("Layout"),
+                AdaptiveStageAppearanceTab.LAYOUT to listOf("Layout", "About Folded and Unfolded"),
                 AdaptiveStageAppearanceTab.GEOMETRY to listOf("Card geometry", "Stack and stack"),
                 AdaptiveStageAppearanceTab.SURFACE to listOf("Surface and glass"),
                 AdaptiveStageAppearanceTab.COLOR to listOf("Colour and content"),
@@ -176,10 +178,10 @@ class AdaptiveStageAppearanceEditorTest {
             }
         }
 
-        // "Reset appearance" lives in the sticky header above the tabs, not inside the tab
+        // The reset action lives in the sticky header above the tabs, not inside the tab
         // content's scrollable column, so it's always on screen -- no performScrollTo() needed
         // (and none is possible: it has no scrollable ancestor).
-        composeRule.onNodeWithText("Reset Folded Cards appearance").performClick()
+        composeRule.onNodeWithText("Reset Folded").performClick()
         composeRule.onNodeWithText("Reset Folded Cards appearance?").assertExists()
         composeRule.onNodeWithContentDescription("Confirm Cards reset").performClick()
         composeRule.runOnIdle {
@@ -201,11 +203,11 @@ class AdaptiveStageAppearanceEditorTest {
             }
         }
 
-        // Both the target chooser and "Reset appearance" live in the sticky header above the
+        // Both the target chooser and the reset action live in the sticky header above the
         // tabs, not inside the tab content's scrollable column, so they're always on screen --
         // no performScrollTo() needed (and none is possible: neither has a scrollable ancestor).
         composeRule.onNodeWithTag("adaptive-stage-appearance-target-UNFOLDED").performClick()
-        composeRule.onNodeWithText("Reset Unfolded Cards appearance").performClick()
+        composeRule.onNodeWithText("Reset Unfolded").performClick()
         composeRule.onNodeWithText("Reset Unfolded Cards appearance?").assertExists()
         composeRule.onNodeWithContentDescription("Confirm Cards reset").performClick()
         composeRule.runOnIdle {
