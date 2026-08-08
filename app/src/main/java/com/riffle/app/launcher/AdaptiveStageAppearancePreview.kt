@@ -2,6 +2,11 @@
 
 package com.riffle.app.launcher
 
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Paint
+import android.graphics.RadialGradient
+import android.graphics.Shader
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
@@ -10,8 +15,12 @@ import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
@@ -51,19 +60,31 @@ internal fun AdaptiveStageAppearancePreview(
             )
             return@BoxWithConstraints
         }
+        // Synthetic but textured (not flat) artwork, so surface settings that only act on real
+        // artwork -- blur strength, and the artwork half of saturation/contrast -- have something
+        // to visibly affect here. A flat-color bitmap would blur to itself.
+        val previewArtwork = remember { PREVIEW_APP_COLORS.map(::adaptiveStagePreviewArtwork) }
         CardStack(
             entries = resolution.layoutPolicy.entries(cardCount = 3, activeIndex = 0, reducedMotion = resolution.reducedMotion),
             modifier = Modifier.fillMaxSize(),
             animationProfile = CardStackAnimationProfile.CARD_FLIGHT,
             animationSpec = resolution.animation,
             reducedMotion = resolution.reducedMotion,
-            itemKey = { entry -> "preview-${entry.cardIndex}" },
+            // Keying on `appearance.motion` replays the entering flight-in animation whenever a
+            // Motion tab setting changes, instead of only ever once at first composition. Enter
+            // duration, easing, spring bounciness, and travel intensity already have a resting
+            // (post-entrance) effect elsewhere in the stack, but parallax intensity's only effect
+            // anywhere is on that one-time entrance -- see CardStack.kt's cardStackRenderedPose --
+            // so without this, dragging its slider had literally no visible effect on an
+            // already-mounted preview.
+            itemKey = { entry -> "preview-${entry.cardIndex}-${appearance.motion}" },
         ) { entry, _ ->
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 AdaptiveStageCardSurface(
                     appearance = effectiveAppearance,
                     background =
                         AdaptiveStageCardBackground(
+                            artwork = previewArtwork[entry.cardIndex],
                             appSeed = PREVIEW_APP_SEEDS[entry.cardIndex],
                             appColor = PREVIEW_APP_COLORS[entry.cardIndex],
                             wallpaperAccent = MaterialTheme.colorScheme.tertiary,
@@ -97,3 +118,31 @@ private val PREVIEW_APP_COLORS =
         androidx.compose.ui.graphics.Color(0xFF6C5B7B),
         androidx.compose.ui.graphics.Color(0xFFC06C84),
     )
+
+/** A small gradient-plus-highlight bitmap -- not a flat fill, so blur has visible texture to act on. */
+private fun adaptiveStagePreviewArtwork(color: androidx.compose.ui.graphics.Color): ImageBitmap {
+    val size = 120
+    val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(bitmap)
+    val darkArgb = color.copy(alpha = 1f).toArgb()
+    val lightArgb =
+        color.copy(
+            red = (color.red + (1f - color.red) * 0.6f).coerceIn(0f, 1f),
+            green = (color.green + (1f - color.green) * 0.6f).coerceIn(0f, 1f),
+            blue = (color.blue + (1f - color.blue) * 0.6f).coerceIn(0f, 1f),
+        ).toArgb()
+    val paint =
+        Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            shader =
+                RadialGradient(
+                    size * 0.35f,
+                    size * 0.3f,
+                    size * 0.9f,
+                    lightArgb,
+                    darkArgb,
+                    Shader.TileMode.CLAMP,
+                )
+        }
+    canvas.drawRect(0f, 0f, size.toFloat(), size.toFloat(), paint)
+    return bitmap.asImageBitmap()
+}
