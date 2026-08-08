@@ -3,11 +3,8 @@ package com.riffle.core.domain.launcher.settings
 import com.riffle.core.domain.launcher.cards.CardStackAnimationEasing
 import com.riffle.core.domain.launcher.cards.CardStackAnimationSpec
 import com.riffle.core.domain.launcher.cards.CardStackLayoutPolicy
-import kotlin.math.abs
 import kotlin.math.ceil
-import kotlin.math.cos
 import kotlin.math.min
-import kotlin.math.sin
 
 /**
  * Versioned, renderer-independent appearance intent for the optional AdaptiveStage card surface.
@@ -94,14 +91,14 @@ data class AdaptiveStageAppearanceSettings(
         val appearance = effectiveForResolution(capabilities, globalReducedMotion)
         val focusedScale = appearance.geometry.focusedScalePercent / 100f
         val stackBounds = resolveStackBounds(appearance.geometry, appearance.motion, focusedScale)
-        val cardSize = appearance.resolveCardSize(viewport, stackBounds)
+        val cardSize = appearance.resolveCardSize(viewport, stackBounds, role)
         val requestedPadding = appearance.geometry.contentPaddingDp
         val isUsable = cardSize.isUsable(role) && appearance.hasReachableStackLayout()
         val depth = if (isUsable) appearance.geometry.visibleDepth else 1
         val horizontalTravel =
             ((viewport.safeWidthDp - cardSize.widthDp * stackBounds.maxWidthScale) / 2f).coerceAtLeast(0f)
         val verticalTravel =
-            ((viewport.safeHeightDp - cardSize.widthDp * stackBounds.maxHeightScale) / 2f).coerceAtLeast(0f)
+            ((viewport.safeHeightDp - cardSize.heightDp * stackBounds.maxHeightScale) / 2f).coerceAtLeast(0f)
         val motionScale = appearance.motion.travelIntensityPercent / 100f
         val offsetDirection =
             when (appearance.geometry.fanDirection) {
@@ -250,6 +247,7 @@ private fun AdaptiveStageAppearanceSettings.hasReachableStackLayout(): Boolean {
 private fun AdaptiveStageAppearanceSettings.resolveCardSize(
     viewport: AdaptiveStageViewportDp,
     stackBounds: ResolvedAdaptiveStageStackBounds,
+    role: AdaptiveStageCardStackRole,
 ): ResolvedAdaptiveStageCardSize =
     resolveCardSize(
         viewport = viewport,
@@ -257,6 +255,16 @@ private fun AdaptiveStageAppearanceSettings.resolveCardSize(
         geometry = geometry,
         stackBounds = stackBounds,
         reservedVerticalSpaceDp = staticVerticalSeparationDp(),
+        // RAIL sizes a tile against its own narrow physical strip (#1054): every dp there is
+        // needed just to keep tiles reachable, so it keeps filling the full strip exactly as
+        // before. PREVIEW is a small, static illustration where actually showing a card matters
+        // more than fan travel room, so it also fills its box fully (see PREVIEW's own, much
+        // smaller usability floor). Only PRIMARY deliberately leaves a fraction of the viewport
+        // unclaimed -- taking a cue from the reference "Calm" timescape, which sizes its focused
+        // card to ~58% of screen height rather than filling it -- so resolveCardStack's fan/
+        // offset/rotation has genuine room to be visible instead of fighting over leftover scraps.
+        fanStageMarginFraction =
+            if (role == AdaptiveStageCardStackRole.PRIMARY) PRIMARY_FAN_STAGE_MARGIN_FRACTION else 0f,
     )
 
 private fun resolveCardSize(
@@ -265,10 +273,12 @@ private fun resolveCardSize(
     geometry: AdaptiveStageGeometry,
     stackBounds: ResolvedAdaptiveStageStackBounds,
     reservedVerticalSpaceDp: Int = 0,
+    fanStageMarginFraction: Float = 0f,
 ): ResolvedAdaptiveStageCardSize {
-    val availableWidth = (viewport.safeWidthDp - requestedPadding * 2).coerceAtLeast(0)
-    val availableHeight =
-        (viewport.safeHeightDp - requestedPadding * 2 - reservedVerticalSpaceDp).coerceAtLeast(0)
+    val stageWidthDp = (viewport.safeWidthDp * (1f - fanStageMarginFraction))
+    val stageHeightDp = (viewport.safeHeightDp * (1f - fanStageMarginFraction))
+    val availableWidth = (stageWidthDp - requestedPadding * 2).coerceAtLeast(0f)
+    val availableHeight = (stageHeightDp - requestedPadding * 2 - reservedVerticalSpaceDp).coerceAtLeast(0f)
     val aspectRatio = geometry.cardAspectRatioPercent / 100f
     val width = min(availableWidth / stackBounds.maxWidthScale, availableHeight / stackBounds.maxHeightScale).toInt()
     val height = if (aspectRatio == 0f) 0 else (width / aspectRatio).toInt()
@@ -283,6 +293,31 @@ private fun resolveCardSize(
     )
 }
 
+/**
+ * How much of the viewport PRIMARY deliberately leaves unclaimed by the focused card so
+ * [AdaptiveStageAppearanceSettings.resolveCardStack]'s fan/offset/rotation travel has real room
+ * to work with, instead of the focused card filling the viewport and leaving only a few dp of
+ * leftover space regardless of the user's configured geometry. Chosen in the same spirit as (not
+ * identical to) the reference "Calm" timescape, which sizes its own focused card to a fixed ~58%
+ * of screen height rather than filling it.
+ */
+private const val PRIMARY_FAN_STAGE_MARGIN_FRACTION = 0.25f
+
+/**
+ * The focused card's own size no longer reserves extra room for the *worst-case rotated*
+ * background silhouette (rotation can put a background card's rendered footprint outside its own
+ * unrotated bounding box) -- the reference "Calm" timescape doesn't either: background cards are
+ * allowed to extend past the focused card's own footprint, exactly as Calm's `clipChildren = false`
+ * stack permits. That reservation was the dominant cost eating the fan/offset travel budget.
+ *
+ * [maxWidthScale]/[maxHeightScale] still guard the one thing that isn't a deliberate stylistic
+ * choice: a background card can render *larger* than the focused card whenever
+ * [AdaptiveStageGeometry.focusedScalePercent] shrinks the focused card below 100% -- the
+ * shallowest background card (depth 1) is barely shrunk from its own full footprint regardless of
+ * [focusedScale], so it can be the single largest rendered element in the stack. Both fields take
+ * whichever of the two is bigger, so sizing and travel both stay conservative enough to contain
+ * every *rendered* card, not just the focused one.
+ */
 private fun resolveStackBounds(
     geometry: AdaptiveStageGeometry,
     motion: AdaptiveStageMotion,
@@ -292,22 +327,13 @@ private fun resolveStackBounds(
     val scaleStep = (1f - MIN_ADAPTIVE_STAGE_BACKGROUND_CARD_SCALE) / depth
     val rotationStep = geometry.rotationDegrees * motion.rotationIntensityPercent / 100f
     val aspectRatio = geometry.cardAspectRatioPercent / 100f
-    var maxWidthScale = focusedScale
-    var maxHeightScale = focusedScale / aspectRatio
-    for (cardDepth in 1..depth) {
-        val scale = 1f - scaleStep * cardDepth
-        val angleRadians = Math.toRadians((rotationStep * cardDepth).toDouble())
-        val cosine = cos(angleRadians).toFloat()
-        val absoluteSine = abs(sin(angleRadians)).toFloat()
-        maxWidthScale = maxOf(maxWidthScale, scale * (cosine + absoluteSine / aspectRatio))
-        maxHeightScale = maxOf(maxHeightScale, scale * (absoluteSine + cosine / aspectRatio))
-    }
+    val maxRenderScale = maxOf(focusedScale, 1f - scaleStep)
     return ResolvedAdaptiveStageStackBounds(
         focusedScale = focusedScale,
         scaleStep = scaleStep,
         rotationStep = rotationStep,
-        maxWidthScale = maxWidthScale,
-        maxHeightScale = maxHeightScale,
+        maxWidthScale = maxRenderScale,
+        maxHeightScale = maxRenderScale / aspectRatio,
     )
 }
 

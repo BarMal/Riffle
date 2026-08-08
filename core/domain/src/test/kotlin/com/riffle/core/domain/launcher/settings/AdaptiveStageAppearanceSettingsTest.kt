@@ -89,6 +89,55 @@ class AdaptiveStageAppearanceSettingsTest {
     }
 
     @Test
+    fun primaryRoleReservesGenuineFanStageInsteadOfLettingTheFocusedCardFillTheViewport() {
+        // A representative real Home viewport (not the settings preview's small box). Before
+        // PRIMARY_FAN_STAGE_MARGIN_FRACTION existed, the focused card filled essentially the whole
+        // viewport, which starved every fan/offset/rotation control down to a couple of dp
+        // regardless of the user's configured geometry -- see the reference "Calm" timescape's own
+        // ~58%-of-viewport focused card for the same idea.
+        val viewport = AdaptiveStageViewportDp(widthDp = 376, heightDp = 684)
+        val resolution = AdaptiveStageAppearanceSettings().resolveCardStack(viewport)
+
+        assertTrue(resolution.isUsable)
+        assertTrue(resolution.cardWidthDp < (viewport.safeWidthDp * 0.85).toInt())
+    }
+
+    @Test
+    fun primaryRoleAppliesTheConfiguredHorizontalOffsetInsteadOfCrushingItToAFewDp() {
+        val viewport = AdaptiveStageViewportDp(widthDp = 376, heightDp = 684)
+        val resolution = AdaptiveStageAppearanceSettings().resolveCardStack(viewport)
+        val depthOneOffset =
+            resolution.layoutPolicy.entries(cardCount = 5, activeIndex = 2).first { it.depth == 1 }.offset
+
+        // Default horizontalOffsetDp is 20dp; the pre-fix starved travel budget crushed this down
+        // to roughly 2dp regardless of the configured value.
+        assertTrue(kotlin.math.abs(depthOneOffset) > 15f)
+    }
+
+    @Test
+    fun railVerticalTravelReservesCardHeightNotCardWidth() {
+        // Regression guard for a copy/paste bug where verticalTravel's reservation multiplied
+        // stackBounds.maxHeightScale by cardWidthDp instead of cardHeightDp -- invisible whenever
+        // width and height happen to be equal, so this deliberately uses a non-square aspect ratio
+        // (cardHeightDp is meaningfully larger than cardWidthDp here) to catch it. The buggy
+        // version reserves too little vertical room and lets verticalStep reach further toward the
+        // full requested spacing than the real geometry allows.
+        val viewport = AdaptiveStageViewportDp(widthDp = 200, heightDp = 800)
+        val settings =
+            AdaptiveStageAppearanceSettings(
+                geometry = AdaptiveStageGeometry(cardAspectRatioPercent = 60, verticalSpacingDp = 96, visibleDepth = 1),
+            )
+
+        val resolution = settings.resolveCardStack(viewport, role = AdaptiveStageCardStackRole.RAIL)
+        val backgroundOffset =
+            resolution.layoutPolicy.entries(cardCount = 3, activeIndex = 1).first { it.depth > 0 }.verticalOffset
+
+        assertTrue(resolution.isUsable)
+        assertTrue(resolution.cardHeightDp > resolution.cardWidthDp)
+        assertTrue(kotlin.math.abs(backgroundOffset) < 96f)
+    }
+
+    @Test
     fun projectsPersistedMotionIntoTheCardStackRendererTokens() {
         val resolution =
             AdaptiveStageAppearanceSettings(
