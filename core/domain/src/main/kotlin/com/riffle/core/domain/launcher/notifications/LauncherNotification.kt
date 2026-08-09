@@ -16,7 +16,15 @@ data class LauncherNotification(
     val title: String = "",
     val text: String = "",
     val largeIconPngBase64: String? = null,
+    /** Individual messages when the source notification carries per-message history, newest last. */
+    val messages: List<LauncherNotificationMessage> = emptyList(),
     val postedAtEpochMillis: Long,
+)
+
+data class LauncherNotificationMessage(
+    val sender: String,
+    val text: String,
+    val timestampEpochMillis: Long,
 )
 
 @JvmInline

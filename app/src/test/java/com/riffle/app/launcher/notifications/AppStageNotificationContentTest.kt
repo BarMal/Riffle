@@ -16,6 +16,7 @@ import com.riffle.core.domain.launcher.cards.AppStagePreferences
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
 import com.riffle.core.domain.launcher.notifications.LauncherNotification
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
+import com.riffle.core.domain.launcher.notifications.LauncherNotificationMessage
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.notifications.NotificationAgeBucket
 import com.riffle.core.domain.launcher.notifications.NotificationCategory
@@ -67,6 +68,40 @@ class AppStageNotificationContentTest {
         assertTrue(cards.single().isRedacted)
         assertEquals("Hidden notification", cards.single().title)
         assertTrue(cards.single().supportedActions.isEmpty())
+    }
+
+    @Test
+    fun `projects per-message history when visible`() {
+        val messages =
+            listOf(LauncherNotificationMessage(sender = "Alex", text = "On my way", timestampEpochMillis = 5))
+        val visible = notification(key = "visible", postedAt = 1).copy(messages = messages)
+
+        val cards =
+            appStageNotificationCards(
+                notifications = listOf(visible),
+                notificationAccessStatus = NotificationAccessStatus.GRANTED,
+                profileContentVisibility =
+                    mapOf(AppProfile.personal().id to AppProfileContentVisibility.VISIBLE),
+            )
+
+        assertEquals(messages, cards.single().messages)
+    }
+
+    @Test
+    fun `redacts per-message history alongside title and text`() {
+        val messages =
+            listOf(LauncherNotificationMessage(sender = "Alex", text = "On my way", timestampEpochMillis = 5))
+        val quiet = notification(key = "quiet", postedAt = 2).copy(messages = messages)
+
+        val cards =
+            appStageNotificationCards(
+                notifications = listOf(quiet),
+                notificationAccessStatus = NotificationAccessStatus.GRANTED,
+                profileContentVisibility =
+                    mapOf(AppProfile.personal().id to AppProfileContentVisibility.REDACTED_QUIET),
+            )
+
+        assertTrue(cards.single().messages.isEmpty())
     }
 
     @Test

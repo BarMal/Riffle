@@ -5,6 +5,7 @@ import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppProfile
 import com.riffle.core.domain.launcher.apps.AppProfileId
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
+import com.riffle.core.domain.launcher.notifications.LauncherNotificationMessage
 import com.riffle.core.domain.launcher.notifications.NotificationCategory
 import com.riffle.core.domain.launcher.notifications.NotificationPriority
 import org.junit.Assert.assertEquals
@@ -44,6 +45,37 @@ class StatusBarNotificationMapperTest {
         assertEquals("Inbox zero is gone", notification.text)
         assertEquals("png-data", notification.largeIconPngBase64)
         assertEquals(42L, notification.postedAtEpochMillis)
+    }
+
+    @Test
+    fun mapsMessagesFromTheSnapshot() {
+        val messages =
+            listOf(LauncherNotificationMessage(sender = "Alex", text = "On my way", timestampEpochMillis = 5L))
+        val notification =
+            mapper.map(
+                StatusBarNotificationSnapshot(
+                    key = "chat-key",
+                    packageName = "com.riffle.chat",
+                    messages = messages,
+                    postedAtEpochMillis = 1_000L,
+                ),
+            )
+
+        assertEquals(messages, notification.messages)
+    }
+
+    @Test
+    fun defaultsToNoMessagesWhenTheSnapshotCarriesNone() {
+        val notification =
+            mapper.map(
+                StatusBarNotificationSnapshot(
+                    key = "no-messages-key",
+                    packageName = "com.riffle.mail",
+                    postedAtEpochMillis = 1_000L,
+                ),
+            )
+
+        assertEquals(emptyList<LauncherNotificationMessage>(), notification.messages)
     }
 
     @Test

@@ -9,12 +9,14 @@ import android.os.UserHandle
 import android.os.UserManager
 import android.service.notification.StatusBarNotification
 import android.util.Base64
+import androidx.core.app.NotificationCompat
 import com.riffle.app.launcher.apps.toAppProfile
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppProfile
 import com.riffle.core.domain.launcher.apps.AppProfileId
 import com.riffle.core.domain.launcher.notifications.LauncherNotification
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
+import com.riffle.core.domain.launcher.notifications.LauncherNotificationMessage
 import java.io.ByteArrayOutputStream
 
 @Suppress("DEPRECATION")
@@ -60,6 +62,7 @@ internal class StatusBarNotificationMapper(
                 title = notification.notification.titleText(),
                 text = notification.notification.bodyText(),
                 largeIconPngBase64 = notification.notification.largeIconPngBase64(),
+                messages = notification.notification.messagingStyleMessages(),
                 postedAtEpochMillis = notification.postTime,
             ),
         )
@@ -76,6 +79,7 @@ internal class StatusBarNotificationMapper(
             title = snapshot.title,
             text = snapshot.text,
             largeIconPngBase64 = snapshot.largeIconPngBase64,
+            messages = snapshot.messages,
             postedAtEpochMillis = snapshot.postedAtEpochMillis,
         )
 }
@@ -91,6 +95,7 @@ internal data class StatusBarNotificationSnapshot(
     val title: String = "",
     val text: String = "",
     val largeIconPngBase64: String? = null,
+    val messages: List<LauncherNotificationMessage> = emptyList(),
     val postedAtEpochMillis: Long,
 )
 
@@ -107,6 +112,28 @@ private fun Notification.bodyText(): String =
     ).mapNotNull { key ->
         extras?.getCharSequence(key)?.toString()?.trim()?.takeIf(String::isNotBlank)
     }.firstOrNull().orEmpty()
+
+/**
+ * Falls back to an empty list for notifications not posted with a messaging style (most
+ * non-messaging apps, and group-summary notifications) -- callers already fall back to
+ * [titleText]/[bodyText] in that case, so no separate heuristic is needed here. Uses the AndroidX
+ * compat extractor (not the platform `Notification.MessagingStyle`, which has no equivalent
+ * static parser) so this works the same way across the app's supported API levels.
+ */
+private fun Notification.messagingStyleMessages(): List<LauncherNotificationMessage> =
+    NotificationCompat.MessagingStyle.extractMessagingStyleFromNotification(this)
+        ?.messages
+        .orEmpty()
+        .takeLast(MAX_MESSAGING_STYLE_MESSAGES)
+        .map { message ->
+            LauncherNotificationMessage(
+                sender =
+                    message.person?.name?.toString()?.takeIf(String::isNotBlank)
+                        ?: message.sender?.toString().orEmpty(),
+                text = message.text?.toString().orEmpty(),
+                timestampEpochMillis = message.timestamp,
+            )
+        }
 
 @Suppress("DEPRECATION")
 private fun Notification.largeIconPngBase64(): String? =
@@ -134,3 +161,5 @@ private fun Bitmap.pngBase64OrNull(): String? =
             Base64.encodeToString(output.toByteArray(), Base64.NO_WRAP)
         }
     }
+
+private const val MAX_MESSAGING_STYLE_MESSAGES = 3
