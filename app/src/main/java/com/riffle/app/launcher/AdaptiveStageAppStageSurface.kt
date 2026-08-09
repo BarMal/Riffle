@@ -2395,16 +2395,19 @@ private fun AdaptiveStageContextActionButton(
     modifier: Modifier = Modifier,
 ) {
     // Built on TextButton (not a raw clickable Surface) so click routing keeps the same proven
-    // semantics/hit-testing behavior as every other action button in this file.
+    // semantics/hit-testing behavior as every other action button in this file. The container is
+    // near-opaque with a real shadow -- at the previous 0.55f alpha and no elevation, these pills
+    // were nearly unreadable over a busy wallpaper.
     TextButton(
         onClick = onClick,
         modifier = modifier,
         shape = RoundedCornerShape(percent = 50),
         colors =
             ButtonDefaults.textButtonColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
+                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.92f),
                 contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
             ),
+        elevation = ButtonDefaults.buttonElevation(defaultElevation = 3.dp, pressedElevation = 1.dp),
     ) {
         Text(
             text = label,
