@@ -15,6 +15,13 @@ data class CardStackLayoutPolicy(
     val rotationStep: Float = DEFAULT_CARD_STACK_ROTATION_STEP,
     val reducedMotionScaleStep: Float = DEFAULT_CARD_STACK_REDUCED_MOTION_SCALE_STEP,
     val reducedMotionOffsetStep: Float = DEFAULT_CARD_STACK_REDUCED_MOTION_OFFSET_STEP,
+    /**
+     * Mirrors [offsetDirection] for the vertical axis: -1/1 flips which side (earlier vs. later
+     * cards) fans up vs. down, 0 disables vertical fan/curve entirely. Defaults to 1 (today's
+     * only prior behavior -- earlier cards fan up, later cards fan down, unconditionally) so every
+     * existing caller that doesn't know about this field is unaffected.
+     */
+    val verticalOffsetDirection: Float = 1f,
 ) {
     init {
         require(maxVisibleDepth >= 0) { "Maximum visible depth must not be negative." }
@@ -27,6 +34,7 @@ data class CardStackLayoutPolicy(
         require(curveStep >= 0f) { "Curve step must not be negative." }
         require(reducedMotionScaleStep >= 0f) { "Reduced-motion scale step must not be negative." }
         require(reducedMotionOffsetStep >= 0f) { "Reduced-motion offset step must not be negative." }
+        require(verticalOffsetDirection in -1f..1f) { "Vertical offset direction must be between -1 and 1." }
     }
 
     fun entries(
@@ -77,7 +85,9 @@ data class CardStackLayoutPolicy(
                             (activeOffsetStep * abs(signedDistance) + if (reducedMotion) 0f else focusedGap) *
                             signedDistance.sign
                     },
-                verticalOffset = verticalOffsetStep * signedDistance + curveStep * signedDistance * signedDistance,
+                verticalOffset =
+                    verticalOffsetDirection *
+                        (verticalOffsetStep * signedDistance + curveStep * signedDistance * signedDistance),
                 rotationDegrees = if (reducedMotion) 0f else rotationStep * signedDistance,
                 alpha = (1f - alphaStep * depth).coerceIn(0f, 1f),
             )

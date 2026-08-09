@@ -54,6 +54,30 @@ class CardStackLayoutPolicyTest {
     }
 
     @Test
+    fun verticalOffsetDirectionFlipsOrDisablesVerticalFanIndependentlyOfHorizontalFan() {
+        val forward = CardStackLayoutPolicy(verticalOffsetStep = 10f, curveStep = 2f, verticalOffsetDirection = 1f)
+        val reversed = CardStackLayoutPolicy(verticalOffsetStep = 10f, curveStep = 2f, verticalOffsetDirection = -1f)
+        val disabled = CardStackLayoutPolicy(verticalOffsetStep = 10f, curveStep = 2f, verticalOffsetDirection = 0f)
+
+        // Excludes cardIndex 1 (the focused card, signedDistance 0): its verticalOffset is always
+        // exactly zero regardless of direction. The "+ 0f" on every value normalizes away negative
+        // zero (e.g. 0f * -8f == -0.0f), which Kotlin's Float.equals (unlike ==) treats as distinct
+        // from positive zero inside a Map comparison.
+        fun verticalOffsetsByCardIndex(policy: CardStackLayoutPolicy) =
+            policy.entries(cardCount = 3, activeIndex = 1)
+                .filter { entry -> entry.cardIndex != 1 }
+                .associate { entry -> entry.cardIndex to entry.verticalOffset + 0f }
+
+        // cardIndex 0 is one step before the focused card (signedDistance -1), cardIndex 2 is one
+        // step after (signedDistance +1) -- verticalOffsetDirection=1 (the default, matching every
+        // prior caller's only behavior) keeps earlier cards fanning up, later cards fanning down;
+        // -1 flips that; 0 disables vertical fan/curve entirely regardless of the step values.
+        assertEquals(mapOf(0 to -8f, 2 to 12f), verticalOffsetsByCardIndex(forward))
+        assertEquals(mapOf(0 to 8f, 2 to -12f), verticalOffsetsByCardIndex(reversed))
+        assertEquals(mapOf(0 to 0f, 2 to 0f), verticalOffsetsByCardIndex(disabled))
+    }
+
+    @Test
     fun lastActiveCardKeepsTrailingStackInBounds() {
         val entries = policy.entries(cardCount = 5, activeIndex = 4)
 

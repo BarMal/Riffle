@@ -203,6 +203,9 @@ private fun encodeAdaptiveStageAppearance(settings: AdaptiveStageAppearanceSetti
                     "fanDirection",
                     appearance.geometry.fanDirection.name,
                 ).put(
+                    "verticalFanDirection",
+                    appearance.geometry.verticalFanDirection.name,
+                ).put(
                     "rotationDegrees",
                     appearance.geometry.rotationDegrees,
                 ).put(
@@ -352,6 +355,11 @@ private fun JSONObject.toAdaptiveStageAppearance(defaults: AdaptiveStageAppearan
                     geometry.enumOrDefault(
                         "fanDirection",
                         defaults.geometry.fanDirection,
+                    ),
+                verticalFanDirection =
+                    geometry.enumOrDefault(
+                        "verticalFanDirection",
+                        defaults.geometry.verticalFanDirection,
                     ),
                 rotationDegrees =
                     geometry.optIntOrDefault(

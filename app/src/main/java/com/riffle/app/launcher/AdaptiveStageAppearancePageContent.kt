@@ -440,6 +440,16 @@ private fun AdaptiveStageGeometryTabContent(
                 it.copy(geometry = it.geometry.copy(fanDirection = value))
             }
         }
+        AdaptiveStageEnumChoices(
+            "Vertical fan direction",
+            AdaptiveStageFanDirection.entries,
+            appearance.geometry.verticalFanDirection,
+            AdaptiveStageFanDirection::label,
+        ) { value ->
+            update {
+                it.copy(geometry = it.geometry.copy(verticalFanDirection = value))
+            }
+        }
     }
 }
 

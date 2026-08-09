@@ -318,7 +318,9 @@ internal fun AdaptiveStageCardSurface(
                     if (effective.surface.blurStrengthPercent == 0) {
                         Modifier
                     } else {
-                        Modifier.blur((effective.surface.blurStrengthPercent * 0.24f).dp)
+                        // Was *0.24f (max 24dp blur at 100%) -- too weak to read as a deliberate
+                        // effect against real artwork. *0.5f gives a max of 50dp.
+                        Modifier.blur((effective.surface.blurStrengthPercent * 0.5f).dp)
                     },
                 )
         }
@@ -419,7 +421,9 @@ private fun AdaptiveStageTexture(
 ) {
     if (intensityPercent == 0) return
     Canvas(modifier = Modifier.fillMaxSize()) {
-        val alpha = intensityPercent / 500f
+        // Was /500f (max alpha 0.08 at the old 40% cap) -- barely perceptible. /250f against the
+        // new 100% cap gives a max alpha of 0.4.
+        val alpha = intensityPercent / 250f
         val spacing = 12.dp.toPx()
         val radius = 0.7.dp.toPx()
         var y = spacing / 2f
