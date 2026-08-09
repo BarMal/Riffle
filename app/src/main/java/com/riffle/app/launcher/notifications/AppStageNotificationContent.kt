@@ -20,6 +20,7 @@ import com.riffle.core.domain.launcher.cards.AppStageSnapshot
 import com.riffle.core.domain.launcher.cards.LauncherCardId
 import com.riffle.core.domain.launcher.notifications.LauncherNotification
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
+import com.riffle.core.domain.launcher.notifications.LauncherNotificationMessage
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.settings.stagePreferencesFor
 
@@ -31,6 +32,8 @@ data class AppStageNotificationCard(
     val text: String,
     val isRedacted: Boolean,
     val supportedActions: Set<NotificationStageAction>,
+    /** Individual messages when the source notification carried per-message history. */
+    val messages: List<LauncherNotificationMessage> = emptyList(),
     /** Process-only artwork payload; it is never persisted with stage preferences. */
     val artworkBase64: String? = null,
     /** Revision-keyed cache identity prepared during notification refresh. */
@@ -218,6 +221,7 @@ private fun LauncherNotification.toAppStageCard(
         text = if (isRedacted) "Content hidden for this profile" else text,
         isRedacted = isRedacted,
         supportedActions = actions,
+        messages = messages.takeUnless { isRedacted }.orEmpty(),
         artworkBase64 = largeIconPngBase64.takeUnless { isRedacted },
         artworkSourceKey = artworkRevision?.let { revision -> "${content.id.value}:$revision" },
     )

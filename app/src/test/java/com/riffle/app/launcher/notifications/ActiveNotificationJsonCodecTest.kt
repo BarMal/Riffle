@@ -5,6 +5,7 @@ import com.riffle.core.domain.launcher.apps.AppProfile
 import com.riffle.core.domain.launcher.apps.AppProfileId
 import com.riffle.core.domain.launcher.notifications.LauncherNotification
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
+import com.riffle.core.domain.launcher.notifications.LauncherNotificationMessage
 import com.riffle.core.domain.launcher.notifications.NotificationCategory
 import com.riffle.core.domain.launcher.notifications.NotificationPriority
 import org.json.JSONArray
@@ -48,6 +49,25 @@ class ActiveNotificationJsonCodecTest {
             )
 
         assertEquals("company", JSONArray(encoded).getJSONObject(0).getString("profileId"))
+    }
+
+    @Test
+    fun roundTripsPerMessageHistory() {
+        val notifications =
+            listOf(
+                LauncherNotification(
+                    key = LauncherNotificationKey("chat-1"),
+                    packageName = AppPackageName("com.riffle.chat"),
+                    messages =
+                        listOf(
+                            LauncherNotificationMessage(sender = "Alex", text = "On my way", timestampEpochMillis = 1_000L),
+                            LauncherNotificationMessage(sender = "Sam", text = "See you soon", timestampEpochMillis = 2_000L),
+                        ),
+                    postedAtEpochMillis = 2_000L,
+                ),
+            )
+
+        assertEquals(notifications, decodeActiveNotifications(encodeActiveNotifications(notifications)))
     }
 
     @Test
@@ -145,6 +165,7 @@ class ActiveNotificationJsonCodecTest {
         assertEquals("", notification.title)
         assertEquals("", notification.text)
         assertEquals(null, notification.largeIconPngBase64)
+        assertEquals(emptyList<LauncherNotificationMessage>(), notification.messages)
     }
 
     @Test

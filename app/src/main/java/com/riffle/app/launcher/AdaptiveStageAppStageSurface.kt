@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ButtonDefaults
@@ -66,6 +67,7 @@ import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -1514,7 +1516,7 @@ private fun AdaptiveStageSupportingPane(
             } else {
                 stage?.let { Text(stageLabel(it.id, state), style = MaterialTheme.typography.labelLarge) }
                 Text(card.title, style = MaterialTheme.typography.titleMedium)
-                Text(card.text, style = MaterialTheme.typography.bodyMedium)
+                AdaptiveStageCardMessageBody(card)
                 AdaptiveStageContextActionsGrid(
                     card = card,
                     onAction = onAction,
@@ -1944,7 +1946,7 @@ private fun AdaptiveStageNotificationStack(
                         ) {
                             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                 Text(card.title, style = MaterialTheme.typography.titleMedium)
-                                Text(card.text, style = MaterialTheme.typography.bodyMedium)
+                                AdaptiveStageCardMessageBody(card)
                             }
                         }
                     }
@@ -2271,6 +2273,59 @@ private fun AdaptiveStageCardPositionIndicator(
         )
     }
 }
+
+/**
+ * Renders a notification's individual messages (sender + snippet, most recent last) when the
+ * source notification carried per-message history, falling back to the plain text summary
+ * otherwise -- most notifications (and every group-summary notification) have no per-message
+ * history to show.
+ */
+@Composable
+internal fun AdaptiveStageCardMessageBody(
+    card: AppStageNotificationCard,
+    style: TextStyle = MaterialTheme.typography.bodyMedium,
+) {
+    if (card.messages.isEmpty()) {
+        Text(card.text, style = style)
+        return
+    }
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        card.messages.takeLast(ADAPTIVE_STAGE_CARD_VISIBLE_MESSAGE_COUNT).forEach { message ->
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                AdaptiveStageMessageAvatar(sender = message.sender)
+                Column {
+                    Text(message.sender, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                    Text(message.text, style = style, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AdaptiveStageMessageAvatar(sender: String) {
+    val initial = sender.trim().firstOrNull()?.uppercaseChar()?.toString() ?: "?"
+    Box(
+        modifier =
+            Modifier
+                .size(24.dp)
+                .clip(CircleShape)
+                .background(adaptiveStageMessageAvatarColor(sender)),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(initial, style = MaterialTheme.typography.labelSmall, color = Color.White)
+    }
+}
+
+private fun adaptiveStageMessageAvatarColor(seed: String): Color {
+    val hue = (seed.hashCode().toUInt().toLong() % 360L).toFloat()
+    return Color.hsv(hue, 0.46f, 0.72f)
+}
+
+private const val ADAPTIVE_STAGE_CARD_VISIBLE_MESSAGE_COUNT = 2
 
 @Composable
 internal fun AdaptiveStageContextShelf(
