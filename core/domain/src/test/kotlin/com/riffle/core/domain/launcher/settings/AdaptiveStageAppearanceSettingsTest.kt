@@ -284,6 +284,7 @@ class AdaptiveStageAppearanceSettingsTest {
         val down = resolve(AdaptiveStageFanDirection.END)
         val up = resolve(AdaptiveStageFanDirection.START)
         val flat = resolve(AdaptiveStageFanDirection.NONE)
+
         fun laterCardVerticalOffset(resolution: AdaptiveStageCardStackResolution) =
             resolution.layoutPolicy.entries(cardCount = 3, activeIndex = 1).last { it.cardIndex == 2 }.verticalOffset
 
