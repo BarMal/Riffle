@@ -4,6 +4,7 @@ package com.riffle.app.launcher
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -1818,6 +1819,14 @@ private fun AdaptiveStageNotificationStack(
         return false
     }
 
+    fun jumpTo(cardId: LauncherCardId) {
+        val result = controller.jumpTo(focusState, cardIds, cardId)
+        if (result is CardStackFocusResult.Applied) {
+            if (result.focusChanged) settleTransitionId++
+            onFocusedCardChanged(result.state.focusedCardId)
+        }
+    }
+
     BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
         val viewport = AdaptiveStageViewportDp(maxWidth.value.toInt(), maxHeight.value.toInt())
         val resolution =
@@ -1833,123 +1842,132 @@ private fun AdaptiveStageNotificationStack(
         val stackDimFactor = if (isDetailVisible) ADAPTIVE_STAGE_SIBLING_DIM_FACTOR else 1f
         Box(modifier = Modifier.fillMaxSize()) {
             Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Box(
-                    modifier = Modifier.fillMaxWidth().weight(1f),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    CardStack(
-                        // CardStack's own root has no size of its own -- give it the same bounded
-                        // size as this Box (rather than leaving it to size from its
-                        // graphicsLayer-positioned, layout-wise-tiny children), so its
-                        // .clipToBounds() clips against the real allotted area instead of a
-                        // single card's footprint. Mirrors AdaptiveStageStageRail's fix for the
-                        // same failure mode.
-                        modifier = Modifier.matchParentSize(),
-                        entries =
-                            adaptiveStageNotificationStackEntries(
-                                resolution = resolution,
-                                cardCount = cards.size,
-                                activeCardIndex = activeCardIndex,
-                            ),
-                        animationSpec = resolution.animation,
-                        reducedMotion = resolution.reducedMotion,
-                        itemKey = { entry -> cards[entry.cardIndex].content.id },
-                        dimFactor = stackDimFactor,
-                        interaction =
-                            CardStackInteraction(
-                                focusedItemKey = activeCard.content.id,
-                                settleTransitionId = settleTransitionId,
-                                onFocusRequest = { entry ->
-                                    controller
-                                        .jumpTo(focusState, cardIds, cardIds[entry.cardIndex])
-                                        .let { result ->
-                                            if (result is CardStackFocusResult.Applied) {
-                                                onFocusedCardChanged(result.state.focusedCardId)
-                                            }
-                                        }
-                                },
-                                onSettle = { drag, velocity ->
-                                    controller
-                                        .settle(
-                                            focusState,
-                                            cardIds,
-                                            CardStackSettleRequest(
-                                                focusedCardId = activeCard.content.id,
-                                                verticalDragPx = drag,
-                                                verticalVelocityPxPerSecond = velocity,
-                                                distanceThresholdPx = 64f,
-                                                flingVelocityThresholdPxPerSecond = 500f,
-                                            ),
-                                        ).let { result ->
-                                            if (result is CardStackFocusResult.Applied) {
-                                                if (result.state.focusedCardId != focusState.focusedCardId) {
-                                                    settleTransitionId++
-                                                }
-                                                onFocusedCardChanged(result.state.focusedCardId)
-                                            }
-                                        }
-                                },
-                                onSettleHaptic = {
-                                    haptics.adaptiveStageSettle(
-                                        state.launcherSettings.cards.adaptiveStageAppearance.motion.hapticStrength,
-                                    )
-                                },
-                                onNavigate = ::navigate,
-                                onExpand = { detailState.expand(activeCard.content.id) },
-                            ),
-                    ) { entry, cardModifier ->
-                        val card = cards[entry.cardIndex]
-                        val artwork =
-                            remember(card.artworkSourceKey, card.artworkBase64, artworkCache) {
-                                card.artworkSourceKey?.let { sourceKey ->
-                                    artworkCache.getOrDecode(sourceKey, card.artworkBase64)
-                                }
-                            }
-                        val focusedCardSemantics =
-                            if (entry.cardIndex == activeCardIndex) {
-                                Modifier.semantics {
-                                    contentDescription =
-                                        "Focused ${adaptiveStageCardKindLabel(card)} card: ${card.title}. ${card.text}"
-                                    stateDescription = "Card ${entry.cardIndex + 1} of ${cards.size}"
-                                    liveRegion = LiveRegionMode.Polite
-                                    customActions =
-                                        listOf(
-                                            CustomAccessibilityAction("Previous card") {
-                                                navigate(CardStackNavigationDirection.PREVIOUS)
-                                            },
-                                            CustomAccessibilityAction("Next card") {
-                                                navigate(CardStackNavigationDirection.NEXT)
-                                            },
-                                            CustomAccessibilityAction("Show details") {
-                                                detailState.expand(card.content.id)
-                                                true
-                                            },
-                                        )
-                                }
-                            } else {
-                                Modifier
-                            }
-                        AdaptiveStageCardSurface(
-                            appearance = state.launcherSettings.cards.adaptiveStageAppearance,
-                            background =
-                                AdaptiveStageCardBackground(
-                                    artwork = artwork,
-                                    appSeed = stage.id.packageName.value,
-                                    appColor = stageAppColor,
+                Row(modifier = Modifier.fillMaxWidth().weight(1f)) {
+                    Box(
+                        modifier = Modifier.weight(1f).fillMaxHeight(),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        CardStack(
+                            // CardStack's own root has no size of its own -- give it the same bounded
+                            // size as this Box (rather than leaving it to size from its
+                            // graphicsLayer-positioned, layout-wise-tiny children), so its
+                            // .clipToBounds() clips against the real allotted area instead of a
+                            // single card's footprint. Mirrors AdaptiveStageStageRail's fix for the
+                            // same failure mode.
+                            modifier = Modifier.matchParentSize(),
+                            entries =
+                                adaptiveStageNotificationStackEntries(
+                                    resolution = resolution,
+                                    cardCount = cards.size,
+                                    activeCardIndex = activeCardIndex,
                                 ),
-                            modifier =
-                                cardModifier.size(
-                                    width = resolution.cardWidthDp.dp,
-                                    height = resolution.cardHeightDp.dp,
-                                ).then(focusedCardSemantics),
-                            contentPadding = adaptiveStageResolvedContentPadding(resolution),
-                        ) {
-                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Text(card.title, style = MaterialTheme.typography.titleMedium)
-                                AdaptiveStageCardMessageBody(card)
+                            animationSpec = resolution.animation,
+                            reducedMotion = resolution.reducedMotion,
+                            itemKey = { entry -> cards[entry.cardIndex].content.id },
+                            dimFactor = stackDimFactor,
+                            interaction =
+                                CardStackInteraction(
+                                    focusedItemKey = activeCard.content.id,
+                                    settleTransitionId = settleTransitionId,
+                                    onFocusRequest = { entry ->
+                                        controller
+                                            .jumpTo(focusState, cardIds, cardIds[entry.cardIndex])
+                                            .let { result ->
+                                                if (result is CardStackFocusResult.Applied) {
+                                                    onFocusedCardChanged(result.state.focusedCardId)
+                                                }
+                                            }
+                                    },
+                                    onSettle = { drag, velocity ->
+                                        controller
+                                            .settle(
+                                                focusState,
+                                                cardIds,
+                                                CardStackSettleRequest(
+                                                    focusedCardId = activeCard.content.id,
+                                                    verticalDragPx = drag,
+                                                    verticalVelocityPxPerSecond = velocity,
+                                                    distanceThresholdPx = 64f,
+                                                    flingVelocityThresholdPxPerSecond = 500f,
+                                                ),
+                                            ).let { result ->
+                                                if (result is CardStackFocusResult.Applied) {
+                                                    if (result.state.focusedCardId != focusState.focusedCardId) {
+                                                        settleTransitionId++
+                                                    }
+                                                    onFocusedCardChanged(result.state.focusedCardId)
+                                                }
+                                            }
+                                    },
+                                    onSettleHaptic = {
+                                        haptics.adaptiveStageSettle(
+                                            state.launcherSettings.cards.adaptiveStageAppearance.motion.hapticStrength,
+                                        )
+                                    },
+                                    onNavigate = ::navigate,
+                                    onExpand = { detailState.expand(activeCard.content.id) },
+                                ),
+                        ) { entry, cardModifier ->
+                            val card = cards[entry.cardIndex]
+                            val artwork =
+                                remember(card.artworkSourceKey, card.artworkBase64, artworkCache) {
+                                    card.artworkSourceKey?.let { sourceKey ->
+                                        artworkCache.getOrDecode(sourceKey, card.artworkBase64)
+                                    }
+                                }
+                            val focusedCardSemantics =
+                                if (entry.cardIndex == activeCardIndex) {
+                                    Modifier.semantics {
+                                        contentDescription =
+                                            "Focused ${adaptiveStageCardKindLabel(card)} card: " +
+                                            "${card.title}. ${card.text}"
+                                        stateDescription = "Card ${entry.cardIndex + 1} of ${cards.size}"
+                                        liveRegion = LiveRegionMode.Polite
+                                        customActions =
+                                            listOf(
+                                                CustomAccessibilityAction("Previous card") {
+                                                    navigate(CardStackNavigationDirection.PREVIOUS)
+                                                },
+                                                CustomAccessibilityAction("Next card") {
+                                                    navigate(CardStackNavigationDirection.NEXT)
+                                                },
+                                                CustomAccessibilityAction("Show details") {
+                                                    detailState.expand(card.content.id)
+                                                    true
+                                                },
+                                            )
+                                    }
+                                } else {
+                                    Modifier
+                                }
+                            AdaptiveStageCardSurface(
+                                appearance = state.launcherSettings.cards.adaptiveStageAppearance,
+                                background =
+                                    AdaptiveStageCardBackground(
+                                        artwork = artwork,
+                                        appSeed = stage.id.packageName.value,
+                                        appColor = stageAppColor,
+                                    ),
+                                modifier =
+                                    cardModifier.size(
+                                        width = resolution.cardWidthDp.dp,
+                                        height = resolution.cardHeightDp.dp,
+                                    ).then(focusedCardSemantics),
+                                contentPadding = adaptiveStageResolvedContentPadding(resolution),
+                            ) {
+                                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Text(card.title, style = MaterialTheme.typography.titleMedium)
+                                    AdaptiveStageCardMessageBody(card)
+                                }
                             }
                         }
                     }
+                    AdaptiveStageCardTimelineRail(
+                        cards = cards,
+                        activeCardIndex = activeCardIndex,
+                        onCardSelected = ::jumpTo,
+                        modifier = Modifier.fillMaxHeight(),
+                    )
                 }
                 AdaptiveStageCardPositionIndicator(position = activeCardIndex + 1, count = cards.size)
                 AdaptiveStageContextShelf(
@@ -2273,6 +2291,55 @@ private fun AdaptiveStageCardPositionIndicator(
         )
     }
 }
+
+/**
+ * A minimal chronological rail beside the card stack: one dot per card, positioned by relative
+ * recency (not just index order) between the oldest and newest visible card, tappable to jump
+ * focus directly to that card. Deliberately simple for a first version -- no cross-app
+ * aggregation and no drag-to-scrub gesture yet, both left as later follow-ups.
+ */
+@Composable
+private fun AdaptiveStageCardTimelineRail(
+    cards: List<AppStageNotificationCard>,
+    activeCardIndex: Int,
+    onCardSelected: (LauncherCardId) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    if (cards.size <= 1) return
+    val timestamps = cards.map { card -> card.content.meaningfulActivityAtEpochMillis }
+    val newest = timestamps.max()
+    val span = (newest - timestamps.min()).coerceAtLeast(1L)
+    BoxWithConstraints(modifier = modifier.width(ADAPTIVE_STAGE_TIMELINE_RAIL_WIDTH_DP.dp).fillMaxHeight()) {
+        val dotSize = ADAPTIVE_STAGE_TIMELINE_DOT_DP.dp
+        val focusedDotSize = ADAPTIVE_STAGE_TIMELINE_FOCUSED_DOT_DP.dp
+        cards.forEachIndexed { index, card ->
+            val recencyFraction = (newest - card.content.meaningfulActivityAtEpochMillis).toFloat() / span.toFloat()
+            val isFocused = index == activeCardIndex
+            val size = if (isFocused) focusedDotSize else dotSize
+            Box(
+                modifier =
+                    Modifier
+                        .align(Alignment.TopCenter)
+                        .offset(y = (maxHeight - size) * recencyFraction)
+                        .size(size)
+                        .clip(CircleShape)
+                        .background(
+                            if (isFocused) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                            },
+                        )
+                        .clickable(onClickLabel = "Jump to ${card.title}") { onCardSelected(card.content.id) }
+                        .testTag("adaptive-stage-timeline-dot-${card.content.id.value}"),
+            )
+        }
+    }
+}
+
+private const val ADAPTIVE_STAGE_TIMELINE_RAIL_WIDTH_DP = 24
+private const val ADAPTIVE_STAGE_TIMELINE_DOT_DP = 6
+private const val ADAPTIVE_STAGE_TIMELINE_FOCUSED_DOT_DP = 10
 
 /**
  * Renders a notification's individual messages (sender + snippet, most recent last) when the
