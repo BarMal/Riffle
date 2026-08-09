@@ -5,6 +5,7 @@ import com.riffle.core.domain.launcher.apps.AppProfile
 import com.riffle.core.domain.launcher.apps.AppProfileId
 import com.riffle.core.domain.launcher.notifications.LauncherNotification
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
+import com.riffle.core.domain.launcher.notifications.LauncherNotificationMessage
 import com.riffle.core.domain.launcher.notifications.NotificationCategory
 import com.riffle.core.domain.launcher.notifications.NotificationPriority
 import org.json.JSONArray
@@ -31,7 +32,14 @@ private fun encodeNotification(notification: LauncherNotification): JSONObject =
         .put("title", notification.title)
         .put("text", notification.text)
         .put("largeIconPngBase64", notification.largeIconPngBase64)
+        .put("messages", JSONArray(notification.messages.map(::encodeMessage)))
         .put("postedAtEpochMillis", notification.postedAtEpochMillis)
+
+private fun encodeMessage(message: LauncherNotificationMessage): JSONObject =
+    JSONObject()
+        .put("sender", message.sender)
+        .put("text", message.text)
+        .put("timestampEpochMillis", message.timestampEpochMillis)
 
 private fun JSONObject.toNotificationOrNull(): LauncherNotification? =
     runCatching {
@@ -46,7 +54,22 @@ private fun JSONObject.toNotificationOrNull(): LauncherNotification? =
             title = optString("title"),
             text = optString("text"),
             largeIconPngBase64 = optString("largeIconPngBase64").takeIf(String::isNotBlank),
+            messages = optMessages(),
             postedAtEpochMillis = optLong("postedAtEpochMillis", 0L),
+        )
+    }.getOrNull()
+
+private fun JSONObject.optMessages(): List<LauncherNotificationMessage> =
+    optJSONArray("messages")?.let { json ->
+        (0 until json.length()).mapNotNull { index -> json.optJSONObject(index)?.toMessageOrNull() }
+    }.orEmpty()
+
+private fun JSONObject.toMessageOrNull(): LauncherNotificationMessage? =
+    runCatching {
+        LauncherNotificationMessage(
+            sender = getString("sender"),
+            text = getString("text"),
+            timestampEpochMillis = optLong("timestampEpochMillis", 0L),
         )
     }.getOrNull()
 

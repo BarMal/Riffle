@@ -127,7 +127,7 @@ internal fun AdaptiveStageCardDetailSurface(
     AdaptiveStageDetailContainer(detailState = detailState, onClose = onClose, modifier = modifier) {
         Text(detailTitle(card), style = MaterialTheme.typography.headlineSmall)
         Text(detailKindLabel(card.content.kind), style = MaterialTheme.typography.labelLarge)
-        Text(card.text, style = MaterialTheme.typography.bodyLarge)
+        AdaptiveStageCardMessageBody(card, style = MaterialTheme.typography.bodyLarge)
         AdaptiveStageContextShelf(card = card, onAction = onAction)
     }
 }

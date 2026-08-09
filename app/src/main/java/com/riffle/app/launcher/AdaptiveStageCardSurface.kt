@@ -374,11 +374,18 @@ internal fun AdaptiveStageCardSurface(
                 intensityPercent = effective.surface.textureIntensityPercent,
             )
         }
+        // Wider than adjustedPadding on purpose: the opaque glass face (and the content that sits
+        // on it) has to start further in from the card edge, so the background layer's
+        // blur/texture/tinted-artwork reads as a clearly visible frame instead of an
+        // imperceptible sliver. contentPaddingDp itself stays untouched -- it's still the real
+        // content-inset value other call sites (reachability sizing, etc.) reason about; this
+        // only widens how this one surface draws it.
+        val glassBezelPadding = adjustedPadding + ADAPTIVE_STAGE_GLASS_BEZEL_EXTRA_DP.dp
         val contentModifier =
             Modifier
                 .fillMaxSize()
                 .clip(shape)
-                .padding(adjustedPadding)
+                .padding(glassBezelPadding)
                 .background(colors.glass, shape)
         MaterialTheme(
             colorScheme =
@@ -502,5 +509,6 @@ private const val DEFAULT_ADAPTIVE_STAGE_ARTWORK_CACHE_ENTRIES = 12
 private const val ARTWORK_REVISION_HEX = "0123456789abcdef"
 private const val MINIMUM_FOREGROUND_CONTRAST_RATIO = 4.5f
 private const val MINIMUM_ACTION_CONTRAST_RATIO = MINIMUM_FOREGROUND_CONTRAST_RATIO
+private const val ADAPTIVE_STAGE_GLASS_BEZEL_EXTRA_DP = 10f
 
 private typealias ArtworkCacheEntry<Value> = MutableMap.MutableEntry<String, Value?>
