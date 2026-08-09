@@ -323,6 +323,14 @@ internal fun AdaptiveStageAppStageSurface(
                         .width(paneLayout.contentWidthDp.dp)
                         .height(paneLayout.contentHeightDp.dp),
             ) {
+                // The Cards stage sits directly over the live wallpaper with nothing behind it to
+                // separate the two, so a busy wallpaper competes with card content for attention
+                // (hands-on testing feedback). A flat, subtle scrim for the whole stage area gives
+                // that separation without touching any individual card's own glass/blur/texture
+                // settings.
+                val backdropScrim =
+                    MaterialTheme.colorScheme.scrim.copy(alpha = ADAPTIVE_STAGE_BACKDROP_SCRIM_ALPHA)
+                Box(modifier = Modifier.matchParentSize().background(backdropScrim))
                 AdaptiveStageTemplateStaticCanvas(
                     elements = visibleTemplateElements,
                     dynamicSlots = templateVariant?.dynamicSlots.orEmpty(),
@@ -1970,6 +1978,7 @@ private fun AdaptiveStageNotificationStack(
 }
 
 internal const val ADAPTIVE_STAGE_SIBLING_DIM_FACTOR = 0.18f
+internal const val ADAPTIVE_STAGE_BACKDROP_SCRIM_ALPHA = 0.16f
 
 /**
  * The "All notifications" page (#1057): every stage's content merged into one recency-ordered
