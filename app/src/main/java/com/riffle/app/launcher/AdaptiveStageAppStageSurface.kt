@@ -328,12 +328,9 @@ internal fun AdaptiveStageAppStageSurface(
                 // (hands-on testing feedback). A flat, subtle scrim for the whole stage area gives
                 // that separation without touching any individual card's own glass/blur/texture
                 // settings.
-                Box(
-                    modifier =
-                        Modifier
-                            .matchParentSize()
-                            .background(MaterialTheme.colorScheme.scrim.copy(alpha = ADAPTIVE_STAGE_BACKDROP_SCRIM_ALPHA)),
-                )
+                val backdropScrim =
+                    MaterialTheme.colorScheme.scrim.copy(alpha = ADAPTIVE_STAGE_BACKDROP_SCRIM_ALPHA)
+                Box(modifier = Modifier.matchParentSize().background(backdropScrim))
                 AdaptiveStageTemplateStaticCanvas(
                     elements = visibleTemplateElements,
                     dynamicSlots = templateVariant?.dynamicSlots.orEmpty(),
