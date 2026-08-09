@@ -380,7 +380,21 @@ private data class ResolvedAdaptiveStageCardSize(
 ) {
     fun isUsable(role: AdaptiveStageCardStackRole): Boolean {
         val (minWidthDp, minHeightDp) = role.minimumUsableSizeDp()
-        return focusedWidthDp >= minWidthDp && focusedHeightDp >= minHeightDp && fitsAvailableSpace
+        // Compares the card's longer/shorter rendered side against the longer/shorter configured
+        // floor, rather than literally width-vs-width and height-vs-height. A portrait card (the
+        // only shape these floors were ever exercised against before wide aspect ratios existed)
+        // has height as its long side, so this is unchanged from a direct width/height comparison
+        // there. A landscape card has width as its long side instead -- checking its (necessarily
+        // shorter) height against the taller MIN_ADAPTIVE_STAGE_REACHABLE_CARD_HEIGHT_DP floor
+        // rejected every wide card as "needs more space" regardless of how large it actually
+        // rendered, since resolveCardSize's width ceiling (screen width, effectively
+        // aspect-ratio-independent) means a wider aspect ratio can only ever produce a *shorter*
+        // card, never a taller one.
+        val longFloorDp = maxOf(minWidthDp, minHeightDp)
+        val shortFloorDp = minOf(minWidthDp, minHeightDp)
+        val longSideDp = maxOf(focusedWidthDp, focusedHeightDp)
+        val shortSideDp = minOf(focusedWidthDp, focusedHeightDp)
+        return longSideDp >= longFloorDp && shortSideDp >= shortFloorDp && fitsAvailableSpace
     }
 }
 

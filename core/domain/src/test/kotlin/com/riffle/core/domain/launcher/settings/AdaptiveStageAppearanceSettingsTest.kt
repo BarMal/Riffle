@@ -309,6 +309,28 @@ class AdaptiveStageAppearanceSettingsTest {
     }
 
     @Test
+    fun wideAspectRatiosStayUsableOnARealisticPhoneViewportInsteadOfNeedingMoreSpace() {
+        // A regression guard: resolveCardSize's width ceiling is effectively independent of aspect
+        // ratio (it's bounded by screen width, not by the requested shape), so a wider aspect ratio
+        // can only ever produce a *shorter* card, never a taller one. Before isUsable() compared a
+        // card's longer/shorter rendered side against the longer/shorter configured floor (instead
+        // of literally width-vs-width and height-vs-height), every aspect ratio above ~110% was
+        // rejected as "needs more space" on an ordinary phone-sized viewport, regardless of how
+        // large the card actually rendered -- because its (now shorter) height fell under
+        // MIN_ADAPTIVE_STAGE_REACHABLE_CARD_HEIGHT_DP, a floor calibrated for a portrait card's
+        // long side, not its short one.
+        val viewport = AdaptiveStageViewportDp(widthDp = 376, heightDp = 684)
+
+        val moderatelyWide =
+            AdaptiveStageAppearanceSettings(
+                geometry = AdaptiveStageGeometry(cardAspectRatioPercent = 140),
+            ).resolveCardStack(viewport)
+
+        assertTrue(moderatelyWide.isUsable)
+        assertTrue(moderatelyWide.cardWidthDp > moderatelyWide.cardHeightDp)
+    }
+
+    @Test
     fun reducedMotionResolutionUsesStaticStackTokens() {
         val resolution =
             AdaptiveStageAppearanceSettings(motion = AdaptiveStageMotion(reducedMotion = true))
