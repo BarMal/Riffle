@@ -60,8 +60,16 @@ class ActiveNotificationJsonCodecTest {
                     packageName = AppPackageName("com.riffle.chat"),
                     messages =
                         listOf(
-                            LauncherNotificationMessage(sender = "Alex", text = "On my way", timestampEpochMillis = 1_000L),
-                            LauncherNotificationMessage(sender = "Sam", text = "See you soon", timestampEpochMillis = 2_000L),
+                            LauncherNotificationMessage(
+                                sender = "Alex",
+                                text = "On my way",
+                                timestampEpochMillis = 1_000L,
+                            ),
+                            LauncherNotificationMessage(
+                                sender = "Sam",
+                                text = "See you soon",
+                                timestampEpochMillis = 2_000L,
+                            ),
                         ),
                     postedAtEpochMillis = 2_000L,
                 ),

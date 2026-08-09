@@ -72,7 +72,8 @@ class AppStageNotificationContentTest {
 
     @Test
     fun `projects per-message history when visible`() {
-        val messages = listOf(LauncherNotificationMessage(sender = "Alex", text = "On my way", timestampEpochMillis = 5))
+        val messages =
+            listOf(LauncherNotificationMessage(sender = "Alex", text = "On my way", timestampEpochMillis = 5))
         val visible = notification(key = "visible", postedAt = 1).copy(messages = messages)
 
         val cards =
@@ -88,7 +89,8 @@ class AppStageNotificationContentTest {
 
     @Test
     fun `redacts per-message history alongside title and text`() {
-        val messages = listOf(LauncherNotificationMessage(sender = "Alex", text = "On my way", timestampEpochMillis = 5))
+        val messages =
+            listOf(LauncherNotificationMessage(sender = "Alex", text = "On my way", timestampEpochMillis = 5))
         val quiet = notification(key = "quiet", postedAt = 2).copy(messages = messages)
 
         val cards =
