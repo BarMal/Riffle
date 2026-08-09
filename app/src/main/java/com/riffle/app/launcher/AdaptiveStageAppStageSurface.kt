@@ -1828,6 +1828,13 @@ private fun AdaptiveStageNotificationStack(
                     contentAlignment = Alignment.Center,
                 ) {
                     CardStack(
+                        // CardStack's own root has no size of its own -- give it the same bounded
+                        // size as this Box (rather than leaving it to size from its
+                        // graphicsLayer-positioned, layout-wise-tiny children), so its
+                        // .clipToBounds() clips against the real allotted area instead of a
+                        // single card's footprint. Mirrors AdaptiveStageStageRail's fix for the
+                        // same failure mode.
+                        modifier = Modifier.matchParentSize(),
                         entries =
                             adaptiveStageNotificationStackEntries(
                                 resolution = resolution,
@@ -2052,6 +2059,13 @@ private fun AdaptiveStageAllNotificationsStack(
                     contentAlignment = Alignment.Center,
                 ) {
                     CardStack(
+                        // CardStack's own root has no size of its own -- give it the same bounded
+                        // size as this Box (rather than leaving it to size from its
+                        // graphicsLayer-positioned, layout-wise-tiny children), so its
+                        // .clipToBounds() clips against the real allotted area instead of a
+                        // single card's footprint. Mirrors AdaptiveStageStageRail's fix for the
+                        // same failure mode.
+                        modifier = Modifier.matchParentSize(),
                         entries =
                             adaptiveStageNotificationStackEntries(
                                 resolution = resolution,
