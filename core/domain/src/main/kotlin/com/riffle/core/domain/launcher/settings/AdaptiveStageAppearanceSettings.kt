@@ -100,12 +100,8 @@ data class AdaptiveStageAppearanceSettings(
         val verticalTravel =
             ((viewport.safeHeightDp - cardSize.heightDp * stackBounds.maxHeightScale) / 2f).coerceAtLeast(0f)
         val motionScale = appearance.motion.travelIntensityPercent / 100f
-        val offsetDirection =
-            when (appearance.geometry.fanDirection) {
-                AdaptiveStageFanDirection.NONE -> 0f
-                AdaptiveStageFanDirection.START -> -1f
-                AdaptiveStageFanDirection.END -> 1f
-            }
+        val offsetDirection = appearance.geometry.fanDirection.toOffsetDirection()
+        val verticalOffsetDirection = appearance.geometry.verticalFanDirection.toOffsetDirection()
         val focusedGap =
             if (offsetDirection == 0f) {
                 0f
@@ -144,6 +140,7 @@ data class AdaptiveStageAppearanceSettings(
                 rotationStep = stackBounds.rotationStep,
                 reducedMotionScaleStep = 0f,
                 reducedMotionOffsetStep = 0f,
+                verticalOffsetDirection = verticalOffsetDirection,
             )
         val animated = !appearance.motion.reducedMotion && isUsable
         return AdaptiveStageCardStackResolution(
@@ -257,14 +254,21 @@ private fun AdaptiveStageAppearanceSettings.resolveCardSize(
         reservedVerticalSpaceDp = staticVerticalSeparationDp(),
         // RAIL sizes a tile against its own narrow physical strip (#1054): every dp there is
         // needed just to keep tiles reachable, so it keeps filling the full strip exactly as
-        // before. PREVIEW is a small, static illustration where actually showing a card matters
-        // more than fan travel room, so it also fills its box fully (see PREVIEW's own, much
-        // smaller usability floor). Only PRIMARY deliberately leaves a fraction of the viewport
-        // unclaimed -- taking a cue from the reference "Calm" timescape, which sizes its focused
-        // card to ~58% of screen height rather than filling it -- so resolveCardStack's fan/
-        // offset/rotation has genuine room to be visible instead of fighting over leftover scraps.
+        // before. PRIMARY deliberately leaves a larger fraction of the viewport unclaimed --
+        // taking a cue from the reference "Calm" timescape, which sizes its focused card to ~58%
+        // of screen height rather than filling it -- so resolveCardStack's fan/offset/rotation has
+        // genuine room to be visible instead of fighting over leftover scraps. PREVIEW gets a much
+        // smaller margin for the same reason, capped by its own tiny usability floor: at the
+        // settings preview's small, landscape-shaped box with a portrait-default card aspect
+        // ratio, the height axis is already the binding constraint before any margin is applied,
+        // so PREVIEW_FAN_STAGE_MARGIN_FRACTION can only be as large as previewRoleIsUsableAtA...
+        // (AdaptiveStageAppearanceSettingsTest) still tolerates -- see that constant's own doc.
         fanStageMarginFraction =
-            if (role == AdaptiveStageCardStackRole.PRIMARY) PRIMARY_FAN_STAGE_MARGIN_FRACTION else 0f,
+            when (role) {
+                AdaptiveStageCardStackRole.PRIMARY -> PRIMARY_FAN_STAGE_MARGIN_FRACTION
+                AdaptiveStageCardStackRole.RAIL -> 0f
+                AdaptiveStageCardStackRole.PREVIEW -> PREVIEW_FAN_STAGE_MARGIN_FRACTION
+            },
     )
 
 private fun resolveCardSize(
@@ -302,6 +306,28 @@ private fun resolveCardSize(
  * of screen height rather than filling it.
  */
 private const val PRIMARY_FAN_STAGE_MARGIN_FRACTION = 0.25f
+
+/**
+ * [resolveCardSize]'s margin for [AdaptiveStageCardStackRole.PREVIEW]. Before this existed, the
+ * settings preview's card filled its whole box (fanStageMarginFraction 0), which -- combined with
+ * the preview's landscape-shaped box (wide, short) and the default portrait card aspect ratio --
+ * left [AdaptiveStageAppearanceSettings.resolveCardStack]'s vertical travel budget at exactly
+ * zero: the height axis alone determined the card's size, with nothing held back. Vertical
+ * spacing/curve sliders had no visible effect in the preview specifically (though they still
+ * worked on the real, larger PRIMARY stage) as a direct result.
+ *
+ * 0.17 is a deliberately small, conservative value -- not chosen for a strong visual effect, but
+ * because [AdaptiveStageCardStackRole.PREVIEW]'s own usability floor
+ * ([MIN_ADAPTIVE_STAGE_LEGIBLE_PREVIEW_CARD_WIDTH_DP]/HEIGHT) is close to binding at the smallest
+ * realistic preview box (a 360x220dp viewport, this fraction's actual ceiling before the preview
+ * would report itself unusable there is ~0.187 -- see the two-role comparison test
+ * previewRoleIsUsableAtASettingsPreviewSizeThatPrimaryRoleRejects in
+ * AdaptiveStageAppearanceSettingsTest, which pins that exact viewport). Unlike PRIMARY's much
+ * larger margin, this can't chase a strong fan effect without either shrinking the preview card
+ * below legibility at small settings-page sizes, or reworking the preview box's own aspect ratio
+ * (out of scope here) -- so some vertical travel, rather than none, is the realistic ceiling.
+ */
+private const val PREVIEW_FAN_STAGE_MARGIN_FRACTION = 0.17f
 
 /**
  * The focused card's own size no longer reserves extra room for the *worst-case rotated*
@@ -412,6 +438,7 @@ data class AdaptiveStageGeometry(
     val horizontalOffsetDp: Int = 20,
     val curveDp: Int = 6,
     val fanDirection: AdaptiveStageFanDirection = AdaptiveStageFanDirection.END,
+    val verticalFanDirection: AdaptiveStageFanDirection = AdaptiveStageFanDirection.END,
     val rotationDegrees: Int = 4,
     val cornerRadiusDp: Int = 28,
     val contentPaddingDp: Int = 20,
@@ -477,6 +504,13 @@ data class AdaptiveStageGeometry(
 }
 
 enum class AdaptiveStageFanDirection { NONE, START, END }
+
+private fun AdaptiveStageFanDirection.toOffsetDirection(): Float =
+    when (this) {
+        AdaptiveStageFanDirection.NONE -> 0f
+        AdaptiveStageFanDirection.START -> -1f
+        AdaptiveStageFanDirection.END -> 1f
+    }
 
 data class AdaptiveStageSurface(
     val backgroundSource: AdaptiveStageBackgroundSource = AdaptiveStageBackgroundSource.APP_DERIVED_GRADIENT,
@@ -650,7 +684,11 @@ data class AdaptiveStageRendererCapabilities(val supportsBlur: Boolean = true, v
 
 const val CURRENT_ADAPTIVE_STAGE_APPEARANCE_VERSION = 1
 const val MIN_ADAPTIVE_STAGE_CARD_ASPECT_RATIO_PERCENT = 55
-const val MAX_ADAPTIVE_STAGE_CARD_ASPECT_RATIO_PERCENT = 100
+
+// Was 100 (square) -- resolveCardSize computes height = width / (cardAspectRatioPercent / 100),
+// so 100 was a hard ceiling on ever rendering a card wider than it is tall. 160 permits up to a
+// roughly 8:5 landscape card.
+const val MAX_ADAPTIVE_STAGE_CARD_ASPECT_RATIO_PERCENT = 160
 const val MIN_ADAPTIVE_STAGE_FOCUSED_SCALE_PERCENT = 85
 const val MAX_ADAPTIVE_STAGE_FOCUSED_SCALE_PERCENT = 115
 const val MIN_ADAPTIVE_STAGE_FOCUSED_GAP_DP = 0
@@ -688,7 +726,10 @@ const val MAX_ADAPTIVE_STAGE_HIGHLIGHT_PERCENT = 100
 const val MIN_ADAPTIVE_STAGE_SHADOW_ELEVATION_DP = 0
 const val MAX_ADAPTIVE_STAGE_SHADOW_ELEVATION_DP = 32
 const val MIN_ADAPTIVE_STAGE_TEXTURE_INTENSITY_PERCENT = 0
-const val MAX_ADAPTIVE_STAGE_TEXTURE_INTENSITY_PERCENT = 40
+
+// Was 40, paired with a /500f alpha divisor in AdaptiveStageTexture -- max alpha was only 0.08
+// (8% opacity), barely perceptible. Now 100, paired with a /250f divisor, for a max alpha of 0.4.
+const val MAX_ADAPTIVE_STAGE_TEXTURE_INTENSITY_PERCENT = 100
 const val MIN_ADAPTIVE_STAGE_TEXT_SCALE_PERCENT = 85
 const val MAX_ADAPTIVE_STAGE_TEXT_SCALE_PERCENT = 130
 const val MIN_ADAPTIVE_STAGE_SETTLE_DURATION_MILLIS = 80

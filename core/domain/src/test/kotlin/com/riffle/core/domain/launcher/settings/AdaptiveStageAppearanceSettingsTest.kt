@@ -273,6 +273,42 @@ class AdaptiveStageAppearanceSettingsTest {
     }
 
     @Test
+    fun verticalFanDirectionIsIndependentOfHorizontalFanDirection() {
+        val viewport = AdaptiveStageViewportDp(widthDp = 800, heightDp = 1200)
+
+        fun resolve(verticalDirection: AdaptiveStageFanDirection) =
+            AdaptiveStageAppearanceSettings(
+                geometry = AdaptiveStageGeometry(verticalFanDirection = verticalDirection),
+            ).resolveCardStack(viewport)
+
+        val down = resolve(AdaptiveStageFanDirection.END)
+        val up = resolve(AdaptiveStageFanDirection.START)
+        val flat = resolve(AdaptiveStageFanDirection.NONE)
+
+        fun laterCardVerticalOffset(resolution: AdaptiveStageCardStackResolution) =
+            resolution.layoutPolicy.entries(cardCount = 3, activeIndex = 1).last { it.cardIndex == 2 }.verticalOffset
+
+        assertTrue(laterCardVerticalOffset(down) > 0f)
+        assertEquals(-laterCardVerticalOffset(down), laterCardVerticalOffset(up))
+        assertEquals(0f, laterCardVerticalOffset(flat))
+        // Horizontal fan direction (default END) is untouched by the vertical-only setting above.
+        val stillFansHorizontally =
+            down.layoutPolicy.entries(cardCount = 3, activeIndex = 1).last { it.cardIndex == 2 }.offset
+        assertTrue(stillFansHorizontally > 0f)
+    }
+
+    @Test
+    fun cardAspectRatioCanRenderWiderThanTallNowThatTheRangeExtendsPastSquare() {
+        val viewport = AdaptiveStageViewportDp(widthDp = 1200, heightDp = 1200)
+        val wide =
+            AdaptiveStageAppearanceSettings(
+                geometry = AdaptiveStageGeometry(cardAspectRatioPercent = MAX_ADAPTIVE_STAGE_CARD_ASPECT_RATIO_PERCENT),
+            ).resolveCardStack(viewport)
+
+        assertTrue(wide.cardWidthDp > wide.cardHeightDp)
+    }
+
+    @Test
     fun reducedMotionResolutionUsesStaticStackTokens() {
         val resolution =
             AdaptiveStageAppearanceSettings(motion = AdaptiveStageMotion(reducedMotion = true))
@@ -390,6 +426,25 @@ class AdaptiveStageAppearanceSettingsTest {
         assertTrue(previewResolution.isUsable)
         assertEquals(settings.geometry.visibleDepth, previewResolution.layoutPolicy.maxVisibleDepth)
         assertEquals(1, primaryResolution.layoutPolicy.maxVisibleDepth)
+    }
+
+    @Test
+    fun previewRoleHasRealVerticalTravelAtARealisticSettingsPreviewBoxSize() {
+        // Before PREVIEW got its own fan-stage margin, this box's height axis alone determined
+        // the card's size (fanStageMarginFraction 0), leaving zero vertical travel -- vertical
+        // spacing/curve had no visible effect specifically in this preview, regardless of their
+        // slider values. 340x300 approximates the preview's actual on-screen box (see
+        // AdaptiveStageAppearancePreview's placement in AdaptiveStageAppearancePageContent).
+        val settings = AdaptiveStageAppearanceSettings()
+        val resolution =
+            settings.resolveCardStack(
+                AdaptiveStageViewportDp(widthDp = 340, heightDp = 300),
+                role = AdaptiveStageCardStackRole.PREVIEW,
+            )
+        val entries = resolution.layoutPolicy.entries(cardCount = 3, activeIndex = 0)
+
+        assertTrue(resolution.isUsable)
+        assertTrue(entries.any { entry -> entry.verticalOffset != 0f })
     }
 
     @Test
