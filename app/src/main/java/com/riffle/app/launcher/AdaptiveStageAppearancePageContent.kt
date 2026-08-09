@@ -372,7 +372,7 @@ private fun AdaptiveStageGeometryTabContent(
             }
         }
     }
-    SettingsSection(title = "Stack and stack") {
+    SettingsSection(title = "Stack and fan") {
         AdaptiveStageSlider(
             "Visible card depth",
             appearance.geometry.visibleDepth,
