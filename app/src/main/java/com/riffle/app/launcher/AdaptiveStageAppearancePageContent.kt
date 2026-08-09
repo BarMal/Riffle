@@ -42,11 +42,14 @@ import com.riffle.core.domain.launcher.cards.AdaptiveStageRailSide
 import com.riffle.core.domain.launcher.settings.AdaptiveStageAccentSource
 import com.riffle.core.domain.launcher.settings.AdaptiveStageAppearanceSettings
 import com.riffle.core.domain.launcher.settings.AdaptiveStageBackgroundSource
+import com.riffle.core.domain.launcher.settings.AdaptiveStageCardStackRole
 import com.riffle.core.domain.launcher.settings.AdaptiveStageContentDensity
 import com.riffle.core.domain.launcher.settings.AdaptiveStageEasing
 import com.riffle.core.domain.launcher.settings.AdaptiveStageFanDirection
 import com.riffle.core.domain.launcher.settings.AdaptiveStageHapticStrength
+import com.riffle.core.domain.launcher.settings.AdaptiveStageInsetsDp
 import com.riffle.core.domain.launcher.settings.AdaptiveStageRendererCapabilities
+import com.riffle.core.domain.launcher.settings.AdaptiveStageViewportDp
 import com.riffle.core.domain.launcher.settings.MAX_ADAPTIVE_STAGE_BLUR_STRENGTH_PERCENT
 import com.riffle.core.domain.launcher.settings.MAX_ADAPTIVE_STAGE_CARD_ASPECT_RATIO_PERCENT
 import com.riffle.core.domain.launcher.settings.MAX_ADAPTIVE_STAGE_CONTENT_PADDING_DP
@@ -835,9 +838,33 @@ private fun adaptiveStageFallbackMessage(
             "Blur is unavailable on this device; the preview shows the opaque fallback."
         appearance.surface.textureIntensityPercent != effective.surface.textureIntensityPercent ->
             "Texture is unavailable on this device; the preview omits it."
+        // The preview above renders with PREVIEW role, which tolerates a much smaller card than
+        // the real Home stage (PRIMARY role) requires to stay touch-reachable -- so it can look
+        // like a full fanned stack here while the same settings collapse to a single flat card on
+        // an actual phone. Checking PRIMARY against a representative (not this exact device's)
+        // viewport surfaces that mismatch instead of leaving the preview silently misleading.
+        !appearance
+            .resolveCardStack(REPRESENTATIVE_PHONE_VIEWPORT, rendererCapabilities, role = AdaptiveStageCardStackRole.PRIMARY)
+            .isUsable ->
+            "These settings need more room than a typical phone screen provides -- Home will likely " +
+                "show one card at a time instead of a fanned stack. Try a less extreme focused card " +
+                "scale or card aspect ratio."
         else -> null
     }
 }
+
+/**
+ * A stand-in for "an ordinary phone," used only to warn when the current settings would collapse
+ * the real Home stage to a single card -- not the exact viewport of whatever device is actually
+ * running the app. Intentionally on the smaller/tighter side (a generous reference would miss
+ * real failures on smaller phones), with modest status-bar/dock inset allowances.
+ */
+private val REPRESENTATIVE_PHONE_VIEWPORT =
+    AdaptiveStageViewportDp(
+        widthDp = 360,
+        heightDp = 740,
+        insets = AdaptiveStageInsetsDp(topDp = 48, bottomDp = 220),
+    )
 
 private fun AdaptiveStageBackgroundSource.label(): String = name.lowercase().replace('_', ' ').replaceFirstChar(Char::uppercase)
 
