@@ -9,6 +9,7 @@ import android.os.UserHandle
 import android.os.UserManager
 import android.service.notification.StatusBarNotification
 import android.util.Base64
+import androidx.core.app.NotificationCompat
 import com.riffle.app.launcher.apps.toAppProfile
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppProfile
@@ -113,26 +114,26 @@ private fun Notification.bodyText(): String =
     }.firstOrNull().orEmpty()
 
 /**
- * Falls back to an empty list for notifications not posted with [Notification.MessagingStyle]
- * (most non-messaging apps, and group-summary notifications) -- callers already fall back to
- * [titleText]/[bodyText] in that case, so no separate heuristic is needed here.
+ * Falls back to an empty list for notifications not posted with a messaging style (most
+ * non-messaging apps, and group-summary notifications) -- callers already fall back to
+ * [titleText]/[bodyText] in that case, so no separate heuristic is needed here. Uses the AndroidX
+ * compat extractor (not the platform `Notification.MessagingStyle`, which has no equivalent
+ * static parser) so this works the same way across the app's supported API levels.
  */
 private fun Notification.messagingStyleMessages(): List<LauncherNotificationMessage> =
-    Notification.MessagingStyle.extractMessagingStyleFromNotification(this)
+    NotificationCompat.MessagingStyle.extractMessagingStyleFromNotification(this)
         ?.messages
         .orEmpty()
         .takeLast(MAX_MESSAGING_STYLE_MESSAGES)
         .map { message ->
             LauncherNotificationMessage(
-                sender = message.person?.name?.toString()?.takeIf(String::isNotBlank) ?: message.senderPerson.orEmpty(),
+                sender =
+                    message.person?.name?.toString()?.takeIf(String::isNotBlank)
+                        ?: message.sender?.toString().orEmpty(),
                 text = message.text?.toString().orEmpty(),
                 timestampEpochMillis = message.timestamp,
             )
         }
-
-@Suppress("DEPRECATION")
-private val Notification.MessagingStyle.Message.senderPerson: String?
-    get() = sender?.toString()
 
 @Suppress("DEPRECATION")
 private fun Notification.largeIconPngBase64(): String? =
