@@ -111,7 +111,6 @@ import com.riffle.core.domain.launcher.notifications.NotificationHideRule
 import com.riffle.core.domain.launcher.settings.AdaptiveStageAppearanceSettings
 import com.riffle.core.domain.launcher.settings.AdaptiveStageCardStackResolution
 import com.riffle.core.domain.launcher.settings.AdaptiveStageViewportDp
-import com.riffle.core.domain.launcher.settings.resolveAdaptiveStageCardStack
 import com.riffle.core.domain.launcher.settings.resolveAdaptiveStageRailCardStack
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
@@ -467,6 +466,10 @@ internal fun AdaptiveStageAppStageSurface(
                                             onContextChanged(context.copy(focusedCardKey = it?.value))
                                         },
                                         showDetailInline = !paneLayout.showsDetailPane,
+                                        // TWO_PANE/THREE_PANE is the docked-rail, unfolded
+                                        // presentation -- the main stack should use the same
+                                        // profile the rail's own tiles already do.
+                                        useUnfoldedAppearance = true,
                                         onAction = onAction,
                                         appIconLoader = appIconLoader,
                                         modifier = Modifier.weight(1f),
@@ -809,6 +812,8 @@ private fun AdaptiveStageCompactStagePager(
             onDetailVisibilityChanged = onDetailVisibilityChanged,
             onFocusedCardChanged = onFocusedCardChanged,
             showDetailInline = true,
+            // This pager is always the compact (folded) presentation -- see its own doc.
+            useUnfoldedAppearance = false,
             onAction = onAction,
             appIconLoader = appIconLoader,
             modifier = modifier,
@@ -857,6 +862,8 @@ private fun AdaptiveStageCompactStagePager(
                         onDetailVisibilityChanged = onDetailVisibilityChanged,
                         onFocusedCardChanged = onFocusedCardChanged,
                         showDetailInline = showDetailInline,
+                        // This pager is always the compact (folded) presentation -- see its own doc.
+                        useUnfoldedAppearance = false,
                         onAction = onAction,
                         appIconLoader = appIconLoader,
                         modifier = stageModifier,
@@ -900,6 +907,14 @@ private fun AdaptiveStagePageBody(
     onDetailVisibilityChanged: (LauncherCardId?) -> Unit,
     onFocusedCardChanged: (LauncherCardId?) -> Unit = {},
     showDetailInline: Boolean = true,
+    // Which of CardsSettings' two independently configurable appearance profiles the rendered
+    // card stack itself should use -- true in the TWO_PANE/THREE_PANE (docked-rail) branch, false
+    // everywhere else (the compact drag pager, used by both COMPACT and SPLIT). No default: every
+    // caller must decide deliberately rather than silently inherit one profile everywhere, which
+    // is exactly the bug this parameter fixes (every card stack rendering the folded profile
+    // regardless of pane mode, so the "Unfolded" appearance editor target had no visible effect
+    // outside the rail's own tiles).
+    useUnfoldedAppearance: Boolean,
     onAction: (LauncherShellAction) -> Unit,
     appIconLoader: AppIconLoader,
     modifier: Modifier,
@@ -916,6 +931,7 @@ private fun AdaptiveStagePageBody(
                 onDetailVisibilityChanged = onDetailVisibilityChanged,
                 onFocusedCardChanged = onFocusedCardChanged,
                 showDetailInline = showDetailInline,
+                useUnfoldedAppearance = useUnfoldedAppearance,
                 onAction = onAction,
                 appIconLoader = appIconLoader,
                 modifier = modifier,
@@ -927,6 +943,7 @@ private fun AdaptiveStagePageBody(
                 state = state,
                 notificationCards = shellState.notificationCards,
                 detailState = allNotificationsDetailState,
+                useUnfoldedAppearance = useUnfoldedAppearance,
                 onAction = onAction,
                 appIconLoader = appIconLoader,
                 modifier = modifier,
@@ -1010,6 +1027,8 @@ private fun AdaptiveStageNeighborStagePage(
         focusedCardId = focusedCardId,
         onDetailVisibilityChanged = {},
         onFocusedCardChanged = { focusedCardId = it },
+        // Neighbor pages only ever exist within the compact drag pager -- see its own doc.
+        useUnfoldedAppearance = false,
         onAction = onAction,
         appIconLoader = appIconLoader,
         modifier = modifier,
@@ -1159,6 +1178,7 @@ private fun AdaptiveStageStageBody(
     onDetailVisibilityChanged: (LauncherCardId?) -> Unit,
     onFocusedCardChanged: (LauncherCardId?) -> Unit = {},
     showDetailInline: Boolean = true,
+    useUnfoldedAppearance: Boolean,
     onAction: (LauncherShellAction) -> Unit,
     appIconLoader: AppIconLoader,
     modifier: Modifier,
@@ -1173,17 +1193,18 @@ private fun AdaptiveStageStageBody(
         )
     } else {
         AdaptiveStageStageContent(
-            selectedStage,
-            state,
-            shellState,
-            requireNotNull(detailState),
-            focusedCardId,
-            onDetailVisibilityChanged,
-            onFocusedCardChanged,
-            showDetailInline,
-            onAction,
-            appIconLoader,
-            modifier,
+            stage = selectedStage,
+            state = state,
+            shellState = shellState,
+            detailState = requireNotNull(detailState),
+            focusedCardId = focusedCardId,
+            onDetailVisibilityChanged = onDetailVisibilityChanged,
+            onFocusedCardChanged = onFocusedCardChanged,
+            showDetailInline = showDetailInline,
+            useUnfoldedAppearance = useUnfoldedAppearance,
+            onAction = onAction,
+            appIconLoader = appIconLoader,
+            modifier = modifier,
         )
     }
 }
@@ -1733,6 +1754,7 @@ private fun AdaptiveStageStageContent(
     onDetailVisibilityChanged: (LauncherCardId?) -> Unit,
     onFocusedCardChanged: (LauncherCardId?) -> Unit = {},
     showDetailInline: Boolean,
+    useUnfoldedAppearance: Boolean,
     onAction: (LauncherShellAction) -> Unit,
     appIconLoader: AppIconLoader,
     modifier: Modifier,
@@ -1756,6 +1778,7 @@ private fun AdaptiveStageStageContent(
                 shellState = shellState,
                 detailState = detailState,
                 showDetailInline = showDetailInline,
+                useUnfoldedAppearance = useUnfoldedAppearance,
                 state = state,
                 appIconLoader = appIconLoader,
                 onAction = onAction,
@@ -1770,6 +1793,7 @@ private fun AdaptiveStageStageContent(
                 focusedCardId = focusedCardId,
                 onFocusedCardChanged = onFocusedCardChanged,
                 showDetailInline = showDetailInline,
+                useUnfoldedAppearance = useUnfoldedAppearance,
                 onAction = onAction,
                 appIconLoader = appIconLoader,
                 modifier = modifier,
@@ -1786,10 +1810,17 @@ private fun AdaptiveStageNotificationStack(
     focusedCardId: LauncherCardId?,
     onFocusedCardChanged: (LauncherCardId?) -> Unit,
     showDetailInline: Boolean,
+    useUnfoldedAppearance: Boolean,
     onAction: (LauncherShellAction) -> Unit,
     appIconLoader: AppIconLoader,
     modifier: Modifier,
 ) {
+    val cardAppearance =
+        if (useUnfoldedAppearance) {
+            state.launcherSettings.cards.unfoldedAppearance
+        } else {
+            state.launcherSettings.cards.adaptiveStageAppearance
+        }
     val haptics = rememberLauncherHaptics(state.launcherSettings.haptics.feedbackStrength)
     val stageAppIdentityValue = remember(stage.id, state) { stageAppIdentity(stage.id, state) }
     var stageAppColor by remember(stageAppIdentityValue, appIconLoader) {
@@ -1857,10 +1888,11 @@ private fun AdaptiveStageNotificationStack(
     BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
         val viewport = AdaptiveStageViewportDp(maxWidth.value.toInt(), maxHeight.value.toInt())
         val resolution =
-            remember(state.launcherSettings, viewport) {
-                state.launcherSettings.resolveAdaptiveStageCardStack(
+            remember(state.launcherSettings, viewport, useUnfoldedAppearance) {
+                cardAppearance.resolveCardStack(
                     viewport = viewport,
                     capabilities = adaptiveStageRendererCapabilities(),
+                    globalReducedMotion = state.launcherSettings.motion.reducedMotion,
                 )
             }
         val isDetailVisible = detailState.expansionState.isVisible && showDetailInline
@@ -1927,9 +1959,7 @@ private fun AdaptiveStageNotificationStack(
                                             }
                                     },
                                     onSettleHaptic = {
-                                        haptics.adaptiveStageSettle(
-                                            state.launcherSettings.cards.adaptiveStageAppearance.motion.hapticStrength,
-                                        )
+                                        haptics.adaptiveStageSettle(cardAppearance.motion.hapticStrength)
                                     },
                                     onNavigate = ::navigate,
                                     onExpand = { detailState.expand(activeCard.content.id) },
@@ -1968,7 +1998,7 @@ private fun AdaptiveStageNotificationStack(
                                     Modifier
                                 }
                             AdaptiveStageCardSurface(
-                                appearance = state.launcherSettings.cards.adaptiveStageAppearance,
+                                appearance = cardAppearance,
                                 background =
                                     AdaptiveStageCardBackground(
                                         artwork = artwork,
@@ -2043,10 +2073,17 @@ private fun AdaptiveStageAllNotificationsStack(
     state: LauncherShellState,
     notificationCards: List<AppStageNotificationCard>,
     detailState: AdaptiveStageCardDetailState,
+    useUnfoldedAppearance: Boolean,
     onAction: (LauncherShellAction) -> Unit,
     appIconLoader: AppIconLoader,
     modifier: Modifier,
 ) {
+    val cardAppearance =
+        if (useUnfoldedAppearance) {
+            state.launcherSettings.cards.unfoldedAppearance
+        } else {
+            state.launcherSettings.cards.adaptiveStageAppearance
+        }
     val haptics = rememberLauncherHaptics(state.launcherSettings.haptics.feedbackStrength)
     val mergedEntries =
         remember(stages, notificationCards) {
@@ -2097,10 +2134,11 @@ private fun AdaptiveStageAllNotificationsStack(
     BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
         val viewport = AdaptiveStageViewportDp(maxWidth.value.toInt(), maxHeight.value.toInt())
         val resolution =
-            remember(state.launcherSettings, viewport) {
-                state.launcherSettings.resolveAdaptiveStageCardStack(
+            remember(state.launcherSettings, viewport, useUnfoldedAppearance) {
+                cardAppearance.resolveCardStack(
                     viewport = viewport,
                     capabilities = adaptiveStageRendererCapabilities(),
+                    globalReducedMotion = state.launcherSettings.motion.reducedMotion,
                 )
             }
         val isDetailVisible = detailState.expansionState.isVisible
@@ -2167,9 +2205,7 @@ private fun AdaptiveStageAllNotificationsStack(
                                         }
                                 },
                                 onSettleHaptic = {
-                                    haptics.adaptiveStageSettle(
-                                        state.launcherSettings.cards.adaptiveStageAppearance.motion.hapticStrength,
-                                    )
+                                    haptics.adaptiveStageSettle(cardAppearance.motion.hapticStrength)
                                 },
                                 onNavigate = ::navigate,
                                 onExpand = { detailState.expand(activeCard.content.id) },
@@ -2219,7 +2255,7 @@ private fun AdaptiveStageAllNotificationsStack(
                                 Modifier
                             }
                         AdaptiveStageCardSurface(
-                            appearance = state.launcherSettings.cards.adaptiveStageAppearance,
+                            appearance = cardAppearance,
                             background =
                                 AdaptiveStageCardBackground(
                                     artwork = artwork,
@@ -2650,11 +2686,18 @@ private fun AdaptiveStageEmptyStage(
     shellState: com.riffle.app.launcher.notifications.AppStageShellState,
     detailState: AdaptiveStageCardDetailState,
     showDetailInline: Boolean,
+    useUnfoldedAppearance: Boolean,
     state: LauncherShellState,
     appIconLoader: AppIconLoader,
     onAction: (LauncherShellAction) -> Unit,
     modifier: Modifier,
 ) {
+    val cardAppearance =
+        if (useUnfoldedAppearance) {
+            state.launcherSettings.cards.unfoldedAppearance
+        } else {
+            state.launcherSettings.cards.adaptiveStageAppearance
+        }
     val notificationAccessStatus = state.notificationAccessStatus
     val emptyCard = shellState.emptyAppCards[stage.id]
     val detailCardId = adaptiveStageEmptyDetailCardId(stage.id)
@@ -2691,14 +2734,15 @@ private fun AdaptiveStageEmptyStage(
     BoxWithConstraints(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         val viewport = AdaptiveStageViewportDp(maxWidth.value.toInt(), maxHeight.value.toInt())
         val resolution =
-            remember(state.launcherSettings, viewport) {
-                state.launcherSettings.resolveAdaptiveStageCardStack(
+            remember(state.launcherSettings, viewport, useUnfoldedAppearance) {
+                cardAppearance.resolveCardStack(
                     viewport = viewport,
                     capabilities = adaptiveStageRendererCapabilities(),
+                    globalReducedMotion = state.launcherSettings.motion.reducedMotion,
                 )
             }
         AdaptiveStageCardSurface(
-            appearance = state.launcherSettings.cards.adaptiveStageAppearance,
+            appearance = cardAppearance,
             background =
                 AdaptiveStageCardBackground(appSeed = stage.id.packageName.value, appColor = emptyStageAppColor),
             modifier =
