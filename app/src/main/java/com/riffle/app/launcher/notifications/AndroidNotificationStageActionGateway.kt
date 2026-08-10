@@ -7,6 +7,7 @@ import android.content.Intent
 import android.media.session.MediaController
 import android.media.session.MediaSession
 import android.media.session.PlaybackState
+import android.os.Bundle
 import android.service.notification.StatusBarNotification
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
 import java.util.concurrent.ConcurrentHashMap
@@ -18,7 +19,6 @@ import java.util.concurrent.ConcurrentHashMap
 object AndroidNotificationStageActionGateway : NotificationStageActionGateway, NotificationStageActionAvailability {
     private val targets = ConcurrentHashMap<LauncherNotificationKey, Targets>()
 
-    @Suppress("DEPRECATION")
     fun replace(
         context: Context,
         notification: StatusBarNotification,
@@ -31,8 +31,7 @@ object AndroidNotificationStageActionGateway : NotificationStageActionGateway, N
                         "provider:$index" to ProviderTarget(action, pendingIntent)
                     }
                 }.orEmpty().toMap()
-        val token =
-            platformNotification.extras?.getParcelable(Notification.EXTRA_MEDIA_SESSION) as? MediaSession.Token
+        val token = platformNotification.extras?.mediaSessionTokenExtraOrNull()
         targets[LauncherNotificationKey(notification.key)] =
             Targets(
                 contentIntent = platformNotification.contentIntent,
@@ -42,12 +41,19 @@ object AndroidNotificationStageActionGateway : NotificationStageActionGateway, N
             )
     }
 
+    /**
+     * Registers each notification independently, mirroring
+     * [com.riffle.app.launcher.notifications.RiffleNotificationListenerService.saveActiveNotifications]'s
+     * own per-item isolation: one notification's [replace] throwing (a platform quirk in a single
+     * StatusBarNotification, say a malformed media-session extra) must not leave every notification
+     * after it in this batch without registered action targets.
+     */
     fun replaceAll(
         context: Context,
         notifications: Array<StatusBarNotification>,
     ) {
         targets.clear()
-        notifications.forEach { notification -> replace(context, notification) }
+        notifications.forEach { notification -> runCatching { replace(context, notification) } }
     }
 
     fun clear() {
@@ -161,6 +167,18 @@ private fun MediaController.perform(command: MediaCommand) {
         MediaCommand.NEXT -> transportControls.skipToNext()
     }
 }
+
+/**
+ * The deprecated single-arg `getParcelable` throws ClassCastException rather than returning null
+ * when the stored extra doesn't match the requested type -- see [StatusBarNotificationMapper]'s
+ * identical [Bundle.bitmapExtraOrNull] doc for the full explanation. A notification without a real
+ * media session doesn't set this extra at all, but a malformed one (an OEM/app quirk) must not
+ * throw out of [AndroidNotificationStageActionGateway.replace] and cost that notification its
+ * other, unrelated action targets (Open, provider actions, dismiss).
+ */
+@Suppress("DEPRECATION")
+private fun Bundle.mediaSessionTokenExtraOrNull(): MediaSession.Token? =
+    runCatching { getParcelable(Notification.EXTRA_MEDIA_SESSION) as? MediaSession.Token }.getOrNull()
 
 internal fun mediaCommandsForPlaybackActions(
     actions: Long,

@@ -1599,7 +1599,10 @@ class AdaptiveStageCardSurfaceTest {
                 )
             assertEquals(Color(0xFF336699), colors.accent)
             assertTrue(contrastRatio(observedAction, colors.glass) >= 4.5f)
-            assertEquals(1.3f, observedFontScale, 0.001f)
+            // textScalePercent (130%) and contentDensity's own scale (EXPANDED, 120%) both drive
+            // fontScale and compound: 1.3 * 1.2 = 1.56. Content density is meant to shrink/grow
+            // text and its (sp-derived) line spacing, not just the padding around it.
+            assertEquals(1.56f, observedFontScale, 0.001f)
             assertEquals(1.2f, adaptiveStageContentDensityScale(AdaptiveStageContentDensity.EXPANDED), 0.001f)
             assertEquals(0.8f, adaptiveStageContentDensityScale(AdaptiveStageContentDensity.COMPACT), 0.001f)
         }

@@ -298,10 +298,14 @@ internal fun AdaptiveStageCardSurface(
     val density = LocalDensity.current
     val contentDensityScale = adaptiveStageContentDensityScale(effective.typography.contentDensity)
     val adjustedPadding = contentPadding * contentDensityScale
+    // contentDensityScale also drives fontScale, not just padding: COMPACT is meant to shrink text
+    // and line spacing (both derive from sp, which resolves through this same Density) so more
+    // content fits without an internal scroll, not just carve out a bigger content box around
+    // text that stayed full-size. EXPANDED mirrors that the other way, for a more spacious feel.
     val adjustedDensity =
         Density(
             density = density.density,
-            fontScale = density.fontScale * effective.typography.textScalePercent / 100f,
+            fontScale = density.fontScale * effective.typography.textScalePercent / 100f * contentDensityScale,
         )
     val artworkEnabled =
         background.artwork != null &&
