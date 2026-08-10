@@ -53,7 +53,7 @@ fun SettingsSurface(
                 Modifier
                     .fillMaxSize()
                     .windowInsetsPadding(WindowInsets.safeDrawing)
-                    .padding(horizontal = SETTINGS_PAGE_HORIZONTAL_PADDING_DP.dp, vertical = 16.dp),
+                    .padding(horizontal = 20.dp, vertical = 16.dp),
         ) {
             SettingsPageHeader(
                 title = selectedPage.value.title,
@@ -175,11 +175,3 @@ internal fun settingsPageScrollStateFor(
 ): ScrollState = pageScrollStates.getValue(page)
 
 private const val SETTINGS_PAGE_MAX_WIDTH_DP = 840
-
-/**
- * The settings page's own horizontal inset around every page's content. Exposed (not private) so
- * an individual page element -- e.g. the Cards appearance preview -- can cancel it out with an
- * equal negative padding to deliberately span edge-to-edge, without hardcoding a duplicate literal
- * that could silently drift out of sync with this one.
- */
-internal const val SETTINGS_PAGE_HORIZONTAL_PADDING_DP = 20

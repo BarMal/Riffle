@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FilterChip
@@ -32,7 +33,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -150,25 +150,17 @@ internal fun AdaptiveStageAppearancePageContent(
             }
         }
         Surface(
-            // Cancels the settings page's own horizontal inset (SettingsSurface's
-            // SETTINGS_PAGE_HORIZONTAL_PADDING_DP) so the preview spans the real device width
-            // edge-to-edge, the same way the real Home stage does, instead of floating in a
-            // narrower padded box that starves it of room and makes it more likely to report
-            // "needs more space" than the real surface it's illustrating ever would. Square
-            // corners to match: a rounded card flush against the true screen edge reads as a
-            // rendering bug, not a deliberate framed illustration, once there's no surrounding
-            // margin left to round into.
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = (-SETTINGS_PAGE_HORIZONTAL_PADDING_DP).dp),
-            shape = RectangleShape,
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(24.dp),
             color = MaterialTheme.colorScheme.surfaceContainerLow,
         ) {
             AdaptiveStageAppearancePreview(
                 appearance = appearance,
                 globalReducedMotion = state.settings.motion.reducedMotion,
                 rendererCapabilities = rendererCapabilities,
+                // Taller than before (was 220-300dp): more headroom directly reduces how often
+                // this hits its own legibility floor and reports "needs more space to render"
+                // relative to the real surface it's illustrating.
                 modifier = Modifier.fillMaxWidth().heightIn(min = 280.dp, max = 340.dp),
             )
         }
