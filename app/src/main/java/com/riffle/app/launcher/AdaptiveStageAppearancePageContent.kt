@@ -158,9 +158,15 @@ internal fun AdaptiveStageAppearancePageContent(
                 appearance = appearance,
                 globalReducedMotion = state.settings.motion.reducedMotion,
                 rendererCapabilities = rendererCapabilities,
-                // Taller than before (was 220-300dp): more headroom directly reduces how often
-                // this hits its own legibility floor and reports "needs more space to render"
-                // relative to the real surface it's illustrating.
+                // Tried making this adaptive with weight() twice in this same PR -- both attempts
+                // broke previewUsesTheLauncherWideReducedMotionPreference (the preview's CardStack
+                // silently never composed at all), including a version with an explicit
+                // heightIn(min) floor stacked under the weight(). Rather than keep guessing at
+                // Compose's constraint resolution without the ability to run this locally,
+                // reverted to the exact fixed range already proven to pass in every context this
+                // app actually places this page in. "The preview still fails to render in certain
+                // ranges" is a real, open complaint this does NOT fix -- it just avoids trading
+                // that for a strictly worse "never renders in some contexts at all."
                 modifier = Modifier.fillMaxWidth().heightIn(min = 280.dp, max = 340.dp),
             )
         }
