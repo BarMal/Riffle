@@ -23,10 +23,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.composed
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -512,82 +514,95 @@ private fun Modifier.cardStackPointerInput(
         } else {
             CardStackGestureAxis.VERTICAL
         }
-    return pointerInput(stableItemKey, isFocused, interaction, orientation) {
-        awaitEachGesture {
-            val down = awaitFirstDown(requireUnconsumed = false)
-            val pointerId: PointerId = down.id
-            var verticalDrag = 0f
-            var horizontalDrag = 0f
-            var axis: CardStackGestureAxis? = null
-            var cancelled = false
-            val velocityTracker = VelocityTracker()
+    // composed + rememberUpdatedState (mirroring dockSwipeUpGestureInput's identical need) rather
+    // than keying pointerInput on `interaction` directly: interaction is a fresh data class
+    // instance every recomposition (its own onLiveDrag closure among them), and since onLiveDrag
+    // firing is exactly what drives its *caller* to recompose every drag frame, keying on it would
+    // restart this gesture's coroutine on every frame of the very drag it's reporting -- the
+    // restarted coroutine's awaitFirstDown() then just waits for a down event that already
+    // happened, silently dropping the rest of that touch. Reading the always-current value inside
+    // the coroutine via rememberUpdatedState keeps callbacks fresh without tearing the gesture down
+    // mid-drag; stableItemKey/isFocused/orientation are stable for a gesture's whole duration (see
+    // their own docs) so keying on those is safe.
+    return composed {
+        val currentInteraction by rememberUpdatedState(interaction)
+        pointerInput(stableItemKey, isFocused, orientation) {
+            awaitEachGesture {
+                val down = awaitFirstDown(requireUnconsumed = false)
+                val pointerId: PointerId = down.id
+                var verticalDrag = 0f
+                var horizontalDrag = 0f
+                var axis: CardStackGestureAxis? = null
+                var cancelled = false
+                val velocityTracker = VelocityTracker()
 
-            while (true) {
-                val event = awaitPointerEvent()
-                if (event.changes.size != 1) {
-                    cancelled = true
-                    break
-                }
-                val change = event.changes.firstOrNull { it.id == pointerId }
-                if (change == null) {
-                    cancelled = true
-                    break
-                }
-                val delta = change.position - change.previousPosition
-                velocityTracker.addPosition(change.uptimeMillis, change.position)
-                verticalDrag += delta.y
-                horizontalDrag += delta.x
-                if (
-                    axis == null &&
-                    (
-                        abs(verticalDrag) > viewConfiguration.touchSlop ||
-                            abs(horizontalDrag) > viewConfiguration.touchSlop
-                    )
-                ) {
-                    axis =
-                        if (abs(verticalDrag) > abs(horizontalDrag)) {
-                            CardStackGestureAxis.VERTICAL
-                        } else {
-                            CardStackGestureAxis.HORIZONTAL
-                        }
-                }
-                if (axis == ownAxis) {
-                    change.consume()
-                    // Reports this gesture upward so a caller can recompute a live, fractional
-                    // activeIndex every frame (see CardStackInteraction.onLiveDrag's own doc);
-                    // isDragging suspends this stack's own settle animation for the same frames
-                    // so that recomputed pose renders immediately instead of being animated toward.
-                    isDragging.value = true
-                    interaction.onLiveDrag?.invoke(
-                        if (orientation == CardStackOrientation.HORIZONTAL) horizontalDrag else verticalDrag,
-                    )
-                }
-                if (!change.pressed) {
-                    // A background-card tap focuses the card without consuming an ancestor's
-                    // cross-axis page/stage drag before that drag's axis is known.
-                    if (axis == null && !isFocused) change.consume()
-                    break
-                }
-            }
-            isDragging.value = false
-            interaction.onLiveDrag?.invoke(null)
-
-            when {
-                cancelled -> Unit
-                axis == null -> interaction.onFocusRequest(entry)
-                axis == ownAxis ->
-                    interaction.run {
-                        val (dragPx, velocityPxPerSecond) =
-                            if (orientation == CardStackOrientation.HORIZONTAL) {
-                                horizontalDrag to velocityTracker.calculateVelocity().x
-                            } else {
-                                verticalDrag to velocityTracker.calculateVelocity().y
-                            }
-                        onSettle(dragPx, velocityPxPerSecond)
-                        onSettleHaptic()
+                while (true) {
+                    val event = awaitPointerEvent()
+                    if (event.changes.size != 1) {
+                        cancelled = true
+                        break
                     }
-                // Cross-axis gestures remain unconsumed for the owning page/stage surface.
-                else -> Unit
+                    val change = event.changes.firstOrNull { it.id == pointerId }
+                    if (change == null) {
+                        cancelled = true
+                        break
+                    }
+                    val delta = change.position - change.previousPosition
+                    velocityTracker.addPosition(change.uptimeMillis, change.position)
+                    verticalDrag += delta.y
+                    horizontalDrag += delta.x
+                    if (
+                        axis == null &&
+                        (
+                            abs(verticalDrag) > viewConfiguration.touchSlop ||
+                                abs(horizontalDrag) > viewConfiguration.touchSlop
+                        )
+                    ) {
+                        axis =
+                            if (abs(verticalDrag) > abs(horizontalDrag)) {
+                                CardStackGestureAxis.VERTICAL
+                            } else {
+                                CardStackGestureAxis.HORIZONTAL
+                            }
+                    }
+                    if (axis == ownAxis) {
+                        change.consume()
+                        // Reports this gesture upward so a caller can recompute a live, fractional
+                        // activeIndex every frame (see CardStackInteraction.onLiveDrag's own doc);
+                        // isDragging suspends this stack's own settle animation for the same frames
+                        // so that recomputed pose renders immediately instead of being animated toward.
+                        isDragging.value = true
+                        currentInteraction?.onLiveDrag?.invoke(
+                            if (orientation == CardStackOrientation.HORIZONTAL) horizontalDrag else verticalDrag,
+                        )
+                    }
+                    if (!change.pressed) {
+                        // A background-card tap focuses the card without consuming an ancestor's
+                        // cross-axis page/stage drag before that drag's axis is known.
+                        if (axis == null && !isFocused) change.consume()
+                        break
+                    }
+                }
+                isDragging.value = false
+                currentInteraction?.onLiveDrag?.invoke(null)
+
+                when {
+                    cancelled -> Unit
+                    axis == null -> currentInteraction?.onFocusRequest?.invoke(entry)
+                    axis == ownAxis ->
+                        currentInteraction?.run {
+                            val (dragPx, velocityPxPerSecond) =
+                                if (orientation == CardStackOrientation.HORIZONTAL) {
+                                    horizontalDrag to velocityTracker.calculateVelocity().x
+                                } else {
+                                    verticalDrag to velocityTracker.calculateVelocity().y
+                                }
+                            onSettle(dragPx, velocityPxPerSecond)
+                            onSettleHaptic()
+                        }
+                    // Cross-axis gestures remain unconsumed for the owning page/stage surface.
+                    else -> Unit
+                }
             }
         }
     }
