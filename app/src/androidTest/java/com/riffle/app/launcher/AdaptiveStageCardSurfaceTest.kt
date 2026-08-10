@@ -1767,7 +1767,7 @@ class AdaptiveStageCardSurfaceTest {
             adaptiveStageNotificationStackEntries(
                 resolution = resolution,
                 cardCount = 11,
-                activeCardIndex = 5,
+                activeCardIndex = 5f,
             )
 
         assertEquals(11, entries.size)

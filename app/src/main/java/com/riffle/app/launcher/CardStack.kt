@@ -17,11 +17,10 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.MutableFloatState
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -83,6 +82,18 @@ internal data class CardStackInteraction(
     val settleTransitionId: Int = 0,
     /** Requester owned by the currently focused rendered entry. */
     val keyboardFocusRequester: FocusRequester? = null,
+    /**
+     * Called continuously while this stack's own drag/settle axis gesture is in progress, with
+     * the raw signed pixel delta along that axis since the gesture began; called with `null` when
+     * no such gesture is active (including right after one ends). A caller that wants the stack
+     * to visibly track the finger during the drag itself -- not just once it settles -- uses this
+     * to recompute a *fractional* activeIndex every frame (see [com.riffle.core.domain.launcher
+     * .cards.CardStackLayoutPolicy]'s Float `entries()` overload), the same way the reference
+     * "Calm" launcher's own card stack continuously recomputes every card's pose from live scroll
+     * position rather than a discrete index -- not by uniformly shifting the whole rendered stack,
+     * which is what an earlier, simpler version of this mechanism did.
+     */
+    val onLiveDrag: ((dragPx: Float?) -> Unit)? = null,
 )
 
 @Composable
@@ -102,14 +113,15 @@ internal fun CardStack(
 ) {
     val motionMode = cardStackMotionMode(reducedMotion)
     val focusRequesters = remember { mutableMapOf<Any, FocusRequester>() }
-    // Raw pixel delta along this stack's own drag/settle axis for whichever gesture is currently
-    // in progress (0 when idle) -- written live, every pointer move, by whichever entry the
-    // gesture actually started on (cardStackPointerInput below), and read by every entry's own
-    // render so the whole stack visibly tracks the finger during the drag itself instead of only
-    // updating once the gesture settles. Deliberately not run through animateFloatAsState: that
-    // would animate toward a constantly-moving target, lagging behind the finger instead of
-    // tracking it 1:1. The settle animation (already state-driven via entries/timing) is untouched.
-    val liveDragDeltaPx = remember { mutableFloatStateOf(0f) }
+    // Whether this stack's own drag/settle axis gesture is currently in progress -- written live,
+    // every pointer move, by whichever entry the gesture actually started on
+    // (cardStackPointerInput below). Used only to suspend every entry's animateFloatAsState during
+    // the drag (see AnimatedCardStackEntry), so a caller that recomputes `entries` every frame from
+    // CardStackInteraction.onLiveDrag's report (a fractional activeIndex -- see that callback's own
+    // doc) renders each new pose immediately instead of chasing a constantly-moving animation
+    // target. Purely a rendering concern -- distinct from onLiveDrag itself, which is what actually
+    // lets a caller recompute those entries in the first place.
+    val isDragging = remember { mutableStateOf(false) }
     var restoreKeyboardFocus by remember { mutableStateOf(false) }
     var keyboardFocusOriginKey by remember { mutableStateOf<Any?>(null) }
     var consumedSettleTransitionId by remember { mutableStateOf(interaction?.settleTransitionId ?: 0) }
@@ -188,7 +200,7 @@ internal fun CardStack(
                     dimFactor = dimFactor,
                     orientation = orientation,
                     isFocused = interaction?.let { stableItemKey == it.focusedItemKey } ?: true,
-                    liveDragDeltaPx = liveDragDeltaPx,
+                    isDragging = isDragging,
                     interaction =
                         interaction?.copy(
                             onNavigate = ::navigateFromKeyboard,
@@ -203,7 +215,7 @@ internal fun CardStack(
                                 isFocused = stableItemKey == interaction?.focusedItemKey,
                                 interaction = interaction,
                                 orientation = orientation,
-                                liveDragDeltaPx = liveDragDeltaPx,
+                                isDragging = isDragging,
                             ),
                         )
                     },
@@ -297,7 +309,7 @@ private fun AnimatedCardStackEntry(
     timing: CardStackAnimationTiming,
     isFocused: Boolean,
     interaction: CardStackInteraction?,
-    liveDragDeltaPx: State<Float>,
+    isDragging: State<Boolean>,
     dimFactor: Float = 1f,
     orientation: CardStackOrientation = CardStackOrientation.VERTICAL,
     content: @Composable (CardStackLayoutEntry, Modifier) -> Unit,
@@ -325,29 +337,39 @@ private fun AnimatedCardStackEntry(
                 motionMode = motionMode,
                 timing = if (hasEntered) timing else CardStackAnimationTiming.ENTER,
             )
+
+        // While this stack's own gesture is live, every property below snaps straight to its
+        // target instead of animating toward it -- the target itself is already changing every
+        // frame (a caller recomputing `entries` from CardStackInteraction.onLiveDrag's report), so
+        // animating on top would forever chase a moving target and visibly lag behind the finger.
+        // The high frame rate of the drag's own pointer events supplies the smoothness instead,
+        // exactly as the reference "Calm" launcher's card stack relies on live scroll callbacks
+        // rather than a property animator while a finger is down.
+        fun liveAwareSpec(animatesThisProperty: Boolean): AnimationSpec<Float> =
+            if (isDragging.value || !animatesThisProperty) snap() else animationSpec
         val alpha by animateFloatAsState(
             targetValue = renderedPose.alpha * dimFactor,
-            animationSpec = if (spec.animatesAlpha) animationSpec else snap(),
+            animationSpec = liveAwareSpec(spec.animatesAlpha),
             label = "card-stack-alpha",
         )
         val offset by animateFloatAsState(
             targetValue = renderedPose.offset,
-            animationSpec = if (spec.animatesHorizontalTranslation) animationSpec else snap(),
+            animationSpec = liveAwareSpec(spec.animatesHorizontalTranslation),
             label = "card-stack-horizontal-offset",
         )
         val verticalOffset by animateFloatAsState(
             targetValue = renderedPose.verticalOffset,
-            animationSpec = if (spec.animatesVerticalTranslation) animationSpec else snap(),
+            animationSpec = liveAwareSpec(spec.animatesVerticalTranslation),
             label = "card-stack-vertical-offset",
         )
         val scale by animateFloatAsState(
             targetValue = entry.scale,
-            animationSpec = if (spec.animatesScale) animationSpec else snap(),
+            animationSpec = liveAwareSpec(spec.animatesScale),
             label = "card-stack-scale",
         )
         val rotationDegrees by animateFloatAsState(
             targetValue = entry.rotationDegrees,
-            animationSpec = if (spec.animatesRotation) animationSpec else snap(),
+            animationSpec = liveAwareSpec(spec.animatesRotation),
             label = "card-stack-rotation",
         )
 
@@ -381,17 +403,13 @@ private fun AnimatedCardStackEntry(
                         // needs no external density lookup.
                         // HORIZONTAL rotates the whole coordinate system 90 degrees: the settle
                         // axis (verticalOffset by default) becomes translationX, and the
-                        // fan/stagger axis (offset by default) becomes translationY. liveDragDeltaPx
-                        // is a raw pixel value (see CardStack's own doc), added directly on the
-                        // settle axis alongside the dp->px-converted, animated verticalOffset --
-                        // deliberately outside animateFloatAsState so it tracks the finger 1:1
-                        // instead of chasing a moving animation target.
+                        // fan/stagger axis (offset by default) becomes translationY.
                         if (orientation == CardStackOrientation.HORIZONTAL) {
-                            translationX = verticalOffset.dp.toPx() + liveDragDeltaPx.value
+                            translationX = verticalOffset.dp.toPx()
                             translationY = offset.dp.toPx()
                         } else {
                             translationX = offset.dp.toPx()
-                            translationY = verticalOffset.dp.toPx() + liveDragDeltaPx.value
+                            translationY = verticalOffset.dp.toPx()
                         }
                         scaleX = scale
                         scaleY = scale
@@ -483,7 +501,7 @@ private fun Modifier.cardStackPointerInput(
     isFocused: Boolean,
     interaction: CardStackInteraction?,
     orientation: CardStackOrientation,
-    liveDragDeltaPx: MutableFloatState,
+    isDragging: MutableState<Boolean>,
 ): Modifier {
     if (interaction == null) return this
     // This stack's own drag-to-navigate axis follows orientation; the other axis is always left
@@ -535,11 +553,14 @@ private fun Modifier.cardStackPointerInput(
                 }
                 if (axis == ownAxis) {
                     change.consume()
-                    // Live, un-animated tracking: the whole stack visibly follows the finger
-                    // during the drag itself (see liveDragDeltaPx's own doc on CardStack),
-                    // rather than only updating once the gesture settles.
-                    liveDragDeltaPx.floatValue =
-                        if (orientation == CardStackOrientation.HORIZONTAL) horizontalDrag else verticalDrag
+                    // Reports this gesture upward so a caller can recompute a live, fractional
+                    // activeIndex every frame (see CardStackInteraction.onLiveDrag's own doc);
+                    // isDragging suspends this stack's own settle animation for the same frames
+                    // so that recomputed pose renders immediately instead of being animated toward.
+                    isDragging.value = true
+                    interaction.onLiveDrag?.invoke(
+                        if (orientation == CardStackOrientation.HORIZONTAL) horizontalDrag else verticalDrag,
+                    )
                 }
                 if (!change.pressed) {
                     // A background-card tap focuses the card without consuming an ancestor's
@@ -548,7 +569,8 @@ private fun Modifier.cardStackPointerInput(
                     break
                 }
             }
-            liveDragDeltaPx.floatValue = 0f
+            isDragging.value = false
+            interaction.onLiveDrag?.invoke(null)
 
             when {
                 cancelled -> Unit
