@@ -17,8 +17,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableFloatState
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -99,7 +102,14 @@ internal fun CardStack(
 ) {
     val motionMode = cardStackMotionMode(reducedMotion)
     val focusRequesters = remember { mutableMapOf<Any, FocusRequester>() }
-    var restoreKeyboardFocus by remember { mutableStateOf(false) }
+    // Raw pixel delta along this stack's own drag/settle axis for whichever gesture is currently
+    // in progress (0 when idle) -- written live, every pointer move, by whichever entry the
+    // gesture actually started on (cardStackPointerInput below), and read by every entry's own
+    // render so the whole stack visibly tracks the finger during the drag itself instead of only
+    // updating once the gesture settles. Deliberately not run through animateFloatAsState: that
+    // would animate toward a constantly-moving target, lagging behind the finger instead of
+    // tracking it 1:1. The settle animation (already state-driven via entries/timing) is untouched.
+    val liveDragDeltaPx = remember { mutableFloatStateOf(0f) }
     var keyboardFocusOriginKey by remember { mutableStateOf<Any?>(null) }
     var consumedSettleTransitionId by remember { mutableStateOf(interaction?.settleTransitionId ?: 0) }
     val timing =
@@ -177,6 +187,7 @@ internal fun CardStack(
                     dimFactor = dimFactor,
                     orientation = orientation,
                     isFocused = interaction?.let { stableItemKey == it.focusedItemKey } ?: true,
+                    liveDragDeltaPx = liveDragDeltaPx,
                     interaction =
                         interaction?.copy(
                             onNavigate = ::navigateFromKeyboard,
@@ -191,6 +202,7 @@ internal fun CardStack(
                                 isFocused = stableItemKey == interaction?.focusedItemKey,
                                 interaction = interaction,
                                 orientation = orientation,
+                                liveDragDeltaPx = liveDragDeltaPx,
                             ),
                         )
                     },
@@ -275,7 +287,7 @@ internal fun cardStackRenderedPose(
 }
 
 @Composable
-@Suppress("LongParameterList")
+@Suppress("LongMethod", "LongParameterList")
 private fun AnimatedCardStackEntry(
     entry: CardStackLayoutEntry,
     stableItemKey: Any,
@@ -284,6 +296,7 @@ private fun AnimatedCardStackEntry(
     timing: CardStackAnimationTiming,
     isFocused: Boolean,
     interaction: CardStackInteraction?,
+    liveDragDeltaPx: State<Float>,
     dimFactor: Float = 1f,
     orientation: CardStackOrientation = CardStackOrientation.VERTICAL,
     content: @Composable (CardStackLayoutEntry, Modifier) -> Unit,
@@ -367,13 +380,17 @@ private fun AnimatedCardStackEntry(
                         // needs no external density lookup.
                         // HORIZONTAL rotates the whole coordinate system 90 degrees: the settle
                         // axis (verticalOffset by default) becomes translationX, and the
-                        // fan/stagger axis (offset by default) becomes translationY.
+                        // fan/stagger axis (offset by default) becomes translationY. liveDragDeltaPx
+                        // is a raw pixel value (see CardStack's own doc), added directly on the
+                        // settle axis alongside the dp->px-converted, animated verticalOffset --
+                        // deliberately outside animateFloatAsState so it tracks the finger 1:1
+                        // instead of chasing a moving animation target.
                         if (orientation == CardStackOrientation.HORIZONTAL) {
-                            translationX = verticalOffset.dp.toPx()
+                            translationX = verticalOffset.dp.toPx() + liveDragDeltaPx.value
                             translationY = offset.dp.toPx()
                         } else {
                             translationX = offset.dp.toPx()
-                            translationY = verticalOffset.dp.toPx()
+                            translationY = verticalOffset.dp.toPx() + liveDragDeltaPx.value
                         }
                         scaleX = scale
                         scaleY = scale
@@ -465,6 +482,7 @@ private fun Modifier.cardStackPointerInput(
     isFocused: Boolean,
     interaction: CardStackInteraction?,
     orientation: CardStackOrientation,
+    liveDragDeltaPx: MutableFloatState,
 ): Modifier {
     if (interaction == null) return this
     // This stack's own drag-to-navigate axis follows orientation; the other axis is always left
@@ -514,7 +532,14 @@ private fun Modifier.cardStackPointerInput(
                             CardStackGestureAxis.HORIZONTAL
                         }
                 }
-                if (axis == ownAxis) change.consume()
+                if (axis == ownAxis) {
+                    change.consume()
+                    // Live, un-animated tracking: the whole stack visibly follows the finger
+                    // during the drag itself (see liveDragDeltaPx's own doc on CardStack),
+                    // rather than only updating once the gesture settles.
+                    liveDragDeltaPx.floatValue =
+                        if (orientation == CardStackOrientation.HORIZONTAL) horizontalDrag else verticalDrag
+                }
                 if (!change.pressed) {
                     // A background-card tap focuses the card without consuming an ancestor's
                     // cross-axis page/stage drag before that drag's axis is known.
@@ -522,6 +547,7 @@ private fun Modifier.cardStackPointerInput(
                     break
                 }
             }
+            liveDragDeltaPx.floatValue = 0f
 
             when {
                 cancelled -> Unit
