@@ -43,10 +43,10 @@ object AndroidNotificationStageActionGateway : NotificationStageActionGateway, N
 
     /**
      * Registers each notification independently, mirroring
-     * [com.riffle.app.launcher.notifications.RiffleNotificationListenerService.saveActiveNotifications]'s
-     * own per-item isolation: one notification's [replace] throwing (a platform quirk in a single
-     * StatusBarNotification, say a malformed media-session extra) must not leave every notification
-     * after it in this batch without registered action targets.
+     * `RiffleNotificationListenerService.saveActiveNotifications()`'s own per-item isolation: one
+     * notification's [replace] throwing (a platform quirk in a single StatusBarNotification, say a
+     * malformed media-session extra) must not leave every notification after it in this batch
+     * without registered action targets.
      */
     fun replaceAll(
         context: Context,
