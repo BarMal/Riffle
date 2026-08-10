@@ -337,6 +337,7 @@ private fun AnimatedCardStackEntry(
                 motionMode = motionMode,
                 timing = if (hasEntered) timing else CardStackAnimationTiming.ENTER,
             )
+
         // While this stack's own gesture is live, every property below snaps straight to its
         // target instead of animating toward it -- the target itself is already changing every
         // frame (a caller recomputing `entries` from CardStackInteraction.onLiveDrag's report), so

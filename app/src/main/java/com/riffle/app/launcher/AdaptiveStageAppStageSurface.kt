@@ -1959,7 +1959,7 @@ private fun AdaptiveStageNotificationStack(
                                                     verticalDragPx = drag,
                                                     verticalVelocityPxPerSecond = velocity,
                                                     distanceThresholdPx =
-                                                        ADAPTIVE_STAGE_CARD_STACK_SETTLE_DISTANCE_THRESHOLD_PX,
+                                                    ADAPTIVE_STAGE_CARD_STACK_SETTLE_DISTANCE_THRESHOLD_PX,
                                                     flingVelocityThresholdPxPerSecond = 500f,
                                                 ),
                                             ).let { result ->
@@ -2225,7 +2225,7 @@ private fun AdaptiveStageAllNotificationsStack(
                                                 verticalDragPx = drag,
                                                 verticalVelocityPxPerSecond = velocity,
                                                 distanceThresholdPx =
-                                                    ADAPTIVE_STAGE_CARD_STACK_SETTLE_DISTANCE_THRESHOLD_PX,
+                                                ADAPTIVE_STAGE_CARD_STACK_SETTLE_DISTANCE_THRESHOLD_PX,
                                                 flingVelocityThresholdPxPerSecond = 500f,
                                             ),
                                         ).let { result ->
