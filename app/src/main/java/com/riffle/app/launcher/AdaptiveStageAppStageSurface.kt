@@ -32,6 +32,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -409,6 +410,7 @@ internal fun AdaptiveStageAppStageSurface(
                                 allNotificationsSelected = allNotificationsSelected,
                                 onAllNotificationsSelectedChanged = { allNotificationsSelected = it },
                                 state = state,
+                                notificationCards = shellState.notificationCards,
                                 appIconLoader = appIconLoader,
                                 onAction = onAction,
                                 modifier = Modifier.fillMaxWidth().height(paneLayout.railHeightDp.dp),
@@ -425,6 +427,7 @@ internal fun AdaptiveStageAppStageSurface(
                                         allNotificationsSelected = allNotificationsSelected,
                                         onAllNotificationsSelectedChanged = { allNotificationsSelected = it },
                                         state = state,
+                                        notificationCards = shellState.notificationCards,
                                         appIconLoader = appIconLoader,
                                         onAction = onAction,
                                         modifier = Modifier.width(paneLayout.railWidthDp.dp),
@@ -502,6 +505,7 @@ internal fun AdaptiveStageAppStageSurface(
                                         allNotificationsSelected = allNotificationsSelected,
                                         onAllNotificationsSelectedChanged = { allNotificationsSelected = it },
                                         state = state,
+                                        notificationCards = shellState.notificationCards,
                                         appIconLoader = appIconLoader,
                                         onAction = onAction,
                                         modifier = Modifier.width(paneLayout.railWidthDp.dp),
@@ -1191,6 +1195,7 @@ private fun AdaptiveStageStageRail(
     allNotificationsSelected: Boolean,
     onAllNotificationsSelectedChanged: (Boolean) -> Unit,
     state: LauncherShellState,
+    notificationCards: List<AppStageNotificationCard>,
     appIconLoader: AppIconLoader,
     onAction: (LauncherShellAction) -> Unit,
     modifier: Modifier,
@@ -1203,6 +1208,15 @@ private fun AdaptiveStageStageRail(
     // trailing "All notifications" page (see #1057) keeps at least one tile even then.
     val haptics = rememberLauncherHaptics(state.launcherSettings.haptics.feedbackStrength)
     val pages = remember(stages) { stages.withAllNotificationsPage() }
+    // #1059's rail audit calls for "live mini-previews (icon + latest snippet), not just an
+    // icon+label chip" -- one lookup per stage's most-recent card (already privacy/redaction-
+    // resolved by appStageNotificationCards), reused by every tile below.
+    val latestCardByStage =
+        remember(notificationCards) {
+            notificationCards
+                .groupBy { card -> card.content.stageId }
+                .mapValues { (_, cards) -> cards.maxBy { card -> card.content.meaningfulActivityAtEpochMillis } }
+        }
     val activeIndex =
         adaptiveStageSelectedPageIndex(pages, selectedStageId, allNotificationsSelected).coerceAtLeast(0)
     var settleTransitionId by rememberSaveable { mutableIntStateOf(0) }
@@ -1301,6 +1315,7 @@ private fun AdaptiveStageStageRail(
                         stageId = page.stage.id,
                         isSelected = !allNotificationsSelected && page.stage.id == selectedStageId,
                         label = stageLabel(page.stage.id, state),
+                        snippet = latestCardByStage[page.stage.id]?.railSnippet(),
                         identity = stageAppIdentity(page.stage.id, state),
                         appearance = state.launcherSettings.cards.unfoldedAppearance,
                         appIconLoader = appIconLoader,
@@ -1328,16 +1343,19 @@ private const val ADAPTIVE_STAGE_STAGE_RAIL_FLING_VELOCITY_THRESHOLD_PX = 500f
 /**
  * A single stage tile in the rail: a small deterministically-tinted icon slot (reusing the same
  * per-app seed color mechanism as populated [AdaptiveStageCardSurface] cards, via
- * [resolveAdaptiveStageCardColors]) with a short caption below, and a clear ring/elevation treatment
- * for the currently selected stage. Non-interactive on its own -- [modifier] (supplied by the
- * enclosing [CardStack]) already carries tap-to-select/settle-drag handling, mirroring how
- * [AdaptiveStageCardSurface] relies on its own given modifier rather than an internal onClick.
+ * [resolveAdaptiveStageCardColors]) with a short caption and, when the stage has live content, a
+ * one-line snippet of its most recent card below -- a live mini-preview rather than a bare
+ * icon+label identity chip (#1059). A clear ring/elevation treatment marks the currently selected
+ * stage. Non-interactive on its own -- [modifier] (supplied by the enclosing [CardStack]) already
+ * carries tap-to-select/settle-drag handling, mirroring how [AdaptiveStageCardSurface] relies on
+ * its own given modifier rather than an internal onClick.
  */
 @Composable
 private fun AdaptiveStageStageRailTile(
     stageId: AppStageId,
     isSelected: Boolean,
     label: String,
+    snippet: String?,
     identity: AppIdentity?,
     appearance: AdaptiveStageAppearanceSettings,
     appIconLoader: AppIconLoader,
@@ -1408,6 +1426,15 @@ private fun AdaptiveStageStageRailTile(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
+            if (snippet != null) {
+                Text(
+                    text = snippet,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = LocalContentColor.current.copy(alpha = 0.7f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
         }
     }
 }
@@ -3006,6 +3033,15 @@ private fun stageAppIdentity(
     state.installedApps.firstOrNull { app ->
         app.identity.packageName == id.packageName && app.identity.profile.id == id.profileId
     }?.identity
+
+/**
+ * A one-line preview of a stage's most recent card for the rail tile (#1059). [text]/[title] are
+ * already redaction-resolved by [appStageNotificationCards] ("Content hidden for this profile" /
+ * "Hidden notification" when the profile is locked/quiet), so this never needs its own privacy
+ * check -- it just picks whichever field actually has content, preferring the message body.
+ */
+private fun AppStageNotificationCard.railSnippet(): String? =
+    text.takeIf(String::isNotBlank) ?: title.takeIf(String::isNotBlank)
 
 private fun AppStage.adaptiveStageStageStateDescription(): String =
     buildList {

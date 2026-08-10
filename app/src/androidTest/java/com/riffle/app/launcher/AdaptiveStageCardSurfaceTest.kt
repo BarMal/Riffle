@@ -741,6 +741,53 @@ class AdaptiveStageCardSurfaceTest {
     }
 
     @Test
+    fun stageRailTileShowsALiveSnippetOfItsMostRecentCardNotJustIdentity() {
+        val mail = adaptiveStageTestApp()
+        val calendar =
+            mail.copy(
+                identity = mail.identity.copy(packageName = AppPackageName("com.example.calendar")),
+                label = "Calendar",
+            )
+        val mailNotification = adaptiveStageTestNotification(mail)
+        val calendarNotification =
+            mailNotification.copy(
+                key = LauncherNotificationKey("calendar"),
+                packageName = calendar.identity.packageName,
+                title = "Calendar event",
+                text = "Standup at 10am",
+                postedAtEpochMillis = mailNotification.postedAtEpochMillis - 1,
+            )
+        val state =
+            LauncherShellState(
+                notificationAccessStatus = NotificationAccessStatus.GRANTED,
+                installedApps = listOf(mail, calendar),
+                profileContentVisibility =
+                    mapOf(mail.identity.profile.id to AppProfileContentVisibility.VISIBLE),
+                notificationGroupsByApp =
+                    listOf(
+                        notificationGroup(mail, mailNotification),
+                        notificationGroup(calendar, calendarNotification),
+                    ),
+            )
+
+        composeRule.setContent {
+            MaterialTheme {
+                AdaptiveStageAppStageSurface(
+                    state = state,
+                    windowLayout =
+                        AdaptiveStageWindowLayout(widthDp = 800, heightDp = 800, posture = AdaptiveStagePosture.UNFOLDED),
+                    onAction = {},
+                )
+            }
+        }
+
+        // The non-focused Calendar rail tile shows its own most recent card's text, not just its
+        // icon+label identity chip (#1059) -- distinct from Mail's own focused-card content, so
+        // this is a genuine per-stage live preview rather than a shared/static label.
+        composeRule.onNodeWithText("Standup at 10am").assertIsDisplayed()
+    }
+
+    @Test
     fun detailActionsRouteEverySupportedActionToTheFocusedNotificationKey() {
         val app = adaptiveStageTestApp()
         val key = LauncherNotificationKey("focused-notification")
