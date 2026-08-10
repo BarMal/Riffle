@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -151,21 +150,7 @@ internal fun AdaptiveStageAppearancePageContent(
             }
         }
         Surface(
-            // A fixed heightIn(min, max) *range* was a guess at "enough room" independent of the
-            // page's actual available height -- too small a guess and this hits its own
-            // legibility floor and reports "needs more space to render" regardless of how much
-            // real screen the device actually has; too large and it starves the tab content
-            // below. weight() instead gives it a genuine, adaptive share of whatever height this
-            // page really has, growing and shrinking with it exactly like the tab content Column
-            // below (which already used weight() for the same reason). A bare weight() can still
-            // collapse toward zero on a pathologically short page though (confirmed by a real CI
-            // failure: the preview's CardStack silently never composed at all) -- heightIn(min)
-            // keeps that a true floor, not the primary sizing mechanism weight() now is.
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .weight(ADAPTIVE_STAGE_PREVIEW_HEIGHT_WEIGHT)
-                    .heightIn(min = ADAPTIVE_STAGE_PREVIEW_MIN_HEIGHT_DP.dp),
+            modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(24.dp),
             color = MaterialTheme.colorScheme.surfaceContainerLow,
         ) {
@@ -173,7 +158,16 @@ internal fun AdaptiveStageAppearancePageContent(
                 appearance = appearance,
                 globalReducedMotion = state.settings.motion.reducedMotion,
                 rendererCapabilities = rendererCapabilities,
-                modifier = Modifier.fillMaxSize(),
+                // Tried making this adaptive with weight() twice in this same PR -- both attempts
+                // broke previewUsesTheLauncherWideReducedMotionPreference (the preview's CardStack
+                // silently never composed at all), including a version with an explicit
+                // heightIn(min) floor stacked under the weight(). Rather than keep guessing at
+                // Compose's constraint resolution without the ability to run this locally,
+                // reverted to the exact fixed range already proven to pass in every context this
+                // app actually places this page in. "The preview still fails to render in certain
+                // ranges" is a real, open complaint this does NOT fix -- it just avoids trading
+                // that for a strictly worse "never renders in some contexts at all."
+                modifier = Modifier.fillMaxWidth().heightIn(min = 280.dp, max = 340.dp),
             )
         }
         adaptiveStageFallbackMessage(appearance, rendererCapabilities)?.let { message ->
@@ -181,10 +175,7 @@ internal fun AdaptiveStageAppearancePageContent(
         }
         AdaptiveStageAppearanceTabRow(selected = selectedTab, onSelected = { tab -> selectedTab = tab })
         Column(
-            modifier =
-                Modifier
-                    .weight(1f - ADAPTIVE_STAGE_PREVIEW_HEIGHT_WEIGHT)
-                    .verticalScroll(rememberScrollState()),
+            modifier = Modifier.weight(1f).verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             when (selectedTab) {
@@ -882,23 +873,6 @@ private fun adaptiveStageFallbackMessage(
         else -> null
     }
 }
-
-/**
- * The preview's share of this page's available height, split against the tab content Column
- * below (which gets the remaining `1f - this`). Chosen to keep roughly the same on-screen
- * proportions the previous fixed 280-340dp range targeted on a typical phone-sized settings page,
- * while actually adapting to the real available height instead of guessing a fixed one.
- */
-private const val ADAPTIVE_STAGE_PREVIEW_HEIGHT_WEIGHT = 0.4f
-
-/**
- * A hard floor under [ADAPTIVE_STAGE_PREVIEW_HEIGHT_WEIGHT]'s adaptive share, for a page short
- * enough that 40% of it still isn't enough room -- without this, the preview can collapse toward
- * (or reach) zero height, which silently stops it from composing a real [CardStack] at all rather
- * than showing the "needs more space" fallback text. Below the old fixed range's own 220dp floor:
- * this is a last-resort safety net now, not the primary sizing mechanism weight() already is.
- */
-private const val ADAPTIVE_STAGE_PREVIEW_MIN_HEIGHT_DP = 200
 
 /**
  * A stand-in for "an ordinary phone," used only to warn when the current settings would collapse
