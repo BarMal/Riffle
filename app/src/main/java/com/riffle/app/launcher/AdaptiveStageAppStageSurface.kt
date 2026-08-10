@@ -1778,7 +1778,6 @@ private fun AdaptiveStageStageContent(
                 shellState = shellState,
                 detailState = detailState,
                 showDetailInline = showDetailInline,
-                useUnfoldedAppearance = useUnfoldedAppearance,
                 state = state,
                 appIconLoader = appIconLoader,
                 onAction = onAction,
@@ -2743,18 +2742,11 @@ private fun AdaptiveStageEmptyStage(
     shellState: com.riffle.app.launcher.notifications.AppStageShellState,
     detailState: AdaptiveStageCardDetailState,
     showDetailInline: Boolean,
-    useUnfoldedAppearance: Boolean,
     state: LauncherShellState,
     appIconLoader: AppIconLoader,
     onAction: (LauncherShellAction) -> Unit,
     modifier: Modifier,
 ) {
-    val cardAppearance =
-        if (useUnfoldedAppearance) {
-            state.launcherSettings.cards.unfoldedAppearance
-        } else {
-            state.launcherSettings.cards.adaptiveStageAppearance
-        }
     val notificationAccessStatus = state.notificationAccessStatus
     val emptyCard = shellState.emptyAppCards[stage.id]
     val detailCardId = adaptiveStageEmptyDetailCardId(stage.id)
@@ -2778,108 +2770,93 @@ private fun AdaptiveStageEmptyStage(
     }
     val identity = stageAppIdentity(stage.id, state)
     val label = stageLabel(stage.id, state)
-    var emptyStageAppColor by remember(identity, appIconLoader) {
-        mutableStateOf(identity?.let(appIconLoader::cachedColorFor))
-    }
-    LaunchedEffect(identity, appIconLoader) {
-        emptyStageAppColor =
-            identity?.let { appIdentity ->
-                appIconLoader.cachedColorFor(appIdentity)
-                    ?: withContext(Dispatchers.Default) { appIconLoader.colorFor(appIdentity) }
-            }
-    }
-    BoxWithConstraints(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        val viewport = AdaptiveStageViewportDp(maxWidth.value.toInt(), maxHeight.value.toInt())
-        val resolution =
-            remember(state.launcherSettings, viewport, useUnfoldedAppearance) {
-                cardAppearance.resolveCardStack(
-                    viewport = viewport,
-                    capabilities = adaptiveStageRendererCapabilities(),
-                    globalReducedMotion = state.launcherSettings.motion.reducedMotion,
-                )
-            }
-        AdaptiveStageCardSurface(
-            appearance = cardAppearance,
-            background =
-                AdaptiveStageCardBackground(appSeed = stage.id.packageName.value, appColor = emptyStageAppColor),
+    // No card surface here -- an empty stage has no notification content to frame in one, only
+    // status text and its contextual actions (open the app, its shortcuts, notification access).
+    // A full card chrome (background/border/blur/shadow) for zero content read as Riffle having
+    // lost track of real notifications rather than genuinely having none to show.
+    Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        // fillMaxSize() + verticalScroll (not just wrap-content) so a stage with many shortcuts
+        // still fits within the stage's own bounds by scrolling, the same as the removed card
+        // surface's content used to -- centered via Arrangement's CenterVertically instead of the
+        // outer Box's contentAlignment, since a fillMaxSize() child always fills that regardless.
+        Column(
             modifier =
                 Modifier
-                    .size(width = resolution.cardWidthDp.dp, height = resolution.cardHeightDp.dp)
-                    .testTag(ADAPTIVE_STAGE_EMPTY_STAGE_CARD_TEST_TAG),
-            contentPadding = adaptiveStageResolvedContentPadding(resolution),
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .testTag(ADAPTIVE_STAGE_EMPTY_STAGE_CARD_TEST_TAG)
+                    .padding(24.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically),
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Column(
-                modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                if (identity != null) {
-                    LauncherAppIcon(
-                        identity = identity,
-                        label = label,
-                        iconLoader = appIconLoader,
-                        modifier = Modifier.size(56.dp),
-                    )
-                }
-                if (notificationAccessStatus != NotificationAccessStatus.GRANTED) {
-                    Text(
-                        text = notificationAccessStatus.adaptiveStageAccessMessage,
-                        modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
-                        style = MaterialTheme.typography.bodyLarge,
-                    )
-                    if (
-                        notificationAccessStatus == NotificationAccessStatus.NOT_GRANTED ||
-                        notificationAccessStatus == NotificationAccessStatus.REVOKED
-                    ) {
-                        TextButton(onClick = { onAction(LauncherShellAction.RequestNotificationAccess) }) {
-                            Text("Allow access")
-                        }
-                    }
-                }
-                Text(
-                    when {
-                        stage.lifecycle.name == "PROFILE_LOCKED" -> "Profile unavailable"
-                        notificationAccessStatus == NotificationAccessStatus.GRANTED -> "Nothing new"
-                        else -> "Stage ready"
-                    },
-                    style = MaterialTheme.typography.titleMedium,
+            if (identity != null) {
+                LauncherAppIcon(
+                    identity = identity,
+                    label = label,
+                    iconLoader = appIconLoader,
+                    modifier = Modifier.size(56.dp),
                 )
-                Text(
-                    "This stage stays available so you can return to it.",
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-                emptyCard?.let { card ->
-                    TextButton(onClick = { onAction(LauncherShellAction.LaunchApp(card.app.identity)) }) {
-                        Text("Open ${card.app.label}")
-                    }
-                    card.shortcuts.forEach { shortcut ->
-                        TextButton(onClick = { onAction(LauncherShellAction.LaunchAppShortcut(shortcut)) }) {
-                            Text(shortcut.shortLabel)
-                        }
-                    }
-                    TextButton(
-                        onClick = { detailState.expand(detailCardId) },
-                        modifier =
-                            Modifier.focusRequester(detailFocusRequester).onGloballyPositioned {
-                                if (restoreDetailFocusForCardId == detailCardId) detailControlLaidOut = true
-                            }
-                                .onFocusChanged { focusState ->
-                                    if (restoreDetailFocusForCardId == detailCardId && focusState.isFocused) {
-                                        restoreDetailFocusForCardId = null
-                                        detailControlLaidOut = false
-                                    }
-                                }.focusable(),
-                    ) {
-                        Text("Details")
-                    }
-                    RestoreFocusAfterLayout(
-                        enabled = restoreDetailFocusForCardId == detailCardId,
-                        focusRequester = detailFocusRequester,
-                        isLaidOut = detailControlLaidOut,
-                    )
-                }
-                AdaptiveStageDetailRecoveryMessage(detailState.sourceRemovalMessage)
             }
+            if (notificationAccessStatus != NotificationAccessStatus.GRANTED) {
+                Text(
+                    text = notificationAccessStatus.adaptiveStageAccessMessage,
+                    modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+                    style = MaterialTheme.typography.bodyLarge,
+                )
+                if (
+                    notificationAccessStatus == NotificationAccessStatus.NOT_GRANTED ||
+                    notificationAccessStatus == NotificationAccessStatus.REVOKED
+                ) {
+                    AdaptiveStageContextActionButton(
+                        label = "Allow access",
+                        onClick = { onAction(LauncherShellAction.RequestNotificationAccess) },
+                    )
+                }
+            }
+            Text(
+                when {
+                    stage.lifecycle.name == "PROFILE_LOCKED" -> "Profile unavailable"
+                    notificationAccessStatus == NotificationAccessStatus.GRANTED -> "Nothing new"
+                    else -> "Stage ready"
+                },
+                style = MaterialTheme.typography.titleMedium,
+            )
+            Text(
+                "This stage stays available so you can return to it.",
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            emptyCard?.let { card ->
+                AdaptiveStageContextActionButton(
+                    label = "Open ${card.app.label}",
+                    onClick = { onAction(LauncherShellAction.LaunchApp(card.app.identity)) },
+                )
+                card.shortcuts.forEach { shortcut ->
+                    AdaptiveStageContextActionButton(
+                        label = shortcut.shortLabel,
+                        onClick = { onAction(LauncherShellAction.LaunchAppShortcut(shortcut)) },
+                    )
+                }
+                AdaptiveStageContextActionButton(
+                    label = "Details",
+                    onClick = { detailState.expand(detailCardId) },
+                    modifier =
+                        Modifier.focusRequester(detailFocusRequester).onGloballyPositioned {
+                            if (restoreDetailFocusForCardId == detailCardId) detailControlLaidOut = true
+                        }
+                            .onFocusChanged { focusState ->
+                                if (restoreDetailFocusForCardId == detailCardId && focusState.isFocused) {
+                                    restoreDetailFocusForCardId = null
+                                    detailControlLaidOut = false
+                                }
+                            }.focusable(),
+                )
+                RestoreFocusAfterLayout(
+                    enabled = restoreDetailFocusForCardId == detailCardId,
+                    focusRequester = detailFocusRequester,
+                    isLaidOut = detailControlLaidOut,
+                )
+            }
+            AdaptiveStageDetailRecoveryMessage(detailState.sourceRemovalMessage)
         }
     }
 }

@@ -35,7 +35,12 @@ class RiffleNotificationListenerService : NotificationListenerService() {
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
         ignoreNotificationListenerFailure {
-            sbn?.let { notification -> AndroidNotificationStageActionGateway.replace(this, notification) }
+            // Isolated in its own runCatching, distinct from the outer ignoreNotificationListenerFailure:
+            // a single malformed notification's action-target registration must not abort
+            // saveActiveNotifications() below, or that notification's *content* would never sync either.
+            sbn?.let { notification ->
+                runCatching { AndroidNotificationStageActionGateway.replace(this, notification) }
+            }
             saveActiveNotifications()
         }
     }

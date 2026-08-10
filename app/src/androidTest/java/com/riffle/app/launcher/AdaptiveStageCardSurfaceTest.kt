@@ -284,16 +284,16 @@ class AdaptiveStageCardSurfaceTest {
         }
 
         composeRule.onNodeWithText("Stage ready").assertIsDisplayed()
-        // The empty-stage placeholder now renders inside a fixed-size AdaptiveStageCardSurface
-        // (matching populated-card sizing) with its content in a scrollable Column, so an
-        // affordance below the fold needs a scroll before it can be clicked, same as on a real
-        // device.
+        // The empty-stage placeholder has no card surface of its own (see AdaptiveStageEmptyStage
+        // -- it's just status text and contextual actions), but its content column still scrolls
+        // within the stage's own bounds, so an affordance below the fold needs a scroll before it
+        // can be clicked, same as on a real device.
         composeRule.onNodeWithText("Open ${app.label}").performScrollTo().performClick()
         assertEquals(LauncherShellAction.LaunchApp(app.identity), actions.single())
     }
 
     @Test
-    fun emptyPinnedStageRendersInsideCardSurfaceContainer() {
+    fun emptyPinnedStageRendersItsPlaceholderContent() {
         val app = adaptiveStageTestApp()
         val stageId = AppStageId(app.identity.packageName, app.identity.profile.id)
 
@@ -1599,7 +1599,10 @@ class AdaptiveStageCardSurfaceTest {
                 )
             assertEquals(Color(0xFF336699), colors.accent)
             assertTrue(contrastRatio(observedAction, colors.glass) >= 4.5f)
-            assertEquals(1.3f, observedFontScale, 0.001f)
+            // textScalePercent (130%) and contentDensity's own scale (EXPANDED, 120%) both drive
+            // fontScale and compound: 1.3 * 1.2 = 1.56. Content density is meant to shrink/grow
+            // text and its (sp-derived) line spacing, not just the padding around it.
+            assertEquals(1.56f, observedFontScale, 0.001f)
             assertEquals(1.2f, adaptiveStageContentDensityScale(AdaptiveStageContentDensity.EXPANDED), 0.001f)
             assertEquals(0.8f, adaptiveStageContentDensityScale(AdaptiveStageContentDensity.COMPACT), 0.001f)
         }
