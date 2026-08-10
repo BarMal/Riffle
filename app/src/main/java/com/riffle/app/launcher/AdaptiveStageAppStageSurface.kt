@@ -1778,7 +1778,6 @@ private fun AdaptiveStageStageContent(
                 shellState = shellState,
                 detailState = detailState,
                 showDetailInline = showDetailInline,
-                useUnfoldedAppearance = useUnfoldedAppearance,
                 state = state,
                 appIconLoader = appIconLoader,
                 onAction = onAction,
@@ -2743,7 +2742,6 @@ private fun AdaptiveStageEmptyStage(
     shellState: com.riffle.app.launcher.notifications.AppStageShellState,
     detailState: AdaptiveStageCardDetailState,
     showDetailInline: Boolean,
-    useUnfoldedAppearance: Boolean,
     state: LauncherShellState,
     appIconLoader: AppIconLoader,
     onAction: (LauncherShellAction) -> Unit,
@@ -2777,9 +2775,18 @@ private fun AdaptiveStageEmptyStage(
     // A full card chrome (background/border/blur/shadow) for zero content read as Riffle having
     // lost track of real notifications rather than genuinely having none to show.
     Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        // fillMaxSize() + verticalScroll (not just wrap-content) so a stage with many shortcuts
+        // still fits within the stage's own bounds by scrolling, the same as the removed card
+        // surface's content used to -- centered via Arrangement's CenterVertically instead of the
+        // outer Box's contentAlignment, since a fillMaxSize() child always fills that regardless.
         Column(
-            modifier = Modifier.testTag(ADAPTIVE_STAGE_EMPTY_STAGE_CARD_TEST_TAG).padding(24.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .testTag(ADAPTIVE_STAGE_EMPTY_STAGE_CARD_TEST_TAG)
+                    .padding(24.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             if (identity != null) {

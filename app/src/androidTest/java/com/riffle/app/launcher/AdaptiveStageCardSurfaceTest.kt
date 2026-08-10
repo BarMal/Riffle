@@ -284,16 +284,16 @@ class AdaptiveStageCardSurfaceTest {
         }
 
         composeRule.onNodeWithText("Stage ready").assertIsDisplayed()
-        // The empty-stage placeholder now renders inside a fixed-size AdaptiveStageCardSurface
-        // (matching populated-card sizing) with its content in a scrollable Column, so an
-        // affordance below the fold needs a scroll before it can be clicked, same as on a real
-        // device.
+        // The empty-stage placeholder has no card surface of its own (see AdaptiveStageEmptyStage
+        // -- it's just status text and contextual actions), but its content column still scrolls
+        // within the stage's own bounds, so an affordance below the fold needs a scroll before it
+        // can be clicked, same as on a real device.
         composeRule.onNodeWithText("Open ${app.label}").performScrollTo().performClick()
         assertEquals(LauncherShellAction.LaunchApp(app.identity), actions.single())
     }
 
     @Test
-    fun emptyPinnedStageRendersInsideCardSurfaceContainer() {
+    fun emptyPinnedStageRendersItsPlaceholderContent() {
         val app = adaptiveStageTestApp()
         val stageId = AppStageId(app.identity.packageName, app.identity.profile.id)
 
