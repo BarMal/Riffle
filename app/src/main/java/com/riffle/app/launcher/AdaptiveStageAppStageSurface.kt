@@ -1892,10 +1892,7 @@ private fun AdaptiveStageNotificationStack(
     // launcher's card stack works, instead of only updating once the drag settles.
     var liveDragPx by remember(stage.id) { mutableStateOf<Float?>(null) }
     val liveActiveCardIndex =
-        liveDragPx?.let { dragPx ->
-            (activeCardIndex - dragPx / ADAPTIVE_STAGE_CARD_STACK_SETTLE_DISTANCE_THRESHOLD_PX)
-                .coerceIn(0f, (cards.size - 1).toFloat())
-        } ?: activeCardIndex.toFloat()
+        adaptiveStageLiveActiveCardIndex(activeCardIndex, cards.size, liveDragPx)
 
     BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
         val viewport = AdaptiveStageViewportDp(maxWidth.value.toInt(), maxHeight.value.toInt())
@@ -2081,6 +2078,31 @@ internal const val ADAPTIVE_STAGE_BACKDROP_SCRIM_ALPHA = 0.16f
 internal const val ADAPTIVE_STAGE_CARD_STACK_SETTLE_DISTANCE_THRESHOLD_PX = 64f
 
 /**
+ * Converts this frame's raw live-drag pixel delta into the fractional index [CardStack] renders
+ * from, clamped to at most one card away from [activeCardIndex] in either direction.
+ *
+ * [CardStackController.settle] only ever commits more than one card on a genuine fling (velocity
+ * past its own threshold, decided once at release) -- a plain drag release always lands on the
+ * immediate neighbor or not at all, "regardless of distance" (see its own doc). Without this cap,
+ * a drag longer than a couple of [ADAPTIVE_STAGE_CARD_STACK_SETTLE_DISTANCE_THRESHOLD_PX]
+ * multiples visually previewed several cards flipping past -- e.g. dragging the full height of a
+ * short stack showed the last card fully focused -- while release still only ever committed that
+ * same single step (or a boundary clamp), so the stack visibly sprang most of the way back to
+ * where it started instead of landing where the drag had shown. Capping the live preview to what
+ * a non-fling release can actually reach keeps the two consistent; a genuine hard fling still
+ * continues past this cap once it settles, since that multi-card jump is real.
+ */
+internal fun adaptiveStageLiveActiveCardIndex(
+    activeCardIndex: Int,
+    cardCount: Int,
+    liveDragPx: Float?,
+): Float =
+    liveDragPx?.let { dragPx ->
+        val indexDelta = (dragPx / ADAPTIVE_STAGE_CARD_STACK_SETTLE_DISTANCE_THRESHOLD_PX).coerceIn(-1f, 1f)
+        (activeCardIndex - indexDelta).coerceIn(0f, (cardCount - 1).toFloat())
+    } ?: activeCardIndex.toFloat()
+
+/**
  * The "All notifications" page (#1057): every stage's content merged into one recency-ordered
  * stream via [mergedContentByRecency], rendered through the same [CardStack] visual as a single
  * stage's own [AdaptiveStageNotificationStack]. Unlike that stack, per-card app identity/color is
@@ -2158,10 +2180,7 @@ private fun AdaptiveStageAllNotificationsStack(
     // converted to a fractional activeIndex below.
     var liveDragPx by remember { mutableStateOf<Float?>(null) }
     val liveActiveCardIndex =
-        liveDragPx?.let { dragPx ->
-            (activeCardIndex - dragPx / ADAPTIVE_STAGE_CARD_STACK_SETTLE_DISTANCE_THRESHOLD_PX)
-                .coerceIn(0f, (cards.size - 1).toFloat())
-        } ?: activeCardIndex.toFloat()
+        adaptiveStageLiveActiveCardIndex(activeCardIndex, cards.size, liveDragPx)
 
     BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
         val viewport = AdaptiveStageViewportDp(maxWidth.value.toInt(), maxHeight.value.toInt())
