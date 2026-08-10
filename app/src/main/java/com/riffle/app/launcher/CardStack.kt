@@ -496,7 +496,7 @@ internal fun cardStackAnimationDuration(
 
 private const val DEFAULT_CARD_STACK_ANIMATION_DURATION_MILLIS = 220
 
-@Suppress("CyclomaticComplexMethod", "LoopWithTooManyJumpStatements")
+@Suppress("CyclomaticComplexMethod", "LoopWithTooManyJumpStatements", "LongMethod")
 private fun Modifier.cardStackPointerInput(
     entry: CardStackLayoutEntry,
     stableItemKey: Any,
