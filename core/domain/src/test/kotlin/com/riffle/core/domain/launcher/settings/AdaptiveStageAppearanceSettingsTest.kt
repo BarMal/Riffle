@@ -298,6 +298,54 @@ class AdaptiveStageAppearanceSettingsTest {
     }
 
     @Test
+    fun cardSizeScalesTheCardDownWithoutChangingItsAspectRatio() {
+        // Before cardSizePercent existed, aspect ratio was the only size-adjacent knob: shrinking
+        // the card meant reshaping it (implying a fixed area), never leaving genuine empty stage
+        // around a deliberately small card of the same shape.
+        val viewport = AdaptiveStageViewportDp(widthDp = 800, heightDp = 1200)
+        val full =
+            AdaptiveStageAppearanceSettings(geometry = AdaptiveStageGeometry(cardAspectRatioPercent = 80))
+                .resolveCardStack(viewport)
+        val half =
+            AdaptiveStageAppearanceSettings(
+                geometry = AdaptiveStageGeometry(cardAspectRatioPercent = 80, cardSizePercent = 50),
+            ).resolveCardStack(viewport)
+
+        assertTrue(half.isUsable)
+        assertTrue(half.cardWidthDp in (full.cardWidthDp / 2 - 1)..(full.cardWidthDp / 2 + 1))
+        val fullAspectRatio = full.cardWidthDp.toFloat() / full.cardHeightDp
+        val halfAspectRatio = half.cardWidthDp.toFloat() / half.cardHeightDp
+        assertEquals(fullAspectRatio, halfAspectRatio, 0.02f)
+    }
+
+    @Test
+    fun cardSizeIsClampedToItsSafeRange() {
+        val coerced = AdaptiveStageGeometry(cardSizePercent = 5).coerce()
+        val coercedHigh = AdaptiveStageGeometry(cardSizePercent = 500).coerce()
+
+        assertEquals(MIN_ADAPTIVE_STAGE_CARD_SIZE_PERCENT, coerced.cardSizePercent)
+        assertEquals(MAX_ADAPTIVE_STAGE_CARD_SIZE_PERCENT, coercedHigh.cardSizePercent)
+    }
+
+    @Test
+    fun railRoleIgnoresCardSizeToStayFillingItsNarrowStrip() {
+        // RAIL must keep filling its own physical strip regardless of the user's PRIMARY-facing
+        // cardSizePercent choice, exactly like it already ignores the fan-stage margin (#1054).
+        val railViewport = AdaptiveStageViewportDp(widthDp = 104, heightDp = 720)
+        val settings =
+            AdaptiveStageAppearanceSettings.unfolded()
+                .copy(geometry = AdaptiveStageAppearanceSettings.unfolded().geometry.copy(cardSizePercent = 50))
+
+        val full =
+            AdaptiveStageAppearanceSettings.unfolded()
+                .resolveCardStack(railViewport, role = AdaptiveStageCardStackRole.RAIL)
+        val shrunk = settings.resolveCardStack(railViewport, role = AdaptiveStageCardStackRole.RAIL)
+
+        assertEquals(full.cardWidthDp, shrunk.cardWidthDp)
+        assertEquals(full.cardHeightDp, shrunk.cardHeightDp)
+    }
+
+    @Test
     fun cardAspectRatioCanRenderWiderThanTallNowThatTheRangeExtendsPastSquare() {
         val viewport = AdaptiveStageViewportDp(widthDp = 1200, heightDp = 1200)
         val wide =

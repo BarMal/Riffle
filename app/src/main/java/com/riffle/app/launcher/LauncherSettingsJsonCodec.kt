@@ -179,6 +179,9 @@ private fun encodeAdaptiveStageAppearance(settings: AdaptiveStageAppearanceSetti
                     "cardAspectRatioPercent",
                     appearance.geometry.cardAspectRatioPercent,
                 ).put(
+                    "cardSizePercent",
+                    appearance.geometry.cardSizePercent,
+                ).put(
                     "focusedScalePercent",
                     appearance.geometry.focusedScalePercent,
                 ).put(
@@ -315,6 +318,11 @@ private fun JSONObject.toAdaptiveStageAppearance(defaults: AdaptiveStageAppearan
                     geometry.optIntOrDefault(
                         "cardAspectRatioPercent",
                         defaults.geometry.cardAspectRatioPercent,
+                    ),
+                cardSizePercent =
+                    geometry.optIntOrDefault(
+                        "cardSizePercent",
+                        defaults.geometry.cardSizePercent,
                     ),
                 focusedScalePercent =
                     geometry.optIntOrDefault(
