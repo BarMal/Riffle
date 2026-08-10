@@ -110,6 +110,7 @@ internal fun CardStack(
     // would animate toward a constantly-moving target, lagging behind the finger instead of
     // tracking it 1:1. The settle animation (already state-driven via entries/timing) is untouched.
     val liveDragDeltaPx = remember { mutableFloatStateOf(0f) }
+    var restoreKeyboardFocus by remember { mutableStateOf(false) }
     var keyboardFocusOriginKey by remember { mutableStateOf<Any?>(null) }
     var consumedSettleTransitionId by remember { mutableStateOf(interaction?.settleTransitionId ?: 0) }
     val timing =
