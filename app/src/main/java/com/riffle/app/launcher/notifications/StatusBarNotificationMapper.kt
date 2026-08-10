@@ -119,21 +119,30 @@ private fun Notification.bodyText(): String =
  * [titleText]/[bodyText] in that case, so no separate heuristic is needed here. Uses the AndroidX
  * compat extractor (not the platform `Notification.MessagingStyle`, which has no equivalent
  * static parser) so this works the same way across the app's supported API levels.
+ *
+ * Wrapped in runCatching like [bitmapExtraOrNull]: extractMessagingStyleFromNotification parses
+ * the same extras Bundle that can hold a Person/Icon/Bitmap of a type the platform's own
+ * deprecated getters throw ClassCastException for rather than returning null (see
+ * [bitmapExtraOrNull]'s own doc) -- an app whose MessagingStyle payload trips that, e.g. a rich
+ * per-message avatar shape, would otherwise fail this notification's entire mapping and silently
+ * drop it from the launcher altogether, not just lose its per-message history.
  */
 private fun Notification.messagingStyleMessages(): List<LauncherNotificationMessage> =
-    NotificationCompat.MessagingStyle.extractMessagingStyleFromNotification(this)
-        ?.messages
-        .orEmpty()
-        .takeLast(MAX_MESSAGING_STYLE_MESSAGES)
-        .map { message ->
-            LauncherNotificationMessage(
-                sender =
-                    message.person?.name?.toString()?.takeIf(String::isNotBlank)
-                        ?: message.sender?.toString().orEmpty(),
-                text = message.text?.toString().orEmpty(),
-                timestampEpochMillis = message.timestamp,
-            )
-        }
+    runCatching {
+        NotificationCompat.MessagingStyle.extractMessagingStyleFromNotification(this)
+            ?.messages
+            .orEmpty()
+            .takeLast(MAX_MESSAGING_STYLE_MESSAGES)
+            .map { message ->
+                LauncherNotificationMessage(
+                    sender =
+                        message.person?.name?.toString()?.takeIf(String::isNotBlank)
+                            ?: message.sender?.toString().orEmpty(),
+                    text = message.text?.toString().orEmpty(),
+                    timestampEpochMillis = message.timestamp,
+                )
+            }
+    }.getOrDefault(emptyList())
 
 @Suppress("DEPRECATION")
 private fun Notification.largeIconPngBase64(): String? =
