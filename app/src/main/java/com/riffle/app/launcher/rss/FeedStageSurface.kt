@@ -256,7 +256,9 @@ private fun FeedArticleStack(
                             adaptiveStageNotificationStackEntries(
                                 resolution = resolution,
                                 cardCount = cards.size,
-                                activeCardIndex = activeIndex,
+                                // Float, not (yet) live-drag-tracked here -- see the parameter's
+                                // own doc; an exact integer value behaves identically to before.
+                                activeCardIndex = activeIndex.toFloat(),
                             ),
                         animationSpec = resolution.animation,
                         reducedMotion = resolution.reducedMotion,

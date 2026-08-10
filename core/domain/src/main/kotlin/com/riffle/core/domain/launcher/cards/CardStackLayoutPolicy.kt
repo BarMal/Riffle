@@ -1,6 +1,7 @@
 package com.riffle.core.domain.launcher.cards
 
 import kotlin.math.abs
+import kotlin.math.roundToInt
 import kotlin.math.sign
 
 data class CardStackLayoutPolicy(
@@ -41,13 +42,32 @@ data class CardStackLayoutPolicy(
         cardCount: Int,
         activeIndex: Int,
         reducedMotion: Boolean = false,
+    ): List<CardStackLayoutEntry> = entries(cardCount, activeIndex.toFloat(), reducedMotion)
+
+    /**
+     * Same geometry as the [Int] overload, but [activeIndex] can sit *between* two cards -- the
+     * fractional part continuously interpolates every entry's scale/offset/verticalOffset/
+     * rotation/alpha toward its neighbor's pose, using exactly the same formulas the settled
+     * (integer-[activeIndex]) case already uses. This is what lets a live, in-progress drag drive
+     * this same computation frame by frame (each card's own depth-relative pose smoothly
+     * reflowing as the drag progresses) instead of only updating once a drag settles on a new
+     * integer index -- the reference "Calm" launcher's own card stack works the same way: its
+     * `style()` recomputes every visible card's scale/translation/alpha from a continuous
+     * `visualDepth` derived straight from live scroll position, not a discrete per-card index.
+     * The [Int] overload above is exact for an integer input (no interpolation to do), so every
+     * existing caller and test is unaffected.
+     */
+    fun entries(
+        cardCount: Int,
+        activeIndex: Float,
+        reducedMotion: Boolean = false,
     ): List<CardStackLayoutEntry> {
         require(cardCount >= 0) { "Card count must not be negative." }
         if (cardCount == 0) {
             return emptyList()
         }
 
-        val focusedIndex = activeIndex.coerceIn(0, cardCount - 1)
+        val focusedIndex = activeIndex.coerceIn(0f, (cardCount - 1).toFloat())
         val visibleIndexes =
             (0 until cardCount).filter { cardIndex ->
                 cardIndex.depthFrom(focusedIndex) <= maxVisibleDepth
@@ -75,10 +95,10 @@ data class CardStackLayoutPolicy(
             CardStackLayoutEntry(
                 cardIndex = cardIndex,
                 order = order,
-                depth = depth,
+                depth = depth.roundToInt(),
                 scale = (1f - activeScaleStep * depth).coerceAtLeast(0f),
                 offset =
-                    if (signedDistance == 0) {
+                    if (signedDistance == 0f) {
                         0f
                     } else {
                         offsetDirection *
@@ -109,7 +129,7 @@ data class CardStackLayoutPolicy(
         }
     }
 
-    private fun Int.depthFrom(activeIndex: Int): Int = abs(this - activeIndex)
+    private fun Int.depthFrom(activeIndex: Float): Float = abs(this - activeIndex)
 
     companion object {
         fun forProfile(profile: CardStackLayoutProfile): CardStackLayoutPolicy = profile.policy

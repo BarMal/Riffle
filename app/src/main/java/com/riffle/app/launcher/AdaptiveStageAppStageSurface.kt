@@ -1885,6 +1885,18 @@ private fun AdaptiveStageNotificationStack(
         }
     }
 
+    // Non-null only while a live drag is in progress on this stack's own settle axis (see
+    // CardStack's CardStackInteraction.onLiveDrag doc) -- the raw signed pixel delta reported this
+    // frame. Converted below into a fractional activeIndex so every entry's own pose continuously
+    // reflows toward its neighbor as the drag progresses, the same way the reference "Calm"
+    // launcher's card stack works, instead of only updating once the drag settles.
+    var liveDragPx by remember(stage.id) { mutableStateOf<Float?>(null) }
+    val liveActiveCardIndex =
+        liveDragPx?.let { dragPx ->
+            (activeCardIndex - dragPx / ADAPTIVE_STAGE_CARD_STACK_SETTLE_DISTANCE_THRESHOLD_PX)
+                .coerceIn(0f, (cards.size - 1).toFloat())
+        } ?: activeCardIndex.toFloat()
+
     BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
         val viewport = AdaptiveStageViewportDp(maxWidth.value.toInt(), maxHeight.value.toInt())
         val resolution =
@@ -1918,7 +1930,7 @@ private fun AdaptiveStageNotificationStack(
                                 adaptiveStageNotificationStackEntries(
                                     resolution = resolution,
                                     cardCount = cards.size,
-                                    activeCardIndex = activeCardIndex,
+                                    activeCardIndex = liveActiveCardIndex,
                                 ),
                             animationSpec = resolution.animation,
                             reducedMotion = resolution.reducedMotion,
@@ -1946,7 +1958,8 @@ private fun AdaptiveStageNotificationStack(
                                                     focusedCardId = activeCard.content.id,
                                                     verticalDragPx = drag,
                                                     verticalVelocityPxPerSecond = velocity,
-                                                    distanceThresholdPx = 64f,
+                                                    distanceThresholdPx =
+                                                        ADAPTIVE_STAGE_CARD_STACK_SETTLE_DISTANCE_THRESHOLD_PX,
                                                     flingVelocityThresholdPxPerSecond = 500f,
                                                 ),
                                             ).let { result ->
@@ -1963,6 +1976,7 @@ private fun AdaptiveStageNotificationStack(
                                     },
                                     onNavigate = ::navigate,
                                     onExpand = { detailState.expand(activeCard.content.id) },
+                                    onLiveDrag = { dragPx -> liveDragPx = dragPx },
                                 ),
                         ) { entry, cardModifier ->
                             val card = cards[entry.cardIndex]
@@ -2058,6 +2072,15 @@ internal const val ADAPTIVE_STAGE_SIBLING_DIM_FACTOR = 0.18f
 internal const val ADAPTIVE_STAGE_BACKDROP_SCRIM_ALPHA = 0.16f
 
 /**
+ * Shared by every notification card stack's own [CardStackSettleRequest.distanceThresholdPx] and,
+ * separately, its live-drag-to-fractional-index conversion (dragPx / this) -- deliberately the
+ * same number for both, so the point at which the stack visually reaches "the next card is now
+ * fully focused" during a live drag is exactly the point at which releasing the finger would
+ * actually commit that same move.
+ */
+internal const val ADAPTIVE_STAGE_CARD_STACK_SETTLE_DISTANCE_THRESHOLD_PX = 64f
+
+/**
  * The "All notifications" page (#1057): every stage's content merged into one recency-ordered
  * stream via [mergedContentByRecency], rendered through the same [CardStack] visual as a single
  * stage's own [AdaptiveStageNotificationStack]. Unlike that stack, per-card app identity/color is
@@ -2131,6 +2154,15 @@ private fun AdaptiveStageAllNotificationsStack(
     }
     val activeCard = focusedCard
 
+    // See AdaptiveStageNotificationStack's identical mechanism for why this exists and how it's
+    // converted to a fractional activeIndex below.
+    var liveDragPx by remember { mutableStateOf<Float?>(null) }
+    val liveActiveCardIndex =
+        liveDragPx?.let { dragPx ->
+            (activeCardIndex - dragPx / ADAPTIVE_STAGE_CARD_STACK_SETTLE_DISTANCE_THRESHOLD_PX)
+                .coerceIn(0f, (cards.size - 1).toFloat())
+        } ?: activeCardIndex.toFloat()
+
     BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
         val viewport = AdaptiveStageViewportDp(maxWidth.value.toInt(), maxHeight.value.toInt())
         val resolution =
@@ -2164,7 +2196,7 @@ private fun AdaptiveStageAllNotificationsStack(
                             adaptiveStageNotificationStackEntries(
                                 resolution = resolution,
                                 cardCount = cards.size,
-                                activeCardIndex = activeCardIndex,
+                                activeCardIndex = liveActiveCardIndex,
                             ),
                         animationSpec = resolution.animation,
                         reducedMotion = resolution.reducedMotion,
@@ -2192,7 +2224,8 @@ private fun AdaptiveStageAllNotificationsStack(
                                                 focusedCardId = activeCard.content.id,
                                                 verticalDragPx = drag,
                                                 verticalVelocityPxPerSecond = velocity,
-                                                distanceThresholdPx = 64f,
+                                                distanceThresholdPx =
+                                                    ADAPTIVE_STAGE_CARD_STACK_SETTLE_DISTANCE_THRESHOLD_PX,
                                                 flingVelocityThresholdPxPerSecond = 500f,
                                             ),
                                         ).let { result ->
@@ -2209,6 +2242,7 @@ private fun AdaptiveStageAllNotificationsStack(
                                 },
                                 onNavigate = ::navigate,
                                 onExpand = { detailState.expand(activeCard.content.id) },
+                                onLiveDrag = { dragPx -> liveDragPx = dragPx },
                             ),
                     ) { entry, cardModifier ->
                         val card = cards[entry.cardIndex]
@@ -2319,7 +2353,11 @@ private fun AdaptiveStageAllNotificationsEmptyState(modifier: Modifier) {
 internal fun adaptiveStageNotificationStackEntries(
     resolution: AdaptiveStageCardStackResolution,
     cardCount: Int,
-    activeCardIndex: Int,
+    // Float, not Int: a caller tracking a live drag (see CardStack's own onLiveDrag doc) passes a
+    // fractional position so every entry's pose continuously interpolates toward its neighbor
+    // frame by frame, instead of only updating once the drag settles on a new integer index. An
+    // exact integer value (the common, non-dragging case) behaves identically to before.
+    activeCardIndex: Float,
 ): List<CardStackLayoutEntry> =
     resolution.layoutPolicy
         .copy(maxVisibleDepth = maxOf(resolution.layoutPolicy.maxVisibleDepth, cardCount - 1))

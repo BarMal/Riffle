@@ -54,6 +54,39 @@ class CardStackLayoutPolicyTest {
     }
 
     @Test
+    fun fractionalActiveIndexContinuouslyInterpolatesEveryEntrysPose() {
+        // activeIndex sitting exactly halfway between cardIndex 2 and 3 -- every card's own
+        // depth-relative pose should land exactly halfway between where the two neighboring
+        // integer activeIndex calls would put it, using the same formulas either way. This is
+        // what lets a live drag drive this same call every frame (see the Float overload's own
+        // doc) instead of only recomputing once a drag settles on a new integer index.
+        val entries = policy.entries(cardCount = 5, activeIndex = 2.5f)
+
+        assertEquals(listOf(0, 1, 4, 2, 3), entries.map { entry -> entry.cardIndex })
+        assertEquals(listOf(0, 1, 2, 3, 4), entries.map { entry -> entry.order })
+        assertFloatListEquals(
+            listOf(0.85f, 0.91f, 0.91f, 0.97f, 0.97f),
+            entries.map { entry -> entry.scale },
+        )
+        assertFloatListEquals(
+            listOf(-60f, -36f, 36f, -12f, 12f),
+            entries.map { entry -> entry.offset },
+        )
+        assertFloatListEquals(
+            listOf(0.6f, 0.76f, 0.76f, 0.92f, 0.92f),
+            entries.map { entry -> entry.alpha },
+        )
+    }
+
+    @Test
+    fun integerActiveIndexOverloadMatchesTheEquivalentFractionalCall() {
+        assertEquals(
+            policy.entries(cardCount = 7, activeIndex = 3),
+            policy.entries(cardCount = 7, activeIndex = 3f),
+        )
+    }
+
+    @Test
     fun verticalOffsetDirectionFlipsOrDisablesVerticalFanIndependentlyOfHorizontalFan() {
         val forward = CardStackLayoutPolicy(verticalOffsetStep = 10f, curveStep = 2f, verticalOffsetDirection = 1f)
         val reversed = CardStackLayoutPolicy(verticalOffsetStep = 10f, curveStep = 2f, verticalOffsetDirection = -1f)
