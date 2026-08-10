@@ -254,31 +254,34 @@ private fun AdaptiveStageAppearanceSettings.resolveCardSize(
         reservedVerticalSpaceDp = staticVerticalSeparationDp(),
         // RAIL sizes a tile against its own narrow physical strip (#1054): every dp there is
         // needed just to keep tiles reachable, so it keeps filling the full strip exactly as
-        // before. PRIMARY deliberately leaves a larger fraction of the viewport unclaimed --
-        // taking a cue from the reference "Calm" timescape, which sizes its focused card to ~58%
-        // of screen height rather than filling it -- so resolveCardStack's fan/offset/rotation has
-        // genuine room to be visible instead of fighting over leftover scraps. PREVIEW gets a much
-        // smaller margin for the same reason, capped by its own tiny usability floor: at the
-        // settings preview's small, landscape-shaped box with a portrait-default card aspect
-        // ratio, the height axis is already the binding constraint before any margin is applied,
-        // so PREVIEW_FAN_STAGE_MARGIN_FRACTION can only be as large as previewRoleIsUsableAtA...
+        // before, ignoring geometry.cardSizePercent entirely. PRIMARY's margin *is*
+        // geometry.cardSizePercent's complement -- the user's single "how much of the screen does
+        // this claim" knob, independent of cardAspectRatioPercent's separate "what shape" knob (see
+        // that field's own doc). 100% (the max) means zero reserved margin: a genuinely full-bleed
+        // card reaching the real screen edge, not the old hardcoded 75%-of-viewport ceiling. Lower
+        // values reserve real stage margin so resolveCardStack's fan/offset/rotation has room to be
+        // visible instead of fighting over leftover scraps, taking a cue from the reference "Calm"
+        // timescape, which sizes its own focused card to ~58% of screen height rather than filling
+        // it. PREVIEW keeps its own small fixed margin for the same reason, capped by its own tiny
+        // usability floor: at the settings preview's small box with a portrait-default card aspect
+        // ratio, the height axis is already the binding constraint before any margin is applied, so
+        // PREVIEW_FAN_STAGE_MARGIN_FRACTION can only be as large as previewRoleIsUsableAtA...
         // (AdaptiveStageAppearanceSettingsTest) still tolerates -- see that constant's own doc.
         fanStageMarginFraction =
             when (role) {
-                AdaptiveStageCardStackRole.PRIMARY -> PRIMARY_FAN_STAGE_MARGIN_FRACTION
+                AdaptiveStageCardStackRole.PRIMARY -> 1f - geometry.cardSizePercent / 100f
                 AdaptiveStageCardStackRole.RAIL -> 0f
                 AdaptiveStageCardStackRole.PREVIEW -> PREVIEW_FAN_STAGE_MARGIN_FRACTION
             },
-        // geometry.cardSizePercent is the user's independent "how big" knob, on top of (not instead
-        // of) the aspect ratio's "what shape" knob -- see that field's own doc. RAIL never applies
-        // it: a rail tile must keep filling its whole narrow strip to stay touch-reachable (#1054),
-        // exactly like fanStageMarginFraction's own RAIL case above.
+        // PREVIEW additionally scales by the user's chosen size on top of its own fixed margin
+        // above, so the illustration keeps reflecting that setting even though its margin doesn't
+        // move with it. PRIMARY folds cardSizePercent entirely into its margin above instead (no
+        // separate scale here) so a 100% choice reaches the real, un-shrunk fitted size rather than
+        // that size multiplied by itself. RAIL ignores it, matching its margin above.
         sizeScaleFraction =
             when (role) {
-                AdaptiveStageCardStackRole.RAIL -> 1f
-                AdaptiveStageCardStackRole.PRIMARY,
-                AdaptiveStageCardStackRole.PREVIEW,
-                -> geometry.cardSizePercent / 100f
+                AdaptiveStageCardStackRole.PRIMARY, AdaptiveStageCardStackRole.RAIL -> 1f
+                AdaptiveStageCardStackRole.PREVIEW -> geometry.cardSizePercent / 100f
             },
     )
 
@@ -311,16 +314,6 @@ private fun resolveCardSize(
 }
 
 /**
- * How much of the viewport PRIMARY deliberately leaves unclaimed by the focused card so
- * [AdaptiveStageAppearanceSettings.resolveCardStack]'s fan/offset/rotation travel has real room
- * to work with, instead of the focused card filling the viewport and leaving only a few dp of
- * leftover space regardless of the user's configured geometry. Chosen in the same spirit as (not
- * identical to) the reference "Calm" timescape, which sizes its own focused card to a fixed ~58%
- * of screen height rather than filling it.
- */
-private const val PRIMARY_FAN_STAGE_MARGIN_FRACTION = 0.25f
-
-/**
  * [resolveCardSize]'s margin for [AdaptiveStageCardStackRole.PREVIEW]. Before this existed, the
  * settings preview's card filled its whole box (fanStageMarginFraction 0), which -- combined with
  * the preview's landscape-shaped box (wide, short) and the default portrait card aspect ratio --
@@ -329,13 +322,21 @@ private const val PRIMARY_FAN_STAGE_MARGIN_FRACTION = 0.25f
  * spacing/curve sliders had no visible effect in the preview specifically (though they still
  * worked on the real, larger PRIMARY stage) as a direct result.
  *
+ * Unlike [AdaptiveStageCardStackRole.PRIMARY] (whose margin is entirely
+ * `1f - geometry.cardSizePercent / 100f`, so a 100% choice reaches a genuinely full-bleed real
+ * card with zero reserved margin), PREVIEW keeps this small fixed floor regardless of that same
+ * setting -- see [resolveCardSize]'s `sizeScaleFraction` doc for how PREVIEW still reflects the
+ * user's chosen size on top of this floor. A static illustration whose entire point is
+ * demonstrating spacing/fan settings would otherwise go margin-less (and travel-less) right along
+ * with a user's real 100% choice, defeating its own purpose.
+ *
  * 0.17 is a deliberately small, conservative value -- not chosen for a strong visual effect, but
  * because [AdaptiveStageCardStackRole.PREVIEW]'s own usability floor
- * ([MIN_ADAPTIVE_STAGE_LEGIBLE_PREVIEW_CARD_WIDTH_DP]/HEIGHT) is close to binding at the smallest
- * realistic preview box (a 360x220dp viewport, this fraction's actual ceiling before the preview
- * would report itself unusable there is ~0.187 -- see the two-role comparison test
- * previewRoleIsUsableAtASettingsPreviewSizeThatPrimaryRoleRejects in
- * AdaptiveStageAppearanceSettingsTest, which pins that exact viewport). Unlike PRIMARY's much
+ * ([MIN_ADAPTIVE_STAGE_LEGIBLE_PREVIEW_CARD_WIDTH_DP]/HEIGHT), combined with the *default*
+ * [AdaptiveStageGeometry.cardSizePercent]'s own further shrink on top of this margin (see
+ * [resolveCardSize]'s `sizeScaleFraction` doc), stays close to binding at the smallest realistic
+ * preview box -- see the two-role comparison test previewRoleIsUsableAtASettingsPreviewSizeThatPrimaryRoleRejects
+ * in AdaptiveStageAppearanceSettingsTest, which pins that exact viewport. Unlike PRIMARY's much
  * larger margin, this can't chase a strong fan effect without either shrinking the preview card
  * below legibility at small settings-page sizes, or reworking the preview box's own aspect ratio
  * (out of scope here) -- so some vertical travel, rather than none, is the realistic ceiling.
@@ -458,15 +459,20 @@ data class AdaptiveStageCardStackResolution(
 data class AdaptiveStageGeometry(
     val cardAspectRatioPercent: Int = 72,
     /**
-     * How large the focused card renders as a fraction of the fitted stage bounds, independent of
+     * How much of the screen [AdaptiveStageCardStackRole.PRIMARY]'s stage claims, independent of
      * [cardAspectRatioPercent]. Before this existed, aspect ratio was the *only* size-adjacent
      * knob: [resolveCardSize] always picked the largest card that fit the given shape, so
      * "make the card smaller" and "change its shape" were the same control -- shrinking one axis
      * always grew the other to compensate, never leaving genuine empty stage around a deliberately
-     * small card. 100 (fill everything the aspect ratio and margins allow) preserves that prior
-     * behavior exactly; values below it scale the card down without touching its shape.
+     * small card, and there was no way to reach a genuinely edge-to-edge card at all. 100 now means
+     * exactly that: zero reserved stage margin, a real card reaching the screen edge (minus only
+     * [contentPaddingDp] and system insets). 75 -- not 100 -- is the *default* here: it reproduces
+     * this surface's original, pre-this-field fixed 25%-of-viewport margin exactly, so existing
+     * installs see no visual change until a user actually moves this slider. Values below it widen
+     * that reserved margin further, leaving more room for [resolveCardStack]'s fan/offset/rotation
+     * to be visible around a deliberately smaller card.
      */
-    val cardSizePercent: Int = 100,
+    val cardSizePercent: Int = 75,
     val focusedScalePercent: Int = 100,
     val focusedGapDp: Int = 12,
     val visibleDepth: Int = 4,
@@ -732,10 +738,12 @@ const val MIN_ADAPTIVE_STAGE_CARD_ASPECT_RATIO_PERCENT = 55
 // roughly 8:5 landscape card.
 const val MAX_ADAPTIVE_STAGE_CARD_ASPECT_RATIO_PERCENT = 160
 
-// 100 is today's only prior behavior: the card fills the largest size the aspect ratio and stage
-// margins allow. Below that, the card shrinks (keeping its shape) and leaves genuine empty stage
-// around it -- unlike focusedScalePercent, which only ever affects the *focused* card relative to
-// its own background cards, this scales the whole fitted stack uniformly.
+// 100 (the max) reserves zero PRIMARY stage margin -- a genuinely edge-to-edge card, not merely
+// "the largest size the aspect ratio allows within a hidden fixed margin" as it used to mean.
+// Below that, the card shrinks (keeping its shape) and leaves genuine empty stage around it --
+// unlike focusedScalePercent, which only ever affects the *focused* card relative to its own
+// background cards, this scales the whole fitted stack uniformly. See cardSizePercent's own doc
+// for why the *default* (75) sits below this max rather than at it.
 const val MIN_ADAPTIVE_STAGE_CARD_SIZE_PERCENT = 40
 const val MAX_ADAPTIVE_STAGE_CARD_SIZE_PERCENT = 100
 const val MIN_ADAPTIVE_STAGE_FOCUSED_SCALE_PERCENT = 85

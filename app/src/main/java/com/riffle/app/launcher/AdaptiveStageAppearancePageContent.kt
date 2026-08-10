@@ -158,7 +158,10 @@ internal fun AdaptiveStageAppearancePageContent(
                 appearance = appearance,
                 globalReducedMotion = state.settings.motion.reducedMotion,
                 rendererCapabilities = rendererCapabilities,
-                modifier = Modifier.fillMaxWidth().heightIn(min = 220.dp, max = 300.dp),
+                // Taller than before (was 220-300dp): more headroom directly reduces how often
+                // this hits its own legibility floor and reports "needs more space to render"
+                // relative to the real surface it's illustrating.
+                modifier = Modifier.fillMaxWidth().heightIn(min = 280.dp, max = 340.dp),
             )
         }
         adaptiveStageFallbackMessage(appearance, rendererCapabilities)?.let { message ->

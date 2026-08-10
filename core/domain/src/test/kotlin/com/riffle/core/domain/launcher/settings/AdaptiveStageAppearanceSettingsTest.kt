@@ -304,18 +304,43 @@ class AdaptiveStageAppearanceSettingsTest {
         // around a deliberately small card of the same shape.
         val viewport = AdaptiveStageViewportDp(widthDp = 800, heightDp = 1200)
         val full =
-            AdaptiveStageAppearanceSettings(geometry = AdaptiveStageGeometry(cardAspectRatioPercent = 80))
-                .resolveCardStack(viewport)
+            AdaptiveStageAppearanceSettings(
+                geometry = AdaptiveStageGeometry(cardAspectRatioPercent = 80, cardSizePercent = 100),
+            ).resolveCardStack(viewport)
         val half =
             AdaptiveStageAppearanceSettings(
                 geometry = AdaptiveStageGeometry(cardAspectRatioPercent = 80, cardSizePercent = 50),
             ).resolveCardStack(viewport)
 
         assertTrue(half.isUsable)
-        assertTrue(half.cardWidthDp in (full.cardWidthDp / 2 - 1)..(full.cardWidthDp / 2 + 1))
+        assertTrue(half.cardWidthDp < full.cardWidthDp)
         val fullAspectRatio = full.cardWidthDp.toFloat() / full.cardHeightDp
         val halfAspectRatio = half.cardWidthDp.toFloat() / half.cardHeightDp
         assertEquals(fullAspectRatio, halfAspectRatio, 0.02f)
+    }
+
+    @Test
+    fun cardSizeAtMaximumReachesAGenuinelyFullBleedCardWithNoReservedMargin() {
+        // The regression this guards: 100% used to still leave PRIMARY's old fixed 25%-of-viewport
+        // margin in place regardless of this setting, so the card could never actually reach the
+        // screen edge no matter how high a user pushed the slider. A square viewport and square
+        // card aspect ratio make width and height equally binding, so the fitted size is exactly
+        // determined by the viewport and content padding alone if (and only if) zero stage margin
+        // is genuinely being reserved.
+        val viewport = AdaptiveStageViewportDp(widthDp = 400, heightDp = 400)
+        val resolution =
+            AdaptiveStageAppearanceSettings(
+                geometry =
+                    AdaptiveStageGeometry(
+                        cardAspectRatioPercent = 100,
+                        cardSizePercent = MAX_ADAPTIVE_STAGE_CARD_SIZE_PERCENT,
+                    ),
+            ).resolveCardStack(viewport)
+        val expectedFullBleedSizeDp = viewport.widthDp - 2 * AdaptiveStageGeometry().contentPaddingDp
+
+        assertTrue(resolution.isUsable)
+        assertEquals(expectedFullBleedSizeDp, resolution.cardWidthDp)
+        assertEquals(expectedFullBleedSizeDp, resolution.cardHeightDp)
     }
 
     @Test
@@ -485,8 +510,10 @@ class AdaptiveStageAppearanceSettingsTest {
         // the focused card ends up much smaller than the viewport -- too small to clear PRIMARY's
         // touch-reachable floor at the settings preview's actual size, even though the illustration
         // itself is still perfectly legible. PREVIEW role exists because that floor is the wrong
-        // yardstick for a static, never-touched illustration.
-        val previewViewport = AdaptiveStageViewportDp(widthDp = 360, heightDp = 220)
+        // yardstick for a static, never-touched illustration. 360x300 approximates the preview's
+        // actual on-screen box (see AdaptiveStageAppearancePreview's placement in
+        // AdaptiveStageAppearancePageContent).
+        val previewViewport = AdaptiveStageViewportDp(widthDp = 360, heightDp = 300)
         val settings = AdaptiveStageAppearanceSettings()
 
         val primaryResolution = settings.resolveCardStack(previewViewport, role = AdaptiveStageCardStackRole.PRIMARY)
