@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -150,7 +149,14 @@ internal fun AdaptiveStageAppearancePageContent(
             }
         }
         Surface(
-            modifier = Modifier.fillMaxWidth(),
+            // A fixed heightIn(min, max) range was a guess at "enough room" independent of the
+            // page's actual available height -- too small a guess and this hits its own
+            // legibility floor and reports "needs more space to render" regardless of how much
+            // real screen the device actually has; too large and it starves the tab content
+            // below. weight() instead gives it a genuine share of whatever height this page
+            // really has to work with, growing and shrinking with it exactly like the tab
+            // content Column below (which already used weight() for the same reason).
+            modifier = Modifier.fillMaxWidth().weight(ADAPTIVE_STAGE_PREVIEW_HEIGHT_WEIGHT),
             shape = RoundedCornerShape(24.dp),
             color = MaterialTheme.colorScheme.surfaceContainerLow,
         ) {
@@ -158,10 +164,7 @@ internal fun AdaptiveStageAppearancePageContent(
                 appearance = appearance,
                 globalReducedMotion = state.settings.motion.reducedMotion,
                 rendererCapabilities = rendererCapabilities,
-                // Taller than before (was 220-300dp): more headroom directly reduces how often
-                // this hits its own legibility floor and reports "needs more space to render"
-                // relative to the real surface it's illustrating.
-                modifier = Modifier.fillMaxWidth().heightIn(min = 280.dp, max = 340.dp),
+                modifier = Modifier.fillMaxSize(),
             )
         }
         adaptiveStageFallbackMessage(appearance, rendererCapabilities)?.let { message ->
@@ -169,7 +172,10 @@ internal fun AdaptiveStageAppearancePageContent(
         }
         AdaptiveStageAppearanceTabRow(selected = selectedTab, onSelected = { tab -> selectedTab = tab })
         Column(
-            modifier = Modifier.weight(1f).verticalScroll(rememberScrollState()),
+            modifier =
+                Modifier
+                    .weight(1f - ADAPTIVE_STAGE_PREVIEW_HEIGHT_WEIGHT)
+                    .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             when (selectedTab) {
@@ -867,6 +873,14 @@ private fun adaptiveStageFallbackMessage(
         else -> null
     }
 }
+
+/**
+ * The preview's share of this page's available height, split against the tab content Column
+ * below (which gets the remaining `1f - this`). Chosen to keep roughly the same on-screen
+ * proportions the previous fixed 280-340dp range targeted on a typical phone-sized settings page,
+ * while actually adapting to the real available height instead of guessing a fixed one.
+ */
+private const val ADAPTIVE_STAGE_PREVIEW_HEIGHT_WEIGHT = 0.4f
 
 /**
  * A stand-in for "an ordinary phone," used only to warn when the current settings would collapse

@@ -23,6 +23,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.focus.FocusRequester
@@ -155,6 +156,14 @@ internal fun CardStack(
                     this[CardStackMotionModeKey] = motionMode
                     this[CardStackAnimationSpecKey] = animationSpec
                 },
+        // Every entry (a BoxWithConstraints that wraps to its own card's size, not this root's
+        // full allotted area) is placed via this alignment before its own offset/verticalOffset
+        // graphicsLayer translation is applied on top. Without an explicit Center here, Box's
+        // default TopStart pins every card -- focused and fanned background cards alike -- to the
+        // top-left corner of the stack's whole area whenever the card is smaller than that area,
+        // instead of centering the stack and letting the fan/offset math (which is authored
+        // relative to a centered baseline) carry background cards outward from there.
+        contentAlignment = Alignment.Center,
     ) {
         entries.forEach { entry ->
             // A card index identifies a stable card while focus changes, so Compose can
