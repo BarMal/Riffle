@@ -269,6 +269,17 @@ private fun AdaptiveStageAppearanceSettings.resolveCardSize(
                 AdaptiveStageCardStackRole.RAIL -> 0f
                 AdaptiveStageCardStackRole.PREVIEW -> PREVIEW_FAN_STAGE_MARGIN_FRACTION
             },
+        // geometry.cardSizePercent is the user's independent "how big" knob, on top of (not instead
+        // of) the aspect ratio's "what shape" knob -- see that field's own doc. RAIL never applies
+        // it: a rail tile must keep filling its whole narrow strip to stay touch-reachable (#1054),
+        // exactly like fanStageMarginFraction's own RAIL case above.
+        sizeScaleFraction =
+            when (role) {
+                AdaptiveStageCardStackRole.RAIL -> 1f
+                AdaptiveStageCardStackRole.PRIMARY,
+                AdaptiveStageCardStackRole.PREVIEW,
+                -> geometry.cardSizePercent / 100f
+            },
     )
 
 private fun resolveCardSize(
@@ -278,13 +289,15 @@ private fun resolveCardSize(
     stackBounds: ResolvedAdaptiveStageStackBounds,
     reservedVerticalSpaceDp: Int = 0,
     fanStageMarginFraction: Float = 0f,
+    sizeScaleFraction: Float = 1f,
 ): ResolvedAdaptiveStageCardSize {
     val stageWidthDp = (viewport.safeWidthDp * (1f - fanStageMarginFraction))
     val stageHeightDp = (viewport.safeHeightDp * (1f - fanStageMarginFraction))
     val availableWidth = (stageWidthDp - requestedPadding * 2).coerceAtLeast(0f)
     val availableHeight = (stageHeightDp - requestedPadding * 2 - reservedVerticalSpaceDp).coerceAtLeast(0f)
     val aspectRatio = geometry.cardAspectRatioPercent / 100f
-    val width = min(availableWidth / stackBounds.maxWidthScale, availableHeight / stackBounds.maxHeightScale).toInt()
+    val fittedWidth = min(availableWidth / stackBounds.maxWidthScale, availableHeight / stackBounds.maxHeightScale)
+    val width = (fittedWidth * sizeScaleFraction).toInt()
     val height = if (aspectRatio == 0f) 0 else (width / aspectRatio).toInt()
     val focusedWidth = ceil(width * stackBounds.focusedScale).toInt()
     val focusedHeight = ceil(height * stackBounds.focusedScale).toInt()
@@ -444,6 +457,16 @@ data class AdaptiveStageCardStackResolution(
 
 data class AdaptiveStageGeometry(
     val cardAspectRatioPercent: Int = 72,
+    /**
+     * How large the focused card renders as a fraction of the fitted stage bounds, independent of
+     * [cardAspectRatioPercent]. Before this existed, aspect ratio was the *only* size-adjacent
+     * knob: [resolveCardSize] always picked the largest card that fit the given shape, so
+     * "make the card smaller" and "change its shape" were the same control -- shrinking one axis
+     * always grew the other to compensate, never leaving genuine empty stage around a deliberately
+     * small card. 100 (fill everything the aspect ratio and margins allow) preserves that prior
+     * behavior exactly; values below it scale the card down without touching its shape.
+     */
+    val cardSizePercent: Int = 100,
     val focusedScalePercent: Int = 100,
     val focusedGapDp: Int = 12,
     val visibleDepth: Int = 4,
@@ -463,6 +486,11 @@ data class AdaptiveStageGeometry(
                 cardAspectRatioPercent.coerceIn(
                     MIN_ADAPTIVE_STAGE_CARD_ASPECT_RATIO_PERCENT,
                     MAX_ADAPTIVE_STAGE_CARD_ASPECT_RATIO_PERCENT,
+                ),
+            cardSizePercent =
+                cardSizePercent.coerceIn(
+                    MIN_ADAPTIVE_STAGE_CARD_SIZE_PERCENT,
+                    MAX_ADAPTIVE_STAGE_CARD_SIZE_PERCENT,
                 ),
             focusedScalePercent =
                 focusedScalePercent.coerceIn(
@@ -703,6 +731,13 @@ const val MIN_ADAPTIVE_STAGE_CARD_ASPECT_RATIO_PERCENT = 55
 // so 100 was a hard ceiling on ever rendering a card wider than it is tall. 160 permits up to a
 // roughly 8:5 landscape card.
 const val MAX_ADAPTIVE_STAGE_CARD_ASPECT_RATIO_PERCENT = 160
+
+// 100 is today's only prior behavior: the card fills the largest size the aspect ratio and stage
+// margins allow. Below that, the card shrinks (keeping its shape) and leaves genuine empty stage
+// around it -- unlike focusedScalePercent, which only ever affects the *focused* card relative to
+// its own background cards, this scales the whole fitted stack uniformly.
+const val MIN_ADAPTIVE_STAGE_CARD_SIZE_PERCENT = 40
+const val MAX_ADAPTIVE_STAGE_CARD_SIZE_PERCENT = 100
 const val MIN_ADAPTIVE_STAGE_FOCUSED_SCALE_PERCENT = 85
 const val MAX_ADAPTIVE_STAGE_FOCUSED_SCALE_PERCENT = 115
 const val MIN_ADAPTIVE_STAGE_FOCUSED_GAP_DP = 0

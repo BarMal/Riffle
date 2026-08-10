@@ -52,6 +52,7 @@ import com.riffle.core.domain.launcher.settings.AdaptiveStageRendererCapabilitie
 import com.riffle.core.domain.launcher.settings.AdaptiveStageViewportDp
 import com.riffle.core.domain.launcher.settings.MAX_ADAPTIVE_STAGE_BLUR_STRENGTH_PERCENT
 import com.riffle.core.domain.launcher.settings.MAX_ADAPTIVE_STAGE_CARD_ASPECT_RATIO_PERCENT
+import com.riffle.core.domain.launcher.settings.MAX_ADAPTIVE_STAGE_CARD_SIZE_PERCENT
 import com.riffle.core.domain.launcher.settings.MAX_ADAPTIVE_STAGE_CONTENT_PADDING_DP
 import com.riffle.core.domain.launcher.settings.MAX_ADAPTIVE_STAGE_CONTRAST_PERCENT
 import com.riffle.core.domain.launcher.settings.MAX_ADAPTIVE_STAGE_CORNER_RADIUS_DP
@@ -78,6 +79,7 @@ import com.riffle.core.domain.launcher.settings.MAX_ADAPTIVE_STAGE_VERTICAL_SPAC
 import com.riffle.core.domain.launcher.settings.MAX_ADAPTIVE_STAGE_VISIBLE_DEPTH
 import com.riffle.core.domain.launcher.settings.MIN_ADAPTIVE_STAGE_BLUR_STRENGTH_PERCENT
 import com.riffle.core.domain.launcher.settings.MIN_ADAPTIVE_STAGE_CARD_ASPECT_RATIO_PERCENT
+import com.riffle.core.domain.launcher.settings.MIN_ADAPTIVE_STAGE_CARD_SIZE_PERCENT
 import com.riffle.core.domain.launcher.settings.MIN_ADAPTIVE_STAGE_CONTENT_PADDING_DP
 import com.riffle.core.domain.launcher.settings.MIN_ADAPTIVE_STAGE_CONTRAST_PERCENT
 import com.riffle.core.domain.launcher.settings.MIN_ADAPTIVE_STAGE_CORNER_RADIUS_DP
@@ -329,6 +331,16 @@ private fun AdaptiveStageGeometryTabContent(
         ) { value ->
             update {
                 it.copy(geometry = it.geometry.copy(cardAspectRatioPercent = value))
+            }
+        }
+        AdaptiveStageSlider(
+            "Card size",
+            appearance.geometry.cardSizePercent,
+            MIN_ADAPTIVE_STAGE_CARD_SIZE_PERCENT..MAX_ADAPTIVE_STAGE_CARD_SIZE_PERCENT,
+            "%",
+        ) { value ->
+            update {
+                it.copy(geometry = it.geometry.copy(cardSizePercent = value))
             }
         }
         AdaptiveStageSlider(
