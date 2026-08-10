@@ -3040,8 +3040,9 @@ private fun stageAppIdentity(
  * "Hidden notification" when the profile is locked/quiet), so this never needs its own privacy
  * check -- it just picks whichever field actually has content, preferring the message body.
  */
-private fun AppStageNotificationCard.railSnippet(): String? =
-    text.takeIf(String::isNotBlank) ?: title.takeIf(String::isNotBlank)
+private fun AppStageNotificationCard.railSnippet(): String? = text.nonBlankOrNull() ?: title.nonBlankOrNull()
+
+private fun String.nonBlankOrNull(): String? = takeIf(String::isNotBlank)
 
 private fun AppStage.adaptiveStageStageStateDescription(): String =
     buildList {
