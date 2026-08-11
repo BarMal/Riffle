@@ -263,6 +263,27 @@ class LauncherShellNotificationStateTest {
     }
 
     @Test
+    fun seedsNotificationCountsFromTheRepositoryOnConstructionWithoutAnExplicitRefresh() {
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                platformDependencies =
+                    LauncherShellPlatformDependencies(
+                        notificationRepository =
+                            FakeNotificationRepository(
+                                notifications =
+                                    listOf(notification(key = "camera-1", packageName = "com.riffle.camera")),
+                            ),
+                    ),
+            )
+
+        // No refreshNotifications() call -- the repository's persisted snapshot must already be
+        // reflected in the very first state, the same way loadHomeLayoutSet()/loadLauncherSettings()
+        // already seed synchronously, so a relaunch doesn't paint a blank Cards stage first.
+        assertEquals(1, viewModel.state.value.notificationGroupsByApp.single().count)
+    }
+
+    @Test
     fun refreshNotificationsCoalescesQueuedRefreshes() {
         val notificationRepository = FakeNotificationRepository()
         val dispatcher = QueuedDispatcher()
@@ -277,6 +298,11 @@ class LauncherShellNotificationStateTest {
                 refreshDispatcher = dispatcher,
             )
 
+        // Construction itself already did one synchronous read to seed initial state (see
+        // createInitialState's own doc) -- reset the counter so this asserts coalescing of the
+        // two explicit refreshNotifications() calls below in isolation, same as the neighboring
+        // refreshInstalledAppsDoesNotRefreshNotifications test does for its own counter.
+        notificationRepository.activeNotificationReadCount = 0
         notificationRepository.notifications =
             listOf(notification(key = "calendar-1", packageName = "com.riffle.calendar"))
         val firstRefresh = viewModel.refreshNotifications()

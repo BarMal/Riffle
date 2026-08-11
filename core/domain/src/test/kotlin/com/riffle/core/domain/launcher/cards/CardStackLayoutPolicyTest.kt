@@ -47,8 +47,11 @@ class CardStackLayoutPolicyTest {
             listOf(0.82f, 0.82f, 0.88f, 0.88f, 0.94f, 0.94f, 1f),
             entries.map { entry -> entry.scale },
         )
+        // The outermost visible depth (3, at maxVisibleDepth itself) fades fully to transparent on
+        // top of alphaStep's own dim -- see CardStackLayoutPolicy.edgeFadeMultiplier -- rather than
+        // staying clearly opaque right up to wherever a caller's own viewport clips it.
         assertFloatListEquals(
-            listOf(0.52f, 0.52f, 0.68f, 0.68f, 0.84f, 0.84f, 1f),
+            listOf(0f, 0f, 0.45333f, 0.45333f, 0.84f, 0.84f, 1f),
             entries.map { entry -> entry.alpha },
         )
     }
@@ -72,8 +75,10 @@ class CardStackLayoutPolicyTest {
             listOf(-60f, -36f, 36f, -12f, 12f),
             entries.map { entry -> entry.offset },
         )
+        // depth=2.5 sits past the edge-fade start (maxVisibleDepth * 0.5 = 1.5), so it fades on
+        // top of alphaStep's own dim -- see CardStackLayoutPolicy.edgeFadeMultiplier.
         assertFloatListEquals(
-            listOf(0.6f, 0.76f, 0.76f, 0.92f, 0.92f),
+            listOf(0.2f, 0.76f, 0.76f, 0.92f, 0.92f),
             entries.map { entry -> entry.alpha },
         )
     }

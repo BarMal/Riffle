@@ -38,7 +38,10 @@ import com.riffle.core.domain.launcher.home.LauncherViewModeAvailability
 import com.riffle.core.domain.launcher.home.PlacementRejectionReason
 import com.riffle.core.domain.launcher.home.WidgetEditResult
 import com.riffle.core.domain.launcher.home.WidgetEngine
+import com.riffle.core.domain.launcher.notifications.AppNotificationCounter
+import com.riffle.core.domain.launcher.notifications.AppNotificationGrouper
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
+import com.riffle.core.domain.launcher.notifications.NotificationStaleFilter
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettingsRepository
 import com.riffle.core.domain.launcher.settings.stagePreferencesFor
@@ -574,6 +577,14 @@ private fun createInitialState(
         launcherSettingsRepository.saveLauncherSettings(launcherSettings)
     }
 
+    // Seeded synchronously from platformDependencies.notificationRepository's own persisted
+    // snapshot, same as homeLayoutRepository/launcherSettingsRepository above -- not left empty
+    // until the first async refreshNotifications() lands after onResume(), which otherwise
+    // painted a blank Cards stage on every relaunch even though a prior snapshot was sitting on
+    // disk the whole time. This is a deliberate exception to the "no platform repository reads
+    // during construction" rule installedApp/appVisibility/widgetProvider still follow (see
+    // LauncherShellViewModelFactoryTest) -- notifications are the one repository whose staleness
+    // is directly, visibly user-facing on the very first frame.
     return LauncherShellState(
         destination = recoveredHomeRoleRequestDestination ?: ShellDestination.HOME,
         homeLayout = layoutSet.activeLayout,
@@ -591,6 +602,12 @@ private fun createInitialState(
             },
         hasRecoveredHomeRoleRequest = hasRecoveredHomeRoleRequest,
         setupCardDismissed = firstRunRepository.isSetupCardDismissed(),
+    ).withNotificationState(
+        notificationRepository = platformDependencies.notificationRepository,
+        appNotificationCounter = AppNotificationCounter(),
+        appNotificationGrouper = AppNotificationGrouper(),
+        notificationStaleFilter = NotificationStaleFilter(),
+        nowEpochMillis = platformDependencies.epochMillisProvider.nowEpochMillis(),
     )
 }
 
