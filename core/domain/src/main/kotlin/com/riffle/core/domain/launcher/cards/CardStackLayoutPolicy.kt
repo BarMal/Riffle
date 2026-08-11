@@ -109,7 +109,7 @@ data class CardStackLayoutPolicy(
                     verticalOffsetDirection *
                         (verticalOffsetStep * signedDistance + curveStep * signedDistance * signedDistance),
                 rotationDegrees = if (reducedMotion) 0f else rotationStep * signedDistance,
-                alpha = (1f - alphaStep * depth).coerceIn(0f, 1f),
+                alpha = ((1f - alphaStep * depth) * edgeFadeMultiplier(depth)).coerceIn(0f, 1f),
             )
         }
     }
@@ -130,6 +130,24 @@ data class CardStackLayoutPolicy(
     }
 
     private fun Int.depthFrom(activeIndex: Float): Float = abs(this - activeIndex)
+
+    /**
+     * Extra falloff for the last visible depths, layered on top of [alphaStep]'s own gentle
+     * per-depth dim. [alphaStep] alone is tuned to keep the stack readable at a glance, not to
+     * reach near-transparent -- a card sitting at [maxVisibleDepth] can still be most of the way
+     * opaque, so whatever clips it at the caller's own viewport edge (fanned/rotated entries can
+     * translate past their own footprint) reads as an abrupt cut instead of a fade. Ramps from 1
+     * (no extra dim) at [maxVisibleDepth] * [EDGE_FADE_START_FRACTION] down to 0 (fully
+     * transparent) at [maxVisibleDepth] itself, leaving cards closer to focus untouched.
+     */
+    private fun edgeFadeMultiplier(depth: Float): Float {
+        if (maxVisibleDepth <= 0) return 1f
+        val fadeStart = maxVisibleDepth * EDGE_FADE_START_FRACTION
+        if (depth <= fadeStart) return 1f
+        val fadeRange = maxVisibleDepth - fadeStart
+        if (fadeRange <= 0f) return 0f
+        return (1f - (depth - fadeStart) / fadeRange).coerceIn(0f, 1f)
+    }
 
     companion object {
         fun forProfile(profile: CardStackLayoutProfile): CardStackLayoutPolicy = profile.policy
@@ -161,3 +179,6 @@ const val DEFAULT_CARD_STACK_CURVE_STEP = 0f
 const val DEFAULT_CARD_STACK_ROTATION_STEP = 0f
 const val DEFAULT_CARD_STACK_REDUCED_MOTION_SCALE_STEP = 0.01f
 const val DEFAULT_CARD_STACK_REDUCED_MOTION_OFFSET_STEP = 2f
+
+/** See [CardStackLayoutPolicy.edgeFadeMultiplier]. */
+private const val EDGE_FADE_START_FRACTION = 0.5f
