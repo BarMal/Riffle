@@ -4,12 +4,13 @@ package com.riffle.app.launcher
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -2029,12 +2030,6 @@ private fun AdaptiveStageNotificationStack(
                             }
                         }
                     }
-                    AdaptiveStageCardTimelineRail(
-                        cards = cards,
-                        activeCardIndex = activeCardIndex,
-                        onCardSelected = ::jumpTo,
-                        modifier = Modifier.fillMaxHeight(),
-                    )
                 }
                 AdaptiveStageCardPositionIndicator(position = activeCardIndex + 1, count = cards.size)
                 AdaptiveStageContextShelf(
@@ -2412,55 +2407,6 @@ private fun AdaptiveStageCardPositionIndicator(
 }
 
 /**
- * A minimal chronological rail beside the card stack: one dot per card, positioned by relative
- * recency (not just index order) between the oldest and newest visible card, tappable to jump
- * focus directly to that card. Deliberately simple for a first version -- no cross-app
- * aggregation and no drag-to-scrub gesture yet, both left as later follow-ups.
- */
-@Composable
-private fun AdaptiveStageCardTimelineRail(
-    cards: List<AppStageNotificationCard>,
-    activeCardIndex: Int,
-    onCardSelected: (LauncherCardId) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    if (cards.size <= 1) return
-    val timestamps = cards.map { card -> card.content.meaningfulActivityAtEpochMillis }
-    val newest = timestamps.max()
-    val span = (newest - timestamps.min()).coerceAtLeast(1L)
-    BoxWithConstraints(modifier = modifier.width(ADAPTIVE_STAGE_TIMELINE_RAIL_WIDTH_DP.dp).fillMaxHeight()) {
-        val dotSize = ADAPTIVE_STAGE_TIMELINE_DOT_DP.dp
-        val focusedDotSize = ADAPTIVE_STAGE_TIMELINE_FOCUSED_DOT_DP.dp
-        cards.forEachIndexed { index, card ->
-            val recencyFraction = (newest - card.content.meaningfulActivityAtEpochMillis).toFloat() / span.toFloat()
-            val isFocused = index == activeCardIndex
-            val size = if (isFocused) focusedDotSize else dotSize
-            Box(
-                modifier =
-                    Modifier
-                        .align(Alignment.TopCenter)
-                        .offset(y = (maxHeight - size) * recencyFraction)
-                        .size(size)
-                        .clip(CircleShape)
-                        .background(
-                            if (isFocused) {
-                                MaterialTheme.colorScheme.primary
-                            } else {
-                                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                            },
-                        )
-                        .clickable(onClickLabel = "Jump to ${card.title}") { onCardSelected(card.content.id) }
-                        .testTag("adaptive-stage-timeline-dot-${card.content.id.value}"),
-            )
-        }
-    }
-}
-
-private const val ADAPTIVE_STAGE_TIMELINE_RAIL_WIDTH_DP = 24
-private const val ADAPTIVE_STAGE_TIMELINE_DOT_DP = 6
-private const val ADAPTIVE_STAGE_TIMELINE_FOCUSED_DOT_DP = 10
-
-/**
  * Renders a notification's individual messages (sender + snippet, most recent last) when the
  * source notification carried per-message history, falling back to the plain text summary
  * otherwise -- most notifications (and every group-summary notification) have no per-message
@@ -2511,7 +2457,7 @@ private fun adaptiveStageMessageAvatarColor(seed: String): Color {
     return Color.hsv(hue, 0.46f, 0.72f)
 }
 
-private const val ADAPTIVE_STAGE_CARD_VISIBLE_MESSAGE_COUNT = 2
+private const val ADAPTIVE_STAGE_CARD_VISIBLE_MESSAGE_COUNT = 3
 
 @Composable
 internal fun AdaptiveStageContextShelf(
@@ -2737,6 +2683,7 @@ internal fun AdaptiveStageContextActionsGrid(
 
 @Composable
 @Suppress("LongMethod")
+@OptIn(ExperimentalLayoutApi::class)
 private fun AdaptiveStageEmptyStage(
     stage: AppStage,
     shellState: com.riffle.app.launcher.notifications.AppStageShellState,
@@ -2826,30 +2773,35 @@ private fun AdaptiveStageEmptyStage(
                 style = MaterialTheme.typography.bodyMedium,
             )
             emptyCard?.let { card ->
-                AdaptiveStageContextActionButton(
-                    label = "Open ${card.app.label}",
-                    onClick = { onAction(LauncherShellAction.LaunchApp(card.app.identity)) },
-                )
-                card.shortcuts.forEach { shortcut ->
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
                     AdaptiveStageContextActionButton(
-                        label = shortcut.shortLabel,
-                        onClick = { onAction(LauncherShellAction.LaunchAppShortcut(shortcut)) },
+                        label = "Open ${card.app.label}",
+                        onClick = { onAction(LauncherShellAction.LaunchApp(card.app.identity)) },
+                    )
+                    card.shortcuts.forEach { shortcut ->
+                        AdaptiveStageContextActionButton(
+                            label = shortcut.shortLabel,
+                            onClick = { onAction(LauncherShellAction.LaunchAppShortcut(shortcut)) },
+                        )
+                    }
+                    AdaptiveStageContextActionButton(
+                        label = "Details",
+                        onClick = { detailState.expand(detailCardId) },
+                        modifier =
+                            Modifier.focusRequester(detailFocusRequester).onGloballyPositioned {
+                                if (restoreDetailFocusForCardId == detailCardId) detailControlLaidOut = true
+                            }
+                                .onFocusChanged { focusState ->
+                                    if (restoreDetailFocusForCardId == detailCardId && focusState.isFocused) {
+                                        restoreDetailFocusForCardId = null
+                                        detailControlLaidOut = false
+                                    }
+                                }.focusable(),
                     )
                 }
-                AdaptiveStageContextActionButton(
-                    label = "Details",
-                    onClick = { detailState.expand(detailCardId) },
-                    modifier =
-                        Modifier.focusRequester(detailFocusRequester).onGloballyPositioned {
-                            if (restoreDetailFocusForCardId == detailCardId) detailControlLaidOut = true
-                        }
-                            .onFocusChanged { focusState ->
-                                if (restoreDetailFocusForCardId == detailCardId && focusState.isFocused) {
-                                    restoreDetailFocusForCardId = null
-                                    detailControlLaidOut = false
-                                }
-                            }.focusable(),
-                )
                 RestoreFocusAfterLayout(
                     enabled = restoreDetailFocusForCardId == detailCardId,
                     focusRequester = detailFocusRequester,
