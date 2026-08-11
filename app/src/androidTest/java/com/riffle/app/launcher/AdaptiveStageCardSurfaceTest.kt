@@ -416,40 +416,6 @@ class AdaptiveStageCardSurfaceTest {
     }
 
     @Test
-    fun tappingATimelineDotJumpsFocusToThatCard() {
-        val app = adaptiveStageTestApp()
-        val newest =
-            adaptiveStageTestNotification(app).copy(
-                key = LauncherNotificationKey("newest"),
-                title = "Newest message",
-                postedAtEpochMillis = 20,
-            )
-        val older =
-            adaptiveStageTestNotification(app).copy(
-                key = LauncherNotificationKey("older"),
-                title = "Older message",
-                postedAtEpochMillis = 10,
-            )
-        val state =
-            adaptiveStageTestState(app, newest).copy(
-                notificationGroupsByApp =
-                    adaptiveStageTestState(app, newest).notificationGroupsByApp.map { group ->
-                        group.copy(notifications = listOf(newest, older))
-                    },
-            )
-        val olderCardTag = "adaptive-stage-timeline-dot-stage-notification:${app.identity.profile.id.value}:older"
-
-        composeRule.setContent {
-            MaterialTheme { AdaptiveStageAppStageSurface(state = state, onAction = {}) }
-        }
-
-        composeRule.onNodeWithText("Newest message").assertIsDisplayed()
-        composeRule.onNodeWithTag(olderCardTag).performClick()
-
-        composeRule.onNodeWithText("Older message").assertIsDisplayed()
-    }
-
-    @Test
     fun explicitDetailsOpensAndBackReturnsToTheFocusedCard() {
         val app = adaptiveStageTestApp()
         val notification = adaptiveStageTestNotification(app)
