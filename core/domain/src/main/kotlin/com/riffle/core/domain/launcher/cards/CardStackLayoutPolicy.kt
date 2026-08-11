@@ -142,11 +142,12 @@ data class CardStackLayoutPolicy(
      */
     private fun edgeFadeMultiplier(depth: Float): Float {
         if (maxVisibleDepth <= 0) return 1f
+        // fadeRange is always maxVisibleDepth * (1 - EDGE_FADE_START_FRACTION), positive whenever
+        // maxVisibleDepth is, so no separate zero-range guard is needed here.
         val fadeStart = maxVisibleDepth * EDGE_FADE_START_FRACTION
-        if (depth <= fadeStart) return 1f
         val fadeRange = maxVisibleDepth - fadeStart
-        if (fadeRange <= 0f) return 0f
-        return (1f - (depth - fadeStart) / fadeRange).coerceIn(0f, 1f)
+        val depthPastFadeStart = (depth - fadeStart).coerceAtLeast(0f)
+        return (1f - depthPastFadeStart / fadeRange).coerceIn(0f, 1f)
     }
 
     companion object {
