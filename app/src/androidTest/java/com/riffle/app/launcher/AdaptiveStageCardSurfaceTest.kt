@@ -74,6 +74,7 @@ import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
 import com.riffle.core.domain.launcher.notifications.LauncherNotification
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
+import com.riffle.core.domain.launcher.notifications.LauncherNotificationMessage
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.notifications.NotificationAgeBucket
 import com.riffle.core.domain.launcher.notifications.NotificationCategory
@@ -820,6 +821,42 @@ class AdaptiveStageCardSurfaceTest {
                 actions,
             )
         }
+    }
+
+    @Test
+    fun viewingAConversationsThreadGroupsItsMessagesAndSurfacesItsActions() {
+        val app = adaptiveStageTestApp()
+        val messages =
+            listOf(
+                LauncherNotificationMessage(sender = "Alex", text = "Message A", timestampEpochMillis = 5),
+                LauncherNotificationMessage(sender = "Alex", text = "Message B", timestampEpochMillis = 10),
+                LauncherNotificationMessage(sender = "Alex", text = "Message C", timestampEpochMillis = 15),
+            )
+        val conversation =
+            adaptiveStageTestNotification(app).copy(messages = messages, canDismiss = true)
+        val state = adaptiveStageTestState(app, conversation)
+
+        composeRule.setContent {
+            MaterialTheme { AdaptiveStageAppStageSurface(state = state, onAction = {}) }
+        }
+
+        // The main stack sorts by recency -- the newest message is focused first -- and hides
+        // Dismiss/Reply/etc. on an individual message card in favor of grouping into the thread.
+        composeRule.onNodeWithText("Message C").assertIsDisplayed()
+        composeRule.onAllNodesWithText("Dismiss").assertCountEquals(0)
+
+        composeRule.onNodeWithText("View thread").performClick()
+
+        // The receded main stack stays composed behind the thread view (its own message cards
+        // are still findable by text, just not asserted on here), while the thread view's own
+        // shelf -- a separate instance -- now shows the conversation's real actions, since
+        // there's no more ambiguity about which card they'd apply to.
+        composeRule.onNodeWithText("Dismiss").assertIsDisplayed()
+        composeRule.onNodeWithText("Done").assertIsDisplayed()
+
+        composeRule.onNodeWithText("Done").performClick()
+
+        composeRule.onAllNodesWithText("Done").assertCountEquals(0)
     }
 
     @Test

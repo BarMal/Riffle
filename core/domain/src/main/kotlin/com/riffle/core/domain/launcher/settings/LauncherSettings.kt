@@ -82,7 +82,18 @@ data class CardsSettings(
     val adaptiveStageRailSide: AdaptiveStageRailSide? = null,
     /** User-opted alternative to the full-stack surface: a top detail region over the card stack. */
     val adaptiveStagePaneArrangement: AdaptiveStagePaneArrangement = AdaptiveStagePaneArrangement.STACK,
+    /** Message order within a conversation's thread view, once its message cards are grouped. */
+    val threadMessageOrder: ThreadMessageOrder = ThreadMessageOrder.CHRONOLOGICAL,
 )
+
+/** How a conversation's messages are ordered within its thread view. */
+enum class ThreadMessageOrder {
+    /** Oldest message first, reading top-to-bottom like a conversation. */
+    CHRONOLOGICAL,
+
+    /** Newest message first, matching the main stack's own recency order. */
+    RECENT_FIRST,
+}
 
 /** Resolves AdaptiveStage using the launcher-wide accessibility motion preference. */
 fun LauncherSettings.resolveAdaptiveStageCardStack(

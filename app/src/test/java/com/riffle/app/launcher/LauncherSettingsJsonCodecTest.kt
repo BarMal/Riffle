@@ -65,6 +65,7 @@ import com.riffle.core.domain.launcher.settings.OverlayDockSettings
 import com.riffle.core.domain.launcher.settings.RssSettings
 import com.riffle.core.domain.launcher.settings.SearchResultPresentation
 import com.riffle.core.domain.launcher.settings.SearchSettings
+import com.riffle.core.domain.launcher.settings.ThreadMessageOrder
 import com.riffle.core.domain.launcher.settings.homeSystemBars
 import com.riffle.core.domain.launcher.settings.stagePreferencesFor
 import com.riffle.core.domain.launcher.settings.withHomeSystemBars
@@ -167,6 +168,34 @@ class LauncherSettingsJsonCodecTest {
             )
 
         assertEquals(AdaptiveStagePaneArrangement.STACK, decodedSettings.cards.adaptiveStagePaneArrangement)
+    }
+
+    @Test
+    fun roundTripsConfiguredThreadMessageOrder() {
+        val settings =
+            LauncherSettings(
+                cards = CardsSettings(threadMessageOrder = ThreadMessageOrder.RECENT_FIRST),
+            )
+
+        val decoded = decodeLauncherSettings(encodeLauncherSettings(settings))
+
+        assertEquals(settings.cards.threadMessageOrder, decoded.cards.threadMessageOrder)
+    }
+
+    @Test
+    fun defaultsUnknownThreadMessageOrder() {
+        val decodedSettings =
+            decodeLauncherSettings(
+                """
+                {
+                  "cards": {
+                    "threadMessageOrder": "UNKNOWN"
+                  }
+                }
+                """.trimIndent(),
+            )
+
+        assertEquals(ThreadMessageOrder.CHRONOLOGICAL, decodedSettings.cards.threadMessageOrder)
     }
 
     @Test

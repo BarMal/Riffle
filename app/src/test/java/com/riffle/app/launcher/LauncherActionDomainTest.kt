@@ -55,6 +55,7 @@ import com.riffle.core.domain.launcher.settings.OverlayDockEdge
 import com.riffle.core.domain.launcher.settings.OverlayDockExpandedOrientation
 import com.riffle.core.domain.launcher.settings.OverlayDockItemMoveDirection
 import com.riffle.core.domain.launcher.settings.SearchResultPresentation
+import com.riffle.core.domain.launcher.settings.ThreadMessageOrder
 import com.riffle.core.domain.launcher.widgets.WidgetProviderClassName
 import com.riffle.core.domain.launcher.widgets.WidgetProviderDimensions
 import com.riffle.core.domain.launcher.widgets.WidgetProviderIdentity
@@ -477,6 +478,10 @@ class LauncherActionDomainTest {
                 settings(
                     "SelectAdaptiveStagePaneArrangement",
                     LauncherShellAction.SelectAdaptiveStagePaneArrangement(AdaptiveStagePaneArrangement.SPLIT),
+                ),
+                settings(
+                    "SelectThreadMessageOrder",
+                    LauncherShellAction.SelectThreadMessageOrder(ThreadMessageOrder.RECENT_FIRST),
                 ),
                 settings(
                     "SelectAdaptiveStageRailSide",

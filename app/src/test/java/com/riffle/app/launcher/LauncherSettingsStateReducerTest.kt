@@ -24,6 +24,7 @@ import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettingsRepository
 import com.riffle.core.domain.launcher.settings.RssSettings
 import com.riffle.core.domain.launcher.settings.SearchResultPresentation
+import com.riffle.core.domain.launcher.settings.ThreadMessageOrder
 import com.riffle.core.domain.launcher.settings.homeSystemBars
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertSame
@@ -116,6 +117,20 @@ class LauncherSettingsStateReducerTest {
             AdaptiveStagePaneArrangement.SPLIT,
             updatedState.launcherSettings.cards.adaptiveStagePaneArrangement,
         )
+        assertEquals(updatedState.launcherSettings, repository.savedSettings)
+    }
+
+    @Test
+    fun persistsThreadMessageOrderSelection() {
+        val repository = FakeLauncherSettingsRepository()
+
+        val updatedState =
+            reducer(launcherSettingsRepository = repository).reduce(
+                state = LauncherShellState(),
+                action = LauncherShellAction.SelectThreadMessageOrder(ThreadMessageOrder.RECENT_FIRST),
+            )
+
+        assertEquals(ThreadMessageOrder.RECENT_FIRST, updatedState.launcherSettings.cards.threadMessageOrder)
         assertEquals(updatedState.launcherSettings, repository.savedSettings)
     }
 

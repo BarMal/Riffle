@@ -205,7 +205,7 @@ private fun LauncherNotification.toAppStageCards(
     if (isRedacted || messages.size <= 1) {
         listOf(toSingleAppStageCard(isRedacted, actionAvailability, artworkRevisions))
     } else {
-        toThreadMessageCards(artworkRevisions)
+        toThreadMessageCards(actionAvailability, artworkRevisions)
     }
 
 private fun LauncherNotification.toSingleAppStageCard(
@@ -246,14 +246,22 @@ private fun LauncherNotification.toSingleAppStageCard(
 /**
  * One card per message for a live, visible conversation, instead of folding every message into
  * one card's body -- so browsing a busy conversation reads as separate cards, not one card whose
- * body silently only shows its last couple of messages. These cards carry no [NotificationStageAction]s
- * of their own: Android only exposes Dismiss/Reply/etc. against the whole notification, not one
- * message inside it, so acting on the conversation happens from its thread view, grouped by the
- * shared [AppStageNotificationCard.notificationKey], not from an individual message card.
+ * body silently only shows its last couple of messages. Every card in the resulting list shares
+ * the same [AppStageNotificationCard.supportedActions]: Android only exposes Dismiss/Reply/etc.
+ * against the whole notification, not one message inside it, so all of a conversation's message
+ * cards are equally (and identically) actionable -- it's a UI-layer choice, not a data one,
+ * whether an individual message card in the main stack surfaces those actions directly or defers
+ * to the conversation's grouped thread view (grouped by the shared
+ * [AppStageNotificationCard.notificationKey]).
  */
 private fun LauncherNotification.toThreadMessageCards(
+    actionAvailability: NotificationStageActionAvailability,
     artworkRevisions: AdaptiveStageArtworkRevisionLookup,
 ): List<AppStageNotificationCard> {
+    val actions =
+        actionAvailability.actionsFor(key, isMediaSession).toMutableSet().apply {
+            if (canDismiss) add(NotificationStageAction.Dismiss)
+        }
     val artworkRevision = artworkRevisions.revisionFor(this)
     return messages.mapIndexed { index, message ->
         val cardId =
@@ -272,7 +280,7 @@ private fun LauncherNotification.toThreadMessageCards(
             title = message.sender.ifBlank { title },
             text = message.text,
             isRedacted = false,
-            supportedActions = emptySet(),
+            supportedActions = actions,
             artworkBase64 = largeIconPngBase64,
             artworkSourceKey = artworkRevision?.let { revision -> "${cardId.value}:$revision" },
         )
