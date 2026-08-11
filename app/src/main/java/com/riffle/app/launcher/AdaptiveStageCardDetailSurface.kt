@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -188,21 +189,28 @@ private fun AdaptiveStageDetailContainer(
         }
     }
 
-    Column(
-        modifier =
-            modifier
-                .fillMaxSize()
-                .graphicsLayer { this.alpha = alpha }
-                .verticalScroll(rememberScrollState())
-                .semantics {
-                    stateDescription = "Card details open"
-                    liveRegion = LiveRegionMode.Polite
-                }
-                .padding(24.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+    // A solid backdrop, not just a fade -- without one, the stack behind (siblings dimmed but
+    // still composed, plus the position indicator) shows straight through the detail content,
+    // reading as illegible overlapping text rather than a card of its own.
+    Surface(
+        modifier = modifier.fillMaxSize().graphicsLayer { this.alpha = alpha },
+        color = MaterialTheme.colorScheme.surface,
     ) {
-        TextButton(onClick = closeDetail) { Text("Back") }
-        content()
+        Column(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .semantics {
+                        stateDescription = "Card details open"
+                        liveRegion = LiveRegionMode.Polite
+                    }
+                    .padding(24.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            TextButton(onClick = closeDetail) { Text("Back") }
+            content()
+        }
     }
 }
 
