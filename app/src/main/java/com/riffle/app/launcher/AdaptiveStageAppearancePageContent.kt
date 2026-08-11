@@ -113,6 +113,7 @@ internal fun AdaptiveStageAppearancePageContent(
     onAction: (LauncherShellAction) -> Unit,
     modifier: Modifier = Modifier,
     rendererCapabilities: AdaptiveStageRendererCapabilities = adaptiveStageRendererCapabilities(),
+    onRequestLivePreview: (AdaptiveStageAppearanceSettings) -> Unit = {},
 ) {
     var editorTarget by rememberSaveable { mutableStateOf(AdaptiveStageAppearanceEditorTarget.FOLDED) }
     var selectedTab by rememberSaveable { mutableStateOf(AdaptiveStageAppearanceTab.LAYOUT) }
@@ -169,6 +170,19 @@ internal fun AdaptiveStageAppearancePageContent(
                 // that for a strictly worse "never renders in some contexts at all."
                 modifier = Modifier.fillMaxWidth().heightIn(min = 280.dp, max = 340.dp),
             )
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
+            horizontalArrangement = Arrangement.End,
+        ) {
+            // This preview above is a small, static illustration -- not scrollable, not sized to
+            // real touch-reachable targets. Full-screen, still using synthetic (not the user's
+            // real) content, so appearance changes can be checked at true size/scale without
+            // leaving Settings for the real Cards surface and risking exposure of real
+            // notifications while tuning something as visible as this.
+            TextButton(onClick = { onRequestLivePreview(appearance) }) {
+                SettingsButtonText(text = "Preview on home screen")
+            }
         }
         adaptiveStageFallbackMessage(appearance, rendererCapabilities)?.let { message ->
             SettingsListRow(title = "Effective fallback", subtitle = message)
