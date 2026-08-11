@@ -145,19 +145,19 @@ internal fun appStageNotificationCards(
     artworkRevisions: AdaptiveStageArtworkRevisionLookup = adaptiveStageArtworkRevisions,
 ): List<AppStageNotificationCard> {
     if (notificationAccessStatus != NotificationAccessStatus.GRANTED) return emptyList()
-    return notifications.mapNotNull { notification ->
+    return notifications.flatMap { notification ->
         val visibility =
             profileContentVisibility[notification.profileId]
                 ?: AppProfileContentVisibility.REDACTED_UNAVAILABLE
         when (visibility) {
             AppProfileContentVisibility.REDACTED_LOCKED,
             AppProfileContentVisibility.REDACTED_UNAVAILABLE,
-            -> null
+            -> emptyList()
 
             AppProfileContentVisibility.VISIBLE,
             AppProfileContentVisibility.REDACTED_QUIET,
             ->
-                notification.toAppStageCard(
+                notification.toAppStageCards(
                     isRedacted = visibility != AppProfileContentVisibility.VISIBLE,
                     actionAvailability = actionAvailability,
                     artworkRevisions = artworkRevisions,
@@ -165,7 +165,7 @@ internal fun appStageNotificationCards(
         }
     }.sortedWith(
         compareByDescending<AppStageNotificationCard> { it.content.meaningfulActivityAtEpochMillis }
-            .thenBy { it.notificationKey.value },
+            .thenBy { it.content.id.value },
     )
 }
 
@@ -192,7 +192,23 @@ fun appStageEmptyAppCard(
             )
         }
 
-private fun LauncherNotification.toAppStageCard(
+/**
+ * One card per notification when there's no genuine per-message history to split (redacted
+ * content, media sessions, and any notification with at most one message), versus one card per
+ * message via [toThreadMessageCards] otherwise.
+ */
+private fun LauncherNotification.toAppStageCards(
+    isRedacted: Boolean,
+    actionAvailability: NotificationStageActionAvailability,
+    artworkRevisions: AdaptiveStageArtworkRevisionLookup,
+): List<AppStageNotificationCard> =
+    if (isRedacted || messages.size <= 1) {
+        listOf(toSingleAppStageCard(isRedacted, actionAvailability, artworkRevisions))
+    } else {
+        toThreadMessageCards(artworkRevisions)
+    }
+
+private fun LauncherNotification.toSingleAppStageCard(
     isRedacted: Boolean,
     actionAvailability: NotificationStageActionAvailability,
     artworkRevisions: AdaptiveStageArtworkRevisionLookup,
@@ -225,4 +241,40 @@ private fun LauncherNotification.toAppStageCard(
         artworkBase64 = largeIconPngBase64.takeUnless { isRedacted },
         artworkSourceKey = artworkRevision?.let { revision -> "${content.id.value}:$revision" },
     )
+}
+
+/**
+ * One card per message for a live, visible conversation, instead of folding every message into
+ * one card's body -- so browsing a busy conversation reads as separate cards, not one card whose
+ * body silently only shows its last couple of messages. These cards carry no [NotificationStageAction]s
+ * of their own: Android only exposes Dismiss/Reply/etc. against the whole notification, not one
+ * message inside it, so acting on the conversation happens from its thread view, grouped by the
+ * shared [AppStageNotificationCard.notificationKey], not from an individual message card.
+ */
+private fun LauncherNotification.toThreadMessageCards(
+    artworkRevisions: AdaptiveStageArtworkRevisionLookup,
+): List<AppStageNotificationCard> {
+    val artworkRevision = artworkRevisions.revisionFor(this)
+    return messages.mapIndexed { index, message ->
+        val cardId =
+            LauncherCardId(
+                "stage-notification:${profileId.value}:${key.value}:${message.timestampEpochMillis}:$index",
+            )
+        AppStageNotificationCard(
+            content =
+                AppStageContent(
+                    id = cardId,
+                    stageId = AppStageId(packageName, profileId),
+                    kind = AppStageContentKind.NOTIFICATION,
+                    meaningfulActivityAtEpochMillis = message.timestampEpochMillis.coerceAtLeast(0L),
+                ),
+            notificationKey = key,
+            title = message.sender.ifBlank { title },
+            text = message.text,
+            isRedacted = false,
+            supportedActions = emptySet(),
+            artworkBase64 = largeIconPngBase64,
+            artworkSourceKey = artworkRevision?.let { revision -> "${cardId.value}:$revision" },
+        )
+    }
 }
