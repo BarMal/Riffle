@@ -102,9 +102,6 @@ fun LauncherShellContent(
     onAdaptiveStageContextChanged: (AdaptiveStageInteractionContext) -> Unit = {},
 ) {
     val haptics = rememberLauncherHaptics(state.launcherSettings.haptics.feedbackStrength)
-    // Ephemeral, not part of durable LauncherShellState -- it's a settings-page-triggered
-    // overlay, never persisted or restored, so it doesn't need reducer/action-system plumbing.
-    var adaptiveStageAppearanceLivePreview by remember { mutableStateOf<AdaptiveStageAppearanceSettings?>(null) }
 
     LauncherShellBackHandling(state = state, onAction = onAction)
 
@@ -152,20 +149,7 @@ fun LauncherShellContent(
                 onAdaptiveStageContextChanged = onAdaptiveStageContextChanged,
                 haptics = haptics,
                 onAction = onAction,
-                onRequestAdaptiveStageAppearanceLivePreview = { appearance ->
-                    onAction(LauncherShellAction.OpenHome)
-                    adaptiveStageAppearanceLivePreview = appearance
-                },
             )
-            adaptiveStageAppearanceLivePreview?.let { appearance ->
-                AdaptiveStageAppearanceLivePreviewOverlay(
-                    appearance = appearance,
-                    onDismiss = {
-                        adaptiveStageAppearanceLivePreview = null
-                        onAction(LauncherShellAction.OpenSettingsPage(SettingsPage.ADAPTIVE_STAGE_APPEARANCE))
-                    },
-                )
-            }
             if (state.destination == ShellDestination.HOME && state.shouldShowSetupCard) {
                 PreviewSetupCard(
                     modifier =
@@ -411,9 +395,15 @@ private fun LauncherDestination(
     onAdaptiveStageContextChanged: (AdaptiveStageInteractionContext) -> Unit,
     haptics: LauncherHaptics,
     onAction: (LauncherShellAction) -> Unit,
-    onRequestAdaptiveStageAppearanceLivePreview: (AdaptiveStageAppearanceSettings) -> Unit,
 ) {
     val settingsPageActionRouter = rememberSettingsPageActionRouter(onAction)
+    // Ephemeral, not part of durable LauncherShellState -- it's a settings-page-triggered
+    // overlay, never persisted or restored, so it doesn't need reducer/action-system plumbing.
+    // Owned here (not hoisted to LauncherShellContent) so its dismiss callback can route back to
+    // the Adaptive Stage Appearance settings page through settingsPageActionRouter -- that
+    // router's own initialSettingsPage state is itself scoped to this composable, unreachable
+    // from outside it.
+    var adaptiveStageAppearanceLivePreview by remember { mutableStateOf<AdaptiveStageAppearanceSettings?>(null) }
 
     when (state.destination) {
         ShellDestination.HOME ->
@@ -497,8 +487,22 @@ private fun LauncherDestination(
                 state = settingsState,
                 initialPage = settingsPageActionRouter.initialSettingsPage,
                 onAction = settingsPageActionRouter.onAction,
-                onRequestAdaptiveStageAppearanceLivePreview = onRequestAdaptiveStageAppearanceLivePreview,
+                onRequestAdaptiveStageAppearanceLivePreview = { appearance ->
+                    onAction(LauncherShellAction.OpenHome)
+                    adaptiveStageAppearanceLivePreview = appearance
+                },
             )
+    }
+    adaptiveStageAppearanceLivePreview?.let { appearance ->
+        AdaptiveStageAppearanceLivePreviewOverlay(
+            appearance = appearance,
+            onDismiss = {
+                adaptiveStageAppearanceLivePreview = null
+                settingsPageActionRouter.onAction(
+                    LauncherShellAction.OpenSettingsPage(SettingsPage.ADAPTIVE_STAGE_APPEARANCE),
+                )
+            },
+        )
     }
 }
 

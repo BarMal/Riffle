@@ -128,7 +128,15 @@ private fun adaptiveStageLivePreviewState(appearance: AdaptiveStageAppearanceSet
                     notifications = notifications,
                 ),
             ),
-        launcherSettings = LauncherSettings(cards = CardsSettings(adaptiveStageAppearance = appearance)),
+        // Both fields, not just adaptiveStageAppearance: AdaptiveStageAppStageSurface reads
+        // unfoldedAppearance instead on a wide/foldable/tablet-sized window (see its
+        // useUnfoldedAppearance branch), which this overlay doesn't otherwise account for -- so
+        // previewing on such a window without this would silently show the *other*, unedited
+        // appearance rather than the one actually being tuned.
+        launcherSettings =
+            LauncherSettings(
+                cards = CardsSettings(adaptiveStageAppearance = appearance, unfoldedAppearance = appearance),
+            ),
     )
 }
 
