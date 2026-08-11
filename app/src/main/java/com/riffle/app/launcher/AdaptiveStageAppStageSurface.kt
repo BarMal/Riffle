@@ -2457,7 +2457,7 @@ private fun adaptiveStageMessageAvatarColor(seed: String): Color {
     return Color.hsv(hue, 0.46f, 0.72f)
 }
 
-private const val ADAPTIVE_STAGE_CARD_VISIBLE_MESSAGE_COUNT = 2
+private const val ADAPTIVE_STAGE_CARD_VISIBLE_MESSAGE_COUNT = 3
 
 @Composable
 internal fun AdaptiveStageContextShelf(
