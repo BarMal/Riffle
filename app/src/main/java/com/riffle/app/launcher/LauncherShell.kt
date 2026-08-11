@@ -26,6 +26,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -52,6 +53,7 @@ import com.riffle.core.domain.launcher.home.DockEditRejectionReason
 import com.riffle.core.domain.launcher.home.LauncherViewModeAvailability
 import com.riffle.core.domain.launcher.home.WallpaperSource
 import com.riffle.core.domain.launcher.search.LauncherSearchResult
+import com.riffle.core.domain.launcher.settings.AdaptiveStageAppearanceSettings
 import kotlinx.coroutines.delay
 
 @Composable
@@ -396,6 +398,13 @@ private fun LauncherDestination(
     onAction: (LauncherShellAction) -> Unit,
 ) {
     val settingsPageActionRouter = rememberSettingsPageActionRouter(onAction)
+    // Ephemeral, not part of durable LauncherShellState -- it's a settings-page-triggered
+    // overlay, never persisted or restored, so it doesn't need reducer/action-system plumbing.
+    // Owned here (not hoisted to LauncherShellContent) so its dismiss callback can route back to
+    // the Adaptive Stage Appearance settings page through settingsPageActionRouter -- that
+    // router's own initialSettingsPage state is itself scoped to this composable, unreachable
+    // from outside it.
+    var adaptiveStageAppearanceLivePreview by remember { mutableStateOf<AdaptiveStageAppearanceSettings?>(null) }
 
     when (state.destination) {
         ShellDestination.HOME ->
@@ -479,7 +488,22 @@ private fun LauncherDestination(
                 state = settingsState,
                 initialPage = settingsPageActionRouter.initialSettingsPage,
                 onAction = settingsPageActionRouter.onAction,
+                onRequestAdaptiveStageAppearanceLivePreview = { appearance ->
+                    onAction(LauncherShellAction.OpenHome)
+                    adaptiveStageAppearanceLivePreview = appearance
+                },
             )
+    }
+    adaptiveStageAppearanceLivePreview?.let { appearance ->
+        AdaptiveStageAppearanceLivePreviewOverlay(
+            appearance = appearance,
+            onDismiss = {
+                adaptiveStageAppearanceLivePreview = null
+                settingsPageActionRouter.onAction(
+                    LauncherShellAction.OpenSettingsPage(SettingsPage.ADAPTIVE_STAGE_APPEARANCE),
+                )
+            },
+        )
     }
 }
 

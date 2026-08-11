@@ -28,12 +28,14 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.riffle.core.domain.launcher.settings.AdaptiveStageAppearanceSettings
 
 @Composable
 fun SettingsSurface(
     state: SettingsSurfaceState,
     initialPage: SettingsPage = SettingsPage.MAIN,
     onAction: (LauncherShellAction) -> Unit,
+    onRequestAdaptiveStageAppearanceLivePreview: (AdaptiveStageAppearanceSettings) -> Unit = {},
 ) {
     // Keep the active page and its per-page scroll position through activity recreation,
     // while this settings session remains open. Leaving Settings removes this state.
@@ -85,6 +87,7 @@ fun SettingsSurface(
                 page = selectedPage.value,
                 onPageSelected = { page -> selectedPage.value = page },
                 onAction = onAction,
+                onRequestAdaptiveStageAppearanceLivePreview = onRequestAdaptiveStageAppearanceLivePreview,
             )
         }
     }
