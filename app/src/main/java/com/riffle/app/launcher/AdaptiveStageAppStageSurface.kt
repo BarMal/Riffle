@@ -3105,5 +3105,5 @@ private fun NotificationStageAction.label(): String =
         NotificationStageAction.Dismiss -> "Dismiss"
         is NotificationStageAction.MediaControl ->
             command.name.lowercase().replaceFirstChar { character -> character.titlecase() }
-        is NotificationStageAction.ProviderAction -> "Action"
+        is NotificationStageAction.ProviderAction -> title
     }

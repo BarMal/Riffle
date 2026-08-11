@@ -8,6 +8,7 @@ sealed interface NotificationStageAction {
 
     data class ProviderAction(
         val id: String,
+        val title: String,
         val replyText: String? = null,
     ) : NotificationStageAction {
         init {

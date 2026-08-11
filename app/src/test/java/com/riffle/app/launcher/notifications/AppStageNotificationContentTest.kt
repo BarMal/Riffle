@@ -88,6 +88,31 @@ class AppStageNotificationContentTest {
     }
 
     @Test
+    fun `explodes a multi-message conversation into one card per message`() {
+        val messages =
+            listOf(
+                LauncherNotificationMessage(sender = "Alex", text = "On my way", timestampEpochMillis = 5),
+                LauncherNotificationMessage(sender = "Alex", text = "Traffic is bad", timestampEpochMillis = 10),
+                LauncherNotificationMessage(sender = "Alex", text = "Running 10 late", timestampEpochMillis = 15),
+            )
+        val conversation = notification(key = "conversation", postedAt = 1).copy(messages = messages)
+
+        val cards =
+            appStageNotificationCards(
+                notifications = listOf(conversation),
+                notificationAccessStatus = NotificationAccessStatus.GRANTED,
+                profileContentVisibility = mapOf(AppProfile.personal().id to AppProfileContentVisibility.VISIBLE),
+            )
+
+        assertEquals(3, cards.size)
+        assertEquals(listOf("Running 10 late", "Traffic is bad", "On my way"), cards.map { card -> card.text })
+        assertTrue(cards.all { card -> card.title == "Alex" })
+        assertTrue(cards.all { card -> card.notificationKey == LauncherNotificationKey("conversation") })
+        assertTrue(cards.all { card -> card.supportedActions.isEmpty() })
+        assertEquals(3, cards.map { card -> card.content.id }.distinct().size)
+    }
+
+    @Test
     fun `redacts per-message history alongside title and text`() {
         val messages =
             listOf(LauncherNotificationMessage(sender = "Alex", text = "On my way", timestampEpochMillis = 5))
