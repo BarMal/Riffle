@@ -104,6 +104,7 @@ import com.riffle.core.domain.launcher.settings.MIN_ADAPTIVE_STAGE_TRANSITION_DU
 import com.riffle.core.domain.launcher.settings.MIN_ADAPTIVE_STAGE_TRAVEL_INTENSITY_PERCENT
 import com.riffle.core.domain.launcher.settings.MIN_ADAPTIVE_STAGE_VERTICAL_SPACING_DP
 import com.riffle.core.domain.launcher.settings.MIN_ADAPTIVE_STAGE_VISIBLE_DEPTH
+import com.riffle.core.domain.launcher.settings.ThreadMessageOrder
 
 private typealias AdaptiveStageAppearanceUpdate = ((AdaptiveStageAppearanceSettings) -> AdaptiveStageAppearanceSettings) -> Unit
 
@@ -336,6 +337,16 @@ private fun AdaptiveStageLayoutTabContent(
         SettingsListRow(
             title = "About Split",
             subtitle = "Split shows card details in a larger area above the stack",
+        )
+    }
+    SettingsSection(title = "Threads") {
+        AdaptiveStageEnumChoices(
+            title = "Message order",
+            values = ThreadMessageOrder.entries,
+            selected = state.settings.cards.threadMessageOrder,
+            label = ThreadMessageOrder::label,
+            testTag = { order -> "thread-message-order-${order.name}" },
+            onSelected = { order -> onAction(LauncherShellAction.SelectThreadMessageOrder(order)) },
         )
     }
 }
@@ -925,4 +936,10 @@ private fun AdaptiveStageRailSide.label(): String =
         AdaptiveStageRailSide.TRAILING -> "Trailing edge"
         AdaptiveStageRailSide.TOP -> "Top edge"
         AdaptiveStageRailSide.BOTTOM -> "Bottom edge"
+    }
+
+private fun ThreadMessageOrder.label(): String =
+    when (this) {
+        ThreadMessageOrder.CHRONOLOGICAL -> "Oldest first"
+        ThreadMessageOrder.RECENT_FIRST -> "Newest first"
     }

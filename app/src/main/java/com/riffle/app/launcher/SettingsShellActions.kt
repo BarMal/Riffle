@@ -92,6 +92,7 @@ internal fun LauncherShellAction.launcherSettingsActionRoute(): LauncherSettings
         is LauncherShellAction.UpdateAdaptiveStageAppearance,
         is LauncherShellAction.UpdateUnfoldedAdaptiveStageAppearance,
         is LauncherShellAction.SelectAdaptiveStagePaneArrangement,
+        is LauncherShellAction.SelectThreadMessageOrder,
         is LauncherShellAction.SelectAdaptiveStageRailSide,
         is LauncherShellAction.SelectOverlayDockEnabled,
         is LauncherShellAction.SelectOverlayDockEdge,

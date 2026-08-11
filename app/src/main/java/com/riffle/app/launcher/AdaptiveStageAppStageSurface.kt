@@ -2,6 +2,8 @@
 
 package com.riffle.app.launcher
 
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
@@ -21,6 +23,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
@@ -107,11 +110,13 @@ import com.riffle.core.domain.launcher.cards.mergedContentByRecency
 import com.riffle.core.domain.launcher.cards.variantFor
 import com.riffle.core.domain.launcher.cards.visibleStaticElements
 import com.riffle.core.domain.launcher.home.LauncherViewMode
+import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.notifications.NotificationHideRule
 import com.riffle.core.domain.launcher.settings.AdaptiveStageAppearanceSettings
 import com.riffle.core.domain.launcher.settings.AdaptiveStageCardStackResolution
 import com.riffle.core.domain.launcher.settings.AdaptiveStageViewportDp
+import com.riffle.core.domain.launcher.settings.ThreadMessageOrder
 import com.riffle.core.domain.launcher.settings.resolveAdaptiveStageRailCardStack
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
@@ -1814,6 +1819,14 @@ private fun AdaptiveStageNotificationStack(
     onAction: (LauncherShellAction) -> Unit,
     appIconLoader: AppIconLoader,
     modifier: Modifier,
+    /**
+     * True for the real, top-level stack: a card that's one message among several sharing the
+     * same conversation hides its own Dismiss/Reply/etc. in favor of a "View thread" action that
+     * groups them. False for the thread view itself (an [AdaptiveStageNotificationStack] recursively
+     * composed over just one conversation's own cards) -- there every card's actions show normally,
+     * and there's nothing further to group into.
+     */
+    groupActionsByThread: Boolean = true,
 ) {
     val cardAppearance =
         if (useUnfoldedAppearance) {
@@ -1860,11 +1873,24 @@ private fun AdaptiveStageNotificationStack(
     val detailFocusRequester = remember { FocusRequester() }
     var restoreDetailFocusForCardId by remember { mutableStateOf<LauncherCardId?>(null) }
 
+    // Ephemeral, not part of durable LauncherShellState -- browsing intent only, never persisted
+    // or restored, the same treatment as the settings-preview overlay's own local state.
+    var threadFocusNotificationKey by remember(stage.id) { mutableStateOf<LauncherNotificationKey?>(null) }
+    val threadCards =
+        remember(cards, threadFocusNotificationKey) {
+            threadFocusNotificationKey?.let { key -> cards.filter { card -> card.notificationKey == key } }
+                .orEmpty()
+        }
+    // A conversation's cards can shrink to one (or zero) as notifications update -- close the
+    // thread view rather than leaving it open over a group that no longer justifies grouping.
+    val isThreadVisible = threadCards.size > 1
+
     LaunchedEffect(activeCard.content.id) {
         onFocusedCardChanged(activeCard.content.id)
     }
     LaunchedEffect(cardIds) {
         if (restoreDetailFocusForCardId !in cardIds) restoreDetailFocusForCardId = null
+        if (threadCards.size <= 1) threadFocusNotificationKey = null
     }
 
     fun navigate(direction: CardStackNavigationDirection): Boolean {
@@ -1908,7 +1934,28 @@ private fun AdaptiveStageNotificationStack(
         // Siblings stay composed (and thus discoverable/re-focusable) but dimmed while a card's
         // detail is expanded, instead of being torn down entirely.
         val stackDimFactor = if (isDetailVisible) ADAPTIVE_STAGE_SIBLING_DIM_FACTOR else 1f
-        Box(modifier = Modifier.fillMaxSize()) {
+        // The whole stage -- stack, shelf, position indicator -- recedes as one unit behind the
+        // thread view rather than just dimming per-card, so it reads as pulled back, not merely
+        // faded: the same idea as [stackDimFactor] one level up, applied with a real scale instead
+        // of alpha alone.
+        val threadRecedeScale by
+            animateFloatAsState(
+                targetValue = if (isThreadVisible) ADAPTIVE_STAGE_THREAD_RECEDE_SCALE else 1f,
+                label = "adaptive-stage-thread-recede-scale",
+            )
+        val threadRecedeAlpha by
+            animateFloatAsState(
+                targetValue = if (isThreadVisible) ADAPTIVE_STAGE_THREAD_RECEDE_ALPHA else 1f,
+                label = "adaptive-stage-thread-recede-alpha",
+            )
+        Box(
+            modifier =
+                Modifier.fillMaxSize().graphicsLayer {
+                    scaleX = threadRecedeScale
+                    scaleY = threadRecedeScale
+                    alpha = threadRecedeAlpha
+                },
+        ) {
             Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(modifier = Modifier.fillMaxWidth().weight(1f)) {
                     Box(
@@ -2032,6 +2079,9 @@ private fun AdaptiveStageNotificationStack(
                     }
                 }
                 AdaptiveStageCardPositionIndicator(position = activeCardIndex + 1, count = cards.size)
+                val isActiveCardThreaded =
+                    groupActionsByThread &&
+                        cards.count { card -> card.notificationKey == activeCard.notificationKey } > 1
                 AdaptiveStageContextShelf(
                     card = activeCard,
                     onAction = onAction,
@@ -2039,6 +2089,13 @@ private fun AdaptiveStageNotificationStack(
                     detailFocusRequester = detailFocusRequester,
                     restoreDetailFocus = restoreDetailFocusForCardId == activeCard.content.id,
                     onDetailFocusRestored = { restoreDetailFocusForCardId = null },
+                    showNotificationActions = !isActiveCardThreaded,
+                    onViewThread =
+                        if (isActiveCardThreaded) {
+                            { threadFocusNotificationKey = activeCard.notificationKey }
+                        } else {
+                            null
+                        },
                 )
                 AdaptiveStageDetailRecoveryMessage(detailState.sourceRemovalMessage)
             }
@@ -2055,12 +2112,106 @@ private fun AdaptiveStageNotificationStack(
                         )
                     }
             }
+            if (isThreadVisible) {
+                AdaptiveStageThreadSurface(
+                    stage = stage,
+                    state = state,
+                    threadCards = threadCards,
+                    showDetailInline = showDetailInline,
+                    useUnfoldedAppearance = useUnfoldedAppearance,
+                    onAction = onAction,
+                    appIconLoader = appIconLoader,
+                    onClose = { threadFocusNotificationKey = null },
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
         }
     }
 }
 
 internal const val ADAPTIVE_STAGE_SIBLING_DIM_FACTOR = 0.18f
 internal const val ADAPTIVE_STAGE_BACKDROP_SCRIM_ALPHA = 0.16f
+internal const val ADAPTIVE_STAGE_THREAD_RECEDE_SCALE = 0.92f
+internal const val ADAPTIVE_STAGE_THREAD_RECEDE_ALPHA = 0.55f
+
+/**
+ * A conversation's message cards, pulled forward as their own small stack in front of the main
+ * one (which recedes behind it via [ADAPTIVE_STAGE_THREAD_RECEDE_SCALE]/[ADAPTIVE_STAGE_THREAD_RECEDE_ALPHA]),
+ * instead of a full-bleed takeover. Reuses [AdaptiveStageNotificationStack] itself rather than a
+ * second hand-rolled rendering path: a synthetic [AppStage] scoped to just [threadCards] gets the
+ * exact same drag/fling/settle/focus/detail/artwork machinery the real per-app stack uses, with
+ * its own independent [CardStackController] and detail state (see [CardStackController]'s doc --
+ * two instances sharing a key string never collide, each is scoped to its own local `remember`).
+ */
+@Composable
+private fun AdaptiveStageThreadSurface(
+    stage: AppStage,
+    state: LauncherShellState,
+    threadCards: List<AppStageNotificationCard>,
+    showDetailInline: Boolean,
+    useUnfoldedAppearance: Boolean,
+    onAction: (LauncherShellAction) -> Unit,
+    appIconLoader: AppIconLoader,
+    onClose: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    BackHandler(onBack = onClose)
+    val threadKey = threadCards.first().notificationKey
+    val orderedCards =
+        remember(threadCards, state.launcherSettings.cards.threadMessageOrder) {
+            when (state.launcherSettings.cards.threadMessageOrder) {
+                ThreadMessageOrder.CHRONOLOGICAL ->
+                    threadCards.sortedBy { card -> card.content.meaningfulActivityAtEpochMillis }
+                ThreadMessageOrder.RECENT_FIRST ->
+                    threadCards.sortedByDescending { card -> card.content.meaningfulActivityAtEpochMillis }
+            }
+        }
+    val threadStage = remember(stage, orderedCards) { stage.copy(content = orderedCards.map { card -> card.content }) }
+    var threadFocusedCardId by remember(threadKey) { mutableStateOf<LauncherCardId?>(null) }
+    val threadDetailState =
+        rememberAdaptiveStageCardDetailState(
+            scopeKey = "thread:${threadKey.value}",
+            motion = state.launcherSettings.cards.adaptiveStageAppearance.motion,
+            globalReducedMotion = state.launcherSettings.motion.reducedMotion,
+        )
+
+    Box(modifier = modifier) {
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            color = MaterialTheme.colorScheme.scrim.copy(alpha = ADAPTIVE_STAGE_BACKDROP_SCRIM_ALPHA),
+        ) {}
+        Column(modifier = Modifier.fillMaxSize()) {
+            Row(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .windowInsetsPadding(WindowInsets.safeDrawing)
+                        .padding(horizontal = 16.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(text = "Thread", style = MaterialTheme.typography.titleMedium)
+                TextButton(onClick = onClose) {
+                    SettingsButtonText(text = "Done")
+                }
+            }
+            AdaptiveStageNotificationStack(
+                stage = threadStage,
+                state = state,
+                notificationCards = orderedCards,
+                detailState = threadDetailState,
+                focusedCardId = threadFocusedCardId,
+                onFocusedCardChanged = { cardId -> threadFocusedCardId = cardId },
+                showDetailInline = showDetailInline,
+                useUnfoldedAppearance = useUnfoldedAppearance,
+                onAction = onAction,
+                appIconLoader = appIconLoader,
+                groupActionsByThread = false,
+                modifier = Modifier.weight(1f).fillMaxWidth(),
+            )
+        }
+    }
+}
 
 /**
  * Shared by every notification card stack's own [CardStackSettleRequest.distanceThresholdPx] and,
@@ -2467,6 +2618,14 @@ internal fun AdaptiveStageContextShelf(
     detailFocusRequester: FocusRequester? = null,
     restoreDetailFocus: Boolean = false,
     onDetailFocusRestored: (() -> Unit)? = null,
+    /**
+     * False while browsing a card that's one message among several sharing the same conversation
+     * -- Dismiss/Reply/etc. all act on the whole conversation, not the one message currently
+     * focused, so those stay hidden here in favor of [onViewThread]'s grouped view instead of
+     * risking a surprising, conversation-wide action from what reads as a single message card.
+     */
+    showNotificationActions: Boolean = true,
+    onViewThread: (() -> Unit)? = null,
 ) {
     var detailControlLaidOut by remember { mutableStateOf(false) }
     RestoreFocusAfterLayout(
@@ -2478,13 +2637,18 @@ internal fun AdaptiveStageContextShelf(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        card.supportedActions.sortedBy { action -> action.label() }.forEach { action ->
-            AdaptiveStageContextActionButton(
-                label = action.label(),
-                onClick = {
-                    onAction(LauncherShellAction.PerformNotificationStageAction(card.notificationKey, action))
-                },
-            )
+        if (showNotificationActions) {
+            card.supportedActions.sortedBy { action -> action.label() }.forEach { action ->
+                AdaptiveStageContextActionButton(
+                    label = action.label(),
+                    onClick = {
+                        onAction(LauncherShellAction.PerformNotificationStageAction(card.notificationKey, action))
+                    },
+                )
+            }
+        }
+        onViewThread?.let { viewThread ->
+            AdaptiveStageContextActionButton(label = "View thread", onClick = viewThread)
         }
         onDetailRequested?.let { requestDetail ->
             AdaptiveStageContextActionButton(

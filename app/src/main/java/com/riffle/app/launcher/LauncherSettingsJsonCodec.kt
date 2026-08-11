@@ -126,6 +126,7 @@ private fun encodeCardsSettings(settings: CardsSettings): JSONObject =
         .put("timeScapeTemplateId", settings.adaptiveStageTemplateId.value)
         .put("timeScapeRailSide", settings.adaptiveStageRailSide?.name)
         .put("timeScapePaneArrangement", settings.adaptiveStagePaneArrangement.name)
+        .put("threadMessageOrder", settings.threadMessageOrder.name)
 
 private fun encodeStagePreferences(entry: Map.Entry<HomeLayoutKey, AppStagePreferences>): JSONObject =
     JSONObject()
@@ -166,6 +167,7 @@ private fun JSONObject.toCardsSettings(defaults: CardsSettings): CardsSettings {
                 ?: defaults.adaptiveStageTemplateId,
         adaptiveStageRailSide = enumOrNull<AdaptiveStageRailSide>("timeScapeRailSide") ?: defaults.adaptiveStageRailSide,
         adaptiveStagePaneArrangement = enumOrDefault("timeScapePaneArrangement", defaults.adaptiveStagePaneArrangement),
+        threadMessageOrder = enumOrDefault("threadMessageOrder", defaults.threadMessageOrder),
     )
 }
 

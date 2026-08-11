@@ -116,6 +116,18 @@ internal class LauncherSettingsStateReducer(
                         launcherSettingsRepository = launcherSettingsRepository,
                     )
 
+                is LauncherShellAction.SelectThreadMessageOrder ->
+                    state.withLauncherSettings(
+                        settings =
+                            state.launcherSettings.copy(
+                                cards =
+                                    state.launcherSettings.cards.copy(
+                                        threadMessageOrder = action.order,
+                                    ),
+                            ),
+                        launcherSettingsRepository = launcherSettingsRepository,
+                    )
+
                 is LauncherShellAction.SelectAdaptiveStageRailSide ->
                     state.withLauncherSettings(
                         settings =

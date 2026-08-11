@@ -15,6 +15,7 @@ import com.riffle.core.domain.launcher.settings.AppDrawerPresentation
 import com.riffle.core.domain.launcher.settings.OverlayDockEdge
 import com.riffle.core.domain.launcher.settings.OverlayDockExpandedOrientation
 import com.riffle.core.domain.launcher.settings.OverlayDockItemMoveDirection
+import com.riffle.core.domain.launcher.settings.ThreadMessageOrder
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -34,6 +35,7 @@ class LauncherSettingsActionRouteTest {
                 LauncherShellAction.UpdateAdaptiveStageAppearance(AdaptiveStageAppearanceSettings.modern()),
                 LauncherShellAction.UpdateUnfoldedAdaptiveStageAppearance(AdaptiveStageAppearanceSettings.unfolded()),
                 LauncherShellAction.SelectAdaptiveStagePaneArrangement(AdaptiveStagePaneArrangement.SPLIT),
+                LauncherShellAction.SelectThreadMessageOrder(ThreadMessageOrder.RECENT_FIRST),
                 LauncherShellAction.SelectAdaptiveStageRailSide(AdaptiveStageRailSide.TOP),
             )
 
