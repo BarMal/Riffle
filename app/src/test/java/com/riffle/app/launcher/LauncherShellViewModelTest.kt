@@ -220,6 +220,27 @@ class LauncherShellViewModelTest {
     }
 
     @Test
+    fun seedsNotificationCountsFromTheRepositoryOnConstructionWithoutAnExplicitRefresh() {
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                platformDependencies =
+                    LauncherShellPlatformDependencies(
+                        notificationRepository =
+                            FakeNotificationRepository(
+                                notifications =
+                                    listOf(notification(key = "camera-1", packageName = "com.riffle.camera")),
+                            ),
+                    ),
+            )
+
+        // No refreshNotifications() call -- the repository's persisted snapshot must already be
+        // reflected in the very first state, the same way loadHomeLayoutSet()/loadLauncherSettings()
+        // already seed synchronously, so a relaunch doesn't paint a blank Cards stage first.
+        assertEquals(1, viewModel.state.value.notificationGroupsByApp.single().count)
+    }
+
+    @Test
     fun refreshesNotificationCounts() {
         val repository = FakeNotificationRepository()
         val viewModel =

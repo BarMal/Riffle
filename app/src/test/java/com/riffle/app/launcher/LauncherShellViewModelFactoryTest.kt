@@ -18,7 +18,7 @@ import org.junit.Test
 
 class LauncherShellViewModelFactoryTest {
     @Test
-    fun factoryCreatedViewModelDoesNotLoadPlatformRepositoriesDuringConstruction() {
+    fun factoryCreatedViewModelDoesNotLoadMostPlatformRepositoriesDuringConstruction() {
         val installedAppRepository = CountingInstalledAppRepository()
         val appVisibilityRepository = CountingAppVisibilityRepository()
         val notificationRepository = CountingNotificationRepository()
@@ -41,8 +41,11 @@ class LauncherShellViewModelFactoryTest {
 
         assertEquals(0, installedAppRepository.installedAppsReadCount)
         assertEquals(0, appVisibilityRepository.hiddenAppsReadCount)
-        assertEquals(0, notificationRepository.activeNotificationsReadCount)
         assertEquals(0, widgetProviderRepository.installedWidgetProvidersReadCount)
+        // Notifications are a deliberate exception to this rule (see createInitialState's own
+        // doc): their staleness is directly, visibly user-facing on the very first frame, so the
+        // persisted snapshot is read synchronously at construction like home layout/settings are.
+        assertEquals(1, notificationRepository.activeNotificationsReadCount)
     }
 
     @Test
