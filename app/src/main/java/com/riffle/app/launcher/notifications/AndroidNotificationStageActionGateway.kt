@@ -71,7 +71,14 @@ object AndroidNotificationStageActionGateway : NotificationStageActionGateway, N
         val target = targets[key] ?: return emptySet()
         return buildSet {
             if (target.contentIntent != null) add(NotificationStageAction.Open)
-            target.providerActions.keys.forEach { id -> add(NotificationStageAction.ProviderAction(id)) }
+            target.providerActions.forEach { (id, providerTarget) ->
+                add(
+                    NotificationStageAction.ProviderAction(
+                        id = id,
+                        title = providerTarget.action.title?.toString()?.takeIf(String::isNotBlank) ?: "Action",
+                    ),
+                )
+            }
             if (isMedia) {
                 target.mediaController
                     ?.playbackState

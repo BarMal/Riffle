@@ -773,7 +773,7 @@ class AdaptiveStageCardSurfaceTest {
                 supportedActions =
                     setOf(
                         NotificationStageAction.Open,
-                        NotificationStageAction.ProviderAction("reply"),
+                        NotificationStageAction.ProviderAction("reply", title = "Reply"),
                         NotificationStageAction.MediaControl(MediaCommand.PLAY),
                         NotificationStageAction.Dismiss,
                     ),
@@ -798,7 +798,7 @@ class AdaptiveStageCardSurfaceTest {
             }
         }
 
-        composeRule.onNodeWithText("Action").performClick()
+        composeRule.onNodeWithText("Reply").performClick()
         composeRule.onNodeWithText("Dismiss").performClick()
         composeRule.onNodeWithText("Open").performClick()
         composeRule.onNodeWithText("Play").performClick()
@@ -808,7 +808,7 @@ class AdaptiveStageCardSurfaceTest {
                 listOf(
                     LauncherShellAction.PerformNotificationStageAction(
                         key,
-                        NotificationStageAction.ProviderAction("reply"),
+                        NotificationStageAction.ProviderAction("reply", title = "Reply"),
                     ),
                     LauncherShellAction.PerformNotificationStageAction(key, NotificationStageAction.Dismiss),
                     LauncherShellAction.PerformNotificationStageAction(key, NotificationStageAction.Open),
