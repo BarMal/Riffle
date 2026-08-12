@@ -120,11 +120,16 @@ class CardStackController {
      * Converts a completed vertical drag or fling into one focus operation. Dragging up moves
      * chronologically forward; dragging down moves back. Insufficient movement is a no-op.
      *
-     * A fling (velocity past [CardStackSettleRequest.flingVelocityThresholdPxPerSecond]) can skip
-     * more than one card: how many is the fling's velocity expressed as a multiple of that same
-     * threshold, e.g. twice the threshold velocity skips two cards. A plain drag-release always
-     * moves exactly one card regardless of distance -- only a fling's velocity, never drag
-     * distance, drives multi-card skips.
+     * Either a fling (velocity past [CardStackSettleRequest.flingVelocityThresholdPxPerSecond])
+     * or a plain drag can skip more than one card: how many is that motion -- the fling's
+     * velocity, or the drag's distance -- expressed as a multiple of its own threshold
+     * ([CardStackSettleRequest.flingVelocityThresholdPxPerSecond] or
+     * [CardStackSettleRequest.distanceThresholdPx] respectively), e.g. twice the distance
+     * threshold's worth of drag skips two cards just as twice the velocity threshold's worth of
+     * fling does. This mirrors the live preview a caller renders while the finger is still down
+     * (see e.g. `adaptiveStageLiveActiveCardIndex`'s doc) -- a drag that visibly previews several
+     * cards flipping past commits that same distance on release instead of springing back to a
+     * single-step move.
      *
      * The focus captured by [CardStackSettleRequest] is checked before navigation so a delayed
      * result cannot overwrite a focus selected by content reconciliation or another input source.
@@ -150,7 +155,9 @@ class CardStackController {
                     .toInt()
                     .coerceAtLeast(1)
             } else {
-                1
+                (abs(request.verticalDragPx) / request.distanceThresholdPx)
+                    .toInt()
+                    .coerceAtLeast(1)
             }
         return when {
             state.focusedCardId != request.focusedCardId ->

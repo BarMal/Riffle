@@ -22,24 +22,24 @@ class AdaptiveStageLiveActiveCardIndexTest {
     }
 
     @Test
-    fun doesNotPreviewPastTheImmediateNeighborEvenForAMuchLongerDrag() {
-        // A non-fling release only ever lands on the immediate neighbor (or not at all) --
-        // CardStackController.settle skips more than one card solely on a genuine fling, decided
-        // by velocity at release. A drag several multiples of the threshold long must not preview
-        // further than that one-card reach, or release visibly springs most of the way back to
-        // where it started once the (unchanged) committed index reasserts itself.
+    fun previewsMultipleCardsAwayForADragSeveralThresholdsLong() {
+        // CardStackController.settle now skips as many cards as the *release* motion -- fling
+        // velocity or plain drag distance -- reaches a further multiple of its own threshold (see
+        // its own doc), so this live preview tracks a long drag by that same multiple instead of
+        // capping at the immediate neighbor -- otherwise release would visibly jump further than
+        // the drag had shown.
         val farDrag =
             adaptiveStageLiveActiveCardIndex(
-                activeCardIndex = 2,
-                cardCount = 5,
+                activeCardIndex = 5,
+                cardCount = 11,
                 liveDragPx = -ADAPTIVE_STAGE_CARD_STACK_SETTLE_DISTANCE_THRESHOLD_PX * 4f,
             )
 
-        assertEquals(3f, farDrag)
+        assertEquals(9f, farDrag)
     }
 
     @Test
-    fun stillClampsToTheStackBoundaryWhenTheNeighborCapWouldOverflowIt() {
+    fun stillClampsToTheStackBoundaryForADragThatWouldOverflowIt() {
         val atTheLastCard =
             adaptiveStageLiveActiveCardIndex(
                 activeCardIndex = 4,
@@ -51,14 +51,14 @@ class AdaptiveStageLiveActiveCardIndexTest {
     }
 
     @Test
-    fun dragInTheOppositeDirectionMovesTowardThePreviousCard() {
+    fun dragInTheOppositeDirectionMovesTowardThePreviousCards() {
         val towardPrevious =
             adaptiveStageLiveActiveCardIndex(
-                activeCardIndex = 2,
-                cardCount = 5,
+                activeCardIndex = 5,
+                cardCount = 11,
                 liveDragPx = ADAPTIVE_STAGE_CARD_STACK_SETTLE_DISTANCE_THRESHOLD_PX * 3f,
             )
 
-        assertEquals(1f, towardPrevious)
+        assertEquals(2f, towardPrevious)
     }
 }

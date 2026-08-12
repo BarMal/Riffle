@@ -1864,6 +1864,11 @@ private fun AdaptiveStageNotificationStack(
     var settleTransitionId by rememberSaveable(stage.id.profileId.value, stage.id.packageName.value) {
         mutableIntStateOf(0)
     }
+    // How many cards the most recent settle-triggered focus change moved by -- see
+    // CardStackInteraction.settleStepCount's own doc for why this drives the settle animation's
+    // duration. Not worth persisting across process death (an in-flight settle animation doesn't
+    // survive that anyway), unlike settleTransitionId above.
+    var settleStepCount by remember(stage.id) { mutableIntStateOf(1) }
     val reconciledFocusedCardId =
         rememberReconciledFocusedCardId(controller, stackKey, cardIds, focusedCardId, onFocusedCardChanged)
     val focusState = CardStackFocusState(stackKey, reconciledFocusedCardId)
@@ -1984,6 +1989,7 @@ private fun AdaptiveStageNotificationStack(
                                 CardStackInteraction(
                                     focusedItemKey = activeCard.content.id,
                                     settleTransitionId = settleTransitionId,
+                                    settleStepCount = settleStepCount,
                                     onFocusRequest = { entry ->
                                         controller
                                             .jumpTo(focusState, cardIds, cardIds[entry.cardIndex])
@@ -1994,6 +2000,7 @@ private fun AdaptiveStageNotificationStack(
                                             }
                                     },
                                     onSettle = { drag, velocity ->
+                                        val previousIndex = activeCardIndex
                                         controller
                                             .settle(
                                                 focusState,
@@ -2010,6 +2017,11 @@ private fun AdaptiveStageNotificationStack(
                                                 if (result is CardStackFocusResult.Applied) {
                                                     if (result.state.focusedCardId != focusState.focusedCardId) {
                                                         settleTransitionId++
+                                                        val newIndex = cardIds.indexOf(result.state.focusedCardId)
+                                                        if (newIndex >= 0) {
+                                                            settleStepCount =
+                                                                abs(newIndex - previousIndex).coerceAtLeast(1)
+                                                        }
                                                     }
                                                     onFocusedCardChanged(result.state.focusedCardId)
                                                 }
@@ -2224,18 +2236,15 @@ internal const val ADAPTIVE_STAGE_CARD_STACK_SETTLE_DISTANCE_THRESHOLD_PX = 64f
 
 /**
  * Converts this frame's raw live-drag pixel delta into the fractional index [CardStack] renders
- * from, clamped to at most one card away from [activeCardIndex] in either direction.
+ * from, uncapped past [activeCardIndex] except by the stack's own bounds.
  *
- * [CardStackController.settle] only ever commits more than one card on a genuine fling (velocity
- * past its own threshold, decided once at release) -- a plain drag release always lands on the
- * immediate neighbor or not at all, "regardless of distance" (see its own doc). Without this cap,
- * a drag longer than a couple of [ADAPTIVE_STAGE_CARD_STACK_SETTLE_DISTANCE_THRESHOLD_PX]
- * multiples visually previewed several cards flipping past -- e.g. dragging the full height of a
- * short stack showed the last card fully focused -- while release still only ever committed that
- * same single step (or a boundary clamp), so the stack visibly sprang most of the way back to
- * where it started instead of landing where the drag had shown. Capping the live preview to what
- * a non-fling release can actually reach keeps the two consistent; a genuine hard fling still
- * continues past this cap once it settles, since that multi-card jump is real.
+ * [CardStackController.settle] commits more than one card whenever the *released* motion --
+ * fling velocity or plain drag distance -- reaches a further multiple of its own threshold (see
+ * its own doc), so this preview tracks the drag by exactly that same multiple while the finger is
+ * still down: dragging a couple of [ADAPTIVE_STAGE_CARD_STACK_SETTLE_DISTANCE_THRESHOLD_PX]
+ * multiples visually previews two cards flipping past, and releasing there commits that same
+ * two-card move rather than springing back to a single step. Only the stack's own boundary caps
+ * how far this can reach, matching the boundary clamp [CardStackController.settle] itself applies.
  */
 internal fun adaptiveStageLiveActiveCardIndex(
     activeCardIndex: Int,
@@ -2243,7 +2252,7 @@ internal fun adaptiveStageLiveActiveCardIndex(
     liveDragPx: Float?,
 ): Float =
     liveDragPx?.let { dragPx ->
-        val indexDelta = (dragPx / ADAPTIVE_STAGE_CARD_STACK_SETTLE_DISTANCE_THRESHOLD_PX).coerceIn(-1f, 1f)
+        val indexDelta = dragPx / ADAPTIVE_STAGE_CARD_STACK_SETTLE_DISTANCE_THRESHOLD_PX
         (activeCardIndex - indexDelta).coerceIn(0f, (cardCount - 1).toFloat())
     } ?: activeCardIndex.toFloat()
 
@@ -2290,6 +2299,8 @@ private fun AdaptiveStageAllNotificationsStack(
         remember { AdaptiveStageArtworkCache<ImageBitmap>(decode = ::decodeAdaptiveStageArtwork) }
     val stackKey = remember { CardStackKey("all-notifications") }
     var settleTransitionId by rememberSaveable { mutableIntStateOf(0) }
+    // See AdaptiveStageNotificationStack's identical settleStepCount for why this exists.
+    var settleStepCount by remember { mutableIntStateOf(1) }
     var focusedCardId by remember { mutableStateOf<LauncherCardId?>(null) }
     val reconciledFocusedCardId =
         rememberReconciledFocusedCardId(controller, stackKey, cardIds, focusedCardId) { id -> focusedCardId = id }
@@ -2370,6 +2381,7 @@ private fun AdaptiveStageAllNotificationsStack(
                             CardStackInteraction(
                                 focusedItemKey = activeCard.content.id,
                                 settleTransitionId = settleTransitionId,
+                                settleStepCount = settleStepCount,
                                 onFocusRequest = { entry ->
                                     controller
                                         .jumpTo(focusState, cardIds, cardIds[entry.cardIndex])
@@ -2380,6 +2392,7 @@ private fun AdaptiveStageAllNotificationsStack(
                                         }
                                 },
                                 onSettle = { drag, velocity ->
+                                    val previousIndex = activeCardIndex
                                     controller
                                         .settle(
                                             focusState,
@@ -2396,6 +2409,11 @@ private fun AdaptiveStageAllNotificationsStack(
                                             if (result is CardStackFocusResult.Applied) {
                                                 if (result.state.focusedCardId != focusState.focusedCardId) {
                                                     settleTransitionId++
+                                                    val newIndex = cardIds.indexOf(result.state.focusedCardId)
+                                                    if (newIndex >= 0) {
+                                                        settleStepCount =
+                                                            abs(newIndex - previousIndex).coerceAtLeast(1)
+                                                    }
                                                 }
                                                 focusedCardId = result.state.focusedCardId
                                             }
