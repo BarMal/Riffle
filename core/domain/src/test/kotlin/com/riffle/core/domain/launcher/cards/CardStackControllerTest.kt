@@ -201,9 +201,34 @@ class CardStackControllerTest {
     }
 
     @Test
-    fun aSlowDragReleaseNeverSkipsMultipleCardsRegardlessOfDistance() {
+    fun aSlowDragJustPastTheThresholdStillOnlyMovesOneCard() {
         val initial = controller.initialize(overview, listOf(a, b, c, d)).applied().state
 
+        val dragged =
+            controller.settle(
+                initial,
+                listOf(a, b, c, d),
+                CardStackSettleRequest(
+                    focusedCardId = a,
+                    verticalDragPx = -60f,
+                    verticalVelocityPxPerSecond = 0f,
+                    distanceThresholdPx = 48f,
+                    flingVelocityThresholdPxPerSecond = 1_000f,
+                ),
+            ).applied()
+
+        assertEquals(b, dragged.state.focusedCardId)
+    }
+
+    @Test
+    fun aSlowDragSeveralThresholdsLongSkipsThatManyCards() {
+        val initial = controller.initialize(overview, listOf(a, b, c, d)).applied().state
+
+        // -400px is just over eight times the 48px distance threshold, so it reaches as far as an
+        // 8-card skip would -- clamped to this 4-card stack's last card, exactly like a hard fling
+        // overshooting the stack does (see the overshoot test above). A sustained drag distance,
+        // not just a fling's release velocity, now drives multi-card skips -- matching the live
+        // preview a caller renders while the finger is still down.
         val dragged =
             controller.settle(
                 initial,
@@ -217,7 +242,8 @@ class CardStackControllerTest {
                 ),
             ).applied()
 
-        assertEquals(b, dragged.state.focusedCardId)
+        assertEquals(d, dragged.state.focusedCardId)
+        assertEquals(true, dragged.boundaryReached)
     }
 
     @Test

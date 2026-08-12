@@ -82,6 +82,17 @@ internal data class CardStackInteraction(
     val onExpand: (() -> Unit)? = null,
     /** Increments only when a gesture settles to a new focused card. */
     val settleTransitionId: Int = 0,
+    /**
+     * How many cards the settle that produced the current [settleTransitionId] moved by. A
+     * caller that lets a hard drag or fling skip several cards at once (see
+     * [com.riffle.core.domain.launcher.cards.CardStackController.settle]'s doc) sets this to that
+     * same step count so the settle animation itself travels for proportionally longer instead of
+     * always taking the same brief, fixed duration however far it's skipping -- without this, a
+     * multi-card skip committed near-instantly, reading as a pop rather than travel. Defaults to 1
+     * (today's only prior behavior) so every existing caller that doesn't know about this field is
+     * unaffected.
+     */
+    val settleStepCount: Int = 1,
     /** Requester owned by the currently focused rendered entry. */
     val keyboardFocusRequester: FocusRequester? = null,
     /**
@@ -338,6 +349,7 @@ private fun AnimatedCardStackEntry(
                 spec = spec,
                 motionMode = motionMode,
                 timing = if (hasEntered) timing else CardStackAnimationTiming.ENTER,
+                settleStepCount = interaction?.settleStepCount ?: 1,
             )
 
         // While this stack's own gesture is live, every property below snaps straight to its
@@ -468,9 +480,10 @@ internal fun cardStackAnimationSpec(
     spec: CardStackAnimationSpec,
     motionMode: CardStackMotionMode,
     timing: CardStackAnimationTiming,
+    settleStepCount: Int = 1,
 ): AnimationSpec<Float> {
     if (motionMode == CardStackMotionMode.SNAP) return snap()
-    val durationMillis = cardStackAnimationDuration(spec, timing)
+    val durationMillis = cardStackAnimationDuration(spec, timing, settleStepCount)
     return when (spec.easing) {
         CardStackAnimationEasing.STANDARD -> tween(durationMillis = durationMillis, easing = LinearOutSlowInEasing)
         CardStackAnimationEasing.EMPHASIZED -> tween(durationMillis = durationMillis, easing = FastOutSlowInEasing)
@@ -487,14 +500,32 @@ internal fun cardStackAnimationSpec(
 internal fun cardStackAnimationDuration(
     spec: CardStackAnimationSpec,
     timing: CardStackAnimationTiming,
+    settleStepCount: Int = 1,
 ): Int =
     when (timing) {
         CardStackAnimationTiming.ENTER -> spec.enterDurationMillis
         CardStackAnimationTiming.REFLOW -> spec.durationMillis
-        CardStackAnimationTiming.SETTLE -> spec.settleDurationMillis
+        CardStackAnimationTiming.SETTLE -> cardStackSettleDurationMillis(spec.settleDurationMillis, settleStepCount)
     }
 
+/**
+ * Scales a settle's base duration by how many cards it's actually skipping, so a multi-card fling
+ * or hard drag (see [com.riffle.core.domain.launcher.cards.CardStackController.settle]'s doc)
+ * reads as travel across those cards instead of the same brief flick a single-card settle uses.
+ * Capped at [SETTLE_DURATION_STEP_CAP] steps' worth of scaling so an extreme skip across a long
+ * stack still settles in a bounded time rather than growing without limit.
+ */
+internal fun cardStackSettleDurationMillis(
+    baseDurationMillis: Int,
+    settleStepCount: Int,
+): Int {
+    require(baseDurationMillis >= 0) { "Base duration must not be negative." }
+    require(settleStepCount >= 1) { "Settle step count must be at least 1." }
+    return baseDurationMillis * settleStepCount.coerceAtMost(SETTLE_DURATION_STEP_CAP)
+}
+
 private const val DEFAULT_CARD_STACK_ANIMATION_DURATION_MILLIS = 220
+private const val SETTLE_DURATION_STEP_CAP = 4
 
 @Suppress("CyclomaticComplexMethod", "LoopWithTooManyJumpStatements", "LongMethod")
 private fun Modifier.cardStackPointerInput(
