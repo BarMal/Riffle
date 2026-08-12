@@ -121,11 +121,18 @@ class AdaptiveStageAppearanceSettingsTest {
         // width and height happen to be equal, so this deliberately uses a non-square aspect ratio
         // (cardHeightDp is meaningfully larger than cardWidthDp here) to catch it. The buggy
         // version reserves too little vertical room and lets verticalStep reach further toward the
-        // full requested spacing than the real geometry allows.
+        // full requested spacing than the real geometry allows. curveDp=0 isolates this from the
+        // curve's own (legitimate) contribution to verticalOffset, which this test isn't about.
         val viewport = AdaptiveStageViewportDp(widthDp = 200, heightDp = 800)
         val settings =
             AdaptiveStageAppearanceSettings(
-                geometry = AdaptiveStageGeometry(cardAspectRatioPercent = 60, verticalSpacingDp = 96, visibleDepth = 1),
+                geometry =
+                    AdaptiveStageGeometry(
+                        cardAspectRatioPercent = 60,
+                        verticalSpacingDp = 96,
+                        visibleDepth = 1,
+                        curveDp = 0,
+                    ),
             )
 
         val resolution = settings.resolveCardStack(viewport, role = AdaptiveStageCardStackRole.RAIL)
