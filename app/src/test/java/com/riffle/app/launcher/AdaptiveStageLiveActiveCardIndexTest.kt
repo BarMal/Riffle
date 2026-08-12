@@ -51,14 +51,14 @@ class AdaptiveStageLiveActiveCardIndexTest {
     }
 
     @Test
-    fun dragInTheOppositeDirectionMovesTowardThePreviousCard() {
+    fun dragInTheOppositeDirectionMovesTowardThePreviousCards() {
         val towardPrevious =
             adaptiveStageLiveActiveCardIndex(
-                activeCardIndex = 2,
-                cardCount = 5,
+                activeCardIndex = 5,
+                cardCount = 11,
                 liveDragPx = ADAPTIVE_STAGE_CARD_STACK_SETTLE_DISTANCE_THRESHOLD_PX * 3f,
             )
 
-        assertEquals(1f, towardPrevious)
+        assertEquals(2f, towardPrevious)
     }
 }
