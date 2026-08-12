@@ -122,10 +122,16 @@ data class AdaptiveStageAppearanceSettings(
                 verticalTravel / depth,
             )
         val remainingVerticalTravel = (verticalTravel - verticalStep * depth).coerceAtLeast(0f)
+        // The total curve displacement CardStackLayoutPolicy reaches at maxVisibleDepth itself
+        // (it eases every nearer depth's own share of this peak via a smootherstep ramp, not a
+        // per-depth-squared coefficient) -- still bounded by both the user's own per-depth dp
+        // budget and by whatever vertical travel room remains after the linear spacing above, but
+        // no longer crushed by a depth-squared division that left the curve barely visible past a
+        // couple of cards regardless of how high curveDp or visibleDepth were set.
         val curveStep =
             min(
-                appearance.geometry.curveDp * motionScale,
-                remainingVerticalTravel / (depth * depth),
+                appearance.geometry.curveDp * motionScale * depth,
+                remainingVerticalTravel,
             )
         val layoutPolicy =
             CardStackLayoutPolicy(

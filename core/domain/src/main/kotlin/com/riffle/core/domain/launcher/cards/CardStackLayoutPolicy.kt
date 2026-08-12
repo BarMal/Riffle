@@ -12,6 +12,13 @@ data class CardStackLayoutPolicy(
     val offsetDirection: Float = 1f,
     val alphaStep: Float = DEFAULT_CARD_STACK_ALPHA_STEP,
     val verticalOffsetStep: Float = DEFAULT_CARD_STACK_VERTICAL_OFFSET_STEP,
+    /**
+     * The total curve displacement reached at [maxVisibleDepth] itself, not a per-depth
+     * coefficient -- every nearer depth's own share of that peak eases toward it via
+     * [curveProgress] (a smootherstep ramp), so the curve stays visible through the near-to-mid
+     * depths instead of being concentrated almost entirely in the last card or two the way
+     * multiplying by squared distance did.
+     */
     val curveStep: Float = DEFAULT_CARD_STACK_CURVE_STEP,
     val rotationStep: Float = DEFAULT_CARD_STACK_ROTATION_STEP,
     val reducedMotionScaleStep: Float = DEFAULT_CARD_STACK_REDUCED_MOTION_SCALE_STEP,
@@ -107,7 +114,7 @@ data class CardStackLayoutPolicy(
                     },
                 verticalOffset =
                     verticalOffsetDirection *
-                        (verticalOffsetStep * signedDistance + curveStep * signedDistance * signedDistance),
+                        (verticalOffsetStep * signedDistance + curveStep * curveProgress(depth) * signedDistance.sign),
                 rotationDegrees = if (reducedMotion) 0f else rotationStep * signedDistance,
                 alpha = ((1f - alphaStep * depth) * edgeFadeMultiplier(depth)).coerceIn(0f, 1f),
             )
@@ -130,6 +137,21 @@ data class CardStackLayoutPolicy(
     }
 
     private fun Int.depthFrom(activeIndex: Float): Float = abs(this - activeIndex)
+
+    /**
+     * Eased 0..1 progress of [depth] toward [maxVisibleDepth], reaching exactly 1 there -- used to
+     * distribute [curveStep]'s configured peak across every nearer depth. A smootherstep ramp
+     * (Ken Perlin's improved ease, `6t^5 - 15t^4 + 10t^3`) front-loads less of the curve into the
+     * first couple of depths than a plain squared-distance ramp does, so the cascade stays visibly
+     * curved through the whole stack instead of concentrating almost all of it into the last card
+     * or two. Mirrors the reference "Calm" launcher's own `CardStackTuning.smootherCurve`, which
+     * uses the identical polynomial for its own horizontal-path/rotation easing.
+     */
+    private fun curveProgress(depth: Float): Float {
+        if (maxVisibleDepth <= 0) return 0f
+        val t = (depth / maxVisibleDepth).coerceIn(0f, 1f)
+        return t * t * t * (t * (6f * t - 15f) + 10f)
+    }
 
     /**
      * Extra falloff for the last visible depths, layered on top of [alphaStep]'s own gentle
