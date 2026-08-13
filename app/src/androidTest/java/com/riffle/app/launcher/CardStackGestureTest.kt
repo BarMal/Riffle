@@ -58,6 +58,43 @@ class CardStackGestureTest {
     }
 
     @Test
+    fun slightlyDiagonalVerticalDragStillSettlesTheFocusedCard() {
+        // Regression: a genuinely vertical fling whose ballistic phase drifts a couple of pixels
+        // sideways would previously latch to the horizontal (pass-through) axis on the first frame
+        // touchSlop was crossed -- just because the perpendicular drift momentarily edged the
+        // vertical drag by a hair. cardStackPointerInput's `onSettle` was never called after that,
+        // but its `isDragging = false`/`onLiveDrag(null)` finalisation still fired, so the stack
+        // visibly snapped back to the starting card and the fling read as unresponsive.
+        var focusedCard by mutableIntStateOf(0)
+        composeRule.setContent {
+            CardStack(
+                entries = CardStackLayoutPolicy().entries(cardCount = 2, activeIndex = focusedCard),
+                modifier = Modifier.fillMaxSize().testTag("stack"),
+                itemKey = { entry -> entry.cardIndex },
+                interaction =
+                    CardStackInteraction(
+                        focusedItemKey = focusedCard,
+                        onFocusRequest = { entry -> focusedCard = entry.cardIndex },
+                        onSettle = { drag, _ -> if (drag < -48f) focusedCard = 1 },
+                    ),
+            ) { _, modifier ->
+                Box(modifier.fillMaxSize())
+            }
+        }
+
+        composeRule.onNodeWithTag("stack").performTouchInput {
+            // Vertical travel dominates but there is a small perpendicular drift, mirroring a
+            // real-world diagonal fling.
+            swipe(
+                start = Offset(centerX, centerY + 200f),
+                end = Offset(centerX + 40f, centerY - 200f),
+            )
+        }
+
+        composeRule.runOnIdle { assertEquals(1, focusedCard) }
+    }
+
+    @Test
     fun horizontalDragOnBackgroundCardRemainsAvailableToItsParent() {
         var horizontalDragWasUnconsumed by mutableStateOf(false)
         composeRule.setContent {

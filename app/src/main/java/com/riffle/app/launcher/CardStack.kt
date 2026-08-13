@@ -527,6 +527,14 @@ internal fun cardStackSettleDurationMillis(
 private const val DEFAULT_CARD_STACK_ANIMATION_DURATION_MILLIS = 220
 private const val SETTLE_DURATION_STEP_CAP = 4
 
+/**
+ * How much larger the perpendicular drag must be than this stack's own axis for a nascent gesture
+ * to be handed to an ancestor page/stage surface instead of driving this stack's own settle. Any
+ * drag whose perpendicular component is within this factor of the own-axis component stays with
+ * this stack; only a clearly cross-axis pan reaches the ancestor. See [cardStackPointerInput].
+ */
+private const val PASS_THROUGH_AXIS_LEAD_RATIO = 1.5f
+
 @Suppress("CyclomaticComplexMethod", "LoopWithTooManyJumpStatements", "LongMethod")
 private fun Modifier.cardStackPointerInput(
     entry: CardStackLayoutEntry,
@@ -589,11 +597,32 @@ private fun Modifier.cardStackPointerInput(
                                 abs(horizontalDrag) > viewConfiguration.touchSlop
                         )
                     ) {
+                        // Latch to this stack's own axis unless the perpendicular drag *clearly*
+                        // dominates. The older "whichever is momentarily larger" tiebreak fired the
+                        // moment either axis first crossed touchSlop, and a genuinely vertical fling
+                        // whose ballistic phase drifted a couple of pixels sideways would latch to
+                        // the pass-through axis on that first frame just because the perpendicular
+                        // drag happened to edge the own axis by a hair. From then on `change.consume()`
+                        // was skipped and `onSettle` was never called, but the finalisation block
+                        // below still fired `isDragging = false` and `onLiveDrag(null)`, so the
+                        // stack visibly snapped back to the card the drag started on -- reading as
+                        // an unresponsive fling. Only give up to the perpendicular axis when it
+                        // leads by [PASS_THROUGH_AXIS_LEAD_RATIO], leaving the near-straight own-axis
+                        // fling on this stack and a clearly cross-axis pan free to reach the
+                        // ancestor page/stage surface as before.
+                        val ownDrag =
+                            if (ownAxis == CardStackGestureAxis.VERTICAL) verticalDrag else horizontalDrag
+                        val perpendicularDrag =
+                            if (ownAxis == CardStackGestureAxis.VERTICAL) horizontalDrag else verticalDrag
                         axis =
-                            if (abs(verticalDrag) > abs(horizontalDrag)) {
-                                CardStackGestureAxis.VERTICAL
+                            if (abs(perpendicularDrag) > abs(ownDrag) * PASS_THROUGH_AXIS_LEAD_RATIO) {
+                                if (ownAxis == CardStackGestureAxis.VERTICAL) {
+                                    CardStackGestureAxis.HORIZONTAL
+                                } else {
+                                    CardStackGestureAxis.VERTICAL
+                                }
                             } else {
-                                CardStackGestureAxis.HORIZONTAL
+                                ownAxis
                             }
                     }
                     if (axis == ownAxis) {
