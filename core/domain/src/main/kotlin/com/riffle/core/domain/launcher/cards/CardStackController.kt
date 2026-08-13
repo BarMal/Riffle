@@ -126,10 +126,19 @@ class CardStackController {
      * ([CardStackSettleRequest.flingVelocityThresholdPxPerSecond] or
      * [CardStackSettleRequest.distanceThresholdPx] respectively), e.g. twice the distance
      * threshold's worth of drag skips two cards just as twice the velocity threshold's worth of
-     * fling does. This mirrors the live preview a caller renders while the finger is still down
-     * (see e.g. `adaptiveStageLiveActiveCardIndex`'s doc) -- a drag that visibly previews several
-     * cards flipping past commits that same distance on release instead of springing back to a
-     * single-step move.
+     * fling does. For a drag, this mirrors the live preview a caller renders while the finger is
+     * still down (see e.g. `adaptiveStageLiveActiveCardIndex`'s doc) -- a drag that visibly
+     * previews several cards flipping past commits that same distance on release instead of
+     * springing back to a single-step move.
+     *
+     * A fling's step count is additionally capped at [MAX_FLING_STEP_COUNT]. Fling velocity has
+     * no live preview to anchor a user's expectations to (unlike a drag's own distance), so an
+     * uncapped velocity-to-step ratio meant a moderate flick against a low velocity threshold
+     * skipped enough cards to cross most of a longer stack and eject to whichever boundary the
+     * fling pointed toward -- reading as a jump-cut, not a boosted swipe. The cap keeps every
+     * fling in the "a few cards forward" range regardless of how hard the finger was moving.
+     * A boundary-adjacent stack still clamps as usual; the cap only prevents a moderate fling
+     * from *reaching* that boundary in the first place from mid-stack.
      *
      * The focus captured by [CardStackSettleRequest] is checked before navigation so a delayed
      * result cannot overwrite a focus selected by content reconciliation or another input source.
@@ -153,7 +162,7 @@ class CardStackController {
             if (isFling) {
                 (abs(request.verticalVelocityPxPerSecond) / request.flingVelocityThresholdPxPerSecond)
                     .toInt()
-                    .coerceAtLeast(1)
+                    .coerceIn(1, MAX_FLING_STEP_COUNT)
             } else {
                 (abs(request.verticalDragPx) / request.distanceThresholdPx)
                     .toInt()
@@ -271,3 +280,12 @@ class CardStackController {
         takeIf { ids -> ids.distinct().size != ids.size }
             ?.let { CardStackFocusResult.Rejected(CardStackFocusRejection.DUPLICATE_CARD_IDS) }
 }
+
+/**
+ * The upper bound on how many cards a single fling can skip, regardless of how much its released
+ * velocity exceeds the fling velocity threshold. See [CardStackController.settle] for why the
+ * cap is fling-specific -- a drag's own step count is still capped only by the stack's own
+ * boundary, since the live-preview a caller renders while the finger is still down anchors the
+ * user's expectation of how many cards the release will commit.
+ */
+const val MAX_FLING_STEP_COUNT = 3

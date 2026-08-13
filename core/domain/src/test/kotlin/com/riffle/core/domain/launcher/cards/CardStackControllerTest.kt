@@ -178,6 +178,41 @@ class CardStackControllerTest {
     }
 
     @Test
+    fun aHardFlingIsCappedRatherThanEjectingToTheBoundaryFromMidStack() {
+        // Without the cap, a fling's step count was velocity / flingThreshold with no upper
+        // bound, so a modest flick against a low velocity threshold (e.g. 3000 px/s at 500 px/s
+        // threshold = 6 steps) skipped enough cards to reach a boundary from most of a longer
+        // stack -- reading as a jump-cut rather than a boosted swipe. With MAX_FLING_STEP_COUNT
+        // in place, even an extreme fling advances at most that many cards, so mid-stack flings
+        // land somewhere the user can still see the origin card from.
+        val e = LauncherCardId("e")
+        val f = LauncherCardId("f")
+        val g = LauncherCardId("g")
+        val cards = listOf(a, b, c, d, e, f, g)
+        val initial = controller.initialize(overview, cards).applied().state
+
+        val flungHard =
+            controller.settle(
+                initial,
+                cards,
+                CardStackSettleRequest(
+                    focusedCardId = a,
+                    verticalDragPx = -4f,
+                    // 16x the fling threshold -- large enough that an uncapped ratio would skip
+                    // clean past the last card in a 7-card stack.
+                    verticalVelocityPxPerSecond = -8_000f,
+                    distanceThresholdPx = 48f,
+                    flingVelocityThresholdPxPerSecond = 500f,
+                ),
+            ).applied()
+
+        // From the first card, MAX_FLING_STEP_COUNT (3) steps lands on the fourth card, not the
+        // last card the way an uncapped 16-step skip would.
+        assertEquals(cards[MAX_FLING_STEP_COUNT], flungHard.state.focusedCardId)
+        assertEquals(false, flungHard.boundaryReached)
+    }
+
+    @Test
     fun aFlingThatWouldOvershootTheStackLandsOnTheLastReachableCardInstead() {
         val initial = controller.initialize(overview, listOf(a, b, c)).applied().state
 
@@ -194,8 +229,9 @@ class CardStackControllerTest {
                 ),
             ).applied()
 
-        // A 5-card skip from a 3-card stack's first card can only reach its last card -- not a
-        // no-op, and not an out-of-bounds index.
+        // Even with the fling step count capped, a MAX_FLING_STEP_COUNT-card skip from a
+        // 3-card stack's first card still overshoots the last -- clamped to the last card, not
+        // a no-op or an out-of-bounds index, and boundaryReached is still true.
         assertEquals(c, flungPastTheEnd.state.focusedCardId)
         assertEquals(true, flungPastTheEnd.boundaryReached)
     }
