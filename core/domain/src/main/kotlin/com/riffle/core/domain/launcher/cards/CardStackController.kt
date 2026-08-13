@@ -120,16 +120,26 @@ class CardStackController {
      * Converts a completed vertical drag or fling into one focus operation. Dragging up moves
      * chronologically forward; dragging down moves back. Insufficient movement is a no-op.
      *
+     * "Insufficient" is measured as a single combined score: the drag's own distance and the
+     * release velocity each expressed as a fraction of their respective thresholds
+     * ([CardStackSettleRequest.distanceThresholdPx] and
+     * [CardStackSettleRequest.flingVelocityThresholdPxPerSecond]), summed. Anything below 1.0
+     * is a no-op; anything at or above 1.0 commits. Neither signal has to clear its own
+     * threshold in isolation -- a quick short flick that would fall short of both (say a 40px
+     * travel with 300 px/s release velocity against a 64px / 500 px/s pair) still adds to a
+     * combined score above 1.0 and commits. Without this, the finger reliably moved the stack
+     * visibly during the drag itself (a caller can preview it frame by frame -- see e.g.
+     * `adaptiveStageLiveActiveCardIndex`'s doc) and then the release snapped the whole thing
+     * back to the origin card, reading as an unresponsive fling.
+     *
      * Either a fling (velocity past [CardStackSettleRequest.flingVelocityThresholdPxPerSecond])
      * or a plain drag can skip more than one card: how many is that motion -- the fling's
-     * velocity, or the drag's distance -- expressed as a multiple of its own threshold
-     * ([CardStackSettleRequest.flingVelocityThresholdPxPerSecond] or
-     * [CardStackSettleRequest.distanceThresholdPx] respectively), e.g. twice the distance
-     * threshold's worth of drag skips two cards just as twice the velocity threshold's worth of
-     * fling does. For a drag, this mirrors the live preview a caller renders while the finger is
-     * still down (see e.g. `adaptiveStageLiveActiveCardIndex`'s doc) -- a drag that visibly
-     * previews several cards flipping past commits that same distance on release instead of
-     * springing back to a single-step move.
+     * velocity, or the drag's distance -- expressed as a multiple of its own threshold, e.g.
+     * twice the distance threshold's worth of drag skips two cards just as twice the velocity
+     * threshold's worth of fling does. For a drag, this mirrors the live preview a caller
+     * renders while the finger is still down -- a drag that visibly previews several cards
+     * flipping past commits that same distance on release instead of springing back to a
+     * single-step move.
      *
      * A fling's step count is additionally capped at [MAX_FLING_STEP_COUNT]. Fling velocity has
      * no live preview to anchor a user's expectations to (unlike a drag's own distance), so an
@@ -157,7 +167,16 @@ class CardStackController {
         request: CardStackSettleRequest,
     ): CardStackFocusResult {
         val isFling = abs(request.verticalVelocityPxPerSecond) >= request.flingVelocityThresholdPxPerSecond
-        val motion = if (isFling) request.verticalVelocityPxPerSecond else request.verticalDragPx
+        // A single "how intentional was this?" score. Neither drag nor release velocity has to
+        // clear its own threshold in isolation -- a quick short flick that would fall short of
+        // both (say a 40px travel with 300 px/s release velocity against a 64px / 500 px/s pair)
+        // still adds to a combined score above 1 and commits. Without this, the finger reliably
+        // moved the stack visibly during the drag itself (adaptiveStageLiveActiveCardIndex
+        // renders a fractional preview from any nonzero drag) and then the release snapped the
+        // whole thing back to the origin card -- reading as an unresponsive fling.
+        val commitEnergy =
+            abs(request.verticalDragPx) / request.distanceThresholdPx +
+                abs(request.verticalVelocityPxPerSecond) / request.flingVelocityThresholdPxPerSecond
         val steps =
             if (isFling) {
                 (abs(request.verticalVelocityPxPerSecond) / request.flingVelocityThresholdPxPerSecond)
@@ -168,16 +187,18 @@ class CardStackController {
                     .toInt()
                     .coerceAtLeast(1)
             }
+        val directionSignal =
+            if (isFling) request.verticalVelocityPxPerSecond else request.verticalDragPx
         return when {
             state.focusedCardId != request.focusedCardId ->
                 CardStackFocusResult.Rejected(CardStackFocusRejection.STALE_SETTLE)
-            abs(motion) < request.distanceThresholdPx -> apply(state, state.focusedCardId)
+            commitEnergy < 1f -> apply(state, state.focusedCardId)
             else ->
                 navigate(
                     state = state,
                     cardIds = cardIds,
                     direction =
-                        if (motion < 0f) {
+                        if (directionSignal < 0f) {
                             CardStackNavigationDirection.NEXT
                         } else {
                             CardStackNavigationDirection.PREVIOUS
