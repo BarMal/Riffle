@@ -21,6 +21,8 @@ import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.notifications.NotificationAgeBucket
 import com.riffle.core.domain.launcher.notifications.NotificationCategory
+import com.riffle.core.domain.launcher.settings.AdaptiveStageAppearanceSettings
+import com.riffle.core.domain.launcher.settings.AdaptiveStageFanDirection
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -78,6 +80,14 @@ class GeneratedPageSurfaceInteractionTest {
                     apps = apps,
                     onAction = actions::add,
                     reducedMotion = true,
+                    // Pin the vertical fan direction so this test's tap coordinates -- which
+                    // depend on the second card rendering *below* the focused first card --
+                    // stay stable regardless of the default `verticalFanDirection` field on
+                    // AdaptiveStageAppearanceSettings. The interaction under test is "tapping
+                    // a background card focuses it," which has nothing to do with which side
+                    // the fan opens toward; keeping the appearance explicit here isolates the
+                    // test from unrelated default changes.
+                    adaptiveStageAppearance = endFanAppearance,
                 )
             }
         }
@@ -91,6 +101,16 @@ class GeneratedPageSurfaceInteractionTest {
             .assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "Card 2 of 2"))
         composeRule.runOnIdle { assertTrue(actions.isEmpty()) }
     }
+
+    private val endFanAppearance =
+        AdaptiveStageAppearanceSettings().let { defaults ->
+            defaults.copy(
+                geometry =
+                    defaults.geometry.copy(
+                        verticalFanDirection = AdaptiveStageFanDirection.END,
+                    ),
+            )
+        }
 
     private fun notificationGroup(suffix: String) =
         AppNotificationGroup(
