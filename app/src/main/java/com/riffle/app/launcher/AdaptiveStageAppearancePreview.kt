@@ -64,8 +64,16 @@ internal fun AdaptiveStageAppearancePreview(
         // artwork -- blur strength, and the artwork half of saturation/contrast -- have something
         // to visibly affect here. A flat-color bitmap would blur to itself.
         val previewArtwork = remember { PREVIEW_APP_COLORS.map(::adaptiveStagePreviewArtwork) }
+        // A middle-focused card so both an earlier and a later card fan out around it. With the
+        // first card focused (the earlier default), every background card had to sit to one side
+        // of focus, and the whole assembly read as a single curved shape -- toggling the "Fan
+        // direction" setting then just flipped the direction of that visible curve, which looked
+        // like a "curve orientation" control rather than "which side do earlier vs. later cards
+        // stack toward." A symmetric layout makes the actual meaning legible: flipping fan
+        // direction visibly swaps earlier and later cards side-to-side; curve depth changes the
+        // arc's magnitude on both sides without switching them.
         CardStack(
-            entries = resolution.layoutPolicy.entries(cardCount = 3, activeIndex = 0, reducedMotion = resolution.reducedMotion),
+            entries = resolution.layoutPolicy.entries(cardCount = 3, activeIndex = 1, reducedMotion = resolution.reducedMotion),
             modifier = Modifier.fillMaxSize(),
             animationProfile = CardStackAnimationProfile.CARD_FLIGHT,
             animationSpec = resolution.animation,
@@ -97,7 +105,7 @@ internal fun AdaptiveStageAppearancePreview(
                     rendererCapabilities = rendererCapabilities,
                 ) {
                     Text(
-                        text = if (entry.cardIndex == 0) "Focus mode" else "Earlier activity",
+                        text = if (entry.cardIndex == 1) "Focus mode" else "Adjacent activity",
                         style = MaterialTheme.typography.titleMedium,
                     )
                     Text(
