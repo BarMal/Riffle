@@ -487,7 +487,7 @@ data class AdaptiveStageGeometry(
     val horizontalOffsetDp: Int = 20,
     val curveDp: Int = 6,
     val fanDirection: AdaptiveStageFanDirection = AdaptiveStageFanDirection.END,
-    val verticalFanDirection: AdaptiveStageFanDirection = AdaptiveStageFanDirection.END,
+    val verticalFanDirection: AdaptiveStageFanDirection = AdaptiveStageFanDirection.START,
     val rotationDegrees: Int = 4,
     val cornerRadiusDp: Int = 28,
     val contentPaddingDp: Int = 20,
