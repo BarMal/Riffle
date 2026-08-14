@@ -283,6 +283,34 @@ class CardStackControllerTest {
     }
 
     @Test
+    fun aQuickShortFlickCommitsFromCombinedDragAndVelocityEvenIfNeitherAloneReachesItsThreshold() {
+        // Regression: the previous no-op check compared only the drag distance (or, for
+        // qualifying flings, only the release velocity) against a single threshold, so a quick
+        // short flick that fell short of both -- e.g. 40 px of travel with 300 px/s release
+        // velocity against a 64 px / 500 px/s pair -- silently returned no-op. The finger had
+        // visibly moved the stack partway toward the next card during the drag itself; the
+        // release then snapped it back to the origin.
+        val initial = controller.initialize(overview, listOf(a, b, c)).applied().state
+
+        val quickShortFlick =
+            controller.settle(
+                initial,
+                listOf(a, b, c),
+                CardStackSettleRequest(
+                    focusedCardId = a,
+                    verticalDragPx = -40f,
+                    verticalVelocityPxPerSecond = -300f,
+                    distanceThresholdPx = 64f,
+                    flingVelocityThresholdPxPerSecond = 500f,
+                ),
+            ).applied()
+
+        // 40 / 64 + 300 / 500 = 0.625 + 0.6 = 1.225 -> commits one step forward.
+        assertEquals(b, quickShortFlick.state.focusedCardId)
+        assertEquals(true, quickShortFlick.focusChanged)
+    }
+
+    @Test
     fun cancelledOrShortDragIsANoOpAndBoundarySettleIsReported() {
         val initial = controller.initialize(overview, listOf(a, b)).applied().state
 
