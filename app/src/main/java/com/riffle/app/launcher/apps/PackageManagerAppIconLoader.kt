@@ -8,6 +8,7 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.core.graphics.drawable.toBitmap
 import com.riffle.app.launcher.AppIconLoader
+import com.riffle.app.launcher.BoundedCache
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import kotlin.math.roundToInt
 
@@ -23,13 +24,13 @@ class PackageManagerAppIconLoader(
             .density
     },
 ) : AppIconLoader {
-    private val icons = BoundedIconCache<AppIdentity, ImageBitmap>(MAX_CACHED_LAUNCHER_ICONS)
+    private val icons = BoundedCache<AppIdentity, ImageBitmap>(MAX_CACHED_LAUNCHER_ICONS)
 
     // Parallel cache, same key set and eviction bound as [icons]: populated alongside the icon by
     // [loadIcon] so the icon bitmap is only ever decoded once. Wrapped in [DominantColorEntry] so a
     // legitimately absent color (icon has no sufficiently saturated pixels) is cached as a present
     // "null" entry rather than being indistinguishable from "not yet loaded".
-    private val colors = BoundedIconCache<AppIdentity, DominantColorEntry>(MAX_CACHED_LAUNCHER_ICONS)
+    private val colors = BoundedCache<AppIdentity, DominantColorEntry>(MAX_CACHED_LAUNCHER_ICONS)
 
     override fun iconFor(identity: AppIdentity): ImageBitmap? = icons[identity] ?: loadIcon(identity)
 
@@ -71,34 +72,6 @@ private fun Drawable.toLauncherImageBitmap(sizePx: Int): ImageBitmap =
         height = sizePx,
     ).asImageBitmap()
 
-internal class BoundedIconCache<Key : Any, Value : Any>(
-    private val maxEntries: Int,
-) {
-    private val entries = LinkedHashMap<Key, Value>(maxEntries, LOAD_FACTOR, true)
-
-    init {
-        require(maxEntries > 0)
-    }
-
-    @Synchronized
-    operator fun get(key: Key): Value? = entries[key]
-
-    @Synchronized
-    operator fun set(
-        key: Key,
-        value: Value,
-    ) {
-        entries[key] = value
-        if (entries.size > maxEntries) {
-            entries.remove(entries.entries.iterator().next().key)
-        }
-    }
-
-    @get:Synchronized
-    val size: Int
-        get() = entries.size
-}
-
 internal fun launcherIconBitmapSizePx(displayDensity: Float): Int =
     (MAX_LAUNCHER_ICON_SIZE_DP * displayDensity)
         .roundToInt()
@@ -109,4 +82,3 @@ private const val DEFAULT_DISPLAY_DENSITY = 1f
 private const val MIN_LAUNCHER_ICON_BITMAP_SIZE_PX = 96
 private const val MAX_LAUNCHER_ICON_BITMAP_SIZE_PX = 320
 private const val MAX_CACHED_LAUNCHER_ICONS = 48
-private const val LOAD_FACTOR = 0.75f

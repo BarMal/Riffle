@@ -1,10 +1,17 @@
 package com.riffle.app.launcher.apps
 
+import com.riffle.app.launcher.BoundedCache
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
 
+// BoundedCache is backed by android.util.LruCache, which the plain "mockable android.jar" used
+// by non-Robolectric JVM unit tests stubs to throw on every call. Robolectric runs the real
+// platform implementation instead.
+@RunWith(RobolectricTestRunner::class)
 class PackageManagerAppIconLoaderTest {
     @Test
     fun usesEnoughPixelsForTheLargestLauncherIconAtTypicalHighDensity() {
@@ -23,7 +30,7 @@ class PackageManagerAppIconLoaderTest {
 
     @Test
     fun evictsLeastRecentlyUsedIconsWhenTheCacheReachesItsBound() {
-        val cache = BoundedIconCache<String, String>(maxEntries = 2)
+        val cache = BoundedCache<String, String>(maxEntries = 2)
 
         cache["first"] = "first icon"
         cache["second"] = "second icon"
@@ -44,7 +51,7 @@ class PackageManagerAppIconLoaderTest {
      */
     @Test
     fun cachedNullPayloadIsDistinguishableFromACacheMiss() {
-        val cache = BoundedIconCache<String, WrappedValue>(maxEntries = 2)
+        val cache = BoundedCache<String, WrappedValue>(maxEntries = 2)
 
         cache["knownNull"] = WrappedValue(null)
 
@@ -55,7 +62,7 @@ class PackageManagerAppIconLoaderTest {
 
     @Test
     fun wrappedValueCacheSharesTheSameBoundAndEvictionPolicyAsTheIconCache() {
-        val cache = BoundedIconCache<String, WrappedValue>(maxEntries = 2)
+        val cache = BoundedCache<String, WrappedValue>(maxEntries = 2)
 
         cache["first"] = WrappedValue("red")
         cache["second"] = WrappedValue(null)

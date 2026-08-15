@@ -14,6 +14,7 @@ import androidx.annotation.RequiresApi
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.core.graphics.drawable.toBitmap
+import com.riffle.app.launcher.BoundedCache
 import com.riffle.app.launcher.WidgetPreviewImageLoader
 import com.riffle.app.launcher.apps.toAppProfile
 import com.riffle.core.domain.launcher.apps.AppProfile
@@ -21,7 +22,6 @@ import com.riffle.core.domain.launcher.widgets.WidgetProviderIdentity
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.util.LinkedHashMap
 
 class AndroidWidgetPreviewImageLoader(
     private val context: Context,
@@ -135,16 +135,17 @@ internal suspend fun loadWidgetPreviewWithFallback(
     return generatedPreview ?: previewCallOrNull { loadLegacyPreview() }
 }
 
-internal class WidgetPreviewCache<T>(
-    private val maxEntries: Int = MAX_PREVIEW_CACHE_ENTRIES,
+internal class WidgetPreviewCache<T : Any>(
+    maxEntries: Int = MAX_PREVIEW_CACHE_ENTRIES,
 ) {
+    // BoundedCache (LruCache-backed) is already internally synchronized, but revision-guarded
+    // writes need the revision check and the cache write to happen as one atomic step -- e.g.
+    // putIfRevision reading currentRevision then writing previews must not interleave with a
+    // concurrent invalidate() bumping that same revision in between. This lock's job is that
+    // compound atomicity, not the cache's own bookkeeping, which BoundedCache already covers.
     private val lock = Any()
     private var currentRevision = 0L
-    private val previews =
-        object : LinkedHashMap<WidgetProviderIdentity, T>(maxEntries.coerceAtLeast(1), 0.75f, true) {
-            override fun removeEldestEntry(eldest: MutableMap.MutableEntry<WidgetProviderIdentity, T>?): Boolean =
-                size > maxEntries.coerceAtLeast(0)
-        }
+    private val previews = BoundedCache<WidgetProviderIdentity, T>(maxEntries.coerceAtLeast(1))
 
     operator fun get(identity: WidgetProviderIdentity): T? =
         synchronized(lock) {
@@ -176,7 +177,7 @@ internal class WidgetPreviewCache<T>(
 
     fun invalidate() {
         synchronized(lock) {
-            previews.clear()
+            previews.evictAll()
             currentRevision += 1
         }
     }

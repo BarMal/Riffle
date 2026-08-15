@@ -11,6 +11,7 @@ kotlin = "2.0.21"
 ktlint = "12.1.2"
 lifecycle = "2.8.7"
 orgJson = "20250517"
+robolectric = "4.14.1"
 window = "1.4.0"
 
 [libraries]
@@ -30,6 +31,7 @@ androidx-compose-ui-test-manifest = { module = "androidx.compose.ui:ui-test-mani
 androidx-compose-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview" }
 junit = { module = "junit:junit", version.ref = "junit" }
 org-json = { module = "org.json:json", version.ref = "orgJson" }
+robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

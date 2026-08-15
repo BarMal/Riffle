@@ -104,6 +104,12 @@ one item does not block or entangle the others, and each can be reverted indepen
   primitive first, and justify a custom implementation explicitly (in code comments or a new
   ADR) when no suitable primitive exists, rather than defaulting to hand-rolled code and
   discovering the gap through production bug reports.
+- The `app` module's JVM unit tests (`testDebugUnitTest`) run against AGP's "mockable
+  android.jar", which stubs every `android.*` method to throw unless Robolectric is present.
+  The `LruCache` consolidation (#1119) is the first migration in this app module to construct
+  an `android.*` framework class from those tests, and needed Robolectric added as a test
+  dependency for exactly that reason. The `Palette` migration will hit the same constraint,
+  since `Palette` operates on `android.graphics.Bitmap`.
 
 ## Alternatives Considered
 
