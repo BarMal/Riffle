@@ -5,7 +5,13 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
 
+// BoundedCache is backed by android.util.LruCache, which the plain "mockable android.jar" used
+// by non-Robolectric JVM unit tests stubs to throw on every call. Robolectric runs the real
+// platform implementation instead.
+@RunWith(RobolectricTestRunner::class)
 class PackageManagerAppIconLoaderTest {
     @Test
     fun usesEnoughPixelsForTheLargestLauncherIconAtTypicalHighDensity() {

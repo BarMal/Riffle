@@ -7,10 +7,16 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
+// WidgetPreviewCache is backed by android.util.LruCache, which the plain "mockable android.jar"
+// used by non-Robolectric JVM unit tests stubs to throw on every call. Robolectric runs the real
+// platform implementation instead.
+@RunWith(RobolectricTestRunner::class)
 class WidgetPreviewCacheTest {
     @Test
     fun boundsEntriesAndEvictsLeastRecentlyUsed() {
