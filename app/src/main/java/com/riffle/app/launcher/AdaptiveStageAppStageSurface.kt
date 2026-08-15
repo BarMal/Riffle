@@ -1741,6 +1741,25 @@ private fun AdaptiveStageStageHeader(
                             },
                         )
                     }
+                    // Cards mode's own card stack fills the whole touch area with its own
+                    // drag/tap gesture handling (see cardStackPointerInput), unlike Standard
+                    // grid mode's HomeBackgroundContextMenu, which sits behind genuinely empty
+                    // grid cells and is always reachable by a long-press there. Cards mode never
+                    // wires up an equivalent background handler, so without this entry the only
+                    // way to reach Settings from Cards mode is whatever empty space happens to
+                    // exist around the dock -- absent entirely on some layouts (reported: a full
+                    // folded-phone dock left no empty space to long-press, forcing a switch to
+                    // the roomier unfolded layout just to reach Settings). This overflow menu is
+                    // already reliably reachable whenever a stage is selected, so it's the
+                    // lowest-risk place to guarantee a path to Settings without touching
+                    // CardStack's own gesture handling.
+                    DropdownMenuItem(
+                        text = { Text("Settings") },
+                        onClick = {
+                            overflowExpanded = false
+                            onAction(LauncherShellAction.OpenSettings)
+                        },
+                    )
                 }
             }
         }
