@@ -79,32 +79,30 @@ internal data class AdaptiveStageCardActionColors(
  * identities plus a source revision, not artwork payloads, so private base64 data is not retained
  * as cache metadata.
  */
-internal class AdaptiveStageArtworkCache<Value>(
-    private val maxEntries: Int = DEFAULT_ADAPTIVE_STAGE_ARTWORK_CACHE_ENTRIES,
+internal class AdaptiveStageArtworkCache<Value : Any>(
+    maxEntries: Int = DEFAULT_ADAPTIVE_STAGE_ARTWORK_CACHE_ENTRIES,
     private val decode: (String?) -> Value?,
 ) {
-    init {
-        require(maxEntries > 0) { "Artwork cache size must be positive." }
-    }
-
-    private val values =
-        object : LinkedHashMap<String, Value?>(maxEntries, 0.75f, true) {
-            override fun removeEldestEntry(eldest: ArtworkCacheEntry<Value>?): Boolean = size > maxEntries
-        }
+    // Wrapped in a non-null payload so a legitimately absent decode (a corrupt/empty artwork
+    // payload) is a cached "known null" hit that skips re-decoding, distinguishable from a key
+    // BoundedCache has never seen -- LruCache itself rejects null values outright.
+    private val values = BoundedCache<String, ArtworkCachePayload<Value>>(maxEntries)
 
     fun getOrDecode(
         sourceKey: String,
         artwork: String?,
-    ): Value? =
-        values[sourceKey]
-            ?: if (values.containsKey(sourceKey)) {
-                null
-            } else {
-                decode(artwork).also { decoded -> values[sourceKey] = decoded }
-            }
+    ): Value? {
+        val cached = values[sourceKey]
+        if (cached != null) return cached.value
+        val decoded = decode(artwork)
+        values[sourceKey] = ArtworkCachePayload(decoded)
+        return decoded
+    }
 
     internal fun sizeForTest(): Int = values.size
 }
+
+private data class ArtworkCachePayload<Value>(val value: Value?)
 
 /** Immutable revision lookup consumed by card composition without hashing artwork payloads. */
 internal fun interface AdaptiveStageArtworkRevisionLookup {
@@ -514,5 +512,3 @@ private const val ARTWORK_REVISION_HEX = "0123456789abcdef"
 private const val MINIMUM_FOREGROUND_CONTRAST_RATIO = 4.5f
 private const val MINIMUM_ACTION_CONTRAST_RATIO = MINIMUM_FOREGROUND_CONTRAST_RATIO
 private const val ADAPTIVE_STAGE_GLASS_BEZEL_EXTRA_DP = 10f
-
-private typealias ArtworkCacheEntry<Value> = MutableMap.MutableEntry<String, Value?>

@@ -1,5 +1,6 @@
 package com.riffle.app.launcher.apps
 
+import com.riffle.app.launcher.BoundedCache
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
@@ -23,7 +24,7 @@ class PackageManagerAppIconLoaderTest {
 
     @Test
     fun evictsLeastRecentlyUsedIconsWhenTheCacheReachesItsBound() {
-        val cache = BoundedIconCache<String, String>(maxEntries = 2)
+        val cache = BoundedCache<String, String>(maxEntries = 2)
 
         cache["first"] = "first icon"
         cache["second"] = "second icon"
@@ -44,7 +45,7 @@ class PackageManagerAppIconLoaderTest {
      */
     @Test
     fun cachedNullPayloadIsDistinguishableFromACacheMiss() {
-        val cache = BoundedIconCache<String, WrappedValue>(maxEntries = 2)
+        val cache = BoundedCache<String, WrappedValue>(maxEntries = 2)
 
         cache["knownNull"] = WrappedValue(null)
 
@@ -55,7 +56,7 @@ class PackageManagerAppIconLoaderTest {
 
     @Test
     fun wrappedValueCacheSharesTheSameBoundAndEvictionPolicyAsTheIconCache() {
-        val cache = BoundedIconCache<String, WrappedValue>(maxEntries = 2)
+        val cache = BoundedCache<String, WrappedValue>(maxEntries = 2)
 
         cache["first"] = WrappedValue("red")
         cache["second"] = WrappedValue(null)
