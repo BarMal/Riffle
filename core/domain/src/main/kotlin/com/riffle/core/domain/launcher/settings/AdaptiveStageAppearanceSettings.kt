@@ -302,8 +302,25 @@ private fun resolveCardSize(
 ): ResolvedAdaptiveStageCardSize {
     val stageWidthDp = (viewport.safeWidthDp * (1f - fanStageMarginFraction))
     val stageHeightDp = (viewport.safeHeightDp * (1f - fanStageMarginFraction))
-    val availableWidth = (stageWidthDp - requestedPadding * 2).coerceAtLeast(0f)
-    val availableHeight = (stageHeightDp - requestedPadding * 2 - reservedVerticalSpaceDp).coerceAtLeast(0f)
+    // geometry.contentPaddingDp is a single raw dp value shared by two very differently-sized
+    // stages: it's subtracted (twice, once per side) from this fit envelope below, and separately
+    // becomes the rendered card's own interior content inset (resolveCardStack's own
+    // `contentPaddingDp` output, coerced against the *already-fitted* card size there). On
+    // PRIMARY's real, large viewport a user's max padding (64dp) is trivial next to a
+    // several-hundred-dp stage. On PREVIEW's small illustrative box, the same raw 64dp eats a much
+    // larger share of the fit envelope -- combined with a wide cardAspectRatioPercent (which
+    // narrows the height-bound fit further, see this function's own `aspectRatio` use below), that
+    // was enough to push the fitted card under PREVIEW's own usability floor, surfacing "Preview
+    // needs more space to render" at slider values PRIMARY handles without issue. Capping the
+    // padding actually spent on *this* fit step to a fraction of the stage's own smaller dimension
+    // keeps every role's fit self-scaling to its own box; the separate, already-capped rendered
+    // content-padding output is untouched, so a real device with real screen space still gets the
+    // user's full chosen padding.
+    val fitPadding =
+        requestedPadding.toFloat()
+            .coerceAtMost(min(stageWidthDp, stageHeightDp) * MAX_CONTENT_PADDING_STAGE_FRACTION)
+    val availableWidth = (stageWidthDp - fitPadding * 2).coerceAtLeast(0f)
+    val availableHeight = (stageHeightDp - fitPadding * 2 - reservedVerticalSpaceDp).coerceAtLeast(0f)
     val aspectRatio = geometry.cardAspectRatioPercent / 100f
     val fittedWidth = min(availableWidth / stackBounds.maxWidthScale, availableHeight / stackBounds.maxHeightScale)
     val width = (fittedWidth * sizeScaleFraction).toInt()
@@ -318,6 +335,18 @@ private fun resolveCardSize(
         fitsAvailableSpace = focusedWidth <= availableWidth && focusedHeight <= availableHeight,
     )
 }
+
+/**
+ * How much of the stage's own smaller dimension [AdaptiveStageGeometry.contentPaddingDp] is
+ * allowed to consume when fitting a card -- see the padding cap's own call-site doc in
+ * [resolveCardSize] for why this exists. 0.15 was chosen by walking every role's fit at the
+ * padding field's full valid range (0-64dp) crossed with the aspect ratio field's full valid
+ * range (55%-160%) against representative viewport sizes for each role (a full phone/tablet
+ * screen for PRIMARY/RAIL, the settings preview's small illustrative box for PREVIEW): the
+ * smallest fraction that kept every one of those combinations usable, so this protects the
+ * tightest real case without being any more conservative than it needs to be.
+ */
+private const val MAX_CONTENT_PADDING_STAGE_FRACTION = 0.15f
 
 /**
  * [resolveCardSize]'s margin for [AdaptiveStageCardStackRole.PREVIEW]. Before this existed, the
