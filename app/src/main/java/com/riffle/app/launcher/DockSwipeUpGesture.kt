@@ -1,7 +1,6 @@
 package com.riffle.app.launcher
 
-import androidx.compose.foundation.gestures.awaitEachGesture
-import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
@@ -9,7 +8,6 @@ import androidx.compose.ui.composed
 import androidx.compose.ui.input.pointer.pointerInput
 import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.settings.LauncherGestureAction
-import kotlin.math.abs
 
 /**
  * Maps the Dock's swipe-up gesture action to a shell action. Restricted to the three actions the
@@ -28,15 +26,16 @@ internal fun LauncherGestureAction.toDockSwipeUpShellAction(): LauncherShellActi
         else -> null
     }
 
-internal fun dockSwipeUpGestureTriggered(
-    horizontalDragPx: Float,
-    verticalDragPx: Float,
-): Boolean =
-    verticalDragPx <= -DOCK_SWIPE_UP_GESTURE_THRESHOLD_PX &&
-        abs(verticalDragPx) > abs(horizontalDragPx)
-
-/** Attaches the Dock swipe-up mode-switch gesture. Callers gate [enabled] to avoid overlapping
- * the shelf-expand gesture's own swipe-up claim on the same touch region. */
+/**
+ * Attaches the Dock swipe-up mode-switch gesture. Callers gate [enabled] to avoid overlapping
+ * the shelf-expand gesture's own swipe-up claim on the same touch region.
+ *
+ * Axis-intent (vertical vs. horizontal) and touch-slop filtering are delegated to
+ * [detectVerticalDragGestures] rather than a hand-rolled post-hoc `|dy| > |dx|` comparison --
+ * that comparison was the same category of bug this app's card-stack fling gesture shipped with
+ * (ADR 0002). [onVerticalDrag] only starts firing once Foundation's own touch-slop lock has
+ * already decided the drag is vertical.
+ */
 internal fun Modifier.dockSwipeUpGestureInput(
     enabled: Boolean,
     action: LauncherGestureAction,
@@ -50,36 +49,23 @@ internal fun Modifier.dockSwipeUpGestureInput(
         val currentOnAction by rememberUpdatedState(onAction)
         val currentShellAction by rememberUpdatedState(shellAction)
         pointerInput(action) {
-            awaitEachGesture {
-                // Default (Main) pass, not Initial: Main dispatches descendant-first, so a
-                // descendant gesture (e.g. a horizontal scroll on dock content) gets first look
-                // at the same event and can consume it before this ancestor-level handler runs --
-                // Initial dispatched ancestor-first instead, letting this claim any qualifying
-                // drag regardless of what a descendant wanted it for.
-                val down = awaitFirstDown(requireUnconsumed = false)
-                val start = down.position
-                var handled = false
-                while (!handled) {
-                    val event = awaitPointerEvent()
-                    val trackedChange = event.changes.firstOrNull { change -> change.id == down.id }
-                    if (trackedChange == null) {
-                        handled = true
-                    } else if (trackedChange.isConsumed) {
-                        // A descendant already claimed this drag for itself.
-                        handled = true
-                    } else {
-                        val drag = trackedChange.position - start
-                        if (dockSwipeUpGestureTriggered(horizontalDragPx = drag.x, verticalDragPx = drag.y)) {
-                            trackedChange.consume()
-                            currentOnAction(currentShellAction)
-                            handled = true
-                        }
-                        if (!trackedChange.pressed) {
-                            handled = true
-                        }
+            var accumulatedVerticalDragPx = 0f
+            var triggered = false
+            detectVerticalDragGestures(
+                onDragStart = {
+                    accumulatedVerticalDragPx = 0f
+                    triggered = false
+                },
+                onVerticalDrag = { change, dragAmount ->
+                    if (triggered) return@detectVerticalDragGestures
+                    accumulatedVerticalDragPx += dragAmount
+                    if (accumulatedVerticalDragPx <= -DOCK_SWIPE_UP_GESTURE_THRESHOLD_PX) {
+                        change.consume()
+                        triggered = true
+                        currentOnAction(currentShellAction)
                     }
-                }
-            }
+                },
+            )
         }
     }
 }
