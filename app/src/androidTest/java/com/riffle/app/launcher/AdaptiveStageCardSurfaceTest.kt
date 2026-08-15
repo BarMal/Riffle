@@ -1218,6 +1218,68 @@ class AdaptiveStageCardSurfaceTest {
     }
 
     @Test
+    fun appStageHeaderOverflowExposesSettingsSinceCardsModeHasNoOtherReliablePathToIt() {
+        // Cards mode's own card stack fills the whole touch area with its own drag/tap gesture
+        // handling, unlike Standard grid mode's HomeBackgroundContextMenu, which sits behind
+        // genuinely empty grid cells reachable by a long-press there. Cards mode never wires up
+        // an equivalent background handler, so this stage header overflow menu is the one
+        // reliably reachable place to guarantee a path to Settings without touching CardStack's
+        // own gesture handling -- reported: a full dock left no empty space to long-press,
+        // forcing a switch to a roomier layout just to reach Settings.
+        val app =
+            InstalledApp(
+                identity =
+                    AppIdentity(
+                        packageName = AppPackageName("com.example.mail"),
+                        activityName = AppActivityName(".Main"),
+                        profile = AppProfile.personal(),
+                    ),
+                label = "Mail",
+            )
+        val notification =
+            LauncherNotification(
+                key = LauncherNotificationKey("mail"),
+                packageName = app.identity.packageName,
+                profileId = app.identity.profile.id,
+                title = "New message",
+                text = "Hello from Cards",
+                postedAtEpochMillis = 10,
+            )
+        val actions = mutableListOf<LauncherShellAction>()
+        composeRule.setContent {
+            MaterialTheme {
+                AdaptiveStageAppStageSurface(
+                    state =
+                        LauncherShellState(
+                            notificationAccessStatus = NotificationAccessStatus.GRANTED,
+                            installedApps = listOf(app),
+                            profileContentVisibility =
+                                mapOf(app.identity.profile.id to AppProfileContentVisibility.VISIBLE),
+                            notificationGroupsByApp =
+                                listOf(
+                                    AppNotificationGroup(
+                                        packageName = app.identity.packageName,
+                                        profileId = app.identity.profile.id,
+                                        latestCategory = NotificationCategory.MESSAGE,
+                                        latestAgeBucket = NotificationAgeBucket.RECENT,
+                                        notifications = listOf(notification),
+                                    ),
+                                ),
+                        ),
+                    onAction = actions::add,
+                )
+            }
+        }
+
+        composeRule.onNodeWithContentDescription("More stage options").performClick()
+        composeRule.onNodeWithText("Settings").performClick()
+
+        composeRule.runOnIdle {
+            assertEquals(listOf(LauncherShellAction.OpenSettings), actions)
+        }
+    }
+
+    @Test
     fun appStageSurfaceLabelsSamePackageProfilesIndependently() {
         val personal =
             InstalledApp(
