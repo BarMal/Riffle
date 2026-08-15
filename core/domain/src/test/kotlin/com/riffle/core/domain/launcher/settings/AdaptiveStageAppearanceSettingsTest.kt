@@ -536,6 +536,37 @@ class AdaptiveStageAppearanceSettingsTest {
     }
 
     @Test
+    fun previewRoleStaysUsableAtMaximumContentPaddingAndAWideAspectRatio() {
+        // Reported regression: a user pushed "Content padding" to its 64dp maximum alongside a
+        // wide "Card aspect ratio" (150%+) while chasing a wider real card -- both individually
+        // legitimate, in-range choices -- and the settings preview started reporting "Preview
+        // needs more space to render." geometry.contentPaddingDp is subtracted twice (once per
+        // side) from this small box's own fit envelope before the card is even sized; on
+        // PRIMARY's real, much larger viewport that same 64dp barely registers, but here it ate
+        // enough of the tiny preview's own fit budget -- compounded by a wide aspect ratio further
+        // narrowing the height-bound fit -- to push the card under PREVIEW's usability floor. 300x280
+        // approximates a smaller-than-typical settings preview box, the tightest case this
+        // regressed at.
+        val settings =
+            AdaptiveStageAppearanceSettings(
+                geometry =
+                    AdaptiveStageGeometry(
+                        cardAspectRatioPercent = MAX_ADAPTIVE_STAGE_CARD_ASPECT_RATIO_PERCENT,
+                        cardSizePercent = MAX_ADAPTIVE_STAGE_CARD_SIZE_PERCENT,
+                        contentPaddingDp = MAX_ADAPTIVE_STAGE_CONTENT_PADDING_DP,
+                    ),
+            )
+
+        val previewResolution =
+            settings.resolveCardStack(
+                AdaptiveStageViewportDp(widthDp = 300, heightDp = 280),
+                role = AdaptiveStageCardStackRole.PREVIEW,
+            )
+
+        assertTrue(previewResolution.isUsable)
+    }
+
+    @Test
     fun previewRoleHasRealVerticalTravelAtARealisticSettingsPreviewBoxSize() {
         // Before PREVIEW got its own fan-stage margin, this box's height axis alone determined
         // the card's size (fanStageMarginFraction 0), leaving zero vertical travel -- vertical
