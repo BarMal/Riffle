@@ -11,6 +11,7 @@ kotlin = "2.0.21"
 ktlint = "12.1.2"
 lifecycle = "2.8.7"
 orgJson = "20250517"
+palette = "1.0.0"
 robolectric = "4.14.1"
 window = "1.4.0"
 
@@ -22,6 +23,7 @@ androidx-datastore-preferences = { module = "androidx.datastore:datastore-prefer
 androidx-lifecycle-runtime-ktx = { module = "androidx.lifecycle:lifecycle-runtime-ktx", version.ref = "lifecycle" }
 androidx-lifecycle-viewmodel-ktx = { module = "androidx.lifecycle:lifecycle-viewmodel-ktx", version.ref = "lifecycle" }
 androidx-window = { module = "androidx.window:window", version.ref = "window" }
+androidx-palette = { module = "androidx.palette:palette-ktx", version.ref = "palette" }
 androidx-compose-bom = { module = "androidx.compose:compose-bom", version.ref = "composeBom" }
 androidx-compose-foundation = { module = "androidx.compose.foundation:foundation" }
 androidx-compose-material3 = { module = "androidx.compose.material3:material3" }

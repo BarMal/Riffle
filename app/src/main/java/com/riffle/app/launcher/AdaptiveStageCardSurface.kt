@@ -28,10 +28,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.luminance
-import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.SemanticsPropertyKey
@@ -39,6 +39,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.palette.graphics.Palette
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
 import com.riffle.core.domain.launcher.notifications.LauncherNotification
 import com.riffle.core.domain.launcher.settings.AdaptiveStageAccentSource
@@ -227,7 +228,17 @@ internal fun adaptiveStageAdjustedColor(
 
 private fun adaptiveStageArtworkColor(artwork: ImageBitmap): Color? =
     runCatching {
-        artwork.toPixelMap()[artwork.width / 2, artwork.height / 2]
+        val palette = Palette.Builder(artwork.asAndroidBitmap()).generate()
+        val swatch =
+            palette.dominantSwatch
+                ?: palette.vibrantSwatch
+                ?: palette.mutedSwatch
+                ?: palette.lightVibrantSwatch
+                ?: palette.darkVibrantSwatch
+                ?: palette.lightMutedSwatch
+                ?: palette.darkMutedSwatch
+                ?: return@runCatching null
+        Color(swatch.rgb)
     }.getOrNull()
 
 internal fun adaptiveStageAccessibleForeground(background: Color): Color =
