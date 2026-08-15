@@ -48,7 +48,6 @@ import com.riffle.core.domain.launcher.settings.AdaptiveStageCardStackResolution
 import com.riffle.core.domain.launcher.settings.AdaptiveStageContentDensity
 import com.riffle.core.domain.launcher.settings.AdaptiveStageRendererCapabilities
 import java.security.MessageDigest
-import java.util.LinkedHashMap
 import kotlin.math.max
 
 /** Transient visual inputs. Every source has a colour fallback when platform artwork is unavailable. */
