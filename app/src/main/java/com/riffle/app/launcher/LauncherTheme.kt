@@ -18,7 +18,6 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.compositeOver
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
@@ -185,7 +184,7 @@ private fun minimumScrimAlpha(
     scrim: Color,
 ): Float {
     val worstCaseWallpaper = if (foreground == Color.Black) Color.Black else Color.White
-    if (foreground.contrastRatioAgainst(overlay.compositeOver(worstCaseWallpaper)) >= MINIMUM_TEXT_CONTRAST) {
+    if (contrastRatio(foreground, overlay.compositeOver(worstCaseWallpaper)) >= MINIMUM_TEXT_CONTRAST) {
         return 0f
     }
 
@@ -194,7 +193,7 @@ private fun minimumScrimAlpha(
     repeat(SCRIM_ALPHA_SEARCH_STEPS) {
         val candidate = (low + high) / 2f
         val renderedSurface = scrim.copy(alpha = candidate).compositeOver(overlay).compositeOver(worstCaseWallpaper)
-        if (foreground.contrastRatioAgainst(renderedSurface) >= MINIMUM_TEXT_CONTRAST) {
+        if (contrastRatio(foreground, renderedSurface) >= MINIMUM_TEXT_CONTRAST) {
             high = candidate
         } else {
             low = candidate
@@ -366,14 +365,8 @@ internal fun Color.contentColor(fallback: Color): Color =
     if (alpha < 0.5f) {
         fallback
     } else {
-        listOf(Color.Black, Color.White).maxBy { candidate -> candidate.contrastRatioAgainst(this) }
+        listOf(Color.Black, Color.White).maxBy { candidate -> contrastRatio(candidate, this) }
     }
-
-private fun Color.contrastRatioAgainst(background: Color): Float {
-    val lighter = maxOf(luminance(), background.luminance())
-    val darker = minOf(luminance(), background.luminance())
-    return (lighter + 0.05f) / (darker + 0.05f)
-}
 
 private data class LauncherAccentColorRoles(
     val primary: Color,
