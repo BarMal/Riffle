@@ -24,7 +24,7 @@ class AppIconDominantColorTest {
         assertNotNull(color)
         val hsv = FloatArray(3)
         android.graphics.Color.colorToHSV(color!!.toArgb(), hsv)
-        // Pure red is hue 0; allow slack for the fixed-bucket quantization.
+        // Pure red is hue 0; allow slack for Palette's own quantization.
         assertTrue("expected a red-ish hue but was ${hsv[0]}", hsv[0] < 20f || hsv[0] > 340f)
     }
 
@@ -54,8 +54,9 @@ class AppIconDominantColorTest {
             Bitmap.createBitmap(40, 40, Bitmap.Config.ARGB_8888).apply {
                 for (x in 0 until width) {
                     for (y in 0 until height) {
-                        // Most of the icon is a near-gray background; a small strongly-saturated
-                        // blue region should still dominate the weighted hue vote.
+                        // Most of the icon is a near-gray background, which fails Palette's
+                        // vibrant-family saturation gate entirely; the small strongly-saturated
+                        // blue region should be the only candidate left standing.
                         val color =
                             if (x < width / 4 && y < height / 4) {
                                 android.graphics.Color.rgb(20, 40, 230)
@@ -67,12 +68,12 @@ class AppIconDominantColorTest {
                 }
             }.asImageBitmap()
 
-        val color = dominantColorOf(bitmap, strideX = 1, strideY = 1)
+        val color = dominantColorOf(bitmap)
 
         assertNotNull(color)
         val hsv = FloatArray(3)
         android.graphics.Color.colorToHSV(color!!.toArgb(), hsv)
-        // Blue sits around hue 225-240; allow slack for the fixed-bucket quantization.
+        // Blue sits around hue 225-240; allow slack for Palette's own quantization.
         assertTrue("expected a blue-ish hue but was ${hsv[0]}", hsv[0] in 190f..270f)
     }
 
