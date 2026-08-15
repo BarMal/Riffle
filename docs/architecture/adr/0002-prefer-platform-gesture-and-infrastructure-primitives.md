@@ -66,8 +66,10 @@ perceptual/color math, whenever one exists that fits the product requirement. Sp
   fan/depth rendering driven by the resulting continuous scroll offset -- the same split Calm
   uses: the platform/library owns "how far did it scroll and by what physics," Riffle's own
   code keeps owning "how does depth N render at scroll position X."
-- `DockShelfGesture.kt` migrates to `AnchoredDraggable`; `DockSwipeUpGesture.kt` migrates to
-  `detectVerticalDragGestures`.
+- `DockSwipeUpGesture.kt` migrates to `detectVerticalDragGestures`.
+- `DockShelfGesture.kt` is evaluated against `AnchoredDraggable` and `detectVerticalDragGestures`;
+  the evaluation's outcome (migrate or keep custom, and why) is recorded when that work lands
+  rather than assumed here, mirroring how `HomeGestureInput.kt`'s N-finger case is handled below.
 - `HomeGestureInput.kt`'s 2-finger pinch path is evaluated against `detectTransformGestures`;
   its N-finger swipe path is expected to remain custom absent a Foundation equivalent, and
   that determination is recorded when the follow-up work lands rather than assumed here.
@@ -100,6 +102,27 @@ one item does not block or entangle the others, and each can be reverted indepen
   description rather than bundled with the mechanical cache/contrast consolidations.
 - `HomeGestureInput.kt`'s N-finger swipe path may remain permanently custom; this ADR does not
   mandate migrating it, only evaluating the 2-finger pinch portion.
+- `DockShelfGesture.kt` was evaluated against both `AnchoredDraggable` and
+  `detectVerticalDragGestures` and kept hand-rolled; neither fits without changing behavior.
+  `AnchoredDraggable` models a continuous drag that follows the finger and settles to
+  an anchor on release/fling; this gesture has no visual offset-following at all -- it commits
+  synchronously mid-drag, still pressed, the instant a threshold is crossed, closer to
+  `DockSwipeUpGesture.kt`'s shape than to a bottom-sheet-style drag. `detectVerticalDragGestures`
+  was traced against Compose Foundation's actual source
+  (`DragGestureDetector.kt`): its `verticalDrag` loop calls `change.consume()`
+  unconditionally after every `onVerticalDrag` invocation, so it cannot preserve this gesture's
+  direction-selective claim (only consume when the drag is both past threshold *and* in the
+  direction that state can move) -- adopting it verbatim would make the dock swallow
+  wrong-direction drags that today fall through to `homeGestureInput`. Dropping to the lower-level
+  `awaitVerticalTouchSlopOrCancellation` for selective consumption doesn't work either: per its
+  own documented contract, an unconsumed touch-slop check resets and re-arms from a new
+  reference point rather than continuing to track cumulative distance from the original touch
+  down, so a claim that's initially rejected (wrong direction, or under the eager-claim
+  threshold) permanently loses the slop-sized distance already travelled -- silently raising the
+  effective 80px toggle threshold above the constant callers can see, and breaking the pixel-exact
+  choreography `DockShelfGestureInteractionTest.kt` already asserts. `DockSwipeUpGesture.kt`
+  avoided both problems because it has a single threshold, a single fixed direction, and no
+  competing early-claim step to preserve alongside it.
 - Future gesture or infrastructure code in this app should default to a platform/library
   primitive first, and justify a custom implementation explicitly (in code comments or a new
   ADR) when no suitable primitive exists, rather than defaulting to hand-rolled code and
@@ -125,6 +148,13 @@ one item does not block or entangle the others, and each can be reverted indepen
   it.** Rejected in favor of an explicit, scoped evaluation of just the 2-finger pinch case,
   so the "no Foundation equivalent" conclusion for N-finger swipe is a documented finding
   rather than an assumption.
+- **Force `DockShelfGesture.kt` onto `AnchoredDraggable` or `detectVerticalDragGestures`
+  regardless of fit.** Rejected after tracing both APIs' actual source and contract (see
+  Consequences): both would either change what gets consumed (breaking ancestor-gesture
+  preemption) or silently shift the effective toggle threshold (breaking the existing
+  pixel-exact regression tests). A migration that trades a small, correct, tested
+  implementation for a platform API that can't preserve its contract is not the improvement
+  this ADR is arguing for.
 
 ## References
 
