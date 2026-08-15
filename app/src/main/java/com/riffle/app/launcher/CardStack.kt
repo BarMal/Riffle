@@ -574,6 +574,15 @@ private fun Modifier.cardStackPointerInput(
                 var axis: CardStackGestureAxis? = null
                 var cancelled = false
                 val velocityTracker = VelocityTracker()
+                // Every subsequent sample is added inside the loop below, but the touch-down
+                // itself -- captured here, before that loop starts -- was never added. Harmless
+                // for an ordinary drag with plenty of later samples to establish velocity from,
+                // but a genuinely quick, short flick can produce only one or two motion events
+                // total before release; omitting the gesture's own starting point/time
+                // disproportionately starves calculateVelocity() of data for exactly that style
+                // of gesture, understating velocity for the fastest flicks specifically -- they
+                // fell below onSettle's fling threshold and read as unresponsive.
+                velocityTracker.addPosition(down.uptimeMillis, down.position)
 
                 while (true) {
                     val event = awaitPointerEvent()
