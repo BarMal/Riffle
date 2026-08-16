@@ -86,7 +86,7 @@ internal class ImmediateHomePagerState(
         get() = foundationPagerState.isScrollInProgress
 }
 
-@Suppress("LongParameterList")
+@Suppress("LongParameterList", "CyclomaticComplexMethod")
 @Composable
 internal fun ImmediateWorkspacePager(
     layout: HomeLayout,
