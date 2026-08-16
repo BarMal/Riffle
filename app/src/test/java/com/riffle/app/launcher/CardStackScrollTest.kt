@@ -36,10 +36,12 @@ class CardStackScrollTest {
     @Test
     fun aStaleFocusedIndexStillYieldsAReachableRange() {
         // Content reconciliation can shrink the stack under a focused index that has not caught up
-        // yet; the scroll must not offer positions outside the cards that actually exist.
+        // yet; the scroll must not offer positions outside the cards that actually exist. Index 9
+        // of a three-card stack anchors to the last card, which leaves nowhere further forward to
+        // go -- the range reaches back to the first card and no further on.
         val range = cardStackScrollPxRange(CardStackScroll(cardCount = 3, activeCardIndex = 9))
 
-        assertEquals(-128f, range.start)
+        assertEquals(0f, range.start)
         assertEquals(128f, range.endInclusive)
     }
 
@@ -57,8 +59,9 @@ class CardStackScrollTest {
     fun magnetizingCommitsToTheNearestCardRatherThanTheOneMostRecentlyPassed() {
         val scroll = CardStackScroll(cardCount = 6, activeCardIndex = 1, distancePerCardPx = 64f)
 
-        // Just past two cards' worth of forward travel -- nearest is the third card on.
-        assertEquals(4, cardStackSettledCardIndex(scrollPx = -140f, scroll = scroll))
+        // A shade past two cards' worth of forward travel from card 1, so the position sits at
+        // 3.19 -- nearest is card 3, not the card the scroll most recently swept past.
+        assertEquals(3, cardStackSettledCardIndex(scrollPx = -140f, scroll = scroll))
         // Not quite halfway into the next card -- the scroll falls back to where it started.
         assertEquals(1, cardStackSettledCardIndex(scrollPx = -20f, scroll = scroll))
         // Backwards, past halfway into the previous card.
