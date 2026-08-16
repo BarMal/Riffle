@@ -22,9 +22,10 @@ import kotlin.math.abs
 import kotlin.math.roundToInt
 
 /**
- * Continuous horizontal drag-to-switch-page pager state, mirroring
- * [rememberImmediateHomePagerState]'s fractional-position/settle-animation/pending-target-guard
- * shape but keyed on an abstract page count/index instead of Standard Home's page list.
+ * Continuous horizontal drag-to-switch-page pager state, mirroring the fractional-position/
+ * settle-animation/pending-target-guard shape [rememberImmediateHomePagerState] used before it
+ * migrated to Foundation's `HorizontalPager`/`PagerState` -- but keyed on an abstract page
+ * count/index instead of Standard Home's page list.
  *
  * This is deliberately generic over what a "page" is -- [pageCount] and [selectedIndex] are plain
  * integers, and [onSettle] receives the settled index directly, rather than this function resolving
@@ -185,8 +186,9 @@ private fun adaptiveStageStageSettleAnimation(policy: HomePageSettleMotionPolicy
     }
 
 /**
- * Claims horizontal drags at the stage-body level, mirroring [immediateHomePageDrag]'s
- * horizontal-intent-threshold/continuous-snapTo/settle-threshold-or-fling logic. Runs on
+ * Claims horizontal drags at the stage-body level, mirroring the horizontal-intent-threshold/
+ * continuous-snapTo/settle-threshold-or-fling logic ImmediateHomePager.kt's drag modifier used
+ * before it migrated to `HorizontalPager`. Runs on
  * [PointerEventPass.Initial] so it sees drags before [cardStackPointerInput] (which only consumes
  * vertical drags on the default Main pass) -- the two gestures coexist without conflict.
  *
@@ -282,5 +284,8 @@ internal fun Modifier.adaptiveStageStagePagerDrag(
         }
     }
 
-/** Same horizontal-intent threshold as [immediateHomePageDrag], kept as an independent constant. */
+/**
+ * Same horizontal-intent threshold value ImmediateHomePager.kt's drag modifier used before its
+ * migration to `HorizontalPager`, kept as an independent constant.
+ */
 internal const val STAGE_HORIZONTAL_DRAG_INTENT_PX = 18f
