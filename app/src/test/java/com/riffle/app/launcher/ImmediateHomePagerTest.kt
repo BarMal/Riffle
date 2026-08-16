@@ -5,8 +5,6 @@ import androidx.compose.ui.geometry.Rect
 import com.riffle.core.domain.launcher.home.GridCell
 import com.riffle.core.domain.launcher.home.GridDimensions
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ImmediateHomePagerTest {
@@ -31,120 +29,6 @@ class ImmediateHomePagerTest {
         assertEquals(WidgetAddTarget.DOCK, widgetPickerDropTarget(Offset(400f, 980f), bounds, dockBounds))
         assertEquals(null, widgetPickerDropTarget(Offset(400f, 940f), bounds, dockBounds))
         assertEquals(null, widgetPickerDropTarget(Offset(20f, 500f), bounds, dockBounds))
-    }
-
-    @Test
-    fun appliesExternalHomePageSelectionWhenPagerIsIdleAndPositionIsStale() {
-        assertTrue(
-            shouldApplyExternalHomePageSelection(
-                isDragging = false,
-                isSettling = false,
-                hasPendingGestureTarget = false,
-                pageCount = 2,
-                currentPagePosition = 0f,
-                selectedPageIndex = 1,
-            ),
-        )
-    }
-
-    @Test
-    fun doesNotApplyExternalHomePageSelectionWhileGestureOwnsTarget() {
-        assertFalse(
-            shouldApplyExternalHomePageSelection(
-                isDragging = false,
-                isSettling = false,
-                hasPendingGestureTarget = true,
-                pageCount = 2,
-                currentPagePosition = 0f,
-                selectedPageIndex = 1,
-            ),
-        )
-    }
-
-    @Test
-    fun doesNotApplyExternalHomePageSelectionWhenPositionAlreadyMatches() {
-        assertFalse(
-            shouldApplyExternalHomePageSelection(
-                isDragging = false,
-                isSettling = false,
-                hasPendingGestureTarget = false,
-                pageCount = 2,
-                currentPagePosition = 1f,
-                selectedPageIndex = 1,
-            ),
-        )
-    }
-
-    @Test
-    fun appliesExternalHomePageSelectionWhenFractionalPositionRoundsToSelectedPage() {
-        assertTrue(
-            shouldApplyExternalHomePageSelection(
-                isDragging = false,
-                isSettling = false,
-                hasPendingGestureTarget = false,
-                pageCount = 2,
-                currentPagePosition = 0.6f,
-                selectedPageIndex = 1,
-            ),
-        )
-    }
-
-    @Test
-    fun doesNotApplyExternalHomePageSelectionWhenThereAreNoPages() {
-        assertFalse(
-            shouldApplyExternalHomePageSelection(
-                isDragging = false,
-                isSettling = false,
-                hasPendingGestureTarget = false,
-                pageCount = 0,
-                currentPagePosition = 0f,
-                selectedPageIndex = 1,
-            ),
-        )
-    }
-
-    @Test
-    fun doesNotApplyExternalHomePageSelectionWhileDragging() {
-        assertFalse(
-            shouldApplyExternalHomePageSelection(
-                isDragging = true,
-                isSettling = false,
-                hasPendingGestureTarget = false,
-                pageCount = 2,
-                currentPagePosition = 0f,
-                selectedPageIndex = 1,
-            ),
-        )
-    }
-
-    @Test
-    fun doesNotApplyExternalHomePageSelectionWhileSettling() {
-        assertFalse(
-            shouldApplyExternalHomePageSelection(
-                isDragging = false,
-                isSettling = true,
-                hasPendingGestureTarget = false,
-                pageCount = 2,
-                currentPagePosition = 0f,
-                selectedPageIndex = 1,
-            ),
-        )
-    }
-
-    @Test
-    fun selectsAnimatedExternalPageSelectionSettlePolicyWhenReducedMotionIsOff() {
-        assertEquals(
-            HomePageExternalSelectionSettlePolicy.AnimatedSettle,
-            homePageExternalSelectionSettlePolicy(reducedMotion = false),
-        )
-    }
-
-    @Test
-    fun selectsAnimatedExternalPageSelectionSettlePolicyWhenReducedMotionIsOn() {
-        assertEquals(
-            HomePageExternalSelectionSettlePolicy.AnimatedSettle,
-            homePageExternalSelectionSettlePolicy(reducedMotion = true),
-        )
     }
 
     @Test

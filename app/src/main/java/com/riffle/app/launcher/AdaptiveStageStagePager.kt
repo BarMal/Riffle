@@ -1,31 +1,24 @@
 package com.riffle.app.launcher
 
-import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.AnimationSpec
 import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.gestures.awaitEachGesture
-import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.pager.PagerState
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.MutableFloatState
-import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.pointer.PointerEventPass
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.input.pointer.util.VelocityTracker
-import kotlin.math.abs
-import kotlin.math.roundToInt
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.snapshotFlow
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.filter
 
 /**
- * Continuous horizontal drag-to-switch-page pager state, mirroring the fractional-position/
- * settle-animation/pending-target-guard shape [rememberImmediateHomePagerState] used before it
- * migrated to Foundation's `HorizontalPager`/`PagerState` -- but keyed on an abstract page
- * count/index instead of Standard Home's page list.
+ * Continuous horizontal drag-to-switch-page pager state, wrapping Compose Foundation's [PagerState]
+ * the same way [rememberImmediateHomePagerState] does for Standard Home's own pages: external
+ * selection (e.g. a spine chip tap) syncs in via `animateScrollToPage` when the pager is idle, and
+ * the pager's own settled page reports back upstream once a user-driven drag/fling finishes.
  *
  * This is deliberately generic over what a "page" is -- [pageCount] and [selectedIndex] are plain
  * integers, and [onSettle] receives the settled index directly, rather than this function resolving
@@ -34,7 +27,6 @@ import kotlin.math.roundToInt
  * means -- e.g. dispatching [LauncherShellAction.SelectAppStage] for a real stage's index, or just
  * updating local UI state for a virtual page's index.
  */
-@Suppress("LongMethod")
 @Composable
 internal fun rememberAdaptiveStageStagePagerState(
     pageCount: Int,
@@ -43,136 +35,68 @@ internal fun rememberAdaptiveStageStagePagerState(
     onSettle: (Int) -> Unit,
 ): AdaptiveStageStagePagerState {
     val coercedSelectedIndex = selectedIndex.coerceAtLeast(0)
-    val dragStagePosition = remember { mutableFloatStateOf(coercedSelectedIndex.toFloat()) }
-    val settleStagePosition = remember { Animatable(coercedSelectedIndex.toFloat()) }
-    val isDragging = remember { mutableStateOf(false) }
-    val isSettling = remember { mutableStateOf(false) }
-    val pendingGestureTargetStageIndex = remember { mutableStateOf<Int?>(null) }
+    val foundationPagerState =
+        rememberPagerState(initialPage = coercedSelectedIndex) { pageCount.coerceAtLeast(1) }
 
-    LaunchedEffect(
-        coercedSelectedIndex,
-        pageCount,
-        isDragging.value,
-        pendingGestureTargetStageIndex.value,
-    ) {
-        if (pendingGestureTargetStageIndex.value == coercedSelectedIndex) {
-            pendingGestureTargetStageIndex.value = null
-        }
-
-        val shouldApplyExternalSelection =
-            shouldApplyExternalHomePageSelection(
-                isDragging = isDragging.value,
-                isSettling = isSettling.value,
-                hasPendingGestureTarget = pendingGestureTargetStageIndex.value != null,
-                pageCount = pageCount,
-                currentPagePosition = dragStagePosition.floatValue,
-                selectedPageIndex = coercedSelectedIndex,
+    // Applies an externally-driven page selection (e.g. a spine chip tap) to the pager. Gated on
+    // isScrollInProgress so it never fights a page the pager's own gesture is still mid-flight on --
+    // the settle-effect below is what reports a user-driven page change back upstream, so by the time
+    // this key combination changes again the pager and caller already agree and this is a no-op.
+    LaunchedEffect(coercedSelectedIndex, pageCount, reducedMotion) {
+        if (
+            pageCount > 0 &&
+            !foundationPagerState.isScrollInProgress &&
+            foundationPagerState.currentPage != coercedSelectedIndex
+        ) {
+            foundationPagerState.animateScrollToPage(
+                page = coercedSelectedIndex,
+                animationSpec = adaptiveStageStageSettleAnimation(homePageSettleMotionPolicy(reducedMotion)),
             )
-
-        if (shouldApplyExternalSelection) {
-            when (homePageExternalSelectionSettlePolicy(reducedMotion)) {
-                HomePageExternalSelectionSettlePolicy.ImmediateSnap -> {
-                    val targetStagePosition = coercedSelectedIndex.toFloat()
-                    dragStagePosition.floatValue = targetStagePosition
-                    settleStagePosition.snapTo(targetStagePosition)
-                }
-
-                HomePageExternalSelectionSettlePolicy.AnimatedSettle -> {
-                    isSettling.value = true
-                    try {
-                        settleStagePosition.snapTo(dragStagePosition.floatValue)
-                        settleStagePosition.animateTo(
-                            targetValue = coercedSelectedIndex.toFloat(),
-                            animationSpec =
-                                adaptiveStageStageSettleAnimation(homePageSettleMotionPolicy(reducedMotion)),
-                        ) {
-                            dragStagePosition.floatValue = value
-                        }
-                        dragStagePosition.floatValue = coercedSelectedIndex.toFloat()
-                    } finally {
-                        isSettling.value = false
-                    }
-                }
-            }
         }
     }
 
-    return AdaptiveStageStagePagerState(
-        pagePositionState = dragStagePosition,
-        settlePagePosition = settleStagePosition,
-        isSettling = isSettling,
-        isDragging = isDragging,
-        onDragStarted = {
-            isDragging.value = true
-            isSettling.value = false
-        },
-        onTargetStageSettling = { targetIndex ->
-            pendingGestureTargetStageIndex.value =
-                if (targetIndex == coercedSelectedIndex) null else targetIndex
-        },
-        onDragStopped = { targetIndex ->
-            pendingGestureTargetStageIndex.value =
-                if (targetIndex == coercedSelectedIndex) null else targetIndex
+    val latestOnSettle = rememberUpdatedState(onSettle)
+    val latestSelectedIndex = rememberUpdatedState(coercedSelectedIndex)
 
-            if (targetIndex != coercedSelectedIndex) onSettle(targetIndex)
-            isDragging.value = false
-        },
-    )
+    // Reports the pager's own settled page upstream once a user-driven drag/fling finishes.
+    LaunchedEffect(foundationPagerState) {
+        snapshotFlow { foundationPagerState.isScrollInProgress }
+            .filter { isScrollInProgress -> !isScrollInProgress }
+            .collect {
+                val settledIndex = foundationPagerState.currentPage
+                if (settledIndex != latestSelectedIndex.value) {
+                    latestOnSettle.value(settledIndex)
+                }
+            }
+    }
+
+    return AdaptiveStageStagePagerState(foundationPagerState)
 }
 
 internal class AdaptiveStageStagePagerState(
-    private val pagePositionState: MutableFloatState,
-    private val settlePagePosition: Animatable<Float, *>,
-    private val isSettling: MutableState<Boolean>,
-    private val isDragging: MutableState<Boolean>,
-    val onDragStarted: () -> Unit,
-    val onTargetStageSettling: (Int) -> Unit,
-    val onDragStopped: (Int) -> Unit,
+    val foundationPagerState: PagerState,
 ) {
+    /** Continuous position (e.g. `1.35`) for consumers -- like the stage spine -- that animate off it. */
     val pagePosition: Float
-        get() = pagePositionState.floatValue
+        get() = foundationPagerState.currentPage + foundationPagerState.currentPageOffsetFraction
 
     val visualSelectedStageIndex: Int
-        get() = pagePosition.roundToInt()
+        get() = foundationPagerState.currentPage
 
     val isStageGestureActive: Boolean
-        get() = isDragging.value || isSettling.value
-
-    suspend fun stopSettling() {
-        settlePagePosition.stop()
-        isSettling.value = false
-    }
-
-    fun snapTo(pagePosition: Float) {
-        pagePositionState.floatValue = pagePosition
-    }
-
-    suspend fun animateToStage(
-        targetStagePosition: Float,
-        initialVelocity: Float,
-        reducedMotion: Boolean,
-    ) {
-        isSettling.value = true
-        try {
-            settlePagePosition.snapTo(pagePositionState.floatValue)
-            settlePagePosition.animateTo(
-                targetValue = targetStagePosition,
-                animationSpec = adaptiveStageStageSettleAnimation(homePageSettleMotionPolicy(reducedMotion)),
-                initialVelocity = initialVelocity,
-            ) {
-                pagePositionState.floatValue = value
-            }
-            pagePositionState.floatValue = targetStagePosition
-        } finally {
-            isSettling.value = false
-        }
-    }
+        get() = foundationPagerState.isScrollInProgress
 }
 
-private fun adaptiveStageStageSettleAnimation(policy: HomePageSettleMotionPolicy) =
+/**
+ * Same threshold/animation-spec helpers [ImmediateHomePager.kt]'s `ImmediateWorkspacePager` seeds its
+ * own `PagerDefaults.flingBehavior` with, kept as an independent constant/function pair rather than
+ * shared -- [homePageSettleMotionPolicy] and [REDUCED_MOTION_PAGE_SETTLE_DURATION_MILLIS] are the only
+ * pieces actually reused across the two files.
+ */
+internal fun adaptiveStageStageSettleAnimation(policy: HomePageSettleMotionPolicy): AnimationSpec<Float> =
     when (policy) {
         HomePageSettleMotionPolicy.ReducedShortTween ->
-            tween<Float>(
+            tween(
                 durationMillis = REDUCED_MOTION_PAGE_SETTLE_DURATION_MILLIS,
                 easing = LinearOutSlowInEasing,
             )
@@ -185,107 +109,4 @@ private fun adaptiveStageStageSettleAnimation(policy: HomePageSettleMotionPolicy
             )
     }
 
-/**
- * Claims horizontal drags at the stage-body level, mirroring the horizontal-intent-threshold/
- * continuous-snapTo/settle-threshold-or-fling logic ImmediateHomePager.kt's drag modifier used
- * before it migrated to `HorizontalPager`. Runs on
- * [PointerEventPass.Initial] so it sees drags before [cardStackPointerInput] (which only consumes
- * vertical drags on the default Main pass) -- the two gestures coexist without conflict.
- *
- * [pageCount] and [selectedIndex] are the same abstract page identity [rememberAdaptiveStageStagePagerState]
- * uses; [navigationKey] should change whenever the underlying set of pages changes shape (a stage
- * added/removed, or a virtual page appearing/disappearing) so the gesture recognizer resets.
- */
-@Suppress("LongParameterList")
-internal fun Modifier.adaptiveStageStagePagerDrag(
-    enabled: Boolean,
-    stageWidthPx: Float,
-    pageCount: Int,
-    selectedIndex: Int,
-    navigationKey: String,
-    pagerState: AdaptiveStageStagePagerState,
-    reducedMotion: Boolean,
-    launchStageMotion: (suspend () -> Unit) -> Unit,
-): Modifier =
-    if (!enabled) {
-        this
-    } else {
-        pointerInput(stageWidthPx, selectedIndex, navigationKey) {
-            awaitEachGesture {
-                val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
-                if (stageWidthPx <= 0f) {
-                    return@awaitEachGesture
-                }
-
-                launchStageMotion { pagerState.stopSettling() }
-                val velocityTracker = VelocityTracker()
-                velocityTracker.addPosition(down.uptimeMillis, down.position)
-
-                val startStagePosition = pagerState.pagePosition
-                var dragX = 0f
-                var dragY = 0f
-                var isStageDrag = false
-                var pointerIsDown = true
-                val lastStageIndex = (pageCount - 1).coerceAtLeast(0)
-
-                while (pointerIsDown) {
-                    val event = awaitPointerEvent(PointerEventPass.Initial)
-                    val change = event.changes.firstOrNull { pointer -> pointer.id == down.id }
-                    if (change == null || !change.pressed) {
-                        pointerIsDown = false
-                    } else {
-                        val delta = change.position - down.position
-                        dragX = delta.x
-                        dragY = delta.y
-                        velocityTracker.addPosition(change.uptimeMillis, change.position)
-
-                        if (
-                            !isStageDrag &&
-                            abs(dragX) >= STAGE_HORIZONTAL_DRAG_INTENT_PX &&
-                            abs(dragX) >= abs(dragY)
-                        ) {
-                            isStageDrag = true
-                            pagerState.onDragStarted()
-                        }
-
-                        if (isStageDrag) {
-                            pagerState.snapTo(
-                                (startStagePosition - (dragX / stageWidthPx)).coerceIn(0f, lastStageIndex.toFloat()),
-                            )
-                            change.consume()
-                        }
-                    }
-                }
-
-                if (isStageDrag) {
-                    val velocity = velocityTracker.calculateVelocity().x
-                    val releasedStagePosition =
-                        (startStagePosition - (dragX / stageWidthPx)).coerceIn(0f, lastStageIndex.toFloat())
-                    val targetIndex =
-                        pageSettleTargetIndex(
-                            startPagePosition = startStagePosition,
-                            releasedPagePosition = releasedStagePosition,
-                            horizontalDragPx = dragX,
-                            pageWidthPx = stageWidthPx,
-                            horizontalVelocityPxPerSecond = velocity,
-                            pageCount = pageCount,
-                        )
-                    launchStageMotion {
-                        pagerState.onTargetStageSettling(targetIndex)
-                        pagerState.animateToStage(
-                            targetStagePosition = targetIndex.toFloat(),
-                            initialVelocity = -velocity / stageWidthPx.coerceAtLeast(1f),
-                            reducedMotion = reducedMotion,
-                        )
-                        pagerState.onDragStopped(targetIndex)
-                    }
-                }
-            }
-        }
-    }
-
-/**
- * Same horizontal-intent threshold value ImmediateHomePager.kt's drag modifier used before its
- * migration to `HorizontalPager`, kept as an independent constant.
- */
-internal const val STAGE_HORIZONTAL_DRAG_INTENT_PX = 18f
+internal const val STAGE_CHANGE_DISTANCE_THRESHOLD = 0.22f

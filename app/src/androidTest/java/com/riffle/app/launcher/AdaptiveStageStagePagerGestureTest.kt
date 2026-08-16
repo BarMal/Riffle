@@ -1,11 +1,10 @@
 package com.riffle.app.launcher
 
 import androidx.activity.ComponentActivity
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -20,15 +19,13 @@ import com.riffle.core.domain.launcher.cards.AppStage
 import com.riffle.core.domain.launcher.cards.AppStageId
 import com.riffle.core.domain.launcher.cards.AppStageLifecycle
 import com.riffle.core.domain.launcher.cards.AppStageOrigin
-import kotlinx.coroutines.CoroutineStart
-import kotlinx.coroutines.launch
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 
 /**
- * Drives [adaptiveStageStagePagerDrag] directly against a minimal harness, the same way
- * [CardStackGestureTest] exercises [CardStack] in isolation, rather than the full
+ * Drives [rememberAdaptiveStageStagePagerState] against a minimal [HorizontalPager] harness, the
+ * same way [CardStackGestureTest] exercises [CardStack] in isolation, rather than the full
  * [AdaptiveStageAppStageSurface] tree. Works in plain page indices rather than [AppStage]s
  * directly (see #1057) -- the pager itself no longer knows whether a given index is a real stage
  * or the virtual All-notifications page; only the harness (mirroring
@@ -53,7 +50,6 @@ class AdaptiveStageStagePagerGestureTest {
         val dispatched = mutableListOf<LauncherShellAction>()
 
         composeRule.setContent {
-            val coroutineScope = rememberCoroutineScope()
             val pagerState =
                 rememberAdaptiveStageStagePagerState(
                     pageCount = stages.size,
@@ -63,24 +59,10 @@ class AdaptiveStageStagePagerGestureTest {
                         selectedIndex = index
                     },
                 )
-            Box(
-                modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .testTag("pager")
-                        .adaptiveStageStagePagerDrag(
-                            enabled = true,
-                            stageWidthPx = 1000f,
-                            pageCount = stages.size,
-                            selectedIndex = selectedIndex,
-                            navigationKey = "test",
-                            pagerState = pagerState,
-                            reducedMotion = false,
-                            launchStageMotion = { action ->
-                                coroutineScope.launch(start = CoroutineStart.UNDISPATCHED) { action() }
-                            },
-                        ),
-            )
+            HorizontalPager(
+                state = pagerState.foundationPagerState,
+                modifier = Modifier.fillMaxSize().testTag("pager"),
+            ) { }
         }
 
         composeRule.onNodeWithTag("pager").performTouchInput {
@@ -103,7 +85,6 @@ class AdaptiveStageStagePagerGestureTest {
         val dispatched = mutableListOf<LauncherShellAction>()
 
         composeRule.setContent {
-            val coroutineScope = rememberCoroutineScope()
             val pagerState =
                 rememberAdaptiveStageStagePagerState(
                     pageCount = stages.size,
@@ -113,29 +94,15 @@ class AdaptiveStageStagePagerGestureTest {
                         selectedIndex = index
                     },
                 )
-            Box(
-                modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .testTag("pager")
-                        .adaptiveStageStagePagerDrag(
-                            enabled = true,
-                            // A very wide virtual stage width relative to the small on-screen drag
-                            // below keeps this well under both the distance and fling thresholds.
-                            stageWidthPx = 100_000f,
-                            pageCount = stages.size,
-                            selectedIndex = selectedIndex,
-                            navigationKey = "test",
-                            pagerState = pagerState,
-                            reducedMotion = false,
-                            launchStageMotion = { action ->
-                                coroutineScope.launch(start = CoroutineStart.UNDISPATCHED) { action() }
-                            },
-                        ),
-            )
+            HorizontalPager(
+                state = pagerState.foundationPagerState,
+                modifier = Modifier.fillMaxSize().testTag("pager"),
+            ) { }
         }
 
         composeRule.onNodeWithTag("pager").performTouchInput {
+            // A short drag relative to the harness's actual on-screen width keeps this well under
+            // both the distance and fling velocity thresholds.
             swipe(
                 start = Offset(width / 2f, height / 2f),
                 end = Offset(width / 2f - 40f, height / 2f),

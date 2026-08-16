@@ -25,8 +25,6 @@ import com.riffle.core.domain.launcher.home.LauncherPageType
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.filter
-import kotlin.math.abs
-import kotlin.math.roundToInt
 
 @Composable
 internal fun rememberImmediateHomePagerState(
@@ -170,62 +168,6 @@ internal fun ImmediateWorkspacePager(
 private val LauncherPage.isNotificationCardsPage: Boolean
     get() = (type as? LauncherPageType.Generated)?.kind == GeneratedLauncherPageKind.NOTIFICATION_CARDS
 
-/**
- * Settle-target arithmetic shared with [AdaptiveStageStagePagerState]'s own hand-rolled drag, which
- * hasn't migrated to a Foundation primitive yet -- kept here rather than duplicated per
- * [AdaptiveStageStagePager.kt]'s doc comments on the functions below.
- */
-internal fun pageSettleTargetIndex(
-    startPagePosition: Float,
-    releasedPagePosition: Float,
-    horizontalDragPx: Float,
-    pageWidthPx: Float,
-    horizontalVelocityPxPerSecond: Float,
-    pageCount: Int,
-): Int {
-    val draggedPageFraction = abs(horizontalDragPx) / pageWidthPx.coerceAtLeast(1f)
-    val startPageIndex = startPagePosition.roundToInt()
-    val hasMeaningfulLeftFling =
-        horizontalDragPx < 0f &&
-            horizontalVelocityPxPerSecond <= -PAGE_FLING_VELOCITY_THRESHOLD_PX_PER_SECOND
-    val hasMeaningfulRightFling =
-        horizontalDragPx > 0f &&
-            horizontalVelocityPxPerSecond >= PAGE_FLING_VELOCITY_THRESHOLD_PX_PER_SECOND
-
-    return when {
-        horizontalDragPx < 0f && draggedPageFraction >= PAGE_CHANGE_DISTANCE_THRESHOLD -> startPageIndex + 1
-
-        horizontalDragPx > 0f && draggedPageFraction >= PAGE_CHANGE_DISTANCE_THRESHOLD -> startPageIndex - 1
-
-        hasMeaningfulLeftFling -> startPageIndex + 1
-
-        hasMeaningfulRightFling -> startPageIndex - 1
-
-        else -> releasedPagePosition.roundToInt()
-    }.coerceIn(0, (pageCount - 1).coerceAtLeast(0))
-}
-
-internal fun shouldApplyExternalHomePageSelection(
-    isDragging: Boolean,
-    isSettling: Boolean,
-    hasPendingGestureTarget: Boolean,
-    pageCount: Int,
-    currentPagePosition: Float,
-    selectedPageIndex: Int,
-): Boolean =
-    !isDragging &&
-        !isSettling &&
-        !hasPendingGestureTarget &&
-        pageCount > 0 &&
-        currentPagePosition != selectedPageIndex.toFloat()
-
-internal fun homePageExternalSelectionSettlePolicy(reducedMotion: Boolean): HomePageExternalSelectionSettlePolicy =
-    when (homePageSettleMotionPolicy(reducedMotion)) {
-        HomePageSettleMotionPolicy.StandardSpring,
-        HomePageSettleMotionPolicy.ReducedShortTween,
-        -> HomePageExternalSelectionSettlePolicy.AnimatedSettle
-    }
-
 internal fun homePageSettleMotionPolicy(reducedMotion: Boolean): HomePageSettleMotionPolicy =
     if (reducedMotion) {
         HomePageSettleMotionPolicy.ReducedShortTween
@@ -257,14 +199,8 @@ internal enum class HomePageSettleMotionPolicy {
     ReducedShortTween,
 }
 
-internal enum class HomePageExternalSelectionSettlePolicy {
-    AnimatedSettle,
-    ImmediateSnap,
-}
-
 internal const val REDUCED_MOTION_PAGE_SETTLE_DURATION_MILLIS = 80
 
 private const val PAGE_CHANGE_DISTANCE_THRESHOLD = 0.22f
-private const val PAGE_FLING_VELOCITY_THRESHOLD_PX_PER_SECOND = 900f
 private const val DRAG_PAGE_EDGE_FRACTION = 0.42f
 private const val DRAG_PAGE_EDGE_HOVER_MILLIS = 180L
