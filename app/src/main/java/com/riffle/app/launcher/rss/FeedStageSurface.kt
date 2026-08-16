@@ -305,7 +305,7 @@ private fun FeedArticleStack(
                                                 verticalDragPx = drag,
                                                 verticalVelocityPxPerSecond = velocity,
                                                 distanceThresholdPx =
-                                                    FEED_CARD_STACK_SETTLE_DISTANCE_THRESHOLD_PX,
+                                                FEED_CARD_STACK_SETTLE_DISTANCE_THRESHOLD_PX,
                                                 flingVelocityThresholdPxPerSecond = 500f,
                                             ),
                                         ).let { result ->

@@ -2047,7 +2047,7 @@ private fun AdaptiveStageNotificationStack(
                                             cardCount = cards.size,
                                             activeCardIndex = activeCardIndex,
                                             distancePerCardPx =
-                                                ADAPTIVE_STAGE_CARD_STACK_SETTLE_DISTANCE_THRESHOLD_PX,
+                                            ADAPTIVE_STAGE_CARD_STACK_SETTLE_DISTANCE_THRESHOLD_PX,
                                         ),
                                 ),
                         ) { entry, cardModifier ->
@@ -2450,7 +2450,7 @@ private fun AdaptiveStageAllNotificationsStack(
                                         cardCount = cards.size,
                                         activeCardIndex = activeCardIndex,
                                         distancePerCardPx =
-                                            ADAPTIVE_STAGE_CARD_STACK_SETTLE_DISTANCE_THRESHOLD_PX,
+                                        ADAPTIVE_STAGE_CARD_STACK_SETTLE_DISTANCE_THRESHOLD_PX,
                                     ),
                             ),
                     ) { entry, cardModifier ->

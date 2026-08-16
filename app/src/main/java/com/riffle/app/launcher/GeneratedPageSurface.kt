@@ -209,7 +209,7 @@ internal fun GeneratedNotificationCardsPage(
                                                             verticalDragPx = drag,
                                                             verticalVelocityPxPerSecond = velocity,
                                                             distanceThresholdPx =
-                                                                GENERATED_CARD_STACK_SETTLE_DISTANCE_THRESHOLD_PX,
+                                                            GENERATED_CARD_STACK_SETTLE_DISTANCE_THRESHOLD_PX,
                                                             flingVelocityThresholdPxPerSecond = 1_000f,
                                                         ),
                                                     )
@@ -235,7 +235,7 @@ internal fun GeneratedNotificationCardsPage(
                                                     cardCount = state.cards.size,
                                                     activeCardIndex = activeCardIndex,
                                                     distancePerCardPx =
-                                                        GENERATED_CARD_STACK_SETTLE_DISTANCE_THRESHOLD_PX,
+                                                    GENERATED_CARD_STACK_SETTLE_DISTANCE_THRESHOLD_PX,
                                                 ),
                                         ),
                                 ) { entry, pointerModifier ->

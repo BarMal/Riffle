@@ -490,6 +490,7 @@ private suspend fun runCardStackScrollFling(
     interaction: () -> CardStackInteraction?,
 ) {
     val range = cardStackScrollPxRange(scroll)
+
     fun publish(position: Float) {
         scrollPx.floatValue = position
         interaction()?.onLiveDrag?.invoke(position)
