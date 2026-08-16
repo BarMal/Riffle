@@ -10,14 +10,14 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.FlingBehavior
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.ScrollScope
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.rememberScrollableState
 import androidx.compose.foundation.gestures.scrollable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.runtime.Composable
@@ -43,6 +43,8 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.SemanticsPropertyKey
 import androidx.compose.ui.semantics.invisibleToUser
 import androidx.compose.ui.semantics.isTraversalGroup
@@ -55,6 +57,7 @@ import com.riffle.core.domain.launcher.cards.CardStackAnimationProfile
 import com.riffle.core.domain.launcher.cards.CardStackAnimationSpec
 import com.riffle.core.domain.launcher.cards.CardStackLayoutEntry
 import com.riffle.core.domain.launcher.cards.CardStackNavigationDirection
+import kotlin.math.abs
 
 /**
  * Which screen axis is this stack's own drag-to-navigate/fan axis. [VERTICAL] (the default,
@@ -577,13 +580,16 @@ private const val SETTLE_DURATION_STEP_CAP = 4
  * Focuses [entry] on a plain tap, for a not-yet-focused entry only -- refocusing an already-focused
  * card is a no-op (see [com.riffle.core.domain.launcher.cards.CardStackController.jumpTo]), and
  * skipping the modifier entirely there leaves a caller's own click handling (e.g. tapping the
- * focused card to launch its app) as the sole `clickable` on that entry instead of stacking two.
+ * focused card to launch its app) as the sole click handler on that entry instead of stacking two.
  *
- * Uses `Modifier.clickable` rather than a lower-level `detectTapGestures` specifically so this
- * cooperates with the ancestor `Modifier.scrollable` this stack's root now installs (see
- * [CardStack]'s own body) the same well-tested way any scrollable-container-of-clickable-items
- * does -- `clickable` defers committing to a click until it's sure an ancestor scrollable hasn't
- * claimed the gesture as a drag first, which a bare `detectTapGestures` here does not.
+ * Runs on [PointerEventPass.Initial] and never consumes anything, mirroring how
+ * `adaptiveStageStagePagerDrag` used to claim priority over `cardStackPointerInput` before its own
+ * migration to `HorizontalPager` (#1126): this stack's root now installs its own
+ * `Modifier.scrollable` for the drag/settle gesture (see [CardStack]'s own body), and this tap
+ * detector needs to reach its own tap-or-not verdict independent of whatever pass/timing that
+ * ancestor's Main-pass gesture recognition uses internally -- a `clickable`/`detectTapGestures`
+ * here, both of which only see events *after* an ancestor scrollable's Main-pass processing, proved
+ * unreliable for a zero-duration synthetic tap in `GeneratedPageSurfaceInteractionTest`.
  */
 private fun Modifier.cardStackTapToFocus(
     entry: CardStackLayoutEntry,
@@ -592,17 +598,30 @@ private fun Modifier.cardStackTapToFocus(
 ): Modifier {
     if (interaction == null || isFocused) return this
     // composed + rememberUpdatedState (mirroring dockSwipeUpGestureInput's identical need) rather
-    // than reading `interaction`/`entry` directly in the onClick lambda: both are fresh instances
-    // every recomposition (interaction's own onLiveDrag closure among them), and a stale closure
-    // here would call an outdated onFocusRequest.
+    // than keying pointerInput on `interaction`/`entry` directly: both are fresh instances every
+    // recomposition, and keying on them would restart this gesture's coroutine mid-tap. Keying on
+    // entry.cardIndex instead -- stable for a given card across recompositions -- avoids that while
+    // still resetting the recognizer if this slot starts rendering a different card.
     return composed {
         val currentInteraction by rememberUpdatedState(interaction)
         val currentEntry by rememberUpdatedState(entry)
-        clickable(
-            interactionSource = remember { MutableInteractionSource() },
-            indication = null,
-        ) {
-            currentInteraction.onFocusRequest(currentEntry)
+        pointerInput(entry.cardIndex) {
+            awaitEachGesture {
+                val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+                var isTap = true
+                while (true) {
+                    val event = awaitPointerEvent(PointerEventPass.Initial)
+                    val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                    val delta = change.position - down.position
+                    if (abs(delta.x) > viewConfiguration.touchSlop || abs(delta.y) > viewConfiguration.touchSlop) {
+                        isTap = false
+                    }
+                    if (!change.pressed) break
+                }
+                if (isTap) {
+                    currentInteraction.onFocusRequest(currentEntry)
+                }
+            }
         }
     }
 }
