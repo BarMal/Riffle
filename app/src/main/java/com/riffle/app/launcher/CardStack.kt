@@ -45,6 +45,7 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.semantics.SemanticsPropertyKey
 import androidx.compose.ui.semantics.invisibleToUser
 import androidx.compose.ui.semantics.isTraversalGroup
@@ -182,6 +183,7 @@ internal fun CardStack(
     }
 
     val currentInteraction by rememberUpdatedState(interaction)
+    val touchSlop = LocalViewConfiguration.current.touchSlop
     // Raw signed pixel delta accumulated since this stack's own axis-drag started -- reset once
     // performFling below reports it to onSettle. Mirrors cardStackPointerInput's old verticalDrag/
     // horizontalDrag locals, just accumulated from Modifier.scrollable's own per-frame deltas
@@ -189,6 +191,18 @@ internal fun CardStack(
     var accumulatedDragPx by remember { mutableFloatStateOf(0f) }
     val scrollableState =
         rememberScrollableState { delta ->
+            if (!isDragging.value) {
+                // Modifier.scrollable consumes touchSlop's worth of movement internally while
+                // deciding this is a drag -- its own gesture utilities call this the "overSlop"
+                // delta -- and never reports that portion through this callback. The old
+                // hand-rolled cardStackPointerInput accumulated every pointer delta starting from
+                // the very first touch-down, with no such exclusion, and CardStackController.
+                // settle's distance/velocity thresholds were tuned against that full-distance
+                // convention. Restoring the slop here keeps a fling/drag committing at the same
+                // physical finger travel it always did, instead of silently requiring extra
+                // travel -- past the already-crossed slop -- to reach those same thresholds.
+                accumulatedDragPx += if (delta >= 0f) touchSlop else -touchSlop
+            }
             isDragging.value = true
             accumulatedDragPx += delta
             currentInteraction?.onLiveDrag?.invoke(accumulatedDragPx)
