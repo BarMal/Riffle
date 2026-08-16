@@ -591,6 +591,7 @@ private const val SETTLE_DURATION_STEP_CAP = 4
  * here, both of which only see events *after* an ancestor scrollable's Main-pass processing, proved
  * unreliable for a zero-duration synthetic tap in `GeneratedPageSurfaceInteractionTest`.
  */
+@Suppress("LoopWithTooManyJumpStatements")
 private fun Modifier.cardStackTapToFocus(
     entry: CardStackLayoutEntry,
     isFocused: Boolean,
