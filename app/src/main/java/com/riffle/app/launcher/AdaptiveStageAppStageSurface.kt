@@ -1726,8 +1726,9 @@ private fun AdaptiveStageStageHeader(
                         )
                     }
                     // Cards mode's own card stack fills the whole touch area with its own
-                    // drag/tap gesture handling (see cardStackPointerInput), unlike Standard
-                    // grid mode's HomeBackgroundContextMenu, which sits behind genuinely empty
+                    // drag/tap gesture handling (see CardStack.kt's Modifier.scrollable +
+                    // cardStackTapToFocus), unlike Standard grid mode's HomeBackgroundContextMenu,
+                    // which sits behind genuinely empty
                     // grid cells and is always reachable by a long-press there. Cards mode never
                     // wires up an equivalent background handler, so without this entry the only
                     // way to reach Settings from Cards mode is whatever empty space happens to
