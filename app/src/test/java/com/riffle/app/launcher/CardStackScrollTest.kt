@@ -44,6 +44,16 @@ class CardStackScrollTest {
     }
 
     @Test
+    fun anEmptyStackHasNowhereForAScrollToRender() {
+        // Surfaces guard against empty content before composing a stack, but the scroll conversion
+        // must not produce a negative index if one ever slips through mid-reconciliation.
+        assertEquals(
+            0f,
+            cardStackLiveActiveCardIndex(activeCardIndex = 0, cardCount = 0, liveDragPx = -500f),
+        )
+    }
+
+    @Test
     fun magnetizingCommitsToTheNearestCardRatherThanTheOneMostRecentlyPassed() {
         val scroll = CardStackScroll(cardCount = 6, activeCardIndex = 1, distancePerCardPx = 64f)
 
