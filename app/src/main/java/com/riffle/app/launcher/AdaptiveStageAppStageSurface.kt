@@ -2037,6 +2037,18 @@ private fun AdaptiveStageNotificationStack(
                                     onNavigate = ::navigate,
                                     onExpand = { detailState.expand(activeCard.content.id) },
                                     onLiveDrag = { dragPx -> liveDragPx = dragPx },
+                                    // Carries the release velocity onward as real momentum instead
+                                    // of stopping dead and animating to a freshly-picked card; the
+                                    // per-card distance matches the settle threshold above so the
+                                    // magnetized position onSettle receives lands on exact card
+                                    // boundaries. See CardStackScroll.
+                                    scroll =
+                                        CardStackScroll(
+                                            cardCount = cards.size,
+                                            activeCardIndex = activeCardIndex,
+                                            distancePerCardPx =
+                                            ADAPTIVE_STAGE_CARD_STACK_SETTLE_DISTANCE_THRESHOLD_PX,
+                                        ),
                                 ),
                         ) { entry, cardModifier ->
                             val card = cards[entry.cardIndex]
@@ -2239,26 +2251,29 @@ private fun AdaptiveStageThreadSurface(
 internal const val ADAPTIVE_STAGE_CARD_STACK_SETTLE_DISTANCE_THRESHOLD_PX = 64f
 
 /**
- * Converts this frame's raw live-drag pixel delta into the fractional index [CardStack] renders
- * from, uncapped past [activeCardIndex] except by the stack's own bounds.
+ * Converts this frame's live scroll position into the fractional index [CardStack] renders from,
+ * uncapped past [activeCardIndex] except by the stack's own bounds.
  *
- * [CardStackController.settle] commits more than one card whenever the *released* motion --
- * fling velocity or plain drag distance -- reaches a further multiple of its own threshold (see
- * its own doc), so this preview tracks the drag by exactly that same multiple while the finger is
- * still down: dragging a couple of [ADAPTIVE_STAGE_CARD_STACK_SETTLE_DISTANCE_THRESHOLD_PX]
- * multiples visually previews two cards flipping past, and releasing there commits that same
- * two-card move rather than springing back to a single step. Only the stack's own boundary caps
- * how far this can reach, matching the boundary clamp [CardStackController.settle] itself applies.
+ * This is not only a drag preview: with [CardStackScroll] wired up (as both notification stacks
+ * do), the position reported here keeps moving through the momentum fling and the magnetize that
+ * follows it, so this same conversion is what renders the whole continuous motion -- one
+ * [ADAPTIVE_STAGE_CARD_STACK_SETTLE_DISTANCE_THRESHOLD_PX] of travel per card, whether the finger
+ * or the fling physics produced it. [CardStackController.settle] then commits the card that
+ * travel came to rest on, because the distance it is handed is the magnetized one: an exact
+ * multiple of that same threshold. Only the stack's own boundary caps how far this can reach,
+ * matching both the scroll's own clamp and the one [CardStackController.settle] applies.
  */
 internal fun adaptiveStageLiveActiveCardIndex(
     activeCardIndex: Int,
     cardCount: Int,
     liveDragPx: Float?,
 ): Float =
-    liveDragPx?.let { dragPx ->
-        val indexDelta = dragPx / ADAPTIVE_STAGE_CARD_STACK_SETTLE_DISTANCE_THRESHOLD_PX
-        (activeCardIndex - indexDelta).coerceIn(0f, (cardCount - 1).toFloat())
-    } ?: activeCardIndex.toFloat()
+    cardStackLiveActiveCardIndex(
+        activeCardIndex = activeCardIndex,
+        cardCount = cardCount,
+        liveDragPx = liveDragPx,
+        distancePerCardPx = ADAPTIVE_STAGE_CARD_STACK_SETTLE_DISTANCE_THRESHOLD_PX,
+    )
 
 /**
  * The "All notifications" page (#1057): every stage's content merged into one recency-ordered
@@ -2429,6 +2444,14 @@ private fun AdaptiveStageAllNotificationsStack(
                                 onNavigate = ::navigate,
                                 onExpand = { detailState.expand(activeCard.content.id) },
                                 onLiveDrag = { dragPx -> liveDragPx = dragPx },
+                                // See AdaptiveStageNotificationStack's identical scroll model.
+                                scroll =
+                                    CardStackScroll(
+                                        cardCount = cards.size,
+                                        activeCardIndex = activeCardIndex,
+                                        distancePerCardPx =
+                                        ADAPTIVE_STAGE_CARD_STACK_SETTLE_DISTANCE_THRESHOLD_PX,
+                                    ),
                             ),
                     ) { entry, cardModifier ->
                         val card = cards[entry.cardIndex]

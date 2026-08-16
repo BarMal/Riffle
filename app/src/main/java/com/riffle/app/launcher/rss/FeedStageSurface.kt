@@ -47,9 +47,11 @@ import com.riffle.app.launcher.AdaptiveStageCardSurface
 import com.riffle.app.launcher.AdaptiveStageDetailRecoveryMessage
 import com.riffle.app.launcher.CardStack
 import com.riffle.app.launcher.CardStackInteraction
+import com.riffle.app.launcher.CardStackScroll
 import com.riffle.app.launcher.adaptiveStageNotificationStackEntries
 import com.riffle.app.launcher.adaptiveStageRendererCapabilities
 import com.riffle.app.launcher.adaptiveStageResolvedContentPadding
+import com.riffle.app.launcher.cardStackLiveActiveCardIndex
 import com.riffle.app.launcher.rememberReconciledFocusedCardId
 import com.riffle.app.launcher.transitionDurationMillis
 import com.riffle.core.domain.launcher.cards.CardExpansionPhase
@@ -153,6 +155,13 @@ internal const val FEED_PREVIOUS_ARTICLE_LABEL = "Previous article"
 internal const val FEED_NEXT_ARTICLE_LABEL = "Next article"
 internal const val FEED_SHOW_DETAILS_LABEL = "Show details"
 
+/**
+ * How far this stack's own axis travels per card -- both the distance a settle is measured
+ * against and the distance the continuous scroll advances by, which have to agree so the
+ * magnetized position a fling reports lands on an exact card boundary. See [CardStackScroll].
+ */
+private const val FEED_CARD_STACK_SETTLE_DISTANCE_THRESHOLD_PX = 64f
+
 @Composable
 private fun FeedStagePlaceholder(
     message: String,
@@ -207,6 +216,18 @@ private fun FeedArticleStack(
 
     LaunchedEffect(activeCard.digest) { onFocusedDigestChanged(activeCard.digest) }
 
+    // This stack's live scroll position, non-null for the whole continuous motion -- finger,
+    // momentum fling and the magnetize that ends it. See CardStack's own CardStackScroll and
+    // CardStackInteraction.onLiveDrag docs; the fractional index below is what actually renders it.
+    var liveScrollPx by remember(stageId) { mutableStateOf<Float?>(null) }
+    val liveActiveIndex =
+        cardStackLiveActiveCardIndex(
+            activeCardIndex = activeIndex,
+            cardCount = cards.size,
+            liveDragPx = liveScrollPx,
+            distancePerCardPx = FEED_CARD_STACK_SETTLE_DISTANCE_THRESHOLD_PX,
+        )
+
     fun navigate(direction: CardStackNavigationDirection): Boolean {
         val result = controller.navigate(focusState, cardIds, direction)
         if (result is CardStackFocusResult.Applied) {
@@ -256,9 +277,7 @@ private fun FeedArticleStack(
                             adaptiveStageNotificationStackEntries(
                                 resolution = resolution,
                                 cardCount = cards.size,
-                                // Float, not (yet) live-drag-tracked here -- see the parameter's
-                                // own doc; an exact integer value behaves identically to before.
-                                activeCardIndex = activeIndex.toFloat(),
+                                activeCardIndex = liveActiveIndex,
                             ),
                         animationSpec = resolution.animation,
                         reducedMotion = resolution.reducedMotion,
@@ -285,7 +304,8 @@ private fun FeedArticleStack(
                                                 focusedCardId = LauncherCardId(activeCard.digest),
                                                 verticalDragPx = drag,
                                                 verticalVelocityPxPerSecond = velocity,
-                                                distanceThresholdPx = 64f,
+                                                distanceThresholdPx =
+                                                FEED_CARD_STACK_SETTLE_DISTANCE_THRESHOLD_PX,
                                                 flingVelocityThresholdPxPerSecond = 500f,
                                             ),
                                         ).let { result ->
@@ -299,6 +319,15 @@ private fun FeedArticleStack(
                                 },
                                 onNavigate = ::navigate,
                                 onExpand = { detailState.expand(LauncherCardId(activeCard.digest)) },
+                                onLiveDrag = { scrollPx -> liveScrollPx = scrollPx },
+                                // See CardStackScroll: momentum carries through release here too,
+                                // with the same per-card distance the settle above is measured in.
+                                scroll =
+                                    CardStackScroll(
+                                        cardCount = cards.size,
+                                        activeCardIndex = activeIndex,
+                                        distancePerCardPx = FEED_CARD_STACK_SETTLE_DISTANCE_THRESHOLD_PX,
+                                    ),
                             ),
                     ) { entry, cardModifier ->
                         val card = cards[entry.cardIndex]

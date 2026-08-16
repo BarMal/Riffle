@@ -5,6 +5,7 @@ import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -27,9 +28,11 @@ import com.riffle.core.domain.launcher.cards.CardStackLayoutPolicy
 import com.riffle.core.domain.launcher.cards.CardStackSettleRequest
 import com.riffle.core.domain.launcher.cards.LauncherCardId
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
+import kotlin.math.roundToInt
 
 class CardStackGestureTest {
     @get:Rule
@@ -167,6 +170,45 @@ class CardStackGestureTest {
     }
 
     @Test
+    fun aFlingKeepsMovingAfterReleaseAndSettlesOnAnExactCardBoundary() {
+        // The continuous-scroll model (see CardStackScroll): release hands the velocity to real
+        // fling physics rather than stopping the stack dead and animating to a freshly-decided
+        // card. What that guarantees, and what this asserts, is that the distance finally committed
+        // is the *magnetized* one -- an exact multiple of the per-card distance, with no velocity
+        // left over -- and that the live position is only cleared once the stack is at rest there.
+        val stack = ScrollingCardStackHarness(cardCount = 8)
+        composeRule.setContent { ScrollingCardStack(stack) }
+
+        composeRule.onNodeWithTag("stack").performTouchInput { swipeUp() }
+
+        composeRule.runOnIdle {
+            val committedDragPx = requireNotNull(stack.settleDragPx) { "a fling must settle" }
+            assertEquals(0f, committedDragPx % stack.perCardPx, 0.01f)
+            assertEquals(0f, stack.settleVelocity)
+            assertTrue("a fling upward moves forward through the stack", stack.focusedCard > 0)
+            assertNull("the live position is cleared once the stack is at rest", stack.liveScrollPx)
+        }
+    }
+
+    @Test
+    fun aFlingLongerThanTheStackParksOnTheBoundaryCardRatherThanPastIt() {
+        // A momentum fling travels as far as its own decay carries it, so on a short stack it will
+        // reach the end with velocity to spare. CardStackScroll clamps the position to the first
+        // and last card, so what that has to produce is the last card exactly -- not a position
+        // out in empty space that the magnetize then has to drag the stack back from.
+        val stack = ScrollingCardStackHarness(cardCount = 3)
+        composeRule.setContent { ScrollingCardStack(stack) }
+
+        composeRule.onNodeWithTag("stack").performTouchInput { swipeUp() }
+
+        composeRule.runOnIdle {
+            assertEquals(2, stack.focusedCard)
+            assertEquals(-stack.perCardPx * 2f, stack.settleDragPx)
+            assertNull(stack.liveScrollPx)
+        }
+    }
+
+    @Test
     fun horizontalDragOnBackgroundCardRemainsAvailableToItsParent() {
         var horizontalDragWasUnconsumed by mutableStateOf(false)
         composeRule.setContent {
@@ -215,5 +257,65 @@ class CardStackGestureTest {
         }
 
         composeRule.runOnIdle { assertTrue(horizontalDragWasUnconsumed) }
+    }
+}
+
+/**
+ * What a surface owning a continuously-scrolling stack has to hold: the durable focused card, and
+ * the live scroll position the stack reports so that surface can render the motion. Mirrors what
+ * AdaptiveStageNotificationStack and its siblings do, in the smallest form that still exercises the
+ * real loop -- position out through onLiveDrag, back in as the fractional index entries are built
+ * from.
+ */
+private class ScrollingCardStackHarness(
+    val cardCount: Int,
+    val perCardPx: Float = 64f,
+) {
+    var focusedCard by mutableIntStateOf(0)
+    var liveScrollPx by mutableStateOf<Float?>(null)
+    var settleDragPx by mutableStateOf<Float?>(null)
+    var settleVelocity by mutableStateOf<Float?>(null)
+}
+
+@Composable
+private fun ScrollingCardStack(harness: ScrollingCardStackHarness) {
+    CardStack(
+        entries =
+            CardStackLayoutPolicy().entries(
+                cardCount = harness.cardCount,
+                activeIndex =
+                    cardStackLiveActiveCardIndex(
+                        activeCardIndex = harness.focusedCard,
+                        cardCount = harness.cardCount,
+                        liveDragPx = harness.liveScrollPx,
+                        distancePerCardPx = harness.perCardPx,
+                    ),
+            ),
+        modifier = Modifier.fillMaxSize().testTag("stack"),
+        itemKey = { entry -> entry.cardIndex },
+        interaction =
+            CardStackInteraction(
+                focusedItemKey = harness.focusedCard,
+                onFocusRequest = { entry -> harness.focusedCard = entry.cardIndex },
+                onSettle = { drag, velocity ->
+                    harness.settleDragPx = drag
+                    harness.settleVelocity = velocity
+                    // The committed distance is magnetized, so rounding it recovers exactly the
+                    // card the scroll came to rest on -- the same resolution CardStackController
+                    // .settle performs for the production surfaces.
+                    harness.focusedCard =
+                        (harness.focusedCard - (drag / harness.perCardPx).roundToInt())
+                            .coerceIn(0, harness.cardCount - 1)
+                },
+                onLiveDrag = { scrollPx -> harness.liveScrollPx = scrollPx },
+                scroll =
+                    CardStackScroll(
+                        cardCount = harness.cardCount,
+                        activeCardIndex = harness.focusedCard,
+                        distancePerCardPx = harness.perCardPx,
+                    ),
+            ),
+    ) { _, modifier ->
+        Box(modifier.fillMaxSize())
     }
 }
