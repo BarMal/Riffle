@@ -70,9 +70,9 @@ perceptual/color math, whenever one exists that fits the product requirement. Sp
 - `DockShelfGesture.kt` is evaluated against `AnchoredDraggable` and `detectVerticalDragGestures`;
   the evaluation's outcome (migrate or keep custom, and why) is recorded when that work lands
   rather than assumed here, mirroring how `HomeGestureInput.kt`'s N-finger case is handled below.
-- `HomeGestureInput.kt`'s 2-finger pinch path is evaluated against `detectTransformGestures`;
-  its N-finger swipe path is expected to remain custom absent a Foundation equivalent, and
-  that determination is recorded when the follow-up work lands rather than assumed here.
+- `HomeGestureInput.kt`'s 2-finger pinch path was evaluated against `detectTransformGestures`
+  and kept custom (see Consequences); its N-finger swipe path remains custom absent a
+  Foundation equivalent, as expected.
 - The three hand-rolled LRU caches consolidate onto `android.util.LruCache`.
 - The two hand-rolled contrast-ratio implementations consolidate onto
   `androidx.core.graphics.ColorUtils.calculateContrast`.
@@ -123,6 +123,25 @@ one item does not block or entangle the others, and each can be reverted indepen
   choreography `DockShelfGestureInteractionTest.kt` already asserts. `DockSwipeUpGesture.kt`
   avoided both problems because it has a single threshold, a single fixed direction, and no
   competing early-claim step to preserve alongside it.
+- `HomeGestureInput.kt`'s 2-finger pinch path was evaluated against `detectTransformGestures`
+  and kept custom, for a related but distinct reason from `DockShelfGesture.kt`.
+  `HomeGestureInput.kt` is deliberately *one* recognizer covering 1/2/3-finger swipes in four
+  directions plus 2-finger pinch, with pinch classified ahead of a 2-finger swipe whenever both
+  conditions could apply (`HomeSwipeGestureInterpreterTest.interpretsPinchesBeforeTwoFingerSwipes`
+  asserts exactly this priority). `detectTransformGestures` is a self-contained, single-purpose
+  recognizer with its own `awaitEachGesture` loop that unconditionally consumes every position
+  change once its own touch slop is crossed (read from Foundation's actual source,
+  `TransformGestureDetector.kt`); running it *alongside* the N-finger swipe loop as a second,
+  independent `pointerInput` block would mean two recognizers racing for the same 2-finger touch
+  with no shared arbitration, reintroducing exactly the kind of race this ADR's Dock-gesture
+  items depend on Main-pass consumption ordering to avoid -- except here there's no ordering that
+  resolves it, since both recognizers would be watching the same pass. Its lower-level centroid
+  utilities (`PointerEvent.calculateCentroid`, `calculateCentroidSize`) were also considered as
+  drop-in replacements for `HomeGestureStart`'s hand-rolled centroid/distance math, but Foundation's
+  versions only include pointers that were *also* pressed in the previous frame, while
+  `HomeGestureStart` deliberately resets to a fresh baseline including a just-added finger on the
+  same frame the pointer count changes -- swapping the math alone would shift centroid/scale
+  results on every finger-count transition, not just simplify the implementation.
 - Future gesture or infrastructure code in this app should default to a platform/library
   primitive first, and justify a custom implementation explicitly (in code comments or a new
   ADR) when no suitable primitive exists, rather than defaulting to hand-rolled code and
@@ -155,6 +174,13 @@ one item does not block or entangle the others, and each can be reverted indepen
   pixel-exact regression tests). A migration that trades a small, correct, tested
   implementation for a platform API that can't preserve its contract is not the improvement
   this ADR is arguing for.
+- **Run `detectTransformGestures` as a second `pointerInput` block alongside
+  `HomeGestureInput.kt`'s existing N-finger swipe loop, for the 2-finger pinch case only.**
+  Rejected: `HomeSwipeGestureInterpreterTest.interpretsPinchesBeforeTwoFingerSwipes` requires
+  pinch and 2-finger swipe to be mutually exclusive outcomes of a *single* decision, and two
+  independently-consuming recognizers watching the same touch have no shared way to guarantee
+  that -- splitting the recognizer would risk both firing, or firing inconsistently depending on
+  event-processing order, for the exact case the existing test locks down.
 
 ## References
 
