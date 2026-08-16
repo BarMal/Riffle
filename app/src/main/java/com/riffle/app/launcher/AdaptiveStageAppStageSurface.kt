@@ -29,6 +29,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.PagerDefaults
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -47,7 +49,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -118,9 +119,7 @@ import com.riffle.core.domain.launcher.settings.AdaptiveStageCardStackResolution
 import com.riffle.core.domain.launcher.settings.AdaptiveStageViewportDp
 import com.riffle.core.domain.launcher.settings.ThreadMessageOrder
 import com.riffle.core.domain.launcher.settings.resolveAdaptiveStageRailCardStack
-import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.abs
 
@@ -776,11 +775,13 @@ private fun AdaptiveStageSplitContent(
 private const val DEFAULT_SPLIT_UPPER_REGION_WEIGHT = 0.6f
 
 /**
- * Lays out every stage's content side by side, offsetting each via `graphicsLayer` translation
- * driven by [AdaptiveStageStagePagerState.pagePosition] -- mirroring [ImmediateWorkspacePager]'s
- * approach for Standard Home's own pages -- and attaches [adaptiveStageStagePagerDrag] to claim
- * horizontal drags. With zero or one stage there is nothing to page between, so this falls back to
- * rendering [AdaptiveStageStageBody] directly without a drag gesture.
+ * Pages between stages with Compose Foundation's `HorizontalPager`, mirroring
+ * [ImmediateWorkspacePager]'s approach for Standard Home's own pages. The selected page always
+ * renders the full interactive [AdaptiveStagePageBody]; every other page -- including one mid-slide
+ * during a drag, before the gesture settles and [selectedPageIndex] catches up -- renders the
+ * lighter [AdaptiveStageNeighborPage] instead, so only one stage ever mounts the expensive
+ * interactive detail/card-stack surface at a time. With zero or one stage there is nothing to page
+ * between, so this falls back to rendering [AdaptiveStageStageBody] directly without a pager.
  */
 @Composable
 @Suppress("LongParameterList")
@@ -827,65 +828,48 @@ private fun AdaptiveStageCompactStagePager(
         return
     }
 
-    val coroutineScope = rememberCoroutineScope()
     val reducedMotion = state.launcherSettings.motion.reducedMotion
-    val navigationKey = remember(pages) { pages.joinToString(separator = "|", transform = ::adaptiveStagePageKey) }
-    BoxWithConstraints(modifier = modifier.fillMaxSize()) {
-        val stageWidthPx = with(LocalDensity.current) { maxWidth.toPx() }
-        Box(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .adaptiveStageStagePagerDrag(
-                        enabled = true,
-                        stageWidthPx = stageWidthPx,
-                        pageCount = pages.size,
-                        selectedIndex = selectedPageIndex,
-                        navigationKey = navigationKey,
-                        pagerState = pagerState,
-                        reducedMotion = reducedMotion,
-                        launchStageMotion = { action ->
-                            coroutineScope.launch(start = CoroutineStart.UNDISPATCHED) { action() }
-                        },
-                    ),
-        ) {
-            pages.forEachIndexed { index, page ->
-                val stageModifier =
-                    Modifier
-                        .fillMaxSize()
-                        .graphicsLayer {
-                            translationX = (index - pagerState.pagePosition) * stageWidthPx
-                        }
-                if (index == selectedPageIndex) {
-                    AdaptiveStagePageBody(
-                        page = page,
-                        state = state,
-                        shellState = shellState,
-                        detailRecoveryMessage = detailRecoveryMessage,
-                        detailState = detailState,
-                        allNotificationsDetailState = allNotificationsDetailState,
-                        focusedCardId = focusedCardId,
-                        onDetailVisibilityChanged = onDetailVisibilityChanged,
-                        onFocusedCardChanged = onFocusedCardChanged,
-                        showDetailInline = showDetailInline,
-                        // This pager is always the compact (folded) presentation -- see its own doc.
-                        useUnfoldedAppearance = false,
-                        onAction = onAction,
-                        appIconLoader = appIconLoader,
-                        modifier = stageModifier,
-                    )
-                } else {
-                    AdaptiveStageNeighborPage(
-                        page = page,
-                        selectedPageIsAllNotifications = selectedPage is AdaptiveStagePage.AllNotifications,
-                        state = state,
-                        shellState = shellState,
-                        onAction = onAction,
-                        appIconLoader = appIconLoader,
-                        modifier = stageModifier,
-                    )
-                }
-            }
+    HorizontalPager(
+        state = pagerState.foundationPagerState,
+        modifier = modifier.fillMaxSize(),
+        flingBehavior =
+            PagerDefaults.flingBehavior(
+                state = pagerState.foundationPagerState,
+                snapAnimationSpec = adaptiveStageStageSettleAnimation(homePageSettleMotionPolicy(reducedMotion)),
+                snapPositionalThreshold = STAGE_CHANGE_DISTANCE_THRESHOLD,
+            ),
+        key = { index -> adaptiveStagePageKey(pages[index]) },
+    ) { index ->
+        val page = pages[index]
+        val stageModifier = Modifier.fillMaxSize()
+        if (index == selectedPageIndex) {
+            AdaptiveStagePageBody(
+                page = page,
+                state = state,
+                shellState = shellState,
+                detailRecoveryMessage = detailRecoveryMessage,
+                detailState = detailState,
+                allNotificationsDetailState = allNotificationsDetailState,
+                focusedCardId = focusedCardId,
+                onDetailVisibilityChanged = onDetailVisibilityChanged,
+                onFocusedCardChanged = onFocusedCardChanged,
+                showDetailInline = showDetailInline,
+                // This pager is always the compact (folded) presentation -- see its own doc.
+                useUnfoldedAppearance = false,
+                onAction = onAction,
+                appIconLoader = appIconLoader,
+                modifier = stageModifier,
+            )
+        } else {
+            AdaptiveStageNeighborPage(
+                page = page,
+                selectedPageIsAllNotifications = selectedPage is AdaptiveStagePage.AllNotifications,
+                state = state,
+                shellState = shellState,
+                onAction = onAction,
+                appIconLoader = appIconLoader,
+                modifier = stageModifier,
+            )
         }
     }
 }
