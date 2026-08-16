@@ -100,6 +100,19 @@ internal fun GeneratedNotificationCardsPage(
                             focusedCardIdValue = result.state.focusedCardId?.value
                         }
                     }
+
+                    // This stack's live scroll position, non-null for the whole continuous motion
+                    // -- finger, momentum fling and the magnetize that ends it -- converted below
+                    // into the fractional index the stack actually renders from. See CardStack's
+                    // own CardStackScroll and CardStackInteraction.onLiveDrag docs.
+                    var liveScrollPx by remember { mutableStateOf<Float?>(null) }
+                    val liveActiveCardIndex =
+                        cardStackLiveActiveCardIndex(
+                            activeCardIndex = activeCardIndex,
+                            cardCount = state.cards.size,
+                            liveDragPx = liveScrollPx,
+                            distancePerCardPx = GENERATED_CARD_STACK_SETTLE_DISTANCE_THRESHOLD_PX,
+                        )
                     Column(
                         modifier = Modifier.fillMaxSize().semantics { contentDescription = "Notification cards page" },
                     ) {
@@ -150,7 +163,7 @@ internal fun GeneratedNotificationCardsPage(
                                     entries =
                                         resolution.layoutPolicy.entries(
                                             cardCount = state.cards.size,
-                                            activeIndex = activeCardIndex,
+                                            activeIndex = liveActiveCardIndex,
                                             reducedMotion = resolution.reducedMotion,
                                         ),
                                     modifier =
@@ -195,7 +208,8 @@ internal fun GeneratedNotificationCardsPage(
                                                             focusedCardId = focusState.focusedCardId,
                                                             verticalDragPx = drag,
                                                             verticalVelocityPxPerSecond = velocity,
-                                                            distanceThresholdPx = 48f,
+                                                            distanceThresholdPx =
+                                                                GENERATED_CARD_STACK_SETTLE_DISTANCE_THRESHOLD_PX,
                                                             flingVelocityThresholdPxPerSecond = 1_000f,
                                                         ),
                                                     )
@@ -212,6 +226,17 @@ internal fun GeneratedNotificationCardsPage(
                                                     adaptiveStageAppearance.motion.hapticStrength,
                                                 )
                                             },
+                                            onLiveDrag = { scrollPx -> liveScrollPx = scrollPx },
+                                            // See CardStackScroll: the release velocity keeps
+                                            // driving the position instead of the stack stopping
+                                            // dead and animating to a freshly-picked card.
+                                            scroll =
+                                                CardStackScroll(
+                                                    cardCount = state.cards.size,
+                                                    activeCardIndex = activeCardIndex,
+                                                    distancePerCardPx =
+                                                        GENERATED_CARD_STACK_SETTLE_DISTANCE_THRESHOLD_PX,
+                                                ),
                                         ),
                                 ) { entry, pointerModifier ->
                                     GeneratedNotificationCard(
@@ -545,6 +570,13 @@ internal fun generatedNotificationCardContentPadding(
 
 internal const val GENERATED_NOTIFICATION_CARD_STACK_TEST_TAG = "generated-notification-card-stack"
 internal const val GENERATED_NOTIFICATION_CARD_LIST_TEST_TAG = "generated-notification-card-list"
+
+/**
+ * How far this stack's own axis travels per card -- both the distance a settle is measured against
+ * and the distance the continuous scroll advances by, which have to agree so the magnetized
+ * position a fling reports lands on an exact card boundary. See [CardStackScroll].
+ */
+private const val GENERATED_CARD_STACK_SETTLE_DISTANCE_THRESHOLD_PX = 48f
 
 internal fun generatedNotificationCardLaunchAction(card: DockNotificationCardState): LauncherShellAction.LaunchApp? =
     card.app?.identity?.let(LauncherShellAction::LaunchApp)

@@ -26,7 +26,9 @@ import com.riffle.core.domain.launcher.cards.CardStackKey
 import com.riffle.core.domain.launcher.cards.CardStackLayoutPolicy
 import com.riffle.core.domain.launcher.cards.CardStackSettleRequest
 import com.riffle.core.domain.launcher.cards.LauncherCardId
+import kotlin.math.roundToInt
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -164,6 +166,69 @@ class CardStackGestureTest {
         }
 
         composeRule.runOnIdle { assertEquals(1, focusedCard) }
+    }
+
+    @Test
+    fun aFlingKeepsMovingAfterReleaseAndSettlesOnAnExactCardBoundary() {
+        // The continuous-scroll model (see CardStackScroll): release hands the velocity to real
+        // fling physics rather than stopping the stack dead and animating to a freshly-decided
+        // card. What that guarantees, and what this asserts, is that the distance finally committed
+        // is the *magnetized* one -- an exact multiple of the per-card distance, with no velocity
+        // left over -- and that the live position is only cleared once the stack is at rest there.
+        val perCardPx = 64f
+        val cardCount = 8
+        var focusedCard by mutableIntStateOf(0)
+        var liveScrollPx by mutableStateOf<Float?>(null)
+        var settleDragPx by mutableStateOf<Float?>(null)
+        var settleVelocity by mutableStateOf<Float?>(null)
+
+        composeRule.setContent {
+            CardStack(
+                entries =
+                    CardStackLayoutPolicy().entries(
+                        cardCount = cardCount,
+                        activeIndex =
+                            cardStackLiveActiveCardIndex(
+                                activeCardIndex = focusedCard,
+                                cardCount = cardCount,
+                                liveDragPx = liveScrollPx,
+                                distancePerCardPx = perCardPx,
+                            ),
+                    ),
+                modifier = Modifier.fillMaxSize().testTag("stack"),
+                itemKey = { entry -> entry.cardIndex },
+                interaction =
+                    CardStackInteraction(
+                        focusedItemKey = focusedCard,
+                        onFocusRequest = { entry -> focusedCard = entry.cardIndex },
+                        onSettle = { drag, velocity ->
+                            settleDragPx = drag
+                            settleVelocity = velocity
+                            focusedCard =
+                                (focusedCard - (drag / perCardPx).roundToInt()).coerceIn(0, cardCount - 1)
+                        },
+                        onLiveDrag = { scrollPx -> liveScrollPx = scrollPx },
+                        scroll =
+                            CardStackScroll(
+                                cardCount = cardCount,
+                                activeCardIndex = focusedCard,
+                                distancePerCardPx = perCardPx,
+                            ),
+                    ),
+            ) { _, modifier ->
+                Box(modifier.fillMaxSize())
+            }
+        }
+
+        composeRule.onNodeWithTag("stack").performTouchInput { swipeUp() }
+
+        composeRule.runOnIdle {
+            val committedDragPx = requireNotNull(settleDragPx) { "a fling must settle" }
+            assertEquals(0f, committedDragPx % perCardPx, 0.01f)
+            assertEquals(0f, settleVelocity)
+            assertTrue("a fling upward moves forward through the stack", focusedCard > 0)
+            assertNull("the live position is cleared once the stack is at rest", liveScrollPx)
+        }
     }
 
     @Test
