@@ -111,7 +111,7 @@ internal data class CardStackInteraction(
 )
 
 @Composable
-@Suppress("LongMethod", "LongParameterList")
+@Suppress("LongMethod", "LongParameterList", "CyclomaticComplexMethod")
 internal fun CardStack(
     entries: List<CardStackLayoutEntry>,
     modifier: Modifier = Modifier,
