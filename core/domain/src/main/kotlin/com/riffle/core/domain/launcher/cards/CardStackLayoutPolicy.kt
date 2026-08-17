@@ -100,7 +100,10 @@ data class CardStackLayoutPolicy(
         val focusedIndex = activeIndex.coerceIn(0f, (cardCount - 1).toFloat())
         val visibleIndexes =
             (0 until cardCount).filter { cardIndex ->
-                cardIndex.depthFrom(focusedIndex) <= visibleRangeFor(cardIndex - focusedIndex)
+                // How far the stack reaches depends on which side of focus this card falls.
+                val reach =
+                    if (cardIndex < focusedIndex) effectiveAboveFocusDepth else maxVisibleDepth
+                cardIndex.depthFrom(focusedIndex) <= reach
             }
         val orderedIndexes =
             visibleIndexes.sortedWith(
@@ -179,10 +182,6 @@ data class CardStackLayoutPolicy(
     private val effectiveAboveFocusDepth: Int
         get() = aboveFocusDepth ?: maxVisibleDepth
 
-    /** How far the stack reaches on whichever side of focus [signedDistance] falls. */
-    private fun visibleRangeFor(signedDistance: Float): Int =
-        if (signedDistance < 0f) effectiveAboveFocusDepth else maxVisibleDepth
-
     /**
      * What to multiply a card's depth by so that a step calibrated against [maxVisibleDepth]
      * completes over this card's own side's range instead. Always 1 on the incoming side, and 1
@@ -198,10 +197,13 @@ data class CardStackLayoutPolicy(
      * own full-size, fully-opaque pose.
      */
     private fun styleCompressionFor(signedDistance: Float): Float {
-        if (signedDistance >= 0f || maxVisibleDepth <= 0) return 1f
         val aboveRange = effectiveAboveFocusDepth
-        if (aboveRange <= 0 || aboveRange == maxVisibleDepth) return 1f
-        return maxVisibleDepth.toFloat() / aboveRange
+        val compresses =
+            signedDistance < 0f &&
+                maxVisibleDepth > 0 &&
+                aboveRange > 0 &&
+                aboveRange != maxVisibleDepth
+        return if (compresses) maxVisibleDepth.toFloat() / aboveRange else 1f
     }
 
     /**
