@@ -180,6 +180,7 @@ internal fun GeneratedNotificationCardsPage(
                                     animationProfile = CardStackAnimationProfile.CARD_FLIGHT,
                                     animationSpec = resolution.animation,
                                     reducedMotion = resolution.reducedMotion,
+                                    stackPeakFraction = resolution.stackPeakFraction,
                                     itemKey = { entry ->
                                         generatedNotificationCardKey(state.cards[entry.cardIndex].group)
                                     },

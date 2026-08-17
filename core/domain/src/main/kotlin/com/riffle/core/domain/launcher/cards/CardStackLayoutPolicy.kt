@@ -30,9 +30,32 @@ data class CardStackLayoutPolicy(
      * existing caller that doesn't know about this field is unaffected.
      */
     val verticalOffsetDirection: Float = 1f,
+    /**
+     * How many cards *above* focus -- earlier ones the stack has already scrolled past -- stay
+     * visible, independently of [maxVisibleDepth]'s reach in the other direction. `null` (the
+     * default) keeps the geometry strictly symmetric about focus, which is this policy's only
+     * prior behavior, so every existing caller is unaffected.
+     *
+     * The reference "Calm" launcher's stack is asymmetric here by design: its `aboveFocusCards`
+     * feeds a separate `outgoingVisibleRange`, and every one of its style functions branches on the
+     * sign of `visualDepth` to measure an already-passed card against that shorter range instead of
+     * against `visibleCards`. The effect is that outgoing cards shrink and fade away over a much
+     * tighter span than incoming ones fan in over -- they read as leaving, rather than as the
+     * mirror image of the cards still to come.
+     *
+     * Only *style* is measured against this range -- scale, alpha, rotation and the horizontal fan.
+     * The vertical step that positions a card is deliberately left alone, matching Calm, whose
+     * outgoing cards also stay at their full layout spacing while their style compresses; pulling
+     * them physically closer together would read as the stack bunching up rather than as cards
+     * departing.
+     */
+    val aboveFocusDepth: Int? = null,
 ) {
     init {
         require(maxVisibleDepth >= 0) { "Maximum visible depth must not be negative." }
+        require(aboveFocusDepth == null || aboveFocusDepth >= 0) {
+            "Above-focus depth must not be negative."
+        }
         require(scaleStep >= 0f) { "Scale step must not be negative." }
         require(offsetStep >= 0f) { "Offset step must not be negative." }
         require(focusedGap >= 0f) { "Focused gap must not be negative." }
@@ -77,7 +100,7 @@ data class CardStackLayoutPolicy(
         val focusedIndex = activeIndex.coerceIn(0f, (cardCount - 1).toFloat())
         val visibleIndexes =
             (0 until cardCount).filter { cardIndex ->
-                cardIndex.depthFrom(focusedIndex) <= maxVisibleDepth
+                cardIndex.depthFrom(focusedIndex) <= visibleRangeFor(cardIndex - focusedIndex)
             }
         val orderedIndexes =
             visibleIndexes.sortedWith(
@@ -88,6 +111,14 @@ data class CardStackLayoutPolicy(
         return orderedIndexes.mapIndexed { order, cardIndex ->
             val depth = cardIndex.depthFrom(focusedIndex)
             val signedDistance = cardIndex - focusedIndex
+            // Style is measured against whichever range this card's own side of focus uses, by
+            // rescaling its depth into the far side's units -- so every step below (which is
+            // calibrated against maxVisibleDepth) reaches exactly the same fraction of its total
+            // travel at this card's own range as it would have at maxVisibleDepth. A symmetric
+            // policy compresses by 1, leaving all of this arithmetically identical to before.
+            val styleCompression = styleCompressionFor(signedDistance)
+            val styleDepth = depth * styleCompression
+            val styleSignedDistance = signedDistance * styleCompression
             val activeScaleStep =
                 when {
                     reducedMotion -> reducedMotionScaleStep
@@ -103,20 +134,23 @@ data class CardStackLayoutPolicy(
                 cardIndex = cardIndex,
                 order = order,
                 depth = depth.roundToInt(),
-                scale = (1f - activeScaleStep * depth).coerceAtLeast(0f),
+                scale = (1f - activeScaleStep * styleDepth).coerceAtLeast(0f),
                 offset =
                     if (signedDistance == 0f) {
                         0f
                     } else {
                         offsetDirection *
-                            (activeOffsetStep * abs(signedDistance) + if (reducedMotion) 0f else focusedGap) *
+                            (activeOffsetStep * abs(styleSignedDistance) + if (reducedMotion) 0f else focusedGap) *
                             signedDistance.sign
                     },
                 verticalOffset =
                     verticalOffsetDirection *
-                        (verticalOffsetStep * signedDistance + curveStep * curveProgress(depth) * signedDistance.sign),
-                rotationDegrees = if (reducedMotion) 0f else rotationStep * signedDistance,
-                alpha = ((1f - alphaStep * depth) * edgeFadeMultiplier(depth)).coerceIn(0f, 1f),
+                        (
+                            verticalOffsetStep * signedDistance +
+                                curveStep * curveProgress(styleDepth) * signedDistance.sign
+                        ),
+                rotationDegrees = if (reducedMotion) 0f else rotationStep * styleSignedDistance,
+                alpha = ((1f - alphaStep * styleDepth) * edgeFadeMultiplier(styleDepth)).coerceIn(0f, 1f),
             )
         }
     }
@@ -137,6 +171,38 @@ data class CardStackLayoutPolicy(
     }
 
     private fun Int.depthFrom(activeIndex: Float): Float = abs(this - activeIndex)
+
+    /**
+     * [aboveFocusDepth] resolved against the symmetric default -- how far this policy reaches on
+     * the already-passed side of focus.
+     */
+    private val effectiveAboveFocusDepth: Int
+        get() = aboveFocusDepth ?: maxVisibleDepth
+
+    /** How far the stack reaches on whichever side of focus [signedDistance] falls. */
+    private fun visibleRangeFor(signedDistance: Float): Int =
+        if (signedDistance < 0f) effectiveAboveFocusDepth else maxVisibleDepth
+
+    /**
+     * What to multiply a card's depth by so that a step calibrated against [maxVisibleDepth]
+     * completes over this card's own side's range instead. Always 1 on the incoming side, and 1
+     * everywhere when [aboveFocusDepth] is unset -- so a symmetric policy is untouched. Above
+     * focus with a shorter range it exceeds 1, which is what makes an outgoing card reach its
+     * fully-shrunk, fully-faded pose in fewer cards than an incoming one takes to arrive.
+     *
+     * A zero above-focus range needs no compression value: every card above focus sits at a depth
+     * greater than zero, so the visibility filter has already dropped all of them. A zero
+     * [maxVisibleDepth] is degenerate in the other direction -- every step it calibrates is already
+     * flat (see [curveProgress] and [edgeFadeMultiplier], which both bail on it) -- and dividing
+     * into it would hand outgoing cards a compression of zero, rendering them at the focused card's
+     * own full-size, fully-opaque pose.
+     */
+    private fun styleCompressionFor(signedDistance: Float): Float {
+        if (signedDistance >= 0f || maxVisibleDepth <= 0) return 1f
+        val aboveRange = effectiveAboveFocusDepth
+        if (aboveRange <= 0 || aboveRange == maxVisibleDepth) return 1f
+        return maxVisibleDepth.toFloat() / aboveRange
+    }
 
     /**
      * Eased 0..1 progress of [depth] toward [maxVisibleDepth], reaching exactly 1 there -- used to

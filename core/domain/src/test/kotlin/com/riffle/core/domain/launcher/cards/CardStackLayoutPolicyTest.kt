@@ -201,6 +201,61 @@ class CardStackLayoutPolicyTest {
         )
     }
 
+    @Test
+    fun anUnsetAboveFocusDepthMeansTheSameRangeInBothDirections() {
+        // The default has to be indistinguishable from spelling out the symmetric range, since a
+        // symmetric stack is this policy's only prior behavior and every existing caller relies on
+        // it. Asserted against a spelled-out equal range rather than against itself, so the
+        // resolution of `null` is what is actually under test.
+        val unset = CardStackLayoutPolicy(maxVisibleDepth = 3)
+        val spelledOut = unset.copy(aboveFocusDepth = 3)
+
+        assertEquals(
+            unset.entries(cardCount = 9, activeIndex = 4),
+            spelledOut.entries(cardCount = 9, activeIndex = 4),
+        )
+    }
+
+    @Test
+    fun aShorterAboveFocusDepthDropsPassedCardsWithoutTouchingTheOnesStillToCome() {
+        val policy = CardStackLayoutPolicy(maxVisibleDepth = 3, aboveFocusDepth = 1)
+
+        val visible = policy.entries(cardCount = 9, activeIndex = 4).map { entry -> entry.cardIndex }
+
+        // One card above focus (index 3), still three below it (5, 6, 7).
+        assertEquals(listOf(3, 4, 5, 6, 7).sorted(), visible.sorted())
+    }
+
+    @Test
+    fun aPassedCardReachesItsFadedShrunkenPoseInFewerCardsThanAnArrivingOne() {
+        // The point of a shorter above-focus range: an outgoing card is measured against it rather
+        // than against maxVisibleDepth, so at the same absolute depth it is already further through
+        // its own falloff than its mirror-image counterpart below focus. This is what makes the
+        // stack read as cards departing rather than as a symmetric fan.
+        val policy =
+            CardStackLayoutPolicy(maxVisibleDepth = 4, aboveFocusDepth = 2, alphaStep = 0.05f, scaleStep = 0.06f)
+        val entries = policy.entries(cardCount = 9, activeIndex = 4).associateBy { entry -> entry.cardIndex }
+
+        val passed = requireNotNull(entries[3]) { "one card above focus stays visible" }
+        val arriving = requireNotNull(entries[5]) { "one card below focus stays visible" }
+
+        assertTrue(passed.alpha < arriving.alpha, "passed ${passed.alpha} vs arriving ${arriving.alpha}")
+        assertTrue(passed.scale < arriving.scale, "passed ${passed.scale} vs arriving ${arriving.scale}")
+    }
+
+    @Test
+    fun aPassedCardKeepsItsFullVerticalStepWhileItsStyleCompresses() {
+        // Only style is measured against the shorter range. The vertical step positions the card,
+        // and Calm's own outgoing cards likewise stay at full layout spacing while their style
+        // compresses -- pulling them physically together would read as the stack bunching up.
+        val policy =
+            CardStackLayoutPolicy(maxVisibleDepth = 4, aboveFocusDepth = 2, verticalOffsetStep = 10f, curveStep = 0f)
+        val entries = policy.entries(cardCount = 9, activeIndex = 4).associateBy { entry -> entry.cardIndex }
+
+        assertEquals(-10f, requireNotNull(entries[3]).verticalOffset, absoluteTolerance = 0.0001f)
+        assertEquals(10f, requireNotNull(entries[5]).verticalOffset, absoluteTolerance = 0.0001f)
+    }
+
     private fun assertFloatListEquals(
         expected: List<Float>,
         actual: List<Float>,

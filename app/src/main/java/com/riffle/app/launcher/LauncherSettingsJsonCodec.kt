@@ -193,6 +193,12 @@ private fun encodeAdaptiveStageAppearance(settings: AdaptiveStageAppearanceSetti
                     "visibleDepth",
                     appearance.geometry.visibleDepth,
                 ).put(
+                    "aboveFocusDepth",
+                    appearance.geometry.aboveFocusDepth,
+                ).put(
+                    "stackPeakPercent",
+                    appearance.geometry.stackPeakPercent,
+                ).put(
                     "overlapPercent",
                     appearance.geometry.overlapPercent,
                 ).put(
@@ -343,6 +349,16 @@ private fun JSONObject.toAdaptiveStageAppearance(defaults: AdaptiveStageAppearan
                     geometry.optIntOrDefault(
                         "visibleDepth",
                         defaults.geometry.visibleDepth,
+                    ),
+                aboveFocusDepth =
+                    geometry.optIntOrDefault(
+                        "aboveFocusDepth",
+                        defaults.geometry.aboveFocusDepth,
+                    ),
+                stackPeakPercent =
+                    geometry.optIntOrDefault(
+                        "stackPeakPercent",
+                        defaults.geometry.stackPeakPercent,
                     ),
                 overlapPercent =
                     geometry.optIntOrDefault(

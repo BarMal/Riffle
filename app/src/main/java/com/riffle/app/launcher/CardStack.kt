@@ -39,7 +39,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
-import androidx.compose.ui.Alignment
+import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.draw.clipToBounds
@@ -273,6 +273,16 @@ internal fun CardStack(
     /** Multiplies every rendered entry's alpha, e.g. to dim the whole stack behind a detail overlay. */
     dimFactor: Float = 1f,
     orientation: CardStackOrientation = CardStackOrientation.VERTICAL,
+    /**
+     * Where along this stack's own settle axis the focused card's centre sits, as a fraction of the
+     * stack's own area: 0.5 (the default) centres it, which is this composable's only prior
+     * behavior. The reference "Calm" launcher calls this `stackPeakPosition` and defaults it to
+     * 0.2 -- its focused card sits high in the viewport, leaving the room below it for the cards
+     * still to come rather than splitting that room evenly with the ones already gone. Its own
+     * `CardStackLayout.activeTopPadding` places the focused card's centre at exactly this fraction
+     * of the viewport, which is what [androidx.compose.ui.BiasAlignment] expresses directly.
+     */
+    stackPeakFraction: Float = CENTERED_CARD_STACK_PEAK_FRACTION,
     content: @Composable (CardStackLayoutEntry, Modifier) -> Unit,
 ) {
     val motionMode = cardStackMotionMode(reducedMotion)
@@ -452,7 +462,9 @@ internal fun CardStack(
                 },
         // Each entry wraps to its own card's size, not this root's full area -- without this,
         // Box's default TopStart pins every card to the top-left corner instead of centering it.
-        contentAlignment = Alignment.Center,
+        // The settle axis additionally carries stackPeakFraction, which slides the whole stack
+        // along that axis; the other axis stays centred.
+        contentAlignment = cardStackPeakAlignment(stackPeakFraction, orientation),
     ) {
         entries.forEach { entry ->
             // A card index identifies a stable card while focus changes, so Compose can
@@ -640,6 +652,26 @@ internal val CardStackMotionModeKey = SemanticsPropertyKey<CardStackMotionMode>(
 
 /** Stable card identity exposed on the focus-owning semantic entry. */
 internal val CardStackItemKey = SemanticsPropertyKey<Any>("CardStackItemKey")
+
+/**
+ * [stackPeakFraction] as a [BiasAlignment] along this stack's own settle axis, with the other axis
+ * left centred. A [BiasAlignment] bias runs -1 (start of the axis) to 1 (end), placing the child's
+ * *centre* at that point -- the same thing the reference "Calm" launcher's own
+ * `CardStackLayout.activeTopPadding` computes as `viewportHeight * peakFraction - cardHeight / 2`.
+ * A fraction outside 0..1 would push the focused card entirely off its own stack, so it is held to
+ * that range rather than trusted.
+ */
+internal fun cardStackPeakAlignment(
+    stackPeakFraction: Float,
+    orientation: CardStackOrientation,
+): BiasAlignment {
+    val bias = stackPeakFraction.coerceIn(0f, 1f) * 2f - 1f
+    return if (orientation == CardStackOrientation.HORIZONTAL) {
+        BiasAlignment(horizontalBias = bias, verticalBias = 0f)
+    } else {
+        BiasAlignment(horizontalBias = 0f, verticalBias = bias)
+    }
+}
 
 internal fun cardStackMotionMode(reducedMotion: Boolean): CardStackMotionMode =
     if (reducedMotion) {
@@ -909,6 +941,9 @@ private const val SETTLE_DURATION_STEP_CAP = 4
  * stack both use, so the default feel is the tuned one.
  */
 internal const val DEFAULT_CARD_STACK_SCROLL_DISTANCE_PER_CARD_PX = 64f
+
+/** The [CardStack] `stackPeakFraction` that centres the focused card -- this stack's prior fixed behavior. */
+internal const val CENTERED_CARD_STACK_PEAK_FRACTION = 0.5f
 
 /**
  * The nudge that pulls an already-decelerated scroll position onto the nearest card. Deliberately

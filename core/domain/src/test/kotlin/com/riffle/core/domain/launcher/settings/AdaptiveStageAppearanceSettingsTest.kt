@@ -25,7 +25,13 @@ class AdaptiveStageAppearanceSettingsTest {
         val coerced =
             AdaptiveStageAppearanceSettings(
                 version = 99,
-                geometry = AdaptiveStageGeometry(cardAspectRatioPercent = -1, visibleDepth = 99, contentPaddingDp = -1),
+                geometry =
+                    AdaptiveStageGeometry(
+                        cardAspectRatioPercent = -1,
+                        visibleDepth = 99,
+                        contentPaddingDp = -1,
+                        stackPeakPercent = 99,
+                    ),
                 surface = AdaptiveStageSurface(blurStrengthPercent = 999, customBackgroundArgb = -1),
                 typography = AdaptiveStageTypography(textScalePercent = 999, customAccentArgb = -1),
                 motion =
@@ -40,12 +46,57 @@ class AdaptiveStageAppearanceSettingsTest {
         assertEquals(55, coerced.geometry.cardAspectRatioPercent)
         assertEquals(6, coerced.geometry.visibleDepth)
         assertEquals(0, coerced.geometry.contentPaddingDp)
+        assertEquals(MAX_ADAPTIVE_STAGE_STACK_PEAK_PERCENT, coerced.geometry.stackPeakPercent)
         assertEquals(100, coerced.surface.blurStrengthPercent)
         assertEquals(0, coerced.surface.customBackgroundArgb)
         assertEquals(130, coerced.typography.textScalePercent)
         assertEquals(80, coerced.motion.settleDurationMillis)
         assertEquals(50, coerced.motion.parallaxIntensityPercent)
         assertEquals(100, coerced.motion.magnetStrengthPercent)
+    }
+
+    @Test
+    fun theStackPeakResolvesToTheFractionARendererPositionsWith() {
+        val centered =
+            AdaptiveStageAppearanceSettings()
+                .resolveCardStack(AdaptiveStageViewportDp(widthDp = 800, heightDp = 1200))
+        val high =
+            AdaptiveStageAppearanceSettings(geometry = AdaptiveStageGeometry(stackPeakPercent = 20))
+                .resolveCardStack(AdaptiveStageViewportDp(widthDp = 800, heightDp = 1200))
+
+        assertEquals(0.5f, centered.stackPeakFraction)
+        assertEquals(0.2f, high.stackPeakFraction)
+    }
+
+    @Test
+    fun theSymmetricAboveFocusDefaultResolvesToNoSeparateRange() {
+        val resolution =
+            AdaptiveStageAppearanceSettings()
+                .resolveCardStack(AdaptiveStageViewportDp(widthDp = 800, heightDp = 1200))
+
+        assertEquals(null, resolution.layoutPolicy.aboveFocusDepth)
+    }
+
+    @Test
+    fun aStoredAboveFocusDepthReachesTheResolvedPolicy() {
+        val resolution =
+            AdaptiveStageAppearanceSettings(geometry = AdaptiveStageGeometry(visibleDepth = 4, aboveFocusDepth = 2))
+                .resolveCardStack(AdaptiveStageViewportDp(widthDp = 800, heightDp = 1200))
+
+        assertEquals(2, resolution.layoutPolicy.aboveFocusDepth)
+    }
+
+    @Test
+    fun anAboveFocusDepthCannotOutreachTheStacksOwnVisibleDepth() {
+        // A space-constrained viewport forces the resolved depth down to a single ring; without a
+        // clamp the stored above-focus range would then reach further above focus than the stack
+        // reaches below it, inverting the asymmetry this field exists to express.
+        val resolution =
+            AdaptiveStageAppearanceSettings(geometry = AdaptiveStageGeometry(visibleDepth = 2, aboveFocusDepth = 6))
+                .resolveCardStack(AdaptiveStageViewportDp(widthDp = 800, heightDp = 1200))
+
+        val resolvedAboveFocusDepth = requireNotNull(resolution.layoutPolicy.aboveFocusDepth)
+        assertTrue(resolvedAboveFocusDepth <= resolution.layoutPolicy.maxVisibleDepth)
     }
 
     @Test

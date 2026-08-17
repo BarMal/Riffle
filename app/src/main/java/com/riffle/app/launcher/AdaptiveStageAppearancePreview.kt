@@ -78,6 +78,7 @@ internal fun AdaptiveStageAppearancePreview(
             animationProfile = CardStackAnimationProfile.CARD_FLIGHT,
             animationSpec = resolution.animation,
             reducedMotion = resolution.reducedMotion,
+            stackPeakFraction = resolution.stackPeakFraction,
             // Keying on `appearance.motion` replays the entering flight-in animation whenever a
             // Motion tab setting changes, instead of only ever once at first composition. Enter
             // duration, easing, spring bounciness, and travel intensity already have a resting

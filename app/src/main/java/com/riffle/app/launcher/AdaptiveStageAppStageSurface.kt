@@ -1987,6 +1987,7 @@ private fun AdaptiveStageNotificationStack(
                                 ),
                             animationSpec = resolution.animation,
                             reducedMotion = resolution.reducedMotion,
+                            stackPeakFraction = resolution.stackPeakFraction,
                             itemKey = { entry -> cards[entry.cardIndex].content.id },
                             dimFactor = stackDimFactor,
                             interaction =
@@ -2395,6 +2396,7 @@ private fun AdaptiveStageAllNotificationsStack(
                             ),
                         animationSpec = resolution.animation,
                         reducedMotion = resolution.reducedMotion,
+                        stackPeakFraction = resolution.stackPeakFraction,
                         itemKey = { entry -> cards[entry.cardIndex].content.id },
                         dimFactor = stackDimFactor,
                         interaction =

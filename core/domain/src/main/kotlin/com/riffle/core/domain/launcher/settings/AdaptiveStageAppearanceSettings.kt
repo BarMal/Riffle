@@ -158,6 +158,14 @@ data class AdaptiveStageAppearanceSettings(
                 reducedMotionScaleStep = 0f,
                 reducedMotionOffsetStep = 0f,
                 verticalOffsetDirection = verticalOffsetDirection,
+                // Held to `depth`, so a stack forced down to a single ring by a space-constrained
+                // viewport (see `depth` above) cannot end up reaching *further* above focus than
+                // below it. Above that floor the setting is passed through untouched, and its
+                // symmetric default resolves to null -- the policy's own "no separate range".
+                aboveFocusDepth =
+                    appearance.geometry.aboveFocusDepth
+                        .takeIf { it != SYMMETRIC_ABOVE_FOCUS_DEPTH }
+                        ?.coerceAtMost(depth),
             )
         val animated = !appearance.motion.reducedMotion && isUsable
         return AdaptiveStageCardStackResolution(
@@ -168,6 +176,7 @@ data class AdaptiveStageAppearanceSettings(
             focusedScale = focusedScale,
             reducedMotion = appearance.motion.reducedMotion,
             layoutPolicy = layoutPolicy,
+            stackPeakFraction = appearance.geometry.stackPeakPercent / 100f,
             animation =
                 CardStackAnimationSpec(
                     horizontalTravelFraction = if (animated) appearance.motion.travelIntensityPercent / 100f else 0f,
@@ -501,6 +510,8 @@ data class AdaptiveStageCardStackResolution(
     val reducedMotion: Boolean,
     val layoutPolicy: CardStackLayoutPolicy,
     val animation: CardStackAnimationSpec,
+    /** [AdaptiveStageGeometry.stackPeakPercent] as the 0..1 fraction a renderer positions with. */
+    val stackPeakFraction: Float = CENTERED_ADAPTIVE_STAGE_STACK_PEAK_PERCENT / 100f,
     /** Only consumed by surfaces that opt into a continuously-scrolling position. */
     val magnet: CardStackMagnet = CardStackMagnet(),
 )
@@ -525,6 +536,25 @@ data class AdaptiveStageGeometry(
     val focusedScalePercent: Int = 100,
     val focusedGapDp: Int = 12,
     val visibleDepth: Int = 4,
+    /**
+     * How many already-passed cards stay visible above focus. [SYMMETRIC_ABOVE_FOCUS_DEPTH] (the
+     * default) keeps the stack symmetric about focus -- this surface's only prior behavior -- so
+     * existing installs see no change until a user moves this slider. See
+     * [CardStackLayoutPolicy.aboveFocusDepth] for what a shorter range does to an outgoing card's
+     * scale, alpha, rotation and fan. The reference "Calm" launcher's own equivalent
+     * (`aboveFocusCards`) defaults to 2 against 3 visible cards, so its outgoing side is
+     * deliberately tighter than its incoming one.
+     */
+    val aboveFocusDepth: Int = SYMMETRIC_ABOVE_FOCUS_DEPTH,
+    /**
+     * Where down the stage the focused card's centre sits, as a percentage. 50 (the default)
+     * centres it -- this surface's only prior behavior. The reference "Calm" launcher's own
+     * `stackPeakPosition` defaults to 20 instead: its focused card sits high, so the room below it
+     * belongs to the cards still to come rather than being split evenly with the ones already
+     * gone. Pairs naturally with [aboveFocusDepth], which decides how much of that upper room the
+     * departing cards need.
+     */
+    val stackPeakPercent: Int = CENTERED_ADAPTIVE_STAGE_STACK_PEAK_PERCENT,
     val overlapPercent: Int = 22,
     val verticalSpacingDp: Int = 8,
     val horizontalOffsetDp: Int = 20,
@@ -561,6 +591,16 @@ data class AdaptiveStageGeometry(
                 visibleDepth.coerceIn(
                     MIN_ADAPTIVE_STAGE_VISIBLE_DEPTH,
                     MAX_ADAPTIVE_STAGE_VISIBLE_DEPTH,
+                ),
+            aboveFocusDepth =
+                aboveFocusDepth.coerceIn(
+                    SYMMETRIC_ABOVE_FOCUS_DEPTH,
+                    MAX_ADAPTIVE_STAGE_VISIBLE_DEPTH,
+                ),
+            stackPeakPercent =
+                stackPeakPercent.coerceIn(
+                    MIN_ADAPTIVE_STAGE_STACK_PEAK_PERCENT,
+                    MAX_ADAPTIVE_STAGE_STACK_PEAK_PERCENT,
                 ),
             overlapPercent =
                 overlapPercent.coerceIn(
@@ -813,6 +853,28 @@ const val MIN_ADAPTIVE_STAGE_FOCUSED_GAP_DP = 0
 const val MAX_ADAPTIVE_STAGE_FOCUSED_GAP_DP = 64
 const val MIN_ADAPTIVE_STAGE_VISIBLE_DEPTH = 1
 const val MAX_ADAPTIVE_STAGE_VISIBLE_DEPTH = 6
+
+/**
+ * The [AdaptiveStageGeometry.aboveFocusDepth] value meaning "however far [
+ * AdaptiveStageGeometry.visibleDepth] reaches" -- a stack symmetric about focus, which is what this
+ * surface did before the field existed. It doubles as the field's minimum: it sits below every real
+ * depth, and the alternative reading of 0 ("show nothing above focus") would make the stack's whole
+ * history vanish the instant a card is scrolled past, which is not a look worth offering.
+ */
+const val SYMMETRIC_ABOVE_FOCUS_DEPTH = 0
+
+/**
+ * The stage's own reachable band for [AdaptiveStageGeometry.stackPeakPercent]. Deliberately not the
+ * full 0..100 the reference "Calm" launcher allows: Calm clamps its own computed padding against
+ * the real card height afterwards, so its extremes collapse back to something reachable, whereas
+ * this value drives an alignment bias that has no such backstop and would happily park the focused
+ * card half off its own stage.
+ */
+const val MIN_ADAPTIVE_STAGE_STACK_PEAK_PERCENT = 15
+const val MAX_ADAPTIVE_STAGE_STACK_PEAK_PERCENT = 85
+
+/** Centres the focused card on the stage -- this surface's prior fixed behavior. */
+const val CENTERED_ADAPTIVE_STAGE_STACK_PEAK_PERCENT = 50
 const val MIN_ADAPTIVE_STAGE_OVERLAP_PERCENT = 0
 const val MAX_ADAPTIVE_STAGE_OVERLAP_PERCENT = 60
 const val MIN_ADAPTIVE_STAGE_VERTICAL_SPACING_DP = 0

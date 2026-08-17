@@ -281,6 +281,7 @@ private fun FeedArticleStack(
                             ),
                         animationSpec = resolution.animation,
                         reducedMotion = resolution.reducedMotion,
+                        stackPeakFraction = resolution.stackPeakFraction,
                         itemKey = { entry -> cards[entry.cardIndex].digest },
                         interaction =
                             CardStackInteraction(

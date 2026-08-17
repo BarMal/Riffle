@@ -274,6 +274,8 @@ class LauncherSettingsJsonCodecTest {
                                 geometry =
                                     AdaptiveStageGeometry(
                                         visibleDepth = 5,
+                                        aboveFocusDepth = 2,
+                                        stackPeakPercent = 30,
                                         rotationDegrees = 8,
                                         verticalFanDirection = AdaptiveStageFanDirection.START,
                                     ),
@@ -295,7 +297,7 @@ class LauncherSettingsJsonCodecTest {
                 {
                   "cards": {
                     "timeScapeAppearance": {
-                      "geometry": { "visibleDepth": 999 },
+                      "geometry": { "visibleDepth": 999, "aboveFocusDepth": 999, "stackPeakPercent": 999 },
                       "surface": { "blurStrengthPercent": -1 },
                       "motion": { "settleDurationMillis": 9999, "magnetStrengthPercent": 999 }
                     }
@@ -304,6 +306,8 @@ class LauncherSettingsJsonCodecTest {
                 """.trimIndent(),
             ).cards.adaptiveStageAppearance
         assertEquals(6, imported.geometry.visibleDepth)
+        assertEquals(6, imported.geometry.aboveFocusDepth)
+        assertEquals(85, imported.geometry.stackPeakPercent)
         assertEquals(0, imported.surface.blurStrengthPercent)
         assertEquals(600, imported.motion.settleDurationMillis)
         assertEquals(100, imported.motion.magnetStrengthPercent)
