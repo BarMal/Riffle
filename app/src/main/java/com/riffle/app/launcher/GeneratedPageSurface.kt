@@ -236,6 +236,7 @@ internal fun GeneratedNotificationCardsPage(
                                                     activeCardIndex = activeCardIndex,
                                                     distancePerCardPx =
                                                     GENERATED_CARD_STACK_SETTLE_DISTANCE_THRESHOLD_PX,
+                                                    magnet = resolution.magnet,
                                                 ),
                                         ),
                                 ) { entry, pointerModifier ->

@@ -3,6 +3,10 @@ package com.riffle.core.domain.launcher.settings
 import com.riffle.core.domain.launcher.cards.CardStackAnimationEasing
 import com.riffle.core.domain.launcher.cards.CardStackAnimationSpec
 import com.riffle.core.domain.launcher.cards.CardStackLayoutPolicy
+import com.riffle.core.domain.launcher.cards.CardStackMagnet
+import com.riffle.core.domain.launcher.cards.DEFAULT_CARD_STACK_MAGNET_STRENGTH_PERCENT
+import com.riffle.core.domain.launcher.cards.MAX_CARD_STACK_MAGNET_STRENGTH_PERCENT
+import com.riffle.core.domain.launcher.cards.MIN_CARD_STACK_MAGNET_STRENGTH_PERCENT
 import kotlin.math.ceil
 import kotlin.math.min
 
@@ -60,6 +64,13 @@ data class AdaptiveStageAppearanceSettings(
                             travelIntensityPercent = 0,
                             parallaxIntensityPercent = 0,
                             rotationIntensityPercent = 0,
+                            // Every other field here drops to zero because reduced motion means
+                            // less travel; the magnet is the one knob where that same intent means
+                            // its *maximum*. Its weak end deliberately leaves the stack drifting
+                            // toward a card over a longer beat -- exactly the lingering motion this
+                            // mode exists to remove -- so it goes to the strongest setting, which
+                            // takes the shortest, most direct path onto the card and stops.
+                            magnetStrengthPercent = MAX_CARD_STACK_MAGNET_STRENGTH_PERCENT,
                         )
                     } else {
                         settings.motion
@@ -173,6 +184,7 @@ data class AdaptiveStageAppearanceSettings(
                     easing = appearance.motion.easing.cardStackEasing(),
                     springBouncinessPercent = appearance.motion.springBouncinessPercent,
                 ),
+            magnet = CardStackMagnet(strengthPercent = appearance.motion.magnetStrengthPercent),
         )
     }
 
@@ -489,6 +501,8 @@ data class AdaptiveStageCardStackResolution(
     val reducedMotion: Boolean,
     val layoutPolicy: CardStackLayoutPolicy,
     val animation: CardStackAnimationSpec,
+    /** Only consumed by surfaces that opt into a continuously-scrolling position. */
+    val magnet: CardStackMagnet = CardStackMagnet(),
 )
 
 data class AdaptiveStageGeometry(
@@ -706,6 +720,13 @@ data class AdaptiveStageMotion(
     val parallaxIntensityPercent: Int = 18,
     val rotationIntensityPercent: Int = 100,
     val hapticStrength: AdaptiveStageHapticStrength = AdaptiveStageHapticStrength.MEDIUM,
+    /**
+     * How long a card stack's scroll position is left standing where its own momentum fling
+     * stopped before being pulled onto the nearest card, and how firmly it is then pulled. See
+     * [com.riffle.core.domain.launcher.cards.CardStackMagnet]; only surfaces that opt into the
+     * continuously-scrolling position (a `CardStackScroll`) have a magnetize phase to tune.
+     */
+    val magnetStrengthPercent: Int = DEFAULT_CARD_STACK_MAGNET_STRENGTH_PERCENT,
     val reducedMotion: Boolean = false,
     val reducedTransparency: Boolean = false,
 ) {
@@ -755,6 +776,11 @@ data class AdaptiveStageMotion(
                 rotationIntensityPercent.coerceIn(
                     MIN_ADAPTIVE_STAGE_ROTATION_INTENSITY_PERCENT,
                     MAX_ADAPTIVE_STAGE_ROTATION_INTENSITY_PERCENT,
+                ),
+            magnetStrengthPercent =
+                magnetStrengthPercent.coerceIn(
+                    MIN_CARD_STACK_MAGNET_STRENGTH_PERCENT,
+                    MAX_CARD_STACK_MAGNET_STRENGTH_PERCENT,
                 ),
         )
 }

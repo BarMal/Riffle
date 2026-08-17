@@ -209,6 +209,47 @@ class CardStackGestureTest {
     }
 
     @Test
+    fun aFlingTicksOneHapticPerCardItTravelsOver() {
+        // The reference "Calm" launcher ticks whenever its derived active index changes on any
+        // scroll callback, so a fling that carries the stack over several cards is felt as travel
+        // across them rather than as one arrival. A momentum fling only ever moves one way, so the
+        // number of crossings it makes is exactly the number of cards focus ends up moving by --
+        // which keeps this assertion independent of how far the decay physics happen to carry it.
+        val stack = ScrollingCardStackHarness(cardCount = 8)
+        composeRule.setContent { ScrollingCardStack(stack) }
+
+        composeRule.onNodeWithTag("stack").performTouchInput { swipeUp() }
+
+        composeRule.runOnIdle {
+            assertTrue("a fling upward moves forward through the stack", stack.focusedCard > 0)
+            assertEquals(stack.focusedCard, stack.hapticCount)
+        }
+    }
+
+    @Test
+    fun aGestureThatMagnetizesBackToItsStartingCardIsNotFelt() {
+        // A drag too small to reach the next card magnetizes straight back to the one it started
+        // on, committing no focus change. Before per-crossing ticks, release fired a haptic
+        // unconditionally, so this no-op was felt exactly like a real card change.
+        val stack = ScrollingCardStackHarness(cardCount = 8)
+        composeRule.setContent { ScrollingCardStack(stack) }
+
+        composeRule.onNodeWithTag("stack").performTouchInput {
+            // Well under half of perCardPx (64f), so the nearest card stays the starting one.
+            swipe(
+                start = Offset(width / 2f, height / 2f),
+                end = Offset(width / 2f, height / 2f - 12f),
+                durationMillis = 400,
+            )
+        }
+
+        composeRule.runOnIdle {
+            assertEquals(0, stack.focusedCard)
+            assertEquals(0, stack.hapticCount)
+        }
+    }
+
+    @Test
     fun horizontalDragOnBackgroundCardRemainsAvailableToItsParent() {
         var horizontalDragWasUnconsumed by mutableStateOf(false)
         composeRule.setContent {
@@ -275,6 +316,7 @@ private class ScrollingCardStackHarness(
     var liveScrollPx by mutableStateOf<Float?>(null)
     var settleDragPx by mutableStateOf<Float?>(null)
     var settleVelocity by mutableStateOf<Float?>(null)
+    var hapticCount by mutableIntStateOf(0)
 }
 
 @Composable
@@ -307,6 +349,7 @@ private fun ScrollingCardStack(harness: ScrollingCardStackHarness) {
                         (harness.focusedCard - (drag / harness.perCardPx).roundToInt())
                             .coerceIn(0, harness.cardCount - 1)
                 },
+                onSettleHaptic = { harness.hapticCount++ },
                 onLiveDrag = { scrollPx -> harness.liveScrollPx = scrollPx },
                 scroll =
                     CardStackScroll(

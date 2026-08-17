@@ -2048,6 +2048,7 @@ private fun AdaptiveStageNotificationStack(
                                             activeCardIndex = activeCardIndex,
                                             distancePerCardPx =
                                             ADAPTIVE_STAGE_CARD_STACK_SETTLE_DISTANCE_THRESHOLD_PX,
+                                            magnet = resolution.magnet,
                                         ),
                                 ),
                         ) { entry, cardModifier ->
@@ -2451,6 +2452,7 @@ private fun AdaptiveStageAllNotificationsStack(
                                         activeCardIndex = activeCardIndex,
                                         distancePerCardPx =
                                         ADAPTIVE_STAGE_CARD_STACK_SETTLE_DISTANCE_THRESHOLD_PX,
+                                        magnet = resolution.magnet,
                                     ),
                             ),
                     ) { entry, cardModifier ->

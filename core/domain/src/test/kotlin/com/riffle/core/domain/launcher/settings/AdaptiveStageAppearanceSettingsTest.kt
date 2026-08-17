@@ -1,6 +1,7 @@
 package com.riffle.core.domain.launcher.settings
 
 import com.riffle.core.domain.launcher.cards.CardStackAnimationEasing
+import com.riffle.core.domain.launcher.cards.MAX_CARD_STACK_MAGNET_STRENGTH_PERCENT
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -27,7 +28,12 @@ class AdaptiveStageAppearanceSettingsTest {
                 geometry = AdaptiveStageGeometry(cardAspectRatioPercent = -1, visibleDepth = 99, contentPaddingDp = -1),
                 surface = AdaptiveStageSurface(blurStrengthPercent = 999, customBackgroundArgb = -1),
                 typography = AdaptiveStageTypography(textScalePercent = 999, customAccentArgb = -1),
-                motion = AdaptiveStageMotion(settleDurationMillis = -1, parallaxIntensityPercent = 999),
+                motion =
+                    AdaptiveStageMotion(
+                        settleDurationMillis = -1,
+                        parallaxIntensityPercent = 999,
+                        magnetStrengthPercent = 999,
+                    ),
             ).coerce()
 
         assertEquals(CURRENT_ADAPTIVE_STAGE_APPEARANCE_VERSION, coerced.version)
@@ -39,6 +45,31 @@ class AdaptiveStageAppearanceSettingsTest {
         assertEquals(130, coerced.typography.textScalePercent)
         assertEquals(80, coerced.motion.settleDurationMillis)
         assertEquals(50, coerced.motion.parallaxIntensityPercent)
+        assertEquals(100, coerced.motion.magnetStrengthPercent)
+    }
+
+    @Test
+    fun theResolvedMagnetCarriesTheStoredStrength() {
+        val resolution =
+            AdaptiveStageAppearanceSettings(motion = AdaptiveStageMotion(magnetStrengthPercent = 20))
+                .resolveCardStack(AdaptiveStageViewportDp(widthDp = 800, heightDp = 1200))
+
+        assertEquals(20, resolution.magnet.strengthPercent)
+    }
+
+    @Test
+    fun reducedMotionTakesTheMagnetToItsStrongestRatherThanItsWeakest() {
+        // Every other motion field drops toward zero under reduced motion because they all add
+        // travel. The magnet is the exception: its weak end is what leaves the stack drifting
+        // toward a card over a longer beat, so removing lingering motion means the *strongest*
+        // setting -- the shortest, most direct path onto the card.
+        val resolution =
+            AdaptiveStageAppearanceSettings(
+                motion = AdaptiveStageMotion(reducedMotion = true, magnetStrengthPercent = 0),
+            ).resolveCardStack(AdaptiveStageViewportDp(widthDp = 800, heightDp = 1200))
+
+        assertEquals(MAX_CARD_STACK_MAGNET_STRENGTH_PERCENT, resolution.magnet.strengthPercent)
+        assertEquals(40L, resolution.magnet.settleDelayMillis)
     }
 
     @Test

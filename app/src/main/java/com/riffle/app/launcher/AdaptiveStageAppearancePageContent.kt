@@ -39,6 +39,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.cards.AdaptiveStagePaneArrangement
 import com.riffle.core.domain.launcher.cards.AdaptiveStageRailSide
+import com.riffle.core.domain.launcher.cards.MAX_CARD_STACK_MAGNET_STRENGTH_PERCENT
+import com.riffle.core.domain.launcher.cards.MIN_CARD_STACK_MAGNET_STRENGTH_PERCENT
 import com.riffle.core.domain.launcher.settings.AdaptiveStageAccentSource
 import com.riffle.core.domain.launcher.settings.AdaptiveStageAppearanceSettings
 import com.riffle.core.domain.launcher.settings.AdaptiveStageBackgroundSource
@@ -784,6 +786,16 @@ private fun AdaptiveStageMotionTabContent(
         ) { value ->
             update {
                 it.copy(motion = it.motion.copy(rotationIntensityPercent = value))
+            }
+        }
+        AdaptiveStageSlider(
+            "Magnet strength",
+            appearance.motion.magnetStrengthPercent,
+            MIN_CARD_STACK_MAGNET_STRENGTH_PERCENT..MAX_CARD_STACK_MAGNET_STRENGTH_PERCENT,
+            "%",
+        ) { value ->
+            update {
+                it.copy(motion = it.motion.copy(magnetStrengthPercent = value))
             }
         }
         AdaptiveStageEnumChoices(

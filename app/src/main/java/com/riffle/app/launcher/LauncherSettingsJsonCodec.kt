@@ -301,6 +301,9 @@ private fun encodeAdaptiveStageAppearance(settings: AdaptiveStageAppearanceSetti
                     "rotationIntensityPercent",
                     appearance.motion.rotationIntensityPercent,
                 ).put(
+                    "magnetStrengthPercent",
+                    appearance.motion.magnetStrengthPercent,
+                ).put(
                     "hapticStrength",
                     appearance.motion.hapticStrength.name,
                 ).put("reducedMotion", appearance.motion.reducedMotion).put("reducedTransparency", appearance.motion.reducedTransparency),
@@ -503,6 +506,11 @@ private fun JSONObject.toAdaptiveStageAppearance(defaults: AdaptiveStageAppearan
                     motion.optIntOrDefault(
                         "parallaxIntensityPercent",
                         defaults.motion.parallaxIntensityPercent,
+                    ),
+                magnetStrengthPercent =
+                    motion.optIntOrDefault(
+                        "magnetStrengthPercent",
+                        defaults.motion.magnetStrengthPercent,
                     ),
                 rotationIntensityPercent =
                     motion.optIntOrDefault(

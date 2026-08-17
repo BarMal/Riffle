@@ -278,7 +278,11 @@ class LauncherSettingsJsonCodecTest {
                                         verticalFanDirection = AdaptiveStageFanDirection.START,
                                     ),
                                 surface = AdaptiveStageSurface(blurStrengthPercent = 42),
-                                motion = AdaptiveStageMotion(reducedTransparency = true),
+                                motion =
+                                    AdaptiveStageMotion(
+                                        magnetStrengthPercent = 15,
+                                        reducedTransparency = true,
+                                    ),
                             ),
                     ),
             )
@@ -293,7 +297,7 @@ class LauncherSettingsJsonCodecTest {
                     "timeScapeAppearance": {
                       "geometry": { "visibleDepth": 999 },
                       "surface": { "blurStrengthPercent": -1 },
-                      "motion": { "settleDurationMillis": 9999 }
+                      "motion": { "settleDurationMillis": 9999, "magnetStrengthPercent": 999 }
                     }
                   }
                 }
@@ -302,6 +306,7 @@ class LauncherSettingsJsonCodecTest {
         assertEquals(6, imported.geometry.visibleDepth)
         assertEquals(0, imported.surface.blurStrengthPercent)
         assertEquals(600, imported.motion.settleDurationMillis)
+        assertEquals(100, imported.motion.magnetStrengthPercent)
     }
 
     @Test

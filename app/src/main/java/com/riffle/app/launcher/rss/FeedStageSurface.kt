@@ -327,6 +327,7 @@ private fun FeedArticleStack(
                                         cardCount = cards.size,
                                         activeCardIndex = activeIndex,
                                         distancePerCardPx = FEED_CARD_STACK_SETTLE_DISTANCE_THRESHOLD_PX,
+                                        magnet = resolution.magnet,
                                     ),
                             ),
                     ) { entry, cardModifier ->
