@@ -659,7 +659,7 @@ data class AdaptiveStageSurface(
      * How the card's own surface is layered. See [AdaptiveStageCardEffect]; this decides whether
      * the background treatment reaches the card's edges or is framed by an inset content face.
      */
-    val cardEffect: AdaptiveStageCardEffect = AdaptiveStageCardEffect.FROSTED,
+    val cardEffect: AdaptiveStageCardEffect = AdaptiveStageCardEffect.GLASS,
     val customBackgroundArgb: Long = 0xFF1B1B1FL,
     val glassTransparencyPercent: Int = 38,
     val glassTintArgb: Long = 0xCCFFFFFFL,
@@ -744,12 +744,18 @@ data class AdaptiveStageSurface(
  * [SOLID] is Calm's `NONE`: the base colour alone, edge to edge, with no tint or outline. The
  * plainest, highest-contrast option, and the cheapest to draw.
  *
- * The gradient, artwork and texture layers render under [GLASS] only. They are inseparable from its
- * frame: the gradient darkens toward one corner and artwork is arbitrary, so text drawn straight
- * onto either has no contrast guarantee, which is precisely why the opaque content face exists in
- * the first place. Letting them fill a border-less card would trade the border for unreadable text
- * over a bright photo. Scrimming just the text block, rather than the whole card, is what would let
- * artwork fill a card safely, and that is a larger change than removing a border.
+ * The gradient, artwork and texture layers render under [GLASS] only, which is why it remains the
+ * default. They are inseparable from its frame: the gradient darkens toward one corner and artwork
+ * is arbitrary, so text drawn straight onto either has no contrast guarantee, which is precisely why
+ * the opaque content face exists. Two rendering tests pin both halves of that bargain -- one that
+ * the content area is a uniform surface, one that artwork stays visible in the band around it -- and
+ * together they say a card cannot show artwork, guarantee contrast, *and* drop its border.
+ *
+ * So [SOLID] and [FROSTED] trade the treatment away for the border, rather than pretending both can
+ * be had: they are the choice for anyone who would rather have a flat, borderless card than a framed
+ * decorated one. Making a borderless card keep its gradient or artwork needs the scrim to shrink to
+ * the text block instead of covering the card, which is a real layout change rather than a
+ * conditional, and is the natural next step for whoever wants that.
  */
 enum class AdaptiveStageCardEffect {
     SOLID,
