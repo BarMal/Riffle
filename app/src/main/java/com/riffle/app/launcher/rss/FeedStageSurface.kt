@@ -281,6 +281,7 @@ private fun FeedArticleStack(
                             ),
                         animationSpec = resolution.animation,
                         reducedMotion = resolution.reducedMotion,
+                        stackPeakFraction = resolution.stackPeakFraction,
                         itemKey = { entry -> cards[entry.cardIndex].digest },
                         interaction =
                             CardStackInteraction(
@@ -327,6 +328,7 @@ private fun FeedArticleStack(
                                         cardCount = cards.size,
                                         activeCardIndex = activeIndex,
                                         distancePerCardPx = FEED_CARD_STACK_SETTLE_DISTANCE_THRESHOLD_PX,
+                                        magnet = resolution.magnet,
                                     ),
                             ),
                     ) { entry, cardModifier ->

@@ -193,6 +193,12 @@ private fun encodeAdaptiveStageAppearance(settings: AdaptiveStageAppearanceSetti
                     "visibleDepth",
                     appearance.geometry.visibleDepth,
                 ).put(
+                    "aboveFocusDepth",
+                    appearance.geometry.aboveFocusDepth,
+                ).put(
+                    "stackPeakPercent",
+                    appearance.geometry.stackPeakPercent,
+                ).put(
                     "overlapPercent",
                     appearance.geometry.overlapPercent,
                 ).put(
@@ -301,6 +307,9 @@ private fun encodeAdaptiveStageAppearance(settings: AdaptiveStageAppearanceSetti
                     "rotationIntensityPercent",
                     appearance.motion.rotationIntensityPercent,
                 ).put(
+                    "magnetStrengthPercent",
+                    appearance.motion.magnetStrengthPercent,
+                ).put(
                     "hapticStrength",
                     appearance.motion.hapticStrength.name,
                 ).put("reducedMotion", appearance.motion.reducedMotion).put("reducedTransparency", appearance.motion.reducedTransparency),
@@ -340,6 +349,16 @@ private fun JSONObject.toAdaptiveStageAppearance(defaults: AdaptiveStageAppearan
                     geometry.optIntOrDefault(
                         "visibleDepth",
                         defaults.geometry.visibleDepth,
+                    ),
+                aboveFocusDepth =
+                    geometry.optIntOrDefault(
+                        "aboveFocusDepth",
+                        defaults.geometry.aboveFocusDepth,
+                    ),
+                stackPeakPercent =
+                    geometry.optIntOrDefault(
+                        "stackPeakPercent",
+                        defaults.geometry.stackPeakPercent,
                     ),
                 overlapPercent =
                     geometry.optIntOrDefault(
@@ -503,6 +522,11 @@ private fun JSONObject.toAdaptiveStageAppearance(defaults: AdaptiveStageAppearan
                     motion.optIntOrDefault(
                         "parallaxIntensityPercent",
                         defaults.motion.parallaxIntensityPercent,
+                    ),
+                magnetStrengthPercent =
+                    motion.optIntOrDefault(
+                        "magnetStrengthPercent",
+                        defaults.motion.magnetStrengthPercent,
                     ),
                 rotationIntensityPercent =
                     motion.optIntOrDefault(

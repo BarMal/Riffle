@@ -39,6 +39,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.cards.AdaptiveStagePaneArrangement
 import com.riffle.core.domain.launcher.cards.AdaptiveStageRailSide
+import com.riffle.core.domain.launcher.cards.MAX_CARD_STACK_MAGNET_STRENGTH_PERCENT
+import com.riffle.core.domain.launcher.cards.MIN_CARD_STACK_MAGNET_STRENGTH_PERCENT
 import com.riffle.core.domain.launcher.settings.AdaptiveStageAccentSource
 import com.riffle.core.domain.launcher.settings.AdaptiveStageAppearanceSettings
 import com.riffle.core.domain.launcher.settings.AdaptiveStageBackgroundSource
@@ -71,6 +73,7 @@ import com.riffle.core.domain.launcher.settings.MAX_ADAPTIVE_STAGE_SATURATION_PE
 import com.riffle.core.domain.launcher.settings.MAX_ADAPTIVE_STAGE_SETTLE_DURATION_MILLIS
 import com.riffle.core.domain.launcher.settings.MAX_ADAPTIVE_STAGE_SHADOW_ELEVATION_DP
 import com.riffle.core.domain.launcher.settings.MAX_ADAPTIVE_STAGE_SPRING_BOUNCINESS_PERCENT
+import com.riffle.core.domain.launcher.settings.MAX_ADAPTIVE_STAGE_STACK_PEAK_PERCENT
 import com.riffle.core.domain.launcher.settings.MAX_ADAPTIVE_STAGE_TEXTURE_INTENSITY_PERCENT
 import com.riffle.core.domain.launcher.settings.MAX_ADAPTIVE_STAGE_TEXT_SCALE_PERCENT
 import com.riffle.core.domain.launcher.settings.MAX_ADAPTIVE_STAGE_TRANSITION_DURATION_MILLIS
@@ -98,12 +101,14 @@ import com.riffle.core.domain.launcher.settings.MIN_ADAPTIVE_STAGE_SATURATION_PE
 import com.riffle.core.domain.launcher.settings.MIN_ADAPTIVE_STAGE_SETTLE_DURATION_MILLIS
 import com.riffle.core.domain.launcher.settings.MIN_ADAPTIVE_STAGE_SHADOW_ELEVATION_DP
 import com.riffle.core.domain.launcher.settings.MIN_ADAPTIVE_STAGE_SPRING_BOUNCINESS_PERCENT
+import com.riffle.core.domain.launcher.settings.MIN_ADAPTIVE_STAGE_STACK_PEAK_PERCENT
 import com.riffle.core.domain.launcher.settings.MIN_ADAPTIVE_STAGE_TEXTURE_INTENSITY_PERCENT
 import com.riffle.core.domain.launcher.settings.MIN_ADAPTIVE_STAGE_TEXT_SCALE_PERCENT
 import com.riffle.core.domain.launcher.settings.MIN_ADAPTIVE_STAGE_TRANSITION_DURATION_MILLIS
 import com.riffle.core.domain.launcher.settings.MIN_ADAPTIVE_STAGE_TRAVEL_INTENSITY_PERCENT
 import com.riffle.core.domain.launcher.settings.MIN_ADAPTIVE_STAGE_VERTICAL_SPACING_DP
 import com.riffle.core.domain.launcher.settings.MIN_ADAPTIVE_STAGE_VISIBLE_DEPTH
+import com.riffle.core.domain.launcher.settings.SYMMETRIC_ABOVE_FOCUS_DEPTH
 import com.riffle.core.domain.launcher.settings.ThreadMessageOrder
 
 private typealias AdaptiveStageAppearanceUpdate = ((AdaptiveStageAppearanceSettings) -> AdaptiveStageAppearanceSettings) -> Unit
@@ -427,6 +432,26 @@ private fun AdaptiveStageGeometryTabContent(
         ) { value ->
             update {
                 it.copy(geometry = it.geometry.copy(visibleDepth = value))
+            }
+        }
+        AdaptiveStageSlider(
+            "Cards above focus",
+            appearance.geometry.aboveFocusDepth,
+            SYMMETRIC_ABOVE_FOCUS_DEPTH..MAX_ADAPTIVE_STAGE_VISIBLE_DEPTH,
+            "cards",
+        ) { value ->
+            update {
+                it.copy(geometry = it.geometry.copy(aboveFocusDepth = value))
+            }
+        }
+        AdaptiveStageSlider(
+            "Stack peak position",
+            appearance.geometry.stackPeakPercent,
+            MIN_ADAPTIVE_STAGE_STACK_PEAK_PERCENT..MAX_ADAPTIVE_STAGE_STACK_PEAK_PERCENT,
+            "%",
+        ) { value ->
+            update {
+                it.copy(geometry = it.geometry.copy(stackPeakPercent = value))
             }
         }
         AdaptiveStageSlider(
@@ -784,6 +809,16 @@ private fun AdaptiveStageMotionTabContent(
         ) { value ->
             update {
                 it.copy(motion = it.motion.copy(rotationIntensityPercent = value))
+            }
+        }
+        AdaptiveStageSlider(
+            "Magnet strength",
+            appearance.motion.magnetStrengthPercent,
+            MIN_CARD_STACK_MAGNET_STRENGTH_PERCENT..MAX_CARD_STACK_MAGNET_STRENGTH_PERCENT,
+            "%",
+        ) { value ->
+            update {
+                it.copy(motion = it.motion.copy(magnetStrengthPercent = value))
             }
         }
         AdaptiveStageEnumChoices(

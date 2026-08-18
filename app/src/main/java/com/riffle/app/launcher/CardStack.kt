@@ -28,16 +28,18 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableFloatState
+import androidx.compose.runtime.MutableIntState
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
-import androidx.compose.ui.Alignment
+import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.draw.clipToBounds
@@ -63,7 +65,9 @@ import com.riffle.core.domain.launcher.cards.CardStackAnimationEasing
 import com.riffle.core.domain.launcher.cards.CardStackAnimationProfile
 import com.riffle.core.domain.launcher.cards.CardStackAnimationSpec
 import com.riffle.core.domain.launcher.cards.CardStackLayoutEntry
+import com.riffle.core.domain.launcher.cards.CardStackMagnet
 import com.riffle.core.domain.launcher.cards.CardStackNavigationDirection
+import kotlinx.coroutines.delay
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
@@ -118,11 +122,14 @@ internal enum class CardStackOrientation { VERTICAL, HORIZONTAL }
  *   card. Pass the same value the caller gives
  *   [com.riffle.core.domain.launcher.cards.CardStackSettleRequest.distanceThresholdPx], so the
  *   magnetized distance reported to `onSettle` lands on exact card boundaries.
+ * @param magnet how long the position is left standing where the decay stopped, and how firmly it
+ *   is then pulled onto the nearest card. See [CardStackMagnet].
  */
 internal data class CardStackScroll(
     val cardCount: Int,
     val activeCardIndex: Int,
     val distancePerCardPx: Float = DEFAULT_CARD_STACK_SCROLL_DISTANCE_PER_CARD_PX,
+    val magnet: CardStackMagnet = CardStackMagnet(),
 ) {
     init {
         require(cardCount >= 0) { "Card count must not be negative." }
@@ -194,6 +201,18 @@ internal data class CardStackInteraction(
      *  instead when [CardStackOrientation.HORIZONTAL] -- treat both params as "this stack's own
      *  primary-axis drag," not literally vertical. */
     val onSettle: (verticalDragPx: Float, verticalVelocityPxPerSecond: Float) -> Unit,
+    /**
+     * One haptic tick for the stack arriving on a card. Without [scroll] this fires once, at
+     * release, as it always did. With [scroll] supplied it instead fires *every time the scroll
+     * position crosses onto a different card* -- during the finger's own drag, through the momentum
+     * fling, and on the magnetize that ends it -- so a fling that carries the stack past four cards
+     * ticks four times rather than once at the end. That is how the reference "Calm" launcher's own
+     * stack behaves (its `style()` compares a freshly derived `activeIndex` against a remembered
+     * `lastHapticIndex` on every scroll callback, and its magnetize is just another scroll
+     * callback), and it is what makes a long fling feel like it is travelling over cards instead of
+     * teleporting to one. The final arrival is itself one of those crossings, so it is not ticked a
+     * second time at commit.
+     */
     val onSettleHaptic: () -> Unit = {},
     /** Alternate-input navigation commits one focused-card change without emulating a drag. */
     val onNavigate: ((CardStackNavigationDirection) -> Boolean)? = null,
@@ -254,6 +273,16 @@ internal fun CardStack(
     /** Multiplies every rendered entry's alpha, e.g. to dim the whole stack behind a detail overlay. */
     dimFactor: Float = 1f,
     orientation: CardStackOrientation = CardStackOrientation.VERTICAL,
+    /**
+     * Where along this stack's own settle axis the focused card's centre sits, as a fraction of the
+     * stack's own area: 0.5 (the default) centres it, which is this composable's only prior
+     * behavior. The reference "Calm" launcher calls this `stackPeakPosition` and defaults it to
+     * 0.2 -- its focused card sits high in the viewport, leaving the room below it for the cards
+     * still to come rather than splitting that room evenly with the ones already gone. Its own
+     * `CardStackLayout.activeTopPadding` places the focused card's centre at exactly this fraction
+     * of the viewport, which is what [androidx.compose.ui.BiasAlignment] expresses directly.
+     */
+    stackPeakFraction: Float = CENTERED_CARD_STACK_PEAK_FRACTION,
     content: @Composable (CardStackLayoutEntry, Modifier) -> Unit,
 ) {
     val motionMode = cardStackMotionMode(reducedMotion)
@@ -320,6 +349,11 @@ internal fun CardStack(
     // committed through onSettle. Without that, it is just the raw accumulated drag, reported to
     // onSettle at release exactly as before.
     val scrollPx = remember { mutableFloatStateOf(0f) }
+    // Which card the position last ticked a haptic for -- see CardStackInteraction.onSettleHaptic.
+    // Seeded from the anchor at the start of every motion, then advanced by every crossing the
+    // finger, the fling and the magnetize make, so one continuous motion never re-ticks a card it
+    // is already resting on. Mirrors the reference "Calm" launcher's own `lastHapticIndex`.
+    val lastHapticIndex = remember { mutableIntStateOf(0) }
     val scrollableState =
         rememberScrollableState { delta ->
             var next = scrollPx.floatValue
@@ -334,6 +368,11 @@ internal fun CardStack(
                 // physical finger travel it always did, instead of silently requiring extra
                 // travel -- past the already-crossed slop -- to reach those same thresholds.
                 next += if (delta >= 0f) touchSlop else -touchSlop
+                // A fresh motion starts resting on the anchor card, so that is the card the first
+                // crossing is measured against. A finger landing mid-fling does not come through
+                // here (isScrolling stays true across that hand-off), which is exactly right: that
+                // motion is continuous, and its crossing history should carry straight on.
+                currentInteraction?.scroll?.let { scroll -> lastHapticIndex.intValue = scroll.anchorIndex }
             }
             isScrolling.value = true
             // A finger landing mid-fling interrupts that fling's coroutine (Modifier.scrollable
@@ -346,9 +385,14 @@ internal fun CardStack(
             // this (see cardStackLiveActiveCardIndex), so a drag past either end looked stopped
             // either way; clamping the position itself is what stops the fling that follows from
             // having to travel back through the slack first.
-            scrollPx.floatValue =
-                currentInteraction?.scroll?.let { scroll -> next.coerceIn(cardStackScrollPxRange(scroll)) } ?: next
-            currentInteraction?.onLiveDrag?.invoke(scrollPx.floatValue)
+            val scroll = currentInteraction?.scroll
+            publishCardStackScrollPosition(
+                position = scroll?.let { next.coerceIn(cardStackScrollPxRange(it)) } ?: next,
+                scroll = scroll,
+                scrollPx = scrollPx,
+                lastHapticIndex = lastHapticIndex,
+                interaction = currentInteraction,
+            )
             delta
         }
     // The same spline curve android.widget.OverScroller (and so every platform ScrollView) flings
@@ -380,6 +424,7 @@ internal fun CardStack(
                         initialVelocity = initialVelocity,
                         scroll = scroll,
                         scrollPx = scrollPx,
+                        lastHapticIndex = lastHapticIndex,
                         decaySpec = flingDecay,
                         interaction = { currentInteraction },
                     )
@@ -417,7 +462,9 @@ internal fun CardStack(
                 },
         // Each entry wraps to its own card's size, not this root's full area -- without this,
         // Box's default TopStart pins every card to the top-left corner instead of centering it.
-        contentAlignment = Alignment.Center,
+        // The settle axis additionally carries stackPeakFraction, which slides the whole stack
+        // along that axis; the other axis stays centred.
+        contentAlignment = cardStackPeakAlignment(stackPeakFraction, orientation),
     ) {
         entries.forEach { entry ->
             // A card index identifies a stable card while focus changes, so Compose can
@@ -472,7 +519,11 @@ internal fun CardStack(
  *  2. **Magnetize.** Only once the decay has come to rest does the position spring onto the
  *     nearest card, seeded with whatever velocity the decay had left. This is the analogue of
  *     Calm's debounced `magnetize()`: a correction applied to an already-settled position, never a
- *     hand-off from one motion to another.
+ *     hand-off from one motion to another. [CardStackScroll.magnet] supplies both halves of that
+ *     debounce -- the beat the position is left standing where the decay stopped, and how firmly
+ *     it is then pulled home. The wait is an ordinary cancellable suspension, so a finger landing
+ *     during it catches the stack exactly where the fling parked it, which is the whole point of
+ *     leaving it there.
  *  3. **Commit.** The magnetized position -- an exact multiple of
  *     [CardStackScroll.distancePerCardPx] -- is reported to `onSettle` with zero velocity, so the
  *     caller's own [com.riffle.core.domain.launcher.cards.CardStackController.settle] resolves to
@@ -482,18 +533,25 @@ internal fun CardStack(
  * Cancellation -- a new finger landing mid-fling -- simply leaves the position where it had got
  * to, which is what lets the next drag catch the moving stack.
  */
+@Suppress("LongParameterList")
 private suspend fun runCardStackScrollFling(
     initialVelocity: Float,
     scroll: CardStackScroll,
     scrollPx: MutableFloatState,
+    lastHapticIndex: MutableIntState,
     decaySpec: DecayAnimationSpec<Float>,
     interaction: () -> CardStackInteraction?,
 ) {
     val range = cardStackScrollPxRange(scroll)
 
     fun publish(position: Float) {
-        scrollPx.floatValue = position
-        interaction()?.onLiveDrag?.invoke(position)
+        publishCardStackScrollPosition(
+            position = position,
+            scroll = scroll,
+            scrollPx = scrollPx,
+            lastHapticIndex = lastHapticIndex,
+            interaction = interaction(),
+        )
     }
 
     var restingVelocity = 0f
@@ -513,8 +571,16 @@ private suspend fun runCardStackScrollFling(
 
     val magnetizedPx = cardStackMagnetizedScrollPx(scrollPx.floatValue, scroll)
     if (magnetizedPx != scrollPx.floatValue) {
+        // Calm's magnetize is posted behind its last scroll callback rather than run inline; the
+        // stack visibly sits where the fling ran out for that beat before easing home. Waiting
+        // here reproduces that, and because it is a plain cancellable delay the decayed position
+        // stays catchable by a new finger throughout.
+        delay(scroll.magnet.settleDelayMillis)
         AnimationState(initialValue = scrollPx.floatValue, initialVelocity = restingVelocity)
-            .animateTo(targetValue = magnetizedPx, animationSpec = CardStackMagnetizeSpec) {
+            .animateTo(
+                targetValue = magnetizedPx,
+                animationSpec = cardStackMagnetizeSpec(scroll.magnet),
+            ) {
                 publish(value.coerceIn(range))
             }
     }
@@ -527,9 +593,34 @@ private suspend fun runCardStackScrollFling(
     // (or clearing first and committing later) is precisely that frame.
     scrollPx.floatValue = 0f
     interaction()?.onLiveDrag?.invoke(null)
-    interaction()?.run {
-        onSettle(magnetizedPx, 0f)
-        onSettleHaptic()
+    // No haptic here: arriving on this card was itself a crossing, already ticked by publish()
+    // above (see CardStackInteraction.onSettleHaptic). Ticking again would double up on every
+    // gesture that moved the stack at all, and invent one for a fling that came back to the card
+    // it started on.
+    interaction()?.onSettle?.invoke(magnetizedPx, 0f)
+}
+
+/**
+ * Writes one live scroll position out to both the state the renderer reads and the caller's own
+ * [CardStackInteraction.onLiveDrag], ticking [CardStackInteraction.onSettleHaptic] whenever the
+ * position has crossed onto a different card since the last tick. Shared by the finger's own drag
+ * and by [runCardStackScrollFling]'s decay and magnetize phases, so one continuous motion ticks
+ * once per card crossed however the position happens to be moving at the time.
+ */
+private fun publishCardStackScrollPosition(
+    position: Float,
+    scroll: CardStackScroll?,
+    scrollPx: MutableFloatState,
+    lastHapticIndex: MutableIntState,
+    interaction: CardStackInteraction?,
+) {
+    scrollPx.floatValue = position
+    interaction?.onLiveDrag?.invoke(position)
+    if (scroll == null) return
+    val crossedIndex = cardStackSettledCardIndex(position, scroll)
+    if (lastHapticIndex.intValue != crossedIndex) {
+        lastHapticIndex.intValue = crossedIndex
+        interaction?.onSettleHaptic?.invoke()
     }
 }
 
@@ -561,6 +652,26 @@ internal val CardStackMotionModeKey = SemanticsPropertyKey<CardStackMotionMode>(
 
 /** Stable card identity exposed on the focus-owning semantic entry. */
 internal val CardStackItemKey = SemanticsPropertyKey<Any>("CardStackItemKey")
+
+/**
+ * [stackPeakFraction] as a [BiasAlignment] along this stack's own settle axis, with the other axis
+ * left centred. A [BiasAlignment] bias runs -1 (start of the axis) to 1 (end), placing the child's
+ * *centre* at that point -- the same thing the reference "Calm" launcher's own
+ * `CardStackLayout.activeTopPadding` computes as `viewportHeight * peakFraction - cardHeight / 2`.
+ * A fraction outside 0..1 would push the focused card entirely off its own stack, so it is held to
+ * that range rather than trusted.
+ */
+internal fun cardStackPeakAlignment(
+    stackPeakFraction: Float,
+    orientation: CardStackOrientation,
+): BiasAlignment {
+    val bias = stackPeakFraction.coerceIn(0f, 1f) * 2f - 1f
+    return if (orientation == CardStackOrientation.HORIZONTAL) {
+        BiasAlignment(horizontalBias = bias, verticalBias = 0f)
+    } else {
+        BiasAlignment(horizontalBias = 0f, verticalBias = bias)
+    }
+}
 
 internal fun cardStackMotionMode(reducedMotion: Boolean): CardStackMotionMode =
     if (reducedMotion) {
@@ -831,14 +942,22 @@ private const val SETTLE_DURATION_STEP_CAP = 4
  */
 internal const val DEFAULT_CARD_STACK_SCROLL_DISTANCE_PER_CARD_PX = 64f
 
+/** The [CardStack] `stackPeakFraction` that centres the focused card -- this stack's prior fixed behavior. */
+internal const val CENTERED_CARD_STACK_PEAK_FRACTION = 0.5f
+
 /**
  * The nudge that pulls an already-decelerated scroll position onto the nearest card. Deliberately
- * unbouncy and unhurried: it is a correction to a position that has already stopped moving on its
- * own (see [runCardStackScrollFling]), so any overshoot here would read as the stack second-
- * guessing where the fling left it.
+ * unbouncy at every strength: it is a correction to a position that has already stopped moving on
+ * its own (see [runCardStackScrollFling]), so any overshoot here would read as the stack second-
+ * guessing where the fling left it. Only how *briskly* it travels is tunable --
+ * [CardStackMagnet.stiffnessScale] against a [Spring.StiffnessMediumLow] base, so the default
+ * strength lands near the single fixed stiffness this replaced.
  */
-private val CardStackMagnetizeSpec: AnimationSpec<Float> =
-    spring<Float>(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow)
+private fun cardStackMagnetizeSpec(magnet: CardStackMagnet): AnimationSpec<Float> =
+    spring<Float>(
+        dampingRatio = Spring.DampingRatioNoBouncy,
+        stiffness = Spring.StiffnessMediumLow * magnet.stiffnessScale,
+    )
 
 /**
  * Focuses [entry] on a plain tap, for a not-yet-focused entry only -- refocusing an already-focused

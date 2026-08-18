@@ -90,6 +90,7 @@ class AdaptiveStageAppearanceEditorTest {
             "Expand duration",
             "Easing",
             "Spring bounciness",
+            "Magnet strength",
             "Haptic strength",
         ).forEach { label -> composeRule.onNodeWithText(label).assertExists() }
     }

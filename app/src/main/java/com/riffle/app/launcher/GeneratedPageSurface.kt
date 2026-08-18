@@ -180,6 +180,7 @@ internal fun GeneratedNotificationCardsPage(
                                     animationProfile = CardStackAnimationProfile.CARD_FLIGHT,
                                     animationSpec = resolution.animation,
                                     reducedMotion = resolution.reducedMotion,
+                                    stackPeakFraction = resolution.stackPeakFraction,
                                     itemKey = { entry ->
                                         generatedNotificationCardKey(state.cards[entry.cardIndex].group)
                                     },
@@ -236,6 +237,7 @@ internal fun GeneratedNotificationCardsPage(
                                                     activeCardIndex = activeCardIndex,
                                                     distancePerCardPx =
                                                     GENERATED_CARD_STACK_SETTLE_DISTANCE_THRESHOLD_PX,
+                                                    magnet = resolution.magnet,
                                                 ),
                                         ),
                                 ) { entry, pointerModifier ->
