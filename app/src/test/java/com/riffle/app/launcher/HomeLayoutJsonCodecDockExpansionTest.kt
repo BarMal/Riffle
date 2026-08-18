@@ -3,8 +3,8 @@ package com.riffle.app.launcher
 import com.riffle.core.domain.launcher.home.DockExpandAffordance
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import org.json.JSONObject
-import kotlin.test.Test
-import kotlin.test.assertEquals
+import org.junit.Assert.assertEquals
+import org.junit.Test
 
 /**
  * Persistence for the dock's expansion settings, which live on the dock and are therefore already
