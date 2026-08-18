@@ -23,6 +23,7 @@ import com.riffle.core.domain.launcher.rss.FeedId
 import com.riffle.core.domain.launcher.rss.FeedRefreshIntent
 import com.riffle.core.domain.launcher.rss.FeedUrl
 import com.riffle.core.domain.launcher.settings.AdaptiveStageAppearanceSettings
+import com.riffle.core.domain.launcher.settings.AdaptiveStageCardEffect
 import com.riffle.core.domain.launcher.settings.AdaptiveStageFanDirection
 import com.riffle.core.domain.launcher.settings.AdaptiveStageGeometry
 import com.riffle.core.domain.launcher.settings.AdaptiveStageMotion
@@ -279,7 +280,11 @@ class LauncherSettingsJsonCodecTest {
                                         rotationDegrees = 8,
                                         verticalFanDirection = AdaptiveStageFanDirection.START,
                                     ),
-                                surface = AdaptiveStageSurface(blurStrengthPercent = 42),
+                                surface =
+                                    AdaptiveStageSurface(
+                                        blurStrengthPercent = 42,
+                                        cardEffect = AdaptiveStageCardEffect.SOLID,
+                                    ),
                                 motion =
                                     AdaptiveStageMotion(
                                         magnetStrengthPercent = 15,

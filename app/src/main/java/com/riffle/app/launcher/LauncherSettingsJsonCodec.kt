@@ -230,6 +230,9 @@ private fun encodeAdaptiveStageAppearance(settings: AdaptiveStageAppearanceSetti
                     "backgroundSource",
                     appearance.surface.backgroundSource.name,
                 ).put(
+                    "cardEffect",
+                    appearance.surface.cardEffect.name,
+                ).put(
                     "customBackgroundArgb",
                     appearance.surface.customBackgroundArgb,
                 ).put(
@@ -412,6 +415,11 @@ private fun JSONObject.toAdaptiveStageAppearance(defaults: AdaptiveStageAppearan
                     surface.enumOrDefault(
                         "backgroundSource",
                         defaults.surface.backgroundSource,
+                    ),
+                cardEffect =
+                    surface.enumOrDefault(
+                        "cardEffect",
+                        defaults.surface.cardEffect,
                     ),
                 customBackgroundArgb =
                     surface.optLongOrDefault(

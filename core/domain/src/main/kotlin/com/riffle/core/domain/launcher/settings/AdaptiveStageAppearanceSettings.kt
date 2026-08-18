@@ -655,6 +655,11 @@ private fun AdaptiveStageFanDirection.toOffsetDirection(): Float =
 
 data class AdaptiveStageSurface(
     val backgroundSource: AdaptiveStageBackgroundSource = AdaptiveStageBackgroundSource.APP_DERIVED_GRADIENT,
+    /**
+     * How the card's own surface is layered. See [AdaptiveStageCardEffect]; this decides whether
+     * the background treatment reaches the card's edges or is framed by an inset content face.
+     */
+    val cardEffect: AdaptiveStageCardEffect = AdaptiveStageCardEffect.FROSTED,
     val customBackgroundArgb: Long = 0xFF1B1B1FL,
     val glassTransparencyPercent: Int = 38,
     val glassTintArgb: Long = 0xCCFFFFFFL,
@@ -719,6 +724,30 @@ data class AdaptiveStageSurface(
                     MAX_ADAPTIVE_STAGE_TEXTURE_INTENSITY_PERCENT,
                 ),
         )
+}
+
+/**
+ * How a card's surface is layered, mirroring the reference "Calm" launcher's own `CardEffect`
+ * (NONE/FROSTED/GLASS) rather than Riffle's previous single hardcoded treatment.
+ *
+ * [GLASS] is that previous treatment: the background layer (gradient, artwork, tint, texture) is
+ * drawn full-bleed, and the content then sits on its *own* opaque face inset from the card edge by
+ * the content padding plus an extra bezel. That inset is the only reason any of the background is
+ * visible at all -- the content face is opaque, so without a frame around it the artwork and
+ * gradient would be completely hidden. The cost is that every card carries a translucent double
+ * border, and the background treatment is reduced to a thin decorative rim.
+ *
+ * [FROSTED] keeps the same tinted treatment but drops the inset face, so the background reaches
+ * every edge and the content sits directly on it. Same colours, no border, and the gradient or
+ * artwork actually fills the card instead of framing it.
+ *
+ * [SOLID] is Calm's `NONE`: one opaque colour, edge to edge, with no gradient, artwork, tint or
+ * outline. The plainest, highest-contrast option, and the cheapest to draw.
+ */
+enum class AdaptiveStageCardEffect {
+    SOLID,
+    FROSTED,
+    GLASS,
 }
 
 enum class AdaptiveStageBackgroundSource {

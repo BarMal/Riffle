@@ -28,6 +28,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.compositeOver
@@ -45,6 +46,7 @@ import com.riffle.core.domain.launcher.notifications.LauncherNotification
 import com.riffle.core.domain.launcher.settings.AdaptiveStageAccentSource
 import com.riffle.core.domain.launcher.settings.AdaptiveStageAppearanceSettings
 import com.riffle.core.domain.launcher.settings.AdaptiveStageBackgroundSource
+import com.riffle.core.domain.launcher.settings.AdaptiveStageCardEffect
 import com.riffle.core.domain.launcher.settings.AdaptiveStageCardStackResolution
 import com.riffle.core.domain.launcher.settings.AdaptiveStageContentDensity
 import com.riffle.core.domain.launcher.settings.AdaptiveStageRendererCapabilities
@@ -188,13 +190,19 @@ internal fun resolveAdaptiveStageCardColors(
     val glass =
         glassTint
             .compositeOver(adjustedBase)
+    // Which surface the content is actually legible against depends on the effect: GLASS and
+    // FROSTED both put text over the tinted treatment, but SOLID skips the tint entirely and leaves
+    // text sitting on the bare base colour. Contrast has to be measured against whichever of those
+    // is really behind the text -- picking a foreground for a light tint and then painting it onto
+    // an untinted, much darker base is how a card ends up unreadable.
+    val contentSurface = adaptiveStageContentSurface(surface.cardEffect, tinted = glass, base = adjustedBase)
     val requestedForeground =
         if (effective.typography.automaticForegroundContrast) {
-            adaptiveStageAccessibleForeground(glass)
+            adaptiveStageAccessibleForeground(contentSurface)
         } else {
             materialBackground
         }
-    val foreground = adaptiveStageForeground(requestedForeground, glass)
+    val foreground = adaptiveStageForeground(requestedForeground, contentSurface)
     val accent =
         when (effective.typography.accentSource) {
             AdaptiveStageAccentSource.APP_DERIVED -> adjustedBase
@@ -210,6 +218,17 @@ internal fun resolveAdaptiveStageCardColors(
         outline = accent.copy(alpha = surface.highlightPercent / 100f),
     )
 }
+
+/**
+ * Whichever surface a card's content is really drawn over, which is what its foreground contrast
+ * has to be measured against. [AdaptiveStageCardEffect.SOLID] skips the tint layer entirely, so its
+ * text sits on the bare [base]; the other effects put text over the [tinted] treatment.
+ */
+private fun adaptiveStageContentSurface(
+    cardEffect: AdaptiveStageCardEffect,
+    tinted: Color,
+    base: Color,
+): Color = if (cardEffect == AdaptiveStageCardEffect.SOLID) base else tinted
 
 internal fun adaptiveStageAdjustedColor(
     color: Color,
@@ -363,15 +382,32 @@ internal fun AdaptiveStageCardSurface(
                 .shadow(effective.surface.shadowElevationDp.dp, shape, clip = false)
                 .semantics { this[AdaptiveStageCardBlurStrengthKey] = effective.surface.blurStrengthPercent },
     ) {
+        // SOLID is Calm's `NONE`: one opaque colour edge to edge, so the gradient, artwork, tint
+        // and texture layers below are all skipped rather than drawn and then covered. The outline
+        // is likewise a GLASS-only flourish -- it reads as a second border stacked on the bezel,
+        // which is exactly what this whole treatment exists to stop drawing.
+        val effect = effective.surface.cardEffect
+        val drawsBackgroundTreatment = effect != AdaptiveStageCardEffect.SOLID
         Box(
             modifier =
                 Modifier
                     .fillMaxSize()
                     .clip(shape)
-                    .background(adaptiveStageBackgroundBrush(effective, colors.background))
-                    .border(effective.surface.outlineWidthDp.dp, colors.outline, shape),
+                    .background(
+                        if (drawsBackgroundTreatment) {
+                            adaptiveStageBackgroundBrush(effective, colors.background)
+                        } else {
+                            SolidColor(colors.background)
+                        },
+                    ).then(
+                        if (effect == AdaptiveStageCardEffect.GLASS) {
+                            Modifier.border(effective.surface.outlineWidthDp.dp, colors.outline, shape)
+                        } else {
+                            Modifier
+                        },
+                    ),
         ) {
-            if (artworkEnabled) {
+            if (artworkEnabled && drawsBackgroundTreatment) {
                 Image(
                     bitmap = requireNotNull(background.artwork),
                     contentDescription = null,
@@ -380,25 +416,42 @@ internal fun AdaptiveStageCardSurface(
                     colorFilter = artworkColorFilter,
                 )
             }
-            Box(modifier = Modifier.fillMaxSize().background(colors.glassTint))
-            AdaptiveStageTexture(
-                color = colors.accent,
-                intensityPercent = effective.surface.textureIntensityPercent,
-            )
+            if (drawsBackgroundTreatment) {
+                Box(modifier = Modifier.fillMaxSize().background(colors.glassTint))
+                AdaptiveStageTexture(
+                    color = colors.accent,
+                    intensityPercent = effective.surface.textureIntensityPercent,
+                )
+            }
         }
-        // Wider than adjustedPadding on purpose: the opaque glass face (and the content that sits
-        // on it) has to start further in from the card edge, so the background layer's
-        // blur/texture/tinted-artwork reads as a clearly visible frame instead of an
-        // imperceptible sliver. contentPaddingDp itself stays untouched -- it's still the real
-        // content-inset value other call sites (reachability sizing, etc.) reason about; this
-        // only widens how this one surface draws it.
-        val glassBezelPadding = adjustedPadding + ADAPTIVE_STAGE_GLASS_BEZEL_EXTRA_DP.dp
+        // GLASS alone gives the content its own opaque face, inset wider than adjustedPadding so
+        // the background layer's blur/texture/tinted-artwork reads as a visible frame around it
+        // rather than an imperceptible sliver. That frame is the translucent border, and it is the
+        // *only* reason any background shows through under this effect -- an opaque face covering
+        // the whole card would hide the treatment entirely.
+        //
+        // SOLID and FROSTED invert that bargain: no inset face at all, so the background reaches
+        // every edge and the content sits straight on it. The card loses its border and the
+        // gradient or artwork fills it instead of merely rimming it. contentPaddingDp is untouched
+        // either way -- it remains the real content inset other call sites reason about; only the
+        // extra bezel is conditional.
         val contentModifier =
-            Modifier
-                .fillMaxSize()
-                .clip(shape)
-                .padding(glassBezelPadding)
-                .background(colors.glass, shape)
+            when (effect) {
+                AdaptiveStageCardEffect.GLASS ->
+                    Modifier
+                        .fillMaxSize()
+                        .clip(shape)
+                        .padding(adjustedPadding + ADAPTIVE_STAGE_GLASS_BEZEL_EXTRA_DP.dp)
+                        .background(colors.glass, shape)
+
+                AdaptiveStageCardEffect.SOLID,
+                AdaptiveStageCardEffect.FROSTED,
+                ->
+                    Modifier
+                        .fillMaxSize()
+                        .clip(shape)
+                        .padding(adjustedPadding)
+            }
         MaterialTheme(
             colorScheme =
                 MaterialTheme.colorScheme.copy(

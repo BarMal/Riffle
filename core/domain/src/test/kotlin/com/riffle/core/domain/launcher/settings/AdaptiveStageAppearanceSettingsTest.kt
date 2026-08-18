@@ -288,6 +288,31 @@ class AdaptiveStageAppearanceSettingsTest {
     }
 
     @Test
+    fun theDefaultCardEffectDropsTheInsetContentFace() {
+        // FROSTED is the default because GLASS's inset face is what draws the translucent double
+        // border around every card. Its background treatment still applies -- only the frame goes.
+        assertEquals(AdaptiveStageCardEffect.FROSTED, AdaptiveStageSurface().cardEffect)
+    }
+
+    @Test
+    fun theCardEffectSurvivesCoercionAndCapabilityFallbacks() {
+        // The effect is a rendering shape, not a bounded magnitude, so nothing should quietly
+        // rewrite it -- including the reduced-transparency path, which flattens the tint by driving
+        // glassTransparencyPercent to zero rather than by changing which layers are drawn.
+        val stored =
+            AdaptiveStageAppearanceSettings(
+                surface = AdaptiveStageSurface(cardEffect = AdaptiveStageCardEffect.SOLID),
+                motion = AdaptiveStageMotion(reducedTransparency = true),
+            )
+
+        assertEquals(AdaptiveStageCardEffect.SOLID, stored.coerce().surface.cardEffect)
+        assertEquals(
+            AdaptiveStageCardEffect.SOLID,
+            stored.effectiveFor(AdaptiveStageRendererCapabilities()).surface.cardEffect,
+        )
+    }
+
+    @Test
     fun aNegativeRotationLeansTheFanTheOtherWay() {
         // The tilt was floored at 0, so a stack could lean one way or lie flat but never mirror
         // itself -- unlike every other lean in this model, which is direction-selectable. Equal and
