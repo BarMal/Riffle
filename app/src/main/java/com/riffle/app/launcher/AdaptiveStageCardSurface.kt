@@ -321,6 +321,15 @@ internal fun AdaptiveStageCardSurface(
             )
         }
     val shape = remember(effective.geometry.cornerRadiusDp) { RoundedCornerShape(effective.geometry.cornerRadiusDp.dp) }
+
+    // A text scrim is a small block inside a much larger card, so it cannot borrow the card's own
+    // corner radius: at the configured maximum that curve would consume a short scrim entirely and
+    // round it into a lozenge. Halving it keeps the scrim visibly part of the same family as the
+    // card without the radius outgrowing the box it is rounding.
+    val scrimShape =
+        remember(effective.geometry.cornerRadiusDp) {
+            RoundedCornerShape((effective.geometry.cornerRadiusDp / 2).dp)
+        }
     val actionColors = remember(colors) { resolveAdaptiveStageCardActionColors(colors.accent, colors.glass) }
     val density = LocalDensity.current
     val contentDensityScale = adaptiveStageContentDensityScale(effective.typography.contentDensity)
@@ -391,19 +400,21 @@ internal fun AdaptiveStageCardSurface(
         // skipped rather than drawn and then covered. The outline is likewise GLASS-only; it reads
         // as a second border stacked on the bezel, which is what this treatment exists to remove.
         val effect = effective.surface.cardEffect
-        val drawsLayeredTreatment = effect == AdaptiveStageCardEffect.GLASS
+        // SOLID is the only effect that forgoes the treatment: it is one opaque colour by
+        // definition, so drawing gradient, artwork, tint and texture underneath just to cover them
+        // would be wasted work. GLASS and FROSTED both show it, and differ only in how the content
+        // above earns its contrast -- a frame around an opaque face, or a scrim behind the text.
+        val drawsLayeredTreatment = effect != AdaptiveStageCardEffect.SOLID
         Box(
             modifier =
                 Modifier
                     .fillMaxSize()
                     .clip(shape)
                     .background(
-                        when (effect) {
-                            AdaptiveStageCardEffect.GLASS ->
-                                adaptiveStageBackgroundBrush(effective, colors.background)
-
-                            AdaptiveStageCardEffect.FROSTED -> SolidColor(colors.glass)
-                            AdaptiveStageCardEffect.SOLID -> SolidColor(colors.background)
+                        if (drawsLayeredTreatment) {
+                            adaptiveStageBackgroundBrush(effective, colors.background)
+                        } else {
+                            SolidColor(colors.background)
                         },
                     ).then(
                         if (drawsLayeredTreatment) {
@@ -430,16 +441,23 @@ internal fun AdaptiveStageCardSurface(
                 )
             }
         }
-        // GLASS alone gives the content its own opaque face, inset wider than adjustedPadding so
-        // the background layer's blur/texture/tinted-artwork reads as a visible frame around it
-        // rather than an imperceptible sliver. That frame *is* the translucent border, and it is
-        // the only reason any of the treatment shows under this effect.
+        // Three ways for content to earn its contrast over the treatment below it.
         //
-        // SOLID and FROSTED need no such face: the card is already one flat field of exactly the
-        // colour that face would have composited to, so the content can sit straight on it with no
-        // inset and no frame, and with the same contrast it had before. contentPaddingDp is
-        // untouched either way -- it remains the real content inset other call sites reason about;
-        // only the extra bezel is conditional.
+        // GLASS gives the content an opaque face covering the whole card, inset wider than
+        // adjustedPadding so a rim of the treatment stays visible around it. That rim *is* the
+        // translucent border, and under this effect it is the only part of the gradient or artwork
+        // that is ever seen -- the face hides the rest.
+        //
+        // FROSTED keeps the same opaque surface but sizes it to the content rather than the card.
+        // Deliberately no fillMaxSize: the Box then wraps whatever it holds, so the scrim hugs the
+        // text and the treatment fills every pixel around it. Content that fills the card of its
+        // own accord still gets a full-card scrim, so this is never *less* legible than GLASS --
+        // it just stops reserving the whole card for text that only needs a corner of it.
+        //
+        // SOLID needs no surface at all: the card is already one flat opaque colour.
+        //
+        // contentPaddingDp is untouched throughout -- it remains the real content inset other call
+        // sites reason about; only the extra bezel and the scrim's own inset are conditional.
         val contentModifier =
             when (effect) {
                 AdaptiveStageCardEffect.GLASS ->
@@ -449,9 +467,13 @@ internal fun AdaptiveStageCardSurface(
                         .padding(adjustedPadding + ADAPTIVE_STAGE_GLASS_BEZEL_EXTRA_DP.dp)
                         .background(colors.glass, shape)
 
-                AdaptiveStageCardEffect.SOLID,
-                AdaptiveStageCardEffect.FROSTED,
-                ->
+                AdaptiveStageCardEffect.FROSTED ->
+                    Modifier
+                        .padding(adjustedPadding)
+                        .background(colors.glass, scrimShape)
+                        .padding(ADAPTIVE_STAGE_TEXT_SCRIM_INSET_DP.dp)
+
+                AdaptiveStageCardEffect.SOLID ->
                     Modifier
                         .fillMaxSize()
                         .clip(shape)
@@ -580,3 +602,10 @@ private const val ARTWORK_REVISION_HEX = "0123456789abcdef"
 private const val MINIMUM_FOREGROUND_CONTRAST_RATIO = 4.5f
 private const val MINIMUM_ACTION_CONTRAST_RATIO = MINIMUM_FOREGROUND_CONTRAST_RATIO
 private const val ADAPTIVE_STAGE_GLASS_BEZEL_EXTRA_DP = 10f
+
+/**
+ * Breathing room between a [AdaptiveStageCardEffect.FROSTED] scrim's edge and the text inside it.
+ * Without this the scrim would be exactly the text's own bounding box, which reads as a highlighter
+ * stripe rather than a surface the text is resting on.
+ */
+private const val ADAPTIVE_STAGE_TEXT_SCRIM_INSET_DP = 12f

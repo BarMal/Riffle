@@ -737,25 +737,23 @@ data class AdaptiveStageSurface(
  * gradient would be completely hidden. The cost is that every card carries a translucent double
  * border, and the background treatment is reduced to a thin decorative rim.
  *
- * [FROSTED] presents that same composited colour -- the base tinted by the glass tint -- as one
- * flat field edge to edge, with no inset face and so no border. Contrast is unchanged, because the
- * card is now uniformly the exact surface the content face used to be.
+ * [FROSTED] keeps that same treatment and that same opaque surface, but sizes the surface to the
+ * *content* instead of to the card. The scrim hugs the text; the gradient or artwork fills every
+ * pixel around it. This is what dissolves the apparent trade between the two: a card cannot show
+ * artwork, guarantee contrast and drop its border only while the scrim is card-sized, because then
+ * the sole way to see any treatment is to leave a rim of it exposed. Shrink the scrim and the rim
+ * has nothing left to do.
  *
- * [SOLID] is Calm's `NONE`: the base colour alone, edge to edge, with no tint or outline. The
- * plainest, highest-contrast option, and the cheapest to draw.
+ * Contrast is not weakened by that. The text still rests on exactly the surface it rested on under
+ * [GLASS] -- there is simply less of it. Content that fills the card of its own accord still gets a
+ * card-sized scrim, so [FROSTED] is never *less* legible than [GLASS]; it just stops reserving the
+ * whole card for text that needs a corner of it.
  *
- * The gradient, artwork and texture layers render under [GLASS] only, which is why it remains the
- * default. They are inseparable from its frame: the gradient darkens toward one corner and artwork
- * is arbitrary, so text drawn straight onto either has no contrast guarantee, which is precisely why
- * the opaque content face exists. Two rendering tests pin both halves of that bargain -- one that
- * the content area is a uniform surface, one that artwork stays visible in the band around it -- and
- * together they say a card cannot show artwork, guarantee contrast, *and* drop its border.
+ * [SOLID] is Calm's `NONE`: the base colour alone, edge to edge, with no gradient, artwork, tint or
+ * outline. The plainest, highest-contrast option, and the cheapest to draw.
  *
- * So [SOLID] and [FROSTED] trade the treatment away for the border, rather than pretending both can
- * be had: they are the choice for anyone who would rather have a flat, borderless card than a framed
- * decorated one. Making a borderless card keep its gradient or artwork needs the scrim to shrink to
- * the text block instead of covering the card, which is a real layout change rather than a
- * conditional, and is the natural next step for whoever wants that.
+ * [GLASS] remains the default so that no existing install is restyled without a deliberate choice,
+ * not because it is the better of the two.
  */
 enum class AdaptiveStageCardEffect {
     SOLID,
