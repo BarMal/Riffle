@@ -16,19 +16,32 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.LauncherShellState
+import com.riffle.core.domain.launcher.apps.AppActivityName
+import com.riffle.core.domain.launcher.apps.AppIdentity
+import com.riffle.core.domain.launcher.apps.AppPackageName
+import com.riffle.core.domain.launcher.apps.AppProfile
+import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.cards.AdaptiveStageHingeBounds
 import com.riffle.core.domain.launcher.cards.AdaptiveStagePaneArrangement
 import com.riffle.core.domain.launcher.cards.AdaptiveStagePosture
 import com.riffle.core.domain.launcher.cards.AdaptiveStageRailSide
 import com.riffle.core.domain.launcher.cards.AdaptiveStageWindowLayout
+import com.riffle.core.domain.launcher.cards.AppStageId
+import com.riffle.core.domain.launcher.cards.AppStagePreferences
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
+import com.riffle.core.domain.launcher.home.HomeLayoutKey
+import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.settings.CardsSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettings
@@ -402,6 +415,105 @@ class AdaptiveStageAdaptiveLayoutInteractionTest {
         // simultaneously -- proving this is a genuine split, not one replacing the other.
         composeRule.onNodeWithTag(ADAPTIVE_STAGE_SUPPORTING_PANE_TEST_TAG).assertIsDisplayed()
         composeRule.onNodeWithText("Install an app to create your first stage.").assertIsDisplayed()
+    }
+
+    @Test
+    fun everyStageIsReachableInTheRailByScrollingRatherThanSteppingThroughAFan() {
+        // More stages than fit the strip at once. The rail scrolls, so the last one is reachable
+        // directly instead of one settle-drag per card between here and there.
+        val apps = railTestApps(count = 16)
+        val actions = mutableListOf<LauncherShellAction>()
+        setRailContent(apps = apps, onAction = actions::add)
+
+        val last = apps.last()
+        composeRule.onNodeWithTag(ADAPTIVE_STAGE_STAGE_RAIL_TEST_TAG)
+            .performScrollToNode(hasContentDescription("${last.label}. Open stage"))
+        composeRule.onNodeWithContentDescription("${last.label}. Open stage").performClick()
+
+        composeRule.runOnIdle {
+            assertEquals(
+                LauncherShellAction.SelectAppStage(
+                    AppStageId(last.identity.packageName, last.identity.profile.id),
+                ),
+                actions.last(),
+            )
+        }
+    }
+
+    @Test
+    fun theRailOpensScrolledToTheSelectedStageRatherThanAtItsStart() {
+        // Selection also moves from outside the rail, so the tile it names has to be the one on
+        // screen -- otherwise a restored selection leaves the rail showing an unrelated stretch.
+        val apps = railTestApps(count = 16)
+        val selected = apps.last()
+        setRailContent(
+            apps = apps,
+            selectedStageId = AppStageId(selected.identity.packageName, selected.identity.profile.id),
+            onAction = {},
+        )
+
+        composeRule.onNodeWithContentDescription("${selected.label}, selected. Open stage").assertIsDisplayed()
+    }
+
+    private fun railTestApps(count: Int): List<InstalledApp> =
+        (1..count).map { index ->
+            val packageName = "com.example.stage$index"
+            InstalledApp(
+                identity =
+                    AppIdentity(
+                        packageName = AppPackageName(packageName),
+                        activityName = AppActivityName("$packageName.Main"),
+                        profile = AppProfile.personal(),
+                    ),
+                label = "Stage %02d".format(index),
+            )
+        }
+
+    private fun setRailContent(
+        apps: List<InstalledApp>,
+        selectedStageId: AppStageId? = null,
+        onAction: (LauncherShellAction) -> Unit,
+    ) {
+        val stageIds = apps.map { app -> AppStageId(app.identity.packageName, app.identity.profile.id) }
+        composeRule.setContent {
+            CompositionLocalProvider(LocalDensity provides Density(TEST_WINDOW_DENSITY)) {
+                MaterialTheme {
+                    Box(
+                        modifier = Modifier.width(1_200.dp).height(TEST_WINDOW_HEIGHT_DP.dp).clipToBounds(),
+                    ) {
+                        AdaptiveStageAppStageSurface(
+                            state =
+                                LauncherShellState(
+                                    notificationAccessStatus = NotificationAccessStatus.GRANTED,
+                                    installedApps = apps,
+                                    launcherSettings =
+                                        LauncherSettings(
+                                            cards =
+                                                CardsSettings(
+                                                    adaptiveStageRailSide = AdaptiveStageRailSide.LEADING,
+                                                    stagePreferencesByLayout =
+                                                        mapOf(
+                                                            HomeLayoutKey(LauncherViewMode.STANDARD_APP_DRAWER) to
+                                                                AppStagePreferences(
+                                                                    pinnedStageIds = stageIds,
+                                                                    selectedStageId = selectedStageId,
+                                                                ),
+                                                        ),
+                                                ),
+                                        ),
+                                ),
+                            windowLayout =
+                                AdaptiveStageWindowLayout(
+                                    widthDp = 1_200,
+                                    heightDp = TEST_WINDOW_HEIGHT_DP,
+                                    posture = AdaptiveStagePosture.UNFOLDED,
+                                ),
+                            onAction = onAction,
+                        )
+                    }
+                }
+            }
+        }
     }
 
     private fun setContent(
