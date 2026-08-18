@@ -11,11 +11,13 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.home.DockAlignment
 import com.riffle.core.domain.launcher.home.DockBackgroundSizing
+import com.riffle.core.domain.launcher.home.DockExpandAffordance
 import com.riffle.core.domain.launcher.home.DockModel
 import com.riffle.core.domain.launcher.home.DockVisualEffect
 import com.riffle.core.domain.launcher.home.MAX_DOCK_BACKGROUND_ALPHA_PERCENT
@@ -44,6 +46,16 @@ internal fun DockSetting(
             notificationAccessStatus = notificationAccessStatus,
             onAction = onAction,
         )
+        DockExpandableSetting(
+            expandable = dock.isExpandable,
+            onAction = onAction,
+        )
+        if (dock.isExpandable) {
+            DockExpandAffordanceSetting(
+                affordance = dock.expandAffordance,
+                onAction = onAction,
+            )
+        }
         DockIconSizeSetting(
             sizeDp = dock.iconSizeDp,
             onAction = onAction,
@@ -229,6 +241,66 @@ private fun DockVisibilitySetting(
         checked = enabled,
         onCheckedChange = { value -> onAction(LauncherShellAction.SelectDockEnabled(value)) },
     )
+}
+
+@Composable
+private fun DockExpandableSetting(
+    expandable: Boolean,
+    onAction: (LauncherShellAction) -> Unit,
+) {
+    SettingsSwitchRow(
+        title = "Expandable dock",
+        subtitle =
+            if (expandable) {
+                "Dock opens a shelf for overflow and notification cards"
+            } else {
+                "Dock stays a single strip of shortcuts"
+            },
+        checked = expandable,
+        onCheckedChange = { value -> onAction(LauncherShellAction.SelectDockExpandable(value)) },
+    )
+}
+
+@Composable
+private fun DockExpandAffordanceSetting(
+    affordance: DockExpandAffordance,
+    onAction: (LauncherShellAction) -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        SettingsTextColumn(
+            modifier = Modifier.weight(1f),
+            title = "Open the shelf with",
+            subtitle =
+                when (affordance) {
+                    DockExpandAffordance.GESTURE -> "Swipe up on the dock; the dock's swipe-up action is unused"
+                    DockExpandAffordance.BUTTON -> "A button on the dock; swipe up runs the dock's own action"
+                },
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            TextButton(
+                modifier = Modifier.testTag("dock-expand-affordance-${DockExpandAffordance.GESTURE.name}"),
+                enabled = affordance != DockExpandAffordance.GESTURE,
+                onClick = {
+                    onAction(LauncherShellAction.SelectDockExpandAffordance(DockExpandAffordance.GESTURE))
+                },
+            ) {
+                SettingsButtonText(text = "Swipe")
+            }
+            TextButton(
+                modifier = Modifier.testTag("dock-expand-affordance-${DockExpandAffordance.BUTTON.name}"),
+                enabled = affordance != DockExpandAffordance.BUTTON,
+                onClick = {
+                    onAction(LauncherShellAction.SelectDockExpandAffordance(DockExpandAffordance.BUTTON))
+                },
+            ) {
+                SettingsButtonText(text = "Button")
+            }
+        }
+    }
 }
 
 @Composable

@@ -13,6 +13,13 @@ data class DockModel(
     val itemSpacingDp: Int = DEFAULT_DOCK_ITEM_SPACING_DP,
     val cornerRadiusDp: Int = DEFAULT_DOCK_CORNER_RADIUS_DP,
     val homeControlsSpacingDp: Int = DEFAULT_DOCK_HOME_CONTROLS_SPACING_DP,
+    /**
+     * Whether the dock offers its expanded shelf at all. `false` leaves the dock as a plain strip
+     * of shortcuts, and frees whatever input the expand affordance would otherwise have claimed.
+     */
+    val isExpandable: Boolean = true,
+    /** How the user reaches the expanded shelf when [isExpandable]. */
+    val expandAffordance: DockExpandAffordance = DockExpandAffordance.GESTURE,
 ) {
     val availableSlots: Int = (capacity - items.size).coerceAtLeast(0)
 }
@@ -20,6 +27,21 @@ data class DockModel(
 enum class DockBackgroundSizing {
     DYNAMIC,
     FIXED,
+}
+
+/**
+ * How the expanded dock shelf is reached.
+ *
+ * [GESTURE] is the original behaviour: swipe up on the dock to expand, down to collapse. It costs a
+ * gesture, and it is the affordance a dock on a side edge cannot have -- a swipe inward from the
+ * screen's edge is Android's own back gesture, so an edge dock has to offer [BUTTON] instead.
+ *
+ * [BUTTON] puts a visible control on the dock. It is discoverable rather than learned, and it hands
+ * the swipe back to whatever the dock's own swipe-up gesture action is bound to.
+ */
+enum class DockExpandAffordance {
+    GESTURE,
+    BUTTON,
 }
 
 /** Horizontal placement for a dock that does not consume the available home width. */

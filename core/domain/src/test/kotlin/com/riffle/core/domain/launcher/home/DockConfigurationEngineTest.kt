@@ -35,6 +35,40 @@ class DockConfigurationEngineTest {
     }
 
     @Test
+    fun updatesDockExpandabilityWithoutChangingItems() {
+        val phone = appShortcut(id = "phone")
+        val layout = layoutWithDockItems(phone)
+
+        val result = engine.setDockExpandable(layout = layout, expandable = false)
+
+        val updated = assertIs<DockEditResult.Updated>(result)
+        assertEquals(false, updated.layout.dock.isExpandable)
+        assertEquals(listOf(phone.id), updated.layout.dock.items.map { item -> item.id })
+    }
+
+    @Test
+    fun updatesDockExpandAffordance() {
+        val result =
+            engine.setDockExpandAffordance(
+                layout = HomeLayoutDefaults.standard(),
+                affordance = DockExpandAffordance.BUTTON,
+            )
+
+        val updated = assertIs<DockEditResult.Updated>(result)
+        assertEquals(DockExpandAffordance.BUTTON, updated.layout.dock.expandAffordance)
+    }
+
+    @Test
+    fun aDockExpandsBySwipeUntilTheUserSaysOtherwise() {
+        // Both defaults exist to leave today's dock exactly as it was: it expands, and the swipe
+        // is how you do it.
+        val dock = HomeLayoutDefaults.standard().dock
+
+        assertEquals(true, dock.isExpandable)
+        assertEquals(DockExpandAffordance.GESTURE, dock.expandAffordance)
+    }
+
+    @Test
     fun updatesDockCapacity() {
         val result = engine.setDockCapacity(layout = HomeLayoutDefaults.standard(), capacity = 7)
 

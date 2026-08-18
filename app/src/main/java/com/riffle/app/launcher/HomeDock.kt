@@ -43,6 +43,7 @@ import com.riffle.core.domain.launcher.apps.AppShortcutsByApp
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.DockAlignment
 import com.riffle.core.domain.launcher.home.DockBackgroundSizing
+import com.riffle.core.domain.launcher.home.DockExpandAffordance
 import com.riffle.core.domain.launcher.home.DockItemMoveDirection
 import com.riffle.core.domain.launcher.home.DockModel
 import com.riffle.core.domain.launcher.home.FolderItem
@@ -398,6 +399,12 @@ internal data class DockInteractions(
     val onFolderOpen: (FolderItem) -> Unit = {},
     val isShelfExpanded: Boolean = false,
     val onShelfExpandedChange: ((Boolean) -> Unit)? = null,
+    /**
+     * How the shelf is reached. Only [DockExpandAffordance.GESTURE] attaches the swipe handler;
+     * [DockExpandAffordance.BUTTON] leaves the drag alone and drives [onShelfExpandedChange] from a
+     * visible control instead.
+     */
+    val shelfExpandAffordance: DockExpandAffordance = DockExpandAffordance.GESTURE,
     val reducedMotion: Boolean = false,
     val homeInsetPolicy: HomeInsetPolicy = HomeInsetPolicy(),
     val homeLayout: HomeLayout? = null,

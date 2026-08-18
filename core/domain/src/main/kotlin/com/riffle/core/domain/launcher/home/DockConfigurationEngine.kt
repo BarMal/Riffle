@@ -22,6 +22,26 @@ class DockConfigurationEngine {
             ),
         )
 
+    fun setDockExpandable(
+        layout: HomeLayout,
+        expandable: Boolean,
+    ): DockEditResult =
+        DockEditResult.Updated(
+            layout.copy(
+                dock = layout.dock.copy(isExpandable = expandable),
+            ),
+        )
+
+    fun setDockExpandAffordance(
+        layout: HomeLayout,
+        affordance: DockExpandAffordance,
+    ): DockEditResult =
+        DockEditResult.Updated(
+            layout.copy(
+                dock = layout.dock.copy(expandAffordance = affordance),
+            ),
+        )
+
     fun setDockCapacity(
         layout: HomeLayout,
         capacity: Int,

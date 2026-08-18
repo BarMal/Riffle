@@ -35,7 +35,10 @@ class DockSettingLayoutTest {
         composeRule.setContent {
             CompositionLocalProvider(LocalDensity provides Density(density = 1f, fontScale = 1.5f)) {
                 MaterialTheme {
-                    Box(modifier = Modifier.width(240.dp)) {
+                    // Scrollable so the assertions below stay about horizontal fit at this width
+                    // and font scale, rather than about how far down the list these rows happen to
+                    // sit -- adding a setting above them must not fail this.
+                    Box(modifier = Modifier.width(240.dp).verticalScroll(rememberScrollState())) {
                         DockSetting(
                             dock = DockModel(capacity = 4),
                             notificationAccessStatus = NotificationAccessStatus.GRANTED,
@@ -46,10 +49,10 @@ class DockSettingLayoutTest {
             }
         }
 
-        composeRule.onNodeWithText("Dock effect").assertIsDisplayed()
-        composeRule.onNodeWithText("Flat").assertIsDisplayed()
-        composeRule.onNodeWithText("Elevated").assertIsDisplayed().assertHasClickAction()
-        composeRule.onNodeWithText("Outlined").assertIsDisplayed().assertHasClickAction()
+        composeRule.onNodeWithText("Dock effect").performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText("Flat").performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText("Elevated").performScrollTo().assertIsDisplayed().assertHasClickAction()
+        composeRule.onNodeWithText("Outlined").performScrollTo().assertIsDisplayed().assertHasClickAction()
     }
 
     @Test
@@ -66,12 +69,12 @@ class DockSettingLayoutTest {
             }
         }
 
-        composeRule.onNodeWithText("Dock height").assertIsDisplayed()
-        composeRule.onNodeWithText("Dock width").assertIsDisplayed()
+        composeRule.onNodeWithText("Dock height").performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText("Dock width").performScrollTo().assertIsDisplayed()
         composeRule.onNodeWithText("Dock corner radius").performScrollTo().assertIsDisplayed()
         composeRule.onNodeWithText("Grid to dock controls spacing").performScrollTo().assertIsDisplayed()
-        composeRule.onNodeWithText("Fit content").assertIsDisplayed()
-        composeRule.onNodeWithText("Full width").assertIsDisplayed().assertHasClickAction()
+        composeRule.onNodeWithText("Fit content").performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText("Full width").performScrollTo().assertIsDisplayed().assertHasClickAction()
         composeRule.onNodeWithText("Dock alignment").performScrollTo().assertIsDisplayed()
         composeRule
             .onNodeWithText("Start")

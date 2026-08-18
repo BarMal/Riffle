@@ -1,12 +1,15 @@
 package com.riffle.app.launcher
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.semantics.SemanticsActions
@@ -16,6 +19,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
@@ -88,7 +92,9 @@ class ThemeCustomizationTest {
         val selectedDockEffects = mutableListOf<DockVisualEffect>()
 
         composeRule.setContent {
-            Column {
+            // Scrollable: this is about the controls dispatching the right actions, not about the
+            // dock settings list being short enough to fit them all on screen at once.
+            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                 ThemeAccentSetting(
                     selectedAccent = LauncherThemeAccent.DEFAULT,
                     onAction = { action ->
@@ -109,12 +115,12 @@ class ThemeCustomizationTest {
             }
         }
 
-        composeRule.onNodeWithText("Teal").assertHasClickAction().performClick()
+        composeRule.onNodeWithText("Teal").performScrollTo().assertHasClickAction().performClick()
         composeRule.runOnIdle {
             assertEquals(listOf(LauncherThemeAccent.TEAL), selectedAccents)
         }
 
-        composeRule.onNodeWithText("Elevated").assertHasClickAction().performClick()
+        composeRule.onNodeWithText("Elevated").performScrollTo().assertHasClickAction().performClick()
         composeRule.runOnIdle {
             assertEquals(listOf(DockVisualEffect.ELEVATED), selectedDockEffects)
         }

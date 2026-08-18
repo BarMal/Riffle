@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -13,8 +15,11 @@ import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.home.DockAlignment
+import com.riffle.core.domain.launcher.home.DockExpandAffordance
 import com.riffle.core.domain.launcher.home.GridInsets
 import com.riffle.core.domain.launcher.home.HomeEditMode
 import com.riffle.core.domain.launcher.home.HomeLayout
@@ -41,15 +46,18 @@ internal fun StandardHomeDockArea(
             hasOverflow = dockHasOverflow(capacity = layout.dock.capacity, itemCount = layout.dock.items.size),
             notificationShelfState = notificationShelfState,
         )
-    val showDockShelf =
-        layout.editMode == HomeEditMode.Browsing && isDockShelfExpanded && hasExpandedContent
+    // Expandability is the user's per-layout choice; content and edit mode are still what decide
+    // whether there is anything to expand into right now.
+    val canExpand =
+        layout.dock.isExpandable && hasExpandedContent && layout.editMode == HomeEditMode.Browsing
+    val showDockShelf = isDockShelfExpanded && canExpand
     val dockInteractions =
         DockInteractions(
             haptics = actions.haptics,
             onFolderOpen = actions.onFolderOpen,
             isShelfExpanded = showDockShelf,
-            onShelfExpandedChange =
-                onDockShelfExpandedChange.takeIf { hasExpandedContent && layout.editMode == HomeEditMode.Browsing },
+            shelfExpandAffordance = layout.dock.expandAffordance,
+            onShelfExpandedChange = onDockShelfExpandedChange.takeIf { canExpand },
             reducedMotion = presentation.reducedMotion,
             homeInsetPolicy = presentation.homeInsetPolicy,
             homeLayout = layout,
@@ -76,13 +84,16 @@ internal fun StandardHomeDockArea(
                 // widget-picker drag/tile interaction is in play: this Column draws on top of
                 // WidgetPickerSurface in the overlapping dock region, so it must yield the region's
                 // touches to the picker's own drag detector whenever it is active.
+                // The shelf only claims swipe-up when its affordance is the gesture, so a
+                // button-expanded (or non-expandable) dock hands the swipe back to this.
                 .dockSwipeUpGestureInput(
-                    enabled = dockInteractions.onShelfExpandedChange == null && !isWidgetPickerInteractionActive,
+                    enabled = !dockInteractions.claimsSwipeUp() && !isWidgetPickerInteractionActive,
                     action = presentation.dockGestures.swipeUp,
                     onAction = actions.onAction,
                 ),
         horizontalAlignment = layout.dock.alignment.toHorizontalAlignment(),
     ) {
+        DockShelfExpandButton(interactions = dockInteractions)
         Spacer(modifier = Modifier.height(HOME_DOCK_TOP_SPACING_DP.dp))
         Box(modifier = Modifier.testTag(HOME_DOCK_TEST_TAG)) {
             if (showDockShelf) {
@@ -108,6 +119,30 @@ internal fun StandardHomeDockArea(
                 )
             }
         }
+    }
+}
+
+/** True while the shelf's own expand gesture is attached, and so owns swipe-up on the dock. */
+private fun DockInteractions.claimsSwipeUp(): Boolean =
+    onShelfExpandedChange != null && shelfExpandAffordance == DockExpandAffordance.GESTURE
+
+/**
+ * The visible way into the expanded shelf, for a dock whose affordance is not the swipe.
+ *
+ * A single control that toggles, rather than separate expand and collapse ones: the expanded shelf
+ * is drawn above this row, so the button keeps its position and only its meaning changes.
+ */
+@Composable
+private fun DockShelfExpandButton(interactions: DockInteractions) {
+    if (interactions.shelfExpandAffordance != DockExpandAffordance.BUTTON) return
+    val onExpandedChange = interactions.onShelfExpandedChange ?: return
+    val isExpanded = interactions.isShelfExpanded
+    val label = if (isExpanded) "Collapse dock" else "Expand dock"
+    TextButton(
+        modifier = Modifier.testTag(HOME_DOCK_EXPAND_BUTTON_TEST_TAG).semantics { contentDescription = label },
+        onClick = { onExpandedChange(!isExpanded) },
+    ) {
+        Text(text = if (isExpanded) "\u2304" else "\u2303")
     }
 }
 
@@ -152,4 +187,5 @@ internal fun HomeLayout.dockInteractionRegionHeightDp(): Int =
     }
 
 private const val HOME_DOCK_TOP_SPACING_DP = 10
+internal const val HOME_DOCK_EXPAND_BUTTON_TEST_TAG = "home-dock-expand-button"
 internal const val HOME_DOCK_TEST_TAG = "home-dock"

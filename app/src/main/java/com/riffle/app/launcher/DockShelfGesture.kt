@@ -8,6 +8,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.input.pointer.pointerInput
+import com.riffle.core.domain.launcher.home.DockExpandAffordance
 import kotlin.math.abs
 
 internal fun dockHasOverflow(
@@ -65,7 +66,11 @@ internal fun Modifier.dockShelfGestureInput(interactions: DockInteractions): Mod
     fillMaxWidth()
         .dockShelfGestureInput(
             isExpanded = interactions.isShelfExpanded,
-            onExpandedChange = interactions.onShelfExpandedChange,
+            // A dock whose shelf is reached by button never claims the drag, which is what hands
+            // swipe-up back to the dock's own gesture action.
+            onExpandedChange =
+                interactions.onShelfExpandedChange
+                    ?.takeIf { interactions.shelfExpandAffordance == DockExpandAffordance.GESTURE },
         )
 
 private fun Modifier.dockShelfGestureInput(
