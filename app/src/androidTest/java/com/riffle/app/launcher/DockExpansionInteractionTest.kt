@@ -52,15 +52,13 @@ class DockExpansionInteractionTest {
         }
         composeRule.waitForIdle()
         composeRule.onAllNodesWithContentDescription(EXPAND_LABEL).assertCountEquals(1)
-        composeRule.onAllNodesWithTag(dockItemTestTag(overflow.id)).assertCountEquals(0)
+        assertCollapsed()
 
         composeRule.onNodeWithTag(HOME_DOCK_EXPAND_BUTTON_TEST_TAG).performClick()
         composeRule.waitForIdle()
 
         composeRule.onAllNodesWithContentDescription(COLLAPSE_LABEL).assertCountEquals(1)
-        val primaryBounds = composeRule.onNodeWithTag(dockItemTestTag(primary.id)).fetchSemanticsNode().boundsInRoot
-        val overflowBounds = composeRule.onNodeWithTag(dockItemTestTag(overflow.id)).fetchSemanticsNode().boundsInRoot
-        assertTrue(overflowBounds.center.y < primaryBounds.center.y)
+        assertExpanded()
     }
 
     @Test
@@ -77,7 +75,7 @@ class DockExpansionInteractionTest {
         }
         composeRule.waitForIdle()
 
-        composeRule.onAllNodesWithTag(dockItemTestTag(overflow.id)).assertCountEquals(0)
+        assertCollapsed()
     }
 
     @Test
@@ -96,9 +94,30 @@ class DockExpansionInteractionTest {
         }
         composeRule.waitForIdle()
 
+        assertExpanded()
+    }
+
+    /**
+     * The shelf draws above the dock's own row, so the overflow item sitting higher than the
+     * primary is what "expanded" looks like. The overflow item is composed either way -- the dock's
+     * slot row scrolls -- so its presence is not the signal; its position is.
+     */
+    private fun assertExpanded() {
         val primaryBounds = composeRule.onNodeWithTag(dockItemTestTag(primary.id)).fetchSemanticsNode().boundsInRoot
         val overflowBounds = composeRule.onNodeWithTag(dockItemTestTag(overflow.id)).fetchSemanticsNode().boundsInRoot
-        assertTrue(overflowBounds.center.y < primaryBounds.center.y)
+        assertTrue(
+            "Expected the overflow item on a shelf above the dock row",
+            overflowBounds.center.y < primaryBounds.center.y,
+        )
+    }
+
+    private fun assertCollapsed() {
+        val primaryBounds = composeRule.onNodeWithTag(dockItemTestTag(primary.id)).fetchSemanticsNode().boundsInRoot
+        val overflowBounds = composeRule.onNodeWithTag(dockItemTestTag(overflow.id)).fetchSemanticsNode().boundsInRoot
+        assertTrue(
+            "Expected no shelf above the dock row",
+            overflowBounds.center.y >= primaryBounds.center.y,
+        )
     }
 
     private fun dockLayout(
