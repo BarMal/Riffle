@@ -98,7 +98,6 @@ import com.riffle.core.domain.launcher.cards.AdaptiveStagePaneLayoutPolicy
 import com.riffle.core.domain.launcher.cards.AdaptiveStagePaneMode
 import com.riffle.core.domain.launcher.cards.AdaptiveStagePosture
 import com.riffle.core.domain.launcher.cards.AdaptiveStagePostureTransitionState
-import com.riffle.core.domain.launcher.cards.AdaptiveStageRailSide
 import com.riffle.core.domain.launcher.cards.AdaptiveStageStaticElement
 import com.riffle.core.domain.launcher.cards.AdaptiveStageTemplateCatalogDefaults
 import com.riffle.core.domain.launcher.cards.AdaptiveStageWindowLayout
@@ -115,6 +114,7 @@ import com.riffle.core.domain.launcher.cards.LauncherCardId
 import com.riffle.core.domain.launcher.cards.mergedContentByRecency
 import com.riffle.core.domain.launcher.cards.variantFor
 import com.riffle.core.domain.launcher.cards.visibleStaticElements
+import com.riffle.core.domain.launcher.home.DockPosition
 import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
@@ -123,6 +123,7 @@ import com.riffle.core.domain.launcher.settings.AdaptiveStageAppearanceSettings
 import com.riffle.core.domain.launcher.settings.AdaptiveStageCardStackResolution
 import com.riffle.core.domain.launcher.settings.AdaptiveStageViewportDp
 import com.riffle.core.domain.launcher.settings.ThreadMessageOrder
+import com.riffle.core.domain.launcher.settings.dockPositionFor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlin.math.abs
@@ -145,17 +146,18 @@ internal fun adaptiveStageAppStageActionFilter(action: LauncherShellAction): Boo
     }
 
 /**
- * `null` [configuredRailSide] means the user has never chosen a rail edge, so the active
- * template's [templateRailSide] applies; once the user picks an edge in settings it always wins,
- * matching how every other explicit user preference in this file overrides its template default.
+ * `null` [configuredDockPosition] means the user has never chosen a dock edge for this layout, so
+ * the active template's [templateDockPosition] applies; once the user picks an edge in settings it
+ * always wins, matching how every other explicit user preference in this file overrides its
+ * template default.
  */
-internal fun resolveAdaptiveStageRailSide(
-    configuredRailSide: AdaptiveStageRailSide?,
-    templateRailSide: AdaptiveStageRailSide?,
-): AdaptiveStageRailSide = configuredRailSide ?: templateRailSide ?: AdaptiveStageRailSide.LEADING
+internal fun resolveDockPosition(
+    configuredDockPosition: DockPosition?,
+    templateDockPosition: DockPosition?,
+): DockPosition = configuredDockPosition ?: templateDockPosition ?: DockPosition.LEADING
 
 /**
- * Mirrors [resolveAdaptiveStageRailSide]'s shape: the pane arrangement is a plain configured user
+ * Mirrors [resolveDockPosition]'s shape: the pane arrangement is a plain configured user
  * preference today, with no template or device override to reconcile against yet.
  */
 @Suppress("MaxLineLength")
@@ -312,18 +314,19 @@ internal fun AdaptiveStageAppStageSurface(
                         .firstOrNull { template -> template.id == state.launcherSettings.cards.adaptiveStageTemplateId }
                         ?.variantFor(state.settingsLayoutDeviceClass, initialPaneLayout.mode)
                 }
-            val railSide =
-                resolveAdaptiveStageRailSide(
-                    configuredRailSide = state.launcherSettings.cards.adaptiveStageRailSide,
-                    templateRailSide = templateVariant?.railSide,
+            val dockPosition =
+                resolveDockPosition(
+                    configuredDockPosition =
+                        state.launcherSettings.cards.dockPositionFor(state.homeLayoutSet.activeKey),
+                    templateDockPosition = templateVariant?.dockPosition,
                 )
             val paneArrangement =
                 resolveAdaptiveStagePaneArrangement(value = state.launcherSettings.cards.adaptiveStagePaneArrangement)
             val paneLayout =
-                remember(adaptiveWindow, postureTransition.effectivePosture, railSide, paneArrangement) {
+                remember(adaptiveWindow, postureTransition.effectivePosture, dockPosition, paneArrangement) {
                     AdaptiveStagePaneLayoutPolicy().layoutFor(
                         window = adaptiveWindow.copy(posture = postureTransition.effectivePosture),
-                        railSide = railSide,
+                        dockPosition = dockPosition,
                         arrangement = paneArrangement,
                     )
                 }
@@ -426,9 +429,9 @@ internal fun AdaptiveStageAppStageSurface(
                             )
                         }
                         Column(modifier = Modifier.fillMaxSize()) {
-                            if (railSide == AdaptiveStageRailSide.TOP) horizontalRail()
+                            if (dockPosition == DockPosition.TOP) horizontalRail()
                             Row(modifier = Modifier.weight(1f).fillMaxWidth()) {
-                                if (railSide == AdaptiveStageRailSide.LEADING) {
+                                if (dockPosition == DockPosition.LEADING) {
                                     AdaptiveStageStageRail(
                                         stages = shellState.snapshot.stages,
                                         selectedStageId = selectedStage?.id,
@@ -503,7 +506,7 @@ internal fun AdaptiveStageAppStageSurface(
                                         modifier = Modifier.width(paneLayout.detailWidthDp.dp).fillMaxSize(),
                                     )
                                 }
-                                if (railSide == AdaptiveStageRailSide.TRAILING) {
+                                if (dockPosition == DockPosition.TRAILING) {
                                     // The stack/detail panes are capped (MIN/MAX_STACK_WIDTH_DP,
                                     // DETAIL_WIDTH_DP) and don't necessarily consume this Row's
                                     // whole width -- without this filler, a Row default-packs its
@@ -524,7 +527,7 @@ internal fun AdaptiveStageAppStageSurface(
                                     )
                                 }
                             }
-                            if (railSide == AdaptiveStageRailSide.BOTTOM) horizontalRail()
+                            if (dockPosition == DockPosition.BOTTOM) horizontalRail()
                         }
                     }
                 }

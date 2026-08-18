@@ -1,5 +1,6 @@
 package com.riffle.core.domain.launcher.cards
 
+import com.riffle.core.domain.launcher.home.DockPosition
 import com.riffle.core.domain.launcher.home.GridCell
 import com.riffle.core.domain.launcher.home.GridDimensions
 import com.riffle.core.domain.launcher.home.GridPlacement
@@ -22,19 +23,9 @@ data class AdaptiveStageTemplateVariant(
     val paneMode: AdaptiveStagePaneMode,
     val canvas: AdaptiveStageCanvas,
     val dynamicSlots: List<AdaptiveStageDynamicSlot>,
-    val railSide: AdaptiveStageRailSide = AdaptiveStageRailSide.LEADING,
+    /** The edge this variant puts the dock/rail strip on when the user has not chosen one. */
+    val dockPosition: DockPosition = DockPosition.LEADING,
 )
-
-enum class AdaptiveStageRailSide {
-    LEADING,
-    TRAILING,
-    TOP,
-    BOTTOM,
-}
-
-/** True for the two edges where the rail runs as a horizontal strip instead of a side column. */
-val AdaptiveStageRailSide.isHorizontalEdge: Boolean
-    get() = this == AdaptiveStageRailSide.TOP || this == AdaptiveStageRailSide.BOTTOM
 
 data class AdaptiveStageCanvas(
     val grid: GridDimensions,

@@ -11,11 +11,11 @@ import com.riffle.core.domain.launcher.apps.AppSearchContentFilter
 import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.cards.AdaptiveStagePaneArrangement
-import com.riffle.core.domain.launcher.cards.AdaptiveStageRailSide
 import com.riffle.core.domain.launcher.cards.AppStageId
 import com.riffle.core.domain.launcher.home.DockAlignment
 import com.riffle.core.domain.launcher.home.DockBackgroundSizing
 import com.riffle.core.domain.launcher.home.DockItemMoveDirection
+import com.riffle.core.domain.launcher.home.DockPosition
 import com.riffle.core.domain.launcher.home.DockVisualEffect
 import com.riffle.core.domain.launcher.home.FolderItemMoveDirection
 import com.riffle.core.domain.launcher.home.GridCell
@@ -23,6 +23,7 @@ import com.riffle.core.domain.launcher.home.GridDimensions
 import com.riffle.core.domain.launcher.home.GridSpan
 import com.riffle.core.domain.launcher.home.HomeLabelSizing
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
+import com.riffle.core.domain.launcher.home.HomeLayoutKey
 import com.riffle.core.domain.launcher.home.HostedWidgetId
 import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.home.LauncherPageId
@@ -446,7 +447,18 @@ sealed interface LauncherShellAction {
 
     data class SelectThreadCardGrouping(val grouping: ThreadCardGrouping) : LauncherShellAction
 
-    data class SelectAdaptiveStageRailSide(val side: AdaptiveStageRailSide) : LauncherShellAction
+    /**
+     * Chooses the dock edge for one home layout.
+     *
+     * The key is carried rather than resolved from the running layout because the settings screen
+     * edits whichever device class is selected there, which is not necessarily the one this device
+     * is currently presenting -- the same reason [withSettingsTargetLayout] takes its key from the
+     * layout on screen.
+     */
+    data class SelectDockPosition(
+        val layoutKey: HomeLayoutKey,
+        val position: DockPosition,
+    ) : LauncherShellAction
 
     data class SelectOverlayDockEnabled(val enabled: Boolean) : LauncherShellAction
 

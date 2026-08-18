@@ -6,10 +6,10 @@ import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppProfile
 import com.riffle.core.domain.launcher.apps.AppProfileId
 import com.riffle.core.domain.launcher.apps.AppProfileType
-import com.riffle.core.domain.launcher.cards.AdaptiveStageRailSide
 import com.riffle.core.domain.launcher.cards.AdaptiveStageTemplateId
 import com.riffle.core.domain.launcher.cards.AppStageId
 import com.riffle.core.domain.launcher.cards.AppStagePreferences
+import com.riffle.core.domain.launcher.home.DockPosition
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.HomeLayoutKey
 import com.riffle.core.domain.launcher.home.LauncherViewMode
@@ -124,10 +124,16 @@ private fun encodeCardsSettings(settings: CardsSettings): JSONObject =
         .put("timeScapeAppearance", encodeAdaptiveStageAppearance(settings.adaptiveStageAppearance))
         .put("adaptiveStageUnfoldedAppearance", encodeAdaptiveStageAppearance(settings.unfoldedAppearance))
         .put("timeScapeTemplateId", settings.adaptiveStageTemplateId.value)
-        .put("timeScapeRailSide", settings.adaptiveStageRailSide?.name)
+        .put("dockPositionByLayout", JSONArray(settings.dockPositionByLayout.map(::encodeDockPosition)))
         .put("timeScapePaneArrangement", settings.adaptiveStagePaneArrangement.name)
         .put("threadMessageOrder", settings.threadMessageOrder.name)
         .put("threadCardGrouping", settings.threadCardGrouping.name)
+
+private fun encodeDockPosition(entry: Map.Entry<HomeLayoutKey, DockPosition>): JSONObject =
+    JSONObject()
+        .put("viewMode", entry.key.viewMode.name)
+        .put("deviceClass", entry.key.deviceClass.name)
+        .put("position", entry.value.name)
 
 private fun encodeStagePreferences(entry: Map.Entry<HomeLayoutKey, AppStagePreferences>): JSONObject =
     JSONObject()
@@ -153,6 +159,24 @@ private fun JSONObject.toCardsSettings(defaults: CardsSettings): CardsSettings {
                 }
             }
             ?: defaults.stagePreferencesByLayout
+    val dockPositionByLayout =
+        optJSONArray("dockPositionByLayout")
+            ?.let { entries ->
+                (0 until entries.length())
+                    .mapNotNull { index -> entries.optJSONObject(index)?.toDockPositionEntry() }
+                    .toMap()
+            }
+            // Before this was per layout there was one chosen edge for everything. Spreading it
+            // across every key preserves that exactly, rather than silently reverting layouts the
+            // user never got the chance to set individually.
+            ?: enumOrNull<DockPosition>("timeScapeRailSide")?.let { legacyPosition ->
+                LauncherViewMode.entries.flatMap { viewMode ->
+                    HomeLayoutDeviceClass.entries.map { deviceClass ->
+                        HomeLayoutKey(viewMode, deviceClass) to legacyPosition
+                    }
+                }.toMap()
+            }
+            ?: defaults.dockPositionByLayout
     return CardsSettings(
         stagePreferencesByLayout = stagePreferencesByLayout,
         adaptiveStageAppearance =
@@ -166,7 +190,7 @@ private fun JSONObject.toCardsSettings(defaults: CardsSettings): CardsSettings {
                 .takeIf(String::isNotBlank)
                 ?.let(::AdaptiveStageTemplateId)
                 ?: defaults.adaptiveStageTemplateId,
-        adaptiveStageRailSide = enumOrNull<AdaptiveStageRailSide>("timeScapeRailSide") ?: defaults.adaptiveStageRailSide,
+        dockPositionByLayout = dockPositionByLayout,
         adaptiveStagePaneArrangement = enumOrDefault("timeScapePaneArrangement", defaults.adaptiveStagePaneArrangement),
         threadMessageOrder = enumOrDefault("threadMessageOrder", defaults.threadMessageOrder),
         threadCardGrouping = enumOrDefault("threadCardGrouping", defaults.threadCardGrouping),
@@ -591,6 +615,15 @@ private inline fun <reified T : Enum<T>> JSONObject?.enumOrNull(name: String): T
     this?.optString(name)?.let { value ->
         enumValues<T>().firstOrNull {
             it.name == value
+        }
+    }
+
+private fun JSONObject.toDockPositionEntry(): Pair<HomeLayoutKey, DockPosition>? =
+    runCatching { LauncherViewMode.valueOf(optString("viewMode")) }.getOrNull()?.let { viewMode ->
+        runCatching { HomeLayoutDeviceClass.valueOf(optString("deviceClass")) }.getOrNull()?.let { deviceClass ->
+            runCatching { DockPosition.valueOf(optString("position")) }.getOrNull()?.let { position ->
+                HomeLayoutKey(viewMode, deviceClass) to position
+            }
         }
     }
 

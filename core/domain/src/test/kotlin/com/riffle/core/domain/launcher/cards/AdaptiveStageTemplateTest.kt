@@ -1,10 +1,12 @@
 package com.riffle.core.domain.launcher.cards
 
+import com.riffle.core.domain.launcher.home.DockPosition
 import com.riffle.core.domain.launcher.home.GridCell
 import com.riffle.core.domain.launcher.home.GridDimensions
 import com.riffle.core.domain.launcher.home.GridPlacement
 import com.riffle.core.domain.launcher.home.GridSpan
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
+import com.riffle.core.domain.launcher.home.isHorizontalEdge
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -77,17 +79,17 @@ class AdaptiveStageTemplateTest {
 
     @Test
     fun responsiveVariantCarriesConfiguredRailSide() {
-        val variant = variant(AdaptiveStagePaneMode.THREE_PANE).copy(railSide = AdaptiveStageRailSide.TRAILING)
+        val variant = variant(AdaptiveStagePaneMode.THREE_PANE).copy(dockPosition = DockPosition.TRAILING)
 
-        assertEquals(AdaptiveStageRailSide.TRAILING, variant.railSide)
+        assertEquals(DockPosition.TRAILING, variant.dockPosition)
     }
 
     @Test
     fun onlyTopAndBottomRailSidesAreHorizontalEdges() {
-        assertTrue(AdaptiveStageRailSide.TOP.isHorizontalEdge)
-        assertTrue(AdaptiveStageRailSide.BOTTOM.isHorizontalEdge)
-        assertTrue(!AdaptiveStageRailSide.LEADING.isHorizontalEdge)
-        assertTrue(!AdaptiveStageRailSide.TRAILING.isHorizontalEdge)
+        assertTrue(DockPosition.TOP.isHorizontalEdge)
+        assertTrue(DockPosition.BOTTOM.isHorizontalEdge)
+        assertTrue(!DockPosition.LEADING.isHorizontalEdge)
+        assertTrue(!DockPosition.TRAILING.isHorizontalEdge)
     }
 
     @Test
