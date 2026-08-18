@@ -44,6 +44,7 @@ import com.riffle.core.domain.launcher.cards.MIN_CARD_STACK_MAGNET_STRENGTH_PERC
 import com.riffle.core.domain.launcher.settings.AdaptiveStageAccentSource
 import com.riffle.core.domain.launcher.settings.AdaptiveStageAppearanceSettings
 import com.riffle.core.domain.launcher.settings.AdaptiveStageBackgroundSource
+import com.riffle.core.domain.launcher.settings.AdaptiveStageCardEffect
 import com.riffle.core.domain.launcher.settings.AdaptiveStageCardStackRole
 import com.riffle.core.domain.launcher.settings.AdaptiveStageContentDensity
 import com.riffle.core.domain.launcher.settings.AdaptiveStageEasing
@@ -534,6 +535,16 @@ private fun AdaptiveStageSurfaceTabContent(
 ) {
     SettingsSection(title = "Surface and glass") {
         AdaptiveStageEnumChoices(
+            "Card effect",
+            AdaptiveStageCardEffect.entries,
+            appearance.surface.cardEffect,
+            AdaptiveStageCardEffect::label,
+        ) { value ->
+            update {
+                it.copy(surface = it.surface.copy(cardEffect = value))
+            }
+        }
+        AdaptiveStageEnumChoices(
             "Background",
             AdaptiveStageBackgroundSource.entries,
             appearance.surface.backgroundSource,
@@ -946,6 +957,8 @@ private val REPRESENTATIVE_PHONE_VIEWPORT =
         heightDp = 740,
         insets = AdaptiveStageInsetsDp(topDp = 48, bottomDp = 220),
     )
+
+private fun AdaptiveStageCardEffect.label(): String = name.lowercase().replaceFirstChar(Char::uppercase)
 
 private fun AdaptiveStageBackgroundSource.label(): String = name.lowercase().replace('_', ' ').replaceFirstChar(Char::uppercase)
 

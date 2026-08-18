@@ -288,6 +288,32 @@ class AdaptiveStageAppearanceSettingsTest {
     }
 
     @Test
+    fun theDefaultCardEffectKeepsTheDecoratedFramedTreatment() {
+        // GLASS stays the default because it is the only effect that renders the gradient, artwork
+        // and texture at all -- its frame is what exposes them. Defaulting elsewhere would flatten
+        // every existing card, including the gradient every install starts with.
+        assertEquals(AdaptiveStageCardEffect.GLASS, AdaptiveStageSurface().cardEffect)
+    }
+
+    @Test
+    fun theCardEffectSurvivesCoercionAndCapabilityFallbacks() {
+        // The effect is a rendering shape, not a bounded magnitude, so nothing should quietly
+        // rewrite it -- including the reduced-transparency path, which flattens the tint by driving
+        // glassTransparencyPercent to zero rather than by changing which layers are drawn.
+        val stored =
+            AdaptiveStageAppearanceSettings(
+                surface = AdaptiveStageSurface(cardEffect = AdaptiveStageCardEffect.SOLID),
+                motion = AdaptiveStageMotion(reducedTransparency = true),
+            )
+
+        assertEquals(AdaptiveStageCardEffect.SOLID, stored.coerce().surface.cardEffect)
+        assertEquals(
+            AdaptiveStageCardEffect.SOLID,
+            stored.effectiveFor(AdaptiveStageRendererCapabilities()).surface.cardEffect,
+        )
+    }
+
+    @Test
     fun aNegativeRotationLeansTheFanTheOtherWay() {
         // The tilt was floored at 0, so a stack could lean one way or lie flat but never mirror
         // itself -- unlike every other lean in this model, which is direction-selectable. Equal and
