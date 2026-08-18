@@ -14,6 +14,7 @@ import com.riffle.core.domain.launcher.cards.AdaptiveStagePaneArrangement
 import com.riffle.core.domain.launcher.cards.AppStageId
 import com.riffle.core.domain.launcher.home.DockAlignment
 import com.riffle.core.domain.launcher.home.DockBackgroundSizing
+import com.riffle.core.domain.launcher.home.DockExpandAffordance
 import com.riffle.core.domain.launcher.home.DockItemMoveDirection
 import com.riffle.core.domain.launcher.home.DockPosition
 import com.riffle.core.domain.launcher.home.DockVisualEffect
@@ -209,6 +210,10 @@ sealed interface LauncherShellAction {
     data class SelectDockEnabled(val enabled: Boolean) : LauncherShellAction
 
     data class SelectDockNotificationCardsEnabled(val enabled: Boolean) : LauncherShellAction
+
+    data class SelectDockExpandable(val expandable: Boolean) : LauncherShellAction
+
+    data class SelectDockExpandAffordance(val affordance: DockExpandAffordance) : LauncherShellAction
 
     data class SelectDockCapacity(val capacity: Int) : LauncherShellAction
 

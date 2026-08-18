@@ -2,6 +2,7 @@ package com.riffle.app.launcher
 
 import com.riffle.core.domain.launcher.home.DockAlignment
 import com.riffle.core.domain.launcher.home.DockBackgroundSizing
+import com.riffle.core.domain.launcher.home.DockExpandAffordance
 import com.riffle.core.domain.launcher.home.DockModel
 import com.riffle.core.domain.launcher.home.DockVisualEffect
 import com.riffle.core.domain.launcher.home.GridDimensions
@@ -72,6 +73,8 @@ private fun encodeDock(dock: DockModel): JSONObject =
     JSONObject()
         .put("isEnabled", dock.isEnabled)
         .put("showNotificationCards", dock.showNotificationCards)
+        .put("isExpandable", dock.isExpandable)
+        .put("expandAffordance", dock.expandAffordance.name)
         .put("iconSizeDp", dock.iconSizeDp)
         .put("backgroundAlphaPercent", dock.backgroundAlphaPercent)
         .put("visualEffect", dock.visualEffect.name)
@@ -87,6 +90,12 @@ private fun JSONObject.toDock(defaults: DockModel): DockModel =
     DockModel(
         isEnabled = optBoolean("isEnabled", defaults.isEnabled),
         showNotificationCards = optBoolean("showNotificationCards", defaults.showNotificationCards),
+        isExpandable = optBoolean("isExpandable", defaults.isExpandable),
+        expandAffordance =
+            optString("expandAffordance", "")
+                .takeIf(String::isNotBlank)
+                ?.let { value -> runCatching { DockExpandAffordance.valueOf(value) }.getOrNull() }
+                ?: defaults.expandAffordance,
         iconSizeDp = optInt("iconSizeDp", defaults.iconSizeDp),
         backgroundAlphaPercent =
             optInt(

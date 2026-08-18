@@ -78,6 +78,8 @@ private fun LauncherShellAction.isDockEditAction(): Boolean =
         is LauncherShellAction.AddHostedWidgetToDock,
         is LauncherShellAction.SelectDockEnabled,
         is LauncherShellAction.SelectDockNotificationCardsEnabled,
+        is LauncherShellAction.SelectDockExpandable,
+        is LauncherShellAction.SelectDockExpandAffordance,
         is LauncherShellAction.SelectDockCapacity,
         is LauncherShellAction.SelectDockIconSize,
         is LauncherShellAction.SelectDockBackgroundAlpha,
