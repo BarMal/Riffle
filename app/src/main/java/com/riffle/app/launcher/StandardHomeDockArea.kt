@@ -148,7 +148,7 @@ internal fun HomeLayout.dockInteractionRegionHeightDp(): Int =
     if (!shouldShowDock()) {
         0
     } else {
-        settings.grid.margin.centered().bottom + HOME_DOCK_TOP_SPACING_DP + dockHeightDp(dock.iconSizeDp)
+        settings.grid.margin.centered().bottom + HOME_DOCK_TOP_SPACING_DP + dockCrossAxisDp(dock.iconSizeDp)
     }
 
 private const val HOME_DOCK_TOP_SPACING_DP = 10

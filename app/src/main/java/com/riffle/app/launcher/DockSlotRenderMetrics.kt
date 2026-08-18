@@ -16,14 +16,14 @@ internal fun dockSlotRenderMetrics(
     slotCount: Int,
     iconSizeDp: Int,
     itemSpacingDp: Int,
-    availableContentWidthDp: Int,
+    availableContentMainAxisDp: Int,
 ): DockSlotRenderMetrics {
     val overflowMode =
         dockOverflowMode(
             slotCount = slotCount,
             iconSizeDp = iconSizeDp,
             itemSpacingDp = itemSpacingDp,
-            availableWidthDp = availableContentWidthDp,
+            availableMainAxisDp = availableContentMainAxisDp,
         )
     return when (overflowMode) {
         DockOverflowMode.FitByCompaction -> {
@@ -32,7 +32,7 @@ internal fun dockSlotRenderMetrics(
                     slotCount = slotCount,
                     iconSizeDp = iconSizeDp,
                     itemSpacingDp = itemSpacingDp,
-                    availableContentWidthDp = availableContentWidthDp,
+                    availableContentMainAxisDp = availableContentMainAxisDp,
                 )
             DockSlotRenderMetrics(
                 iconSizeDp =
@@ -40,7 +40,7 @@ internal fun dockSlotRenderMetrics(
                         slotCount = slotCount,
                         iconSizeDp = iconSizeDp,
                         itemSpacingDp = compactedSpacingDp,
-                        availableContentWidthDp = availableContentWidthDp,
+                        availableContentMainAxisDp = availableContentMainAxisDp,
                     ),
                 itemSpacingDp = compactedSpacingDp,
                 overflowMode = overflowMode,
@@ -62,13 +62,13 @@ private fun compactedDockSlotSpacingDp(
     slotCount: Int,
     iconSizeDp: Int,
     itemSpacingDp: Int,
-    availableContentWidthDp: Int,
+    availableContentMainAxisDp: Int,
 ): Int {
     if (slotCount <= 1) {
         return 0
     }
 
-    val availableSpacingDp = availableContentWidthDp - (slotCount * iconSizeDp)
+    val availableSpacingDp = availableContentMainAxisDp - (slotCount * iconSizeDp)
     return min(itemSpacingDp, availableSpacingDp / (slotCount - 1)).coerceAtLeast(MIN_DOCK_ITEM_SPACING_DP)
 }
 
@@ -76,17 +76,17 @@ private fun compactedDockSlotIconSizeDp(
     slotCount: Int,
     iconSizeDp: Int,
     itemSpacingDp: Int,
-    availableContentWidthDp: Int,
+    availableContentMainAxisDp: Int,
 ): Int {
     if (slotCount <= 0) {
         return iconSizeDp
     }
 
-    val availableIconWidthDp = availableContentWidthDp - ((slotCount - 1).coerceAtLeast(0) * itemSpacingDp)
-    return min(iconSizeDp, availableIconWidthDp / slotCount).coerceAtLeast(MIN_DOCK_ICON_SIZE_DP)
+    val availableIconMainAxisDp = availableContentMainAxisDp - ((slotCount - 1).coerceAtLeast(0) * itemSpacingDp)
+    return min(iconSizeDp, availableIconMainAxisDp / slotCount).coerceAtLeast(MIN_DOCK_ICON_SIZE_DP)
 }
 
-internal fun dockSlotContentWidthDp(
+internal fun dockSlotContentMainAxisDp(
     slotCount: Int,
     metrics: DockSlotRenderMetrics,
 ): Int {

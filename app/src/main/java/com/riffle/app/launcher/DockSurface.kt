@@ -22,15 +22,15 @@ private const val DOCK_SHELF_CONTENT_SPACING_DP = 6
 
 internal data class DockSurfaceMetrics(
     val renderedSlotCount: Int,
-    val containerWidthDp: Int,
-    val contentViewportWidthDp: Int,
+    val containerMainAxisDp: Int,
+    val contentViewportMainAxisDp: Int,
     val slotMetrics: DockSlotRenderMetrics,
 )
 
 internal fun dockSurfaceMetrics(
     dock: DockModel,
     isEditing: Boolean,
-    availableWidthDp: Int,
+    availableMainAxisDp: Int,
     previewSlotCount: Int = 0,
 ): DockSurfaceMetrics? {
     val renderedSlotCount =
@@ -50,32 +50,32 @@ internal fun dockSurfaceMetrics(
         return null
     }
 
-    val containerWidthDp =
-        dockContainerWidthDp(
-            availableWidthDp = availableWidthDp,
+    val containerMainAxisDp =
+        dockContainerMainAxisDp(
+            availableMainAxisDp = availableMainAxisDp,
             slotCount = renderedSlotCount,
             iconSizeDp = dock.iconSizeDp,
             itemSpacingDp = dock.itemSpacingDp,
             backgroundSizing = dock.backgroundSizing,
         )
-    val contentViewportWidthDp =
-        dockContentViewportWidthDp(
+    val contentViewportMainAxisDp =
+        dockContentViewportMainAxisDp(
             slotCount = renderedSlotCount,
             iconSizeDp = dock.iconSizeDp,
             itemSpacingDp = dock.itemSpacingDp,
-            availableDockWidthDp = containerWidthDp,
+            availableDockMainAxisDp = containerMainAxisDp,
         )
 
     return DockSurfaceMetrics(
         renderedSlotCount = renderedSlotCount,
-        containerWidthDp = containerWidthDp,
-        contentViewportWidthDp = contentViewportWidthDp,
+        containerMainAxisDp = containerMainAxisDp,
+        contentViewportMainAxisDp = contentViewportMainAxisDp,
         slotMetrics =
             dockSlotRenderMetrics(
                 slotCount = renderedSlotCount,
                 iconSizeDp = dock.iconSizeDp,
                 itemSpacingDp = dock.itemSpacingDp,
-                availableContentWidthDp = contentViewportWidthDp,
+                availableContentMainAxisDp = contentViewportMainAxisDp,
             ),
     )
 }
@@ -99,12 +99,14 @@ internal fun ExpandedDockSurface(
         modifier = Modifier.dockShelfGestureInput(interactions),
         contentAlignment = dock.alignment.toBoxAlignment(),
     ) {
-        val availableWidthDp = maxWidth.value.toInt()
+        // Horizontal today, so the dock's run is this Box's width; the sizing helpers below are
+        // named for the axis rather than the dimension so a side dock can pass its height here.
+        val availableMainAxisDp = maxWidth.value.toInt()
         val surfaceMetrics =
             dockSurfaceMetrics(
                 dock = primaryDock,
                 isEditing = false,
-                availableWidthDp = availableWidthDp,
+                availableMainAxisDp = availableMainAxisDp,
             ) ?: return@BoxWithConstraints
         HomeBackgroundContextMenu(
             haptics = interactions.haptics,
@@ -116,7 +118,7 @@ internal fun ExpandedDockSurface(
             modifier =
                 Modifier
                     .dockShelfPolicies(interactions)
-                    .width(surfaceMetrics.containerWidthDp.dp)
+                    .width(surfaceMetrics.containerMainAxisDp.dp)
                     .dockSurfaceAppearance(dock),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
@@ -126,8 +128,8 @@ internal fun ExpandedDockSurface(
                         Modifier
                             .fillMaxWidth()
                             .padding(
-                                horizontal = DOCK_HORIZONTAL_PADDING_DP.dp,
-                                vertical = DOCK_VERTICAL_PADDING_DP.dp,
+                                horizontal = DOCK_MAIN_AXIS_PADDING_DP.dp,
+                                vertical = DOCK_CROSS_AXIS_PADDING_DP.dp,
                             ),
                 ) {
                     DockNotificationShelf(
@@ -144,7 +146,7 @@ internal fun ExpandedDockSurface(
                     surfaceMetrics =
                         expandedOverflowSurfaceMetrics(
                             dock = overflowDock,
-                            availableWidthDp = availableWidthDp,
+                            availableMainAxisDp = availableMainAxisDp,
                             mainSurfaceMetrics = surfaceMetrics,
                         ),
                     isEditing = false,
@@ -168,16 +170,16 @@ internal fun ExpandedDockSurface(
 
 private fun expandedOverflowSurfaceMetrics(
     dock: DockModel,
-    availableWidthDp: Int,
+    availableMainAxisDp: Int,
     mainSurfaceMetrics: DockSurfaceMetrics,
 ): DockSurfaceMetrics =
     checkNotNull(
         dockSurfaceMetrics(
             dock = dock,
             isEditing = false,
-            availableWidthDp = availableWidthDp,
+            availableMainAxisDp = availableMainAxisDp,
         ),
-    ).copy(containerWidthDp = mainSurfaceMetrics.containerWidthDp)
+    ).copy(containerMainAxisDp = mainSurfaceMetrics.containerMainAxisDp)
 
 @Composable
 @Suppress("LongParameterList")
@@ -194,8 +196,8 @@ internal fun DockSurfaceRow(
     Box(
         modifier =
             modifier
-                .width(surfaceMetrics.containerWidthDp.dp)
-                .height(dockHeightDp(surfaceMetrics.slotMetrics.iconSizeDp).dp)
+                .width(surfaceMetrics.containerMainAxisDp.dp)
+                .height(dockCrossAxisDp(surfaceMetrics.slotMetrics.iconSizeDp).dp)
                 .then(
                     if (renderBackground) {
                         Modifier.dockSurfaceAppearance(dock)
@@ -203,14 +205,14 @@ internal fun DockSurfaceRow(
                         Modifier
                     },
                 )
-                .padding(horizontal = DOCK_HORIZONTAL_PADDING_DP.dp, vertical = DOCK_VERTICAL_PADDING_DP.dp),
+                .padding(horizontal = DOCK_MAIN_AXIS_PADDING_DP.dp, vertical = DOCK_CROSS_AXIS_PADDING_DP.dp),
         contentAlignment = Alignment.Center,
     ) {
-        if (surfaceMetrics.renderedSlotCount > 0 && surfaceMetrics.contentViewportWidthDp > 0) {
+        if (surfaceMetrics.renderedSlotCount > 0 && surfaceMetrics.contentViewportMainAxisDp > 0) {
             DockSlotsRow(
                 dock = dock,
                 renderedSlotCount = surfaceMetrics.renderedSlotCount,
-                contentViewportWidthDp = surfaceMetrics.contentViewportWidthDp,
+                contentViewportMainAxisDp = surfaceMetrics.contentViewportMainAxisDp,
                 slotMetrics = surfaceMetrics.slotMetrics,
                 isEditing = isEditing,
                 presentation = presentation,

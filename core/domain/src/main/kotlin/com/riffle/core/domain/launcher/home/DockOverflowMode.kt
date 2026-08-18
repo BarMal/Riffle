@@ -1,5 +1,12 @@
 package com.riffle.core.domain.launcher.home
 
+/**
+ * Whether a dock's slots fit the extent it has to lay them out along.
+ *
+ * Expressed in main-axis terms rather than width: the question is "N slots of this size, with this
+ * spacing, along this much room" regardless of whether the dock runs across the bottom or down an
+ * edge. Nothing here needs to know which. See [com.riffle.core.domain.launcher.home.DockPosition].
+ */
 sealed interface DockOverflowMode {
     data object Fits : DockOverflowMode
 
@@ -8,39 +15,43 @@ sealed interface DockOverflowMode {
     data object RequiresOverflowNavigation : DockOverflowMode
 }
 
+/**
+ * [availableMainAxisDp] is the room along the dock's own run: its width when the dock is
+ * horizontal, its height when it is vertical.
+ */
 fun dockOverflowMode(
     slotCount: Int,
     iconSizeDp: Int,
     itemSpacingDp: Int,
     minIconSizeDp: Int = MIN_DOCK_ICON_SIZE_DP,
-    availableWidthDp: Int,
+    availableMainAxisDp: Int,
 ): DockOverflowMode {
     val normalizedSlotCount = slotCount.coerceAtLeast(0)
     if (normalizedSlotCount == 0) {
         return DockOverflowMode.Fits
     }
 
-    val configuredWidthDp =
-        dockContentWidthDp(
+    val configuredMainAxisDp =
+        dockContentMainAxisDp(
             slotCount = normalizedSlotCount,
             iconSizeDp = iconSizeDp.coerceAtLeast(0),
             itemSpacingDp = itemSpacingDp.coerceAtLeast(0),
         )
-    val hardMinimumWidthDp =
-        dockContentWidthDp(
+    val hardMinimumMainAxisDp =
+        dockContentMainAxisDp(
             slotCount = normalizedSlotCount,
             iconSizeDp = minIconSizeDp.coerceAtLeast(0),
             itemSpacingDp = MIN_DOCK_ITEM_SPACING_DP,
         )
 
     return when {
-        configuredWidthDp <= availableWidthDp.toLong() -> DockOverflowMode.Fits
-        hardMinimumWidthDp <= availableWidthDp.toLong() -> DockOverflowMode.FitByCompaction
+        configuredMainAxisDp <= availableMainAxisDp.toLong() -> DockOverflowMode.Fits
+        hardMinimumMainAxisDp <= availableMainAxisDp.toLong() -> DockOverflowMode.FitByCompaction
         else -> DockOverflowMode.RequiresOverflowNavigation
     }
 }
 
-private fun dockContentWidthDp(
+private fun dockContentMainAxisDp(
     slotCount: Int,
     iconSizeDp: Int,
     itemSpacingDp: Int,
