@@ -22,6 +22,9 @@ import com.riffle.core.domain.launcher.notifications.LauncherNotification
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationMessage
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
+import com.riffle.core.domain.launcher.notifications.NotificationThreadSummary
+import com.riffle.core.domain.launcher.settings.ThreadCardGrouping
+import com.riffle.core.domain.launcher.settings.ThreadMessageOrder
 import com.riffle.core.domain.launcher.settings.stagePreferencesFor
 
 /** Process-only card data for one notification or media item in an app stage. */
@@ -63,6 +66,8 @@ fun LauncherShellState.appStageShellState(
             notificationAccessStatus = notificationAccessStatus,
             profileContentVisibility = profileContentVisibility,
             actionAvailability = actionAvailability,
+            threadCardGrouping = launcherSettings.cards.threadCardGrouping,
+            threadMessageOrder = launcherSettings.cards.threadMessageOrder,
         )
     val snapshot =
         appStageSnapshot(
@@ -137,12 +142,15 @@ private fun LauncherShellState.restoredSelectedDynamicStageSnapshot(): AppStageS
 }
 
 /** Builds stable, privacy-aware dynamic input for the app-stage planner. */
+@Suppress("LongParameterList")
 internal fun appStageNotificationCards(
     notifications: List<LauncherNotification>,
     notificationAccessStatus: NotificationAccessStatus,
     profileContentVisibility: Map<AppProfileId, AppProfileContentVisibility>,
     actionAvailability: NotificationStageActionAvailability = NotificationStageActionAvailability.None,
     artworkRevisions: AdaptiveStageArtworkRevisionLookup = adaptiveStageArtworkRevisions,
+    threadCardGrouping: ThreadCardGrouping = ThreadCardGrouping.PER_THREAD,
+    threadMessageOrder: ThreadMessageOrder = ThreadMessageOrder.CHRONOLOGICAL,
 ): List<AppStageNotificationCard> {
     if (notificationAccessStatus != NotificationAccessStatus.GRANTED) return emptyList()
     return notifications.flatMap { notification ->
@@ -161,6 +169,8 @@ internal fun appStageNotificationCards(
                     isRedacted = visibility != AppProfileContentVisibility.VISIBLE,
                     actionAvailability = actionAvailability,
                     artworkRevisions = artworkRevisions,
+                    threadCardGrouping = threadCardGrouping,
+                    threadMessageOrder = threadMessageOrder,
                 )
         }
     }.sortedWith(
@@ -193,20 +203,65 @@ fun appStageEmptyAppCard(
         }
 
 /**
- * One card per notification when there's no genuine per-message history to split (redacted
- * content, media sessions, and any notification with at most one message), versus one card per
- * message via [toThreadMessageCards] otherwise.
+ * One card per notification when there's no genuine per-message history to divide up -- redacted
+ * content, media sessions, and any notification with at most one message.
+ *
+ * Where there is history, [ThreadCardGrouping] decides: [ThreadCardGrouping.PER_THREAD] folds the
+ * conversation onto one card via [toThreadSummaryCard], [ThreadCardGrouping.PER_MESSAGE] spreads it
+ * across one card each via [toThreadMessageCards].
  */
+@Suppress("LongParameterList")
 private fun LauncherNotification.toAppStageCards(
     isRedacted: Boolean,
     actionAvailability: NotificationStageActionAvailability,
     artworkRevisions: AdaptiveStageArtworkRevisionLookup,
+    threadCardGrouping: ThreadCardGrouping,
+    threadMessageOrder: ThreadMessageOrder,
 ): List<AppStageNotificationCard> =
-    if (isRedacted || messages.size <= 1) {
-        listOf(toSingleAppStageCard(isRedacted, actionAvailability, artworkRevisions))
-    } else {
-        toThreadMessageCards(actionAvailability, artworkRevisions)
+    when {
+        isRedacted || messages.size <= 1 ->
+            listOf(toSingleAppStageCard(isRedacted, actionAvailability, artworkRevisions))
+
+        threadCardGrouping == ThreadCardGrouping.PER_THREAD ->
+            listOf(
+                toThreadSummaryCard(
+                    actionAvailability = actionAvailability,
+                    artworkRevisions = artworkRevisions,
+                    newestFirst = threadMessageOrder == ThreadMessageOrder.RECENT_FIRST,
+                ),
+            )
+
+        else -> toThreadMessageCards(actionAvailability, artworkRevisions)
     }
+
+/**
+ * A whole conversation on one card: the same card [toSingleAppStageCard] builds, with its title and
+ * body replaced by the folded thread and its sort key moved to the newest message.
+ *
+ * Built by copying that card rather than assembling a parallel one, so the identity, actions,
+ * artwork and redaction handling cannot drift between the two shapes -- the only differences are
+ * the three fields the fold actually changes. Notably the id stays the notification's own, so a
+ * conversation keeps its place in the stack as messages arrive rather than being treated as a new
+ * card each time.
+ */
+private fun LauncherNotification.toThreadSummaryCard(
+    actionAvailability: NotificationStageActionAvailability,
+    artworkRevisions: AdaptiveStageArtworkRevisionLookup,
+    newestFirst: Boolean,
+): AppStageNotificationCard {
+    val card = toSingleAppStageCard(false, actionAvailability, artworkRevisions)
+    return card.copy(
+        title = NotificationThreadSummary.combinedTitle(messages) ?: card.title,
+        text = NotificationThreadSummary.combinedText(messages, newestFirst = newestFirst),
+        content =
+            card.content.copy(
+                meaningfulActivityAtEpochMillis =
+                    NotificationThreadSummary
+                        .latestActivityEpochMillis(messages, postedAtEpochMillis)
+                        .coerceAtLeast(0L),
+            ),
+    )
+}
 
 private fun LauncherNotification.toSingleAppStageCard(
     isRedacted: Boolean,

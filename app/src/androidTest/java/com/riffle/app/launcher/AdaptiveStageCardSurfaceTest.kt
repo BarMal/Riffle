@@ -90,6 +90,7 @@ import com.riffle.core.domain.launcher.settings.AdaptiveStageTypography
 import com.riffle.core.domain.launcher.settings.AdaptiveStageViewportDp
 import com.riffle.core.domain.launcher.settings.CardsSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettings
+import com.riffle.core.domain.launcher.settings.ThreadCardGrouping
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
@@ -824,17 +825,10 @@ class AdaptiveStageCardSurfaceTest {
     }
 
     @Test
-    fun viewingAConversationsThreadGroupsItsMessagesAndSurfacesItsActions() {
+    fun perMessageGroupingDefersEachMessageCardsActionsToTheGroupedThreadView() {
         val app = adaptiveStageTestApp()
-        val messages =
-            listOf(
-                LauncherNotificationMessage(sender = "Alex", text = "Message A", timestampEpochMillis = 5),
-                LauncherNotificationMessage(sender = "Alex", text = "Message B", timestampEpochMillis = 10),
-                LauncherNotificationMessage(sender = "Alex", text = "Message C", timestampEpochMillis = 15),
-            )
-        val conversation =
-            adaptiveStageTestNotification(app).copy(messages = messages, canDismiss = true)
-        val state = adaptiveStageTestState(app, conversation)
+        val conversation = adaptiveStageTestConversation(app)
+        val state = adaptiveStageTestState(app, conversation, perMessageGroupingSettings())
 
         composeRule.setContent {
             MaterialTheme { AdaptiveStageAppStageSurface(state = state, onAction = {}) }
@@ -857,6 +851,28 @@ class AdaptiveStageCardSurfaceTest {
         composeRule.onNodeWithText("Done").performClick()
 
         composeRule.onAllNodesWithText("Done").assertCountEquals(0)
+    }
+
+    @Test
+    fun perThreadGroupingPutsTheWholeConversationOnOneDirectlyActionableCard() {
+        // The default fold. There is only one card for the conversation, so there is no ambiguity
+        // about which card a conversation-wide action would apply to and nothing left to group
+        // into: the actions belong on the card itself and "View thread" has no work to do.
+        val app = adaptiveStageTestApp()
+        val conversation = adaptiveStageTestConversation(app)
+        val state = adaptiveStageTestState(app, conversation)
+
+        composeRule.setContent {
+            MaterialTheme { AdaptiveStageAppStageSurface(state = state, onAction = {}) }
+        }
+
+        // One card carrying the conversation, rather than one card per message to page through.
+        composeRule.onNodeWithText("Card 1 of 1").assertIsDisplayed()
+        composeRule.onNodeWithText("Message A").assertIsDisplayed()
+        composeRule.onNodeWithText("Message B").assertIsDisplayed()
+        composeRule.onNodeWithText("Message C").assertIsDisplayed()
+        composeRule.onNodeWithText("Dismiss").assertIsDisplayed()
+        composeRule.onAllNodesWithText("View thread").assertCountEquals(0)
     }
 
     @Test
@@ -1863,6 +1879,20 @@ class AdaptiveStageCardSurfaceTest {
             postedAtEpochMillis = 10,
         )
 
+    private fun adaptiveStageTestConversation(app: InstalledApp): LauncherNotification =
+        adaptiveStageTestNotification(app).copy(
+            messages =
+                listOf(
+                    LauncherNotificationMessage(sender = "Alex", text = "Message A", timestampEpochMillis = 5),
+                    LauncherNotificationMessage(sender = "Alex", text = "Message B", timestampEpochMillis = 10),
+                    LauncherNotificationMessage(sender = "Alex", text = "Message C", timestampEpochMillis = 15),
+                ),
+            canDismiss = true,
+        )
+
+    private fun perMessageGroupingSettings(): LauncherSettings =
+        LauncherSettings(cards = CardsSettings(threadCardGrouping = ThreadCardGrouping.PER_MESSAGE))
+
     private fun notificationGroup(
         app: InstalledApp,
         notification: LauncherNotification,
@@ -1878,11 +1908,13 @@ class AdaptiveStageCardSurfaceTest {
     private fun adaptiveStageTestState(
         app: InstalledApp,
         notification: LauncherNotification,
+        launcherSettings: LauncherSettings = LauncherSettings(),
     ): LauncherShellState =
         LauncherShellState(
             notificationAccessStatus = NotificationAccessStatus.GRANTED,
             installedApps = listOf(app),
             profileContentVisibility = mapOf(app.identity.profile.id to AppProfileContentVisibility.VISIBLE),
+            launcherSettings = launcherSettings,
             notificationGroupsByApp =
                 listOf(
                     AppNotificationGroup(

@@ -66,6 +66,7 @@ import com.riffle.core.domain.launcher.settings.OverlayDockSettings
 import com.riffle.core.domain.launcher.settings.RssSettings
 import com.riffle.core.domain.launcher.settings.SearchResultPresentation
 import com.riffle.core.domain.launcher.settings.SearchSettings
+import com.riffle.core.domain.launcher.settings.ThreadCardGrouping
 import com.riffle.core.domain.launcher.settings.ThreadMessageOrder
 import com.riffle.core.domain.launcher.settings.homeSystemBars
 import com.riffle.core.domain.launcher.settings.stagePreferencesFor
@@ -197,6 +198,36 @@ class LauncherSettingsJsonCodecTest {
             )
 
         assertEquals(ThreadMessageOrder.CHRONOLOGICAL, decodedSettings.cards.threadMessageOrder)
+    }
+
+    @Test
+    fun roundTripsConfiguredThreadCardGrouping() {
+        val settings =
+            LauncherSettings(
+                cards = CardsSettings(threadCardGrouping = ThreadCardGrouping.PER_MESSAGE),
+            )
+
+        val decoded = decodeLauncherSettings(encodeLauncherSettings(settings))
+
+        assertEquals(settings.cards.threadCardGrouping, decoded.cards.threadCardGrouping)
+    }
+
+    @Test
+    fun defaultsUnknownThreadCardGroupingToFoldingTheConversation() {
+        // Settings written by a build that did not know this field decode to the folded default,
+        // the same shape a fresh install gets.
+        val decodedSettings =
+            decodeLauncherSettings(
+                """
+                {
+                  "cards": {
+                    "threadCardGrouping": "UNKNOWN"
+                  }
+                }
+                """.trimIndent(),
+            )
+
+        assertEquals(ThreadCardGrouping.PER_THREAD, decodedSettings.cards.threadCardGrouping)
     }
 
     @Test

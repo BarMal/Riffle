@@ -110,6 +110,7 @@ import com.riffle.core.domain.launcher.settings.MIN_ADAPTIVE_STAGE_TRAVEL_INTENS
 import com.riffle.core.domain.launcher.settings.MIN_ADAPTIVE_STAGE_VERTICAL_SPACING_DP
 import com.riffle.core.domain.launcher.settings.MIN_ADAPTIVE_STAGE_VISIBLE_DEPTH
 import com.riffle.core.domain.launcher.settings.SYMMETRIC_ABOVE_FOCUS_DEPTH
+import com.riffle.core.domain.launcher.settings.ThreadCardGrouping
 import com.riffle.core.domain.launcher.settings.ThreadMessageOrder
 
 private typealias AdaptiveStageAppearanceUpdate = ((AdaptiveStageAppearanceSettings) -> AdaptiveStageAppearanceSettings) -> Unit
@@ -346,6 +347,14 @@ private fun AdaptiveStageLayoutTabContent(
         )
     }
     SettingsSection(title = "Threads") {
+        AdaptiveStageEnumChoices(
+            title = "Card grouping",
+            values = ThreadCardGrouping.entries,
+            selected = state.settings.cards.threadCardGrouping,
+            label = ThreadCardGrouping::label,
+            testTag = { grouping -> "thread-card-grouping-${grouping.name}" },
+            onSelected = { grouping -> onAction(LauncherShellAction.SelectThreadCardGrouping(grouping)) },
+        )
         AdaptiveStageEnumChoices(
             title = "Message order",
             values = ThreadMessageOrder.entries,
@@ -984,6 +993,12 @@ private fun AdaptiveStageRailSide.label(): String =
         AdaptiveStageRailSide.TRAILING -> "Trailing edge"
         AdaptiveStageRailSide.TOP -> "Top edge"
         AdaptiveStageRailSide.BOTTOM -> "Bottom edge"
+    }
+
+private fun ThreadCardGrouping.label(): String =
+    when (this) {
+        ThreadCardGrouping.PER_MESSAGE -> "One card per message"
+        ThreadCardGrouping.PER_THREAD -> "One card per conversation"
     }
 
 private fun ThreadMessageOrder.label(): String =

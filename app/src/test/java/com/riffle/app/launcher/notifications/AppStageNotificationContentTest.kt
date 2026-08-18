@@ -22,6 +22,7 @@ import com.riffle.core.domain.launcher.notifications.NotificationAgeBucket
 import com.riffle.core.domain.launcher.notifications.NotificationCategory
 import com.riffle.core.domain.launcher.settings.CardsSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettings
+import com.riffle.core.domain.launcher.settings.ThreadCardGrouping
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -88,7 +89,7 @@ class AppStageNotificationContentTest {
     }
 
     @Test
-    fun `explodes a multi-message conversation into one card per message`() {
+    fun `PER_MESSAGE grouping explodes a multi-message conversation into one card per message`() {
         val messages =
             listOf(
                 LauncherNotificationMessage(sender = "Alex", text = "On my way", timestampEpochMillis = 5),
@@ -105,6 +106,7 @@ class AppStageNotificationContentTest {
                 notificationAccessStatus = NotificationAccessStatus.GRANTED,
                 profileContentVisibility = mapOf(AppProfile.personal().id to AppProfileContentVisibility.VISIBLE),
                 actionAvailability = availability,
+                threadCardGrouping = ThreadCardGrouping.PER_MESSAGE,
             )
 
         assertEquals(3, cards.size)
@@ -119,6 +121,36 @@ class AppStageNotificationContentTest {
             },
         )
         assertEquals(3, cards.map { card -> card.content.id }.distinct().size)
+    }
+
+    @Test
+    fun `PER_THREAD grouping is the default and folds the same conversation onto one card`() {
+        val messages =
+            listOf(
+                LauncherNotificationMessage(sender = "Alex", text = "On my way", timestampEpochMillis = 5),
+                LauncherNotificationMessage(sender = "Alex", text = "Traffic is bad", timestampEpochMillis = 10),
+                LauncherNotificationMessage(sender = "Alex", text = "Running 10 late", timestampEpochMillis = 15),
+            )
+        val conversation =
+            notification(key = "conversation", postedAt = 1, canDismiss = true).copy(messages = messages)
+
+        val cards =
+            appStageNotificationCards(
+                notifications = listOf(conversation),
+                notificationAccessStatus = NotificationAccessStatus.GRANTED,
+                profileContentVisibility = mapOf(AppProfile.personal().id to AppProfileContentVisibility.VISIBLE),
+            )
+
+        val card = cards.single()
+        assertEquals("Alex", card.title)
+        // One sender, so the lines carry the messages alone -- the name is already the title.
+        assertEquals("On my way\nTraffic is bad\nRunning 10 late", card.text)
+        // The whole history stays on the card, so a thread view still has every message to show.
+        assertEquals(messages, card.messages)
+        assertEquals(LauncherNotificationKey("conversation"), card.notificationKey)
+        // Sorted by the newest message rather than the notification's own posted time (1), so an
+        // active conversation rises in the stack as it continues.
+        assertEquals(15L, card.content.meaningfulActivityAtEpochMillis)
     }
 
     @Test

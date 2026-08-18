@@ -82,11 +82,33 @@ data class CardsSettings(
     val adaptiveStageRailSide: AdaptiveStageRailSide? = null,
     /** User-opted alternative to the full-stack surface: a top detail region over the card stack. */
     val adaptiveStagePaneArrangement: AdaptiveStagePaneArrangement = AdaptiveStagePaneArrangement.STACK,
-    /** Message order within a conversation's thread view, once its message cards are grouped. */
+    /**
+     * Message order within a conversation, whichever shape [threadCardGrouping] gives it: the
+     * order of the folded card's own body, and of the thread view that groups message cards.
+     */
     val threadMessageOrder: ThreadMessageOrder = ThreadMessageOrder.CHRONOLOGICAL,
+    /** Whether a conversation's messages become one card each or one card between them. */
+    val threadCardGrouping: ThreadCardGrouping = ThreadCardGrouping.PER_THREAD,
 )
 
-/** How a conversation's messages are ordered within its thread view. */
+/**
+ * How a messaging notification that carries message history becomes cards.
+ *
+ * [PER_MESSAGE] was the only prior behaviour: every message in the history becomes its own card.
+ * A single conversation therefore spreads across a stack the user pages through, and each card --
+ * sized for a whole notification -- carries one short line. Four unread chats read as a dozen
+ * near-empty cards.
+ *
+ * [PER_THREAD] puts the conversation on one card instead, its messages as the body. Fewer cards,
+ * and more on each of them, which is the same problem seen from both ends. It is the default
+ * because the split was not a deliberate design so much as the shape the data arrived in.
+ */
+enum class ThreadCardGrouping {
+    PER_MESSAGE,
+    PER_THREAD,
+}
+
+/** How a conversation's messages are ordered, on a folded card or in its thread view. */
 enum class ThreadMessageOrder {
     /** Oldest message first, reading top-to-bottom like a conversation. */
     CHRONOLOGICAL,
