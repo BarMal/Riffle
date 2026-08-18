@@ -13,7 +13,7 @@ class DockOverflowModePolicyTest {
                 iconSizeDp = 56,
                 itemSpacingDp = 24,
                 minIconSizeDp = 32,
-                availableWidthDp = 252,
+                availableMainAxisDp = 252,
             ),
         )
     }
@@ -27,7 +27,7 @@ class DockOverflowModePolicyTest {
                 iconSizeDp = 48,
                 itemSpacingDp = 10,
                 minIconSizeDp = 32,
-                availableWidthDp = 280,
+                availableMainAxisDp = 280,
             ),
         )
     }
@@ -41,7 +41,7 @@ class DockOverflowModePolicyTest {
                 iconSizeDp = 56,
                 itemSpacingDp = 24,
                 minIconSizeDp = 32,
-                availableWidthDp = 376,
+                availableMainAxisDp = 376,
             ),
         )
     }
@@ -55,13 +55,13 @@ class DockOverflowModePolicyTest {
                 iconSizeDp = 48,
                 itemSpacingDp = 10,
                 minIconSizeDp = 32,
-                availableWidthDp = 160,
+                availableMainAxisDp = 160,
             ),
         )
     }
 
     @Test
-    fun classifiesTooNarrowHardMinimumCaseAsRequiresOverflowNavigation() {
+    fun classifiesTooLittleRunForTheHardMinimumAsRequiresOverflowNavigation() {
         assertEquals(
             DockOverflowMode.RequiresOverflowNavigation,
             dockOverflowMode(
@@ -69,7 +69,36 @@ class DockOverflowModePolicyTest {
                 iconSizeDp = 48,
                 itemSpacingDp = 10,
                 minIconSizeDp = 32,
-                availableWidthDp = 159,
+                availableMainAxisDp = 159,
+            ),
+        )
+    }
+
+    @Test
+    fun theAxisTheDockRunsAlongIsWhatDecidesWhetherItsSlotsFit() {
+        // Eight slots need 454dp of run. The same dock on the same phone therefore has to be
+        // classified differently depending on which way it is laid out -- which is the whole reason
+        // this takes a main-axis extent and not a width.
+        val slots = 8
+        val iconSizeDp = 48
+        val itemSpacingDp = 10
+
+        assertEquals(
+            DockOverflowMode.FitByCompaction,
+            dockOverflowMode(
+                slotCount = slots,
+                iconSizeDp = iconSizeDp,
+                itemSpacingDp = itemSpacingDp,
+                availableMainAxisDp = 360,
+            ),
+        )
+        assertEquals(
+            DockOverflowMode.Fits,
+            dockOverflowMode(
+                slotCount = slots,
+                iconSizeDp = iconSizeDp,
+                itemSpacingDp = itemSpacingDp,
+                availableMainAxisDp = 800,
             ),
         )
     }

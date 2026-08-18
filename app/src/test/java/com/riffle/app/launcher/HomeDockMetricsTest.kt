@@ -13,19 +13,19 @@ import org.junit.Test
 class HomeDockMetricsTest {
     @Test
     fun defaultIconSizeKeepsExistingDockHeight() {
-        assertEquals(76, dockHeightDp(iconSizeDp = 44))
+        assertEquals(76, dockCrossAxisDp(iconSizeDp = 44))
     }
 
     @Test
     fun largerIconSizeIncreasesDockHeight() {
-        assertEquals(96, dockHeightDp(iconSizeDp = 64))
+        assertEquals(96, dockCrossAxisDp(iconSizeDp = 64))
     }
 
     @Test
     fun dockContentViewportUsesOccupiedIconWidthAndSpacing() {
         assertEquals(
             212,
-            dockContentViewportWidthDp(
+            dockContentViewportMainAxisDp(
                 slotCount = 4,
                 iconSizeDp = 44,
                 itemSpacingDp = 12,
@@ -37,7 +37,7 @@ class HomeDockMetricsTest {
     fun dockContentViewportCapsAtDockInteriorWidth() {
         assertEquals(
             532,
-            dockContentViewportWidthDp(
+            dockContentViewportMainAxisDp(
                 slotCount = 20,
                 iconSizeDp = 56,
                 itemSpacingDp = 24,
@@ -49,11 +49,11 @@ class HomeDockMetricsTest {
     fun dockContentViewportCapsAtAvailableInteriorWidth() {
         assertEquals(
             292,
-            dockContentViewportWidthDp(
+            dockContentViewportMainAxisDp(
                 slotCount = 5,
                 iconSizeDp = 56,
                 itemSpacingDp = 24,
-                availableDockWidthDp = 320,
+                availableDockMainAxisDp = 320,
             ),
         )
     }
@@ -65,7 +65,7 @@ class HomeDockMetricsTest {
                 slotCount = 5,
                 iconSizeDp = 48,
                 itemSpacingDp = 10,
-                availableContentWidthDp = 280,
+                availableContentMainAxisDp = 280,
             )
 
         assertEquals(
@@ -86,7 +86,7 @@ class HomeDockMetricsTest {
                 slotCount = 5,
                 iconSizeDp = 48,
                 itemSpacingDp = 10,
-                availableContentWidthDp = 252,
+                availableContentMainAxisDp = 252,
             )
 
         assertEquals(
@@ -97,7 +97,7 @@ class HomeDockMetricsTest {
             ),
             metrics,
         )
-        assertEquals(252, dockSlotContentWidthDp(slotCount = 5, metrics = metrics))
+        assertEquals(252, dockSlotContentMainAxisDp(slotCount = 5, metrics = metrics))
     }
 
     @Test
@@ -107,7 +107,7 @@ class HomeDockMetricsTest {
                 slotCount = 5,
                 iconSizeDp = 56,
                 itemSpacingDp = 24,
-                availableContentWidthDp = 252,
+                availableContentMainAxisDp = 252,
             )
 
         assertEquals(
@@ -118,7 +118,7 @@ class HomeDockMetricsTest {
             ),
             metrics,
         )
-        assertEquals(250, dockSlotContentWidthDp(slotCount = 5, metrics = metrics))
+        assertEquals(250, dockSlotContentMainAxisDp(slotCount = 5, metrics = metrics))
     }
 
     @Test
@@ -128,7 +128,7 @@ class HomeDockMetricsTest {
                 slotCount = 5,
                 iconSizeDp = 48,
                 itemSpacingDp = 10,
-                availableContentWidthDp = 159,
+                availableContentMainAxisDp = 159,
             )
 
         assertEquals(
@@ -139,15 +139,15 @@ class HomeDockMetricsTest {
             ),
             metrics,
         )
-        assertEquals(280, dockSlotContentWidthDp(slotCount = 5, metrics = metrics))
+        assertEquals(280, dockSlotContentMainAxisDp(slotCount = 5, metrics = metrics))
     }
 
     @Test
     fun dynamicDockContainerCapsAtAvailableWidthWhenContentOverflows() {
         assertEquals(
             320,
-            dockContainerWidthDp(
-                availableWidthDp = 320,
+            dockContainerMainAxisDp(
+                availableMainAxisDp = 320,
                 slotCount = 5,
                 iconSizeDp = 56,
                 itemSpacingDp = 24,
@@ -160,8 +160,8 @@ class HomeDockMetricsTest {
     fun dynamicDockContainerWrapsContentWhenContentFits() {
         assertEquals(
             240,
-            dockContainerWidthDp(
-                availableWidthDp = 320,
+            dockContainerMainAxisDp(
+                availableMainAxisDp = 320,
                 slotCount = 4,
                 iconSizeDp = 44,
                 itemSpacingDp = 12,
@@ -174,8 +174,8 @@ class HomeDockMetricsTest {
     fun fixedDockContainerCapsAtAvailableWidth() {
         assertEquals(
             320,
-            dockContainerWidthDp(
-                availableWidthDp = 320,
+            dockContainerMainAxisDp(
+                availableMainAxisDp = 320,
                 slotCount = 5,
                 iconSizeDp = 56,
                 itemSpacingDp = 24,
@@ -188,7 +188,7 @@ class HomeDockMetricsTest {
     fun emptyDockHasNoContentViewport() {
         assertEquals(
             0,
-            dockContentViewportWidthDp(
+            dockContentViewportMainAxisDp(
                 slotCount = 0,
                 iconSizeDp = 44,
                 itemSpacingDp = 12,
@@ -299,7 +299,7 @@ class HomeDockMetricsTest {
                 dockSurfaceMetrics(
                     dock = DockModel(capacity = 0, items = listOf(widget("weather", 1))),
                     isEditing = false,
-                    availableWidthDp = 320,
+                    availableMainAxisDp = 320,
                 ),
             )
 
@@ -605,34 +605,34 @@ class HomeDockMetricsTest {
         assertEquals(2, overflowRenderedSlotCount)
 
         val primaryWidth =
-            dockContainerWidthDp(
-                availableWidthDp = 320,
+            dockContainerMainAxisDp(
+                availableMainAxisDp = 320,
                 slotCount = primaryRenderedSlotCount,
                 iconSizeDp = primaryDock.iconSizeDp,
                 itemSpacingDp = primaryDock.itemSpacingDp,
                 backgroundSizing = primaryDock.backgroundSizing,
             )
         val overflowWidth =
-            dockContainerWidthDp(
-                availableWidthDp = 320,
+            dockContainerMainAxisDp(
+                availableMainAxisDp = 320,
                 slotCount = overflowRenderedSlotCount,
                 iconSizeDp = overflowDock.iconSizeDp,
                 itemSpacingDp = overflowDock.itemSpacingDp,
                 backgroundSizing = overflowDock.backgroundSizing,
             )
         val primaryViewportWidth =
-            dockContentViewportWidthDp(
+            dockContentViewportMainAxisDp(
                 slotCount = primaryRenderedSlotCount,
                 iconSizeDp = primaryDock.iconSizeDp,
                 itemSpacingDp = primaryDock.itemSpacingDp,
-                availableDockWidthDp = primaryWidth,
+                availableDockMainAxisDp = primaryWidth,
             )
         val overflowViewportWidth =
-            dockContentViewportWidthDp(
+            dockContentViewportMainAxisDp(
                 slotCount = overflowRenderedSlotCount,
                 iconSizeDp = overflowDock.iconSizeDp,
                 itemSpacingDp = overflowDock.itemSpacingDp,
-                availableDockWidthDp = overflowWidth,
+                availableDockMainAxisDp = overflowWidth,
             )
 
         assertEquals(308, primaryWidth)

@@ -82,7 +82,7 @@ internal fun Dock(
             dockSurfaceMetrics(
                 dock = dock,
                 isEditing = isEditing,
-                availableWidthDp = maxWidth.value.toInt(),
+                availableMainAxisDp = maxWidth.value.toInt(),
                 previewSlotCount = if (widgetPickerDockPreview != null) 1 else 0,
             ) ?: return@BoxWithConstraints
         HomeBackgroundContextMenu(
@@ -110,7 +110,7 @@ internal fun Dock(
 internal fun DockSlotsRow(
     dock: DockModel,
     renderedSlotCount: Int,
-    contentViewportWidthDp: Int,
+    contentViewportMainAxisDp: Int,
     slotMetrics: DockSlotRenderMetrics,
     isEditing: Boolean,
     presentation: DockPresentation,
@@ -145,14 +145,14 @@ internal fun DockSlotsRow(
     Box(
         modifier =
             Modifier
-                .width(contentViewportWidthDp.dp)
+                .width(contentViewportMainAxisDp.dp)
                 .clipToBounds(),
         contentAlignment = Alignment.Center,
     ) {
         Row(
             modifier =
                 Modifier
-                    .width(dockSlotContentWidthDp(renderedSlotCount, slotMetrics).dp)
+                    .width(dockSlotContentMainAxisDp(renderedSlotCount, slotMetrics).dp)
                     .horizontalScroll(scrollState),
             horizontalArrangement = Arrangement.spacedBy(slotMetrics.itemSpacingDp.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -193,7 +193,7 @@ internal fun DockSlotsRow(
                             presentation = slotPresentation,
                             appIconLoader = appIconLoader,
                             dragState = dragState.value,
-                            dragViewport = DockDragViewport(scrollState, contentViewportWidthDp),
+                            dragViewport = DockDragViewport(scrollState, contentViewportMainAxisDp),
                             onDragStateChanged = { dragState.value = it },
                         )
                     }
@@ -279,10 +279,17 @@ private fun WidgetPickerDockPlaceholder(
     }
 }
 
-private const val DOCK_MAX_WIDTH_DP = 560
-internal const val DOCK_VERTICAL_CHROME_DP = 32
-internal const val DOCK_HORIZONTAL_PADDING_DP = 14
-internal const val DOCK_VERTICAL_PADDING_DP = 10
+/**
+ * Caps how long the dock's run may get. An absolute dp suits a horizontal dock, where the cap stops
+ * a wide tablet from stretching six icons across the whole screen. A vertical dock wants a fraction
+ * of the available extent instead -- the overlay dock already does exactly that with its own
+ * MAX_TALL_EXPANDED_DOCK_SCREEN_FRACTION. Left as-is here because this commit renames without
+ * changing any number.
+ */
+private const val DOCK_MAX_MAIN_AXIS_DP = 560
+internal const val DOCK_CROSS_AXIS_CHROME_DP = 32
+internal const val DOCK_MAIN_AXIS_PADDING_DP = 14
+internal const val DOCK_CROSS_AXIS_PADDING_DP = 10
 private const val DOCK_OVERFLOW_FADE_WIDTH_DP = 20
 private const val DOCK_EDGE_AUTO_SCROLL_ZONE_DP = 28
 private const val DOCK_EDGE_AUTO_SCROLL_MAX_PX_PER_EVENT = 24f
@@ -291,42 +298,51 @@ private const val DOCK_EDGE_AUTO_SCROLL_FRAME_DELAY_MILLIS = 16L
 internal const val HOME_DOCK_SURFACE_TEST_TAG = "home-dock-surface"
 internal const val WIDGET_PICKER_DOCK_PREVIEW_TEST_TAG = "widget-picker-dock-preview"
 
-internal fun dockHeightDp(iconSizeDp: Int): Int = iconSizeDp + DOCK_VERTICAL_CHROME_DP
+/**
+ * The dock's thickness -- across its run, not along it. The strip is one icon deep plus chrome
+ * whichever edge it sits on, so this is the same arithmetic for a bottom dock's height and a side
+ * dock's width.
+ */
+internal fun dockCrossAxisDp(iconSizeDp: Int): Int = iconSizeDp + DOCK_CROSS_AXIS_CHROME_DP
 
-internal fun dockContentViewportWidthDp(
+/**
+ * How much room the slots themselves get along the dock's run, after its own padding and the
+ * [DOCK_MAX_MAIN_AXIS_DP] cap.
+ */
+internal fun dockContentViewportMainAxisDp(
     slotCount: Int,
     iconSizeDp: Int,
     itemSpacingDp: Int,
-    availableDockWidthDp: Int = DOCK_MAX_WIDTH_DP,
+    availableDockMainAxisDp: Int = DOCK_MAX_MAIN_AXIS_DP,
 ): Int {
     if (slotCount <= 0) {
         return 0
     }
-    val contentWidth = (slotCount * iconSizeDp) + ((slotCount - 1) * itemSpacingDp)
-    val maxDockWidth = min(availableDockWidthDp, DOCK_MAX_WIDTH_DP)
-    val maxContentWidth = (maxDockWidth - (DOCK_HORIZONTAL_PADDING_DP * 2)).coerceAtLeast(0)
-    return min(contentWidth, maxContentWidth)
+    val contentMainAxis = (slotCount * iconSizeDp) + ((slotCount - 1) * itemSpacingDp)
+    val maxDockMainAxis = min(availableDockMainAxisDp, DOCK_MAX_MAIN_AXIS_DP)
+    val maxContentMainAxis = (maxDockMainAxis - (DOCK_MAIN_AXIS_PADDING_DP * 2)).coerceAtLeast(0)
+    return min(contentMainAxis, maxContentMainAxis)
 }
 
-internal fun dockContainerWidthDp(
-    availableWidthDp: Int,
+internal fun dockContainerMainAxisDp(
+    availableMainAxisDp: Int,
     slotCount: Int,
     iconSizeDp: Int,
     itemSpacingDp: Int,
     backgroundSizing: DockBackgroundSizing,
 ): Int {
-    val maxDockWidth = min(availableWidthDp, DOCK_MAX_WIDTH_DP).coerceAtLeast(0)
+    val maxDockMainAxis = min(availableMainAxisDp, DOCK_MAX_MAIN_AXIS_DP).coerceAtLeast(0)
     if (backgroundSizing == DockBackgroundSizing.FIXED) {
-        return maxDockWidth
+        return maxDockMainAxis
     }
-    val contentViewportWidth =
-        dockContentViewportWidthDp(
+    val contentViewportMainAxis =
+        dockContentViewportMainAxisDp(
             slotCount = slotCount,
             iconSizeDp = iconSizeDp,
             itemSpacingDp = itemSpacingDp,
-            availableDockWidthDp = maxDockWidth,
+            availableDockMainAxisDp = maxDockMainAxis,
         )
-    return min(maxDockWidth, contentViewportWidth + (DOCK_HORIZONTAL_PADDING_DP * 2))
+    return min(maxDockMainAxis, contentViewportMainAxis + (DOCK_MAIN_AXIS_PADDING_DP * 2))
 }
 
 internal fun dockRenderedSlotCount(
@@ -474,7 +490,7 @@ internal data class DockDragState(
 
 private data class DockDragViewport(
     val scrollState: androidx.compose.foundation.ScrollState,
-    val contentViewportWidthDp: Int,
+    val contentViewportMainAxisDp: Int,
 )
 
 internal fun dockItemTestTag(itemId: LauncherItemId): String = "dock-item:${itemId.value}"
@@ -698,7 +714,7 @@ private fun Modifier.dockItemDrag(
                             horizontalDrag += amount.x
                             verticalDrag += amount.y
                             val slotWidthPx = density * (slotWidthDp + itemSpacingDp)
-                            val viewportWidthPx = density * dragViewport.contentViewportWidthDp
+                            val viewportWidthPx = density * dragViewport.contentViewportMainAxisDp
                             val pointerX =
                                 (state.visualIndex * slotWidthPx) - dragViewport.scrollState.value + change.position.x
                             edgeAutoScrollDelta =
