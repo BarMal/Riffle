@@ -561,6 +561,10 @@ data class AdaptiveStageGeometry(
     val curveDp: Int = 6,
     val fanDirection: AdaptiveStageFanDirection = AdaptiveStageFanDirection.END,
     val verticalFanDirection: AdaptiveStageFanDirection = AdaptiveStageFanDirection.START,
+    /**
+     * How far the outermost visible card is tilted, and -- via its sign -- which way the whole fan
+     * leans. See [MIN_ADAPTIVE_STAGE_ROTATION_DEGREES]. Negative mirrors the lean; 0 is flat.
+     */
     val rotationDegrees: Int = 4,
     val cornerRadiusDp: Int = 28,
     val contentPaddingDp: Int = 20,
@@ -883,7 +887,21 @@ const val MIN_ADAPTIVE_STAGE_HORIZONTAL_OFFSET_DP = 0
 const val MAX_ADAPTIVE_STAGE_HORIZONTAL_OFFSET_DP = 160
 const val MIN_ADAPTIVE_STAGE_CURVE_DP = 0
 const val MAX_ADAPTIVE_STAGE_CURVE_DP = 96
-const val MIN_ADAPTIVE_STAGE_ROTATION_DEGREES = 0
+
+/**
+ * [AdaptiveStageGeometry.rotationDegrees] is signed: its magnitude is how far the outermost visible
+ * card is tilted, and its sign is which way the fan leans. Was floored at 0, which offered only one
+ * of the two handednesses -- a stack could lean one way or lie flat, never the other way, even
+ * though every other lean in this model (see [AdaptiveStageFanDirection], applied to both the
+ * horizontal and vertical axes) is direction-selectable. Nothing downstream ever required a
+ * non-negative rotation: [CardStackLayoutPolicy] has no such invariant, and `resolveStackBounds`
+ * passes the step straight through without letting it influence card sizing, so the floor was the
+ * only thing withholding the mirrored half of the range.
+ *
+ * 0 still means no rotation and remains the midpoint of the slider, so a stored value is unaffected
+ * by the widened range.
+ */
+const val MIN_ADAPTIVE_STAGE_ROTATION_DEGREES = -18
 const val MAX_ADAPTIVE_STAGE_ROTATION_DEGREES = 18
 const val MIN_ADAPTIVE_STAGE_CORNER_RADIUS_DP = 0
 const val MAX_ADAPTIVE_STAGE_CORNER_RADIUS_DP = 64
