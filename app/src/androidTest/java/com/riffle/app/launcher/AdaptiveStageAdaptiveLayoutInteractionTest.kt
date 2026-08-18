@@ -35,10 +35,10 @@ import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.cards.AdaptiveStageHingeBounds
 import com.riffle.core.domain.launcher.cards.AdaptiveStagePaneArrangement
 import com.riffle.core.domain.launcher.cards.AdaptiveStagePosture
-import com.riffle.core.domain.launcher.cards.AdaptiveStageRailSide
 import com.riffle.core.domain.launcher.cards.AdaptiveStageWindowLayout
 import com.riffle.core.domain.launcher.cards.AppStageId
 import com.riffle.core.domain.launcher.cards.AppStagePreferences
+import com.riffle.core.domain.launcher.home.DockPosition
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.HomeLayoutKey
 import com.riffle.core.domain.launcher.home.LauncherViewMode
@@ -57,10 +57,10 @@ class AdaptiveStageAdaptiveLayoutInteractionTest {
     @Test
     fun configuredLeadingRailOverridesTrailingTemplateVariant() {
         assertEquals(
-            AdaptiveStageRailSide.LEADING,
-            resolveAdaptiveStageRailSide(
-                configuredRailSide = AdaptiveStageRailSide.LEADING,
-                templateRailSide = AdaptiveStageRailSide.TRAILING,
+            DockPosition.LEADING,
+            resolveDockPosition(
+                configuredDockPosition = DockPosition.LEADING,
+                templateDockPosition = DockPosition.TRAILING,
             ),
         )
     }
@@ -68,10 +68,10 @@ class AdaptiveStageAdaptiveLayoutInteractionTest {
     @Test
     fun configuredTrailingRailOverridesLeadingTemplateVariant() {
         assertEquals(
-            AdaptiveStageRailSide.TRAILING,
-            resolveAdaptiveStageRailSide(
-                configuredRailSide = AdaptiveStageRailSide.TRAILING,
-                templateRailSide = AdaptiveStageRailSide.LEADING,
+            DockPosition.TRAILING,
+            resolveDockPosition(
+                configuredDockPosition = DockPosition.TRAILING,
+                templateDockPosition = DockPosition.LEADING,
             ),
         )
     }
@@ -79,10 +79,10 @@ class AdaptiveStageAdaptiveLayoutInteractionTest {
     @Test
     fun unconfiguredRailDefersToTheTemplateVariant() {
         assertEquals(
-            AdaptiveStageRailSide.TRAILING,
-            resolveAdaptiveStageRailSide(
-                configuredRailSide = null,
-                templateRailSide = AdaptiveStageRailSide.TRAILING,
+            DockPosition.TRAILING,
+            resolveDockPosition(
+                configuredDockPosition = null,
+                templateDockPosition = DockPosition.TRAILING,
             ),
         )
     }
@@ -90,8 +90,8 @@ class AdaptiveStageAdaptiveLayoutInteractionTest {
     @Test
     fun unconfiguredRailWithNoTemplateFallsBackToLeading() {
         assertEquals(
-            AdaptiveStageRailSide.LEADING,
-            resolveAdaptiveStageRailSide(configuredRailSide = null, templateRailSide = null),
+            DockPosition.LEADING,
+            resolveDockPosition(configuredDockPosition = null, templateDockPosition = null),
         )
     }
 
@@ -239,7 +239,7 @@ class AdaptiveStageAdaptiveLayoutInteractionTest {
                                     notificationAccessStatus = NotificationAccessStatus.NOT_GRANTED,
                                     launcherSettings =
                                         LauncherSettings(
-                                            cards = CardsSettings(adaptiveStageRailSide = AdaptiveStageRailSide.TOP),
+                                            cards = dockPositionSettings(DockPosition.TOP),
                                         ),
                                 ),
                             windowLayout =
@@ -282,7 +282,7 @@ class AdaptiveStageAdaptiveLayoutInteractionTest {
                                     notificationAccessStatus = NotificationAccessStatus.NOT_GRANTED,
                                     launcherSettings =
                                         LauncherSettings(
-                                            cards = CardsSettings(adaptiveStageRailSide = AdaptiveStageRailSide.TRAILING),
+                                            cards = dockPositionSettings(DockPosition.TRAILING),
                                         ),
                                 ),
                             windowInsets =
@@ -455,6 +455,15 @@ class AdaptiveStageAdaptiveLayoutInteractionTest {
         composeRule.onNodeWithContentDescription("${selected.label}, selected. Open stage").assertIsDisplayed()
     }
 
+    /**
+     * The dock edge is stored per layout, so a test that wants one has to name the layout the
+     * surface will actually look up -- the shell's own active key.
+     */
+    private fun activeLayoutKey(): HomeLayoutKey = LauncherShellState().homeLayoutSet.activeKey
+
+    private fun dockPositionSettings(position: DockPosition): CardsSettings =
+        CardsSettings(dockPositionByLayout = mapOf(activeLayoutKey() to position))
+
     private fun railTestApps(count: Int): List<InstalledApp> =
         (1..count).map { index ->
             val packageName = "com.example.stage$index"
@@ -490,7 +499,8 @@ class AdaptiveStageAdaptiveLayoutInteractionTest {
                                         LauncherSettings(
                                             cards =
                                                 CardsSettings(
-                                                    adaptiveStageRailSide = AdaptiveStageRailSide.LEADING,
+                                                    dockPositionByLayout =
+                                                        mapOf(activeLayoutKey() to DockPosition.LEADING),
                                                     stagePreferencesByLayout =
                                                         mapOf(
                                                             HomeLayoutKey(LauncherViewMode.STANDARD_APP_DRAWER) to

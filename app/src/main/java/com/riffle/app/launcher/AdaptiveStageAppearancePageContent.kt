@@ -38,9 +38,10 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.cards.AdaptiveStagePaneArrangement
-import com.riffle.core.domain.launcher.cards.AdaptiveStageRailSide
 import com.riffle.core.domain.launcher.cards.MAX_CARD_STACK_MAGNET_STRENGTH_PERCENT
 import com.riffle.core.domain.launcher.cards.MIN_CARD_STACK_MAGNET_STRENGTH_PERCENT
+import com.riffle.core.domain.launcher.home.DockPosition
+import com.riffle.core.domain.launcher.home.HomeLayoutKey
 import com.riffle.core.domain.launcher.settings.AdaptiveStageAccentSource
 import com.riffle.core.domain.launcher.settings.AdaptiveStageAppearanceSettings
 import com.riffle.core.domain.launcher.settings.AdaptiveStageBackgroundSource
@@ -112,6 +113,7 @@ import com.riffle.core.domain.launcher.settings.MIN_ADAPTIVE_STAGE_VISIBLE_DEPTH
 import com.riffle.core.domain.launcher.settings.SYMMETRIC_ABOVE_FOCUS_DEPTH
 import com.riffle.core.domain.launcher.settings.ThreadCardGrouping
 import com.riffle.core.domain.launcher.settings.ThreadMessageOrder
+import com.riffle.core.domain.launcher.settings.dockPositionFor
 
 private typealias AdaptiveStageAppearanceUpdate = ((AdaptiveStageAppearanceSettings) -> AdaptiveStageAppearanceSettings) -> Unit
 
@@ -321,15 +323,24 @@ private fun AdaptiveStageLayoutTabContent(
     onAction: (LauncherShellAction) -> Unit,
 ) {
     SettingsSection(title = "Layout") {
+        val layoutKey =
+            HomeLayoutKey(
+                viewMode = state.homeLayout.viewMode,
+                deviceClass = state.selectedLayoutDeviceClass,
+            )
         AdaptiveStageEnumChoices(
-            title = "Rail side",
-            values = AdaptiveStageRailSide.entries,
-            selected = state.settings.cards.adaptiveStageRailSide ?: AdaptiveStageRailSide.LEADING,
-            label = AdaptiveStageRailSide::label,
-            testTag = { side -> "adaptive-stage-rail-side-${side.name}" },
-            onSelected = { side ->
-                onAction(LauncherShellAction.SelectAdaptiveStageRailSide(side))
+            title = "Dock position",
+            values = DockPosition.entries,
+            selected = state.settings.cards.dockPositionFor(layoutKey) ?: DockPosition.LEADING,
+            label = DockPosition::label,
+            testTag = { position -> "dock-position-${position.name}" },
+            onSelected = { position ->
+                onAction(LauncherShellAction.SelectDockPosition(layoutKey, position))
             },
+        )
+        SettingsListRow(
+            title = "About Dock position",
+            subtitle = "Applies to the layout selected above; other device classes keep their own edge",
         )
         AdaptiveStageEnumChoices(
             title = "Pane arrangement",
@@ -987,12 +998,12 @@ private fun AdaptiveStagePaneArrangement.label(): String =
         AdaptiveStagePaneArrangement.SPLIT -> "Split"
     }
 
-private fun AdaptiveStageRailSide.label(): String =
+private fun DockPosition.label(): String =
     when (this) {
-        AdaptiveStageRailSide.LEADING -> "Leading edge"
-        AdaptiveStageRailSide.TRAILING -> "Trailing edge"
-        AdaptiveStageRailSide.TOP -> "Top edge"
-        AdaptiveStageRailSide.BOTTOM -> "Bottom edge"
+        DockPosition.LEADING -> "Leading edge"
+        DockPosition.TRAILING -> "Trailing edge"
+        DockPosition.TOP -> "Top edge"
+        DockPosition.BOTTOM -> "Bottom edge"
     }
 
 private fun ThreadCardGrouping.label(): String =

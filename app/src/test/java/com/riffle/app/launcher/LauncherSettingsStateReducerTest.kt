@@ -7,10 +7,13 @@ import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppVisibilityRepository
 import com.riffle.core.domain.launcher.cards.AdaptiveStagePaneArrangement
-import com.riffle.core.domain.launcher.cards.AdaptiveStageRailSide
 import com.riffle.core.domain.launcher.contextual.ContextualSettings
+import com.riffle.core.domain.launcher.home.DockPosition
 import com.riffle.core.domain.launcher.home.HomeLayout
+import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
+import com.riffle.core.domain.launcher.home.HomeLayoutKey
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
+import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.rss.FeedConfiguration
 import com.riffle.core.domain.launcher.rss.FeedId
 import com.riffle.core.domain.launcher.rss.FeedUrl
@@ -26,6 +29,7 @@ import com.riffle.core.domain.launcher.settings.RssSettings
 import com.riffle.core.domain.launcher.settings.SearchResultPresentation
 import com.riffle.core.domain.launcher.settings.ThreadCardGrouping
 import com.riffle.core.domain.launcher.settings.ThreadMessageOrder
+import com.riffle.core.domain.launcher.settings.dockPositionFor
 import com.riffle.core.domain.launcher.settings.homeSystemBars
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertSame
@@ -150,17 +154,42 @@ class LauncherSettingsStateReducerTest {
     }
 
     @Test
-    fun persistsAdaptiveStageRailSideSelection() {
+    fun persistsDockPositionSelectionForTheLayoutItNames() {
         val repository = FakeLauncherSettingsRepository()
+        val tablet = HomeLayoutKey(LauncherViewMode.CARD_INTERFACE, HomeLayoutDeviceClass.TABLET)
 
         val updatedState =
             reducer(launcherSettingsRepository = repository).reduce(
                 state = LauncherShellState(),
-                action = LauncherShellAction.SelectAdaptiveStageRailSide(AdaptiveStageRailSide.TOP),
+                action = LauncherShellAction.SelectDockPosition(tablet, DockPosition.TOP),
             )
 
-        assertEquals(AdaptiveStageRailSide.TOP, updatedState.launcherSettings.cards.adaptiveStageRailSide)
+        assertEquals(DockPosition.TOP, updatedState.launcherSettings.cards.dockPositionFor(tablet))
         assertEquals(updatedState.launcherSettings, repository.savedSettings)
+    }
+
+    @Test
+    fun choosingADockPositionLeavesOtherLayoutsAlone() {
+        // The point of making this per layout: an edge that suits a tablet must not follow the
+        // user back to their phone.
+        val repository = FakeLauncherSettingsRepository()
+        val phone = HomeLayoutKey(LauncherViewMode.STANDARD_APP_DRAWER, HomeLayoutDeviceClass.PHONE)
+        val tablet = HomeLayoutKey(LauncherViewMode.CARD_INTERFACE, HomeLayoutDeviceClass.TABLET)
+        val shellReducer = reducer(launcherSettingsRepository = repository)
+
+        val afterPhone =
+            shellReducer.reduce(
+                state = LauncherShellState(),
+                action = LauncherShellAction.SelectDockPosition(phone, DockPosition.BOTTOM),
+            )
+        val afterTablet =
+            shellReducer.reduce(
+                state = afterPhone,
+                action = LauncherShellAction.SelectDockPosition(tablet, DockPosition.LEADING),
+            )
+
+        assertEquals(DockPosition.BOTTOM, afterTablet.launcherSettings.cards.dockPositionFor(phone))
+        assertEquals(DockPosition.LEADING, afterTablet.launcherSettings.cards.dockPositionFor(tablet))
     }
 
     @Test

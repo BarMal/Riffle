@@ -1,5 +1,6 @@
 package com.riffle.core.domain.launcher.cards
 
+import com.riffle.core.domain.launcher.home.DockPosition
 import kotlin.math.roundToInt
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -137,7 +138,7 @@ class AdaptiveStagePaneLayoutPolicyTest {
                         separatingHinges = listOf(AdaptiveStageHingeBounds(368, 0, 400, 800)),
                         posture = AdaptiveStagePosture.UNFOLDED,
                     ),
-                railSide = AdaptiveStageRailSide.TRAILING,
+                dockPosition = DockPosition.TRAILING,
             )
 
         assertEquals(AdaptiveStagePaneMode.THREE_PANE, layout.mode)
@@ -167,7 +168,7 @@ class AdaptiveStagePaneLayoutPolicyTest {
                         separatingHinges = listOf(AdaptiveStageHingeBounds(472, 0, 504, 800)),
                         posture = AdaptiveStagePosture.UNFOLDED,
                     ),
-                railSide = AdaptiveStageRailSide.LEADING,
+                dockPosition = DockPosition.LEADING,
             )
 
         assertEquals(AdaptiveStagePaneMode.THREE_PANE, layout.mode)
@@ -189,7 +190,7 @@ class AdaptiveStagePaneLayoutPolicyTest {
         val layout =
             policy.layoutFor(
                 AdaptiveStageWindowLayout(800, 900, posture = AdaptiveStagePosture.UNFOLDED),
-                railSide = AdaptiveStageRailSide.TOP,
+                dockPosition = DockPosition.TOP,
             )
 
         assertEquals(AdaptiveStagePaneMode.TWO_PANE, layout.mode)
@@ -208,7 +209,7 @@ class AdaptiveStagePaneLayoutPolicyTest {
         val layout =
             policy.layoutFor(
                 AdaptiveStageWindowLayout(1_300, 900, posture = AdaptiveStagePosture.UNFOLDED),
-                railSide = AdaptiveStageRailSide.BOTTOM,
+                dockPosition = DockPosition.BOTTOM,
             )
 
         assertEquals(AdaptiveStagePaneMode.THREE_PANE, layout.mode)

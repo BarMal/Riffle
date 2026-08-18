@@ -19,7 +19,8 @@ import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.cards.AdaptiveStagePaneArrangement
-import com.riffle.core.domain.launcher.cards.AdaptiveStageRailSide
+import com.riffle.core.domain.launcher.home.DockPosition
+import com.riffle.core.domain.launcher.home.HomeLayoutKey
 import com.riffle.core.domain.launcher.settings.AdaptiveStageAppearanceSettings
 import com.riffle.core.domain.launcher.settings.AdaptiveStageEasing
 import com.riffle.core.domain.launcher.settings.AdaptiveStageHapticStrength
@@ -125,7 +126,7 @@ class AdaptiveStageAppearanceEditorTest {
     }
 
     @Test
-    fun selectingTopDispatchesTheAdaptiveStageRailSideAction() {
+    fun selectingTopDispatchesTheDockPositionAction() {
         val actions = mutableListOf<LauncherShellAction>()
         composeRule.setContent {
             MaterialTheme {
@@ -138,13 +139,20 @@ class AdaptiveStageAppearanceEditorTest {
         }
 
         selectTab(AdaptiveStageAppearanceTab.LAYOUT)
-        composeRule.onNodeWithTag("adaptive-stage-rail-side-${AdaptiveStageRailSide.TOP.name}")
+        composeRule.onNodeWithTag("dock-position-${DockPosition.TOP.name}")
             .performScrollTo()
             .performClick()
 
         composeRule.runOnIdle {
-            val action = actions.last() as LauncherShellAction.SelectAdaptiveStageRailSide
-            assertEquals(AdaptiveStageRailSide.TOP, action.side)
+            val action = actions.last() as LauncherShellAction.SelectDockPosition
+            assertEquals(DockPosition.TOP, action.position)
+            // The editor names the layout it is showing, so the choice lands on that one rather
+            // than on whichever layout this device happens to be presenting.
+            val state = LauncherShellState().settingsSurfaceState()
+            assertEquals(
+                HomeLayoutKey(state.homeLayout.viewMode, state.selectedLayoutDeviceClass),
+                action.layoutKey,
+            )
         }
     }
 

@@ -7,6 +7,7 @@ import com.riffle.core.domain.launcher.apps.AppVisibilityRepository
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
 import com.riffle.core.domain.launcher.settings.LauncherSettingsRepository
 import com.riffle.core.domain.launcher.settings.coerced
+import com.riffle.core.domain.launcher.settings.withDockPosition
 
 internal class LauncherSettingsStateReducer(
     private val homeLayoutRepository: HomeLayoutRepository,
@@ -140,13 +141,14 @@ internal class LauncherSettingsStateReducer(
                         launcherSettingsRepository = launcherSettingsRepository,
                     )
 
-                is LauncherShellAction.SelectAdaptiveStageRailSide ->
+                is LauncherShellAction.SelectDockPosition ->
                     state.withLauncherSettings(
                         settings =
                             state.launcherSettings.copy(
                                 cards =
-                                    state.launcherSettings.cards.copy(
-                                        adaptiveStageRailSide = action.side,
+                                    state.launcherSettings.cards.withDockPosition(
+                                        layoutKey = action.layoutKey,
+                                        position = action.position,
                                     ),
                             ),
                         launcherSettingsRepository = launcherSettingsRepository,
