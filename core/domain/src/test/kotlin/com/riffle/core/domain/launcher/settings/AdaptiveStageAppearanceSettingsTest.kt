@@ -290,7 +290,8 @@ class AdaptiveStageAppearanceSettingsTest {
     @Test
     fun theDefaultCardEffectDropsTheInsetContentFace() {
         // FROSTED is the default because GLASS's inset face is what draws the translucent double
-        // border around every card. Its background treatment still applies -- only the frame goes.
+        // border around every card. FROSTED presents the same composited colour that face had, so
+        // the border goes without the card's contrast changing.
         assertEquals(AdaptiveStageCardEffect.FROSTED, AdaptiveStageSurface().cardEffect)
     }
 

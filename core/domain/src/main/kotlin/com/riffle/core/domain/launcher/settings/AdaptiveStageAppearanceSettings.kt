@@ -737,12 +737,19 @@ data class AdaptiveStageSurface(
  * gradient would be completely hidden. The cost is that every card carries a translucent double
  * border, and the background treatment is reduced to a thin decorative rim.
  *
- * [FROSTED] keeps the same tinted treatment but drops the inset face, so the background reaches
- * every edge and the content sits directly on it. Same colours, no border, and the gradient or
- * artwork actually fills the card instead of framing it.
+ * [FROSTED] presents that same composited colour -- the base tinted by the glass tint -- as one
+ * flat field edge to edge, with no inset face and so no border. Contrast is unchanged, because the
+ * card is now uniformly the exact surface the content face used to be.
  *
- * [SOLID] is Calm's `NONE`: one opaque colour, edge to edge, with no gradient, artwork, tint or
- * outline. The plainest, highest-contrast option, and the cheapest to draw.
+ * [SOLID] is Calm's `NONE`: the base colour alone, edge to edge, with no tint or outline. The
+ * plainest, highest-contrast option, and the cheapest to draw.
+ *
+ * The gradient, artwork and texture layers render under [GLASS] only. They are inseparable from its
+ * frame: the gradient darkens toward one corner and artwork is arbitrary, so text drawn straight
+ * onto either has no contrast guarantee, which is precisely why the opaque content face exists in
+ * the first place. Letting them fill a border-less card would trade the border for unreadable text
+ * over a bright photo. Scrimming just the text block, rather than the whole card, is what would let
+ * artwork fill a card safely, and that is a larger change than removing a border.
  */
 enum class AdaptiveStageCardEffect {
     SOLID,

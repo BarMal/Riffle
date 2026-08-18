@@ -382,32 +382,38 @@ internal fun AdaptiveStageCardSurface(
                 .shadow(effective.surface.shadowElevationDp.dp, shape, clip = false)
                 .semantics { this[AdaptiveStageCardBlurStrengthKey] = effective.surface.blurStrengthPercent },
     ) {
-        // SOLID is Calm's `NONE`: one opaque colour edge to edge, so the gradient, artwork, tint
-        // and texture layers below are all skipped rather than drawn and then covered. The outline
-        // is likewise a GLASS-only flourish -- it reads as a second border stacked on the bezel,
-        // which is exactly what this whole treatment exists to stop drawing.
+        // Only GLASS reveals the layered treatment, and only because its bezel leaves a rim of it
+        // showing around an opaque content face. The layers are inseparable from that frame: the
+        // gradient darkens toward one corner and artwork is arbitrary, so text drawn straight onto
+        // either has no contrast guarantee at all. SOLID and FROSTED therefore present one flat,
+        // deterministic field edge to edge -- the base colour, or that colour tinted -- which is
+        // exactly the surface GLASS's own content face already composites to. The layers below are
+        // skipped rather than drawn and then covered. The outline is likewise GLASS-only; it reads
+        // as a second border stacked on the bezel, which is what this treatment exists to remove.
         val effect = effective.surface.cardEffect
-        val drawsBackgroundTreatment = effect != AdaptiveStageCardEffect.SOLID
+        val drawsLayeredTreatment = effect == AdaptiveStageCardEffect.GLASS
         Box(
             modifier =
                 Modifier
                     .fillMaxSize()
                     .clip(shape)
                     .background(
-                        if (drawsBackgroundTreatment) {
-                            adaptiveStageBackgroundBrush(effective, colors.background)
-                        } else {
-                            SolidColor(colors.background)
+                        when (effect) {
+                            AdaptiveStageCardEffect.GLASS ->
+                                adaptiveStageBackgroundBrush(effective, colors.background)
+
+                            AdaptiveStageCardEffect.FROSTED -> SolidColor(colors.glass)
+                            AdaptiveStageCardEffect.SOLID -> SolidColor(colors.background)
                         },
                     ).then(
-                        if (effect == AdaptiveStageCardEffect.GLASS) {
+                        if (drawsLayeredTreatment) {
                             Modifier.border(effective.surface.outlineWidthDp.dp, colors.outline, shape)
                         } else {
                             Modifier
                         },
                     ),
         ) {
-            if (artworkEnabled && drawsBackgroundTreatment) {
+            if (artworkEnabled && drawsLayeredTreatment) {
                 Image(
                     bitmap = requireNotNull(background.artwork),
                     contentDescription = null,
@@ -416,7 +422,7 @@ internal fun AdaptiveStageCardSurface(
                     colorFilter = artworkColorFilter,
                 )
             }
-            if (drawsBackgroundTreatment) {
+            if (drawsLayeredTreatment) {
                 Box(modifier = Modifier.fillMaxSize().background(colors.glassTint))
                 AdaptiveStageTexture(
                     color = colors.accent,
@@ -426,15 +432,14 @@ internal fun AdaptiveStageCardSurface(
         }
         // GLASS alone gives the content its own opaque face, inset wider than adjustedPadding so
         // the background layer's blur/texture/tinted-artwork reads as a visible frame around it
-        // rather than an imperceptible sliver. That frame is the translucent border, and it is the
-        // *only* reason any background shows through under this effect -- an opaque face covering
-        // the whole card would hide the treatment entirely.
+        // rather than an imperceptible sliver. That frame *is* the translucent border, and it is
+        // the only reason any of the treatment shows under this effect.
         //
-        // SOLID and FROSTED invert that bargain: no inset face at all, so the background reaches
-        // every edge and the content sits straight on it. The card loses its border and the
-        // gradient or artwork fills it instead of merely rimming it. contentPaddingDp is untouched
-        // either way -- it remains the real content inset other call sites reason about; only the
-        // extra bezel is conditional.
+        // SOLID and FROSTED need no such face: the card is already one flat field of exactly the
+        // colour that face would have composited to, so the content can sit straight on it with no
+        // inset and no frame, and with the same contrast it had before. contentPaddingDp is
+        // untouched either way -- it remains the real content inset other call sites reason about;
+        // only the extra bezel is conditional.
         val contentModifier =
             when (effect) {
                 AdaptiveStageCardEffect.GLASS ->
