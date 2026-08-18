@@ -6,6 +6,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -27,8 +28,12 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerDefaults
 import androidx.compose.foundation.rememberScrollState
@@ -118,7 +123,6 @@ import com.riffle.core.domain.launcher.settings.AdaptiveStageAppearanceSettings
 import com.riffle.core.domain.launcher.settings.AdaptiveStageCardStackResolution
 import com.riffle.core.domain.launcher.settings.AdaptiveStageViewportDp
 import com.riffle.core.domain.launcher.settings.ThreadMessageOrder
-import com.riffle.core.domain.launcher.settings.resolveAdaptiveStageRailCardStack
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlin.math.abs
@@ -1213,10 +1217,9 @@ private fun AdaptiveStageStageRail(
     horizontal: Boolean = false,
 ) {
     // Deliberately does not early-return on an empty stages list: the container (testTag,
-    // background) still composes with an empty CardStack -- CardStackLayoutPolicy.entries()
-    // already returns an empty list for cardCount = 0 -- so the rail's presence stays a stable
-    // signal of "this pane mode shows a rail" independent of whether any stage exists yet. The
-    // trailing "All notifications" page (see #1057) keeps at least one tile even then.
+    // background) still composes with an empty list, so the rail's presence stays a stable signal
+    // of "this pane mode shows a rail" independent of whether any stage exists yet. The trailing
+    // "All notifications" page (see #1057) keeps at least one tile even then.
     val haptics = rememberLauncherHaptics(state.launcherSettings.haptics.feedbackStrength)
     val pages = remember(stages) { stages.withAllNotificationsPage() }
     // #1059's rail audit calls for "live mini-previews (icon + latest snippet), not just an
@@ -1230,284 +1233,279 @@ private fun AdaptiveStageStageRail(
         }
     val activeIndex =
         adaptiveStageSelectedPageIndex(pages, selectedStageId, allNotificationsSelected).coerceAtLeast(0)
-    var settleTransitionId by rememberSaveable { mutableIntStateOf(0) }
+    val listState = rememberLazyListState()
 
-    fun navigateToIndex(targetIndex: Int): Boolean {
-        if (pages.getOrNull(targetIndex) == null) return false
-        settleTransitionId++
-        adaptiveStageOnPageSettled(pages, targetIndex, onAction, onAllNotificationsSelectedChanged)
-        return true
+    // Selection moves from outside this rail too -- the stack's own pager, a restored preference,
+    // a stage arriving or leaving -- so follow it rather than only scrolling when a tap here is
+    // what changed it. Reduced motion still needs the tile brought into view; it just arrives
+    // there without the travel.
+    val reducedMotion = state.launcherSettings.motion.reducedMotion
+    LaunchedEffect(activeIndex, pages.size, reducedMotion) {
+        if (activeIndex !in pages.indices) return@LaunchedEffect
+        if (reducedMotion) listState.scrollToItem(activeIndex) else listState.animateScrollToItem(activeIndex)
     }
 
-    fun navigate(direction: CardStackNavigationDirection): Boolean {
-        val delta = if (direction == CardStackNavigationDirection.NEXT) 1 else -1
-        return navigateToIndex(activeIndex + delta)
+    fun select(index: Int) {
+        if (index == activeIndex || pages.getOrNull(index) == null) return
+        haptics.adaptiveStageSettle(state.launcherSettings.cards.unfoldedAppearance.motion.hapticStrength)
+        adaptiveStageOnPageSettled(pages, index, onAction, onAllNotificationsSelectedChanged)
     }
 
-    val railBackground = Modifier.background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.32f))
-    BoxWithConstraints(
-        // Explicit clip: the fan/stack visual is allowed to layer within this container, but must
-        // never bleed into neighboring UI the way earlier AdaptiveStage overflow bugs did.
-        // fillMaxHeight() matters for LEADING/TRAILING: the caller only pins width there (unlike
-        // TOP/BOTTOM, which pins height explicitly), so without it this Box would wrap-size to its
-        // content -- collapsing to zero height whenever there are no stages yet, since nothing
-        // here is unconditionally present the way the old Row/Column's "Stages"/Previous/Next
-        // chrome always was.
-        modifier =
-            modifier.testTag(ADAPTIVE_STAGE_STAGE_RAIL_TEST_TAG)
-                .then(railBackground)
-                .fillMaxHeight()
-                .clipToBounds(),
-        contentAlignment = Alignment.Center,
-    ) {
-        // This Box's own real bounds -- not the whole window -- are what
-        // AdaptiveStageCardStackRole.RAIL's resolution sizes tiles and travel against; see
-        // resolveAdaptiveStageRailCardStack's doc for why that's the right viewport to pass here.
-        val viewport = AdaptiveStageViewportDp(maxWidth.value.toInt(), maxHeight.value.toInt())
-        val resolution =
-            remember(state.launcherSettings, viewport) {
-                state.launcherSettings.resolveAdaptiveStageRailCardStack(
-                    viewport = viewport,
-                    capabilities = adaptiveStageRendererCapabilities(),
-                )
-            }
-        CardStack(
-            // CardStack's own root has no size of its own -- give it the same bounded size as
-            // this Box (rather than leaving it to size from its graphicsLayer-positioned,
-            // layout-wise-tiny children), so BoxWithConstraints inside each entry measures
-            // against real, finite constraints instead of whatever this Box's ambient
-            // constraints happen to resolve to.
-            modifier = Modifier.matchParentSize(),
-            entries =
-                resolution.layoutPolicy.entries(
-                    cardCount = pages.size,
-                    activeIndex = activeIndex,
-                    reducedMotion = resolution.reducedMotion,
-                ),
-            animationSpec = resolution.animation,
-            reducedMotion = resolution.reducedMotion,
-            orientation = if (horizontal) CardStackOrientation.HORIZONTAL else CardStackOrientation.VERTICAL,
-            itemKey = { entry -> adaptiveStagePageKey(pages[entry.cardIndex]) },
-            interaction =
-                CardStackInteraction(
-                    focusedItemKey = pages.getOrNull(activeIndex)?.let(::adaptiveStagePageKey),
-                    settleTransitionId = settleTransitionId,
-                    onFocusRequest = { entry ->
-                        if (entry.cardIndex != activeIndex) navigateToIndex(entry.cardIndex)
-                    },
-                    onSettle = { dragPx, velocityPxPerSecond ->
-                        val motion =
-                            if (abs(velocityPxPerSecond) >= ADAPTIVE_STAGE_STAGE_RAIL_FLING_VELOCITY_THRESHOLD_PX) {
-                                velocityPxPerSecond
-                            } else {
-                                dragPx
-                            }
-                        if (abs(motion) >= ADAPTIVE_STAGE_STAGE_RAIL_SETTLE_DISTANCE_THRESHOLD_PX) {
-                            val direction =
-                                if (motion < 0f) {
-                                    CardStackNavigationDirection.NEXT
-                                } else {
-                                    CardStackNavigationDirection.PREVIOUS
-                                }
-                            navigate(direction)
-                        }
-                    },
-                    onSettleHaptic = {
-                        haptics.adaptiveStageSettle(
-                            state.launcherSettings.cards.unfoldedAppearance.motion.hapticStrength,
-                        )
-                    },
-                    onNavigate = ::navigate,
-                ),
-        ) { entry, cardModifier ->
-            when (val page = pages[entry.cardIndex]) {
-                is AdaptiveStagePage.Stage ->
-                    AdaptiveStageStageRailTile(
-                        stageId = page.stage.id,
-                        isSelected = !allNotificationsSelected && page.stage.id == selectedStageId,
-                        label = stageLabel(page.stage.id, state),
-                        snippet = latestCardByStage[page.stage.id]?.railSnippet(),
-                        identity = stageAppIdentity(page.stage.id, state),
-                        appearance = state.launcherSettings.cards.unfoldedAppearance,
-                        appIconLoader = appIconLoader,
-                        modifier = cardModifier,
-                    )
+    val tiles: LazyListScope.() -> Unit = {
+        itemsIndexed(
+            items = pages,
+            key = { _, page -> adaptiveStagePageKey(page) },
+        ) { index, page ->
+            AdaptiveStageStageRailTile(
+                page = page,
+                isSelected =
+                    when (page) {
+                        is AdaptiveStagePage.Stage ->
+                            !allNotificationsSelected && page.stage.id == selectedStageId
 
-                AdaptiveStagePage.AllNotifications ->
-                    AdaptiveStageAllNotificationsRailTile(
-                        isSelected = allNotificationsSelected,
-                        appearance = state.launcherSettings.cards.unfoldedAppearance,
-                        modifier = cardModifier,
-                    )
-            }
+                        AdaptiveStagePage.AllNotifications -> allNotificationsSelected
+                    },
+                state = state,
+                latestCardByStage = latestCardByStage,
+                appIconLoader = appIconLoader,
+                horizontal = horizontal,
+                onClick = { select(index) },
+            )
         }
+    }
+    val railBackground = Modifier.background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.32f))
+    // Explicit clip: tiles are allowed to layer within this container, but must never bleed into
+    // neighboring UI the way earlier AdaptiveStage overflow bugs did. fillMaxHeight() matters for
+    // LEADING/TRAILING: the caller only pins width there (unlike TOP/BOTTOM, which pins height
+    // explicitly), so without it this Box would wrap-size to its content.
+    val railModifier =
+        modifier.testTag(ADAPTIVE_STAGE_STAGE_RAIL_TEST_TAG)
+            .then(railBackground)
+            .fillMaxHeight()
+            .clipToBounds()
+    val tilePadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp)
+    if (horizontal) {
+        LazyRow(
+            modifier = railModifier,
+            state = listState,
+            contentPadding = tilePadding,
+            horizontalArrangement = Arrangement.spacedBy(ADAPTIVE_STAGE_STAGE_RAIL_TILE_GAP_DP.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            content = tiles,
+        )
+    } else {
+        LazyColumn(
+            modifier = railModifier,
+            state = listState,
+            contentPadding = tilePadding,
+            verticalArrangement = Arrangement.spacedBy(ADAPTIVE_STAGE_STAGE_RAIL_TILE_GAP_DP.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            content = tiles,
+        )
     }
 }
 
 /** Only one [AdaptiveStageStageRail] is ever composed at a time, so a single fixed tag is unambiguous. */
 internal const val ADAPTIVE_STAGE_STAGE_RAIL_TEST_TAG = "adaptive-stage-stage-rail"
 
-/** Same settle thresholds as [AdaptiveStageNotificationStack]'s card-to-card settle, for a consistent feel. */
-private const val ADAPTIVE_STAGE_STAGE_RAIL_SETTLE_DISTANCE_THRESHOLD_PX = 64f
-private const val ADAPTIVE_STAGE_STAGE_RAIL_FLING_VELOCITY_THRESHOLD_PX = 500f
+private const val ADAPTIVE_STAGE_STAGE_RAIL_TILE_GAP_DP = 8
 
 /**
- * A single stage tile in the rail: a small deterministically-tinted icon slot (reusing the same
- * per-app seed color mechanism as populated [AdaptiveStageCardSurface] cards, via
- * [resolveAdaptiveStageCardColors]) with a short caption and, when the stage has live content, a
- * one-line snippet of its most recent card below -- a live mini-preview rather than a bare
- * icon+label identity chip (#1059). A clear ring/elevation treatment marks the currently selected
- * stage. Non-interactive on its own -- [modifier] (supplied by the enclosing [CardStack]) already
- * carries tap-to-select/settle-drag handling, mirroring how [AdaptiveStageCardSurface] relies on
- * its own given modifier rather than an internal onClick.
+ * A horizontal rail is a strip about as tall as one tile, so its tiles read left-to-right like the
+ * dock's own notification shelf -- icon beside the text rather than above it, which is what lets an
+ * app's name and its latest snippet both fit in that height.
+ */
+private const val ADAPTIVE_STAGE_STAGE_RAIL_HORIZONTAL_TILE_WIDTH_DP = 168
+
+/**
+ * One page of the rail, resolved from [page] to the pieces [AdaptiveStageStageRailSurface] renders.
+ *
+ * A stage tile is keyed on its own app (icon, deterministic seed color) and carries a one-line
+ * snippet of that stage's most recent card -- a live mini-preview rather than a bare icon+label
+ * identity chip (#1059). The virtual "All notifications" page (#1057) has no single app identity to
+ * key off, so it uses a fixed seed and a generic "All" glyph instead.
  */
 @Composable
 private fun AdaptiveStageStageRailTile(
-    stageId: AppStageId,
+    page: AdaptiveStagePage,
     isSelected: Boolean,
+    state: LauncherShellState,
+    latestCardByStage: Map<AppStageId, AppStageNotificationCard>,
+    appIconLoader: AppIconLoader,
+    horizontal: Boolean,
+    onClick: () -> Unit,
+) {
+    val appearance = state.launcherSettings.cards.unfoldedAppearance
+    when (page) {
+        is AdaptiveStagePage.Stage -> {
+            val stageId = page.stage.id
+            val label = stageLabel(stageId, state)
+            val identity = stageAppIdentity(stageId, state)
+            var appColor by remember(identity, appIconLoader) {
+                mutableStateOf(identity?.let(appIconLoader::cachedColorFor))
+            }
+            LaunchedEffect(identity, appIconLoader) {
+                appColor =
+                    identity?.let { appIdentity ->
+                        appIconLoader.cachedColorFor(appIdentity)
+                            ?: withContext(Dispatchers.Default) { appIconLoader.colorFor(appIdentity) }
+                    }
+            }
+            AdaptiveStageStageRailSurface(
+                label = label,
+                snippet = latestCardByStage[stageId]?.railSnippet(),
+                isSelected = isSelected,
+                appearance = appearance,
+                background =
+                    AdaptiveStageCardBackground(appSeed = stageId.packageName.value, appColor = appColor),
+                horizontal = horizontal,
+                onClick = onClick,
+            ) { colors ->
+                if (identity != null) {
+                    LauncherAppIcon(
+                        identity = identity,
+                        label = label,
+                        iconLoader = appIconLoader,
+                        modifier = Modifier.launcherIconSize(),
+                    )
+                } else {
+                    AdaptiveStageStageRailGlyph(
+                        text = label.firstOrNull()?.uppercase().orEmpty(),
+                        colors = colors,
+                    )
+                }
+            }
+        }
+
+        AdaptiveStagePage.AllNotifications ->
+            AdaptiveStageStageRailSurface(
+                label = "All notifications",
+                snippet = null,
+                isSelected = isSelected,
+                appearance = appearance,
+                background = AdaptiveStageCardBackground(appSeed = "all-notifications", appColor = null),
+                horizontal = horizontal,
+                onClick = onClick,
+            ) { colors ->
+                AdaptiveStageStageRailGlyph(text = "All", colors = colors)
+            }
+    }
+}
+
+/**
+ * The shared tile chrome: a deterministically-tinted surface (reusing the same per-app seed color
+ * mechanism as populated [AdaptiveStageCardSurface] cards, via [resolveAdaptiveStageCardColors])
+ * with a ring/elevation treatment marking the selected page.
+ *
+ * Unlike the rail's previous fan-of-cards presentation, every tile is laid out at full size and is
+ * directly tappable; reaching one past the strip's end is ordinary scrolling rather than a
+ * settle-drag per step.
+ */
+@Composable
+private fun AdaptiveStageStageRailSurface(
     label: String,
     snippet: String?,
-    identity: AppIdentity?,
+    isSelected: Boolean,
     appearance: AdaptiveStageAppearanceSettings,
-    appIconLoader: AppIconLoader,
-    modifier: Modifier = Modifier,
+    background: AdaptiveStageCardBackground,
+    horizontal: Boolean,
+    onClick: () -> Unit,
+    icon: @Composable (AdaptiveStageCardColors) -> Unit,
 ) {
     val materialBackground = MaterialTheme.colorScheme.onSurface
     val materialAccent = MaterialTheme.colorScheme.primary
-    var appColor by remember(identity, appIconLoader) {
-        mutableStateOf(identity?.let(appIconLoader::cachedColorFor))
-    }
-    LaunchedEffect(identity, appIconLoader) {
-        appColor =
-            identity?.let { appIdentity ->
-                appIconLoader.cachedColorFor(appIdentity)
-                    ?: withContext(Dispatchers.Default) { appIconLoader.colorFor(appIdentity) }
-            }
-    }
     val colors =
-        remember(appearance, stageId, materialBackground, materialAccent, appColor) {
+        remember(appearance, background, materialBackground, materialAccent) {
             resolveAdaptiveStageCardColors(
                 appearance = appearance,
-                background = AdaptiveStageCardBackground(appSeed = stageId.packageName.value, appColor = appColor),
+                background = background,
                 materialBackground = materialBackground,
                 materialAccent = materialAccent,
             )
         }
-    val shape = RoundedCornerShape(14.dp)
     Surface(
-        shape = shape,
+        shape = RoundedCornerShape(14.dp),
         color = colors.background,
         contentColor = colors.foreground,
         tonalElevation = if (isSelected) 6.dp else 0.dp,
         shadowElevation = if (isSelected) 4.dp else 0.dp,
         border = if (isSelected) BorderStroke(2.dp, colors.accent) else null,
         modifier =
-            modifier.width(64.dp).semantics {
-                contentDescription =
-                    if (isSelected) "$label, selected. Open stage" else "$label. Open stage"
-            },
-    ) {
-        Column(
-            modifier = Modifier.padding(vertical = 8.dp, horizontal = 4.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            if (identity != null) {
-                LauncherAppIcon(
-                    identity = identity,
-                    label = label,
-                    iconLoader = appIconLoader,
-                    modifier = Modifier.launcherIconSize(),
+            Modifier
+                .then(
+                    if (horizontal) {
+                        Modifier.width(ADAPTIVE_STAGE_STAGE_RAIL_HORIZONTAL_TILE_WIDTH_DP.dp)
+                    } else {
+                        Modifier.fillMaxWidth()
+                    },
                 )
-            } else {
-                Box(
-                    modifier =
-                        Modifier
-                            .launcherIconSize()
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(colors.accent),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(text = label.firstOrNull()?.uppercase().orEmpty(), color = colors.foreground)
+                .semantics {
+                    contentDescription = if (isSelected) "$label, selected. Open stage" else "$label. Open stage"
+                }
+                .clickable(onClick = onClick),
+    ) {
+        if (horizontal) {
+            Row(
+                modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                icon(colors)
+                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    AdaptiveStageStageRailLabel(label)
+                    AdaptiveStageStageRailSnippet(snippet)
                 }
             }
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelSmall,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            if (snippet != null) {
-                Text(
-                    text = snippet,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = LocalContentColor.current.copy(alpha = 0.7f),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+        } else {
+            Column(
+                modifier = Modifier.padding(vertical = 8.dp, horizontal = 6.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                icon(colors)
+                AdaptiveStageStageRailLabel(label)
+                AdaptiveStageStageRailSnippet(snippet)
             }
         }
     }
 }
 
-/**
- * The rail's tile for the virtual "All notifications" page (#1057) -- same shape as
- * [AdaptiveStageStageRailTile], but with no single app identity to key its color/icon off, so it
- * uses a fixed seed and a generic "All" glyph instead of a per-app [LauncherAppIcon].
- */
 @Composable
-private fun AdaptiveStageAllNotificationsRailTile(
-    isSelected: Boolean,
-    appearance: AdaptiveStageAppearanceSettings,
-    modifier: Modifier = Modifier,
+private fun AdaptiveStageStageRailLabel(label: String) {
+    Text(
+        text = label,
+        style = MaterialTheme.typography.labelSmall,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+    )
+}
+
+@Composable
+private fun AdaptiveStageStageRailSnippet(snippet: String?) {
+    if (snippet == null) return
+    Text(
+        text = snippet,
+        style = MaterialTheme.typography.labelSmall,
+        color = LocalContentColor.current.copy(alpha = 0.7f),
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+    )
+}
+
+@Composable
+private fun AdaptiveStageStageRailGlyph(
+    text: String,
+    colors: AdaptiveStageCardColors,
 ) {
-    val materialBackground = MaterialTheme.colorScheme.onSurface
-    val materialAccent = MaterialTheme.colorScheme.primary
-    val colors =
-        remember(appearance, materialBackground, materialAccent) {
-            resolveAdaptiveStageCardColors(
-                appearance = appearance,
-                background = AdaptiveStageCardBackground(appSeed = "all-notifications", appColor = null),
-                materialBackground = materialBackground,
-                materialAccent = materialAccent,
-            )
-        }
-    val shape = RoundedCornerShape(14.dp)
-    Surface(
-        shape = shape,
-        color = colors.background,
-        contentColor = colors.foreground,
-        tonalElevation = if (isSelected) 6.dp else 0.dp,
-        shadowElevation = if (isSelected) 4.dp else 0.dp,
-        border = if (isSelected) BorderStroke(2.dp, colors.accent) else null,
+    Box(
         modifier =
-            modifier.width(64.dp).semantics {
-                contentDescription =
-                    if (isSelected) "All notifications, selected. Open" else "All notifications. Open"
-            },
+            Modifier
+                .launcherIconSize()
+                .clip(RoundedCornerShape(12.dp))
+                .background(colors.accent),
+        contentAlignment = Alignment.Center,
     ) {
-        Column(
-            modifier = Modifier.padding(vertical = 8.dp, horizontal = 4.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            Box(
-                modifier =
-                    Modifier
-                        .launcherIconSize()
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(colors.accent),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(text = "All", color = colors.foreground, style = MaterialTheme.typography.labelSmall)
-            }
-            Text(
-                text = "All notifications",
-                style = MaterialTheme.typography.labelSmall,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
+        Text(text = text, color = colors.foreground, style = MaterialTheme.typography.labelSmall)
     }
 }
 
