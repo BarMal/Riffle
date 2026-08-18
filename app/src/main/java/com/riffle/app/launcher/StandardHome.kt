@@ -477,7 +477,7 @@ internal fun StandardHomeDockOnlySurface(
     val openedFolderId = remember { mutableStateOf<LauncherItemId?>(null) }
     val notificationShelfState =
         dockNotificationShelfState(
-            showNotificationCards = visibleLayout.dock.showNotificationCards,
+            dock = visibleLayout.dock,
             groups = presentation.notificationGroupsByApp,
             notificationAccessStatus = presentation.notificationAccessStatus,
             apps = presentation.installedApps,
@@ -537,7 +537,7 @@ private fun StandardHomeColumn(
         )
     val notificationShelfState =
         dockNotificationShelfState(
-            showNotificationCards = state.visibleLayout.dock.showNotificationCards,
+            dock = state.visibleLayout.dock,
             groups = state.presentation.notificationGroupsByApp,
             notificationAccessStatus = state.presentation.notificationAccessStatus,
             apps = state.presentation.installedApps,

@@ -5,6 +5,9 @@ import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppProfile
 import com.riffle.core.domain.launcher.apps.InstalledApp
+import com.riffle.core.domain.launcher.home.AppShortcutItem
+import com.riffle.core.domain.launcher.home.DockModel
+import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
 import com.riffle.core.domain.launcher.notifications.LauncherNotification
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
@@ -19,7 +22,7 @@ class DockNotificationCardsTest {
     fun permissionPromptWinsWhenNotificationAccessIsUnavailable() {
         val state =
             dockNotificationShelfState(
-                showNotificationCards = true,
+                dock = dock(),
                 groups = listOf(notificationGroup(packageName = "com.example.chat", count = 2)),
                 notificationAccessStatus = NotificationAccessStatus.NOT_GRANTED,
                 apps = emptyList(),
@@ -38,7 +41,7 @@ class DockNotificationCardsTest {
     fun revokedAccessShowsRevokedPermissionPrompt() {
         val state =
             dockNotificationShelfState(
-                showNotificationCards = true,
+                dock = dock(),
                 groups = listOf(notificationGroup(packageName = "com.example.chat", count = 2)),
                 notificationAccessStatus = NotificationAccessStatus.REVOKED,
                 apps = emptyList(),
@@ -58,7 +61,7 @@ class DockNotificationCardsTest {
         assertEquals(
             DockNotificationShelfState.Hidden,
             dockNotificationShelfState(
-                showNotificationCards = true,
+                dock = dock(),
                 groups = emptyList(),
                 notificationAccessStatus = NotificationAccessStatus.GRANTED,
                 apps = emptyList(),
@@ -72,7 +75,7 @@ class DockNotificationCardsTest {
             assertEquals(
                 DockNotificationShelfState.Hidden,
                 dockNotificationShelfState(
-                    showNotificationCards = false,
+                    dock = dock(showNotificationCards = false),
                     groups = listOf(notificationGroup(packageName = "com.example.chat")),
                     notificationAccessStatus = notificationAccessStatus,
                     apps = emptyList(),
@@ -150,7 +153,7 @@ class DockNotificationCardsTest {
                     ),
             ),
             dockNotificationShelfState(
-                showNotificationCards = true,
+                dock = dock(),
                 groups = listOf(chat, mail, calendar, maps),
                 notificationAccessStatus = NotificationAccessStatus.GRANTED,
                 apps = apps,
@@ -463,6 +466,51 @@ class DockNotificationCardsTest {
                     activityName = AppActivityName(".MainActivity"),
                 ),
             label = label,
+        )
+
+    @Test
+    fun anAppPinnedToTheDockIsNotRepeatedInTheShelf() {
+        // The static side already shows and badges it, so a shelf entry would be the same app
+        // twice in one strip. DockCompositionPlanner owns the rule; this pins that the shelf is
+        // actually routed through it rather than planning its own cards.
+        val state =
+            dockNotificationShelfState(
+                dock = dock(pinned = listOf("com.example.chat")),
+                groups =
+                    listOf(
+                        notificationGroup(packageName = "com.example.chat"),
+                        notificationGroup(packageName = "com.example.mail"),
+                    ),
+                notificationAccessStatus = NotificationAccessStatus.GRANTED,
+                apps = emptyList(),
+            )
+
+        val content = state as DockNotificationShelfState.Content
+        assertEquals(
+            listOf(AppPackageName("com.example.mail")),
+            content.cards.map { card -> card.group.packageName },
+        )
+    }
+
+    private fun dock(
+        pinned: List<String> = emptyList(),
+        showNotificationCards: Boolean = true,
+    ): DockModel =
+        DockModel(
+            capacity = 5,
+            items =
+                pinned.map { packageName ->
+                    AppShortcutItem(
+                        id = LauncherItemId(packageName),
+                        appIdentity =
+                            AppIdentity(
+                                packageName = AppPackageName(packageName),
+                                activityName = AppActivityName("$packageName.Main"),
+                            ),
+                        label = packageName,
+                    )
+                },
+            showNotificationCards = showNotificationCards,
         )
 
     private fun notificationGroup(
