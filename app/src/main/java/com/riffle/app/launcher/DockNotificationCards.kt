@@ -27,8 +27,9 @@ import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.home.DEFAULT_MAX_DOCK_NOTIFICATION_CARDS
+import com.riffle.core.domain.launcher.home.DockCompositionPlanner
+import com.riffle.core.domain.launcher.home.DockModel
 import com.riffle.core.domain.launcher.home.DockNotificationCardDeckState
-import com.riffle.core.domain.launcher.home.DockNotificationCardPlanner
 import com.riffle.core.domain.launcher.home.DockNotificationPermissionFallbackReason
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroupKey
@@ -58,15 +59,21 @@ internal data class DockNotificationCardState(
                 ?.let { keys -> LauncherShellAction.DismissNotifications(keys) }
 }
 
+/**
+ * The shelf's state for one dock, with entries for apps that dock already shows excluded.
+ *
+ * Takes the whole [dock] rather than just its notification flag because the exclusion needs to know
+ * what is pinned: an app on the static side is already on screen and already badged, so repeating it
+ * here would show the same app twice in one strip. [DockCompositionPlanner] owns that rule and the
+ * cap and permission handling underneath it.
+ */
 internal fun dockNotificationShelfState(
-    showNotificationCards: Boolean,
+    dock: DockModel,
     groups: List<AppNotificationGroup>,
     notificationAccessStatus: NotificationAccessStatus,
     apps: List<InstalledApp>,
     maxCards: Int = DEFAULT_MAX_DOCK_NOTIFICATION_CARDS,
 ): DockNotificationShelfState {
-    if (!showNotificationCards) return DockNotificationShelfState.Hidden
-
     val groupsByKey =
         groups.associateBy { group ->
             AppNotificationGroupKey(
@@ -77,11 +84,12 @@ internal fun dockNotificationShelfState(
 
     return when (
         val deckState =
-            DockNotificationCardPlanner().plan(
+            DockCompositionPlanner().plan(
+                dock = dock,
                 groups = groups,
                 notificationAccessStatus = notificationAccessStatus,
-                maxCards = maxCards,
-            )
+                maxNotificationEntries = maxCards,
+            ).notifications
     ) {
         DockNotificationCardDeckState.Hidden -> DockNotificationShelfState.Hidden
         is DockNotificationCardDeckState.PermissionFallback ->
