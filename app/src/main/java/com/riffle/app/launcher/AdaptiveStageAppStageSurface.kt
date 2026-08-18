@@ -1354,6 +1354,8 @@ private fun AdaptiveStageStageRailTile(
             AdaptiveStageStageRailSurface(
                 label = label,
                 snippet = latestCardByStage[stageId]?.railSnippet(),
+                contentDescription =
+                    if (isSelected) "$label, selected. Open stage" else "$label. Open stage",
                 isSelected = isSelected,
                 appearance = appearance,
                 background =
@@ -1381,6 +1383,10 @@ private fun AdaptiveStageStageRailTile(
             AdaptiveStageStageRailSurface(
                 label = "All notifications",
                 snippet = null,
+                // Not a stage, so it is not "Open stage" -- the merged page is its own thing, and
+                // the wording has to keep saying so now both tiles share one surface.
+                contentDescription =
+                    if (isSelected) "All notifications, selected. Open" else "All notifications. Open",
                 isSelected = isSelected,
                 appearance = appearance,
                 background = AdaptiveStageCardBackground(appSeed = "all-notifications", appColor = null),
@@ -1405,6 +1411,7 @@ private fun AdaptiveStageStageRailTile(
 private fun AdaptiveStageStageRailSurface(
     label: String,
     snippet: String?,
+    contentDescription: String,
     isSelected: Boolean,
     appearance: AdaptiveStageAppearanceSettings,
     background: AdaptiveStageCardBackground,
@@ -1439,9 +1446,7 @@ private fun AdaptiveStageStageRailSurface(
                         Modifier.fillMaxWidth()
                     },
                 )
-                .semantics {
-                    contentDescription = if (isSelected) "$label, selected. Open stage" else "$label. Open stage"
-                }
+                .semantics { this.contentDescription = contentDescription }
                 .clickable(onClick = onClick),
     ) {
         if (horizontal) {
