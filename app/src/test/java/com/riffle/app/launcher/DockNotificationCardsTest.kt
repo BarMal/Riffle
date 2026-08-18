@@ -85,11 +85,10 @@ class DockNotificationCardsTest {
     }
 
     @Test
-    fun notificationCardsProvideExpandedDockContentWithoutShortcutOverflow() {
+    fun theNotificationSectionIsTheOnlyThingThatGivesTheShelfContent() {
         assertEquals(
             true,
             dockHasExpandedContent(
-                hasOverflow = false,
                 notificationShelfState =
                     DockNotificationShelfState.Content(
                         cards =
@@ -104,10 +103,7 @@ class DockNotificationCardsTest {
         )
         assertEquals(
             false,
-            dockHasExpandedContent(
-                hasOverflow = false,
-                notificationShelfState = DockNotificationShelfState.Hidden,
-            ),
+            dockHasExpandedContent(notificationShelfState = DockNotificationShelfState.Hidden),
         )
     }
 

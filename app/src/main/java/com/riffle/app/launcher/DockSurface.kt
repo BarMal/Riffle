@@ -39,6 +39,16 @@ internal fun dockSurfaceMetrics(
             itemCount = dock.items.size,
             isEditing = isEditing,
         ) + previewSlotCount.coerceAtLeast(0)
+    // Capacity is how many slots are visible at once; anything past that is reached by scrolling
+    // the strip. Sizing from the rendered count instead would shrink every icon as apps are added,
+    // which is the opposite of what a capacity setting is for. A capacity-zero legacy layout has no
+    // such choice on record, so it keeps sizing to its items.
+    val visibleSlotCount =
+        if (dock.capacity > 0) {
+            dock.capacity + previewSlotCount.coerceAtLeast(0)
+        } else {
+            renderedSlotCount
+        }
     if (
         !dockBackgroundVisible(
             capacity = dock.capacity,
@@ -53,14 +63,14 @@ internal fun dockSurfaceMetrics(
     val containerMainAxisDp =
         dockContainerMainAxisDp(
             availableMainAxisDp = availableMainAxisDp,
-            slotCount = renderedSlotCount,
+            slotCount = visibleSlotCount,
             iconSizeDp = dock.iconSizeDp,
             itemSpacingDp = dock.itemSpacingDp,
             backgroundSizing = dock.backgroundSizing,
         )
     val contentViewportMainAxisDp =
         dockContentViewportMainAxisDp(
-            slotCount = renderedSlotCount,
+            slotCount = visibleSlotCount,
             iconSizeDp = dock.iconSizeDp,
             itemSpacingDp = dock.itemSpacingDp,
             availableDockMainAxisDp = containerMainAxisDp,
@@ -72,7 +82,7 @@ internal fun dockSurfaceMetrics(
         contentViewportMainAxisDp = contentViewportMainAxisDp,
         slotMetrics =
             dockSlotRenderMetrics(
-                slotCount = renderedSlotCount,
+                slotCount = visibleSlotCount,
                 iconSizeDp = dock.iconSizeDp,
                 itemSpacingDp = dock.itemSpacingDp,
                 availableContentMainAxisDp = contentViewportMainAxisDp,
@@ -90,9 +100,6 @@ internal fun ExpandedDockSurface(
     widgetViewFactory: HomeWidgetViewFactory = EmptyHomeWidgetViewFactory,
     interactions: DockInteractions,
 ) {
-    val primaryDock = dock.primaryDock(showShelf = true)
-    val overflowDock = dock.overflowShelfDock()
-    val hasOverflow = dockHasOverflow(capacity = dock.capacity, itemCount = dock.items.size)
     val presentation = DockPresentation(notificationGroupsByApp, appShortcutsByApp, widgetViewFactory, interactions)
 
     BoxWithConstraints(
@@ -104,7 +111,7 @@ internal fun ExpandedDockSurface(
         val availableMainAxisDp = maxWidth.value.toInt()
         val surfaceMetrics =
             dockSurfaceMetrics(
-                dock = primaryDock,
+                dock = dock,
                 isEditing = false,
                 availableMainAxisDp = availableMainAxisDp,
             ) ?: return@BoxWithConstraints
@@ -140,24 +147,8 @@ internal fun ExpandedDockSurface(
                 }
                 Spacer(modifier = Modifier.height(DOCK_SHELF_CONTENT_SPACING_DP.dp))
             }
-            if (hasOverflow) {
-                DockSurfaceRow(
-                    dock = overflowDock,
-                    surfaceMetrics =
-                        expandedOverflowSurfaceMetrics(
-                            dock = overflowDock,
-                            availableMainAxisDp = availableMainAxisDp,
-                            mainSurfaceMetrics = surfaceMetrics,
-                        ),
-                    isEditing = false,
-                    presentation = presentation,
-                    appIconLoader = appIconLoader,
-                    renderBackground = false,
-                )
-                Spacer(modifier = Modifier.height(DOCK_SHELF_CONTENT_SPACING_DP.dp))
-            }
             DockSurfaceRow(
-                dock = primaryDock,
+                dock = dock,
                 surfaceMetrics = surfaceMetrics,
                 isEditing = false,
                 presentation = presentation,
@@ -167,19 +158,6 @@ internal fun ExpandedDockSurface(
         }
     }
 }
-
-private fun expandedOverflowSurfaceMetrics(
-    dock: DockModel,
-    availableMainAxisDp: Int,
-    mainSurfaceMetrics: DockSurfaceMetrics,
-): DockSurfaceMetrics =
-    checkNotNull(
-        dockSurfaceMetrics(
-            dock = dock,
-            isEditing = false,
-            availableMainAxisDp = availableMainAxisDp,
-        ),
-    ).copy(containerMainAxisDp = mainSurfaceMetrics.containerMainAxisDp)
 
 @Composable
 @Suppress("LongParameterList")
