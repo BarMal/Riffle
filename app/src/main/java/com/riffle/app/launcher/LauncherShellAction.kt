@@ -56,6 +56,7 @@ import com.riffle.core.domain.launcher.settings.OverlayDockEdge
 import com.riffle.core.domain.launcher.settings.OverlayDockExpandedOrientation
 import com.riffle.core.domain.launcher.settings.OverlayDockItemMoveDirection
 import com.riffle.core.domain.launcher.settings.SearchResultPresentation
+import com.riffle.core.domain.launcher.settings.ThreadCardGrouping
 import com.riffle.core.domain.launcher.settings.ThreadMessageOrder
 import com.riffle.core.domain.launcher.widgets.WidgetProviderDimensions
 import com.riffle.core.domain.launcher.widgets.WidgetProviderIdentity
@@ -442,6 +443,8 @@ sealed interface LauncherShellAction {
     data class SelectAdaptiveStagePaneArrangement(val arrangement: AdaptiveStagePaneArrangement) : LauncherShellAction
 
     data class SelectThreadMessageOrder(val order: ThreadMessageOrder) : LauncherShellAction
+
+    data class SelectThreadCardGrouping(val grouping: ThreadCardGrouping) : LauncherShellAction
 
     data class SelectAdaptiveStageRailSide(val side: AdaptiveStageRailSide) : LauncherShellAction
 

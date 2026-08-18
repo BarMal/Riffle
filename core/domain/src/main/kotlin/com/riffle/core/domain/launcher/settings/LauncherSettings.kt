@@ -82,7 +82,10 @@ data class CardsSettings(
     val adaptiveStageRailSide: AdaptiveStageRailSide? = null,
     /** User-opted alternative to the full-stack surface: a top detail region over the card stack. */
     val adaptiveStagePaneArrangement: AdaptiveStagePaneArrangement = AdaptiveStagePaneArrangement.STACK,
-    /** Message order within a conversation's thread view, once its message cards are grouped. */
+    /**
+     * Message order within a conversation, whichever shape [threadCardGrouping] gives it: the
+     * order of the folded card's own body, and of the thread view that groups message cards.
+     */
     val threadMessageOrder: ThreadMessageOrder = ThreadMessageOrder.CHRONOLOGICAL,
     /** Whether a conversation's messages become one card each or one card between them. */
     val threadCardGrouping: ThreadCardGrouping = ThreadCardGrouping.PER_THREAD,
@@ -105,7 +108,7 @@ enum class ThreadCardGrouping {
     PER_THREAD,
 }
 
-/** How a conversation's messages are ordered within its thread view. */
+/** How a conversation's messages are ordered, on a folded card or in its thread view. */
 enum class ThreadMessageOrder {
     /** Oldest message first, reading top-to-bottom like a conversation. */
     CHRONOLOGICAL,
