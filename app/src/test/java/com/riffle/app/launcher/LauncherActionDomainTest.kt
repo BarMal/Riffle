@@ -15,6 +15,7 @@ import com.riffle.core.domain.launcher.cards.AdaptiveStagePaneArrangement
 import com.riffle.core.domain.launcher.cards.AppStageId
 import com.riffle.core.domain.launcher.home.DockAlignment
 import com.riffle.core.domain.launcher.home.DockBackgroundSizing
+import com.riffle.core.domain.launcher.home.DockExpandAffordance
 import com.riffle.core.domain.launcher.home.DockItemMoveDirection
 import com.riffle.core.domain.launcher.home.DockPosition
 import com.riffle.core.domain.launcher.home.DockVisualEffect
@@ -271,6 +272,14 @@ class LauncherActionDomainTest {
                 activity(
                     "SelectDockNotificationCardsEnabled",
                     LauncherShellAction.SelectDockNotificationCardsEnabled(enabled = false),
+                ),
+                activity(
+                    "SelectDockExpandable",
+                    LauncherShellAction.SelectDockExpandable(expandable = false),
+                ),
+                activity(
+                    "SelectDockExpandAffordance",
+                    LauncherShellAction.SelectDockExpandAffordance(DockExpandAffordance.BUTTON),
                 ),
                 activity("SelectDockCapacity", LauncherShellAction.SelectDockCapacity(capacity = 6)),
                 activity("SelectDockIconSize", LauncherShellAction.SelectDockIconSize(sizeDp = 52)),
