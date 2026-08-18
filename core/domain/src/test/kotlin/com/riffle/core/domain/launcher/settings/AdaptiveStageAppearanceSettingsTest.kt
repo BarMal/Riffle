@@ -288,6 +288,38 @@ class AdaptiveStageAppearanceSettingsTest {
     }
 
     @Test
+    fun aNegativeRotationLeansTheFanTheOtherWay() {
+        // The tilt was floored at 0, so a stack could lean one way or lie flat but never mirror
+        // itself -- unlike every other lean in this model, which is direction-selectable. Equal and
+        // opposite settings must now produce equal and opposite angles on every card.
+        fun rotationsAt(degrees: Int): List<Float> =
+            AdaptiveStageAppearanceSettings(geometry = AdaptiveStageGeometry(rotationDegrees = degrees))
+                .resolveCardStack(AdaptiveStageViewportDp(widthDp = 800, heightDp = 1200))
+                .layoutPolicy
+                .entries(cardCount = 5, activeIndex = 2)
+                .map { entry -> entry.rotationDegrees }
+
+        val leaning = rotationsAt(8)
+        val mirrored = rotationsAt(-8)
+
+        assertTrue(leaning.any { it != 0f }, "the fan should actually be tilted at 8 degrees")
+        assertEquals(leaning.map { -it }, mirrored)
+    }
+
+    @Test
+    fun rotationCoercesToTheMirroredFloorRatherThanToFlat() {
+        // A value past the negative end has to land on the mirrored extreme; clamping it to 0 would
+        // silently turn "lean hard the other way" into "do not lean at all".
+        val coerced =
+            AdaptiveStageAppearanceSettings(
+                geometry = AdaptiveStageGeometry(rotationDegrees = -999),
+            ).coerce()
+
+        assertEquals(MIN_ADAPTIVE_STAGE_ROTATION_DEGREES, coerced.geometry.rotationDegrees)
+        assertTrue(MIN_ADAPTIVE_STAGE_ROTATION_DEGREES < 0)
+    }
+
+    @Test
     fun maximumRotationKeepsBackgroundCardsWithinHorizontalAndVerticalBounds() {
         val viewport = AdaptiveStageViewportDp(widthDp = 400, heightDp = 400)
         val resolution =
