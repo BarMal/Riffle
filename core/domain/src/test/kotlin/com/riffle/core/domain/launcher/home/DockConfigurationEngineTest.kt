@@ -178,6 +178,43 @@ class DockConfigurationEngineTest {
     }
 
     @Test
+    fun movingTheDockToASideTakesAColumnFromTheWorkspace() {
+        val layout = layoutWithDockItems(appShortcut(id = "phone"))
+        val configuredColumns = layout.settings.grid.dimensions.columns
+
+        val result = engine.setDockPosition(layout = layout, position = DockPosition.LEADING)
+
+        val updated = assertIs<DockEditResult.Updated>(result).layout
+        assertEquals(configuredColumns - 1, updated.pages.first().grid.columns)
+        // The configured grid keeps the borrowed column so moving the dock back gives it up again.
+        assertEquals(configuredColumns, updated.settings.grid.dimensions.columns)
+    }
+
+    @Test
+    fun movingTheDockBackToAHorizontalEdgeReturnsTheColumn() {
+        val layout = layoutWithDockItems(appShortcut(id = "phone"))
+        val configuredColumns = layout.settings.grid.dimensions.columns
+        val onASide =
+            assertIs<DockEditResult.Updated>(
+                engine.setDockPosition(layout = layout, position = DockPosition.LEADING),
+            ).layout
+
+        val result = engine.setDockPosition(layout = onASide, position = DockPosition.BOTTOM)
+
+        assertEquals(configuredColumns, assertIs<DockEditResult.Updated>(result).layout.pages.first().grid.columns)
+    }
+
+    @Test
+    fun aDisabledDockTakesNoColumnWhereverItIsPositioned() {
+        val layout = layoutWithDockItems().copy(dock = DockModel(capacity = 5, isEnabled = false))
+        val configuredColumns = layout.settings.grid.dimensions.columns
+
+        val result = engine.setDockPosition(layout = layout, position = DockPosition.LEADING)
+
+        assertEquals(configuredColumns, assertIs<DockEditResult.Updated>(result).layout.pages.first().grid.columns)
+    }
+
+    @Test
     fun aDockFollowsItsTemplateUntilAPositionIsChosen() {
         assertNull(HomeLayoutDefaults.standard().dock.position)
     }

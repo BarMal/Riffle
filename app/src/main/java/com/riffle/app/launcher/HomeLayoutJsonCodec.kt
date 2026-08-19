@@ -14,6 +14,8 @@ import com.riffle.core.domain.launcher.home.LauncherPageId
 import com.riffle.core.domain.launcher.home.LauncherPageType
 import com.riffle.core.domain.launcher.home.LauncherTemplateId
 import com.riffle.core.domain.launcher.home.LauncherViewMode
+import com.riffle.core.domain.launcher.home.reflowedToWorkspaceGrid
+import com.riffle.core.domain.launcher.home.workspaceGridFor
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -39,11 +41,16 @@ internal fun encodeHomeLayoutObject(layout: HomeLayout): JSONObject =
 internal fun JSONObject.toHomeLayout(defaults: HomeLayout = HomeLayoutDefaults.standard()): HomeLayout =
     let { json ->
         val settings = json.optJSONObject("settings")?.toSettings(defaults.settings) ?: defaults.settings
-        val pages =
-            json.optJSONArray("pages")
-                ?.toPages(defaultGrid = settings.grid.dimensions)
-                .orEmpty()
-                .map { page -> page.copy(grid = settings.grid.dimensions) }
+        val dock =
+            json.optJSONObject("dock")
+                ?.toDock(defaults = defaults.dock, defaultGrid = settings.grid.dimensions)
+                ?: defaults.dock
+        // A side dock takes a column, so the grid the pages are held to is the one it leaves --
+        // otherwise a reload would put them back to full width underneath it.
+        val workspaceGrid = settings.grid.dimensions.workspaceGridFor(dock)
+        // The grid each page is held to is settled by the reflow below; this is only the fallback
+        // for a stored page that never recorded its own dimensions.
+        val pages = json.optJSONArray("pages")?.toPages(defaultGrid = workspaceGrid).orEmpty()
         val selectedPageId = LauncherPageId(json.optString("selectedPageId", defaults.selectedPageId.value))
         val safeSelectedPageId =
             pages.firstOrNull { page -> page.id == selectedPageId }?.id
@@ -59,12 +66,9 @@ internal fun JSONObject.toHomeLayout(defaults: HomeLayout = HomeLayoutDefaults.s
                     ?.let(::LauncherTemplateId),
             pages = pages.ifEmpty { defaults.pages },
             selectedPageId = safeSelectedPageId,
-            dock =
-                json.optJSONObject("dock")
-                    ?.toDock(defaults = defaults.dock, defaultGrid = settings.grid.dimensions)
-                    ?: defaults.dock,
+            dock = dock,
             settings = settings,
-        )
+        ).reflowedToWorkspaceGrid()
     }
 
 private fun JSONObject.optViewMode(default: LauncherViewMode): LauncherViewMode =
