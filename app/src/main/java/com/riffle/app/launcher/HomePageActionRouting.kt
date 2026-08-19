@@ -49,7 +49,10 @@ internal fun LauncherShellAction.isHomeLayoutConfigurationAction(): Boolean =
         is LauncherShellAction.SelectHomeLabelMaxWidth,
         is LauncherShellAction.SelectHomeLabelMaxLines,
         is LauncherShellAction.SelectHomeLabelSizing,
-        is LauncherShellAction.SelectLauncherViewMode,
+        // SelectLauncherViewMode is deliberately absent. A mode is not a field of a layout that
+        // settings can edit -- it is which of the per-mode layouts applies. Editing it as a field
+        // wrote the layout on screen into the mode being switched to, so the mode you left came
+        // back holding a copy of the one you were on, dock and all.
         is LauncherShellAction.SelectLauncherTemplate,
         -> true
 

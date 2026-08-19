@@ -106,9 +106,6 @@ internal fun HomePageEngine.applyHomeLayoutConfigurationEdit(
         is LauncherShellAction.SelectHomeLabelSizing ->
             HomePageEditResult.Updated(layout.withHomeLabelSizing(action.sizing))
 
-        is LauncherShellAction.SelectLauncherViewMode ->
-            HomePageEditResult.Updated(layout.withLauncherViewMode(action.mode))
-
         else -> HomePageEditResult.Rejected(HomePageEditRejectionReason.PAGE_NOT_FOUND)
     }
 
@@ -196,16 +193,6 @@ private fun HomeLayout.withHomeLabelTextSize(textSizeSp: Int): HomePageEditResul
             )
 
         else -> HomePageEditResult.Rejected(HomePageEditRejectionReason.INVALID_LABEL_SETTING)
-    }
-
-private fun HomeLayout.withLauncherViewMode(mode: LauncherViewMode): HomeLayout =
-    copy(viewMode = mode).let { updatedLayout ->
-        when (mode) {
-            LauncherViewMode.HOME_SCREEN_LIBRARY -> updatedLayout
-            LauncherViewMode.STANDARD_APP_DRAWER,
-            LauncherViewMode.CARD_INTERFACE,
-            -> updatedLayout.withoutHomeScreenLibraryApps()
-        }
     }
 
 private fun HomeLayout.layoutForGridDimensionUpdate(): HomeLayout =
