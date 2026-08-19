@@ -98,6 +98,7 @@ internal fun Dock(
                 availableMainAxisDp =
                     if (position.isHorizontalEdge) maxWidth.value.toInt() else maxHeight.value.toInt(),
                 previewSlotCount = if (widgetPickerDockPreview != null) 1 else 0,
+                runsHorizontally = position.isHorizontalEdge,
             ) ?: return@BoxWithConstraints
         HomeBackgroundContextMenu(
             haptics = interactions.haptics,
@@ -364,13 +365,20 @@ private fun WidgetPickerDockPlaceholder(
 }
 
 /**
- * Caps how long the dock's run may get. An absolute dp suits a horizontal dock, where the cap stops
- * a wide tablet from stretching six icons across the whole screen. A vertical dock wants a fraction
- * of the available extent instead -- the overlay dock already does exactly that with its own
- * MAX_TALL_EXPANDED_DOCK_SCREEN_FRACTION. Left as-is here because this commit renames without
- * changing any number.
+ * Caps how long a horizontal dock's run may get, so a wide tablet does not stretch six icons across
+ * the whole screen. An absolute dp is the right shape here: the cap exists because screens get
+ * wider than a dock usefully needs to be, which is a statement about dp, not about proportion.
  */
-private const val DOCK_MAX_MAIN_AXIS_DP = 560
+private const val DOCK_MAX_HORIZONTAL_MAIN_AXIS_DP = 560
+
+/**
+ * Caps a vertical dock's run as a share of the height it was offered instead.
+ *
+ * A side dock runs down a screen whose height it does not know in advance, and a fixed dp would
+ * either crowd a short screen or stop well short of a tall one. The overlay dock reaches the same
+ * conclusion for its tall expanded form with its own screen fraction.
+ */
+private const val DOCK_MAX_VERTICAL_MAIN_AXIS_FRACTION = 0.7f
 internal const val DOCK_CROSS_AXIS_CHROME_DP = 32
 internal const val DOCK_MAIN_AXIS_PADDING_DP = 14
 internal const val DOCK_CROSS_AXIS_PADDING_DP = 10
@@ -383,6 +391,22 @@ internal const val HOME_DOCK_SURFACE_TEST_TAG = "home-dock-surface"
 internal const val WIDGET_PICKER_DOCK_PREVIEW_TEST_TAG = "widget-picker-dock-preview"
 
 /**
+ * The longest run the dock may have, given how much it was offered and which way it runs.
+ *
+ * The two axes want different kinds of cap, so this is where the difference lives rather than in
+ * one number that has to suit both.
+ */
+private fun dockMaxMainAxisDp(
+    availableMainAxisDp: Int,
+    runsHorizontally: Boolean,
+): Int =
+    if (runsHorizontally) {
+        DOCK_MAX_HORIZONTAL_MAIN_AXIS_DP
+    } else {
+        (availableMainAxisDp.coerceAtLeast(0) * DOCK_MAX_VERTICAL_MAIN_AXIS_FRACTION).toInt()
+    }
+
+/**
  * The dock's thickness -- across its run, not along it. The strip is one icon deep plus chrome
  * whichever edge it sits on, so this is the same arithmetic for a bottom dock's height and a side
  * dock's width.
@@ -390,21 +414,25 @@ internal const val WIDGET_PICKER_DOCK_PREVIEW_TEST_TAG = "widget-picker-dock-pre
 internal fun dockCrossAxisDp(iconSizeDp: Int): Int = iconSizeDp + DOCK_CROSS_AXIS_CHROME_DP
 
 /**
- * How much room the slots themselves get along the dock's run, after its own padding and the
- * [DOCK_MAX_MAIN_AXIS_DP] cap.
+ * How much room the slots themselves get along the dock's run, after the dock's own padding.
+ *
+ * [availableDockMainAxisDp] is taken as already capped, because how long a run may get depends on
+ * which way it runs and only the caller knows that -- re-applying the horizontal cap here would
+ * clamp a vertical dock to a number chosen for wide screens. The default is that horizontal cap,
+ * for callers asking about a horizontal dock without a container to measure against.
  */
 internal fun dockContentViewportMainAxisDp(
     slotCount: Int,
     iconSizeDp: Int,
     itemSpacingDp: Int,
-    availableDockMainAxisDp: Int = DOCK_MAX_MAIN_AXIS_DP,
+    availableDockMainAxisDp: Int = DOCK_MAX_HORIZONTAL_MAIN_AXIS_DP,
 ): Int {
     if (slotCount <= 0) {
         return 0
     }
     val contentMainAxis = (slotCount * iconSizeDp) + ((slotCount - 1) * itemSpacingDp)
-    val maxDockMainAxis = min(availableDockMainAxisDp, DOCK_MAX_MAIN_AXIS_DP)
-    val maxContentMainAxis = (maxDockMainAxis - (DOCK_MAIN_AXIS_PADDING_DP * 2)).coerceAtLeast(0)
+    val maxContentMainAxis =
+        (availableDockMainAxisDp - (DOCK_MAIN_AXIS_PADDING_DP * 2)).coerceAtLeast(0)
     return min(contentMainAxis, maxContentMainAxis)
 }
 
@@ -414,8 +442,10 @@ internal fun dockContainerMainAxisDp(
     iconSizeDp: Int,
     itemSpacingDp: Int,
     backgroundSizing: DockBackgroundSizing,
+    runsHorizontally: Boolean = true,
 ): Int {
-    val maxDockMainAxis = min(availableMainAxisDp, DOCK_MAX_MAIN_AXIS_DP).coerceAtLeast(0)
+    val maxDockMainAxis =
+        min(availableMainAxisDp, dockMaxMainAxisDp(availableMainAxisDp, runsHorizontally)).coerceAtLeast(0)
     if (backgroundSizing == DockBackgroundSizing.FIXED) {
         return maxDockMainAxis
     }

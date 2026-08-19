@@ -246,7 +246,14 @@ internal fun HomeLayout.shouldShowDock(): Boolean =
             backgroundSizing = dock.backgroundSizing,
         )
 
-/** Bottom region that Cards mode leaves to the standard dock for physical input. */
+/**
+ * The band along the bottom that Cards mode leaves to the standard dock for physical input.
+ *
+ * A height, and only a height, because the dock Cards mode draws is the bottom-pinned one from
+ * [StandardHomeDockOnlySurface] -- there, [DockModel.position] places the stage rail instead, so
+ * the dock stays where it has always been however the rail is configured. Anything that starts
+ * passing a position into that surface has to revisit this.
+ */
 internal fun HomeLayout.dockInteractionRegionHeightDp(): Int =
     if (!shouldShowDock()) {
         0

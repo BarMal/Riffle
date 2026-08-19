@@ -602,6 +602,65 @@ class HomeDockMetricsTest {
     }
 
     @Test
+    fun aHorizontalDockStopsAtItsAbsoluteCapHoweverWideTheScreenIs() {
+        // The cap exists because screens get wider than a dock usefully needs to be.
+        assertEquals(
+            560,
+            dockContainerMainAxisDp(
+                availableMainAxisDp = 1600,
+                slotCount = 40,
+                iconSizeDp = 48,
+                itemSpacingDp = 8,
+                backgroundSizing = DockBackgroundSizing.FIXED,
+                runsHorizontally = true,
+            ),
+        )
+    }
+
+    @Test
+    fun aVerticalDockStopsAtAShareOfTheHeightItWasOffered() {
+        // A fixed dp would crowd a short screen and stop well short of a tall one.
+        assertEquals(
+            (800 * 0.7f).toInt(),
+            dockContainerMainAxisDp(
+                availableMainAxisDp = 800,
+                slotCount = 40,
+                iconSizeDp = 48,
+                itemSpacingDp = 8,
+                backgroundSizing = DockBackgroundSizing.FIXED,
+                runsHorizontally = false,
+            ),
+        )
+        assertEquals(
+            (1600 * 0.7f).toInt(),
+            dockContainerMainAxisDp(
+                availableMainAxisDp = 1600,
+                slotCount = 40,
+                iconSizeDp = 48,
+                itemSpacingDp = 8,
+                backgroundSizing = DockBackgroundSizing.FIXED,
+                runsHorizontally = false,
+            ),
+        )
+    }
+
+    @Test
+    fun aVerticalDockShorterThanItsShareStillSizesToItsItems() {
+        // The share is a ceiling, not a length: a two-item dock is two items long on any screen.
+        val twoItems =
+            dockContainerMainAxisDp(
+                availableMainAxisDp = 1600,
+                slotCount = 2,
+                iconSizeDp = 48,
+                itemSpacingDp = 8,
+                backgroundSizing = DockBackgroundSizing.DYNAMIC,
+                runsHorizontally = false,
+            )
+
+        assertEquals(true, twoItems < (1600 * 0.7f).toInt())
+    }
+
+    @Test
     fun dockShelfGestureExpandsOnDominantSwipeUpAndCollapsesOnDominantSwipeDown() {
         assertEquals(
             true,
