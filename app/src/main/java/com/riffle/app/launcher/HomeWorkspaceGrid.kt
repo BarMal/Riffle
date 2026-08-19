@@ -163,6 +163,8 @@ private fun RowScope.HomeGridCell(
         HomeBackgroundContextMenu(
             haptics = actions.haptics,
             onAction = actions.onAction,
+            items = backgroundContextMenuItems(presentation.contextSurface),
+            longClickLabel = presentation.contextSurface.backgroundLongClickLabel,
             modifier = Modifier.fillMaxSize(),
             onClick = actions.onBackgroundClick,
         )

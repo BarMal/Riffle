@@ -34,7 +34,7 @@ internal class LauncherAppStateActionCoordinator(
                     appListActionReducer.reduce(currentState(), route.action) ?: currentState()
 
                 is LauncherAppActionRoute.WidgetPickerState -> {
-                    if (route.action == LauncherShellAction.OpenWidgetPicker) {
+                    if (route.action.opensWidgetPicker()) {
                         launchedRefresh = refreshWidgetProviders()
                     }
                     widgetPickerActionReducer.reduce(currentState(), route.action) ?: currentState()
@@ -47,3 +47,7 @@ internal class LauncherAppStateActionCoordinator(
         return launchedRefresh
     }
 }
+
+/** Both picker-opening actions need the provider catalog refreshed; only the aim differs. */
+private fun LauncherShellAction.opensWidgetPicker(): Boolean =
+    this == LauncherShellAction.OpenWidgetPicker || this == LauncherShellAction.OpenWidgetPickerForDockPanel

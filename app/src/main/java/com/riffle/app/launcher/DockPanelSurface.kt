@@ -17,8 +17,8 @@ import com.riffle.core.domain.launcher.home.LauncherPage
  * than a purpose-built set of tiles. A media widget, a clock, a set of toggles: whatever the user
  * has, placed where they want it, with no component here per kind of content.
  *
- * Read-only for now. Placing items on it comes with the editing pass; until then a panel only has
- * contents if something else put them there.
+ * Long-pressing its empty space adds a widget, and an item's own menu removes it. Dragging items
+ * on and off, and between the panel and a home page, is still to come.
  */
 @Composable
 internal fun DockPanel(

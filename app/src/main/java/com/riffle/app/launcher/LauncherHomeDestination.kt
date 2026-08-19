@@ -148,6 +148,7 @@ private fun StandardHomeSurface(
                         profileContentVisibility = state.profileContentVisibility,
                         catalogStatus = state.widgetProviderCatalogStatus,
                         isOpen = state.isWidgetPickerOpen,
+                        isTargetingDockPanel = state.isWidgetPickerTargetingDockPanel,
                     ),
                 homeInsetPolicy = homeInsetPolicy(state.launcherSettings.appearance),
                 adaptiveStageAppearance = state.launcherSettings.cards.adaptiveStageAppearance,

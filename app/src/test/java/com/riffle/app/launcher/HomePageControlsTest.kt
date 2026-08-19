@@ -269,6 +269,24 @@ class HomePageControlsTest {
     }
 
     @Test
+    fun emptyPanelCellMenuOnlyOffersAddingAWidget() {
+        // Page management and folders belong to home pages; the panel is neither. Adding a widget
+        // has to name the panel, because the picker covers the shelf and cannot be dragged onto.
+        val items = backgroundContextMenuItems(ShortcutContextSurface.DOCK_PANEL)
+
+        assertEquals(
+            listOf(ShortcutContextMenuItem("Add widget", LauncherShellAction.OpenWidgetPickerForDockPanel)),
+            items,
+        )
+    }
+
+    @Test
+    fun emptyHomeCellMenuIsUnchangedForHomeAndDock() {
+        assertEquals(homeWorkspaceContextMenuItems(), backgroundContextMenuItems(ShortcutContextSurface.HOME))
+        assertEquals(homeWorkspaceContextMenuItems(), backgroundContextMenuItems(ShortcutContextSurface.DOCK))
+    }
+
+    @Test
     fun pageTypeOptionsExposeClassicLibraryAndGeneratedPages() {
         assertEquals(
             listOf(

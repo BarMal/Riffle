@@ -5,6 +5,7 @@ package com.riffle.app.launcher
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Arrangement
@@ -82,6 +83,16 @@ fun WidgetPickerSurface(
     catalogStatus: WidgetProviderCatalogStatus = WidgetProviderCatalogStatus.READY,
     previewImageLoader: WidgetPreviewImageLoader = EmptyWidgetPreviewImageLoader,
     accessiblePlacement: WidgetPickerAccessiblePlacement? = null,
+    /** Whether this layout's dock has a panel, and so whether placing onto one can be offered. */
+    hasDockPanel: Boolean = false,
+    /**
+     * The surface this picker was opened to fill, when it was opened to fill one.
+     *
+     * Dragging chooses the surface by where the widget lands, which only works for surfaces the
+     * picker is not covering. When it is covering the target -- the dock's panel lives on the
+     * shelf -- the choice is already made, and a tap on a provider goes straight to placement.
+     */
+    guidedPlacementTarget: WidgetAddTarget? = null,
     isDragHandoffActive: Boolean = false,
     onWidgetDragStarted: (InstalledWidgetProvider) -> Unit = {},
     onWidgetDragMoved: (InstalledWidgetProvider, Offset, IntSize) -> Unit = { _, _, _ -> },
@@ -221,6 +232,8 @@ fun WidgetPickerSurface(
                         onWidgetDragMoved = onWidgetDragMoved,
                         onWidgetDragCancelled = onWidgetDragCancelled,
                         onWidgetDropped = onWidgetDropped,
+                        hasDockPanel = hasDockPanel,
+                        guidedPlacementTarget = guidedPlacementTarget,
                         onAccessiblePlacementRequested = { provider, target ->
                             pendingProviderFocusKey = provider.widgetPickerKey
                             onAccessiblePlacementRequested(provider, target)
@@ -261,6 +274,8 @@ private fun WidgetPickerContent(
     onWidgetDragMoved: (InstalledWidgetProvider, Offset, IntSize) -> Unit,
     onWidgetDragCancelled: (InstalledWidgetProvider) -> Unit,
     onWidgetDropped: (InstalledWidgetProvider, Offset, IntSize) -> Unit,
+    hasDockPanel: Boolean,
+    guidedPlacementTarget: WidgetAddTarget?,
     onAccessiblePlacementRequested: (InstalledWidgetProvider, WidgetAddTarget) -> Unit,
     providerFocusRequesters: MutableMap<String, FocusRequester>,
     rootCoordinates: LayoutCoordinates?,
@@ -334,6 +349,8 @@ private fun WidgetPickerContent(
                                 onWidgetDragMoved = onWidgetDragMoved,
                                 onWidgetDragCancelled = onWidgetDragCancelled,
                                 onWidgetDropped = onWidgetDropped,
+                                hasDockPanel = hasDockPanel,
+                                guidedPlacementTarget = guidedPlacementTarget,
                                 onAccessiblePlacementRequested = onAccessiblePlacementRequested,
                                 rootCoordinates = rootCoordinates,
                             )
@@ -388,6 +405,39 @@ internal fun widgetPickerProfileStateText(contentVisibility: AppProfileContentVi
             "This profile is unavailable. Its widgets can’t be previewed or placed."
     }
 
+/**
+ * The surfaces this provider can be placed on, as assistive-technology actions.
+ *
+ * The panel is offered only when the dock has one -- otherwise the action would name a surface
+ * this layout does not have.
+ */
+private fun InstalledWidgetProvider.widgetPickerPlacementActions(
+    hasDockPanel: Boolean,
+    onAccessiblePlacementRequested: (InstalledWidgetProvider, WidgetAddTarget) -> Unit,
+): List<CustomAccessibilityAction> =
+    buildList {
+        add(
+            CustomAccessibilityAction("Add $label to Home") {
+                onAccessiblePlacementRequested(this@widgetPickerPlacementActions, WidgetAddTarget.HOME)
+                true
+            },
+        )
+        add(
+            CustomAccessibilityAction("Add $label to Dock") {
+                onAccessiblePlacementRequested(this@widgetPickerPlacementActions, WidgetAddTarget.DOCK)
+                true
+            },
+        )
+        if (hasDockPanel) {
+            add(
+                CustomAccessibilityAction("Add $label to Panel") {
+                    onAccessiblePlacementRequested(this@widgetPickerPlacementActions, WidgetAddTarget.DOCK_PANEL)
+                    true
+                },
+            )
+        }
+    }
+
 @Composable
 private fun WidgetProviderTile(
     provider: InstalledWidgetProvider,
@@ -398,6 +448,8 @@ private fun WidgetProviderTile(
     onWidgetDragMoved: (InstalledWidgetProvider, Offset, IntSize) -> Unit,
     onWidgetDragCancelled: (InstalledWidgetProvider) -> Unit,
     onWidgetDropped: (InstalledWidgetProvider, Offset, IntSize) -> Unit,
+    hasDockPanel: Boolean,
+    guidedPlacementTarget: WidgetAddTarget?,
     onAccessiblePlacementRequested: (InstalledWidgetProvider, WidgetAddTarget) -> Unit,
     rootCoordinates: LayoutCoordinates?,
 ) {
@@ -417,19 +469,25 @@ private fun WidgetProviderTile(
                 .fillMaxWidth()
                 .padding(bottom = 2.dp)
                 .testTag(WIDGET_PROVIDER_TILE_TEST_TAG)
+                .then(
+                    // Only when the picker was opened to fill one surface. Otherwise a tap has no
+                    // destination to mean, and dragging is how the destination is chosen.
+                    guidedPlacementTarget
+                        ?.takeIf { isAvailable }
+                        ?.let { target ->
+                            Modifier.clickable(
+                                onClickLabel = "Add ${provider.label}",
+                                onClick = { onAccessiblePlacementRequested(provider, target) },
+                            )
+                        } ?: Modifier,
+                )
                 .semantics {
                     role = Role.Image
                     if (isAvailable) {
                         customActions =
-                            listOf(
-                                CustomAccessibilityAction("Add ${provider.label} to Home") {
-                                    onAccessiblePlacementRequested(provider, WidgetAddTarget.HOME)
-                                    true
-                                },
-                                CustomAccessibilityAction("Add ${provider.label} to Dock") {
-                                    onAccessiblePlacementRequested(provider, WidgetAddTarget.DOCK)
-                                    true
-                                },
+                            provider.widgetPickerPlacementActions(
+                                hasDockPanel = hasDockPanel,
+                                onAccessiblePlacementRequested = onAccessiblePlacementRequested,
                             )
                     } else {
                         disabled()
@@ -629,6 +687,10 @@ internal fun WidgetPickerAccessiblePlacement.accessiblePlacementAnnouncement(): 
 
         target == WidgetAddTarget.DOCK ->
             "${accessibleWidgetLabel()} in the Dock at " +
+                "${selectedCandidate?.placementPositionLabel()}; placement is ready."
+
+        target == WidgetAddTarget.DOCK_PANEL ->
+            "${accessibleWidgetLabel()} on the dock's Panel at " +
                 "${selectedCandidate?.placementPositionLabel()}; placement is ready."
 
         else -> "${accessibleWidgetLabel()} placement is ready."
