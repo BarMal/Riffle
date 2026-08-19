@@ -7,11 +7,7 @@ import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.apps.AppShortcutId
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.cards.AdaptiveStagePaneArrangement
-import com.riffle.core.domain.launcher.home.DockPosition
-import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
-import com.riffle.core.domain.launcher.home.HomeLayoutKey
 import com.riffle.core.domain.launcher.home.LauncherItemId
-import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.home.WallpaperScrollMode
 import com.riffle.core.domain.launcher.settings.AdaptiveStageAppearanceSettings
 import com.riffle.core.domain.launcher.settings.AppDrawerPresentation
@@ -41,10 +37,6 @@ class LauncherSettingsActionRouteTest {
                 LauncherShellAction.SelectAdaptiveStagePaneArrangement(AdaptiveStagePaneArrangement.SPLIT),
                 LauncherShellAction.SelectThreadMessageOrder(ThreadMessageOrder.RECENT_FIRST),
                 LauncherShellAction.SelectThreadCardGrouping(ThreadCardGrouping.PER_MESSAGE),
-                LauncherShellAction.SelectDockPosition(
-                    HomeLayoutKey(LauncherViewMode.CARD_INTERFACE, HomeLayoutDeviceClass.PHONE),
-                    DockPosition.TOP,
-                ),
             )
 
         actions.forEach { action ->

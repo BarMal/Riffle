@@ -8,7 +8,6 @@ import com.riffle.core.domain.launcher.cards.AdaptiveStageTemplateId
 import com.riffle.core.domain.launcher.cards.AppStagePreferences
 import com.riffle.core.domain.launcher.contextual.ContextualSettings
 import com.riffle.core.domain.launcher.home.AppShortcutItem
-import com.riffle.core.domain.launcher.home.DockPosition
 import com.riffle.core.domain.launcher.home.HomeLayoutKey
 import com.riffle.core.domain.launcher.home.WallpaperSettings
 import com.riffle.core.domain.launcher.rss.FeedStagePreferences
@@ -74,18 +73,6 @@ data class CardsSettings(
      */
     val unfoldedAppearance: AdaptiveStageAppearanceSettings = AdaptiveStageAppearanceSettings.unfolded(),
     val adaptiveStageTemplateId: AdaptiveStageTemplateId = AdaptiveStageTemplateCatalogDefaults.sharedCanvasId,
-    /**
-     * Explicit user choice of dock edge per [HomeLayoutKey]. A layout with no entry has never been
-     * changed, in which case the active template's
-     * [com.riffle.core.domain.launcher.cards.AdaptiveStageTemplateVariant.dockPosition] applies,
-     * falling back to [DockPosition.LEADING].
-     *
-     * Per layout rather than global because the answer genuinely differs by device: an edge column
-     * that suits a tablet wastes width on a phone in portrait. Settings written before this was
-     * per-layout decode to their single chosen edge on every layout, so nobody's existing choice
-     * changes meaning.
-     */
-    val dockPositionByLayout: Map<HomeLayoutKey, DockPosition> = emptyMap(),
     /** User-opted alternative to the full-stack surface: a top detail region over the card stack. */
     val adaptiveStagePaneArrangement: AdaptiveStagePaneArrangement = AdaptiveStagePaneArrangement.STACK,
     /**

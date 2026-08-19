@@ -119,6 +119,23 @@ class DockConfigurationEngineTest {
     }
 
     @Test
+    fun updatesDockPositionWithoutDisturbingTheRestOfTheDock() {
+        val phone = appShortcut(id = "phone")
+        val layout = layoutWithDockItems(phone)
+
+        val result = engine.setDockPosition(layout = layout, position = DockPosition.TRAILING)
+
+        val updated = assertIs<DockEditResult.Updated>(result)
+        assertEquals(DockPosition.TRAILING, updated.layout.dock.position)
+        assertEquals(listOf(phone.id), updated.layout.dock.items.map { item -> item.id })
+    }
+
+    @Test
+    fun aDockFollowsItsTemplateUntilAPositionIsChosen() {
+        assertNull(HomeLayoutDefaults.standard().dock.position)
+    }
+
+    @Test
     fun updatesDockCapacity() {
         val result = engine.setDockCapacity(layout = HomeLayoutDefaults.standard(), capacity = 7)
 

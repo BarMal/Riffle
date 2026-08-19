@@ -5,6 +5,7 @@ import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.DockExpandAffordance
+import com.riffle.core.domain.launcher.home.DockPosition
 import com.riffle.core.domain.launcher.home.GridCell
 import com.riffle.core.domain.launcher.home.GridDimensions
 import com.riffle.core.domain.launcher.home.GridPlacement
@@ -78,6 +79,22 @@ class HomeLayoutJsonCodecDockExpansionTest {
         assertEquals(GridDimensions(columns = 4, rows = 2), decodedPanel?.grid)
         assertEquals(listOf(clock.id), decodedPanel?.items?.map { item -> item.id })
         assertEquals(GridCell(column = 1, row = 0), decodedPanel?.items?.single()?.placement?.cell)
+    }
+
+    @Test
+    fun roundTripsTheDockPosition() {
+        val layout =
+            HomeLayoutDefaults.standard().let { standard ->
+                standard.copy(dock = standard.dock.copy(position = DockPosition.TRAILING))
+            }
+
+        assertEquals(DockPosition.TRAILING, decodeHomeLayout(encodeHomeLayout(layout)).dock.position)
+    }
+
+    @Test
+    fun aDockWithNoChosenPositionDecodesWithoutOne() {
+        // Null means "follow the active template", which is not the same as any particular edge.
+        assertEquals(null, decodeHomeLayout(encodeHomeLayout(HomeLayoutDefaults.standard())).dock.position)
     }
 
     @Test

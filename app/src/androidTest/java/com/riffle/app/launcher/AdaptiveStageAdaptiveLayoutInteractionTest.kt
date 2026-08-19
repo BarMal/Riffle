@@ -41,6 +41,7 @@ import com.riffle.core.domain.launcher.cards.AppStagePreferences
 import com.riffle.core.domain.launcher.home.DockPosition
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.HomeLayoutKey
+import com.riffle.core.domain.launcher.home.HomeLayoutSet
 import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.settings.CardsSettings
@@ -237,10 +238,7 @@ class AdaptiveStageAdaptiveLayoutInteractionTest {
                             state =
                                 LauncherShellState(
                                     notificationAccessStatus = NotificationAccessStatus.NOT_GRANTED,
-                                    launcherSettings =
-                                        LauncherSettings(
-                                            cards = dockPositionSettings(DockPosition.TOP),
-                                        ),
+                                    homeLayoutSet = layoutWithDockPosition(DockPosition.TOP),
                                 ),
                             windowLayout =
                                 AdaptiveStageWindowLayout(
@@ -280,10 +278,7 @@ class AdaptiveStageAdaptiveLayoutInteractionTest {
                             state =
                                 LauncherShellState(
                                     notificationAccessStatus = NotificationAccessStatus.NOT_GRANTED,
-                                    launcherSettings =
-                                        LauncherSettings(
-                                            cards = dockPositionSettings(DockPosition.TRAILING),
-                                        ),
+                                    homeLayoutSet = layoutWithDockPosition(DockPosition.TRAILING),
                                 ),
                             windowInsets =
                                 WindowInsets(
@@ -456,13 +451,16 @@ class AdaptiveStageAdaptiveLayoutInteractionTest {
     }
 
     /**
-     * The dock edge is stored per layout, so a test that wants one has to name the layout the
-     * surface will actually look up -- the shell's own active key.
+     * The dock edge lives on the dock, and the dock belongs to a layout, so a fixture that wants
+     * one sets it on the layout the surface will actually render.
      */
-    private fun activeLayoutKey(): HomeLayoutKey = LauncherShellState().homeLayoutSet.activeKey
-
-    private fun dockPositionSettings(position: DockPosition): CardsSettings =
-        CardsSettings(dockPositionByLayout = mapOf(activeLayoutKey() to position))
+    private fun layoutWithDockPosition(position: DockPosition): HomeLayoutSet =
+        LauncherShellState().homeLayoutSet.let { set ->
+            set.withLayout(
+                key = set.activeKey,
+                layout = set.activeLayout.copy(dock = set.activeLayout.dock.copy(position = position)),
+            )
+        }
 
     private fun railTestApps(count: Int): List<InstalledApp> =
         (1..count).map { index ->
@@ -499,8 +497,6 @@ class AdaptiveStageAdaptiveLayoutInteractionTest {
                                         LauncherSettings(
                                             cards =
                                                 CardsSettings(
-                                                    dockPositionByLayout =
-                                                        mapOf(activeLayoutKey() to DockPosition.LEADING),
                                                     stagePreferencesByLayout =
                                                         mapOf(
                                                             HomeLayoutKey(LauncherViewMode.STANDARD_APP_DRAWER) to

@@ -123,7 +123,6 @@ import com.riffle.core.domain.launcher.settings.AdaptiveStageAppearanceSettings
 import com.riffle.core.domain.launcher.settings.AdaptiveStageCardStackResolution
 import com.riffle.core.domain.launcher.settings.AdaptiveStageViewportDp
 import com.riffle.core.domain.launcher.settings.ThreadMessageOrder
-import com.riffle.core.domain.launcher.settings.dockPositionFor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlin.math.abs
@@ -316,8 +315,7 @@ internal fun AdaptiveStageAppStageSurface(
                 }
             val dockPosition =
                 resolveDockPosition(
-                    configuredDockPosition =
-                        state.launcherSettings.cards.dockPositionFor(state.homeLayoutSet.activeKey),
+                    configuredDockPosition = state.homeLayoutSet.activeLayout.dock.position,
                     templateDockPosition = templateVariant?.dockPosition,
                 )
             val paneArrangement =

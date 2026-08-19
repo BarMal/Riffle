@@ -38,6 +38,9 @@ fun DockEngine.applyEdit(
         is LauncherShellAction.SelectDockPanelEnabled ->
             DockConfigurationEngine().setDockPanelEnabled(layout = layout, enabled = action.enabled)
 
+        is LauncherShellAction.SelectDockPosition ->
+            DockConfigurationEngine().setDockPosition(layout = layout, position = action.position)
+
         is LauncherShellAction.SelectDockCapacity ->
             DockConfigurationEngine().setDockCapacity(layout = layout, capacity = action.capacity)
 
@@ -108,6 +111,7 @@ internal fun LauncherShellAction.isDockConfigurationAction(): Boolean =
         is LauncherShellAction.SelectDockExpandable,
         is LauncherShellAction.SelectDockExpandAffordance,
         is LauncherShellAction.SelectDockPanelEnabled,
+        is LauncherShellAction.SelectDockPosition,
         is LauncherShellAction.SelectDockCapacity,
         is LauncherShellAction.SelectDockIconSize,
         is LauncherShellAction.SelectDockBackgroundAlpha,
