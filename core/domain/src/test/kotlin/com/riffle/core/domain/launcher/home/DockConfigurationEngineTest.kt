@@ -6,6 +6,8 @@ import com.riffle.core.domain.launcher.apps.AppPackageName
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 
 class DockConfigurationEngineTest {
     private val engine = DockConfigurationEngine()
@@ -66,6 +68,54 @@ class DockConfigurationEngineTest {
 
         assertEquals(true, dock.isExpandable)
         assertEquals(DockExpandAffordance.GESTURE, dock.expandAffordance)
+    }
+
+    @Test
+    fun aSeededPanelTakesTheLayoutsOwnGridWidth() {
+        // So it reads as a short home page rather than a differently-proportioned thing.
+        val layout = HomeLayoutDefaults.standard()
+
+        val result = engine.setDockPanelEnabled(layout = layout, enabled = true)
+
+        val panel = assertNotNull(assertIs<DockEditResult.Updated>(result).layout.dock.panel)
+        assertEquals(layout.settings.grid.dimensions.columns, panel.grid.columns)
+        assertEquals(2, panel.grid.rows)
+        assertEquals(emptyList(), panel.items)
+    }
+
+    @Test
+    fun enablingAPanelThatAlreadyExistsLeavesItsContentsAlone() {
+        // Re-running the enable path must not quietly wipe what the user placed.
+        val seeded =
+            assertIs<DockEditResult.Updated>(
+                engine.setDockPanelEnabled(layout = HomeLayoutDefaults.standard(), enabled = true),
+            ).layout
+        val placed = appShortcut(id = "clock")
+        val withContents = seeded.copy(dock = seeded.dock.copy(panel = seeded.dock.panel?.copy(items = listOf(placed))))
+
+        val result = engine.setDockPanelEnabled(layout = withContents, enabled = true)
+
+        assertEquals(
+            listOf(placed.id),
+            assertIs<DockEditResult.Updated>(result).layout.dock.panel?.items?.map { item -> item.id },
+        )
+    }
+
+    @Test
+    fun disablingThePanelRemovesIt() {
+        val seeded =
+            assertIs<DockEditResult.Updated>(
+                engine.setDockPanelEnabled(layout = HomeLayoutDefaults.standard(), enabled = true),
+            ).layout
+
+        val result = engine.setDockPanelEnabled(layout = seeded, enabled = false)
+
+        assertNull(assertIs<DockEditResult.Updated>(result).layout.dock.panel)
+    }
+
+    @Test
+    fun aDockHasNoPanelUntilOneIsAskedFor() {
+        assertNull(HomeLayoutDefaults.standard().dock.panel)
     }
 
     @Test

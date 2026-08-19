@@ -148,6 +148,24 @@ internal fun ExpandedDockSurface(
                 }
                 Spacer(modifier = Modifier.height(DOCK_SHELF_CONTENT_SPACING_DP.dp))
             }
+            // The panel sits directly above the dock's own row, with notifications above it. Only
+            // one of the two can hold a stable position as notifications come and go, and the
+            // panel is the one worth keeping still: it is a place the user aims for, where the
+            // notification section is whatever happens to have arrived.
+            dock.panel?.let { panel ->
+                DockPanel(
+                    panel = panel,
+                    presentation = presentation,
+                    appIconLoader = appIconLoader,
+                    interactions = interactions,
+                    modifier =
+                        Modifier.padding(
+                            horizontal = DOCK_MAIN_AXIS_PADDING_DP.dp,
+                            vertical = DOCK_CROSS_AXIS_PADDING_DP.dp,
+                        ),
+                )
+                Spacer(modifier = Modifier.height(DOCK_SHELF_CONTENT_SPACING_DP.dp))
+            }
             DockSurfaceRow(
                 dock = dock,
                 surfaceMetrics = surfaceMetrics,

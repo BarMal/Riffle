@@ -42,7 +42,10 @@ internal fun StandardHomeDockArea(
     }
 
     val hasExpandedContent =
-        dockHasExpandedContent(notificationShelfState = notificationShelfState)
+        dockHasExpandedContent(
+            hasPanel = layout.dock.panel != null,
+            notificationShelfState = notificationShelfState,
+        )
     // Expandability is the user's per-layout choice; content and edit mode are still what decide
     // whether there is anything to expand into right now.
     val canExpand =

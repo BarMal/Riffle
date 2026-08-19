@@ -53,15 +53,16 @@ internal fun dockShelfExpandedStateForContent(
 ): Boolean = isExpanded && hasContent
 
 /**
- * Whether the shelf has anything to show.
+ * Whether the shelf has anything to show: the user's panel, the notification section, or both.
  *
- * Only the notification section, now that apps past the dock's capacity are reached by scrolling
- * the strip rather than by opening the shelf. Expanding used to show *fewer* apps in the dock's own
- * row than the collapsed dock did, which was the clearest sign the shelf was answering the wrong
- * question.
+ * Not apps past the dock's capacity -- those are reached by scrolling the strip. Expanding used to
+ * show *fewer* apps in the dock's own row than the collapsed dock did, which was the clearest sign
+ * the shelf was answering the wrong question.
  */
-internal fun dockHasExpandedContent(notificationShelfState: DockNotificationShelfState): Boolean =
-    notificationShelfState != DockNotificationShelfState.Hidden
+internal fun dockHasExpandedContent(
+    hasPanel: Boolean,
+    notificationShelfState: DockNotificationShelfState,
+): Boolean = hasPanel || notificationShelfState != DockNotificationShelfState.Hidden
 
 internal fun Modifier.dockShelfGestureInput(interactions: DockInteractions): Modifier =
     fillMaxWidth()

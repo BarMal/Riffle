@@ -6,6 +6,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithTag
@@ -21,9 +22,14 @@ import com.riffle.core.domain.launcher.apps.AppProfile
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.DockExpandAffordance
+import com.riffle.core.domain.launcher.home.GridCell
+import com.riffle.core.domain.launcher.home.GridDimensions
+import com.riffle.core.domain.launcher.home.GridPlacement
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.LauncherItemId
+import com.riffle.core.domain.launcher.home.LauncherPage
+import com.riffle.core.domain.launcher.home.LauncherPageId
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
 import com.riffle.core.domain.launcher.notifications.LauncherNotification
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
@@ -46,6 +52,7 @@ class DockExpansionInteractionTest {
     val composeRule = createComposeRule()
 
     private val docked = shortcut("docked")
+    private val panelled = shortcut("clock")
     private val chat =
         InstalledApp(
             identity =
@@ -101,6 +108,20 @@ class DockExpansionInteractionTest {
     }
 
     @Test
+    fun thePanelRendersOnTheShelfAndIsEnoughToMakeTheShelfWorthOpening() {
+        // A dock that wants no notification cards but does have a panel still has something to
+        // expand into -- the panel is the other half of the shelf's content, not a passenger on it.
+        setContent(dockLayout(wantsNotifications = false, panel = panelWith(panelled)))
+
+        composeRule.onAllNodesWithTag(DOCK_PANEL_TEST_TAG).assertCountEquals(0)
+
+        swipeUpOnTheDock()
+
+        composeRule.onNodeWithTag(DOCK_PANEL_TEST_TAG).assertIsDisplayed()
+        composeRule.onAllNodesWithText(panelled.label).assertCountEquals(1)
+    }
+
+    @Test
     fun aDockWithNothingToExpandIntoHidesTheButtonEntirely() {
         // Expandable and set to the button, but this dock does not want notification cards, so the
         // shelf has nothing at all to show and the affordance must not advertise it. Opting the
@@ -126,10 +147,18 @@ class DockExpansionInteractionTest {
 
     private fun assertCollapsed() = composeRule.onAllNodesWithText(chat.label).assertCountEquals(0)
 
+    private fun panelWith(item: AppShortcutItem): LauncherPage =
+        LauncherPage(
+            id = LauncherPageId("dock-panel"),
+            grid = GridDimensions(columns = 4, rows = 2),
+            items = listOf(item.copy(placement = GridPlacement(cell = GridCell(column = 0, row = 0)))),
+        )
+
     private fun dockLayout(
         isExpandable: Boolean = true,
         expandAffordance: DockExpandAffordance = DockExpandAffordance.GESTURE,
         wantsNotifications: Boolean = true,
+        panel: LauncherPage? = null,
     ): HomeLayout =
         HomeLayoutDefaults.standard().let { standardLayout ->
             standardLayout.copy(
@@ -139,6 +168,7 @@ class DockExpansionInteractionTest {
                         showNotificationCards = wantsNotifications,
                         isExpandable = isExpandable,
                         expandAffordance = expandAffordance,
+                        panel = panel,
                     ),
             )
         }
@@ -149,13 +179,13 @@ class DockExpansionInteractionTest {
                 Box(modifier = Modifier.size(400.dp)) {
                     StandardHome(
                         layout = layout,
-                        installedApps = listOf(docked.installedApp(), chat),
+                        installedApps = listOf(docked.installedApp(), panelled.installedApp(), chat),
                         interactions = StandardHomeInteractions(),
                         presentation =
                             StandardHomePresentation(
                                 notificationGroupsByApp = listOf(chatNotificationGroup()),
                                 notificationAccessStatus = NotificationAccessStatus.GRANTED,
-                                installedApps = listOf(docked.installedApp(), chat),
+                                installedApps = listOf(docked.installedApp(), panelled.installedApp(), chat),
                                 appShortcutsByApp = emptyMap(),
                             ),
                         appIconLoader = EmptyAppIconLoader,

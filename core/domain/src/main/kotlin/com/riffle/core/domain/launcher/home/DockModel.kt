@@ -20,6 +20,19 @@ data class DockModel(
     val isExpandable: Boolean = true,
     /** How the user reaches the expanded shelf when [isExpandable]. */
     val expandAffordance: DockExpandAffordance = DockExpandAffordance.GESTURE,
+    /**
+     * A small page of the user's own widgets and shortcuts, shown on the expanded shelf, or `null`
+     * when this dock has none.
+     *
+     * A [LauncherPage] rather than a bespoke panel model, so it is laid out, persisted and
+     * (eventually) edited by the same grid machinery as a home page. That is what lets the shelf
+     * carry a clock, a media widget or a set of toggles without this codebase growing a component
+     * for each: whatever the user has installed, placed on a grid.
+     *
+     * It is deliberately not where apps past [capacity] go -- those scroll in the dock's own strip.
+     * The shelf is for things you consult or act on without leaving where you are.
+     */
+    val panel: LauncherPage? = null,
 ) {
     val availableSlots: Int = (capacity - items.size).coerceAtLeast(0)
 }
