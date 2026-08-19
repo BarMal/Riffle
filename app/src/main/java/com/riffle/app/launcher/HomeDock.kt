@@ -488,6 +488,8 @@ internal data class DockInteractions(
      * visible control instead.
      */
     val shelfExpandAffordance: DockExpandAffordance = DockExpandAffordance.GESTURE,
+    /** The edge this dock is on, which is the direction its shelf opens away from. */
+    val position: DockPosition = DockPosition.BOTTOM,
     val reducedMotion: Boolean = false,
     val homeInsetPolicy: HomeInsetPolicy = HomeInsetPolicy(),
     val homeLayout: HomeLayout? = null,

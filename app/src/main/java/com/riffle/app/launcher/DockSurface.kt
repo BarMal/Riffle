@@ -3,6 +3,7 @@ package com.riffle.app.launcher
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -11,6 +12,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.riffle.app.launcher.widgets.EmptyHomeWidgetViewFactory
 import com.riffle.app.launcher.widgets.HomeWidgetViewFactory
@@ -94,6 +96,7 @@ internal fun dockSurfaceMetrics(
 }
 
 @Composable
+@Suppress("LongParameterList")
 internal fun ExpandedDockSurface(
     dock: DockModel,
     notificationShelfState: DockNotificationShelfState,
@@ -101,18 +104,20 @@ internal fun ExpandedDockSurface(
     appShortcutsByApp: AppShortcutsByApp,
     appIconLoader: AppIconLoader,
     widgetViewFactory: HomeWidgetViewFactory = EmptyHomeWidgetViewFactory,
+    position: DockPosition = DockPosition.BOTTOM,
     interactions: DockInteractions,
 ) {
     val presentation = DockPresentation(notificationGroupsByApp, appShortcutsByApp, widgetViewFactory, interactions)
+    val runsHorizontally = position.isHorizontalEdge
 
     BoxWithConstraints(
         modifier = Modifier.dockShelfGestureInput(interactions),
         contentAlignment = dock.alignment.toBoxAlignment(),
     ) {
-        // The expanded shelf stacks notifications, the panel and the dock's own strip vertically,
-        // so it is a bottom-edge arrangement whatever edge the collapsed dock ends up on -- how a
-        // side dock expands is its own question. Its strip therefore runs along this Box's width.
-        val availableMainAxisDp = maxWidth.value.toInt()
+        // The shelf grows out of the edge the dock is on, so its strip runs the same way the
+        // collapsed dock did: along this Box's width on a horizontal edge, its height on a side.
+        val availableMainAxisDp =
+            if (runsHorizontally) maxWidth.value.toInt() else maxHeight.value.toInt()
         val surfaceMetrics =
             dockSurfaceMetrics(
                 dock = dock,
@@ -125,61 +130,129 @@ internal fun ExpandedDockSurface(
             modifier = Modifier.matchParentSize(),
         )
 
-        Column(
+        DockShelfArrangement(
+            runsHorizontally = runsHorizontally,
+            stripFirst = position == DockPosition.TOP || position == DockPosition.LEADING,
             modifier =
                 Modifier
                     .dockShelfPolicies(interactions)
-                    .width(surfaceMetrics.containerMainAxisDp.dp)
+                    .dockShelfExtent(runsHorizontally, surfaceMetrics.containerMainAxisDp.dp)
                     .dockSurfaceAppearance(dock),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            if (notificationShelfState != DockNotificationShelfState.Hidden) {
-                Box(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(
-                                horizontal = DOCK_MAIN_AXIS_PADDING_DP.dp,
-                                vertical = DOCK_CROSS_AXIS_PADDING_DP.dp,
-                            ),
-                ) {
-                    DockNotificationShelf(
-                        state = notificationShelfState,
-                        appIconLoader = appIconLoader,
-                        interactions = interactions,
-                    )
-                }
-                Spacer(modifier = Modifier.height(DOCK_SHELF_CONTENT_SPACING_DP.dp))
-            }
-            // The panel sits directly above the dock's own row, with notifications above it. Only
-            // one of the two can hold a stable position as notifications come and go, and the
-            // panel is the one worth keeping still: it is a place the user aims for, where the
-            // notification section is whatever happens to have arrived.
-            dock.panel?.let { panel ->
-                DockPanel(
-                    panel = panel,
+            strip = {
+                DockSurfaceStrip(
+                    dock = dock,
+                    surfaceMetrics = surfaceMetrics,
+                    isEditing = false,
                     presentation = presentation,
                     appIconLoader = appIconLoader,
-                    interactions = interactions,
-                    modifier =
-                        Modifier.padding(
-                            horizontal = DOCK_MAIN_AXIS_PADDING_DP.dp,
-                            vertical = DOCK_CROSS_AXIS_PADDING_DP.dp,
-                        ),
+                    position = position,
+                    renderBackground = false,
                 )
-                Spacer(modifier = Modifier.height(DOCK_SHELF_CONTENT_SPACING_DP.dp))
-            }
-            DockSurfaceStrip(
-                dock = dock,
-                surfaceMetrics = surfaceMetrics,
-                isEditing = false,
-                presentation = presentation,
-                appIconLoader = appIconLoader,
-                renderBackground = false,
-            )
+            },
+            content = {
+                DockShelfContent(
+                    dock = dock,
+                    notificationShelfState = notificationShelfState,
+                    appIconLoader = appIconLoader,
+                    presentation = presentation,
+                    interactions = interactions,
+                    panelFirst = !runsHorizontally,
+                )
+            },
+        )
+    }
+}
+
+/**
+ * The shelf's two parts, laid out so the dock's own strip stays against the edge it came from.
+ *
+ * The strip and the shelf's content run across each other: a bottom shelf stacks them, a side shelf
+ * sets them side by side, and which comes first is which edge the dock is on.
+ */
+@Composable
+private fun DockShelfArrangement(
+    runsHorizontally: Boolean,
+    stripFirst: Boolean,
+    modifier: Modifier,
+    strip: @Composable () -> Unit,
+    content: @Composable () -> Unit,
+) {
+    val parts: List<@Composable () -> Unit> = if (stripFirst) listOf(strip, content) else listOf(content, strip)
+    if (runsHorizontally) {
+        Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+            parts.forEach { part -> part() }
+        }
+    } else {
+        Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
+            parts.forEach { part -> part() }
         }
     }
 }
+
+/**
+ * The notification section and the panel, stacked.
+ *
+ * Only one of the two can hold a stable position as notifications come and go, and the panel is the
+ * one worth keeping still: it is a place the user aims for, where the notification section is
+ * whatever happens to have arrived. So the panel is the one placed against the dock -- directly
+ * above the strip on a bottom shelf, and at the top of the column beside it on a side shelf, where
+ * "against the dock" is a different direction.
+ */
+@Composable
+private fun DockShelfContent(
+    dock: DockModel,
+    notificationShelfState: DockNotificationShelfState,
+    appIconLoader: AppIconLoader,
+    presentation: DockPresentation,
+    interactions: DockInteractions,
+    panelFirst: Boolean,
+) {
+    val notifications: (@Composable () -> Unit)? =
+        notificationShelfState
+            .takeIf { state -> state != DockNotificationShelfState.Hidden }
+            ?.let { state ->
+                {
+                    Box(modifier = Modifier.fillMaxWidth().dockShelfContentPadding()) {
+                        DockNotificationShelf(
+                            state = state,
+                            appIconLoader = appIconLoader,
+                            interactions = interactions,
+                        )
+                    }
+                }
+            }
+    val panel: (@Composable () -> Unit)? =
+        dock.panel?.let { page ->
+            {
+                DockPanel(
+                    panel = page,
+                    presentation = presentation,
+                    appIconLoader = appIconLoader,
+                    interactions = interactions,
+                    modifier = Modifier.dockShelfContentPadding(),
+                )
+            }
+        }
+    val ordered = if (panelFirst) listOfNotNull(panel, notifications) else listOfNotNull(notifications, panel)
+
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        ordered.forEachIndexed { index, part ->
+            part()
+            if (index != ordered.lastIndex) {
+                Spacer(modifier = Modifier.height(DOCK_SHELF_CONTENT_SPACING_DP.dp))
+            }
+        }
+    }
+}
+
+private fun Modifier.dockShelfContentPadding(): Modifier =
+    padding(horizontal = DOCK_MAIN_AXIS_PADDING_DP.dp, vertical = DOCK_CROSS_AXIS_PADDING_DP.dp)
+
+/** Sizes the shelf along the dock's run and lets its content decide the other way. */
+private fun Modifier.dockShelfExtent(
+    runsHorizontally: Boolean,
+    mainAxis: Dp,
+): Modifier = if (runsHorizontally) width(mainAxis) else height(mainAxis)
 
 @Composable
 @Suppress("LongParameterList")
