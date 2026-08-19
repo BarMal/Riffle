@@ -83,6 +83,7 @@ class LauncherAppActionRouteTest {
 
         listOf(
             LauncherShellAction.OpenWidgetPicker,
+            LauncherShellAction.OpenWidgetPickerForDockPanel,
             LauncherShellAction.CloseWidgetPicker,
         ).forEach { action ->
             assertEquals(LauncherAppActionRoute.WidgetPickerState(action), action.launcherAppActionRoute())

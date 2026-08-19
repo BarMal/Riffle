@@ -9,6 +9,7 @@ internal class LauncherWidgetPickerActionReducer {
     ): LauncherShellState? =
         when (action) {
             LauncherShellAction.OpenWidgetPicker,
+            LauncherShellAction.OpenWidgetPickerForDockPanel,
             LauncherShellAction.CloseWidgetPicker,
             -> state.withWidgetPickerAction(action)
 

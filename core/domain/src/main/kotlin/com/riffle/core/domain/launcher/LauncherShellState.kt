@@ -73,6 +73,8 @@ data class LauncherShellState(
     val installedWidgetProviders: List<InstalledWidgetProvider> = emptyList(),
     val widgetProviderCatalogStatus: WidgetProviderCatalogStatus = WidgetProviderCatalogStatus.READY,
     val isWidgetPickerOpen: Boolean = false,
+    /** Whether the open picker is placing onto the dock's panel rather than onto home or the dock. */
+    val isWidgetPickerTargetingDockPanel: Boolean = false,
     /** The latest rejected Dock edit, retained until another Dock edit succeeds. */
     val dockEditRejectionReason: DockEditRejectionReason? = null,
 ) {

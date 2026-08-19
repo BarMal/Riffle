@@ -482,6 +482,24 @@ private fun reduceHomeShortcutEdit(
                 is WidgetEditResult.Rejected -> previousState
             }
 
+        is LauncherShellAction.AddHostedWidgetToDockPanel ->
+            when (
+                val result =
+                    widgetEngine.addWidgetToDockPanel(
+                        layout = previousState.homeLayout,
+                        hostedWidgetId = action.hostedWidgetId,
+                        label = action.label,
+                        preferredSpan = action.preferredSpan,
+                        resizeConstraints = action.resizeConstraints,
+                        targetCell = action.targetCell,
+                    )
+            ) {
+                is WidgetEditResult.Updated ->
+                    previousState.withHomeLayout(result.layout, homeLayoutRepository)
+
+                is WidgetEditResult.Rejected -> previousState
+            }
+
         is LauncherShellAction.ResizeHomeWidget ->
             when (
                 val result =

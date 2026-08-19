@@ -19,6 +19,8 @@ internal fun HomeBackgroundContextMenu(
     haptics: LauncherHaptics,
     onAction: (LauncherShellAction) -> Unit,
     modifier: Modifier = Modifier,
+    items: List<ShortcutContextMenuItem> = homeWorkspaceContextMenuItems(),
+    longClickLabel: String = "Show home actions",
     onClick: () -> Unit = {},
 ) {
     val isMenuExpanded = remember { mutableStateOf(false) }
@@ -53,7 +55,7 @@ internal fun HomeBackgroundContextMenu(
                         true
                     })
                     onLongClick(
-                        label = "Show home actions",
+                        label = longClickLabel,
                         action = {
                             showMenu(DpOffset.Zero)
                             true
@@ -63,7 +65,7 @@ internal fun HomeBackgroundContextMenu(
     ) {
         ShortcutContextMenu(
             expanded = isMenuExpanded.value,
-            items = homeWorkspaceContextMenuItems(),
+            items = items,
             onDismissRequest = {
                 isMenuExpanded.value = false
                 menuOffset.value = DpOffset.Zero
@@ -73,6 +75,33 @@ internal fun HomeBackgroundContextMenu(
         )
     }
 }
+
+/**
+ * What long-pressing the empty space of a grid offers, which depends on whose grid it is.
+ *
+ * The panel is a short grid on the dock's shelf, not a home page: page management and folders do
+ * not apply to it, and adding a widget has to say so, because the picker covers the shelf and the
+ * widget cannot simply be dragged back onto it.
+ */
+internal fun backgroundContextMenuItems(surface: ShortcutContextSurface): List<ShortcutContextMenuItem> =
+    when (surface) {
+        ShortcutContextSurface.DOCK_PANEL ->
+            listOf(
+                ShortcutContextMenuItem(
+                    label = "Add widget",
+                    action = LauncherShellAction.OpenWidgetPickerForDockPanel,
+                ),
+            )
+
+        ShortcutContextSurface.HOME, ShortcutContextSurface.DOCK -> homeWorkspaceContextMenuItems()
+    }
+
+internal val ShortcutContextSurface.backgroundLongClickLabel: String
+    get() =
+        when (this) {
+            ShortcutContextSurface.DOCK_PANEL -> "Show panel actions"
+            ShortcutContextSurface.HOME, ShortcutContextSurface.DOCK -> "Show home actions"
+        }
 
 internal fun homeWorkspaceContextMenuItems(): List<ShortcutContextMenuItem> =
     listOf(

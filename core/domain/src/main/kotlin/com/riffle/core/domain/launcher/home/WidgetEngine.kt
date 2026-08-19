@@ -23,44 +23,99 @@ class WidgetEngine(
                 WidgetEditResult.Rejected(PlacementRejectionReason.DUPLICATE_ITEM_ID)
 
             else ->
-                WidgetItem(
-                    id = LauncherItemId("widget:${hostedWidgetId.value}"),
-                    appWidgetId = hostedWidgetId,
-                    label = label.ifBlank { DEFAULT_WIDGET_LABEL },
+                placeWidget(
+                    page = targetPage(layout = layout, targetPageId = targetPageId),
+                    widget = widgetFor(hostedWidgetId, label, resizeConstraints),
+                    preferredSpan = preferredSpan,
                     resizeConstraints = resizeConstraints,
-                ).let { widget ->
-                    val targetPage = targetPage(layout = layout, targetPageId = targetPageId)
-                    preferredSpan
-                        .placementCandidates(resizeConstraints)
-                        .map { span ->
-                            val result =
-                                if (targetCell == null) {
-                                    gridPlacementEngine.placeItemInFirstAvailableCell(
-                                        page = targetPage,
-                                        item = widget,
-                                        span = span,
-                                    )
-                                } else {
-                                    gridPlacementEngine.placeItem(
-                                        page = targetPage,
-                                        item = widget.withPlacement(GridPlacement(cell = targetCell, span = span)),
-                                    )
-                                }
-                            span to result
-                        }
-                        .firstOrNull { (_, result) -> result is PlaceLauncherItemResult.Placed }
-                        ?.let { (span, result) ->
-                            WidgetEditResult.Updated(
-                                layout =
-                                    layout.withUpdatedPage(
-                                        (result as PlaceLauncherItemResult.Placed).page,
-                                    ),
-                                placedSpan = span,
-                            )
-                        }
-                        ?: WidgetEditResult.Rejected(PlacementRejectionReason.NO_AVAILABLE_CELL)
-                }
+                    targetCell = targetCell,
+                )
+                    ?.let { (span, page) ->
+                        WidgetEditResult.Updated(layout = layout.withUpdatedPage(page), placedSpan = span)
+                    }
+                    ?: WidgetEditResult.Rejected(PlacementRejectionReason.NO_AVAILABLE_CELL)
         }
+
+    /**
+     * Places a widget on the dock's panel.
+     *
+     * The panel is a page in every respect that matters here -- it has a grid and holds items --
+     * but it is not one of [HomeLayout.pages], so the home path cannot reach it and it needs its
+     * own entry point. The placement itself is the same search for a span that fits.
+     */
+    fun addWidgetToDockPanel(
+        layout: HomeLayout,
+        hostedWidgetId: HostedWidgetId,
+        label: String,
+        preferredSpan: GridSpan = GridSpan(),
+        resizeConstraints: WidgetResizeConstraints = WidgetResizeConstraints(),
+        targetCell: GridCell? = null,
+    ): WidgetEditResult {
+        val panel = layout.dock.panel
+        return when {
+            panel == null ->
+                WidgetEditResult.Rejected(PlacementRejectionReason.ITEM_NOT_FOUND)
+
+            layout.hostsWidget(hostedWidgetId) ->
+                WidgetEditResult.Rejected(PlacementRejectionReason.DUPLICATE_ITEM_ID)
+
+            else ->
+                placeWidget(
+                    page = panel,
+                    widget = widgetFor(hostedWidgetId, label, resizeConstraints),
+                    preferredSpan = preferredSpan,
+                    resizeConstraints = resizeConstraints,
+                    targetCell = targetCell,
+                )
+                    ?.let { (span, placedPanel) ->
+                        WidgetEditResult.Updated(
+                            layout = layout.copy(dock = layout.dock.copy(panel = placedPanel)),
+                            placedSpan = span,
+                        )
+                    }
+                    ?: WidgetEditResult.Rejected(PlacementRejectionReason.NO_AVAILABLE_CELL)
+        }
+    }
+
+    /**
+     * The largest permitted span at or below [preferredSpan] that fits, and the page holding it.
+     *
+     * Null when no candidate span lands anywhere -- either the requested cell is taken or the page
+     * has no room at any size the widget allows.
+     */
+    private fun placeWidget(
+        page: LauncherPage,
+        widget: WidgetItem,
+        preferredSpan: GridSpan,
+        resizeConstraints: WidgetResizeConstraints,
+        targetCell: GridCell?,
+    ): Pair<GridSpan, LauncherPage>? =
+        preferredSpan
+            .placementCandidates(resizeConstraints)
+            .firstNotNullOfOrNull { span ->
+                val result =
+                    if (targetCell == null) {
+                        gridPlacementEngine.placeItemInFirstAvailableCell(page = page, item = widget, span = span)
+                    } else {
+                        gridPlacementEngine.placeItem(
+                            page = page,
+                            item = widget.withPlacement(GridPlacement(cell = targetCell, span = span)),
+                        )
+                    }
+                (result as? PlaceLauncherItemResult.Placed)?.let { placed -> span to placed.page }
+            }
+
+    private fun widgetFor(
+        hostedWidgetId: HostedWidgetId,
+        label: String,
+        resizeConstraints: WidgetResizeConstraints,
+    ): WidgetItem =
+        WidgetItem(
+            id = LauncherItemId("widget:${hostedWidgetId.value}"),
+            appWidgetId = hostedWidgetId,
+            label = label.ifBlank { DEFAULT_WIDGET_LABEL },
+            resizeConstraints = resizeConstraints,
+        )
 
     fun resizeWidgetOnSelectedPage(
         layout: HomeLayout,

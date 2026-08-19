@@ -68,6 +68,7 @@ internal fun LauncherShellAction.launcherAppActionRoute(): LauncherAppActionRout
         -> LauncherAppActionRoute.AppListState(this)
 
         LauncherShellAction.OpenWidgetPicker,
+        LauncherShellAction.OpenWidgetPickerForDockPanel,
         LauncherShellAction.CloseWidgetPicker,
         -> LauncherAppActionRoute.WidgetPickerState(this)
 

@@ -252,6 +252,15 @@ class WidgetBindingCoordinator(
                     label = label,
                     dockIndex = dockIndex,
                 )
+
+            WidgetAddTarget.DOCK_PANEL ->
+                LauncherShellAction.AddHostedWidgetToDockPanel(
+                    hostedWidgetId = hostedWidgetId,
+                    label = label,
+                    preferredSpan = preferredSpan,
+                    resizeConstraints = resizeConstraints,
+                    targetCell = targetCell,
+                )
         }
 }
 

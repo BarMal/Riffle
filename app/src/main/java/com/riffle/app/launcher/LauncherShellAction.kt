@@ -324,6 +324,15 @@ sealed interface LauncherShellAction {
 
     data object OpenWidgetPicker : LauncherShellAction
 
+    /**
+     * Opens the widget picker aimed at the dock's panel.
+     *
+     * Its own action rather than a parameter on [OpenWidgetPicker] because the picker covers the
+     * shelf: the panel cannot be dragged onto, so where a widget is going has to be settled before
+     * the picker opens rather than by where it is dropped.
+     */
+    data object OpenWidgetPickerForDockPanel : LauncherShellAction
+
     data object CloseWidgetPicker : LauncherShellAction
 
     data class RequestAddWidget(
@@ -352,6 +361,15 @@ sealed interface LauncherShellAction {
         override val hostedWidgetId: HostedWidgetId,
         override val label: String,
         val dockIndex: Int? = null,
+    ) : LauncherShellAction,
+        HostedWidgetAddAction
+
+    data class AddHostedWidgetToDockPanel(
+        override val hostedWidgetId: HostedWidgetId,
+        override val label: String,
+        val preferredSpan: GridSpan = GridSpan(),
+        val resizeConstraints: WidgetResizeConstraints = WidgetResizeConstraints(),
+        val targetCell: GridCell? = null,
     ) : LauncherShellAction,
         HostedWidgetAddAction
 
@@ -511,6 +529,9 @@ sealed interface LauncherShellAction {
 enum class WidgetAddTarget {
     HOME,
     DOCK,
+
+    /** The dock's panel -- a grid like a home page, reached through the dock rather than [HOME]. */
+    DOCK_PANEL,
 }
 
 sealed interface HostedWidgetAddAction {

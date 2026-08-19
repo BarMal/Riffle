@@ -231,6 +231,9 @@ internal fun StandardHome(
             catalogStatus = presentation.widgetPicker.catalogStatus,
             previewImageLoader = widgetPreviewImageLoader,
             accessiblePlacement = accessibleWidgetPlacement.value,
+            hasDockPanel = visibleLayout.dock.panel != null,
+            guidedPlacementTarget =
+                WidgetAddTarget.DOCK_PANEL.takeIf { presentation.widgetPicker.isTargetingDockPanel },
             isDragHandoffActive = widgetPickerDragInProgress.value,
             onWidgetDragStarted = {
                 cancelAccessibleWidgetPlacement()
@@ -289,6 +292,7 @@ internal fun StandardHome(
                             accessibleWidgetPlacement.value?.initialPageId
                                 ?: visibleLayout.selectedPageId,
                         dockItemCount = visibleLayout.dock.items.size,
+                        panel = visibleLayout.dock.panel,
                         availableWidthDp = workspaceGridBounds.value?.width?.div(density)?.roundToInt() ?: 0,
                         availableHeightDp = workspaceGridBounds.value?.height?.div(density)?.roundToInt() ?: 0,
                     )
@@ -412,6 +416,7 @@ internal fun accessibleWidgetPlacementFor(
     selectedPageId: LauncherPageId,
     initialPageId: LauncherPageId = selectedPageId,
     dockItemCount: Int = 0,
+    panel: LauncherPage? = null,
     availableWidthDp: Int,
     availableHeightDp: Int,
 ): WidgetPickerAccessiblePlacement {
@@ -427,29 +432,22 @@ internal fun accessibleWidgetPlacementFor(
         )
     }
 
-    val orderedPages =
-        pages.sortedBy { page ->
-            if (page.id == selectedPageId) 0 else 1
+    // The panel is a page with a grid, so free cells are found on it exactly as on a home page. It
+    // is the only page in play when it is the target, and its candidates carry no page ID -- it is
+    // not one of the layout's pages, and nothing downstream should try to navigate to it.
+    val searchedPages =
+        when (target) {
+            WidgetAddTarget.DOCK_PANEL -> listOfNotNull(panel)
+            else -> pages.sortedBy { page -> if (page.id == selectedPageId) 0 else 1 }
         }
     val candidates =
-        orderedPages.flatMap { page ->
-            (0 until page.grid.rows.coerceAtLeast(0)).flatMap { row ->
-                (0 until page.grid.columns.coerceAtLeast(0)).mapNotNull { column ->
-                    widgetPickerDragPlacementPreviewFor(
-                        page = page,
-                        provider = provider,
-                        cell = GridCell(column = column, row = row),
-                        availableWidthDp = availableWidthDp,
-                        availableHeightDp = availableHeightDp,
-                    ).takeIf { preview -> preview.isValid }?.let { preview ->
-                        WidgetPickerPlacementCandidate(
-                            pageId = page.id,
-                            cell = preview.cell,
-                            span = preview.span,
-                        )
-                    }
-                }
-            }
+        searchedPages.flatMap { page ->
+            page.freeCellCandidates(
+                provider = provider,
+                pageId = page.id.takeIf { target != WidgetAddTarget.DOCK_PANEL },
+                availableWidthDp = availableWidthDp,
+                availableHeightDp = availableHeightDp,
+            )
         }
     return WidgetPickerAccessiblePlacement(
         provider = provider,
@@ -458,6 +456,30 @@ internal fun accessibleWidgetPlacementFor(
         candidates = candidates,
     )
 }
+
+private fun LauncherPage.freeCellCandidates(
+    provider: InstalledWidgetProvider,
+    pageId: LauncherPageId?,
+    availableWidthDp: Int,
+    availableHeightDp: Int,
+): List<WidgetPickerPlacementCandidate> =
+    (0 until grid.rows.coerceAtLeast(0)).flatMap { row ->
+        (0 until grid.columns.coerceAtLeast(0)).mapNotNull { column ->
+            widgetPickerDragPlacementPreviewFor(
+                page = this,
+                provider = provider,
+                cell = GridCell(column = column, row = row),
+                availableWidthDp = availableWidthDp,
+                availableHeightDp = availableHeightDp,
+            ).takeIf { preview -> preview.isValid }?.let { preview ->
+                WidgetPickerPlacementCandidate(
+                    pageId = pageId,
+                    cell = preview.cell,
+                    span = preview.span,
+                )
+            }
+        }
+    }
 
 /**
  * Renders only the standard Dock, pinned to the bottom of the screen. Cards mode reuses the
@@ -887,6 +909,8 @@ internal data class StandardHomeWidgetPickerState(
     val profileContentVisibility: Map<AppProfileId, AppProfileContentVisibility> = emptyMap(),
     val catalogStatus: WidgetProviderCatalogStatus = WidgetProviderCatalogStatus.READY,
     val isOpen: Boolean = false,
+    /** Whether this picker is placing onto the dock's panel rather than onto home or the dock. */
+    val isTargetingDockPanel: Boolean = false,
 )
 
 internal data class HomeInsetPolicy(

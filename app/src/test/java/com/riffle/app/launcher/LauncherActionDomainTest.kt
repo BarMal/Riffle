@@ -333,6 +333,7 @@ class LauncherActionDomainTest {
                 ),
                 activity("ResizeHomeWidget", LauncherShellAction.ResizeHomeWidget(itemId, GridSpan(2, 2))),
                 app("OpenWidgetPicker", LauncherShellAction.OpenWidgetPicker),
+                app("OpenWidgetPickerForDockPanel", LauncherShellAction.OpenWidgetPickerForDockPanel),
                 app("CloseWidgetPicker", LauncherShellAction.CloseWidgetPicker),
                 app(
                     "RequestAddWidget",
@@ -349,6 +350,10 @@ class LauncherActionDomainTest {
                 activity(
                     "AddHostedWidgetToDock",
                     LauncherShellAction.AddHostedWidgetToDock(HostedWidgetId(42), label = "Weather"),
+                ),
+                activity(
+                    "AddHostedWidgetToDockPanel",
+                    LauncherShellAction.AddHostedWidgetToDockPanel(HostedWidgetId(42), label = "Weather"),
                 ),
                 app("SearchQueryChanged", LauncherShellAction.SearchQueryChanged("query")),
                 app(
