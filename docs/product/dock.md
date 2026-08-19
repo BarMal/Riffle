@@ -45,10 +45,15 @@ The **dynamic** section shows an entry when **a notification has arrived** for a
 not already showing. It is opt-in, per layout. Its meaning is "this has something waiting", not
 "this is a list of things you can go to".
 
-What a tap on a dynamic entry *does* depends on where the content lives:
+What a tap *does* depends on where the content lives, and this holds on both sides:
 
-- in grid modes there is nowhere on the launcher for it, so a tap opens the app;
-- in Cards mode the app's content is already on the launcher, so a tap brings that stage forward.
+- in grid modes there is nowhere on the launcher for an app's content, so a tap opens the app;
+- in Cards mode the content is already on the launcher, so a tap brings that stage forward.
+
+That applies to the static side too. In Cards, a tap on a pinned icon selects its stage when it has
+one and opens the app when it does not, so a quiet pinned app never gives a dead tap. **Open** stays
+on the icon's long-press menu either way. The badge is the tell: a badged pinned icon has a stage a
+tap will show, an unbadged one opens.
 
 The static section is sized first and in full; the dynamic section takes what is left. Notifications
 come and go, and a section sized first would shove the pinned icons along the dock every time one
@@ -86,12 +91,12 @@ section does that job, so the rail is gone (#1159).
 | Target | State |
 | --- | --- |
 | One dock, every layout | Renders in every mode. Cards invokes it through its own bottom-pinned path rather than the shared one |
-| Anchors to any edge, space reserved | Done for grid modes (#1148–#1152). **Not for Cards** — bottom-pinned, so the position setting is inert there |
+| Anchors to any edge, space reserved | Done for grid modes (#1148–#1152). **Not for Cards** — bottom-pinned, so the position setting is inert there. Decided: wire `resolveDockPosition` into the dock's position, which means revisiting `dockInteractionRegionHeightDp` (it reserves a height and only a height) |
 | Sized by settings | Done |
 | Static section | Done |
 | Dynamic section exists, opt-in per layout | Done (#1154), gated on the existing per-layout switch |
-| Dynamic section means "a notification arrived" | **Wrong in Cards** — see below |
-| Tap opens the app / brings the stage forward | Done (#1155) |
+| Dynamic section means "a notification arrived" | Done (#1162) — de-duplicated against the static side in every mode |
+| Tap opens the app / brings the stage forward | Done (#1155), and on the static side in Cards too (#1162) |
 | Static sized first, dynamic takes the remainder | Done (#1154) |
 | Visible-before-overflow, scroll for the rest | Done |
 | Multiple rows | **Not started** — no notion of rows exists |
@@ -101,28 +106,17 @@ section does that job, so the rail is gone (#1159).
 | Dock floats over other apps | **Not started** — a separate overlay dock subsystem exists and is to be replaced |
 | Rail superseded | Done (#1159) |
 
-## Known divergence to correct
+## Unresolved
 
-**The Cards dynamic section is the full stage list, not a notification section.** It currently holds
-every stage — including apps pinned to the static side, and stages with nothing waiting. That was
-inferred while replacing the rail and it contradicts this document: dynamic means *a notification
-arrived*, and a pinned app is static. The de-duplication in `DockCompositionPlanner` was correct and
-should be restored for Cards as well.
-
-Correcting it raises one question this document does not yet answer: with pinned apps excluded from
-the dynamic section, **how is a pinned app's stage reached on a wide window?** Its icon is on the
-static side, where a tap opens the app; there is no stage carousel at that width. Candidate answers:
-static icons select the stage in Cards rather than launching; or pinned apps are not excluded in
-Cards specifically; or wide windows gain the carousel that compact widths already have.
-
-## Also unresolved
-
+- **The merged All-notifications page has no dock affordance on a wide window.** It used to ride the
+  full-stage-list feed, which was wrong for other reasons (#1162); the compact stage carousel still
+  reaches it. The `ShowAllNotifications` intent and its plumbing are deliberately left in place and
+  dormant, so a dedicated affordance can host it if a wide window is decided to need one.
+- **A pinned app's tap action in Cards depends on whether something is waiting.** The badge makes it
+  legible, but it is a behaviour that changes without the user doing anything, and is open to veto.
 - **The rail's per-stage snippet.** The rail showed a line of the most recent card per stage. A dock
-  entry is one icon wide and has nowhere to put it, so that is currently lost with no replacement.
-- **`resolveDockPosition` has no consumer.** It resolved the dock's edge from the user's setting or
-  the active template's suggestion, and the rail was its only reader — so a template can no longer
-  suggest an edge.
-- **The Cards expanded shelf still shows a notification card row**, which now duplicates the dock's
+  entry is one icon wide and has nowhere to put it, so that is lost with no replacement.
+- **The Cards expanded shelf still shows a notification card row**, which duplicates the dock's
   dynamic section. The panel is the part worth keeping there.
 
 ## Change checklist
