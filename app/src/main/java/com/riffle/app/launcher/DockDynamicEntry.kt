@@ -85,6 +85,29 @@ internal fun List<DockNotificationCardState>.stageSelectingDockDynamicEntries(se
         )
     }
 
+/**
+ * The merged "All notifications" entry -- every stage's notifications at once, one destination.
+ *
+ * Offered only where opted in (per posture), and unlike a per-app entry it stands for no single app,
+ * so it draws the initial-letter fallback rather than borrowing an icon. Activating it is a choice
+ * about what the surface shows, not a stage selection, so it carries [ShowAllNotifications].
+ */
+internal fun allNotificationsDockDynamicEntry(
+    isSelected: Boolean,
+    badgeCount: Int,
+): DockDynamicEntry =
+    DockDynamicEntry(
+        key = "all-notifications",
+        label = ALL_NOTIFICATIONS_LABEL,
+        identity = null,
+        badgeCount = badgeCount,
+        isSelected = isSelected,
+        contentDescription = dockStageEntryContentDescription(ALL_NOTIFICATIONS_LABEL, badgeCount, isSelected),
+        intent = DockDynamicEntryIntent.ShowAllNotifications,
+    )
+
+private const val ALL_NOTIFICATIONS_LABEL = "All notifications"
+
 private fun dockStageEntryContentDescription(
     label: String,
     badgeCount: Int,

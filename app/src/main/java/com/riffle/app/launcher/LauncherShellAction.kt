@@ -481,6 +481,12 @@ sealed interface LauncherShellAction {
 
     data class SelectThreadCardGrouping(val grouping: ThreadCardGrouping) : LauncherShellAction
 
+    /** Whether the merged "All notifications" view is offered on the folded (compact) Cards layout. */
+    data class SelectCardsFoldedShowAllNotifications(val enabled: Boolean) : LauncherShellAction
+
+    /** Whether the merged "All notifications" view is offered on the unfolded (wide) Cards layout. */
+    data class SelectCardsUnfoldedShowAllNotifications(val enabled: Boolean) : LauncherShellAction
+
     data class SelectDockPosition(val position: DockPosition) : LauncherShellAction
 
     data class SelectOverlayDockEnabled(val enabled: Boolean) : LauncherShellAction

@@ -126,6 +126,8 @@ private fun encodeCardsSettings(settings: CardsSettings): JSONObject =
         .put("timeScapePaneArrangement", settings.adaptiveStagePaneArrangement.name)
         .put("threadMessageOrder", settings.threadMessageOrder.name)
         .put("threadCardGrouping", settings.threadCardGrouping.name)
+        .put("foldedShowAllNotifications", settings.foldedShowAllNotifications)
+        .put("unfoldedShowAllNotifications", settings.unfoldedShowAllNotifications)
 
 private fun encodeStagePreferences(entry: Map.Entry<HomeLayoutKey, AppStagePreferences>): JSONObject =
     JSONObject()
@@ -167,6 +169,9 @@ private fun JSONObject.toCardsSettings(defaults: CardsSettings): CardsSettings {
         adaptiveStagePaneArrangement = enumOrDefault("timeScapePaneArrangement", defaults.adaptiveStagePaneArrangement),
         threadMessageOrder = enumOrDefault("threadMessageOrder", defaults.threadMessageOrder),
         threadCardGrouping = enumOrDefault("threadCardGrouping", defaults.threadCardGrouping),
+        foldedShowAllNotifications = optBoolean("foldedShowAllNotifications", defaults.foldedShowAllNotifications),
+        unfoldedShowAllNotifications =
+            optBoolean("unfoldedShowAllNotifications", defaults.unfoldedShowAllNotifications),
     )
 }
 

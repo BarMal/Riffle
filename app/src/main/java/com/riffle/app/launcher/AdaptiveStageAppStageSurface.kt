@@ -493,8 +493,8 @@ internal sealed interface AdaptiveStagePage {
     data object AllNotifications : AdaptiveStagePage
 }
 
-internal fun List<AppStage>.withAllNotificationsPage(): List<AdaptiveStagePage> =
-    map(AdaptiveStagePage::Stage) + AdaptiveStagePage.AllNotifications
+internal fun List<AppStage>.withAllNotificationsPage(include: Boolean = true): List<AdaptiveStagePage> =
+    map(AdaptiveStagePage::Stage) + listOfNotNull(AdaptiveStagePage.AllNotifications.takeIf { include })
 
 /**
  * The pager's index into [pages] for whatever is currently shown, independent of pages.size.
@@ -562,7 +562,8 @@ private fun AdaptiveStageCompactContent(
 ) {
     val stages = shellState.snapshot.stages
     val reducedMotion = state.launcherSettings.motion.reducedMotion
-    val pages = remember(stages) { stages.withAllNotificationsPage() }
+    val showAllNotifications = state.launcherSettings.cards.foldedShowAllNotifications
+    val pages = remember(stages, showAllNotifications) { stages.withAllNotificationsPage(showAllNotifications) }
     val selectedPageIndex =
         adaptiveStageSelectedPageIndex(pages, selectedStage?.id, allNotificationsSelected)
     val pagerState =
@@ -641,7 +642,8 @@ private fun AdaptiveStageSplitContent(
 ) {
     val stages = shellState.snapshot.stages
     val reducedMotion = state.launcherSettings.motion.reducedMotion
-    val pages = remember(stages) { stages.withAllNotificationsPage() }
+    val showAllNotifications = state.launcherSettings.cards.foldedShowAllNotifications
+    val pages = remember(stages, showAllNotifications) { stages.withAllNotificationsPage(showAllNotifications) }
     val selectedPageIndex =
         adaptiveStageSelectedPageIndex(pages, selectedStage?.id, allNotificationsSelected)
     val pagerState =

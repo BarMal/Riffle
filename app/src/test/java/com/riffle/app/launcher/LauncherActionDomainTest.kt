@@ -506,6 +506,14 @@ class LauncherActionDomainTest {
                     "SelectThreadCardGrouping",
                     LauncherShellAction.SelectThreadCardGrouping(ThreadCardGrouping.PER_MESSAGE),
                 ),
+                settings(
+                    "SelectCardsFoldedShowAllNotifications",
+                    LauncherShellAction.SelectCardsFoldedShowAllNotifications(enabled = true),
+                ),
+                settings(
+                    "SelectCardsUnfoldedShowAllNotifications",
+                    LauncherShellAction.SelectCardsUnfoldedShowAllNotifications(enabled = true),
+                ),
                 settings("SelectOverlayDockEnabled", LauncherShellAction.SelectOverlayDockEnabled(enabled = true)),
                 settings("SelectOverlayDockEdge", LauncherShellAction.SelectOverlayDockEdge(OverlayDockEdge.START)),
                 settings(
