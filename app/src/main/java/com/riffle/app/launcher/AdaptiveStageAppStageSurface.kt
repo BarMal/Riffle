@@ -151,7 +151,8 @@ internal fun resolveDockPosition(
  * preference today, with no template or device override to reconcile against yet.
  */
 @Suppress("MaxLineLength")
-internal fun resolveAdaptiveStagePaneArrangement(value: AdaptiveStagePaneArrangement): AdaptiveStagePaneArrangement = value
+internal fun resolveAdaptiveStagePaneArrangement(value: AdaptiveStagePaneArrangement): AdaptiveStagePaneArrangement =
+    value
 
 /** The Cards home surface, compact by default and pane-adaptive for the current launcher window. */
 @Composable

@@ -79,12 +79,17 @@ class AndroidFeedParserTest {
         assertEquals(50, feed.items.size)
         assertTrue(feed.items.none { item -> item.identity == "id-500" })
 
-        val oversized = parser.parse("<rss><channel><item><title>${"x".repeat(257)}</title></item></channel></rss>").getOrThrow()
+        val oversized =
+            parser.parse(
+                "<rss><channel><item><title>${"x".repeat(257)}</title></item></channel></rss>",
+            ).getOrThrow()
         assertTrue(oversized.items.isEmpty())
 
         val oversizedNested =
             parser.parse(
-                "<feed><title><div>${"x".repeat(257)}</div></title><entry><id>kept</id><title>Kept</title></entry></feed>",
+                "<feed><title><div>${"x".repeat(
+                    257,
+                )}</div></title><entry><id>kept</id><title>Kept</title></entry></feed>",
             ).getOrThrow()
         assertEquals("Kept", oversizedNested.items.single().title)
     }

@@ -9,4 +9,8 @@ insert_final_newline = true
 trim_trailing_whitespace = true
 
 [*.{kt,kts}]
+# Match detekt's MaxLineLength (config/detekt/detekt.yml). Without it ktlint has no line limit and
+# collapses signatures/expression bodies past 120, which detekt then rejects -- the two tools
+# disagreeing on the same line. Setting it makes ktlint wrap at the width detekt enforces.
+max_line_length = 120
 ktlint_function_naming_ignore_when_annotated_with = Composable

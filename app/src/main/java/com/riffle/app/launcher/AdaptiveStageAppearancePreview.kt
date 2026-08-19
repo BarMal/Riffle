@@ -73,7 +73,12 @@ internal fun AdaptiveStageAppearancePreview(
         // direction visibly swaps earlier and later cards side-to-side; curve depth changes the
         // arc's magnitude on both sides without switching them.
         CardStack(
-            entries = resolution.layoutPolicy.entries(cardCount = 3, activeIndex = 1, reducedMotion = resolution.reducedMotion),
+            entries =
+                resolution.layoutPolicy.entries(
+                    cardCount = 3,
+                    activeIndex = 1,
+                    reducedMotion = resolution.reducedMotion,
+                ),
             modifier = Modifier.fillMaxSize(),
             animationProfile = CardStackAnimationProfile.CARD_FLIGHT,
             animationSpec = resolution.animation,

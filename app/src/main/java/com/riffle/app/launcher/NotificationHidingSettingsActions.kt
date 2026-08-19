@@ -7,7 +7,9 @@ import com.riffle.core.domain.launcher.settings.withRule
 import com.riffle.core.domain.launcher.settings.withoutRule
 
 @Suppress("MaxLineLength")
-private fun NotificationHidingSettings.withNotificationHidingAction(action: LauncherShellAction): NotificationHidingSettings =
+private fun NotificationHidingSettings.withNotificationHidingAction(
+    action: LauncherShellAction,
+): NotificationHidingSettings =
     when (action) {
         is LauncherShellAction.AddNotificationHideRule ->
             withRule(

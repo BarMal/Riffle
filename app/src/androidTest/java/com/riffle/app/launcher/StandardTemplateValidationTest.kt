@@ -98,7 +98,10 @@ class StandardTemplateValidationTest {
             assertEquals(1, shellState.homeLayout.pages.size)
             assertEquals(ShellDestination.HOME, shellState.destination)
             shellState =
-                (HomeShortcutEngine().addAppToSelectedPage(shellState.homeLayout, apps.first()) as HomeShortcutResult.Updated)
+                (
+                    HomeShortcutEngine().addAppToSelectedPage(shellState.homeLayout, apps.first())
+                        as HomeShortcutResult.Updated
+                )
                     .layout
                     .let { layout -> shellState.withHomeLayout(layout, homeLayoutRepository) }
         }

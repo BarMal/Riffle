@@ -314,11 +314,16 @@ private fun encodeAdaptiveStageAppearance(settings: AdaptiveStageAppearanceSetti
                 ).put(
                     "hapticStrength",
                     appearance.motion.hapticStrength.name,
-                ).put("reducedMotion", appearance.motion.reducedMotion).put("reducedTransparency", appearance.motion.reducedTransparency),
+                ).put(
+                    "reducedMotion",
+                    appearance.motion.reducedMotion,
+                ).put("reducedTransparency", appearance.motion.reducedTransparency),
             )
     }
 
-private fun JSONObject.toAdaptiveStageAppearance(defaults: AdaptiveStageAppearanceSettings): AdaptiveStageAppearanceSettings {
+private fun JSONObject.toAdaptiveStageAppearance(
+    defaults: AdaptiveStageAppearanceSettings,
+): AdaptiveStageAppearanceSettings {
     val geometry = optJSONObject("geometry")
     val surface = optJSONObject("surface")
     val typography = optJSONObject("typography")
@@ -474,7 +479,11 @@ private fun JSONObject.toAdaptiveStageAppearance(defaults: AdaptiveStageAppearan
         typography =
             AdaptiveStageTypography(
                 accentSource = typography.enumOrDefault("accentSource", defaults.typography.accentSource),
-                customAccentArgb = typography.optLongOrDefault("customAccentArgb", defaults.typography.customAccentArgb),
+                customAccentArgb =
+                    typography.optLongOrDefault(
+                        "customAccentArgb",
+                        defaults.typography.customAccentArgb,
+                    ),
                 automaticForegroundContrast =
                     typography.optBooleanOrDefault(
                         "automaticForegroundContrast",

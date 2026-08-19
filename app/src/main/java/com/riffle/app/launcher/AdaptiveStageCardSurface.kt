@@ -153,7 +153,8 @@ private fun String.sha256Revision(): String {
 
 /** Keeps all AdaptiveStage card renderers aligned with the reachability-capped stack resolution. */
 @Suppress("MaxLineLength")
-internal fun adaptiveStageResolvedContentPadding(resolution: AdaptiveStageCardStackResolution): Dp = resolution.contentPaddingDp.dp
+internal fun adaptiveStageResolvedContentPadding(resolution: AdaptiveStageCardStackResolution): Dp =
+    resolution.contentPaddingDp.dp
 
 internal fun adaptiveStageRendererCapabilities(sdkInt: Int = Build.VERSION.SDK_INT): AdaptiveStageRendererCapabilities =
     AdaptiveStageRendererCapabilities(supportsBlur = sdkInt >= Build.VERSION_CODES.S)

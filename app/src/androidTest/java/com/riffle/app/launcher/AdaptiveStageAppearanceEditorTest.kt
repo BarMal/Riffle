@@ -336,7 +336,10 @@ class AdaptiveStageAppearanceEditorTest {
         composeRule.setContent {
             MaterialTheme {
                 AdaptiveStageAppearancePreview(
-                    appearance = AdaptiveStageAppearanceSettings(surface = AdaptiveStageSurface(blurStrengthPercent = 72)),
+                    appearance =
+                        AdaptiveStageAppearanceSettings(
+                            surface = AdaptiveStageSurface(blurStrengthPercent = 72),
+                        ),
                     globalReducedMotion = false,
                     rendererCapabilities = AdaptiveStageRendererCapabilities(supportsBlur = false),
                     modifier = Modifier.requiredSize(360.dp),

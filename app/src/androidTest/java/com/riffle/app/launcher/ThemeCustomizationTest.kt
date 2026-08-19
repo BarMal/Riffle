@@ -131,7 +131,11 @@ class ThemeCustomizationTest {
     @Test
     fun resetColorPickerUsesTheActiveDarkPresetColourAndExposesAdjustableControls() {
         var selectedArgb: Int? by mutableStateOf(0xFFFF0000.toInt())
-        val expectedDefault = fallbackScheme(darkTheme = true, themePreset = LauncherThemePreset.RETRO).primary.toThemeHex()
+        val expectedDefault =
+            fallbackScheme(
+                darkTheme = true,
+                themePreset = LauncherThemePreset.RETRO,
+            ).primary.toThemeHex()
 
         composeRule.setContent {
             RiffleLauncherTheme(
@@ -148,7 +152,9 @@ class ThemeCustomizationTest {
             }
         }
 
-        composeRule.onNodeWithContentDescription("Hue colour control").performSemanticsAction(SemanticsActions.SetProgress) {
+        composeRule.onNodeWithContentDescription(
+            "Hue colour control",
+        ).performSemanticsAction(SemanticsActions.SetProgress) {
                 setProgress ->
             setProgress(180f)
         }

@@ -114,9 +114,18 @@ class AdaptiveStageAdaptiveLayoutInteractionTest {
             }
         }
 
-        val clock = composeRule.onNodeWithTag(adaptiveStageTemplateElementTestTag("clock")).fetchSemanticsNode().boundsInRoot
-        val search = composeRule.onNodeWithTag(adaptiveStageTemplateElementTestTag("search")).fetchSemanticsNode().boundsInRoot
-        val dock = composeRule.onNodeWithTag(adaptiveStageTemplateElementTestTag("dock")).fetchSemanticsNode().boundsInRoot
+        val clock =
+            composeRule.onNodeWithTag(
+                adaptiveStageTemplateElementTestTag("clock"),
+            ).fetchSemanticsNode().boundsInRoot
+        val search =
+            composeRule.onNodeWithTag(
+                adaptiveStageTemplateElementTestTag("search"),
+            ).fetchSemanticsNode().boundsInRoot
+        val dock =
+            composeRule.onNodeWithTag(
+                adaptiveStageTemplateElementTestTag("dock"),
+            ).fetchSemanticsNode().boundsInRoot
         val stageSlot =
             composeRule.onNodeWithTag(adaptiveStageTemplateSlotTestTag("app-stage")).fetchSemanticsNode().boundsInRoot
 
@@ -189,8 +198,14 @@ class AdaptiveStageAdaptiveLayoutInteractionTest {
         )
 
         composeRule.onNodeWithText("Details").assertIsDisplayed()
-        val paneBounds = composeRule.onNodeWithTag(ADAPTIVE_STAGE_SUPPORTING_PANE_TEST_TAG).fetchSemanticsNode().boundsInRoot
-        val windowBounds = composeRule.onNodeWithTag(ADAPTIVE_STAGE_ADAPTIVE_TEST_WINDOW_TAG).fetchSemanticsNode().boundsInRoot
+        val paneBounds =
+            composeRule.onNodeWithTag(
+                ADAPTIVE_STAGE_SUPPORTING_PANE_TEST_TAG,
+            ).fetchSemanticsNode().boundsInRoot
+        val windowBounds =
+            composeRule.onNodeWithTag(
+                ADAPTIVE_STAGE_ADAPTIVE_TEST_WINDOW_TAG,
+            ).fetchSemanticsNode().boundsInRoot
 
         assertTrue(paneBounds.left >= windowBounds.left + SAFE_START_PX - PIXEL_TOLERANCE)
         assertTrue(paneBounds.top >= windowBounds.top + SAFE_TOP_PX - PIXEL_TOLERANCE)

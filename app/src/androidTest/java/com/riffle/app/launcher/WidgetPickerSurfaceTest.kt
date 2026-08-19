@@ -91,7 +91,10 @@ class WidgetPickerSurfaceTest {
             }
         }
 
-        val actions = composeRule.onNodeWithTag(WIDGET_PROVIDER_TILE_TEST_TAG).fetchSemanticsNode().config[SemanticsActions.CustomActions]
+        val actions =
+            composeRule.onNodeWithTag(
+                WIDGET_PROVIDER_TILE_TEST_TAG,
+            ).fetchSemanticsNode().config[SemanticsActions.CustomActions]
         actions.first { action -> action.label == "Add Clock to Home" }.action()
         actions.first { action -> action.label == "Add Clock to Dock" }.action()
 
