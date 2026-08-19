@@ -119,6 +119,53 @@ class DockConfigurationEngineTest {
     }
 
     @Test
+    fun removesAnItemFromThePanel() {
+        val clock = appShortcut(id = "clock")
+        val weather = appShortcut(id = "weather")
+        val layout = layoutWithPanelItems(clock, weather)
+
+        val result = engine.removePanelItem(layout = layout, itemId = clock.id)
+
+        val updated = assertIs<DockEditResult.Updated>(result)
+        assertEquals(listOf(weather.id), updated.layout.dock.panel?.items?.map { item -> item.id })
+    }
+
+    @Test
+    fun leavesTheRestOfTheLayoutAloneWhenRemovingAPanelItem() {
+        // The panel hangs off the dock, so its removal must not touch the dock's own slots or the pages.
+        val clock = appShortcut(id = "clock")
+        val phone = appShortcut(id = "phone")
+        val panelled = layoutWithPanelItems(clock)
+        val layout = panelled.copy(dock = panelled.dock.copy(items = listOf(phone)))
+
+        val result = engine.removePanelItem(layout = layout, itemId = clock.id)
+
+        val updated = assertIs<DockEditResult.Updated>(result)
+        assertEquals(listOf(phone.id), updated.layout.dock.items.map { item -> item.id })
+        assertEquals(layout.pages, updated.layout.pages)
+    }
+
+    @Test
+    fun rejectsRemovingAnItemThePanelDoesNotHold() {
+        val layout = layoutWithPanelItems(appShortcut(id = "clock"))
+
+        val result = engine.removePanelItem(layout = layout, itemId = LauncherItemId("weather"))
+
+        assertEquals(DockEditRejectionReason.ITEM_NOT_FOUND, assertIs<DockEditResult.Rejected>(result).reason)
+    }
+
+    @Test
+    fun rejectsRemovingFromADockWithNoPanel() {
+        val result =
+            engine.removePanelItem(
+                layout = HomeLayoutDefaults.standard(),
+                itemId = LauncherItemId("clock"),
+            )
+
+        assertEquals(DockEditRejectionReason.ITEM_NOT_FOUND, assertIs<DockEditResult.Rejected>(result).reason)
+    }
+
+    @Test
     fun updatesDockPositionWithoutDisturbingTheRestOfTheDock() {
         val phone = appShortcut(id = "phone")
         val layout = layoutWithDockItems(phone)
@@ -298,6 +345,14 @@ class DockConfigurationEngineTest {
 
         val rejected = assertIs<DockEditResult.Rejected>(result)
         assertEquals(DockEditRejectionReason.INVALID_ITEM_SPACING, rejected.reason)
+    }
+
+    private fun layoutWithPanelItems(vararg items: AppShortcutItem): HomeLayout {
+        val seeded =
+            assertIs<DockEditResult.Updated>(
+                engine.setDockPanelEnabled(layout = HomeLayoutDefaults.standard(), enabled = true),
+            ).layout
+        return seeded.copy(dock = seeded.dock.copy(panel = seeded.dock.panel?.copy(items = items.toList())))
     }
 
     private fun layoutWithDockItems(vararg items: AppShortcutItem): HomeLayout =

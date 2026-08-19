@@ -318,6 +318,7 @@ class LauncherActionDomainTest {
                 ),
                 activity("MoveAppOutOfFolder", LauncherShellAction.MoveAppOutOfFolder(itemId, itemId)),
                 activity("RemoveDockShortcut", LauncherShellAction.RemoveDockShortcut(itemId)),
+                activity("RemoveDockPanelItem", LauncherShellAction.RemoveDockPanelItem(itemId)),
                 activity("MoveDockShortcut", LauncherShellAction.MoveDockShortcut(itemId, DockItemMoveDirection.RIGHT)),
                 activity(
                     "MoveDockShortcutToIndex",

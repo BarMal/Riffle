@@ -60,6 +60,21 @@ class ShortcutContextMenuTest {
     }
 
     @Test
+    fun panelShortcutMenuRemovesFromThePanel() {
+        // The panel is not one of the layout's pages, so the home removal would match nothing on it.
+        val shortcut = shortcut()
+
+        val items = shortcutContextMenuItems(shortcut, ShortcutContextSurface.DOCK_PANEL)
+
+        assertEquals(
+            ShortcutContextMenuItem("Remove from panel", LauncherShellAction.RemoveDockPanelItem(shortcut.id)),
+            items.last(),
+        )
+        assertFalse(items.any { it.label == "Move to home" })
+        assertFalse(items.any { it.label == "Move to dock" })
+    }
+
+    @Test
     fun homeShortcutMenuDoesNotExposeEditMode() {
         val shortcut = shortcut()
 

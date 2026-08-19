@@ -256,6 +256,7 @@ private fun HomeGridItem(
                         appShortcuts = presentation.appShortcutsByApp[item.appIdentity].orEmpty(),
                         labelSettings = presentation.labelSettings,
                         reducedMotion = presentation.reducedMotion,
+                        contextSurface = presentation.contextSurface,
                     ),
                 appIconLoader = appIconLoader,
                 actions = actions,
@@ -285,36 +286,52 @@ private fun HomeGridItem(
                 )
             }
 
-        is WidgetItem -> {
-            val span = item.placement?.span ?: GridSpan()
+        is WidgetItem ->
+            HomeGridWidget(
+                widget = item,
+                state = state,
+                presentation = presentation,
+                actions = actions,
+            )
+    }
+}
 
-            Box(
-                modifier =
-                    state.dragSourceModifier
-                        .requiredWidth(state.cellSize * span.columns)
-                        .requiredHeight(state.cellSize * span.rows)
-                        .graphicsLayer {
-                            translationX = ((span.columns - 1) * state.cellSizePx) / 2f
-                            translationY = ((span.rows - 1) * state.cellSizePx) / 2f
-                        },
-            ) {
-                HomeWidgetPlaceholder(
-                    widget = item,
-                    isEditing = state.isEditing,
-                    widgetViewFactory = presentation.widgetViewFactory,
-                    dragState =
-                        HomeItemDragState(
-                            pageId = state.pageId,
-                            cell = state.cell,
-                            cellSizePx = state.cellSizePx,
-                            grid = state.grid,
-                            pageItems = state.pageItems,
-                        ),
-                    workspaceActions = actions,
-                    onAction = actions.onAction,
-                )
-            }
-        }
+@Composable
+@OptIn(ExperimentalFoundationApi::class)
+private fun HomeGridWidget(
+    widget: WidgetItem,
+    state: HomeGridItemState,
+    presentation: HomeGridPresentation,
+    actions: HomeWorkspaceActions,
+) {
+    val span = widget.placement?.span ?: GridSpan()
+
+    Box(
+        modifier =
+            state.dragSourceModifier
+                .requiredWidth(state.cellSize * span.columns)
+                .requiredHeight(state.cellSize * span.rows)
+                .graphicsLayer {
+                    translationX = ((span.columns - 1) * state.cellSizePx) / 2f
+                    translationY = ((span.rows - 1) * state.cellSizePx) / 2f
+                },
+    ) {
+        HomeWidgetPlaceholder(
+            widget = widget,
+            isEditing = state.isEditing,
+            contextSurface = presentation.contextSurface,
+            widgetViewFactory = presentation.widgetViewFactory,
+            dragState =
+                HomeItemDragState(
+                    pageId = state.pageId,
+                    cell = state.cell,
+                    cellSizePx = state.cellSizePx,
+                    grid = state.grid,
+                    pageItems = state.pageItems,
+                ),
+            workspaceActions = actions,
+            onAction = actions.onAction,
+        )
     }
 }
 
@@ -399,7 +416,7 @@ private fun HomeShortcut(
             items =
                 shortcutContextMenuItems(
                     shortcut = shortcut,
-                    surface = ShortcutContextSurface.HOME,
+                    surface = presentation.contextSurface,
                     appShortcuts = presentation.appShortcuts,
                 ),
             onDismissRequest = { isContextMenuExpanded.value = false },
@@ -445,6 +462,7 @@ private data class HomeShortcutPresentation(
     val appShortcuts: List<AppShortcut>,
     val labelSettings: HomeLabelSettings,
     val reducedMotion: Boolean,
+    val contextSurface: ShortcutContextSurface,
 )
 
 private const val DRAGGED_GRID_ITEM_Z_INDEX = 1f

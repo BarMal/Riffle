@@ -20,10 +20,17 @@ import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.apps.AppShortcut
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.home.AppShortcutItem
+import com.riffle.core.domain.launcher.home.WidgetItem
 
 internal enum class ShortcutContextSurface {
     HOME,
     DOCK,
+
+    /**
+     * The dock's panel. Its own surface because the panel is not one of the layout's pages, so the
+     * home removal -- which acts on the selected page -- never matches an item on it.
+     */
+    DOCK_PANEL,
 }
 
 internal data class ShortcutContextMenuItem(
@@ -158,13 +165,32 @@ private val ShortcutContextSurface.removeLabel: String
         when (this) {
             ShortcutContextSurface.HOME -> "Remove from home"
             ShortcutContextSurface.DOCK -> "Remove from dock"
+            ShortcutContextSurface.DOCK_PANEL -> "Remove from panel"
         }
 
 private fun ShortcutContextSurface.removeAction(shortcut: AppShortcutItem): LauncherShellAction =
     when (this) {
         ShortcutContextSurface.HOME -> LauncherShellAction.RemoveHomeShortcut(shortcut.id)
         ShortcutContextSurface.DOCK -> LauncherShellAction.RemoveDockShortcut(shortcut.id)
+        ShortcutContextSurface.DOCK_PANEL -> LauncherShellAction.RemoveDockPanelItem(shortcut.id)
     }
+
+/**
+ * Where a widget goes when removed depends on what is hosting its grid. The dock's panel is not one
+ * of the layout's pages, so the home removal never matches an item on it.
+ */
+internal fun WidgetItem.removeActionFor(surface: ShortcutContextSurface): LauncherShellAction =
+    when (surface) {
+        ShortcutContextSurface.DOCK_PANEL -> LauncherShellAction.RemoveDockPanelItem(id)
+        ShortcutContextSurface.HOME, ShortcutContextSurface.DOCK -> LauncherShellAction.RemoveHomeShortcut(id)
+    }
+
+internal val ShortcutContextSurface.widgetRemoveLabel: String
+    get() =
+        when (this) {
+            ShortcutContextSurface.DOCK_PANEL -> "Remove from panel"
+            ShortcutContextSurface.HOME, ShortcutContextSurface.DOCK -> "Remove from home"
+        }
 
 private fun ShortcutContextSurface.dockManagementItems(shortcut: AppShortcutItem): List<ShortcutContextMenuItem> =
     when (this) {
@@ -199,6 +225,10 @@ private fun ShortcutContextSurface.dockManagementItems(shortcut: AppShortcutItem
                     action = LauncherShellAction.MoveDockItemToHome(shortcut.id),
                 ),
             )
+
+        // No "move to" offer yet: moving between the panel and a home page means re-placing on a
+        // different grid, which the panel's own drag support has to land first.
+        ShortcutContextSurface.DOCK_PANEL -> emptyList()
     }
 
 private val AppShortcut.contextMenuLabel: String
