@@ -8,9 +8,9 @@ import org.junit.Test
 
 class DockSwipeUpGestureTest {
     @Test
-    fun exitAdaptiveStageMapsToSwitchingBackToStandardHome() {
+    fun exitAdaptiveStageMapsToLeavingCardsWhichPicksItsOwnDestination() {
         assertEquals(
-            LauncherShellAction.SelectLauncherViewMode(LauncherViewMode.STANDARD_APP_DRAWER),
+            LauncherShellAction.ExitAdaptiveStage,
             LauncherGestureAction.EXIT_ADAPTIVE_STAGE.toDockSwipeUpShellAction(LauncherViewMode.CARD_INTERFACE),
         )
     }

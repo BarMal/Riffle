@@ -16,12 +16,8 @@ class AdaptiveStageAppStageActionFilterTest {
     }
 
     @Test
-    fun allowsExitingBackToStandardHome() {
-        assertTrue(
-            adaptiveStageAppStageActionFilter(
-                LauncherShellAction.SelectLauncherViewMode(LauncherViewMode.STANDARD_APP_DRAWER),
-            ),
-        )
+    fun allowsLeavingCards() {
+        assertTrue(adaptiveStageAppStageActionFilter(LauncherShellAction.ExitAdaptiveStage))
     }
 
     @Test

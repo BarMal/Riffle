@@ -65,6 +65,24 @@ internal fun LauncherShellState.withSelectedHomeLayoutMode(
     return copy(homeLayout = layoutSet.activeLayout, homeLayoutSet = layoutSet)
 }
 
+/**
+ * Leave Cards for wherever it was entered from.
+ *
+ * The destination is the active device's last non-Cards mode, which the layout set remembers;
+ * [withSelectedHomeLayoutMode] then makes the switch, so availability and per-mode layouts are
+ * handled exactly as any other mode change. Exit is only ever dispatched from the home screen, so
+ * the device being configured and the device being held are the same one.
+ */
+internal fun LauncherShellState.withExitedAdaptiveStage(
+    homeLayoutRepository: HomeLayoutRepository,
+    viewModeAvailability: LauncherViewModeAvailability,
+): LauncherShellState =
+    withSelectedHomeLayoutMode(
+        mode = currentLayoutSet(homeLayoutRepository).withActiveLayout(homeLayout).modeLeavingCards(),
+        homeLayoutRepository = homeLayoutRepository,
+        viewModeAvailability = viewModeAvailability,
+    )
+
 internal fun LauncherShellState.withSelectedHomeLayoutTemplate(
     templateId: LauncherTemplateId,
     mode: LauncherViewMode,

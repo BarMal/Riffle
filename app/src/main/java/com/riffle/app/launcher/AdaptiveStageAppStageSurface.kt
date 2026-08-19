@@ -108,7 +108,6 @@ import com.riffle.core.domain.launcher.cards.mergedContentByRecency
 import com.riffle.core.domain.launcher.cards.variantFor
 import com.riffle.core.domain.launcher.cards.visibleStaticElements
 import com.riffle.core.domain.launcher.home.DockPosition
-import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.notifications.NotificationHideRule
@@ -121,14 +120,14 @@ import kotlin.math.abs
 
 /**
  * Cards mode reuses the persisted home-gesture bindings, but only lets a subset of actions
- * through: stage navigation, exiting back to Standard Home, and reaching the app drawer/search so
- * Cards mode stays a normal, discoverable overlay rather than an isolated static surface.
+ * through: stage navigation, leaving Cards, and reaching the app drawer/search so Cards mode stays
+ * a normal, discoverable overlay rather than an isolated static surface.
  */
 internal fun adaptiveStageAppStageActionFilter(action: LauncherShellAction): Boolean =
     when (action) {
         LauncherShellAction.SelectNextAppStage,
         LauncherShellAction.SelectPreviousAppStage,
-        LauncherShellAction.SelectLauncherViewMode(LauncherViewMode.STANDARD_APP_DRAWER),
+        LauncherShellAction.ExitAdaptiveStage,
         LauncherShellAction.OpenAppDrawer,
         LauncherShellAction.OpenSearch,
         -> true

@@ -13,7 +13,8 @@ fun encodeHomeLayoutSet(layoutSet: HomeLayoutSet): String =
     JSONObject()
         .put("type", HOME_LAYOUT_SET_TYPE)
         .put("active", encodeLayoutKey(layoutSet.activeKey))
-        .put("preferredModes", encodePreferredModes(layoutSet.preferredModesByDeviceClass))
+        .put("preferredModes", encodeDeviceClassModes(layoutSet.preferredModesByDeviceClass))
+        .put("lastNonCardsModes", encodeDeviceClassModes(layoutSet.lastNonCardsModeByDeviceClass))
         .put(
             "layouts",
             JSONArray(
@@ -40,13 +41,15 @@ internal fun JSONObject.toHomeLayoutSet(): HomeLayoutSet {
         optJSONArray("layouts")
             ?.toHomeLayoutEntries()
             .orEmpty()
-    val preferredModes = optPreferredModes()
+    val preferredModes = optDeviceClassModes("preferredModes")
+    val lastNonCardsModes = optDeviceClassModes("lastNonCardsModes")
 
     return HomeLayoutSet(
         activeKey = activeKey,
         layouts = layouts.toMap(),
         preferredModesByDeviceClass =
             preferredModes.ifEmpty { mapOf(activeKey.deviceClass to activeKey.viewMode) },
+        lastNonCardsModeByDeviceClass = lastNonCardsModes,
     ).let { layoutSet ->
         layoutSet.takeIf { set -> set.activeKey in set.layouts }
             ?: layoutSet.copy(layouts = layoutSet.layouts + (activeKey to layoutSet.layoutFor(activeKey)))
