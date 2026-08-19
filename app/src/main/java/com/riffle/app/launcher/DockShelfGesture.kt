@@ -8,40 +8,50 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
 import com.riffle.core.domain.launcher.home.DockExpandAffordance
+import com.riffle.core.domain.launcher.home.DockPosition
 import kotlin.math.abs
 
+/**
+ * Whether a drag opens or closes the shelf, or means neither.
+ *
+ * The shelf comes out of the edge the dock is on, so the gesture that opens it is a pull away from
+ * that edge and the one that closes it is a push back toward it. Reading the drag through the
+ * dock's own edge is what makes that one comparison instead of one per edge -- on a bottom dock it
+ * is the same upward pull it has always been.
+ */
 internal fun dockShelfGestureExpandedState(
     isExpanded: Boolean,
     horizontalDragPx: Float,
     verticalDragPx: Float,
-): Boolean? =
-    when {
-        isExpanded &&
-            verticalDragPx >= DOCK_SHELF_GESTURE_THRESHOLD_PX &&
-            abs(verticalDragPx) > abs(horizontalDragPx) ->
-            false
-
-        !isExpanded &&
-            verticalDragPx <= -DOCK_SHELF_GESTURE_THRESHOLD_PX &&
-            abs(verticalDragPx) > abs(horizontalDragPx) ->
-            true
-
+    position: DockPosition = DockPosition.BOTTOM,
+    isRtl: Boolean = false,
+): Boolean? {
+    val awayPx = position.dragAwayFromEdgePx(horizontalDragPx, verticalDragPx, isRtl)
+    val alongRunPx = position.dragAlongRunPx(horizontalDragPx, verticalDragPx)
+    return when {
+        abs(awayPx) < DOCK_SHELF_GESTURE_THRESHOLD_PX || abs(awayPx) <= abs(alongRunPx) -> null
+        isExpanded && awayPx < 0f -> false
+        !isExpanded && awayPx > 0f -> true
         else -> null
     }
+}
 
 internal fun dockShelfGestureClaimsDrag(
     isExpanded: Boolean,
     horizontalDragPx: Float,
     verticalDragPx: Float,
-): Boolean =
-    abs(verticalDragPx) >= DOCK_SHELF_GESTURE_CLAIM_THRESHOLD_PX &&
-        abs(verticalDragPx) > abs(horizontalDragPx) &&
-        if (isExpanded) {
-            verticalDragPx > 0f
-        } else {
-            verticalDragPx < 0f
-        }
+    position: DockPosition = DockPosition.BOTTOM,
+    isRtl: Boolean = false,
+): Boolean {
+    val awayPx = position.dragAwayFromEdgePx(horizontalDragPx, verticalDragPx, isRtl)
+    val alongRunPx = position.dragAlongRunPx(horizontalDragPx, verticalDragPx)
+    return abs(awayPx) >= DOCK_SHELF_GESTURE_CLAIM_THRESHOLD_PX &&
+        abs(awayPx) > abs(alongRunPx) &&
+        if (isExpanded) awayPx < 0f else awayPx > 0f
+}
 
 internal fun dockShelfExpandedStateAfterBackgroundTap(isExpanded: Boolean): Boolean {
     return if (isExpanded) false else isExpanded
@@ -68,6 +78,7 @@ internal fun Modifier.dockShelfGestureInput(interactions: DockInteractions): Mod
     fillMaxWidth()
         .dockShelfGestureInput(
             isExpanded = interactions.isShelfExpanded,
+            position = interactions.position,
             // A dock whose shelf is reached by button never claims the drag, which is what hands
             // swipe-up back to the dock's own gesture action.
             onExpandedChange =
@@ -77,6 +88,7 @@ internal fun Modifier.dockShelfGestureInput(interactions: DockInteractions): Mod
 
 private fun Modifier.dockShelfGestureInput(
     isExpanded: Boolean,
+    position: DockPosition,
     onExpandedChange: ((Boolean) -> Unit)?,
 ): Modifier {
     if (onExpandedChange == null) {
@@ -84,7 +96,8 @@ private fun Modifier.dockShelfGestureInput(
     }
     return composed {
         val currentOnExpandedChange by rememberUpdatedState(onExpandedChange)
-        pointerInput(isExpanded) {
+        val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+        pointerInput(isExpanded, position, isRtl) {
             awaitEachGesture {
                 // Default (Main) pass, not Initial: Main dispatches descendant-first, so a
                 // descendant gesture (e.g. a horizontal scroll on the dock icon or notification
@@ -110,6 +123,8 @@ private fun Modifier.dockShelfGestureInput(
                                 isExpanded = isExpanded,
                                 horizontalDragPx = drag.x,
                                 verticalDragPx = drag.y,
+                                position = position,
+                                isRtl = isRtl,
                             )
                         ) {
                             trackedChange.consume()
@@ -118,6 +133,8 @@ private fun Modifier.dockShelfGestureInput(
                             isExpanded = isExpanded,
                             horizontalDragPx = drag.x,
                             verticalDragPx = drag.y,
+                            position = position,
+                            isRtl = isRtl,
                         )?.let { expanded ->
                             currentOnExpandedChange(expanded)
                             handled = true

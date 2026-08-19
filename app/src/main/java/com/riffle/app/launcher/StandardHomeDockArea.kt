@@ -64,6 +64,7 @@ internal fun StandardHomeDockArea(
             onFolderOpen = actions.onFolderOpen,
             isShelfExpanded = showDockShelf,
             shelfExpandAffordance = layout.dock.expandAffordance,
+            position = position,
             onShelfExpandedChange = onDockShelfExpandedChange.takeIf { canExpand },
             reducedMotion = presentation.reducedMotion,
             homeInsetPolicy = presentation.homeInsetPolicy,
@@ -76,7 +77,12 @@ internal fun StandardHomeDockArea(
     Column(
         modifier =
             Modifier
-                .dockAreaExtent(runsAlongASide = runsAlongASide, dock = layout.dock, margins = margins)
+                .dockAreaExtent(
+                    runsAlongASide = runsAlongASide,
+                    isShelfOpen = showDockShelf,
+                    dock = layout.dock,
+                    margins = margins,
+                )
                 .onSizeChanged { size -> actions.onDockInteractionHeightChanged(size.height) }
                 .onGloballyPositioned { coordinates ->
                     actions.onDockBoundsChanged(coordinates.boundsInRoot())
@@ -106,50 +112,82 @@ internal fun StandardHomeDockArea(
         DockShelfExpandButton(interactions = dockInteractions)
         Spacer(modifier = Modifier.height(HOME_DOCK_TOP_SPACING_DP.dp))
         Box(modifier = Modifier.testTag(HOME_DOCK_TEST_TAG)) {
-            if (showDockShelf) {
-                ExpandedDockSurface(
-                    dock = layout.dock,
-                    notificationShelfState = notificationShelfState,
-                    notificationGroupsByApp = presentation.notificationGroupsByApp,
-                    appShortcutsByApp = presentation.appShortcutsByApp,
-                    appIconLoader = appIconLoader,
-                    widgetViewFactory = presentation.widgetViewFactory,
-                    interactions = dockInteractions,
-                )
-            } else {
-                Dock(
-                    dock = layout.dock,
-                    isEditing = layout.editMode is HomeEditMode.EditingPage,
-                    notificationGroupsByApp = presentation.notificationGroupsByApp,
-                    appShortcutsByApp = presentation.appShortcutsByApp,
-                    appIconLoader = appIconLoader,
-                    widgetViewFactory = presentation.widgetViewFactory,
-                    position = position,
-                    interactions = dockInteractions,
-                    widgetPickerDockPreview = widgetPickerDockPreview,
-                )
-            }
+            DockOrShelf(
+                layout = layout,
+                presentation = presentation,
+                notificationShelfState = notificationShelfState,
+                showDockShelf = showDockShelf,
+                appIconLoader = appIconLoader,
+                position = position,
+                interactions = dockInteractions,
+                widgetPickerDockPreview = widgetPickerDockPreview,
+            )
         }
+    }
+}
+
+/** The dock as it stands: its own strip, or the shelf it grows into. */
+@Composable
+@Suppress("LongParameterList")
+private fun DockOrShelf(
+    layout: HomeLayout,
+    presentation: StandardHomePresentation,
+    notificationShelfState: DockNotificationShelfState,
+    showDockShelf: Boolean,
+    appIconLoader: AppIconLoader,
+    position: DockPosition,
+    interactions: DockInteractions,
+    widgetPickerDockPreview: WidgetPickerDockPlacementPreview?,
+) {
+    if (showDockShelf) {
+        ExpandedDockSurface(
+            dock = layout.dock,
+            notificationShelfState = notificationShelfState,
+            notificationGroupsByApp = presentation.notificationGroupsByApp,
+            appShortcutsByApp = presentation.appShortcutsByApp,
+            appIconLoader = appIconLoader,
+            widgetViewFactory = presentation.widgetViewFactory,
+            position = position,
+            interactions = interactions,
+        )
+    } else {
+        Dock(
+            dock = layout.dock,
+            isEditing = layout.editMode is HomeEditMode.EditingPage,
+            notificationGroupsByApp = presentation.notificationGroupsByApp,
+            appShortcutsByApp = presentation.appShortcutsByApp,
+            appIconLoader = appIconLoader,
+            widgetViewFactory = presentation.widgetViewFactory,
+            position = position,
+            interactions = interactions,
+            widgetPickerDockPreview = widgetPickerDockPreview,
+        )
     }
 }
 
 /**
  * How much of the screen the dock's area claims.
  *
- * A side dock reserves a strip exactly as thick as the dock plus its margins, and fills the height
- * it was given. Left to wrap its content it would take whatever width its container offered and
- * leave the workspace the remainder, which is the wrong way round: the reservation is what the grid
- * gave up a column for, so it has to be the known quantity.
+ * A collapsed side dock reserves a strip exactly as thick as the dock plus its margins, and fills
+ * the height it was given. Left to wrap its content it would take whatever width its container
+ * offered and leave the workspace the remainder, which is the wrong way round: the reservation is
+ * what the grid gave up a column for, so it has to be the known quantity.
+ *
+ * Opening the shelf widens that reservation to a fixed share of the screen, which squeezes the
+ * workspace the same way a bottom shelf squeezes it by growing upward. A share rather than the
+ * shelf's own content width because the panel and the notification section both fill whatever they
+ * are given, so unbounded they would take the whole screen and leave the workspace nothing.
  */
 private fun Modifier.dockAreaExtent(
     runsAlongASide: Boolean,
+    isShelfOpen: Boolean,
     dock: DockModel,
     margins: GridInsets,
 ): Modifier =
-    if (runsAlongASide) {
-        fillMaxHeight().width((dockCrossAxisDp(dock.iconSizeDp) + margins.start + margins.end).dp)
-    } else {
-        fillMaxWidth()
+    when {
+        !runsAlongASide -> fillMaxWidth()
+        isShelfOpen -> fillMaxHeight().fillMaxWidth(SIDE_DOCK_SHELF_WIDTH_FRACTION)
+        else -> fillMaxHeight().width((dockCrossAxisDp(dock.iconSizeDp) + margins.start + margins.end).dp)
     }
 
 /** True while the shelf's own expand gesture is attached, and so owns swipe-up on the dock. */
@@ -215,6 +253,9 @@ internal fun HomeLayout.dockInteractionRegionHeightDp(): Int =
     } else {
         settings.grid.margin.centered().bottom + HOME_DOCK_TOP_SPACING_DP + dockCrossAxisDp(dock.iconSizeDp)
     }
+
+/** How much of the screen an open side shelf takes, leaving the rest to the workspace. */
+private const val SIDE_DOCK_SHELF_WIDTH_FRACTION = 0.5f
 
 private const val HOME_DOCK_TOP_SPACING_DP = 10
 internal const val HOME_DOCK_EXPAND_BUTTON_TEST_TAG = "home-dock-expand-button"
