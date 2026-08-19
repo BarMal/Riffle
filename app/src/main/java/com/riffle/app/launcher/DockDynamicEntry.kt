@@ -20,8 +20,22 @@ internal data class DockDynamicEntry(
     val badgeCount: Int,
     val isSelected: Boolean,
     val contentDescription: String,
-    val action: LauncherShellAction?,
+    val intent: DockDynamicEntryIntent?,
 )
+
+/**
+ * What activating an entry means.
+ *
+ * Most entries resolve to a shell action, but the merged All-notifications page is not a stage and
+ * has no action to send -- it is a choice about what the Cards surface is showing. Naming both as
+ * values keeps the entry comparable, which a callback per entry would not be: the section is redrawn
+ * whenever a notification lands, and entries that differ only by lambda identity would never skip.
+ */
+internal sealed interface DockDynamicEntryIntent {
+    data class Dispatch(val action: LauncherShellAction) : DockDynamicEntryIntent
+
+    data object ShowAllNotifications : DockDynamicEntryIntent
+}
 
 /**
  * Grid mode's entries: the apps the dock is not already showing that have notifications waiting.
@@ -39,7 +53,10 @@ internal fun List<DockNotificationCardState>.launchableDockDynamicEntries(): Lis
             badgeCount = card.group.count,
             isSelected = false,
             contentDescription = dockNotificationCardContentDescription(card = card, label = label),
-            action = card.app?.identity?.let(LauncherShellAction::LaunchApp),
+            intent =
+                card.app?.identity
+                    ?.let(LauncherShellAction::LaunchApp)
+                    ?.let(DockDynamicEntryIntent::Dispatch),
         )
     }
 
@@ -60,8 +77,11 @@ internal fun List<AppStage>.stageDockDynamicEntries(
     state: LauncherShellState,
     selectedStageId: AppStageId?,
     badgeCounts: Map<AppStageId, Int>,
-): List<DockDynamicEntry> =
-    map { stage ->
+    allNotificationsSelected: Boolean = false,
+): List<DockDynamicEntry> {
+    // No stages means nothing to merge, so the page that merges them is not offered either.
+    if (isEmpty()) return emptyList()
+    return map { stage ->
         val label = stageLabel(stage.id, state)
         val count = badgeCounts[stage.id] ?: 0
         DockDynamicEntry(
@@ -71,9 +91,37 @@ internal fun List<AppStage>.stageDockDynamicEntries(
             badgeCount = count,
             isSelected = stage.id == selectedStageId,
             contentDescription = dockStageEntryContentDescription(label, count, stage.id == selectedStageId),
-            action = LauncherShellAction.SelectAppStage(stage.id),
+            intent = DockDynamicEntryIntent.Dispatch(LauncherShellAction.SelectAppStage(stage.id)),
         )
-    }
+    } +
+        allNotificationsDockDynamicEntry(
+            isSelected = allNotificationsSelected,
+            badgeCount = badgeCounts.values.sum(),
+        )
+}
+
+/**
+ * The merged view of every stage's notifications, kept last as the rail kept it.
+ *
+ * It has no app behind it, so it draws the initial fallback the section already uses for an app the
+ * launcher cannot resolve rather than borrowing some stage's icon.
+ */
+private fun allNotificationsDockDynamicEntry(
+    isSelected: Boolean,
+    badgeCount: Int,
+): DockDynamicEntry =
+    DockDynamicEntry(
+        key = "all-notifications",
+        label = ALL_NOTIFICATIONS_LABEL,
+        identity = null,
+        badgeCount = badgeCount,
+        isSelected = isSelected,
+        contentDescription =
+            dockStageEntryContentDescription(ALL_NOTIFICATIONS_LABEL, badgeCount, isSelected),
+        intent = DockDynamicEntryIntent.ShowAllNotifications,
+    )
+
+private const val ALL_NOTIFICATIONS_LABEL = "All notifications"
 
 private fun dockStageEntryContentDescription(
     label: String,

@@ -16,6 +16,7 @@ class LauncherShellAdaptiveStageContextTest {
                 detailCardKey = "personal:mail:message",
                 templateId = "shared",
                 scrollOffsetPx = 64,
+                allNotificationsSelected = true,
             )
 
         val saved: List<String> =
@@ -47,6 +48,29 @@ class LauncherShellAdaptiveStageContextTest {
                 availableStageKeys = setOf("work:calendar"),
                 availableCardKeys = setOf("personal:mail:message"),
             ),
+        )
+    }
+
+    @Test
+    fun saverRestoresAPayloadWrittenBeforeTheAllNotificationsPageWasCarried() {
+        // Six fields is what the previous format wrote; the page it does not mention was not the
+        // one showing, because there was nowhere for that to have been recorded.
+        val restored =
+            AdaptiveStageInteractionContextSaver.restore(
+                listOf("work:calendar", "personal:mail", "focused", "detail", "shared", "12"),
+            )
+
+        assertEquals(
+            AdaptiveStageInteractionContext(
+                selectedStageKey = "work:calendar",
+                detailStageKey = "personal:mail",
+                focusedCardKey = "focused",
+                detailCardKey = "detail",
+                templateId = "shared",
+                scrollOffsetPx = 12,
+                allNotificationsSelected = false,
+            ),
+            restored,
         )
     }
 

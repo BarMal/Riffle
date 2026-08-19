@@ -203,13 +203,19 @@ internal fun AdaptiveStageAppStageSurface(
                 globalReducedMotion = state.launcherSettings.motion.reducedMotion,
             )
         }
-    // Local, non-persisted UI state -- the "All notifications" page merges content across every
-    // real stage (see #1056/#1057), so it deliberately isn't a real AppStageId and never touches
-    // AppStagePlanner, LauncherShellAction's stage-selection reducer, or persisted preferences the
-    // way a real stage selection does. Selecting a real stage through any of the existing paths
-    // (SelectAppStage/prev/next/tap) implicitly leaves this page, since those all flow through the
-    // callbacks below that explicitly clear it.
-    var allNotificationsSelected by rememberSaveable { mutableStateOf(false) }
+    // The "All notifications" page merges content across every real stage (see #1056/#1057), so it
+    // deliberately isn't a real AppStageId and never touches AppStagePlanner, LauncherShellAction's
+    // stage-selection reducer, or persisted preferences the way a real stage selection does.
+    // Selecting a real stage through any of the existing paths (SelectAppStage/prev/next/tap)
+    // implicitly leaves this page, since those all flow through the callback below that clears it.
+    //
+    // It lives in the hoisted interaction context rather than in a rememberSaveable here: this
+    // surface is torn down whenever the launcher shows something else, so held locally the page was
+    // the one thing about "what you were looking at" that a trip to settings threw away.
+    val allNotificationsSelected = context.allNotificationsSelected
+    val onAllNotificationsSelectedChanged: (Boolean) -> Unit = { selected ->
+        onContextChanged(context.copy(allNotificationsSelected = selected))
+    }
     val allNotificationsDetailState =
         rememberAdaptiveStageCardDetailState(
             scopeKey = "all-notifications",
@@ -366,7 +372,7 @@ internal fun AdaptiveStageAppStageSurface(
                             allNotificationsDetailState = allNotificationsDetailState,
                             focusedCardId = focusedCardIdValue?.let(::LauncherCardId),
                             allNotificationsSelected = allNotificationsSelected,
-                            onAllNotificationsSelectedChanged = { allNotificationsSelected = it },
+                            onAllNotificationsSelectedChanged = onAllNotificationsSelectedChanged,
                             onFocusedCardChanged = {
                                 focusedCardIdValue = it?.value
                                 onContextChanged(context.copy(focusedCardKey = it?.value))
@@ -392,7 +398,7 @@ internal fun AdaptiveStageAppStageSurface(
                             focusedCardId = focusedCardIdValue?.let(::LauncherCardId),
                             selectedDetailCardId = detailOrigin?.cardId ?: focusedCardIdValue?.let(::LauncherCardId),
                             allNotificationsSelected = allNotificationsSelected,
-                            onAllNotificationsSelectedChanged = { allNotificationsSelected = it },
+                            onAllNotificationsSelectedChanged = onAllNotificationsSelectedChanged,
                             paneLayout = paneLayout,
                             onFocusedCardChanged = {
                                 focusedCardIdValue = it?.value
@@ -417,7 +423,7 @@ internal fun AdaptiveStageAppStageSurface(
                                 stages = shellState.snapshot.stages,
                                 selectedStageId = selectedStage?.id,
                                 allNotificationsSelected = allNotificationsSelected,
-                                onAllNotificationsSelectedChanged = { allNotificationsSelected = it },
+                                onAllNotificationsSelectedChanged = onAllNotificationsSelectedChanged,
                                 state = state,
                                 notificationCards = shellState.notificationCards,
                                 appIconLoader = appIconLoader,
@@ -434,7 +440,7 @@ internal fun AdaptiveStageAppStageSurface(
                                         stages = shellState.snapshot.stages,
                                         selectedStageId = selectedStage?.id,
                                         allNotificationsSelected = allNotificationsSelected,
-                                        onAllNotificationsSelectedChanged = { allNotificationsSelected = it },
+                                        onAllNotificationsSelectedChanged = onAllNotificationsSelectedChanged,
                                         state = state,
                                         notificationCards = shellState.notificationCards,
                                         appIconLoader = appIconLoader,
@@ -516,7 +522,7 @@ internal fun AdaptiveStageAppStageSurface(
                                         stages = shellState.snapshot.stages,
                                         selectedStageId = selectedStage?.id,
                                         allNotificationsSelected = allNotificationsSelected,
-                                        onAllNotificationsSelectedChanged = { allNotificationsSelected = it },
+                                        onAllNotificationsSelectedChanged = onAllNotificationsSelectedChanged,
                                         state = state,
                                         notificationCards = shellState.notificationCards,
                                         appIconLoader = appIconLoader,

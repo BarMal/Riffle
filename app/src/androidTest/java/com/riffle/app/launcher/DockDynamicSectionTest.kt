@@ -107,7 +107,7 @@ class DockDynamicSectionTest {
         // A notification whose app the launcher can no longer resolve: the entry is still worth
         // showing, and tapping it does nothing rather than opening something arbitrary.
         val actions = mutableListOf<LauncherShellAction>()
-        setContent(DockPosition.BOTTOM, entries = listOf(chatEntry.copy(action = null)), actions = actions)
+        setContent(DockPosition.BOTTOM, entries = listOf(chatEntry.copy(intent = null)), actions = actions)
 
         composeRule.onNodeWithTag(dockDynamicSectionTileTestTag(CHAT_LABEL)).performClick()
 
@@ -119,6 +119,35 @@ class DockDynamicSectionTest {
         setContent(DockPosition.BOTTOM, entries = listOf(chatEntry.copy(isSelected = true)))
 
         composeRule.onNodeWithTag(dockDynamicSectionTileTestTag(CHAT_LABEL)).assertIsSelected()
+    }
+
+    @Test
+    fun theMergedPageIsReachedWithoutAnActionToSend() {
+        // It is not a stage, so there is nothing to dispatch -- the section reports it upward and
+        // the Cards surface decides what showing it means.
+        var shown = false
+        composeRule.setContent {
+            MaterialTheme {
+                Box(modifier = Modifier.size(420.dp)) {
+                    Dock(
+                        dock = DockModel(capacity = 2, items = listOf(camera, mail)),
+                        isEditing = false,
+                        notificationGroupsByApp = emptyList(),
+                        appShortcutsByApp = emptyMap(),
+                        appIconLoader = EmptyAppIconLoader,
+                        widgetViewFactory = EmptyHomeWidgetViewFactory,
+                        position = DockPosition.BOTTOM,
+                        interactions = DockInteractions(onAction = {}),
+                        dynamicEntries = listOf(mergedPageEntry),
+                        onShowAllNotifications = { shown = true },
+                    )
+                }
+            }
+        }
+
+        composeRule.onNodeWithTag(dockDynamicSectionTileTestTag(ALL_NOTIFICATIONS_LABEL)).performClick()
+
+        composeRule.runOnIdle { assertTrue("expected the merged page to be asked for", shown) }
     }
 
     @Test
@@ -182,6 +211,19 @@ class DockDynamicSectionTest {
                 profileId = chatIdentity.profile.id,
             )
 
+        private const val ALL_NOTIFICATIONS_LABEL = "All notifications"
+
+        private val mergedPageEntry =
+            DockDynamicEntry(
+                key = "all-notifications",
+                label = ALL_NOTIFICATIONS_LABEL,
+                identity = null,
+                badgeCount = 2,
+                isSelected = false,
+                contentDescription = "All notifications, 2 cards, Open stage",
+                intent = DockDynamicEntryIntent.ShowAllNotifications,
+            )
+
         private val chatEntry =
             DockDynamicEntry(
                 key = "stage:chat",
@@ -190,7 +232,7 @@ class DockDynamicSectionTest {
                 badgeCount = 1,
                 isSelected = false,
                 contentDescription = "Chat, 1 card, Open stage",
-                action = LauncherShellAction.SelectAppStage(chatStageId),
+                intent = DockDynamicEntryIntent.Dispatch(LauncherShellAction.SelectAppStage(chatStageId)),
             )
     }
 }

@@ -39,6 +39,15 @@ data class AdaptiveStageInteractionContext(
     val detailCardKey: String? = null,
     val templateId: String? = null,
     val scrollOffsetPx: Int = 0,
+    /**
+     * Whether the merged All-notifications page is the one showing.
+     *
+     * Not a stage, and deliberately not a stage selection: it has no [AppStageId] and never reaches
+     * the stage planner or the durable preferences. It lives here anyway because it answers the
+     * same question the rest of this does -- what the user was looking at -- and the surface it
+     * belongs to is torn down whenever the launcher shows something else.
+     */
+    val allNotificationsSelected: Boolean = false,
 ) {
     fun reconcile(
         availableStageKeys: Set<String>,
