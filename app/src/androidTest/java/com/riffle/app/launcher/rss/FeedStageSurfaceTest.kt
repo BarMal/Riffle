@@ -300,7 +300,12 @@ class FeedStageSurfaceTest {
     private fun item(
         seed: Int,
         publishedAtEpochMillis: Long? = null,
-    ): FeedStageItem = FeedStageItem(digest = digest(seed), publishedAtEpochMillis = publishedAtEpochMillis, sourceOrder = seed)
+    ): FeedStageItem =
+        FeedStageItem(
+            digest = digest(seed),
+            publishedAtEpochMillis = publishedAtEpochMillis,
+            sourceOrder = seed,
+        )
 
     private fun stage(
         lifecycle: FeedStageLifecycle,

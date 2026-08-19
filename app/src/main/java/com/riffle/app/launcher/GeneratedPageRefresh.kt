@@ -16,7 +16,9 @@ import com.riffle.core.domain.launcher.home.HomeLayoutRepository
 import com.riffle.core.domain.launcher.home.LauncherPageType
 
 @Suppress("MaxLineLength")
-internal fun LauncherShellState.withRefreshedGeneratedPages(homeLayoutRepository: HomeLayoutRepository): LauncherShellState {
+internal fun LauncherShellState.withRefreshedGeneratedPages(
+    homeLayoutRepository: HomeLayoutRepository,
+): LauncherShellState {
     val layout = refreshedGeneratedPages(homeLayout)
     return if (layout == homeLayout) this else withHomeLayout(layout, homeLayoutRepository)
 }
@@ -75,10 +77,13 @@ private fun LauncherShellState.contextualGeneratedPageKinds(): List<GeneratedLau
         ).pageKinds
 
 @Suppress("MaxLineLength")
-private fun List<InstalledApp>.countProfile(type: AppProfileType): Int = count { app -> app.identity.profile.type == type }
+private fun List<InstalledApp>.countProfile(type: AppProfileType): Int =
+    count { app -> app.identity.profile.type == type }
 
 @Suppress("MaxLineLength")
-private fun HomeLayout.withContextualGeneratedPageSelected(contextualPageKinds: List<GeneratedLauncherPageKind>): HomeLayout {
+private fun HomeLayout.withContextualGeneratedPageSelected(
+    contextualPageKinds: List<GeneratedLauncherPageKind>,
+): HomeLayout {
     val pageId =
         contextualPageKinds.firstNotNullOfOrNull { kind ->
             pages.firstOrNull { page -> (page.type as? LauncherPageType.Generated)?.kind == kind }?.id

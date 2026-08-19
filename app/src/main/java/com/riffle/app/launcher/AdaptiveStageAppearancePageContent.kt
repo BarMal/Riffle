@@ -114,7 +114,8 @@ import com.riffle.core.domain.launcher.settings.SYMMETRIC_ABOVE_FOCUS_DEPTH
 import com.riffle.core.domain.launcher.settings.ThreadCardGrouping
 import com.riffle.core.domain.launcher.settings.ThreadMessageOrder
 
-private typealias AdaptiveStageAppearanceUpdate = ((AdaptiveStageAppearanceSettings) -> AdaptiveStageAppearanceSettings) -> Unit
+private typealias AdaptiveStageAppearanceUpdate =
+    ((AdaptiveStageAppearanceSettings) -> AdaptiveStageAppearanceSettings) -> Unit
 
 @Composable
 internal fun AdaptiveStageAppearancePageContent(
@@ -271,7 +272,9 @@ internal fun AdaptiveStageAppearanceEditor(
 }
 
 /** Which of the two stored appearances the editor is pointed at. */
-internal fun SettingsSurfaceState.appearanceFor(target: AdaptiveStageAppearanceEditorTarget): AdaptiveStageAppearanceSettings =
+internal fun SettingsSurfaceState.appearanceFor(
+    target: AdaptiveStageAppearanceEditorTarget,
+): AdaptiveStageAppearanceSettings =
     when (target) {
         AdaptiveStageAppearanceEditorTarget.FOLDED -> settings.cards.adaptiveStageAppearance
         AdaptiveStageAppearanceEditorTarget.UNFOLDED -> settings.cards.unfoldedAppearance
@@ -882,16 +885,26 @@ private fun AdaptiveStageAccessibilityTabContent(
     update: AdaptiveStageAppearanceUpdate,
 ) {
     SettingsSection(title = "Accessibility fallbacks") {
-        SettingsSwitchRow("Reduced motion", "Use static, reachable card positions", appearance.motion.reducedMotion, { value ->
-            update {
-                it.copy(motion = it.motion.copy(reducedMotion = value))
-            }
-        })
-        SettingsSwitchRow("Reduced transparency", "Remove translucent glass and blur", appearance.motion.reducedTransparency, { value ->
-            update {
-                it.copy(motion = it.motion.copy(reducedTransparency = value))
-            }
-        })
+        SettingsSwitchRow(
+            "Reduced motion",
+            "Use static, reachable card positions",
+            appearance.motion.reducedMotion,
+            { value ->
+                update {
+                    it.copy(motion = it.motion.copy(reducedMotion = value))
+                }
+            },
+        )
+        SettingsSwitchRow(
+            "Reduced transparency",
+            "Remove translucent glass and blur",
+            appearance.motion.reducedTransparency,
+            { value ->
+                update {
+                    it.copy(motion = it.motion.copy(reducedTransparency = value))
+                }
+            },
+        )
     }
 }
 
@@ -967,7 +980,11 @@ private fun adaptiveStageFallbackMessage(
         // an actual phone. Checking PRIMARY against a representative (not this exact device's)
         // viewport surfaces that mismatch instead of leaving the preview silently misleading.
         !appearance
-            .resolveCardStack(REPRESENTATIVE_PHONE_VIEWPORT, rendererCapabilities, role = AdaptiveStageCardStackRole.PRIMARY)
+            .resolveCardStack(
+                REPRESENTATIVE_PHONE_VIEWPORT,
+                rendererCapabilities,
+                role = AdaptiveStageCardStackRole.PRIMARY,
+            )
             .isUsable ->
             "These settings need more room than a typical phone screen provides -- Home will likely " +
                 "show one card at a time instead of a fanned stack. Try a less extreme focused card " +
@@ -991,9 +1008,17 @@ private val REPRESENTATIVE_PHONE_VIEWPORT =
 
 private fun AdaptiveStageCardEffect.label(): String = name.lowercase().replaceFirstChar(Char::uppercase)
 
-private fun AdaptiveStageBackgroundSource.label(): String = name.lowercase().replace('_', ' ').replaceFirstChar(Char::uppercase)
+private fun AdaptiveStageBackgroundSource.label(): String =
+    name.lowercase().replace(
+        '_',
+        ' ',
+    ).replaceFirstChar(Char::uppercase)
 
-private fun AdaptiveStageAccentSource.label(): String = name.lowercase().replace('_', ' ').replaceFirstChar(Char::uppercase)
+private fun AdaptiveStageAccentSource.label(): String =
+    name.lowercase().replace(
+        '_',
+        ' ',
+    ).replaceFirstChar(Char::uppercase)
 
 private fun AdaptiveStageContentDensity.label(): String = name.lowercase().replaceFirstChar(Char::uppercase)
 

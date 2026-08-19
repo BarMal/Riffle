@@ -161,7 +161,11 @@ class WidgetEngine(
     private fun targetPage(
         layout: HomeLayout,
         targetPageId: LauncherPageId?,
-    ): LauncherPage = targetPageId?.let { pageId -> layout.pages.firstOrNull { it.id == pageId } } ?: layout.selectedPage
+    ): LauncherPage =
+        targetPageId?.let {
+                pageId ->
+            layout.pages.firstOrNull { it.id == pageId }
+        } ?: layout.selectedPage
 }
 
 private fun GridSpan.coerceAtLeastOneCell(): GridSpan =

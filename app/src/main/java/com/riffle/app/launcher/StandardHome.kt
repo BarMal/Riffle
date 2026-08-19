@@ -390,7 +390,9 @@ internal fun StandardHome(
 }
 
 @Suppress("MaxLineLength")
-internal fun accessibleWidgetAddActionFor(placement: WidgetPickerAccessiblePlacement): LauncherShellAction.RequestAddWidget? {
+internal fun accessibleWidgetAddActionFor(
+    placement: WidgetPickerAccessiblePlacement,
+): LauncherShellAction.RequestAddWidget? {
     val candidate = placement.selectedCandidate ?: return null
     return LauncherShellAction.RequestAddWidget(
         provider = placement.provider.identity,

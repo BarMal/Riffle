@@ -87,7 +87,9 @@ class CardModeGuardedSurfaceTest {
 
     @Test
     fun enteringCardsShowsMissingAccessRecoveryWhenPlatformWindowMetricsAreNotReady() {
-        var state by mutableStateOf(standardState().copy(notificationAccessStatus = NotificationAccessStatus.NOT_GRANTED))
+        var state by mutableStateOf(
+            standardState().copy(notificationAccessStatus = NotificationAccessStatus.NOT_GRANTED),
+        )
 
         composeRule.setContent {
             LauncherShellContent(

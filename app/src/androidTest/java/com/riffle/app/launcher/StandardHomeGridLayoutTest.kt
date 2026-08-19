@@ -55,7 +55,11 @@ class StandardHomeGridLayoutTest {
         assertEquals(
             GridCell(column = 0, row = 0),
             widgetPickerDropCell(
-                position = Offset(renderedBounds.left + renderedBounds.width / 5f, renderedBounds.top + renderedBounds.height / 10f),
+                position =
+                    Offset(
+                        renderedBounds.left + renderedBounds.width / 5f,
+                        renderedBounds.top + renderedBounds.height / 10f,
+                    ),
                 gridBounds = requireNotNull(reportedBounds.value),
                 grid = standardPage().grid,
             ),

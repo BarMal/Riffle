@@ -59,7 +59,10 @@ class StandardHomeSideDockLayoutTest {
         val root = rootBounds()
         val dock = dockBounds()
 
-        assertTrue("expected it at the trailing edge, dock=$dock root=$root", dock.right > root.right - root.width / 10f)
+        assertTrue(
+            "expected it at the trailing edge, dock=$dock root=$root",
+            dock.right > root.right - root.width / 10f,
+        )
         assertTrue("expected a narrow strip, dock=$dock root=$root", dock.width < root.width / 3f)
         assertTrue("expected a tall strip, dock=$dock root=$root", dock.height > root.height / 2f)
     }

@@ -482,7 +482,12 @@ class AdaptiveStageCardSurfaceTest {
             MaterialTheme {
                 AdaptiveStageAppStageSurface(
                     state = splitState,
-                    windowLayout = AdaptiveStageWindowLayout(widthDp = 360, heightDp = 800, posture = AdaptiveStagePosture.UNFOLDED),
+                    windowLayout =
+                        AdaptiveStageWindowLayout(
+                            widthDp = 360,
+                            heightDp = 800,
+                            posture = AdaptiveStagePosture.UNFOLDED,
+                        ),
                     onAction = {},
                 )
             }
@@ -530,7 +535,12 @@ class AdaptiveStageCardSurfaceTest {
                     Box(modifier = Modifier.width(widthDp.dp).height(800.dp).clipToBounds()) {
                         AdaptiveStageAppStageSurface(
                             state = testState,
-                            windowLayout = AdaptiveStageWindowLayout(widthDp, 800, posture = AdaptiveStagePosture.UNFOLDED),
+                            windowLayout =
+                                AdaptiveStageWindowLayout(
+                                    widthDp,
+                                    800,
+                                    posture = AdaptiveStagePosture.UNFOLDED,
+                                ),
                             onAction = {},
                         )
                     }
@@ -808,7 +818,12 @@ class AdaptiveStageCardSurfaceTest {
                     Box(modifier = Modifier.width(widthDp.dp).height(800.dp).clipToBounds()) {
                         AdaptiveStageAppStageSurface(
                             state = emptyPinnedStageState(app),
-                            windowLayout = AdaptiveStageWindowLayout(widthDp, 800, posture = AdaptiveStagePosture.UNFOLDED),
+                            windowLayout =
+                                AdaptiveStageWindowLayout(
+                                    widthDp,
+                                    800,
+                                    posture = AdaptiveStagePosture.UNFOLDED,
+                                ),
                             onAction = {},
                         )
                     }
@@ -830,7 +845,10 @@ class AdaptiveStageCardSurfaceTest {
     @Test
     fun removingSourceDuringBackCloseDoesNotFocusRemainingCardDetails() {
         val app = adaptiveStageTestApp()
-        val source = adaptiveStageTestNotification(app).copy(key = LauncherNotificationKey("source"), postedAtEpochMillis = 20)
+        val source =
+            adaptiveStageTestNotification(
+                app,
+            ).copy(key = LauncherNotificationKey("source"), postedAtEpochMillis = 20)
         val remaining =
             adaptiveStageTestNotification(app).copy(
                 key = LauncherNotificationKey("remaining"),
@@ -1382,14 +1400,20 @@ class AdaptiveStageCardSurfaceTest {
         backgroundSources.forEach { source ->
             val colorsWithAppColor =
                 resolveAdaptiveStageCardColors(
-                    appearance = AdaptiveStageAppearanceSettings(surface = AdaptiveStageSurface(backgroundSource = source)),
+                    appearance =
+                        AdaptiveStageAppearanceSettings(
+                            surface = AdaptiveStageSurface(backgroundSource = source),
+                        ),
                     background = AdaptiveStageCardBackground(appSeed = "com.example.app", appColor = appColor),
                     materialBackground = Color.White,
                     materialAccent = Color.Blue,
                 )
             val colorsWithoutAppColor =
                 resolveAdaptiveStageCardColors(
-                    appearance = AdaptiveStageAppearanceSettings(surface = AdaptiveStageSurface(backgroundSource = source)),
+                    appearance =
+                        AdaptiveStageAppearanceSettings(
+                            surface = AdaptiveStageSurface(backgroundSource = source),
+                        ),
                     background = AdaptiveStageCardBackground(appSeed = "com.example.app"),
                     materialBackground = Color.White,
                     materialAccent = Color.Blue,
@@ -1649,7 +1673,10 @@ class AdaptiveStageCardSurfaceTest {
 
         assertFalse(adaptiveStageRendererCapabilities(sdkInt = 30).supportsBlur)
         assertEquals(72, appearance.surface.blurStrengthPercent)
-        assertEquals(0, appearance.effectiveFor(adaptiveStageRendererCapabilities(sdkInt = 30)).surface.blurStrengthPercent)
+        assertEquals(
+            0,
+            appearance.effectiveFor(adaptiveStageRendererCapabilities(sdkInt = 30)).surface.blurStrengthPercent,
+        )
     }
 
     @Test

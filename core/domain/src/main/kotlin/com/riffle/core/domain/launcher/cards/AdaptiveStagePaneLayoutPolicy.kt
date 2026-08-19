@@ -116,11 +116,15 @@ class AdaptiveStagePaneLayoutPolicy {
         val safeHeight = (window.heightDp - window.safeTopDp - window.safeBottomDp).coerceAtLeast(0)
         val verticalHinge =
             window.separatingHinges.firstOrNull { hinge ->
-                hinge.isVertical && hinge.rightDp > window.safeStartDp && hinge.leftDp < window.widthDp - window.safeEndDp
+                hinge.isVertical &&
+                    hinge.rightDp > window.safeStartDp &&
+                    hinge.leftDp < window.widthDp - window.safeEndDp
             }
         val horizontalHinge =
             window.separatingHinges.firstOrNull { hinge ->
-                !hinge.isVertical && hinge.bottomDp > window.safeTopDp && hinge.topDp < window.heightDp - window.safeBottomDp
+                !hinge.isVertical &&
+                    hinge.bottomDp > window.safeTopDp &&
+                    hinge.topDp < window.heightDp - window.safeBottomDp
             }
         val hingeGap = verticalHinge?.widthDp ?: 0
         val usableWidth = (safeWidth - hingeGap).coerceAtLeast(0)

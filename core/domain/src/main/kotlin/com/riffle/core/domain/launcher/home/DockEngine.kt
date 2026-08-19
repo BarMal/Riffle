@@ -256,7 +256,8 @@ class DockEngine {
             .count { item -> item.appIdentity == app.identity } + 1
 
     @Suppress("MaxLineLength")
-    private fun HomeLayout.pageForId(pageId: LauncherPageId): LauncherPage? = pages.firstOrNull { page -> page.id == pageId }
+    private fun HomeLayout.pageForId(pageId: LauncherPageId): LauncherPage? =
+        pages.firstOrNull { page -> page.id == pageId }
 
     private fun DockModel.capacityAfterAddingAppShortcut(): Int =
         if (isEnabled) {
