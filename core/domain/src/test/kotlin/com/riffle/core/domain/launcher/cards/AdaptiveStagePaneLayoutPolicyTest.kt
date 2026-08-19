@@ -1,10 +1,10 @@
 package com.riffle.core.domain.launcher.cards
 
-import com.riffle.core.domain.launcher.home.DockPosition
 import kotlin.math.roundToInt
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
+import kotlin.test.assertTrue
 
 class AdaptiveStagePaneLayoutPolicyTest {
     private val policy = AdaptiveStagePaneLayoutPolicy()
@@ -60,14 +60,13 @@ class AdaptiveStagePaneLayoutPolicyTest {
     }
 
     @Test
-    fun expandedWindowShowsRailWithoutStretchingTheStack() {
+    fun expandedWindowDoesNotStretchTheStackToFillIt() {
         val layout =
             policy.layoutFor(
                 AdaptiveStageWindowLayout(800, 900, posture = AdaptiveStagePosture.UNFOLDED),
             )
 
         assertEquals(AdaptiveStagePaneMode.TWO_PANE, layout.mode)
-        assertEquals(104, layout.railWidthDp)
         assertEquals(560, layout.stackWidthDp)
     }
 
@@ -82,7 +81,7 @@ class AdaptiveStagePaneLayoutPolicyTest {
         assertEquals(360, layout.detailWidthDp)
         assertEquals(560, layout.stackWidthDp)
         assertEquals(0, layout.leadingRemainderDp)
-        assertEquals(1_024, layout.railWidthDp + layout.stackWidthDp + layout.detailWidthDp)
+        assertEquals(920, layout.stackWidthDp + layout.detailWidthDp)
         assertEquals(1_300, layout.contentWidthDp)
     }
 
@@ -101,7 +100,7 @@ class AdaptiveStagePaneLayoutPolicyTest {
         assertEquals(AdaptiveStagePaneMode.THREE_PANE, layout.mode)
         assertEquals(30, layout.hingeGapDp)
         assertEquals(510, layout.leadingRegionWidthDp)
-        assertEquals(510, layout.railWidthDp + layout.stackWidthDp)
+        assertEquals(510, layout.stackWidthDp)
         assertEquals(510, layout.trailingRegionWidthDp)
     }
 
@@ -122,101 +121,45 @@ class AdaptiveStagePaneLayoutPolicyTest {
         assertEquals(500, layout.leadingRegionWidthDp)
         assertEquals(520, layout.trailingRegionWidthDp)
         assertEquals(30, layout.hingeGapDp)
-        assertEquals(500, layout.railWidthDp + layout.stackWidthDp)
+        assertEquals(500, layout.stackWidthDp)
     }
 
     @Test
-    fun trailingRailIsReservedInsideMinimumThreePaneHingeRegions() {
+    fun minimumThreePaneHingeRegionsKeepBothPanesInsideTheContentWidth() {
         val layout =
             policy.layoutFor(
-                window =
-                    AdaptiveStageWindowLayout(
-                        widthDp = 872,
-                        heightDp = 800,
-                        safeStartDp = 8,
-                        safeEndDp = 8,
-                        separatingHinges = listOf(AdaptiveStageHingeBounds(368, 0, 400, 800)),
-                        posture = AdaptiveStagePosture.UNFOLDED,
-                    ),
-                dockPosition = DockPosition.TRAILING,
+                AdaptiveStageWindowLayout(
+                    widthDp = 872,
+                    heightDp = 800,
+                    safeStartDp = 8,
+                    safeEndDp = 8,
+                    separatingHinges = listOf(AdaptiveStageHingeBounds(472, 0, 504, 800)),
+                    posture = AdaptiveStagePosture.UNFOLDED,
+                ),
             )
 
         assertEquals(AdaptiveStagePaneMode.THREE_PANE, layout.mode)
-        assertEquals(360, layout.stackWidthDp)
+        assertEquals(464, layout.stackWidthDp)
         assertEquals(360, layout.detailWidthDp)
-        assertEquals(464, layout.trailingRegionWidthDp)
-        assertEquals(
-            layout.contentWidthDp,
-            layout.stackWidthDp +
-                layout.leadingRemainderDp +
-                layout.hingeGapDp +
-                layout.detailWidthDp +
-                layout.railWidthDp,
+        // Fits rather than fills. The panes are capped (MAX_STACK_WIDTH_DP, DETAIL_WIDTH_DP), so a
+        // wide enough region has width left over -- which used to be exactly what the rail took.
+        assertTrue(
+            layout.stackWidthDp + layout.leadingRemainderDp + layout.hingeGapDp + layout.detailWidthDp <=
+                layout.contentWidthDp,
+            "expected the panes to fit $layout",
         )
     }
 
     @Test
-    fun leadingRailRemainsReservedInsideMinimumThreePaneHingeRegions() {
-        val layout =
-            policy.layoutFor(
-                window =
-                    AdaptiveStageWindowLayout(
-                        widthDp = 872,
-                        heightDp = 800,
-                        safeStartDp = 8,
-                        safeEndDp = 8,
-                        separatingHinges = listOf(AdaptiveStageHingeBounds(472, 0, 504, 800)),
-                        posture = AdaptiveStagePosture.UNFOLDED,
-                    ),
-                dockPosition = DockPosition.LEADING,
-            )
-
-        assertEquals(AdaptiveStagePaneMode.THREE_PANE, layout.mode)
-        assertEquals(104, layout.railWidthDp)
-        assertEquals(360, layout.stackWidthDp)
-        assertEquals(360, layout.detailWidthDp)
-        assertEquals(
-            layout.contentWidthDp,
-            layout.railWidthDp +
-                layout.stackWidthDp +
-                layout.leadingRemainderDp +
-                layout.hingeGapDp +
-                layout.detailWidthDp,
-        )
-    }
-
-    @Test
-    fun topRailReservesHeightInsteadOfWidth() {
+    fun anUnfoldedWindowGivesItsWholeHeightToTheContent() {
+        // The horizontal rail used to reserve a strip of this; nothing does now.
         val layout =
             policy.layoutFor(
                 AdaptiveStageWindowLayout(800, 900, posture = AdaptiveStagePosture.UNFOLDED),
-                dockPosition = DockPosition.TOP,
             )
 
         assertEquals(AdaptiveStagePaneMode.TWO_PANE, layout.mode)
-        assertEquals(0, layout.railWidthDp)
-        assertEquals(96, layout.railHeightDp)
-        assertEquals(560, layout.stackWidthDp)
-        assertEquals(804, layout.contentHeightDp)
-        // contentTopDp positions the whole content box (rail included), not just the area below
-        // the rail -- it stays untouched; the rail-then-content Column ordering is what keeps
-        // content below the rail without an extra offset.
-        assertEquals(0, layout.contentTopDp)
-    }
-
-    @Test
-    fun bottomRailReservesHeightWithoutShiftingContentDown() {
-        val layout =
-            policy.layoutFor(
-                AdaptiveStageWindowLayout(1_300, 900, posture = AdaptiveStagePosture.UNFOLDED),
-                dockPosition = DockPosition.BOTTOM,
-            )
-
-        assertEquals(AdaptiveStagePaneMode.THREE_PANE, layout.mode)
-        assertEquals(0, layout.railWidthDp)
-        assertEquals(96, layout.railHeightDp)
-        assertEquals(360, layout.detailWidthDp)
-        assertEquals(804, layout.contentHeightDp)
+        assertEquals(900, layout.contentHeightDp)
         assertEquals(0, layout.contentTopDp)
     }
 

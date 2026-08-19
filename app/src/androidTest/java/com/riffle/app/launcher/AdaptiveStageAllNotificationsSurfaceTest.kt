@@ -13,7 +13,6 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.performClick
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.apps.AppActivityName
@@ -31,7 +30,6 @@ import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.notifications.NotificationAgeBucket
 import com.riffle.core.domain.launcher.notifications.NotificationCategory
-import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
@@ -50,13 +48,10 @@ class AdaptiveStageAllNotificationsSurfaceTest {
     val composeRule = createComposeRule()
 
     @Test
-    fun allNotificationsTileSelectsTheMergedPageShowingEveryStagesContent() {
+    fun theMergedPageShowsEveryStagesContent() {
         val mail = testApp("mail", "Mail")
         val chat = testApp("chat", "Chat")
-        setWideContent(twoStageState(mail, chat))
-
-        composeRule.onNodeWithContentDescription("All notifications. Open").assertIsDisplayed()
-        composeRule.onNodeWithContentDescription("All notifications. Open").performClick()
+        setWideContent(twoStageState(mail, chat), AdaptiveStageInteractionContext(allNotificationsSelected = true))
 
         composeRule.onNodeWithContentDescription("Cards stage: All notifications").assertIsDisplayed()
         composeRule.onNodeWithText("Chat message").assertIsDisplayed()
@@ -94,44 +89,16 @@ class AdaptiveStageAllNotificationsSurfaceTest {
         composeRule.onNodeWithContentDescription("Cards stage: All notifications").assertIsDisplayed()
     }
 
-    @Test
-    fun choosingTheMergedPageTellsWhoeverIsHoldingTheContext() {
-        val mail = testApp("mail", "Mail")
-        val chat = testApp("chat", "Chat")
-        val state = twoStageState(mail, chat)
-        var context by mutableStateOf(AdaptiveStageInteractionContext())
+    private fun setWideContent(
+        state: LauncherShellState,
+        context: AdaptiveStageInteractionContext = AdaptiveStageInteractionContext(),
+    ) {
         composeRule.setContent {
             MaterialTheme {
                 Box(modifier = Modifier.width(800.dp).height(800.dp).clipToBounds()) {
                     AdaptiveStageAppStageSurface(
                         state = state,
-                        windowLayout =
-                            AdaptiveStageWindowLayout(
-                                widthDp = 800,
-                                heightDp = 800,
-                                posture = AdaptiveStagePosture.UNFOLDED,
-                            ),
                         context = context,
-                        onContextChanged = { next -> context = next },
-                        onAction = {},
-                    )
-                }
-            }
-        }
-
-        composeRule.onNodeWithContentDescription("All notifications. Open").performClick()
-
-        composeRule.runOnIdle {
-            assertTrue("expected the context to carry the page, was $context", context.allNotificationsSelected)
-        }
-    }
-
-    private fun setWideContent(state: LauncherShellState) {
-        composeRule.setContent {
-            MaterialTheme {
-                Box(modifier = Modifier.width(800.dp).height(800.dp).clipToBounds()) {
-                    AdaptiveStageAppStageSurface(
-                        state = state,
                         windowLayout =
                             AdaptiveStageWindowLayout(
                                 widthDp = 800,
