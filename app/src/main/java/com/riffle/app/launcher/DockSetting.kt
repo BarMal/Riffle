@@ -19,6 +19,7 @@ import com.riffle.core.domain.launcher.home.DockAlignment
 import com.riffle.core.domain.launcher.home.DockBackgroundSizing
 import com.riffle.core.domain.launcher.home.DockExpandAffordance
 import com.riffle.core.domain.launcher.home.DockModel
+import com.riffle.core.domain.launcher.home.DockPosition
 import com.riffle.core.domain.launcher.home.DockVisualEffect
 import com.riffle.core.domain.launcher.home.MAX_DOCK_BACKGROUND_ALPHA_PERCENT
 import com.riffle.core.domain.launcher.home.MAX_DOCK_CORNER_RADIUS_DP
@@ -44,6 +45,10 @@ internal fun DockSetting(
         DockNotificationCardsSetting(
             enabled = dock.showNotificationCards,
             notificationAccessStatus = notificationAccessStatus,
+            onAction = onAction,
+        )
+        DockPositionSetting(
+            position = dock.position,
             onAction = onAction,
         )
         DockExpandableSetting(
@@ -246,6 +251,50 @@ private fun DockVisibilitySetting(
         onCheckedChange = { value -> onAction(LauncherShellAction.SelectDockEnabled(value)) },
     )
 }
+
+/**
+ * Which edge the dock occupies. Lives with the dock's other settings and therefore applies to the
+ * layout the settings screen is showing, the same as every control beside it.
+ */
+@Composable
+private fun DockPositionSetting(
+    position: DockPosition?,
+    onAction: (LauncherShellAction) -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        SettingsTextColumn(
+            title = "Dock position",
+            subtitle =
+                position?.label()
+                    ?: "Following the active Cards template",
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth().selectableGroup(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            DockPosition.entries.forEach { candidate ->
+                TextButton(
+                    modifier =
+                        Modifier
+                            .testTag("dock-position-${candidate.name}")
+                            .semantics { selected = candidate == position },
+                    enabled = candidate != position,
+                    onClick = { onAction(LauncherShellAction.SelectDockPosition(candidate)) },
+                ) {
+                    SettingsButtonText(text = candidate.label())
+                }
+            }
+        }
+    }
+}
+
+private fun DockPosition.label(): String =
+    when (this) {
+        DockPosition.LEADING -> "Leading edge"
+        DockPosition.TRAILING -> "Trailing edge"
+        DockPosition.TOP -> "Top edge"
+        DockPosition.BOTTOM -> "Bottom edge"
+    }
 
 @Composable
 private fun DockExpandableSetting(

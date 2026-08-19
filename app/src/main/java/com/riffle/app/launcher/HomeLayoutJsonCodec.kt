@@ -4,6 +4,7 @@ import com.riffle.core.domain.launcher.home.DockAlignment
 import com.riffle.core.domain.launcher.home.DockBackgroundSizing
 import com.riffle.core.domain.launcher.home.DockExpandAffordance
 import com.riffle.core.domain.launcher.home.DockModel
+import com.riffle.core.domain.launcher.home.DockPosition
 import com.riffle.core.domain.launcher.home.DockVisualEffect
 import com.riffle.core.domain.launcher.home.GridDimensions
 import com.riffle.core.domain.launcher.home.HomeLayout
@@ -78,6 +79,7 @@ private fun encodeDock(dock: DockModel): JSONObject =
         .put("showNotificationCards", dock.showNotificationCards)
         .put("isExpandable", dock.isExpandable)
         .put("expandAffordance", dock.expandAffordance.name)
+        .put("position", dock.position?.name)
         .apply { dock.panel?.let { panel -> put("panel", encodePage(panel)) } }
         .put("iconSizeDp", dock.iconSizeDp)
         .put("backgroundAlphaPercent", dock.backgroundAlphaPercent)
@@ -103,6 +105,11 @@ private fun JSONObject.toDock(
                 .takeIf(String::isNotBlank)
                 ?.let { value -> runCatching { DockExpandAffordance.valueOf(value) }.getOrNull() }
                 ?: defaults.expandAffordance,
+        position =
+            optString("position", "")
+                .takeIf(String::isNotBlank)
+                ?.let { value -> runCatching { DockPosition.valueOf(value) }.getOrNull() }
+                ?: defaults.position,
         panel =
             optJSONObject("panel")
                 ?.let { panel -> runCatching { panel.toPage(defaultGrid = defaultGrid) }.getOrNull() }

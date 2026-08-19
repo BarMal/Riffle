@@ -24,7 +24,6 @@ import com.riffle.core.domain.launcher.home.GridDimensions
 import com.riffle.core.domain.launcher.home.GridSpan
 import com.riffle.core.domain.launcher.home.HomeLabelSizing
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
-import com.riffle.core.domain.launcher.home.HomeLayoutKey
 import com.riffle.core.domain.launcher.home.HostedWidgetId
 import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.home.LauncherPageId
@@ -454,18 +453,7 @@ sealed interface LauncherShellAction {
 
     data class SelectThreadCardGrouping(val grouping: ThreadCardGrouping) : LauncherShellAction
 
-    /**
-     * Chooses the dock edge for one home layout.
-     *
-     * The key is carried rather than resolved from the running layout because the settings screen
-     * edits whichever device class is selected there, which is not necessarily the one this device
-     * is currently presenting -- the same reason [withSettingsTargetLayout] takes its key from the
-     * layout on screen.
-     */
-    data class SelectDockPosition(
-        val layoutKey: HomeLayoutKey,
-        val position: DockPosition,
-    ) : LauncherShellAction
+    data class SelectDockPosition(val position: DockPosition) : LauncherShellAction
 
     data class SelectOverlayDockEnabled(val enabled: Boolean) : LauncherShellAction
 

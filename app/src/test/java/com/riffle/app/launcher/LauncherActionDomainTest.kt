@@ -25,7 +25,6 @@ import com.riffle.core.domain.launcher.home.GridDimensions
 import com.riffle.core.domain.launcher.home.GridSpan
 import com.riffle.core.domain.launcher.home.HomeLabelSizing
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
-import com.riffle.core.domain.launcher.home.HomeLayoutKey
 import com.riffle.core.domain.launcher.home.HomeLayoutSet
 import com.riffle.core.domain.launcher.home.HostedWidgetId
 import com.riffle.core.domain.launcher.home.LauncherItemId
@@ -282,6 +281,7 @@ class LauncherActionDomainTest {
                     LauncherShellAction.SelectDockExpandAffordance(DockExpandAffordance.BUTTON),
                 ),
                 activity("SelectDockPanelEnabled", LauncherShellAction.SelectDockPanelEnabled(enabled = true)),
+                activity("SelectDockPosition", LauncherShellAction.SelectDockPosition(DockPosition.TOP)),
                 activity("SelectDockCapacity", LauncherShellAction.SelectDockCapacity(capacity = 6)),
                 activity("SelectDockIconSize", LauncherShellAction.SelectDockIconSize(sizeDp = 52)),
                 activity("SelectDockBackgroundAlpha", LauncherShellAction.SelectDockBackgroundAlpha(alphaPercent = 80)),
@@ -498,13 +498,6 @@ class LauncherActionDomainTest {
                 settings(
                     "SelectThreadCardGrouping",
                     LauncherShellAction.SelectThreadCardGrouping(ThreadCardGrouping.PER_MESSAGE),
-                ),
-                settings(
-                    "SelectDockPosition",
-                    LauncherShellAction.SelectDockPosition(
-                        HomeLayoutKey(LauncherViewMode.CARD_INTERFACE, HomeLayoutDeviceClass.PHONE),
-                        DockPosition.TOP,
-                    ),
                 ),
                 settings("SelectOverlayDockEnabled", LauncherShellAction.SelectOverlayDockEnabled(enabled = true)),
                 settings("SelectOverlayDockEdge", LauncherShellAction.SelectOverlayDockEdge(OverlayDockEdge.START)),

@@ -19,8 +19,6 @@ import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.cards.AdaptiveStagePaneArrangement
-import com.riffle.core.domain.launcher.home.DockPosition
-import com.riffle.core.domain.launcher.home.HomeLayoutKey
 import com.riffle.core.domain.launcher.settings.AdaptiveStageAppearanceSettings
 import com.riffle.core.domain.launcher.settings.AdaptiveStageEasing
 import com.riffle.core.domain.launcher.settings.AdaptiveStageHapticStrength
@@ -122,37 +120,6 @@ class AdaptiveStageAppearanceEditorTest {
         composeRule.runOnIdle {
             val action = actions.last() as LauncherShellAction.SelectAdaptiveStagePaneArrangement
             assertEquals(AdaptiveStagePaneArrangement.SPLIT, action.arrangement)
-        }
-    }
-
-    @Test
-    fun selectingTopDispatchesTheDockPositionAction() {
-        val actions = mutableListOf<LauncherShellAction>()
-        composeRule.setContent {
-            MaterialTheme {
-                AdaptiveStageAppearancePageContent(
-                    state = LauncherShellState().settingsSurfaceState(),
-                    onAction = actions::add,
-                    modifier = Modifier.requiredSize(360.dp, 800.dp),
-                )
-            }
-        }
-
-        selectTab(AdaptiveStageAppearanceTab.LAYOUT)
-        composeRule.onNodeWithTag("dock-position-${DockPosition.TOP.name}")
-            .performScrollTo()
-            .performClick()
-
-        composeRule.runOnIdle {
-            val action = actions.last() as LauncherShellAction.SelectDockPosition
-            assertEquals(DockPosition.TOP, action.position)
-            // The editor names the layout it is showing, so the choice lands on that one rather
-            // than on whichever layout this device happens to be presenting.
-            val state = LauncherShellState().settingsSurfaceState()
-            assertEquals(
-                HomeLayoutKey(state.homeLayout.viewMode, state.selectedLayoutDeviceClass),
-                action.layoutKey,
-            )
         }
     }
 

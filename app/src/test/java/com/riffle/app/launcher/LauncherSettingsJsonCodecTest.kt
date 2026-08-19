@@ -10,7 +10,6 @@ import com.riffle.core.domain.launcher.cards.AppStageId
 import com.riffle.core.domain.launcher.cards.AppStagePreferences
 import com.riffle.core.domain.launcher.contextual.ContextualSettings
 import com.riffle.core.domain.launcher.home.AppShortcutItem
-import com.riffle.core.domain.launcher.home.DockPosition
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.HomeLayoutKey
 import com.riffle.core.domain.launcher.home.LauncherItemId
@@ -68,7 +67,6 @@ import com.riffle.core.domain.launcher.settings.SearchResultPresentation
 import com.riffle.core.domain.launcher.settings.SearchSettings
 import com.riffle.core.domain.launcher.settings.ThreadCardGrouping
 import com.riffle.core.domain.launcher.settings.ThreadMessageOrder
-import com.riffle.core.domain.launcher.settings.dockPositionFor
 import com.riffle.core.domain.launcher.settings.homeSystemBars
 import com.riffle.core.domain.launcher.settings.stagePreferencesFor
 import com.riffle.core.domain.launcher.settings.withHomeSystemBars
@@ -121,60 +119,15 @@ class LauncherSettingsJsonCodecTest {
     }
 
     @Test
-    fun roundTripsConfiguredAdaptiveStageTemplateAndDockPositionPerLayout() {
-        val phone = HomeLayoutKey(LauncherViewMode.STANDARD_APP_DRAWER, HomeLayoutDeviceClass.PHONE)
-        val tablet = HomeLayoutKey(LauncherViewMode.CARD_INTERFACE, HomeLayoutDeviceClass.TABLET)
+    fun roundTripsConfiguredAdaptiveStageTemplate() {
         val settings =
             LauncherSettings(
-                cards =
-                    CardsSettings(
-                        adaptiveStageTemplateId = AdaptiveStageTemplateCatalogDefaults.sharedCanvasId,
-                        dockPositionByLayout =
-                            mapOf(phone to DockPosition.BOTTOM, tablet to DockPosition.TRAILING),
-                    ),
+                cards = CardsSettings(adaptiveStageTemplateId = AdaptiveStageTemplateCatalogDefaults.sharedCanvasId),
             )
 
         val decoded = decodeLauncherSettings(encodeLauncherSettings(settings))
 
         assertEquals(settings.cards.adaptiveStageTemplateId, decoded.cards.adaptiveStageTemplateId)
-        assertEquals(DockPosition.BOTTOM, decoded.cards.dockPositionFor(phone))
-        assertEquals(DockPosition.TRAILING, decoded.cards.dockPositionFor(tablet))
-    }
-
-    @Test
-    fun anUnconfiguredLayoutHasNoDockPositionOfItsOwn() {
-        val settings = LauncherSettings(cards = CardsSettings())
-        val phone = HomeLayoutKey(LauncherViewMode.STANDARD_APP_DRAWER, HomeLayoutDeviceClass.PHONE)
-
-        assertEquals(null, settings.cards.dockPositionFor(phone))
-        assertEquals(
-            null,
-            decodeLauncherSettings(encodeLauncherSettings(settings)).cards.dockPositionFor(phone),
-        )
-    }
-
-    @Test
-    fun aSingleLegacyRailSideBecomesThatEdgeOnEveryLayout() {
-        // It was one global choice before it was per layout, so every layout has to keep answering
-        // the way that choice did -- decoding it onto only some of them would silently move the
-        // dock on the rest.
-        val decoded =
-            decodeLauncherSettings(
-                """
-                {
-                  "cards": {
-                    "timeScapeRailSide": "TRAILING"
-                  }
-                }
-                """.trimIndent(),
-            ).cards
-
-        val everyKey =
-            LauncherViewMode.entries.flatMap { viewMode ->
-                HomeLayoutDeviceClass.entries.map { deviceClass -> HomeLayoutKey(viewMode, deviceClass) }
-            }
-        assertEquals(everyKey.size, decoded.dockPositionByLayout.size)
-        everyKey.forEach { key -> assertEquals(DockPosition.TRAILING, decoded.dockPositionFor(key)) }
     }
 
     @Test
@@ -444,10 +397,6 @@ class LauncherSettingsJsonCodecTest {
 
         assertEquals(AdaptiveStageAppearanceSettings.unfolded(), decoded.unfoldedAppearance)
         assertEquals(5, decoded.adaptiveStageAppearance.geometry.visibleDepth)
-        assertEquals(
-            DockPosition.TOP,
-            decoded.dockPositionFor(HomeLayoutKey(LauncherViewMode.CARD_INTERFACE, HomeLayoutDeviceClass.PHONE)),
-        )
     }
 
     @Test

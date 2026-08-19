@@ -72,6 +72,16 @@ class DockConfigurationEngine {
         return DockEditResult.Updated(layout.copy(dock = layout.dock.copy(panel = panel)))
     }
 
+    fun setDockPosition(
+        layout: HomeLayout,
+        position: DockPosition,
+    ): DockEditResult =
+        DockEditResult.Updated(
+            layout.copy(
+                dock = layout.dock.copy(position = position),
+            ),
+        )
+
     fun setDockCapacity(
         layout: HomeLayout,
         capacity: Int,
