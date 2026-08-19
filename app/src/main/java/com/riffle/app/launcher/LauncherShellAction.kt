@@ -163,6 +163,14 @@ sealed interface LauncherShellAction {
 
     data class SelectLauncherViewMode(val mode: LauncherViewMode) : LauncherShellAction
 
+    /**
+     * Leaves Cards for the non-Cards mode it was entered from, or Standard if none is recorded.
+     *
+     * Not a [SelectLauncherViewMode] with a fixed mode, because where to return to is a decision
+     * only the layout set can make -- it is the one holding which mode Cards was entered from.
+     */
+    data object ExitAdaptiveStage : LauncherShellAction
+
     data class SelectLauncherTemplate(
         val templateId: LauncherTemplateId,
         val mode: LauncherViewMode,

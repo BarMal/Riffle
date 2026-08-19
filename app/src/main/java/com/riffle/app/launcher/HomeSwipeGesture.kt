@@ -133,8 +133,7 @@ class HomeSwipeGestureActionMapper {
             LauncherGestureAction.SELECT_PREVIOUS_HOME_PAGE -> LauncherShellAction.SelectPreviousHomePage
             LauncherGestureAction.ENTER_ADAPTIVE_STAGE ->
                 LauncherShellAction.SelectLauncherViewMode(LauncherViewMode.CARD_INTERFACE)
-            LauncherGestureAction.EXIT_ADAPTIVE_STAGE ->
-                LauncherShellAction.SelectLauncherViewMode(LauncherViewMode.STANDARD_APP_DRAWER)
+            LauncherGestureAction.EXIT_ADAPTIVE_STAGE -> LauncherShellAction.ExitAdaptiveStage
             LauncherGestureAction.SELECT_NEXT_APP_STAGE -> LauncherShellAction.SelectNextAppStage
             LauncherGestureAction.SELECT_PREVIOUS_APP_STAGE -> LauncherShellAction.SelectPreviousAppStage
             LauncherGestureAction.LAUNCH_APP -> launchTarget.launchAppAction()

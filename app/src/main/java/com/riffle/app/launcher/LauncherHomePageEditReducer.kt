@@ -44,6 +44,14 @@ internal class LauncherHomePageEditReducer(
                     )
                     .withHomeScreenLibraryApps(homeLayoutRepository)
 
+            action is LauncherShellAction.ExitAdaptiveStage ->
+                state
+                    .withExitedAdaptiveStage(
+                        homeLayoutRepository = homeLayoutRepository,
+                        viewModeAvailability = viewModeAvailability,
+                    )
+                    .withHomeScreenLibraryApps(homeLayoutRepository)
+
             action is LauncherShellAction.SelectHomeLayoutDeviceClass ->
                 state
                     .withSelectedHomeLayoutDeviceClass(

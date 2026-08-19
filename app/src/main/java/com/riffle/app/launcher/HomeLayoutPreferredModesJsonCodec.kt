@@ -5,17 +5,19 @@ import com.riffle.core.domain.launcher.home.LauncherViewMode
 import org.json.JSONArray
 import org.json.JSONObject
 
-internal fun encodePreferredModes(preferredModes: Map<HomeLayoutDeviceClass, LauncherViewMode>): JSONArray =
+// A device-class-to-mode map, encoded and decoded the same way wherever one is stored -- the
+// active-mode preferences and the leaving-Cards return modes are both this shape.
+internal fun encodeDeviceClassModes(modes: Map<HomeLayoutDeviceClass, LauncherViewMode>): JSONArray =
     JSONArray(
-        preferredModes.map { (deviceClass, mode) ->
+        modes.map { (deviceClass, mode) ->
             JSONObject()
                 .put("deviceClass", deviceClass.name)
                 .put("viewMode", mode.name)
         },
     )
 
-internal fun JSONObject.optPreferredModes(): Map<HomeLayoutDeviceClass, LauncherViewMode> =
-    optJSONArray("preferredModes")
+internal fun JSONObject.optDeviceClassModes(key: String): Map<HomeLayoutDeviceClass, LauncherViewMode> =
+    optJSONArray(key)
         ?.toPreferredModes()
         .orEmpty()
 

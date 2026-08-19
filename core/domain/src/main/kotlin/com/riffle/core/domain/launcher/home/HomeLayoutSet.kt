@@ -18,8 +18,25 @@ data class HomeLayoutSet(
     val layouts: Map<HomeLayoutKey, HomeLayout>,
     val preferredModesByDeviceClass: Map<HomeLayoutDeviceClass, LauncherViewMode> =
         mapOf(activeKey.deviceClass to activeKey.viewMode),
+    /**
+     * The most recent non-Cards mode chosen on each device class -- where leaving Cards returns to.
+     *
+     * Distinct from [preferredModesByDeviceClass], which holds whatever is active *now* (Cards
+     * included) so a device-class switch restores what you were last looking at there. This one is
+     * only ever a non-Cards mode, so it survives entering Cards and can answer "where did I come
+     * from" when you leave. Absent an entry -- a first run, or a decode of a layout written before
+     * this was tracked -- leaving Cards falls back to [LauncherViewMode.STANDARD_APP_DRAWER], which
+     * is where it always went before.
+     */
+    val lastNonCardsModeByDeviceClass: Map<HomeLayoutDeviceClass, LauncherViewMode> = emptyMap(),
 ) {
     val activeLayout: HomeLayout = layoutFor(activeKey)
+
+    /** The mode to restore when leaving Cards on the active device. */
+    fun modeLeavingCards(): LauncherViewMode {
+        return lastNonCardsModeByDeviceClass[activeKey.deviceClass]
+            ?: LauncherViewMode.STANDARD_APP_DRAWER
+    }
 
     fun layoutFor(key: HomeLayoutKey): HomeLayout = layouts[key] ?: defaultLayout(key)
 
@@ -44,6 +61,14 @@ data class HomeLayoutSet(
                     activeKey = key,
                     layouts = layouts + (key to layout),
                     preferredModesByDeviceClass = preferredModesByDeviceClass + (key.deviceClass to mode),
+                    // Entering Cards must not overwrite where leaving it returns to; every other
+                    // mode is itself a valid return, so it records where you now are.
+                    lastNonCardsModeByDeviceClass =
+                        if (mode == LauncherViewMode.CARD_INTERFACE) {
+                            lastNonCardsModeByDeviceClass
+                        } else {
+                            lastNonCardsModeByDeviceClass + (key.deviceClass to mode)
+                        },
                 )
             }
 

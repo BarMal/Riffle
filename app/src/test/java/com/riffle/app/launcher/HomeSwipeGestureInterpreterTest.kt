@@ -265,7 +265,7 @@ class HomeSwipeGestureInterpreterTest {
             actionMapper.actionFor(HomeGesture.THREE_FINGER_UP, settings),
         )
         assertEquals(
-            LauncherShellAction.SelectLauncherViewMode(LauncherViewMode.STANDARD_APP_DRAWER),
+            LauncherShellAction.ExitAdaptiveStage,
             actionMapper.actionFor(HomeGesture.THREE_FINGER_DOWN, settings),
         )
         assertEquals(

@@ -249,6 +249,37 @@ class HomeLayoutSetTest {
         assertEquals(LauncherPageId("foldable-home"), layoutSet.layoutFor(foldableKey).selectedPageId)
     }
 
+    @Test
+    fun leavingCardsReturnsToTheModeYouEnteredItFrom() {
+        val layoutSet =
+            HomeLayoutSet.standard()
+                .selectMode(LauncherViewMode.HOME_SCREEN_LIBRARY)
+                .selectMode(LauncherViewMode.CARD_INTERFACE)
+
+        assertEquals(LauncherViewMode.HOME_SCREEN_LIBRARY, layoutSet.modeLeavingCards())
+    }
+
+    @Test
+    fun leavingCardsRemembersTheMostRecentNonCardsModeNotTheFirst() {
+        val layoutSet =
+            HomeLayoutSet.standard()
+                .selectMode(LauncherViewMode.HOME_SCREEN_LIBRARY)
+                .selectMode(LauncherViewMode.CARD_INTERFACE)
+                .selectMode(LauncherViewMode.STANDARD_APP_DRAWER)
+                .selectMode(LauncherViewMode.CARD_INTERFACE)
+
+        assertEquals(LauncherViewMode.STANDARD_APP_DRAWER, layoutSet.modeLeavingCards())
+    }
+
+    @Test
+    fun leavingCardsFallsBackToStandardWhenNothingWasRecorded() {
+        // A layout that has only ever been in Cards -- or one decoded from before this was tracked
+        // -- has nowhere recorded to return to, and lands where leaving Cards always used to.
+        val layoutSet = HomeLayoutSet.standard().selectMode(LauncherViewMode.CARD_INTERFACE)
+
+        assertEquals(LauncherViewMode.STANDARD_APP_DRAWER, layoutSet.modeLeavingCards())
+    }
+
     private val standardKey = HomeLayoutKey(LauncherViewMode.STANDARD_APP_DRAWER)
 
     private fun appShortcut(id: String): AppShortcutItem =

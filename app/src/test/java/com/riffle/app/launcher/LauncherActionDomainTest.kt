@@ -235,6 +235,7 @@ class LauncherActionDomainTest {
                     "SelectLauncherViewMode",
                     LauncherShellAction.SelectLauncherViewMode(LauncherViewMode.HOME_SCREEN_LIBRARY),
                 ),
+                activity("ExitAdaptiveStage", LauncherShellAction.ExitAdaptiveStage),
                 activity(
                     "SelectLauncherTemplate",
                     LauncherShellAction.SelectLauncherTemplate(

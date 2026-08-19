@@ -141,6 +141,52 @@ class LauncherShellViewModeViewModelTest {
     }
 
     @Test
+    fun leavingCardsReturnsToTheModeYouCameFrom() {
+        val camera = app(label = "Camera")
+        val repository = FakeHomeLayoutRepository(savedLayout = HomeLayoutDefaults.standard())
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                installedAppRepository = FakeInstalledAppRepository(apps = listOf(camera)),
+                homeLayoutRepository = repository,
+                platformDependencies = libraryAndCardsViewModePlatformDependencies,
+            )
+
+        runBlocking { viewModel.refreshInstalledApps().join() }
+        viewModel.onHomePageEdited(
+            LauncherShellAction.SelectLauncherViewMode(LauncherViewMode.HOME_SCREEN_LIBRARY),
+        )
+        viewModel.onHomePageEdited(
+            LauncherShellAction.SelectLauncherViewMode(LauncherViewMode.CARD_INTERFACE),
+        )
+        viewModel.onHomePageEdited(LauncherShellAction.ExitAdaptiveStage)
+
+        assertEquals(LauncherViewMode.HOME_SCREEN_LIBRARY, viewModel.state.value.homeLayout.viewMode)
+    }
+
+    @Test
+    fun leavingCardsWithNothingRememberedLandsOnStandard() {
+        val camera = app(label = "Camera")
+        val repository =
+            FakeHomeLayoutRepository(
+                savedLayout =
+                    HomeLayoutDefaults.standard().copy(viewMode = LauncherViewMode.CARD_INTERFACE),
+            )
+        val viewModel =
+            LauncherShellViewModel(
+                firstRunRepository = FakeFirstRunRepository(),
+                installedAppRepository = FakeInstalledAppRepository(apps = listOf(camera)),
+                homeLayoutRepository = repository,
+                platformDependencies = libraryAndCardsViewModePlatformDependencies,
+            )
+
+        runBlocking { viewModel.refreshInstalledApps().join() }
+        viewModel.onHomePageEdited(LauncherShellAction.ExitAdaptiveStage)
+
+        assertEquals(LauncherViewMode.STANDARD_APP_DRAWER, viewModel.state.value.homeLayout.viewMode)
+    }
+
+    @Test
     fun refreshAddsNewInstalledAppsWhenLibraryModeIsActive() {
         val camera = app(label = "Camera")
         val calendar = app(label = "Calendar")
@@ -792,6 +838,17 @@ private val libraryViewModeAvailability =
 
 private val libraryViewModePlatformDependencies =
     LauncherShellPlatformDependencies(viewModeAvailability = libraryViewModeAvailability)
+
+private val libraryAndCardsViewModePlatformDependencies =
+    LauncherShellPlatformDependencies(
+        viewModeAvailability =
+            LauncherViewModeAvailability(
+                enabledExperimentalModesByDeviceClass =
+                    HomeLayoutDeviceClass.entries.associateWith {
+                        setOf(LauncherViewMode.HOME_SCREEN_LIBRARY, LauncherViewMode.CARD_INTERFACE)
+                    },
+            ),
+    )
 
 private val phoneAndFoldableLibraryViewModePlatformDependencies =
     LauncherShellPlatformDependencies(

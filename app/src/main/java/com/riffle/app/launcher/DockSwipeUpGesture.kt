@@ -24,10 +24,9 @@ internal fun LauncherGestureAction.toDockSwipeUpShellAction(viewMode: LauncherVi
         // Only from Cards, where there is something to exit. Firing it everywhere turned a swipe on
         // the Library dock into a jump to Standard -- a mode the user had not asked for, and one
         // whose layout has a dock of its own, so the dock they had swiped on was replaced too.
+        // Where it returns to is the layout set's call, not this mapper's -- see ExitAdaptiveStage.
         LauncherGestureAction.EXIT_ADAPTIVE_STAGE ->
-            LauncherShellAction
-                .SelectLauncherViewMode(LauncherViewMode.STANDARD_APP_DRAWER)
-                .takeIf { viewMode == LauncherViewMode.CARD_INTERFACE }
+            LauncherShellAction.ExitAdaptiveStage.takeIf { viewMode == LauncherViewMode.CARD_INTERFACE }
         LauncherGestureAction.OPEN_APP_DRAWER -> LauncherShellAction.OpenAppDrawer
         // The Dock swipe-up binding only persists one of the three actions above; any other value
         // (e.g. from a future migration) is treated as a no-op rather than crashing.
