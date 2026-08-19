@@ -161,6 +161,9 @@ private fun DockOrShelf(
             position = position,
             interactions = interactions,
             widgetPickerDockPreview = widgetPickerDockPreview,
+            // Only the collapsed dock carries the section. Expanded, the shelf's card row *is* the
+            // same section with room to say more, so drawing both would show every entry twice.
+            dynamicEntries = notificationShelfState.dynamicEntries(),
         )
     }
 }

@@ -408,7 +408,7 @@ private fun DockNotificationCardsSetting(
     onAction: (LauncherShellAction) -> Unit,
 ) {
     SettingsSwitchRow(
-        title = "Expanded dock cards",
+        title = "Dock notifications",
         subtitle = dockNotificationCardsSettingSubtitle(enabled, notificationAccessStatus),
         checked = enabled,
         onCheckedChange = { value ->
@@ -438,11 +438,11 @@ internal fun dockNotificationCardsSettingSubtitle(
     notificationAccessStatus: NotificationAccessStatus,
 ): String {
     if (!enabled) {
-        return "Expanded dock only shows shortcuts and widgets"
+        return "Dock only shows what you pinned to it"
     }
 
     return when (notificationAccessStatus) {
-        NotificationAccessStatus.GRANTED -> "Expanded dock can show notification cards"
+        NotificationAccessStatus.GRANTED -> "Dock shows apps with notifications beside your pinned ones"
         NotificationAccessStatus.NOT_GRANTED -> "Notification cards are on, but access is not allowed"
         NotificationAccessStatus.REVOKED -> "Notification cards are on, but access was revoked"
         NotificationAccessStatus.UNKNOWN -> "Notification cards are on, but access has not been checked"

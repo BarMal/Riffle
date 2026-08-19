@@ -83,6 +83,7 @@ internal fun Dock(
     position: DockPosition = DockPosition.BOTTOM,
     interactions: DockInteractions,
     widgetPickerDockPreview: WidgetPickerDockPlacementPreview? = null,
+    dynamicEntries: List<DockNotificationCardState> = emptyList(),
 ) {
     val presentation = DockPresentation(notificationGroupsByApp, appShortcutsByApp, widgetViewFactory, interactions)
 
@@ -99,6 +100,7 @@ internal fun Dock(
                     if (position.isHorizontalEdge) maxWidth.value.toInt() else maxHeight.value.toInt(),
                 previewSlotCount = if (widgetPickerDockPreview != null) 1 else 0,
                 runsHorizontally = position.isHorizontalEdge,
+                dynamicEntryCount = dynamicEntries.size,
             ) ?: return@BoxWithConstraints
         HomeBackgroundContextMenu(
             haptics = interactions.haptics,
@@ -117,6 +119,7 @@ internal fun Dock(
             appIconLoader = appIconLoader,
             position = position,
             widgetPickerDockPreview = widgetPickerDockPreview,
+            dynamicEntries = dynamicEntries,
         )
     }
 }
@@ -382,6 +385,10 @@ private const val DOCK_MAX_VERTICAL_MAIN_AXIS_FRACTION = 0.7f
 internal const val DOCK_CROSS_AXIS_CHROME_DP = 32
 internal const val DOCK_MAIN_AXIS_PADDING_DP = 14
 internal const val DOCK_CROSS_AXIS_PADDING_DP = 10
+
+/** The seam between the dock's two sections along its run: a 1dp rule with 8dp either side. */
+internal const val DOCK_SECTION_DIVIDER_MAIN_AXIS_DP = 17
+
 private const val DOCK_OVERFLOW_FADE_WIDTH_DP = 20
 private const val DOCK_EDGE_AUTO_SCROLL_ZONE_DP = 28
 private const val DOCK_EDGE_AUTO_SCROLL_MAX_PX_PER_EVENT = 24f
@@ -396,7 +403,7 @@ internal const val WIDGET_PICKER_DOCK_PREVIEW_TEST_TAG = "widget-picker-dock-pre
  * The two axes want different kinds of cap, so this is where the difference lives rather than in
  * one number that has to suit both.
  */
-private fun dockMaxMainAxisDp(
+internal fun dockMaxMainAxisDp(
     availableMainAxisDp: Int,
     runsHorizontally: Boolean,
 ): Int =
@@ -457,6 +464,33 @@ internal fun dockContainerMainAxisDp(
             availableDockMainAxisDp = maxDockMainAxis,
         )
     return min(maxDockMainAxis, contentViewportMainAxis + (DOCK_MAIN_AXIS_PADDING_DP * 2))
+}
+
+/**
+ * How much of the dock's run the dynamic section gets, once the static side has had its share.
+ *
+ * The static side is the one the user built, so it is sized first and in full; the dynamic section
+ * takes what is left. That ordering is the point -- notifications come and go, and a section that
+ * sized itself first would shove the pinned icons along the dock every time one arrived.
+ *
+ * [maxRunMainAxisDp] is taken as already capped for the same reason [dockContentViewportMainAxisDp]
+ * takes its own: how long a run may get depends on which way it runs, and only the caller knows
+ * that. What does not fit is reached by scrolling the section rather than by shrinking its tiles,
+ * so an entry is always the size of a dock icon whatever the run has room for.
+ */
+internal fun dockDynamicSectionMainAxisDp(
+    entryCount: Int,
+    entryExtentDp: Int,
+    entrySpacingDp: Int,
+    staticContainerMainAxisDp: Int,
+    maxRunMainAxisDp: Int,
+): Int {
+    if (entryCount <= 0 || entryExtentDp <= 0) {
+        return 0
+    }
+    val wanted = (entryCount * entryExtentDp) + ((entryCount - 1) * entrySpacingDp.coerceAtLeast(0))
+    val room = maxRunMainAxisDp - staticContainerMainAxisDp - DOCK_SECTION_DIVIDER_MAIN_AXIS_DP
+    return min(wanted, room).coerceAtLeast(0)
 }
 
 internal fun dockRenderedSlotCount(

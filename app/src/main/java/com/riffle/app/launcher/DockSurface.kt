@@ -1,14 +1,17 @@
 package com.riffle.app.launcher
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -29,7 +32,22 @@ internal data class DockSurfaceMetrics(
     val containerMainAxisDp: Int,
     val contentViewportMainAxisDp: Int,
     val slotMetrics: DockSlotRenderMetrics,
-)
+    val dynamicSectionMainAxisDp: Int = 0,
+) {
+    /**
+     * The whole dock's run: the static side, and the dynamic section and rule beside it.
+     *
+     * Equal to [containerMainAxisDp] whenever there is no dynamic section, which is what every
+     * caller that predates one is asking for.
+     */
+    val surfaceMainAxisDp: Int
+        get() =
+            if (dynamicSectionMainAxisDp <= 0) {
+                containerMainAxisDp
+            } else {
+                containerMainAxisDp + DOCK_SECTION_DIVIDER_MAIN_AXIS_DP + dynamicSectionMainAxisDp
+            }
+}
 
 internal fun dockSurfaceMetrics(
     dock: DockModel,
@@ -37,6 +55,7 @@ internal fun dockSurfaceMetrics(
     availableMainAxisDp: Int,
     previewSlotCount: Int = 0,
     runsHorizontally: Boolean = true,
+    dynamicEntryCount: Int = 0,
 ): DockSurfaceMetrics? {
     val renderedSlotCount =
         dockRenderedSlotCount(
@@ -93,6 +112,18 @@ internal fun dockSurfaceMetrics(
                 iconSizeDp = dock.iconSizeDp,
                 itemSpacingDp = dock.itemSpacingDp,
                 availableContentMainAxisDp = contentViewportMainAxisDp,
+            ),
+        dynamicSectionMainAxisDp =
+            dockDynamicSectionMainAxisDp(
+                entryCount = dynamicEntryCount,
+                entryExtentDp = dock.iconSizeDp,
+                entrySpacingDp = dock.itemSpacingDp,
+                staticContainerMainAxisDp = containerMainAxisDp,
+                maxRunMainAxisDp =
+                    minOf(
+                        availableMainAxisDp,
+                        dockMaxMainAxisDp(availableMainAxisDp, runsHorizontally),
+                    ).coerceAtLeast(0),
             ),
     )
 }
@@ -269,10 +300,26 @@ internal fun DockSurfaceStrip(
     position: DockPosition = DockPosition.BOTTOM,
     renderBackground: Boolean = true,
     widgetPickerDockPreview: WidgetPickerDockPlacementPreview? = null,
+    dynamicEntries: List<DockNotificationCardState> = emptyList(),
 ) {
     val runsHorizontally = position.isHorizontalEdge
-    val mainAxisDp = surfaceMetrics.containerMainAxisDp.dp
+    val mainAxisDp = surfaceMetrics.surfaceMainAxisDp.dp
     val crossAxisDp = dockCrossAxisDp(surfaceMetrics.slotMetrics.iconSizeDp).dp
+    val staticSide: @Composable () -> Unit = {
+        if (surfaceMetrics.renderedSlotCount > 0 && surfaceMetrics.contentViewportMainAxisDp > 0) {
+            DockSlotStrip(
+                dock = dock,
+                renderedSlotCount = surfaceMetrics.renderedSlotCount,
+                contentViewportMainAxisDp = surfaceMetrics.contentViewportMainAxisDp,
+                slotMetrics = surfaceMetrics.slotMetrics,
+                isEditing = isEditing,
+                presentation = presentation,
+                appIconLoader = appIconLoader,
+                position = position,
+                widgetPickerDockPreview = widgetPickerDockPreview,
+            )
+        }
+    }
 
     Box(
         modifier =
@@ -292,18 +339,73 @@ internal fun DockSurfaceStrip(
                 ),
         contentAlignment = Alignment.Center,
     ) {
-        if (surfaceMetrics.renderedSlotCount > 0 && surfaceMetrics.contentViewportMainAxisDp > 0) {
-            DockSlotStrip(
-                dock = dock,
-                renderedSlotCount = surfaceMetrics.renderedSlotCount,
-                contentViewportMainAxisDp = surfaceMetrics.contentViewportMainAxisDp,
-                slotMetrics = surfaceMetrics.slotMetrics,
-                isEditing = isEditing,
-                presentation = presentation,
-                appIconLoader = appIconLoader,
-                position = position,
-                widgetPickerDockPreview = widgetPickerDockPreview,
-            )
+        // Nothing dynamic to show is the common case and stays exactly as it was: one strip,
+        // centred, with no arrangement wrapped around it to shift it by a fraction of a pixel.
+        if (surfaceMetrics.dynamicSectionMainAxisDp <= 0) {
+            staticSide()
+        } else {
+            DockSectionRun(runsHorizontally = runsHorizontally) {
+                staticSide()
+                DockSectionDivider(runsHorizontally = runsHorizontally)
+                DockDynamicSection(
+                    entries = dynamicEntries,
+                    slotMetrics = surfaceMetrics.slotMetrics,
+                    mainAxisDp = surfaceMetrics.dynamicSectionMainAxisDp,
+                    runsHorizontally = runsHorizontally,
+                    appIconLoader = appIconLoader,
+                    onAction = presentation.interactions.onAction,
+                )
+            }
         }
     }
 }
+
+/** The dock's two sections laid end to end, whichever way the dock runs. */
+@Composable
+private fun DockSectionRun(
+    runsHorizontally: Boolean,
+    content: @Composable () -> Unit,
+) {
+    if (runsHorizontally) {
+        Row(verticalAlignment = Alignment.CenterVertically) { content() }
+    } else {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) { content() }
+    }
+}
+
+/**
+ * The rule between the static side and the dynamic one.
+ *
+ * A visible seam on purpose. The two sides answer to different things -- one to what the user
+ * pinned, one to what has just arrived -- and running them together would make the dock look like
+ * it rearranges itself.
+ */
+@Composable
+private fun DockSectionDivider(runsHorizontally: Boolean) {
+    val thickness = DOCK_SECTION_DIVIDER_MAIN_AXIS_DP.dp
+    Box(
+        modifier =
+            if (runsHorizontally) {
+                Modifier.width(thickness).fillMaxHeight()
+            } else {
+                Modifier.height(thickness).fillMaxWidth()
+            },
+        contentAlignment = Alignment.Center,
+    ) {
+        Box(
+            modifier =
+                Modifier
+                    .then(
+                        if (runsHorizontally) {
+                            Modifier.width(DOCK_SECTION_DIVIDER_RULE_DP.dp).fillMaxHeight()
+                        } else {
+                            Modifier.height(DOCK_SECTION_DIVIDER_RULE_DP.dp).fillMaxWidth()
+                        },
+                    )
+                    .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = DOCK_SECTION_DIVIDER_ALPHA)),
+        )
+    }
+}
+
+private const val DOCK_SECTION_DIVIDER_RULE_DP = 1
+private const val DOCK_SECTION_DIVIDER_ALPHA = 0.3f
