@@ -39,13 +39,12 @@ import androidx.compose.ui.unit.dp
  */
 @Composable
 internal fun DockDynamicSection(
-    entries: List<DockNotificationCardState>,
+    entries: List<DockDynamicEntry>,
     slotMetrics: DockSlotRenderMetrics,
     mainAxisDp: Int,
     runsHorizontally: Boolean,
     appIconLoader: AppIconLoader,
     onAction: (LauncherShellAction) -> Unit,
-    behaviour: DockDynamicSectionBehaviour = DockDynamicSectionBehaviour.LaunchApp,
 ) {
     if (entries.isEmpty() || mainAxisDp <= 0) {
         return
@@ -70,9 +69,8 @@ internal fun DockDynamicSection(
             DockDynamicSectionTile(
                 entry = entry,
                 iconSizeDp = iconSizeDp,
-                isSelected = behaviour.isSelected(entry),
                 appIconLoader = appIconLoader,
-                onActivate = { behaviour.actionFor(entry)?.let(onAction) },
+                onAction = onAction,
             )
         }
     }
@@ -102,14 +100,14 @@ internal fun DockDynamicSection(
  */
 @Composable
 private fun DockDynamicSectionTile(
-    entry: DockNotificationCardState,
+    entry: DockDynamicEntry,
     iconSizeDp: Int,
-    isSelected: Boolean,
     appIconLoader: AppIconLoader,
-    onActivate: () -> Unit,
+    onAction: (LauncherShellAction) -> Unit,
 ) {
-    val label = dockNotificationCardLabel(entry)
-    val identity = entry.app?.identity
+    val label = entry.label
+    val identity = entry.identity
+    val isSelected = entry.isSelected
 
     Box(
         modifier =
@@ -117,10 +115,10 @@ private fun DockDynamicSectionTile(
                 .requiredSize(iconSizeDp.dp)
                 .testTag(dockDynamicSectionTileTestTag(label))
                 .semantics {
-                    contentDescription = dockNotificationCardContentDescription(card = entry, label = label)
+                    contentDescription = entry.contentDescription
                     selected = isSelected
                 }
-                .clickable(onClick = onActivate)
+                .clickable(enabled = entry.action != null) { entry.action?.let(onAction) }
                 // A ring over the icon's edge rather than anything behind or around it: the tile is
                 // exactly one dock icon wide and the run was measured on that, so the mark for
                 // "this is the one showing" cannot be allowed to take any room.
@@ -161,7 +159,7 @@ private fun DockDynamicSectionTile(
                 )
             }
         }
-        NotificationCountBadge(count = entry.group.count)
+        NotificationCountBadge(count = entry.badgeCount)
     }
 }
 
@@ -173,10 +171,10 @@ internal fun dockDynamicSectionTileTestTag(label: String): String = "dock-dynami
 internal const val DOCK_DYNAMIC_SECTION_TEST_TAG = "dock-dynamic-section"
 
 /**
- * The entries this section will draw, empty for every shelf state that has none.
+ * The notification entries this section will draw, empty for every shelf state that has none.
  *
  * A permission prompt is deliberately not one of them: it is a paragraph asking for access, which
  * has nowhere to go in a strip one icon deep. The shelf still shows it.
  */
-internal fun DockNotificationShelfState.dynamicEntries(): List<DockNotificationCardState> =
-    (this as? DockNotificationShelfState.Content)?.cards.orEmpty()
+internal fun DockNotificationShelfState.dynamicEntries(): List<DockDynamicEntry> =
+    (this as? DockNotificationShelfState.Content)?.cards.orEmpty().launchableDockDynamicEntries()

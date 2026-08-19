@@ -300,8 +300,7 @@ internal fun DockSurfaceStrip(
     position: DockPosition = DockPosition.BOTTOM,
     renderBackground: Boolean = true,
     widgetPickerDockPreview: WidgetPickerDockPlacementPreview? = null,
-    dynamicEntries: List<DockNotificationCardState> = emptyList(),
-    dynamicBehaviour: DockDynamicSectionBehaviour = DockDynamicSectionBehaviour.LaunchApp,
+    dynamicEntries: List<DockDynamicEntry> = emptyList(),
 ) {
     val runsHorizontally = position.isHorizontalEdge
     val mainAxisDp = surfaceMetrics.surfaceMainAxisDp.dp
@@ -355,7 +354,6 @@ internal fun DockSurfaceStrip(
                     runsHorizontally = runsHorizontally,
                     appIconLoader = appIconLoader,
                     onAction = presentation.interactions.onAction,
-                    behaviour = dynamicBehaviour,
                 )
             }
         }

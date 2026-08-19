@@ -63,6 +63,17 @@ private fun CardsHomeSurface(
 ) {
     val dockInteractionHeightPx = remember { mutableIntStateOf(0) }
     val density = LocalDensity.current
+    // Reconciled once for the whole surface. The dock's dynamic side is the stage list now, so it
+    // and the stage itself have to be looking at the same stages -- and the reconciler carries the
+    // previous snapshot, so a second one would quietly keep a history of its own.
+    val shellState = rememberAppStageShellState(state)
+    val stageEntries =
+        shellState.snapshot.stages.stageDockDynamicEntries(
+            state = state,
+            selectedStageId = shellState.snapshot.selectedStage?.id,
+            badgeCounts =
+                shellState.notificationCards.groupingBy { card -> card.content.stageId }.eachCount(),
+        )
     val dockInteractionHeight =
         maxOf(
             state.homeLayout.dockInteractionRegionHeightDp().dp,
@@ -98,13 +109,15 @@ private fun CardsHomeSurface(
                 ),
             appIconLoader = appIconLoader,
             onAction = onAction,
-            // A tap on the dock's dynamic side brings that app's cards forward rather than leaving
-            // for the app. Having its content on the launcher is the reason the user is in Cards
-            // mode at all, so opening the app is the one thing the tap should not do.
-            dynamicBehaviour = DockDynamicSectionBehaviour.SelectStage(adaptiveStageContext.selectedStageKey),
+            // The stages, rather than the apps with notifications the dock is not already showing.
+            // In Cards mode this side is how the user moves between stages, so it has to hold all
+            // of them -- including those of apps pinned to the static side, which mean something
+            // different there (that one opens the app; this one brings its cards forward).
+            dynamicEntries = stageEntries,
         )
         AdaptiveStageAppStageSurface(
             state = state,
+            shellState = shellState,
             modifier = Modifier.padding(bottom = dockInteractionHeight),
             windowInsets = cardsPanelInsetPolicy(state).safeDrawingPanelInsets(),
             windowLayout = adaptiveStageWindowLayout,
