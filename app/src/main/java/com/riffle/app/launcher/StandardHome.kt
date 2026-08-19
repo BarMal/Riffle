@@ -502,6 +502,7 @@ internal fun StandardHomeDockOnlySurface(
     /** Null leaves the dock's dynamic side to notifications, which is what grid mode wants. */
     dynamicEntries: List<DockDynamicEntry>? = null,
     onShowAllNotifications: () -> Unit = {},
+    staticTapBehaviour: DockStaticTapBehaviour = DockStaticTapBehaviour.Launch,
 ) {
     val visibleLayout = layout.visibleTo(installedApps)
     val openedFolderId = remember { mutableStateOf<LauncherItemId?>(null) }
@@ -544,6 +545,7 @@ internal fun StandardHomeDockOnlySurface(
             actions = actions,
             dynamicEntries = dynamicEntries ?: notificationShelfState.dynamicEntries(),
             onShowAllNotifications = onShowAllNotifications,
+            staticTapBehaviour = staticTapBehaviour,
         )
     }
     visibleLayout.openedFolder(openedFolderId.value)?.let { folder ->

@@ -63,18 +63,24 @@ private fun CardsHomeSurface(
 ) {
     val dockInteractionHeightPx = remember { mutableIntStateOf(0) }
     val density = LocalDensity.current
-    // Reconciled once for the whole surface. The dock's dynamic side is the stage list now, so it
-    // and the stage itself have to be looking at the same stages -- and the reconciler carries the
-    // previous snapshot, so a second one would quietly keep a history of its own.
+    // Reconciled once for the whole surface, so the dock and the stage agree on what exists -- the
+    // reconciler carries the previous snapshot, so a second one would quietly keep its own history.
     val shellState = rememberAppStageShellState(state)
-    val stageEntries =
-        shellState.snapshot.stages.stageDockDynamicEntries(
-            state = state,
-            selectedStageId =
-                shellState.snapshot.selectedStage?.id.takeUnless { adaptiveStageContext.allNotificationsSelected },
-            badgeCounts =
-                shellState.notificationCards.groupingBy { card -> card.content.stageId }.eachCount(),
-            allNotificationsSelected = adaptiveStageContext.allNotificationsSelected,
+    val selectedStageId =
+        shellState.snapshot.selectedStage?.id.takeUnless { adaptiveStageContext.allNotificationsSelected }
+    // The dynamic side means "a notification arrived", the same de-duplicated list grid mode draws
+    // (a pinned app is on the static side and excluded here), but a tap brings the app's stage
+    // forward instead of opening it. A pinned app's own stage is reached from its static icon.
+    val dockDynamicEntries =
+        dockNotificationShelfState(
+            dock = state.homeLayout.visibleTo(state.installedApps).dock,
+            groups = state.notificationGroupsByApp,
+            notificationAccessStatus = state.notificationAccessStatus,
+            apps = state.installedApps,
+        ).dockNotificationCards().stageSelectingDockDynamicEntries(selectedStageId)
+    val dockStaticTapBehaviour =
+        DockStaticTapBehaviour.SelectStageIfBacked(
+            shellState.snapshot.stages.map { stage -> stage.id }.toSet(),
         )
     val dockInteractionHeight =
         maxOf(
@@ -111,16 +117,10 @@ private fun CardsHomeSurface(
                 ),
             appIconLoader = appIconLoader,
             onAction = onAction,
-            // The stages, rather than the apps with notifications the dock is not already showing.
-            // In Cards mode this side is how the user moves between stages, so it has to hold all
-            // of them -- including those of apps pinned to the static side, which mean something
-            // different there (that one opens the app; this one brings its cards forward).
-            dynamicEntries = stageEntries,
-            // The merged page is not a stage, so there is no action to send: it is a choice about
-            // what this surface is showing, which is what the interaction context holds.
-            onShowAllNotifications = {
-                onAdaptiveStageContextChanged(adaptiveStageContext.copy(allNotificationsSelected = true))
-            },
+            dynamicEntries = dockDynamicEntries,
+            // In Cards a pinned app icon brings its stage forward rather than opening the app, when
+            // it has a stage; opening stays on the icon's long-press menu.
+            staticTapBehaviour = dockStaticTapBehaviour,
         )
         AdaptiveStageAppStageSurface(
             state = state,

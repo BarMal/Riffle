@@ -559,6 +559,8 @@ internal data class DockInteractions(
     val reducedMotion: Boolean = false,
     val homeInsetPolicy: HomeInsetPolicy = HomeInsetPolicy(),
     val homeLayout: HomeLayout? = null,
+    /** What a tap on a pinned app opens: the app (grid), or its stage where it has one (Cards). */
+    val staticTapBehaviour: DockStaticTapBehaviour = DockStaticTapBehaviour.Launch,
     val onAction: (LauncherShellAction) -> Unit,
 )
 
@@ -999,7 +1001,9 @@ private fun DockShortcut(
                     } else {
                         Modifier.combinedClickable(
                             onClick = {
-                                presentation.interactions.onAction(shortcut.launchAction())
+                                presentation.interactions.onAction(
+                                    presentation.interactions.staticTapBehaviour.actionFor(shortcut),
+                                )
                             },
                             onLongClick = {
                                 presentation.interactions.haptics.longPress()
@@ -1080,7 +1084,18 @@ internal fun dockShortcutContextMenuItems(
             emptyList()
         }
 
+    // Browsing, a tap may select the app's stage rather than open it (Cards), so opening has to
+    // stay reachable somewhere; the long-press menu is that somewhere. Harmless where a tap already
+    // opens -- there it is simply the same thing the tap does.
+    val openItems =
+        if (isEditing) {
+            emptyList()
+        } else {
+            listOf(ShortcutContextMenuItem(label = "Open", action = shortcut.launchAction()))
+        }
+
     return editItems +
+        openItems +
         shortcutContextMenuItems(
             shortcut = shortcut,
             surface = ShortcutContextSurface.DOCK,
