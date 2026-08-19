@@ -7,8 +7,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -59,17 +61,24 @@ class PageOverviewReorderInteractionTest {
         }
     }
 
+    /**
+     * Brings the card on screen through the strip's own scroll semantics rather than by flinging it
+     * there.
+     *
+     * This used to dispatch eight synthetic swipes and wait for idle between each, and the comment
+     * where that boundary sat said why: rapid test input can overlap the previous layout
+     * observation. It did, intermittently, as a multithreaded-access failure inside
+     * SnapshotStateObserver. `performScrollToNode` drives the LazyRow through the scroll action
+     * already published in its semantics, which the test framework synchronises for us, so there is
+     * no gesture stream to overlap in the first place.
+     *
+     * Getting the card on screen was never what this test is about -- the drag and its resulting
+     * action are -- so nothing it asserts changes.
+     */
     private fun scrollToPageOverviewCard(pageId: String) {
-        repeat(8) {
-            composeRule.onNodeWithTag(PAGE_OVERVIEW_STRIP_TEST_TAG).performTouchInput {
-                down(center)
-                moveBy(Offset(x = -width.toFloat(), y = 0f))
-                up()
-            }
-            // Let LazyRow finish applying each gesture before dispatching the next one. Without
-            // this boundary, rapid test input can overlap the previous layout observation.
-            composeRule.waitForIdle()
-        }
+        composeRule
+            .onNodeWithTag(PAGE_OVERVIEW_STRIP_TEST_TAG)
+            .performScrollToNode(hasTestTag(pageOverviewCardTestTag(pageId)))
 
         composeRule.onNodeWithTag(pageOverviewCardTestTag(pageId)).assertIsDisplayed()
     }
