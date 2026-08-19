@@ -19,7 +19,7 @@ class WidgetEngine(
             targetPage(layout = layout, targetPageId = targetPageId).type is LauncherPageType.Generated ->
                 WidgetEditResult.Rejected(PlacementRejectionReason.GENERATED_PAGE)
 
-            layout.hasHostedWidget(hostedWidgetId) ->
+            layout.hostsWidget(hostedWidgetId) ->
                 WidgetEditResult.Rejected(PlacementRejectionReason.DUPLICATE_ITEM_ID)
 
             else ->
@@ -114,14 +114,6 @@ private fun GridSpan.coerceAtLeastOneCell(): GridSpan =
         columns = columns.coerceAtLeast(1),
         rows = rows.coerceAtLeast(1),
     )
-
-private fun HomeLayout.hasHostedWidget(hostedWidgetId: HostedWidgetId): Boolean =
-    (
-        pages
-            .flatMap { page -> page.items } + dock.items
-    )
-        .filterIsInstance<WidgetItem>()
-        .any { widget -> widget.appWidgetId == hostedWidgetId }
 
 private fun GridSpan.placementCandidates(resizeConstraints: WidgetResizeConstraints): List<GridSpan> =
     coerceAtLeastOneCell().coerceAtLeast(resizeConstraints.minSpan).let { preferredSpan ->

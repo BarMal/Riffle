@@ -6,6 +6,7 @@ import com.riffle.core.domain.launcher.home.GridSpan
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HostedWidgetId
 import com.riffle.core.domain.launcher.home.WidgetItem
+import com.riffle.core.domain.launcher.home.hostsWidget
 
 internal fun LauncherShellViewModel.completeWidgetAdd(action: HostedWidgetAddAction): HostedWidgetAddCompletionResult =
     when (action) {
@@ -16,7 +17,7 @@ internal fun LauncherShellViewModel.completeWidgetAdd(action: HostedWidgetAddAct
 private fun LauncherShellViewModel.completeHomeWidgetAdd(
     action: LauncherShellAction.AddHostedWidgetToHome,
 ): HostedWidgetAddCompletionResult {
-    val hadHostedWidgetBeforeAdd = state.value.homeLayout.hasHostedWidget(action.hostedWidgetId)
+    val hadHostedWidgetBeforeAdd = state.value.homeLayout.hostsWidget(action.hostedWidgetId)
     val fittedAction =
         action.copy(
             preferredSpan =
@@ -45,7 +46,7 @@ private fun LauncherShellViewModel.completeHomeWidgetAdd(
 private fun LauncherShellViewModel.completeDockWidgetAdd(
     action: LauncherShellAction.AddHostedWidgetToDock,
 ): HostedWidgetAddCompletionResult {
-    val hadHostedWidgetBeforeAdd = state.value.homeLayout.hasHostedWidget(action.hostedWidgetId)
+    val hadHostedWidgetBeforeAdd = state.value.homeLayout.hostsWidget(action.hostedWidgetId)
     onDockEdited(action)
     val wasPlaced =
         !hadHostedWidgetBeforeAdd &&
@@ -100,14 +101,6 @@ private fun HomeLayout.hostedWidgetSpanAdjustmentMessage(
                 actualSpan = actualSpan,
             )
         }
-
-private fun HomeLayout.hasHostedWidget(hostedWidgetId: HostedWidgetId): Boolean =
-    (
-        pages
-            .flatMap { page -> page.items } + dock.items
-    )
-        .filterIsInstance<WidgetItem>()
-        .any { widget -> widget.appWidgetId == hostedWidgetId }
 
 private fun HomeLayout.pageHasHostedWidget(
     hostedWidgetId: HostedWidgetId,

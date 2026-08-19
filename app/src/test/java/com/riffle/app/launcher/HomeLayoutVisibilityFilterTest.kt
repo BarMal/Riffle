@@ -8,6 +8,7 @@ import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.DockModel
 import com.riffle.core.domain.launcher.home.FolderItem
 import com.riffle.core.domain.launcher.home.GridCell
+import com.riffle.core.domain.launcher.home.GridDimensions
 import com.riffle.core.domain.launcher.home.GridPlacement
 import com.riffle.core.domain.launcher.home.GridSpan
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
@@ -19,6 +20,7 @@ import com.riffle.core.domain.launcher.home.LauncherPageType
 import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.home.WidgetItem
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Test
 
 class HomeLayoutVisibilityFilterTest {
@@ -158,6 +160,54 @@ class HomeLayoutVisibilityFilterTest {
         val visibleFolder = visibleLayout.selectedPage.items.single() as FolderItem
         assertEquals(listOf("Camera"), visibleFolder.items.labels)
         assertEquals(emptyList<AppShortcutItem>(), visibleLayout.dock.items)
+    }
+
+    @Test
+    fun filtersThePanelsItems() {
+        // The panel is not one of the layout's pages, so a filter written over pages alone would
+        // leave a hidden app's shortcut on it.
+        val camera = app("Camera")
+        val docs = app("Docs")
+        val layout =
+            HomeLayoutDefaults.standard().let { defaults ->
+                defaults.copy(
+                    dock =
+                        defaults.dock.copy(
+                            panel =
+                                LauncherPage(
+                                    id = LauncherPageId("dock-panel"),
+                                    grid = GridDimensions(columns = 4, rows = 2),
+                                    items =
+                                        listOf(
+                                            shortcut(
+                                                id = "panel-camera",
+                                                app = camera,
+                                                placement = GridPlacement(cell = GridCell(column = 0, row = 0)),
+                                            ),
+                                            shortcut(
+                                                id = "panel-docs",
+                                                app = docs,
+                                                placement = GridPlacement(cell = GridCell(column = 1, row = 0)),
+                                            ),
+                                        ),
+                                ),
+                        ),
+                )
+            }
+
+        val visibleLayout = layout.visibleTo(apps = listOf(camera))
+
+        val panelItems = visibleLayout.dock.panel?.items.orEmpty().filterIsInstance<AppShortcutItem>()
+        assertEquals(listOf("Camera"), panelItems.labels)
+        assertEquals(GridPlacement(cell = GridCell(column = 0, row = 0)), panelItems.single().placement)
+    }
+
+    @Test
+    fun leavesALayoutWithoutAPanelAlone() {
+        val camera = app("Camera")
+        val layout = HomeLayoutDefaults.standard()
+
+        assertNull(layout.visibleTo(apps = listOf(camera)).dock.panel)
     }
 
     @Test
