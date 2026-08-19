@@ -574,7 +574,7 @@ class HomeDockMetricsTest {
     }
 
     @Test
-    fun theDockSizesToItsCapacityRatherThanToHowManyItemsItHolds() {
+    fun theDockSizesToItsCapacityRatherThanToHowManyItemsItHoldsOnceItIsFull() {
         // What makes capacity mean "visible at once": five slots' worth of room whether the dock
         // holds five items or twelve, so adding apps scrolls the strip instead of shrinking every
         // icon in it.

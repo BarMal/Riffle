@@ -241,10 +241,14 @@ class CardModeGuardedSurfaceTest {
                                     margin = standard.settings.grid.margin.copy(bottom = 48),
                                 ),
                         ),
+                    // Both shortcuts stay visible in the dock's own row: capacity caps how many
+                    // are shown at once and no longer diverts the rest to a separate shelf row, so
+                    // a capacity of 1 would leave the second one scrolled out of reach here.
                     dock =
                         standard.dock.copy(
-                            capacity = 1,
+                            capacity = 2,
                             items = listOf(primaryShortcut, overflowShortcut),
+                            showNotificationCards = true,
                         ),
                 )
             }

@@ -39,13 +39,14 @@ internal fun dockSurfaceMetrics(
             itemCount = dock.items.size,
             isEditing = isEditing,
         ) + previewSlotCount.coerceAtLeast(0)
-    // Capacity is how many slots are visible at once; anything past that is reached by scrolling
-    // the strip. Sizing from the rendered count instead would shrink every icon as apps are added,
-    // which is the opposite of what a capacity setting is for. A capacity-zero legacy layout has no
-    // such choice on record, so it keeps sizing to its items.
+    // Capacity caps how many slots are visible at once; anything past it is reached by scrolling
+    // the strip. Sizing from the rendered count alone would shrink every icon as apps are added,
+    // which is the opposite of what a capacity setting is for -- but capacity is a ceiling, not a
+    // fixed width, so an under-filled dynamic dock still sizes to the items it actually holds
+    // rather than reserving empty slots. A capacity-zero legacy layout has no ceiling on record.
     val visibleSlotCount =
         if (dock.capacity > 0) {
-            dock.capacity + previewSlotCount.coerceAtLeast(0)
+            renderedSlotCount.coerceAtMost(dock.capacity + previewSlotCount.coerceAtLeast(0))
         } else {
             renderedSlotCount
         }
