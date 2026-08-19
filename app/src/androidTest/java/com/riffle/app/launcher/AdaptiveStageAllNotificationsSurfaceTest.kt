@@ -13,7 +13,6 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.performClick
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.apps.AppActivityName
@@ -31,32 +30,29 @@ import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.notifications.NotificationAgeBucket
 import com.riffle.core.domain.launcher.notifications.NotificationCategory
-import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
 /**
  * Covers the "All notifications" page (#1057) end to end through the real
- * [AdaptiveStageAppStageSurface] tree -- the rail's extra tile, selecting it, and the merged
- * content it shows -- as opposed to [AdaptiveStageAllNotificationsPageTest]'s pure-logic coverage
- * of the underlying page-index/settle helpers alone (including the reverse direction, settling on
- * a real stage from the merged page, which doesn't need a real Compose tree to verify). Uses a
- * wide (TWO_PANE) window since that's where the rail (and its "All notifications" tile) render at
- * all; see [AdaptiveStageAdaptiveLayoutInteractionTest.mediumWindowRendersStageRail] for the same
- * width/posture combination.
+ * [AdaptiveStageAppStageSurface] tree -- showing it, and the merged content it draws -- as opposed
+ * to [AdaptiveStageAllNotificationsPageTest]'s pure-logic coverage of the underlying
+ * page-index/settle helpers alone (including the reverse direction, settling on a real stage from
+ * the merged page, which doesn't need a real Compose tree to verify).
+ *
+ * Reached by setting the interaction context, which is what the dock's own entry for the page does
+ * now that the rail that used to carry a tile for it is gone -- see DockDynamicSectionTest for the
+ * dock half. Uses a wide window since that is where the surface has no navigation of its own.
  */
 class AdaptiveStageAllNotificationsSurfaceTest {
     @get:Rule
     val composeRule = createComposeRule()
 
     @Test
-    fun allNotificationsTileSelectsTheMergedPageShowingEveryStagesContent() {
+    fun theMergedPageShowsEveryStagesContent() {
         val mail = testApp("mail", "Mail")
         val chat = testApp("chat", "Chat")
-        setWideContent(twoStageState(mail, chat))
-
-        composeRule.onNodeWithContentDescription("All notifications. Open").assertIsDisplayed()
-        composeRule.onNodeWithContentDescription("All notifications. Open").performClick()
+        setWideContent(twoStageState(mail, chat), AdaptiveStageInteractionContext(allNotificationsSelected = true))
 
         composeRule.onNodeWithContentDescription("Cards stage: All notifications").assertIsDisplayed()
         composeRule.onNodeWithText("Chat message").assertIsDisplayed()
@@ -94,44 +90,16 @@ class AdaptiveStageAllNotificationsSurfaceTest {
         composeRule.onNodeWithContentDescription("Cards stage: All notifications").assertIsDisplayed()
     }
 
-    @Test
-    fun choosingTheMergedPageTellsWhoeverIsHoldingTheContext() {
-        val mail = testApp("mail", "Mail")
-        val chat = testApp("chat", "Chat")
-        val state = twoStageState(mail, chat)
-        var context by mutableStateOf(AdaptiveStageInteractionContext())
+    private fun setWideContent(
+        state: LauncherShellState,
+        context: AdaptiveStageInteractionContext = AdaptiveStageInteractionContext(),
+    ) {
         composeRule.setContent {
             MaterialTheme {
                 Box(modifier = Modifier.width(800.dp).height(800.dp).clipToBounds()) {
                     AdaptiveStageAppStageSurface(
                         state = state,
-                        windowLayout =
-                            AdaptiveStageWindowLayout(
-                                widthDp = 800,
-                                heightDp = 800,
-                                posture = AdaptiveStagePosture.UNFOLDED,
-                            ),
                         context = context,
-                        onContextChanged = { next -> context = next },
-                        onAction = {},
-                    )
-                }
-            }
-        }
-
-        composeRule.onNodeWithContentDescription("All notifications. Open").performClick()
-
-        composeRule.runOnIdle {
-            assertTrue("expected the context to carry the page, was $context", context.allNotificationsSelected)
-        }
-    }
-
-    private fun setWideContent(state: LauncherShellState) {
-        composeRule.setContent {
-            MaterialTheme {
-                Box(modifier = Modifier.width(800.dp).height(800.dp).clipToBounds()) {
-                    AdaptiveStageAppStageSurface(
-                        state = state,
                         windowLayout =
                             AdaptiveStageWindowLayout(
                                 widthDp = 800,

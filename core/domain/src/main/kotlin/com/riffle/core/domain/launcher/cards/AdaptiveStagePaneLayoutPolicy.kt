@@ -1,7 +1,5 @@
 package com.riffle.core.domain.launcher.cards
 
-import com.riffle.core.domain.launcher.home.DockPosition
-import com.riffle.core.domain.launcher.home.isHorizontalEdge
 import kotlin.math.roundToInt
 
 /** Framework-independent window and separating-hinge inputs for the adaptive AdaptiveStage surface. */
@@ -58,7 +56,6 @@ enum class AdaptiveStagePaneArrangement {
  */
 data class AdaptiveStagePaneLayout(
     val mode: AdaptiveStagePaneMode,
-    val railWidthDp: Int,
     val stackWidthDp: Int,
     val detailWidthDp: Int,
     val hingeGapDp: Int = 0,
@@ -74,10 +71,7 @@ data class AdaptiveStagePaneLayout(
     val upperRegionHeightDp: Int = 0,
     /** [AdaptiveStagePaneMode.SPLIT]-only: height of the lower card-stack + spine region. */
     val lowerRegionHeightDp: Int = 0,
-    /** Non-zero only when the rail runs along [DockPosition.TOP]/[DockPosition.BOTTOM]. */
-    val railHeightDp: Int = 0,
 ) {
-    val showsRail: Boolean get() = mode == AdaptiveStagePaneMode.TWO_PANE || mode == AdaptiveStagePaneMode.THREE_PANE
     val showsDetailPane: Boolean get() = mode == AdaptiveStagePaneMode.THREE_PANE
 }
 
@@ -95,10 +89,9 @@ class AdaptiveStagePaneLayoutPolicy {
      */
     fun layoutFor(
         window: AdaptiveStageWindowLayout,
-        dockPosition: DockPosition = DockPosition.LEADING,
         arrangement: AdaptiveStagePaneArrangement = AdaptiveStagePaneArrangement.STACK,
     ): AdaptiveStagePaneLayout {
-        val stackLayout = resolveStackLayout(window, dockPosition).reserveHorizontalRail(dockPosition)
+        val stackLayout = resolveStackLayout(window)
         val canSplit =
             arrangement == AdaptiveStagePaneArrangement.SPLIT &&
                 stackLayout.mode == AdaptiveStagePaneMode.COMPACT &&
@@ -118,10 +111,7 @@ class AdaptiveStagePaneLayoutPolicy {
     }
 
     @Suppress("CyclomaticComplexMethod", "LongMethod", "MaxLineLength", "ReturnCount")
-    private fun resolveStackLayout(
-        window: AdaptiveStageWindowLayout,
-        dockPosition: DockPosition,
-    ): AdaptiveStagePaneLayout {
+    private fun resolveStackLayout(window: AdaptiveStageWindowLayout): AdaptiveStagePaneLayout {
         val safeWidth = (window.widthDp - window.safeStartDp - window.safeEndDp).coerceAtLeast(0)
         val safeHeight = (window.heightDp - window.safeTopDp - window.safeBottomDp).coerceAtLeast(0)
         val verticalHinge =
@@ -151,7 +141,7 @@ class AdaptiveStagePaneLayoutPolicy {
             }
 
         // A half-open or tabletop device must remain a usable compact surface even when the
-        // reported bounds are large. The docked-rail layout is reserved for a confirmed flat posture.
+        // reported bounds are large. The multi-pane layout is reserved for a confirmed flat posture.
         if (window.posture.isCompactFallback()) {
             val useTrailingRegion = verticalHinge != null && trailingWidth > leadingWidth
             val compactWidth =
@@ -164,7 +154,6 @@ class AdaptiveStagePaneLayoutPolicy {
                 }
             return AdaptiveStagePaneLayout(
                 mode = AdaptiveStagePaneMode.COMPACT,
-                railWidthDp = 0,
                 stackWidthDp = compactWidth,
                 detailWidthDp = 0,
                 hingeGapDp = 0,
@@ -177,16 +166,12 @@ class AdaptiveStagePaneLayoutPolicy {
             )
         }
 
-        val leadingRailWidth = if (dockPosition == DockPosition.LEADING) RAIL_WIDTH_DP else 0
-        val trailingRailWidth = if (dockPosition == DockPosition.TRAILING) RAIL_WIDTH_DP else 0
-        val leadingRegionIsTooNarrow = leadingWidth < leadingRailWidth + MIN_STACK_WIDTH_DP
-        val trailingRegionIsTooNarrow = trailingWidth < trailingRailWidth
-        if (verticalHinge != null && (leadingRegionIsTooNarrow || trailingRegionIsTooNarrow)) {
+        val leadingRegionIsTooNarrow = leadingWidth < MIN_STACK_WIDTH_DP
+        if (verticalHinge != null && leadingRegionIsTooNarrow) {
             val useTrailingRegion = trailingWidth > leadingWidth
             val compactWidth = if (useTrailingRegion) trailingWidth else leadingWidth
             return AdaptiveStagePaneLayout(
                 mode = AdaptiveStagePaneMode.COMPACT,
-                railWidthDp = 0,
                 stackWidthDp = compactWidth,
                 detailWidthDp = 0,
                 hingeGapDp = 0,
@@ -199,20 +184,18 @@ class AdaptiveStagePaneLayoutPolicy {
             )
         }
 
-        val hasThreePaneLeadingRegion = leadingWidth >= leadingRailWidth + MIN_STACK_WIDTH_DP
-        val hasThreePaneTrailingRegion = trailingWidth >= DETAIL_WIDTH_DP + trailingRailWidth
+        val hasThreePaneLeadingRegion = leadingWidth >= MIN_STACK_WIDTH_DP
+        val hasThreePaneTrailingRegion = trailingWidth >= DETAIL_WIDTH_DP
         if (verticalHinge != null && hasThreePaneLeadingRegion && hasThreePaneTrailingRegion) {
-            val stackWidth = (leadingWidth - leadingRailWidth).coerceAtMost(MAX_STACK_WIDTH_DP)
+            val stackWidth = leadingWidth.coerceAtMost(MAX_STACK_WIDTH_DP)
             return AdaptiveStagePaneLayout(
                 mode = AdaptiveStagePaneMode.THREE_PANE,
-                railWidthDp = RAIL_WIDTH_DP,
                 stackWidthDp = stackWidth,
-                detailWidthDp = (trailingWidth - trailingRailWidth).coerceAtMost(DETAIL_WIDTH_DP),
+                detailWidthDp = trailingWidth.coerceAtMost(DETAIL_WIDTH_DP),
                 hingeGapDp = hingeGap,
                 leadingRegionWidthDp = leadingWidth,
                 trailingRegionWidthDp = trailingWidth,
-                leadingRemainderDp =
-                    (leadingWidth - leadingRailWidth - stackWidth).coerceAtLeast(0),
+                leadingRemainderDp = (leadingWidth - stackWidth).coerceAtLeast(0),
                 contentWidthDp = safeWidth,
                 contentTopDp = contentTop,
                 contentHeightDp = contentHeight,
@@ -220,33 +203,25 @@ class AdaptiveStagePaneLayoutPolicy {
         }
 
         if (verticalHinge != null) {
-            val stackWidth = (leadingWidth - leadingRailWidth).coerceAtMost(MAX_STACK_WIDTH_DP)
+            val stackWidth = leadingWidth.coerceAtMost(MAX_STACK_WIDTH_DP)
             return AdaptiveStagePaneLayout(
                 mode = AdaptiveStagePaneMode.TWO_PANE,
-                railWidthDp = RAIL_WIDTH_DP,
                 stackWidthDp = stackWidth,
                 detailWidthDp = 0,
                 hingeGapDp = hingeGap,
                 leadingRegionWidthDp = leadingWidth,
                 trailingRegionWidthDp = trailingWidth,
-                leadingRemainderDp =
-                    (leadingWidth - leadingRailWidth - stackWidth).coerceAtLeast(0),
+                leadingRemainderDp = (leadingWidth - stackWidth).coerceAtLeast(0),
                 contentWidthDp = safeWidth,
                 contentTopDp = contentTop,
                 contentHeightDp = contentHeight,
             )
         }
 
-        // A TOP/BOTTOM rail reserves height (see reserveHorizontalRail below), not width, so it
-        // contributes nothing to the width math here -- unlike LEADING/TRAILING, which always
-        // reserve RAIL_WIDTH_DP of width in this no-hinge layout regardless of which side it ends
-        // up drawn on.
-        val noHingeRailWidth = if (dockPosition.isHorizontalEdge) 0 else RAIL_WIDTH_DP
         return when {
             usableWidth < MIN_TWO_PANE_WIDTH_DP ->
                 AdaptiveStagePaneLayout(
                     mode = AdaptiveStagePaneMode.COMPACT,
-                    railWidthDp = 0,
                     stackWidthDp = usableWidth,
                     detailWidthDp = 0,
                     hingeGapDp = hingeGap,
@@ -260,9 +235,7 @@ class AdaptiveStagePaneLayoutPolicy {
             usableWidth < MIN_THREE_PANE_WIDTH_DP ->
                 AdaptiveStagePaneLayout(
                     mode = AdaptiveStagePaneMode.TWO_PANE,
-                    railWidthDp = noHingeRailWidth,
-                    stackWidthDp =
-                        (usableWidth - noHingeRailWidth).coerceIn(MIN_STACK_WIDTH_DP, MAX_STACK_WIDTH_DP),
+                    stackWidthDp = usableWidth.coerceIn(MIN_STACK_WIDTH_DP, MAX_STACK_WIDTH_DP),
                     detailWidthDp = 0,
                     hingeGapDp = hingeGap,
                     leadingRegionWidthDp = leadingWidth,
@@ -275,10 +248,8 @@ class AdaptiveStagePaneLayoutPolicy {
             else ->
                 AdaptiveStagePaneLayout(
                     mode = AdaptiveStagePaneMode.THREE_PANE,
-                    railWidthDp = noHingeRailWidth,
                     stackWidthDp =
-                        (usableWidth - noHingeRailWidth - DETAIL_WIDTH_DP)
-                            .coerceIn(MIN_STACK_WIDTH_DP, MAX_STACK_WIDTH_DP),
+                        (usableWidth - DETAIL_WIDTH_DP).coerceIn(MIN_STACK_WIDTH_DP, MAX_STACK_WIDTH_DP),
                     detailWidthDp = DETAIL_WIDTH_DP,
                     hingeGapDp = hingeGap,
                     leadingRegionWidthDp = leadingWidth,
@@ -293,7 +264,6 @@ class AdaptiveStagePaneLayoutPolicy {
     private companion object {
         const val MIN_TWO_PANE_WIDTH_DP = 600
         const val MIN_THREE_PANE_WIDTH_DP = 1_000
-        const val RAIL_WIDTH_DP = 104
         const val MIN_STACK_WIDTH_DP = 360
         const val MAX_STACK_WIDTH_DP = 560
         const val DETAIL_WIDTH_DP = 360
@@ -315,38 +285,6 @@ class AdaptiveStagePaneLayoutPolicy {
          */
         const val MIN_SPLIT_CONTENT_HEIGHT_DP = 400
     }
-}
-
-/**
- * Height reserved for a [DockPosition.TOP]/[DockPosition.BOTTOM] rail, sized for a row of
- * [AdaptiveStageStageRailTile]-shaped tiles (icon + label) plus padding -- deliberately smaller than
- * [AdaptiveStagePaneLayoutPolicy]'s `RAIL_WIDTH_DP` column, since a horizontal strip only needs to fit
- * one tile's height rather than a label column beside it.
- */
-private const val RAIL_HEIGHT_DP = 96
-
-/**
- * When the rail runs along the top or bottom edge it consumes vertical rather than horizontal
- * space: reserve it from [AdaptiveStagePaneLayout.contentHeightDp] rather than touching any of the
- * width-based pane-mode math above (which stays exactly as before for
- * [DockPosition.LEADING]/[DockPosition.TRAILING]).
- *
- * [AdaptiveStagePaneLayout.contentTopDp] is deliberately left untouched here: it positions the whole
- * content [androidx.compose.foundation.layout.Box] -- which contains the rail itself, not just the
- * area below it -- within the window, mirroring how a horizontal separating hinge already shifts
- * that same offset. Adjusting it here would push the rail down along with everything else instead
- * of just reserving its height; the rail-then-content ordering inside that box (a plain
- * top-to-bottom [androidx.compose.foundation.layout.Column]) is what actually keeps the content
- * below the rail, no extra offset required.
- */
-private fun AdaptiveStagePaneLayout.reserveHorizontalRail(dockPosition: DockPosition): AdaptiveStagePaneLayout {
-    if (!dockPosition.isHorizontalEdge || !showsRail) return this
-    val reservedHeight = RAIL_HEIGHT_DP.coerceAtMost(contentHeightDp)
-    return copy(
-        railWidthDp = 0,
-        railHeightDp = reservedHeight,
-        contentHeightDp = contentHeightDp - reservedHeight,
-    )
 }
 
 private fun AdaptiveStagePosture.isCompactFallback(): Boolean =

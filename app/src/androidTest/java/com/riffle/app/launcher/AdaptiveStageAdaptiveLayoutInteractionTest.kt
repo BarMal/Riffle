@@ -16,33 +16,19 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.onAllNodesWithTag
-import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.LauncherShellState
-import com.riffle.core.domain.launcher.apps.AppActivityName
-import com.riffle.core.domain.launcher.apps.AppIdentity
-import com.riffle.core.domain.launcher.apps.AppPackageName
-import com.riffle.core.domain.launcher.apps.AppProfile
-import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.cards.AdaptiveStageHingeBounds
 import com.riffle.core.domain.launcher.cards.AdaptiveStagePaneArrangement
 import com.riffle.core.domain.launcher.cards.AdaptiveStagePosture
 import com.riffle.core.domain.launcher.cards.AdaptiveStageWindowLayout
-import com.riffle.core.domain.launcher.cards.AppStageId
-import com.riffle.core.domain.launcher.cards.AppStagePreferences
 import com.riffle.core.domain.launcher.home.DockPosition
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
-import com.riffle.core.domain.launcher.home.HomeLayoutKey
-import com.riffle.core.domain.launcher.home.HomeLayoutSet
-import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.settings.CardsSettings
 import com.riffle.core.domain.launcher.settings.LauncherSettings
@@ -56,7 +42,7 @@ class AdaptiveStageAdaptiveLayoutInteractionTest {
     val composeRule = createComposeRule()
 
     @Test
-    fun configuredLeadingRailOverridesTrailingTemplateVariant() {
+    fun configuredLeadingDockOverridesTrailingTemplateVariant() {
         assertEquals(
             DockPosition.LEADING,
             resolveDockPosition(
@@ -67,7 +53,7 @@ class AdaptiveStageAdaptiveLayoutInteractionTest {
     }
 
     @Test
-    fun configuredTrailingRailOverridesLeadingTemplateVariant() {
+    fun configuredTrailingDockOverridesLeadingTemplateVariant() {
         assertEquals(
             DockPosition.TRAILING,
             resolveDockPosition(
@@ -78,7 +64,7 @@ class AdaptiveStageAdaptiveLayoutInteractionTest {
     }
 
     @Test
-    fun unconfiguredRailDefersToTheTemplateVariant() {
+    fun unconfiguredDockDefersToTheTemplateVariant() {
         assertEquals(
             DockPosition.TRAILING,
             resolveDockPosition(
@@ -89,21 +75,11 @@ class AdaptiveStageAdaptiveLayoutInteractionTest {
     }
 
     @Test
-    fun unconfiguredRailWithNoTemplateFallsBackToLeading() {
+    fun unconfiguredDockWithNoTemplateFallsBackToLeading() {
         assertEquals(
             DockPosition.LEADING,
             resolveDockPosition(configuredDockPosition = null, templateDockPosition = null),
         )
-    }
-
-    @Test
-    fun mediumWindowRendersStageRail() {
-        setContent(widthDp = 800)
-
-        // Previous/Next controls were removed in favor of tap/settle-drag navigation on the rail's
-        // own card-stack visual (see AdaptiveStageStageHeader's customActions for the non-touch path) --
-        // the rail's testTag is now the stable signal that this pane mode shows a rail at all.
-        composeRule.onNodeWithTag(ADAPTIVE_STAGE_STAGE_RAIL_TEST_TAG).assertIsDisplayed()
     }
 
     @Test
@@ -223,102 +199,7 @@ class AdaptiveStageAdaptiveLayoutInteractionTest {
     }
 
     @Test
-    fun topRailRendersAboveTheStageContentInsteadOfBesideIt() {
-        composeRule.setContent {
-            CompositionLocalProvider(LocalDensity provides Density(TEST_WINDOW_DENSITY)) {
-                MaterialTheme {
-                    Box(
-                        modifier =
-                            Modifier.width(800.dp)
-                                .height(TEST_WINDOW_HEIGHT_DP.dp)
-                                .clipToBounds()
-                                .testTag(ADAPTIVE_STAGE_ADAPTIVE_TEST_WINDOW_TAG),
-                    ) {
-                        AdaptiveStageAppStageSurface(
-                            state =
-                                LauncherShellState(
-                                    notificationAccessStatus = NotificationAccessStatus.NOT_GRANTED,
-                                    homeLayoutSet = layoutWithDockPosition(DockPosition.TOP),
-                                ),
-                            windowLayout =
-                                AdaptiveStageWindowLayout(
-                                    widthDp = 800,
-                                    heightDp = TEST_WINDOW_HEIGHT_DP,
-                                    posture = AdaptiveStagePosture.UNFOLDED,
-                                ),
-                            onAction = {},
-                        )
-                    }
-                }
-            }
-        }
-
-        val railBounds = composeRule.onNodeWithTag(ADAPTIVE_STAGE_STAGE_RAIL_TEST_TAG).fetchSemanticsNode().boundsInRoot
-        val windowBounds = composeRule.onNodeWithTag(ADAPTIVE_STAGE_ADAPTIVE_TEST_WINDOW_TAG).fetchSemanticsNode().boundsInRoot
-
-        // A TOP rail sits in a horizontal strip flush with the window's top edge and spanning its
-        // full width, unlike the default LEADING rail, which is a narrow column offset to one side.
-        assertTrue(railBounds.top <= windowBounds.top + PIXEL_TOLERANCE)
-        assertTrue(railBounds.width >= windowBounds.width - PIXEL_TOLERANCE)
-    }
-
-    @Test
-    fun minimumThreePaneVerticalHingeKeepsTrailingRailInsideSafeInsets() {
-        composeRule.setContent {
-            CompositionLocalProvider(LocalDensity provides Density(MINIMUM_HINGE_TEST_DENSITY)) {
-                MaterialTheme {
-                    Box(
-                        modifier =
-                            Modifier.width(MINIMUM_HINGE_WINDOW_WIDTH_DP.dp)
-                                .height(TEST_WINDOW_HEIGHT_DP.dp)
-                                .clipToBounds()
-                                .testTag(ADAPTIVE_STAGE_ADAPTIVE_TEST_WINDOW_TAG),
-                    ) {
-                        AdaptiveStageAppStageSurface(
-                            state =
-                                LauncherShellState(
-                                    notificationAccessStatus = NotificationAccessStatus.NOT_GRANTED,
-                                    homeLayoutSet = layoutWithDockPosition(DockPosition.TRAILING),
-                                ),
-                            windowInsets =
-                                WindowInsets(
-                                    MINIMUM_HINGE_SAFE_INSET_PX,
-                                    0,
-                                    MINIMUM_HINGE_SAFE_INSET_PX,
-                                    0,
-                                ),
-                            windowLayout =
-                                AdaptiveStageWindowLayout(
-                                    widthDp = MINIMUM_HINGE_WINDOW_WIDTH_DP,
-                                    heightDp = TEST_WINDOW_HEIGHT_DP,
-                                    separatingHinges =
-                                        listOf(
-                                            AdaptiveStageHingeBounds(
-                                                leftDp = 376,
-                                                topDp = 0,
-                                                rightDp = 408,
-                                                bottomDp = TEST_WINDOW_HEIGHT_DP,
-                                            ),
-                                        ),
-                                    posture = AdaptiveStagePosture.UNFOLDED,
-                                ),
-                            onAction = {},
-                        )
-                    }
-                }
-            }
-        }
-
-        val railBounds = composeRule.onNodeWithTag(ADAPTIVE_STAGE_STAGE_RAIL_TEST_TAG).fetchSemanticsNode().boundsInRoot
-        val paneBounds = composeRule.onNodeWithTag(ADAPTIVE_STAGE_SUPPORTING_PANE_TEST_TAG).fetchSemanticsNode().boundsInRoot
-        val windowBounds = composeRule.onNodeWithTag(ADAPTIVE_STAGE_ADAPTIVE_TEST_WINDOW_TAG).fetchSemanticsNode().boundsInRoot
-
-        assertTrue(paneBounds.right <= railBounds.left + PIXEL_TOLERANCE)
-        assertTrue(railBounds.right <= windowBounds.right - MINIMUM_HINGE_SAFE_INSET_PX + PIXEL_TOLERANCE)
-    }
-
-    @Test
-    fun rotationLikeWindowResizeKeepsAdaptiveStageNavigationReachable() {
+    fun rotationLikeWindowResizeKeepsTheStageOnScreen() {
         var widthDp by mutableIntStateOf(360)
         var heightDp by mutableIntStateOf(800)
         composeRule.setContent {
@@ -346,7 +227,9 @@ class AdaptiveStageAdaptiveLayoutInteractionTest {
             heightDp = 360
         }
 
-        composeRule.onNodeWithTag(ADAPTIVE_STAGE_STAGE_RAIL_TEST_TAG).assertIsDisplayed()
+        // The wide layout's navigation lives on the dock, which is a sibling of this surface --
+        // see DockDynamicSectionTest. What this surface owes a resize is that the stage survives it.
+        composeRule.onNodeWithTag(ADAPTIVE_STAGE_STAGE_HEADER_TEST_TAG).assertIsDisplayed()
     }
 
     @Test
@@ -368,11 +251,13 @@ class AdaptiveStageAdaptiveLayoutInteractionTest {
             }
         }
 
-        composeRule.onAllNodesWithTag(ADAPTIVE_STAGE_STAGE_RAIL_TEST_TAG).assertCountEquals(0)
+        // The supporting pane is what a confirmed flat posture buys at this width; a half-open or
+        // tabletop device stays compact however large its reported bounds are.
+        composeRule.onAllNodesWithText("Details").assertCountEquals(0)
         composeRule.runOnIdle { posture = AdaptiveStagePosture.UNFOLDED }
-        composeRule.onNodeWithTag(ADAPTIVE_STAGE_STAGE_RAIL_TEST_TAG).assertIsDisplayed()
+        composeRule.onNodeWithText("Details").assertIsDisplayed()
         composeRule.runOnIdle { posture = AdaptiveStagePosture.COMPACT }
-        composeRule.onAllNodesWithTag(ADAPTIVE_STAGE_STAGE_RAIL_TEST_TAG).assertCountEquals(0)
+        composeRule.onAllNodesWithText("Details").assertCountEquals(0)
     }
 
     @Test
@@ -410,116 +295,6 @@ class AdaptiveStageAdaptiveLayoutInteractionTest {
         // simultaneously -- proving this is a genuine split, not one replacing the other.
         composeRule.onNodeWithTag(ADAPTIVE_STAGE_SUPPORTING_PANE_TEST_TAG).assertIsDisplayed()
         composeRule.onNodeWithText("Install an app to create your first stage.").assertIsDisplayed()
-    }
-
-    @Test
-    fun everyStageIsReachableInTheRailByScrollingRatherThanSteppingThroughAFan() {
-        // More stages than fit the strip at once. The rail scrolls, so the last one is reachable
-        // directly instead of one settle-drag per card between here and there.
-        val apps = railTestApps(count = 16)
-        val actions = mutableListOf<LauncherShellAction>()
-        setRailContent(apps = apps, onAction = actions::add)
-
-        val last = apps.last()
-        composeRule.onNodeWithTag(ADAPTIVE_STAGE_STAGE_RAIL_TEST_TAG)
-            .performScrollToNode(hasContentDescription("${last.label}. Open stage"))
-        composeRule.onNodeWithContentDescription("${last.label}. Open stage").performClick()
-
-        composeRule.runOnIdle {
-            assertEquals(
-                LauncherShellAction.SelectAppStage(
-                    AppStageId(last.identity.packageName, last.identity.profile.id),
-                ),
-                actions.last(),
-            )
-        }
-    }
-
-    @Test
-    fun theRailOpensScrolledToTheSelectedStageRatherThanAtItsStart() {
-        // Selection also moves from outside the rail, so the tile it names has to be the one on
-        // screen -- otherwise a restored selection leaves the rail showing an unrelated stretch.
-        val apps = railTestApps(count = 16)
-        val selected = apps.last()
-        setRailContent(
-            apps = apps,
-            selectedStageId = AppStageId(selected.identity.packageName, selected.identity.profile.id),
-            onAction = {},
-        )
-
-        composeRule.onNodeWithContentDescription("${selected.label}, selected. Open stage").assertIsDisplayed()
-    }
-
-    /**
-     * The dock edge lives on the dock, and the dock belongs to a layout, so a fixture that wants
-     * one sets it on the layout the surface will actually render.
-     */
-    private fun layoutWithDockPosition(position: DockPosition): HomeLayoutSet =
-        LauncherShellState().homeLayoutSet.let { set ->
-            set.withLayout(
-                key = set.activeKey,
-                layout = set.activeLayout.copy(dock = set.activeLayout.dock.copy(position = position)),
-            )
-        }
-
-    private fun railTestApps(count: Int): List<InstalledApp> =
-        (1..count).map { index ->
-            val packageName = "com.example.stage$index"
-            InstalledApp(
-                identity =
-                    AppIdentity(
-                        packageName = AppPackageName(packageName),
-                        activityName = AppActivityName("$packageName.Main"),
-                        profile = AppProfile.personal(),
-                    ),
-                label = "Stage %02d".format(index),
-            )
-        }
-
-    private fun setRailContent(
-        apps: List<InstalledApp>,
-        selectedStageId: AppStageId? = null,
-        onAction: (LauncherShellAction) -> Unit,
-    ) {
-        val stageIds = apps.map { app -> AppStageId(app.identity.packageName, app.identity.profile.id) }
-        composeRule.setContent {
-            CompositionLocalProvider(LocalDensity provides Density(TEST_WINDOW_DENSITY)) {
-                MaterialTheme {
-                    Box(
-                        modifier = Modifier.width(1_200.dp).height(TEST_WINDOW_HEIGHT_DP.dp).clipToBounds(),
-                    ) {
-                        AdaptiveStageAppStageSurface(
-                            state =
-                                LauncherShellState(
-                                    notificationAccessStatus = NotificationAccessStatus.GRANTED,
-                                    installedApps = apps,
-                                    launcherSettings =
-                                        LauncherSettings(
-                                            cards =
-                                                CardsSettings(
-                                                    stagePreferencesByLayout =
-                                                        mapOf(
-                                                            HomeLayoutKey(LauncherViewMode.STANDARD_APP_DRAWER) to
-                                                                AppStagePreferences(
-                                                                    pinnedStageIds = stageIds,
-                                                                    selectedStageId = selectedStageId,
-                                                                ),
-                                                        ),
-                                                ),
-                                        ),
-                                ),
-                            windowLayout =
-                                AdaptiveStageWindowLayout(
-                                    widthDp = 1_200,
-                                    heightDp = TEST_WINDOW_HEIGHT_DP,
-                                    posture = AdaptiveStagePosture.UNFOLDED,
-                                ),
-                            onAction = onAction,
-                        )
-                    }
-                }
-            }
-        }
     }
 
     private fun setContent(

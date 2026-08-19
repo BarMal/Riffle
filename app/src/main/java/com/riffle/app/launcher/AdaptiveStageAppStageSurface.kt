@@ -4,9 +4,7 @@ package com.riffle.app.launcher
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -28,12 +26,8 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerDefaults
 import androidx.compose.foundation.rememberScrollState
@@ -43,7 +37,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -61,7 +54,6 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
@@ -120,7 +112,6 @@ import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.notifications.NotificationHideRule
-import com.riffle.core.domain.launcher.settings.AdaptiveStageAppearanceSettings
 import com.riffle.core.domain.launcher.settings.AdaptiveStageCardStackResolution
 import com.riffle.core.domain.launcher.settings.AdaptiveStageViewportDp
 import com.riffle.core.domain.launcher.settings.ThreadMessageOrder
@@ -330,18 +321,12 @@ internal fun AdaptiveStageAppStageSurface(
                         .firstOrNull { template -> template.id == state.launcherSettings.cards.adaptiveStageTemplateId }
                         ?.variantFor(state.settingsLayoutDeviceClass, initialPaneLayout.mode)
                 }
-            val dockPosition =
-                resolveDockPosition(
-                    configuredDockPosition = state.homeLayoutSet.activeLayout.dock.position,
-                    templateDockPosition = templateVariant?.dockPosition,
-                )
             val paneArrangement =
                 resolveAdaptiveStagePaneArrangement(value = state.launcherSettings.cards.adaptiveStagePaneArrangement)
             val paneLayout =
-                remember(adaptiveWindow, postureTransition.effectivePosture, dockPosition, paneArrangement) {
+                remember(adaptiveWindow, postureTransition.effectivePosture, paneArrangement) {
                     AdaptiveStagePaneLayoutPolicy().layoutFor(
                         window = adaptiveWindow.copy(posture = postureTransition.effectivePosture),
-                        dockPosition = dockPosition,
                         arrangement = paneArrangement,
                     )
                 }
@@ -426,123 +411,68 @@ internal fun AdaptiveStageAppStageSurface(
                         )
 
                     AdaptiveStagePaneMode.TWO_PANE, AdaptiveStagePaneMode.THREE_PANE -> {
-                        // TOP/BOTTOM rails run as a horizontal strip outside the leading/trailing
-                        // Row below, since they reserve height (paneLayout.railHeightDp) rather
-                        // than width -- see AdaptiveStagePaneLayoutPolicy.reserveHorizontalRail.
-                        val horizontalRail: @Composable () -> Unit = {
-                            AdaptiveStageStageRail(
-                                stages = shellState.snapshot.stages,
-                                selectedStageId = selectedStage?.id,
-                                allNotificationsSelected = allNotificationsSelected,
-                                onAllNotificationsSelectedChanged = onAllNotificationsSelectedChanged,
-                                state = state,
-                                notificationCards = shellState.notificationCards,
-                                appIconLoader = appIconLoader,
-                                onAction = onAction,
-                                modifier = Modifier.fillMaxWidth().height(paneLayout.railHeightDp.dp),
-                                horizontal = true,
-                            )
-                        }
-                        Column(modifier = Modifier.fillMaxSize()) {
-                            if (dockPosition == DockPosition.TOP) horizontalRail()
-                            Row(modifier = Modifier.weight(1f).fillMaxWidth()) {
-                                if (dockPosition == DockPosition.LEADING) {
-                                    AdaptiveStageStageRail(
-                                        stages = shellState.snapshot.stages,
-                                        selectedStageId = selectedStage?.id,
-                                        allNotificationsSelected = allNotificationsSelected,
-                                        onAllNotificationsSelectedChanged = onAllNotificationsSelectedChanged,
-                                        state = state,
-                                        notificationCards = shellState.notificationCards,
-                                        appIconLoader = appIconLoader,
-                                        onAction = onAction,
-                                        modifier = Modifier.width(paneLayout.railWidthDp.dp),
-                                    )
-                                }
-                                Column(modifier = Modifier.width(paneLayout.stackWidthDp.dp).fillMaxSize()) {
-                                    AdaptiveStageStageHeader(
-                                        selectedStage = selectedStage,
-                                        allNotificationsSelected = allNotificationsSelected,
-                                        stages = shellState.snapshot.stages,
-                                        state = state,
-                                        appIconLoader = appIconLoader,
-                                        onAction = onAction,
-                                    )
-                                    AdaptiveStagePageBody(
-                                        page =
-                                            if (allNotificationsSelected) {
-                                                AdaptiveStagePage.AllNotifications
-                                            } else {
-                                                selectedStage?.let(AdaptiveStagePage::Stage)
-                                            },
-                                        state = state,
-                                        shellState = shellState,
-                                        detailRecoveryMessage = detailRecoveryMessage,
-                                        detailState = detailState,
-                                        allNotificationsDetailState = allNotificationsDetailState,
-                                        focusedCardId = focusedCardIdValue?.let(::LauncherCardId),
-                                        onDetailVisibilityChanged = { cardId ->
-                                            detailCardKey = cardId?.value
-                                            detailStageKey =
-                                                cardId?.let { selectedStage?.id?.let(::adaptiveStageStageKey) }
-                                            onContextChanged(context.copy(detailCardKey = cardId?.value))
-                                            if (cardId != null) detailRecoveryMessage = null
+                        Row(modifier = Modifier.fillMaxSize()) {
+                            Column(modifier = Modifier.width(paneLayout.stackWidthDp.dp).fillMaxSize()) {
+                                AdaptiveStageStageHeader(
+                                    selectedStage = selectedStage,
+                                    allNotificationsSelected = allNotificationsSelected,
+                                    stages = shellState.snapshot.stages,
+                                    state = state,
+                                    appIconLoader = appIconLoader,
+                                    onAction = onAction,
+                                )
+                                AdaptiveStagePageBody(
+                                    page =
+                                        if (allNotificationsSelected) {
+                                            AdaptiveStagePage.AllNotifications
+                                        } else {
+                                            selectedStage?.let(AdaptiveStagePage::Stage)
                                         },
-                                        onFocusedCardChanged = {
-                                            focusedCardIdValue = it?.value
-                                            onContextChanged(context.copy(focusedCardKey = it?.value))
-                                        },
-                                        showDetailInline = !paneLayout.showsDetailPane,
-                                        // TWO_PANE/THREE_PANE is the docked-rail, unfolded
-                                        // presentation -- the main stack should use the same
-                                        // profile the rail's own tiles already do.
-                                        useUnfoldedAppearance = true,
-                                        onAction = onAction,
-                                        appIconLoader = appIconLoader,
-                                        modifier = Modifier.weight(1f),
-                                    )
-                                }
-                                if (paneLayout.leadingRemainderDp > 0) {
-                                    Spacer(modifier = Modifier.width(paneLayout.leadingRemainderDp.dp))
-                                }
-                                if (paneLayout.hingeGapDp > 0) {
-                                    Spacer(modifier = Modifier.width(paneLayout.hingeGapDp.dp))
-                                }
-                                if (paneLayout.showsDetailPane) {
-                                    AdaptiveStageSupportingPane(
-                                        stage = selectedStage,
-                                        selectedCardId =
-                                            detailOrigin?.cardId ?: focusedCardIdValue?.let(::LauncherCardId),
-                                        state = state,
-                                        notificationCards = shellState.notificationCards,
-                                        emptyCard = selectedStage?.let { shellState.emptyAppCards[it.id] },
-                                        detailState = detailState,
-                                        onAction = onAction,
-                                        modifier = Modifier.width(paneLayout.detailWidthDp.dp).fillMaxSize(),
-                                    )
-                                }
-                                if (dockPosition == DockPosition.TRAILING) {
-                                    // The stack/detail panes are capped (MIN/MAX_STACK_WIDTH_DP,
-                                    // DETAIL_WIDTH_DP) and don't necessarily consume this Row's
-                                    // whole width -- without this filler, a Row default-packs its
-                                    // children to the leading edge, so the leftover width lands
-                                    // after the trailing rail instead of before it, leaving the
-                                    // rail short of the true trailing screen edge.
-                                    Spacer(modifier = Modifier.weight(1f))
-                                    AdaptiveStageStageRail(
-                                        stages = shellState.snapshot.stages,
-                                        selectedStageId = selectedStage?.id,
-                                        allNotificationsSelected = allNotificationsSelected,
-                                        onAllNotificationsSelectedChanged = onAllNotificationsSelectedChanged,
-                                        state = state,
-                                        notificationCards = shellState.notificationCards,
-                                        appIconLoader = appIconLoader,
-                                        onAction = onAction,
-                                        modifier = Modifier.width(paneLayout.railWidthDp.dp),
-                                    )
-                                }
+                                    state = state,
+                                    shellState = shellState,
+                                    detailRecoveryMessage = detailRecoveryMessage,
+                                    detailState = detailState,
+                                    allNotificationsDetailState = allNotificationsDetailState,
+                                    focusedCardId = focusedCardIdValue?.let(::LauncherCardId),
+                                    onDetailVisibilityChanged = { cardId ->
+                                        detailCardKey = cardId?.value
+                                        detailStageKey =
+                                            cardId?.let { selectedStage?.id?.let(::adaptiveStageStageKey) }
+                                        onContextChanged(context.copy(detailCardKey = cardId?.value))
+                                        if (cardId != null) detailRecoveryMessage = null
+                                    },
+                                    onFocusedCardChanged = {
+                                        focusedCardIdValue = it?.value
+                                        onContextChanged(context.copy(focusedCardKey = it?.value))
+                                    },
+                                    showDetailInline = !paneLayout.showsDetailPane,
+                                    // TWO_PANE/THREE_PANE is the unfolded presentation, so the
+                                    // stack uses the unfolded appearance profile.
+                                    useUnfoldedAppearance = true,
+                                    onAction = onAction,
+                                    appIconLoader = appIconLoader,
+                                    modifier = Modifier.weight(1f),
+                                )
                             }
-                            if (dockPosition == DockPosition.BOTTOM) horizontalRail()
+                            if (paneLayout.leadingRemainderDp > 0) {
+                                Spacer(modifier = Modifier.width(paneLayout.leadingRemainderDp.dp))
+                            }
+                            if (paneLayout.hingeGapDp > 0) {
+                                Spacer(modifier = Modifier.width(paneLayout.hingeGapDp.dp))
+                            }
+                            if (paneLayout.showsDetailPane) {
+                                AdaptiveStageSupportingPane(
+                                    stage = selectedStage,
+                                    selectedCardId =
+                                        detailOrigin?.cardId ?: focusedCardIdValue?.let(::LauncherCardId),
+                                    state = state,
+                                    notificationCards = shellState.notificationCards,
+                                    emptyCard = selectedStage?.let { shellState.emptyAppCards[it.id] },
+                                    detailState = detailState,
+                                    onAction = onAction,
+                                    modifier = Modifier.width(paneLayout.detailWidthDp.dp).fillMaxSize(),
+                                )
+                            }
                         }
                     }
                 }
@@ -1222,317 +1152,6 @@ private fun AdaptiveStageStageBody(
 }
 
 @Composable
-private fun AdaptiveStageStageRail(
-    stages: List<AppStage>,
-    selectedStageId: AppStageId?,
-    allNotificationsSelected: Boolean,
-    onAllNotificationsSelectedChanged: (Boolean) -> Unit,
-    state: LauncherShellState,
-    notificationCards: List<AppStageNotificationCard>,
-    appIconLoader: AppIconLoader,
-    onAction: (LauncherShellAction) -> Unit,
-    modifier: Modifier,
-    horizontal: Boolean = false,
-) {
-    // Deliberately does not early-return on an empty stages list: the container (testTag,
-    // background) still composes with an empty list, so the rail's presence stays a stable signal
-    // of "this pane mode shows a rail" independent of whether any stage exists yet. The trailing
-    // "All notifications" page (see #1057) keeps at least one tile even then.
-    val haptics = rememberLauncherHaptics(state.launcherSettings.haptics.feedbackStrength)
-    val pages = remember(stages) { stages.withAllNotificationsPage() }
-    // #1059's rail audit calls for "live mini-previews (icon + latest snippet), not just an
-    // icon+label chip" -- one lookup per stage's most-recent card (already privacy/redaction-
-    // resolved by appStageNotificationCards), reused by every tile below.
-    val latestCardByStage =
-        remember(notificationCards) {
-            notificationCards
-                .groupBy { card -> card.content.stageId }
-                .mapValues { (_, cards) -> cards.maxBy { card -> card.content.meaningfulActivityAtEpochMillis } }
-        }
-    val activeIndex =
-        adaptiveStageSelectedPageIndex(pages, selectedStageId, allNotificationsSelected).coerceAtLeast(0)
-    val listState = rememberLazyListState()
-
-    // Selection moves from outside this rail too -- the stack's own pager, a restored preference,
-    // a stage arriving or leaving -- so follow it rather than only scrolling when a tap here is
-    // what changed it. Reduced motion still needs the tile brought into view; it just arrives
-    // there without the travel.
-    val reducedMotion = state.launcherSettings.motion.reducedMotion
-    LaunchedEffect(activeIndex, pages.size, reducedMotion) {
-        if (activeIndex !in pages.indices) return@LaunchedEffect
-        if (reducedMotion) listState.scrollToItem(activeIndex) else listState.animateScrollToItem(activeIndex)
-    }
-
-    fun select(index: Int) {
-        if (index == activeIndex || pages.getOrNull(index) == null) return
-        haptics.adaptiveStageSettle(state.launcherSettings.cards.unfoldedAppearance.motion.hapticStrength)
-        adaptiveStageOnPageSettled(pages, index, onAction, onAllNotificationsSelectedChanged)
-    }
-
-    val tiles: LazyListScope.() -> Unit = {
-        itemsIndexed(
-            items = pages,
-            key = { _, page -> adaptiveStagePageKey(page) },
-        ) { index, page ->
-            AdaptiveStageStageRailTile(
-                page = page,
-                isSelected =
-                    when (page) {
-                        is AdaptiveStagePage.Stage ->
-                            !allNotificationsSelected && page.stage.id == selectedStageId
-
-                        AdaptiveStagePage.AllNotifications -> allNotificationsSelected
-                    },
-                state = state,
-                latestCardByStage = latestCardByStage,
-                appIconLoader = appIconLoader,
-                horizontal = horizontal,
-                onClick = { select(index) },
-            )
-        }
-    }
-    val railBackground = Modifier.background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.32f))
-    // Explicit clip: tiles are allowed to layer within this container, but must never bleed into
-    // neighboring UI the way earlier AdaptiveStage overflow bugs did. fillMaxHeight() matters for
-    // LEADING/TRAILING: the caller only pins width there (unlike TOP/BOTTOM, which pins height
-    // explicitly), so without it this Box would wrap-size to its content.
-    val railModifier =
-        modifier.testTag(ADAPTIVE_STAGE_STAGE_RAIL_TEST_TAG)
-            .then(railBackground)
-            .fillMaxHeight()
-            .clipToBounds()
-    val tilePadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp)
-    if (horizontal) {
-        LazyRow(
-            modifier = railModifier,
-            state = listState,
-            contentPadding = tilePadding,
-            horizontalArrangement = Arrangement.spacedBy(ADAPTIVE_STAGE_STAGE_RAIL_TILE_GAP_DP.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            content = tiles,
-        )
-    } else {
-        LazyColumn(
-            modifier = railModifier,
-            state = listState,
-            contentPadding = tilePadding,
-            verticalArrangement = Arrangement.spacedBy(ADAPTIVE_STAGE_STAGE_RAIL_TILE_GAP_DP.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            content = tiles,
-        )
-    }
-}
-
-/** Only one [AdaptiveStageStageRail] is ever composed at a time, so a single fixed tag is unambiguous. */
-internal const val ADAPTIVE_STAGE_STAGE_RAIL_TEST_TAG = "adaptive-stage-stage-rail"
-
-private const val ADAPTIVE_STAGE_STAGE_RAIL_TILE_GAP_DP = 8
-
-/**
- * A horizontal rail is a strip about as tall as one tile, so its tiles read left-to-right like the
- * dock's own notification shelf -- icon beside the text rather than above it, which is what lets an
- * app's name and its latest snippet both fit in that height.
- */
-private const val ADAPTIVE_STAGE_STAGE_RAIL_HORIZONTAL_TILE_WIDTH_DP = 168
-
-/**
- * One page of the rail, resolved from [page] to the pieces [AdaptiveStageStageRailSurface] renders.
- *
- * A stage tile is keyed on its own app (icon, deterministic seed color) and carries a one-line
- * snippet of that stage's most recent card -- a live mini-preview rather than a bare icon+label
- * identity chip (#1059). The virtual "All notifications" page (#1057) has no single app identity to
- * key off, so it uses a fixed seed and a generic "All" glyph instead.
- */
-@Composable
-private fun AdaptiveStageStageRailTile(
-    page: AdaptiveStagePage,
-    isSelected: Boolean,
-    state: LauncherShellState,
-    latestCardByStage: Map<AppStageId, AppStageNotificationCard>,
-    appIconLoader: AppIconLoader,
-    horizontal: Boolean,
-    onClick: () -> Unit,
-) {
-    val appearance = state.launcherSettings.cards.unfoldedAppearance
-    when (page) {
-        is AdaptiveStagePage.Stage -> {
-            val stageId = page.stage.id
-            val label = stageLabel(stageId, state)
-            val identity = stageAppIdentity(stageId, state)
-            var appColor by remember(identity, appIconLoader) {
-                mutableStateOf(identity?.let(appIconLoader::cachedColorFor))
-            }
-            LaunchedEffect(identity, appIconLoader) {
-                appColor =
-                    identity?.let { appIdentity ->
-                        appIconLoader.cachedColorFor(appIdentity)
-                            ?: withContext(Dispatchers.Default) { appIconLoader.colorFor(appIdentity) }
-                    }
-            }
-            AdaptiveStageStageRailSurface(
-                label = label,
-                snippet = latestCardByStage[stageId]?.railSnippet(),
-                contentDescription =
-                    if (isSelected) "$label, selected. Open stage" else "$label. Open stage",
-                isSelected = isSelected,
-                appearance = appearance,
-                background =
-                    AdaptiveStageCardBackground(appSeed = stageId.packageName.value, appColor = appColor),
-                horizontal = horizontal,
-                onClick = onClick,
-            ) { colors ->
-                if (identity != null) {
-                    LauncherAppIcon(
-                        identity = identity,
-                        label = label,
-                        iconLoader = appIconLoader,
-                        modifier = Modifier.launcherIconSize(),
-                    )
-                } else {
-                    AdaptiveStageStageRailGlyph(
-                        text = label.firstOrNull()?.uppercase().orEmpty(),
-                        colors = colors,
-                    )
-                }
-            }
-        }
-
-        AdaptiveStagePage.AllNotifications ->
-            AdaptiveStageStageRailSurface(
-                label = "All notifications",
-                snippet = null,
-                // Not a stage, so it is not "Open stage" -- the merged page is its own thing, and
-                // the wording has to keep saying so now both tiles share one surface.
-                contentDescription =
-                    if (isSelected) "All notifications, selected. Open" else "All notifications. Open",
-                isSelected = isSelected,
-                appearance = appearance,
-                background = AdaptiveStageCardBackground(appSeed = "all-notifications", appColor = null),
-                horizontal = horizontal,
-                onClick = onClick,
-            ) { colors ->
-                AdaptiveStageStageRailGlyph(text = "All", colors = colors)
-            }
-    }
-}
-
-/**
- * The shared tile chrome: a deterministically-tinted surface (reusing the same per-app seed color
- * mechanism as populated [AdaptiveStageCardSurface] cards, via [resolveAdaptiveStageCardColors])
- * with a ring/elevation treatment marking the selected page.
- *
- * Unlike the rail's previous fan-of-cards presentation, every tile is laid out at full size and is
- * directly tappable; reaching one past the strip's end is ordinary scrolling rather than a
- * settle-drag per step.
- */
-@Composable
-private fun AdaptiveStageStageRailSurface(
-    label: String,
-    snippet: String?,
-    contentDescription: String,
-    isSelected: Boolean,
-    appearance: AdaptiveStageAppearanceSettings,
-    background: AdaptiveStageCardBackground,
-    horizontal: Boolean,
-    onClick: () -> Unit,
-    icon: @Composable (AdaptiveStageCardColors) -> Unit,
-) {
-    val materialBackground = MaterialTheme.colorScheme.onSurface
-    val materialAccent = MaterialTheme.colorScheme.primary
-    val colors =
-        remember(appearance, background, materialBackground, materialAccent) {
-            resolveAdaptiveStageCardColors(
-                appearance = appearance,
-                background = background,
-                materialBackground = materialBackground,
-                materialAccent = materialAccent,
-            )
-        }
-    Surface(
-        shape = RoundedCornerShape(14.dp),
-        color = colors.background,
-        contentColor = colors.foreground,
-        tonalElevation = if (isSelected) 6.dp else 0.dp,
-        shadowElevation = if (isSelected) 4.dp else 0.dp,
-        border = if (isSelected) BorderStroke(2.dp, colors.accent) else null,
-        modifier =
-            Modifier
-                .then(
-                    if (horizontal) {
-                        Modifier.width(ADAPTIVE_STAGE_STAGE_RAIL_HORIZONTAL_TILE_WIDTH_DP.dp)
-                    } else {
-                        Modifier.fillMaxWidth()
-                    },
-                )
-                .semantics { this.contentDescription = contentDescription }
-                .clickable(onClick = onClick),
-    ) {
-        if (horizontal) {
-            Row(
-                modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                icon(colors)
-                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    AdaptiveStageStageRailLabel(label)
-                    AdaptiveStageStageRailSnippet(snippet)
-                }
-            }
-        } else {
-            Column(
-                modifier = Modifier.padding(vertical = 8.dp, horizontal = 6.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
-                icon(colors)
-                AdaptiveStageStageRailLabel(label)
-                AdaptiveStageStageRailSnippet(snippet)
-            }
-        }
-    }
-}
-
-@Composable
-private fun AdaptiveStageStageRailLabel(label: String) {
-    Text(
-        text = label,
-        style = MaterialTheme.typography.labelSmall,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
-    )
-}
-
-@Composable
-private fun AdaptiveStageStageRailSnippet(snippet: String?) {
-    if (snippet == null) return
-    Text(
-        text = snippet,
-        style = MaterialTheme.typography.labelSmall,
-        color = LocalContentColor.current.copy(alpha = 0.7f),
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
-    )
-}
-
-@Composable
-private fun AdaptiveStageStageRailGlyph(
-    text: String,
-    colors: AdaptiveStageCardColors,
-) {
-    Box(
-        modifier =
-            Modifier
-                .launcherIconSize()
-                .clip(RoundedCornerShape(12.dp))
-                .background(colors.accent),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(text = text, color = colors.foreground, style = MaterialTheme.typography.labelSmall)
-    }
-}
-
-@Composable
 private fun AdaptiveStageSupportingPane(
     stage: AppStage?,
     selectedCardId: LauncherCardId?,
@@ -1997,8 +1616,7 @@ private fun AdaptiveStageNotificationStack(
                             // size as this Box (rather than leaving it to size from its
                             // graphicsLayer-positioned, layout-wise-tiny children), so its
                             // .clipToBounds() clips against the real allotted area instead of a
-                            // single card's footprint. Mirrors AdaptiveStageStageRail's fix for the
-                            // same failure mode.
+                            // single card's footprint.
                             modifier = Modifier.matchParentSize(),
                             entries =
                                 adaptiveStageNotificationStackEntries(
@@ -2406,8 +2024,7 @@ private fun AdaptiveStageAllNotificationsStack(
                         // size as this Box (rather than leaving it to size from its
                         // graphicsLayer-positioned, layout-wise-tiny children), so its
                         // .clipToBounds() clips against the real allotted area instead of a
-                        // single card's footprint. Mirrors AdaptiveStageStageRail's fix for the
-                        // same failure mode.
+                        // single card's footprint.
                         modifier = Modifier.matchParentSize(),
                         entries =
                             adaptiveStageNotificationStackEntries(
@@ -3313,16 +2930,6 @@ internal fun stageAppIdentity(
     state.installedApps.firstOrNull { app ->
         app.identity.packageName == id.packageName && app.identity.profile.id == id.profileId
     }?.identity
-
-/**
- * A one-line preview of a stage's most recent card for the rail tile (#1059). [text]/[title] are
- * already redaction-resolved by [appStageNotificationCards] ("Content hidden for this profile" /
- * "Hidden notification" when the profile is locked/quiet), so this never needs its own privacy
- * check -- it just picks whichever field actually has content, preferring the message body.
- */
-private fun AppStageNotificationCard.railSnippet(): String? = text.nonBlankOrNull() ?: title.nonBlankOrNull()
-
-private fun String.nonBlankOrNull(): String? = takeIf(String::isNotBlank)
 
 private fun AppStage.adaptiveStageStageStateDescription(): String =
     buildList {
