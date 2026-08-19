@@ -16,6 +16,8 @@ import com.riffle.app.launcher.widgets.EmptyHomeWidgetViewFactory
 import com.riffle.app.launcher.widgets.HomeWidgetViewFactory
 import com.riffle.core.domain.launcher.apps.AppShortcutsByApp
 import com.riffle.core.domain.launcher.home.DockModel
+import com.riffle.core.domain.launcher.home.DockPosition
+import com.riffle.core.domain.launcher.home.isHorizontalEdge
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
 
 private const val DOCK_SHELF_CONTENT_SPACING_DP = 6
@@ -107,8 +109,9 @@ internal fun ExpandedDockSurface(
         modifier = Modifier.dockShelfGestureInput(interactions),
         contentAlignment = dock.alignment.toBoxAlignment(),
     ) {
-        // Horizontal today, so the dock's run is this Box's width; the sizing helpers below are
-        // named for the axis rather than the dimension so a side dock can pass its height here.
+        // The expanded shelf stacks notifications, the panel and the dock's own strip vertically,
+        // so it is a bottom-edge arrangement whatever edge the collapsed dock ends up on -- how a
+        // side dock expands is its own question. Its strip therefore runs along this Box's width.
         val availableMainAxisDp = maxWidth.value.toInt()
         val surfaceMetrics =
             dockSurfaceMetrics(
@@ -166,7 +169,7 @@ internal fun ExpandedDockSurface(
                 )
                 Spacer(modifier = Modifier.height(DOCK_SHELF_CONTENT_SPACING_DP.dp))
             }
-            DockSurfaceRow(
+            DockSurfaceStrip(
                 dock = dock,
                 surfaceMetrics = surfaceMetrics,
                 isEditing = false,
@@ -180,21 +183,26 @@ internal fun ExpandedDockSurface(
 
 @Composable
 @Suppress("LongParameterList")
-internal fun DockSurfaceRow(
+internal fun DockSurfaceStrip(
     dock: DockModel,
     surfaceMetrics: DockSurfaceMetrics,
     isEditing: Boolean,
     presentation: DockPresentation,
     appIconLoader: AppIconLoader,
     modifier: Modifier = Modifier,
+    position: DockPosition = DockPosition.BOTTOM,
     renderBackground: Boolean = true,
     widgetPickerDockPreview: WidgetPickerDockPlacementPreview? = null,
 ) {
+    val runsHorizontally = position.isHorizontalEdge
+    val mainAxisDp = surfaceMetrics.containerMainAxisDp.dp
+    val crossAxisDp = dockCrossAxisDp(surfaceMetrics.slotMetrics.iconSizeDp).dp
+
     Box(
         modifier =
             modifier
-                .width(surfaceMetrics.containerMainAxisDp.dp)
-                .height(dockCrossAxisDp(surfaceMetrics.slotMetrics.iconSizeDp).dp)
+                .width(if (runsHorizontally) mainAxisDp else crossAxisDp)
+                .height(if (runsHorizontally) crossAxisDp else mainAxisDp)
                 .then(
                     if (renderBackground) {
                         Modifier.dockSurfaceAppearance(dock)
@@ -202,11 +210,14 @@ internal fun DockSurfaceRow(
                         Modifier
                     },
                 )
-                .padding(horizontal = DOCK_MAIN_AXIS_PADDING_DP.dp, vertical = DOCK_CROSS_AXIS_PADDING_DP.dp),
+                .padding(
+                    horizontal = if (runsHorizontally) DOCK_MAIN_AXIS_PADDING_DP.dp else DOCK_CROSS_AXIS_PADDING_DP.dp,
+                    vertical = if (runsHorizontally) DOCK_CROSS_AXIS_PADDING_DP.dp else DOCK_MAIN_AXIS_PADDING_DP.dp,
+                ),
         contentAlignment = Alignment.Center,
     ) {
         if (surfaceMetrics.renderedSlotCount > 0 && surfaceMetrics.contentViewportMainAxisDp > 0) {
-            DockSlotsRow(
+            DockSlotStrip(
                 dock = dock,
                 renderedSlotCount = surfaceMetrics.renderedSlotCount,
                 contentViewportMainAxisDp = surfaceMetrics.contentViewportMainAxisDp,
@@ -214,6 +225,7 @@ internal fun DockSurfaceRow(
                 isEditing = isEditing,
                 presentation = presentation,
                 appIconLoader = appIconLoader,
+                position = position,
                 widgetPickerDockPreview = widgetPickerDockPreview,
             )
         }

@@ -3,6 +3,7 @@
 package com.riffle.app.launcher
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
@@ -10,15 +11,18 @@ import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -32,9 +36,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import com.riffle.app.launcher.widgets.EmptyHomeWidgetViewFactory
 import com.riffle.app.launcher.widgets.HomeWidgetViewFactory
@@ -46,6 +54,7 @@ import com.riffle.core.domain.launcher.home.DockBackgroundSizing
 import com.riffle.core.domain.launcher.home.DockExpandAffordance
 import com.riffle.core.domain.launcher.home.DockItemMoveDirection
 import com.riffle.core.domain.launcher.home.DockModel
+import com.riffle.core.domain.launcher.home.DockPosition
 import com.riffle.core.domain.launcher.home.FolderItem
 import com.riffle.core.domain.launcher.home.GridCell
 import com.riffle.core.domain.launcher.home.HomeLayout
@@ -54,6 +63,7 @@ import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.home.LauncherPage
 import com.riffle.core.domain.launcher.home.LauncherPageId
 import com.riffle.core.domain.launcher.home.LauncherPageType
+import com.riffle.core.domain.launcher.home.isHorizontalEdge
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.coroutineScope
@@ -70,6 +80,7 @@ internal fun Dock(
     appShortcutsByApp: AppShortcutsByApp,
     appIconLoader: AppIconLoader,
     widgetViewFactory: HomeWidgetViewFactory = EmptyHomeWidgetViewFactory,
+    position: DockPosition = DockPosition.BOTTOM,
     interactions: DockInteractions,
     widgetPickerDockPreview: WidgetPickerDockPlacementPreview? = null,
 ) {
@@ -83,7 +94,9 @@ internal fun Dock(
             dockSurfaceMetrics(
                 dock = dock,
                 isEditing = isEditing,
-                availableMainAxisDp = maxWidth.value.toInt(),
+                // The dock's run is the width of this Box on a top or bottom edge, its height on a side.
+                availableMainAxisDp =
+                    if (position.isHorizontalEdge) maxWidth.value.toInt() else maxHeight.value.toInt(),
                 previewSlotCount = if (widgetPickerDockPreview != null) 1 else 0,
             ) ?: return@BoxWithConstraints
         HomeBackgroundContextMenu(
@@ -91,7 +104,7 @@ internal fun Dock(
             onAction = interactions.onAction,
             modifier = Modifier.matchParentSize(),
         )
-        DockSurfaceRow(
+        DockSurfaceStrip(
             modifier =
                 Modifier
                     .dockShelfPolicies(interactions)
@@ -101,6 +114,7 @@ internal fun Dock(
             isEditing = isEditing,
             presentation = presentation,
             appIconLoader = appIconLoader,
+            position = position,
             widgetPickerDockPreview = widgetPickerDockPreview,
         )
     }
@@ -108,7 +122,7 @@ internal fun Dock(
 
 @Suppress("LongMethod")
 @Composable
-internal fun DockSlotsRow(
+internal fun DockSlotStrip(
     dock: DockModel,
     renderedSlotCount: Int,
     contentViewportMainAxisDp: Int,
@@ -116,6 +130,7 @@ internal fun DockSlotsRow(
     isEditing: Boolean,
     presentation: DockPresentation,
     appIconLoader: AppIconLoader,
+    position: DockPosition = DockPosition.BOTTOM,
     widgetPickerDockPreview: WidgetPickerDockPlacementPreview? = null,
 ) {
     val scrollState = rememberScrollState()
@@ -143,20 +158,23 @@ internal fun DockSlotsRow(
         )
     val fadeColor = dockSurfaceColor(dock)
 
+    val runsHorizontally = position.isHorizontalEdge
+    val contentMainAxisDp = dockSlotContentMainAxisDp(renderedSlotCount, slotMetrics).dp
+
     Box(
         modifier =
             Modifier
-                .width(contentViewportMainAxisDp.dp)
+                .dockRunSize(runsHorizontally, contentViewportMainAxisDp.dp)
                 .clipToBounds(),
         contentAlignment = Alignment.Center,
     ) {
-        Row(
+        DockSlotRun(
+            runsHorizontally = runsHorizontally,
             modifier =
                 Modifier
-                    .width(dockSlotContentMainAxisDp(renderedSlotCount, slotMetrics).dp)
-                    .horizontalScroll(scrollState),
-            horizontalArrangement = Arrangement.spacedBy(slotMetrics.itemSpacingDp.dp),
-            verticalAlignment = Alignment.CenterVertically,
+                    .dockRunSize(runsHorizontally, contentMainAxisDp)
+                    .dockRunScroll(runsHorizontally, scrollState),
+            itemSpacingDp = slotMetrics.itemSpacingDp,
         ) {
             repeat(renderedSlotCount) { index ->
                 val candidateIndex = widgetPickerDockPreview?.dockIndex
@@ -190,6 +208,7 @@ internal fun DockSlotsRow(
                                     iconSizeDp = slotMetrics.iconSizeDp,
                                     itemSpacingDp = slotMetrics.itemSpacingDp,
                                     isEditing = isEditing,
+                                    position = position,
                                 ),
                             presentation = slotPresentation,
                             appIconLoader = appIconLoader,
@@ -203,32 +222,10 @@ internal fun DockSlotsRow(
         }
 
         if (overflowAffordance.showStart) {
-            Box(
-                modifier =
-                    Modifier
-                        .align(Alignment.CenterStart)
-                        .width(DOCK_OVERFLOW_FADE_WIDTH_DP.dp)
-                        .fillMaxHeight()
-                        .background(
-                            Brush.horizontalGradient(
-                                colors = listOf(fadeColor, fadeColor.copy(alpha = 0f)),
-                            ),
-                        ),
-            )
+            DockOverflowFade(runsHorizontally = runsHorizontally, atRunStart = true, color = fadeColor)
         }
         if (overflowAffordance.showEnd) {
-            Box(
-                modifier =
-                    Modifier
-                        .align(Alignment.CenterEnd)
-                        .width(DOCK_OVERFLOW_FADE_WIDTH_DP.dp)
-                        .fillMaxHeight()
-                        .background(
-                            Brush.horizontalGradient(
-                                colors = listOf(fadeColor.copy(alpha = 0f), fadeColor),
-                            ),
-                        ),
-            )
+            DockOverflowFade(runsHorizontally = runsHorizontally, atRunStart = false, color = fadeColor)
         }
     }
 
@@ -246,6 +243,92 @@ internal fun DockSlotsRow(
         }
     }
 }
+
+/**
+ * The slots themselves, laid out along the dock's run.
+ *
+ * A Row and a Column with the same children, chosen by axis, rather than one scrollable list with a
+ * direction parameter: the slots are a handful of fixed-size items, so nothing here needs lazy
+ * layout, and the two arrangements read plainly.
+ */
+@Composable
+private fun DockSlotRun(
+    runsHorizontally: Boolean,
+    modifier: Modifier,
+    itemSpacingDp: Int,
+    content: @Composable () -> Unit,
+) {
+    if (runsHorizontally) {
+        Row(
+            modifier = modifier,
+            horizontalArrangement = Arrangement.spacedBy(itemSpacingDp.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            content()
+        }
+    } else {
+        Column(
+            modifier = modifier,
+            verticalArrangement = Arrangement.spacedBy(itemSpacingDp.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            content()
+        }
+    }
+}
+
+/** Sizes along the dock's run and leaves the other axis to the content. */
+private fun Modifier.dockRunSize(
+    runsHorizontally: Boolean,
+    mainAxis: Dp,
+): Modifier = if (runsHorizontally) width(mainAxis) else height(mainAxis)
+
+@Composable
+private fun Modifier.dockRunScroll(
+    runsHorizontally: Boolean,
+    scrollState: ScrollState,
+): Modifier = if (runsHorizontally) horizontalScroll(scrollState) else verticalScroll(scrollState)
+
+/** The hint that the strip continues past an edge, drawn across the run at whichever end it is. */
+@Composable
+private fun BoxScope.DockOverflowFade(
+    runsHorizontally: Boolean,
+    atRunStart: Boolean,
+    color: Color,
+) {
+    val transparent = color.copy(alpha = 0f)
+    val colors = if (atRunStart) listOf(color, transparent) else listOf(transparent, color)
+    Box(
+        modifier =
+            Modifier
+                .align(dockOverflowFadeAlignment(runsHorizontally, atRunStart))
+                .then(
+                    if (runsHorizontally) {
+                        Modifier.width(DOCK_OVERFLOW_FADE_WIDTH_DP.dp).fillMaxHeight()
+                    } else {
+                        Modifier.height(DOCK_OVERFLOW_FADE_WIDTH_DP.dp).fillMaxWidth()
+                    },
+                )
+                .background(
+                    if (runsHorizontally) {
+                        Brush.horizontalGradient(colors = colors)
+                    } else {
+                        Brush.verticalGradient(colors = colors)
+                    },
+                ),
+    )
+}
+
+private fun dockOverflowFadeAlignment(
+    runsHorizontally: Boolean,
+    atRunStart: Boolean,
+): Alignment =
+    when {
+        runsHorizontally && atRunStart -> Alignment.CenterStart
+        runsHorizontally -> Alignment.CenterEnd
+        atRunStart -> Alignment.TopCenter
+        else -> Alignment.BottomCenter
+    }
 
 @Composable
 private fun WidgetPickerDockPlaceholder(
@@ -487,6 +570,8 @@ private data class DockSlotState(
     val iconSizeDp: Int,
     val itemSpacingDp: Int,
     val isEditing: Boolean,
+    /** The edge the dock is on, which is what tells a drag which way is along its run and which is off it. */
+    val position: DockPosition,
 )
 
 internal data class DockDragState(
@@ -596,8 +681,9 @@ private fun DockSlot(
                 .then(state.item?.let { item -> Modifier.testTag(dockItemTestTag(item.id)) } ?: Modifier)
                 .dockItemDrag(
                     state = state,
-                    slotWidthDp = state.iconSizeDp,
+                    slotSizeDp = state.iconSizeDp,
                     itemSpacingDp = state.itemSpacingDp,
+                    isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl,
                     dragViewport = dragViewport,
                     onDragStateChanged = onDragStateChanged,
                     onAction = presentation.interactions.onAction,
@@ -655,10 +741,12 @@ private fun DockSlot(
     }
 }
 
+@Suppress("LongParameterList")
 private fun Modifier.dockItemDrag(
     state: DockSlotState,
-    slotWidthDp: Int,
+    slotSizeDp: Int,
     itemSpacingDp: Int,
+    isRtl: Boolean,
     dragViewport: DockDragViewport,
     onDragStateChanged: (DockDragState?) -> Unit,
     onAction: (LauncherShellAction) -> Unit,
@@ -667,29 +755,30 @@ private fun Modifier.dockItemDrag(
         ?.takeIf { item -> state.isEditing && item.isDirectDockDragEligible() }
         ?.id
         ?.let { itemId ->
-            pointerInput(itemId, state.shortcutIndex, state.shortcutCount, slotWidthDp, itemSpacingDp) {
+            pointerInput(itemId, state.shortcutIndex, state.shortcutCount, slotSizeDp, itemSpacingDp, state.position) {
                 coroutineScope {
-                    var horizontalDrag = 0f
-                    var verticalDrag = 0f
+                    var dragXPx = 0f
+                    var dragYPx = 0f
                     var targetIndex = state.shortcutIndex
                     var initialScrollOffset = 0
                     var edgeAutoScrollDelta = 0f
                     var autoScrollJob: Job? = null
 
-                    fun updateCandidate(slotWidthPx: Float) {
+                    fun updateCandidate(slotSizePx: Float) {
                         targetIndex =
                             dockDragTargetIndex(
                                 originIndex = state.shortcutIndex,
                                 currentTargetIndex = targetIndex,
                                 draggedSlotDeltaPx =
-                                    horizontalDrag + dragViewport.scrollState.value - initialScrollOffset,
-                                slotWidthPx = slotWidthPx,
+                                    state.position.dragAlongRunPx(dragXPx, dragYPx) +
+                                        dragViewport.scrollState.value - initialScrollOffset,
+                                slotWidthPx = slotSizePx,
                                 itemCount = state.shortcutCount,
                             )
                         onDragStateChanged(DockDragState(itemId, state.shortcutIndex, targetIndex))
                     }
 
-                    fun updateEdgeAutoScroll(slotWidthPx: Float) {
+                    fun updateEdgeAutoScroll(slotSizePx: Float) {
                         if (edgeAutoScrollDelta == 0f) {
                             autoScrollJob?.cancel()
                             return
@@ -701,7 +790,7 @@ private fun Modifier.dockItemDrag(
                                     val scrollOffset = dragViewport.scrollState.value
                                     dragViewport.scrollState.dispatchRawDelta(edgeAutoScrollDelta)
                                     if (dragViewport.scrollState.value == scrollOffset) break
-                                    updateCandidate(slotWidthPx)
+                                    updateCandidate(slotSizePx)
                                     delay(DOCK_EDGE_AUTO_SCROLL_FRAME_DELAY_MILLIS)
                                 }
                             }
@@ -709,8 +798,8 @@ private fun Modifier.dockItemDrag(
 
                     detectDragGesturesAfterLongPress(
                         onDragStart = {
-                            horizontalDrag = 0f
-                            verticalDrag = 0f
+                            dragXPx = 0f
+                            dragYPx = 0f
                             targetIndex = state.shortcutIndex
                             initialScrollOffset = dragViewport.scrollState.value
                             edgeAutoScrollDelta = 0f
@@ -718,20 +807,21 @@ private fun Modifier.dockItemDrag(
                         },
                         onDrag = { change, amount ->
                             change.consume()
-                            horizontalDrag += amount.x
-                            verticalDrag += amount.y
-                            val slotWidthPx = density * (slotWidthDp + itemSpacingDp)
-                            val viewportWidthPx = density * dragViewport.contentViewportMainAxisDp
-                            val pointerX =
-                                (state.visualIndex * slotWidthPx) - dragViewport.scrollState.value + change.position.x
+                            dragXPx += amount.x
+                            dragYPx += amount.y
+                            val slotSizePx = density * (slotSizeDp + itemSpacingDp)
+                            val viewportSizePx = density * dragViewport.contentViewportMainAxisDp
+                            val pointerAlongRunPx =
+                                (state.visualIndex * slotSizePx) - dragViewport.scrollState.value +
+                                    state.position.dragAlongRunPx(change.position.x, change.position.y)
                             edgeAutoScrollDelta =
                                 dockEdgeAutoScrollDelta(
-                                    pointerX = pointerX,
-                                    viewportWidthPx = viewportWidthPx,
+                                    pointerX = pointerAlongRunPx,
+                                    viewportWidthPx = viewportSizePx,
                                     edgeZonePx = density * DOCK_EDGE_AUTO_SCROLL_ZONE_DP,
                                 )
-                            updateCandidate(slotWidthPx)
-                            updateEdgeAutoScroll(slotWidthPx)
+                            updateCandidate(slotSizePx)
+                            updateEdgeAutoScroll(slotSizePx)
                         },
                         onDragEnd = {
                             autoScrollJob?.cancel()
@@ -739,8 +829,9 @@ private fun Modifier.dockItemDrag(
                                 itemId = itemId,
                                 originIndex = state.shortcutIndex,
                                 targetIndex = targetIndex,
-                                verticalDragPx = verticalDrag,
-                                dockItemSizePx = density * slotWidthDp,
+                                awayFromEdgePx =
+                                    state.position.dragAwayFromEdgePx(dragXPx, dragYPx, isRtl = isRtl),
+                                dockItemSizePx = density * slotSizeDp,
                             )?.let(onAction)
                             onDragStateChanged(null)
                         },
@@ -754,15 +845,21 @@ private fun Modifier.dockItemDrag(
         } ?: this
 }
 
+/**
+ * What a finished dock drag means: a move to another slot, a move out to home, or nothing.
+ *
+ * [awayFromEdgePx] is the drag measured off the dock's edge rather than up the screen, so a dock on
+ * a side reads a sideways pull the same way a bottom dock reads an upward one.
+ */
 internal fun dockDragDropAction(
     itemId: LauncherItemId,
     originIndex: Int,
     targetIndex: Int,
-    verticalDragPx: Float,
+    awayFromEdgePx: Float,
     dockItemSizePx: Float,
 ): LauncherShellAction? =
     when {
-        verticalDragPx <= -dockItemSizePx -> LauncherShellAction.MoveDockItemToHome(itemId)
+        awayFromEdgePx >= dockItemSizePx -> LauncherShellAction.MoveDockItemToHome(itemId)
         targetIndex != originIndex -> LauncherShellAction.MoveDockShortcutToIndex(itemId, targetIndex)
         else -> null
     }
