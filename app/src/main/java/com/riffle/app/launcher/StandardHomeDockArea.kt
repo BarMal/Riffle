@@ -43,6 +43,7 @@ internal fun StandardHomeDockArea(
     position: DockPosition = DockPosition.BOTTOM,
     widgetPickerDockPreview: WidgetPickerDockPlacementPreview? = null,
     isWidgetPickerInteractionActive: Boolean = false,
+    dynamicBehaviour: DockDynamicSectionBehaviour = DockDynamicSectionBehaviour.LaunchApp,
 ) {
     if (!layout.shouldShowDock()) {
         return
@@ -121,6 +122,7 @@ internal fun StandardHomeDockArea(
                 position = position,
                 interactions = dockInteractions,
                 widgetPickerDockPreview = widgetPickerDockPreview,
+                dynamicBehaviour = dynamicBehaviour,
             )
         }
     }
@@ -138,6 +140,7 @@ private fun DockOrShelf(
     position: DockPosition,
     interactions: DockInteractions,
     widgetPickerDockPreview: WidgetPickerDockPlacementPreview?,
+    dynamicBehaviour: DockDynamicSectionBehaviour,
 ) {
     if (showDockShelf) {
         ExpandedDockSurface(
@@ -164,6 +167,7 @@ private fun DockOrShelf(
             // Only the collapsed dock carries the section. Expanded, the shelf's card row *is* the
             // same section with room to say more, so drawing both would show every entry twice.
             dynamicEntries = notificationShelfState.dynamicEntries(),
+            dynamicBehaviour = dynamicBehaviour,
         )
     }
 }
