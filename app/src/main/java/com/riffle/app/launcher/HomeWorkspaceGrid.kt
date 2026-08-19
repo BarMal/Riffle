@@ -55,6 +55,7 @@ internal fun WorkspaceGrid(
     appIconLoader: AppIconLoader,
     actions: HomeWorkspaceActions,
     modifier: Modifier = Modifier,
+    testTag: String = HOME_WORKSPACE_GRID_TEST_TAG,
 ) {
     BoxWithConstraints(
         modifier = modifier,
@@ -88,7 +89,7 @@ internal fun WorkspaceGrid(
                             .onGloballyPositioned { coordinates ->
                                 actions.onWorkspaceGridBoundsChanged(page.id, coordinates.boundsInRoot())
                             }
-                            .testTag(HOME_WORKSPACE_GRID_TEST_TAG),
+                            .testTag(testTag),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     repeat(page.grid.rows) { row ->

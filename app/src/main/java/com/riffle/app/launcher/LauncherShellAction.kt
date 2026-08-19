@@ -215,6 +215,8 @@ sealed interface LauncherShellAction {
 
     data class SelectDockExpandAffordance(val affordance: DockExpandAffordance) : LauncherShellAction
 
+    data class SelectDockPanelEnabled(val enabled: Boolean) : LauncherShellAction
+
     data class SelectDockCapacity(val capacity: Int) : LauncherShellAction
 
     data class SelectDockIconSize(val sizeDp: Int) : LauncherShellAction

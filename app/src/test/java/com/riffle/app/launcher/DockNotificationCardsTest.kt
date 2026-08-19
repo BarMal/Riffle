@@ -85,10 +85,11 @@ class DockNotificationCardsTest {
     }
 
     @Test
-    fun theNotificationSectionIsTheOnlyThingThatGivesTheShelfContent() {
+    fun eitherThePanelOrTheNotificationSectionGivesTheShelfContent() {
         assertEquals(
             true,
             dockHasExpandedContent(
+                hasPanel = false,
                 notificationShelfState =
                     DockNotificationShelfState.Content(
                         cards =
@@ -102,8 +103,12 @@ class DockNotificationCardsTest {
             ),
         )
         assertEquals(
+            true,
+            dockHasExpandedContent(hasPanel = true, notificationShelfState = DockNotificationShelfState.Hidden),
+        )
+        assertEquals(
             false,
-            dockHasExpandedContent(notificationShelfState = DockNotificationShelfState.Hidden),
+            dockHasExpandedContent(hasPanel = false, notificationShelfState = DockNotificationShelfState.Hidden),
         )
     }
 

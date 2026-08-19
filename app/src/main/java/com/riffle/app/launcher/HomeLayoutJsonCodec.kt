@@ -58,7 +58,10 @@ internal fun JSONObject.toHomeLayout(defaults: HomeLayout = HomeLayoutDefaults.s
                     ?.let(::LauncherTemplateId),
             pages = pages.ifEmpty { defaults.pages },
             selectedPageId = safeSelectedPageId,
-            dock = json.optJSONObject("dock")?.toDock(defaults.dock) ?: defaults.dock,
+            dock =
+                json.optJSONObject("dock")
+                    ?.toDock(defaults = defaults.dock, defaultGrid = settings.grid.dimensions)
+                    ?: defaults.dock,
             settings = settings,
         )
     }
@@ -75,6 +78,7 @@ private fun encodeDock(dock: DockModel): JSONObject =
         .put("showNotificationCards", dock.showNotificationCards)
         .put("isExpandable", dock.isExpandable)
         .put("expandAffordance", dock.expandAffordance.name)
+        .apply { dock.panel?.let { panel -> put("panel", encodePage(panel)) } }
         .put("iconSizeDp", dock.iconSizeDp)
         .put("backgroundAlphaPercent", dock.backgroundAlphaPercent)
         .put("visualEffect", dock.visualEffect.name)
@@ -86,7 +90,10 @@ private fun encodeDock(dock: DockModel): JSONObject =
         .put("capacity", dock.capacity)
         .put("items", JSONArray(dock.items.map(::encodeLauncherItem)))
 
-private fun JSONObject.toDock(defaults: DockModel): DockModel =
+private fun JSONObject.toDock(
+    defaults: DockModel,
+    defaultGrid: GridDimensions,
+): DockModel =
     DockModel(
         isEnabled = optBoolean("isEnabled", defaults.isEnabled),
         showNotificationCards = optBoolean("showNotificationCards", defaults.showNotificationCards),
@@ -96,6 +103,10 @@ private fun JSONObject.toDock(defaults: DockModel): DockModel =
                 .takeIf(String::isNotBlank)
                 ?.let { value -> runCatching { DockExpandAffordance.valueOf(value) }.getOrNull() }
                 ?: defaults.expandAffordance,
+        panel =
+            optJSONObject("panel")
+                ?.let { panel -> runCatching { panel.toPage(defaultGrid = defaultGrid) }.getOrNull() }
+                ?: defaults.panel,
         iconSizeDp = optInt("iconSizeDp", defaults.iconSizeDp),
         backgroundAlphaPercent =
             optInt(

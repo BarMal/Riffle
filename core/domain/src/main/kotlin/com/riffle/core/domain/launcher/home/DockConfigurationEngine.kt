@@ -42,6 +42,36 @@ class DockConfigurationEngine {
             ),
         )
 
+    /**
+     * Gives the dock a panel, or takes it away.
+     *
+     * Seeding uses the layout's own grid width so the panel reads as a short home page rather than
+     * a differently-proportioned thing, and a couple of rows because the shelf grows into the
+     * screen the dock sits against. Turning it off removes the page and anything the user placed
+     * on it, the same way removing a home page does; re-enabling seeds an empty one.
+     */
+    fun setDockPanelEnabled(
+        layout: HomeLayout,
+        enabled: Boolean,
+    ): DockEditResult {
+        val existing = layout.dock.panel
+        val panel =
+            when {
+                !enabled -> null
+                existing != null -> existing
+                else ->
+                    LauncherPage(
+                        id = LauncherPageId(DOCK_PANEL_PAGE_ID),
+                        grid =
+                            GridDimensions(
+                                columns = layout.settings.grid.dimensions.columns,
+                                rows = DEFAULT_DOCK_PANEL_ROWS,
+                            ),
+                    )
+            }
+        return DockEditResult.Updated(layout.copy(dock = layout.dock.copy(panel = panel)))
+    }
+
     fun setDockCapacity(
         layout: HomeLayout,
         capacity: Int,
@@ -157,3 +187,7 @@ class DockConfigurationEngine {
 }
 
 private const val MIN_DOCK_CAPACITY = 0
+
+/** Fixed rather than generated: a dock has at most one panel, so its page needs no unique id. */
+private const val DOCK_PANEL_PAGE_ID = "dock-panel"
+private const val DEFAULT_DOCK_PANEL_ROWS = 2

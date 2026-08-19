@@ -281,6 +281,7 @@ class LauncherActionDomainTest {
                     "SelectDockExpandAffordance",
                     LauncherShellAction.SelectDockExpandAffordance(DockExpandAffordance.BUTTON),
                 ),
+                activity("SelectDockPanelEnabled", LauncherShellAction.SelectDockPanelEnabled(enabled = true)),
                 activity("SelectDockCapacity", LauncherShellAction.SelectDockCapacity(capacity = 6)),
                 activity("SelectDockIconSize", LauncherShellAction.SelectDockIconSize(sizeDp = 52)),
                 activity("SelectDockBackgroundAlpha", LauncherShellAction.SelectDockBackgroundAlpha(alphaPercent = 80)),

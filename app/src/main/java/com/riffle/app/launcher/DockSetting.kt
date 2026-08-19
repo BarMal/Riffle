@@ -55,6 +55,10 @@ internal fun DockSetting(
                 affordance = dock.expandAffordance,
                 onAction = onAction,
             )
+            DockPanelSetting(
+                hasPanel = dock.panel != null,
+                onAction = onAction,
+            )
         }
         DockIconSizeSetting(
             sizeDp = dock.iconSizeDp,
@@ -301,6 +305,24 @@ private fun DockExpandAffordanceSetting(
             }
         }
     }
+}
+
+@Composable
+private fun DockPanelSetting(
+    hasPanel: Boolean,
+    onAction: (LauncherShellAction) -> Unit,
+) {
+    SettingsSwitchRow(
+        title = "Dock panel",
+        subtitle =
+            if (hasPanel) {
+                "A small grid of widgets and shortcuts on the expanded dock"
+            } else {
+                "Turning this on adds an empty grid; turning it off removes it and anything on it"
+            },
+        checked = hasPanel,
+        onCheckedChange = { value -> onAction(LauncherShellAction.SelectDockPanelEnabled(value)) },
+    )
 }
 
 @Composable
