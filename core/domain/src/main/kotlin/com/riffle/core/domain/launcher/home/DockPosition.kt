@@ -42,3 +42,22 @@ fun GridDimensions.workspaceGridFor(dock: DockModel): GridDimensions =
         dock.position?.isHorizontalEdge != false -> this
         else -> copy(columns = (columns - 1).coerceAtLeast(MIN_GRID_DIMENSION))
     }
+
+/**
+ * The edges a layout can actually put its persistent strip on.
+ *
+ * A Cards layout positions its stage rail, which is drawn on all four. Every other view mode
+ * positions the home dock, which is placed on three -- nothing puts the home dock on the top edge,
+ * and a setting that silently does nothing is worse than one that is simply not offered.
+ *
+ * The distinction lives here rather than in the settings screen because it is a fact about which
+ * surface a view mode draws, not about how the control looks.
+ */
+val LauncherViewMode.placeableDockPositions: List<DockPosition>
+    get() =
+        when (this) {
+            LauncherViewMode.CARD_INTERFACE -> DockPosition.entries.toList()
+            LauncherViewMode.STANDARD_APP_DRAWER,
+            LauncherViewMode.HOME_SCREEN_LIBRARY,
+            -> DockPosition.entries.filterNot { position -> position == DockPosition.TOP }
+        }

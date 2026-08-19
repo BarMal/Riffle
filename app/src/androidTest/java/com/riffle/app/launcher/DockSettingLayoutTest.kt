@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.riffle.core.domain.launcher.home.DockModel
+import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import org.junit.Rule
 import org.junit.Test
@@ -41,6 +42,7 @@ class DockSettingLayoutTest {
                     Box(modifier = Modifier.width(240.dp).verticalScroll(rememberScrollState())) {
                         DockSetting(
                             dock = DockModel(capacity = 4),
+                            viewMode = LauncherViewMode.STANDARD_APP_DRAWER,
                             notificationAccessStatus = NotificationAccessStatus.GRANTED,
                             onAction = {},
                         )
@@ -62,6 +64,7 @@ class DockSettingLayoutTest {
                 Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                     DockSetting(
                         dock = DockModel(capacity = 4),
+                        viewMode = LauncherViewMode.STANDARD_APP_DRAWER,
                         notificationAccessStatus = NotificationAccessStatus.GRANTED,
                         onAction = {},
                     )

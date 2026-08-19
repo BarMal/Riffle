@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.riffle.core.domain.launcher.home.DockModel
 import com.riffle.core.domain.launcher.home.DockVisualEffect
+import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.settings.LauncherThemeAccent
 import com.riffle.core.domain.launcher.settings.LauncherThemeColorTarget
@@ -105,6 +106,7 @@ class ThemeCustomizationTest {
                 )
                 DockSetting(
                     dock = DockModel(capacity = 4),
+                    viewMode = LauncherViewMode.STANDARD_APP_DRAWER,
                     notificationAccessStatus = NotificationAccessStatus.NOT_GRANTED,
                     onAction = { action ->
                         if (action is LauncherShellAction.SelectDockVisualEffect) {
