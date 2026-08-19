@@ -321,18 +321,12 @@ internal fun AdaptiveStageAppStageSurface(
                         .firstOrNull { template -> template.id == state.launcherSettings.cards.adaptiveStageTemplateId }
                         ?.variantFor(state.settingsLayoutDeviceClass, initialPaneLayout.mode)
                 }
-            val dockPosition =
-                resolveDockPosition(
-                    configuredDockPosition = state.homeLayoutSet.activeLayout.dock.position,
-                    templateDockPosition = templateVariant?.dockPosition,
-                )
             val paneArrangement =
                 resolveAdaptiveStagePaneArrangement(value = state.launcherSettings.cards.adaptiveStagePaneArrangement)
             val paneLayout =
-                remember(adaptiveWindow, postureTransition.effectivePosture, dockPosition, paneArrangement) {
+                remember(adaptiveWindow, postureTransition.effectivePosture, paneArrangement) {
                     AdaptiveStagePaneLayoutPolicy().layoutFor(
                         window = adaptiveWindow.copy(posture = postureTransition.effectivePosture),
-                        dockPosition = dockPosition,
                         arrangement = paneArrangement,
                     )
                 }
@@ -2030,8 +2024,7 @@ private fun AdaptiveStageAllNotificationsStack(
                         // size as this Box (rather than leaving it to size from its
                         // graphicsLayer-positioned, layout-wise-tiny children), so its
                         // .clipToBounds() clips against the real allotted area instead of a
-                        // single card's footprint. Mirrors AdaptiveStageStageRail's fix for the
-                        // same failure mode.
+                        // single card's footprint.
                         modifier = Modifier.matchParentSize(),
                         entries =
                             adaptiveStageNotificationStackEntries(
