@@ -35,13 +35,14 @@ import org.junit.Test
 
 /**
  * Covers the "All notifications" page (#1057) end to end through the real
- * [AdaptiveStageAppStageSurface] tree -- the rail's extra tile, selecting it, and the merged
- * content it shows -- as opposed to [AdaptiveStageAllNotificationsPageTest]'s pure-logic coverage
- * of the underlying page-index/settle helpers alone (including the reverse direction, settling on
- * a real stage from the merged page, which doesn't need a real Compose tree to verify). Uses a
- * wide (TWO_PANE) window since that's where the rail (and its "All notifications" tile) render at
- * all; see [AdaptiveStageAdaptiveLayoutInteractionTest.mediumWindowRendersStageRail] for the same
- * width/posture combination.
+ * [AdaptiveStageAppStageSurface] tree -- showing it, and the merged content it draws -- as opposed
+ * to [AdaptiveStageAllNotificationsPageTest]'s pure-logic coverage of the underlying
+ * page-index/settle helpers alone (including the reverse direction, settling on a real stage from
+ * the merged page, which doesn't need a real Compose tree to verify).
+ *
+ * Reached by setting the interaction context, which is what the dock's own entry for the page does
+ * now that the rail that used to carry a tile for it is gone -- see DockDynamicSectionTest for the
+ * dock half. Uses a wide window since that is where the surface has no navigation of its own.
  */
 class AdaptiveStageAllNotificationsSurfaceTest {
     @get:Rule

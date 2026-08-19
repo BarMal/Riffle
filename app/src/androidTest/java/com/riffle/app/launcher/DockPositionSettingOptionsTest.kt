@@ -29,8 +29,12 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * The dock position control drives two surfaces: a Cards layout's stage rail, drawn on all four
- * edges, and every other layout's home dock, placed on three. It offers what the layout can place.
+ * What the dock position control offers, which is what the layout can place.
+ *
+ * A Cards layout is still offered all four. Note that nothing acts on the choice there yet: the
+ * rail it used to place is gone, and the dock Cards mode draws is still bottom-pinned -- see
+ * `dockInteractionRegionHeightDp`, which reserves a height and only a height. Letting a Cards
+ * dock take an edge is the follow-up; these only pin what the control shows.
  */
 @RunWith(AndroidJUnit4::class)
 class DockPositionSettingOptionsTest {
@@ -48,7 +52,7 @@ class DockPositionSettingOptionsTest {
     }
 
     @Test
-    fun aCardsLayoutKeepsAllFourForItsRail() {
+    fun aCardsLayoutIsOfferedAllFourEdges() {
         setContent(LauncherViewMode.CARD_INTERFACE)
 
         DockPosition.entries.forEach { candidate ->

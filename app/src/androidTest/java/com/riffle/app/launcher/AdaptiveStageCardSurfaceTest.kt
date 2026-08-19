@@ -30,7 +30,6 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.captureToImage
-import androidx.compose.ui.test.click
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
@@ -41,7 +40,6 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
-import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import com.riffle.app.launcher.notifications.AppStageNotificationCard
@@ -644,115 +642,6 @@ class AdaptiveStageCardSurfaceTest {
             ),
             actions,
         )
-    }
-
-    @Test
-    fun tappingAStageRailTileSelectsThatStage() {
-        val first = adaptiveStageTestApp()
-        val second =
-            first.copy(
-                identity = first.identity.copy(packageName = AppPackageName("com.example.calendar")),
-                label = "Calendar",
-            )
-        val firstNotification = adaptiveStageTestNotification(first)
-        // Older than firstNotification so AppStagePlanner's default-selection tie-break (most
-        // recent content wins) deterministically leaves "Calendar" unselected regardless of how
-        // package names happen to sort -- this test taps it expecting the plain, unselected
-        // "Calendar. Open stage" content description.
-        val secondNotification =
-            firstNotification.copy(
-                key = LauncherNotificationKey("calendar"),
-                packageName = second.identity.packageName,
-                title = "Calendar event",
-                postedAtEpochMillis = firstNotification.postedAtEpochMillis - 1,
-            )
-        val actions = mutableListOf<LauncherShellAction>()
-        val state =
-            LauncherShellState(
-                notificationAccessStatus = NotificationAccessStatus.GRANTED,
-                installedApps = listOf(first, second),
-                profileContentVisibility =
-                    mapOf(
-                        first.identity.profile.id to AppProfileContentVisibility.VISIBLE,
-                    ),
-                notificationGroupsByApp =
-                    listOf(
-                        notificationGroup(first, firstNotification),
-                        notificationGroup(second, secondNotification),
-                    ),
-            )
-
-        composeRule.setContent {
-            MaterialTheme {
-                AdaptiveStageAppStageSurface(
-                    state = state,
-                    windowLayout =
-                        AdaptiveStageWindowLayout(widthDp = 800, heightDp = 800, posture = AdaptiveStagePosture.UNFOLDED),
-                    onAction = actions::add,
-                )
-            }
-        }
-
-        // Rail tiles are no longer their own clickable Surface -- the CardStack-supplied modifier
-        // (raw pointer input, not a semantics onClick action) drives tap-to-select now, so this
-        // must synthesize a real touch rather than use performClick().
-        composeRule.onNodeWithContentDescription("Calendar. Open stage").performTouchInput { click() }
-
-        assertEquals(
-            listOf(
-                LauncherShellAction.SelectAppStage(
-                    AppStageId(second.identity.packageName, second.identity.profile.id),
-                ),
-            ),
-            actions,
-        )
-    }
-
-    @Test
-    fun stageRailTileShowsALiveSnippetOfItsMostRecentCardNotJustIdentity() {
-        val mail = adaptiveStageTestApp()
-        val calendar =
-            mail.copy(
-                identity = mail.identity.copy(packageName = AppPackageName("com.example.calendar")),
-                label = "Calendar",
-            )
-        val mailNotification = adaptiveStageTestNotification(mail)
-        val calendarNotification =
-            mailNotification.copy(
-                key = LauncherNotificationKey("calendar"),
-                packageName = calendar.identity.packageName,
-                title = "Calendar event",
-                text = "Standup at 10am",
-                postedAtEpochMillis = mailNotification.postedAtEpochMillis - 1,
-            )
-        val state =
-            LauncherShellState(
-                notificationAccessStatus = NotificationAccessStatus.GRANTED,
-                installedApps = listOf(mail, calendar),
-                profileContentVisibility =
-                    mapOf(mail.identity.profile.id to AppProfileContentVisibility.VISIBLE),
-                notificationGroupsByApp =
-                    listOf(
-                        notificationGroup(mail, mailNotification),
-                        notificationGroup(calendar, calendarNotification),
-                    ),
-            )
-
-        composeRule.setContent {
-            MaterialTheme {
-                AdaptiveStageAppStageSurface(
-                    state = state,
-                    windowLayout =
-                        AdaptiveStageWindowLayout(widthDp = 800, heightDp = 800, posture = AdaptiveStagePosture.UNFOLDED),
-                    onAction = {},
-                )
-            }
-        }
-
-        // The non-focused Calendar rail tile shows its own most recent card's text, not just its
-        // icon+label identity chip (#1059) -- distinct from Mail's own focused-card content, so
-        // this is a genuine per-stage live preview rather than a shared/static label.
-        composeRule.onNodeWithText("Standup at 10am").assertIsDisplayed()
     }
 
     @Test
