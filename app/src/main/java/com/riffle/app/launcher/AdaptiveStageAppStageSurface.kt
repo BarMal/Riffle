@@ -212,8 +212,19 @@ internal fun AdaptiveStageAppStageSurface(
     // It lives in the hoisted interaction context rather than in a rememberSaveable here: this
     // surface is torn down whenever the launcher shows something else, so held locally the page was
     // the one thing about "what you were looking at" that a trip to settings threw away.
-    val allNotificationsSelected = context.allNotificationsSelected
+    // Mirrored from the context rather than read straight off it, the way every other piece of
+    // interaction state in this surface already is. [context] and [onContextChanged] are both
+    // defaulted, so a caller is free not to hoist -- and read directly, a caller that did not would
+    // have a page it could never reach, because its writes would go to a callback that does
+    // nothing. The effect below is what a caller that *does* hoist buys: the dock's merged-page
+    // entry sets the context from outside this surface, and this has to notice.
+    var allNotificationsSelectedValue by rememberSaveable { mutableStateOf(context.allNotificationsSelected) }
+    LaunchedEffect(context.allNotificationsSelected) {
+        allNotificationsSelectedValue = context.allNotificationsSelected
+    }
+    val allNotificationsSelected = allNotificationsSelectedValue
     val onAllNotificationsSelectedChanged: (Boolean) -> Unit = { selected ->
+        allNotificationsSelectedValue = selected
         onContextChanged(context.copy(allNotificationsSelected = selected))
     }
     val allNotificationsDetailState =

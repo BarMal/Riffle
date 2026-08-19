@@ -4,6 +4,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.test.assertIsDisplayed
@@ -19,6 +22,7 @@ import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppProfile
 import com.riffle.core.domain.launcher.apps.AppProfileContentVisibility
 import com.riffle.core.domain.launcher.apps.InstalledApp
+import com.riffle.core.domain.launcher.cards.AdaptiveStageInteractionContext
 import com.riffle.core.domain.launcher.cards.AdaptiveStagePosture
 import com.riffle.core.domain.launcher.cards.AdaptiveStageWindowLayout
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
@@ -27,6 +31,7 @@ import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.notifications.NotificationAgeBucket
 import com.riffle.core.domain.launcher.notifications.NotificationCategory
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
@@ -55,6 +60,70 @@ class AdaptiveStageAllNotificationsSurfaceTest {
 
         composeRule.onNodeWithContentDescription("Cards stage: All notifications").assertIsDisplayed()
         composeRule.onNodeWithText("Chat message").assertIsDisplayed()
+    }
+
+    @Test
+    fun aCallerHoldingTheContextCanPutTheSurfaceOnTheMergedPage() {
+        // The dock's merged-page entry sets the context from outside this surface, so the surface
+        // has to follow one it did not change itself.
+        val mail = testApp("mail", "Mail")
+        val chat = testApp("chat", "Chat")
+        val state = twoStageState(mail, chat)
+        var context by mutableStateOf(AdaptiveStageInteractionContext())
+        composeRule.setContent {
+            MaterialTheme {
+                Box(modifier = Modifier.width(800.dp).height(800.dp).clipToBounds()) {
+                    AdaptiveStageAppStageSurface(
+                        state = state,
+                        windowLayout =
+                            AdaptiveStageWindowLayout(
+                                widthDp = 800,
+                                heightDp = 800,
+                                posture = AdaptiveStagePosture.UNFOLDED,
+                            ),
+                        context = context,
+                        onContextChanged = { next -> context = next },
+                        onAction = {},
+                    )
+                }
+            }
+        }
+
+        composeRule.runOnIdle { context = context.copy(allNotificationsSelected = true) }
+
+        composeRule.onNodeWithContentDescription("Cards stage: All notifications").assertIsDisplayed()
+    }
+
+    @Test
+    fun choosingTheMergedPageTellsWhoeverIsHoldingTheContext() {
+        val mail = testApp("mail", "Mail")
+        val chat = testApp("chat", "Chat")
+        val state = twoStageState(mail, chat)
+        var context by mutableStateOf(AdaptiveStageInteractionContext())
+        composeRule.setContent {
+            MaterialTheme {
+                Box(modifier = Modifier.width(800.dp).height(800.dp).clipToBounds()) {
+                    AdaptiveStageAppStageSurface(
+                        state = state,
+                        windowLayout =
+                            AdaptiveStageWindowLayout(
+                                widthDp = 800,
+                                heightDp = 800,
+                                posture = AdaptiveStagePosture.UNFOLDED,
+                            ),
+                        context = context,
+                        onContextChanged = { next -> context = next },
+                        onAction = {},
+                    )
+                }
+            }
+        }
+
+        composeRule.onNodeWithContentDescription("All notifications. Open").performClick()
+
+        composeRule.runOnIdle {
+            assertTrue("expected the context to carry the page, was $context", context.allNotificationsSelected)
+        }
     }
 
     private fun setWideContent(state: LauncherShellState) {
