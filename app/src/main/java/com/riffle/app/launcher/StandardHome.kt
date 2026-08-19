@@ -499,6 +499,7 @@ internal fun StandardHomeDockOnlySurface(
     presentation: StandardHomePresentation,
     appIconLoader: AppIconLoader,
     onAction: (LauncherShellAction) -> Unit,
+    dynamicBehaviour: DockDynamicSectionBehaviour = DockDynamicSectionBehaviour.LaunchApp,
 ) {
     val visibleLayout = layout.visibleTo(installedApps)
     val openedFolderId = remember { mutableStateOf<LauncherItemId?>(null) }
@@ -539,6 +540,7 @@ internal fun StandardHomeDockOnlySurface(
             onDockShelfExpandedChange = dockShelf.onExpandedChange,
             appIconLoader = appIconLoader,
             actions = actions,
+            dynamicBehaviour = dynamicBehaviour,
         )
     }
     visibleLayout.openedFolder(openedFolderId.value)?.let { folder ->

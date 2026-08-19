@@ -1,6 +1,7 @@
 package com.riffle.app.launcher
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -21,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 
@@ -43,16 +45,18 @@ internal fun DockDynamicSection(
     runsHorizontally: Boolean,
     appIconLoader: AppIconLoader,
     onAction: (LauncherShellAction) -> Unit,
-    modifier: Modifier = Modifier,
+    behaviour: DockDynamicSectionBehaviour = DockDynamicSectionBehaviour.LaunchApp,
 ) {
-    // The same numbers the static side is drawn from, so an entry is the size of a pinned icon.
-    val iconSizeDp = slotMetrics.iconSizeDp
-    val spacingDp = slotMetrics.itemSpacingDp
     if (entries.isEmpty() || mainAxisDp <= 0) {
         return
     }
+    // The same numbers the static side is drawn from, so an entry is the size of a pinned icon.
+    val iconSizeDp = slotMetrics.iconSizeDp
+    val spacingDp = slotMetrics.itemSpacingDp
+    // No modifier parameter, against the usual convention: the section's extent is measured for it
+    // by the dock and a caller-supplied one would only fight that.
     val runModifier =
-        modifier
+        Modifier
             .testTag(DOCK_DYNAMIC_SECTION_TEST_TAG)
             .then(
                 if (runsHorizontally) {
@@ -66,8 +70,9 @@ internal fun DockDynamicSection(
             DockDynamicSectionTile(
                 entry = entry,
                 iconSizeDp = iconSizeDp,
+                isSelected = behaviour.isSelected(entry),
                 appIconLoader = appIconLoader,
-                onAction = onAction,
+                onActivate = { behaviour.actionFor(entry)?.let(onAction) },
             )
         }
     }
@@ -88,18 +93,20 @@ internal fun DockDynamicSection(
 }
 
 /**
- * One entry: the app's icon, badged with what is waiting, opening the app on a tap.
+ * One entry: the app's icon, badged with what is waiting, doing whatever a tap here means.
  *
  * The badge sits on the icon rather than beside it so the tile stays exactly one dock icon wide --
  * the run was measured on that assumption, and a tile that grew with its count would push the rest
- * of the section along every time a notification arrived.
+ * of the section along every time a notification arrived. The selected ring is drawn behind the
+ * icon for the same reason.
  */
 @Composable
 private fun DockDynamicSectionTile(
     entry: DockNotificationCardState,
     iconSizeDp: Int,
+    isSelected: Boolean,
     appIconLoader: AppIconLoader,
-    onAction: (LauncherShellAction) -> Unit,
+    onActivate: () -> Unit,
 ) {
     val label = dockNotificationCardLabel(entry)
     val identity = entry.app?.identity
@@ -111,10 +118,23 @@ private fun DockDynamicSectionTile(
                 .testTag(dockDynamicSectionTileTestTag(label))
                 .semantics {
                     contentDescription = dockNotificationCardContentDescription(card = entry, label = label)
+                    selected = isSelected
                 }
-                .clickable(enabled = identity != null) {
-                    identity?.let { appIdentity -> onAction(LauncherShellAction.LaunchApp(appIdentity)) }
-                },
+                .clickable(onClick = onActivate)
+                // A ring over the icon's edge rather than anything behind or around it: the tile is
+                // exactly one dock icon wide and the run was measured on that, so the mark for
+                // "this is the one showing" cannot be allowed to take any room.
+                .then(
+                    if (isSelected) {
+                        Modifier.border(
+                            width = SELECTED_ENTRY_RING_DP.dp,
+                            color = MaterialTheme.colorScheme.primary,
+                            shape = CircleShape,
+                        )
+                    } else {
+                        Modifier
+                    },
+                ),
         contentAlignment = Alignment.TopEnd,
     ) {
         if (identity != null) {
@@ -144,6 +164,9 @@ private fun DockDynamicSectionTile(
         NotificationCountBadge(count = entry.group.count)
     }
 }
+
+/** The ring marking the entry whose stage is currently showing. */
+private const val SELECTED_ENTRY_RING_DP = 2
 
 internal fun dockDynamicSectionTileTestTag(label: String): String = "dock-dynamic-entry:$label"
 

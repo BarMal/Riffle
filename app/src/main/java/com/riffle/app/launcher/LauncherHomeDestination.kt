@@ -98,6 +98,10 @@ private fun CardsHomeSurface(
                 ),
             appIconLoader = appIconLoader,
             onAction = onAction,
+            // A tap on the dock's dynamic side brings that app's cards forward rather than leaving
+            // for the app. Having its content on the launcher is the reason the user is in Cards
+            // mode at all, so opening the app is the one thing the tap should not do.
+            dynamicBehaviour = DockDynamicSectionBehaviour.SelectStage(adaptiveStageContext.selectedStageKey),
         )
         AdaptiveStageAppStageSurface(
             state = state,

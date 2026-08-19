@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotSelected
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
@@ -16,6 +18,7 @@ import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppProfile
 import com.riffle.core.domain.launcher.apps.InstalledApp
+import com.riffle.core.domain.launcher.cards.AppStageId
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.DockModel
 import com.riffle.core.domain.launcher.home.DockPosition
@@ -105,12 +108,48 @@ class DockDynamicSectionTest {
         }
     }
 
+    @Test
+    fun withAStageBehindItATapBringsThatStageForward() {
+        // Cards mode: the app's content is already on the launcher, so opening the app is the one
+        // thing the tap should not do.
+        val actions = mutableListOf<LauncherShellAction>()
+        setContent(
+            DockPosition.BOTTOM,
+            actions = actions,
+            behaviour = DockDynamicSectionBehaviour.SelectStage(),
+        )
+
+        composeRule.onNodeWithTag(dockDynamicSectionTileTestTag(CHAT_LABEL)).performClick()
+
+        composeRule.runOnIdle {
+            assertEquals(listOf(LauncherShellAction.SelectAppStage(chatStageId)), actions)
+        }
+    }
+
+    @Test
+    fun theEntryWhoseStageIsShowingSaysSo() {
+        setContent(
+            DockPosition.BOTTOM,
+            behaviour = DockDynamicSectionBehaviour.SelectStage(adaptiveStageStageKey(chatStageId)),
+        )
+
+        composeRule.onNodeWithTag(dockDynamicSectionTileTestTag(CHAT_LABEL)).assertIsSelected()
+    }
+
+    @Test
+    fun anEntryWithNothingShowingBehindItSaysThatToo() {
+        setContent(DockPosition.BOTTOM, behaviour = DockDynamicSectionBehaviour.SelectStage())
+
+        composeRule.onNodeWithTag(dockDynamicSectionTileTestTag(CHAT_LABEL)).assertIsNotSelected()
+    }
+
     private fun boundsOf(tag: String) = composeRule.onNodeWithTag(tag).fetchSemanticsNode().boundsInRoot
 
     private fun setContent(
         position: DockPosition,
         entries: List<DockNotificationCardState> = listOf(chatEntry),
         actions: MutableList<LauncherShellAction> = mutableListOf(),
+        behaviour: DockDynamicSectionBehaviour = DockDynamicSectionBehaviour.LaunchApp,
     ) {
         composeRule.setContent {
             MaterialTheme {
@@ -130,6 +169,7 @@ class DockDynamicSectionTest {
                         position = position,
                         interactions = DockInteractions(onAction = actions::add),
                         dynamicEntries = entries,
+                        dynamicBehaviour = behaviour,
                     )
                 }
             }
@@ -160,6 +200,12 @@ class DockDynamicSectionTest {
                         profile = AppProfile.personal(),
                     ),
                 label = CHAT_LABEL,
+            )
+
+        private val chatStageId =
+            AppStageId(
+                packageName = chatApp.identity.packageName,
+                profileId = chatApp.identity.profile.id,
             )
 
         private val chatEntry =
