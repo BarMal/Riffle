@@ -8,7 +8,7 @@ class DockSettingTest {
     @Test
     fun dockNotificationCardsSettingSubtitleUsesGenericDisabledCopy() {
         assertEquals(
-            "Expanded dock only shows shortcuts and widgets",
+            "Dock only shows what you pinned to it",
             dockNotificationCardsSettingSubtitle(
                 enabled = false,
                 notificationAccessStatus = NotificationAccessStatus.REVOKED,
@@ -19,7 +19,7 @@ class DockSettingTest {
     @Test
     fun dockNotificationCardsSettingSubtitleUsesGrantedCopy() {
         assertEquals(
-            "Expanded dock can show notification cards",
+            "Dock shows apps with notifications beside your pinned ones",
             dockNotificationCardsSettingSubtitle(
                 enabled = true,
                 notificationAccessStatus = NotificationAccessStatus.GRANTED,
