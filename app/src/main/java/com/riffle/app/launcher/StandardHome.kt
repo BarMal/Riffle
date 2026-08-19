@@ -919,6 +919,11 @@ internal data class HomeGridPresentation(
     val reducedMotion: Boolean = false,
     val widgetViewFactory: HomeWidgetViewFactory,
     val generatedPage: GeneratedPagePresentation = GeneratedPagePresentation(),
+    /**
+     * Which surface these cells belong to, so an item's own menu removes it from the right place.
+     * The dock's panel renders through the same grid but is not one of the layout's pages.
+     */
+    val contextSurface: ShortcutContextSurface = ShortcutContextSurface.HOME,
 )
 
 internal data class GeneratedPagePresentation(

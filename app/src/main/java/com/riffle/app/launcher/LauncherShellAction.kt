@@ -216,6 +216,8 @@ sealed interface LauncherShellAction {
 
     data class SelectDockPanelEnabled(val enabled: Boolean) : LauncherShellAction
 
+    data class RemoveDockPanelItem(val itemId: LauncherItemId) : LauncherShellAction
+
     data class SelectDockCapacity(val capacity: Int) : LauncherShellAction
 
     data class SelectDockIconSize(val sizeDp: Int) : LauncherShellAction

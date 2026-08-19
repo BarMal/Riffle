@@ -82,6 +82,34 @@ class DockConfigurationEngine {
             ),
         )
 
+    /**
+     * Removes one item from the dock's panel.
+     *
+     * The panel needs its own removal because the home path removes from the *selected page*, and
+     * the panel is not one of the layout's pages -- it hangs off the dock. Routing panel items
+     * through the home action left their menus dispatching something that matched nothing.
+     */
+    fun removePanelItem(
+        layout: HomeLayout,
+        itemId: LauncherItemId,
+    ): DockEditResult {
+        val panel = layout.dock.panel
+        return when {
+            panel == null || panel.items.none { item -> item.id == itemId } ->
+                DockEditResult.Rejected(DockEditRejectionReason.ITEM_NOT_FOUND)
+
+            else ->
+                DockEditResult.Updated(
+                    layout.copy(
+                        dock =
+                            layout.dock.copy(
+                                panel = panel.copy(items = panel.items.filterNot { item -> item.id == itemId }),
+                            ),
+                    ),
+                )
+        }
+    }
+
     fun setDockCapacity(
         layout: HomeLayout,
         capacity: Int,

@@ -47,6 +47,7 @@ internal fun HomeWidgetPlaceholder(
     widget: WidgetItem,
     isEditing: Boolean,
     onAction: (LauncherShellAction) -> Unit,
+    contextSurface: ShortcutContextSurface = ShortcutContextSurface.HOME,
     widgetViewFactory: HomeWidgetViewFactory = EmptyHomeWidgetViewFactory,
     dragState: HomeItemDragState? = null,
     workspaceActions: HomeWorkspaceActions? = null,
@@ -104,12 +105,19 @@ internal fun HomeWidgetPlaceholder(
                 widget = widget,
                 grid = dragState?.grid,
                 pageItems = dragState?.pageItems ?: listOf(widget),
+                contextSurface = contextSurface,
                 onAction = onAction,
             )
         }
         ShortcutContextMenu(
             expanded = isContextMenuExpanded.value,
-            items = widgetPlaceholderContextMenuItems(widget, dragState?.grid, dragState?.pageItems ?: listOf(widget)),
+            items =
+                widgetPlaceholderContextMenuItems(
+                    widget = widget,
+                    grid = dragState?.grid,
+                    pageItems = dragState?.pageItems ?: listOf(widget),
+                    contextSurface = contextSurface,
+                ),
             onDismissRequest = { isContextMenuExpanded.value = false },
             onAction = onAction,
         )
@@ -157,11 +165,12 @@ private fun BoxScope.WidgetEditHandles(
     widget: WidgetItem,
     grid: GridDimensions?,
     pageItems: List<LauncherItem>,
+    contextSurface: ShortcutContextSurface,
     onAction: (LauncherShellAction) -> Unit,
 ) {
     RemoveShortcutButton(
         label = widget.label,
-        onClick = { onAction(LauncherShellAction.RemoveHomeShortcut(widget.id)) },
+        onClick = { onAction(widget.removeActionFor(contextSurface)) },
     )
     val resizeHandleLabels = widget.resizeHandleLabels()
     if ("Make wider" in resizeHandleLabels) {
@@ -245,6 +254,7 @@ internal fun widgetPlaceholderContextMenuItems(
     widget: WidgetItem,
     grid: GridDimensions? = null,
     pageItems: List<LauncherItem> = listOf(widget),
+    contextSurface: ShortcutContextSurface = ShortcutContextSurface.HOME,
 ): List<ShortcutContextMenuItem> {
     return listOf(
         ShortcutContextMenuItem(
@@ -268,8 +278,8 @@ internal fun widgetPlaceholderContextMenuItems(
             enabled = widget.canResize(columnsDelta = 0, rowsDelta = -1, grid = grid, pageItems = pageItems),
         ),
         ShortcutContextMenuItem(
-            label = "Remove from home",
-            action = LauncherShellAction.RemoveHomeShortcut(widget.id),
+            label = contextSurface.widgetRemoveLabel,
+            action = widget.removeActionFor(contextSurface),
         ),
     )
 }

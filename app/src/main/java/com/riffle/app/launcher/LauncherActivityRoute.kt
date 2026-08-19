@@ -82,6 +82,7 @@ private fun LauncherShellAction.isDockEditAction(): Boolean =
         is LauncherShellAction.SelectDockExpandAffordance,
         is LauncherShellAction.SelectDockPanelEnabled,
         is LauncherShellAction.SelectDockPosition,
+        is LauncherShellAction.RemoveDockPanelItem,
         is LauncherShellAction.SelectDockCapacity,
         is LauncherShellAction.SelectDockIconSize,
         is LauncherShellAction.SelectDockBackgroundAlpha,

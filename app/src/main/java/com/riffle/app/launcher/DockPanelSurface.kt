@@ -44,6 +44,9 @@ internal fun DockPanel(
                 labelSettings = interactions.homeLayout?.settings?.labels ?: HomeLabelSettings.standard(),
                 reducedMotion = interactions.reducedMotion,
                 widgetViewFactory = presentation.widgetViewFactory,
+                // Without this the panel's items offer "Remove from home", which acts on the
+                // selected page and so matches nothing here.
+                contextSurface = ShortcutContextSurface.DOCK_PANEL,
             ),
         appIconLoader = appIconLoader,
         actions =
