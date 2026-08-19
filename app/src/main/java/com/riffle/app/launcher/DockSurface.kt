@@ -36,6 +36,7 @@ internal fun dockSurfaceMetrics(
     isEditing: Boolean,
     availableMainAxisDp: Int,
     previewSlotCount: Int = 0,
+    runsHorizontally: Boolean = true,
 ): DockSurfaceMetrics? {
     val renderedSlotCount =
         dockRenderedSlotCount(
@@ -72,6 +73,7 @@ internal fun dockSurfaceMetrics(
             iconSizeDp = dock.iconSizeDp,
             itemSpacingDp = dock.itemSpacingDp,
             backgroundSizing = dock.backgroundSizing,
+            runsHorizontally = runsHorizontally,
         )
     val contentViewportMainAxisDp =
         dockContentViewportMainAxisDp(
@@ -123,6 +125,7 @@ internal fun ExpandedDockSurface(
                 dock = dock,
                 isEditing = false,
                 availableMainAxisDp = availableMainAxisDp,
+                runsHorizontally = runsHorizontally,
             ) ?: return@BoxWithConstraints
         HomeBackgroundContextMenu(
             haptics = interactions.haptics,
