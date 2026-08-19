@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -22,6 +23,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.home.DockAlignment
 import com.riffle.core.domain.launcher.home.DockExpandAffordance
+import com.riffle.core.domain.launcher.home.DockModel
 import com.riffle.core.domain.launcher.home.DockPosition
 import com.riffle.core.domain.launcher.home.GridInsets
 import com.riffle.core.domain.launcher.home.HomeEditMode
@@ -74,9 +76,7 @@ internal fun StandardHomeDockArea(
     Column(
         modifier =
             Modifier
-                // A side dock fills the height it was given and is only as wide as it needs to be;
-                // a bottom dock is the other way round.
-                .then(if (runsAlongASide) Modifier.fillMaxHeight() else Modifier.fillMaxWidth())
+                .dockAreaExtent(runsAlongASide = runsAlongASide, dock = layout.dock, margins = margins)
                 .onSizeChanged { size -> actions.onDockInteractionHeightChanged(size.height) }
                 .onGloballyPositioned { coordinates ->
                     actions.onDockBoundsChanged(coordinates.boundsInRoot())
@@ -132,6 +132,25 @@ internal fun StandardHomeDockArea(
         }
     }
 }
+
+/**
+ * How much of the screen the dock's area claims.
+ *
+ * A side dock reserves a strip exactly as thick as the dock plus its margins, and fills the height
+ * it was given. Left to wrap its content it would take whatever width its container offered and
+ * leave the workspace the remainder, which is the wrong way round: the reservation is what the grid
+ * gave up a column for, so it has to be the known quantity.
+ */
+private fun Modifier.dockAreaExtent(
+    runsAlongASide: Boolean,
+    dock: DockModel,
+    margins: GridInsets,
+): Modifier =
+    if (runsAlongASide) {
+        fillMaxHeight().width((dockCrossAxisDp(dock.iconSizeDp) + margins.start + margins.end).dp)
+    } else {
+        fillMaxWidth()
+    }
 
 /** True while the shelf's own expand gesture is attached, and so owns swipe-up on the dock. */
 private fun DockInteractions.claimsSwipeUp(): Boolean =

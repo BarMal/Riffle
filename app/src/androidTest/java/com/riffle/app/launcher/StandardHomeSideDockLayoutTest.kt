@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.unit.dp
@@ -33,44 +34,58 @@ class StandardHomeSideDockLayoutTest {
     @get:Rule
     val composeRule = createComposeRule()
 
-    private val docked = shortcut("docked")
+    // A filled dock, so the strip is clearly longer than it is thick: with the dynamic background
+    // a one-item dock is a small square on any edge, which would tell us nothing about its run.
+    private val docked = (0 until 5).map { index -> shortcut("docked$index") }
 
     @Test
-    fun aLeadingDockSitsBesideTheWorkspaceRatherThanUnderIt() {
+    fun aLeadingDockIsANarrowStripDownTheLeadingEdge() {
         setContent(DockPosition.LEADING)
 
-        val dock = composeRule.onNodeWithTag(HOME_DOCK_TEST_TAG).fetchSemanticsNode().boundsInRoot
-        val grid = composeRule.onNodeWithTag(HOME_WORKSPACE_GRID_TEST_TAG).fetchSemanticsNode().boundsInRoot
+        val root = rootBounds()
+        val dock = dockBounds()
 
-        assertTrue("expected the dock left of the grid, dock=$dock grid=$grid", dock.right <= grid.left)
+        // Fractions of the root rather than exact edges: window insets and the grid margin both
+        // sit between the dock and the screen edge, and neither is what this is about.
+        assertTrue("expected it at the leading edge, dock=$dock root=$root", dock.left < root.left + root.width / 10f)
+        assertTrue("expected a narrow strip, dock=$dock root=$root", dock.width < root.width / 3f)
+        assertTrue("expected a tall strip, dock=$dock root=$root", dock.height > root.height / 2f)
     }
 
     @Test
-    fun aTrailingDockTakesTheOtherSide() {
+    fun aTrailingDockTakesTheOtherEdge() {
         setContent(DockPosition.TRAILING)
 
-        val dock = composeRule.onNodeWithTag(HOME_DOCK_TEST_TAG).fetchSemanticsNode().boundsInRoot
-        val grid = composeRule.onNodeWithTag(HOME_WORKSPACE_GRID_TEST_TAG).fetchSemanticsNode().boundsInRoot
+        val root = rootBounds()
+        val dock = dockBounds()
 
-        assertTrue("expected the dock right of the grid, dock=$dock grid=$grid", dock.left >= grid.right)
+        assertTrue("expected it at the trailing edge, dock=$dock root=$root", dock.right > root.right - root.width / 10f)
+        assertTrue("expected a narrow strip, dock=$dock root=$root", dock.width < root.width / 3f)
+        assertTrue("expected a tall strip, dock=$dock root=$root", dock.height > root.height / 2f)
     }
 
     @Test
-    fun aBottomDockStillStacksUnderTheWorkspace() {
+    fun aBottomDockIsStillAWideStripAcrossTheBottom() {
         setContent(DockPosition.BOTTOM)
 
-        val dock = composeRule.onNodeWithTag(HOME_DOCK_TEST_TAG).fetchSemanticsNode().boundsInRoot
-        val grid = composeRule.onNodeWithTag(HOME_WORKSPACE_GRID_TEST_TAG).fetchSemanticsNode().boundsInRoot
+        val root = rootBounds()
+        val dock = dockBounds()
 
-        assertTrue("expected the dock below the grid, dock=$dock grid=$grid", dock.top >= grid.bottom)
+        assertTrue("expected a wide strip, dock=$dock root=$root", dock.width > root.width / 2f)
+        assertTrue("expected a short strip, dock=$dock root=$root", dock.height < root.height / 3f)
+        assertTrue("expected it near the bottom, dock=$dock root=$root", dock.top > root.top + root.height / 2f)
     }
+
+    private fun rootBounds() = composeRule.onNodeWithTag(ROOT_TEST_TAG).fetchSemanticsNode().boundsInRoot
+
+    private fun dockBounds() = composeRule.onNodeWithTag(HOME_DOCK_TEST_TAG).fetchSemanticsNode().boundsInRoot
 
     private fun setContent(position: DockPosition) {
         val layout = layoutWithDockAt(position)
-        val installed = listOf(docked.installedApp())
+        val installed = docked.map { item -> item.installedApp() }
         composeRule.setContent {
             MaterialTheme {
-                Box(modifier = Modifier.size(420.dp)) {
+                Box(modifier = Modifier.size(420.dp).testTag(ROOT_TEST_TAG)) {
                     StandardHome(
                         layout = layout,
                         installedApps = installed,
@@ -92,7 +107,7 @@ class StandardHomeSideDockLayoutTest {
     private fun layoutWithDockAt(position: DockPosition): HomeLayout {
         val seeded =
             HomeLayoutDefaults.standard().let { standard ->
-                standard.copy(dock = standard.dock.copy(items = listOf(docked)))
+                standard.copy(dock = standard.dock.copy(items = docked))
             }
         val result = DockConfigurationEngine().setDockPosition(layout = seeded, position = position)
         return (result as DockEditResult.Updated).layout
@@ -114,4 +129,8 @@ class StandardHomeSideDockLayoutTest {
             identity = appIdentity,
             label = label,
         )
+
+    private companion object {
+        private const val ROOT_TEST_TAG = "side-dock-layout-root"
+    }
 }
