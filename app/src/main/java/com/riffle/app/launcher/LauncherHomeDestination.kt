@@ -70,9 +70,11 @@ private fun CardsHomeSurface(
     val stageEntries =
         shellState.snapshot.stages.stageDockDynamicEntries(
             state = state,
-            selectedStageId = shellState.snapshot.selectedStage?.id,
+            selectedStageId =
+                shellState.snapshot.selectedStage?.id.takeUnless { adaptiveStageContext.allNotificationsSelected },
             badgeCounts =
                 shellState.notificationCards.groupingBy { card -> card.content.stageId }.eachCount(),
+            allNotificationsSelected = adaptiveStageContext.allNotificationsSelected,
         )
     val dockInteractionHeight =
         maxOf(
@@ -114,6 +116,11 @@ private fun CardsHomeSurface(
             // of them -- including those of apps pinned to the static side, which mean something
             // different there (that one opens the app; this one brings its cards forward).
             dynamicEntries = stageEntries,
+            // The merged page is not a stage, so there is no action to send: it is a choice about
+            // what this surface is showing, which is what the interaction context holds.
+            onShowAllNotifications = {
+                onAdaptiveStageContextChanged(adaptiveStageContext.copy(allNotificationsSelected = true))
+            },
         )
         AdaptiveStageAppStageSurface(
             state = state,

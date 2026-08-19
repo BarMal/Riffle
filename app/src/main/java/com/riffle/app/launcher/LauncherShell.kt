@@ -232,10 +232,21 @@ internal val AdaptiveStageInteractionContextSaver =
                 context.detailCardKey.orEmpty(),
                 context.templateId.orEmpty(),
                 context.scrollOffsetPx.toString(),
+                context.allNotificationsSelected.toString(),
             )
         },
         restore = { saved ->
-            if (saved.size >= 6) {
+            if (saved.size >= 7) {
+                AdaptiveStageInteractionContext(
+                    selectedStageKey = saved.getOrNull(0)?.takeIf(String::isNotBlank),
+                    detailStageKey = saved.getOrNull(1)?.takeIf(String::isNotBlank),
+                    focusedCardKey = saved.getOrNull(2)?.takeIf(String::isNotBlank),
+                    detailCardKey = saved.getOrNull(3)?.takeIf(String::isNotBlank),
+                    templateId = saved.getOrNull(4)?.takeIf(String::isNotBlank),
+                    scrollOffsetPx = saved.getOrNull(5)?.toIntOrNull() ?: 0,
+                    allNotificationsSelected = saved.getOrNull(6).toBoolean(),
+                )
+            } else if (saved.size >= 6) {
                 AdaptiveStageInteractionContext(
                     selectedStageKey = saved.getOrNull(0)?.takeIf(String::isNotBlank),
                     detailStageKey = saved.getOrNull(1)?.takeIf(String::isNotBlank),

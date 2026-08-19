@@ -203,13 +203,30 @@ internal fun AdaptiveStageAppStageSurface(
                 globalReducedMotion = state.launcherSettings.motion.reducedMotion,
             )
         }
-    // Local, non-persisted UI state -- the "All notifications" page merges content across every
-    // real stage (see #1056/#1057), so it deliberately isn't a real AppStageId and never touches
-    // AppStagePlanner, LauncherShellAction's stage-selection reducer, or persisted preferences the
-    // way a real stage selection does. Selecting a real stage through any of the existing paths
-    // (SelectAppStage/prev/next/tap) implicitly leaves this page, since those all flow through the
-    // callbacks below that explicitly clear it.
-    var allNotificationsSelected by rememberSaveable { mutableStateOf(false) }
+    // The "All notifications" page merges content across every real stage (see #1056/#1057), so it
+    // deliberately isn't a real AppStageId and never touches AppStagePlanner, LauncherShellAction's
+    // stage-selection reducer, or persisted preferences the way a real stage selection does.
+    // Selecting a real stage through any of the existing paths (SelectAppStage/prev/next/tap)
+    // implicitly leaves this page, since those all flow through the callback below that clears it.
+    //
+    // It lives in the hoisted interaction context rather than in a rememberSaveable here: this
+    // surface is torn down whenever the launcher shows something else, so held locally the page was
+    // the one thing about "what you were looking at" that a trip to settings threw away.
+    // Mirrored from the context rather than read straight off it, the way every other piece of
+    // interaction state in this surface already is. [context] and [onContextChanged] are both
+    // defaulted, so a caller is free not to hoist -- and read directly, a caller that did not would
+    // have a page it could never reach, because its writes would go to a callback that does
+    // nothing. The effect below is what a caller that *does* hoist buys: the dock's merged-page
+    // entry sets the context from outside this surface, and this has to notice.
+    var allNotificationsSelectedValue by rememberSaveable { mutableStateOf(context.allNotificationsSelected) }
+    LaunchedEffect(context.allNotificationsSelected) {
+        allNotificationsSelectedValue = context.allNotificationsSelected
+    }
+    val allNotificationsSelected = allNotificationsSelectedValue
+    val onAllNotificationsSelectedChanged: (Boolean) -> Unit = { selected ->
+        allNotificationsSelectedValue = selected
+        onContextChanged(context.copy(allNotificationsSelected = selected))
+    }
     val allNotificationsDetailState =
         rememberAdaptiveStageCardDetailState(
             scopeKey = "all-notifications",
@@ -366,7 +383,7 @@ internal fun AdaptiveStageAppStageSurface(
                             allNotificationsDetailState = allNotificationsDetailState,
                             focusedCardId = focusedCardIdValue?.let(::LauncherCardId),
                             allNotificationsSelected = allNotificationsSelected,
-                            onAllNotificationsSelectedChanged = { allNotificationsSelected = it },
+                            onAllNotificationsSelectedChanged = onAllNotificationsSelectedChanged,
                             onFocusedCardChanged = {
                                 focusedCardIdValue = it?.value
                                 onContextChanged(context.copy(focusedCardKey = it?.value))
@@ -392,7 +409,7 @@ internal fun AdaptiveStageAppStageSurface(
                             focusedCardId = focusedCardIdValue?.let(::LauncherCardId),
                             selectedDetailCardId = detailOrigin?.cardId ?: focusedCardIdValue?.let(::LauncherCardId),
                             allNotificationsSelected = allNotificationsSelected,
-                            onAllNotificationsSelectedChanged = { allNotificationsSelected = it },
+                            onAllNotificationsSelectedChanged = onAllNotificationsSelectedChanged,
                             paneLayout = paneLayout,
                             onFocusedCardChanged = {
                                 focusedCardIdValue = it?.value
@@ -417,7 +434,7 @@ internal fun AdaptiveStageAppStageSurface(
                                 stages = shellState.snapshot.stages,
                                 selectedStageId = selectedStage?.id,
                                 allNotificationsSelected = allNotificationsSelected,
-                                onAllNotificationsSelectedChanged = { allNotificationsSelected = it },
+                                onAllNotificationsSelectedChanged = onAllNotificationsSelectedChanged,
                                 state = state,
                                 notificationCards = shellState.notificationCards,
                                 appIconLoader = appIconLoader,
@@ -434,7 +451,7 @@ internal fun AdaptiveStageAppStageSurface(
                                         stages = shellState.snapshot.stages,
                                         selectedStageId = selectedStage?.id,
                                         allNotificationsSelected = allNotificationsSelected,
-                                        onAllNotificationsSelectedChanged = { allNotificationsSelected = it },
+                                        onAllNotificationsSelectedChanged = onAllNotificationsSelectedChanged,
                                         state = state,
                                         notificationCards = shellState.notificationCards,
                                         appIconLoader = appIconLoader,
@@ -516,7 +533,7 @@ internal fun AdaptiveStageAppStageSurface(
                                         stages = shellState.snapshot.stages,
                                         selectedStageId = selectedStage?.id,
                                         allNotificationsSelected = allNotificationsSelected,
-                                        onAllNotificationsSelectedChanged = { allNotificationsSelected = it },
+                                        onAllNotificationsSelectedChanged = onAllNotificationsSelectedChanged,
                                         state = state,
                                         notificationCards = shellState.notificationCards,
                                         appIconLoader = appIconLoader,

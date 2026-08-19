@@ -84,6 +84,7 @@ internal fun Dock(
     interactions: DockInteractions,
     widgetPickerDockPreview: WidgetPickerDockPlacementPreview? = null,
     dynamicEntries: List<DockDynamicEntry> = emptyList(),
+    onShowAllNotifications: () -> Unit = {},
 ) {
     val presentation = DockPresentation(notificationGroupsByApp, appShortcutsByApp, widgetViewFactory, interactions)
 
@@ -120,6 +121,7 @@ internal fun Dock(
             position = position,
             widgetPickerDockPreview = widgetPickerDockPreview,
             dynamicEntries = dynamicEntries,
+            onShowAllNotifications = onShowAllNotifications,
         )
     }
 }

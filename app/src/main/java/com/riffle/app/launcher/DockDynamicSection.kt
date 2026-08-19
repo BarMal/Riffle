@@ -45,6 +45,7 @@ internal fun DockDynamicSection(
     runsHorizontally: Boolean,
     appIconLoader: AppIconLoader,
     onAction: (LauncherShellAction) -> Unit,
+    onShowAllNotifications: () -> Unit = {},
 ) {
     if (entries.isEmpty() || mainAxisDp <= 0) {
         return
@@ -70,7 +71,13 @@ internal fun DockDynamicSection(
                 entry = entry,
                 iconSizeDp = iconSizeDp,
                 appIconLoader = appIconLoader,
-                onAction = onAction,
+                onActivate = {
+                    when (val intent = entry.intent) {
+                        is DockDynamicEntryIntent.Dispatch -> onAction(intent.action)
+                        DockDynamicEntryIntent.ShowAllNotifications -> onShowAllNotifications()
+                        null -> Unit
+                    }
+                },
             )
         }
     }
@@ -103,7 +110,7 @@ private fun DockDynamicSectionTile(
     entry: DockDynamicEntry,
     iconSizeDp: Int,
     appIconLoader: AppIconLoader,
-    onAction: (LauncherShellAction) -> Unit,
+    onActivate: () -> Unit,
 ) {
     val label = entry.label
     val identity = entry.identity
@@ -118,7 +125,7 @@ private fun DockDynamicSectionTile(
                     contentDescription = entry.contentDescription
                     selected = isSelected
                 }
-                .clickable(enabled = entry.action != null) { entry.action?.let(onAction) }
+                .clickable(enabled = entry.intent != null, onClick = onActivate)
                 // A ring over the icon's edge rather than anything behind or around it: the tile is
                 // exactly one dock icon wide and the run was measured on that, so the mark for
                 // "this is the one showing" cannot be allowed to take any room.

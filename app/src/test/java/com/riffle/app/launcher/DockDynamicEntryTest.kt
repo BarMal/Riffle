@@ -29,7 +29,10 @@ class DockDynamicEntryTest {
     fun withoutAStageAnEntryLeavesForTheApp() {
         val entries = listOf(notificationCard(app = chatApp)).launchableDockDynamicEntries()
 
-        assertEquals(LauncherShellAction.LaunchApp(chatApp.identity), entries.single().action)
+        assertEquals(
+            DockDynamicEntryIntent.Dispatch(LauncherShellAction.LaunchApp(chatApp.identity)),
+            entries.single().intent,
+        )
         assertEquals(1, entries.single().badgeCount)
     }
 
@@ -39,14 +42,14 @@ class DockDynamicEntryTest {
         // so this is a tap that does nothing rather than an entry that is missing.
         val entries = listOf(notificationCard(app = null)).launchableDockDynamicEntries()
 
-        assertNull(entries.single().action)
+        assertNull(entries.single().intent)
     }
 
     @Test
     fun aStageEntryBringsItsStageForwardRatherThanLeaving() {
         val entries = listOf(stage(chatStageId)).stageDockDynamicEntries(state, null, emptyMap())
 
-        assertEquals(LauncherShellAction.SelectAppStage(chatStageId), entries.single().action)
+        assertEquals(selectStage(chatStageId), entries.stages().single().intent)
     }
 
     @Test
@@ -56,8 +59,8 @@ class DockDynamicEntryTest {
         val entries =
             listOf(stage(chatStageId)).stageDockDynamicEntries(LauncherShellState(), null, emptyMap())
 
-        assertEquals(LauncherShellAction.SelectAppStage(chatStageId), entries.single().action)
-        assertNull(entries.single().identity)
+        assertEquals(selectStage(chatStageId), entries.stages().single().intent)
+        assertNull(entries.stages().single().identity)
     }
 
     @Test
@@ -68,7 +71,7 @@ class DockDynamicEntryTest {
             listOf(stage(chatStageId), stage(mailStageId, pinned = true))
                 .stageDockDynamicEntries(state, null, emptyMap())
 
-        assertEquals(listOf(chatStageId, mailStageId), entries.map { entry -> entry.action.stageId() })
+        assertEquals(listOf(chatStageId, mailStageId), entries.stages().map { entry -> entry.intent.stageId() })
     }
 
     @Test
@@ -77,8 +80,8 @@ class DockDynamicEntryTest {
             listOf(stage(chatStageId), stage(mailStageId))
                 .stageDockDynamicEntries(state, mailStageId, emptyMap())
 
-        assertFalse(entries.first().isSelected)
-        assertTrue(entries.last().isSelected)
+        assertFalse(entries.stages().first().isSelected)
+        assertTrue(entries.stages().last().isSelected)
     }
 
     @Test
@@ -94,28 +97,70 @@ class DockDynamicEntryTest {
         val entries =
             listOf(stage(chatStageId)).stageDockDynamicEntries(state, null, mapOf(chatStageId to 3))
 
-        assertEquals(3, entries.single().badgeCount)
-        assertTrue(entries.single().contentDescription.contains("3 cards"))
+        assertEquals(3, entries.stages().single().badgeCount)
+        assertTrue(entries.stages().single().contentDescription.contains("3 cards"))
     }
 
     @Test
     fun aStageCarryingNothingIsNotBadged() {
         val entries = listOf(stage(chatStageId)).stageDockDynamicEntries(state, null, emptyMap())
 
-        assertEquals(0, entries.single().badgeCount)
-        assertFalse(entries.single().contentDescription.contains("card"))
+        assertEquals(0, entries.stages().single().badgeCount)
+        assertFalse(entries.stages().single().contentDescription.contains("card"))
     }
 
     @Test
     fun entriesAreKeyedApartAcrossTheTwoSources() {
         // Both sources can describe the same app, and the two entries are not interchangeable.
         val launchable = listOf(notificationCard(app = chatApp)).launchableDockDynamicEntries()
-        val stages = listOf(stage(chatStageId)).stageDockDynamicEntries(state, null, emptyMap())
+        val staged = listOf(stage(chatStageId)).stageDockDynamicEntries(state, null, emptyMap())
 
-        assertFalse(launchable.single().key == stages.single().key)
+        assertFalse(launchable.single().key == staged.stages().single().key)
     }
 
-    private fun LauncherShellAction?.stageId(): AppStageId? = (this as? LauncherShellAction.SelectAppStage)?.stageId
+    @Test
+    fun theStageListEndsWithTheMergedPage() {
+        // Last, as the rail kept it, and with no app behind it to borrow an icon from.
+        val entries = listOf(stage(chatStageId)).stageDockDynamicEntries(state, null, emptyMap())
+
+        assertEquals(DockDynamicEntryIntent.ShowAllNotifications, entries.last().intent)
+        assertNull(entries.last().identity)
+        assertTrue(entries.last().contentDescription.startsWith("All notifications"))
+    }
+
+    @Test
+    fun theMergedPageIsBadgedWithEverythingAcrossEveryStage() {
+        val entries =
+            listOf(stage(chatStageId), stage(mailStageId))
+                .stageDockDynamicEntries(state, null, mapOf(chatStageId to 2, mailStageId to 3))
+
+        assertEquals(5, entries.last().badgeCount)
+    }
+
+    @Test
+    fun theMergedPageIsTheSelectedEntryWhileItIsShowing() {
+        val entries =
+            listOf(stage(chatStageId))
+                .stageDockDynamicEntries(state, null, emptyMap(), allNotificationsSelected = true)
+
+        assertTrue(entries.last().isSelected)
+        assertTrue(entries.stages().none { entry -> entry.isSelected })
+    }
+
+    @Test
+    fun noStagesMeansNoEntriesAtAllNotAMergedPageOnItsOwn() {
+        // Nothing to merge, so offering the page that merges them would be an entry to nowhere.
+        assertTrue(emptyList<AppStage>().stageDockDynamicEntries(state, null, emptyMap()).isEmpty())
+    }
+
+    /** The stage entries, without the merged page every stage list ends with. */
+    private fun List<DockDynamicEntry>.stages(): List<DockDynamicEntry> = dropLast(1)
+
+    private fun selectStage(id: AppStageId): DockDynamicEntryIntent =
+        DockDynamicEntryIntent.Dispatch(LauncherShellAction.SelectAppStage(id))
+
+    private fun DockDynamicEntryIntent?.stageId(): AppStageId? =
+        ((this as? DockDynamicEntryIntent.Dispatch)?.action as? LauncherShellAction.SelectAppStage)?.stageId
 
     private fun stage(
         id: AppStageId,
