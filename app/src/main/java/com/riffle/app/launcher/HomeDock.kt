@@ -414,21 +414,25 @@ private fun dockMaxMainAxisDp(
 internal fun dockCrossAxisDp(iconSizeDp: Int): Int = iconSizeDp + DOCK_CROSS_AXIS_CHROME_DP
 
 /**
- * How much room the slots themselves get along the dock's run, after its own padding and the
- * [DOCK_MAX_MAIN_AXIS_DP] cap.
+ * How much room the slots themselves get along the dock's run, after the dock's own padding.
+ *
+ * [availableDockMainAxisDp] is taken as already capped, because how long a run may get depends on
+ * which way it runs and only the caller knows that -- re-applying the horizontal cap here would
+ * clamp a vertical dock to a number chosen for wide screens. The default is that horizontal cap,
+ * for callers asking about a horizontal dock without a container to measure against.
  */
 internal fun dockContentViewportMainAxisDp(
     slotCount: Int,
     iconSizeDp: Int,
     itemSpacingDp: Int,
-    availableDockMainAxisDp: Int = DOCK_MAX_MAIN_AXIS_DP,
+    availableDockMainAxisDp: Int = DOCK_MAX_HORIZONTAL_MAIN_AXIS_DP,
 ): Int {
     if (slotCount <= 0) {
         return 0
     }
     val contentMainAxis = (slotCount * iconSizeDp) + ((slotCount - 1) * itemSpacingDp)
-    val maxDockMainAxis = min(availableDockMainAxisDp, DOCK_MAX_MAIN_AXIS_DP)
-    val maxContentMainAxis = (maxDockMainAxis - (DOCK_MAIN_AXIS_PADDING_DP * 2)).coerceAtLeast(0)
+    val maxContentMainAxis =
+        (availableDockMainAxisDp - (DOCK_MAIN_AXIS_PADDING_DP * 2)).coerceAtLeast(0)
     return min(contentMainAxis, maxContentMainAxis)
 }
 
