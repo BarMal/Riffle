@@ -183,5 +183,14 @@ internal const val DOCK_DYNAMIC_SECTION_TEST_TAG = "dock-dynamic-section"
  * A permission prompt is deliberately not one of them: it is a paragraph asking for access, which
  * has nowhere to go in a strip one icon deep. The shelf still shows it.
  */
-internal fun DockNotificationShelfState.dynamicEntries(): List<DockDynamicEntry> =
-    (this as? DockNotificationShelfState.Content)?.cards.orEmpty().launchableDockDynamicEntries()
+internal fun DockNotificationShelfState.dynamicEntries(): List<DockDynamicEntry> {
+    return dockNotificationCards().launchableDockDynamicEntries()
+}
+
+/**
+ * The de-duplicated notification cards behind the dynamic section -- what an app pinned to the
+ * static side is already excluded from. Cards mode builds stage-selecting entries from these rather
+ * than the launch-opening ones [dynamicEntries] gives grid mode.
+ */
+internal fun DockNotificationShelfState.dockNotificationCards(): List<DockNotificationCardState> =
+    (this as? DockNotificationShelfState.Content)?.cards.orEmpty()

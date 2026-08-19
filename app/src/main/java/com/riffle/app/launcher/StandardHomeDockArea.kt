@@ -45,6 +45,7 @@ internal fun StandardHomeDockArea(
     isWidgetPickerInteractionActive: Boolean = false,
     dynamicEntries: List<DockDynamicEntry> = notificationShelfState.dynamicEntries(),
     onShowAllNotifications: () -> Unit = {},
+    staticTapBehaviour: DockStaticTapBehaviour = DockStaticTapBehaviour.Launch,
 ) {
     if (!layout.shouldShowDock()) {
         return
@@ -71,6 +72,7 @@ internal fun StandardHomeDockArea(
             reducedMotion = presentation.reducedMotion,
             homeInsetPolicy = presentation.homeInsetPolicy,
             homeLayout = layout,
+            staticTapBehaviour = staticTapBehaviour,
             onAction = actions.onAction,
         )
     val margins = layout.settings.grid.margin.centered()

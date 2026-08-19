@@ -1,15 +1,11 @@
 package com.riffle.app.launcher
 
-import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.apps.AppActivityName
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppProfile
 import com.riffle.core.domain.launcher.apps.InstalledApp
-import com.riffle.core.domain.launcher.cards.AppStage
 import com.riffle.core.domain.launcher.cards.AppStageId
-import com.riffle.core.domain.launcher.cards.AppStageLifecycle
-import com.riffle.core.domain.launcher.cards.AppStageOrigin
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
 import com.riffle.core.domain.launcher.notifications.LauncherNotification
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
@@ -22,12 +18,13 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * What the dock's dynamic side is showing, which is a different list in each view mode.
+ * What the dock's dynamic side shows -- the same de-duplicated notification list in both modes, but
+ * a tap opens the app (grid) or brings its stage forward (Cards).
  */
 class DockDynamicEntryTest {
     @Test
-    fun withoutAStageAnEntryLeavesForTheApp() {
-        val entries = listOf(notificationCard(app = chatApp)).launchableDockDynamicEntries()
+    fun inGridAnEntryOpensTheApp() {
+        val entries = listOf(notificationCard(chatApp)).launchableDockDynamicEntries()
 
         assertEquals(
             DockDynamicEntryIntent.Dispatch(LauncherShellAction.LaunchApp(chatApp.identity)),
@@ -37,7 +34,7 @@ class DockDynamicEntryTest {
     }
 
     @Test
-    fun anAppTheLauncherCannotResolveHasNothingToLaunch() {
+    fun inGridAnAppTheLauncherCannotResolveHasNothingToOpen() {
         // The entry still stands -- the notification is real even when the app behind it has gone --
         // so this is a tap that does nothing rather than an entry that is missing.
         val entries = listOf(notificationCard(app = null)).launchableDockDynamicEntries()
@@ -46,152 +43,86 @@ class DockDynamicEntryTest {
     }
 
     @Test
-    fun aStageEntryBringsItsStageForwardRatherThanLeaving() {
-        val entries = listOf(stage(chatStageId)).stageDockDynamicEntries(state, null, emptyMap())
+    fun inCardsAnEntryBringsItsStageForward() {
+        val entries = listOf(notificationCard(chatApp)).stageSelectingDockDynamicEntries(selectedStageId = null)
 
-        assertEquals(selectStage(chatStageId), entries.stages().single().intent)
+        assertEquals(selectStage(chatStageId), entries.single().intent)
     }
 
     @Test
-    fun aStageIsStillReachableWhenTheLauncherCannotResolveItsApp() {
-        // Unlike launching, this does not need the app: a stage is reachable whether or not the
-        // launcher currently has an installed app to put an icon to.
-        val entries =
-            listOf(stage(chatStageId)).stageDockDynamicEntries(LauncherShellState(), null, emptyMap())
+    fun inCardsAStageIsStillReachableWhenTheLauncherCannotResolveItsApp() {
+        // Selecting a stage does not need the app resolved -- the stage is built from the very
+        // notification the entry is showing.
+        val entries = listOf(notificationCard(app = null)).stageSelectingDockDynamicEntries(selectedStageId = null)
 
-        assertEquals(selectStage(chatStageId), entries.stages().single().intent)
-        assertNull(entries.stages().single().identity)
+        assertEquals(selectStage(chatStageId), entries.single().intent)
+        assertNull(entries.single().identity)
     }
 
     @Test
-    fun everyStageGetsAnEntryIncludingAPinnedApps() {
-        // The dynamic side is how the user moves between stages, so leaving one out would make it
-        // the only stage with no way to reach it.
+    fun inCardsTheEntryWhoseStageIsShowingIsSelected() {
         val entries =
-            listOf(stage(chatStageId), stage(mailStageId, pinned = true))
-                .stageDockDynamicEntries(state, null, emptyMap())
+            listOf(notificationCard(chatApp), notificationCard(mailApp, group = mailApp))
+                .stageSelectingDockDynamicEntries(selectedStageId = mailStageId)
 
-        assertEquals(listOf(chatStageId, mailStageId), entries.stages().map { entry -> entry.intent.stageId() })
+        assertFalse(entries.first().isSelected)
+        assertTrue(entries.last().isSelected)
     }
 
     @Test
-    fun theStageThatIsShowingIsTheSelectedEntry() {
+    fun inCardsNothingShowingLeavesEveryEntryUnselected() {
         val entries =
-            listOf(stage(chatStageId), stage(mailStageId))
-                .stageDockDynamicEntries(state, mailStageId, emptyMap())
-
-        assertFalse(entries.stages().first().isSelected)
-        assertTrue(entries.stages().last().isSelected)
-    }
-
-    @Test
-    fun nothingShowingLeavesEveryEntryUnselected() {
-        val entries =
-            listOf(stage(chatStageId), stage(mailStageId)).stageDockDynamicEntries(state, null, emptyMap())
+            listOf(notificationCard(chatApp), notificationCard(mailApp, group = mailApp))
+                .stageSelectingDockDynamicEntries(selectedStageId = null)
 
         assertTrue(entries.none { entry -> entry.isSelected })
     }
 
     @Test
-    fun aStageEntryIsBadgedWithWhatItIsCarrying() {
-        val entries =
-            listOf(stage(chatStageId)).stageDockDynamicEntries(state, null, mapOf(chatStageId to 3))
+    fun aCardsEntryIsBadgedWithHowManyAreWaiting() {
+        val entries = listOf(notificationCard(chatApp, count = 3)).stageSelectingDockDynamicEntries(null)
 
-        assertEquals(3, entries.stages().single().badgeCount)
-        assertTrue(entries.stages().single().contentDescription.contains("3 cards"))
+        assertEquals(3, entries.single().badgeCount)
+        assertTrue(entries.single().contentDescription.contains("3 cards"))
     }
 
     @Test
-    fun aStageCarryingNothingIsNotBadged() {
-        val entries = listOf(stage(chatStageId)).stageDockDynamicEntries(state, null, emptyMap())
+    fun theTwoModesKeyTheirEntriesApart() {
+        // Both build from the same card, and the two entries mean different things, so they are not
+        // interchangeable in a keyed list.
+        val launchable = listOf(notificationCard(chatApp)).launchableDockDynamicEntries()
+        val selecting = listOf(notificationCard(chatApp)).stageSelectingDockDynamicEntries(null)
 
-        assertEquals(0, entries.stages().single().badgeCount)
-        assertFalse(entries.stages().single().contentDescription.contains("card"))
+        assertFalse(launchable.single().key == selecting.single().key)
     }
-
-    @Test
-    fun entriesAreKeyedApartAcrossTheTwoSources() {
-        // Both sources can describe the same app, and the two entries are not interchangeable.
-        val launchable = listOf(notificationCard(app = chatApp)).launchableDockDynamicEntries()
-        val staged = listOf(stage(chatStageId)).stageDockDynamicEntries(state, null, emptyMap())
-
-        assertFalse(launchable.single().key == staged.stages().single().key)
-    }
-
-    @Test
-    fun theStageListEndsWithTheMergedPage() {
-        // Last, as the rail kept it, and with no app behind it to borrow an icon from.
-        val entries = listOf(stage(chatStageId)).stageDockDynamicEntries(state, null, emptyMap())
-
-        assertEquals(DockDynamicEntryIntent.ShowAllNotifications, entries.last().intent)
-        assertNull(entries.last().identity)
-        assertTrue(entries.last().contentDescription.startsWith("All notifications"))
-    }
-
-    @Test
-    fun theMergedPageIsBadgedWithEverythingAcrossEveryStage() {
-        val entries =
-            listOf(stage(chatStageId), stage(mailStageId))
-                .stageDockDynamicEntries(state, null, mapOf(chatStageId to 2, mailStageId to 3))
-
-        assertEquals(5, entries.last().badgeCount)
-    }
-
-    @Test
-    fun theMergedPageIsTheSelectedEntryWhileItIsShowing() {
-        val entries =
-            listOf(stage(chatStageId))
-                .stageDockDynamicEntries(state, null, emptyMap(), allNotificationsSelected = true)
-
-        assertTrue(entries.last().isSelected)
-        assertTrue(entries.stages().none { entry -> entry.isSelected })
-    }
-
-    @Test
-    fun noStagesMeansNoEntriesAtAllNotAMergedPageOnItsOwn() {
-        // Nothing to merge, so offering the page that merges them would be an entry to nowhere.
-        assertTrue(emptyList<AppStage>().stageDockDynamicEntries(state, null, emptyMap()).isEmpty())
-    }
-
-    /** The stage entries, without the merged page every stage list ends with. */
-    private fun List<DockDynamicEntry>.stages(): List<DockDynamicEntry> = dropLast(1)
 
     private fun selectStage(id: AppStageId): DockDynamicEntryIntent =
         DockDynamicEntryIntent.Dispatch(LauncherShellAction.SelectAppStage(id))
 
-    private fun DockDynamicEntryIntent?.stageId(): AppStageId? =
-        ((this as? DockDynamicEntryIntent.Dispatch)?.action as? LauncherShellAction.SelectAppStage)?.stageId
-
-    private fun stage(
-        id: AppStageId,
-        pinned: Boolean = false,
-    ): AppStage =
-        AppStage(
-            id = id,
-            origins = setOf(if (pinned) AppStageOrigin.PINNED else AppStageOrigin.DYNAMIC),
-            lifecycle = AppStageLifecycle.ACTIVE,
-        )
-
-    private fun notificationCard(app: InstalledApp?): DockNotificationCardState =
+    private fun notificationCard(
+        app: InstalledApp?,
+        group: InstalledApp = chatApp,
+        count: Int = 1,
+    ): DockNotificationCardState =
         DockNotificationCardState(
             app = app,
             group =
                 AppNotificationGroup(
-                    packageName = chatApp.identity.packageName,
-                    profileId = chatApp.identity.profile.id,
+                    packageName = group.identity.packageName,
+                    profileId = group.identity.profile.id,
                     latestCategory = NotificationCategory.MESSAGE,
                     latestAgeBucket = NotificationAgeBucket.RECENT,
                     notifications =
-                        listOf(
+                        (1..count).map { index ->
                             LauncherNotification(
-                                key = LauncherNotificationKey("chat-1"),
-                                packageName = chatApp.identity.packageName,
-                                profileId = chatApp.identity.profile.id,
-                                title = "Chat",
-                                text = "One waiting",
-                                postedAtEpochMillis = 1L,
-                            ),
-                        ),
+                                key = LauncherNotificationKey("${group.label}-$index"),
+                                packageName = group.identity.packageName,
+                                profileId = group.identity.profile.id,
+                                title = group.label,
+                                text = "waiting",
+                                postedAtEpochMillis = index.toLong(),
+                            )
+                        },
                 ),
         )
 
@@ -199,12 +130,8 @@ class DockDynamicEntryTest {
         private val chatApp = installedApp("chat", "Chat")
         private val mailApp = installedApp("mail", "Mail")
 
-        private val chatStageId =
-            AppStageId(chatApp.identity.packageName, chatApp.identity.profile.id)
-        private val mailStageId =
-            AppStageId(mailApp.identity.packageName, mailApp.identity.profile.id)
-
-        private val state = LauncherShellState(installedApps = listOf(chatApp, mailApp))
+        private val chatStageId = AppStageId(chatApp.identity.packageName, chatApp.identity.profile.id)
+        private val mailStageId = AppStageId(mailApp.identity.packageName, mailApp.identity.profile.id)
 
         private fun installedApp(
             name: String,
