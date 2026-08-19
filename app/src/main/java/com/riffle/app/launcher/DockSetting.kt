@@ -4,6 +4,8 @@ package com.riffle.app.launcher
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.selection.selectableGroup
@@ -21,6 +23,7 @@ import com.riffle.core.domain.launcher.home.DockExpandAffordance
 import com.riffle.core.domain.launcher.home.DockModel
 import com.riffle.core.domain.launcher.home.DockPosition
 import com.riffle.core.domain.launcher.home.DockVisualEffect
+import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.home.MAX_DOCK_BACKGROUND_ALPHA_PERCENT
 import com.riffle.core.domain.launcher.home.MAX_DOCK_CORNER_RADIUS_DP
 import com.riffle.core.domain.launcher.home.MAX_DOCK_HOME_CONTROLS_SPACING_DP
@@ -29,11 +32,13 @@ import com.riffle.core.domain.launcher.home.MIN_DOCK_BACKGROUND_ALPHA_PERCENT
 import com.riffle.core.domain.launcher.home.MIN_DOCK_CORNER_RADIUS_DP
 import com.riffle.core.domain.launcher.home.MIN_DOCK_HOME_CONTROLS_SPACING_DP
 import com.riffle.core.domain.launcher.home.MIN_DOCK_ICON_SIZE_DP
+import com.riffle.core.domain.launcher.home.placeableDockPositions
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 
 @Composable
 internal fun DockSetting(
     dock: DockModel,
+    viewMode: LauncherViewMode,
     notificationAccessStatus: NotificationAccessStatus,
     onAction: (LauncherShellAction) -> Unit,
 ) {
@@ -49,6 +54,7 @@ internal fun DockSetting(
         )
         DockPositionSetting(
             position = dock.position,
+            placeablePositions = viewMode.placeableDockPositions,
             onAction = onAction,
         )
         DockExpandableSetting(
@@ -257,22 +263,25 @@ private fun DockVisibilitySetting(
  * layout the settings screen is showing, the same as every control beside it.
  */
 @Composable
+@OptIn(ExperimentalLayoutApi::class)
 private fun DockPositionSetting(
     position: DockPosition?,
+    placeablePositions: List<DockPosition>,
     onAction: (LauncherShellAction) -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         SettingsTextColumn(
             title = "Dock position",
-            subtitle =
-                position?.label()
-                    ?: "Following the active Cards template",
+            subtitle = dockPositionSubtitle(position, placeablePositions),
         )
-        Row(
+        // Wrapping, because four edges do not fit across a phone: a plain Row measured the last
+        // one to nothing, so a Cards layout could never reach whichever edge fell off the end.
+        FlowRow(
             modifier = Modifier.fillMaxWidth().selectableGroup(),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            DockPosition.entries.forEach { candidate ->
+            placeablePositions.forEach { candidate ->
                 TextButton(
                     modifier =
                         Modifier
@@ -287,6 +296,24 @@ private fun DockPositionSetting(
         }
     }
 }
+
+/**
+ * What the control says the dock is doing, which is not always what is stored.
+ *
+ * A layout can hold an edge it cannot place -- the top edge was offered to every layout before the
+ * home dock's three were separated from the rail's four -- and saying "Top edge" while the dock
+ * sits at the bottom is the papercut this whole change is about. Naming the mismatch is the one
+ * honest option left, and tapping any offered edge leaves the state behind.
+ */
+private fun dockPositionSubtitle(
+    position: DockPosition?,
+    placeablePositions: List<DockPosition>,
+): String =
+    when {
+        position == null -> "Following the active Cards template"
+        position in placeablePositions -> position.label()
+        else -> "${position.label()} is not available on this layout, so the dock is on the bottom edge"
+    }
 
 private fun DockPosition.label(): String =
     when (this) {
