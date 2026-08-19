@@ -12,7 +12,6 @@ class DockOverflowModePolicyTest {
                 slotCount = 5,
                 iconSizeDp = 56,
                 itemSpacingDp = 24,
-                minIconSizeDp = 32,
                 availableMainAxisDp = 252,
             ),
         )
@@ -26,7 +25,6 @@ class DockOverflowModePolicyTest {
                 slotCount = 5,
                 iconSizeDp = 48,
                 itemSpacingDp = 10,
-                minIconSizeDp = 32,
                 availableMainAxisDp = 280,
             ),
         )
@@ -40,7 +38,6 @@ class DockOverflowModePolicyTest {
                 slotCount = 5,
                 iconSizeDp = 56,
                 itemSpacingDp = 24,
-                minIconSizeDp = 32,
                 availableMainAxisDp = 376,
             ),
         )
@@ -54,22 +51,7 @@ class DockOverflowModePolicyTest {
                 slotCount = 5,
                 iconSizeDp = 48,
                 itemSpacingDp = 10,
-                minIconSizeDp = 32,
                 availableMainAxisDp = 160,
-            ),
-        )
-    }
-
-    @Test
-    fun classifiesTooLittleRunForTheHardMinimumAsRequiresOverflowNavigation() {
-        assertEquals(
-            DockOverflowMode.RequiresOverflowNavigation,
-            dockOverflowMode(
-                slotCount = 5,
-                iconSizeDp = 48,
-                itemSpacingDp = 10,
-                minIconSizeDp = 32,
-                availableMainAxisDp = 159,
             ),
         )
     }

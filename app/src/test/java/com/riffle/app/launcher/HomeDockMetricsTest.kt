@@ -5,6 +5,8 @@ import com.riffle.core.domain.launcher.home.DockModel
 import com.riffle.core.domain.launcher.home.DockOverflowMode
 import com.riffle.core.domain.launcher.home.HostedWidgetId
 import com.riffle.core.domain.launcher.home.LauncherItemId
+import com.riffle.core.domain.launcher.home.MIN_DOCK_ICON_SIZE_DP
+import com.riffle.core.domain.launcher.home.MIN_DOCK_ITEM_SPACING_DP
 import com.riffle.core.domain.launcher.home.WidgetItem
 import com.riffle.core.domain.launcher.settings.MotionPerformanceTargetFps
 import org.junit.Assert.assertEquals
@@ -122,7 +124,10 @@ class HomeDockMetricsTest {
     }
 
     @Test
-    fun dockSlotRenderMetricsPreservesConfiguredMetricsWhenHardMinimumCannotFit() {
+    fun tooLittleRoomCompactsToTheFloorAndLetsTheRestScroll() {
+        // Previously this case gave up and returned the configured, uncompacted size, so a dock
+        // that grew slightly too narrow to compact into suddenly showed *bigger* icons than one
+        // that just fit. Compacting to the floor and scrolling past it removes that discontinuity.
         val metrics =
             dockSlotRenderMetrics(
                 slotCount = 5,
@@ -133,13 +138,13 @@ class HomeDockMetricsTest {
 
         assertEquals(
             DockSlotRenderMetrics(
-                iconSizeDp = 48,
-                itemSpacingDp = 10,
-                overflowMode = DockOverflowMode.RequiresOverflowNavigation,
+                iconSizeDp = MIN_DOCK_ICON_SIZE_DP,
+                itemSpacingDp = MIN_DOCK_ITEM_SPACING_DP,
+                overflowMode = DockOverflowMode.FitByCompaction,
             ),
             metrics,
         )
-        assertEquals(280, dockSlotContentMainAxisDp(slotCount = 5, metrics = metrics))
+        assertEquals(160, dockSlotContentMainAxisDp(slotCount = 5, metrics = metrics))
     }
 
     @Test
@@ -534,13 +539,6 @@ class HomeDockMetricsTest {
         )
     }
 
-    @Test
-    fun dockOverflowRequiresMoreItemsThanCapacity() {
-        assertEquals(true, dockHasOverflow(capacity = 5, itemCount = 6))
-        assertEquals(false, dockHasOverflow(capacity = 5, itemCount = 5))
-        assertEquals(false, dockHasOverflow(capacity = 0, itemCount = 1))
-    }
-
     private class FakeDockShelfFrameRatePlatform(
         initialFrameRate: Float?,
         private val supportedFrameRates: List<Float>? = listOf(60f, 90f, 120f),
@@ -564,81 +562,43 @@ class HomeDockMetricsTest {
     }
 
     @Test
-    fun expandedDockSplitsPrimaryAndOverflowShelfItemsOnTheMainDockGrid() {
+    fun everyDockItemRendersWhateverTheCapacityIs() {
+        // Capacity no longer truncates. All seven items are laid out; the strip scrolls.
         val items = (1..7).map { index -> widget("widget:$index", index) }
         val dock = DockModel(capacity = 5, items = items)
 
-        assertEquals(items.take(5), dock.primaryDock(showShelf = true).items)
-        assertEquals(items.drop(5), dock.overflowShelfDock().items)
-        assertEquals(5, dock.overflowShelfDock().capacity)
+        assertEquals(
+            7,
+            dockRenderedSlotCount(capacity = dock.capacity, itemCount = dock.items.size, isEditing = false),
+        )
     }
 
     @Test
-    fun collapsedPrimaryDockKeepsOverflowItemsForTheExpandedShelf() {
-        val items = (1..7).map { index -> widget("widget:$index", index) }
-        val dock = DockModel(capacity = 5, items = items)
-
-        assertEquals(items, dock.primaryDock(showShelf = false).items)
-        assertEquals(7, dockRenderedSlotCount(capacity = dock.capacity, itemCount = dock.items.size, isEditing = false))
-    }
-
-    @Test
-    fun expandedDockRowsKeepTheirOwnOccupiedSlotCounts() {
-        val items = (1..7).map { index -> widget("widget:$index", index) }
-        val dock = DockModel(capacity = 5, items = items)
-        val primaryDock = dock.primaryDock(showShelf = true)
-        val overflowDock = dock.overflowShelfDock()
-        val primaryRenderedSlotCount =
-            dockRenderedSlotCount(
-                capacity = primaryDock.capacity,
-                itemCount = primaryDock.items.size,
-                isEditing = false,
-            )
-        val overflowRenderedSlotCount =
-            dockRenderedSlotCount(
-                capacity = overflowDock.capacity,
-                itemCount = overflowDock.items.size,
-                isEditing = false,
-            )
-
-        assertEquals(5, primaryRenderedSlotCount)
-        assertEquals(2, overflowRenderedSlotCount)
-
-        val primaryWidth =
+    fun theDockSizesToItsCapacityRatherThanToHowManyItemsItHoldsOnceItIsFull() {
+        // What makes capacity mean "visible at once": five slots' worth of room whether the dock
+        // holds five items or twelve, so adding apps scrolls the strip instead of shrinking every
+        // icon in it.
+        val dock = DockModel(capacity = 5, items = emptyList())
+        val fiveSlots =
             dockContainerMainAxisDp(
-                availableMainAxisDp = 320,
-                slotCount = primaryRenderedSlotCount,
-                iconSizeDp = primaryDock.iconSizeDp,
-                itemSpacingDp = primaryDock.itemSpacingDp,
-                backgroundSizing = primaryDock.backgroundSizing,
+                availableMainAxisDp = 400,
+                slotCount = 5,
+                iconSizeDp = dock.iconSizeDp,
+                itemSpacingDp = dock.itemSpacingDp,
+                backgroundSizing = dock.backgroundSizing,
             )
-        val overflowWidth =
+        val twelveSlots =
             dockContainerMainAxisDp(
-                availableMainAxisDp = 320,
-                slotCount = overflowRenderedSlotCount,
-                iconSizeDp = overflowDock.iconSizeDp,
-                itemSpacingDp = overflowDock.itemSpacingDp,
-                backgroundSizing = overflowDock.backgroundSizing,
-            )
-        val primaryViewportWidth =
-            dockContentViewportMainAxisDp(
-                slotCount = primaryRenderedSlotCount,
-                iconSizeDp = primaryDock.iconSizeDp,
-                itemSpacingDp = primaryDock.itemSpacingDp,
-                availableDockMainAxisDp = primaryWidth,
-            )
-        val overflowViewportWidth =
-            dockContentViewportMainAxisDp(
-                slotCount = overflowRenderedSlotCount,
-                iconSizeDp = overflowDock.iconSizeDp,
-                itemSpacingDp = overflowDock.itemSpacingDp,
-                availableDockMainAxisDp = overflowWidth,
+                availableMainAxisDp = 400,
+                slotCount = 12,
+                iconSizeDp = dock.iconSizeDp,
+                itemSpacingDp = dock.itemSpacingDp,
+                backgroundSizing = dock.backgroundSizing,
             )
 
-        assertEquals(308, primaryWidth)
-        assertEquals(134, overflowWidth)
-        assertEquals(280, primaryViewportWidth)
-        assertEquals(106, overflowViewportWidth)
+        // Twelve slots would want more room than five, which is exactly the widening the dock must
+        // not do now that the surface sizes from capacity instead of from the item count.
+        assertEquals(true, twelveSlots > fiveSlots)
     }
 
     @Test

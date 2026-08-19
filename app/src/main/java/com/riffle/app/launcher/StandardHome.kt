@@ -482,7 +482,7 @@ internal fun StandardHomeDockOnlySurface(
             notificationAccessStatus = presentation.notificationAccessStatus,
             apps = presentation.installedApps,
         )
-    val dockShelf = rememberDockShelfController(visibleLayout, notificationShelfState)
+    val dockShelf = rememberDockShelfController(notificationShelfState)
     val actions =
         HomeWorkspaceActions(
             onFolderOpen = { folder -> openedFolderId.value = folder.id },
@@ -542,7 +542,7 @@ private fun StandardHomeColumn(
             notificationAccessStatus = state.presentation.notificationAccessStatus,
             apps = state.presentation.installedApps,
         )
-    val dockShelf = rememberDockShelfController(state.visibleLayout, notificationShelfState)
+    val dockShelf = rememberDockShelfController(notificationShelfState)
     val homeActions =
         actions.copy(
             onBackgroundClick = dockShelf.dismiss,
@@ -624,16 +624,10 @@ private fun StandardHomeColumn(
 }
 
 @Composable
-private fun rememberDockShelfController(
-    layout: HomeLayout,
-    notificationShelfState: DockNotificationShelfState,
-): DockShelfController {
+private fun rememberDockShelfController(notificationShelfState: DockNotificationShelfState): DockShelfController {
     val isExpanded = remember { mutableStateOf(false) }
     val hasContent =
-        dockHasExpandedContent(
-            hasOverflow = dockHasOverflow(capacity = layout.dock.capacity, itemCount = layout.dock.items.size),
-            notificationShelfState = notificationShelfState,
-        )
+        dockHasExpandedContent(notificationShelfState = notificationShelfState)
 
     LaunchedEffect(hasContent) {
         isExpanded.value =

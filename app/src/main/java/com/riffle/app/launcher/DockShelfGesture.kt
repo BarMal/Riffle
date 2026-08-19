@@ -11,11 +11,6 @@ import androidx.compose.ui.input.pointer.pointerInput
 import com.riffle.core.domain.launcher.home.DockExpandAffordance
 import kotlin.math.abs
 
-internal fun dockHasOverflow(
-    capacity: Int,
-    itemCount: Int,
-): Boolean = capacity > 0 && itemCount > capacity
-
 internal fun dockShelfGestureExpandedState(
     isExpanded: Boolean,
     horizontalDragPx: Float,
@@ -57,10 +52,16 @@ internal fun dockShelfExpandedStateForContent(
     hasContent: Boolean,
 ): Boolean = isExpanded && hasContent
 
-internal fun dockHasExpandedContent(
-    hasOverflow: Boolean,
-    notificationShelfState: DockNotificationShelfState,
-): Boolean = hasOverflow || notificationShelfState != DockNotificationShelfState.Hidden
+/**
+ * Whether the shelf has anything to show.
+ *
+ * Only the notification section, now that apps past the dock's capacity are reached by scrolling
+ * the strip rather than by opening the shelf. Expanding used to show *fewer* apps in the dock's own
+ * row than the collapsed dock did, which was the clearest sign the shelf was answering the wrong
+ * question.
+ */
+internal fun dockHasExpandedContent(notificationShelfState: DockNotificationShelfState): Boolean =
+    notificationShelfState != DockNotificationShelfState.Hidden
 
 internal fun Modifier.dockShelfGestureInput(interactions: DockInteractions): Modifier =
     fillMaxWidth()

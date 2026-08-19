@@ -47,9 +47,7 @@ internal fun dockSlotRenderMetrics(
             )
         }
 
-        DockOverflowMode.Fits,
-        DockOverflowMode.RequiresOverflowNavigation,
-        ->
+        DockOverflowMode.Fits ->
             DockSlotRenderMetrics(
                 iconSizeDp = iconSizeDp,
                 itemSpacingDp = itemSpacingDp,

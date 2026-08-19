@@ -42,10 +42,7 @@ internal fun StandardHomeDockArea(
     }
 
     val hasExpandedContent =
-        dockHasExpandedContent(
-            hasOverflow = dockHasOverflow(capacity = layout.dock.capacity, itemCount = layout.dock.items.size),
-            notificationShelfState = notificationShelfState,
-        )
+        dockHasExpandedContent(notificationShelfState = notificationShelfState)
     // Expandability is the user's per-layout choice; content and edit mode are still what decide
     // whether there is anything to expand into right now.
     val canExpand =
@@ -108,7 +105,7 @@ internal fun StandardHomeDockArea(
                 )
             } else {
                 Dock(
-                    dock = layout.dock.primaryDock(showShelf = false),
+                    dock = layout.dock,
                     isEditing = layout.editMode is HomeEditMode.EditingPage,
                     notificationGroupsByApp = presentation.notificationGroupsByApp,
                     appShortcutsByApp = presentation.appShortcutsByApp,
