@@ -86,6 +86,7 @@ import androidx.compose.ui.unit.dp
 import com.riffle.app.launcher.notifications.AndroidNotificationStageActionGateway
 import com.riffle.app.launcher.notifications.AppStageEmptyAppCard
 import com.riffle.app.launcher.notifications.AppStageNotificationCard
+import com.riffle.app.launcher.notifications.AppStageShellState
 import com.riffle.app.launcher.notifications.AppStageShellStateReconciler
 import com.riffle.app.launcher.notifications.NotificationStageAction
 import com.riffle.core.domain.launcher.LauncherShellState
@@ -173,6 +174,7 @@ internal fun AdaptiveStageAppStageSurface(
     context: AdaptiveStageInteractionContext = AdaptiveStageInteractionContext(),
     onContextChanged: (AdaptiveStageInteractionContext) -> Unit = {},
     appIconLoader: AppIconLoader = EmptyAppIconLoader,
+    shellState: AppStageShellState = rememberAppStageShellState(state),
 ) {
     val density = LocalDensity.current
     val layoutDirection = LocalLayoutDirection.current
@@ -183,8 +185,6 @@ internal fun AdaptiveStageAppStageSurface(
             end = with(density) { windowInsets.getRight(this, layoutDirection).toDp().value.toInt() },
             bottom = with(density) { windowInsets.getBottom(this).toDp().value.toInt() },
         )
-    val reconciler = remember { AppStageShellStateReconciler(AndroidNotificationStageActionGateway) }
-    val shellState = reconciler.reconcile(state)
     val selectedStage = shellState.snapshot.selectedStage
     var detailCardKey by rememberSaveable { mutableStateOf(context.detailCardKey) }
     var detailStageKey by rememberSaveable {
@@ -3263,7 +3263,22 @@ internal fun adaptiveStageStageSelectorItemKey(stage: AppStage): String {
     return "${stage.id.profileId.value}:${stage.id.packageName.value}"
 }
 
-private fun stageLabel(
+/**
+ * The reconciled stage snapshot for this composition.
+ *
+ * The reconciler carries the previous snapshot -- that is how an empty dynamic stage survives the
+ * notification that made it going away -- so there must only ever be one per surface. Anything that
+ * needs the stages alongside [AdaptiveStageAppStageSurface] takes this and hands it in, rather than
+ * reconciling a second time and getting a snapshot with a history of its own.
+ */
+@Composable
+internal fun rememberAppStageShellState(state: LauncherShellState): AppStageShellState {
+    val reconciler = remember { AppStageShellStateReconciler(AndroidNotificationStageActionGateway) }
+    return reconciler.reconcile(state)
+}
+
+/** An app's name for a stage, shared with the dock so both name a stage the same way. */
+internal fun stageLabel(
     id: AppStageId,
     state: LauncherShellState,
 ): String =
@@ -3273,7 +3288,8 @@ private fun stageLabel(
         app.identity.profile.profileDisplayLabel(app.label)
     } ?: "${id.packageName.value} (${id.profileId.value})"
 
-private fun stageAppIdentity(
+/** The installed app behind a stage, or null once the launcher has lost track of it. */
+internal fun stageAppIdentity(
     id: AppStageId,
     state: LauncherShellState,
 ): AppIdentity? =

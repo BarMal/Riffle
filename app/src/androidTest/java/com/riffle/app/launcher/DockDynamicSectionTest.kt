@@ -17,17 +17,11 @@ import com.riffle.core.domain.launcher.apps.AppActivityName
 import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppProfile
-import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.cards.AppStageId
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.DockModel
 import com.riffle.core.domain.launcher.home.DockPosition
 import com.riffle.core.domain.launcher.home.LauncherItemId
-import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
-import com.riffle.core.domain.launcher.notifications.LauncherNotification
-import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
-import com.riffle.core.domain.launcher.notifications.NotificationAgeBucket
-import com.riffle.core.domain.launcher.notifications.NotificationCategory
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -37,9 +31,9 @@ import org.junit.runner.RunWith
 /**
  * The dock's two sections are one dock.
  *
- * What the user pinned and what has just arrived sit in the same strip, on the same edge, inside
- * the same surface -- rather than the pinned items being a dock and everything else being a rail
- * somewhere else on screen.
+ * What the user pinned and what the dock is showing dynamically sit in the same strip, on the same
+ * edge, inside the same surface -- rather than the pinned items being a dock and everything else
+ * being a rail somewhere else on screen.
  */
 @RunWith(AndroidJUnit4::class)
 class DockDynamicSectionTest {
@@ -89,7 +83,7 @@ class DockDynamicSectionTest {
     }
 
     @Test
-    fun aDockWithNothingWaitingIsJustItsStaticSide() {
+    fun aDockWithNothingToShowIsJustItsStaticSide() {
         setContent(DockPosition.BOTTOM, entries = emptyList())
 
         composeRule.onNodeWithTag(dockItemTestTag(mail.id)).assertIsDisplayed()
@@ -97,27 +91,9 @@ class DockDynamicSectionTest {
     }
 
     @Test
-    fun tappingAnEntryOpensTheAppItIsWaitingFor() {
+    fun tappingAnEntryDispatchesWhateverItCarries() {
         val actions = mutableListOf<LauncherShellAction>()
         setContent(DockPosition.BOTTOM, actions = actions)
-
-        composeRule.onNodeWithTag(dockDynamicSectionTileTestTag(CHAT_LABEL)).performClick()
-
-        composeRule.runOnIdle {
-            assertEquals(listOf(LauncherShellAction.LaunchApp(chatApp.identity)), actions)
-        }
-    }
-
-    @Test
-    fun withAStageBehindItATapBringsThatStageForward() {
-        // Cards mode: the app's content is already on the launcher, so opening the app is the one
-        // thing the tap should not do.
-        val actions = mutableListOf<LauncherShellAction>()
-        setContent(
-            DockPosition.BOTTOM,
-            actions = actions,
-            behaviour = DockDynamicSectionBehaviour.SelectStage(),
-        )
 
         composeRule.onNodeWithTag(dockDynamicSectionTileTestTag(CHAT_LABEL)).performClick()
 
@@ -127,18 +103,27 @@ class DockDynamicSectionTest {
     }
 
     @Test
-    fun theEntryWhoseStageIsShowingSaysSo() {
-        setContent(
-            DockPosition.BOTTOM,
-            behaviour = DockDynamicSectionBehaviour.SelectStage(adaptiveStageStageKey(chatStageId)),
-        )
+    fun anEntryWithNothingToDispatchStaysPutWhenTapped() {
+        // A notification whose app the launcher can no longer resolve: the entry is still worth
+        // showing, and tapping it does nothing rather than opening something arbitrary.
+        val actions = mutableListOf<LauncherShellAction>()
+        setContent(DockPosition.BOTTOM, entries = listOf(chatEntry.copy(action = null)), actions = actions)
+
+        composeRule.onNodeWithTag(dockDynamicSectionTileTestTag(CHAT_LABEL)).performClick()
+
+        composeRule.runOnIdle { assertTrue("expected no action, got $actions", actions.isEmpty()) }
+    }
+
+    @Test
+    fun theEntryThatIsShowingSaysSo() {
+        setContent(DockPosition.BOTTOM, entries = listOf(chatEntry.copy(isSelected = true)))
 
         composeRule.onNodeWithTag(dockDynamicSectionTileTestTag(CHAT_LABEL)).assertIsSelected()
     }
 
     @Test
-    fun anEntryWithNothingShowingBehindItSaysThatToo() {
-        setContent(DockPosition.BOTTOM, behaviour = DockDynamicSectionBehaviour.SelectStage())
+    fun anEntryThatIsNotShowingSaysThatToo() {
+        setContent(DockPosition.BOTTOM)
 
         composeRule.onNodeWithTag(dockDynamicSectionTileTestTag(CHAT_LABEL)).assertIsNotSelected()
     }
@@ -147,20 +132,14 @@ class DockDynamicSectionTest {
 
     private fun setContent(
         position: DockPosition,
-        entries: List<DockNotificationCardState> = listOf(chatEntry),
+        entries: List<DockDynamicEntry> = listOf(chatEntry),
         actions: MutableList<LauncherShellAction> = mutableListOf(),
-        behaviour: DockDynamicSectionBehaviour = DockDynamicSectionBehaviour.LaunchApp,
     ) {
         composeRule.setContent {
             MaterialTheme {
                 Box(modifier = Modifier.size(420.dp)) {
                     Dock(
-                        dock =
-                            DockModel(
-                                capacity = 2,
-                                items = listOf(camera, mail),
-                                showNotificationCards = true,
-                            ),
+                        dock = DockModel(capacity = 2, items = listOf(camera, mail)),
                         isEditing = false,
                         notificationGroupsByApp = emptyList(),
                         appShortcutsByApp = emptyMap(),
@@ -169,7 +148,6 @@ class DockDynamicSectionTest {
                         position = position,
                         interactions = DockInteractions(onAction = actions::add),
                         dynamicEntries = entries,
-                        dynamicBehaviour = behaviour,
                     )
                 }
             }
@@ -191,44 +169,28 @@ class DockDynamicSectionTest {
         private const val CHAT_LABEL = "Chat"
         private const val TOLERANCE_PX = 0.5f
 
-        private val chatApp =
-            InstalledApp(
-                identity =
-                    AppIdentity(
-                        packageName = AppPackageName("com.riffle.chat"),
-                        activityName = AppActivityName(".MainActivity"),
-                        profile = AppProfile.personal(),
-                    ),
-                label = CHAT_LABEL,
+        private val chatIdentity =
+            AppIdentity(
+                packageName = AppPackageName("com.riffle.chat"),
+                activityName = AppActivityName(".MainActivity"),
+                profile = AppProfile.personal(),
             )
 
         private val chatStageId =
             AppStageId(
-                packageName = chatApp.identity.packageName,
-                profileId = chatApp.identity.profile.id,
+                packageName = chatIdentity.packageName,
+                profileId = chatIdentity.profile.id,
             )
 
         private val chatEntry =
-            DockNotificationCardState(
-                app = chatApp,
-                group =
-                    AppNotificationGroup(
-                        packageName = chatApp.identity.packageName,
-                        profileId = chatApp.identity.profile.id,
-                        latestCategory = NotificationCategory.MESSAGE,
-                        latestAgeBucket = NotificationAgeBucket.RECENT,
-                        notifications =
-                            listOf(
-                                LauncherNotification(
-                                    key = LauncherNotificationKey("chat-1"),
-                                    packageName = chatApp.identity.packageName,
-                                    profileId = chatApp.identity.profile.id,
-                                    title = "Chat",
-                                    text = "One waiting",
-                                    postedAtEpochMillis = 1L,
-                                ),
-                            ),
-                    ),
+            DockDynamicEntry(
+                key = "stage:chat",
+                label = CHAT_LABEL,
+                identity = chatIdentity,
+                badgeCount = 1,
+                isSelected = false,
+                contentDescription = "Chat, 1 card, Open stage",
+                action = LauncherShellAction.SelectAppStage(chatStageId),
             )
     }
 }
