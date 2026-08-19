@@ -4,6 +4,8 @@ package com.riffle.app.launcher
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.selection.selectableGroup
@@ -261,6 +263,7 @@ private fun DockVisibilitySetting(
  * layout the settings screen is showing, the same as every control beside it.
  */
 @Composable
+@OptIn(ExperimentalLayoutApi::class)
 private fun DockPositionSetting(
     position: DockPosition?,
     placeablePositions: List<DockPosition>,
@@ -271,9 +274,12 @@ private fun DockPositionSetting(
             title = "Dock position",
             subtitle = dockPositionSubtitle(position, placeablePositions),
         )
-        Row(
+        // Wrapping, because four edges do not fit across a phone: a plain Row measured the last
+        // one to nothing, so a Cards layout could never reach whichever edge fell off the end.
+        FlowRow(
             modifier = Modifier.fillMaxWidth().selectableGroup(),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             placeablePositions.forEach { candidate ->
                 TextButton(

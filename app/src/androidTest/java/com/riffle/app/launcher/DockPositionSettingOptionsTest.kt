@@ -1,17 +1,24 @@
 package com.riffle.app.launcher
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.riffle.core.domain.launcher.home.DockModel
 import com.riffle.core.domain.launcher.home.DockPosition
@@ -46,6 +53,34 @@ class DockPositionSettingOptionsTest {
 
         DockPosition.entries.forEach { candidate ->
             composeRule.onNodeWithTag(positionTag(candidate)).performScrollTo().assertIsDisplayed()
+        }
+    }
+
+    @Test
+    fun allFourEdgesStayReachableAtCompactWidthWithLargeFont() {
+        // Four of these do not fit across a phone. A plain row measured the last one to nothing,
+        // which is how a Cards layout ended up with an edge it could see named but never tap.
+        composeRule.setContent {
+            CompositionLocalProvider(LocalDensity provides Density(density = 1f, fontScale = 1.5f)) {
+                MaterialTheme {
+                    Box(modifier = Modifier.width(240.dp).verticalScroll(rememberScrollState())) {
+                        DockSetting(
+                            dock = DockModel(capacity = 4),
+                            viewMode = LauncherViewMode.CARD_INTERFACE,
+                            notificationAccessStatus = NotificationAccessStatus.GRANTED,
+                            onAction = {},
+                        )
+                    }
+                }
+            }
+        }
+
+        DockPosition.entries.forEach { candidate ->
+            composeRule
+                .onNodeWithTag(positionTag(candidate))
+                .performScrollTo()
+                .assertIsDisplayed()
+                .assertHasClickAction()
         }
     }
 
