@@ -16,7 +16,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.home.WallpaperSource
-import com.riffle.core.domain.launcher.settings.AdaptiveStageAppearanceSettings
 import com.riffle.core.domain.launcher.settings.SearchResultPresentation
 import com.riffle.core.domain.launcher.settings.homeSystemBars
 
@@ -28,7 +27,7 @@ internal fun SettingsPageContent(
     page: SettingsPage,
     onPageSelected: (SettingsPage) -> Unit,
     onAction: (LauncherShellAction) -> Unit,
-    onRequestAdaptiveStageAppearanceLivePreview: (AdaptiveStageAppearanceSettings) -> Unit = {},
+    onRequestAdaptiveStageAppearanceTuning: () -> Unit = {},
 ) {
     Column(
         modifier = modifier,
@@ -50,7 +49,7 @@ internal fun SettingsPageContent(
                     state = state,
                     onAction = onAction,
                     modifier = Modifier.fillMaxSize(),
-                    onRequestLivePreview = onRequestAdaptiveStageAppearanceLivePreview,
+                    onRequestTuning = onRequestAdaptiveStageAppearanceTuning,
                 )
             SettingsPage.FLOATING_DOCK -> SettingsFloatingDockPageContent(state = state, onAction = onAction)
             SettingsPage.GESTURES -> SettingsGesturesPageContent(state = state, onAction = onAction)

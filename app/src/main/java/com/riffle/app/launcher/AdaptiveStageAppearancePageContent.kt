@@ -9,6 +9,7 @@ package com.riffle.app.launcher
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
@@ -121,50 +122,25 @@ internal fun AdaptiveStageAppearancePageContent(
     onAction: (LauncherShellAction) -> Unit,
     modifier: Modifier = Modifier,
     rendererCapabilities: AdaptiveStageRendererCapabilities = adaptiveStageRendererCapabilities(),
-    onRequestLivePreview: (AdaptiveStageAppearanceSettings) -> Unit = {},
+    onRequestTuning: () -> Unit = {},
 ) {
     var editorTarget by rememberSaveable { mutableStateOf(AdaptiveStageAppearanceEditorTarget.FOLDED) }
-    var selectedTab by rememberSaveable { mutableStateOf(AdaptiveStageAppearanceTab.LAYOUT) }
-    val appearance =
-        when (editorTarget) {
-            AdaptiveStageAppearanceEditorTarget.FOLDED -> state.settings.cards.adaptiveStageAppearance
-            AdaptiveStageAppearanceEditorTarget.UNFOLDED -> state.settings.cards.unfoldedAppearance
-        }
-    var resetConfirmationVisible by rememberSaveable { mutableStateOf(false) }
-    val update: AdaptiveStageAppearanceUpdate = { transform ->
-        val next = transform(appearance).coerce()
-        onAction(
-            when (editorTarget) {
-                AdaptiveStageAppearanceEditorTarget.FOLDED -> LauncherShellAction.UpdateAdaptiveStageAppearance(next)
-                AdaptiveStageAppearanceEditorTarget.UNFOLDED ->
-                    LauncherShellAction.UpdateUnfoldedAdaptiveStageAppearance(next)
-            },
-        )
-    }
 
-    Column(modifier = modifier) {
-        // Sticky header: the target chooser and reset action share one compact row instead of
-        // two separately titled, separately carded sections, and the preview drops its own
-        // "Preview" label -- on a real device the previous three stacked sections left no room
-        // for any tab content at all. The reset row's old subtitle is dropped too since the
-        // confirmation dialog already explains what resetting does.
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            AdaptiveStageTargetToggle(selected = editorTarget, onSelected = { target -> editorTarget = target })
-            TextButton(onClick = { resetConfirmationVisible = true }) {
-                SettingsButtonText(text = "Reset ${editorTarget.label()}")
-            }
-        }
+    AdaptiveStageAppearanceEditor(
+        state = state,
+        target = editorTarget,
+        onTargetChange = { target -> editorTarget = target },
+        onAction = onAction,
+        modifier = modifier,
+        rendererCapabilities = rendererCapabilities,
+    ) {
         Surface(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(24.dp),
             color = MaterialTheme.colorScheme.surfaceContainerLow,
         ) {
             AdaptiveStageAppearancePreview(
-                appearance = appearance,
+                appearance = state.appearanceFor(editorTarget),
                 globalReducedMotion = state.settings.motion.reducedMotion,
                 rendererCapabilities = rendererCapabilities,
                 // Tried making this adaptive with weight() twice in this same PR -- both attempts
@@ -183,15 +159,64 @@ internal fun AdaptiveStageAppearancePageContent(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
             horizontalArrangement = Arrangement.End,
         ) {
-            // This preview above is a small, static illustration -- not scrollable, not sized to
-            // real touch-reachable targets. Full-screen, still using synthetic (not the user's
-            // real) content, so appearance changes can be checked at true size/scale without
-            // leaving Settings for the real Cards surface and risking exposure of real
-            // notifications while tuning something as visible as this.
-            TextButton(onClick = { onRequestLivePreview(appearance) }) {
-                SettingsButtonText(text = "Preview on home screen")
+            // This preview is a small, static illustration -- not scrollable, not sized to real
+            // touch-reachable targets, and the subject of a standing complaint that it barely
+            // seems to change. Tuning instead happens on the real surface, with these same
+            // controls in a sheet over it, so a change and its effect are visible at once.
+            TextButton(onClick = onRequestTuning) {
+                SettingsButtonText(text = "Tune on home screen")
             }
         }
+    }
+}
+
+/**
+ * The Cards appearance controls: which appearance is being edited, and every control that shapes
+ * it.
+ *
+ * Shared by the settings page and the tuning sheet that sits over the real surface, so the two
+ * cannot drift apart -- the sheet is the same editor with the page's static illustration left out.
+ * [preview] is whatever the caller wants between the target chooser and the tabs; the sheet passes
+ * nothing, because the surface behind it is the preview.
+ */
+@Composable
+internal fun AdaptiveStageAppearanceEditor(
+    state: SettingsSurfaceState,
+    target: AdaptiveStageAppearanceEditorTarget,
+    onTargetChange: (AdaptiveStageAppearanceEditorTarget) -> Unit,
+    onAction: (LauncherShellAction) -> Unit,
+    modifier: Modifier = Modifier,
+    rendererCapabilities: AdaptiveStageRendererCapabilities = adaptiveStageRendererCapabilities(),
+    preview: @Composable ColumnScope.() -> Unit = {},
+) {
+    var selectedTab by rememberSaveable { mutableStateOf(AdaptiveStageAppearanceTab.LAYOUT) }
+    val appearance = state.appearanceFor(target)
+    var resetConfirmationVisible by rememberSaveable { mutableStateOf(false) }
+    val update: AdaptiveStageAppearanceUpdate = { transform ->
+        val next = transform(appearance).coerce()
+        onAction(
+            when (target) {
+                AdaptiveStageAppearanceEditorTarget.FOLDED -> LauncherShellAction.UpdateAdaptiveStageAppearance(next)
+                AdaptiveStageAppearanceEditorTarget.UNFOLDED ->
+                    LauncherShellAction.UpdateUnfoldedAdaptiveStageAppearance(next)
+            },
+        )
+    }
+
+    Column(modifier = modifier) {
+        // Sticky header: the target chooser and reset action share one compact row instead of
+        // two separately titled, separately carded sections.
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            AdaptiveStageTargetToggle(selected = target, onSelected = onTargetChange)
+            TextButton(onClick = { resetConfirmationVisible = true }) {
+                SettingsButtonText(text = "Reset ${target.label()}")
+            }
+        }
+        preview()
         adaptiveStageFallbackMessage(appearance, rendererCapabilities)?.let { message ->
             SettingsListRow(title = "Effective fallback", subtitle = message)
         }
@@ -224,17 +249,17 @@ internal fun AdaptiveStageAppearancePageContent(
     if (resetConfirmationVisible) {
         AlertDialog(
             onDismissRequest = { resetConfirmationVisible = false },
-            title = { Text("Reset ${editorTarget.label()} Cards appearance?") },
+            title = { Text("Reset ${target.label()} Cards appearance?") },
             text = {
                 Text(
-                    "This replaces all ${editorTarget.label().lowercase()} Cards appearance, geometry, and" +
+                    "This replaces all ${target.label().lowercase()} Cards appearance, geometry, and" +
                         " motion choices with its default values.",
                 )
             },
             confirmButton = {
                 TextButton(
                     onClick = {
-                        update { editorTarget.defaultAppearance() }
+                        update { target.defaultAppearance() }
                         resetConfirmationVisible = false
                     },
                     modifier = Modifier.semantics { contentDescription = "Confirm Cards reset" },
@@ -244,6 +269,13 @@ internal fun AdaptiveStageAppearancePageContent(
         )
     }
 }
+
+/** Which of the two stored appearances the editor is pointed at. */
+internal fun SettingsSurfaceState.appearanceFor(target: AdaptiveStageAppearanceEditorTarget): AdaptiveStageAppearanceSettings =
+    when (target) {
+        AdaptiveStageAppearanceEditorTarget.FOLDED -> settings.cards.adaptiveStageAppearance
+        AdaptiveStageAppearanceEditorTarget.UNFOLDED -> settings.cards.unfoldedAppearance
+    }
 
 internal enum class AdaptiveStageAppearanceEditorTarget { FOLDED, UNFOLDED }
 

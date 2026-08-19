@@ -53,7 +53,6 @@ import com.riffle.core.domain.launcher.home.DockEditRejectionReason
 import com.riffle.core.domain.launcher.home.LauncherViewModeAvailability
 import com.riffle.core.domain.launcher.home.WallpaperSource
 import com.riffle.core.domain.launcher.search.LauncherSearchResult
-import com.riffle.core.domain.launcher.settings.AdaptiveStageAppearanceSettings
 import kotlinx.coroutines.delay
 
 @Composable
@@ -404,7 +403,7 @@ private fun LauncherDestination(
     // the Adaptive Stage Appearance settings page through settingsPageActionRouter -- that
     // router's own initialSettingsPage state is itself scoped to this composable, unreachable
     // from outside it.
-    var adaptiveStageAppearanceLivePreview by remember { mutableStateOf<AdaptiveStageAppearanceSettings?>(null) }
+    var adaptiveStageAppearanceTuning by remember { mutableStateOf(false) }
 
     when (state.destination) {
         ShellDestination.HOME ->
@@ -488,17 +487,21 @@ private fun LauncherDestination(
                 state = settingsState,
                 initialPage = settingsPageActionRouter.initialSettingsPage,
                 onAction = settingsPageActionRouter.onAction,
-                onRequestAdaptiveStageAppearanceLivePreview = { appearance ->
+                onRequestAdaptiveStageAppearanceTuning = {
                     onAction(LauncherShellAction.OpenHome)
-                    adaptiveStageAppearanceLivePreview = appearance
+                    adaptiveStageAppearanceTuning = true
                 },
             )
     }
-    adaptiveStageAppearanceLivePreview?.let { appearance ->
-        AdaptiveStageAppearanceLivePreviewOverlay(
-            appearance = appearance,
+    if (adaptiveStageAppearanceTuning) {
+        AdaptiveStageAppearanceTuningOverlay(
+            state = settingsState,
+            // The real actions, so the surface behind is showing the setting rather than a copy of
+            // it. Routed like the settings page's own edits so nothing about where a change came
+            // from is special.
+            onAction = settingsPageActionRouter.onAction,
             onDismiss = {
-                adaptiveStageAppearanceLivePreview = null
+                adaptiveStageAppearanceTuning = false
                 settingsPageActionRouter.onAction(
                     LauncherShellAction.OpenSettingsPage(SettingsPage.ADAPTIVE_STAGE_APPEARANCE),
                 )
