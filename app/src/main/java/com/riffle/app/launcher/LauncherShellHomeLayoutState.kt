@@ -28,22 +28,42 @@ internal fun LauncherShellState.withHomeLayout(
             )
         }
 
+/**
+ * Choose which of the per-mode layouts applies.
+ *
+ * A mode is not a field of a layout. Every mode has a layout of its own, with its own pages and its
+ * own dock, and choosing one moves the selection between them -- the layout on screen is saved
+ * where it belongs and left there, never written into the mode being switched to.
+ *
+ * The choice belongs to whichever device class is being configured, which is not always the one
+ * being held: settings can be pointed at another device's layout, and choosing a mode there records
+ * the preference for that device without changing what is on screen.
+ */
 internal fun LauncherShellState.withSelectedHomeLayoutMode(
     mode: LauncherViewMode,
     homeLayoutRepository: HomeLayoutRepository,
     viewModeAvailability: LauncherViewModeAvailability,
-): LauncherShellState =
-    currentLayoutSet(homeLayoutRepository)
-        .withActiveLayout(homeLayout)
-        .selectMode(mode, viewModeAvailability)
-        .also(homeLayoutRepository::saveHomeLayoutSet)
-        .let { layoutSet ->
-            copy(
-                homeLayout = layoutSet.activeLayout,
-                homeLayoutSet = layoutSet,
-                settingsLayoutDeviceClass = layoutSet.activeKey.deviceClass,
-            )
-        }
+): LauncherShellState {
+    val targetDeviceClass = settingsLayoutDeviceClass
+    val resolvedMode = viewModeAvailability.availableModeOrStandard(targetDeviceClass, mode)
+    val layoutSet =
+        currentLayoutSet(homeLayoutRepository)
+            .withActiveLayout(homeLayout)
+            .withPreferredMode(deviceClass = targetDeviceClass, mode = resolvedMode)
+            .let { layouts ->
+                // Only the device being held decides what is on screen. A mode chosen for another
+                // device class is recorded as its preference and applies when that device is next
+                // the active one.
+                if (layouts.activeKey.deviceClass == targetDeviceClass) {
+                    layouts.selectMode(resolvedMode)
+                } else {
+                    layouts
+                }
+            }
+            .also(homeLayoutRepository::saveHomeLayoutSet)
+
+    return copy(homeLayout = layoutSet.activeLayout, homeLayoutSet = layoutSet)
+}
 
 internal fun LauncherShellState.withSelectedHomeLayoutTemplate(
     templateId: LauncherTemplateId,

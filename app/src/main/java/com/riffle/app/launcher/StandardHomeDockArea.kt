@@ -105,6 +105,7 @@ internal fun StandardHomeDockArea(
                 .dockSwipeUpGestureInput(
                     enabled = !dockInteractions.claimsSwipeUp() && !isWidgetPickerInteractionActive,
                     action = presentation.dockGestures.swipeUp,
+                    viewMode = layout.viewMode,
                     onAction = actions.onAction,
                 ),
         horizontalAlignment = layout.dock.alignment.toHorizontalAlignment(),

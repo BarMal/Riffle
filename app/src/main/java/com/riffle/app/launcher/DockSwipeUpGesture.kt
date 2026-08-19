@@ -14,12 +14,20 @@ import com.riffle.core.domain.launcher.settings.LauncherGestureAction
  * Dock physically supports: staying put, returning to Standard Home from Cards mode, and opening
  * the app drawer. Distinct from [dockShelfGestureInput], which only expands/collapses the
  * notification overflow shelf and never navigates.
+ *
+ * [viewMode] is what the launcher is showing now, because one of those three only means anything
+ * from one mode.
  */
-internal fun LauncherGestureAction.toDockSwipeUpShellAction(): LauncherShellAction? =
+internal fun LauncherGestureAction.toDockSwipeUpShellAction(viewMode: LauncherViewMode): LauncherShellAction? =
     when (this) {
         LauncherGestureAction.NONE -> null
+        // Only from Cards, where there is something to exit. Firing it everywhere turned a swipe on
+        // the Library dock into a jump to Standard -- a mode the user had not asked for, and one
+        // whose layout has a dock of its own, so the dock they had swiped on was replaced too.
         LauncherGestureAction.EXIT_ADAPTIVE_STAGE ->
-            LauncherShellAction.SelectLauncherViewMode(LauncherViewMode.STANDARD_APP_DRAWER)
+            LauncherShellAction
+                .SelectLauncherViewMode(LauncherViewMode.STANDARD_APP_DRAWER)
+                .takeIf { viewMode == LauncherViewMode.CARD_INTERFACE }
         LauncherGestureAction.OPEN_APP_DRAWER -> LauncherShellAction.OpenAppDrawer
         // The Dock swipe-up binding only persists one of the three actions above; any other value
         // (e.g. from a future migration) is treated as a no-op rather than crashing.
@@ -39,9 +47,10 @@ internal fun LauncherGestureAction.toDockSwipeUpShellAction(): LauncherShellActi
 internal fun Modifier.dockSwipeUpGestureInput(
     enabled: Boolean,
     action: LauncherGestureAction,
+    viewMode: LauncherViewMode,
     onAction: (LauncherShellAction) -> Unit,
 ): Modifier {
-    val shellAction = action.toDockSwipeUpShellAction()
+    val shellAction = action.toDockSwipeUpShellAction(viewMode)
     if (!enabled || shellAction == null) {
         return this
     }

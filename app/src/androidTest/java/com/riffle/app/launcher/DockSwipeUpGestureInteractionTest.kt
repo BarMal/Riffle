@@ -10,6 +10,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.unit.dp
+import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.settings.LauncherGestureAction
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -95,6 +96,7 @@ class DockSwipeUpGestureInteractionTest {
                         .dockSwipeUpGestureInput(
                             enabled = enabled,
                             action = LauncherGestureAction.OPEN_APP_DRAWER,
+                            viewMode = LauncherViewMode.STANDARD_APP_DRAWER,
                             onAction = actions::add,
                         ),
             )
