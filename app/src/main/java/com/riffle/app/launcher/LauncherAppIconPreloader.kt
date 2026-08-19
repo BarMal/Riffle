@@ -30,6 +30,10 @@ fun LauncherShellState.appIconPreloadIdentities(): List<AppIdentity> =
             } +
             homeLayout.dock.items
                 .flatMap { item -> item.appIconPreloadIdentities() } +
+            homeLayout.dock.panel
+                ?.items
+                .orEmpty()
+                .flatMap { item -> item.appIconPreloadIdentities() } +
             launcherSettings.overlayDock.items.map { shortcut -> shortcut.appIdentity }
     ).distinct()
 

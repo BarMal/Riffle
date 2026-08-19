@@ -46,7 +46,7 @@ import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.home.GridDimensions
 import com.riffle.core.domain.launcher.home.HomeLayoutSet
 import com.riffle.core.domain.launcher.home.HostedWidgetId
-import com.riffle.core.domain.launcher.home.WidgetItem
+import com.riffle.core.domain.launcher.home.hostsWidget
 
 internal class MainActivityDependencies(
     private val activity: Activity,
@@ -151,9 +151,7 @@ internal class MainActivityDependencies(
 private fun HomeLayoutSet.hostedWidgetIdReferenceState(hostedWidgetId: HostedWidgetId): HostedWidgetIdReferenceState =
     layouts.values
         .asSequence()
-        .flatMap { layout -> (layout.pages.flatMap { it.items } + layout.dock.items).asSequence() }
-        .filterIsInstance<WidgetItem>()
-        .any { it.appWidgetId == hostedWidgetId }
+        .any { layout -> layout.hostsWidget(hostedWidgetId) }
         .let { referenced ->
             if (referenced) {
                 HostedWidgetIdReferenceState.Referenced

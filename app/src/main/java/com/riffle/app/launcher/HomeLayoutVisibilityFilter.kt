@@ -23,6 +23,9 @@ private fun HomeLayout.visibleTo(visibleAppIdentities: Set<AppIdentity>): HomeLa
         dock =
             dock.copy(
                 items = dock.items.mapNotNull { item -> item.visibleTo(visibleAppIdentities) },
+                // The panel holds the user's own items too, so it filters like any other page --
+                // it is simply reached through the dock rather than through [pages].
+                panel = dock.panel?.visibleTo(visibleAppIdentities),
             ),
     ).withoutTrailingEmptyLibraryPages()
 

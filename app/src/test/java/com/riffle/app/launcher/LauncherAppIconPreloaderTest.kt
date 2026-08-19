@@ -7,9 +7,12 @@ import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.FolderItem
+import com.riffle.core.domain.launcher.home.GridDimensions
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.LauncherItem
 import com.riffle.core.domain.launcher.home.LauncherItemId
+import com.riffle.core.domain.launcher.home.LauncherPage
+import com.riffle.core.domain.launcher.home.LauncherPageId
 import com.riffle.core.domain.launcher.settings.LauncherSettings
 import com.riffle.core.domain.launcher.settings.OverlayDockSettings
 import org.junit.Assert.assertEquals
@@ -111,6 +114,46 @@ class LauncherAppIconPreloaderTest {
 
         assertEquals(
             listOf(installed, firstHome, folderChild, dock, floatingDock),
+            state.appIconPreloadIdentities(),
+        )
+    }
+
+    @Test
+    fun includesThePanelsItems() {
+        // The panel is not one of the layout's pages, so its icons would otherwise load cold the
+        // first time the shelf is opened.
+        val panelShortcut = identity("panel")
+        val panelFolderChild = identity("panel-folder-child")
+        val state =
+            LauncherShellState(
+                homeLayout =
+                    HomeLayoutDefaults.standard().let { defaults ->
+                        defaults.copy(
+                            dock =
+                                defaults.dock.copy(
+                                    panel =
+                                        LauncherPage(
+                                            id = LauncherPageId("dock-panel"),
+                                            grid = GridDimensions(columns = 4, rows = 2),
+                                            items =
+                                                listOf(
+                                                    shortcut(id = "panel", identity = panelShortcut),
+                                                    folder(
+                                                        id = "panel-tools",
+                                                        shortcut(
+                                                            id = "panel-folder-child",
+                                                            identity = panelFolderChild,
+                                                        ),
+                                                    ),
+                                                ),
+                                        ),
+                                ),
+                        )
+                    },
+            )
+
+        assertEquals(
+            listOf(panelShortcut, panelFolderChild),
             state.appIconPreloadIdentities(),
         )
     }

@@ -7,6 +7,7 @@ import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.apps.AppProfile
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.GridCell
+import com.riffle.core.domain.launcher.home.GridDimensions
 import com.riffle.core.domain.launcher.home.GridPlacement
 import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
@@ -104,6 +105,39 @@ class HomeLayoutUnavailableAppPrunerTest {
 
         val shortcuts = pruned.homeLayout.selectedPage.items.filterIsInstance<AppShortcutItem>()
         assertEquals(listOf(workCamera), shortcuts.map { shortcut -> shortcut.appIdentity })
+    }
+
+    @Test
+    fun prunesThePanelsShortcutsForAppsThatAreGone() {
+        // The panel is not one of the layout's pages, so pruning written over pages alone would
+        // leave a shortcut pointing at an app that is no longer installed.
+        val camera = app("Camera")
+        val docs = app("Docs")
+        val layout =
+            HomeLayoutDefaults.standard().let { defaults ->
+                defaults.copy(
+                    dock =
+                        defaults.dock.copy(
+                            panel =
+                                LauncherPage(
+                                    id = LauncherPageId("dock-panel"),
+                                    grid = GridDimensions(columns = 4, rows = 2),
+                                    items =
+                                        listOf(
+                                            shortcut(id = "panel-camera", app = camera),
+                                            shortcut(id = "panel-docs", app = docs),
+                                        ),
+                                ),
+                        ),
+                )
+            }
+
+        val prunedLayout = layout.keepingApps(setOf(camera))
+
+        assertEquals(
+            listOf(LauncherItemId("panel-camera")),
+            prunedLayout.dock.panel?.items?.map { item -> item.id },
+        )
     }
 
     private fun app(

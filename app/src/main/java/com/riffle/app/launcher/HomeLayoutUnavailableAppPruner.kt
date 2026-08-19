@@ -9,6 +9,7 @@ import com.riffle.core.domain.launcher.home.FolderItem
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
 import com.riffle.core.domain.launcher.home.LauncherItem
+import com.riffle.core.domain.launcher.home.LauncherPage
 import com.riffle.core.domain.launcher.home.WidgetItem
 
 fun LauncherShellState.withoutUnavailableApps(homeLayoutRepository: HomeLayoutRepository): LauncherShellState =
@@ -48,8 +49,14 @@ private fun HomeLayout.keepingApps(shouldKeep: (AppIdentity) -> Boolean): HomeLa
         dock =
             dock.copy(
                 items = dock.items.mapNotNull { item -> item.keepingApps(shouldKeep) },
+                // The panel is not one of [pages], so it needs pruning of its own -- otherwise a
+                // shortcut there outlives the app it points at.
+                panel = dock.panel?.keepingApps(shouldKeep),
             ),
     ).withoutTrailingEmptyLibraryPages()
+
+private fun LauncherPage.keepingApps(shouldKeep: (AppIdentity) -> Boolean): LauncherPage =
+    copy(items = items.mapNotNull { item -> item.keepingApps(shouldKeep) })
 
 private fun LauncherItem.keepingApps(shouldKeep: (AppIdentity) -> Boolean): LauncherItem? =
     when (this) {
