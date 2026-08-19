@@ -1,8 +1,10 @@
 package com.riffle.app.launcher
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -20,9 +22,11 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.home.DockAlignment
 import com.riffle.core.domain.launcher.home.DockExpandAffordance
+import com.riffle.core.domain.launcher.home.DockPosition
 import com.riffle.core.domain.launcher.home.GridInsets
 import com.riffle.core.domain.launcher.home.HomeEditMode
 import com.riffle.core.domain.launcher.home.HomeLayout
+import com.riffle.core.domain.launcher.home.isHorizontalEdge
 
 @Composable
 @Suppress("LongParameterList")
@@ -34,6 +38,7 @@ internal fun StandardHomeDockArea(
     onDockShelfExpandedChange: (Boolean) -> Unit,
     appIconLoader: AppIconLoader,
     actions: HomeWorkspaceActions,
+    position: DockPosition = DockPosition.BOTTOM,
     widgetPickerDockPreview: WidgetPickerDockPlacementPreview? = null,
     isWidgetPickerInteractionActive: Boolean = false,
 ) {
@@ -64,11 +69,14 @@ internal fun StandardHomeDockArea(
             onAction = actions.onAction,
         )
     val margins = layout.settings.grid.margin.centered()
+    val runsAlongASide = !position.isHorizontalEdge
 
     Column(
         modifier =
             Modifier
-                .fillMaxWidth()
+                // A side dock fills the height it was given and is only as wide as it needs to be;
+                // a bottom dock is the other way round.
+                .then(if (runsAlongASide) Modifier.fillMaxHeight() else Modifier.fillMaxWidth())
                 .onSizeChanged { size -> actions.onDockInteractionHeightChanged(size.height) }
                 .onGloballyPositioned { coordinates ->
                     actions.onDockBoundsChanged(coordinates.boundsInRoot())
@@ -76,6 +84,7 @@ internal fun StandardHomeDockArea(
                 .padding(
                     start = margins.start.dp,
                     end = margins.end.dp,
+                    top = if (runsAlongASide) margins.top.dp else 0.dp,
                     bottom = margins.bottom.dp,
                 )
                 .dockShelfMotion(dockShelfMotionPolicy(presentation.reducedMotion))
@@ -92,6 +101,7 @@ internal fun StandardHomeDockArea(
                     onAction = actions.onAction,
                 ),
         horizontalAlignment = layout.dock.alignment.toHorizontalAlignment(),
+        verticalArrangement = if (runsAlongASide) Arrangement.Center else Arrangement.Top,
     ) {
         DockShelfExpandButton(interactions = dockInteractions)
         Spacer(modifier = Modifier.height(HOME_DOCK_TOP_SPACING_DP.dp))
@@ -114,6 +124,7 @@ internal fun StandardHomeDockArea(
                     appShortcutsByApp = presentation.appShortcutsByApp,
                     appIconLoader = appIconLoader,
                     widgetViewFactory = presentation.widgetViewFactory,
+                    position = position,
                     interactions = dockInteractions,
                     widgetPickerDockPreview = widgetPickerDockPreview,
                 )

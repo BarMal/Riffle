@@ -170,7 +170,7 @@ private fun GridSpan.coerceAtLeastOneCell(): GridSpan =
         rows = rows.coerceAtLeast(1),
     )
 
-private fun GridSpan.placementCandidates(resizeConstraints: WidgetResizeConstraints): List<GridSpan> =
+internal fun GridSpan.placementCandidates(resizeConstraints: WidgetResizeConstraints): List<GridSpan> =
     coerceAtLeastOneCell().coerceAtLeast(resizeConstraints.minSpan).let { preferredSpan ->
         (preferredSpan.columns downTo 1).flatMap { columns ->
             (preferredSpan.rows downTo 1).map { rows ->

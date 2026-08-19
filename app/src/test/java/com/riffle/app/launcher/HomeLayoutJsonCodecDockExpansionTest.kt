@@ -92,6 +92,55 @@ class HomeLayoutJsonCodecDockExpansionTest {
     }
 
     @Test
+    fun aSideDocksPagesDecodeAtTheNarrowerGrid() {
+        // Pages are held to the grid the dock leaves, or a reload would put them back to full
+        // width underneath it.
+        val layout =
+            HomeLayoutDefaults.standard().let { standard ->
+                standard.copy(dock = standard.dock.copy(position = DockPosition.LEADING))
+            }
+
+        val decoded = decodeHomeLayout(encodeHomeLayout(layout))
+
+        assertEquals(
+            layout.settings.grid.dimensions.columns - 1,
+            decoded.pages.first().grid.columns,
+        )
+        assertEquals(layout.settings.grid.dimensions.columns, decoded.settings.grid.dimensions.columns)
+    }
+
+    @Test
+    fun anItemStoredInAColumnASideDockTookIsMovedRatherThanLost() {
+        // Written with a bottom dock, read back with a side one: without a reflow the shortcut is
+        // still held by the layout but drawn nowhere.
+        val standard = HomeLayoutDefaults.standard()
+        val lastColumn = standard.settings.grid.dimensions.columns - 1
+        val stranded =
+            AppShortcutItem(
+                id = LauncherItemId("app:camera"),
+                appIdentity =
+                    AppIdentity(
+                        packageName = AppPackageName("com.riffle.camera"),
+                        activityName = AppActivityName(".MainActivity"),
+                    ),
+                label = "Camera",
+                placement = GridPlacement(cell = GridCell(column = lastColumn, row = 0)),
+            )
+        val encoded =
+            encodeHomeLayout(
+                standard.copy(
+                    pages = listOf(standard.selectedPage.copy(items = listOf(stranded))),
+                    dock = standard.dock.copy(position = DockPosition.LEADING),
+                ),
+            )
+
+        val decoded = decodeHomeLayout(encoded)
+
+        val placement = decoded.pages.first().items.single { item -> item.id == stranded.id }.placement
+        assertEquals(GridCell(column = 0, row = 0), placement?.cell)
+    }
+
+    @Test
     fun aDockWithNoChosenPositionDecodesWithoutOne() {
         // Null means "follow the active template", which is not the same as any particular edge.
         assertEquals(null, decodeHomeLayout(encodeHomeLayout(HomeLayoutDefaults.standard())).dock.position)

@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.exclude
@@ -57,6 +59,7 @@ import com.riffle.core.domain.launcher.apps.AppProfileContentVisibility
 import com.riffle.core.domain.launcher.apps.AppProfileId
 import com.riffle.core.domain.launcher.apps.AppShortcutsByApp
 import com.riffle.core.domain.launcher.apps.InstalledApp
+import com.riffle.core.domain.launcher.home.DockPosition
 import com.riffle.core.domain.launcher.home.FolderItem
 import com.riffle.core.domain.launcher.home.GridCell
 import com.riffle.core.domain.launcher.home.GridDimensions
@@ -276,6 +279,7 @@ internal fun StandardHome(
                         dock = visibleLayout.dock,
                         dockBounds = dockBounds.value,
                         isRtl = isRtl,
+                        position = visibleLayout.dock.position ?: DockPosition.BOTTOM,
                     )
             },
             onWidgetDragCancelled = {
@@ -347,6 +351,7 @@ internal fun StandardHome(
                         dock = visibleLayout.dock,
                         dockBounds = dockBounds.value,
                         isRtl = isRtl,
+                        position = visibleLayout.dock.position ?: DockPosition.BOTTOM,
                     )
                 val isValidDrop =
                     widgetPickerDropIsValid(
@@ -578,8 +583,26 @@ private fun StandardHomeColumn(
             onBackgroundClick = dockShelf.dismiss,
         )
     val margins = state.visibleLayout.settings.grid.margin.centered()
+    val dockEdge = state.visibleLayout.dock.position ?: DockPosition.BOTTOM
+    val dockArea: @Composable () -> Unit = {
+        StandardHomeDockArea(
+            layout = state.visibleLayout,
+            presentation = state.presentation,
+            notificationShelfState = notificationShelfState,
+            isDockShelfExpanded = dockShelf.isExpanded,
+            onDockShelfExpandedChange = dockShelf.onExpandedChange,
+            appIconLoader = appIconLoader,
+            actions = actions,
+            position = dockEdge,
+            widgetPickerDockPreview = state.widgetPickerDockPreview,
+            isWidgetPickerInteractionActive =
+                state.presentation.widgetPicker.isOpen || state.widgetPickerDragInProgress,
+        )
+    }
 
-    Column(
+    StandardHomeFrame(
+        dockEdge = dockEdge,
+        dockArea = dockArea,
         modifier =
             Modifier
                 .fillMaxSize()
@@ -589,8 +612,6 @@ private fun StandardHomeColumn(
                     onAction = actions.onAction,
                 )
                 .windowInsetsPadding(state.presentation.homeInsetPolicy.safeDrawingInsets()),
-        verticalArrangement = Arrangement.Top,
-        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         ImmediateWorkspacePager(
             layout = state.visibleLayout,
@@ -638,20 +659,54 @@ private fun StandardHomeColumn(
             modifier =
                 Modifier.onSizeChanged { size -> homeActions.onBottomControlsHeightChanged(size.height) },
         )
-        StandardHomeDockArea(
-            layout = state.visibleLayout,
-            presentation = state.presentation,
-            notificationShelfState = notificationShelfState,
-            isDockShelfExpanded = dockShelf.isExpanded,
-            onDockShelfExpandedChange = dockShelf.onExpandedChange,
-            appIconLoader = appIconLoader,
-            actions = actions,
-            widgetPickerDockPreview = state.widgetPickerDockPreview,
-            isWidgetPickerInteractionActive =
-                state.presentation.widgetPicker.isOpen || state.widgetPickerDragInProgress,
-        )
+        if (!dockEdge.isSideEdge) dockArea()
     }
 }
+
+/**
+ * The home screen's frame: the workspace, and the dock on whichever edge it has been given.
+ *
+ * A dock on a side sits beside the whole workspace column, reserving its width -- which is the
+ * width the grid has already given up a column for. Otherwise the workspace column draws the dock
+ * itself, at the bottom, so it keeps its place under the page controls.
+ */
+@Composable
+private fun StandardHomeFrame(
+    dockEdge: DockPosition,
+    dockArea: @Composable () -> Unit,
+    modifier: Modifier,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    if (!dockEdge.isSideEdge) {
+        Column(
+            modifier = modifier,
+            verticalArrangement = Arrangement.Top,
+            horizontalAlignment = Alignment.CenterHorizontally,
+            content = content,
+        )
+        return
+    }
+
+    Row(modifier = modifier) {
+        if (dockEdge == DockPosition.LEADING) dockArea()
+        Column(
+            modifier = Modifier.weight(1f).fillMaxHeight(),
+            verticalArrangement = Arrangement.Top,
+            horizontalAlignment = Alignment.CenterHorizontally,
+            content = content,
+        )
+        if (dockEdge == DockPosition.TRAILING) dockArea()
+    }
+}
+
+/**
+ * Whether this edge puts the dock beside the workspace rather than under it.
+ *
+ * The top edge is not one: nothing places the home dock there yet, so a layout set to it keeps the
+ * bottom dock it has always had rather than rendering somewhere half-supported.
+ */
+private val DockPosition.isSideEdge: Boolean
+    get() = this == DockPosition.LEADING || this == DockPosition.TRAILING
 
 @Composable
 private fun rememberDockShelfController(

@@ -5,6 +5,7 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.unit.IntSize
 import com.riffle.app.launcher.widgets.preferredGridSpan
 import com.riffle.core.domain.launcher.home.DockModel
+import com.riffle.core.domain.launcher.home.DockPosition
 import com.riffle.core.domain.launcher.home.GridCell
 import com.riffle.core.domain.launcher.home.GridDimensions
 import com.riffle.core.domain.launcher.home.GridSpan
@@ -12,6 +13,7 @@ import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.home.LauncherPage
 import com.riffle.core.domain.launcher.home.LauncherPageId
 import com.riffle.core.domain.launcher.home.LauncherPageType
+import com.riffle.core.domain.launcher.home.isHorizontalEdge
 import com.riffle.core.domain.launcher.widgets.InstalledWidgetProvider
 import kotlin.math.roundToInt
 
@@ -107,12 +109,20 @@ internal fun widgetPickerDockPlacementPreviewFor(
     dock: DockModel,
     dockBounds: Rect?,
     isRtl: Boolean = false,
+    position: DockPosition = DockPosition.BOTTOM,
 ): WidgetPickerDockPlacementPreview? {
     val bounds = dockBounds?.takeIf { it.width > 0f && it.height > 0f }
     return bounds?.takeIf { it.contains(snapshot.position) }?.let {
         val insertionCount = dock.items.size + 1
-        val physicalFraction = ((snapshot.position.x - it.left) / it.width).coerceIn(0f, 1f)
-        val logicalFraction = if (isRtl) 1f - physicalFraction else physicalFraction
+        // Slots run down a side dock, so how far along the run the pointer is comes from y there
+        // and from x on a horizontal edge. Only the horizontal run mirrors in RTL.
+        val physicalFraction =
+            if (position.isHorizontalEdge) {
+                ((snapshot.position.x - it.left) / it.width).coerceIn(0f, 1f)
+            } else {
+                ((snapshot.position.y - it.top) / it.height).coerceIn(0f, 1f)
+            }
+        val logicalFraction = if (isRtl && position.isHorizontalEdge) 1f - physicalFraction else physicalFraction
         val index = (logicalFraction * insertionCount).toInt().coerceIn(0, dock.items.size)
         WidgetPickerDockPlacementPreview(
             provider = snapshot.provider,

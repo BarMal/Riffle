@@ -72,15 +72,24 @@ class DockConfigurationEngine {
         return DockEditResult.Updated(layout.copy(dock = layout.dock.copy(panel = panel)))
     }
 
+    /**
+     * Moves the dock to [position], re-fitting the workspace to whatever grid that leaves.
+     *
+     * A side dock takes a column from the pages beside it and a horizontal one gives it back, so
+     * the pages have to be re-fitted either way. Growing never displaces anything; shrinking moves
+     * whatever was in the lost column into free cells rather than refusing, because the user asked
+     * to move the dock, not to resize their grid.
+     */
     fun setDockPosition(
         layout: HomeLayout,
         position: DockPosition,
-    ): DockEditResult =
-        DockEditResult.Updated(
-            layout.copy(
-                dock = layout.dock.copy(position = position),
-            ),
-        )
+    ): DockEditResult {
+        val moved = layout.copy(dock = layout.dock.copy(position = position))
+        return when (val result = GridReflowEngine().reflowToGrid(moved, moved.workspaceGrid)) {
+            is GridReflowResult.Updated -> DockEditResult.Updated(result.layout)
+            is GridReflowResult.Rejected -> DockEditResult.Rejected(DockEditRejectionReason.NO_ROOM_FOR_GRID)
+        }
+    }
 
     /**
      * Removes one item from the dock's panel.

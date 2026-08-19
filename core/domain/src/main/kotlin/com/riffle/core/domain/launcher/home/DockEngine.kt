@@ -315,6 +315,9 @@ enum class DockEditRejectionReason {
     HOME_PAGE_NOT_FOUND,
     NO_AVAILABLE_HOME_CELL,
     INVALID_HOME_PLACEMENT,
+
+    /** A side dock would take a grid column the workspace has nowhere to put the contents of. */
+    NO_ROOM_FOR_GRID,
 }
 
 enum class DockItemMoveDirection(
