@@ -208,6 +208,7 @@ private fun StandardHomeSurface(
             ),
         appIconLoader = appIconLoader,
         widgetPreviewImageLoader = widgetRenderers.previewImageLoader,
+        deviceClass = state.settingsLayoutDeviceClass,
         onAction = onAction,
     )
 }

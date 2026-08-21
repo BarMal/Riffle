@@ -66,6 +66,7 @@ import com.riffle.core.domain.launcher.home.GridDimensions
 import com.riffle.core.domain.launcher.home.HomeEditMode
 import com.riffle.core.domain.launcher.home.HomeLabelSettings
 import com.riffle.core.domain.launcher.home.HomeLayout
+import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.LauncherItem
 import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.home.LauncherPage
@@ -90,9 +91,14 @@ internal fun StandardHome(
     presentation: StandardHomePresentation,
     appIconLoader: AppIconLoader,
     widgetPreviewImageLoader: WidgetPreviewImageLoader = EmptyWidgetPreviewImageLoader,
+    deviceClass: HomeLayoutDeviceClass = HomeLayoutDeviceClass.PHONE,
     onAction: (LauncherShellAction) -> Unit,
 ) {
     val visibleLayout = layout.visibleTo(installedApps)
+    // Single source of truth for where the dock sits: the user's configured edge if any, else the
+    // device class's template default (bottom on phones, the leading rail on wide postures -- see
+    // #1159). The widget-picker drop previews below and the rendered dock must agree on it.
+    val dockPosition = resolveDockPosition(visibleLayout.dock.position, deviceClass.templateDockPosition)
     val openedFolderId = remember { mutableStateOf<LauncherItemId?>(null) }
     val homeDragSession = remember { mutableStateOf<HomeDragSession?>(null) }
     val widgetPickerDragInProgress = remember { mutableStateOf(false) }
@@ -218,6 +224,7 @@ internal fun StandardHome(
             StandardHomeContentState(
                 layout = layout,
                 visibleLayout = visibleLayout,
+                dockPosition = dockPosition,
                 dragSession = homeDragSession.value,
                 widgetPickerDragPreview = widgetPickerDragPreview.value,
                 widgetPickerDockPreview = widgetPickerDockPreview.value,
@@ -279,7 +286,7 @@ internal fun StandardHome(
                         dock = visibleLayout.dock,
                         dockBounds = dockBounds.value,
                         isRtl = isRtl,
-                        position = visibleLayout.dock.position ?: DockPosition.BOTTOM,
+                        position = dockPosition,
                     )
             },
             onWidgetDragCancelled = {
@@ -351,7 +358,7 @@ internal fun StandardHome(
                         dock = visibleLayout.dock,
                         dockBounds = dockBounds.value,
                         isRtl = isRtl,
-                        position = visibleLayout.dock.position ?: DockPosition.BOTTOM,
+                        position = dockPosition,
                     )
                 val isValidDrop =
                     widgetPickerDropIsValid(
@@ -592,7 +599,7 @@ private fun StandardHomeColumn(
             onBackgroundClick = dockShelf.dismiss,
         )
     val margins = state.visibleLayout.settings.grid.margin.centered()
-    val dockEdge = state.visibleLayout.dock.position ?: DockPosition.BOTTOM
+    val dockEdge = state.dockPosition
     val dockArea: @Composable () -> Unit = {
         StandardHomeDockArea(
             layout = state.visibleLayout,
@@ -906,6 +913,7 @@ fun BoxScope.RemoveShortcutButton(
 private data class StandardHomeContentState(
     val layout: HomeLayout,
     val visibleLayout: HomeLayout,
+    val dockPosition: DockPosition,
     val dragSession: HomeDragSession?,
     val widgetPickerDragPreview: WidgetPickerDragPlacementPreview?,
     val widgetPickerDockPreview: WidgetPickerDockPlacementPreview?,
