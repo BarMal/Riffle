@@ -512,6 +512,13 @@ internal fun StandardHomeDockOnlySurface(
     dynamicEntries: List<DockDynamicEntry>? = null,
     onShowAllNotifications: () -> Unit = {},
     staticTapBehaviour: DockStaticTapBehaviour = DockStaticTapBehaviour.Launch,
+    /**
+     * Whether the expanded shelf shows its notification card row. Cards mode passes false: the
+     * stages already *are* the notifications, so the shelf becomes a panel-only mini-home surface
+     * and the row would just duplicate them. The collapsed strip's dynamic chips are passed
+     * separately via [dynamicEntries] and stay either way.
+     */
+    showExpandedNotificationShelf: Boolean = true,
 ) {
     val visibleLayout = layout.visibleTo(installedApps)
     val openedFolderId = remember { mutableStateOf<LauncherItemId?>(null) }
@@ -522,10 +529,13 @@ internal fun StandardHomeDockOnlySurface(
             notificationAccessStatus = presentation.notificationAccessStatus,
             apps = presentation.installedApps,
         )
+    // The expanded shelf's own notification section, suppressed to a panel-only shelf in Cards.
+    val expandedShelfState =
+        if (showExpandedNotificationShelf) notificationShelfState else DockNotificationShelfState.Hidden
     val dockShelf =
         rememberDockShelfController(
             hasPanel = visibleLayout.dock.panel != null,
-            notificationShelfState = notificationShelfState,
+            notificationShelfState = expandedShelfState,
         )
     val actions =
         HomeWorkspaceActions(
@@ -547,7 +557,7 @@ internal fun StandardHomeDockOnlySurface(
         StandardHomeDockArea(
             layout = visibleLayout,
             presentation = presentation,
-            notificationShelfState = notificationShelfState,
+            notificationShelfState = expandedShelfState,
             isDockShelfExpanded = dockShelf.isExpanded,
             onDockShelfExpandedChange = dockShelf.onExpandedChange,
             appIconLoader = appIconLoader,
