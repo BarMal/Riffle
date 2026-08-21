@@ -32,6 +32,11 @@ The dock anchors to any edge, and the space it takes is reserved rather than ove
 costs the workspace a column, a top or bottom dock costs it a row. Items are laid out along the
 edge it sits on.
 
+Until the user picks an edge, the dock takes its layout's default: the bottom on a phone, the
+leading edge — where the rail used to be — on a foldable, tablet or desktop, so a wide window opens
+with the dock already standing in as its side rail. A chosen edge always wins over the default
+(#1165).
+
 ### Sized by settings
 
 Icon size, item spacing, corner radius, background alpha and sizing are per-layout settings, and
@@ -59,6 +64,14 @@ The static section is sized first and in full; the dynamic section takes what is
 come and go, and a section sized first would shove the pinned icons along the dock every time one
 arrived.
 
+### The merged All-notifications view
+
+Cards can show a single view merging every stage's notifications. Where it is reached depends on the
+posture: on a compact window it rides the stage carousel's spine; on a wide window, which has no
+spine, it is offered as a dock entry kept last in the dynamic section, where the rail once kept it.
+Each posture has its own switch and both are off by default, so it is an opt-in extra rather than a
+step between stages (#1164).
+
 ### Overflow and rows
 
 The dock has a configurable number of items **visible before overflow**, and supports **multiple
@@ -74,6 +87,10 @@ configurable for **rendered size**, **grid dimensions**, and **padding**.
 
 It is deliberately not where items past the visible-before-overflow count go; those scroll in the
 dock's own strip. The panel is for things you consult or act on without leaving where you are.
+
+In Cards the panel is the whole of the expanded shelf. The notification card row that used to sit
+alongside it is gone (#1166): the stages already are the notifications, so the row showed them a
+second time. What arrived still reaches the collapsed strip's dynamic section either way.
 
 ### Floating over other apps
 
@@ -91,16 +108,19 @@ section does that job, so the rail is gone (#1159).
 | Target | State |
 | --- | --- |
 | One dock, every layout | Renders in every mode. Cards invokes it through its own bottom-pinned path rather than the shared one |
-| Anchors to any edge, space reserved | Done for grid modes (#1148–#1152). **Not for Cards** — bottom-pinned, so the position setting is inert there. Decided: wire `resolveDockPosition` into the dock's position, which means revisiting `dockInteractionRegionHeightDp` (it reserves a height and only a height) |
+| Anchors to any edge, space reserved | Done for grid modes (#1148–#1152, #1165) — the edge now resolves through `resolveDockPosition`. **Not for Cards** — still bottom-pinned via its own path, so the position setting is inert there; `dockInteractionRegionHeightDp` reserves a height and only a height |
+| Default edge per device class | Done for the standard dock (#1165) — phone bottom, wide leading rail, a chosen edge wins. Cards not yet (its own bottom-pinned path) |
 | Sized by settings | Done |
 | Static section | Done |
 | Dynamic section exists, opt-in per layout | Done (#1154), gated on the existing per-layout switch |
 | Dynamic section means "a notification arrived" | Done (#1162) — de-duplicated against the static side in every mode |
 | Tap opens the app / brings the stage forward | Done (#1155), and on the static side in Cards too (#1162) |
 | Static sized first, dynamic takes the remainder | Done (#1154) |
+| Merged All-notifications view reachable | Done (#1164) — spine on a compact window, opt-in dock entry on a wide one, each posture switched separately and off by default |
 | Visible-before-overflow, scroll for the rest | Done |
 | Multiple rows | **Not started** — no notion of rows exists |
 | Panel exists, standard conventions | Done — a real `LauncherPage` on the same grid machinery as a home page |
+| Cards expanded shelf is panel-only | Done (#1166) — the notification card row is dropped there, the panel stays |
 | Panel configurable: size, grid, padding | **Not started** |
 | Panel editing: drag in from the picker | **Not started** — needs a non-fullscreen picker so the dock stays visible |
 | Dock floats over other apps | **Not started** — a separate overlay dock subsystem exists and is to be replaced |
@@ -108,16 +128,13 @@ section does that job, so the rail is gone (#1159).
 
 ## Unresolved
 
-- **The merged All-notifications page has no dock affordance on a wide window.** It used to ride the
-  full-stage-list feed, which was wrong for other reasons (#1162); the compact stage carousel still
-  reaches it. The `ShowAllNotifications` intent and its plumbing are deliberately left in place and
-  dormant, so a dedicated affordance can host it if a wide window is decided to need one.
 - **A pinned app's tap action in Cards depends on whether something is waiting.** The badge makes it
   legible, but it is a behaviour that changes without the user doing anything, and is open to veto.
 - **The rail's per-stage snippet.** The rail showed a line of the most recent card per stage. A dock
   entry is one icon wide and has nowhere to put it, so that is lost with no replacement.
-- **The Cards expanded shelf still shows a notification card row**, which duplicates the dock's
-  dynamic section. The panel is the part worth keeping there.
+- **The merged All-notifications view on a wide window is a dock entry, unverified on a device.** It
+  now has an affordance (#1164), but whether it reads right at the end of the dynamic row — and
+  whether the wide-vs-compact posture check agrees with the surface's own — wants a real wide screen.
 
 ## Change checklist
 
