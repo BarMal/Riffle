@@ -772,7 +772,13 @@ private fun AdaptiveStageCompactStagePager(
             focusedCardId = focusedCardId,
             onDetailVisibilityChanged = onDetailVisibilityChanged,
             onFocusedCardChanged = onFocusedCardChanged,
-            showDetailInline = true,
+            // Honour the caller's choice here too. This single-page fallback used to be reachable
+            // only in the degenerate all-notifications-only case (the page list always carried the
+            // merged page), so hardcoding true was harmless. Once the merged page became opt-in
+            // (per-posture toggle), a lone real Stage page reaches this path -- and in SPLIT the
+            // upper AdaptiveStageSupportingPane already renders the detail, so inline here would
+            // duplicate it. COMPACT still passes the default (true), so it is unaffected.
+            showDetailInline = showDetailInline,
             // This pager is always the compact (folded) presentation -- see its own doc.
             useUnfoldedAppearance = false,
             onAction = onAction,
