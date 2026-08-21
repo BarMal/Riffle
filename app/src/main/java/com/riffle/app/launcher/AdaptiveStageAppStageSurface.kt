@@ -108,6 +108,7 @@ import com.riffle.core.domain.launcher.cards.mergedContentByRecency
 import com.riffle.core.domain.launcher.cards.variantFor
 import com.riffle.core.domain.launcher.cards.visibleStaticElements
 import com.riffle.core.domain.launcher.home.DockPosition
+import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.notifications.LauncherNotificationKey
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.notifications.NotificationHideRule
@@ -145,6 +146,25 @@ internal fun resolveDockPosition(
     configuredDockPosition: DockPosition?,
     templateDockPosition: DockPosition?,
 ): DockPosition = configuredDockPosition ?: templateDockPosition ?: DockPosition.LEADING
+
+/**
+ * The dock edge a device class defaults to before the user picks one -- the [templateDockPosition]
+ * that [resolveDockPosition] falls back to. Narrow postures keep the dock along the bottom; wide
+ * postures put it on the leading edge, where #1159 moved the rail once the standalone rail went
+ * away. Every class is mapped, so [resolveDockPosition]'s own `LEADING` fallback stays unreached.
+ */
+internal val HomeLayoutDeviceClass.templateDockPosition: DockPosition
+    get() =
+        when (this) {
+            HomeLayoutDeviceClass.PHONE,
+            HomeLayoutDeviceClass.PHONE_LANDSCAPE,
+            -> DockPosition.BOTTOM
+
+            HomeLayoutDeviceClass.FOLDABLE,
+            HomeLayoutDeviceClass.TABLET,
+            HomeLayoutDeviceClass.DESKTOP,
+            -> DockPosition.LEADING
+        }
 
 /**
  * Mirrors [resolveDockPosition]'s shape: the pane arrangement is a plain configured user
