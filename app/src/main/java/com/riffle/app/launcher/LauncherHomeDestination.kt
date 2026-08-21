@@ -150,6 +150,9 @@ private fun CardsHomeSurface(
             // In Cards a pinned app icon brings its stage forward rather than opening the app, when
             // it has a stage; opening stays on the icon's long-press menu.
             staticTapBehaviour = dockStaticTapBehaviour,
+            // The stages already are the notifications, so the expanded shelf is a panel-only
+            // mini-home surface here -- the card row would just show them a second time.
+            showExpandedNotificationShelf = false,
         )
         AdaptiveStageAppStageSurface(
             state = state,
