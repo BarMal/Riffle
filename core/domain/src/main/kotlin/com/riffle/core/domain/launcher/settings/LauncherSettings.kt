@@ -82,6 +82,13 @@ data class CardsSettings(
     val threadMessageOrder: ThreadMessageOrder = ThreadMessageOrder.CHRONOLOGICAL,
     /** Whether a conversation's messages become one card each or one card between them. */
     val threadCardGrouping: ThreadCardGrouping = ThreadCardGrouping.PER_THREAD,
+    /**
+     * Whether the merged "All notifications" view -- every stage's notifications at once -- is
+     * offered, per posture. Folded is the compact spine's trailing page; unfolded is the wide
+     * layout's dock entry. Off by default: it is an opt-in extra, not part of moving between stages.
+     */
+    val foldedShowAllNotifications: Boolean = false,
+    val unfoldedShowAllNotifications: Boolean = false,
 )
 
 /**

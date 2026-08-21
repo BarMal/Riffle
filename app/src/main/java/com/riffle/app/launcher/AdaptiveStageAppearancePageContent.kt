@@ -389,6 +389,24 @@ private fun AdaptiveStageLayoutTabContent(
             onSelected = { order -> onAction(LauncherShellAction.SelectThreadMessageOrder(order)) },
         )
     }
+    SettingsSection(title = "All notifications") {
+        SettingsSwitchRow(
+            title = "Show on folded",
+            subtitle = "A merged view of every notification, on the compact layout",
+            checked = state.settings.cards.foldedShowAllNotifications,
+            onCheckedChange = { enabled ->
+                onAction(LauncherShellAction.SelectCardsFoldedShowAllNotifications(enabled))
+            },
+        )
+        SettingsSwitchRow(
+            title = "Show on unfolded",
+            subtitle = "The same merged view on the wide layout",
+            checked = state.settings.cards.unfoldedShowAllNotifications,
+            onCheckedChange = { enabled ->
+                onAction(LauncherShellAction.SelectCardsUnfoldedShowAllNotifications(enabled))
+            },
+        )
+    }
 }
 
 @Composable

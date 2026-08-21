@@ -493,8 +493,8 @@ internal sealed interface AdaptiveStagePage {
     data object AllNotifications : AdaptiveStagePage
 }
 
-internal fun List<AppStage>.withAllNotificationsPage(): List<AdaptiveStagePage> =
-    map(AdaptiveStagePage::Stage) + AdaptiveStagePage.AllNotifications
+internal fun List<AppStage>.withAllNotificationsPage(include: Boolean = true): List<AdaptiveStagePage> =
+    map(AdaptiveStagePage::Stage) + listOfNotNull(AdaptiveStagePage.AllNotifications.takeIf { include })
 
 /**
  * The pager's index into [pages] for whatever is currently shown, independent of pages.size.
@@ -562,7 +562,8 @@ private fun AdaptiveStageCompactContent(
 ) {
     val stages = shellState.snapshot.stages
     val reducedMotion = state.launcherSettings.motion.reducedMotion
-    val pages = remember(stages) { stages.withAllNotificationsPage() }
+    val showAllNotifications = state.launcherSettings.cards.foldedShowAllNotifications
+    val pages = remember(stages, showAllNotifications) { stages.withAllNotificationsPage(showAllNotifications) }
     val selectedPageIndex =
         adaptiveStageSelectedPageIndex(pages, selectedStage?.id, allNotificationsSelected)
     val pagerState =
@@ -641,7 +642,8 @@ private fun AdaptiveStageSplitContent(
 ) {
     val stages = shellState.snapshot.stages
     val reducedMotion = state.launcherSettings.motion.reducedMotion
-    val pages = remember(stages) { stages.withAllNotificationsPage() }
+    val showAllNotifications = state.launcherSettings.cards.foldedShowAllNotifications
+    val pages = remember(stages, showAllNotifications) { stages.withAllNotificationsPage(showAllNotifications) }
     val selectedPageIndex =
         adaptiveStageSelectedPageIndex(pages, selectedStage?.id, allNotificationsSelected)
     val pagerState =
@@ -770,7 +772,13 @@ private fun AdaptiveStageCompactStagePager(
             focusedCardId = focusedCardId,
             onDetailVisibilityChanged = onDetailVisibilityChanged,
             onFocusedCardChanged = onFocusedCardChanged,
-            showDetailInline = true,
+            // Honour the caller's choice here too. This single-page fallback used to be reachable
+            // only in the degenerate all-notifications-only case (the page list always carried the
+            // merged page), so hardcoding true was harmless. Once the merged page became opt-in
+            // (per-posture toggle), a lone real Stage page reaches this path -- and in SPLIT the
+            // upper AdaptiveStageSupportingPane already renders the detail, so inline here would
+            // duplicate it. COMPACT still passes the default (true), so it is unaffected.
+            showDetailInline = showDetailInline,
             // This pager is always the compact (folded) presentation -- see its own doc.
             useUnfoldedAppearance = false,
             onAction = onAction,

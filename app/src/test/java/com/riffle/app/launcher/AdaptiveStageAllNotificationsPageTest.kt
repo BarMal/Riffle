@@ -42,6 +42,18 @@ class AdaptiveStageAllNotificationsPageTest {
     }
 
     @Test
+    fun withAllNotificationsPageExcludedIsJustTheRealStages() {
+        val mail = stage("mail")
+        val chat = stage("chat")
+        val stages = listOf(appStage(mail), appStage(chat))
+
+        val pages = stages.withAllNotificationsPage(include = false)
+
+        assertEquals(2, pages.size)
+        assertTrue(pages.none { page -> page == AdaptiveStagePage.AllNotifications })
+    }
+
+    @Test
     fun selectedPageIndexResolvesARealSelectedStage() {
         val mail = stage("mail")
         val chat = stage("chat")

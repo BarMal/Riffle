@@ -13,6 +13,8 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.cards.AdaptiveStageInteractionContext
+import com.riffle.core.domain.launcher.cards.AdaptiveStagePaneLayoutPolicy
+import com.riffle.core.domain.launcher.cards.AdaptiveStagePaneMode
 import com.riffle.core.domain.launcher.cards.AdaptiveStageWindowLayout
 
 @Composable
@@ -50,6 +52,16 @@ fun HomeDestination(
     }
 }
 
+/**
+ * Whether this window resolves to a wide (unfolded) Cards layout -- the multi-pane one, where the
+ * merged All-notifications view has no spine to live on. Null (unmeasured, or previews) reads as not
+ * wide, so the entry stays off until a real wide window is known.
+ */
+private fun AdaptiveStageWindowLayout?.showsUnfoldedCardsLayout(): Boolean {
+    val mode = this?.let { window -> AdaptiveStagePaneLayoutPolicy().layoutFor(window).mode } ?: return false
+    return mode == AdaptiveStagePaneMode.TWO_PANE || mode == AdaptiveStagePaneMode.THREE_PANE
+}
+
 @Composable
 private fun CardsHomeSurface(
     state: LauncherShellState,
@@ -71,13 +83,25 @@ private fun CardsHomeSurface(
     // The dynamic side means "a notification arrived", the same de-duplicated list grid mode draws
     // (a pinned app is on the static side and excluded here), but a tap brings the app's stage
     // forward instead of opening it. A pinned app's own stage is reached from its static icon.
+    // The merged "All notifications" entry is offered only on a wide (unfolded) layout and only
+    // when opted in -- on a compact layout that view lives on the spine instead. Kept last, as the
+    // rail kept it.
+    val showUnfoldedAllNotifications =
+        adaptiveStageWindowLayout.showsUnfoldedCardsLayout() &&
+            state.launcherSettings.cards.unfoldedShowAllNotifications
     val dockDynamicEntries =
         dockNotificationShelfState(
             dock = state.homeLayout.visibleTo(state.installedApps).dock,
             groups = state.notificationGroupsByApp,
             notificationAccessStatus = state.notificationAccessStatus,
             apps = state.installedApps,
-        ).dockNotificationCards().stageSelectingDockDynamicEntries(selectedStageId)
+        ).dockNotificationCards().stageSelectingDockDynamicEntries(selectedStageId) +
+            listOfNotNull(
+                allNotificationsDockDynamicEntry(
+                    isSelected = adaptiveStageContext.allNotificationsSelected,
+                    badgeCount = state.notificationGroupsByApp.sumOf { group -> group.count },
+                ).takeIf { showUnfoldedAllNotifications },
+            )
     val dockStaticTapBehaviour =
         DockStaticTapBehaviour.SelectStageIfBacked(
             shellState.snapshot.stages.map { stage -> stage.id }.toSet(),
@@ -118,6 +142,11 @@ private fun CardsHomeSurface(
             appIconLoader = appIconLoader,
             onAction = onAction,
             dynamicEntries = dockDynamicEntries,
+            // The merged page is not a stage, so there is no action to send: it is a choice about
+            // what this surface shows, which the interaction context holds.
+            onShowAllNotifications = {
+                onAdaptiveStageContextChanged(adaptiveStageContext.copy(allNotificationsSelected = true))
+            },
             // In Cards a pinned app icon brings its stage forward rather than opening the app, when
             // it has a stage; opening stays on the icon's long-press menu.
             staticTapBehaviour = dockStaticTapBehaviour,

@@ -143,6 +143,23 @@ class LauncherSettingsJsonCodecTest {
     }
 
     @Test
+    fun roundTripsTheAllNotificationsToggles() {
+        val settings =
+            LauncherSettings(
+                cards =
+                    CardsSettings(
+                        foldedShowAllNotifications = true,
+                        unfoldedShowAllNotifications = true,
+                    ),
+            )
+
+        val decoded = decodeLauncherSettings(encodeLauncherSettings(settings))
+
+        assertEquals(true, decoded.cards.foldedShowAllNotifications)
+        assertEquals(true, decoded.cards.unfoldedShowAllNotifications)
+    }
+
+    @Test
     fun defaultsUnknownAdaptiveStagePaneArrangement() {
         val decodedSettings =
             decodeLauncherSettings(
