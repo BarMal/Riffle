@@ -4,7 +4,6 @@ import com.riffle.core.domain.launcher.home.DockAlignment
 import com.riffle.core.domain.launcher.home.DockBackgroundSizing
 import com.riffle.core.domain.launcher.home.DockExpandAffordance
 import com.riffle.core.domain.launcher.home.DockModel
-import com.riffle.core.domain.launcher.home.DockPosition
 import com.riffle.core.domain.launcher.home.DockVisualEffect
 import com.riffle.core.domain.launcher.home.GridDimensions
 import com.riffle.core.domain.launcher.home.HomeLayout
@@ -14,6 +13,7 @@ import com.riffle.core.domain.launcher.home.LauncherPageId
 import com.riffle.core.domain.launcher.home.LauncherPageType
 import com.riffle.core.domain.launcher.home.LauncherTemplateId
 import com.riffle.core.domain.launcher.home.LauncherViewMode
+import com.riffle.core.domain.launcher.home.dockPositionFromStoredName
 import com.riffle.core.domain.launcher.home.reflowedToWorkspaceGrid
 import com.riffle.core.domain.launcher.home.workspaceGridFor
 import org.json.JSONArray
@@ -112,7 +112,7 @@ private fun JSONObject.toDock(
         position =
             optString("position", "")
                 .takeIf(String::isNotBlank)
-                ?.let { value -> runCatching { DockPosition.valueOf(value) }.getOrNull() }
+                ?.let(::dockPositionFromStoredName)
                 ?: defaults.position,
         panel =
             optJSONObject("panel")

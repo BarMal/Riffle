@@ -32,10 +32,11 @@ The dock anchors to any edge, and the space it takes is reserved rather than ove
 costs the workspace a column, a top or bottom dock costs it a row. Items are laid out along the
 edge it sits on.
 
-Until the user picks an edge, the dock takes its layout's default: the bottom on a phone, the
-leading edge — where the rail used to be — on a foldable, tablet or desktop, so a wide window opens
-with the dock already standing in as its side rail. A chosen edge always wins over the default
-(#1165).
+Until the user picks an edge, the dock takes its layout's default: the bottom on a phone, the left
+edge — where the rail used to be — on a foldable, tablet or desktop, so a wide window opens with the
+dock already standing in as its side rail. A chosen edge always wins over the default (#1165). The
+edges are absolute (top/bottom/left/right), not layout-direction-relative: a dock the user places
+stays where they put it rather than mirroring in a right-to-left locale.
 
 ### Sized by settings
 
@@ -109,7 +110,7 @@ section does that job, so the rail is gone (#1159).
 | --- | --- |
 | One dock, every layout | Renders in every mode. Cards invokes it through its own bottom-pinned path rather than the shared one |
 | Anchors to any edge, space reserved | Done for grid modes (#1148–#1152, #1165) — the edge now resolves through `resolveDockPosition`. **Not for Cards** — still bottom-pinned via its own path, so the position setting is inert there; `dockInteractionRegionHeightDp` reserves a height and only a height |
-| Default edge per device class | Done for the standard dock (#1165) — phone bottom, wide leading rail, a chosen edge wins. Cards not yet (its own bottom-pinned path) |
+| Default edge per device class | Done for the standard dock (#1165) — phone bottom, wide left-edge rail, a chosen edge wins. Cards not yet (its own bottom-pinned path) |
 | Sized by settings | Done |
 | Static section | Done |
 | Dynamic section exists, opt-in per layout | Done (#1154), gated on the existing per-layout switch |

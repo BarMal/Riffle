@@ -38,7 +38,7 @@ class DockRunOrientationTest {
 
     @Test
     fun aSideDockStacksItsSlotsDownTheEdge() {
-        setContent(DockPosition.LEADING)
+        setContent(DockPosition.LEFT)
 
         val first = composeRule.onNodeWithTag(dockItemTestTag(camera.id)).fetchSemanticsNode().boundsInRoot
         val second = composeRule.onNodeWithTag(dockItemTestTag(mail.id)).fetchSemanticsNode().boundsInRoot
@@ -60,7 +60,7 @@ class DockRunOrientationTest {
 
     @Test
     fun aSideDocksSurfaceIsTallerThanItIsWide() {
-        setContent(DockPosition.LEADING)
+        setContent(DockPosition.LEFT)
 
         val surface = composeRule.onNodeWithTag(HOME_DOCK_SURFACE_TEST_TAG).fetchSemanticsNode().boundsInRoot
 
@@ -71,7 +71,7 @@ class DockRunOrientationTest {
     fun draggingAnItemOffASideDockMovesItHome() {
         // Sideways, not upward: off a leading dock is toward the workspace.
         val actions = mutableListOf<LauncherShellAction>()
-        setContent(DockPosition.LEADING, actions = actions)
+        setContent(DockPosition.LEFT, actions = actions)
 
         composeRule.onNodeWithTag(dockItemTestTag(camera.id)).performTouchInput {
             down(center)
@@ -88,7 +88,7 @@ class DockRunOrientationTest {
     @Test
     fun draggingAlongASideDocksRunReordersInsteadOfLeaving() {
         val actions = mutableListOf<LauncherShellAction>()
-        setContent(DockPosition.LEADING, actions = actions)
+        setContent(DockPosition.LEFT, actions = actions)
 
         composeRule.onNodeWithTag(dockItemTestTag(camera.id)).performTouchInput {
             down(center)

@@ -39,10 +39,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import com.riffle.app.launcher.widgets.EmptyHomeWidgetViewFactory
 import com.riffle.app.launcher.widgets.HomeWidgetViewFactory
@@ -753,7 +751,6 @@ private fun DockSlot(
                     state = state,
                     slotSizeDp = state.iconSizeDp,
                     itemSpacingDp = state.itemSpacingDp,
-                    isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl,
                     dragViewport = dragViewport,
                     onDragStateChanged = onDragStateChanged,
                     onAction = presentation.interactions.onAction,
@@ -816,7 +813,6 @@ private fun Modifier.dockItemDrag(
     state: DockSlotState,
     slotSizeDp: Int,
     itemSpacingDp: Int,
-    isRtl: Boolean,
     dragViewport: DockDragViewport,
     onDragStateChanged: (DockDragState?) -> Unit,
     onAction: (LauncherShellAction) -> Unit,
@@ -900,7 +896,7 @@ private fun Modifier.dockItemDrag(
                                 originIndex = state.shortcutIndex,
                                 targetIndex = targetIndex,
                                 awayFromEdgePx =
-                                    state.position.dragAwayFromEdgePx(dragXPx, dragYPx, isRtl = isRtl),
+                                    state.position.dragAwayFromEdgePx(dragXPx, dragYPx),
                                 dockItemSizePx = density * slotSizeDp,
                             )?.let(onAction)
                             onDragStateChanged(null)

@@ -85,10 +85,10 @@ class HomeLayoutJsonCodecDockExpansionTest {
     fun roundTripsTheDockPosition() {
         val layout =
             HomeLayoutDefaults.standard().let { standard ->
-                standard.copy(dock = standard.dock.copy(position = DockPosition.TRAILING))
+                standard.copy(dock = standard.dock.copy(position = DockPosition.RIGHT))
             }
 
-        assertEquals(DockPosition.TRAILING, decodeHomeLayout(encodeHomeLayout(layout)).dock.position)
+        assertEquals(DockPosition.RIGHT, decodeHomeLayout(encodeHomeLayout(layout)).dock.position)
     }
 
     @Test
@@ -97,7 +97,7 @@ class HomeLayoutJsonCodecDockExpansionTest {
         // width underneath it.
         val layout =
             HomeLayoutDefaults.standard().let { standard ->
-                standard.copy(dock = standard.dock.copy(position = DockPosition.LEADING))
+                standard.copy(dock = standard.dock.copy(position = DockPosition.LEFT))
             }
 
         val decoded = decodeHomeLayout(encodeHomeLayout(layout))
@@ -130,7 +130,7 @@ class HomeLayoutJsonCodecDockExpansionTest {
             encodeHomeLayout(
                 standard.copy(
                     pages = listOf(standard.selectedPage.copy(items = listOf(stranded))),
-                    dock = standard.dock.copy(position = DockPosition.LEADING),
+                    dock = standard.dock.copy(position = DockPosition.LEFT),
                 ),
             )
 

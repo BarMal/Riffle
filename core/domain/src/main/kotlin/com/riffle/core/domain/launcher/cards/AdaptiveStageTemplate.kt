@@ -24,7 +24,7 @@ data class AdaptiveStageTemplateVariant(
     val canvas: AdaptiveStageCanvas,
     val dynamicSlots: List<AdaptiveStageDynamicSlot>,
     /** The edge this variant puts the dock/rail strip on when the user has not chosen one. */
-    val dockPosition: DockPosition = DockPosition.LEADING,
+    val dockPosition: DockPosition = DockPosition.LEFT,
 )
 
 data class AdaptiveStageCanvas(

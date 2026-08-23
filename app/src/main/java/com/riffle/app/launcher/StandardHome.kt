@@ -713,15 +713,18 @@ private fun StandardHomeFrame(
         return
     }
 
+    // The edges are physical, but a Row lays children start-to-end and mirrors in RTL. Placing the
+    // dock by physical side keeps a left dock on the left either way.
+    val dockLeadsRow = dockEdge.placedBeforeContent(LocalLayoutDirection.current)
     Row(modifier = modifier) {
-        if (dockEdge == DockPosition.LEADING) dockArea()
+        if (dockLeadsRow) dockArea()
         Column(
             modifier = Modifier.weight(1f).fillMaxHeight(),
             verticalArrangement = Arrangement.Top,
             horizontalAlignment = Alignment.CenterHorizontally,
             content = content,
         )
-        if (dockEdge == DockPosition.TRAILING) dockArea()
+        if (!dockLeadsRow) dockArea()
     }
 }
 
@@ -732,7 +735,7 @@ private fun StandardHomeFrame(
  * bottom dock it has always had rather than rendering somewhere half-supported.
  */
 private val DockPosition.isSideEdge: Boolean
-    get() = this == DockPosition.LEADING || this == DockPosition.TRAILING
+    get() = this == DockPosition.LEFT || this == DockPosition.RIGHT
 
 @Composable
 private fun rememberDockShelfController(

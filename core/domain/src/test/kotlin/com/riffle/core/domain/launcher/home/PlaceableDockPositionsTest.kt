@@ -24,8 +24,8 @@ class PlaceableDockPositionsTest {
             val placeable = viewMode.placeableDockPositions
 
             assertFalse(DockPosition.TOP in placeable, "$viewMode should not offer the top edge")
-            assertTrue(DockPosition.LEADING in placeable)
-            assertTrue(DockPosition.TRAILING in placeable)
+            assertTrue(DockPosition.LEFT in placeable)
+            assertTrue(DockPosition.RIGHT in placeable)
             assertTrue(DockPosition.BOTTOM in placeable)
         }
     }

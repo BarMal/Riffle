@@ -56,7 +56,7 @@ class DockDynamicSectionTest {
 
     @Test
     fun theDynamicSectionRunsOnDownASideDock() {
-        setContent(DockPosition.LEADING)
+        setContent(DockPosition.LEFT)
 
         val pinned = boundsOf(dockItemTestTag(mail.id))
         val waiting = boundsOf(dockDynamicSectionTileTestTag(CHAT_LABEL))

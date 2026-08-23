@@ -317,8 +317,8 @@ private fun dockPositionSubtitle(
 
 private fun DockPosition.label(): String =
     when (this) {
-        DockPosition.LEADING -> "Leading edge"
-        DockPosition.TRAILING -> "Trailing edge"
+        DockPosition.LEFT -> "Left edge"
+        DockPosition.RIGHT -> "Right edge"
         DockPosition.TOP -> "Top edge"
         DockPosition.BOTTOM -> "Bottom edge"
     }

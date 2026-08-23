@@ -15,6 +15,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.riffle.app.launcher.widgets.EmptyHomeWidgetViewFactory
@@ -166,7 +167,7 @@ internal fun ExpandedDockSurface(
 
         DockShelfArrangement(
             runsHorizontally = runsHorizontally,
-            stripFirst = position == DockPosition.TOP || position == DockPosition.LEADING,
+            stripFirst = position.placedBeforeContent(LocalLayoutDirection.current),
             modifier =
                 Modifier
                     .dockShelfPolicies(interactions)

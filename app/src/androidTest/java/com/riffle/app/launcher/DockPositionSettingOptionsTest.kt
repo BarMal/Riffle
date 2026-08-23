@@ -46,8 +46,8 @@ class DockPositionSettingOptionsTest {
         setContent(LauncherViewMode.STANDARD_APP_DRAWER)
 
         composeRule.onNodeWithTag(positionTag(DockPosition.BOTTOM)).performScrollTo().assertIsDisplayed()
-        composeRule.onNodeWithTag(positionTag(DockPosition.LEADING)).assertIsDisplayed()
-        composeRule.onNodeWithTag(positionTag(DockPosition.TRAILING)).assertIsDisplayed()
+        composeRule.onNodeWithTag(positionTag(DockPosition.LEFT)).assertIsDisplayed()
+        composeRule.onNodeWithTag(positionTag(DockPosition.RIGHT)).assertIsDisplayed()
         composeRule.onAllNodesWithTag(positionTag(DockPosition.TOP)).assertCountEquals(0)
     }
 

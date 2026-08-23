@@ -170,10 +170,10 @@ class DockConfigurationEngineTest {
         val phone = appShortcut(id = "phone")
         val layout = layoutWithDockItems(phone)
 
-        val result = engine.setDockPosition(layout = layout, position = DockPosition.TRAILING)
+        val result = engine.setDockPosition(layout = layout, position = DockPosition.RIGHT)
 
         val updated = assertIs<DockEditResult.Updated>(result)
-        assertEquals(DockPosition.TRAILING, updated.layout.dock.position)
+        assertEquals(DockPosition.RIGHT, updated.layout.dock.position)
         assertEquals(listOf(phone.id), updated.layout.dock.items.map { item -> item.id })
     }
 
@@ -182,7 +182,7 @@ class DockConfigurationEngineTest {
         val layout = layoutWithDockItems(appShortcut(id = "phone"))
         val configuredColumns = layout.settings.grid.dimensions.columns
 
-        val result = engine.setDockPosition(layout = layout, position = DockPosition.LEADING)
+        val result = engine.setDockPosition(layout = layout, position = DockPosition.LEFT)
 
         val updated = assertIs<DockEditResult.Updated>(result).layout
         assertEquals(configuredColumns - 1, updated.pages.first().grid.columns)
@@ -196,7 +196,7 @@ class DockConfigurationEngineTest {
         val configuredColumns = layout.settings.grid.dimensions.columns
         val onASide =
             assertIs<DockEditResult.Updated>(
-                engine.setDockPosition(layout = layout, position = DockPosition.LEADING),
+                engine.setDockPosition(layout = layout, position = DockPosition.LEFT),
             ).layout
 
         val result = engine.setDockPosition(layout = onASide, position = DockPosition.BOTTOM)
@@ -209,7 +209,7 @@ class DockConfigurationEngineTest {
         val layout = layoutWithDockItems().copy(dock = DockModel(capacity = 5, isEnabled = false))
         val configuredColumns = layout.settings.grid.dimensions.columns
 
-        val result = engine.setDockPosition(layout = layout, position = DockPosition.LEADING)
+        val result = engine.setDockPosition(layout = layout, position = DockPosition.LEFT)
 
         assertEquals(configuredColumns, assertIs<DockEditResult.Updated>(result).layout.pages.first().grid.columns)
     }
