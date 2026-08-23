@@ -71,6 +71,7 @@ import com.riffle.core.domain.launcher.home.LauncherItem
 import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.home.LauncherPage
 import com.riffle.core.domain.launcher.home.LauncherPageId
+import com.riffle.core.domain.launcher.home.isHorizontalEdge
 import com.riffle.core.domain.launcher.notifications.AppNotificationGroup
 import com.riffle.core.domain.launcher.notifications.NotificationAccessStatus
 import com.riffle.core.domain.launcher.settings.AdaptiveStageAppearanceSettings
@@ -207,7 +208,7 @@ internal fun StandardHome(
             onDragSessionChanged = { session -> homeDragSession.value = session },
             currentDragSession = { homeDragSession.value },
             haptics = interactions.haptics,
-            onDockInteractionHeightChanged = interactions.onDockInteractionHeightChanged,
+            onDockInteractionExtentChanged = interactions.onDockInteractionExtentChanged,
             onBottomControlsHeightChanged = interactions.onBottomControlsHeightChanged,
             onWorkspaceGridBoundsChanged = { pageId, bounds ->
                 if (pageId == visibleLayout.selectedPageId) {
@@ -496,7 +497,7 @@ private fun LauncherPage.freeCellCandidates(
     }
 
 /**
- * Renders only the standard Dock, pinned to the bottom of the screen. Cards mode reuses the
+ * Renders only the standard Dock, on whichever edge it has been given. Cards mode reuses the
  * standard Dock but must not show the standard grid pages (and their icons) underneath its own
  * canvas -- unlike [StandardHome], this never composes [ImmediateWorkspacePager].
  */
@@ -508,6 +509,7 @@ internal fun StandardHomeDockOnlySurface(
     presentation: StandardHomePresentation,
     appIconLoader: AppIconLoader,
     onAction: (LauncherShellAction) -> Unit,
+    position: DockPosition = DockPosition.BOTTOM,
     /** Null leaves the dock's dynamic side to notifications, which is what grid mode wants. */
     dynamicEntries: List<DockDynamicEntry>? = null,
     onShowAllNotifications: () -> Unit = {},
@@ -542,7 +544,7 @@ internal fun StandardHomeDockOnlySurface(
             onFolderOpen = { folder -> openedFolderId.value = folder.id },
             onDragSessionChanged = {},
             haptics = interactions.haptics,
-            onDockInteractionHeightChanged = interactions.onDockInteractionHeightChanged,
+            onDockInteractionExtentChanged = interactions.onDockInteractionExtentChanged,
             onBackgroundClick = dockShelf.dismiss,
             onAction = onAction,
         )
@@ -552,7 +554,7 @@ internal fun StandardHomeDockOnlySurface(
             Modifier
                 .fillMaxSize()
                 .windowInsetsPadding(presentation.homeInsetPolicy.safeDrawingInsets()),
-        contentAlignment = Alignment.BottomCenter,
+        contentAlignment = position.dockOnlyBoxAlignment(LocalLayoutDirection.current),
     ) {
         StandardHomeDockArea(
             layout = visibleLayout,
@@ -562,6 +564,7 @@ internal fun StandardHomeDockOnlySurface(
             onDockShelfExpandedChange = dockShelf.onExpandedChange,
             appIconLoader = appIconLoader,
             actions = actions,
+            position = position,
             dynamicEntries = dynamicEntries ?: notificationShelfState.dynamicEntries(),
             onShowAllNotifications = onShowAllNotifications,
             staticTapBehaviour = staticTapBehaviour,
@@ -736,6 +739,23 @@ private fun StandardHomeFrame(
  */
 private val DockPosition.isSideEdge: Boolean
     get() = this == DockPosition.LEFT || this == DockPosition.RIGHT
+
+/**
+ * The [Box] alignment that pins [StandardHomeDockOnlySurface]'s dock to this edge.
+ *
+ * Unlike [StandardHomeFrame], every edge is live here -- Cards allows all four -- so this reuses
+ * [placedBeforeContent] rather than [isSideEdge]'s side-only split: a horizontal edge centers along
+ * the top or bottom, a vertical one resolves to the physical left or right via the same
+ * direction-aware mapping the Row ordering above uses.
+ */
+private fun DockPosition.dockOnlyBoxAlignment(direction: LayoutDirection): Alignment =
+    if (isHorizontalEdge) {
+        if (this == DockPosition.TOP) Alignment.TopCenter else Alignment.BottomCenter
+    } else if (placedBeforeContent(direction)) {
+        Alignment.CenterStart
+    } else {
+        Alignment.CenterEnd
+    }
 
 @Composable
 private fun rememberDockShelfController(
@@ -970,7 +990,7 @@ internal data class HomeDragSession(
 
 internal data class StandardHomeInteractions(
     val haptics: LauncherHaptics = NoopLauncherHaptics,
-    val onDockInteractionHeightChanged: (Int) -> Unit = {},
+    val onDockInteractionExtentChanged: (Int) -> Unit = {},
     val onBottomControlsHeightChanged: (Int) -> Unit = {},
 )
 
@@ -1056,7 +1076,7 @@ internal data class HomeWorkspaceActions(
     val onDragSessionChanged: (HomeDragSession?) -> Unit,
     val currentDragSession: () -> HomeDragSession? = { null },
     val haptics: LauncherHaptics,
-    val onDockInteractionHeightChanged: (Int) -> Unit = {},
+    val onDockInteractionExtentChanged: (Int) -> Unit = {},
     val onBottomControlsHeightChanged: (Int) -> Unit = {},
     val onWorkspaceGridBoundsChanged: (LauncherPageId, Rect) -> Unit = { _, _ -> },
     val onDockBoundsChanged: (Rect) -> Unit = {},

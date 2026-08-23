@@ -31,10 +31,8 @@ import org.junit.runner.RunWith
 /**
  * What the dock position control offers, which is what the layout can place.
  *
- * A Cards layout is still offered all four. Note that nothing acts on the choice there yet: the
- * rail it used to place is gone, and the dock Cards mode draws is still bottom-pinned -- see
- * `dockInteractionRegionHeightDp`, which reserves a height and only a height. Letting a Cards
- * dock take an edge is the follow-up; these only pin what the control shows.
+ * A Cards layout is offered all four, and (see `CardsHomeSurface`) the dock it draws now resolves
+ * and follows the same edge.
  */
 @RunWith(AndroidJUnit4::class)
 class DockPositionSettingOptionsTest {

@@ -108,9 +108,9 @@ section does that job, so the rail is gone (#1159).
 
 | Target | State |
 | --- | --- |
-| One dock, every layout | Renders in every mode. Cards invokes it through its own bottom-pinned path rather than the shared one |
-| Anchors to any edge, space reserved | Done for grid modes (#1148–#1152, #1165) — the edge now resolves through `resolveDockPosition`. **Not for Cards** — still bottom-pinned via its own path, so the position setting is inert there; `dockInteractionRegionHeightDp` reserves a height and only a height |
-| Default edge per device class | Done for the standard dock (#1165) — phone bottom, wide left-edge rail, a chosen edge wins. Cards not yet (its own bottom-pinned path) |
+| One dock, every layout | Renders in every mode, Cards through its own path (`StandardHomeDockOnlySurface`) rather than the shared frame — but that path now resolves and follows the same edge |
+| Anchors to any edge, space reserved | Done for grid modes (#1148–#1152, #1165) and for Cards — both resolve through `resolveDockPosition`, and `dockInteractionRegionExtentDp` reserves a width for a side edge, a height for top/bottom |
+| Default edge per device class | Done for the standard dock (#1165) — phone bottom, wide left-edge rail, a chosen edge wins. Cards follows the same resolution now |
 | Sized by settings | Done |
 | Static section | Done |
 | Dynamic section exists, opt-in per layout | Done (#1154), gated on the existing per-layout switch |
