@@ -174,6 +174,30 @@ internal val HomeLayoutDeviceClass.templateDockPosition: DockPosition
 internal fun resolveAdaptiveStagePaneArrangement(value: AdaptiveStagePaneArrangement): AdaptiveStagePaneArrangement =
     value
 
+/**
+ * Width of the pane content [AdaptiveStagePaneLayout] actually renders. COMPACT and SPLIT stretch
+ * across the whole content area, but TWO_PANE/THREE_PANE cap the stack and detail panes below it
+ * ("fits rather than fills"), so a wide window leaves margin beside them. The backdrop scrim and
+ * the pane row both key off this instead of the raw content width, so neither bleeds into -- or,
+ * for the no-hinge case, sits uncentered against -- space nothing is actually drawn in.
+ */
+private val AdaptiveStagePaneLayout.renderedGroupWidthDp: Int
+    get() =
+        when (mode) {
+            AdaptiveStagePaneMode.COMPACT, AdaptiveStagePaneMode.SPLIT -> contentWidthDp
+            AdaptiveStagePaneMode.TWO_PANE, AdaptiveStagePaneMode.THREE_PANE ->
+                stackWidthDp + leadingRemainderDp + hingeGapDp + (if (showsDetailPane) detailWidthDp else 0)
+        }
+
+/**
+ * A real separating hinge is a hardware crease at a fixed position: the leading pane sits flush
+ * against the screen's physical edge before it, so [renderedGroupWidthDp] anchors there too.
+ * Without one there is no such constraint, so any margin left over from the pane-width caps is
+ * split evenly instead of left on one side.
+ */
+private val AdaptiveStagePaneLayout.renderedGroupAlignment: Alignment
+    get() = if (hingeGapDp > 0) Alignment.CenterStart else Alignment.Center
+
 /** The Cards home surface, compact by default and pane-adaptive for the current launcher window. */
 @Composable
 internal fun AdaptiveStageAppStageSurface(
@@ -365,7 +389,14 @@ internal fun AdaptiveStageAppStageSurface(
                 // settings.
                 val backdropScrim =
                     MaterialTheme.colorScheme.scrim.copy(alpha = ADAPTIVE_STAGE_BACKDROP_SCRIM_ALPHA)
-                Box(modifier = Modifier.matchParentSize().background(backdropScrim))
+                Box(
+                    modifier =
+                        Modifier
+                            .align(paneLayout.renderedGroupAlignment)
+                            .width(paneLayout.renderedGroupWidthDp.dp)
+                            .fillMaxHeight()
+                            .background(backdropScrim),
+                )
                 AdaptiveStageTemplateStaticCanvas(
                     elements = visibleTemplateElements,
                     dynamicSlots = templateVariant?.dynamicSlots.orEmpty(),
@@ -431,7 +462,13 @@ internal fun AdaptiveStageAppStageSurface(
                         )
 
                     AdaptiveStagePaneMode.TWO_PANE, AdaptiveStagePaneMode.THREE_PANE -> {
-                        Row(modifier = Modifier.fillMaxSize()) {
+                        Row(
+                            modifier =
+                                Modifier
+                                    .align(paneLayout.renderedGroupAlignment)
+                                    .width(paneLayout.renderedGroupWidthDp.dp)
+                                    .fillMaxHeight(),
+                        ) {
                             Column(modifier = Modifier.width(paneLayout.stackWidthDp.dp).fillMaxSize()) {
                                 AdaptiveStageStageHeader(
                                     selectedStage = selectedStage,
