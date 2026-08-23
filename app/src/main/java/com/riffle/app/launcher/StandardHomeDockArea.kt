@@ -87,15 +87,17 @@ internal fun StandardHomeDockArea(
                     dock = layout.dock,
                     margins = margins,
                 )
-                .onSizeChanged { size -> actions.onDockInteractionHeightChanged(size.height) }
+                .onSizeChanged { size ->
+                    actions.onDockInteractionExtentChanged(if (runsAlongASide) size.width else size.height)
+                }
                 .onGloballyPositioned { coordinates ->
                     actions.onDockBoundsChanged(coordinates.boundsInRoot())
                 }
                 .padding(
                     start = margins.start.dp,
                     end = margins.end.dp,
-                    top = if (runsAlongASide) margins.top.dp else 0.dp,
-                    bottom = margins.bottom.dp,
+                    top = if (runsAlongASide || position == DockPosition.TOP) margins.top.dp else 0.dp,
+                    bottom = if (runsAlongASide || position == DockPosition.BOTTOM) margins.bottom.dp else 0.dp,
                 )
                 .dockShelfMotion(dockShelfMotionPolicy(presentation.reducedMotion))
                 .dockShelfFrameRatePreference(presentation.motionPerformanceTargetFps)
@@ -260,18 +262,20 @@ internal fun HomeLayout.shouldShowDock(): Boolean =
         )
 
 /**
- * The band along the bottom that Cards mode leaves to the standard dock for physical input.
+ * The band Cards mode leaves the standard dock for physical input: a height along a horizontal
+ * edge, a width along a vertical one -- whichever axis [position] reserves.
  *
- * A height, and only a height, because the dock Cards mode draws is the bottom-pinned one from
- * [StandardHomeDockOnlySurface] -- there, [DockModel.position] places the stage rail instead, so
- * the dock stays where it has always been however the rail is configured. Anything that starts
- * passing a position into that surface has to revisit this.
+ * Mirrors [dockAreaExtent]'s two branches (its shelf-open case does not apply here: the live
+ * measurement in [StandardHomeDockArea] catches that instead).
  */
-internal fun HomeLayout.dockInteractionRegionHeightDp(): Int =
+internal fun HomeLayout.dockInteractionRegionExtentDp(position: DockPosition): Int =
     if (!shouldShowDock()) {
         0
-    } else {
+    } else if (position.isHorizontalEdge) {
         settings.grid.margin.centered().bottom + HOME_DOCK_TOP_SPACING_DP + dockCrossAxisDp(dock.iconSizeDp)
+    } else {
+        val margins = settings.grid.margin.centered()
+        dockCrossAxisDp(dock.iconSizeDp) + margins.start + margins.end
     }
 
 /** How much of the screen an open side shelf takes, leaving the rest to the workspace. */

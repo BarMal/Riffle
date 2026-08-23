@@ -3,19 +3,22 @@
 package com.riffle.app.launcher
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.absolutePadding
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.cards.AdaptiveStageInteractionContext
 import com.riffle.core.domain.launcher.cards.AdaptiveStagePaneLayoutPolicy
 import com.riffle.core.domain.launcher.cards.AdaptiveStagePaneMode
 import com.riffle.core.domain.launcher.cards.AdaptiveStageWindowLayout
+import com.riffle.core.domain.launcher.cards.AppStageId
+import com.riffle.core.domain.launcher.home.DockPosition
 
 @Composable
 fun HomeDestination(
@@ -62,6 +65,54 @@ private fun AdaptiveStageWindowLayout?.showsUnfoldedCardsLayout(): Boolean {
     return mode == AdaptiveStagePaneMode.TWO_PANE || mode == AdaptiveStagePaneMode.THREE_PANE
 }
 
+/**
+ * Keeps the stage clear of the standard Dock [StandardHomeDockOnlySurface] draws over it, on
+ * whichever physical edge the dock sits on -- an absolute edge, so this uses [absolutePadding]
+ * rather than [Modifier.padding]'s start/end, which would mirror in RTL.
+ */
+private fun Modifier.dockInteractionPadding(
+    position: DockPosition,
+    extent: Dp,
+): Modifier =
+    when (position) {
+        DockPosition.TOP -> absolutePadding(top = extent)
+        DockPosition.BOTTOM -> absolutePadding(bottom = extent)
+        DockPosition.LEFT -> absolutePadding(left = extent)
+        DockPosition.RIGHT -> absolutePadding(right = extent)
+    }
+
+/**
+ * The dynamic side means "a notification arrived", the same de-duplicated list grid mode draws (a
+ * pinned app is on the static side and excluded here), but a tap brings the app's stage forward
+ * instead of opening it. A pinned app's own stage is reached from its static icon.
+ *
+ * The merged "All notifications" entry is offered only on a wide (unfolded) layout and only when
+ * opted in -- on a compact layout that view lives on the spine instead. Kept last, as the rail
+ * kept it.
+ */
+private fun cardsDockDynamicEntries(
+    state: LauncherShellState,
+    adaptiveStageWindowLayout: AdaptiveStageWindowLayout?,
+    adaptiveStageContext: AdaptiveStageInteractionContext,
+    selectedStageId: AppStageId?,
+): List<DockDynamicEntry> {
+    val showUnfoldedAllNotifications =
+        adaptiveStageWindowLayout.showsUnfoldedCardsLayout() &&
+            state.launcherSettings.cards.unfoldedShowAllNotifications
+    return dockNotificationShelfState(
+        dock = state.homeLayout.visibleTo(state.installedApps).dock,
+        groups = state.notificationGroupsByApp,
+        notificationAccessStatus = state.notificationAccessStatus,
+        apps = state.installedApps,
+    ).dockNotificationCards().stageSelectingDockDynamicEntries(selectedStageId) +
+        listOfNotNull(
+            allNotificationsDockDynamicEntry(
+                isSelected = adaptiveStageContext.allNotificationsSelected,
+                badgeCount = state.notificationGroupsByApp.sumOf { group -> group.count },
+            ).takeIf { showUnfoldedAllNotifications },
+        )
+}
+
 @Composable
 private fun CardsHomeSurface(
     state: LauncherShellState,
@@ -73,43 +124,27 @@ private fun CardsHomeSurface(
     onAdaptiveStageContextChanged: (AdaptiveStageInteractionContext) -> Unit,
     onAction: (LauncherShellAction) -> Unit,
 ) {
-    val dockInteractionHeightPx = remember { mutableIntStateOf(0) }
+    val dockInteractionExtentPx = remember { mutableIntStateOf(0) }
     val density = LocalDensity.current
+    // Single source of truth for where the dock sits, mirroring StandardHome's own resolution --
+    // the dock and the stage must agree on the edge just as they agree on what exists below.
+    val dockPosition =
+        resolveDockPosition(state.homeLayout.dock.position, state.settingsLayoutDeviceClass.templateDockPosition)
     // Reconciled once for the whole surface, so the dock and the stage agree on what exists -- the
     // reconciler carries the previous snapshot, so a second one would quietly keep its own history.
     val shellState = rememberAppStageShellState(state)
     val selectedStageId =
         shellState.snapshot.selectedStage?.id.takeUnless { adaptiveStageContext.allNotificationsSelected }
-    // The dynamic side means "a notification arrived", the same de-duplicated list grid mode draws
-    // (a pinned app is on the static side and excluded here), but a tap brings the app's stage
-    // forward instead of opening it. A pinned app's own stage is reached from its static icon.
-    // The merged "All notifications" entry is offered only on a wide (unfolded) layout and only
-    // when opted in -- on a compact layout that view lives on the spine instead. Kept last, as the
-    // rail kept it.
-    val showUnfoldedAllNotifications =
-        adaptiveStageWindowLayout.showsUnfoldedCardsLayout() &&
-            state.launcherSettings.cards.unfoldedShowAllNotifications
     val dockDynamicEntries =
-        dockNotificationShelfState(
-            dock = state.homeLayout.visibleTo(state.installedApps).dock,
-            groups = state.notificationGroupsByApp,
-            notificationAccessStatus = state.notificationAccessStatus,
-            apps = state.installedApps,
-        ).dockNotificationCards().stageSelectingDockDynamicEntries(selectedStageId) +
-            listOfNotNull(
-                allNotificationsDockDynamicEntry(
-                    isSelected = adaptiveStageContext.allNotificationsSelected,
-                    badgeCount = state.notificationGroupsByApp.sumOf { group -> group.count },
-                ).takeIf { showUnfoldedAllNotifications },
-            )
+        cardsDockDynamicEntries(state, adaptiveStageWindowLayout, adaptiveStageContext, selectedStageId)
     val dockStaticTapBehaviour =
         DockStaticTapBehaviour.SelectStageIfBacked(
             shellState.snapshot.stages.map { stage -> stage.id }.toSet(),
         )
-    val dockInteractionHeight =
+    val dockInteractionExtent =
         maxOf(
-            state.homeLayout.dockInteractionRegionHeightDp().dp,
-            with(density) { dockInteractionHeightPx.intValue.toDp() },
+            state.homeLayout.dockInteractionRegionExtentDp(dockPosition).dp,
+            with(density) { dockInteractionExtentPx.intValue.toDp() },
         )
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -121,10 +156,11 @@ private fun CardsHomeSurface(
             interactions =
                 StandardHomeInteractions(
                     haptics = haptics,
-                    onDockInteractionHeightChanged = { heightPx ->
-                        dockInteractionHeightPx.intValue = heightPx
+                    onDockInteractionExtentChanged = { extentPx ->
+                        dockInteractionExtentPx.intValue = extentPx
                     },
                 ),
+            position = dockPosition,
             presentation =
                 StandardHomePresentation(
                     notificationGroupsByApp = state.notificationGroupsByApp,
@@ -157,7 +193,7 @@ private fun CardsHomeSurface(
         AdaptiveStageAppStageSurface(
             state = state,
             shellState = shellState,
-            modifier = Modifier.padding(bottom = dockInteractionHeight),
+            modifier = Modifier.dockInteractionPadding(dockPosition, dockInteractionExtent),
             windowInsets = cardsPanelInsetPolicy(state).safeDrawingPanelInsets(),
             windowLayout = adaptiveStageWindowLayout,
             context = adaptiveStageContext,
@@ -174,7 +210,7 @@ private fun StandardHomeSurface(
     appIconLoader: AppIconLoader,
     widgetRenderers: LauncherWidgetRenderers,
     haptics: LauncherHaptics,
-    onDockInteractionHeightChanged: (Int) -> Unit = {},
+    onDockInteractionExtentChanged: (Int) -> Unit = {},
     onBottomControlsHeightChanged: (Int) -> Unit = {},
     onAction: (LauncherShellAction) -> Unit,
 ) {
@@ -184,7 +220,7 @@ private fun StandardHomeSurface(
         interactions =
             StandardHomeInteractions(
                 haptics = haptics,
-                onDockInteractionHeightChanged = onDockInteractionHeightChanged,
+                onDockInteractionExtentChanged = onDockInteractionExtentChanged,
                 onBottomControlsHeightChanged = onBottomControlsHeightChanged,
             ),
         presentation =
