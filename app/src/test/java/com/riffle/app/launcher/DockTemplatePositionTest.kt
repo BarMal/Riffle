@@ -19,9 +19,9 @@ class DockTemplatePositionTest {
 
     @Test
     fun widePosturesDefaultToTheLeadingRail() {
-        assertEquals(DockPosition.LEADING, HomeLayoutDeviceClass.FOLDABLE.templateDockPosition)
-        assertEquals(DockPosition.LEADING, HomeLayoutDeviceClass.TABLET.templateDockPosition)
-        assertEquals(DockPosition.LEADING, HomeLayoutDeviceClass.DESKTOP.templateDockPosition)
+        assertEquals(DockPosition.LEFT, HomeLayoutDeviceClass.FOLDABLE.templateDockPosition)
+        assertEquals(DockPosition.LEFT, HomeLayoutDeviceClass.TABLET.templateDockPosition)
+        assertEquals(DockPosition.LEFT, HomeLayoutDeviceClass.DESKTOP.templateDockPosition)
     }
 
     @Test

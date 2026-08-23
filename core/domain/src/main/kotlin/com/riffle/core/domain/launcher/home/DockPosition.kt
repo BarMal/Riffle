@@ -1,18 +1,20 @@
 package com.riffle.core.domain.launcher.home
 
 /**
- * Which edge of a home layout the dock occupies.
+ * Which physical edge of a home layout the dock occupies.
  *
- * This started life as the Cards surface's rail side, because the rail was the only edge-anchored
- * strip in the launcher. It is the same question either way -- which edge does the persistent strip
- * of apps and live content run along -- so it is named for the strip rather than for the one
- * surface that happened to have it first, and is configured per [HomeLayoutKey]: a phone in
- * portrait and a tablet want different answers, and the layout key is already how this codebase
- * says "per device class and view mode".
+ * These are absolute edges, not layout-direction-relative ones: [LEFT] is the physical left edge in
+ * every locale and [RIGHT] the physical right. A dock is a place the user explicitly points at in
+ * settings, so it stays where they put it rather than mirroring with text direction the way
+ * start/end content does. (Content *inside* the dock -- icon order, labels -- still mirrors on its
+ * own; that is independent of which edge the strip sits on.)
+ *
+ * Configured per [HomeLayoutKey]: a phone in portrait and a tablet want different answers, and the
+ * layout key is already how this codebase says "per device class and view mode".
  */
 enum class DockPosition {
-    LEADING,
-    TRAILING,
+    LEFT,
+    RIGHT,
     TOP,
     BOTTOM,
 }
@@ -20,6 +22,19 @@ enum class DockPosition {
 /** True for the two edges where the dock runs as a horizontal strip instead of a side column. */
 val DockPosition.isHorizontalEdge: Boolean
     get() = this == DockPosition.TOP || this == DockPosition.BOTTOM
+
+/**
+ * Parses a stored [DockPosition] name, mapping the legacy direction-relative names to the absolute
+ * edges they became. Layouts written before the rename hold "LEADING"/"TRAILING"; in the
+ * left-to-right layouts they were all authored in, those were the left and right edges. Returns null
+ * for anything unrecognised, so a caller can fall back to its default.
+ */
+fun dockPositionFromStoredName(name: String): DockPosition? =
+    when (name) {
+        "LEADING" -> DockPosition.LEFT
+        "TRAILING" -> DockPosition.RIGHT
+        else -> DockPosition.entries.firstOrNull { position -> position.name == name }
+    }
 
 /**
  * The grid the workspace actually gets, once the dock has taken what it needs.

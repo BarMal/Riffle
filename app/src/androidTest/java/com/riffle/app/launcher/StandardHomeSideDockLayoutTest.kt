@@ -40,7 +40,7 @@ class StandardHomeSideDockLayoutTest {
 
     @Test
     fun aLeadingDockIsANarrowStripDownTheLeadingEdge() {
-        setContent(DockPosition.LEADING)
+        setContent(DockPosition.LEFT)
 
         val root = rootBounds()
         val dock = dockBounds()
@@ -54,7 +54,7 @@ class StandardHomeSideDockLayoutTest {
 
     @Test
     fun aTrailingDockTakesTheOtherEdge() {
-        setContent(DockPosition.TRAILING)
+        setContent(DockPosition.RIGHT)
 
         val root = rootBounds()
         val dock = dockBounds()

@@ -8,8 +8,6 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalLayoutDirection
-import androidx.compose.ui.unit.LayoutDirection
 import com.riffle.core.domain.launcher.home.DockExpandAffordance
 import com.riffle.core.domain.launcher.home.DockPosition
 import kotlin.math.abs
@@ -27,9 +25,8 @@ internal fun dockShelfGestureExpandedState(
     horizontalDragPx: Float,
     verticalDragPx: Float,
     position: DockPosition = DockPosition.BOTTOM,
-    isRtl: Boolean = false,
 ): Boolean? {
-    val awayPx = position.dragAwayFromEdgePx(horizontalDragPx, verticalDragPx, isRtl)
+    val awayPx = position.dragAwayFromEdgePx(horizontalDragPx, verticalDragPx)
     val alongRunPx = position.dragAlongRunPx(horizontalDragPx, verticalDragPx)
     return when {
         abs(awayPx) < DOCK_SHELF_GESTURE_THRESHOLD_PX || abs(awayPx) <= abs(alongRunPx) -> null
@@ -44,9 +41,8 @@ internal fun dockShelfGestureClaimsDrag(
     horizontalDragPx: Float,
     verticalDragPx: Float,
     position: DockPosition = DockPosition.BOTTOM,
-    isRtl: Boolean = false,
 ): Boolean {
-    val awayPx = position.dragAwayFromEdgePx(horizontalDragPx, verticalDragPx, isRtl)
+    val awayPx = position.dragAwayFromEdgePx(horizontalDragPx, verticalDragPx)
     val alongRunPx = position.dragAlongRunPx(horizontalDragPx, verticalDragPx)
     return abs(awayPx) >= DOCK_SHELF_GESTURE_CLAIM_THRESHOLD_PX &&
         abs(awayPx) > abs(alongRunPx) &&
@@ -96,8 +92,7 @@ private fun Modifier.dockShelfGestureInput(
     }
     return composed {
         val currentOnExpandedChange by rememberUpdatedState(onExpandedChange)
-        val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
-        pointerInput(isExpanded, position, isRtl) {
+        pointerInput(isExpanded, position) {
             awaitEachGesture {
                 // Default (Main) pass, not Initial: Main dispatches descendant-first, so a
                 // descendant gesture (e.g. a horizontal scroll on the dock icon or notification
@@ -124,7 +119,6 @@ private fun Modifier.dockShelfGestureInput(
                                 horizontalDragPx = drag.x,
                                 verticalDragPx = drag.y,
                                 position = position,
-                                isRtl = isRtl,
                             )
                         ) {
                             trackedChange.consume()
@@ -134,7 +128,6 @@ private fun Modifier.dockShelfGestureInput(
                             horizontalDragPx = drag.x,
                             verticalDragPx = drag.y,
                             position = position,
-                            isRtl = isRtl,
                         )?.let { expanded ->
                             currentOnExpandedChange(expanded)
                             handled = true

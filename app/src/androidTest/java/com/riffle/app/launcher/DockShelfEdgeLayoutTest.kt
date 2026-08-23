@@ -48,7 +48,7 @@ class DockShelfEdgeLayoutTest {
 
     @Test
     fun aLeadingDocksShelfOpensSidewaysAndPutsItsPanelBesideTheStrip() {
-        setContent(DockPosition.LEADING)
+        setContent(DockPosition.LEFT)
 
         pullAwayFromTheEdge(Offset(96f, 0f))
 
@@ -75,7 +75,7 @@ class DockShelfEdgeLayoutTest {
     @Test
     fun aSwipeUpDoesNotOpenALeadingDocksShelf() {
         // Up is along a side dock's run, not away from its edge, so it is not the shelf's gesture.
-        setContent(DockPosition.LEADING)
+        setContent(DockPosition.LEFT)
 
         pullAwayFromTheEdge(Offset(0f, -96f))
 

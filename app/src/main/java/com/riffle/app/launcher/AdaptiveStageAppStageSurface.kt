@@ -145,13 +145,13 @@ internal fun adaptiveStageAppStageActionFilter(action: LauncherShellAction): Boo
 internal fun resolveDockPosition(
     configuredDockPosition: DockPosition?,
     templateDockPosition: DockPosition?,
-): DockPosition = configuredDockPosition ?: templateDockPosition ?: DockPosition.LEADING
+): DockPosition = configuredDockPosition ?: templateDockPosition ?: DockPosition.LEFT
 
 /**
  * The dock edge a device class defaults to before the user picks one -- the [templateDockPosition]
  * that [resolveDockPosition] falls back to. Narrow postures keep the dock along the bottom; wide
- * postures put it on the leading edge, where #1159 moved the rail once the standalone rail went
- * away. Every class is mapped, so [resolveDockPosition]'s own `LEADING` fallback stays unreached.
+ * postures put it on the left edge, where #1159 moved the rail once the standalone rail went away.
+ * Every class is mapped, so [resolveDockPosition]'s own `LEFT` fallback stays unreached.
  */
 internal val HomeLayoutDeviceClass.templateDockPosition: DockPosition
     get() =
@@ -163,7 +163,7 @@ internal val HomeLayoutDeviceClass.templateDockPosition: DockPosition
             HomeLayoutDeviceClass.FOLDABLE,
             HomeLayoutDeviceClass.TABLET,
             HomeLayoutDeviceClass.DESKTOP,
-            -> DockPosition.LEADING
+            -> DockPosition.LEFT
         }
 
 /**

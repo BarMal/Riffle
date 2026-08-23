@@ -31,7 +31,7 @@ class DockOverflowDragTest {
     fun pullingAnItemOffTheDockMovesItHomeWhicheverEdgeTheDockIsOn() {
         // The threshold is one comparison because the drag arrives already measured off the edge,
         // so a side dock's sideways pull and a bottom dock's upward one are the same number here.
-        listOf(DockPosition.BOTTOM, DockPosition.TOP, DockPosition.LEADING, DockPosition.TRAILING)
+        listOf(DockPosition.BOTTOM, DockPosition.TOP, DockPosition.LEFT, DockPosition.RIGHT)
             .forEach { position ->
                 val awayFromEdgePx = position.dragAwayFromEdgePx(dragXPx = 0f, dragYPx = 0f) + 60f
                 assertEquals(

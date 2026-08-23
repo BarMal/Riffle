@@ -44,10 +44,10 @@ class AdaptiveStageAdaptiveLayoutInteractionTest {
     @Test
     fun configuredLeadingDockOverridesTrailingTemplateVariant() {
         assertEquals(
-            DockPosition.LEADING,
+            DockPosition.LEFT,
             resolveDockPosition(
-                configuredDockPosition = DockPosition.LEADING,
-                templateDockPosition = DockPosition.TRAILING,
+                configuredDockPosition = DockPosition.LEFT,
+                templateDockPosition = DockPosition.RIGHT,
             ),
         )
     }
@@ -55,10 +55,10 @@ class AdaptiveStageAdaptiveLayoutInteractionTest {
     @Test
     fun configuredTrailingDockOverridesLeadingTemplateVariant() {
         assertEquals(
-            DockPosition.TRAILING,
+            DockPosition.RIGHT,
             resolveDockPosition(
-                configuredDockPosition = DockPosition.TRAILING,
-                templateDockPosition = DockPosition.LEADING,
+                configuredDockPosition = DockPosition.RIGHT,
+                templateDockPosition = DockPosition.LEFT,
             ),
         )
     }
@@ -66,10 +66,10 @@ class AdaptiveStageAdaptiveLayoutInteractionTest {
     @Test
     fun unconfiguredDockDefersToTheTemplateVariant() {
         assertEquals(
-            DockPosition.TRAILING,
+            DockPosition.RIGHT,
             resolveDockPosition(
                 configuredDockPosition = null,
-                templateDockPosition = DockPosition.TRAILING,
+                templateDockPosition = DockPosition.RIGHT,
             ),
         )
     }
@@ -77,7 +77,7 @@ class AdaptiveStageAdaptiveLayoutInteractionTest {
     @Test
     fun unconfiguredDockWithNoTemplateFallsBackToLeading() {
         assertEquals(
-            DockPosition.LEADING,
+            DockPosition.LEFT,
             resolveDockPosition(configuredDockPosition = null, templateDockPosition = null),
         )
     }

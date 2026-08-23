@@ -15,11 +15,11 @@ class DockShelfGestureEdgeTest {
     fun aSideDockOpensOnAPullAwayFromItsEdge() {
         assertEquals(
             true,
-            expandedState(isExpanded = false, x = PAST_THRESHOLD, y = 10f, position = DockPosition.LEADING),
+            expandedState(isExpanded = false, x = PAST_THRESHOLD, y = 10f, position = DockPosition.LEFT),
         )
         assertEquals(
             true,
-            expandedState(isExpanded = false, x = -PAST_THRESHOLD, y = 10f, position = DockPosition.TRAILING),
+            expandedState(isExpanded = false, x = -PAST_THRESHOLD, y = 10f, position = DockPosition.RIGHT),
         )
     }
 
@@ -27,11 +27,11 @@ class DockShelfGestureEdgeTest {
     fun aSideDockClosesOnAPushBackTowardItsEdge() {
         assertEquals(
             false,
-            expandedState(isExpanded = true, x = -PAST_THRESHOLD, y = 10f, position = DockPosition.LEADING),
+            expandedState(isExpanded = true, x = -PAST_THRESHOLD, y = 10f, position = DockPosition.LEFT),
         )
         assertEquals(
             false,
-            expandedState(isExpanded = true, x = PAST_THRESHOLD, y = 10f, position = DockPosition.TRAILING),
+            expandedState(isExpanded = true, x = PAST_THRESHOLD, y = 10f, position = DockPosition.RIGHT),
         )
     }
 
@@ -40,32 +40,21 @@ class DockShelfGestureEdgeTest {
         // It is along the dock's run, not away from its edge, so it is not the shelf's gesture.
         assertEquals(
             null,
-            expandedState(isExpanded = false, x = 0f, y = -PAST_THRESHOLD, position = DockPosition.LEADING),
+            expandedState(isExpanded = false, x = 0f, y = -PAST_THRESHOLD, position = DockPosition.LEFT),
         )
     }
 
     @Test
-    fun aSideDocksOpeningPullFollowsTheLayoutDirection() {
-        // The leading edge is the right one in RTL, so the pull that opens it points the other way.
+    fun aLeftDockOpensWithARightwardPull() {
+        // The left edge is physical, so the pull that opens it is always rightward -- pushing back
+        // into the edge (leftward) is not the opening gesture.
         assertEquals(
             true,
-            dockShelfGestureExpandedState(
-                isExpanded = false,
-                horizontalDragPx = -PAST_THRESHOLD,
-                verticalDragPx = 0f,
-                position = DockPosition.LEADING,
-                isRtl = true,
-            ),
+            expandedState(isExpanded = false, x = PAST_THRESHOLD, y = 0f, position = DockPosition.LEFT),
         )
         assertEquals(
             null,
-            dockShelfGestureExpandedState(
-                isExpanded = false,
-                horizontalDragPx = PAST_THRESHOLD,
-                verticalDragPx = 0f,
-                position = DockPosition.LEADING,
-                isRtl = true,
-            ),
+            expandedState(isExpanded = false, x = -PAST_THRESHOLD, y = 0f, position = DockPosition.LEFT),
         )
     }
 
@@ -92,7 +81,7 @@ class DockShelfGestureEdgeTest {
                 isExpanded = false,
                 horizontalDragPx = PAST_CLAIM_THRESHOLD,
                 verticalDragPx = 0f,
-                position = DockPosition.LEADING,
+                position = DockPosition.LEFT,
             ),
         )
         // Pushing into a closed side dock's own edge is not the start of opening it.
@@ -101,7 +90,7 @@ class DockShelfGestureEdgeTest {
                 isExpanded = false,
                 horizontalDragPx = -PAST_CLAIM_THRESHOLD,
                 verticalDragPx = 0f,
-                position = DockPosition.LEADING,
+                position = DockPosition.LEFT,
             ),
         )
     }

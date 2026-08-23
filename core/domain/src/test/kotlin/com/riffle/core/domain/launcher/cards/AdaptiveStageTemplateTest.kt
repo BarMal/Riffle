@@ -79,17 +79,17 @@ class AdaptiveStageTemplateTest {
 
     @Test
     fun responsiveVariantCarriesConfiguredRailSide() {
-        val variant = variant(AdaptiveStagePaneMode.THREE_PANE).copy(dockPosition = DockPosition.TRAILING)
+        val variant = variant(AdaptiveStagePaneMode.THREE_PANE).copy(dockPosition = DockPosition.RIGHT)
 
-        assertEquals(DockPosition.TRAILING, variant.dockPosition)
+        assertEquals(DockPosition.RIGHT, variant.dockPosition)
     }
 
     @Test
     fun onlyTopAndBottomRailSidesAreHorizontalEdges() {
         assertTrue(DockPosition.TOP.isHorizontalEdge)
         assertTrue(DockPosition.BOTTOM.isHorizontalEdge)
-        assertTrue(!DockPosition.LEADING.isHorizontalEdge)
-        assertTrue(!DockPosition.TRAILING.isHorizontalEdge)
+        assertTrue(!DockPosition.LEFT.isHorizontalEdge)
+        assertTrue(!DockPosition.RIGHT.isHorizontalEdge)
     }
 
     @Test

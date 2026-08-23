@@ -24,7 +24,7 @@ data class DockModel(
      * Which edge this dock occupies, or `null` when the user has never chosen one -- in which case
      * the active template's own
      * [com.riffle.core.domain.launcher.cards.AdaptiveStageTemplateVariant.dockPosition] applies,
-     * falling back to [DockPosition.LEADING].
+     * falling back to [DockPosition.LEFT].
      *
      * Per layout for free, because a [DockModel] already belongs to one [HomeLayout]. An edge that
      * suits a tablet wastes width on a phone in portrait, and this is where the rest of the dock's
