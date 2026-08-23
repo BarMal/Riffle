@@ -361,6 +361,40 @@ class WidgetPickerDragSessionTest {
     }
 
     @Test
+    fun previewSpanUsesMeasuredWorkspaceBoundsInsteadOfPickerRootSize() {
+        // rootSize (600x600) and the measured workspace (300x300) diverge, as they do under insets
+        // or multi-window. Sizing the span from rootSize would call each cell 200dp and fit the
+        // 150dp-wide widget in one column; sizing from the workspace calls each cell 100dp, so it
+        // correctly spans two -- matching the cell the drop actually lands in.
+        val provider =
+            provider(targetCellWidth = null, targetCellHeight = null).copy(
+                dimensions =
+                    WidgetProviderDimensions(
+                        minWidthDp = 150,
+                        minHeightDp = 100,
+                    ),
+            )
+        val page = page().copy(grid = GridDimensions(columns = 3, rows = 3))
+        val preview =
+            widgetPickerDragPlacementPreviewFor(
+                snapshot =
+                    WidgetPickerDragSnapshot(
+                        provider = provider,
+                        position = Offset(250f, 200f),
+                        rootSize = IntSize(600, 600),
+                    ),
+                page = page,
+                workspaceBounds = Rect(100f, 50f, 400f, 350f),
+                dockBounds = null,
+                density = 1f,
+            )
+
+        assertEquals(GridCell(column = 1, row = 1), preview?.cell)
+        assertEquals(GridSpan(columns = 2, rows = 1), preview?.span)
+        assertTrue(preview?.isValid == true)
+    }
+
+    @Test
     fun dockPreviewSelectsTheExactInsertionIndexAndRespectsRtl() {
         val dock = DockModel(capacity = 4, items = listOf(dockWidget("first"), dockWidget("second")))
         val bounds = Rect(100f, 400f, 400f, 500f)
