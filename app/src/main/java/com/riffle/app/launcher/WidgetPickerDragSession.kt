@@ -188,8 +188,11 @@ internal fun widgetPickerDragPlacementPreviewFor(
         page = page,
         provider = snapshot.provider,
         cell = widgetPickerDropCell(snapshot.position, workspaceBounds, page.grid),
-        availableWidthDp = (snapshot.rootSize.width / density).roundToInt(),
-        availableHeightDp = (snapshot.rootSize.height / density).roundToInt(),
+        // Position and bounds are both in the Compose root coordinate space. Size the widget's span
+        // from the measured workspace bounds, not the picker/root size: the two diverge under insets,
+        // multi-window, foldables and rotation, and the span must match the cell the drop lands in.
+        availableWidthDp = (workspaceBounds.width / density).roundToInt(),
+        availableHeightDp = (workspaceBounds.height / density).roundToInt(),
     )
 }
 
