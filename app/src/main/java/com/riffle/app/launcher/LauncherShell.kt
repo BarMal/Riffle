@@ -513,8 +513,11 @@ private fun LauncherDestination(
             onAction = settingsPageActionRouter.onAction,
             onDismiss = {
                 adaptiveStageAppearanceTuning = false
+                // Not back to ADAPTIVE_STAGE_APPEARANCE itself: that page has no content of its own
+                // any more -- reaching it immediately reopens this same tuning sheet (#1177) -- so
+                // dismissing lands on the settings list instead of bouncing straight back in.
                 settingsPageActionRouter.onAction(
-                    LauncherShellAction.OpenSettingsPage(SettingsPage.ADAPTIVE_STAGE_APPEARANCE),
+                    LauncherShellAction.OpenSettingsPage(SettingsPage.MAIN),
                 )
             },
         )

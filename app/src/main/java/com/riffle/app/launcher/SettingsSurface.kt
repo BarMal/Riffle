@@ -23,6 +23,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
@@ -43,6 +44,19 @@ fun SettingsSurface(
 
     BackHandler(enabled = selectedPage.value != SettingsPage.MAIN) {
         selectedPage.value = SettingsPage.MAIN
+    }
+
+    // Cards appearance has a single editor: the live tuning sheet over the real Cards surface
+    // (#1177). Reaching this page -- from the main list, search, or a deep link that names it as
+    // the initial page -- opens that sheet directly instead of a separate, static settings page
+    // offering it as one mode among others. Falls back to MAIN so this settings session has
+    // somewhere sane to show once the tuning sheet (which takes over the Home destination) is
+    // dismissed back into it.
+    LaunchedEffect(selectedPage.value) {
+        if (selectedPage.value == SettingsPage.ADAPTIVE_STAGE_APPEARANCE) {
+            selectedPage.value = SettingsPage.MAIN
+            onRequestAdaptiveStageAppearanceTuning()
+        }
     }
 
     Surface(
