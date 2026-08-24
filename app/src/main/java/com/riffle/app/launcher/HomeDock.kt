@@ -300,7 +300,15 @@ private fun Modifier.dockRunScroll(
     scrollState: ScrollState,
 ): Modifier = if (runsHorizontally) horizontalScroll(scrollState) else verticalScroll(scrollState)
 
-/** The hint that the strip continues past an edge, drawn across the run at whichever end it is. */
+/**
+ * The hint that the strip continues past an edge, drawn across the run at whichever end it is.
+ *
+ * On a vertical (left/right edge) dock this is a top/bottom fade rather than the usual left/right
+ * one -- the run itself is vertical there, so the overflow it hints at is vertical too. It only
+ * reads as a real affordance once it spans the dock's whole cross-axis extent rather than
+ * collapsing to one icon's own width, which is what its caller's viewport sizing now guarantees
+ * (see [DockSlotStrip]; #1174/#1175).
+ */
 @Composable
 private fun BoxScope.DockOverflowFade(
     runsHorizontally: Boolean,
