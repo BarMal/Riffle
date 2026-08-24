@@ -1547,6 +1547,7 @@ private fun AdaptiveStageNotificationStack(
         }
     val haptics = rememberLauncherHaptics(state.launcherSettings.haptics.feedbackStrength)
     val stageAppIdentityValue = remember(stage.id, state) { stageAppIdentity(stage.id, state) }
+    val stageLabelValue = remember(stage.id, state) { stageLabel(stage.id, state) }
     var stageAppColor by remember(stageAppIdentityValue, appIconLoader) {
         mutableStateOf(stageAppIdentityValue?.let(appIconLoader::cachedColorFor))
     }
@@ -1807,7 +1808,25 @@ private fun AdaptiveStageNotificationStack(
                                 contentPadding = adaptiveStageResolvedContentPadding(resolution),
                             ) {
                                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    Text(card.title, style = MaterialTheme.typography.titleMedium)
+                                    Row(
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                    ) {
+                                        if (stageAppIdentityValue != null) {
+                                            LauncherAppIcon(
+                                                identity = stageAppIdentityValue,
+                                                label = stageLabelValue,
+                                                iconLoader = appIconLoader,
+                                                modifier = Modifier.size(28.dp),
+                                                shape = CircleShape,
+                                            )
+                                        }
+                                        Text(
+                                            card.title,
+                                            style = MaterialTheme.typography.titleMedium,
+                                            modifier = Modifier.weight(1f),
+                                        )
+                                    }
                                     AdaptiveStageCardMessageBody(card)
                                 }
                             }
@@ -2222,7 +2241,25 @@ private fun AdaptiveStageAllNotificationsStack(
                             contentPadding = adaptiveStageResolvedContentPadding(resolution),
                         ) {
                             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Text(stageLabel(cardStageId, state), style = MaterialTheme.typography.labelMedium)
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    if (identity != null) {
+                                        LauncherAppIcon(
+                                            identity = identity,
+                                            label = stageLabel(cardStageId, state),
+                                            iconLoader = appIconLoader,
+                                            modifier = Modifier.size(28.dp),
+                                            shape = CircleShape,
+                                        )
+                                    }
+                                    Text(
+                                        stageLabel(cardStageId, state),
+                                        style = MaterialTheme.typography.labelMedium,
+                                        modifier = Modifier.weight(1f),
+                                    )
+                                }
                                 Text(card.title, style = MaterialTheme.typography.titleMedium)
                                 Text(card.text, style = MaterialTheme.typography.bodyMedium)
                             }
