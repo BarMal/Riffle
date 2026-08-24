@@ -269,7 +269,14 @@ class AdaptiveStagePaneLayoutPolicy {
         const val MIN_TWO_PANE_WIDTH_DP = 600
         const val MIN_THREE_PANE_WIDTH_DP = 1_000
         const val MIN_STACK_WIDTH_DP = 360
-        const val MAX_STACK_WIDTH_DP = 560
+
+        /**
+         * Raised from 560 (#1172): on a wide unfolded/tablet/desktop window the stack was leaving
+         * a large, clearly-too-generous margin instead of using the space TWO_PANE/THREE_PANE has
+         * available. Still capped well short of [MIN_THREE_PANE_WIDTH_DP] so the stack stays a
+         * readable card column rather than stretching edge to edge.
+         */
+        const val MAX_STACK_WIDTH_DP = 720
         const val DETAIL_WIDTH_DP = 360
 
         /**
