@@ -67,7 +67,7 @@ class AdaptiveStagePaneLayoutPolicyTest {
             )
 
         assertEquals(AdaptiveStagePaneMode.TWO_PANE, layout.mode)
-        assertEquals(560, layout.stackWidthDp)
+        assertEquals(720, layout.stackWidthDp)
     }
 
     @Test
@@ -79,9 +79,9 @@ class AdaptiveStagePaneLayoutPolicyTest {
 
         assertEquals(AdaptiveStagePaneMode.THREE_PANE, layout.mode)
         assertEquals(360, layout.detailWidthDp)
-        assertEquals(560, layout.stackWidthDp)
+        assertEquals(720, layout.stackWidthDp)
         assertEquals(0, layout.leadingRemainderDp)
-        assertEquals(920, layout.stackWidthDp + layout.detailWidthDp)
+        assertEquals(1_080, layout.stackWidthDp + layout.detailWidthDp)
         assertEquals(1_300, layout.contentWidthDp)
     }
 
