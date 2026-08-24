@@ -3,7 +3,6 @@ package com.riffle.app.launcher
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.FilterChip
@@ -11,6 +10,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -44,13 +44,13 @@ internal fun SettingsPageContent(
             SettingsPage.LAYOUT -> SettingsLayoutPageContent(state = state, onAction = onAction)
             SettingsPage.DOCK -> SettingsDockPageContent(state = state, onAction = onAction)
             SettingsPage.APPEARANCE -> SettingsAppearancePageContent(state = state, onAction = onAction)
+            // The live tuning overlay -- the real Cards surface, with these same controls in a
+            // sheet over it -- is the only Cards appearance editor now (#1177). This settings row
+            // is a launch point for that surface rather than a page of its own: reaching it jumps
+            // straight to Home with the sheet open, instead of showing a second, static-preview
+            // copy of the same editor first.
             SettingsPage.ADAPTIVE_STAGE_APPEARANCE ->
-                AdaptiveStageAppearancePageContent(
-                    state = state,
-                    onAction = onAction,
-                    modifier = Modifier.fillMaxSize(),
-                    onRequestTuning = onRequestAdaptiveStageAppearanceTuning,
-                )
+                LaunchedEffect(Unit) { onRequestAdaptiveStageAppearanceTuning() }
             SettingsPage.FLOATING_DOCK -> SettingsFloatingDockPageContent(state = state, onAction = onAction)
             SettingsPage.GESTURES -> SettingsGesturesPageContent(state = state, onAction = onAction)
             SettingsPage.CONTEXTUAL -> SettingsContextualPageContent(state = state, onAction = onAction)
