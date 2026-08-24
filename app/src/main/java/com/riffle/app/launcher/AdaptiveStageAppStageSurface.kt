@@ -1805,7 +1805,24 @@ private fun AdaptiveStageNotificationStack(
                                 contentPadding = adaptiveStageResolvedContentPadding(resolution),
                             ) {
                                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    Text(card.title, style = MaterialTheme.typography.titleMedium)
+                                    // The card is a notification for an app, so it should say whose
+                                    // -- not just show the notification's own title/body (#1173).
+                                    if (stageAppIdentityValue != null) {
+                                        Row(
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                        ) {
+                                            LauncherAppIcon(
+                                                identity = stageAppIdentityValue,
+                                                label = stageLabel(stage.id, state),
+                                                iconLoader = appIconLoader,
+                                                modifier = Modifier.size(20.dp),
+                                            )
+                                            Text(card.title, style = MaterialTheme.typography.titleMedium)
+                                        }
+                                    } else {
+                                        Text(card.title, style = MaterialTheme.typography.titleMedium)
+                                    }
                                     AdaptiveStageCardMessageBody(card)
                                 }
                             }
@@ -2220,7 +2237,27 @@ private fun AdaptiveStageAllNotificationsStack(
                             contentPadding = adaptiveStageResolvedContentPadding(resolution),
                         ) {
                             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Text(stageLabel(cardStageId, state), style = MaterialTheme.typography.labelMedium)
+                                // Which app this notification belongs to, illustrated rather than
+                                // just captioned (#1173).
+                                if (identity != null) {
+                                    Row(
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                    ) {
+                                        LauncherAppIcon(
+                                            identity = identity,
+                                            label = stageLabel(cardStageId, state),
+                                            iconLoader = appIconLoader,
+                                            modifier = Modifier.size(20.dp),
+                                        )
+                                        Text(
+                                            stageLabel(cardStageId, state),
+                                            style = MaterialTheme.typography.labelMedium,
+                                        )
+                                    }
+                                } else {
+                                    Text(stageLabel(cardStageId, state), style = MaterialTheme.typography.labelMedium)
+                                }
                                 Text(card.title, style = MaterialTheme.typography.titleMedium)
                                 Text(card.text, style = MaterialTheme.typography.bodyMedium)
                             }
