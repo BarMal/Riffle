@@ -19,6 +19,9 @@ internal class LauncherHomePageEditReducer(
         action: LauncherShellAction,
     ): LauncherShellState =
         when {
+            action == LauncherShellAction.OpenDefaultHome ->
+                state.withDefaultHomeOpened(homeLayoutRepository).withHomeScreenLibraryApps(homeLayoutRepository)
+
             action is LauncherShellAction.SelectLauncherTemplate ->
                 state.withSelectedHomeLayoutTemplate(
                     templateId = action.templateId,

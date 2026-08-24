@@ -169,6 +169,13 @@ internal fun DockSlotStrip(
         modifier =
             Modifier
                 .dockRunSize(runsHorizontally, contentViewportMainAxisDp.dp)
+                // The overflow fade below aligns to this Box's edges, so it has to span the dock
+                // strip's whole cross-axis extent -- not just wrap to the icons' own size -- or the
+                // fade reads as a property of one icon's container rather than the dock strip as a
+                // whole (#1174). Filling the cross axis also makes the vertical-dock case (a
+                // top/bottom fade on a side dock) actually visible instead of collapsing to the
+                // icons' own narrow width (#1175).
+                .then(if (runsHorizontally) Modifier.fillMaxHeight() else Modifier.fillMaxWidth())
                 .clipToBounds(),
         contentAlignment = Alignment.Center,
     ) {
@@ -293,7 +300,15 @@ private fun Modifier.dockRunScroll(
     scrollState: ScrollState,
 ): Modifier = if (runsHorizontally) horizontalScroll(scrollState) else verticalScroll(scrollState)
 
-/** The hint that the strip continues past an edge, drawn across the run at whichever end it is. */
+/**
+ * The hint that the strip continues past an edge, drawn across the run at whichever end it is.
+ *
+ * On a vertical (left/right edge) dock this is a top/bottom fade rather than the usual left/right
+ * one -- the run itself is vertical there, so the overflow it hints at is vertical too. It only
+ * reads as a real affordance once it spans the dock's whole cross-axis extent rather than
+ * collapsing to one icon's own width, which is what its caller's viewport sizing now guarantees
+ * (see [DockSlotStrip]; #1174/#1175).
+ */
 @Composable
 private fun BoxScope.DockOverflowFade(
     runsHorizontally: Boolean,

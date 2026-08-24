@@ -60,14 +60,16 @@ class AdaptiveStagePaneLayoutPolicyTest {
     }
 
     @Test
-    fun expandedWindowDoesNotStretchTheStackToFillIt() {
+    fun expandedWindowWithoutAHingeUsesTheWholeWidth() {
+        // No separating hinge to anchor against, so (#1172) the single pane grows with the window
+        // instead of stopping at a compact-sized cap.
         val layout =
             policy.layoutFor(
                 AdaptiveStageWindowLayout(800, 900, posture = AdaptiveStagePosture.UNFOLDED),
             )
 
         assertEquals(AdaptiveStagePaneMode.TWO_PANE, layout.mode)
-        assertEquals(560, layout.stackWidthDp)
+        assertEquals(800, layout.stackWidthDp)
     }
 
     @Test
@@ -78,11 +80,25 @@ class AdaptiveStagePaneLayoutPolicyTest {
             )
 
         assertEquals(AdaptiveStagePaneMode.THREE_PANE, layout.mode)
-        assertEquals(360, layout.detailWidthDp)
-        assertEquals(560, layout.stackWidthDp)
+        assertEquals(416, layout.detailWidthDp)
+        assertEquals(884, layout.stackWidthDp)
         assertEquals(0, layout.leadingRemainderDp)
-        assertEquals(920, layout.stackWidthDp + layout.detailWidthDp)
+        // No hinge to fit beside (#1172): the panes now use the window's whole width, not just the
+        // compact-sized 920dp the old fixed caps left it capped at.
+        assertEquals(1_300, layout.stackWidthDp + layout.detailWidthDp)
         assertEquals(1_300, layout.contentWidthDp)
+    }
+
+    @Test
+    fun ultraWideWindowWithoutAHingeStillBoundsBothPanes() {
+        val layout =
+            policy.layoutFor(
+                AdaptiveStageWindowLayout(3_000, 900, posture = AdaptiveStagePosture.UNFOLDED),
+            )
+
+        assertEquals(AdaptiveStagePaneMode.THREE_PANE, layout.mode)
+        assertEquals(560, layout.detailWidthDp)
+        assertEquals(960, layout.stackWidthDp)
     }
 
     @Test

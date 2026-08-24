@@ -176,10 +176,12 @@ internal fun resolveAdaptiveStagePaneArrangement(value: AdaptiveStagePaneArrange
 
 /**
  * Width of the pane content [AdaptiveStagePaneLayout] actually renders. COMPACT and SPLIT stretch
- * across the whole content area, but TWO_PANE/THREE_PANE cap the stack and detail panes below it
- * ("fits rather than fills"), so a wide window leaves margin beside them. The backdrop scrim and
- * the pane row both key off this instead of the raw content width, so neither bleeds into -- or,
- * for the no-hinge case, sits uncentered against -- space nothing is actually drawn in.
+ * across the whole content area. TWO_PANE/THREE_PANE flush against a real separating hinge still
+ * cap the stack and detail panes below it, since a hardware crease is a fixed anchor rather than
+ * something to fill -- but without a hinge, [AdaptiveStagePaneLayoutPolicy] now grows both panes
+ * with the window instead of leaving most of it unused (#1172). The backdrop scrim and the pane
+ * row both key off this instead of the raw content width, so neither bleeds into -- or, for the
+ * no-hinge case, sits uncentered against -- space nothing is actually drawn in (#1171).
  */
 private val AdaptiveStagePaneLayout.renderedGroupWidthDp: Int
     get() =
@@ -1545,6 +1547,7 @@ private fun AdaptiveStageNotificationStack(
         }
     val haptics = rememberLauncherHaptics(state.launcherSettings.haptics.feedbackStrength)
     val stageAppIdentityValue = remember(stage.id, state) { stageAppIdentity(stage.id, state) }
+    val stageLabelValue = remember(stage.id, state) { stageLabel(stage.id, state) }
     var stageAppColor by remember(stageAppIdentityValue, appIconLoader) {
         mutableStateOf(stageAppIdentityValue?.let(appIconLoader::cachedColorFor))
     }
@@ -1805,7 +1808,25 @@ private fun AdaptiveStageNotificationStack(
                                 contentPadding = adaptiveStageResolvedContentPadding(resolution),
                             ) {
                                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    Text(card.title, style = MaterialTheme.typography.titleMedium)
+                                    Row(
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                    ) {
+                                        if (stageAppIdentityValue != null) {
+                                            LauncherAppIcon(
+                                                identity = stageAppIdentityValue,
+                                                label = stageLabelValue,
+                                                iconLoader = appIconLoader,
+                                                modifier = Modifier.size(28.dp),
+                                                shape = CircleShape,
+                                            )
+                                        }
+                                        Text(
+                                            card.title,
+                                            style = MaterialTheme.typography.titleMedium,
+                                            modifier = Modifier.weight(1f),
+                                        )
+                                    }
                                     AdaptiveStageCardMessageBody(card)
                                 }
                             }
@@ -2220,7 +2241,25 @@ private fun AdaptiveStageAllNotificationsStack(
                             contentPadding = adaptiveStageResolvedContentPadding(resolution),
                         ) {
                             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Text(stageLabel(cardStageId, state), style = MaterialTheme.typography.labelMedium)
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    if (identity != null) {
+                                        LauncherAppIcon(
+                                            identity = identity,
+                                            label = stageLabel(cardStageId, state),
+                                            iconLoader = appIconLoader,
+                                            modifier = Modifier.size(28.dp),
+                                            shape = CircleShape,
+                                        )
+                                    }
+                                    Text(
+                                        stageLabel(cardStageId, state),
+                                        style = MaterialTheme.typography.labelMedium,
+                                        modifier = Modifier.weight(1f),
+                                    )
+                                }
                                 Text(card.title, style = MaterialTheme.typography.titleMedium)
                                 Text(card.text, style = MaterialTheme.typography.bodyMedium)
                             }

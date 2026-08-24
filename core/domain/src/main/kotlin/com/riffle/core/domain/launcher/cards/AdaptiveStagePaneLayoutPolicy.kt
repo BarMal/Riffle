@@ -239,7 +239,7 @@ class AdaptiveStagePaneLayoutPolicy {
             usableWidth < MIN_THREE_PANE_WIDTH_DP ->
                 AdaptiveStagePaneLayout(
                     mode = AdaptiveStagePaneMode.TWO_PANE,
-                    stackWidthDp = usableWidth.coerceIn(MIN_STACK_WIDTH_DP, MAX_STACK_WIDTH_DP),
+                    stackWidthDp = usableWidth.coerceIn(MIN_STACK_WIDTH_DP, MAX_UNFOLDED_STACK_WIDTH_DP),
                     detailWidthDp = 0,
                     hingeGapDp = hingeGap,
                     leadingRegionWidthDp = leadingWidth,
@@ -249,12 +249,22 @@ class AdaptiveStagePaneLayoutPolicy {
                     contentHeightDp = contentHeight,
                 )
 
-            else ->
+            else -> {
+                // Unlike the separating-hinge branches above -- where the stack is flush against a
+                // real physical crease and DETAIL_WIDTH_DP/MAX_STACK_WIDTH_DP's compact-sized caps
+                // are the right fit -- there's no hinge here to anchor against, so both panes should
+                // grow with the window instead of leaving most of a wide (unfolded/tablet/desktop)
+                // window's width unused. The detail pane takes a fixed share of the usable width and
+                // the stack takes the rest, each still bounded so neither becomes unreadably wide on
+                // an ultra-wide window.
+                val detailWidth =
+                    (usableWidth * UNFOLDED_DETAIL_WIDTH_RATIO).roundToInt()
+                        .coerceIn(DETAIL_WIDTH_DP, MAX_UNFOLDED_DETAIL_WIDTH_DP)
+                val stackWidth = (usableWidth - detailWidth).coerceIn(MIN_STACK_WIDTH_DP, MAX_UNFOLDED_STACK_WIDTH_DP)
                 AdaptiveStagePaneLayout(
                     mode = AdaptiveStagePaneMode.THREE_PANE,
-                    stackWidthDp =
-                        (usableWidth - DETAIL_WIDTH_DP).coerceIn(MIN_STACK_WIDTH_DP, MAX_STACK_WIDTH_DP),
-                    detailWidthDp = DETAIL_WIDTH_DP,
+                    stackWidthDp = stackWidth,
+                    detailWidthDp = detailWidth,
                     hingeGapDp = hingeGap,
                     leadingRegionWidthDp = leadingWidth,
                     trailingRegionWidthDp = trailingWidth,
@@ -262,6 +272,7 @@ class AdaptiveStagePaneLayoutPolicy {
                     contentTopDp = contentTop,
                     contentHeightDp = contentHeight,
                 )
+            }
         }
     }
 
@@ -271,6 +282,17 @@ class AdaptiveStagePaneLayoutPolicy {
         const val MIN_STACK_WIDTH_DP = 360
         const val MAX_STACK_WIDTH_DP = 560
         const val DETAIL_WIDTH_DP = 360
+
+        /**
+         * Caps for the no-separating-hinge TWO_PANE/THREE_PANE branches only (see [resolveStackLayout]).
+         * [MAX_STACK_WIDTH_DP]/[DETAIL_WIDTH_DP] stay compact-sized on purpose for the hinge branches,
+         * where the stack is flush against a real physical crease; without a hinge there's nothing to
+         * anchor against, so both panes instead grow with the window, bounded by these larger caps
+         * rather than left mostly unused on a wide (unfolded/tablet/desktop) window (#1172).
+         */
+        const val MAX_UNFOLDED_STACK_WIDTH_DP = 960
+        const val MAX_UNFOLDED_DETAIL_WIDTH_DP = 560
+        const val UNFOLDED_DETAIL_WIDTH_RATIO = 0.32f
 
         /**
          * The upper focus/detail region gets 60% of the available content height in
