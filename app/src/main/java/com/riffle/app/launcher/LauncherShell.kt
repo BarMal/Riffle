@@ -513,9 +513,9 @@ private fun LauncherDestination(
             onAction = settingsPageActionRouter.onAction,
             onDismiss = {
                 adaptiveStageAppearanceTuning = false
-                settingsPageActionRouter.onAction(
-                    LauncherShellAction.OpenSettingsPage(SettingsPage.ADAPTIVE_STAGE_APPEARANCE),
-                )
+                // Not back to SettingsPage.ADAPTIVE_STAGE_APPEARANCE: that page now only launches
+                // this same overlay (#1177), so returning to it would reopen the sheet immediately.
+                settingsPageActionRouter.onAction(LauncherShellAction.OpenSettingsPage(SettingsPage.MAIN))
             },
         )
     }
