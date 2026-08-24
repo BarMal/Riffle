@@ -136,6 +136,10 @@ internal fun DockSlotStrip(
     appIconLoader: AppIconLoader,
     position: DockPosition = DockPosition.BOTTOM,
     widgetPickerDockPreview: WidgetPickerDockPlacementPreview? = null,
+    // The edge against the section divider is an internal seam, not the dock's real edge -- a fade
+    // there reads as scrollability that isn't there and, worse, draws over the icon run rather than
+    // the dock's own background (#1174). Only the true outer edge of the whole strip earns a fade.
+    suppressEndFade: Boolean = false,
 ) {
     val scrollState = rememberScrollState()
     val dragState = remember { mutableStateOf<DockDragState?>(null) }
@@ -228,7 +232,7 @@ internal fun DockSlotStrip(
         if (overflowAffordance.showStart) {
             DockOverflowFade(runsHorizontally = runsHorizontally, atRunStart = true, color = fadeColor)
         }
-        if (overflowAffordance.showEnd) {
+        if (overflowAffordance.showEnd && !suppressEndFade) {
             DockOverflowFade(runsHorizontally = runsHorizontally, atRunStart = false, color = fadeColor)
         }
     }
@@ -295,7 +299,7 @@ private fun Modifier.dockRunScroll(
 
 /** The hint that the strip continues past an edge, drawn across the run at whichever end it is. */
 @Composable
-private fun BoxScope.DockOverflowFade(
+internal fun BoxScope.DockOverflowFade(
     runsHorizontally: Boolean,
     atRunStart: Boolean,
     color: Color,
@@ -323,7 +327,7 @@ private fun BoxScope.DockOverflowFade(
     )
 }
 
-private fun dockOverflowFadeAlignment(
+internal fun dockOverflowFadeAlignment(
     runsHorizontally: Boolean,
     atRunStart: Boolean,
 ): Alignment =
@@ -389,7 +393,7 @@ internal const val DOCK_CROSS_AXIS_PADDING_DP = 10
 /** The seam between the dock's two sections along its run: a 1dp rule with 8dp either side. */
 internal const val DOCK_SECTION_DIVIDER_MAIN_AXIS_DP = 17
 
-private const val DOCK_OVERFLOW_FADE_WIDTH_DP = 20
+internal const val DOCK_OVERFLOW_FADE_WIDTH_DP = 20
 private const val DOCK_EDGE_AUTO_SCROLL_ZONE_DP = 28
 private const val DOCK_EDGE_AUTO_SCROLL_MAX_PX_PER_EVENT = 24f
 private const val DOCK_DRAG_SLOT_HYSTERESIS = 0.15f

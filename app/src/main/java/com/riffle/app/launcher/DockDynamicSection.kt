@@ -25,6 +25,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import com.riffle.core.domain.launcher.home.DockModel
 
 /**
  * The dock's dynamic side: the apps it is not already showing that have something waiting.
@@ -38,7 +39,9 @@ import androidx.compose.ui.unit.dp
  * section exists to remove.
  */
 @Composable
+@Suppress("LongParameterList")
 internal fun DockDynamicSection(
+    dock: DockModel,
     entries: List<DockDynamicEntry>,
     slotMetrics: DockSlotRenderMetrics,
     mainAxisDp: Int,
@@ -46,6 +49,9 @@ internal fun DockDynamicSection(
     appIconLoader: AppIconLoader,
     onAction: (LauncherShellAction) -> Unit,
     onShowAllNotifications: () -> Unit = {},
+    // The edge against the section divider is an internal seam, not the dock's real edge -- see the
+    // matching suppressEndFade on DockSlotStrip (#1174).
+    suppressStartFade: Boolean = false,
 ) {
     if (entries.isEmpty() || mainAxisDp <= 0) {
         return
@@ -53,6 +59,7 @@ internal fun DockDynamicSection(
     // The same numbers the static side is drawn from, so an entry is the size of a pinned icon.
     val iconSizeDp = slotMetrics.iconSizeDp
     val spacingDp = slotMetrics.itemSpacingDp
+    val scrollState = rememberScrollState()
     // No modifier parameter, against the usual convention: the section's extent is measured for it
     // by the dock and a caller-supplied one would only fight that.
     val runModifier =
@@ -60,9 +67,9 @@ internal fun DockDynamicSection(
             .testTag(DOCK_DYNAMIC_SECTION_TEST_TAG)
             .then(
                 if (runsHorizontally) {
-                    Modifier.width(mainAxisDp.dp).horizontalScroll(rememberScrollState())
+                    Modifier.width(mainAxisDp.dp).horizontalScroll(scrollState)
                 } else {
-                    Modifier.height(mainAxisDp.dp).verticalScroll(rememberScrollState())
+                    Modifier.height(mainAxisDp.dp).verticalScroll(scrollState)
                 },
             )
     val tiles: @Composable () -> Unit = {
@@ -82,18 +89,33 @@ internal fun DockDynamicSection(
         }
     }
 
-    if (runsHorizontally) {
-        Row(
-            modifier = runModifier,
-            horizontalArrangement = Arrangement.spacedBy(spacingDp.coerceAtLeast(0).dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) { tiles() }
-    } else {
-        Column(
-            modifier = runModifier,
-            verticalArrangement = Arrangement.spacedBy(spacingDp.coerceAtLeast(0).dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) { tiles() }
+    // Whatever does not fit scrolls (see this file's own doc above), so the section needs the same
+    // "there is more" hint the static side already has -- previously missing here entirely, which
+    // on a vertical (left/right edge) dock left no way to discover the dynamic side scrolls at all
+    // (#1175).
+    val overflowAffordance =
+        DockOverflowAffordance(scrollOffsetPx = scrollState.value, maxScrollOffsetPx = scrollState.maxValue)
+    val fadeColor = dockSurfaceColor(dock)
+    Box {
+        if (runsHorizontally) {
+            Row(
+                modifier = runModifier,
+                horizontalArrangement = Arrangement.spacedBy(spacingDp.coerceAtLeast(0).dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) { tiles() }
+        } else {
+            Column(
+                modifier = runModifier,
+                verticalArrangement = Arrangement.spacedBy(spacingDp.coerceAtLeast(0).dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) { tiles() }
+        }
+        if (overflowAffordance.showStart && !suppressStartFade) {
+            DockOverflowFade(runsHorizontally = runsHorizontally, atRunStart = true, color = fadeColor)
+        }
+        if (overflowAffordance.showEnd) {
+            DockOverflowFade(runsHorizontally = runsHorizontally, atRunStart = false, color = fadeColor)
+        }
     }
 }
 
