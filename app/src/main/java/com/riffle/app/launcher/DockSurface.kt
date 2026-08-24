@@ -307,7 +307,7 @@ internal fun DockSurfaceStrip(
     val runsHorizontally = position.isHorizontalEdge
     val mainAxisDp = surfaceMetrics.surfaceMainAxisDp.dp
     val crossAxisDp = dockCrossAxisDp(surfaceMetrics.slotMetrics.iconSizeDp).dp
-    val staticSide: @Composable () -> Unit = {
+    val staticSide: @Composable (suppressEndFade: Boolean) -> Unit = { suppressEndFade ->
         if (surfaceMetrics.renderedSlotCount > 0 && surfaceMetrics.contentViewportMainAxisDp > 0) {
             DockSlotStrip(
                 dock = dock,
@@ -319,6 +319,7 @@ internal fun DockSurfaceStrip(
                 appIconLoader = appIconLoader,
                 position = position,
                 widgetPickerDockPreview = widgetPickerDockPreview,
+                suppressEndFade = suppressEndFade,
             )
         }
     }
@@ -344,12 +345,13 @@ internal fun DockSurfaceStrip(
         // Nothing dynamic to show is the common case and stays exactly as it was: one strip,
         // centred, with no arrangement wrapped around it to shift it by a fraction of a pixel.
         if (surfaceMetrics.dynamicSectionMainAxisDp <= 0) {
-            staticSide()
+            staticSide(false)
         } else {
             DockSectionRun(runsHorizontally = runsHorizontally) {
-                staticSide()
+                staticSide(true)
                 DockSectionDivider(runsHorizontally = runsHorizontally)
                 DockDynamicSection(
+                    dock = dock,
                     entries = dynamicEntries,
                     slotMetrics = surfaceMetrics.slotMetrics,
                     mainAxisDp = surfaceMetrics.dynamicSectionMainAxisDp,
@@ -357,6 +359,7 @@ internal fun DockSurfaceStrip(
                     appIconLoader = appIconLoader,
                     onAction = presentation.interactions.onAction,
                     onShowAllNotifications = onShowAllNotifications,
+                    suppressStartFade = true,
                 )
             }
         }
