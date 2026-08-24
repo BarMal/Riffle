@@ -176,10 +176,12 @@ internal fun resolveAdaptiveStagePaneArrangement(value: AdaptiveStagePaneArrange
 
 /**
  * Width of the pane content [AdaptiveStagePaneLayout] actually renders. COMPACT and SPLIT stretch
- * across the whole content area, but TWO_PANE/THREE_PANE cap the stack and detail panes below it
- * ("fits rather than fills"), so a wide window leaves margin beside them. The backdrop scrim and
- * the pane row both key off this instead of the raw content width, so neither bleeds into -- or,
- * for the no-hinge case, sits uncentered against -- space nothing is actually drawn in.
+ * across the whole content area. TWO_PANE/THREE_PANE flush against a real separating hinge still
+ * cap the stack and detail panes below it, since a hardware crease is a fixed anchor rather than
+ * something to fill -- but without a hinge, [AdaptiveStagePaneLayoutPolicy] now grows both panes
+ * with the window instead of leaving most of it unused (#1172). The backdrop scrim and the pane
+ * row both key off this instead of the raw content width, so neither bleeds into -- or, for the
+ * no-hinge case, sits uncentered against -- space nothing is actually drawn in (#1171).
  */
 private val AdaptiveStagePaneLayout.renderedGroupWidthDp: Int
     get() =
