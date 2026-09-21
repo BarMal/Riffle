@@ -336,6 +336,7 @@ internal fun DockSurfaceStrip(
                         Modifier
                     },
                 )
+                .dockDropHighlight(dock, presentation.interactions.isDropHighlighted)
                 .padding(
                     horizontal = if (runsHorizontally) DOCK_MAIN_AXIS_PADDING_DP.dp else DOCK_CROSS_AXIS_PADDING_DP.dp,
                     vertical = if (runsHorizontally) DOCK_CROSS_AXIS_PADDING_DP.dp else DOCK_MAIN_AXIS_PADDING_DP.dp,

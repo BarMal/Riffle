@@ -209,6 +209,7 @@ internal fun homeDragSessionForUpdate(
         dragOffsetX = dragOffsetX,
         dragOffsetY = dragOffsetY,
         projectedCell = dragState.projectedCell(dragX = dragOffsetX, dragY = dragOffsetY),
+        isOverDock = item.isDockTransferable && dragState.isDraggedBelowGrid(dragOffsetY),
     )
 
 @Composable

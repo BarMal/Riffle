@@ -16,6 +16,7 @@ import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.apps.AppPackageName
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.DockModel
+import com.riffle.core.domain.launcher.home.HomeLayoutDefaults
 import com.riffle.core.domain.launcher.home.LauncherItemId
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -77,6 +78,47 @@ class DockReorderInteractionTest {
             up()
         }
 
+        composeRule.runOnIdle {
+            assertEquals(listOf(LauncherShellAction.MoveDockItemToHome(camera.id)), actions)
+        }
+    }
+
+    @Test
+    fun draggingADockItemAboveTheDockSkipsThePageAndCellPickerDialog() {
+        val camera = shortcut("camera")
+        val actions = mutableListOf<LauncherShellAction>()
+        composeRule.setContent {
+            MaterialTheme {
+                Box(modifier = Modifier.size(260.dp)) {
+                    Dock(
+                        dock = DockModel(capacity = 1, items = listOf(camera)),
+                        isEditing = true,
+                        notificationGroupsByApp = emptyList(),
+                        appShortcutsByApp = emptyMap(),
+                        appIconLoader = EmptyAppIconLoader,
+                        widgetViewFactory = EmptyHomeWidgetViewFactory,
+                        interactions =
+                            DockInteractions(
+                                // A dialog would only ever be considered when there is a home layout
+                                // to place the item into -- set one so this exercises the same branch
+                                // a real drop would.
+                                homeLayout = HomeLayoutDefaults.standard(),
+                                onAction = actions::add,
+                            ),
+                    )
+                }
+            }
+        }
+
+        composeRule.onNodeWithTag(dockItemTestTag(camera.id)).performTouchInput {
+            down(center)
+            advanceEventTime(viewConfiguration.longPressTimeoutMillis + 50L)
+            moveBy(Offset(0f, -height.toFloat() * 1.2f))
+            up()
+        }
+
+        // A dialog interception would leave this empty and instead record which item to show a
+        // page/cell picker for; the drag path dispatches the auto-placing action directly.
         composeRule.runOnIdle {
             assertEquals(listOf(LauncherShellAction.MoveDockItemToHome(camera.id)), actions)
         }

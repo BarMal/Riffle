@@ -2,6 +2,8 @@
 
 package com.riffle.app.launcher
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
@@ -223,6 +225,11 @@ internal fun DockSlotStrip(
                             dragState = dragState.value,
                             dragViewport = DockDragViewport(scrollState, contentViewportMainAxisDp),
                             onDragStateChanged = { dragState.value = it },
+                            // A drag that leaves the dock drops straight onto the current home page
+                            // (auto-placed at the first open cell) rather than opening the page/cell
+                            // picker dialog -- that dialog stays reserved for the non-spatial "Move to
+                            // home" menu action, which goes through slotPresentation above instead.
+                            onDragDroppedAction = presentation.interactions.onAction,
                         )
                     }
                 }
@@ -398,6 +405,9 @@ private const val DOCK_EDGE_AUTO_SCROLL_ZONE_DP = 28
 private const val DOCK_EDGE_AUTO_SCROLL_MAX_PX_PER_EVENT = 24f
 private const val DOCK_DRAG_SLOT_HYSTERESIS = 0.15f
 private const val DOCK_EDGE_AUTO_SCROLL_FRAME_DELAY_MILLIS = 16L
+private const val DOCK_DRAG_LIFT_SCALE = 1.08f
+private const val DOCK_DRAG_LIFT_ELEVATION = 12f
+private const val DOCK_DRAG_LIFT_ANIMATION_MILLIS = 120
 internal const val HOME_DOCK_SURFACE_TEST_TAG = "home-dock-surface"
 internal const val WIDGET_PICKER_DOCK_PREVIEW_TEST_TAG = "widget-picker-dock-preview"
 
@@ -563,6 +573,8 @@ internal data class DockInteractions(
     val homeLayout: HomeLayout? = null,
     /** What a tap on a pinned app opens: the app (grid), or its stage where it has one (Cards). */
     val staticTapBehaviour: DockStaticTapBehaviour = DockStaticTapBehaviour.Launch,
+    /** Whether a home-grid item is currently being dragged over the dock, and would drop into it. */
+    val isDropHighlighted: Boolean = false,
     val onAction: (LauncherShellAction) -> Unit,
 )
 
@@ -737,8 +749,22 @@ private fun DockSlot(
     dragState: DockDragState?,
     dragViewport: DockDragViewport,
     onDragStateChanged: (DockDragState?) -> Unit,
+    onDragDroppedAction: (LauncherShellAction) -> Unit,
 ) {
     val editingSlotColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.10f)
+    val isBeingDragged = dragState?.itemId == state.item?.id
+    val liftScale by
+        animateFloatAsState(
+            targetValue = if (isBeingDragged) DOCK_DRAG_LIFT_SCALE else 1f,
+            animationSpec = tween(DOCK_DRAG_LIFT_ANIMATION_MILLIS),
+            label = "dockItemLiftScale",
+        )
+    val liftElevation by
+        animateFloatAsState(
+            targetValue = if (isBeingDragged) DOCK_DRAG_LIFT_ELEVATION else 0f,
+            animationSpec = tween(DOCK_DRAG_LIFT_ANIMATION_MILLIS),
+            label = "dockItemLiftElevation",
+        )
 
     Box(
         modifier =
@@ -757,14 +783,13 @@ private fun DockSlot(
                     itemSpacingDp = state.itemSpacingDp,
                     dragViewport = dragViewport,
                     onDragStateChanged = onDragStateChanged,
-                    onAction = presentation.interactions.onAction,
+                    haptics = presentation.interactions.haptics,
+                    onAction = onDragDroppedAction,
                 )
                 .graphicsLayer {
-                    if (dragState?.itemId == state.item?.id) {
-                        scaleX = 1.08f
-                        scaleY = 1.08f
-                        shadowElevation = 12f
-                    }
+                    scaleX = liftScale
+                    scaleY = liftScale
+                    shadowElevation = liftElevation
                 },
         contentAlignment = Alignment.Center,
     ) {
@@ -819,6 +844,7 @@ private fun Modifier.dockItemDrag(
     itemSpacingDp: Int,
     dragViewport: DockDragViewport,
     onDragStateChanged: (DockDragState?) -> Unit,
+    haptics: LauncherHaptics,
     onAction: (LauncherShellAction) -> Unit,
 ): Modifier {
     return state.item
@@ -873,6 +899,7 @@ private fun Modifier.dockItemDrag(
                             targetIndex = state.shortcutIndex
                             initialScrollOffset = dragViewport.scrollState.value
                             edgeAutoScrollDelta = 0f
+                            haptics.longPress()
                             onDragStateChanged(DockDragState(itemId, state.shortcutIndex, state.shortcutIndex))
                         },
                         onDrag = { change, amount ->

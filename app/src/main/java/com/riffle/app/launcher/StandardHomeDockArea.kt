@@ -46,6 +46,7 @@ internal fun StandardHomeDockArea(
     dynamicEntries: List<DockDynamicEntry> = notificationShelfState.dynamicEntries(),
     onShowAllNotifications: () -> Unit = {},
     staticTapBehaviour: DockStaticTapBehaviour = DockStaticTapBehaviour.Launch,
+    isDraggedItemOverDock: Boolean = false,
 ) {
     if (!layout.shouldShowDock()) {
         return
@@ -73,6 +74,7 @@ internal fun StandardHomeDockArea(
             homeInsetPolicy = presentation.homeInsetPolicy,
             homeLayout = layout,
             staticTapBehaviour = staticTapBehaviour,
+            isDropHighlighted = isDraggedItemOverDock,
             onAction = actions.onAction,
         )
     val margins = layout.settings.grid.margin.centered()
