@@ -6,12 +6,10 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.selected
@@ -107,23 +105,14 @@ private fun DockVisualEffectSetting(
     effect: DockVisualEffect,
     onAction: (LauncherShellAction) -> Unit,
 ) {
-    Column(
-        verticalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        SettingsTextColumn(
-            title = "Dock effect",
-            subtitle = "${effect.name.lowercase().replaceFirstChar(Char::uppercase)} Material treatment",
-        )
-        DockVisualEffect.entries.forEach { candidate ->
-            TextButton(
-                modifier = Modifier.fillMaxWidth(),
-                enabled = candidate != effect,
-                onClick = { onAction(LauncherShellAction.SelectDockVisualEffect(candidate)) },
-            ) {
-                SettingsButtonText(text = candidate.name.lowercase().replaceFirstChar(Char::uppercase))
-            }
-        }
-    }
+    SettingsChoiceRow(
+        title = "Dock effect",
+        subtitle = "${effect.name.lowercase().replaceFirstChar(Char::uppercase)} Material treatment",
+        options = DockVisualEffect.entries,
+        selected = effect,
+        onSelect = { candidate -> onAction(LauncherShellAction.SelectDockVisualEffect(candidate)) },
+        label = { candidate -> candidate.name.lowercase().replaceFirstChar(Char::uppercase) },
+    )
 }
 
 @Composable
@@ -155,35 +144,23 @@ private fun DockBackgroundSizingSetting(
     sizing: DockBackgroundSizing,
     onAction: (LauncherShellAction) -> Unit,
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        SettingsTextColumn(
-            modifier = Modifier.weight(1f),
-            title = "Dock width",
-            subtitle =
-                when (sizing) {
-                    DockBackgroundSizing.DYNAMIC -> "Fits dock items"
-                    DockBackgroundSizing.FIXED -> "Uses available width"
-                },
-        )
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            TextButton(
-                enabled = sizing != DockBackgroundSizing.DYNAMIC,
-                onClick = { onAction(LauncherShellAction.SelectDockBackgroundSizing(DockBackgroundSizing.DYNAMIC)) },
-            ) {
-                SettingsButtonText(text = "Fit content")
+    SettingsChoiceRow(
+        title = "Dock width",
+        subtitle =
+            when (sizing) {
+                DockBackgroundSizing.DYNAMIC -> "Fits dock items"
+                DockBackgroundSizing.FIXED -> "Uses available width"
+            },
+        options = DockBackgroundSizing.entries,
+        selected = sizing,
+        onSelect = { candidate -> onAction(LauncherShellAction.SelectDockBackgroundSizing(candidate)) },
+        label = { candidate ->
+            when (candidate) {
+                DockBackgroundSizing.DYNAMIC -> "Fit content"
+                DockBackgroundSizing.FIXED -> "Full width"
             }
-            TextButton(
-                enabled = sizing != DockBackgroundSizing.FIXED,
-                onClick = { onAction(LauncherShellAction.SelectDockBackgroundSizing(DockBackgroundSizing.FIXED)) },
-            ) {
-                SettingsButtonText(text = "Full width")
-            }
-        }
-    }
+        },
+    )
 }
 
 @Composable
@@ -215,34 +192,20 @@ private fun DockAlignmentSetting(
     alignment: DockAlignment,
     onAction: (LauncherShellAction) -> Unit,
 ) {
-    Column(
-        modifier = Modifier.selectableGroup(),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        SettingsTextColumn(
-            title = "Dock alignment",
-            subtitle = "Places a content-sized dock on the home screen",
-        )
-        DockAlignment.entries.forEach { candidate ->
-            TextButton(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .semantics { selected = candidate == alignment },
-                enabled = candidate != alignment,
-                onClick = { onAction(LauncherShellAction.SelectDockAlignment(candidate)) },
-            ) {
-                SettingsButtonText(
-                    text =
-                        when (candidate) {
-                            DockAlignment.START -> "Start"
-                            DockAlignment.CENTER -> "Center"
-                            DockAlignment.END -> "End"
-                        },
-                )
+    SettingsChoiceRow(
+        title = "Dock alignment",
+        subtitle = "Places a content-sized dock on the home screen",
+        options = DockAlignment.entries,
+        selected = alignment,
+        onSelect = { candidate -> onAction(LauncherShellAction.SelectDockAlignment(candidate)) },
+        label = { candidate ->
+            when (candidate) {
+                DockAlignment.START -> "Start"
+                DockAlignment.CENTER -> "Center"
+                DockAlignment.END -> "End"
             }
-        }
-    }
+        },
+    )
 }
 
 @Composable
@@ -346,41 +309,23 @@ private fun DockExpandAffordanceSetting(
     affordance: DockExpandAffordance,
     onAction: (LauncherShellAction) -> Unit,
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        SettingsTextColumn(
-            modifier = Modifier.weight(1f),
-            title = "Open the shelf with",
-            subtitle =
-                when (affordance) {
-                    DockExpandAffordance.GESTURE -> "Swipe up on the dock; the dock's swipe-up action is unused"
-                    DockExpandAffordance.BUTTON -> "A button on the dock; swipe up runs the dock's own action"
-                },
-        )
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            TextButton(
-                modifier = Modifier.testTag("dock-expand-affordance-${DockExpandAffordance.GESTURE.name}"),
-                enabled = affordance != DockExpandAffordance.GESTURE,
-                onClick = {
-                    onAction(LauncherShellAction.SelectDockExpandAffordance(DockExpandAffordance.GESTURE))
-                },
-            ) {
-                SettingsButtonText(text = "Swipe")
+    SettingsChoiceRow(
+        title = "Open the shelf with",
+        subtitle =
+            when (affordance) {
+                DockExpandAffordance.GESTURE -> "Swipe up on the dock; the dock's swipe-up action is unused"
+                DockExpandAffordance.BUTTON -> "A button on the dock; swipe up runs the dock's own action"
+            },
+        options = DockExpandAffordance.entries,
+        selected = affordance,
+        onSelect = { candidate -> onAction(LauncherShellAction.SelectDockExpandAffordance(candidate)) },
+        label = { candidate ->
+            when (candidate) {
+                DockExpandAffordance.GESTURE -> "Swipe"
+                DockExpandAffordance.BUTTON -> "Button"
             }
-            TextButton(
-                modifier = Modifier.testTag("dock-expand-affordance-${DockExpandAffordance.BUTTON.name}"),
-                enabled = affordance != DockExpandAffordance.BUTTON,
-                onClick = {
-                    onAction(LauncherShellAction.SelectDockExpandAffordance(DockExpandAffordance.BUTTON))
-                },
-            ) {
-                SettingsButtonText(text = "Button")
-            }
-        }
-    }
+        },
+    )
 }
 
 @Composable

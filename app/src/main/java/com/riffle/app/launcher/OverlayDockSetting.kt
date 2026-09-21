@@ -4,12 +4,8 @@ package com.riffle.app.launcher
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.OverlayDockPermissionStatus
 import com.riffle.core.domain.launcher.settings.MAX_OVERLAY_DOCK_EXPANDED_ICON_SIZE_DP
@@ -149,31 +145,14 @@ private fun OverlayDockEdgeSetting(
     edge: OverlayDockEdge,
     onAction: (LauncherShellAction) -> Unit,
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        SettingsTextColumn(
-            modifier = Modifier.weight(1f),
-            title = "Overlay edge",
-            subtitle = edge.label,
-        )
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            TextButton(
-                enabled = edge != OverlayDockEdge.START,
-                onClick = { onAction(LauncherShellAction.SelectOverlayDockEdge(OverlayDockEdge.START)) },
-            ) {
-                SettingsButtonText(text = "Left")
-            }
-            TextButton(
-                enabled = edge != OverlayDockEdge.END,
-                onClick = { onAction(LauncherShellAction.SelectOverlayDockEdge(OverlayDockEdge.END)) },
-            ) {
-                SettingsButtonText(text = "Right")
-            }
-        }
-    }
+    SettingsChoiceRow(
+        title = "Overlay edge",
+        subtitle = edge.label,
+        options = OverlayDockEdge.entries,
+        selected = edge,
+        onSelect = { candidate -> onAction(LauncherShellAction.SelectOverlayDockEdge(candidate)) },
+        label = { candidate -> candidate.label },
+    )
 }
 
 @Composable

@@ -2,12 +2,7 @@ package com.riffle.app.launcher
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.home.HomeLabelSettings
 import com.riffle.core.domain.launcher.home.HomeLabelSizing
@@ -128,27 +123,14 @@ private fun HomeLabelSizingSetting(
     settings: HomeLabelSettings,
     onAction: (LauncherShellAction) -> Unit,
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        SettingsTextColumn(
-            modifier = Modifier.weight(1f),
-            title = "Label sizing",
-            subtitle = settings.sizing.label,
-        )
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            HomeLabelSizing.values().forEach { sizing ->
-                TextButton(
-                    enabled = settings.sizing != sizing,
-                    onClick = { onAction(LauncherShellAction.SelectHomeLabelSizing(sizing)) },
-                ) {
-                    SettingsButtonText(text = sizing.buttonLabel)
-                }
-            }
-        }
-    }
+    SettingsChoiceRow(
+        title = "Label sizing",
+        subtitle = settings.sizing.label,
+        options = HomeLabelSizing.values().toList(),
+        selected = settings.sizing,
+        onSelect = { sizing -> onAction(LauncherShellAction.SelectHomeLabelSizing(sizing)) },
+        label = { sizing -> sizing.buttonLabel },
+    )
 }
 
 @Composable

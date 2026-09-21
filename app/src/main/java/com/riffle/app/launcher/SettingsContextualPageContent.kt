@@ -11,7 +11,9 @@ internal fun SettingsContextualPageContent(
         SettingsSwitchRow(
             title = "Contextual behaviour",
             subtitle =
-                "Open one of your configured Work, Personal, or Cards pages when it matches current activity",
+                "Automatically bring forward a Today, Work, Personal, frequently-used, or notification " +
+                    "page or card when it matches what's happening right now. This is automatic -- there's " +
+                    "nothing else to configure.",
             checked = state.settings.contextual.enabled,
             onCheckedChange = { enabled ->
                 onAction(LauncherShellAction.SelectContextualEnabled(enabled))

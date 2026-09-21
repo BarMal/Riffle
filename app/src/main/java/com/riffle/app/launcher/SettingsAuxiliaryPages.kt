@@ -2,7 +2,6 @@ package com.riffle.app.launcher
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -10,7 +9,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -111,26 +109,13 @@ internal fun HapticStrengthSetting(
     selectedStrength: HapticFeedbackStrength,
     onAction: (LauncherShellAction) -> Unit,
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        SettingsTextColumn(
-            modifier = Modifier.weight(1f),
-            title = "Feedback strength",
-        )
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            HapticFeedbackStrength.entries.forEach { strength ->
-                TextButton(
-                    enabled = strength != selectedStrength,
-                    onClick = { onAction(LauncherShellAction.SelectHapticFeedbackStrength(strength)) },
-                ) {
-                    SettingsButtonText(text = strength.label)
-                }
-            }
-        }
-    }
+    SettingsChoiceRow(
+        title = "Feedback strength",
+        options = HapticFeedbackStrength.entries,
+        selected = selectedStrength,
+        onSelect = { strength -> onAction(LauncherShellAction.SelectHapticFeedbackStrength(strength)) },
+        label = { strength -> strength.label },
+    )
 }
 
 @Composable
