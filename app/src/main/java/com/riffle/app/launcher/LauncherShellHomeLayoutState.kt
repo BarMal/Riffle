@@ -240,5 +240,16 @@ internal val LauncherShellState.settingsTargetLayoutKey: HomeLayoutKey
 internal fun LauncherShellState.settingsTargetLayout(homeLayoutRepository: HomeLayoutRepository): HomeLayout =
     currentLayoutSet(homeLayoutRepository).layoutFor(settingsTargetLayoutKey)
 
+/**
+ * The layout set to base the next edit on.
+ *
+ * This trusts the in-memory [LauncherShellState.homeLayoutSet] rather than re-reading the
+ * repository. Every mutator in this file keeps that field in sync with what it persists, so a
+ * fresh disk read here would only ever return the same data -- except when a concurrent writer
+ * (e.g. a background app/widget refresh) has since saved its own change. Re-reading in that case
+ * would silently discard whichever edit is in memory here, so this always builds on the state
+ * already held instead of racing another writer's disk snapshot.
+ */
+@Suppress("UNUSED_PARAMETER")
 private fun LauncherShellState.currentLayoutSet(homeLayoutRepository: HomeLayoutRepository): HomeLayoutSet =
-    homeLayoutRepository.loadHomeLayoutSet() ?: homeLayoutSet.withActiveLayout(homeLayout)
+    homeLayoutSet.withActiveLayout(homeLayout)

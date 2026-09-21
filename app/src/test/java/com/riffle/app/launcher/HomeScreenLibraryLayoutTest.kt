@@ -324,13 +324,43 @@ class HomeScreenLibraryLayoutTest {
 
         assertEquals(listOf(LauncherPageId("home")), expandedLayout.pages.map { page -> page.id })
         assertEquals(
-            listOf(camera.identity, calendar.identity, clock.identity),
+            listOf(calendar.identity, camera.identity, clock.identity),
             expandedLayout.selectedPage.items.appIdentities,
         )
         assertEquals(
             listOf(GridCell(column = 0, row = 0), GridCell(column = 1, row = 0), GridCell(column = 2, row = 0)),
             expandedLayout.selectedPage.items.map { item -> item.placement?.cell },
         )
+    }
+
+    @Test
+    fun compactLibraryModeInsertsNewlyInstalledAppsIntoAlphabeticalOrderWithoutGaps() {
+        val camera = app(label = "Camera")
+        val clock = app(label = "Clock")
+        val grid = GridDimensions(columns = 2, rows = 1)
+        val layout =
+            HomeLayoutDefaults.standard().copy(
+                viewMode = LauncherViewMode.HOME_SCREEN_LIBRARY,
+                pages = listOf(LauncherPage(id = LauncherPageId("home"), grid = grid)),
+                settings =
+                    HomeLayoutDefaults.standard().settings.copy(
+                        grid = GridSettings(dimensions = grid, compactLibraryPages = true),
+                    ),
+            )
+        val initialLibraryLayout = layout.withHomeScreenLibraryApps(listOf(camera, clock))
+
+        val calendar = app(label = "Calendar")
+        val libraryLayout = initialLibraryLayout.withHomeScreenLibraryApps(listOf(camera, calendar, clock))
+
+        assertEquals(
+            listOf(calendar.identity, camera.identity),
+            libraryLayout.pages[0].items.appIdentities,
+        )
+        assertEquals(
+            listOf(GridCell(column = 0, row = 0), GridCell(column = 1, row = 0)),
+            libraryLayout.pages[0].items.map { item -> item.placement?.cell },
+        )
+        assertEquals(listOf(clock.identity), libraryLayout.pages[1].items.appIdentities)
     }
 
     @Test

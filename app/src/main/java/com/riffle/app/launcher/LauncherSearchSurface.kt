@@ -116,6 +116,7 @@ fun SearchSurface(
                     filters = state.filters,
                 ),
             presentation = state.resultPresentation,
+            gridColumns = state.homeLayout.selectedPage.grid.columns,
             webPreview = searchWebPreview(state.query),
             modifier = Modifier.weight(1f),
         )
@@ -193,6 +194,7 @@ private fun SearchResultList(
     appListContext: AppListContext,
     emptyText: String,
     presentation: SearchResultPresentation,
+    gridColumns: Int,
     webPreview: SearchWebPreview?,
     modifier: Modifier = Modifier,
 ) {
@@ -219,6 +221,7 @@ private fun SearchResultList(
                     SearchResultIconGrid(
                         results = results,
                         appListContext = appListContext,
+                        gridColumns = gridColumns,
                         modifier = Modifier.weight(1f),
                     )
 
@@ -261,10 +264,11 @@ private fun SearchResultListItems(
 private fun SearchResultIconGrid(
     results: List<SearchGridResult>,
     appListContext: AppListContext,
+    gridColumns: Int,
     modifier: Modifier = Modifier,
 ) {
     LazyVerticalGrid(
-        columns = GridCells.Adaptive(minSize = SEARCH_ICON_TILE_MIN_WIDTH_DP.dp),
+        columns = GridCells.Fixed(count = gridColumns.coerceAtLeast(1)),
         modifier = modifier.fillMaxWidth().testTag(SEARCH_RESULT_ICON_GRID_TEST_TAG),
         contentPadding = searchResultContentPadding(),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -564,6 +568,5 @@ private const val SEARCH_RESULT_ICON_SIZE_DP = 40
 private const val SEARCH_RESULT_ICON_CORNER_DP = 12
 internal const val SEARCH_RESULT_LIST_TEST_TAG = "search-result-list"
 internal const val SEARCH_RESULT_ICON_GRID_TEST_TAG = "search-result-icon-grid"
-private const val SEARCH_ICON_TILE_MIN_WIDTH_DP = 84
 private const val SEARCH_ICON_TILE_MIN_HEIGHT_DP = 104
 private const val SEARCH_ICON_TILE_SIZE_DP = 52
