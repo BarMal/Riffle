@@ -167,10 +167,10 @@ class LauncherShellHomeGridViewModelTest {
             viewModel.state.value.homeLayout.pages.map { page -> page.id },
         )
         assertEquals(
-            listOf(camera.identity, clock.identity),
+            listOf(calendar.identity, camera.identity),
             viewModel.state.value.homeLayout.pages[0].items.appIdentities,
         )
-        assertEquals(listOf(calendar.identity), viewModel.state.value.homeLayout.pages[1].items.appIdentities)
+        assertEquals(listOf(clock.identity), viewModel.state.value.homeLayout.pages[1].items.appIdentities)
         assertEquals(true, viewModel.state.value.homeLayout.settings.grid.compactLibraryPages)
         assertEquals(viewModel.state.value.homeLayout, repository.savedLayout)
     }
