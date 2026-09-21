@@ -17,7 +17,9 @@ import androidx.compose.ui.unit.dp
  *
  * A [FilterChip] carries its selected state to accessibility services as selected, not as
  * disabled -- unlike a disabled button, which TalkBack announces as unavailable rather than as
- * the current value.
+ * the current value. [onSelect] is not re-fired for an option that is already selected: some
+ * call sites (e.g. re-seeding a layout template) are not idempotent, and the control this
+ * replaces never re-dispatched the current value either, since that option's button was disabled.
  */
 @Composable
 internal fun <T> SettingsChoiceRow(
@@ -40,7 +42,7 @@ internal fun <T> SettingsChoiceRow(
                 FilterChip(
                     selected = option == selected,
                     enabled = enabled,
-                    onClick = { onSelect(option) },
+                    onClick = { if (option != selected) onSelect(option) },
                     label = { Text(label(option)) },
                 )
             }
