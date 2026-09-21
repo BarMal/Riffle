@@ -20,7 +20,7 @@ internal fun LauncherShellState.withSettingsHomePageEdit(
         val result =
             homePageEngine.applyHomeLayoutConfigurationEdit(
                 action = action,
-                layout = settingsTargetLayout,
+                layout = settingsTargetLayout(homeLayoutRepository),
             )
     ) {
         is HomePageEditResult.Updated ->
@@ -44,7 +44,7 @@ internal fun LauncherShellState.withSettingsDockEdit(
         val result =
             dockEngine.applyEdit(
                 action = action,
-                layout = settingsTargetLayout,
+                layout = settingsTargetLayout(homeLayoutRepository),
             )
     ) {
         is DockEditResult.Updated ->
