@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.dp
  * call sites (e.g. re-seeding a layout template) are not idempotent, and the control this
  * replaces never re-dispatched the current value either, since that option's button was disabled.
  */
+@Suppress("LongParameterList")
 @Composable
 internal fun <T> SettingsChoiceRow(
     title: String,
