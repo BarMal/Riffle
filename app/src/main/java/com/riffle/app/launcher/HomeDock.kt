@@ -753,48 +753,17 @@ private fun DockSlot(
     onDragStateChanged: (DockDragState?) -> Unit,
     onDragDroppedAction: (LauncherShellAction) -> Unit,
 ) {
-    val editingSlotColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.10f)
-    val isBeingDragged = dragState?.itemId == state.item?.id
-    val liftAnimationSpec: AnimationSpec<Float> =
-        if (presentation.interactions.reducedMotion) snap() else tween(DOCK_DRAG_LIFT_ANIMATION_MILLIS)
-    val liftScale by
-        animateFloatAsState(
-            targetValue = if (isBeingDragged) DOCK_DRAG_LIFT_SCALE else 1f,
-            animationSpec = liftAnimationSpec,
-            label = "dockItemLiftScale",
-        )
-    val liftElevation by
-        animateFloatAsState(
-            targetValue = if (isBeingDragged) DOCK_DRAG_LIFT_ELEVATION else 0f,
-            animationSpec = liftAnimationSpec,
-            label = "dockItemLiftElevation",
-        )
-
     Box(
         modifier =
-            modifier
-                .then(
-                    if (state.isEditing) {
-                        Modifier.clip(LocalLauncherCardShape.current).background(editingSlotColor)
-                    } else {
-                        Modifier
-                    },
-                )
-                .then(state.item?.let { item -> Modifier.testTag(dockItemTestTag(item.id)) } ?: Modifier)
-                .dockItemDrag(
-                    state = state,
-                    slotSizeDp = state.iconSizeDp,
-                    itemSpacingDp = state.itemSpacingDp,
-                    dragViewport = dragViewport,
-                    onDragStateChanged = onDragStateChanged,
-                    haptics = presentation.interactions.haptics,
-                    onAction = onDragDroppedAction,
-                )
-                .graphicsLayer {
-                    scaleX = liftScale
-                    scaleY = liftScale
-                    shadowElevation = liftElevation
-                },
+            dockSlotModifier(
+                modifier = modifier,
+                state = state,
+                presentation = presentation,
+                dragState = dragState,
+                dragViewport = dragViewport,
+                onDragStateChanged = onDragStateChanged,
+                onDragDroppedAction = onDragDroppedAction,
+            ),
         contentAlignment = Alignment.Center,
     ) {
         when (val item = state.item) {
@@ -839,6 +808,71 @@ private fun DockSlot(
                 )
         }
     }
+}
+
+@Suppress("LongParameterList")
+@Composable
+private fun dockSlotModifier(
+    modifier: Modifier,
+    state: DockSlotState,
+    presentation: DockPresentation,
+    dragState: DockDragState?,
+    dragViewport: DockDragViewport,
+    onDragStateChanged: (DockDragState?) -> Unit,
+    onDragDroppedAction: (LauncherShellAction) -> Unit,
+): Modifier {
+    val editingSlotColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.10f)
+    val lift =
+        dockDragLift(
+            isBeingDragged = dragState?.itemId == state.item?.id,
+            reducedMotion = presentation.interactions.reducedMotion,
+        )
+    return modifier
+        .then(
+            if (state.isEditing) {
+                Modifier.clip(LocalLauncherCardShape.current).background(editingSlotColor)
+            } else {
+                Modifier
+            },
+        )
+        .then(state.item?.let { item -> Modifier.testTag(dockItemTestTag(item.id)) } ?: Modifier)
+        .dockItemDrag(
+            state = state,
+            slotSizeDp = state.iconSizeDp,
+            itemSpacingDp = state.itemSpacingDp,
+            dragViewport = dragViewport,
+            onDragStateChanged = onDragStateChanged,
+            haptics = presentation.interactions.haptics,
+            onAction = onDragDroppedAction,
+        )
+        .graphicsLayer {
+            scaleX = lift.scale
+            scaleY = lift.scale
+            shadowElevation = lift.elevation
+        }
+}
+
+private data class DockDragLift(val scale: Float, val elevation: Float)
+
+@Composable
+private fun dockDragLift(
+    isBeingDragged: Boolean,
+    reducedMotion: Boolean,
+): DockDragLift {
+    val animationSpec: AnimationSpec<Float> = if (reducedMotion) snap() else tween(DOCK_DRAG_LIFT_ANIMATION_MILLIS)
+    val scale by
+        animateFloatAsState(
+            targetValue = if (isBeingDragged) DOCK_DRAG_LIFT_SCALE else 1f,
+            animationSpec = animationSpec,
+            label = "dockItemLiftScale",
+        )
+    val elevation by
+        animateFloatAsState(
+            targetValue = if (isBeingDragged) DOCK_DRAG_LIFT_ELEVATION else 0f,
+            animationSpec = animationSpec,
+            label = "dockItemLiftElevation",
+        )
+    return DockDragLift(scale, elevation)
 }
 
 @Suppress("LongParameterList")
