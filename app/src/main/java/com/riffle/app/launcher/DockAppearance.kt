@@ -1,10 +1,14 @@
 package com.riffle.app.launcher
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
@@ -58,3 +62,27 @@ internal fun Modifier.dockSurfaceAppearance(dock: DockModel): Modifier {
     }
     return result
 }
+
+/**
+ * Draws a fading-in ring around the dock while a home-grid item is being dragged over it, so the
+ * dock's own drop zone is visible before the drag is released instead of only afterward.
+ */
+@Composable
+internal fun Modifier.dockDropHighlight(
+    dock: DockModel,
+    isHighlighted: Boolean,
+    reducedMotion: Boolean = false,
+): Modifier {
+    val alpha by
+        animateFloatAsState(
+            targetValue = if (isHighlighted) 1f else 0f,
+            animationSpec = if (reducedMotion) snap() else tween(DOCK_DROP_HIGHLIGHT_ANIMATION_MILLIS),
+            label = "dockDropHighlightAlpha",
+        )
+    if (alpha <= 0f) return this
+    val shape = RoundedCornerShape(dockAppearanceSpec(dock.visualEffect, dock.cornerRadiusDp).cornerRadiusDp.dp)
+    return border(DOCK_DROP_HIGHLIGHT_WIDTH_DP.dp, MaterialTheme.colorScheme.primary.copy(alpha = alpha), shape)
+}
+
+private const val DOCK_DROP_HIGHLIGHT_WIDTH_DP = 2
+private const val DOCK_DROP_HIGHLIGHT_ANIMATION_MILLIS = 120

@@ -626,6 +626,7 @@ private fun StandardHomeColumn(
             widgetPickerDockPreview = state.widgetPickerDockPreview,
             isWidgetPickerInteractionActive =
                 state.presentation.widgetPicker.isOpen || state.widgetPickerDragInProgress,
+            isDraggedItemOverDock = state.dragSession?.isOverDock == true,
         )
     }
 
@@ -986,6 +987,8 @@ internal data class HomeDragSession(
     val dragOffsetX: Float = 0f,
     val dragOffsetY: Float = 0f,
     val projectedCell: GridCell,
+    /** Whether releasing right now would drop [item] on the dock instead of a home cell. */
+    val isOverDock: Boolean = false,
 )
 
 internal data class StandardHomeInteractions(
