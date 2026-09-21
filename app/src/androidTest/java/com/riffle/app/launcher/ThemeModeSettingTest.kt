@@ -2,7 +2,7 @@ package com.riffle.app.launcher
 
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -50,10 +50,10 @@ class ThemeModeSettingTest {
             }
         }
 
-        composeRule.onNodeWithText("Dark (selected)").assertIsDisplayed()
-        composeRule.onNodeWithText("Glass (selected)").assertIsDisplayed()
-        composeRule.onNodeWithText("Teal (selected)").assertIsDisplayed()
-        composeRule.onNodeWithText("Rounded (selected)").assertIsDisplayed()
-        composeRule.onNodeWithText("Monospace (selected)").assertIsDisplayed()
+        composeRule.onNodeWithText("Dark").assertIsSelected()
+        composeRule.onNodeWithText("Glass").assertIsSelected()
+        composeRule.onNodeWithText("Teal").assertIsSelected()
+        composeRule.onNodeWithText("Rounded").assertIsSelected()
+        composeRule.onNodeWithText("Monospace").assertIsSelected()
     }
 }

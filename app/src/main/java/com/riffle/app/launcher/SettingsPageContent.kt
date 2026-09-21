@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
@@ -324,23 +323,11 @@ private fun WallpaperSourceSetting(
     selectedSource: WallpaperSource,
     onAction: (LauncherShellAction) -> Unit,
 ) {
-    SettingsListRow(
+    SettingsChoiceRow(
         title = "Wallpaper",
-        trailingContent = {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TextButton(
-                    enabled = WallpaperSource.SYSTEM != selectedSource,
-                    onClick = { onAction(LauncherShellAction.SelectWallpaperSource(WallpaperSource.SYSTEM)) },
-                ) {
-                    SettingsButtonText(text = "System")
-                }
-                TextButton(
-                    enabled = WallpaperSource.SOLID_COLOR != selectedSource,
-                    onClick = { onAction(LauncherShellAction.SelectWallpaperSource(WallpaperSource.SOLID_COLOR)) },
-                ) {
-                    SettingsButtonText(text = "Solid")
-                }
-            }
-        },
+        options = WallpaperSource.entries,
+        selected = selectedSource,
+        onSelect = { source -> onAction(LauncherShellAction.SelectWallpaperSource(source)) },
+        label = { source -> if (source == WallpaperSource.SYSTEM) "System" else "Solid" },
     )
 }
