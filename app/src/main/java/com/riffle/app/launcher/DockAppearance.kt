@@ -1,6 +1,7 @@
 package com.riffle.app.launcher
 
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -69,11 +70,12 @@ internal fun Modifier.dockSurfaceAppearance(dock: DockModel): Modifier {
 internal fun Modifier.dockDropHighlight(
     dock: DockModel,
     isHighlighted: Boolean,
+    reducedMotion: Boolean = false,
 ): Modifier {
     val alpha by
         animateFloatAsState(
             targetValue = if (isHighlighted) 1f else 0f,
-            animationSpec = tween(DOCK_DROP_HIGHLIGHT_ANIMATION_MILLIS),
+            animationSpec = if (reducedMotion) snap() else tween(DOCK_DROP_HIGHLIGHT_ANIMATION_MILLIS),
             label = "dockDropHighlightAlpha",
         )
     if (alpha <= 0f) return this

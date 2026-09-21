@@ -2,7 +2,9 @@
 
 package com.riffle.app.launcher
 
+import androidx.compose.animation.core.AnimationSpec
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.ScrollState
@@ -753,16 +755,18 @@ private fun DockSlot(
 ) {
     val editingSlotColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.10f)
     val isBeingDragged = dragState?.itemId == state.item?.id
+    val liftAnimationSpec: AnimationSpec<Float> =
+        if (presentation.interactions.reducedMotion) snap() else tween(DOCK_DRAG_LIFT_ANIMATION_MILLIS)
     val liftScale by
         animateFloatAsState(
             targetValue = if (isBeingDragged) DOCK_DRAG_LIFT_SCALE else 1f,
-            animationSpec = tween(DOCK_DRAG_LIFT_ANIMATION_MILLIS),
+            animationSpec = liftAnimationSpec,
             label = "dockItemLiftScale",
         )
     val liftElevation by
         animateFloatAsState(
             targetValue = if (isBeingDragged) DOCK_DRAG_LIFT_ELEVATION else 0f,
-            animationSpec = tween(DOCK_DRAG_LIFT_ANIMATION_MILLIS),
+            animationSpec = liftAnimationSpec,
             label = "dockItemLiftElevation",
         )
 
