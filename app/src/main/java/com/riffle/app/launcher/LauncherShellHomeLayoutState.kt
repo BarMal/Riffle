@@ -18,7 +18,7 @@ internal fun LauncherShellState.withHomeLayout(
     layout: HomeLayout,
     homeLayoutRepository: HomeLayoutRepository,
 ): LauncherShellState =
-    currentLayoutSet(homeLayoutRepository)
+    currentLayoutSet
         .withActiveLayout(layout)
         .also(homeLayoutRepository::saveHomeLayoutSet)
         .let { layoutSet ->
@@ -47,7 +47,7 @@ internal fun LauncherShellState.withSelectedHomeLayoutMode(
     val targetDeviceClass = settingsLayoutDeviceClass
     val resolvedMode = viewModeAvailability.availableModeOrStandard(targetDeviceClass, mode)
     val layoutSet =
-        currentLayoutSet(homeLayoutRepository)
+        currentLayoutSet
             .withActiveLayout(homeLayout)
             .withPreferredMode(deviceClass = targetDeviceClass, mode = resolvedMode)
             .let { layouts ->
@@ -78,7 +78,7 @@ internal fun LauncherShellState.withExitedAdaptiveStage(
     viewModeAvailability: LauncherViewModeAvailability,
 ): LauncherShellState =
     withSelectedHomeLayoutMode(
-        mode = currentLayoutSet(homeLayoutRepository).withActiveLayout(homeLayout).modeLeavingCards(),
+        mode = currentLayoutSet.withActiveLayout(homeLayout).modeLeavingCards(),
         homeLayoutRepository = homeLayoutRepository,
         viewModeAvailability = viewModeAvailability,
     )
@@ -102,9 +102,9 @@ internal fun LauncherShellState.withSelectedHomeLayoutTemplate(
         }
 
     return layout?.let { selectedLayout ->
-        val currentLayoutSet = currentLayoutSet(homeLayoutRepository).withActiveLayout(homeLayout)
+        val baseLayoutSet = currentLayoutSet.withActiveLayout(homeLayout)
         val updatedLayoutSet =
-            currentLayoutSet
+            baseLayoutSet
                 .withLayout(key = targetKey, layout = selectedLayout)
                 .withPreferredMode(deviceClass = targetDeviceClass, mode = mode)
                 .let { layoutSet ->
@@ -135,7 +135,7 @@ internal fun LauncherShellState.withSelectedHomeLayoutDeviceClass(
     homeLayoutRepository: HomeLayoutRepository,
     viewModeAvailability: LauncherViewModeAvailability,
 ): LauncherShellState {
-    val layoutSet = currentLayoutSet(homeLayoutRepository)
+    val layoutSet = currentLayoutSet
     val updatedAvailableDeviceClasses = availableLayoutDeviceClasses + availableDeviceClasses + deviceClass
 
     if (layoutSet.activeKey.deviceClass == deviceClass && layoutSet.activeLayout == homeLayout) {
@@ -207,18 +207,18 @@ internal fun LauncherShellState.withSettingsTargetLayout(
             viewMode = layout.viewMode,
             deviceClass = settingsLayoutDeviceClass,
         )
-    val currentLayoutSet =
-        currentLayoutSet(homeLayoutRepository)
+    val updatedLayoutSet =
+        currentLayoutSet
             .withLayout(key = key, layout = layout)
             .withPreferredMode(
                 deviceClass = settingsLayoutDeviceClass,
                 mode = key.viewMode,
             )
     val layoutSet =
-        if (currentLayoutSet.activeKey.deviceClass == settingsLayoutDeviceClass) {
-            currentLayoutSet.selectMode(key.viewMode)
+        if (updatedLayoutSet.activeKey.deviceClass == settingsLayoutDeviceClass) {
+            updatedLayoutSet.selectMode(key.viewMode)
         } else {
-            currentLayoutSet
+            updatedLayoutSet
         }
 
     homeLayoutRepository.saveHomeLayoutSet(layoutSet)
@@ -237,8 +237,8 @@ internal val LauncherShellState.settingsTargetLayoutKey: HomeLayoutKey
                 deviceClass = settingsLayoutDeviceClass,
             )
 
-internal fun LauncherShellState.settingsTargetLayout(homeLayoutRepository: HomeLayoutRepository): HomeLayout =
-    currentLayoutSet(homeLayoutRepository).layoutFor(settingsTargetLayoutKey)
+internal val LauncherShellState.settingsTargetLayout: HomeLayout
+    get() = currentLayoutSet.layoutFor(settingsTargetLayoutKey)
 
 /**
  * The layout set to base the next edit on.
@@ -250,6 +250,5 @@ internal fun LauncherShellState.settingsTargetLayout(homeLayoutRepository: HomeL
  * would silently discard whichever edit is in memory here, so this always builds on the state
  * already held instead of racing another writer's disk snapshot.
  */
-@Suppress("UNUSED_PARAMETER")
-private fun LauncherShellState.currentLayoutSet(homeLayoutRepository: HomeLayoutRepository): HomeLayoutSet =
-    homeLayoutSet.withActiveLayout(homeLayout)
+private val LauncherShellState.currentLayoutSet: HomeLayoutSet
+    get() = homeLayoutSet.withActiveLayout(homeLayout)

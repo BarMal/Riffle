@@ -95,7 +95,7 @@ internal class LauncherHomePageEditReducer(
         homeLayoutRepository: HomeLayoutRepository,
     ): LauncherShellState =
         if (action is LauncherShellAction.SelectSelectedHomePageType) {
-            val settingsLayout = settingsTargetLayout(homeLayoutRepository)
+            val settingsLayout = settingsTargetLayout
             val refreshedLayout = refreshedGeneratedPages(settingsLayout)
             if (refreshedLayout == settingsLayout) {
                 this
