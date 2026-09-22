@@ -534,6 +534,27 @@ internal fun dockDynamicSectionReservedMainAxisDp(
         0
     }
 
+/**
+ * Whether [DockSurfaceStrip] should actually draw a divider and dynamic section, rather than just
+ * reserve room for one.
+ *
+ * A caller can reserve room in [DockSurfaceMetrics.containerMainAxisDp] for a dynamic section
+ * without asking this strip to draw one -- [ExpandedDockSurface] does exactly that, to keep the
+ * static side's width steady across the collapsed/expanded transition, while the shelf's own card
+ * row shows the entries instead. Drawing the section there anyway, with nothing in it, would tack a
+ * dead gap and an orphaned divider onto the strip for content that was never going to be there.
+ */
+internal fun dockSurfaceStripShowsDynamicSection(
+    surfaceMetrics: DockSurfaceMetrics,
+    dynamicEntries: List<DockDynamicEntry>,
+): Boolean = surfaceMetrics.dynamicSectionMainAxisDp > 0 && dynamicEntries.isNotEmpty()
+
+/** The strip's own run: the full [DockSurfaceMetrics.surfaceMainAxisDp] only when it is drawn. */
+internal fun dockSurfaceStripMainAxisDp(
+    surfaceMetrics: DockSurfaceMetrics,
+    showDynamicSection: Boolean,
+): Int = if (showDynamicSection) surfaceMetrics.surfaceMainAxisDp else surfaceMetrics.containerMainAxisDp
+
 internal fun dockRenderedSlotCount(
     capacity: Int,
     itemCount: Int,
