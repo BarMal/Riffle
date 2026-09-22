@@ -136,6 +136,65 @@ class DockDynamicSectionMetricsTest {
     }
 
     @Test
+    fun stripWithReservedRoomButNoEntriesDoesNotDrawTheDynamicSection() {
+        // A reservation with nothing to show it -- ExpandedDockSurface's case, since the shelf's
+        // own card row carries the entries instead. The strip must not draw an empty divider for it.
+        val metrics =
+            DockSurfaceMetrics(
+                renderedSlotCount = 4,
+                containerMainAxisDp = 240,
+                contentViewportMainAxisDp = 212,
+                slotMetrics =
+                    dockSlotRenderMetrics(
+                        slotCount = 4,
+                        iconSizeDp = 44,
+                        itemSpacingDp = 12,
+                        availableContentMainAxisDp = 212,
+                    ),
+                dynamicSectionMainAxisDp = 61,
+            )
+
+        assertEquals(false, dockSurfaceStripShowsDynamicSection(metrics, dynamicEntries = emptyList()))
+        assertEquals(240, dockSurfaceStripMainAxisDp(metrics, showDynamicSection = false))
+    }
+
+    @Test
+    fun stripWithEntriesDrawsTheDynamicSectionAtTheFullSurfaceWidth() {
+        val metrics =
+            DockSurfaceMetrics(
+                renderedSlotCount = 4,
+                containerMainAxisDp = 240,
+                contentViewportMainAxisDp = 212,
+                slotMetrics =
+                    dockSlotRenderMetrics(
+                        slotCount = 4,
+                        iconSizeDp = 44,
+                        itemSpacingDp = 12,
+                        availableContentMainAxisDp = 212,
+                    ),
+                dynamicSectionMainAxisDp = 61,
+            )
+        val entries =
+            listOf(
+                DockDynamicEntry(
+                    key = "app",
+                    label = "App",
+                    identity = null,
+                    badgeCount = 1,
+                    isSelected = false,
+                    contentDescription = "App, 1 notification",
+                    intent = null,
+                ),
+            )
+
+        assertEquals(true, dockSurfaceStripShowsDynamicSection(metrics, dynamicEntries = entries))
+        assertEquals(
+            metrics.surfaceMainAxisDp,
+            dockSurfaceStripMainAxisDp(metrics, showDynamicSection = true),
+        )
+    }
+
+    @Test
     fun aDockWithADynamicSectionRunsLongEnoughForBothAndTheRuleBetween() {
         val metrics =
             DockSurfaceMetrics(

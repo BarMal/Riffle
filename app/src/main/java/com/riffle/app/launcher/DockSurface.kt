@@ -134,6 +134,27 @@ internal fun dockSurfaceMetrics(
     )
 }
 
+/**
+ * Whether [DockSurfaceStrip] should actually draw a divider and dynamic section, rather than just
+ * reserve room for one.
+ *
+ * A caller can reserve room in [DockSurfaceMetrics.containerMainAxisDp] for a dynamic section
+ * without asking this strip to draw one -- [ExpandedDockSurface] does exactly that, to keep the
+ * static side's width steady across the collapsed/expanded transition, while the shelf's own card
+ * row shows the entries instead. Drawing the section there anyway, with nothing in it, would tack a
+ * dead gap and an orphaned divider onto the strip for content that was never going to be there.
+ */
+internal fun dockSurfaceStripShowsDynamicSection(
+    surfaceMetrics: DockSurfaceMetrics,
+    dynamicEntries: List<DockDynamicEntry>,
+): Boolean = surfaceMetrics.dynamicSectionMainAxisDp > 0 && dynamicEntries.isNotEmpty()
+
+/** The strip's own run: the full [DockSurfaceMetrics.surfaceMainAxisDp] only when it is drawn. */
+internal fun dockSurfaceStripMainAxisDp(
+    surfaceMetrics: DockSurfaceMetrics,
+    showDynamicSection: Boolean,
+): Int = if (showDynamicSection) surfaceMetrics.surfaceMainAxisDp else surfaceMetrics.containerMainAxisDp
+
 @Composable
 @Suppress("LongParameterList")
 internal fun ExpandedDockSurface(
@@ -145,6 +166,7 @@ internal fun ExpandedDockSurface(
     widgetViewFactory: HomeWidgetViewFactory = EmptyHomeWidgetViewFactory,
     position: DockPosition = DockPosition.BOTTOM,
     interactions: DockInteractions,
+    dynamicEntryCount: Int = 0,
 ) {
     val presentation = DockPresentation(notificationGroupsByApp, appShortcutsByApp, widgetViewFactory, interactions)
     val runsHorizontally = position.isHorizontalEdge
@@ -163,6 +185,12 @@ internal fun ExpandedDockSurface(
                 isEditing = false,
                 availableMainAxisDp = availableMainAxisDp,
                 runsHorizontally = runsHorizontally,
+                // The strip's own dynamic section stays undrawn here (the shelf's card row already
+                // shows those entries -- see the comment where dynamicEntries is withheld in
+                // DockOrShelf), but the static side still needs to reserve the same room for it that
+                // the collapsed dock does, or the pinned-icon strip's width jumps when the shelf
+                // opens and closes.
+                dynamicEntryCount = dynamicEntryCount,
             ) ?: return@BoxWithConstraints
         HomeBackgroundContextMenu(
             haptics = interactions.haptics,
@@ -310,7 +338,8 @@ internal fun DockSurfaceStrip(
     onShowAllNotifications: () -> Unit = {},
 ) {
     val runsHorizontally = position.isHorizontalEdge
-    val mainAxisDp = surfaceMetrics.surfaceMainAxisDp.dp
+    val showDynamicSection = dockSurfaceStripShowsDynamicSection(surfaceMetrics, dynamicEntries)
+    val mainAxisDp = dockSurfaceStripMainAxisDp(surfaceMetrics, showDynamicSection).dp
     val crossAxisDp = dockCrossAxisDp(surfaceMetrics.slotMetrics.iconSizeDp).dp
     val staticSide: @Composable (suppressEndFade: Boolean) -> Unit = { suppressEndFade ->
         if (surfaceMetrics.renderedSlotCount > 0 && surfaceMetrics.contentViewportMainAxisDp > 0) {
@@ -354,7 +383,7 @@ internal fun DockSurfaceStrip(
     ) {
         // Nothing dynamic to show is the common case and stays exactly as it was: one strip,
         // centred, with no arrangement wrapped around it to shift it by a fraction of a pixel.
-        if (surfaceMetrics.dynamicSectionMainAxisDp <= 0) {
+        if (!showDynamicSection) {
             staticSide(false)
         } else {
             DockSectionRun(runsHorizontally = runsHorizontally) {
