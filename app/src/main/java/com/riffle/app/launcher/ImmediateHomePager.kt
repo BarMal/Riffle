@@ -13,6 +13,7 @@ import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
@@ -36,12 +37,21 @@ internal fun rememberImmediateHomePagerState(
     val pageCount = layout.pages.size
     val foundationPagerState =
         rememberPagerState(initialPage = selectedPageIndex) { pageCount.coerceAtLeast(1) }
+    val pagerState = remember(foundationPagerState) { ImmediateHomePagerState(foundationPagerState) }
 
     // Applies an externally-driven page selection (e.g. a PageIndicator tap) to the pager. Gated on
     // isScrollInProgress so it never fights a page the pager's own gesture is still mid-flight on --
     // the settle-effect below is what reports a user-driven page change back upstream, so by the time
     // this key combination changes again the pager and caller already agree and this is a no-op.
+    //
+    // selectedPageIndex only changes here through a genuine commit -- the scrub's own onPageSelected
+    // included -- so it is also a reliable point to drop any uncommitted-scrub marker the settle
+    // effect below is still holding: that effect only clears it when it happens to observe the
+    // matching isScrollInProgress transition, which a fast run of instant scrubToPage jumps can
+    // coalesce away before it ever gets the chance to. Clearing it here too bounds how long a stale
+    // marker could otherwise survive to a single genuine commit, rather than indefinitely.
     LaunchedEffect(selectedPageIndex, pageCount, reducedMotion) {
+        pagerState.lastUncommittedScrubPage = null
         if (
             pageCount > 0 &&
             !foundationPagerState.isScrollInProgress &&
@@ -59,19 +69,31 @@ internal fun rememberImmediateHomePagerState(
     val latestOnAction = rememberUpdatedState(actions.onAction)
 
     // Reports the pager's own settled page upstream once a user-driven drag/fling finishes.
+    //
+    // snapToPage's instant jumps also flip isScrollInProgress false→true→false around themselves
+    // (they sit on the same scroll machinery a real drag does), so this would otherwise fire once
+    // per page a live indicator scrub crosses -- each one dispatching SelectHomePage, and with it a
+    // home-layout disk write, for a page the drag hasn't even committed to yet. lastUncommittedScrubPage
+    // is how a scrub's own jumps are told apart from an actual user gesture settling: it names the
+    // page snapToPage most recently moved to without a matching commit, and is cleared the moment
+    // this effect has used it once, so a later real settle on that same page still reports normally.
     LaunchedEffect(foundationPagerState) {
         snapshotFlow { foundationPagerState.isScrollInProgress }
             .filter { isScrollInProgress -> !isScrollInProgress }
             .collect {
+                val currentPage = foundationPagerState.currentPage
+                val wasUncommittedScrubJump = pagerState.lastUncommittedScrubPage == currentPage
+                pagerState.lastUncommittedScrubPage = null
+                if (wasUncommittedScrubJump) return@collect
                 latestPages.value
-                    .getOrNull(foundationPagerState.currentPage)
+                    .getOrNull(currentPage)
                     ?.id
                     ?.takeIf { pageId -> pageId != latestSelectedPageId.value }
                     ?.let { pageId -> latestOnAction.value(LauncherShellAction.SelectHomePage(pageId)) }
             }
     }
 
-    return ImmediateHomePagerState(foundationPagerState)
+    return pagerState
 }
 
 internal class ImmediateHomePagerState(
@@ -82,6 +104,27 @@ internal class ImmediateHomePagerState(
 
     val isPageGestureActive: Boolean
         get() = foundationPagerState.isScrollInProgress
+
+    /**
+     * The page [snapToPage] most recently moved to without [rememberImmediateHomePagerState]'s own
+     * settle-report effect having seen it yet -- how that effect tells its own scrub-driven jumps
+     * apart from a real user gesture settling. Null once nothing is waiting to be told apart.
+     */
+    internal var lastUncommittedScrubPage: Int? = null
+
+    /**
+     * Jumps the pager straight to [index] with no animation, for a caller that is already
+     * animating its own handle for the transition (the page-indicator scrub drag) and would
+     * otherwise fight [rememberImmediateHomePagerState]'s own settle animation for the same move.
+     *
+     * A later call preempts an earlier one still in flight -- the scroll APIs this sits on already
+     * arbitrate concurrent scrolls on the same [PagerState], so a fast drag across several pages
+     * just lands on whichever index was requested last.
+     */
+    suspend fun snapToPage(index: Int) {
+        lastUncommittedScrubPage = index
+        foundationPagerState.scrollToPage(index)
+    }
 }
 
 @Suppress("LongParameterList", "CyclomaticComplexMethod")
