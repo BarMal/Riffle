@@ -467,9 +467,13 @@ internal fun dockContainerMainAxisDp(
     itemSpacingDp: Int,
     backgroundSizing: DockBackgroundSizing,
     runsHorizontally: Boolean = true,
+    reservedDynamicSectionMainAxisDp: Int = 0,
 ): Int {
     val maxDockMainAxis =
-        min(availableMainAxisDp, dockMaxMainAxisDp(availableMainAxisDp, runsHorizontally)).coerceAtLeast(0)
+        (
+            min(availableMainAxisDp, dockMaxMainAxisDp(availableMainAxisDp, runsHorizontally)) -
+                reservedDynamicSectionMainAxisDp.coerceAtLeast(0)
+        ).coerceAtLeast(0)
     if (backgroundSizing == DockBackgroundSizing.FIXED) {
         return maxDockMainAxis
     }
@@ -486,9 +490,14 @@ internal fun dockContainerMainAxisDp(
 /**
  * How much of the dock's run the dynamic section gets, once the static side has had its share.
  *
- * The static side is the one the user built, so it is sized first and in full; the dynamic section
- * takes what is left. That ordering is the point -- notifications come and go, and a section that
- * sized itself first would shove the pinned icons along the dock every time one arrived.
+ * The static side is the one the user built, so it is sized first; the dynamic section takes what
+ * is left. That ordering is the point -- notifications come and go, and a section that sized
+ * itself first would shove the pinned icons along the dock every time one arrived. The static
+ * side's own share is capped ahead of time by [dockDynamicSectionReservedMainAxisDp] (passed to
+ * [dockContainerMainAxisDp] as `reservedDynamicSectionMainAxisDp`) whenever there is at least one
+ * entry to show, so "what is left" never collapses to nothing just because the static side is
+ * full: the two sections' shares stay stable across individual notifications arriving or leaving,
+ * changing only when the section goes from empty to non-empty or back.
  *
  * [maxRunMainAxisDp] is taken as already capped for the same reason [dockContentViewportMainAxisDp]
  * takes its own: how long a run may get depends on which way it runs, and only the caller knows
@@ -509,6 +518,42 @@ internal fun dockDynamicSectionMainAxisDp(
     val room = maxRunMainAxisDp - staticContainerMainAxisDp - DOCK_SECTION_DIVIDER_MAIN_AXIS_DP
     return min(wanted, room).coerceAtLeast(0)
 }
+
+/**
+ * How much of the run to hold back from the static side so the dynamic section, once it has any
+ * entries at all, always gets at least one tile's worth of space rather than being squeezed to
+ * nothing by a dock that is otherwise full. Zero when there is nothing to reserve for.
+ */
+internal fun dockDynamicSectionReservedMainAxisDp(
+    entryCount: Int,
+    entryExtentDp: Int,
+): Int =
+    if (entryCount > 0 && entryExtentDp > 0) {
+        entryExtentDp + DOCK_SECTION_DIVIDER_MAIN_AXIS_DP
+    } else {
+        0
+    }
+
+/**
+ * Whether [DockSurfaceStrip] should actually draw a divider and dynamic section, rather than just
+ * reserve room for one.
+ *
+ * A caller can reserve room in [DockSurfaceMetrics.containerMainAxisDp] for a dynamic section
+ * without asking this strip to draw one -- [ExpandedDockSurface] does exactly that, to keep the
+ * static side's width steady across the collapsed/expanded transition, while the shelf's own card
+ * row shows the entries instead. Drawing the section there anyway, with nothing in it, would tack a
+ * dead gap and an orphaned divider onto the strip for content that was never going to be there.
+ */
+internal fun dockSurfaceStripShowsDynamicSection(
+    surfaceMetrics: DockSurfaceMetrics,
+    dynamicEntries: List<DockDynamicEntry>,
+): Boolean = surfaceMetrics.dynamicSectionMainAxisDp > 0 && dynamicEntries.isNotEmpty()
+
+/** The strip's own run: the full [DockSurfaceMetrics.surfaceMainAxisDp] only when it is drawn. */
+internal fun dockSurfaceStripMainAxisDp(
+    surfaceMetrics: DockSurfaceMetrics,
+    showDynamicSection: Boolean,
+): Int = if (showDynamicSection) surfaceMetrics.surfaceMainAxisDp else surfaceMetrics.containerMainAxisDp
 
 internal fun dockRenderedSlotCount(
     capacity: Int,

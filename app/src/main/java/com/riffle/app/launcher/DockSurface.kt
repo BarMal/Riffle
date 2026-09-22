@@ -94,6 +94,11 @@ internal fun dockSurfaceMetrics(
             itemSpacingDp = dock.itemSpacingDp,
             backgroundSizing = dock.backgroundSizing,
             runsHorizontally = runsHorizontally,
+            reservedDynamicSectionMainAxisDp =
+                dockDynamicSectionReservedMainAxisDp(
+                    entryCount = dynamicEntryCount,
+                    entryExtentDp = dock.iconSizeDp,
+                ),
         )
     val contentViewportMainAxisDp =
         dockContentViewportMainAxisDp(
@@ -140,6 +145,7 @@ internal fun ExpandedDockSurface(
     widgetViewFactory: HomeWidgetViewFactory = EmptyHomeWidgetViewFactory,
     position: DockPosition = DockPosition.BOTTOM,
     interactions: DockInteractions,
+    dynamicEntryCount: Int = 0,
 ) {
     val presentation = DockPresentation(notificationGroupsByApp, appShortcutsByApp, widgetViewFactory, interactions)
     val runsHorizontally = position.isHorizontalEdge
@@ -158,6 +164,12 @@ internal fun ExpandedDockSurface(
                 isEditing = false,
                 availableMainAxisDp = availableMainAxisDp,
                 runsHorizontally = runsHorizontally,
+                // The strip's own dynamic section stays undrawn here (the shelf's card row already
+                // shows those entries -- see the comment where dynamicEntries is withheld in
+                // DockOrShelf), but the static side still needs to reserve the same room for it that
+                // the collapsed dock does, or the pinned-icon strip's width jumps when the shelf
+                // opens and closes.
+                dynamicEntryCount = dynamicEntryCount,
             ) ?: return@BoxWithConstraints
         HomeBackgroundContextMenu(
             haptics = interactions.haptics,
@@ -305,7 +317,8 @@ internal fun DockSurfaceStrip(
     onShowAllNotifications: () -> Unit = {},
 ) {
     val runsHorizontally = position.isHorizontalEdge
-    val mainAxisDp = surfaceMetrics.surfaceMainAxisDp.dp
+    val showDynamicSection = dockSurfaceStripShowsDynamicSection(surfaceMetrics, dynamicEntries)
+    val mainAxisDp = dockSurfaceStripMainAxisDp(surfaceMetrics, showDynamicSection).dp
     val crossAxisDp = dockCrossAxisDp(surfaceMetrics.slotMetrics.iconSizeDp).dp
     val staticSide: @Composable (suppressEndFade: Boolean) -> Unit = { suppressEndFade ->
         if (surfaceMetrics.renderedSlotCount > 0 && surfaceMetrics.contentViewportMainAxisDp > 0) {
@@ -349,7 +362,7 @@ internal fun DockSurfaceStrip(
     ) {
         // Nothing dynamic to show is the common case and stays exactly as it was: one strip,
         // centred, with no arrangement wrapped around it to shift it by a fraction of a pixel.
-        if (surfaceMetrics.dynamicSectionMainAxisDp <= 0) {
+        if (!showDynamicSection) {
             staticSide(false)
         } else {
             DockSectionRun(runsHorizontally = runsHorizontally) {
