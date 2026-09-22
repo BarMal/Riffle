@@ -595,6 +595,29 @@ private fun StandardHomeColumn(
             reducedMotion = state.presentation.reducedMotion,
             actions = actions,
         )
+    // Keyed on a request id rather than the target page itself, so a new page crossed mid-drag
+    // explicitly supersedes and cancels whatever snap the previous one was still mid-flight on --
+    // the same superseding-coroutine pattern PageIndicator's own live-offset tracking uses, rather
+    // than leaning on PagerState's own scroll-mutex preemption as the only thing keeping fast,
+    // overlapping scrub updates in order. Keying on the target page directly would silently skip a
+    // request whenever it repeats whatever page a previous, unrelated request already left recorded
+    // (a cancelled drag reverting to page 0, then a later one's first crossed page also being 0);
+    // the id guarantees every request is treated as new regardless of what page it names.
+    val scrubRequestId = remember { mutableStateOf(0) }
+    val scrubTargetPageIndex = remember { mutableStateOf<Int?>(null) }
+    LaunchedEffect(scrubRequestId.value) {
+        scrubTargetPageIndex.value?.let { index -> pagerState.snapToPage(index) }
+    }
+    val onIndicatorScrub: (Int) -> Unit = { index ->
+        scrubTargetPageIndex.value = index
+        scrubRequestId.value += 1
+    }
+    // isPageGestureActive only pulses while a scrub jump is actually landing on a new page -- a
+    // finger held still mid-drag, between crossings, wouldn't otherwise count as "active" and could
+    // let the indicator's own idle-hide timer unmount it (pointerInput and all) out from under the
+    // still-down finger. This keeps it counted as active for exactly as long as the drag itself is.
+    val isIndicatorDragActive = remember { mutableStateOf(false) }
+    val onIndicatorDragActiveChanged: (Boolean) -> Unit = { active -> isIndicatorDragActive.value = active }
     val notificationShelfState =
         dockNotificationShelfState(
             dock = state.visibleLayout.dock,
@@ -681,8 +704,11 @@ private fun StandardHomeColumn(
         HomeBottomControls(
             layout = state.visibleLayout,
             selectedPageIndex = pagerState.visualSelectedPageIndex,
-            showPageIndicator = pagerState.rememberPageIndicatorVisible(),
+            showPageIndicator =
+                pagerState.rememberPageIndicatorVisible(isIndicatorDragActive = isIndicatorDragActive.value),
             reducedMotion = state.presentation.reducedMotion,
+            onIndicatorScrub = onIndicatorScrub,
+            onIndicatorDragActiveChanged = onIndicatorDragActiveChanged,
             appIconLoader = appIconLoader,
             widgetViewFactory = state.presentation.widgetViewFactory,
             actions = homeActions,
@@ -794,6 +820,8 @@ private fun HomeBottomControls(
     selectedPageIndex: Int,
     showPageIndicator: Boolean,
     reducedMotion: Boolean,
+    onIndicatorScrub: (Int) -> Unit,
+    onIndicatorDragActiveChanged: (Boolean) -> Unit,
     appIconLoader: AppIconLoader,
     widgetViewFactory: HomeWidgetViewFactory,
     actions: HomeWorkspaceActions,
@@ -816,11 +844,14 @@ private fun HomeBottomControls(
                     pageCount = layout.pages.size,
                     selectedPageIndex = selectedPageIndex,
                     showPageIndicator = showPageIndicator,
+                    reducedMotion = reducedMotion,
                     onPageSelected = { pageIndex ->
                         layout.pages.getOrNull(pageIndex)?.let { page ->
                             actions.onAction(LauncherShellAction.SelectHomePage(page.id))
                         }
                     },
+                    onIndicatorScrub = onIndicatorScrub,
+                    onIndicatorDragActiveChanged = onIndicatorDragActiveChanged,
                     actions = actions,
                 )
 
@@ -848,7 +879,10 @@ private fun HomeBottomSearchArea(
     pageCount: Int,
     selectedPageIndex: Int,
     showPageIndicator: Boolean,
+    reducedMotion: Boolean,
     onPageSelected: (Int) -> Unit,
+    onIndicatorScrub: (Int) -> Unit,
+    onIndicatorDragActiveChanged: (Boolean) -> Unit,
     actions: HomeWorkspaceActions,
 ) {
     Box(
@@ -868,7 +902,11 @@ private fun HomeBottomSearchArea(
             PageIndicator(
                 pageCount = pageCount,
                 selectedPageIndex = selectedPageIndex,
+                reducedMotion = reducedMotion,
+                haptics = actions.haptics,
                 onPageSelected = onPageSelected,
+                onLiveDragPageChanged = onIndicatorScrub,
+                onDragActiveChanged = onIndicatorDragActiveChanged,
                 modifier =
                     Modifier
                         .height(HOME_PAGE_INDICATOR_TOUCH_TARGET_HEIGHT_DP.dp)
@@ -905,11 +943,14 @@ private fun HomeBottomSearchArea(
 }
 
 @Composable
-private fun ImmediateHomePagerState.rememberPageIndicatorVisible(): Boolean {
+private fun ImmediateHomePagerState.rememberPageIndicatorVisible(isIndicatorDragActive: Boolean): Boolean {
     val isVisible = remember { mutableStateOf(false) }
 
-    LaunchedEffect(isPageGestureActive, visualSelectedPageIndex) {
-        if (isPageGestureActive) {
+    // isPageGestureActive alone only pulses while a scrub jump is landing on a newly-crossed page --
+    // isIndicatorDragActive covers the gaps, a finger held still mid-drag between crossings, so the
+    // indicator (and the pointerInput the finger is still down on) can't unmount itself mid-gesture.
+    LaunchedEffect(isPageGestureActive, isIndicatorDragActive, visualSelectedPageIndex) {
+        if (isPageGestureActive || isIndicatorDragActive) {
             isVisible.value = true
         } else {
             delay(PAGE_INDICATOR_SETTLED_VISIBLE_MS)

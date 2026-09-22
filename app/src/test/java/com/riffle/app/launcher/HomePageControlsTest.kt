@@ -108,6 +108,50 @@ class HomePageControlsTest {
     }
 
     @Test
+    fun pageIndicatorHandleRestOffsetIsTheInverseOfTheDragMapping() {
+        // Page 2 of 5 is halfway along the track either way.
+        assertEquals(
+            50f,
+            pageIndicatorHandleRestOffsetPx(index = 2, trackWidthPx = 100f, pageCount = 5),
+        )
+        assertEquals(
+            0f,
+            pageIndicatorHandleRestOffsetPx(index = 0, trackWidthPx = 100f, pageCount = 5),
+        )
+        assertEquals(
+            100f,
+            pageIndicatorHandleRestOffsetPx(index = 4, trackWidthPx = 100f, pageCount = 5),
+        )
+    }
+
+    @Test
+    fun pageIndicatorHandleRestOffsetMirrorsInRtl() {
+        assertEquals(
+            100f,
+            pageIndicatorHandleRestOffsetPx(
+                index = 0,
+                trackWidthPx = 100f,
+                pageCount = 5,
+                layoutDirection = LayoutDirection.Rtl,
+            ),
+        )
+        assertEquals(
+            0f,
+            pageIndicatorHandleRestOffsetPx(
+                index = 4,
+                trackWidthPx = 100f,
+                pageCount = 5,
+                layoutDirection = LayoutDirection.Rtl,
+            ),
+        )
+    }
+
+    @Test
+    fun pageIndicatorHandleRestOffsetIsZeroForASinglePage() {
+        assertEquals(0f, pageIndicatorHandleRestOffsetPx(index = 0, trackWidthPx = 100f, pageCount = 1))
+    }
+
+    @Test
     fun pageOverviewOnlyOffersPinningForGeneratedPages() {
         assertEquals(null, pageOverviewPinActionLabel(LauncherPageType.Home, isPinned = false))
         assertEquals(null, pageOverviewPinActionLabel(LauncherPageType.AllApps, isPinned = false))

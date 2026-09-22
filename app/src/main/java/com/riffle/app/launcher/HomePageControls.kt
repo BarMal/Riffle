@@ -2,8 +2,15 @@
 
 package com.riffle.app.launcher
 
-import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.AnimationSpec
+import androidx.compose.animation.core.AnimationVector1D
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -11,13 +18,15 @@ import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -32,14 +41,22 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.composed
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
@@ -48,6 +65,8 @@ import androidx.compose.ui.semantics.progressBarRangeInfo
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.setProgress
 import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import com.riffle.app.launcher.widgets.HomeWidgetViewFactory
@@ -475,15 +494,32 @@ internal fun pageOverviewActionsMenuItems(
             },
         )
 
+/**
+ * A track of dots with a draggable handle riding over the current page, for jumping several pages
+ * at once faster than tapping "Next" repeatedly or waiting through one long glide.
+ *
+ * The handle follows the finger 1:1 -- unanimated -- while a drag is live, reporting each page it
+ * crosses through [onLiveDragPageChanged] so the pager can jump there instantly and the scrub feels
+ * direct rather than laggy; [onPageSelected] fires once, on release, to commit the final page the
+ * ordinary way. Letting go (or a page change from anywhere else -- a swipe on the pager, "Next")
+ * settles the handle onto its resting spot with a spring, the same one a real slider's thumb would
+ * use.
+ */
+@Suppress("LongParameterList")
 @Composable
 fun PageIndicator(
     pageCount: Int,
     selectedPageIndex: Int,
+    reducedMotion: Boolean,
+    haptics: LauncherHaptics,
     onPageSelected: (Int) -> Unit,
+    onLiveDragPageChanged: (Int) -> Unit = {},
+    onDragActiveChanged: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val layoutDirection = LocalLayoutDirection.current
-    Row(
+
+    Box(
         modifier =
             Modifier
                 .heightIn(min = PAGE_INDICATOR_TOUCH_TARGET_HEIGHT_DP.dp)
@@ -492,37 +528,211 @@ fun PageIndicator(
                     pageCount = pageCount,
                     selectedPageIndex = selectedPageIndex,
                     onPageSelected = onPageSelected,
-                ).pageIndicatorDrag(
-                    pageCount = pageCount,
-                    layoutDirection = layoutDirection,
-                    onPageSelected = onPageSelected,
                 ),
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-        verticalAlignment = Alignment.CenterVertically,
+        contentAlignment = Alignment.CenterStart,
     ) {
-        repeat(pageCount) { index ->
-            val isSelected = index == selectedPageIndex
-            val width =
-                animateDpAsState(
-                    targetValue = if (isSelected) 18.dp else 6.dp,
-                    label = "page-indicator-width",
-                )
-            val color =
-                animateColorAsState(
-                    targetValue = pageIndicatorColor(isSelected = isSelected),
-                    label = "page-indicator-color",
-                )
+        // The dot row's own measured width, not the indicator's -- the handle's fixed touch target
+        // can be wider than a short row of dots (e.g. two pages), and that must not stretch the
+        // track math out past where the dots actually are. Both are re-keyed on pageCount: a changed
+        // dot count remeasures to a different width, and the stale one from the old count must not
+        // be trusted (or treated as "already measured") for even one frame in between.
+        var trackWidthPx by remember(pageCount) { mutableStateOf(0f) }
+        // Stays false until the very first real measurement, so that measurement is applied with a
+        // snap rather than the settle spring -- otherwise the handle would visibly slide in from x=0
+        // once layout catches up, on every single appearance of the indicator (or every page added
+        // or removed, since the row's width -- and so the handle's correct resting spot -- changes).
+        var hasMeasuredTrack by remember(pageCount) { mutableStateOf(false) }
+        var isDragging by remember { mutableStateOf(false) }
+        var liveDragOffsetPx by remember { mutableStateOf<Float?>(null) }
+        val restingOffsetPx =
+            pageIndicatorHandleRestOffsetPx(
+                index = selectedPageIndex,
+                trackWidthPx = trackWidthPx,
+                pageCount = pageCount,
+                layoutDirection = layoutDirection,
+            )
+        val handleOffsetPx = remember(pageCount) { Animatable(restingOffsetPx) }
 
-            Box(
-                modifier =
-                    Modifier
-                        .width(width.value)
-                        .height(6.dp)
-                        .clip(CircleShape)
-                        .background(color.value),
+        // The pointer callbacks below aren't a suspend context, so a drag reports its position
+        // through this plain state instead of driving the Animatable directly; this effect is what
+        // actually moves it, one snapTo per position change.
+        LaunchedEffect(liveDragOffsetPx) {
+            liveDragOffsetPx?.let { offsetPx -> handleOffsetPx.snapTo(offsetPx) }
+        }
+
+        LaunchedEffect(restingOffsetPx, isDragging, reducedMotion, trackWidthPx) {
+            if (isDragging) return@LaunchedEffect
+            if (reducedMotion || !hasMeasuredTrack) {
+                handleOffsetPx.snapTo(restingOffsetPx)
+                if (trackWidthPx > 0f) hasMeasuredTrack = true
+            } else {
+                handleOffsetPx.animateTo(restingOffsetPx, PageIndicatorHandleSettleSpec)
+            }
+        }
+
+        Row(
+            modifier = Modifier.onSizeChanged { size -> trackWidthPx = size.width.toFloat() },
+            horizontalArrangement = Arrangement.spacedBy(PAGE_INDICATOR_DOT_SPACING_DP.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            repeat(pageCount) {
+                Box(
+                    modifier =
+                        Modifier
+                            .size(PAGE_INDICATOR_DOT_DIAMETER_DP.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.onSurface.copy(alpha = PAGE_INDICATOR_DOT_ALPHA)),
+                )
+            }
+        }
+
+        PageIndicatorHandleOverlay(
+            pageCount = pageCount,
+            layoutDirection = layoutDirection,
+            trackWidthPx = trackWidthPx,
+            reducedMotion = reducedMotion,
+            haptics = haptics,
+            isDragging = isDragging,
+            handleOffsetPx = handleOffsetPx,
+            onDraggingChanged = { dragging ->
+                isDragging = dragging
+                onDragActiveChanged(dragging)
+                if (!dragging) liveDragOffsetPx = null
+            },
+            onLiveOffsetChanged = { offsetPx -> liveDragOffsetPx = offsetPx },
+            onLiveDragPageChanged = onLiveDragPageChanged,
+            onPageSelected = onPageSelected,
+        )
+    }
+}
+
+/**
+ * pageIndicatorHandleRestOffsetPx and pageIndicatorDragTargetIndex already fold RTL into offsetPx
+ * themselves (0 is always the track's physical left, however the app mirrors) -- placing the
+ * handle through the ambient direction on top of that would mirror it a second time. matchParentSize
+ * leaves the outer Box's own placement of this wrapper alone (a child exactly its parent's size has
+ * no slack for any alignment to act on, in either direction), and forcing Ltr just for this subtree
+ * makes its own TopStart placement of the handle unambiguous physical pixels, matching what offsetPx
+ * already means.
+ *
+ * The drag itself lives on this static, full-track overlay rather than on the small handle it
+ * draws -- not the handle's own (deliberately compact) touch target. A gesture attached to the
+ * handle would have to track the finger by accumulating each move's delta, since the handle's own
+ * position (and so its local coordinate frame) shifts under the finger as it follows; delta
+ * accumulation only starts counting once Compose's touch-slop threshold is crossed, silently
+ * dropping that initial distance. On a short track (few pages) that loss is enough to fall a whole
+ * page short of an edge-to-edge drag. Reading the raw touch position against this element's own
+ * fixed frame instead avoids losing anything to slop, and gives the drag a far more forgiving hit
+ * area besides -- the whole track, not just the small roundel.
+ *
+ * [trackWidthPx] is passed in rather than read from this overlay's own matchParentSize dimension,
+ * so the drag always resolves against the exact same width [pageIndicatorHandleRestOffsetPx] used
+ * to place the dots and the handle's resting spot -- a caller-supplied [PageIndicator] modifier
+ * that stretched the outer Box wider than the dot row would otherwise let this overlay's own size
+ * drift out of step with theirs, so the same drag could compute a different page than where the
+ * handle and dots visibly sit.
+ */
+@Suppress("LongParameterList")
+@Composable
+private fun BoxScope.PageIndicatorHandleOverlay(
+    pageCount: Int,
+    layoutDirection: LayoutDirection,
+    trackWidthPx: Float,
+    reducedMotion: Boolean,
+    haptics: LauncherHaptics,
+    isDragging: Boolean,
+    handleOffsetPx: Animatable<Float, AnimationVector1D>,
+    onDraggingChanged: (Boolean) -> Unit,
+    onLiveOffsetChanged: (Float) -> Unit,
+    onLiveDragPageChanged: (Int) -> Unit,
+    onPageSelected: (Int) -> Unit,
+) {
+    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+        Box(
+            modifier =
+                Modifier
+                    .matchParentSize()
+                    .pageIndicatorDrag(
+                        pageCount = pageCount,
+                        layoutDirection = layoutDirection,
+                        trackWidthPx = trackWidthPx,
+                        haptics = haptics,
+                        callbacks =
+                            PageIndicatorDragCallbacks(
+                                onDragActiveChanged = onDraggingChanged,
+                                onLiveOffsetChanged = onLiveOffsetChanged,
+                                onLivePageChanged = onLiveDragPageChanged,
+                                onPageSelected = onPageSelected,
+                            ),
+                    ),
+        ) {
+            PageIndicatorHandle(
+                offsetPx = handleOffsetPx.value,
+                isLifted = isDragging,
+                reducedMotion = reducedMotion,
             )
         }
     }
+}
+
+/**
+ * The visible, grabbable roundel riding over the indicator's current page. Purely visual -- see
+ * [PageIndicatorHandleOverlay] for where the drag that moves it actually lives.
+ */
+@Composable
+private fun PageIndicatorHandle(
+    offsetPx: Float,
+    isLifted: Boolean,
+    reducedMotion: Boolean,
+) {
+    val density = LocalDensity.current
+    val touchTargetPx = remember(density) { with(density) { PAGE_INDICATOR_HANDLE_TOUCH_TARGET_DP.dp.toPx() } }
+    val lift = pageIndicatorHandleLift(isLifted = isLifted, reducedMotion = reducedMotion)
+
+    Box(
+        modifier =
+            Modifier
+                .offset { IntOffset(x = (offsetPx - touchTargetPx / 2f).roundToInt(), y = 0) }
+                .size(PAGE_INDICATOR_HANDLE_TOUCH_TARGET_DP.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Box(
+            modifier =
+                Modifier
+                    .size(PAGE_INDICATOR_HANDLE_DIAMETER_DP.dp)
+                    .scale(lift.scale)
+                    .shadow(lift.elevation, CircleShape)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primary),
+        )
+    }
+}
+
+private data class PageIndicatorHandleLift(val scale: Float, val elevation: Dp)
+
+/** Grow-and-lift on grab, the same idea as picking up a dock icon or a slider's thumb. */
+@Composable
+private fun pageIndicatorHandleLift(
+    isLifted: Boolean,
+    reducedMotion: Boolean,
+): PageIndicatorHandleLift {
+    val scaleAnimationSpec: AnimationSpec<Float> =
+        if (reducedMotion) snap() else tween(PAGE_INDICATOR_HANDLE_LIFT_ANIMATION_MILLIS)
+    val elevationAnimationSpec: AnimationSpec<Dp> =
+        if (reducedMotion) snap() else tween(PAGE_INDICATOR_HANDLE_LIFT_ANIMATION_MILLIS)
+    val scale by
+        animateFloatAsState(
+            targetValue = if (isLifted) PAGE_INDICATOR_HANDLE_LIFT_SCALE else 1f,
+            animationSpec = scaleAnimationSpec,
+            label = "page-indicator-handle-scale",
+        )
+    val elevation by
+        animateDpAsState(
+            targetValue = if (isLifted) PAGE_INDICATOR_HANDLE_LIFT_ELEVATION_DP.dp else 0.dp,
+            animationSpec = elevationAnimationSpec,
+            label = "page-indicator-handle-elevation",
+        )
+    return PageIndicatorHandleLift(scale, elevation)
 }
 
 private fun Modifier.pageIndicatorSemantics(
@@ -547,39 +757,108 @@ private fun Modifier.pageIndicatorSemantics(
         }
     }
 
+private data class PageIndicatorDragCallbacks(
+    val onDragActiveChanged: (Boolean) -> Unit,
+    val onLiveOffsetChanged: (Float) -> Unit,
+    val onLivePageChanged: (Int) -> Unit,
+    val onPageSelected: (Int) -> Unit,
+)
+
+/**
+ * The drag itself: read as the pointer's raw, absolute position against this element's own fixed
+ * frame (this modifier sits on the static full-track overlay, not the handle -- see
+ * [PageIndicatorHandleOverlay]), so nothing is lost to Compose's touch-slop threshold the way
+ * summing each move's delta would.
+ *
+ * [haptics] and [callbacks] are read through [rememberUpdatedState] rather than keyed into
+ * [pointerInput] directly: PageIndicator reads the handle's own live position on every recomposition
+ * (it drives where the dot-overlay renders), so a fresh [PageIndicatorDragCallbacks] instance -- and
+ * a changed key -- would otherwise arrive on close to every frame of a scrub drag or its settle
+ * spring. [pointerInput] restarts [detectHorizontalDragGestures] from scratch whenever any of its
+ * keys change, which would drop the in-progress gesture (no new pointer-down is coming) and leave
+ * the drag stuck after its first move. Only [pageCount], [layoutDirection] and [trackWidthPx] are
+ * kept as keys, since none of them change while a drag is actually in progress.
+ */
 private fun Modifier.pageIndicatorDrag(
     pageCount: Int,
     layoutDirection: LayoutDirection,
-    onPageSelected: (Int) -> Unit,
+    trackWidthPx: Float,
+    haptics: LauncherHaptics,
+    callbacks: PageIndicatorDragCallbacks,
 ): Modifier =
-    if (pageCount <= 1) {
+    if (pageCount <= 1 || trackWidthPx <= 0f) {
         this
     } else {
-        pointerInput(pageCount, layoutDirection, onPageSelected) {
-            var targetPageIndex = 0
+        composed {
+            val latestHaptics by rememberUpdatedState(haptics)
+            val latestCallbacks by rememberUpdatedState(callbacks)
+            pointerInput(pageCount, layoutDirection, trackWidthPx) {
+                var startPageIndex = 0
+                var targetPageIndex = 0
+                var isDragInProgress = false
 
-            detectHorizontalDragGestures(
-                onDragStart = { position ->
-                    targetPageIndex =
-                        pageIndicatorDragTargetIndex(
-                            dragPositionPx = position.x,
-                            trackWidthPx = size.width.toFloat(),
-                            pageCount = pageCount,
-                            layoutDirection = layoutDirection,
-                        )
-                },
-                onHorizontalDrag = { change, _ ->
-                    change.consume()
-                    targetPageIndex =
-                        pageIndicatorDragTargetIndex(
-                            dragPositionPx = change.position.x,
-                            trackWidthPx = size.width.toFloat(),
-                            pageCount = pageCount,
-                            layoutDirection = layoutDirection,
-                        )
-                },
-                onDragEnd = { onPageSelected(targetPageIndex) },
-            )
+                // pageCount, layoutDirection or trackWidthPx changing mid-drag (a page added or
+                // removed while a finger is still down, say) restarts this whole pointerInput block
+                // from scratch, which cancels detectHorizontalDragGestures without giving it the
+                // chance to run onDragEnd or onDragCancel itself. Without this, isDragging on the
+                // caller's side would never be told the drag is over and would stay stuck lifted.
+                try {
+                    detectHorizontalDragGestures(
+                        onDragStart = { position ->
+                            isDragInProgress = true
+                            startPageIndex =
+                                pageIndicatorDragTargetIndex(
+                                    dragPositionPx = position.x,
+                                    trackWidthPx = trackWidthPx,
+                                    pageCount = pageCount,
+                                    layoutDirection = layoutDirection,
+                                )
+                            targetPageIndex = startPageIndex
+                            latestHaptics.longPress()
+                            latestCallbacks.onDragActiveChanged(true)
+                            // An overswipe past either edge is a normal way to drag -- the page index
+                            // above already clamps to it, but the handle's own visible position must
+                            // too, or it renders off past the dot row until the finger comes back.
+                            latestCallbacks.onLiveOffsetChanged(position.x.coerceIn(0f, trackWidthPx))
+                        },
+                        onHorizontalDrag = { change, _ ->
+                            change.consume()
+                            latestCallbacks.onLiveOffsetChanged(change.position.x.coerceIn(0f, trackWidthPx))
+                            val newTargetPageIndex =
+                                pageIndicatorDragTargetIndex(
+                                    dragPositionPx = change.position.x,
+                                    trackWidthPx = trackWidthPx,
+                                    pageCount = pageCount,
+                                    layoutDirection = layoutDirection,
+                                )
+                            if (newTargetPageIndex != targetPageIndex) {
+                                targetPageIndex = newTargetPageIndex
+                                latestHaptics.longPress()
+                                latestCallbacks.onLivePageChanged(targetPageIndex)
+                            }
+                        },
+                        onDragEnd = {
+                            isDragInProgress = false
+                            latestCallbacks.onDragActiveChanged(false)
+                            latestCallbacks.onPageSelected(targetPageIndex)
+                        },
+                        onDragCancel = {
+                            isDragInProgress = false
+                            latestCallbacks.onDragActiveChanged(false)
+                            // No commit happened, but a live jump mid-drag may already have moved the
+                            // pager itself past pages it was never asked to settle on -- put it back
+                            // where the drag started rather than leaving it stranded there.
+                            if (targetPageIndex != startPageIndex) {
+                                latestCallbacks.onLivePageChanged(startPageIndex)
+                            }
+                        },
+                    )
+                } finally {
+                    if (isDragInProgress) {
+                        latestCallbacks.onDragActiveChanged(false)
+                    }
+                }
+            }
         }
     }
 
@@ -598,20 +877,36 @@ internal fun pageIndicatorDragTargetIndex(
         .coerceIn(0, pageCount - 1)
 }
 
+/** The exact inverse of [pageIndicatorDragTargetIndex]: where a page's dot sits along the track. */
+internal fun pageIndicatorHandleRestOffsetPx(
+    index: Int,
+    trackWidthPx: Float,
+    pageCount: Int,
+    layoutDirection: LayoutDirection = LayoutDirection.Ltr,
+): Float {
+    if (pageCount <= 1) return 0f
+
+    val progress = index.toFloat() / (pageCount - 1)
+    val trackProgress = if (layoutDirection == LayoutDirection.Rtl) 1f - progress else progress
+    return (trackProgress * trackWidthPx).coerceIn(0f, trackWidthPx)
+}
+
 internal fun pageIndicatorStateDescription(
     selectedPageIndex: Int,
     pageCount: Int,
 ): String = "Page ${selectedPageIndex + 1} of $pageCount"
 
 private const val PAGE_INDICATOR_TOUCH_TARGET_HEIGHT_DP = 48
-
-@Composable
-private fun pageIndicatorColor(isSelected: Boolean) =
-    if (isSelected) {
-        MaterialTheme.colorScheme.onSurface
-    } else {
-        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.28f)
-    }
+private const val PAGE_INDICATOR_DOT_DIAMETER_DP = 6
+private const val PAGE_INDICATOR_DOT_SPACING_DP = 6
+private const val PAGE_INDICATOR_DOT_ALPHA = 0.28f
+private const val PAGE_INDICATOR_HANDLE_DIAMETER_DP = 14
+private const val PAGE_INDICATOR_HANDLE_TOUCH_TARGET_DP = 44
+private const val PAGE_INDICATOR_HANDLE_LIFT_SCALE = 1.3f
+private const val PAGE_INDICATOR_HANDLE_LIFT_ELEVATION_DP = 6
+private const val PAGE_INDICATOR_HANDLE_LIFT_ANIMATION_MILLIS = 120
+private val PageIndicatorHandleSettleSpec: AnimationSpec<Float> =
+    spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium)
 
 private fun pageOverviewLabel(index: Int): String = "Page ${index + 1}"
 

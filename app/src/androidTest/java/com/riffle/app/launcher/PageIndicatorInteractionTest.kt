@@ -1,13 +1,11 @@
 package com.riffle.app.launcher
 
-import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.semantics.SemanticsActions
@@ -43,6 +41,8 @@ class PageIndicatorInteractionTest {
                 PageIndicator(
                     pageCount = 5,
                     selectedPageIndex = selectedPageIndex,
+                    reducedMotion = true,
+                    haptics = NoopLauncherHaptics,
                     onPageSelected = { pageIndex ->
                         selectedPageIndex = pageIndex
                         selectedPages += pageIndex
@@ -91,13 +91,18 @@ class PageIndicatorInteractionTest {
                     PageIndicator(
                         pageCount = 5,
                         selectedPageIndex = 0,
+                        reducedMotion = true,
+                        haptics = NoopLauncherHaptics,
                         onPageSelected = selectedPages::add,
-                        modifier = Modifier.width(200.dp),
                     )
                 }
             }
         }
 
+        // The drag surface is the full track (a static overlay spanning the indicator, not the
+        // small handle riding over it), read as absolute position -- so a drag from as near the
+        // node's own edge as it allows, spanning its own reported width, reaches the last page
+        // exactly the way a real thumb drag across the whole track would.
         composeRule
             .onNodeWithContentDescription("Page selector")
             .performTouchInput {
@@ -111,6 +116,42 @@ class PageIndicatorInteractionTest {
 
         composeRule.runOnIdle {
             assertEquals(listOf(4), selectedPages)
+        }
+    }
+
+    @Test
+    fun dragReportsEachCrossedPageLiveBeforeCommittingOnceOnRelease() {
+        val liveIndices = mutableListOf<Int>()
+        val committedIndices = mutableListOf<Int>()
+        composeRule.setContent {
+            MaterialTheme {
+                PageIndicator(
+                    pageCount = 5,
+                    selectedPageIndex = 0,
+                    reducedMotion = true,
+                    haptics = NoopLauncherHaptics,
+                    onPageSelected = committedIndices::add,
+                    onLiveDragPageChanged = liveIndices::add,
+                )
+            }
+        }
+
+        composeRule
+            .onNodeWithContentDescription("Page selector")
+            .performTouchInput {
+                swipe(
+                    start = Offset(1f, height / 2f),
+                    end = Offset(width - 1f, height / 2f),
+                )
+            }
+
+        composeRule.runOnIdle {
+            // The whole point of the live callback is that the pager can already be following the
+            // drag before it ends -- if it only ever fired once, at the same moment as the commit,
+            // scrubbing would be no faster than the old drag-then-jump behaviour it replaced.
+            assertTrue(liveIndices.isNotEmpty())
+            assertEquals(4, liveIndices.last())
+            assertEquals(listOf(4), committedIndices)
         }
     }
 }
