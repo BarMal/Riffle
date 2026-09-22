@@ -18,6 +18,7 @@ import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -617,7 +618,7 @@ fun PageIndicator(
  */
 @Suppress("LongParameterList")
 @Composable
-private fun PageIndicatorHandleOverlay(
+private fun BoxScope.PageIndicatorHandleOverlay(
     pageCount: Int,
     layoutDirection: LayoutDirection,
     trackWidthPx: Float,
