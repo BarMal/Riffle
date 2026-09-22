@@ -99,10 +99,10 @@ class PageIndicatorInteractionTest {
             }
         }
 
-        // The handle's own touch target is the drag surface, resting on the currently selected
-        // page's dot -- for page 0 that is the track's own visual start, so a drag from as near
-        // that edge as the node allows, spanning the node's own reported width, reaches the last
-        // page exactly the way a real thumb drag across the whole track would.
+        // The drag surface is the full track (a static overlay spanning the indicator, not the
+        // small handle riding over it), read as absolute position -- so a drag from as near the
+        // node's own edge as it allows, spanning its own reported width, reaches the last page
+        // exactly the way a real thumb drag across the whole track would.
         composeRule
             .onNodeWithContentDescription("Page selector")
             .performTouchInput {

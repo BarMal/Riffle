@@ -614,6 +614,23 @@ fun PageIndicator(
  * no slack for any alignment to act on, in either direction), and forcing Ltr just for this subtree
  * makes its own TopStart placement of the handle unambiguous physical pixels, matching what offsetPx
  * already means.
+ *
+ * The drag itself lives on this static, full-track overlay rather than on the small handle it
+ * draws -- not the handle's own (deliberately compact) touch target. A gesture attached to the
+ * handle would have to track the finger by accumulating each move's delta, since the handle's own
+ * position (and so its local coordinate frame) shifts under the finger as it follows; delta
+ * accumulation only starts counting once Compose's touch-slop threshold is crossed, silently
+ * dropping that initial distance. On a short track (few pages) that loss is enough to fall a whole
+ * page short of an edge-to-edge drag. Reading the raw touch position against this element's own
+ * fixed frame instead avoids losing anything to slop, and gives the drag a far more forgiving hit
+ * area besides -- the whole track, not just the small roundel.
+ *
+ * [trackWidthPx] is passed in rather than read from this overlay's own matchParentSize dimension,
+ * so the drag always resolves against the exact same width [pageIndicatorHandleRestOffsetPx] used
+ * to place the dots and the handle's resting spot -- a caller-supplied [PageIndicator] modifier
+ * that stretched the outer Box wider than the dot row would otherwise let this overlay's own size
+ * drift out of step with theirs, so the same drag could compute a different page than where the
+ * handle and dots visibly sit.
  */
 @Suppress("LongParameterList")
 @Composable
@@ -631,38 +648,42 @@ private fun BoxScope.PageIndicatorHandleOverlay(
     onPageSelected: (Int) -> Unit,
 ) {
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
-        Box(modifier = Modifier.matchParentSize()) {
-            PageIndicatorHandle(
-                offsetPx = handleOffsetPx.value,
-                isLifted = isDragging,
-                reducedMotion = reducedMotion,
-                modifier =
-                    Modifier.pageIndicatorDrag(
+        Box(
+            modifier =
+                Modifier
+                    .matchParentSize()
+                    .pageIndicatorDrag(
                         pageCount = pageCount,
                         layoutDirection = layoutDirection,
                         trackWidthPx = trackWidthPx,
                         haptics = haptics,
                         callbacks =
                             PageIndicatorDragCallbacks(
-                                initialOffsetPx = { handleOffsetPx.value },
                                 onDragActiveChanged = onDraggingChanged,
                                 onLiveOffsetChanged = onLiveOffsetChanged,
                                 onLivePageChanged = onLiveDragPageChanged,
                                 onPageSelected = onPageSelected,
                             ),
                     ),
+        ) {
+            PageIndicatorHandle(
+                offsetPx = handleOffsetPx.value,
+                isLifted = isDragging,
+                reducedMotion = reducedMotion,
             )
         }
     }
 }
 
-/** The visible, grabbable roundel riding over the indicator's current page. */
+/**
+ * The visible, grabbable roundel riding over the indicator's current page. Purely visual -- see
+ * [PageIndicatorHandleOverlay] for where the drag that moves it actually lives.
+ */
 @Composable
 private fun PageIndicatorHandle(
     offsetPx: Float,
     isLifted: Boolean,
     reducedMotion: Boolean,
-    modifier: Modifier = Modifier,
 ) {
     val density = LocalDensity.current
     val touchTargetPx = remember(density) { with(density) { PAGE_INDICATOR_HANDLE_TOUCH_TARGET_DP.dp.toPx() } }
@@ -672,8 +693,7 @@ private fun PageIndicatorHandle(
         modifier =
             Modifier
                 .offset { IntOffset(x = (offsetPx - touchTargetPx / 2f).roundToInt(), y = 0) }
-                .size(PAGE_INDICATOR_HANDLE_TOUCH_TARGET_DP.dp)
-                .then(modifier),
+                .size(PAGE_INDICATOR_HANDLE_TOUCH_TARGET_DP.dp),
         contentAlignment = Alignment.Center,
     ) {
         Box(
@@ -738,7 +758,6 @@ private fun Modifier.pageIndicatorSemantics(
     }
 
 private data class PageIndicatorDragCallbacks(
-    val initialOffsetPx: () -> Float,
     val onDragActiveChanged: (Boolean) -> Unit,
     val onLiveOffsetChanged: (Float) -> Unit,
     val onLivePageChanged: (Int) -> Unit,
@@ -746,10 +765,10 @@ private data class PageIndicatorDragCallbacks(
 )
 
 /**
- * The handle's own drag: tracked by accumulated delta rather than the pointer's absolute position,
- * because the handle itself moves out from under that position as it follows the finger -- an
- * absolute reading would be relative to a track origin that keeps sliding away from where the drag
- * actually started.
+ * The drag itself: read as the pointer's raw, absolute position against this element's own fixed
+ * frame (this modifier sits on the static full-track overlay, not the handle -- see
+ * [PageIndicatorHandleOverlay]), so nothing is lost to Compose's touch-slop threshold the way
+ * summing each move's delta would.
  *
  * [haptics] and [callbacks] are read through [rememberUpdatedState] rather than keyed into
  * [pointerInput] directly: PageIndicator reads the handle's own live position on every recomposition
@@ -774,7 +793,6 @@ private fun Modifier.pageIndicatorDrag(
             val latestHaptics by rememberUpdatedState(haptics)
             val latestCallbacks by rememberUpdatedState(callbacks)
             pointerInput(pageCount, layoutDirection, trackWidthPx) {
-                var currentOffsetPx = 0f
                 var startPageIndex = 0
                 var targetPageIndex = 0
                 var isDragInProgress = false
@@ -786,12 +804,11 @@ private fun Modifier.pageIndicatorDrag(
                 // caller's side would never be told the drag is over and would stay stuck lifted.
                 try {
                     detectHorizontalDragGestures(
-                        onDragStart = {
+                        onDragStart = { position ->
                             isDragInProgress = true
-                            currentOffsetPx = latestCallbacks.initialOffsetPx()
                             startPageIndex =
                                 pageIndicatorDragTargetIndex(
-                                    dragPositionPx = currentOffsetPx,
+                                    dragPositionPx = position.x,
                                     trackWidthPx = trackWidthPx,
                                     pageCount = pageCount,
                                     layoutDirection = layoutDirection,
@@ -799,15 +816,17 @@ private fun Modifier.pageIndicatorDrag(
                             targetPageIndex = startPageIndex
                             latestHaptics.longPress()
                             latestCallbacks.onDragActiveChanged(true)
-                            latestCallbacks.onLiveOffsetChanged(currentOffsetPx)
+                            // An overswipe past either edge is a normal way to drag -- the page index
+                            // above already clamps to it, but the handle's own visible position must
+                            // too, or it renders off past the dot row until the finger comes back.
+                            latestCallbacks.onLiveOffsetChanged(position.x.coerceIn(0f, trackWidthPx))
                         },
-                        onHorizontalDrag = { change, dragAmount ->
+                        onHorizontalDrag = { change, _ ->
                             change.consume()
-                            currentOffsetPx = (currentOffsetPx + dragAmount).coerceIn(0f, trackWidthPx)
-                            latestCallbacks.onLiveOffsetChanged(currentOffsetPx)
+                            latestCallbacks.onLiveOffsetChanged(change.position.x.coerceIn(0f, trackWidthPx))
                             val newTargetPageIndex =
                                 pageIndicatorDragTargetIndex(
-                                    dragPositionPx = currentOffsetPx,
+                                    dragPositionPx = change.position.x,
                                     trackWidthPx = trackWidthPx,
                                     pageCount = pageCount,
                                     layoutDirection = layoutDirection,
