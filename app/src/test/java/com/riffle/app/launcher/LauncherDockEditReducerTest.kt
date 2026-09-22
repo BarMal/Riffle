@@ -9,6 +9,7 @@ import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.DockEditRejectionReason
 import com.riffle.core.domain.launcher.home.DockEngine
+import com.riffle.core.domain.launcher.home.DockPosition
 import com.riffle.core.domain.launcher.home.GridCell
 import com.riffle.core.domain.launcher.home.GridPlacement
 import com.riffle.core.domain.launcher.home.HomeLayout
@@ -154,6 +155,44 @@ class LauncherDockEditReducerTest {
 
         assertEquals(7, updatedState.homeLayout.dock.capacity)
         assertEquals(7, repository.savedLayoutSet?.activeLayout?.dock?.capacity)
+    }
+
+    @Test
+    fun exposesRejectedDockPositionEditOnSettingsTargetLayoutWithoutSavingIt() {
+        val fullGrid = HomeLayoutDefaults.standard().settings.grid.dimensions
+        val shortcuts =
+            (0 until fullGrid.rows).flatMap { row ->
+                (0 until fullGrid.columns).map { column ->
+                    AppShortcutItem(
+                        LauncherItemId("app-$row-$column"),
+                        phoneIdentity,
+                        "App $row $column",
+                        placement = GridPlacement(GridCell(column, row)),
+                    )
+                }
+            }
+        val layout =
+            HomeLayoutDefaults.standard().copy(
+                dock = HomeLayoutDefaults.standard().dock.copy(position = DockPosition.BOTTOM),
+                pages = listOf(HomeLayoutDefaults.standard().selectedPage.copy(items = shortcuts)),
+            )
+        val layoutSet = HomeLayoutSet.fromLayout(layout)
+        val repository = FakeHomeLayoutRepository(savedLayoutSet = layoutSet)
+        val state =
+            LauncherShellState(
+                destination = ShellDestination.SETTINGS,
+                homeLayout = layout,
+                homeLayoutSet = layoutSet,
+            )
+
+        val updatedState =
+            reducer(repository).reduce(
+                state = state,
+                action = LauncherShellAction.SelectDockPosition(DockPosition.LEFT),
+            )
+
+        assertEquals(DockEditRejectionReason.NO_ROOM_FOR_GRID, updatedState.dockEditRejectionReason)
+        assertEquals(layout, updatedState.homeLayout)
     }
 
     @Test

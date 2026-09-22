@@ -51,7 +51,7 @@ internal fun LauncherShellState.withSettingsDockEdit(
             withSettingsTargetLayout(
                 layout = result.layout,
                 homeLayoutRepository = homeLayoutRepository,
-            )
+            ).copy(dockEditRejectionReason = null)
 
-        is DockEditResult.Rejected -> this
+        is DockEditResult.Rejected -> copy(dockEditRejectionReason = result.reason)
     }
