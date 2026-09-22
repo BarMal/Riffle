@@ -39,14 +39,16 @@ internal fun LauncherShellState.withSettingsDockEdit(
     action: LauncherShellAction,
     dockEngine: DockEngine,
     homeLayoutRepository: HomeLayoutRepository,
-): LauncherShellState =
-    when (
-        val result =
-            dockEngine.applyEdit(
-                action = action,
-                layout = settingsTargetLayout(homeLayoutRepository),
-            )
-    ) {
+): LauncherShellState {
+    val layout = settingsTargetLayout(homeLayoutRepository)
+    val result =
+        if (action is LauncherShellAction.SelectDockPosition && layout.usesCompactLibraryPacking) {
+            layout.repackedForDockPosition(action.position, installedApps)
+        } else {
+            dockEngine.applyEdit(action = action, layout = layout)
+        }
+
+    return when (result) {
         is DockEditResult.Updated ->
             withSettingsTargetLayout(
                 layout = result.layout,
@@ -55,3 +57,4 @@ internal fun LauncherShellState.withSettingsDockEdit(
 
         is DockEditResult.Rejected -> copy(dockEditRejectionReason = result.reason)
     }
+}

@@ -2,10 +2,58 @@ package com.riffle.app.launcher
 
 import com.riffle.core.domain.launcher.apps.InstalledApp
 import com.riffle.core.domain.launcher.home.AppShortcutItem
+import com.riffle.core.domain.launcher.home.DockEditRejectionReason
+import com.riffle.core.domain.launcher.home.DockEditResult
+import com.riffle.core.domain.launcher.home.DockPosition
+import com.riffle.core.domain.launcher.home.GridReflowEngine
+import com.riffle.core.domain.launcher.home.GridReflowResult
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.LauncherPage
 import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.home.containsHomeApp
+import com.riffle.core.domain.launcher.home.workspaceGrid
+
+/**
+ * Whether this layout's library pages are packed edge-to-edge with no spare cells.
+ *
+ * A compacted layout never has a free cell for [GridReflowEngine] to displace a stranded item
+ * into, so moving the dock onto a side edge -- which needs the workspace a column narrower --
+ * has to repack from scratch via [repackedForDockPosition] instead of the generic reflow that
+ * [com.riffle.core.domain.launcher.home.DockConfigurationEngine] runs for every other layout.
+ */
+internal val HomeLayout.usesCompactLibraryPacking: Boolean
+    get() = viewMode == LauncherViewMode.HOME_SCREEN_LIBRARY && settings.grid.compactLibraryPages
+
+/**
+ * Moves the dock to [position] by repacking the library instead of reflowing it.
+ *
+ * The generic reflow only ever displaces a stranded item into a free cell an existing page
+ * already has, and a compacted library page never has one -- so it would reject every side-edge
+ * move on sight. Compaction itself can't get stuck the same way: it rebuilds every library page
+ * from scratch at whatever width it is given, adding pages as needed, so it always finds room.
+ * Non-library items (a manually placed folder or widget) are not compaction's to move, so those
+ * still go through the ordinary reflow first, against the library apps stripped out -- which
+ * leaves it just the handful of manual items to fit, not the whole library.
+ */
+internal fun HomeLayout.repackedForDockPosition(
+    position: DockPosition,
+    apps: List<InstalledApp>,
+): DockEditResult {
+    val strippedOfLibraryApps =
+        withoutHomeScreenLibraryApps().copy(dock = dock.copy(position = position))
+
+    return when (
+        val reflowed =
+            GridReflowEngine().reflowToGrid(strippedOfLibraryApps, strippedOfLibraryApps.workspaceGrid)
+    ) {
+        is GridReflowResult.Updated ->
+            DockEditResult.Updated(
+                reflowed.layout.withCompactedLibraryApps(apps).withoutTrailingEmptyLibraryPages(),
+            )
+
+        is GridReflowResult.Rejected -> DockEditResult.Rejected(DockEditRejectionReason.NO_ROOM_FOR_GRID)
+    }
+}
 
 internal fun HomeLayout.withCompactedLibraryApps(apps: List<InstalledApp>): HomeLayout {
     val allLibraryShortcuts = pages.flatMap { page -> page.libraryShortcuts() }
