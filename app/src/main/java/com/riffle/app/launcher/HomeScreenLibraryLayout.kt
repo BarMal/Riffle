@@ -16,6 +16,7 @@ import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.home.PlaceLauncherItemResult
 import com.riffle.core.domain.launcher.home.WidgetItem
 import com.riffle.core.domain.launcher.home.containsHomeApp
+import com.riffle.core.domain.launcher.home.workspaceGrid
 
 fun HomeLayout.withHomeScreenLibraryApps(apps: List<InstalledApp>): HomeLayout =
     when (viewMode) {
@@ -98,7 +99,7 @@ private fun HomeLayout.withAdditionalLibraryPage(shortcut: AppShortcutItem): Hom
             LauncherPage(
                 id = pageId,
                 type = LauncherPageType.AllApps,
-                grid = settings.grid.dimensions,
+                grid = workspaceGrid,
             )
 
         copy(pages = pages + page)
