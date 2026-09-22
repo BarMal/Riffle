@@ -61,9 +61,12 @@ one and opens the app when it does not, so a quiet pinned app never gives a dead
 on the icon's long-press menu either way. The badge is the tell: a badged pinned icon has a stage a
 tap will show, an unbadged one opens.
 
-The static section is sized first and in full; the dynamic section takes what is left. Notifications
-come and go, and a section sized first would shove the pinned icons along the dock every time one
-arrived.
+The static section is sized first, so notifications coming and going don't shove the pinned icons
+along the dock. It is not sized in full, though: once the dynamic section has at least one entry to
+show, the static side's own share is capped short of the run, reserving one icon's worth of room
+so the dynamic section is never squeezed to nothing by a static side that would otherwise fill the
+whole dock. That reservation holds steady across individual notifications arriving or leaving --
+only going from no entries to some, or back, changes it.
 
 ### The merged All-notifications view
 

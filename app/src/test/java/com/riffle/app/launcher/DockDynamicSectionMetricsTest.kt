@@ -1,13 +1,16 @@
 package com.riffle.app.launcher
 
+import com.riffle.core.domain.launcher.home.DockBackgroundSizing
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
 /**
  * How the dock's run is divided between its two sections.
  *
- * The static side is sized first and in full; the dynamic one takes what is left. These pin that
- * ordering, and the arithmetic that turns the two into one run.
+ * The static side is sized first, but capped short of the full run once there is at least one
+ * dynamic entry to show, so that entry always has a tile's worth of room reserved for it; the
+ * dynamic side then takes whatever the static side actually used plus that reservation. These pin
+ * that ordering, and the arithmetic that turns the two into one run.
  */
 class DockDynamicSectionMetricsTest {
     @Test
@@ -54,6 +57,48 @@ class DockDynamicSectionMetricsTest {
                 maxRunMainAxisDp = 560,
             ),
         )
+    }
+
+    @Test
+    fun reservationHoldsBackOneEntryAndTheDividerWhenThereAreEntries() {
+        assertEquals(
+            44 + 17,
+            dockDynamicSectionReservedMainAxisDp(entryCount = 3, entryExtentDp = 44),
+        )
+    }
+
+    @Test
+    fun reservationIsZeroWithNoEntries() {
+        assertEquals(0, dockDynamicSectionReservedMainAxisDp(entryCount = 0, entryExtentDp = 44))
+    }
+
+    @Test
+    fun aFullDockStillLeavesRoomForOneDynamicEntryOnceTheStaticSideReservesForIt() {
+        // Without a reservation, a static side sized to fill the whole 560dp run would leave the
+        // dynamic section nothing -- this is the "compressed to uselessness when folded" bug: the
+        // static side must be capped short of the full run first so the entry it reserved for is
+        // actually still there once the dynamic section asks for its share.
+        val reserved = dockDynamicSectionReservedMainAxisDp(entryCount = 3, entryExtentDp = 44)
+        val staticContainerMainAxisDp =
+            dockContainerMainAxisDp(
+                availableMainAxisDp = 560,
+                slotCount = 20,
+                iconSizeDp = 44,
+                itemSpacingDp = 12,
+                backgroundSizing = DockBackgroundSizing.FIXED,
+                reservedDynamicSectionMainAxisDp = reserved,
+            )
+
+        val dynamicSection =
+            dockDynamicSectionMainAxisDp(
+                entryCount = 3,
+                entryExtentDp = 44,
+                entrySpacingDp = 12,
+                staticContainerMainAxisDp = staticContainerMainAxisDp,
+                maxRunMainAxisDp = 560,
+            )
+
+        assertEquals(true, dynamicSection >= 44)
     }
 
     @Test

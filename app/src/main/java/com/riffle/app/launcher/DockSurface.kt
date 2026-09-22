@@ -94,6 +94,11 @@ internal fun dockSurfaceMetrics(
             itemSpacingDp = dock.itemSpacingDp,
             backgroundSizing = dock.backgroundSizing,
             runsHorizontally = runsHorizontally,
+            reservedDynamicSectionMainAxisDp =
+                dockDynamicSectionReservedMainAxisDp(
+                    entryCount = dynamicEntryCount,
+                    entryExtentDp = dock.iconSizeDp,
+                ),
         )
     val contentViewportMainAxisDp =
         dockContentViewportMainAxisDp(
