@@ -458,7 +458,7 @@ class LauncherShellRefreshCoordinatorTest {
     }
 
     private fun coordinator(
-        installedAppRepository: FakeInstalledAppRepository = FakeInstalledAppRepository(),
+        installedAppRepository: InstalledAppRepository = FakeInstalledAppRepository(),
         notificationRepository: LauncherNotificationRepository = FakeNotificationRepository(),
         widgetProviderRepository: FakeWidgetProviderRepository = FakeWidgetProviderRepository(),
         homeLayoutRepository: FakeHomeLayoutRepository = FakeHomeLayoutRepository(),
