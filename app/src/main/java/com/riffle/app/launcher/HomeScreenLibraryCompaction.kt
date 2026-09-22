@@ -8,7 +8,16 @@ import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.home.containsHomeApp
 
 internal fun HomeLayout.withCompactedLibraryApps(apps: List<InstalledApp>): HomeLayout {
-    val libraryShortcuts = pages.flatMap { page -> page.libraryShortcuts() }
+    val visibleAppIdentities = apps.map { app -> app.identity }.toSet()
+    // A hidden or uninstalled app's shortcut stays in the layout until something prunes it, and the
+    // visibility filter that strips it from what's drawn runs after compaction, not before -- so an
+    // unfiltered repack would still hand that stale item a real cell, leaving a visible hole exactly
+    // where it used to be once rendering drops it again. Compaction is the one place that decides
+    // the pack, so it is the one place that has to leave stale placements out of it.
+    val libraryShortcuts =
+        pages
+            .flatMap { page -> page.libraryShortcuts() }
+            .filter { shortcut -> shortcut.appIdentity in visibleAppIdentities }
     val libraryAppIdentities = libraryShortcuts.map { item -> item.appIdentity }.toSet()
     val compactBase = withoutHomeScreenLibraryApps().copy(viewMode = LauncherViewMode.HOME_SCREEN_LIBRARY)
     val missingLibraryShortcuts =
