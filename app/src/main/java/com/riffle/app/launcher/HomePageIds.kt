@@ -8,11 +8,12 @@ import com.riffle.core.domain.launcher.home.LauncherItemId
 import com.riffle.core.domain.launcher.home.LauncherPage
 import com.riffle.core.domain.launcher.home.LauncherPageId
 import com.riffle.core.domain.launcher.home.WidgetItem
+import com.riffle.core.domain.launcher.home.workspaceGrid
 
 fun HomeLayout.newHomePage(): LauncherPage =
     LauncherPage(
         id = nextHomePageId(),
-        grid = settings.grid.dimensions,
+        grid = workspaceGrid,
     )
 
 fun HomeLayout.duplicatedItemIdProvider(pageId: LauncherPageId): () -> LauncherItemId {

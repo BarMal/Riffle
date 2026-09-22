@@ -59,6 +59,23 @@ fun GridDimensions.workspaceGridFor(dock: DockModel): GridDimensions =
     }
 
 /**
+ * The exact inverse of [workspaceGridFor]: the stored, dock-agnostic grid that reproduces
+ * [this] visible grid once [workspaceGridFor] is applied to it for the same [dock].
+ *
+ * Settings edits the grid the user currently sees, never the pre-dock number underneath it --
+ * that number is a storage detail, not something the user is asking about when they tap "+1
+ * column". This is what turns "one more column" back into that storage detail, so the edit
+ * lands as one more *visible* column instead of silently cancelling out whatever column the
+ * dock already reserved.
+ */
+fun GridDimensions.rawGridFor(dock: DockModel): GridDimensions =
+    when {
+        !dock.isEnabled -> this
+        dock.position?.isHorizontalEdge != false -> this
+        else -> copy(columns = columns + 1)
+    }
+
+/**
  * The edges a layout can actually put its persistent strip on.
  *
  * A Cards layout positions its stage rail, which is drawn on all four. Every other view mode

@@ -15,6 +15,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.riffle.core.domain.launcher.home.WallpaperSource
+import com.riffle.core.domain.launcher.home.workspaceGrid
 import com.riffle.core.domain.launcher.settings.SearchResultPresentation
 import com.riffle.core.domain.launcher.settings.homeSystemBars
 
@@ -201,6 +202,7 @@ private fun SettingsLayoutPageContent(
         )
         HomeGridSetting(
             grid = state.homeLayout.settings.grid,
+            visibleDimensions = state.homeLayout.workspaceGrid,
             viewMode = state.homeLayout.viewMode,
             onAction = onAction,
         )

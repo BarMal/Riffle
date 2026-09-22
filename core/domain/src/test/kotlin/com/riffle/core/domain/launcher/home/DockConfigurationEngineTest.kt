@@ -84,6 +84,22 @@ class DockConfigurationEngineTest {
     }
 
     @Test
+    fun aSeededPanelTakesTheWorkspaceWidthRatherThanTheStoredPreDockWidth() {
+        // A side dock reserves a column from the pages beside it, so a panel seeded at the raw,
+        // pre-dock width would read as wider than every other page instead of matching them.
+        val layout =
+            HomeLayoutDefaults.standard().copy(
+                dock = HomeLayoutDefaults.standard().dock.copy(position = DockPosition.LEFT),
+            )
+
+        val result = engine.setDockPanelEnabled(layout = layout, enabled = true)
+
+        val panel = assertNotNull(assertIs<DockEditResult.Updated>(result).layout.dock.panel)
+        assertEquals(layout.workspaceGrid.columns, panel.grid.columns)
+        assertEquals(layout.settings.grid.dimensions.columns - 1, panel.grid.columns)
+    }
+
+    @Test
     fun enablingAPanelThatAlreadyExistsLeavesItsContentsAlone() {
         // Re-running the enable path must not quietly wipe what the user placed.
         val seeded =
