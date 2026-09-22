@@ -26,8 +26,11 @@ internal fun LauncherShellAction.applyAppVisibilityAction(appVisibilityRepositor
     }
 }
 
-internal fun LauncherShellState.withRefreshedInstalledApps(deps: InstalledAppRefreshDependencies): LauncherShellState =
-    when (val result = deps.installedAppRepository.refreshResult()) {
+internal fun LauncherShellState.withRefreshedInstalledApps(
+    deps: InstalledAppRefreshDependencies,
+    result: InstalledAppRefreshResult,
+): LauncherShellState =
+    when (result) {
         is InstalledAppRefreshResult.Authoritative ->
             withInstalledApps(
                 apps = result.apps,

@@ -5,12 +5,11 @@ import com.riffle.core.domain.launcher.apps.AppIdentity
 import com.riffle.core.domain.launcher.notifications.AppNotificationCounter
 import com.riffle.core.domain.launcher.notifications.AppNotificationGrouper
 import com.riffle.core.domain.launcher.notifications.LauncherNotification
-import com.riffle.core.domain.launcher.notifications.LauncherNotificationRepository
 import com.riffle.core.domain.launcher.notifications.NotificationHideRuleFilter
 import com.riffle.core.domain.launcher.notifications.NotificationStaleFilter
 
 fun LauncherShellState.withNotificationState(
-    notificationRepository: LauncherNotificationRepository,
+    notifications: List<LauncherNotification>,
     appNotificationCounter: AppNotificationCounter,
     appNotificationGrouper: AppNotificationGrouper,
     notificationStaleFilter: NotificationStaleFilter,
@@ -21,7 +20,7 @@ fun LauncherShellState.withNotificationState(
         notificationHideRuleFilter.visible(
             notifications =
                 notificationStaleFilter.activeForLauncherState(
-                    notifications = notificationRepository.activeNotifications(),
+                    notifications = notifications,
                     nowEpochMillis = nowEpochMillis,
                 ).filterNotHidden(hiddenApps = hiddenApps.map { app -> app.identity }.toSet()),
             rules = launcherSettings.notificationHiding.rules,
