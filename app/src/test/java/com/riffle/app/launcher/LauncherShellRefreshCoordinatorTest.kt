@@ -17,6 +17,7 @@ import com.riffle.core.domain.launcher.apps.InstalledAppRepository
 import com.riffle.core.domain.launcher.contextual.ContextualSettings
 import com.riffle.core.domain.launcher.home.AppShortcutItem
 import com.riffle.core.domain.launcher.home.DockModel
+import com.riffle.core.domain.launcher.home.DockPosition
 import com.riffle.core.domain.launcher.home.FolderItem
 import com.riffle.core.domain.launcher.home.GeneratedLauncherPageKind
 import com.riffle.core.domain.launcher.home.HomeLayout
@@ -151,6 +152,53 @@ class LauncherShellRefreshCoordinatorTest {
         assertEquals(emptyList<InstalledApp>(), refreshed.installedApps)
         assertEquals(layout, refreshed.homeLayout)
         assertEquals(emptyList<HomeLayout>(), homeLayoutRepository.savedLayouts)
+    }
+
+    @Test
+    fun refreshInstalledAppsDoesNotDiscardASynchronousEditMadeWhileTheFetchWasInFlight() {
+        // Reproduces the "settings changes revert" bug: a slow background refresh (installed-app
+        // scans can take real wall-clock time) must not silently overwrite an edit -- such as moving
+        // the dock to a different edge -- that lands on state while its I/O is still in flight.
+        val fetchStarted = CountDownLatch(1)
+        val releaseFetch = CountDownLatch(1)
+        val repository =
+            object : InstalledAppRepository {
+                override fun installedApps(): List<InstalledApp> = emptyList()
+
+                override fun refreshResult(): InstalledAppRefreshResult {
+                    fetchStarted.countDown()
+                    check(releaseFetch.await(5, TimeUnit.SECONDS))
+                    return InstalledAppRefreshResult.Authoritative(listOf(app(label = "Camera")))
+                }
+            }
+        val coordinator = coordinator(installedAppRepository = repository)
+        var state = LauncherShellState(homeLayout = HomeLayoutDefaults.standard())
+        val dispatcher = Executors.newFixedThreadPool(2).asCoroutineDispatcher()
+        try {
+            runBlocking {
+                val actions =
+                    LauncherShellRefreshActions(
+                        coroutineScope = this,
+                        refreshDispatcher = dispatcher,
+                        currentState = { state },
+                        updateState = { state = it },
+                        refreshCoordinator = coordinator,
+                    )
+
+                val job = actions.refreshInstalledApps()
+                check(fetchStarted.await(5, TimeUnit.SECONDS))
+                val dockMovedLeft = state.homeLayout.dock.copy(position = DockPosition.LEFT)
+                state = state.copy(homeLayout = state.homeLayout.copy(dock = dockMovedLeft))
+                releaseFetch.countDown()
+                job.join()
+            }
+
+            assertEquals(DockPosition.LEFT, state.homeLayout.dock.position)
+            assertEquals(listOf("Camera"), state.installedApps.map { installedApp -> installedApp.label })
+        } finally {
+            releaseFetch.countDown()
+            dispatcher.close()
+        }
     }
 
     @Test

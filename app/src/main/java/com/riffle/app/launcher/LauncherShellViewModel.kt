@@ -621,7 +621,7 @@ private fun createInitialState(
         hasRecoveredHomeRoleRequest = hasRecoveredHomeRoleRequest,
         setupCardDismissed = firstRunRepository.isSetupCardDismissed(),
     ).withNotificationState(
-        notificationRepository = platformDependencies.notificationRepository,
+        notifications = platformDependencies.notificationRepository.activeNotifications(),
         appNotificationCounter = AppNotificationCounter(),
         appNotificationGrouper = AppNotificationGrouper(),
         notificationStaleFilter = NotificationStaleFilter(),
