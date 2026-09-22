@@ -364,6 +364,67 @@ class HomeScreenLibraryLayoutTest {
     }
 
     @Test
+    fun compactLibraryModeDropsHiddenOrUninstalledAppsInsteadOfLeavingAGapWhereTheyWere() {
+        val camera = app(label = "Camera")
+        val clock = app(label = "Clock")
+        val hidden = app(label = "Hidden")
+        val grid = GridDimensions(columns = 2, rows = 1)
+        val layout =
+            HomeLayoutDefaults.standard().copy(
+                viewMode = LauncherViewMode.HOME_SCREEN_LIBRARY,
+                pages = listOf(LauncherPage(id = LauncherPageId("home"), grid = grid)),
+                settings =
+                    HomeLayoutDefaults.standard().settings.copy(
+                        grid = GridSettings(dimensions = grid, compactLibraryPages = true),
+                    ),
+            )
+        // Seed a layout that still has a placed shortcut for `hidden`, the way one would be left
+        // behind by hiding or uninstalling an app: the item stays in the layout even though it is no
+        // longer in the visible-apps list compaction is given below.
+        val layoutWithStaleShortcut = layout.withHomeScreenLibraryApps(listOf(camera, clock, hidden))
+
+        val recompacted = layoutWithStaleShortcut.withHomeScreenLibraryApps(listOf(camera, clock))
+
+        assertEquals(
+            listOf(camera.identity, clock.identity),
+            recompacted.pages[0].items.appIdentities,
+        )
+        assertEquals(
+            listOf(GridCell(column = 0, row = 0), GridCell(column = 1, row = 0)),
+            recompacted.pages[0].items.map { item -> item.placement?.cell },
+        )
+        assertEquals(listOf(LauncherPageId("home")), recompacted.pages.map { page -> page.id })
+    }
+
+    @Test
+    fun compactingWithAnEmptyAppsListKeepsExistingShortcutsInsteadOfTreatingThemAllAsStale() {
+        // The caller's installed-apps snapshot loads asynchronously and starts out empty, so
+        // compaction can run before the first refresh lands. An empty list has to mean "not loaded
+        // yet", not "nothing is visible" -- otherwise every library page would empty out the instant
+        // compaction next ran, before the real refresh had a chance to repopulate it.
+        val camera = app(label = "Camera")
+        val clock = app(label = "Clock")
+        val grid = GridDimensions(columns = 2, rows = 1)
+        val layout =
+            HomeLayoutDefaults.standard().copy(
+                viewMode = LauncherViewMode.HOME_SCREEN_LIBRARY,
+                pages = listOf(LauncherPage(id = LauncherPageId("home"), grid = grid)),
+                settings =
+                    HomeLayoutDefaults.standard().settings.copy(
+                        grid = GridSettings(dimensions = grid, compactLibraryPages = true),
+                    ),
+            )
+        val layoutWithShortcuts = layout.withHomeScreenLibraryApps(listOf(camera, clock))
+
+        val recompacted = layoutWithShortcuts.withHomeScreenLibraryApps(emptyList())
+
+        assertEquals(
+            listOf(camera.identity, clock.identity),
+            recompacted.pages[0].items.appIdentities,
+        )
+    }
+
+    @Test
     fun removesGeneratedLibraryAppsWhenLeavingLibraryMode() {
         val camera = app(label = "Camera")
         val manualCalendar = app(label = "Calendar")
