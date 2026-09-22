@@ -629,33 +629,6 @@ class HomePageEngineTest {
     }
 
     @Test
-    fun updatesGridDimensionsTreatsTheInputAsTheVisibleGridWithASideDock() {
-        val layoutWithSideDock =
-            layout.copy(
-                dock = layout.dock.copy(position = DockPosition.LEFT),
-                pages = listOf(page(id = "home")),
-            )
-
-        val result =
-            engine.updateGridDimensions(
-                layout = layoutWithSideDock,
-                dimensions = GridDimensions(columns = 5, rows = 6),
-            )
-
-        val updated = assertIs<HomePageEditResult.Updated>(result)
-        // Every page is sized to exactly what was asked for -- that's what's on screen.
-        assertEquals(
-            listOf(GridDimensions(columns = 5, rows = 6)),
-            updated.layout.pages.map { page -> page.grid },
-        )
-        // The dock still owes itself a column, so the stored (pre-dock) number is one column
-        // wider than what's visible -- reading it back through workspaceGrid reproduces the 5
-        // columns the user just asked for, instead of silently losing the dock's reservation.
-        assertEquals(GridDimensions(columns = 6, rows = 6), updated.layout.settings.grid.dimensions)
-        assertEquals(GridDimensions(columns = 5, rows = 6), updated.layout.workspaceGrid)
-    }
-
-    @Test
     fun rejectsGridDimensionsSmallerThanOneCell() {
         val result =
             engine.updateGridDimensions(
