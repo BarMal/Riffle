@@ -4,6 +4,7 @@ package com.riffle.app.launcher
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationSpec
+import androidx.compose.animation.core.AnimationVector1D
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -504,6 +505,7 @@ internal fun pageOverviewActionsMenuItems(
  * settles the handle onto its resting spot with a spring, the same one a real slider's thumb would
  * use.
  */
+@Suppress("LongParameterList")
 @Composable
 fun PageIndicator(
     pageCount: Int,
@@ -584,40 +586,72 @@ fun PageIndicator(
             }
         }
 
-        // pageIndicatorHandleRestOffsetPx and pageIndicatorDragTargetIndex already fold RTL into
-        // offsetPx themselves (0 is always the track's physical left, however the app mirrors) --
-        // placing the handle through the ambient direction on top of that would mirror it a second
-        // time. matchParentSize leaves the outer Box's own placement of this wrapper alone (a child
-        // exactly its parent's size has no slack for any alignment to act on, in either direction),
-        // and forcing Ltr just for this subtree makes its own TopStart placement of the handle
-        // unambiguous physical pixels, matching what offsetPx already means.
-        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
-            Box(modifier = Modifier.matchParentSize()) {
-                PageIndicatorHandle(
-                    offsetPx = handleOffsetPx.value,
-                    isLifted = isDragging,
-                    reducedMotion = reducedMotion,
-                    modifier =
-                        Modifier.pageIndicatorDrag(
-                            pageCount = pageCount,
-                            layoutDirection = layoutDirection,
-                            trackWidthPx = trackWidthPx,
-                            haptics = haptics,
-                            callbacks =
-                                PageIndicatorDragCallbacks(
-                                    initialOffsetPx = { handleOffsetPx.value },
-                                    onDragActiveChanged = { dragging ->
-                                        isDragging = dragging
-                                        onDragActiveChanged(dragging)
-                                        if (!dragging) liveDragOffsetPx = null
-                                    },
-                                    onLiveOffsetChanged = { offsetPx -> liveDragOffsetPx = offsetPx },
-                                    onLivePageChanged = onLiveDragPageChanged,
-                                    onPageSelected = onPageSelected,
-                                ),
-                        ),
-                )
-            }
+        PageIndicatorHandleOverlay(
+            pageCount = pageCount,
+            layoutDirection = layoutDirection,
+            trackWidthPx = trackWidthPx,
+            reducedMotion = reducedMotion,
+            haptics = haptics,
+            isDragging = isDragging,
+            handleOffsetPx = handleOffsetPx,
+            onDraggingChanged = { dragging ->
+                isDragging = dragging
+                onDragActiveChanged(dragging)
+                if (!dragging) liveDragOffsetPx = null
+            },
+            onLiveOffsetChanged = { offsetPx -> liveDragOffsetPx = offsetPx },
+            onLiveDragPageChanged = onLiveDragPageChanged,
+            onPageSelected = onPageSelected,
+        )
+    }
+}
+
+/**
+ * pageIndicatorHandleRestOffsetPx and pageIndicatorDragTargetIndex already fold RTL into offsetPx
+ * themselves (0 is always the track's physical left, however the app mirrors) -- placing the
+ * handle through the ambient direction on top of that would mirror it a second time. matchParentSize
+ * leaves the outer Box's own placement of this wrapper alone (a child exactly its parent's size has
+ * no slack for any alignment to act on, in either direction), and forcing Ltr just for this subtree
+ * makes its own TopStart placement of the handle unambiguous physical pixels, matching what offsetPx
+ * already means.
+ */
+@Suppress("LongParameterList")
+@Composable
+private fun PageIndicatorHandleOverlay(
+    pageCount: Int,
+    layoutDirection: LayoutDirection,
+    trackWidthPx: Float,
+    reducedMotion: Boolean,
+    haptics: LauncherHaptics,
+    isDragging: Boolean,
+    handleOffsetPx: Animatable<Float, AnimationVector1D>,
+    onDraggingChanged: (Boolean) -> Unit,
+    onLiveOffsetChanged: (Float) -> Unit,
+    onLiveDragPageChanged: (Int) -> Unit,
+    onPageSelected: (Int) -> Unit,
+) {
+    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+        Box(modifier = Modifier.matchParentSize()) {
+            PageIndicatorHandle(
+                offsetPx = handleOffsetPx.value,
+                isLifted = isDragging,
+                reducedMotion = reducedMotion,
+                modifier =
+                    Modifier.pageIndicatorDrag(
+                        pageCount = pageCount,
+                        layoutDirection = layoutDirection,
+                        trackWidthPx = trackWidthPx,
+                        haptics = haptics,
+                        callbacks =
+                            PageIndicatorDragCallbacks(
+                                initialOffsetPx = { handleOffsetPx.value },
+                                onDragActiveChanged = onDraggingChanged,
+                                onLiveOffsetChanged = onLiveOffsetChanged,
+                                onLivePageChanged = onLiveDragPageChanged,
+                                onPageSelected = onPageSelected,
+                            ),
+                    ),
+            )
         }
     }
 }
