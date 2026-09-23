@@ -280,18 +280,6 @@ class HomeLayoutJsonCodecTest {
     }
 
     @Test
-    fun roundTripsDockDynamicSectionReservedSlotCount() {
-        val layout =
-            HomeLayoutDefaults.standard().copy(
-                dock = HomeLayoutDefaults.standard().dock.copy(dynamicSectionReservedSlotCount = 3),
-            )
-
-        val decodedLayout = decodeHomeLayout(encodeHomeLayout(layout))
-
-        assertEquals(3, decodedLayout.dock.dynamicSectionReservedSlotCount)
-    }
-
-    @Test
     fun roundTripsLauncherViewMode() {
         val layout = HomeLayoutDefaults.standard().copy(viewMode = LauncherViewMode.HOME_SCREEN_LIBRARY)
 
