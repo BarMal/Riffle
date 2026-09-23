@@ -9,50 +9,60 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.riffle.core.domain.launcher.home.GridDimensions
 import com.riffle.core.domain.launcher.home.GridSettings
 import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.home.MAX_HOME_GRID_MARGIN_DP
 import com.riffle.core.domain.launcher.home.MIN_HOME_GRID_MARGIN_DP
 
+/**
+ * [visibleDimensions] is the grid actually on screen right now -- [GridSettings.dimensions]
+ * itself is the pre-dock number underneath it, a storage detail this control never shows. A side
+ * dock silently reserves one of the columns [GridSettings.dimensions] counts, so editing that raw
+ * number directly is how "+1 column" used to end up cancelling the dock's own reservation instead
+ * of adding a column to what's on screen. Dispatching edits off [visibleDimensions] instead means
+ * "+1" always means one more of what the user is looking at, dock or no dock.
+ */
 @Composable
 internal fun HomeGridSetting(
     grid: GridSettings,
+    visibleDimensions: GridDimensions,
     viewMode: LauncherViewMode,
     onAction: (LauncherShellAction) -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         GridDimensionSetting(
             label = "Columns",
-            value = grid.dimensions.columns,
+            value = visibleDimensions.columns,
             onDecrease = {
                 onAction(
                     LauncherShellAction.SelectHomeGridDimensions(
-                        grid.dimensions.copy(columns = grid.dimensions.columns - 1),
+                        visibleDimensions.copy(columns = visibleDimensions.columns - 1),
                     ),
                 )
             },
             onIncrease = {
                 onAction(
                     LauncherShellAction.SelectHomeGridDimensions(
-                        grid.dimensions.copy(columns = grid.dimensions.columns + 1),
+                        visibleDimensions.copy(columns = visibleDimensions.columns + 1),
                     ),
                 )
             },
         )
         GridDimensionSetting(
             label = "Rows",
-            value = grid.dimensions.rows,
+            value = visibleDimensions.rows,
             onDecrease = {
                 onAction(
                     LauncherShellAction.SelectHomeGridDimensions(
-                        grid.dimensions.copy(rows = grid.dimensions.rows - 1),
+                        visibleDimensions.copy(rows = visibleDimensions.rows - 1),
                     ),
                 )
             },
             onIncrease = {
                 onAction(
                     LauncherShellAction.SelectHomeGridDimensions(
-                        grid.dimensions.copy(rows = grid.dimensions.rows + 1),
+                        visibleDimensions.copy(rows = visibleDimensions.rows + 1),
                     ),
                 )
             },

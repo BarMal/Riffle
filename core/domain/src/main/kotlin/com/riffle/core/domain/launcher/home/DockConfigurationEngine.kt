@@ -64,7 +64,7 @@ class DockConfigurationEngine {
                         id = LauncherPageId(DOCK_PANEL_PAGE_ID),
                         grid =
                             GridDimensions(
-                                columns = layout.settings.grid.dimensions.columns,
+                                columns = layout.workspaceGrid.columns,
                                 rows = DEFAULT_DOCK_PANEL_ROWS,
                             ),
                     )

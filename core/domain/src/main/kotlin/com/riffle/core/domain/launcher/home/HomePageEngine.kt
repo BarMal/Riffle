@@ -229,6 +229,13 @@ class HomePageEngine {
             layout.copy(editMode = HomeEditMode.Browsing),
         )
 
+    /**
+     * [dimensions] is the grid the user is asking to see -- what every page will actually be
+     * sized to -- not the pre-dock number [GridSettings.dimensions] stores. A side dock reserves
+     * one of those visible columns for itself, so what gets stored is [dimensions] with that
+     * column given back via [rawGridFor], keeping [workspaceGridFor] able to reproduce exactly
+     * the grid the user just asked for the next time it's read.
+     */
     fun updateGridDimensions(
         layout: HomeLayout,
         dimensions: GridDimensions,
@@ -244,7 +251,10 @@ class HomePageEngine {
                         pages = layout.pages.map { page -> page.copy(grid = dimensions) },
                         settings =
                             layout.settings.copy(
-                                grid = layout.settings.grid.copy(dimensions = dimensions),
+                                grid =
+                                    layout.settings.grid.copy(
+                                        dimensions = dimensions.rawGridFor(layout.dock),
+                                    ),
                             ),
                     ),
                 )
