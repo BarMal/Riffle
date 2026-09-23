@@ -129,7 +129,7 @@ internal fun Dock(
     }
 }
 
-@Suppress("LongMethod", "LongParameterList")
+@Suppress("LongMethod", "LongParameterList", "CyclomaticComplexMethod")
 @Composable
 internal fun DockSlotStrip(
     dock: DockModel,
@@ -195,21 +195,52 @@ internal fun DockSlotStrip(
             itemSpacingDp = slotMetrics.itemSpacingDp,
         ) {
             repeat(renderedSlotCount) { index ->
-                DockSlotStripSlot(
-                    index = index,
-                    dock = dock,
-                    slotMetrics = slotMetrics,
-                    isEditing = isEditing,
-                    position = position,
-                    presentation = slotPresentation,
-                    appIconLoader = appIconLoader,
-                    widgetPickerDockPreview = widgetPickerDockPreview,
-                    previewItems = previewItems,
-                    dragState = dragState.value,
-                    onDragStateChanged = { dragState.value = it },
-                    dragViewport = DockDragViewport(scrollState, contentViewportMainAxisDp),
-                    onDragDroppedAction = presentation.interactions.onAction,
-                )
+                val candidateIndex = widgetPickerDockPreview?.dockIndex
+                val isWidgetCandidate = candidateIndex == index
+                val itemIndex = if (candidateIndex != null && index > candidateIndex) index - 1 else index
+                val previewItem = previewItems.getOrNull(itemIndex)
+                // A preview reflow moves items between visual slots. Key actual items by their
+                // stable launcher ID so the dragged node keeps its pointer-input coroutine until
+                // the gesture commits or cancels.
+                val slotKey =
+                    if (isWidgetCandidate) {
+                        "widget-candidate:$index"
+                    } else {
+                        previewItem?.id ?: "dock-placeholder:$index"
+                    }
+                key(slotKey) {
+                    if (isWidgetCandidate) {
+                        WidgetPickerDockPlaceholder(
+                            preview = requireNotNull(widgetPickerDockPreview),
+                            sizeDp = slotMetrics.iconSizeDp,
+                        )
+                    } else {
+                        DockSlot(
+                            modifier = Modifier.requiredSize(slotMetrics.iconSizeDp.dp),
+                            state =
+                                DockSlotState(
+                                    item = dockSlotItemState(previewItem),
+                                    shortcutIndex = dock.items.indexOfFirst { item -> item.id == previewItem?.id },
+                                    visualIndex = index,
+                                    shortcutCount = dock.items.size,
+                                    iconSizeDp = slotMetrics.iconSizeDp,
+                                    itemSpacingDp = slotMetrics.itemSpacingDp,
+                                    isEditing = isEditing,
+                                    position = position,
+                                ),
+                            presentation = slotPresentation,
+                            appIconLoader = appIconLoader,
+                            dragState = dragState.value,
+                            dragViewport = DockDragViewport(scrollState, contentViewportMainAxisDp),
+                            onDragStateChanged = { dragState.value = it },
+                            // A drag that leaves the dock drops straight onto the current home page
+                            // (auto-placed at the first open cell) rather than opening the page/cell
+                            // picker dialog -- that dialog stays reserved for the non-spatial "Move to
+                            // home" menu action, which goes through slotPresentation above instead.
+                            onDragDroppedAction = presentation.interactions.onAction,
+                        )
+                    }
+                }
             }
         }
     }
@@ -244,71 +275,6 @@ internal fun DockSlotStrip(
                     presentation.interactions.onAction(dockMoveToHomeAction(itemId, pageId, cell))
                     moveToHomeItemId.value = null
                 },
-            )
-        }
-    }
-}
-
-/** One slot in the strip: a real dock item, a drag preview placeholder, or a widget-picker candidate. */
-@Composable
-@Suppress("LongParameterList")
-private fun DockSlotStripSlot(
-    index: Int,
-    dock: DockModel,
-    slotMetrics: DockSlotRenderMetrics,
-    isEditing: Boolean,
-    position: DockPosition,
-    presentation: DockPresentation,
-    appIconLoader: AppIconLoader,
-    widgetPickerDockPreview: WidgetPickerDockPlacementPreview?,
-    previewItems: List<LauncherItem?>,
-    dragState: DockDragState?,
-    onDragStateChanged: (DockDragState?) -> Unit,
-    dragViewport: DockDragViewport,
-    onDragDroppedAction: (LauncherShellAction) -> Unit,
-) {
-    val candidateIndex = widgetPickerDockPreview?.dockIndex
-    val isWidgetCandidate = candidateIndex == index
-    val itemIndex = if (candidateIndex != null && index > candidateIndex) index - 1 else index
-    val previewItem = previewItems.getOrNull(itemIndex)
-    // A preview reflow moves items between visual slots. Key actual items by their stable launcher
-    // ID so the dragged node keeps its pointer-input coroutine until the gesture commits or cancels.
-    val slotKey =
-        if (isWidgetCandidate) {
-            "widget-candidate:$index"
-        } else {
-            previewItem?.id ?: "dock-placeholder:$index"
-        }
-    key(slotKey) {
-        if (isWidgetCandidate) {
-            WidgetPickerDockPlaceholder(
-                preview = requireNotNull(widgetPickerDockPreview),
-                sizeDp = slotMetrics.iconSizeDp,
-            )
-        } else {
-            DockSlot(
-                modifier = Modifier.requiredSize(slotMetrics.iconSizeDp.dp),
-                state =
-                    DockSlotState(
-                        item = dockSlotItemState(previewItem),
-                        shortcutIndex = dock.items.indexOfFirst { item -> item.id == previewItem?.id },
-                        visualIndex = index,
-                        shortcutCount = dock.items.size,
-                        iconSizeDp = slotMetrics.iconSizeDp,
-                        itemSpacingDp = slotMetrics.itemSpacingDp,
-                        isEditing = isEditing,
-                        position = position,
-                    ),
-                presentation = presentation,
-                appIconLoader = appIconLoader,
-                dragState = dragState,
-                dragViewport = dragViewport,
-                onDragStateChanged = onDragStateChanged,
-                // A drag that leaves the dock drops straight onto the current home page (auto-placed
-                // at the first open cell) rather than opening the page/cell picker dialog -- that
-                // dialog stays reserved for the non-spatial "Move to home" menu action, which goes
-                // through the caller's own presentation instead.
-                onDragDroppedAction = onDragDroppedAction,
             )
         }
     }

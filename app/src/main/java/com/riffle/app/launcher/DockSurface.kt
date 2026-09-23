@@ -1,6 +1,5 @@
 package com.riffle.app.launcher
 
-import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -307,7 +306,7 @@ private fun Modifier.dockShelfExtent(
 ): Modifier = if (runsHorizontally) width(mainAxis) else height(mainAxis)
 
 @Composable
-@Suppress("LongParameterList")
+@Suppress("LongParameterList", "LongMethod")
 internal fun DockSurfaceStrip(
     dock: DockModel,
     surfaceMetrics: DockSurfaceMetrics,
@@ -376,72 +375,42 @@ internal fun DockSurfaceStrip(
         if (!showDynamicSection) {
             staticSide(surfaceMetrics.contentViewportMainAxisDp, false)
         } else {
-            DockMergedSectionRun(
-                dock = dock,
-                surfaceMetrics = surfaceMetrics,
-                dynamicEntries = dynamicEntries,
-                runsHorizontally = runsHorizontally,
-                mainAxisDp = mainAxisDp,
-                scrollState = scrollState,
-                staticSide = staticSide,
-                presentation = presentation,
-                appIconLoader = appIconLoader,
-                onShowAllNotifications = onShowAllNotifications,
-            )
-        }
-    }
-}
-
-/**
- * One shared scroll and one clipped viewport across both sections -- rather than each scrolling its
- * own capped-width slice -- so the whole strip scrolls as a single run and a swipe that starts over
- * the pinned icons carries on into the notifications beside them.
- */
-@Composable
-@Suppress("LongParameterList")
-private fun DockMergedSectionRun(
-    dock: DockModel,
-    surfaceMetrics: DockSurfaceMetrics,
-    dynamicEntries: List<DockDynamicEntry>,
-    runsHorizontally: Boolean,
-    mainAxisDp: Dp,
-    scrollState: ScrollState,
-    staticSide: @Composable (viewportMainAxisDp: Int, sharedScroll: Boolean) -> Unit,
-    presentation: DockPresentation,
-    appIconLoader: AppIconLoader,
-    onShowAllNotifications: () -> Unit,
-) {
-    val overflowAffordance =
-        DockOverflowAffordance(scrollOffsetPx = scrollState.value, maxScrollOffsetPx = scrollState.maxValue)
-    val fadeColor = dockSurfaceColor(dock)
-    Box(
-        modifier = Modifier.dockRunSize(runsHorizontally, mainAxisDp).clipToBounds(),
-        contentAlignment = Alignment.Center,
-    ) {
-        DockSectionRun(
-            runsHorizontally = runsHorizontally,
-            modifier = Modifier.dockRunScroll(runsHorizontally, scrollState),
-        ) {
-            staticSide(surfaceMetrics.surfaceMainAxisDp, true)
-            DockSectionDivider(runsHorizontally = runsHorizontally)
-            DockDynamicSection(
-                dock = dock,
-                entries = dynamicEntries,
-                slotMetrics = surfaceMetrics.slotMetrics,
-                mainAxisDp = surfaceMetrics.dynamicSectionMainAxisDp,
-                runsHorizontally = runsHorizontally,
-                appIconLoader = appIconLoader,
-                onAction = presentation.interactions.onAction,
-                onShowAllNotifications = onShowAllNotifications,
-                scrollState = scrollState,
-                clipAndScroll = false,
-            )
-        }
-        if (overflowAffordance.showStart) {
-            DockOverflowFade(runsHorizontally = runsHorizontally, atRunStart = true, color = fadeColor)
-        }
-        if (overflowAffordance.showEnd) {
-            DockOverflowFade(runsHorizontally = runsHorizontally, atRunStart = false, color = fadeColor)
+            // One shared scroll and one clipped viewport across both sections -- rather than each
+            // scrolling its own capped-width slice -- so the whole strip scrolls as a single run and
+            // a swipe that starts over the pinned icons carries on into the notifications beside them.
+            val overflowAffordance =
+                DockOverflowAffordance(scrollOffsetPx = scrollState.value, maxScrollOffsetPx = scrollState.maxValue)
+            val fadeColor = dockSurfaceColor(dock)
+            Box(
+                modifier = Modifier.dockRunSize(runsHorizontally, mainAxisDp).clipToBounds(),
+                contentAlignment = Alignment.Center,
+            ) {
+                DockSectionRun(
+                    runsHorizontally = runsHorizontally,
+                    modifier = Modifier.dockRunScroll(runsHorizontally, scrollState),
+                ) {
+                    staticSide(surfaceMetrics.surfaceMainAxisDp, true)
+                    DockSectionDivider(runsHorizontally = runsHorizontally)
+                    DockDynamicSection(
+                        dock = dock,
+                        entries = dynamicEntries,
+                        slotMetrics = surfaceMetrics.slotMetrics,
+                        mainAxisDp = surfaceMetrics.dynamicSectionMainAxisDp,
+                        runsHorizontally = runsHorizontally,
+                        appIconLoader = appIconLoader,
+                        onAction = presentation.interactions.onAction,
+                        onShowAllNotifications = onShowAllNotifications,
+                        scrollState = scrollState,
+                        clipAndScroll = false,
+                    )
+                }
+                if (overflowAffordance.showStart) {
+                    DockOverflowFade(runsHorizontally = runsHorizontally, atRunStart = true, color = fadeColor)
+                }
+                if (overflowAffordance.showEnd) {
+                    DockOverflowFade(runsHorizontally = runsHorizontally, atRunStart = false, color = fadeColor)
+                }
+            }
         }
     }
 }
