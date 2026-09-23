@@ -93,6 +93,7 @@ private fun LauncherShellAction.isDockEditAction(): Boolean =
         is LauncherShellAction.SelectDockItemSpacing,
         is LauncherShellAction.SelectDockCornerRadius,
         is LauncherShellAction.SelectDockHomeControlsSpacing,
+        is LauncherShellAction.SelectDockDynamicSectionReservedSlots,
         is LauncherShellAction.RemoveDockShortcut,
         is LauncherShellAction.MoveDockShortcut,
         is LauncherShellAction.MoveDockShortcutToIndex,

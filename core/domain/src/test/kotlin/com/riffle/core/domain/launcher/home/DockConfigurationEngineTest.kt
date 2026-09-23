@@ -400,6 +400,39 @@ class DockConfigurationEngineTest {
         assertEquals(DockEditRejectionReason.INVALID_ITEM_SPACING, rejected.reason)
     }
 
+    @Test
+    fun updatesDockDynamicSectionReservedSlots() {
+        val result =
+            engine.setDockDynamicSectionReservedSlots(layout = HomeLayoutDefaults.standard(), slotCount = 3)
+
+        val updated = assertIs<DockEditResult.Updated>(result)
+        assertEquals(3, updated.layout.dock.dynamicSectionReservedSlotCount)
+    }
+
+    @Test
+    fun rejectsDockDynamicSectionReservedSlotsBelowMinimum() {
+        val result =
+            engine.setDockDynamicSectionReservedSlots(
+                layout = HomeLayoutDefaults.standard(),
+                slotCount = MIN_DOCK_DYNAMIC_SECTION_RESERVED_SLOT_COUNT - 1,
+            )
+
+        val rejected = assertIs<DockEditResult.Rejected>(result)
+        assertEquals(DockEditRejectionReason.INVALID_DYNAMIC_SECTION_RESERVED_SLOTS, rejected.reason)
+    }
+
+    @Test
+    fun rejectsDockDynamicSectionReservedSlotsAboveMaximum() {
+        val result =
+            engine.setDockDynamicSectionReservedSlots(
+                layout = HomeLayoutDefaults.standard(),
+                slotCount = MAX_DOCK_DYNAMIC_SECTION_RESERVED_SLOT_COUNT + 1,
+            )
+
+        val rejected = assertIs<DockEditResult.Rejected>(result)
+        assertEquals(DockEditRejectionReason.INVALID_DYNAMIC_SECTION_RESERVED_SLOTS, rejected.reason)
+    }
+
     private fun layoutWithPanelItems(vararg items: AppShortcutItem): HomeLayout {
         val seeded =
             assertIs<DockEditResult.Updated>(

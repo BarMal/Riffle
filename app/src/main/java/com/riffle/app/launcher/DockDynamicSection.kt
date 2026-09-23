@@ -1,5 +1,6 @@
 package com.riffle.app.launcher
 
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -52,6 +53,11 @@ internal fun DockDynamicSection(
     // The edge against the section divider is an internal seam, not the dock's real edge -- see the
     // matching suppressEndFade on DockSlotStrip (#1174).
     suppressStartFade: Boolean = false,
+    scrollState: ScrollState = rememberScrollState(),
+    // False when a caller is scrolling this section together with the static side beside it as one
+    // continuous run -- see DockSurfaceStrip. The section then renders at its natural content width
+    // and leaves sizing, scrolling and the overflow fades to that shared run.
+    clipAndScroll: Boolean = true,
 ) {
     if (entries.isEmpty() || mainAxisDp <= 0) {
         return
@@ -59,14 +65,15 @@ internal fun DockDynamicSection(
     // The same numbers the static side is drawn from, so an entry is the size of a pinned icon.
     val iconSizeDp = slotMetrics.iconSizeDp
     val spacingDp = slotMetrics.itemSpacingDp
-    val scrollState = rememberScrollState()
     // No modifier parameter, against the usual convention: the section's extent is measured for it
     // by the dock and a caller-supplied one would only fight that.
     val runModifier =
         Modifier
             .testTag(DOCK_DYNAMIC_SECTION_TEST_TAG)
             .then(
-                if (runsHorizontally) {
+                if (!clipAndScroll) {
+                    Modifier
+                } else if (runsHorizontally) {
                     Modifier.width(mainAxisDp.dp).horizontalScroll(scrollState)
                 } else {
                     Modifier.height(mainAxisDp.dp).verticalScroll(scrollState)
@@ -93,10 +100,7 @@ internal fun DockDynamicSection(
     // "there is more" hint the static side already has -- previously missing here entirely, which
     // on a vertical (left/right edge) dock left no way to discover the dynamic side scrolls at all
     // (#1175).
-    val overflowAffordance =
-        DockOverflowAffordance(scrollOffsetPx = scrollState.value, maxScrollOffsetPx = scrollState.maxValue)
-    val fadeColor = dockSurfaceColor(dock)
-    Box {
+    val run: @Composable () -> Unit = {
         if (runsHorizontally) {
             Row(
                 modifier = runModifier,
@@ -110,11 +114,22 @@ internal fun DockDynamicSection(
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) { tiles() }
         }
-        if (overflowAffordance.showStart && !suppressStartFade) {
-            DockOverflowFade(runsHorizontally = runsHorizontally, atRunStart = true, color = fadeColor)
-        }
-        if (overflowAffordance.showEnd) {
-            DockOverflowFade(runsHorizontally = runsHorizontally, atRunStart = false, color = fadeColor)
+    }
+
+    if (!clipAndScroll) {
+        run()
+    } else {
+        val overflowAffordance =
+            DockOverflowAffordance(scrollOffsetPx = scrollState.value, maxScrollOffsetPx = scrollState.maxValue)
+        val fadeColor = dockSurfaceColor(dock)
+        Box {
+            run()
+            if (overflowAffordance.showStart && !suppressStartFade) {
+                DockOverflowFade(runsHorizontally = runsHorizontally, atRunStart = true, color = fadeColor)
+            }
+            if (overflowAffordance.showEnd) {
+                DockOverflowFade(runsHorizontally = runsHorizontally, atRunStart = false, color = fadeColor)
+            }
         }
     }
 }

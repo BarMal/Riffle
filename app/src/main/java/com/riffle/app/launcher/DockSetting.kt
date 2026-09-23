@@ -26,10 +26,12 @@ import com.riffle.core.domain.launcher.home.DockVisualEffect
 import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.home.MAX_DOCK_BACKGROUND_ALPHA_PERCENT
 import com.riffle.core.domain.launcher.home.MAX_DOCK_CORNER_RADIUS_DP
+import com.riffle.core.domain.launcher.home.MAX_DOCK_DYNAMIC_SECTION_RESERVED_SLOT_COUNT
 import com.riffle.core.domain.launcher.home.MAX_DOCK_HOME_CONTROLS_SPACING_DP
 import com.riffle.core.domain.launcher.home.MAX_DOCK_ICON_SIZE_DP
 import com.riffle.core.domain.launcher.home.MIN_DOCK_BACKGROUND_ALPHA_PERCENT
 import com.riffle.core.domain.launcher.home.MIN_DOCK_CORNER_RADIUS_DP
+import com.riffle.core.domain.launcher.home.MIN_DOCK_DYNAMIC_SECTION_RESERVED_SLOT_COUNT
 import com.riffle.core.domain.launcher.home.MIN_DOCK_HOME_CONTROLS_SPACING_DP
 import com.riffle.core.domain.launcher.home.MIN_DOCK_ICON_SIZE_DP
 import com.riffle.core.domain.launcher.home.placeableDockPositions
@@ -52,6 +54,12 @@ internal fun DockSetting(
             notificationAccessStatus = notificationAccessStatus,
             onAction = onAction,
         )
+        if (dock.showNotificationCards) {
+            DockDynamicSectionReservedSlotsSetting(
+                slotCount = dock.dynamicSectionReservedSlotCount,
+                onAction = onAction,
+            )
+        }
         DockPositionSetting(
             position = dock.position,
             placeablePositions = viewMode.placeableDockPositions,
@@ -125,6 +133,24 @@ private fun DockVisualEffectSetting(
         }
     }
 }
+
+/**
+ * How many icons' worth of room the dynamic section holds onto before it has to share the strip
+ * with the static side, letting a user who finds one icon awkward to reach give the notification
+ * section more standing room -- or, at zero, let the static side use the whole run and take its
+ * chances on what is left.
+ */
+@Composable
+private fun DockDynamicSectionReservedSlotsSetting(
+    slotCount: Int,
+    onAction: (LauncherShellAction) -> Unit,
+) = DiscreteSettingSlider(
+    title = "Dock notification space",
+    value = slotCount,
+    valueRange = MIN_DOCK_DYNAMIC_SECTION_RESERVED_SLOT_COUNT..MAX_DOCK_DYNAMIC_SECTION_RESERVED_SLOT_COUNT,
+    valueLabel = { count -> if (count == 1) "1 icon" else "$count icons" },
+    onValueChange = { value -> onAction(LauncherShellAction.SelectDockDynamicSectionReservedSlots(value)) },
+)
 
 @Composable
 private fun DockIconSizeSetting(

@@ -71,6 +71,9 @@ fun DockEngine.applyEdit(
         is LauncherShellAction.SelectDockHomeControlsSpacing ->
             DockConfigurationEngine().setDockHomeControlsSpacing(layout = layout, spacingDp = action.spacingDp)
 
+        is LauncherShellAction.SelectDockDynamicSectionReservedSlots ->
+            DockConfigurationEngine().setDockDynamicSectionReservedSlots(layout = layout, slotCount = action.slotCount)
+
         is LauncherShellAction.RemoveDockShortcut ->
             removeDockItem(layout = layout, itemId = action.itemId)
 
@@ -125,6 +128,7 @@ internal fun LauncherShellAction.isDockConfigurationAction(): Boolean =
         is LauncherShellAction.SelectDockItemSpacing,
         is LauncherShellAction.SelectDockCornerRadius,
         is LauncherShellAction.SelectDockHomeControlsSpacing,
+        is LauncherShellAction.SelectDockDynamicSectionReservedSlots,
         -> true
 
         else -> false
