@@ -129,7 +129,7 @@ internal fun Dock(
     }
 }
 
-@Suppress("LongMethod")
+@Suppress("LongMethod", "LongParameterList")
 @Composable
 internal fun DockSlotStrip(
     dock: DockModel,
@@ -145,8 +145,13 @@ internal fun DockSlotStrip(
     // there reads as scrollability that isn't there and, worse, draws over the icon run rather than
     // the dock's own background (#1174). Only the true outer edge of the whole strip earns a fade.
     suppressEndFade: Boolean = false,
+    scrollState: ScrollState = rememberScrollState(),
+    // False when a caller is scrolling this strip together with content beside it (the dynamic
+    // section) as one continuous run -- see DockSurfaceStrip. The strip then renders at its natural
+    // content width and leaves clipping, scrolling and the overflow fades to that shared run, rather
+    // than scrolling itself independently of what sits next to it.
+    clipAndScroll: Boolean = true,
 ) {
-    val scrollState = rememberScrollState()
     val dragState = remember { mutableStateOf<DockDragState?>(null) }
     val moveToHomeItemId = remember { mutableStateOf<LauncherItemId?>(null) }
     val homeLayout = presentation.interactions.homeLayout
@@ -174,19 +179,19 @@ internal fun DockSlotStrip(
     val runsHorizontally = position.isHorizontalEdge
     val contentMainAxisDp = dockSlotContentMainAxisDp(renderedSlotCount, slotMetrics).dp
 
-    Box(
-        modifier =
-            Modifier
-                .dockRunSize(runsHorizontally, contentViewportMainAxisDp.dp)
-                .clipToBounds(),
-        contentAlignment = Alignment.Center,
-    ) {
+    val slots: @Composable () -> Unit = {
         DockSlotRun(
             runsHorizontally = runsHorizontally,
             modifier =
                 Modifier
                     .dockRunSize(runsHorizontally, contentMainAxisDp)
-                    .dockRunScroll(runsHorizontally, scrollState),
+                    .then(
+                        if (clipAndScroll) {
+                            Modifier.dockRunScroll(runsHorizontally, scrollState)
+                        } else {
+                            Modifier
+                        },
+                    ),
             itemSpacingDp = slotMetrics.itemSpacingDp,
         ) {
             repeat(renderedSlotCount) { index ->
@@ -238,13 +243,26 @@ internal fun DockSlotStrip(
                 }
             }
         }
+    }
 
-        if (overflowAffordance.showStart) {
-            DockOverflowFade(runsHorizontally = runsHorizontally, atRunStart = true, color = fadeColor)
+    if (clipAndScroll) {
+        Box(
+            modifier =
+                Modifier
+                    .dockRunSize(runsHorizontally, contentViewportMainAxisDp.dp)
+                    .clipToBounds(),
+            contentAlignment = Alignment.Center,
+        ) {
+            slots()
+            if (overflowAffordance.showStart) {
+                DockOverflowFade(runsHorizontally = runsHorizontally, atRunStart = true, color = fadeColor)
+            }
+            if (overflowAffordance.showEnd && !suppressEndFade) {
+                DockOverflowFade(runsHorizontally = runsHorizontally, atRunStart = false, color = fadeColor)
+            }
         }
-        if (overflowAffordance.showEnd && !suppressEndFade) {
-            DockOverflowFade(runsHorizontally = runsHorizontally, atRunStart = false, color = fadeColor)
-        }
+    } else {
+        slots()
     }
 
     moveToHomeItemId.value?.let { itemId ->
@@ -296,13 +314,13 @@ private fun DockSlotRun(
 }
 
 /** Sizes along the dock's run and leaves the other axis to the content. */
-private fun Modifier.dockRunSize(
+internal fun Modifier.dockRunSize(
     runsHorizontally: Boolean,
     mainAxis: Dp,
 ): Modifier = if (runsHorizontally) width(mainAxis) else height(mainAxis)
 
 @Composable
-private fun Modifier.dockRunScroll(
+internal fun Modifier.dockRunScroll(
     runsHorizontally: Boolean,
     scrollState: ScrollState,
 ): Modifier = if (runsHorizontally) horizontalScroll(scrollState) else verticalScroll(scrollState)
@@ -521,18 +539,30 @@ internal fun dockDynamicSectionMainAxisDp(
 
 /**
  * How much of the run to hold back from the static side so the dynamic section, once it has any
- * entries at all, always gets at least one tile's worth of space rather than being squeezed to
- * nothing by a dock that is otherwise full. Zero when there is nothing to reserve for.
+ * entries at all, always gets at least [reservedSlotCount] tiles' worth of space rather than being
+ * squeezed to nothing by a dock that is otherwise full. Zero when there is nothing to reserve for.
+ *
+ * [reservedSlotCount] is a per-layout setting (see [DockModel.dynamicSectionReservedSlotCount]) --
+ * one tile is the default that keeps a single notification legible without scrolling, but a layout
+ * with room to spare can hold open more of the strip so the dynamic section reads at a glance.
+ * Reserving is capped to [entryCount]: there is nothing to gain by holding back room for a tile that
+ * will never render.
  */
 internal fun dockDynamicSectionReservedMainAxisDp(
     entryCount: Int,
     entryExtentDp: Int,
-): Int =
-    if (entryCount > 0 && entryExtentDp > 0) {
-        entryExtentDp + DOCK_SECTION_DIVIDER_MAIN_AXIS_DP
+    entrySpacingDp: Int,
+    reservedSlotCount: Int,
+): Int {
+    val slots = reservedSlotCount.coerceAtMost(entryCount)
+    return if (slots > 0 && entryExtentDp > 0) {
+        (slots * entryExtentDp) +
+            ((slots - 1) * entrySpacingDp.coerceAtLeast(0)) +
+            DOCK_SECTION_DIVIDER_MAIN_AXIS_DP
     } else {
         0
     }
+}
 
 /**
  * Whether [DockSurfaceStrip] should actually draw a divider and dynamic section, rather than just

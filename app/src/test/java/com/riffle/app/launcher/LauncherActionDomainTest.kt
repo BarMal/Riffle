@@ -301,6 +301,10 @@ class LauncherActionDomainTest {
                     "SelectDockHomeControlsSpacing",
                     LauncherShellAction.SelectDockHomeControlsSpacing(spacingDp = 16),
                 ),
+                activity(
+                    "SelectDockDynamicSectionReservedSlots",
+                    LauncherShellAction.SelectDockDynamicSectionReservedSlots(slotCount = 2),
+                ),
                 app("AppDrawerQueryChanged", LauncherShellAction.AppDrawerQueryChanged("query")),
                 app("RefreshInstalledApps", LauncherShellAction.RefreshInstalledApps),
                 app(

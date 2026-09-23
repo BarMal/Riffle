@@ -81,6 +81,7 @@ private fun encodeDock(dock: DockModel): JSONObject =
     JSONObject()
         .put("isEnabled", dock.isEnabled)
         .put("showNotificationCards", dock.showNotificationCards)
+        .put("dynamicSectionReservedSlotCount", dock.dynamicSectionReservedSlotCount)
         .put("isExpandable", dock.isExpandable)
         .put("expandAffordance", dock.expandAffordance.name)
         .put("position", dock.position?.name)
@@ -103,6 +104,8 @@ private fun JSONObject.toDock(
     DockModel(
         isEnabled = optBoolean("isEnabled", defaults.isEnabled),
         showNotificationCards = optBoolean("showNotificationCards", defaults.showNotificationCards),
+        dynamicSectionReservedSlotCount =
+            optInt("dynamicSectionReservedSlotCount", defaults.dynamicSectionReservedSlotCount),
         isExpandable = optBoolean("isExpandable", defaults.isExpandable),
         expandAffordance =
             optString("expandAffordance", "")

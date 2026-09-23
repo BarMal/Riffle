@@ -63,13 +63,68 @@ class DockDynamicSectionMetricsTest {
     fun reservationHoldsBackOneEntryAndTheDividerWhenThereAreEntries() {
         assertEquals(
             44 + 17,
-            dockDynamicSectionReservedMainAxisDp(entryCount = 3, entryExtentDp = 44),
+            dockDynamicSectionReservedMainAxisDp(
+                entryCount = 3,
+                entryExtentDp = 44,
+                entrySpacingDp = 12,
+                reservedSlotCount = 1,
+            ),
         )
     }
 
     @Test
     fun reservationIsZeroWithNoEntries() {
-        assertEquals(0, dockDynamicSectionReservedMainAxisDp(entryCount = 0, entryExtentDp = 44))
+        assertEquals(
+            0,
+            dockDynamicSectionReservedMainAxisDp(
+                entryCount = 0,
+                entryExtentDp = 44,
+                entrySpacingDp = 12,
+                reservedSlotCount = 1,
+            ),
+        )
+    }
+
+    @Test
+    fun reservationIsZeroWhenTheSettingAsksForNoSlots() {
+        assertEquals(
+            0,
+            dockDynamicSectionReservedMainAxisDp(
+                entryCount = 3,
+                entryExtentDp = 44,
+                entrySpacingDp = 12,
+                reservedSlotCount = 0,
+            ),
+        )
+    }
+
+    @Test
+    fun reservationHoldsBackMultipleSlotsAndTheSpacingBetweenThem() {
+        // Two reserved slots: 2*44 + 1*12 spacing between them, plus the divider.
+        assertEquals(
+            (2 * 44) + 12 + 17,
+            dockDynamicSectionReservedMainAxisDp(
+                entryCount = 3,
+                entryExtentDp = 44,
+                entrySpacingDp = 12,
+                reservedSlotCount = 2,
+            ),
+        )
+    }
+
+    @Test
+    fun reservationNeverExceedsWhatTheEntriesActuallyNeed() {
+        // Asking for more reserved slots than there are entries reserves only for the entries that
+        // exist -- there is nothing to gain by holding back room for a tile that will never render.
+        assertEquals(
+            44 + 17,
+            dockDynamicSectionReservedMainAxisDp(
+                entryCount = 1,
+                entryExtentDp = 44,
+                entrySpacingDp = 12,
+                reservedSlotCount = 5,
+            ),
+        )
     }
 
     @Test
@@ -78,7 +133,13 @@ class DockDynamicSectionMetricsTest {
         // dynamic section nothing -- this is the "compressed to uselessness when folded" bug: the
         // static side must be capped short of the full run first so the entry it reserved for is
         // actually still there once the dynamic section asks for its share.
-        val reserved = dockDynamicSectionReservedMainAxisDp(entryCount = 3, entryExtentDp = 44)
+        val reserved =
+            dockDynamicSectionReservedMainAxisDp(
+                entryCount = 3,
+                entryExtentDp = 44,
+                entrySpacingDp = 12,
+                reservedSlotCount = 1,
+            )
         val staticContainerMainAxisDp =
             dockContainerMainAxisDp(
                 availableMainAxisDp = 560,

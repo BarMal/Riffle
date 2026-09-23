@@ -63,10 +63,16 @@ tap will show, an unbadged one opens.
 
 The static section is sized first, so notifications coming and going don't shove the pinned icons
 along the dock. It is not sized in full, though: once the dynamic section has at least one entry to
-show, the static side's own share is capped short of the run, reserving one icon's worth of room
-so the dynamic section is never squeezed to nothing by a static side that would otherwise fill the
-whole dock. That reservation holds steady across individual notifications arriving or leaving --
-only going from no entries to some, or back, changes it.
+show, the static side's own share is capped short of the run, reserving a configurable number of
+icons' worth of room (one by default) so the dynamic section is never squeezed to nothing by a
+static side that would otherwise fill the whole dock. That reservation holds steady across
+individual notifications arriving or leaving -- only going from no entries to some, or back, changes
+it. Reserving is capped to however many entries actually exist, so asking for more room than there
+is anything to fill it with wastes none.
+
+The two sections scroll as one strip rather than two: a swipe anywhere on the dock carries across
+the divider, so reaching a notification never means a second, separate gesture from the one that
+scrolls the pinned icons.
 
 ### The merged All-notifications view
 
@@ -120,8 +126,9 @@ section does that job, so the rail is gone (#1159).
 | Dynamic section means "a notification arrived" | Done (#1162) — de-duplicated against the static side in every mode |
 | Tap opens the app / brings the stage forward | Done (#1155), and on the static side in Cards too (#1162) |
 | Static sized first, dynamic takes the remainder | Done (#1154) |
+| Dynamic section's reserved room is configurable | Done — a per-layout slot count, capped to the entries that exist |
 | Merged All-notifications view reachable | Done (#1164) — spine on a compact window, opt-in dock entry on a wide one, each posture switched separately and off by default |
-| Visible-before-overflow, scroll for the rest | Done |
+| Visible-before-overflow, scroll for the rest | Done — the two sections scroll together as one run |
 | Multiple rows | **Not started** — no notion of rows exists |
 | Panel exists, standard conventions | Done — a real `LauncherPage` on the same grid machinery as a home page |
 | Cards expanded shelf is panel-only | Done (#1166) — the notification card row is dropped there, the panel stays |

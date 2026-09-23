@@ -219,6 +219,19 @@ class DockConfigurationEngine {
             else -> DockEditResult.Rejected(DockEditRejectionReason.INVALID_ITEM_SPACING)
         }
 
+    fun setDockDynamicSectionReservedSlots(
+        layout: HomeLayout,
+        slotCount: Int,
+    ): DockEditResult =
+        when (slotCount) {
+            in MIN_DOCK_DYNAMIC_SECTION_RESERVED_SLOT_COUNT..MAX_DOCK_DYNAMIC_SECTION_RESERVED_SLOT_COUNT ->
+                DockEditResult.Updated(
+                    layout.copy(dock = layout.dock.copy(dynamicSectionReservedSlotCount = slotCount)),
+                )
+
+            else -> DockEditResult.Rejected(DockEditRejectionReason.INVALID_DYNAMIC_SECTION_RESERVED_SLOTS)
+        }
+
     fun setDockHomeControlsSpacing(
         layout: HomeLayout,
         spacingDp: Int,
