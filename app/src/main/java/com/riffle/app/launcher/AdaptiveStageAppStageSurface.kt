@@ -3097,35 +3097,11 @@ internal fun stageAppIdentity(
     state: LauncherShellState,
 ): AppIdentity? = stageInstalledApp(id, state)?.identity
 
-/**
- * The first installed app matching [id], through a stage-id index rebuilt only when the installed
- * app list instance changes -- stage labels are looked up per card and per chip on every frame, and
- * a linear search of every installed app each time added up (#1211).
- */
+/** The first installed app matching [id], via the state's own stage-id index. */
 private fun stageInstalledApp(
     id: AppStageId,
     state: LauncherShellState,
-): InstalledApp? {
-    val apps = state.installedApps
-    val index =
-        lastStageAppIndex?.takeIf { cached -> cached.apps === apps }
-            ?: StageAppIndex(apps).also { built -> lastStageAppIndex = built }
-    return index.byStageId[id]
-}
-
-private class StageAppIndex(val apps: List<InstalledApp>) {
-    val byStageId: Map<AppStageId, InstalledApp> =
-        HashMap<AppStageId, InstalledApp>(apps.size).apply {
-            apps.forEach { app ->
-                val key = AppStageId(packageName = app.identity.packageName, profileId = app.identity.profile.id)
-                // First match wins, matching the linear search this replaced.
-                if (!containsKey(key)) put(key, app)
-            }
-        }
-}
-
-@Volatile
-private var lastStageAppIndex: StageAppIndex? = null
+): InstalledApp? = state.installedAppsByStageId[id]
 
 private fun AppStage.adaptiveStageStageStateDescription(): String =
     buildList {
