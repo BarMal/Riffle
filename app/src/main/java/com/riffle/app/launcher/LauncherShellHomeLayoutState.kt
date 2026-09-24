@@ -2,6 +2,7 @@ package com.riffle.app.launcher
 
 import com.riffle.core.domain.launcher.LauncherShellState
 import com.riffle.core.domain.launcher.ShellDestination
+import com.riffle.core.domain.launcher.home.HomeEditMode
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.HomeLayoutKey
@@ -27,6 +28,29 @@ internal fun LauncherShellState.withHomeLayout(
                 homeLayoutSet = layoutSet,
             )
         }
+
+/**
+ * Home always returns to the first page of whichever layout/view mode is already on screen --
+ * never a mode switch. See #1176.
+ *
+ * Deliberately does not go through [withHomeLayout] (and its [currentLayoutSet] disk reload):
+ * that reload discards the in-memory [homeLayoutSet] for whatever is currently persisted, then
+ * [HomeLayoutSet.withActiveLayout] stamps the resulting layout with *that reloaded set's*
+ * `activeKey.viewMode` -- so if the persisted active key were ever a step behind the mode actually
+ * on screen (in memory), pressing Home would silently fall back to whatever mode disk still
+ * remembers. Updating [homeLayoutSet] directly off the state already held in memory keeps the
+ * layout that's rewritten in step with the mode that's actually showing, no matter what disk has.
+ */
+internal fun LauncherShellState.withDefaultHomeOpened(homeLayoutRepository: HomeLayoutRepository): LauncherShellState {
+    val resetLayout =
+        homeLayout.copy(
+            selectedPageId = homeLayout.pages.firstOrNull()?.id ?: homeLayout.selectedPageId,
+            editMode = HomeEditMode.Browsing,
+        )
+    val layoutSet = homeLayoutSet.withActiveLayout(resetLayout)
+    homeLayoutRepository.saveHomeLayoutSet(layoutSet)
+    return copy(homeLayout = layoutSet.activeLayout, homeLayoutSet = layoutSet)
+}
 
 /**
  * Choose which of the per-mode layouts applies.

@@ -309,6 +309,40 @@ class LauncherHomePageEditReducerTest {
     }
 
     @Test
+    fun openingDefaultHomeKeepsTheModeAlreadyOnScreenEvenWhenDiskRemembersAnOlderOne() {
+        val cardsKey = HomeLayoutKey(LauncherViewMode.CARD_INTERFACE)
+        val standardKey = HomeLayoutKey(LauncherViewMode.STANDARD_APP_DRAWER)
+        val secondPage = HomeLayoutDefaults.standard().selectedPage.copy(id = LauncherPageId("cards-2"))
+        val cardsLayout =
+            HomeLayoutDefaults.standard()
+                .copy(
+                    viewMode = LauncherViewMode.CARD_INTERFACE,
+                    pages = listOf(HomeLayoutDefaults.standard().selectedPage, secondPage),
+                    selectedPageId = secondPage.id,
+                    editMode = HomeEditMode.EditingPage(secondPage.id),
+                )
+        val onScreenLayoutSet = HomeLayoutSet(activeKey = cardsKey, layouts = mapOf(cardsKey to cardsLayout))
+        // Disk still remembers the mode from before the in-memory switch to Cards -- the scenario
+        // that made pressing Home silently fall back to Standard (#1176).
+        val staleDiskLayoutSet =
+            HomeLayoutSet(
+                activeKey = standardKey,
+                layouts = mapOf(standardKey to HomeLayoutDefaults.standard(), cardsKey to cardsLayout),
+            )
+        val repository = FakeHomeLayoutRepository(staleDiskLayoutSet)
+        val reducer = LauncherHomePageEditReducer(homeLayoutRepository = repository)
+        val state = launcherState(onScreenLayoutSet)
+
+        val updated = reducer.reduce(state, LauncherShellAction.OpenDefaultHome)
+
+        assertEquals(LauncherViewMode.CARD_INTERFACE, updated.homeLayout.viewMode)
+        assertEquals(HomeLayoutDefaults.standard().selectedPage.id, updated.homeLayout.selectedPageId)
+        assertEquals(HomeEditMode.Browsing, updated.homeLayout.editMode)
+        assertEquals(cardsKey, updated.homeLayoutSet.activeKey)
+        assertEquals(cardsKey, repository.savedLayoutSet?.activeKey)
+    }
+
+    @Test
     fun unavailableLauncherViewModeSelectionFallsBackToStandardWithoutMutatingStoredLayout() {
         val cardKey = HomeLayoutKey(LauncherViewMode.CARD_INTERFACE)
         val cardLayout =
