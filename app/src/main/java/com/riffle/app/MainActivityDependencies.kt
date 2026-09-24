@@ -149,9 +149,7 @@ internal class MainActivityDependencies(
 }
 
 private fun HomeLayoutSet.hostedWidgetIdReferenceState(hostedWidgetId: HostedWidgetId): HostedWidgetIdReferenceState =
-    layouts.values
-        .asSequence()
-        .any { layout -> layout.hostsWidget(hostedWidgetId) }
+    hostsWidget(hostedWidgetId)
         .let { referenced ->
             if (referenced) {
                 HostedWidgetIdReferenceState.Referenced

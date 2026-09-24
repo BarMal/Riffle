@@ -109,6 +109,11 @@ internal fun HomeLayout.withSharedDock(dock: DockModel): HomeLayout {
  * onto that mode's own home pages, where the user curated it; an item that only the Cards dock
  * held goes to the showing mode's pages instead, because Cards draws no home grid. It takes the
  * first free cell, and whatever finds none is collected into a [FROM_DOCK_FOLDER_LABEL] folder.
+ *
+ * Invariant: every item some mode's dock or dock panel held is, afterwards, held by the shared dock
+ * or by a home page of a mode that draws one. A widget that fits no free cell -- even one whose
+ * minimum span is wider than the workspace -- goes on a page of its own, clamped to the grid if it
+ * must be, so its [HostedWidgetId] stays referenced rather than orphaned.
  */
 fun HomeLayoutSet.withLegacyDocksUnified(): HomeLayoutSet =
     layouts.keys
@@ -196,7 +201,6 @@ private fun HomeLayout.placingRescued(item: LauncherItem): HomeLayout {
             folder.items.fold(this) { layout, app -> layout.inFromDockFolder(app) }
         }
         ?: placedOnNewPage(unique)
-        ?: this
 }
 
 private fun HomeLayout.inFromDockFolder(app: AppShortcutItem): HomeLayout {
@@ -211,7 +215,7 @@ private fun HomeLayout.inFromDockFolder(app: AppShortcutItem): HomeLayout {
         )
     }
     val folder = FolderItem(id = FROM_DOCK_FOLDER_ID, label = FROM_DOCK_FOLDER_LABEL, items = listOf(app))
-    return placedOnExistingPage(folder) ?: placedOnNewPage(folder) ?: this
+    return placedOnExistingPage(folder) ?: placedOnNewPage(folder)
 }
 
 private fun HomeLayout.fromDockFolder(): FolderItem? =
@@ -228,15 +232,44 @@ private fun HomeLayout.placedOnExistingPage(item: LauncherItem): HomeLayout? =
             }
         }
 
-private fun HomeLayout.placedOnNewPage(item: LauncherItem): HomeLayout? {
+/**
+ * [item] on a page of its own, appended to the layout. This is the last resort, so it always
+ * succeeds: that is the invariant that makes the migration drop nothing.
+ *
+ * The item is placed through the grid engine at the largest span its own constraints allow, as
+ * anywhere else. Only when none of those fits the workspace -- a dock-panel widget wider than a home
+ * grid a side dock has narrowed, say -- is its span clamped to the workspace, below its stated
+ * minimum if it must be. A widget drawn smaller than it would like is recoverable (the user can
+ * resize or move it); a widget dropped here would take its [HostedWidgetId] with it, leaving a bound
+ * host id that nothing references and no way back to the widget.
+ */
+private fun HomeLayout.placedOnNewPage(item: LauncherItem): HomeLayout {
     val ids = pages.map { page -> page.id.value }.toSet()
     val id =
         generateSequence(0) { it + 1 }
             .map { index -> if (index == 0) FROM_DOCK_PAGE_ID else "$FROM_DOCK_PAGE_ID-$index" }
             .first { candidate -> candidate !in ids }
-    return LauncherPage(id = LauncherPageId(id), grid = workspaceGrid)
-        .placing(item)
-        ?.let { page -> copy(pages = pages + page) }
+    val grid =
+        GridDimensions(
+            columns = workspaceGrid.columns.coerceAtLeast(MIN_GRID_DIMENSION),
+            rows = workspaceGrid.rows.coerceAtLeast(MIN_GRID_DIMENSION),
+        )
+    val empty = LauncherPage(id = LauncherPageId(id), grid = grid)
+    val page = empty.placing(item) ?: empty.copy(items = listOf(item.withPlacement(item.clampedPlacementOn(grid))))
+    return copy(pages = pages + page)
+}
+
+/** [this] at the top-left of [grid], its span cut down to what [grid] can hold. */
+private fun LauncherItem.clampedPlacementOn(grid: GridDimensions): GridPlacement {
+    val span = placement?.span ?: GridSpan()
+    return GridPlacement(
+        cell = GridCell(column = 0, row = 0),
+        span =
+            GridSpan(
+                columns = span.columns.coerceIn(1, grid.columns),
+                rows = span.rows.coerceIn(1, grid.rows),
+            ),
+    )
 }
 
 private fun LauncherPage.placing(item: LauncherItem): LauncherPage? =
@@ -262,28 +295,38 @@ private fun LauncherItem.spanCandidatesOn(grid: GridDimensions): List<GridSpan> 
  * home item or dock entry that the per-mode copies were made from.
  */
 private fun LauncherItem.withIdsUniqueIn(layout: HomeLayout): LauncherItem {
+    // Grown as each id is handed out, so two ids issued here -- a folder's and its apps', or two
+    // apps that arrived with the same id -- can never be given the same replacement.
     val used =
         (layout.pages.flatMap { page -> page.items } + layout.dock.pinnedItems())
             .flatMap { item -> listOf(item.id) + (item as? FolderItem)?.items?.map { app -> app.id }.orEmpty() }
             .map { id -> id.value }
-            .toSet()
+            .toMutableSet()
     return when (this) {
-        is AppShortcutItem -> copy(id = id.uniqueIn(used))
-        is WidgetItem -> copy(id = id.uniqueIn(used))
+        is AppShortcutItem -> copy(id = id.claimUniqueIn(used))
+        is WidgetItem -> copy(id = id.claimUniqueIn(used))
         is FolderItem ->
-            copy(id = id.uniqueIn(used), items = items.map { app -> app.copy(id = app.id.uniqueIn(used)) })
+            copy(
+                id = id.claimUniqueIn(used),
+                items = items.map { app -> app.copy(id = app.id.claimUniqueIn(used)) },
+            )
     }
 }
 
-private fun LauncherItemId.uniqueIn(used: Set<String>): LauncherItemId =
-    if (value !in used) {
-        this
-    } else {
-        generateSequence(1) { it + 1 }
-            .map { index -> "$value-from-dock-$index" }
-            .first { candidate -> candidate !in used }
-            .let(::LauncherItemId)
-    }
+/** An id not in [used] -- this one if it is free, else the first free suffixed one -- now claimed. */
+internal fun LauncherItemId.claimUniqueIn(used: MutableSet<String>): LauncherItemId {
+    val unique =
+        if (value !in used) {
+            this
+        } else {
+            generateSequence(1) { it + 1 }
+                .map { index -> "$value-from-dock-$index" }
+                .first { candidate -> candidate !in used }
+                .let(::LauncherItemId)
+        }
+    used += unique.value
+    return unique
+}
 
 private val FROM_DOCK_FOLDER_ID = LauncherItemId("from-dock-folder")
 private const val FROM_DOCK_PAGE_ID = "from-dock"
