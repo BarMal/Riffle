@@ -62,9 +62,11 @@ The steer: **"if Apple and Sony designed it together."**
 
 1. **The mode ring is user-configured.** Standard, Library and Cards remain distinct modes. The
    user enables two or three and orders them; the default ring is **Library → Cards**.
-2. **The dock is the handle.** Its pinned and dynamic items are shared by every mode in the ring
-   (per device class). The dock stays anchored while the mode behind it changes — the physical
-   metaphor is that you're holding the dock and sliding the world past it.
+2. **One unified dock.** Exactly one dock per device class, identical in every mode: same pinned
+   items, edge, size, appearance and dynamic-section budgets. No per-mode dock configuration is
+   stored; anything that must differ by mode (what a dynamic-entry tap does) is derived from the
+   active mode at render time. The dock is rendered once, outside the mode surface, so a mode
+   change never re-lays it out — it is the fixed point you hold while the world slides past.
 3. **A grabber pill on the dock is the mode control.**
    - *Placement*: centred on the dock's inner edge (top edge of a bottom dock; inner edge of a side
      dock, rotated). 36 × 5 dp visual, ≥ 48 × 48 dp touch target.
@@ -123,7 +125,8 @@ Phases are ordered by what makes Cards usable soonest; #1196 holds the phase che
 4. #1204 String resources and RTL pass. (D5)
 
 ### W2 — Mode ring and dock handle (Phase 2)
-1. #1205 Domain: shared dock across modes + mode ring configuration, with migration. (M2)
+1. #1205 Unify the dock across modes: one dock per device class, rendered outside the mode surface, with migration. (M2) — **Phase 1**
+1b. #1225 Domain: user-configured mode ring. (M3)
 2. #1206 Interactive mode-transition controller (progress, commit/cancel, interruption). (M1)
 3. #1207 Dock grabber pill component. (Decision 3)
 4. #1208 Transition choreography with shared dock → stage elements. (Decision 4)
