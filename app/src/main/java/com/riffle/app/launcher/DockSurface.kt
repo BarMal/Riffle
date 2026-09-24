@@ -11,12 +11,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -96,13 +94,6 @@ internal fun dockSurfaceMetrics(
             itemSpacingDp = dock.itemSpacingDp,
             backgroundSizing = dock.backgroundSizing,
             runsHorizontally = runsHorizontally,
-            reservedDynamicSectionMainAxisDp =
-                dockDynamicSectionReservedMainAxisDp(
-                    entryCount = dynamicEntryCount,
-                    entryExtentDp = dock.iconSizeDp,
-                    entrySpacingDp = dock.itemSpacingDp,
-                    reservedSlotCount = dock.dynamicSectionReservedSlotCount,
-                ),
         )
     val contentViewportMainAxisDp =
         dockContentViewportMainAxisDp(
@@ -126,6 +117,7 @@ internal fun dockSurfaceMetrics(
         dynamicSectionMainAxisDp =
             dockDynamicSectionMainAxisDp(
                 entryCount = dynamicEntryCount,
+                notificationSlotCount = dock.notificationSlotCount,
                 entryExtentDp = dock.iconSizeDp,
                 entrySpacingDp = dock.itemSpacingDp,
                 staticContainerMainAxisDp = containerMainAxisDp,
@@ -306,7 +298,7 @@ private fun Modifier.dockShelfExtent(
 ): Modifier = if (runsHorizontally) width(mainAxis) else height(mainAxis)
 
 @Composable
-@Suppress("LongParameterList", "LongMethod")
+@Suppress("LongParameterList")
 internal fun DockSurfaceStrip(
     dock: DockModel,
     surfaceMetrics: DockSurfaceMetrics,
@@ -324,28 +316,22 @@ internal fun DockSurfaceStrip(
     val showDynamicSection = dockSurfaceStripShowsDynamicSection(surfaceMetrics, dynamicEntries)
     val mainAxisDp = dockSurfaceStripMainAxisDp(surfaceMetrics, showDynamicSection).dp
     val crossAxisDp = dockCrossAxisDp(surfaceMetrics.slotMetrics.iconSizeDp).dp
-    // Shared by both sections once the dynamic one draws, so a swipe anywhere on the strip scrolls
-    // the whole run rather than only whichever section sits under the pointer -- the two sections
-    // read as one strip (see DockSectionDivider's own doc), so overflow behaves as one strip's too.
-    val scrollState = rememberScrollState()
-    val staticSide: @Composable (viewportMainAxisDp: Int, sharedScroll: Boolean) -> Unit =
-        { viewportMainAxisDp, sharedScroll ->
-            if (surfaceMetrics.renderedSlotCount > 0 && surfaceMetrics.contentViewportMainAxisDp > 0) {
-                DockSlotStrip(
-                    dock = dock,
-                    renderedSlotCount = surfaceMetrics.renderedSlotCount,
-                    contentViewportMainAxisDp = viewportMainAxisDp,
-                    slotMetrics = surfaceMetrics.slotMetrics,
-                    isEditing = isEditing,
-                    presentation = presentation,
-                    appIconLoader = appIconLoader,
-                    position = position,
-                    widgetPickerDockPreview = widgetPickerDockPreview,
-                    scrollState = scrollState,
-                    clipAndScroll = !sharedScroll,
-                )
-            }
+    val staticSide: @Composable (suppressEndFade: Boolean) -> Unit = { suppressEndFade ->
+        if (surfaceMetrics.renderedSlotCount > 0 && surfaceMetrics.contentViewportMainAxisDp > 0) {
+            DockSlotStrip(
+                dock = dock,
+                renderedSlotCount = surfaceMetrics.renderedSlotCount,
+                contentViewportMainAxisDp = surfaceMetrics.contentViewportMainAxisDp,
+                slotMetrics = surfaceMetrics.slotMetrics,
+                isEditing = isEditing,
+                presentation = presentation,
+                appIconLoader = appIconLoader,
+                position = position,
+                widgetPickerDockPreview = widgetPickerDockPreview,
+                suppressEndFade = suppressEndFade,
+            )
         }
+    }
 
     Box(
         modifier =
@@ -373,43 +359,22 @@ internal fun DockSurfaceStrip(
         // Nothing dynamic to show is the common case and stays exactly as it was: one strip,
         // centred, with no arrangement wrapped around it to shift it by a fraction of a pixel.
         if (!showDynamicSection) {
-            staticSide(surfaceMetrics.contentViewportMainAxisDp, false)
+            staticSide(false)
         } else {
-            // One shared scroll and one clipped viewport across both sections -- rather than each
-            // scrolling its own capped-width slice -- so the whole strip scrolls as a single run and
-            // a swipe that starts over the pinned icons carries on into the notifications beside them.
-            val overflowAffordance =
-                DockOverflowAffordance(scrollOffsetPx = scrollState.value, maxScrollOffsetPx = scrollState.maxValue)
-            val fadeColor = dockSurfaceColor(dock)
-            Box(
-                modifier = Modifier.dockRunSize(runsHorizontally, mainAxisDp).clipToBounds(),
-                contentAlignment = Alignment.Center,
-            ) {
-                DockSectionRun(
+            DockSectionRun(runsHorizontally = runsHorizontally) {
+                staticSide(true)
+                DockSectionDivider(runsHorizontally = runsHorizontally)
+                DockDynamicSection(
+                    dock = dock,
+                    entries = dynamicEntries,
+                    slotMetrics = surfaceMetrics.slotMetrics,
+                    mainAxisDp = surfaceMetrics.dynamicSectionMainAxisDp,
                     runsHorizontally = runsHorizontally,
-                    modifier = Modifier.dockRunScroll(runsHorizontally, scrollState),
-                ) {
-                    staticSide(surfaceMetrics.surfaceMainAxisDp, true)
-                    DockSectionDivider(runsHorizontally = runsHorizontally)
-                    DockDynamicSection(
-                        dock = dock,
-                        entries = dynamicEntries,
-                        slotMetrics = surfaceMetrics.slotMetrics,
-                        mainAxisDp = surfaceMetrics.dynamicSectionMainAxisDp,
-                        runsHorizontally = runsHorizontally,
-                        appIconLoader = appIconLoader,
-                        onAction = presentation.interactions.onAction,
-                        onShowAllNotifications = onShowAllNotifications,
-                        scrollState = scrollState,
-                        clipAndScroll = false,
-                    )
-                }
-                if (overflowAffordance.showStart) {
-                    DockOverflowFade(runsHorizontally = runsHorizontally, atRunStart = true, color = fadeColor)
-                }
-                if (overflowAffordance.showEnd) {
-                    DockOverflowFade(runsHorizontally = runsHorizontally, atRunStart = false, color = fadeColor)
-                }
+                    appIconLoader = appIconLoader,
+                    onAction = presentation.interactions.onAction,
+                    onShowAllNotifications = onShowAllNotifications,
+                    suppressStartFade = true,
+                )
             }
         }
     }
@@ -419,13 +384,12 @@ internal fun DockSurfaceStrip(
 @Composable
 private fun DockSectionRun(
     runsHorizontally: Boolean,
-    modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
 ) {
     if (runsHorizontally) {
-        Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) { content() }
+        Row(verticalAlignment = Alignment.CenterVertically) { content() }
     } else {
-        Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) { content() }
+        Column(horizontalAlignment = Alignment.CenterHorizontally) { content() }
     }
 }
 

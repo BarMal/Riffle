@@ -1,17 +1,18 @@
 package com.riffle.core.domain.launcher.home
 
 data class DockModel(
+    /** How many pinned icons show at once before the static side scrolls. */
     val capacity: Int,
     val items: List<LauncherItem> = emptyList(),
     val isEnabled: Boolean = true,
     val showNotificationCards: Boolean = false,
     /**
-     * How many icons' worth of room the dynamic section holds onto once it has at least one entry,
-     * before the static side is sized -- see the class doc on the reservation this backs. Zero lets
-     * the static side fill the run and leaves the dynamic section to whatever is left, which can be
-     * nothing.
+     * How many notification icons show at once before that section scrolls, independent of
+     * [capacity] -- the two are separate budgets the user sets on their own terms, not a shared
+     * pool one side starves the other out of. Fewer notifications than this shrinks the section
+     * rather than padding it out to the full count; more scrolls.
      */
-    val dynamicSectionReservedSlotCount: Int = DEFAULT_DOCK_DYNAMIC_SECTION_RESERVED_SLOT_COUNT,
+    val notificationSlotCount: Int = DEFAULT_DOCK_NOTIFICATION_SLOT_COUNT,
     val iconSizeDp: Int = DEFAULT_DOCK_ICON_SIZE_DP,
     val backgroundAlphaPercent: Int = DEFAULT_DOCK_BACKGROUND_ALPHA_PERCENT,
     val visualEffect: DockVisualEffect = DockVisualEffect.FLAT,
@@ -89,9 +90,11 @@ enum class DockVisualEffect {
     OUTLINED,
 }
 
-const val DEFAULT_DOCK_DYNAMIC_SECTION_RESERVED_SLOT_COUNT = 1
-const val MIN_DOCK_DYNAMIC_SECTION_RESERVED_SLOT_COUNT = 0
-const val MAX_DOCK_DYNAMIC_SECTION_RESERVED_SLOT_COUNT = 5
+const val DEFAULT_DOCK_NOTIFICATION_SLOT_COUNT = 3
+const val MIN_DOCK_NOTIFICATION_SLOT_COUNT = 1
+const val MAX_DOCK_NOTIFICATION_SLOT_COUNT = 5
+const val MIN_DOCK_CAPACITY = 1
+const val MAX_DOCK_CAPACITY = 12
 const val DEFAULT_DOCK_ICON_SIZE_DP = 48
 const val MIN_DOCK_ICON_SIZE_DP = 32
 const val MAX_DOCK_ICON_SIZE_DP = 56

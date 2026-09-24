@@ -59,4 +59,20 @@ class DockSettingTest {
             ),
         )
     }
+
+    @Test
+    fun dockSizeSummaryShowsOnlyPinnedCountWhenNotificationsAreOff() {
+        assertEquals(
+            "Shows up to 7 pinned icons",
+            dockSizeSummaryText(capacity = 7, notificationSlotCount = 3, showNotificationCards = false),
+        )
+    }
+
+    @Test
+    fun dockSizeSummarySplitsTheTotalBetweenPinnedAndNotificationsWhenOn() {
+        assertEquals(
+            "Shows up to 10 icons: 7 pinned, 3 for notifications",
+            dockSizeSummaryText(capacity = 7, notificationSlotCount = 3, showNotificationCards = true),
+        )
+    }
 }

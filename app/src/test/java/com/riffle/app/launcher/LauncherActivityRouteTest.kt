@@ -153,7 +153,7 @@ class LauncherActivityRouteTest {
                 LauncherShellAction.SelectDockItemSpacing(spacingDp = 12),
                 LauncherShellAction.SelectDockCornerRadius(cornerRadiusDp = 20),
                 LauncherShellAction.SelectDockHomeControlsSpacing(spacingDp = 16),
-                LauncherShellAction.SelectDockDynamicSectionReservedSlots(slotCount = 2),
+                LauncherShellAction.SelectDockNotificationSlotCount(slotCount = 2),
                 LauncherShellAction.RemoveDockShortcut(LauncherItemId("dock")),
                 LauncherShellAction.MoveDockShortcut(
                     itemId = LauncherItemId("dock"),
