@@ -1,10 +1,12 @@
 package com.riffle.app.launcher
 
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Typography
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.riffle.app.launcher.designsystem.RiffleShapes
 import com.riffle.core.domain.launcher.settings.LauncherThemeAccent
 import com.riffle.core.domain.launcher.settings.LauncherThemeColors
 import com.riffle.core.domain.launcher.settings.LauncherThemeCornerStyle
@@ -242,16 +244,16 @@ class LauncherThemeTest {
 
     @Test
     fun cardShapeTokenVariesByPreset() {
-        assertEquals(RoundedCornerShape(0.dp), launcherCardShape(LauncherThemePreset.TERMINAL))
-        assertEquals(RoundedCornerShape(28.dp), launcherCardShape(LauncherThemePreset.GLASS))
-        assertEquals(RoundedCornerShape(24.dp), launcherCardShape(LauncherThemePreset.MATERIAL))
+        assertEquals(RiffleShapes.continuous(0.dp), launcherCardShape(LauncherThemePreset.TERMINAL))
+        assertEquals(RiffleShapes.continuous(28.dp), launcherCardShape(LauncherThemePreset.GLASS))
+        assertEquals(RiffleShapes.continuous(24.dp), launcherCardShape(LauncherThemePreset.MATERIAL))
     }
 
     @Test
     fun panelShapeTokenVariesByPreset() {
-        assertEquals(RoundedCornerShape(0.dp), launcherPanelShape(LauncherThemePreset.TERMINAL))
-        assertEquals(RoundedCornerShape(36.dp), launcherPanelShape(LauncherThemePreset.GLASS))
-        assertEquals(RoundedCornerShape(32.dp), launcherPanelShape(LauncherThemePreset.MATERIAL))
+        assertEquals(RiffleShapes.continuous(0.dp), launcherPanelShape(LauncherThemePreset.TERMINAL))
+        assertEquals(RiffleShapes.continuous(36.dp), launcherPanelShape(LauncherThemePreset.GLASS))
+        assertEquals(RiffleShapes.continuous(32.dp), launcherPanelShape(LauncherThemePreset.MATERIAL))
     }
 
     @Test
@@ -264,11 +266,11 @@ class LauncherThemeTest {
     @Test
     fun cornerOverrideTakesPrecedenceOverPresetShape() {
         assertEquals(
-            RoundedCornerShape(8.dp),
+            RiffleShapes.continuous(8.dp),
             launcherCardShape(LauncherThemePreset.GLASS, LauncherThemeCornerStyle.COMPACT),
         )
         assertEquals(
-            RoundedCornerShape(36.dp),
+            RiffleShapes.continuous(36.dp),
             launcherPanelShape(LauncherThemePreset.TERMINAL, LauncherThemeCornerStyle.ROUNDED),
         )
     }
@@ -282,6 +284,38 @@ class LauncherThemeTest {
         assertNotEquals(
             FontFamily.Monospace,
             launcherTypography(LauncherThemePreset.TERMINAL, LauncherThemeTypography.SYSTEM).bodyMedium.fontFamily,
+        )
+    }
+
+    @Test
+    fun typographyUsesLightDisplayAndTrackedMediumLabels() {
+        val typography = launcherTypography(LauncherThemePreset.MATERIAL)
+
+        assertEquals(FontWeight.Light, typography.displayLarge.fontWeight)
+        assertEquals(FontWeight.Light, typography.displaySmall.fontWeight)
+        assertEquals(FontWeight.Medium, typography.labelMedium.fontWeight)
+        assertTrue(typography.labelMedium.letterSpacing.value > Typography().labelMedium.letterSpacing.value)
+    }
+
+    @Test
+    fun monospaceSwapKeepsTheRiffleTypeTuning() {
+        val typography = launcherTypography(LauncherThemePreset.TERMINAL)
+
+        assertEquals(FontFamily.Monospace, typography.displayLarge.fontFamily)
+        assertEquals(FontWeight.Light, typography.displayLarge.fontWeight)
+        assertEquals(
+            launcherTypography(LauncherThemePreset.MATERIAL).labelSmall.letterSpacing,
+            typography.labelSmall.letterSpacing,
+        )
+    }
+
+    @Test
+    fun materialShapesGoSharpOnlyWhenTheCardCornerIsSharp() {
+        assertEquals(RiffleShapes.materialShapes(square = true), launcherMaterialShapes(LauncherThemePreset.TERMINAL))
+        assertEquals(RiffleShapes.materialShapes(), launcherMaterialShapes(LauncherThemePreset.MATERIAL))
+        assertEquals(
+            RiffleShapes.materialShapes(),
+            launcherMaterialShapes(LauncherThemePreset.TERMINAL, LauncherThemeCornerStyle.ROUNDED),
         )
     }
 }

@@ -24,6 +24,7 @@ import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.riffle.app.launcher.designsystem.RiffleShapes
 import com.riffle.core.domain.launcher.home.DockModel
 import com.riffle.core.domain.launcher.home.DockVisualEffect
 import com.riffle.core.domain.launcher.home.LauncherViewMode
@@ -71,7 +72,7 @@ class ThemeCustomizationTest {
         }
 
         composeRule.runOnIdle {
-            assertEquals(androidx.compose.foundation.shape.RoundedCornerShape(12.dp), panelShape)
+            assertEquals(RiffleShapes.continuous(12.dp), panelShape)
             assertEquals(FontFamily.Monospace, bodyFontFamily)
         }
         val lightPrimary = primary
@@ -82,7 +83,7 @@ class ThemeCustomizationTest {
 
         composeRule.runOnIdle {
             assertNotEquals(lightPrimary, primary)
-            assertEquals(androidx.compose.foundation.shape.RoundedCornerShape(12.dp), panelShape)
+            assertEquals(RiffleShapes.continuous(12.dp), panelShape)
             assertEquals(FontFamily.Monospace, bodyFontFamily)
         }
     }
