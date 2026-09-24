@@ -18,8 +18,9 @@ import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.produceState
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
@@ -142,16 +143,16 @@ internal fun rememberAdaptiveStageArtwork(
     val currentArtwork by rememberUpdatedState(artwork)
     val cached = remember(sourceKey, cache) { sourceKey?.let(cache::peek) }
     val initial = if (cached is ArtworkPeek.Cached) cached.value else null
-    val decoded by
-        produceState(initialValue = initial, sourceKey, cache) {
-            value =
-                when {
-                    sourceKey == null -> null
-                    cached is ArtworkPeek.Cached -> cached.value
-                    else -> withContext(Dispatchers.Default) { cache.getOrDecode(sourceKey, currentArtwork) }
-                }
-        }
-    return decoded
+    val decoded = remember(sourceKey, cache) { mutableStateOf(initial) }
+    LaunchedEffect(sourceKey, cache) {
+        decoded.value =
+            when {
+                sourceKey == null -> null
+                cached is ArtworkPeek.Cached -> cached.value
+                else -> withContext(Dispatchers.Default) { cache.getOrDecode(sourceKey, currentArtwork) }
+            }
+    }
+    return decoded.value
 }
 
 /** Immutable revision lookup consumed by card composition without hashing artwork payloads. */
