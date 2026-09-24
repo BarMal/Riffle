@@ -126,6 +126,9 @@ private fun CardsHomeSurface(
 ) {
     val dockInteractionExtentPx = remember { mutableIntStateOf(0) }
     val density = LocalDensity.current
+    // state.homeLayout.dock is the device class's one shared dock (#1205) -- the same model the grid
+    // modes draw -- so only what the mode derives at render time differs here: the dynamic entries
+    // select a stage and the static icons bring a backed stage forward.
     // Single source of truth for where the dock sits, mirroring StandardHome's own resolution --
     // the dock and the stage must agree on the edge just as they agree on what exists below.
     val dockPosition =

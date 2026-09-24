@@ -34,9 +34,10 @@ data class DockModel(
      * [com.riffle.core.domain.launcher.cards.AdaptiveStageTemplateVariant.dockPosition] applies,
      * falling back to [DockPosition.LEFT].
      *
-     * Per layout for free, because a [DockModel] already belongs to one [HomeLayout]. An edge that
-     * suits a tablet wastes width on a phone in portrait, and this is where the rest of the dock's
-     * configuration already answers that kind of question.
+     * Per device class, because there is one [DockModel] per device class, shared by every view
+     * mode on it ([HomeLayoutSet.docks], #1205). An edge that suits a tablet wastes width on a phone
+     * in portrait, and this is where the rest of the dock's configuration already answers that kind
+     * of question; it is never per mode, so the dock stays put while the mode changes.
      */
     val position: DockPosition? = null,
     /**

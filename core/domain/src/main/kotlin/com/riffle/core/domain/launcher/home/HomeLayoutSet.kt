@@ -13,6 +13,20 @@ enum class HomeLayoutDeviceClass {
     DESKTOP,
 }
 
+/**
+ * Every home layout Riffle holds: one per (view mode x device class), plus exactly one dock per
+ * device class.
+ *
+ * The dock is deliberately not per mode (#1205, docs/product/dock.md): the same pinned items, edge,
+ * size, appearance and dynamic-section budgets apply in Standard, Library and Cards alike, so it
+ * can stay put while the mode changes around it. [layouts] still stores a [HomeLayout] per key --
+ * its pages, template and settings are genuinely per mode -- but whatever dock a stored layout
+ * carries is not authoritative. Read layouts through [layoutFor] / [activeLayout], which always
+ * hand back the device class's shared dock, and write them through [withLayout] /
+ * [withActiveLayout], which store the layout's dock as that shared dock. That keeps every existing
+ * dock edit (pin, reorder, move to or from home, settings) working unchanged while writing to the
+ * one dock whatever mode it was made in.
+ */
 data class HomeLayoutSet(
     val activeKey: HomeLayoutKey,
     val layouts: Map<HomeLayoutKey, HomeLayout>,
@@ -29,6 +43,17 @@ data class HomeLayoutSet(
      * is where it always went before.
      */
     val lastNonCardsModeByDeviceClass: Map<HomeLayoutDeviceClass, LauncherViewMode> = emptyMap(),
+    /**
+     * The one dock each device class has, shared by every mode on it.
+     *
+     * Defaults to the dock of the mode each device class currently shows (see [docksChosenFrom]),
+     * which is what a set assembled from per-mode layouts -- a test fixture, or a caller that
+     * predates the shared dock -- means by "its dock". Decoding a stored set written before the
+     * dock was shared goes through [unifiedLegacyDocks] instead, which also rescues pins that only
+     * another mode's dock held.
+     */
+    val docks: Map<HomeLayoutDeviceClass, DockModel> =
+        docksChosenFrom(activeKey, layouts, preferredModesByDeviceClass),
 ) {
     val activeLayout: HomeLayout = layoutFor(activeKey)
 
@@ -38,15 +63,22 @@ data class HomeLayoutSet(
             ?: LauncherViewMode.STANDARD_APP_DRAWER
     }
 
-    fun layoutFor(key: HomeLayoutKey): HomeLayout = layouts[key] ?: defaultLayout(key)
+    /** [key]'s layout, carrying its device class's shared dock. */
+    fun layoutFor(key: HomeLayoutKey): HomeLayout =
+        (layouts[key] ?: defaultLayout(key)).withSharedDock(dockFor(key.deviceClass))
 
-    fun withActiveLayout(layout: HomeLayout): HomeLayoutSet =
-        copy(layouts = layouts + (activeKey to layout.copy(viewMode = activeKey.viewMode)))
+    /** Stores [layout] as the active one; its dock becomes the active device class's dock. */
+    fun withActiveLayout(layout: HomeLayout): HomeLayoutSet = withLayout(activeKey, layout)
 
+    /** Stores [layout] under [key]; its dock becomes [key]'s device class dock, in every mode. */
     fun withLayout(
         key: HomeLayoutKey,
         layout: HomeLayout,
-    ): HomeLayoutSet = copy(layouts = layouts + (key to layout.copy(viewMode = key.viewMode)))
+    ): HomeLayoutSet =
+        copy(
+            layouts = layouts + (key to layout.copy(viewMode = key.viewMode)),
+            docks = docks + (key.deviceClass to layout.dock),
+        )
 
     fun withPreferredMode(
         deviceClass: HomeLayoutDeviceClass,
@@ -56,7 +88,9 @@ data class HomeLayoutSet(
     fun selectMode(mode: LauncherViewMode): HomeLayoutSet =
         activeKey.copy(viewMode = mode)
             .let { key ->
-                val layout = layouts[key] ?: defaultLayout(key).copy(dock = activeLayout.dock)
+                // The dock is not part of what a mode owns: a layout created here shows the
+                // device class's shared dock through layoutFor, like every other.
+                val layout = layouts[key] ?: defaultLayout(key)
                 copy(
                     activeKey = key,
                     layouts = layouts + (key to layout),
