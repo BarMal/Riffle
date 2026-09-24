@@ -18,7 +18,10 @@ import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
@@ -50,6 +53,8 @@ import com.riffle.core.domain.launcher.settings.AdaptiveStageCardEffect
 import com.riffle.core.domain.launcher.settings.AdaptiveStageCardStackResolution
 import com.riffle.core.domain.launcher.settings.AdaptiveStageContentDensity
 import com.riffle.core.domain.launcher.settings.AdaptiveStageRendererCapabilities
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.security.MessageDigest
 import kotlin.math.max
 
@@ -101,10 +106,53 @@ internal class AdaptiveStageArtworkCache<Value : Any>(
         return decoded
     }
 
+    /**
+     * Whether [sourceKey] has already been decoded (successfully or not), and if so its value --
+     * a cheap, non-decoding lookup safe to call during composition.
+     */
+    fun peek(sourceKey: String): ArtworkPeek<Value> =
+        values[sourceKey]?.let { cached -> ArtworkPeek.Cached(cached.value) } ?: ArtworkPeek.Missing
+
     internal fun sizeForTest(): Int = values.size
 }
 
+/** Result of [AdaptiveStageArtworkCache.peek]. */
+internal sealed interface ArtworkPeek<out Value> {
+    data class Cached<Value>(val value: Value?) : ArtworkPeek<Value>
+
+    data object Missing : ArtworkPeek<Nothing>
+}
+
 private data class ArtworkCachePayload<Value>(val value: Value?)
+
+/**
+ * A card's notification artwork, decoded off the main thread (#1211). A cache hit is returned in
+ * the same frame; a miss renders `null` -- the card's app-colour tint, which every background
+ * source already falls back to -- until [Dispatchers.Default] has decoded the Base64 payload, so
+ * a burst of new notifications never decodes bitmaps inside composition. [sourceKey] is the card
+ * identity plus the artwork's content hash, so an unchanged payload is never decoded twice and a
+ * changed one is always re-decoded.
+ */
+@Composable
+internal fun rememberAdaptiveStageArtwork(
+    sourceKey: String?,
+    artwork: String?,
+    cache: AdaptiveStageArtworkCache<ImageBitmap>,
+): ImageBitmap? {
+    val currentArtwork by rememberUpdatedState(artwork)
+    val cached = remember(sourceKey, cache) { sourceKey?.let(cache::peek) }
+    val initial = if (cached is ArtworkPeek.Cached) cached.value else null
+    val decoded by
+        produceState(initialValue = initial, sourceKey, cache) {
+            value =
+                when {
+                    sourceKey == null -> null
+                    cached is ArtworkPeek.Cached -> cached.value
+                    else -> withContext(Dispatchers.Default) { cache.getOrDecode(sourceKey, currentArtwork) }
+                }
+        }
+    return decoded
+}
 
 /** Immutable revision lookup consumed by card composition without hashing artwork payloads. */
 internal fun interface AdaptiveStageArtworkRevisionLookup {

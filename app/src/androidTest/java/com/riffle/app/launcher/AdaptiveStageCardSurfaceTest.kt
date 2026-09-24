@@ -1757,21 +1757,30 @@ class AdaptiveStageCardSurfaceTest {
     }
 
     @Test
-    fun notificationStackKeepsEveryAvailableCardReachableBeyondConfiguredVisualDepth() {
+    fun notificationStackComposesOnlyTheConfiguredVisualDepthPlusOneEachSide() {
+        // #1211: composing every card regardless of depth violated the performance budget; cards
+        // beyond the window stay reachable through drag, keyboard and the focused card's
+        // Previous/Next accessibility actions.
         val resolution =
             AdaptiveStageAppearanceSettings().resolveCardStack(
                 viewport = AdaptiveStageViewportDp(widthDp = 800, heightDp = 1_200),
             )
+        val policy = resolution.layoutPolicy
+        val below = policy.maxVisibleDepth + 1
+        val above = (policy.aboveFocusDepth ?: policy.maxVisibleDepth) + 1
 
         val entries =
             adaptiveStageNotificationStackEntries(
                 resolution = resolution,
-                cardCount = 11,
-                activeCardIndex = 5f,
+                cardCount = 41,
+                activeCardIndex = 20f,
             )
 
-        assertEquals(11, entries.size)
-        assertEquals((0..10).toSet(), entries.map { entry -> entry.cardIndex }.toSet())
+        assertEquals(
+            ((20 - above).coerceAtLeast(0)..(20 + below).coerceAtMost(40)).toSet(),
+            entries.map { entry -> entry.cardIndex }.toSet(),
+        )
+        assertTrue(entries.size < 41)
     }
 
     private fun adaptiveStageTestApp(): InstalledApp =
