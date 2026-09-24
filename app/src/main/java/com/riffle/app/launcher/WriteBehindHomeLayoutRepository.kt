@@ -23,7 +23,8 @@ internal const val DEFAULT_HOME_LAYOUT_WRITE_DEBOUNCE_MILLIS = 250L
  * is never read back. Each save replaces it at once and schedules a write on [scope] (expected to
  * run off the main thread) after [debounceMillis], so a burst of edits costs one write. Writes are
  * serialized and always persist the newest set, so they may be coalesced but never land out of
- * order. [flush] (also run on `onStop`) writes whatever is pending without waiting for the debounce.
+ * order. [flush] writes whatever is pending without waiting for the debounce; `onStop` does the same
+ * but blocks until the write has landed (see [flushHomeLayoutBlocking]).
  */
 internal class WriteBehindHomeLayoutRepository(
     initialLayoutSet: HomeLayoutSet?,
@@ -63,8 +64,15 @@ internal class WriteBehindHomeLayoutRepository(
     /** Writes the newest unsaved layout set now, skipping the debounce. */
     fun flush(): Job = scope.launch { writePending() }
 
+    /** Writes the newest unsaved layout set, suspending until it has landed (or failed). */
+    suspend fun flushNow() {
+        writePending()
+    }
+
     override fun onStop(owner: LifecycleOwner) {
-        flush()
+        // Once onStop returns, a backgrounded launcher may be killed at any moment with no grace
+        // period, so a fire-and-forget flush could still lose the last edit. Wait for it instead.
+        flushHomeLayoutBlocking(this)
     }
 
     private suspend fun writePending() {
