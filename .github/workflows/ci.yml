@@ -85,6 +85,56 @@ jobs:
           disable-animations: true
           script: ./gradlew deviceVerify
 
+  screenshots:
+    # Renders every JVM screenshot test and uploads the PNGs so each PR has reviewable images.
+    # Record-only (not a merge gate) until goldens are committed; then CI turns comparison on with
+    # -Priffle.screenshots.verify=true. See docs/development/screenshot-testing.md.
+    name: Screenshots
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Record screenshots
+        run: >-
+          ./gradlew
+          :app:testDebugUnitTest --tests 'com.riffle.app.screenshots.*'
+          :app:recordRoborazziDebug
+
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots
+          path: app/src/test/screenshots/
+          retention-days: 14
+          if-no-files-found: warn
+
+      - name: Upload screenshot test report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshot-test-report
+          path: app/build/reports/tests/testDebugUnitTest/
+          retention-days: 14
+          if-no-files-found: ignore
+
   verify:
     name: Verify
     if: always()
