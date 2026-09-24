@@ -77,6 +77,19 @@ data class HomeLayoutSet(
         availability: LauncherViewModeAvailability,
     ): HomeLayoutSet = selectMode(availability.availableModeOrStandard(activeKey.deviceClass, mode))
 
+    /**
+     * Record [mode] as [deviceClass]'s preference, switching to it only when [deviceClass] is the
+     * device being held. A mode chosen for another device class applies when that device is next
+     * the active one.
+     */
+    fun withModeChosenFor(
+        deviceClass: HomeLayoutDeviceClass,
+        mode: LauncherViewMode,
+    ): HomeLayoutSet =
+        withPreferredMode(deviceClass = deviceClass, mode = mode).let { layouts ->
+            if (layouts.activeKey.deviceClass == deviceClass) layouts.selectMode(mode) else layouts
+        }
+
     fun selectDeviceClass(deviceClass: HomeLayoutDeviceClass): HomeLayoutSet =
         HomeLayoutKey(
             viewMode = preferredModesByDeviceClass[deviceClass] ?: activeKey.viewMode,

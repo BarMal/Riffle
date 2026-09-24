@@ -429,6 +429,8 @@ class MainActivity : ComponentActivity() {
         lifecycle.addObserver(activeNotificationRefreshCoordinator)
         lifecycle.addObserver(packageChangeObserver)
         lifecycle.addObserver(widgetHostGateway)
+        // Writes the home layout behind on stop, so backgrounding never leaves an edit only in memory.
+        lifecycle.addObserver(homeLayoutRepository)
         refreshHomeLayoutDeviceClass(source = "onCreate")
         observeHomeLayoutDeviceClass()
         startSystemUiSync(shellViewModel.state)

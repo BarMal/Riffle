@@ -1,3 +1,6 @@
+// Existing blocking DataStore access, predating the runBlocking ban (#1198); convert to suspend/write-behind.
+@file:Suppress("ForbiddenImport")
+
 package com.riffle.app.launcher
 
 import android.content.Context

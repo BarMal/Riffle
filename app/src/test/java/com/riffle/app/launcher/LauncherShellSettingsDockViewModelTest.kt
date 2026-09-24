@@ -21,10 +21,21 @@ import org.junit.Test
 
 class LauncherShellSettingsDockViewModelTest {
     @Test
-    fun changingDockEffectDoesNotOverwriteNewerDockAndGridSettingsInTheActiveProfile() {
+    fun changingDockEffectForAnotherDeviceClassLeavesTheActiveProfileUntouched() {
+        // Since #1198 the ViewModel's in-memory layout set is the only writer, so this guards the
+        // remaining half of the original #1188 contract: a Settings edit targeted at another device
+        // class must not overwrite the active profile's customised dock and grid.
         val phoneKey = HomeLayoutKey(LauncherViewMode.STANDARD_APP_DRAWER, HomeLayoutDeviceClass.PHONE)
         val foldableKey = HomeLayoutKey(LauncherViewMode.STANDARD_APP_DRAWER, HomeLayoutDeviceClass.FOLDABLE)
-        val initialFoldableLayout = HomeLayoutDefaults.standard(HomeLayoutDeviceClass.FOLDABLE)
+        val defaultFoldableLayout = HomeLayoutDefaults.standard(HomeLayoutDeviceClass.FOLDABLE)
+        val customisedFoldableLayout =
+            defaultFoldableLayout.copy(
+                settings =
+                    defaultFoldableLayout.settings.copy(
+                        grid = GridSettings(dimensions = GridDimensions(columns = 8, rows = 5)),
+                    ),
+                dock = defaultFoldableLayout.dock.copy(capacity = 7, iconSizeDp = 52),
+            )
         val repository =
             FakeHomeLayoutRepository().also { repo ->
                 repo.savedLayoutSet =
@@ -33,7 +44,7 @@ class LauncherShellSettingsDockViewModelTest {
                         layouts =
                             mapOf(
                                 phoneKey to HomeLayoutDefaults.standard(HomeLayoutDeviceClass.PHONE),
-                                foldableKey to initialFoldableLayout,
+                                foldableKey to customisedFoldableLayout,
                             ),
                     )
             }
@@ -43,16 +54,6 @@ class LauncherShellSettingsDockViewModelTest {
                 installedAppRepository = InstalledAppRepository { emptyList() },
                 homeLayoutRepository = repository,
             )
-        val persistedFoldableLayout =
-            initialFoldableLayout.copy(
-                settings =
-                    initialFoldableLayout.settings.copy(
-                        grid = GridSettings(dimensions = GridDimensions(columns = 8, rows = 5)),
-                    ),
-                dock = initialFoldableLayout.dock.copy(capacity = 7, iconSizeDp = 52),
-            )
-        repository.savedLayoutSet =
-            checkNotNull(repository.savedLayoutSet).withLayout(foldableKey, persistedFoldableLayout)
         val router = routerFor(viewModel)
 
         assertTrue(router.handle(LauncherShellAction.OpenSettings))
@@ -60,9 +61,9 @@ class LauncherShellSettingsDockViewModelTest {
         assertTrue(router.handle(LauncherShellAction.SelectDockVisualEffect(DockVisualEffect.ELEVATED)))
 
         val savedLayoutSet = checkNotNull(repository.savedLayoutSet)
-        assertEquals(persistedFoldableLayout, savedLayoutSet.layoutFor(foldableKey))
+        assertEquals(customisedFoldableLayout, savedLayoutSet.layoutFor(foldableKey))
         assertEquals(DockVisualEffect.ELEVATED, savedLayoutSet.layoutFor(phoneKey).dock.visualEffect)
-        assertEquals(persistedFoldableLayout, viewModel.state.value.homeLayout)
+        assertEquals(customisedFoldableLayout, viewModel.state.value.homeLayout)
     }
 
     @Test
