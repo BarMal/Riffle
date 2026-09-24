@@ -2,8 +2,6 @@ package com.riffle.app.launcher
 
 import androidx.compose.animation.core.AnimationSpec
 import androidx.compose.animation.core.LinearOutSlowInEasing
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
@@ -19,6 +17,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.platform.LocalDensity
+import com.riffle.app.launcher.designsystem.RiffleMotion
 import com.riffle.core.domain.launcher.home.GeneratedLauncherPageKind
 import com.riffle.core.domain.launcher.home.HomeLayout
 import com.riffle.core.domain.launcher.home.LauncherPage
@@ -227,11 +226,7 @@ private fun homePageSettleAnimation(policy: HomePageSettleMotionPolicy): Animati
             )
 
         HomePageSettleMotionPolicy.StandardSpring ->
-            spring(
-                dampingRatio = Spring.DampingRatioNoBouncy,
-                stiffness = Spring.StiffnessMediumLow,
-                visibilityThreshold = 0.001f,
-            )
+            RiffleMotion.smooth(visibilityThreshold = 0.001f)
     }
 
 private val HomeLayout.lastPageIndex: Int

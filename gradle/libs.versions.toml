@@ -13,6 +13,8 @@ lifecycle = "2.8.7"
 orgJson = "20250517"
 palette = "1.0.0"
 robolectric = "4.14.1"
+# Keep in step with the roborazzi-gradle-plugin dependency in build-logic/build.gradle.kts.
+roborazzi = "1.43.0"
 window = "1.4.0"
 
 [libraries]
@@ -34,6 +36,7 @@ androidx-compose-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling
 junit = { module = "junit:junit", version.ref = "junit" }
 org-json = { module = "org.json:json", version.ref = "orgJson" }
 robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
+roborazzi = { module = "io.github.takahirom.roborazzi:roborazzi", version.ref = "roborazzi" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
