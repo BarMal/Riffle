@@ -224,7 +224,6 @@ private fun SettingsDockPageContent(
     SettingsSection(title = "Dock") {
         DockSetting(
             dock = state.homeLayout.dock,
-            viewMode = state.homeLayout.viewMode,
             notificationAccessStatus = state.notificationAccessStatus,
             onAction = onAction,
         )

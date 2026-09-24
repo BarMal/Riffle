@@ -6,6 +6,7 @@ import com.riffle.core.domain.launcher.home.HomeLayoutDeviceClass
 import com.riffle.core.domain.launcher.home.HomeLayoutKey
 import com.riffle.core.domain.launcher.home.HomeLayoutSet
 import com.riffle.core.domain.launcher.home.LauncherViewMode
+import com.riffle.core.domain.launcher.home.withLegacyDocksUnified
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -15,13 +16,17 @@ fun encodeHomeLayoutSet(layoutSet: HomeLayoutSet): String =
         .put("active", encodeLayoutKey(layoutSet.activeKey))
         .put("preferredModes", encodeDeviceClassModes(layoutSet.preferredModesByDeviceClass))
         .put("lastNonCardsModes", encodeDeviceClassModes(layoutSet.lastNonCardsModeByDeviceClass))
+        .put("docks", encodeDocks(layoutSet))
         .put(
             "layouts",
             JSONArray(
-                layoutSet.layouts.map { (key, layout) ->
+                layoutSet.layouts.keys.map { key ->
+                    // Each layout is written with its device class's shared dock (and the pages
+                    // fitted to it), so the per-layout copy never disagrees with "docks" -- which is
+                    // what an older build, that only knows per-layout docks, would read.
                     JSONObject()
                         .put("key", encodeLayoutKey(key))
-                        .put("layout", encodeHomeLayoutObject(layout.copy(viewMode = key.viewMode)))
+                        .put("layout", encodeHomeLayoutObject(layoutSet.layoutFor(key)))
                 },
             ),
         )
@@ -43,6 +48,7 @@ internal fun JSONObject.toHomeLayoutSet(): HomeLayoutSet {
             .orEmpty()
     val preferredModes = optDeviceClassModes("preferredModes")
     val lastNonCardsModes = optDeviceClassModes("lastNonCardsModes")
+    val storedDocks = optJSONArray("docks")?.toDocks()
 
     return HomeLayoutSet(
         activeKey = activeKey,
@@ -51,6 +57,12 @@ internal fun JSONObject.toHomeLayoutSet(): HomeLayoutSet {
             preferredModes.ifEmpty { mapOf(activeKey.deviceClass to activeKey.viewMode) },
         lastNonCardsModeByDeviceClass = lastNonCardsModes,
     ).let { layoutSet ->
+        // A set written before the dock was shared (#1205) has no "docks": each mode kept its own,
+        // and unifying them may have to rescue pins only another mode's dock held.
+        storedDocks
+            ?.let { docks -> layoutSet.copy(docks = layoutSet.docks + docks) }
+            ?: layoutSet.withLegacyDocksUnified()
+    }.let { layoutSet ->
         layoutSet.takeIf { set -> set.activeKey in set.layouts }
             ?: layoutSet.copy(layouts = layoutSet.layouts + (activeKey to layoutSet.layoutFor(activeKey)))
     }

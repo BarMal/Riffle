@@ -643,6 +643,8 @@ private fun HomeLayoutSet.selectInitialDeviceClass(
             activeKey = key,
             layouts = layouts + (key to activeLayout.copy(viewMode = key.viewMode)),
             preferredModesByDeviceClass = preferredModesByDeviceClass + (key.deviceClass to key.viewMode),
+            // The one stored layout's dock travels with it to the device class it is now used on.
+            docks = docks + (key.deviceClass to activeLayout.dock),
         )
     } else {
         selectDeviceClass(deviceClass = deviceClass, availability = availability)
