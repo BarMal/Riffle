@@ -1,6 +1,7 @@
 package com.riffle.app.launcher
 
 import com.riffle.core.domain.launcher.LauncherShellState
+import com.riffle.core.domain.launcher.home.HomeEditMode
 import com.riffle.core.domain.launcher.home.HomeLayoutRepository
 import com.riffle.core.domain.launcher.home.HomePageEditResult
 import com.riffle.core.domain.launcher.home.HomePageEngine
@@ -19,6 +20,9 @@ internal class LauncherHomePageEditReducer(
         action: LauncherShellAction,
     ): LauncherShellState =
         when {
+            action is LauncherShellAction.OpenDefaultHome ->
+                state.withDefaultHomeOpened(homeLayoutRepository).withHomeScreenLibraryApps(homeLayoutRepository)
+
             action is LauncherShellAction.SelectLauncherTemplate ->
                 state.withSelectedHomeLayoutTemplate(
                     templateId = action.templateId,
@@ -105,4 +109,27 @@ internal class LauncherHomePageEditReducer(
         } else {
             this
         }
+}
+
+/**
+ * Home always returns to the first page of whichever layout/view mode is already on screen --
+ * never a mode switch. See #1176.
+ *
+ * Deliberately does not go through [withHomeLayout] (and its disk reload of the layout set):
+ * that reload discards the in-memory `homeLayoutSet` for whatever is currently persisted, then
+ * stamps the resulting layout with *that reloaded set's* active view mode -- so if the persisted
+ * active key were ever a step behind the mode actually on screen (in memory), pressing Home would
+ * silently fall back to whatever mode disk still remembers. Updating `homeLayoutSet` directly off
+ * the state already held in memory keeps the layout that's rewritten in step with the mode that's
+ * actually showing, no matter what disk has.
+ */
+private fun LauncherShellState.withDefaultHomeOpened(homeLayoutRepository: HomeLayoutRepository): LauncherShellState {
+    val resetLayout =
+        homeLayout.copy(
+            selectedPageId = homeLayout.pages.firstOrNull()?.id ?: homeLayout.selectedPageId,
+            editMode = HomeEditMode.Browsing,
+        )
+    val layoutSet = homeLayoutSet.withActiveLayout(resetLayout)
+    homeLayoutRepository.saveHomeLayoutSet(layoutSet)
+    return copy(homeLayout = layoutSet.activeLayout, homeLayoutSet = layoutSet)
 }
