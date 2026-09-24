@@ -86,6 +86,27 @@ internal fun dockSurfaceMetrics(
         return null
     }
 
+    val maxRunMainAxisDp =
+        minOf(availableMainAxisDp, dockMaxMainAxisDp(availableMainAxisDp, runsHorizontally)).coerceAtLeast(0)
+
+    // Notifications claim their room first; the static side is sized from whatever is left (see
+    // dockDynamicSectionMainAxisDp), not the other way around -- a busy notification section
+    // scrolls the pinned icons out of the way rather than getting squeezed itself.
+    val dynamicSectionMainAxisDp =
+        dockDynamicSectionMainAxisDp(
+            entryCount = dynamicEntryCount,
+            notificationSlotCount = dock.notificationSlotCount,
+            entryExtentDp = dock.iconSizeDp,
+            entrySpacingDp = dock.itemSpacingDp,
+            maxRunMainAxisDp = maxRunMainAxisDp,
+        )
+    val staticMaxRunMainAxisDp =
+        if (dynamicSectionMainAxisDp > 0) {
+            (maxRunMainAxisDp - dynamicSectionMainAxisDp - DOCK_SECTION_DIVIDER_MAIN_AXIS_DP).coerceAtLeast(0)
+        } else {
+            maxRunMainAxisDp
+        }
+
     val containerMainAxisDp =
         dockContainerMainAxisDp(
             availableMainAxisDp = availableMainAxisDp,
@@ -94,6 +115,7 @@ internal fun dockSurfaceMetrics(
             itemSpacingDp = dock.itemSpacingDp,
             backgroundSizing = dock.backgroundSizing,
             runsHorizontally = runsHorizontally,
+            runMainAxisCapDp = staticMaxRunMainAxisDp,
         )
     val contentViewportMainAxisDp =
         dockContentViewportMainAxisDp(
@@ -114,19 +136,7 @@ internal fun dockSurfaceMetrics(
                 itemSpacingDp = dock.itemSpacingDp,
                 availableContentMainAxisDp = contentViewportMainAxisDp,
             ),
-        dynamicSectionMainAxisDp =
-            dockDynamicSectionMainAxisDp(
-                entryCount = dynamicEntryCount,
-                notificationSlotCount = dock.notificationSlotCount,
-                entryExtentDp = dock.iconSizeDp,
-                entrySpacingDp = dock.itemSpacingDp,
-                staticContainerMainAxisDp = containerMainAxisDp,
-                maxRunMainAxisDp =
-                    minOf(
-                        availableMainAxisDp,
-                        dockMaxMainAxisDp(availableMainAxisDp, runsHorizontally),
-                    ).coerceAtLeast(0),
-            ),
+        dynamicSectionMainAxisDp = dynamicSectionMainAxisDp,
     )
 }
 

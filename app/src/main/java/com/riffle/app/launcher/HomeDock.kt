@@ -467,8 +467,17 @@ internal fun dockContainerMainAxisDp(
     itemSpacingDp: Int,
     backgroundSizing: DockBackgroundSizing,
     runsHorizontally: Boolean = true,
+    /**
+     * A further ceiling on the run, already measured against the screen by the caller -- how much
+     * room the dynamic section's own priority has left the static side, once notifications have
+     * taken what they need. `null` for every caller that predates the dynamic section, which leaves
+     * this exactly the cap [dockMaxMainAxisDp] would compute on its own.
+     */
+    runMainAxisCapDp: Int? = null,
 ): Int {
-    val maxDockMainAxis = min(availableMainAxisDp, dockMaxMainAxisDp(availableMainAxisDp, runsHorizontally))
+    val maxDockMainAxis =
+        runMainAxisCapDp?.let { cap -> min(availableMainAxisDp, cap) }
+            ?: min(availableMainAxisDp, dockMaxMainAxisDp(availableMainAxisDp, runsHorizontally))
     if (backgroundSizing == DockBackgroundSizing.FIXED) {
         return maxDockMainAxis
     }
@@ -485,12 +494,12 @@ internal fun dockContainerMainAxisDp(
 /**
  * How much of the dock's run the dynamic section gets.
  *
- * The static side is sized on its own settings (capacity), never shrunk to make room here -- the
- * two sides are independent budgets the user sets separately, not a shared pool the busier one
- * starves the other out of. What actually shows is capped to [notificationSlotCount] tiles' worth
+ * Notifications go first: what actually shows is capped to [notificationSlotCount] tiles' worth
  * (fewer entries than that shrinks the section instead of padding it out; more scrolls, see
- * [DockDynamicSection]), and [staticContainerMainAxisDp]/[maxRunMainAxisDp] only clamp the result
- * so the whole strip never draws wider than the screen has -- not to trade room between sections.
+ * [DockDynamicSection]), drawn in full whenever the run has room for it -- the static side is what
+ * gives way, sized afterwards from whatever this leaves (see [dockContainerMainAxisDp]'s
+ * `runMainAxisCapDp`), not the other way around. [maxRunMainAxisDp] only clamps this section's own
+ * result so the whole strip never draws wider than the screen has.
  *
  * [maxRunMainAxisDp] is taken as already capped for the same reason [dockContentViewportMainAxisDp]
  * takes its own: how long a run may get depends on which way it runs, and only the caller knows
@@ -502,7 +511,6 @@ internal fun dockDynamicSectionMainAxisDp(
     notificationSlotCount: Int,
     entryExtentDp: Int,
     entrySpacingDp: Int,
-    staticContainerMainAxisDp: Int,
     maxRunMainAxisDp: Int,
 ): Int {
     val visibleCount = entryCount.coerceAtMost(notificationSlotCount.coerceAtLeast(0))
@@ -510,7 +518,7 @@ internal fun dockDynamicSectionMainAxisDp(
         return 0
     }
     val wanted = (visibleCount * entryExtentDp) + ((visibleCount - 1) * entrySpacingDp.coerceAtLeast(0))
-    val room = maxRunMainAxisDp - staticContainerMainAxisDp - DOCK_SECTION_DIVIDER_MAIN_AXIS_DP
+    val room = maxRunMainAxisDp - DOCK_SECTION_DIVIDER_MAIN_AXIS_DP
     return min(wanted, room).coerceAtLeast(0)
 }
 

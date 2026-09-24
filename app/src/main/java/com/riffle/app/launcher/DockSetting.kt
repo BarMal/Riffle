@@ -177,7 +177,11 @@ internal fun dockSizeSummaryText(
         "Shows up to $capacity pinned icons"
     }
 
-/** How many pinned icons show before the static side scrolls, independent of notification space. */
+/**
+ * The ceiling on how many pinned icons show before the static side scrolls -- a setting independent
+ * of notification space, though a busy notification section can still leave the static side less
+ * room than this alone would draw, scrolling the rest.
+ */
 @Composable
 private fun DockCapacitySetting(
     capacity: Int,
