@@ -20,6 +20,46 @@ class WriteBehindHomeLayoutRepositoryTest {
     private val cards = library.selectMode(LauncherViewMode.CARD_INTERFACE)
 
     @Test
+    fun theStopFlushReturnsOnlyOnceThePendingWriteHasLanded() {
+        val persisted = mutableListOf<HomeLayoutSet>()
+        val repository =
+            WriteBehindHomeLayoutRepository(
+                initialLayoutSet = standard,
+                persist = { layoutSet ->
+                    delay(SLOW_WRITE_MILLIS)
+                    persisted += layoutSet
+                },
+                scope = CoroutineScope(Job()),
+                // Far longer than the test: only the stop flush can write this edit.
+                debounceMillis = NEVER_DEBOUNCE_MILLIS,
+            )
+
+        repository.saveHomeLayoutSet(cards)
+        flushHomeLayoutBlocking(repository)
+
+        // No join: the blocking flush itself guarantees the write is durable when it returns.
+        assertEquals(listOf(cards), persisted)
+        assertFalse(repository.hasPendingWrite)
+    }
+
+    @Test
+    fun aStopFlushThatTimesOutLeavesTheEditPendingForTheNextWrite() {
+        val repository =
+            WriteBehindHomeLayoutRepository(
+                initialLayoutSet = standard,
+                persist = { delay(NEVER_DEBOUNCE_MILLIS) },
+                scope = CoroutineScope(Job()),
+                debounceMillis = NEVER_DEBOUNCE_MILLIS,
+            )
+
+        repository.saveHomeLayoutSet(cards)
+        flushHomeLayoutBlocking(repository, timeoutMillis = SHORT_TIMEOUT_MILLIS)
+
+        assertEquals(cards, repository.loadHomeLayoutSet())
+        assertTrue(repository.hasPendingWrite)
+    }
+
+    @Test
     fun readsServeTheLoadedSetWithoutTouchingStorage() {
         val repository =
             WriteBehindHomeLayoutRepository(
@@ -165,6 +205,8 @@ class WriteBehindHomeLayoutRepositoryTest {
 
     private companion object {
         const val SLOW_WRITE_MILLIS = 20L
+        const val SHORT_TIMEOUT_MILLIS = 50L
+        const val NEVER_DEBOUNCE_MILLIS = 3_600_000L
         const val LONG_DEBOUNCE_MILLIS = 60_000L
     }
 }
