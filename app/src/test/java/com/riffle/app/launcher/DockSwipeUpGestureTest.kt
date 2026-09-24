@@ -3,10 +3,23 @@ package com.riffle.app.launcher
 import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.settings.LauncherGestureAction
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class DockSwipeUpGestureTest {
+    @Test
+    fun swipeUpTriggersAtItsDpThresholdResolvedToPixels() {
+        // 30.5dp at 2.625x: the historical 80px.
+        assertFalse(dockSwipeUpTriggered(accumulatedVerticalDragPx = -79f))
+        assertTrue(dockSwipeUpTriggered(accumulatedVerticalDragPx = -81f))
+        // A denser display needs more pixels for the same physical swipe.
+        assertFalse(dockSwipeUpTriggered(accumulatedVerticalDragPx = -81f, thresholdPx = 30.5f * 3.5f))
+        // Downward travel never triggers a swipe-up.
+        assertFalse(dockSwipeUpTriggered(accumulatedVerticalDragPx = 200f))
+    }
+
     @Test
     fun exitAdaptiveStageMapsToLeavingCardsWhichPicksItsOwnDestination() {
         assertEquals(

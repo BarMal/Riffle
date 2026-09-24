@@ -26,7 +26,7 @@ class DockSwipeUpGestureInteractionTest {
 
         composeRule.onNodeWithTag(TEST_TAG).performTouchInput {
             down(Offset(width / 2f, height - 1f))
-            moveBy(Offset(0f, -150f))
+            moveBy(Offset(0f, -PAST_THRESHOLD_DP.dp.toPx()))
             up()
         }
 
@@ -39,7 +39,7 @@ class DockSwipeUpGestureInteractionTest {
 
         composeRule.onNodeWithTag(TEST_TAG).performTouchInput {
             down(Offset(width / 2f, height - 1f))
-            moveBy(Offset(0f, -30f))
+            moveBy(Offset(0f, -BELOW_THRESHOLD_DP.dp.toPx()))
             up()
         }
 
@@ -78,7 +78,7 @@ class DockSwipeUpGestureInteractionTest {
 
         composeRule.onNodeWithTag(TEST_TAG).performTouchInput {
             down(Offset(width / 2f, height - 1f))
-            moveBy(Offset(0f, -150f))
+            moveBy(Offset(0f, -PAST_THRESHOLD_DP.dp.toPx()))
             up()
         }
 
@@ -106,5 +106,10 @@ class DockSwipeUpGestureInteractionTest {
 
     private companion object {
         const val TEST_TAG = "dock-swipe-up"
+
+        // The threshold is GestureThresholds.DOCK_SWIPE_UP_DP past the touch slop; drags are in
+        // dp too so they mean the same physical swipe at any test-device density.
+        const val PAST_THRESHOLD_DP = 60f
+        const val BELOW_THRESHOLD_DP = 11f
     }
 }
