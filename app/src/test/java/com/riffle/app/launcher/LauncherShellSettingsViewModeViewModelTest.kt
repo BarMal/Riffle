@@ -21,12 +21,16 @@ import org.junit.Test
 
 /**
  * Choosing a view mode in settings picks which layout is active. It is not an edit of the layout
- * that happens to be showing, and it must not carry that layout into the mode being switched to --
- * every mode keeps its own pages and its own dock.
+ * that happens to be showing, and it must not carry that layout's pages into the mode being switched
+ * to -- every mode keeps its own pages.
+ *
+ * The dock is the exception (#1205): there is one per device class, shared by every mode, so a
+ * mode switch shows the same dock on both sides of it. These tests used to assert that each mode
+ * kept a dock of its own; that premise was removed deliberately, so they now pin the shared dock.
  */
 class LauncherShellSettingsViewModeViewModelTest {
     @Test
-    fun switchingModeFromSettingsKeepsTheOtherModesDock() {
+    fun switchingModeFromSettingsKeepsTheSharedDock() {
         val repository = repositoryWithBothModes()
         val viewModel = viewModelFor(repository)
 
@@ -36,11 +40,11 @@ class LauncherShellSettingsViewModeViewModelTest {
         )
 
         assertEquals(LauncherViewMode.HOME_SCREEN_LIBRARY, viewModel.state.value.homeLayout.viewMode)
-        assertEquals(libraryDock.items, viewModel.state.value.homeLayout.dock.items)
+        assertEquals(standardDock.items, viewModel.state.value.homeLayout.dock.items)
     }
 
     @Test
-    fun switchingModeFromSettingsLeavesTheModeItCameFromAlone() {
+    fun switchingModeFromSettingsLeavesEveryModeOnTheSameDock() {
         val repository = repositoryWithBothModes()
         val viewModel = viewModelFor(repository)
 
@@ -51,6 +55,7 @@ class LauncherShellSettingsViewModeViewModelTest {
 
         val saved = checkNotNull(repository.savedLayoutSet)
         assertEquals(standardDock.items, saved.layoutFor(standardKey).dock.items)
+        assertEquals(standardDock.items, saved.layoutFor(libraryKey).dock.items)
     }
 
     @Test
@@ -70,7 +75,26 @@ class LauncherShellSettingsViewModeViewModelTest {
             LauncherShellAction.SelectLauncherViewMode(LauncherViewMode.HOME_SCREEN_LIBRARY),
         )
 
-        assertEquals(libraryDock.items, viewModel.state.value.homeLayout.dock.items)
+        assertEquals(standardDock.items, viewModel.state.value.homeLayout.dock.items)
+    }
+
+    @Test
+    fun aDockSettingChangedInOneModeAppliesInTheOther() {
+        val repository = repositoryWithBothModes()
+        val viewModel = viewModelFor(repository)
+
+        viewModel.onNavigationActionSelected(ShellNavigationAction.OpenSettings)
+        viewModel.onHomePageEdited(
+            LauncherShellAction.SelectLauncherViewMode(LauncherViewMode.HOME_SCREEN_LIBRARY),
+        )
+        viewModel.onDockEdited(LauncherShellAction.SelectDockCapacity(capacity = 6))
+        viewModel.onHomePageEdited(
+            LauncherShellAction.SelectLauncherViewMode(LauncherViewMode.STANDARD_APP_DRAWER),
+        )
+
+        assertEquals(LauncherViewMode.STANDARD_APP_DRAWER, viewModel.state.value.homeLayout.viewMode)
+        assertEquals(6, viewModel.state.value.homeLayout.dock.capacity)
+        assertEquals(6, checkNotNull(repository.savedLayoutSet).layoutFor(libraryKey).dock.capacity)
     }
 
     private fun repositoryWithBothModes(): FakeHomeLayoutRepository =

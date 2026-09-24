@@ -13,6 +13,7 @@ import com.riffle.core.domain.launcher.home.LauncherTemplateId
 import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.home.LauncherViewModeAvailability
 import com.riffle.core.domain.launcher.home.seedHomeLayout
+import com.riffle.core.domain.launcher.home.withLayoutKeepingDock
 import com.riffle.core.domain.launcher.modeSwitchTargetDeviceClass
 
 /**
@@ -39,9 +40,10 @@ internal fun LauncherShellState.withHomeLayout(
 /**
  * Choose which of the per-mode layouts applies.
  *
- * A mode is not a field of a layout. Every mode has a layout of its own, with its own pages and its
- * own dock, and choosing one moves the selection between them -- the layout on screen is saved
- * where it belongs and left there, never written into the mode being switched to.
+ * A mode is not a field of a layout. Every mode has a layout of its own, with its own pages, and
+ * choosing one moves the selection between them -- the layout on screen is saved where it belongs
+ * and left there, never written into the mode being switched to. The dock is the exception: there is
+ * one per device class, shared by every mode, so it is the same before and after the switch (#1205).
  *
  * The choice belongs to [targetDeviceClass]. From Settings that is whichever device class is being
  * configured, which can be another device's layout: choosing a mode there records the preference for
@@ -105,7 +107,9 @@ internal fun LauncherShellState.withSelectedHomeLayoutTemplate(
         val updatedLayoutSet =
             homeLayoutSet
                 .withActiveLayout(homeLayout)
-                .withLayout(key = targetKey, layout = selectedLayout)
+                // A template seeds pages; the dock is shared by every mode on the device and keeps
+                // what the user built rather than taking the seed's default (#1205).
+                .withLayoutKeepingDock(key = targetKey, layout = selectedLayout)
                 .withModeChosenFor(deviceClass = targetDeviceClass, mode = mode)
 
         homeLayoutRepository.saveHomeLayoutSet(updatedLayoutSet)

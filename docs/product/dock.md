@@ -1,7 +1,7 @@
 # The dock
 
-The dock is Riffle's central shortcut and recents surface. There is **one** dock, shared by every
-view mode, configured per layout. This document is the target it is being built toward and the
+The dock is Riffle's central shortcut and recents surface. There is **one dock per device class,
+shared by every mode**. This document is the target it is being built toward and the
 honest state of it today; where the two differ, the target wins.
 
 ## What the dock is
@@ -20,11 +20,32 @@ exist.
 
 ## Target behaviour
 
-### One dock, every layout
+### One dock per device class, shared by every mode
 
-The dock is available in every view mode. It is configured per layout, because a
-`DockModel` belongs to a `HomeLayout` and a layout belongs to a
-(view mode × device class) key — an edge that suits a tablet wastes width on a phone in portrait.
+The dock is available in every view mode, and it is the **same** dock in each: the same pinned
+items, edge, size, appearance and dynamic-section budgets (#1205). `HomeLayoutSet.docks` holds one
+`DockModel` per device class; no dock configuration is stored per mode. Pinning, reordering or
+moving an item to or from home, and every dock setting, edits that one dock whatever mode it was
+made in, so a pin made in Library shows in Cards and Standard at once.
+
+It is per device class, not global, because an edge that suits a tablet wastes width on a phone in
+portrait.
+
+Anything that must differ by mode is derived from the active mode when the dock is drawn, never
+stored. Today that is only what a tap does (see below): select a stage in Cards, open the app
+elsewhere.
+
+Because the edge is shared, the dock is offered only the edges every mode can draw it on — left,
+right and bottom. The top edge, which only Cards could draw, is no longer offered.
+
+#### Migrating per-mode docks
+
+Layouts written before #1205 stored a dock per (mode × device class). On decode, each device class
+takes the dock of the mode it was showing, so any conflicting setting takes that mode's value (a
+top edge comes down to the bottom). Nothing pinned is dropped: an item only another mode's dock
+(or dock panel) held is placed on that mode's own first home page with a free cell — or on the
+showing mode's pages when it came from Cards, which draws no home grid — and whatever finds no free
+cell is gathered into a **From dock** folder.
 
 ### Anchored, with space reserved for it
 
@@ -40,7 +61,8 @@ stays where they put it rather than mirroring in a right-to-left locale.
 
 ### Sized by settings
 
-Icon size, item spacing, corner radius, background alpha and sizing are per-layout settings, and
+Icon size, item spacing, corner radius, background alpha and sizing are per-device-class dock
+settings, shared by every mode, and
 the dock's extent follows from them rather than being fixed.
 
 ### Static and dynamic sections
@@ -48,7 +70,7 @@ the dock's extent follows from them rather than being fixed.
 The **static** section is what the user pinned. It always shows. A tap opens the item.
 
 The **dynamic** section shows an entry when **a notification has arrived** for an app the dock is
-not already showing. It is opt-in, per layout. Its meaning is "this has something waiting", not
+not already showing. It is opt-in, per device class. Its meaning is "this has something waiting", not
 "this is a list of things you can go to".
 
 What a tap *does* depends on where the content lives, and this holds on both sides:
@@ -62,7 +84,7 @@ on the icon's long-press menu either way. The badge is the tell: a badged pinned
 tap will show, an unbadged one opens.
 
 The two sections are sized from two independent, per-layout settings rather than negotiating a
-shared run between them: **capacity** caps how many pinned icons show before the static side
+shared run between them (both per device class, shared by every mode): **capacity** caps how many pinned icons show before the static side
 scrolls, and **notification slot count** caps how many notification icons show before the dynamic
 section scrolls. Neither setting shrinks the other -- a dock busy with pinned apps never squeezes
 notifications out, and a dock with several notifications never shoves the pinned icons along. A
@@ -117,7 +139,7 @@ section does that job, so the rail is gone (#1159).
 
 | Target | State |
 | --- | --- |
-| One dock, every layout | Renders in every mode, Cards through its own path (`StandardHomeDockOnlySurface`) rather than the shared frame — but that path now resolves and follows the same edge |
+| One dock per device class, shared by every mode | Model done (#1205): one `DockModel` per device class, per-mode docks migrated. Rendering still draws it through two paths — the grid frame and Cards' `StandardHomeDockOnlySurface` — both reading that one model; a single dock host outside the mode surface is a follow-up |
 | Anchors to any edge, space reserved | Done for grid modes (#1148–#1152, #1165) and for Cards — both resolve through `resolveDockPosition`, and `dockInteractionRegionExtentDp` reserves a width for a side edge, a height for top/bottom |
 | Default edge per device class | Done for the standard dock (#1165) — phone bottom, wide left-edge rail, a chosen edge wins. Cards follows the same resolution now |
 | Sized by settings | Done |
