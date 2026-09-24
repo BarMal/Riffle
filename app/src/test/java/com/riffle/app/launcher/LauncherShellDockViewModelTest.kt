@@ -239,7 +239,7 @@ class LauncherShellDockViewModelTest {
     }
 
     @Test
-    fun updatesDockDynamicSectionReservedSlotsAndSavesLayout() {
+    fun updatesDockNotificationSlotCountAndSavesLayout() {
         val repository = FakeHomeLayoutRepository()
         val viewModel =
             LauncherShellViewModel(
@@ -247,9 +247,9 @@ class LauncherShellDockViewModelTest {
                 homeLayoutRepository = repository,
             )
 
-        viewModel.onDockEdited(LauncherShellAction.SelectDockDynamicSectionReservedSlots(slotCount = 2))
+        viewModel.onDockEdited(LauncherShellAction.SelectDockNotificationSlotCount(slotCount = 2))
 
-        assertEquals(2, viewModel.state.value.homeLayout.dock.dynamicSectionReservedSlotCount)
+        assertEquals(2, viewModel.state.value.homeLayout.dock.notificationSlotCount)
         assertEquals(viewModel.state.value.homeLayout, repository.savedLayout)
     }
 

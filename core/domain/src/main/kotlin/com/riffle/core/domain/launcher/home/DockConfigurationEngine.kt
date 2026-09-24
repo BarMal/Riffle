@@ -123,14 +123,15 @@ class DockConfigurationEngine {
         layout: HomeLayout,
         capacity: Int,
     ): DockEditResult =
-        when {
-            capacity < MIN_DOCK_CAPACITY -> DockEditResult.Rejected(DockEditRejectionReason.INVALID_CAPACITY)
-            else ->
+        when (capacity) {
+            in MIN_DOCK_CAPACITY..MAX_DOCK_CAPACITY ->
                 DockEditResult.Updated(
                     layout.copy(
                         dock = layout.dock.copy(capacity = capacity),
                     ),
                 )
+
+            else -> DockEditResult.Rejected(DockEditRejectionReason.INVALID_CAPACITY)
         }
 
     fun setDockIconSize(
@@ -219,17 +220,17 @@ class DockConfigurationEngine {
             else -> DockEditResult.Rejected(DockEditRejectionReason.INVALID_ITEM_SPACING)
         }
 
-    fun setDockDynamicSectionReservedSlots(
+    fun setDockNotificationSlotCount(
         layout: HomeLayout,
         slotCount: Int,
     ): DockEditResult =
         when (slotCount) {
-            in MIN_DOCK_DYNAMIC_SECTION_RESERVED_SLOT_COUNT..MAX_DOCK_DYNAMIC_SECTION_RESERVED_SLOT_COUNT ->
+            in MIN_DOCK_NOTIFICATION_SLOT_COUNT..MAX_DOCK_NOTIFICATION_SLOT_COUNT ->
                 DockEditResult.Updated(
-                    layout.copy(dock = layout.dock.copy(dynamicSectionReservedSlotCount = slotCount)),
+                    layout.copy(dock = layout.dock.copy(notificationSlotCount = slotCount)),
                 )
 
-            else -> DockEditResult.Rejected(DockEditRejectionReason.INVALID_DYNAMIC_SECTION_RESERVED_SLOTS)
+            else -> DockEditResult.Rejected(DockEditRejectionReason.INVALID_NOTIFICATION_SLOT_COUNT)
         }
 
     fun setDockHomeControlsSpacing(
@@ -245,8 +246,6 @@ class DockConfigurationEngine {
             else -> DockEditResult.Rejected(DockEditRejectionReason.INVALID_ITEM_SPACING)
         }
 }
-
-private const val MIN_DOCK_CAPACITY = 0
 
 /** Fixed rather than generated: a dock has at most one panel, so its page needs no unique id. */
 private const val DOCK_PANEL_PAGE_ID = "dock-panel"

@@ -302,8 +302,8 @@ class LauncherActionDomainTest {
                     LauncherShellAction.SelectDockHomeControlsSpacing(spacingDp = 16),
                 ),
                 activity(
-                    "SelectDockDynamicSectionReservedSlots",
-                    LauncherShellAction.SelectDockDynamicSectionReservedSlots(slotCount = 2),
+                    "SelectDockNotificationSlotCount",
+                    LauncherShellAction.SelectDockNotificationSlotCount(slotCount = 2),
                 ),
                 app("AppDrawerQueryChanged", LauncherShellAction.AppDrawerQueryChanged("query")),
                 app("RefreshInstalledApps", LauncherShellAction.RefreshInstalledApps),

@@ -129,7 +129,7 @@ internal fun Dock(
     }
 }
 
-@Suppress("LongMethod", "LongParameterList", "CyclomaticComplexMethod")
+@Suppress("LongMethod")
 @Composable
 internal fun DockSlotStrip(
     dock: DockModel,
@@ -145,13 +145,8 @@ internal fun DockSlotStrip(
     // there reads as scrollability that isn't there and, worse, draws over the icon run rather than
     // the dock's own background (#1174). Only the true outer edge of the whole strip earns a fade.
     suppressEndFade: Boolean = false,
-    scrollState: ScrollState = rememberScrollState(),
-    // False when a caller is scrolling this strip together with content beside it (the dynamic
-    // section) as one continuous run -- see DockSurfaceStrip. The strip then renders at its natural
-    // content width and leaves clipping, scrolling and the overflow fades to that shared run, rather
-    // than scrolling itself independently of what sits next to it.
-    clipAndScroll: Boolean = true,
 ) {
+    val scrollState = rememberScrollState()
     val dragState = remember { mutableStateOf<DockDragState?>(null) }
     val moveToHomeItemId = remember { mutableStateOf<LauncherItemId?>(null) }
     val homeLayout = presentation.interactions.homeLayout
@@ -179,19 +174,19 @@ internal fun DockSlotStrip(
     val runsHorizontally = position.isHorizontalEdge
     val contentMainAxisDp = dockSlotContentMainAxisDp(renderedSlotCount, slotMetrics).dp
 
-    val slots: @Composable () -> Unit = {
+    Box(
+        modifier =
+            Modifier
+                .dockRunSize(runsHorizontally, contentViewportMainAxisDp.dp)
+                .clipToBounds(),
+        contentAlignment = Alignment.Center,
+    ) {
         DockSlotRun(
             runsHorizontally = runsHorizontally,
             modifier =
                 Modifier
                     .dockRunSize(runsHorizontally, contentMainAxisDp)
-                    .then(
-                        if (clipAndScroll) {
-                            Modifier.dockRunScroll(runsHorizontally, scrollState)
-                        } else {
-                            Modifier
-                        },
-                    ),
+                    .dockRunScroll(runsHorizontally, scrollState),
             itemSpacingDp = slotMetrics.itemSpacingDp,
         ) {
             repeat(renderedSlotCount) { index ->
@@ -243,26 +238,13 @@ internal fun DockSlotStrip(
                 }
             }
         }
-    }
 
-    if (clipAndScroll) {
-        Box(
-            modifier =
-                Modifier
-                    .dockRunSize(runsHorizontally, contentViewportMainAxisDp.dp)
-                    .clipToBounds(),
-            contentAlignment = Alignment.Center,
-        ) {
-            slots()
-            if (overflowAffordance.showStart) {
-                DockOverflowFade(runsHorizontally = runsHorizontally, atRunStart = true, color = fadeColor)
-            }
-            if (overflowAffordance.showEnd && !suppressEndFade) {
-                DockOverflowFade(runsHorizontally = runsHorizontally, atRunStart = false, color = fadeColor)
-            }
+        if (overflowAffordance.showStart) {
+            DockOverflowFade(runsHorizontally = runsHorizontally, atRunStart = true, color = fadeColor)
         }
-    } else {
-        slots()
+        if (overflowAffordance.showEnd && !suppressEndFade) {
+            DockOverflowFade(runsHorizontally = runsHorizontally, atRunStart = false, color = fadeColor)
+        }
     }
 
     moveToHomeItemId.value?.let { itemId ->
@@ -314,13 +296,13 @@ private fun DockSlotRun(
 }
 
 /** Sizes along the dock's run and leaves the other axis to the content. */
-internal fun Modifier.dockRunSize(
+private fun Modifier.dockRunSize(
     runsHorizontally: Boolean,
     mainAxis: Dp,
 ): Modifier = if (runsHorizontally) width(mainAxis) else height(mainAxis)
 
 @Composable
-internal fun Modifier.dockRunScroll(
+private fun Modifier.dockRunScroll(
     runsHorizontally: Boolean,
     scrollState: ScrollState,
 ): Modifier = if (runsHorizontally) horizontalScroll(scrollState) else verticalScroll(scrollState)
@@ -485,13 +467,8 @@ internal fun dockContainerMainAxisDp(
     itemSpacingDp: Int,
     backgroundSizing: DockBackgroundSizing,
     runsHorizontally: Boolean = true,
-    reservedDynamicSectionMainAxisDp: Int = 0,
 ): Int {
-    val maxDockMainAxis =
-        (
-            min(availableMainAxisDp, dockMaxMainAxisDp(availableMainAxisDp, runsHorizontally)) -
-                reservedDynamicSectionMainAxisDp.coerceAtLeast(0)
-        ).coerceAtLeast(0)
+    val maxDockMainAxis = min(availableMainAxisDp, dockMaxMainAxisDp(availableMainAxisDp, runsHorizontally))
     if (backgroundSizing == DockBackgroundSizing.FIXED) {
         return maxDockMainAxis
     }
@@ -506,16 +483,14 @@ internal fun dockContainerMainAxisDp(
 }
 
 /**
- * How much of the dock's run the dynamic section gets, once the static side has had its share.
+ * How much of the dock's run the dynamic section gets.
  *
- * The static side is the one the user built, so it is sized first; the dynamic section takes what
- * is left. That ordering is the point -- notifications come and go, and a section that sized
- * itself first would shove the pinned icons along the dock every time one arrived. The static
- * side's own share is capped ahead of time by [dockDynamicSectionReservedMainAxisDp] (passed to
- * [dockContainerMainAxisDp] as `reservedDynamicSectionMainAxisDp`) whenever there is at least one
- * entry to show, so "what is left" never collapses to nothing just because the static side is
- * full: the two sections' shares stay stable across individual notifications arriving or leaving,
- * changing only when the section goes from empty to non-empty or back.
+ * The static side is sized on its own settings (capacity), never shrunk to make room here -- the
+ * two sides are independent budgets the user sets separately, not a shared pool the busier one
+ * starves the other out of. What actually shows is capped to [notificationSlotCount] tiles' worth
+ * (fewer entries than that shrinks the section instead of padding it out; more scrolls, see
+ * [DockDynamicSection]), and [staticContainerMainAxisDp]/[maxRunMainAxisDp] only clamp the result
+ * so the whole strip never draws wider than the screen has -- not to trade room between sections.
  *
  * [maxRunMainAxisDp] is taken as already capped for the same reason [dockContentViewportMainAxisDp]
  * takes its own: how long a run may get depends on which way it runs, and only the caller knows
@@ -524,44 +499,19 @@ internal fun dockContainerMainAxisDp(
  */
 internal fun dockDynamicSectionMainAxisDp(
     entryCount: Int,
+    notificationSlotCount: Int,
     entryExtentDp: Int,
     entrySpacingDp: Int,
     staticContainerMainAxisDp: Int,
     maxRunMainAxisDp: Int,
 ): Int {
-    if (entryCount <= 0 || entryExtentDp <= 0) {
+    val visibleCount = entryCount.coerceAtMost(notificationSlotCount.coerceAtLeast(0))
+    if (visibleCount <= 0 || entryExtentDp <= 0) {
         return 0
     }
-    val wanted = (entryCount * entryExtentDp) + ((entryCount - 1) * entrySpacingDp.coerceAtLeast(0))
+    val wanted = (visibleCount * entryExtentDp) + ((visibleCount - 1) * entrySpacingDp.coerceAtLeast(0))
     val room = maxRunMainAxisDp - staticContainerMainAxisDp - DOCK_SECTION_DIVIDER_MAIN_AXIS_DP
     return min(wanted, room).coerceAtLeast(0)
-}
-
-/**
- * How much of the run to hold back from the static side so the dynamic section, once it has any
- * entries at all, always gets at least [reservedSlotCount] tiles' worth of space rather than being
- * squeezed to nothing by a dock that is otherwise full. Zero when there is nothing to reserve for.
- *
- * [reservedSlotCount] is a per-layout setting (see [DockModel.dynamicSectionReservedSlotCount]) --
- * one tile is the default that keeps a single notification legible without scrolling, but a layout
- * with room to spare can hold open more of the strip so the dynamic section reads at a glance.
- * Reserving is capped to [entryCount]: there is nothing to gain by holding back room for a tile that
- * will never render.
- */
-internal fun dockDynamicSectionReservedMainAxisDp(
-    entryCount: Int,
-    entryExtentDp: Int,
-    entrySpacingDp: Int,
-    reservedSlotCount: Int,
-): Int {
-    val slots = reservedSlotCount.coerceAtMost(entryCount)
-    return if (slots > 0 && entryExtentDp > 0) {
-        (slots * entryExtentDp) +
-            ((slots - 1) * entrySpacingDp.coerceAtLeast(0)) +
-            DOCK_SECTION_DIVIDER_MAIN_AXIS_DP
-    } else {
-        0
-    }
 }
 
 /**

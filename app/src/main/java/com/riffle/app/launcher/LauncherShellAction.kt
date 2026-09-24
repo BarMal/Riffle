@@ -244,7 +244,7 @@ sealed interface LauncherShellAction {
 
     data class SelectDockHomeControlsSpacing(val spacingDp: Int) : LauncherShellAction
 
-    data class SelectDockDynamicSectionReservedSlots(val slotCount: Int) : LauncherShellAction
+    data class SelectDockNotificationSlotCount(val slotCount: Int) : LauncherShellAction
 
     data class AppDrawerQueryChanged(val query: String) : LauncherShellAction
 

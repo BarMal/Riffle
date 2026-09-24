@@ -401,36 +401,45 @@ class DockConfigurationEngineTest {
     }
 
     @Test
-    fun updatesDockDynamicSectionReservedSlots() {
+    fun updatesDockNotificationSlotCount() {
         val result =
-            engine.setDockDynamicSectionReservedSlots(layout = HomeLayoutDefaults.standard(), slotCount = 3)
+            engine.setDockNotificationSlotCount(layout = HomeLayoutDefaults.standard(), slotCount = 2)
 
         val updated = assertIs<DockEditResult.Updated>(result)
-        assertEquals(3, updated.layout.dock.dynamicSectionReservedSlotCount)
+        assertEquals(2, updated.layout.dock.notificationSlotCount)
     }
 
     @Test
-    fun rejectsDockDynamicSectionReservedSlotsBelowMinimum() {
+    fun rejectsDockNotificationSlotCountBelowMinimum() {
         val result =
-            engine.setDockDynamicSectionReservedSlots(
+            engine.setDockNotificationSlotCount(
                 layout = HomeLayoutDefaults.standard(),
-                slotCount = MIN_DOCK_DYNAMIC_SECTION_RESERVED_SLOT_COUNT - 1,
+                slotCount = MIN_DOCK_NOTIFICATION_SLOT_COUNT - 1,
             )
 
         val rejected = assertIs<DockEditResult.Rejected>(result)
-        assertEquals(DockEditRejectionReason.INVALID_DYNAMIC_SECTION_RESERVED_SLOTS, rejected.reason)
+        assertEquals(DockEditRejectionReason.INVALID_NOTIFICATION_SLOT_COUNT, rejected.reason)
     }
 
     @Test
-    fun rejectsDockDynamicSectionReservedSlotsAboveMaximum() {
+    fun rejectsDockNotificationSlotCountAboveMaximum() {
         val result =
-            engine.setDockDynamicSectionReservedSlots(
+            engine.setDockNotificationSlotCount(
                 layout = HomeLayoutDefaults.standard(),
-                slotCount = MAX_DOCK_DYNAMIC_SECTION_RESERVED_SLOT_COUNT + 1,
+                slotCount = MAX_DOCK_NOTIFICATION_SLOT_COUNT + 1,
             )
 
         val rejected = assertIs<DockEditResult.Rejected>(result)
-        assertEquals(DockEditRejectionReason.INVALID_DYNAMIC_SECTION_RESERVED_SLOTS, rejected.reason)
+        assertEquals(DockEditRejectionReason.INVALID_NOTIFICATION_SLOT_COUNT, rejected.reason)
+    }
+
+    @Test
+    fun rejectsDockCapacityAboveMaximum() {
+        val result =
+            engine.setDockCapacity(layout = HomeLayoutDefaults.standard(), capacity = MAX_DOCK_CAPACITY + 1)
+
+        val rejected = assertIs<DockEditResult.Rejected>(result)
+        assertEquals(DockEditRejectionReason.INVALID_CAPACITY, rejected.reason)
     }
 
     private fun layoutWithPanelItems(vararg items: AppShortcutItem): HomeLayout {
