@@ -8,8 +8,6 @@ import android.view.Display
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.FiniteAnimationSpec
 import androidx.compose.animation.core.LinearOutSlowInEasing
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.systemGestureExclusion
 import androidx.compose.runtime.DisposableEffect
@@ -21,6 +19,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import com.riffle.app.launcher.designsystem.RiffleMotion
 import com.riffle.core.domain.launcher.settings.MotionPerformanceTargetFps
 import kotlin.math.abs
 
@@ -231,8 +230,5 @@ private fun dockShelfSizeAnimation(policy: DockShelfMotionPolicy): FiniteAnimati
             )
 
         DockShelfMotionPolicy.StandardSpring ->
-            spring(
-                dampingRatio = Spring.DampingRatioNoBouncy,
-                stiffness = Spring.StiffnessMediumLow,
-            )
+            RiffleMotion.smooth()
     }
