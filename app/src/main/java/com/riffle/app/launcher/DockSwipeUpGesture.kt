@@ -7,6 +7,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.input.pointer.pointerInput
 import com.riffle.core.domain.launcher.gestures.GestureThresholdsPx
+import com.riffle.core.domain.launcher.gestures.dockSwipeUpTriggered
 import com.riffle.core.domain.launcher.home.LauncherViewMode
 import com.riffle.core.domain.launcher.settings.LauncherGestureAction
 
@@ -79,12 +80,3 @@ internal fun Modifier.dockSwipeUpGestureInput(
         }
     }
 }
-
-/**
- * Whether [accumulatedVerticalDragPx] -- upward travel past the platform touch slop, negative going
- * up -- has reached [thresholdPx] (resolved from GestureThresholds.DOCK_SWIPE_UP_DP).
- */
-internal fun dockSwipeUpTriggered(
-    accumulatedVerticalDragPx: Float,
-    thresholdPx: Float = GestureThresholdsPx.Reference.dockSwipeUpPx,
-): Boolean = accumulatedVerticalDragPx <= -thresholdPx

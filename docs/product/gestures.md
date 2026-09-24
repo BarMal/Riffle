@@ -29,7 +29,7 @@ constants at the 2.625x reference density (420dpi) they were tuned on.
 | --- | --- | --- | --- |
 | Home swipe commit | 30.5 | 80px | Dominant axis must lead the other by 1.2x; pinch at 18% scale change |
 | Dock shelf toggle | 30.5 | 80px | Measured away from / toward the dock edge |
-| Dock shelf claim | 9 (never below touch slop) | 24px | Must stay below the home swipe commit |
+| Dock shelf claim | 9 (never below touch slop) | 24px (9dp = 23.6px at 2.625×) | Must stay below the home swipe commit |
 | Dock swipe-up | 30.5 past touch slop | 80px past slop | Slop handled by `detectVerticalDragGestures` |
 | Card stack travel per card / fling | see `CardStackTravel` | 64px / 500px/s | Already dp since #1211 |
 | Multi-finger claim | 3 pointers | – | See rule 2 |

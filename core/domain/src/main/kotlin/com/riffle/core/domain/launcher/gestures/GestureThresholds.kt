@@ -5,8 +5,9 @@ package com.riffle.core.domain.launcher.gestures
  *
  * Riffle used to hard-code these as raw pixels (80px to commit a home swipe, 24px for the dock shelf
  * to claim a drag), which meant the same physical swipe committed at very different finger travel
- * on a 2x phone and a 3.5x tablet. The dp values below keep today's feel at the reference density
- * the pixel values were tuned on ([REFERENCE_DENSITY], a 420dpi phone) and scale from there.
+ * on a 2x phone and a 3.5x tablet. The dp values below reproduce today's feel at the reference
+ * density the pixel values were tuned on ([REFERENCE_DENSITY], a 420dpi phone): 80px exactly, and
+ * 24px to within half a pixel. They scale from there.
  *
  * See docs/product/gestures.md for which region owns which gesture.
  */
@@ -22,7 +23,8 @@ object GestureThresholds {
 
     /**
      * Travel away from the dock edge after which the shelf claims (consumes) the drag so the home
-     * gesture layer cannot also act on it (was 24px). Must stay below [HOME_SWIPE_DP].
+     * gesture layer cannot also act on it (was 24px; 9dp is 23.6px at the reference density, a
+     * deliberate round-down). Must stay below [HOME_SWIPE_DP].
      */
     const val DOCK_SHELF_CLAIM_DP: Float = 9f
 
