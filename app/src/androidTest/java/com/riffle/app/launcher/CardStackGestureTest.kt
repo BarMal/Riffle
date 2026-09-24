@@ -344,9 +344,16 @@ class CardStackGestureTest {
                 durationMillis = 400,
             )
         }
+        // A slow release (below the fling threshold) rests where it stopped for
+        // CardStackMagnet.settleDelayMillis before magnetizing and committing -- a plain coroutine
+        // delay() in runCardStackScrollFling. The test clock only auto-advances while frames are
+        // awaited, so waitForIdle/runOnIdle would otherwise assert while that delay is still
+        // pending (the stack mid-settle, nothing committed yet). Advance past it explicitly.
+        composeRule.mainClock.advanceTimeBy(SLOW_SETTLE_WAIT_MILLIS)
 
         composeRule.runOnIdle {
             assertEquals(emptyList<LauncherShellAction>(), actions.toList())
+            assertNull("the slow release has settled and committed", stack.liveScrollPx)
             assertTrue(stack.focusedCard > 0)
         }
     }
@@ -463,3 +470,6 @@ private fun HomeGesturesOverScrollingCardStack(
         ScrollingCardStack(harness)
     }
 }
+
+/** Comfortably past CardStackMagnet.settleDelayMillis (<= 130ms) plus the magnetize spring. */
+private const val SLOW_SETTLE_WAIT_MILLIS = 1_000L
