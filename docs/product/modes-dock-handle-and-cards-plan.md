@@ -12,6 +12,12 @@ gesture, and bring every surface under one design language.
 
 The steer: **"if Apple and Sony designed it together."**
 
+**Scope.** This plan covers the Cards / dock / design-language slice only. It does not reorder the
+overall backlog priorities in `AGENTS.md`: standard-launcher parity work (widgets, folders,
+backup/restore, drawer/search) keeps its priority and is not deferred by this epic's P0 labels.
+Where this plan improves shared primitives (layout state, gestures, tokens, the dock), Standard
+and Library benefit directly.
+
 ## Findings from the codebase review (at `078454b`)
 
 ### Cards mode
@@ -67,6 +73,12 @@ The steer: **"if Apple and Sony designed it together."**
    stored; anything that must differ by mode (what a dynamic-entry tap does) is derived from the
    active mode at render time. The dock is rendered once, outside the mode surface, so a mode
    change never re-lays it out — it is the fixed point you hold while the world slides past.
+   *Boundary:* the shared dock is a mode-agnostic component. It renders a `DockModel` and emits
+   neutral intents (item tapped, dynamic entry tapped, item dragged out, handle dragged); each mode
+   supplies an interpreter for those intents. Cards-specific behaviour (stage selection, stage
+   previews) lives behind that interface in the Cards feature code, never in the dock or in
+   Standard/Library code. #1205 and #1225 implement against this boundary.
+
 3. **A grabber pill on the dock is the mode control.**
    - *Placement*: centred on the dock's inner edge (top edge of a bottom dock; inner edge of a side
      dock, rotated). 36 × 5 dp visual, ≥ 48 × 48 dp touch target.
