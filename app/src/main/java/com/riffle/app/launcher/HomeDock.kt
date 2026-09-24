@@ -504,7 +504,10 @@ internal fun dockContainerMainAxisDp(
  * [maxRunMainAxisDp] is taken as already capped for the same reason [dockContentViewportMainAxisDp]
  * takes its own: how long a run may get depends on which way it runs, and only the caller knows
  * that. What does not fit is reached by scrolling the section rather than by shrinking its tiles,
- * so an entry is always the size of a dock icon whatever the run has room for.
+ * so an entry is always the size of a dock icon whatever the run has room for. It is also where the
+ * static side's floor lives, by construction rather than by clamping this function's result: the
+ * caller reduces [maxRunMainAxisDp] by one pinned icon's worth of room before calling this, so this
+ * section can never be sized to leave the static side nothing at all.
  */
 internal fun dockDynamicSectionMainAxisDp(
     entryCount: Int,

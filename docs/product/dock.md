@@ -66,8 +66,10 @@ pinned icons show before the static side scrolls, and **notification slot count*
 notification icons show before the dynamic section scrolls. The two settings are independent
 ceilings, but the run itself is one shared strip, and notifications go first when it is tight: the
 dynamic section always draws in full up to its slot count, and the static side is sized from
-whatever room that leaves, scrolling the rest rather than the other way around. A dock with nothing
-waiting sizes the static side exactly as if the dynamic section did not exist. A settings-screen
+whatever room that leaves, scrolling the rest rather than the other way around -- except that the
+static side always keeps room for at least one pinned icon, so a busy notification section can
+scroll the rest of the pinned icons away but never make every pinned icon disappear. A dock with
+nothing waiting sizes the static side exactly as if the dynamic section did not exist. A settings-screen
 summary states the resulting total and its split in one line (for example, "Shows up to 10 icons: 7
 pinned, 3 for notifications") so the two sliders read as one budget.
 

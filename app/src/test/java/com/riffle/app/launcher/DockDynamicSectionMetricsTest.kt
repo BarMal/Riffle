@@ -147,6 +147,35 @@ class DockDynamicSectionMetricsTest {
     }
 
     @Test
+    fun theDynamicSectionNeverDisplacesTheStaticSideEntirely() {
+        // A 200dp run, one pinned icon, and a notification section demanding far more than fits
+        // (12 entries at 44dp/12dp wants 660dp). Without a floor the dynamic section would claim
+        // everything past its own 17dp rule (183dp), leaving the static side 0dp -- not scrolled,
+        // gone. The floor reserves one icon's worth (44 + 2*14 = 72dp) for the static side first, so
+        // the dynamic section is capped to 111dp (200 - 72 - 17) instead, and the pinned icon still
+        // draws.
+        val surfaceMetrics =
+            dockSurfaceMetrics(
+                dock =
+                    DockModel(
+                        capacity = 1,
+                        items = listOf(testDockShortcut("app-0")),
+                        notificationSlotCount = 12,
+                        iconSizeDp = 44,
+                        itemSpacingDp = 12,
+                    ),
+                isEditing = false,
+                availableMainAxisDp = 200,
+                runsHorizontally = true,
+                dynamicEntryCount = 12,
+            )
+
+        assertEquals(111, surfaceMetrics?.dynamicSectionMainAxisDp)
+        assertEquals(72, surfaceMetrics?.containerMainAxisDp)
+        assertEquals(true, (surfaceMetrics?.contentViewportMainAxisDp ?: 0) > 0)
+    }
+
+    @Test
     fun aDockWithNoNotificationsSizesTheStaticSideAsIfTheDynamicSectionDidNotExist() {
         val withNotifications =
             dockSurfaceMetrics(
