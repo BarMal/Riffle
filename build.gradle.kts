@@ -17,6 +17,12 @@ tasks.register("verify") {
     dependsOn(checkableProjects.map { "${it.path}:ktlintCheck" })
     dependsOn(checkableProjects.map { "${it.path}:detekt" })
     dependsOn(appProjects.map { "${it.path}:assembleDebug" })
+    // Screenshot comparison is opt-in until goldens are committed and CI switches it on; see
+    // docs/development/screenshot-testing.md. Having the Roborazzi verify task in the graph is what
+    // puts the debug unit-test run into compare-against-goldens mode.
+    if (providers.gradleProperty("riffle.screenshots.verify").map { it.toBoolean() }.getOrElse(false)) {
+        dependsOn(appProjects.map { "${it.path}:verifyRoborazziDebug" })
+    }
 }
 
 tasks.register("deviceVerify") {
